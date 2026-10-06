@@ -110,10 +110,11 @@ Open **Settings...** from the tray icon's right-click menu. Settings are grouped
 | Planning and notifications | Planning margin, import tolerance, minimum window length, notification lead time |
 | Away rules | Weekly times the car is not at home, one row per rule |
 
-- **Save** checks all values together. If something is wrong it lists every problem and writes nothing. Otherwise it writes the file, applies the change straight away (no restart) and closes the window. Changing tilt, direction, location or time zone fetches a fresh forecast.
-- **Cancel**, the close button and Escape ask "Discard your changes?" only if something changed.
+- **Save** checks all values together. If something is wrong it lists every problem and writes nothing. Otherwise it writes the file and applies the change straight away (no restart). Changing tilt, direction, location or time zone fetches a fresh forecast.
+- The Save button is a split button. Its main part saves and **keeps the window open**. The arrow beside it opens a menu with **Save** and **Save and close**; picking one changes what the button does (the label follows) but does not save yet. The window opens in Save mode every time.
+- **Cancel**, the close button and Escape ask "Discard your changes?" only if something changed since the last save.
 - **Reset tab** puts the current tab back to the built-in defaults. Nothing is saved until you press Save.
-- Pressing Enter in a field has the same effect as Save.
+- Pressing Enter in a field does what the Save button currently does.
 - Values tagged **Assumed** or **Estimate** are guesses until you replace them with real numbers.
 
 The settings live in `~/.config/car-charge-planner/config.toml`, a plain TOML file. The Settings window manages it: saving rewrites the whole file and does not keep comments. The app reads the file only at startup, so if you want to edit it by hand, do it while the app is closed. An invalid value makes the app show a dialog listing the problems and exit.

@@ -6,14 +6,16 @@ from pathlib import Path
 from typing import Callable
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import QAction, QActionGroup, QFontMetrics, QGuiApplication
 from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QMessageBox,
     QPushButton,
     QTabWidget,
+    QToolButton,
     QVBoxLayout,
 )
 
@@ -48,6 +50,7 @@ class SettingsWindow(QDialog):
         self.config_file = config_file
         self.on_save = on_save
         self.confirm_discard: Callable[[], bool] = lambda: ask_discard(self)
+        self.closes_after_save = False
 
         self.tabs = QTabWidget()
         self.field_tabs: list[FieldTab] = [FieldTab(spec, cfg) for spec in TABS]
@@ -65,9 +68,24 @@ class SettingsWindow(QDialog):
         self.reset_button.clicked.connect(self.reset_tab)
         self.cancel_button = QPushButton("Cancel")
         self.cancel_button.clicked.connect(self.reject)
-        self.save_button = QPushButton("Save")
-        self.save_button.setDefault(True)
-        self.save_button.clicked.connect(self.save)
+        for button in (self.reset_button, self.cancel_button):
+            button.setAutoDefault(False)  # Enter runs the save action below, not whichever button is first
+
+        # One split button: the main part runs the current mode, the arrow picks the mode.
+        self.save_button = QToolButton()
+        self.save_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self.save_button.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+        menu = QMenu(self.save_button)
+        modes = QActionGroup(menu)
+        modes.setExclusive(True)
+        self.save_action = self._mode_action(menu, modes, "Save", "Save and keep this window open")
+        self.save_close_action = self._mode_action(menu, modes, "Save and close", "Save, then close this window")
+        self.save_button.setMenu(menu)
+        modes.triggered.connect(self.set_mode)
+        widest = max(QFontMetrics(self.save_button.font()).horizontalAdvance(a.text()) for a in modes.actions())
+        self.save_button.setMinimumWidth(widest + 56)  # room for the arrow, so the button does not resize
+        self.save_button.clicked.connect(self.run_save)
+        self.set_mode(self.save_action)  # every time the window opens: Save, window stays open
         buttons = QHBoxLayout()
         buttons.addWidget(self.reset_button)
         buttons.addStretch()
@@ -78,6 +96,13 @@ class SettingsWindow(QDialog):
         layout.addWidget(self.tabs)
         layout.addWidget(self.errors)
         layout.addLayout(buttons)
+
+    def _mode_action(self, menu: QMenu, group: QActionGroup, text: str, tip: str) -> QAction:
+        action = menu.addAction(text)
+        action.setCheckable(True)
+        action.setToolTip(tip)
+        group.addAction(action)
+        return action
 
     # -- reading the boxes -------------------------------------------------
 
@@ -95,24 +120,45 @@ class SettingsWindow(QDialog):
     def reset_tab(self) -> None:
         self.all_tabs[self.tabs.currentIndex()].load(Config())
 
-    def save(self) -> None:
+    def set_mode(self, action: QAction) -> None:
+        """Choose what the save button does. Only switches the mode; nothing is saved yet."""
+        action.setChecked(True)
+        self.closes_after_save = action is self.save_close_action
+        self.save_button.setText(action.text())
+        self.save_button.setToolTip(action.toolTip())
+
+    def run_save(self) -> None:
+        """What the main part of the save button, and the Enter key, do."""
+        if self.save() and self.closes_after_save:
+            self.accept()
+
+    def keyPressEvent(self, event) -> None:
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            self.run_save()
+            return
+        super().keyPressEvent(event)
+
+    def save(self) -> bool:
+        """Validate, write, apply. True when saved; on any problem nothing is written and False is returned."""
         try:
             cfg = validate(self.current_config())
         except ConfigError as err:
             self.show_errors(str(err).split("\n")[1:] or [str(err)])
-            return
+            return False
         except TypeError as err:
             self.show_errors([f"A value has the wrong type: {err}"])
-            return
+            return False
         try:
             write_config(cfg, self.config_file)
         except OSError as err:
             self.show_errors([f"Could not write {self.config_file}: {err}"])
-            return
+            return False
         self.stored = cfg
         self.errors.setVisible(False)
+        for tab in self.all_tabs:
+            tab.load(cfg)  # the window stays usable: what is saved is now the baseline for "changed"
         self.on_save(cfg)
-        self.accept()
+        return True
 
     def show_errors(self, lines: list[str]) -> None:
         bullets = [f"• {line.lstrip('- ').strip()}" for line in lines if line.strip()]

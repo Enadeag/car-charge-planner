@@ -52,12 +52,12 @@ def test_units_and_assumed_labels_are_visible(h):
     assert not any("Assumed." in t and "South-east is -45" in t for t in texts)  # direction is not an assumption
 
 
-def test_save_writes_the_file_applies_and_closes(h):
+def test_save_writes_the_file_applies_and_keeps_the_window_open(h):
     h.box("panels.kwp").setValue(5.2)
     h.window.save_button.click()
     assert load_config(h.file).panels.kwp == 5.2
     assert [c.panels.kwp for c in h.saved] == [5.2]
-    assert not h.window.isVisible() and h.window.result() == QDialog.DialogCode.Accepted
+    assert h.window.isVisible()
 
 
 def test_percent_is_stored_as_a_fraction(h):
@@ -164,3 +164,124 @@ def test_reset_then_cancel_keeps_the_stored_config(tmp_path, qapp):
     h.window.reset_button.click()
     h.window.cancel_button.click()
     assert h.asked == [1] and h.window.stored.panels.kwp == 9.0 and not h.file.exists()
+
+
+# ---- the split save button ---------------------------------------------------
+
+
+def choose(h, action):
+    action.trigger()  # what picking an entry in the dropdown does
+
+
+def test_the_button_opens_in_plain_save_mode(h):
+    assert h.window.save_button.text() == "Save" and h.window.closes_after_save is False
+    assert h.window.save_action.isChecked() and not h.window.save_close_action.isChecked()
+
+
+def test_the_dropdown_offers_save_and_save_and_close(h):
+    menu = h.window.save_button.menu()
+    assert [a.text() for a in menu.actions()] == ["Save", "Save and close"]
+    assert all(a.isCheckable() for a in menu.actions())
+    assert h.window.save_button.popupMode().name == "MenuButtonPopup"
+
+
+def test_choosing_save_and_close_only_switches_the_mode(h):
+    h.box("panels.kwp").setValue(5.2)
+    choose(h, h.window.save_close_action)
+    assert h.window.save_button.text() == "Save and close"
+    assert h.window.save_close_action.isChecked() and not h.window.save_action.isChecked()
+    assert not h.file.exists() and h.saved == [] and h.window.isVisible()  # nothing saved yet
+
+
+def test_save_and_close_saves_then_closes(h):
+    h.box("panels.kwp").setValue(5.2)
+    choose(h, h.window.save_close_action)
+    h.window.save_button.click()
+    assert load_config(h.file).panels.kwp == 5.2
+    assert not h.window.isVisible() and h.window.result() == QDialog.DialogCode.Accepted
+
+
+def test_switching_back_to_save_keeps_the_window_open_again(h):
+    choose(h, h.window.save_close_action)
+    choose(h, h.window.save_action)
+    h.box("panels.kwp").setValue(5.2)
+    h.window.save_button.click()
+    assert h.window.isVisible() and h.window.save_button.text() == "Save"
+
+
+def test_a_new_window_starts_in_save_mode_again(tmp_path, qapp):
+    first = Harness(tmp_path)
+    choose(first, first.window.save_close_action)
+    second = Harness(tmp_path)
+    assert second.window.save_button.text() == "Save" and second.window.closes_after_save is False
+
+
+def test_save_and_close_stays_open_when_a_value_is_invalid(h):
+    choose(h, h.window.save_close_action)
+    h.box("timezone").setCurrentText("Mars/Base")
+    h.window.save_button.click()
+    assert h.window.isVisible() and not h.window.errors.isHidden() and not h.file.exists()
+
+
+def test_after_saving_with_the_window_open_nothing_counts_as_changed(h):
+    h.box("panels.kwp").setValue(5.2)
+    assert h.window.is_dirty()
+    h.window.save_button.click()
+    assert not h.window.is_dirty()
+    h.window.cancel_button.click()  # nothing to discard: no question, window closes
+    assert h.asked == [] and not h.window.isVisible()
+
+
+def test_editing_after_a_save_makes_it_dirty_again_and_cancel_asks(h):
+    h.box("panels.kwp").setValue(5.2)
+    h.window.save_button.click()
+    h.box("panels.kwp").setValue(6.0)
+    assert h.window.is_dirty()
+    h.window.cancel_button.click()
+    assert h.asked == [1]
+    assert load_config(h.file).panels.kwp == 5.2  # the unsaved 6.0 never reached the file
+
+
+def test_saving_twice_keeps_both_edits_and_exact_values(h):
+    h.box("panels.kwp").setValue(5.2)
+    h.window.save_button.click()
+    h.window.field_tabs[1].inputs["car.minimum_pct"].setValue(25)
+    h.window.save_button.click()
+    saved = load_config(h.file)
+    assert saved.panels.kwp == 5.2 and saved.car.minimum_pct == 25
+    assert saved.car.km_per_day == 600 / 7  # still exact after two saves
+
+
+def test_away_rules_survive_a_save_with_the_window_open(h):
+    h.window.away_tab.add_button.click()
+    rows = h.window.away_tab.rows
+    rows[1].weekday.setCurrentIndex(2)
+    h.window.save_button.click()
+    after = h.window.away_tab.rows
+    assert [r.weekday.currentIndex() for r in after] == [3, 2] and h.window.isVisible()
+    assert not h.window.is_dirty()
+
+
+def test_enter_runs_the_current_mode(h):
+    from PySide6.QtCore import Qt
+    from PySide6.QtTest import QTest
+
+    h.box("panels.kwp").setValue(5.2)
+    QTest.keyClick(h.window, Qt.Key.Key_Return)
+    assert load_config(h.file).panels.kwp == 5.2 and h.window.isVisible()  # Save mode: stays open
+    choose(h, h.window.save_close_action)
+    h.box("panels.kwp").setValue(5.4)
+    QTest.keyClick(h.window, Qt.Key.Key_Return)
+    assert load_config(h.file).panels.kwp == 5.4 and not h.window.isVisible()
+
+
+def test_enter_does_not_press_reset_or_cancel(h):
+    from PySide6.QtCore import Qt
+    from PySide6.QtTest import QTest
+
+    h.box("panels.kwp").setValue(5.2)
+    assert not h.window.reset_button.autoDefault() and not h.window.cancel_button.autoDefault()
+    h.window.reset_button.setFocus()
+    QTest.keyClick(h.window.reset_button, Qt.Key.Key_Return)
+    assert h.window.isVisible() and h.asked == []
+    assert load_config(h.file).panels.kwp == 5.2  # it saved; it did not reset or cancel
