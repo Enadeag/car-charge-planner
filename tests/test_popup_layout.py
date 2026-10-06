@@ -308,10 +308,10 @@ def test_escape_and_the_x_still_close_it(cfg, qapp):
 
 
 def _tray(cfg, tmp_path, monkeypatch):
-    from app.tray import TrayApp
+    from conftest import TrayApp
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("app.tray.get_forecast", lambda *a, **k: None)
+    monkeypatch.setattr("app.controller.get_forecast", lambda *a, **k: None)
     return TrayApp(cfg, tmp_path / "config.toml")
 
 

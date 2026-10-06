@@ -8,7 +8,8 @@ from datetime import date
 
 from PySide6.QtWidgets import QApplication
 
-from app.tray import Popup, make_icon
+from app.popup import Popup
+from app.shells.tray import make_icon
 from app.view_model import build
 from planner.projection import plan
 from storage.state import BatteryReading
@@ -123,7 +124,7 @@ def test_tray_app_round_trip_persists_and_replans(cfg, tmp_path, monkeypatch):
     from PySide6.QtWidgets import QApplication as QA
 
     from app.away_input import make_away
-    from app.tray import TrayApp
+    from conftest import TrayApp
     from forecast.open_meteo import ForecastResult
     from storage.state import load_state
 
@@ -138,14 +139,14 @@ def test_tray_app_round_trip_persists_and_replans(cfg, tmp_path, monkeypatch):
         def now(tz=None):
             return at(day, 7)
 
-    monkeypatch.setattr("app.tray.datetime", FrozenNow)
-    app._on_battery(33)
+    monkeypatch.setattr("app.controller.datetime", FrozenNow)
+    app.set_battery(33)
     assert load_state().battery.pct == 33
     assert app.vm.projection.startswith("Battery 33% \u2192")
-    app._on_away_added(make_away(day, True, time(), time(), TZ))
+    app.add_away_period(make_away(day, True, time(), time(), TZ))
     assert len(load_state().away) == 1
     assert "Today" in app.vm.quiet_days
-    app._on_away_removed(load_state().away[0])
+    app.remove_away_period(load_state().away[0])
     assert load_state().away == ()
     assert "Today" not in app.vm.quiet_days
 
@@ -168,7 +169,7 @@ def test_popup_has_a_close_button_and_stays_open_when_focus_moves(cfg):
 
 
 def _tray_with_frozen_clock(cfg, tmp_path, monkeypatch, hour, minute, failed=False):
-    from app.tray import TrayApp
+    from conftest import TrayApp
     from forecast.open_meteo import ForecastResult
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
@@ -186,7 +187,7 @@ def _tray_with_frozen_clock(cfg, tmp_path, monkeypatch, hour, minute, failed=Fal
         def now(tz=None):
             return at(day, hour, minute)
 
-    monkeypatch.setattr("app.tray.datetime", Frozen)
+    monkeypatch.setattr("app.controller.datetime", Frozen)
     return app, sent
 
 
@@ -280,10 +281,10 @@ def test_the_settings_button_asks_for_the_away_rules_tab(cfg):
 
 
 def test_tray_opens_settings_on_the_away_rules_tab_and_hides_the_popup(cfg, tmp_path, monkeypatch):
-    from app.tray import TrayApp
+    from conftest import TrayApp
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("app.tray.get_forecast", lambda *a, **k: None)
+    monkeypatch.setattr("app.controller.get_forecast", lambda *a, **k: None)
     QApplication.instance() or QApplication([])
     app = TrayApp(cfg, tmp_path / "config.toml")
     app.popup.show()
@@ -300,11 +301,11 @@ def test_a_rule_saved_in_settings_shows_up_in_the_popup(cfg, tmp_path, monkeypat
 
     from PySide6.QtCore import QTime
 
-    from app.tray import TrayApp
+    from conftest import TrayApp
     from forecast.open_meteo import ForecastResult
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("app.tray.get_forecast", lambda *a, **k: None)
+    monkeypatch.setattr("app.controller.get_forecast", lambda *a, **k: None)
     QApplication.instance() or QApplication([])
     app = TrayApp(cfg, tmp_path / "config.toml")
     app.result = ForecastResult(forecast_from([(date(2026, 7, 3), 900)]), at(date(2026, 7, 3), 6), True, False)

@@ -1,10 +1,12 @@
 # Car charge planner
 
-A personal tray app for KDE Plasma that tells you when to charge the car so that as much of your own solar energy as possible is used and as little as possible is fed back to the grid.
+A tray app for Linux desktops that tells you when to charge your electric car so that as much of your own solar energy as possible is used and as little as possible is fed back to the grid.
 
 It is advisory only: it recommends a **charge window** and a **charge power**, and you set the current in your charger's app yourself.
 
-Built for one home (Hometown, 12 solar panels, single-phase 7.4 kW ChargerBrand charger, CarBrand CarModel, fixed energy contract). The numbers it assumes are in the config file.
+It plans from a description of your set-up: your solar panels (size, tilt, direction), your location, your home charger's current limits and your car's battery. You enter all of it in the Settings window. The values it starts with are **examples, not measurements**: replace them with yours, or the plan will not fit your home.
+
+It suits a fixed-price energy contract, where the goal is simply to use your own solar power instead of feeding it back. It does not look at hourly energy prices.
 
 ## What it does
 
@@ -13,8 +15,8 @@ Built for one home (Hometown, 12 solar panels, single-phase 7.4 kW ChargerBrand 
 - Tray icon: green while a window is active, blue when one is coming, grey when there is none, orange when a grid charge is needed, red when there is no forecast.
 - Click the icon for a popup with two pages. **Plan** answers "when do I charge?": the next window, the battery level you expect after it, grid-charge advice when needed, a short table of the next days, and a battery and away status line. **Update** holds the daily inputs.
 - Right-click the icon for **Settings...**, a window with all configuration, grouped over tabs.
-- Sends a desktop notification 15 minutes before each window, once per window.
-- **Grid-charge advice:** if the battery would end a day below the minimum (30%), it says how much to charge from the grid and picks the time that uses the most leftover sun.
+- Sends a desktop notification a few minutes before each window (the lead time is a setting), once per window.
+- **Grid-charge advice:** if the battery would end a day below your minimum charge level, it says how much to charge from the grid and picks the time that uses the most leftover sun.
 
 ### Inputs (the popup's Update page)
 
@@ -27,15 +29,14 @@ Where things are edited: **settings** (panel size, charger, weekly away rules an
 
 ## Current state
 
-All six planner tickets and all seven Settings-window tickets are done and reviewed against their specs (`.scratch/car-charge-planner/review.md`, `.scratch/settings-window/review.md`). The test suite passes; run it as shown under Tests.
+The planner, the tray app and the Settings window work. Design notes and reviews are under `.scratch/`.
 
-Not done or not verified:
+Limits to know about:
 
-- **Panel size and tilt are assumed** (4.8 kWp, 35 degrees, south-east) until you get access to the InverterBrand account (planner ticket 08).
-- The CarModel's real consumption, charging losses and minimum charge current are estimates (planner ticket 09).
-- Calendar sync for away periods is saved for later (planner ticket 01).
-- No measured data yet: no P1 smart-meter reader, no InverterBrand production data. The plan is forecast-only.
-- Popup placement on Wayland was checked offscreen only.
+- **The plan is forecast-only.** It uses a weather forecast and the values you enter, not measured data: no smart-meter, inverter or car readings. The more accurate your panel, battery and consumption values, the better the plan. Values tagged **Assumed** or **Estimate** in Settings are the ones most worth checking.
+- **You enter the battery level by hand**, and away times by hand or as weekly rules. There is no calendar sync and no connection to the car.
+- **You set the charge current yourself**, in your charger's own app. The app only recommends it.
+- **Tested on KDE Plasma under Wayland.** Support for GNOME is being added.
 
 ## Requirements
 
@@ -46,7 +47,7 @@ Not done or not verified:
 ## Setup
 
 ```bash
-cd ~/projects/car-charge-notification
+# in the folder you cloned this repository into
 python3 -m venv .venv
 .venv/bin/pip install PySide6-Essentials jeepney pytest
 ```
@@ -159,7 +160,7 @@ No network or display is needed: the forecast client runs against a recorded res
 | `planner/` | The planning logic, with no network or UI: surplus, windows, projection, grid advice, config reading and writing (`config_io.py`), CLI. |
 | `forecast/` | Open-Meteo client and cache. |
 | `storage/` | Reading and writing `state.json`. |
-| `app/` | Tray, the popup (`popup.py`, a window around the reusable `planview.py`), notifications over D-Bus (`notifier.py`), the launcher and autostart entries, theme-aware colours. |
+| `app/` | `controller.py` (what the app does: refresh, plan, announce, the owner's edits) and `shells/` (how it shows itself: the tray icon with its popup). The popup (`popup.py`) is a window around the reusable `planview.py`. Also notifications over D-Bus (`notifier.py`), the launcher and autostart entries, theme-aware colours. |
 | `app/settings/` | The Settings window: field definitions, tabs, window. |
 | `tests/` | Test suite and the recorded forecast. |
 | `CONTEXT.md` | Glossary of the domain terms used throughout (feed-in, surplus, charge window, ...). |
@@ -170,10 +171,10 @@ No network or display is needed: the forecast client runs against a recorded res
 
 ## How it plans, briefly
 
-1. Surplus per hour = panel output (size x forecast irradiance x losses) minus the house baseload, scaled by a planning margin of 85% so it errs towards too little power rather than grid draw.
-2. A step counts only if the surplus covers at least the charger's minimum (6 A, 1.4 kW).
-3. Within the hours the car is home, it picks the window and power that bring in the most solar for the energy the car needs, up to the 80% target.
-4. It projects the battery day by day, subtracting average driving (about 86 km a day). If a day would end more than one point under 30%, it adds the grid-charge advice.
+1. Surplus per hour = panel output (size x forecast irradiance x losses) minus the house baseload, scaled by a planning margin (85% by default) so it errs towards too little power rather than grid draw.
+2. A step counts only if the surplus covers at least your charger's minimum current (6 A by default, about 1.4 kW on a single-phase 230 V connection).
+3. Within the hours the car is home, it picks the window and power that bring in the most solar for the energy the car needs, up to your target charge level (80% by default).
+4. It projects the battery day by day, subtracting your average driving per day (a setting). If a day would end more than one point under your minimum charge level, it adds the grid-charge advice.
 5. A window you have been notified about is kept as announced while it runs, so the power on screen matches what you set.
 
 The full design is in `.scratch/car-charge-planner/spec.md`.

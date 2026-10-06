@@ -139,7 +139,7 @@ def test_the_tray_app_announces_through_the_notifier(cfg, tmp_path, monkeypatch)
 
     from PySide6.QtWidgets import QApplication
 
-    from app.tray import TrayApp
+    from conftest import TrayApp
     from conftest import FakeNotifier, at, forecast_from
     from forecast.open_meteo import ForecastResult
 
@@ -156,6 +156,6 @@ def test_the_tray_app_announces_through_the_notifier(cfg, tmp_path, monkeypatch)
         def now(tz=None):
             return at(day, 8, 50)
 
-    monkeypatch.setattr("app.tray.datetime", Frozen)
+    monkeypatch.setattr("app.controller.datetime", Frozen)
     app.rebuild()
     assert len(fake.sent) == 1 and fake.sent[0][0].startswith("Charge window 09:00")

@@ -12,7 +12,7 @@ from datetime import date
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from app.tray import TrayApp
+from conftest import TrayApp
 from forecast.open_meteo import ForecastResult, forecast_key
 from planner.model import Config
 from storage.state import load_state, mark_notified
@@ -57,7 +57,7 @@ class FakeForecast:
 
 def make_app(tmp_path, monkeypatch, fake, cfg=None):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("app.tray.get_forecast", fake)
+    monkeypatch.setattr("app.controller.get_forecast", fake)
     return TrayApp(cfg or Config(), tmp_path / "config.toml")
 
 

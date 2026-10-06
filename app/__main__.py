@@ -22,7 +22,7 @@ elif command == "uninstall-launcher":
     removed = uninstall()
     print("Removed:\n" + "\n".join(f"  {path}" for path in removed) if removed else "No launcher entry found")
 elif command == "run":
-    from .tray import main
+    from .main import main
 
     sys.exit(main())
 else:

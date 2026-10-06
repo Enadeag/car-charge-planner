@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication, QLabel
 
 from app import colours
 from app.settings.window import SettingsWindow
-from app.tray import Popup
+from app.popup import Popup
 from planner.model import Config
 
 from conftest import TZ
