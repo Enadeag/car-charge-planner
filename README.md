@@ -112,7 +112,7 @@ Open **Settings...** from the tray icon's right-click menu. Settings are grouped
 
 - **Save** checks all values together. If something is wrong it lists every problem and writes nothing. Otherwise it writes the file and applies the change straight away (no restart). Changing tilt, direction, location or time zone fetches a fresh forecast.
 - The Save button is a split button. Its main part saves and **keeps the window open**. The arrow beside it opens a menu with **Save** and **Save and close**; picking one changes what the button does (the label follows) but does not save yet. The window opens in Save mode every time.
-- **Cancel**, the close button and Escape ask "Discard your changes?" only if something changed since the last save.
+- The button next to Save reads **Close** while nothing is unsaved and **Cancel** while there are edits. Cancel, the window's close button and Escape ask "Discard your changes?" only if something changed since the last save.
 - **Reset tab** puts the current tab back to the built-in defaults. Nothing is saved until you press Save.
 - Pressing Enter in a field does what the Save button currently does.
 - Values tagged **Assumed** or **Estimate** are guesses until you replace them with real numbers.

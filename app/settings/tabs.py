@@ -6,7 +6,7 @@ from html import escape
 from datetime import time
 from zoneinfo import available_timezones
 
-from PySide6.QtCore import QTime
+from PySide6.QtCore import QTime, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QCompleter,
@@ -38,6 +38,8 @@ def shown_value(spec: FieldSpec, stored):
 
 
 class FieldTab(QWidget):
+    changed = Signal()  # any box edited, or the tab (re)loaded
+
     def __init__(self, tab: TabSpec, cfg: Config) -> None:
         super().__init__()
         self.title = tab.title
@@ -74,6 +76,7 @@ class FieldTab(QWidget):
             completer.setCaseSensitivity(completer.caseSensitivity().CaseInsensitive)
             completer.setFilterMode(completer.filterMode().MatchContains)
             box.setCompleter(completer)
+            box.currentTextChanged.connect(lambda _text: self.changed.emit())
             return box
         if spec.kind == "int":
             spin = QSpinBox()
@@ -86,6 +89,7 @@ class FieldTab(QWidget):
             spin.setSingleStep(spec.step)
         if spec.unit:
             spin.setSuffix(f" {spec.unit}")
+        spin.valueChanged.connect(lambda _value: self.changed.emit())
         return spin
 
     def _set_widget(self, spec: FieldSpec, stored) -> None:
@@ -127,7 +131,7 @@ WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", 
 
 
 class RuleRow(QWidget):
-    def __init__(self, rule: AwayRule, on_remove) -> None:
+    def __init__(self, rule: AwayRule, on_remove, on_change) -> None:
         super().__init__()
         self.weekday = QComboBox()
         self.weekday.addItems(WEEKDAYS)
@@ -136,6 +140,9 @@ class RuleRow(QWidget):
         self.end = QTimeEdit(QTime(rule.end.hour, rule.end.minute))
         for edit in (self.start, self.end):
             edit.setDisplayFormat("HH:mm")
+        self.weekday.currentIndexChanged.connect(lambda _i: on_change())
+        for edit in (self.start, self.end):
+            edit.timeChanged.connect(lambda _t: on_change())
         remove = QPushButton("Remove")
         remove.clicked.connect(lambda: on_remove(self))
         self.remove_button = remove
@@ -154,6 +161,8 @@ class RuleRow(QWidget):
 
 class AwayRulesTab(QWidget):
     """Weekly times the car is not at home: one row per rule."""
+
+    changed = Signal()  # a row edited, added or removed
 
     DEFAULT_NEW = AwayRule(0, time(8, 0), time(17, 0))
 
@@ -184,10 +193,11 @@ class AwayRulesTab(QWidget):
         self.load(cfg)
 
     def add_row(self, rule: AwayRule) -> RuleRow:
-        row = RuleRow(rule, self.remove_row)
+        row = RuleRow(rule, self.remove_row, self.changed.emit)
         self.rows.append(row)
         self.rows_box.addWidget(row)
         self.empty_note.setVisible(False)
+        self.changed.emit()
         return row
 
     def remove_row(self, row: RuleRow) -> None:
@@ -196,6 +206,7 @@ class AwayRulesTab(QWidget):
         row.deleteLater()
         row.hide()
         self.empty_note.setVisible(not self.rows)
+        self.changed.emit()
 
     def load(self, cfg: Config) -> None:
         for row in list(self.rows):

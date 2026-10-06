@@ -66,10 +66,12 @@ class SettingsWindow(QDialog):
         self.reset_button = QPushButton("Reset tab")
         self.reset_button.setToolTip("Put this tab back to the built-in defaults. Nothing is saved until you press Save.")
         self.reset_button.clicked.connect(self.reset_tab)
-        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button = QPushButton("Close")  # reads "Cancel" while there are unsaved edits
         self.cancel_button.clicked.connect(self.reject)
         for button in (self.reset_button, self.cancel_button):
             button.setAutoDefault(False)  # Enter runs the save action below, not whichever button is first
+        metrics = QFontMetrics(self.cancel_button.font())
+        self.cancel_button.setMinimumWidth(max(metrics.horizontalAdvance(t) for t in ("Cancel", "Close")) + 32)  # no jump when the label flips
 
         # One split button: the main part runs the current mode, the arrow picks the mode.
         self.save_button = QToolButton()
@@ -86,12 +88,15 @@ class SettingsWindow(QDialog):
         self.save_button.setMinimumWidth(widest + 56)  # room for the arrow, so the button does not resize
         self.save_button.clicked.connect(self.run_save)
         self.set_mode(self.save_action)  # every time the window opens: Save, window stays open
+        for tab in self.all_tabs:
+            tab.changed.connect(self.refresh_close_button)
         buttons = QHBoxLayout()
         buttons.addWidget(self.reset_button)
         buttons.addStretch()
         buttons.addWidget(self.cancel_button)
         buttons.addWidget(self.save_button)
 
+        self.refresh_close_button()
         layout = QVBoxLayout(self)
         layout.addWidget(self.tabs)
         layout.addWidget(self.errors)
@@ -119,6 +124,16 @@ class SettingsWindow(QDialog):
 
     def reset_tab(self) -> None:
         self.all_tabs[self.tabs.currentIndex()].load(Config())
+        self.refresh_close_button()
+
+    def refresh_close_button(self) -> None:
+        """"Close" when nothing is unsaved, "Cancel" when closing would throw edits away."""
+        if self.is_dirty():
+            self.cancel_button.setText("Cancel")
+            self.cancel_button.setToolTip("Discard your unsaved changes and close this window")
+        else:
+            self.cancel_button.setText("Close")
+            self.cancel_button.setToolTip("Close this window")
 
     def set_mode(self, action: QAction) -> None:
         """Choose what the save button does. Only switches the mode; nothing is saved yet."""
@@ -157,6 +172,7 @@ class SettingsWindow(QDialog):
         self.errors.setVisible(False)
         for tab in self.all_tabs:
             tab.load(cfg)  # the window stays usable: what is saved is now the baseline for "changed"
+        self.refresh_close_button()
         self.on_save(cfg)
         return True
 

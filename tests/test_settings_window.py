@@ -285,3 +285,82 @@ def test_enter_does_not_press_reset_or_cancel(h):
     QTest.keyClick(h.window.reset_button, Qt.Key.Key_Return)
     assert h.window.isVisible() and h.asked == []
     assert load_config(h.file).panels.kwp == 5.2  # it saved; it did not reset or cancel
+
+
+# ---- Close / Cancel label ------------------------------------------------------
+
+
+def test_the_button_reads_close_when_nothing_is_unsaved(h):
+    assert h.window.cancel_button.text() == "Close"
+
+
+def test_it_reads_cancel_once_something_is_edited(h):
+    h.box("panels.kwp").setValue(5.2)
+    assert h.window.cancel_button.text() == "Cancel"
+    assert "Discard" in h.window.cancel_button.toolTip()
+
+
+def test_it_goes_back_to_close_when_the_edit_is_undone(h):
+    h.box("panels.kwp").setValue(5.2)
+    h.box("panels.kwp").setValue(4.8)
+    assert h.window.cancel_button.text() == "Close"
+
+
+def test_it_reads_close_again_after_a_save_with_the_window_open(h):
+    h.box("panels.kwp").setValue(5.2)
+    h.window.save_button.click()
+    assert h.window.cancel_button.text() == "Close"
+    h.box("panels.kwp").setValue(6.0)
+    assert h.window.cancel_button.text() == "Cancel"
+
+
+def test_it_follows_edits_on_every_kind_of_input(h):
+    t = h.window
+    t.field_tabs[2].inputs["charger.max_amps"].setValue(20)  # a whole-number box on another tab
+    assert t.cancel_button.text() == "Cancel"
+    t.field_tabs[2].inputs["charger.max_amps"].setValue(32)
+    assert t.cancel_button.text() == "Close"
+    h.box("timezone").setCurrentText("Europe/London")  # the time zone dropdown
+    assert t.cancel_button.text() == "Cancel"
+    h.box("timezone").setCurrentText("Europe/Amsterdam")
+    assert t.cancel_button.text() == "Close"
+
+
+def test_it_follows_the_away_rule_rows(h):
+    from PySide6.QtCore import QTime
+
+    tab = h.window.away_tab
+    tab.rows[0].end.setTime(QTime(18, 0))
+    assert h.window.cancel_button.text() == "Cancel"
+    tab.rows[0].end.setTime(QTime(19, 0))
+    assert h.window.cancel_button.text() == "Close"
+    tab.add_button.click()
+    assert h.window.cancel_button.text() == "Cancel"
+    tab.rows[1].remove_button.click()
+    assert h.window.cancel_button.text() == "Close"
+    tab.rows[0].remove_button.click()
+    assert h.window.cancel_button.text() == "Cancel"
+
+
+def test_reset_tab_changes_the_label_only_when_it_changes_something(tmp_path, qapp):
+    h = Harness(tmp_path)
+    h.window.reset_button.click()  # stored values already are the defaults
+    assert h.window.cancel_button.text() == "Close"
+    custom = replace(Config(), panels=replace(Config().panels, kwp=9.0))
+    h2 = Harness(tmp_path, custom)
+    h2.window.reset_button.click()
+    assert h2.window.cancel_button.text() == "Cancel"
+
+
+def test_close_with_nothing_unsaved_closes_without_asking(h):
+    h.box("panels.kwp").setValue(5.2)
+    h.window.save_button.click()
+    h.window.cancel_button.click()  # reads "Close"
+    assert h.asked == [] and not h.window.isVisible()
+
+
+def test_cancel_with_unsaved_edits_still_asks(h):
+    h.box("panels.kwp").setValue(5.2)
+    assert h.window.cancel_button.text() == "Cancel"
+    h.window.cancel_button.click()
+    assert h.asked == [1]
