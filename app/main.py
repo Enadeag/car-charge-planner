@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 
-from PySide6.QtCore import QLockFile
 from PySide6.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
 
 from planner.model import ConfigError, load_config
@@ -13,7 +11,8 @@ from planner.model import ConfigError, load_config
 from . import launcher
 from .config_file import ensure_config
 from .controller import Controller
-from .identity import DESKTOP_ENTRY
+from .identity import APP_NAME, DESKTOP_ENTRY
+from .instance import Outcome, claim_instance
 from .shells.tray import TrayShell
 
 
@@ -24,15 +23,12 @@ def main(argv: list[str] | None = None) -> int:
         app.setDesktopFileName(DESKTOP_ENTRY)  # the Wayland app id: matches the launcher entry
     app.setQuitOnLastWindowClosed(False)
 
-    lock_path = Path.home() / ".cache" / "car-charge-planner.lock"
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-    lock = QLockFile(str(lock_path))
-    if not lock.tryLock(100):
-        if lock.error() == QLockFile.LockError.LockFailedError:
-            print("car-charge-planner is already running", file=sys.stderr)
-        else:
-            print(f"Could not create the lock file {lock_path}", file=sys.stderr)
-        return 1
+    outcome, instance = claim_instance()
+    if outcome is Outcome.SIGNALLED:
+        print(f"{APP_NAME} is already running: asked it to show itself.", file=sys.stderr)
+        return 0
+    if outcome is Outcome.UNAVAILABLE:
+        print("Could not set up the single-instance socket; a second copy could start.", file=sys.stderr)
 
     if not QSystemTrayIcon.isSystemTrayAvailable():
         print("No system tray available on this desktop", file=sys.stderr)
@@ -47,5 +43,7 @@ def main(argv: list[str] | None = None) -> int:
         print(err, file=sys.stderr)
         return 2
     shell = TrayShell(Controller(cfg, config_file))
+    if instance is not None:
+        instance.show_requested.connect(shell.show_plan)  # a second start shows the plan of this one
     shell.start()
     return app.exec()

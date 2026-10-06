@@ -60,7 +60,7 @@ Start the tray app:
 .venv/bin/python -m app
 ```
 
-It runs until you choose **Quit** in the tray icon's right-click menu. A second start is refused, so you cannot get two icons. The first start creates the config file.
+It runs until you choose **Quit** in the tray icon's right-click menu. Starting it again while it runs does not start a second copy: it asks the running one to show its popup and exits. The first start creates the config file.
 
 Stop a running instance from a terminal:
 
@@ -141,7 +141,7 @@ The settings live in `~/.config/car-charge-planner/config.toml`, a plain TOML fi
 | Config | `~/.config/car-charge-planner/config.toml` |
 | Battery level, away periods, announced windows | `~/.local/state/car-charge-planner/state.json` |
 | Forecast cache | `~/.cache/car-charge-planner/forecast.json` |
-| Single-instance lock | `~/.cache/car-charge-planner.lock` |
+| Single-instance socket | `$XDG_RUNTIME_DIR/car-charge-planner.sock` (a private directory under the temp directory if there is no runtime directory) |
 
 Delete the state file to reset your entries. The other files are recreated as needed.
 
