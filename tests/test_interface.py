@@ -19,7 +19,7 @@ from planner.config_io import dump_config, write_config
 from planner.model import INTERFACE_MODES, Config, ConfigError, Interface, load_config
 from storage.state import load_state
 
-from conftest import FakeNotifier
+from conftest import FakeNotifier, example_config
 
 
 @pytest.fixture
@@ -187,7 +187,7 @@ def test_changing_the_interface_says_it_applies_at_the_next_start(tmp_path, monk
 class Harness:
     def __init__(self, tmp_path, cfg=None):
         self.file = tmp_path / "config.toml"
-        self.window = SettingsWindow(cfg or Config(), self.file, lambda c: None)
+        self.window = SettingsWindow(cfg or example_config(), self.file, lambda c: None)
         self.window.confirm_discard = lambda: True
         self.window.show()
         self.tab = next(t for t in self.window.all_tabs if t.title == "Interface")

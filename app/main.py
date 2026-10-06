@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
 
 from planner.model import ConfigError, load_config
 
-from . import launcher
+from . import gcguard, launcher
 from .config_file import ensure_config
 from .controller import Controller
 from .identity import APP_NAME, DESKTOP_ENTRY
@@ -68,6 +68,7 @@ def main(argv: list[str] | None = None) -> int:
     if launcher.is_installed():  # the portal looks the id up: set it only when there is an entry to find
         app.setDesktopFileName(DESKTOP_ENTRY)  # the Wayland app id: matches the launcher entry
     app.setQuitOnLastWindowClosed(False)
+    gcguard.install(app)  # destroy Qt objects only on this thread, never from a background thread's allocation
 
     outcome, instance = claim_instance()
     if outcome is Outcome.SIGNALLED:

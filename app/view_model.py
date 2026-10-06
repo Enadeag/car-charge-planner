@@ -36,7 +36,7 @@ class AdviceView:
 
 @dataclass(frozen=True)
 class ViewModel:
-    state: str  # "active" | "upcoming" | "none" | "grid" | "no-forecast"
+    state: str  # "active" | "upcoming" | "none" | "grid" | "no-forecast" | "needs-setup"
     tooltip: str
     headline: str
     detail: str  # one compact line: "Until 15:00 · 1.6 kW (7 A) · 5.8 kWh · 99% solar"
@@ -149,6 +149,24 @@ def _outlook(days: list[DayPlan], headline_window: Window | None, now: datetime,
     # when every day is quiet the headline already says so
     quiet_text = f"{', '.join(quiet)}: no good window" if quiet and len(quiet) < len(days) else ""
     return tuple(rows), quiet_text
+
+
+def needs_setup(battery: BatteryReading, now: datetime) -> ViewModel:
+    """Shown until the user has given a location: nothing is fetched and there is no plan yet."""
+    line, _ = battery_status(battery, now)
+    return ViewModel(
+        state="needs-setup",
+        tooltip="Not set up yet",
+        headline="Not set up yet",
+        detail="Enter your location in Settings to get a plan.",
+        battery_line=line,
+        battery_stale=False,  # no prompt to update the battery before there is anything to plan
+        battery_pct=battery.pct,
+        projection="",
+        outlook=(),
+        quiet_days="",
+        footer=SOURCE,
+    )
 
 
 def no_forecast(reason: str, battery: BatteryReading, now: datetime) -> ViewModel:

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import os
 import tomllib
+from functools import lru_cache
 from dataclasses import dataclass, field, fields, replace
 from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
@@ -101,8 +103,34 @@ class Interface:
     mode: str = "auto"
 
 
-def _default_away() -> tuple[AwayRule, ...]:
-    return (AwayRule(weekday=3, start=time(6, 0), end=time(19, 0)),)
+def find_timezone(environ: dict[str, str], etc_timezone: str, localtime_target: str) -> str:
+    """The system's IANA time zone name from what the system offers, or UTC.
+
+    Looks at TZ, then /etc/timezone (Debian style), then the target of the /etc/localtime link.
+    """
+    candidates = [environ.get("TZ", "").lstrip(":"), etc_timezone.strip()]
+    if "zoneinfo/" in localtime_target:
+        candidates.append(localtime_target.split("zoneinfo/", 1)[1])
+    for name in candidates:
+        for prefix in ("posix/", "right/"):
+            name = name.removeprefix(prefix)
+        if not name:
+            continue
+        try:
+            ZoneInfo(name)
+        except (ZoneInfoNotFoundError, ValueError):
+            continue
+        return name
+    return "UTC"
+
+
+@lru_cache(maxsize=1)
+def system_timezone() -> str:
+    try:
+        etc_timezone = Path("/etc/timezone").read_text()
+    except OSError:
+        etc_timezone = ""
+    return find_timezone(dict(os.environ), etc_timezone, os.path.realpath("/etc/localtime"))
 
 
 @dataclass(frozen=True)
@@ -114,10 +142,16 @@ class Config:
     planning: Planning = field(default_factory=Planning)
     notify: Notify = field(default_factory=Notify)
     interface: Interface = field(default_factory=Interface)
-    away_rules: tuple[AwayRule, ...] = field(default_factory=_default_away)
-    timezone: str = "Europe/Amsterdam"
+    away_rules: tuple[AwayRule, ...] = ()
+    timezone: str = field(default_factory=system_timezone)
+    # (0, 0) means "not set": a new install has no location until the user gives one
     latitude: float = 0.0
     longitude: float = 0.0
+
+    @property
+    def is_set_up(self) -> bool:
+        """Has the user given a location? Until then nothing is fetched and there is no plan."""
+        return (self.latitude, self.longitude) != (0, 0)
 
 
 @dataclass(frozen=True)
@@ -187,6 +221,13 @@ def validate(cfg: Config) -> Config:
         need(rule.start < rule.end, "[away] each rule must end after it starts on the same day (no overnight rules)")
     if problems:
         raise ConfigError("Invalid config:\n- " + "\n- ".join(problems))
+    return cfg
+
+
+def require_location(cfg: Config) -> Config:
+    """For saving settings: a plan needs a real location, so (0, 0) is refused with a plain message."""
+    if not cfg.is_set_up:
+        raise ConfigError("Enter your location: latitude and longitude cannot both be 0")
     return cfg
 
 

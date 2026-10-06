@@ -13,7 +13,7 @@ from app.settings.tabs import AwayRulesTab
 from app.settings.window import SettingsWindow
 from planner.model import AwayRule, Config, load_config
 
-from conftest import at
+from conftest import at, example_config
 
 
 @pytest.fixture
@@ -26,7 +26,7 @@ class Harness:
         self.file = tmp_path / "config.toml"
         self.saved = []
         self.asked = []
-        self.window = SettingsWindow(cfg or Config(), self.file, self.saved.append)
+        self.window = SettingsWindow(cfg or example_config(), self.file, self.saved.append)
         self.window.confirm_discard = lambda: (self.asked.append(1), True)[1]
         self.window.show()
 
@@ -118,7 +118,7 @@ def test_both_cross_field_problems_are_listed_together(h):
 
 def test_reset_tab_works_on_house_car_and_on_charger(tmp_path, qapp):
     custom = replace(
-        Config(),
+        example_config(),
         car=replace(Config().car, usable_battery_kwh=60, target_pct=90),
         charger=replace(Config().charger, volts=240, max_amps=16),
     )
@@ -156,7 +156,7 @@ def test_planning_edit_saves_as_stored_types(h):
 
 
 def test_planning_reset_tab(tmp_path, qapp):
-    h = Harness(tmp_path, replace(Config(), notify=replace(Config().notify, lead_minutes=45)))
+    h = Harness(tmp_path, replace(example_config(), notify=replace(Config().notify, lead_minutes=45)))
     h.show("Planning and notifications")
     h.window.reset_button.click()
     assert h.box("Planning and notifications", "notify.lead_minutes").value() == 15
@@ -171,7 +171,7 @@ def test_a_saved_lead_time_changes_when_the_next_notification_is_due(tmp_path, m
     day = date(2026, 7, 3)
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     monkeypatch.setattr("app.controller.get_forecast", lambda cfg, now, force=False: None)
-    app = TrayApp(Config(), tmp_path / "config.toml")
+    app = TrayApp(example_config(), tmp_path / "config.toml")
     app.result = ForecastResult(forecast_from([(day, 900)]), at(day, 6), True, False)
     from conftest import FakeNotifier
 
@@ -246,16 +246,14 @@ def test_a_rule_that_ends_before_it_starts_is_reported_and_nothing_is_written(h)
     assert not h.file.exists()
 
 
-def test_reset_restores_the_default_thursday_rule(tmp_path, qapp):
-    cfg = replace(Config(), away_rules=(AwayRule(0, time(8, 0), time(9, 0)), AwayRule(5, time(1, 0), time(2, 0))))
+def test_reset_empties_the_rules_because_there_is_no_default_rule(tmp_path, qapp):
+    cfg = replace(example_config(), away_rules=(AwayRule(0, time(8, 0), time(9, 0)), AwayRule(5, time(1, 0), time(2, 0))))
     h = Harness(tmp_path, cfg)
     assert len(rows(h)) == 2
     h.show("Away rules")
     h.window.reset_button.click()
-    assert [(r.weekday.currentText(), r.start.time(), r.end.time()) for r in rows(h)] == [
-        ("Thursday", QTime(6, 0), QTime(19, 0))
-    ]
-    assert not h.file.exists()
+    assert rows(h) == [] and not h.tab("Away rules").empty_note.isHidden()  # the car is treated as home all week
+    assert not h.file.exists()  # reset alone saves nothing
 
 
 def test_rules_count_as_changes_for_the_discard_question(h):
@@ -274,7 +272,7 @@ def test_putting_a_rule_back_is_not_a_change(h):
 
 
 def test_rule_order_is_kept(tmp_path, qapp):
-    cfg = replace(Config(), away_rules=(AwayRule(4, time(8, 0), time(9, 0)), AwayRule(1, time(8, 0), time(9, 0))))
+    cfg = replace(example_config(), away_rules=(AwayRule(4, time(8, 0), time(9, 0)), AwayRule(1, time(8, 0), time(9, 0))))
     h = Harness(tmp_path, cfg)
     assert [r.weekday.currentText() for r in rows(h)] == ["Friday", "Tuesday"]
     rows(h)[0].end.setTime(QTime(10, 0))
@@ -285,7 +283,7 @@ def test_rule_order_is_kept(tmp_path, qapp):
 def test_no_hint_text_is_clipped_on_any_tab(tmp_path, qapp):
     from PySide6.QtWidgets import QLabel as Label
 
-    window = SettingsWindow(Config(), tmp_path / "c.toml", lambda c: None)
+    window = SettingsWindow(example_config(), tmp_path / "c.toml", lambda c: None)
     window.show_centred()  # the same path the tray uses
     for index in range(window.tabs.count()):
         window.tabs.setCurrentIndex(index)

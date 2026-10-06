@@ -25,7 +25,7 @@ from storage.state import State, add_away, load_state, mark_notified, remove_awa
 from .notifications import candidate_windows, due, message
 from .notifier import Notifier
 from .settings.window import SettingsWindow
-from .view_model import ViewModel, build, no_forecast
+from .view_model import ViewModel, build, needs_setup, no_forecast
 
 TICK_MS = 60_000  # recompute every minute; the forecast itself refreshes at most hourly
 
@@ -69,6 +69,9 @@ class Controller(QObject):
 
     def refresh(self, force: bool = False) -> None:
         """Fetch (cache-aware) off the UI thread; the result comes back as a signal."""
+        if not self.cfg.is_set_up:
+            self.rebuild()  # no location yet: there is nothing to ask a forecast service, and nothing leaves the machine
+            return
         if self._loading:
             return
         self._loading = True
@@ -124,7 +127,9 @@ class Controller(QObject):
         now = datetime.now(self.tz)
         state = load_state()
         battery = state.battery
-        if self.result is None:
+        if not self.cfg.is_set_up:
+            vm = needs_setup(battery, now)
+        elif self.result is None:
             vm = no_forecast(self.error or "Loading forecast...", battery, now)
         else:
             days = plan(self.result.steps, self.cfg, battery.pct, now, list(state.away), list(state.notified))

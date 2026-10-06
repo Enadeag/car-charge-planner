@@ -68,6 +68,16 @@ Stop a running instance from a terminal:
 pkill -f "python -m app$"
 ```
 
+### First run
+
+The first start creates the config file and shows **Not set up yet**. The app knows nothing about you at that point: it has no location, it **fetches nothing** (no request leaves your machine) and there is no plan.
+
+1. Open **Settings...** (the button on the plan page, or the menu) and, on the first tab, enter your **latitude and longitude**. Both at 0 means "not set". Saving without a location is refused.
+2. Check the other values, especially your panels, car and charger. Whatever you leave alone starts as an **example value**, not a measurement.
+3. Press Save. The app fetches its first forecast and shows the plan.
+
+Your time zone is taken from the system, and there are no away rules to begin with, so the car is treated as home all week until you add some (Settings, Away rules). A guided set-up screen that walks you through all of this is planned.
+
 ### Check that clicking a notification works on your desktop
 
 ```bash
@@ -84,7 +94,7 @@ This sends a labelled test notification and waits up to a minute for you to clic
 
 | Option | Meaning |
 | --- | --- |
-| `--live` | Real Open-Meteo forecast, cached for an hour. `--refresh` ignores the cache. |
+| `--live` | Real Open-Meteo forecast, cached for an hour. `--refresh` ignores the cache. Needs a location in the config (`--config`). |
 | `--demo summer\|overcast\|mixed\|winter` | Invented forecast, no network. |
 | `--forecast file.json` | Your own forecast: a list of `{"start", "end", "gti"}` (ISO times, W/m2). |
 | `--battery N` | Current battery percentage (required). |

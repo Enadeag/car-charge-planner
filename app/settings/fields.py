@@ -62,7 +62,7 @@ SOLAR = TabSpec(
             "panels.system_losses", "System losses", "Combined losses from the inverter, cables, heat and dirt. Typically 10-15%.",
             unit="%", minimum=0, maximum=99.9, decimals=1, step=1, scale=100,
         ),
-        FieldSpec("latitude", "Latitude", "Decimal degrees of the panels' location. Positive is north of the equator.", unit="degrees", minimum=-90, maximum=90, decimals=4, step=0.01),
+        FieldSpec("latitude", "Latitude", "Decimal degrees of the panels' location. Positive is north. 0 and 0 together mean not set.", unit="degrees", minimum=-90, maximum=90, decimals=4, step=0.01),
         FieldSpec("longitude", "Longitude", "Decimal degrees of the panels' location. Positive is east of Greenwich.", unit="degrees", minimum=-180, maximum=180, decimals=4, step=0.01),
         FieldSpec("timezone", "Time zone", "The time zone of the location. Start typing to search the list.", kind="timezone"),
     ),

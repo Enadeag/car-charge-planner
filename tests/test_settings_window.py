@@ -10,6 +10,8 @@ from PySide6.QtWidgets import QApplication, QDialog
 from app.settings.window import SettingsWindow
 from planner.model import Config, load_config
 
+from conftest import example_config
+
 
 @pytest.fixture
 def qapp():
@@ -22,7 +24,7 @@ class Harness:
         self.saved = []
         self.asked = []
         self.answer = True
-        self.window = SettingsWindow(cfg or Config(), self.file, self.saved.append)
+        self.window = SettingsWindow(cfg or example_config(), self.file, self.saved.append)
         self.window.confirm_discard = lambda: (self.asked.append(1), self.answer)[1]
         self.window.show()
 
@@ -40,7 +42,7 @@ def test_shows_the_stored_values(h):
     assert h.box("panels.tilt_deg").value() == 35
     assert h.box("panels.azimuth_deg").value() == -45
     assert h.box("panels.system_losses").value() == 14.0  # a fraction stored, a percent shown
-    assert h.box("latitude").value() == 0.0 and h.box("longitude").value() == 0.0
+    assert h.box("latitude").value() == 52.37 and h.box("longitude").value() == 4.9
     assert h.box("timezone").currentText() == "Europe/Amsterdam"
 
 
@@ -67,12 +69,12 @@ def test_percent_is_stored_as_a_fraction(h):
 
 
 def test_untouched_fields_keep_their_exact_values(tmp_path, qapp):
-    odd = replace(Config(), latitude=50.123456789, panels=replace(Config().panels, system_losses=0.1234567))
+    odd = replace(example_config(), latitude=52.123456789, panels=replace(Config().panels, system_losses=0.1234567))
     h = Harness(tmp_path, odd)
     h.box("panels.kwp").setValue(6.0)  # edit one field only
     h.window.save_button.click()
     saved = load_config(h.file)
-    assert saved.latitude == 50.123456789  # the box only shows 4 decimals
+    assert saved.latitude == 52.123456789  # the box only shows 4 decimals
     assert saved.panels.system_losses == 0.1234567
     assert saved.panels.tilt_deg == 35 and isinstance(saved.panels.tilt_deg, int)
 
@@ -146,20 +148,24 @@ def test_editing_back_to_the_stored_value_is_not_a_change(h):
 
 
 def test_reset_tab_restores_defaults_without_saving(tmp_path, qapp):
-    custom = replace(Config(), panels=replace(Config().panels, kwp=9.0, tilt_deg=10), latitude=51.5)
+    base = example_config()
+    custom = replace(base, panels=replace(base.panels, kwp=9.0, tilt_deg=10), latitude=51.5)
     h = Harness(tmp_path, custom)
     assert h.box("panels.kwp").value() == 9.0
     h.window.reset_button.click()
     assert h.box("panels.kwp").value() == 4.8 and h.box("panels.tilt_deg").value() == 35
-    assert h.box("latitude").value() == 0.0
+    assert h.box("latitude").value() == 0.0 and h.box("longitude").value() == 0.0  # the location is not set
     assert not h.file.exists() and h.saved == []  # nothing saved yet
     assert h.window.is_dirty()  # it differs from what is stored
+    h.box("latitude").setValue(52.37)  # a plan needs a location, so saving asks for one
+    h.box("longitude").setValue(4.9)
     h.window.save_button.click()
-    assert load_config(h.file) == Config()
+    expected = replace(Config(), latitude=52.37, longitude=4.9, away_rules=base.away_rules)  # the other tabs were untouched
+    assert load_config(h.file) == expected
 
 
 def test_reset_then_cancel_keeps_the_stored_config(tmp_path, qapp):
-    custom = replace(Config(), panels=replace(Config().panels, kwp=9.0))
+    custom = replace(example_config(), panels=replace(Config().panels, kwp=9.0))
     h = Harness(tmp_path, custom)
     h.window.reset_button.click()
     h.window.cancel_button.click()
@@ -343,8 +349,8 @@ def test_it_follows_the_away_rule_rows(h):
 
 
 def test_reset_tab_changes_the_label_only_when_it_changes_something(tmp_path, qapp):
-    h = Harness(tmp_path)
-    h.window.reset_button.click()  # stored values already are the defaults
+    h = Harness(tmp_path, Config())
+    h.window.reset_button.click()  # stored values already are the built-in defaults
     assert h.window.cancel_button.text() == "Close"
     custom = replace(Config(), panels=replace(Config().panels, kwp=9.0))
     h2 = Harness(tmp_path, custom)

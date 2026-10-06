@@ -17,7 +17,7 @@ from forecast.open_meteo import ForecastResult, forecast_key
 from planner.model import Config
 from storage.state import load_state, mark_notified
 
-from conftest import at, forecast_from
+from conftest import at, example_config, forecast_from
 
 DAY = date(2026, 7, 3)
 
@@ -58,7 +58,7 @@ class FakeForecast:
 def make_app(tmp_path, monkeypatch, fake, cfg=None):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     monkeypatch.setattr("app.controller.get_forecast", fake)
-    return TrayApp(cfg or Config(), tmp_path / "config.toml")
+    return TrayApp(cfg or example_config(), tmp_path / "config.toml")
 
 
 def loaded(app, fake, qapp, calls=1):

@@ -60,6 +60,8 @@ def main(argv: list[str] | None = None) -> None:
     if args.live:
         from forecast.open_meteo import ForecastUnavailable, get_forecast
 
+        if not cfg.is_set_up:
+            raise SystemExit("No location is set: give latitude and longitude in a config file (--config) or in Settings. --demo needs none.")
         try:
             result = get_forecast(cfg, now, force=args.refresh)
         except ForecastUnavailable as err:

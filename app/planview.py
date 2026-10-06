@@ -136,6 +136,14 @@ class PlanView(QWidget):
             head.addWidget(widget)
         box.addLayout(head)
 
+        # shown only while not set up: the way to the place where the location is entered
+        self.setup_button = QPushButton("Open Settings...")
+        self.setup_button.clicked.connect(lambda: self.settings_requested.emit("Solar and location"))
+        setup_row = QHBoxLayout()
+        setup_row.addWidget(self.setup_button)
+        setup_row.addStretch()
+        box.addLayout(setup_row)
+
         self.advice_box = QWidget()
         advice = QVBoxLayout(self.advice_box)
         advice.setContentsMargins(0, 0, 0, 0)
@@ -163,7 +171,9 @@ class PlanView(QWidget):
         box.addWidget(self.outlook_box)
 
         # compact status lines; the buttons jump to the Update page
-        status = QGridLayout()
+        self.status_box = QWidget()  # hidden while not set up: a battery gauge means nothing before there is a plan
+        status = QGridLayout(self.status_box)
+        status.setContentsMargins(0, 0, 0, 0)
         status.setHorizontalSpacing(10)
         status.setVerticalSpacing(6)
         self.battery_status = QLabel()
@@ -186,7 +196,7 @@ class PlanView(QWidget):
         status.addWidget(self.away_status, 1, 0, 1, 2)
         status.addWidget(self.manage_away, 1, 2)
         status.setColumnStretch(0, 1)
-        box.addLayout(status)
+        box.addWidget(self.status_box)
         return page
 
     # -- the Update page -------------------------------------------------------
@@ -266,6 +276,8 @@ class PlanView(QWidget):
         self.detail.setText(vm.detail)
         self.projection.setText(vm.projection)
         self.projection.setVisible(bool(vm.projection))
+        self.setup_button.setVisible(vm.state == "needs-setup")
+        self.status_box.setVisible(vm.state != "needs-setup")
 
         self.advice_box.setVisible(vm.advice is not None)
         if vm.advice is not None:

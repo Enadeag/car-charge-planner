@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 
 from app import colours
 from planner.config_io import write_config
-from planner.model import Config, ConfigError, validate
+from planner.model import Config, ConfigError, require_location, validate
 
 from .fields import TABS
 from .tabs import AwayRulesTab, FieldTab
@@ -156,7 +156,7 @@ class SettingsWindow(QDialog):
     def save(self) -> bool:
         """Validate, write, apply. True when saved; on any problem nothing is written and False is returned."""
         try:
-            cfg = validate(self.current_config())
+            cfg = require_location(validate(self.current_config()))
         except ConfigError as err:
             self.show_errors(str(err).split("\n")[1:] or [str(err)])
             return False

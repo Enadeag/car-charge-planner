@@ -5,7 +5,7 @@ from __future__ import annotations
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap, QPolygonF
 
-COLORS = {"active": "#2e9e5b", "upcoming": "#3b82c4", "none": "#7a7f87", "grid": "#d98c1f", "no-forecast": "#c4553b"}
+COLORS = {"active": "#2e9e5b", "upcoming": "#3b82c4", "none": "#7a7f87", "grid": "#d98c1f", "no-forecast": "#c4553b", "needs-setup": "#7b5ea7"}
 
 
 def make_icon(state: str) -> QIcon:
