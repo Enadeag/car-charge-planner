@@ -265,3 +265,23 @@ def test_the_tray_shell_and_the_window_shell_share_their_icon_code():
     from app.shells import tray
 
     assert tray.make_icon is make_icon
+
+
+# ---- centred on first show, then left alone -------------------------------------------------------
+
+
+def test_the_window_is_centred_the_first_time_it_is_shown(s):
+    from PySide6.QtGui import QGuiApplication
+
+    s.shell.show_plan()
+    area = QGuiApplication.primaryScreen().availableGeometry()
+    assert abs(s.window.geometry().center().x() - area.center().x()) <= 2
+    assert abs(s.window.geometry().center().y() - area.center().y()) <= 2
+
+
+def test_it_is_not_moved_again_after_the_owner_has_placed_it(s):
+    s.shell.show_plan()
+    s.window.move(37, 53)  # the owner dragged it
+    s.window.hide()
+    s.shell.show_plan()  # a second launch, a notification click
+    assert (s.window.x(), s.window.y()) == (37, 53)

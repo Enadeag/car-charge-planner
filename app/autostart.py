@@ -19,11 +19,12 @@ def desktop_entry(python: Path, project: Path) -> str:
 Type=Application
 Name={APP_NAME}
 Comment={COMMENT}
-Exec={python} -m app
+Exec={python} -m app --background
 Icon={ICON_NAME}
 Path={project}
 Terminal=false
 X-KDE-autostart-after=panel
+X-GNOME-Autostart-enabled=true
 """
 
 

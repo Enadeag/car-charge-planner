@@ -281,3 +281,27 @@ def test_without_a_tray_the_app_starts_as_a_window_instead_of_exiting(tmp_path):
             first.kill()
             out, err = first.communicate()
     assert "Traceback" not in err and "No system tray" not in err
+
+
+def test_the_autostart_flag_starts_the_whole_app_without_a_tray_too(tmp_path):
+    """What the autostart entry runs: `python -m app --background`, here on a desktop with no tray."""
+    import subprocess
+    import sys
+    import time
+    from pathlib import Path
+
+    project = Path(__file__).resolve().parent.parent
+    process = subprocess.Popen(
+        [sys.executable, "-m", "app", "--background"], cwd=project, env=_env(tmp_path), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+    )
+    try:
+        time.sleep(8)  # up to five seconds looking for a tray at login, then the hidden window
+        assert process.poll() is None, process.stderr.read()
+    finally:
+        process.terminate()
+        try:
+            out, err = process.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            out, err = process.communicate()
+    assert "Traceback" not in err and "unknown command" not in err.lower()

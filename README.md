@@ -15,7 +15,7 @@ It suits a fixed-price energy contract, where the goal is simply to use your own
 - Tray icon: green while a window is active, blue when one is coming, grey when there is none, orange when a grid charge is needed, red when there is no forecast.
 - Click the icon for a popup with two pages. **Plan** answers "when do I charge?": the next window, the battery level you expect after it, grid-charge advice when needed, a short table of the next days, and a battery and away status line. **Update** holds the daily inputs.
 - Right-click the icon for **Settings...**, a window with all configuration, grouped over tabs.
-- Sends a desktop notification a few minutes before each window (the lead time is a setting), once per window. Clicking the notification shows the plan.
+- Sends a desktop notification a few minutes before each window (the lead time is a setting), once per window. Clicking the notification shows the plan. Notifications go straight to the desktop's notification service (D-Bus), so they work with or without a tray.
 - **Grid-charge advice:** if the battery would end a day below your minimum charge level, it says how much to charge from the grid and picks the time that uses the most leftover sun.
 
 ### Inputs (the popup's Update page)
@@ -36,11 +36,11 @@ Limits to know about:
 - **The plan is forecast-only.** It uses a weather forecast and the values you enter, not measured data: no smart-meter, inverter or car readings. The more accurate your panel, battery and consumption values, the better the plan. Values tagged **Assumed** or **Estimate** in Settings are the ones most worth checking.
 - **You enter the battery level by hand**, and away times by hand or as weekly rules. There is no calendar sync and no connection to the car.
 - **You set the charge current yourself**, in your charger's own app. The app only recommends it.
-- **Tested on KDE Plasma under Wayland.** Support for GNOME is being added.
+- **Tested on KDE Plasma under Wayland.** GNOME support is built and tested automatically but not yet tried on a real GNOME desktop (see Running on GNOME).
 
 ## Requirements
 
-- Linux. The tray icon needs a desktop with a system tray (KDE Plasma; GNOME only with an extension). Without one the app shows a window instead. Developed on KDE Plasma under Wayland.
+- Linux. The tray icon needs a desktop with a system tray (KDE Plasma; GNOME only with an extension). Without one the app shows a window instead; see Running on GNOME. Developed on KDE Plasma under Wayland.
 - Python 3.12 or newer (developed on 3.14).
 - Internet access for the forecast. Without it the app uses its cached forecast and says so.
 
@@ -120,6 +120,42 @@ To remove both files:
 ```bash
 .venv/bin/python -m app uninstall-launcher
 ```
+
+## Running on GNOME
+
+**Status:** the GNOME support is built and covered by automated tests, but it has not yet been tried on a real GNOME desktop. The check list for that is in `.scratch/gnome-support/issues/10-verify-on-gnome.md`.
+
+**Target:** GNOME 48 to 51 (the current release and the three before it, as of October 2026), in a Wayland session. GNOME 50 and later have no X11 session at all.
+
+GNOME has no system tray of its own, so the app shows a window there instead of a tray icon and popup. The window has the same two pages (Plan and Update), a menu button (Settings, Refresh forecast, Quit) and the same notifications.
+
+| What | Needed? | Notes |
+| --- | --- | --- |
+| A Wayland session | Required | The Qt libraries in the PySide6 package include the Wayland plugin; no extra Qt package is needed. |
+| Python 3.12+, `PySide6-Essentials`, `jeepney` | Required | As under Setup. |
+| The notification service | Required | GNOME Shell provides it. |
+| A launcher entry | Recommended | Run `python -m app install-launcher`. GNOME ties the app's windows and notifications to it, so they show its name and icon. |
+| The **AppIndicator and KStatusNotifierItem Support** extension | **Optional** | Only needed if you want the tray icon and popup instead of a window. |
+
+**The optional tray extension.** With it, the app shows its tray icon with a popup, as on KDE. Ubuntu ships it enabled. Elsewhere, install it and turn it on in the Extensions app, then log out and in:
+
+| Distribution | Install |
+| --- | --- |
+| Fedora | `sudo dnf install gnome-shell-extension-appindicator` |
+| Debian | `sudo apt install gnome-shell-extension-appindicator` |
+| Arch | `sudo pacman -S gnome-shell-extension-appindicator` |
+| Others | [extensions.gnome.org](https://extensions.gnome.org/extension/615/appindicator-support/) |
+
+Its current version lists GNOME Shell 45 to 51. A new GNOME release can outrun an extension for a while; the window mode is the fallback for exactly that.
+
+**How it behaves**
+
+- **Start it** from the application menu (after `install-launcher`) or with `python -m app`. Starting it again shows the window that is already running instead of starting a second copy.
+- **Closing the window hides it.** The app keeps running in the background so you still get notifications; the first time you close it, it tells you so. Quit from the window's menu or with Ctrl+Q.
+- **At login:** `python -m app install-autostart` starts it hidden in the background. If you set up autostart before this version, run the command again to update it.
+- **Choose how it shows itself** under Settings, on the Interface tab: Automatic (a tray icon if the desktop has one, otherwise a window), Tray icon, or Window. Automatic waits a few seconds for a tray at login, since the tray can appear a moment after the app starts. The change applies the next time the app starts.
+- **Clicking a notification** shows the plan. Check that it works on your desktop with `python -m app test-notification`.
+- **Look and feel:** it is a Qt application, so without an Adwaita Qt theme it can look less native on GNOME. Light and dark follow the system.
 
 ## Configuration
 

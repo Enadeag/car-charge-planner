@@ -106,6 +106,12 @@ def test_desktop_entry_has_exec_and_working_directory():
     assert "Path=/p" in text and "Type=Application" in text and "Terminal=false" in text
 
 
+def test_the_autostart_entry_starts_the_app_hidden_and_suits_both_desktops():
+    text = desktop_entry(Path("/p/.venv/bin/python"), Path("/p"))
+    assert "Exec=/p/.venv/bin/python -m app --background\n" in text  # window mode must not pop up at login
+    assert "X-KDE-autostart-after=panel" in text and "X-GNOME-Autostart-enabled=true" in text
+
+
 def test_install_and_uninstall_autostart(tmp_path):
     target = install(Path("/p/.venv/bin/python"), Path("/p"), tmp_path / "autostart")
     assert target.name == ENTRY_NAME and target.exists()

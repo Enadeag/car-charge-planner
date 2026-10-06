@@ -7,7 +7,7 @@ Wayland compositors place ordinary windows themselves, which is why this needs n
 
 from __future__ import annotations
 
-from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtGui import QAction, QGuiApplication, QKeySequence
 from PySide6.QtWidgets import QApplication, QMainWindow, QMenu, QToolButton, QVBoxLayout, QWidget
 
 from storage.state import mark_seen
@@ -37,6 +37,7 @@ class PlanWindow(QMainWindow):
 class WindowShell:
     def __init__(self, controller: Controller) -> None:
         self.controller = controller
+        self._placed = False  # centre the window the first time it is shown, then leave it where the owner puts it
         self.window = PlanWindow(self._after_close)
         self.window.setWindowTitle(APP_NAME)
         self.window.setWindowIcon(make_icon("none"))
@@ -89,9 +90,22 @@ class WindowShell:
         self.controller.rebuild()
         if self.window.isMinimized():
             self.window.showNormal()
+        self._centre_once()
         self.window.show()
         self.window.raise_()
         self.window.activateWindow()
+
+    def _centre_once(self) -> None:
+        """Best effort: Wayland compositors place ordinary windows themselves and ignore this."""
+        if self._placed:
+            return
+        self._placed = True
+        screen = QGuiApplication.primaryScreen()
+        if screen is None:
+            return
+        self.window.adjustSize()
+        area = screen.availableGeometry()
+        self.window.move(area.center().x() - self.window.width() // 2, area.center().y() - self.window.height() // 2)
 
     def _on_view_changed(self, update: ViewUpdate) -> None:
         self.view.tz = update.tz
