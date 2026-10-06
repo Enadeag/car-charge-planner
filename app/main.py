@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
 
 from planner.model import ConfigError, load_config
 
-from . import gcguard, launcher
+from . import gcguard, i18n, launcher
 from .config_file import ensure_config
 from .controller import Controller
 from .identity import APP_NAME, DESKTOP_ENTRY
@@ -69,6 +69,7 @@ def main(argv: list[str] | None = None) -> int:
         app.setDesktopFileName(DESKTOP_ENTRY)  # the Wayland app id: matches the launcher entry
     app.setQuitOnLastWindowClosed(False)
     gcguard.install(app)  # destroy Qt objects only on this thread, never from a background thread's allocation
+    i18n.setup(app)  # the language, before any widget text is created
 
     outcome, instance = claim_instance()
     if outcome is Outcome.SIGNALLED:

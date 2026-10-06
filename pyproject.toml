@@ -4,6 +4,9 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = ["PySide6-Essentials", "jeepney"]
 
+[project.optional-dependencies]
+dev = ["pytest", "babel"]  # babel: only for the translation commands
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

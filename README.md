@@ -208,6 +208,19 @@ Delete the state file to reset your entries. The other files are recreated as ne
 
 No network or display is needed: the forecast client runs against a recorded response, and the Qt tests run offscreen.
 
+## Translations
+
+All texts the app shows are translatable (gettext). English is the source language and the only one provided so far; a language is one `.po` file. For developers, with Babel installed (`pip install babel`):
+
+```bash
+.venv/bin/python -m app.i18n_tools extract     # collect the marked texts into app/locale/car-charge-planner.pot
+.venv/bin/python -m app.i18n_tools init nl     # start a new language
+.venv/bin/python -m app.i18n_tools update      # bring every language up to date with the template
+.venv/bin/python -m app.i18n_tools compile     # .po -> .mo, which is what the app loads
+```
+
+The language follows your system (`LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`, then the desktop's setting); with no matching catalogue the app stays in English. Try one with `LANGUAGE=nl .venv/bin/python -m app`.
+
 ## Project layout
 
 | Folder | Contents |
