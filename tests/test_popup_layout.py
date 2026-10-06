@@ -330,3 +330,18 @@ def test_the_click_that_closed_the_popup_does_not_reopen_it(cfg, tmp_path, monke
     assert app.popup.isVisible()
     app._on_activated(trigger)  # and a click while it is open closes it
     assert not app.popup.isVisible()
+
+
+def test_the_popup_grows_for_the_taller_page_and_shrinks_back(cfg, qapp):
+    popup, _ = view(cfg, [(DAY, 900)], soc=70)  # one sunny day: a short Plan page, a taller Update page
+    popup.show()
+    qapp.processEvents()
+    plan_height = popup.height()
+    popup.show_update()
+    qapp.processEvents()
+    update_height = popup.height()
+    popup.tabs.setCurrentIndex(PLAN)
+    qapp.processEvents()
+    assert update_height > plan_height
+    assert popup.height() == plan_height  # no stale minimum left behind by the taller page
+    popup.hide()

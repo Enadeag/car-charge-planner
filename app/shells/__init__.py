@@ -1,9 +1,9 @@
 """Shells: how the app shows itself.
 
 A shell draws what the `Controller` reports and turns the owner's actions into controller calls. It
-needs only three things:
+needs only these:
 
-    start()      show itself and start the controller
+    start(background=False)  show itself (unless background) and start the controller
     show_plan()  bring the plan in front of the owner (a popup, a window)
     (it listens to `controller.view_changed` for everything it draws)
 
@@ -17,6 +17,6 @@ from typing import Protocol
 
 
 class Shell(Protocol):
-    def start(self) -> None: ...
+    def start(self, background: bool = False) -> None: ...
 
     def show_plan(self) -> None: ...

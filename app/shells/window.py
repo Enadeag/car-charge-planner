@@ -1,0 +1,114 @@
+"""The window shell: the plan in an ordinary window, for desktops without a tray (stock GNOME).
+
+The same Plan and Update pages as the popup, in a normal top-level window. Closing the window hides
+it and the app keeps running, so notifications continue; Quit is in the window's menu (and Ctrl+Q).
+Wayland compositors place ordinary windows themselves, which is why this needs no anchoring.
+"""
+
+from __future__ import annotations
+
+from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtWidgets import QApplication, QMainWindow, QMenu, QToolButton, QVBoxLayout, QWidget
+
+from storage.state import mark_seen
+
+from ..controller import Controller, ViewUpdate
+from ..identity import APP_NAME
+from ..planview import PlanView
+from .icons import make_icon
+
+BACKGROUND_HINT = "background"  # the one-time note about closing the window
+MIN_WIDTH = 480
+
+
+class PlanWindow(QMainWindow):
+    """Closing hides instead of ending the app."""
+
+    def __init__(self, on_hidden_by_close) -> None:
+        super().__init__(None)
+        self._on_hidden_by_close = on_hidden_by_close
+
+    def closeEvent(self, event) -> None:
+        event.ignore()
+        self.hide()
+        self._on_hidden_by_close()
+
+
+class WindowShell:
+    def __init__(self, controller: Controller) -> None:
+        self.controller = controller
+        self.window = PlanWindow(self._after_close)
+        self.window.setWindowTitle(APP_NAME)
+        self.window.setWindowIcon(make_icon("none"))
+        self.window.setMinimumWidth(MIN_WIDTH)
+
+        self.view = PlanView(controller.tz)
+        self.view.battery_submitted.connect(controller.set_battery)
+        self.view.away_added.connect(controller.add_away_period)
+        self.view.away_removed.connect(controller.remove_away_period)
+        self.view.settings_requested.connect(controller.open_settings)
+        self.view.layout_changed.connect(self._fit)
+
+        central = QWidget()
+        box = QVBoxLayout(central)
+        box.setContentsMargins(16, 10, 16, 12)
+        box.addWidget(self.view)
+        self.window.setCentralWidget(central)
+
+        # what the tray's context menu is on the tray shell
+        self.menu = QMenu(self.window)
+        self.settings_action = self.menu.addAction("Settings...")
+        self.settings_action.triggered.connect(lambda: controller.open_settings())
+        self.refresh_action = self.menu.addAction("Refresh forecast")
+        self.refresh_action.triggered.connect(lambda: controller.refresh(force=True))
+        self.menu.addSeparator()
+        self.quit_action = QAction("Quit", self.window)
+        self.quit_action.setShortcut(QKeySequence.StandardKey.Quit)  # Ctrl+Q
+        self.quit_action.triggered.connect(lambda: QApplication.quit())
+        self.menu.addAction(self.quit_action)
+        self.window.addAction(self.quit_action)  # so the shortcut works anywhere in the window
+
+        self.menu_button = QToolButton()
+        self.menu_button.setText("☰")
+        self.menu_button.setToolTip("Menu")
+        self.menu_button.setAutoRaise(True)
+        self.menu_button.setFixedSize(28, 28)
+        self.menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.menu_button.setStyleSheet("QToolButton { font-size: 14pt; } QToolButton::menu-indicator { image: none; }")
+        self.menu_button.setMenu(self.menu)
+        self.view.add_to_header(self.menu_button)
+
+        controller.view_changed.connect(self._on_view_changed)
+
+    def start(self, background: bool = False) -> None:
+        if not background:
+            self.show_plan()
+        self.controller.start()
+
+    def show_plan(self) -> None:
+        self.controller.rebuild()
+        if self.window.isMinimized():
+            self.window.showNormal()
+        self.window.show()
+        self.window.raise_()
+        self.window.activateWindow()
+
+    def _on_view_changed(self, update: ViewUpdate) -> None:
+        self.view.tz = update.tz
+        self.view.update_view(update.vm, update.state, update.today, update.rules)
+        self.window.setWindowTitle(update.vm.headline)
+        self.window.setWindowIcon(make_icon(update.vm.state))
+
+    def _fit(self) -> None:
+        self.window.centralWidget().layout().activate()
+        self.window.layout().activate()
+        self.window.adjustSize()
+
+    def _after_close(self) -> None:
+        """The first time the window is closed, say that the app keeps running (once, ever)."""
+        if mark_seen(BACKGROUND_HINT):
+            self.controller.notifier.send(
+                "Still running in the background",
+                f"{APP_NAME} keeps running so you get notifications. Open it again from the application menu; "
+                "quit it from its menu (Ctrl+Q).",
+            )

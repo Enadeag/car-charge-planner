@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-command = sys.argv[1] if len(sys.argv) > 1 else "run"
+command = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else "run"  # flags such as --background mean "run"
 
 if command == "install-autostart":
     from .autostart import install

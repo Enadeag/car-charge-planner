@@ -29,6 +29,7 @@ class State:
     battery: BatteryReading = field(default_factory=lambda: BatteryReading(DEFAULT_BATTERY_PCT, None))
     away: tuple[AwayPeriod, ...] = ()
     notified: tuple[Window, ...] = ()  # windows already announced; the app sticks to them while they run
+    seen: tuple[str, ...] = ()  # one-time hints already shown to the owner
 
 
 def state_path() -> Path:
@@ -74,7 +75,8 @@ def load_state(path: Path | None = None) -> State:
             )
         except (KeyError, TypeError, ValueError):
             continue  # also drops records from before windows were stored in full
-    return replace(state, away=tuple(sorted(away, key=lambda a: a.start)), notified=tuple(notified))
+    seen = tuple(x for x in blob.get("seen", []) if isinstance(x, str)) if isinstance(blob, dict) else ()
+    return replace(state, away=tuple(sorted(away, key=lambda a: a.start)), notified=tuple(notified), seen=seen)
 
 
 def save_state(state: State, path: Path | None = None) -> None:
@@ -93,6 +95,8 @@ def save_state(state: State, path: Path | None = None) -> None:
             for n in state.notified
         ],
     }
+    if state.seen:
+        blob["seen"] = list(state.seen)
     if state.battery.entered_at is not None:
         blob["battery_pct"] = state.battery.pct
         blob["battery_entered_at"] = state.battery.entered_at.timestamp()
@@ -138,3 +142,12 @@ def mark_notified(window: Window, now: datetime, path: Path | None = None) -> St
     state = replace(state, notified=tuple([*kept, window]))
     save_state(state, path)
     return state
+
+
+def mark_seen(hint: str, path: Path | None = None) -> bool:
+    """Remember that a one-time hint was shown. True the first time, False if it had been shown before."""
+    state = load_state(path)
+    if hint in state.seen:
+        return False
+    save_state(replace(state, seen=(*state.seen, hint)), path)
+    return True

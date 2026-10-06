@@ -45,5 +45,5 @@ def main(argv: list[str] | None = None) -> int:
     shell = TrayShell(Controller(cfg, config_file))
     if instance is not None:
         instance.show_requested.connect(shell.show_plan)  # a second start shows the plan of this one
-    shell.start()
+    shell.start(background="--background" in sys.argv[1:])  # the autostart entry starts the app hidden
     return app.exec()
