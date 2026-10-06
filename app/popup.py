@@ -10,7 +10,7 @@ import time as clock
 from datetime import date
 from zoneinfo import ZoneInfo
 
-from PySide6.QtCore import QEvent, QTimer, Qt, Signal
+from PySide6.QtCore import QEvent, QPoint, QTimer, Qt, Signal
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
 
@@ -35,6 +35,7 @@ class Popup(QWidget):
         super().__init__(None, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint)
         self._was_active = False  # click-away only counts once the popup really had the focus
         self.auto_closed_at = 0.0  # when focus loss last closed it (the tray uses this to avoid a reopen)
+        self.last_position: QPoint | None = None  # where it was last placed, for when there is no icon to anchor to
         self.setMinimumWidth(440)
         self.setObjectName("popup")
         self.setStyleSheet("#popup { border: 1px solid palette(mid); background: palette(window); }")
@@ -111,9 +112,15 @@ class Popup(QWidget):
         screen = QGuiApplication.screenAt(anchor.center()) or QGuiApplication.primaryScreen()
         area = screen.availableGeometry()
         self.view.fit_to_page()
-        x = min(max(area.left() + 8, anchor.center().x() - self.width() // 2), area.right() - self.width() - 8)
-        top_panel = anchor.isValid() and anchor.center().y() < area.center().y()
-        y = area.top() + 8 if top_panel else area.bottom() - self.height() - 8
+        if anchor.isValid():
+            x = min(max(area.left() + 8, anchor.center().x() - self.width() // 2), area.right() - self.width() - 8)
+            top_panel = anchor.center().y() < area.center().y()
+            y = area.top() + 8 if top_panel else area.bottom() - self.height() - 8
+        elif self.last_position is not None:  # no tray icon to go by (a notification click, a second start)
+            x, y = self.last_position.x(), self.last_position.y()
+        else:
+            x, y = area.right() - self.width() - 8, area.top() + 8  # near the top right, where notifications appear
         self.move(x, y)
+        self.last_position = QPoint(x, y)
         self.show()
         self.activateWindow()

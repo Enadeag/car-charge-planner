@@ -86,6 +86,10 @@ class Notifier:
         self.sent_ids: list[int] = []
         self._warned = False
 
+    def owns(self, notification_id: int) -> bool:
+        """Is this one of the notifications this app sent? Other apps' notifications share the id space."""
+        return notification_id in self.sent_ids
+
     def send(self, title: str, body: str, expire_ms: int = 20_000) -> int | None:
         """Show a notification. Returns its id, or None when it could not be shown; never raises."""
         try:

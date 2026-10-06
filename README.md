@@ -15,7 +15,7 @@ It suits a fixed-price energy contract, where the goal is simply to use your own
 - Tray icon: green while a window is active, blue when one is coming, grey when there is none, orange when a grid charge is needed, red when there is no forecast.
 - Click the icon for a popup with two pages. **Plan** answers "when do I charge?": the next window, the battery level you expect after it, grid-charge advice when needed, a short table of the next days, and a battery and away status line. **Update** holds the daily inputs.
 - Right-click the icon for **Settings...**, a window with all configuration, grouped over tabs.
-- Sends a desktop notification a few minutes before each window (the lead time is a setting), once per window.
+- Sends a desktop notification a few minutes before each window (the lead time is a setting), once per window. Clicking the notification shows the plan.
 - **Grid-charge advice:** if the battery would end a day below your minimum charge level, it says how much to charge from the grid and picks the time that uses the most leftover sun.
 
 ### Inputs (the popup's Update page)
@@ -67,6 +67,14 @@ Stop a running instance from a terminal:
 ```bash
 pkill -f "python -m app$"
 ```
+
+### Check that clicking a notification works on your desktop
+
+```bash
+.venv/bin/python -m app test-notification
+```
+
+This sends a labelled test notification and waits up to a minute for you to click it. It says whether the click reached the app. If it does not, the notification itself still works; only the click-to-open step does not.
 
 ### Without the tray: print the plan in a terminal
 

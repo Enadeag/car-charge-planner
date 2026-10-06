@@ -16,6 +16,7 @@ from .config_file import ensure_config
 from .controller import Controller
 from .identity import APP_NAME, DESKTOP_ENTRY
 from .instance import Outcome, claim_instance
+from .notification_actions import ActionListener, action_handler
 from .shells import Shell, ShellChoice, choose_shell
 from .shells.tray import TrayShell
 from .shells.window import WindowShell
@@ -91,5 +92,9 @@ def main(argv: list[str] | None = None) -> int:
     announce_tray_fallback(controller, choice)
     if instance is not None:
         instance.show_requested.connect(shell.show_plan)  # a second start shows the plan of this one
+    listener = ActionListener()  # a click on one of our notifications shows the plan
+    listener.action_invoked.connect(action_handler(controller.notifier, shell.show_plan))
+    app.aboutToQuit.connect(listener.stop)
+    listener.start()
     shell.start(background=background)
     return app.exec()

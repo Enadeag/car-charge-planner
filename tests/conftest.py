@@ -31,6 +31,9 @@ class FakeNotifier:
         self.sent.append((title, body))
         return len(self.sent)
 
+    def owns(self, notification_id):
+        return 1 <= notification_id <= len(self.sent)  # ids are 1, 2, 3 ... in the order sent
+
 
 @pytest.fixture
 def cfg() -> Config:

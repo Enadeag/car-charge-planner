@@ -21,11 +21,15 @@ elif command == "uninstall-launcher":
 
     removed = uninstall()
     print("Removed:\n" + "\n".join(f"  {path}" for path in removed) if removed else "No launcher entry found")
+elif command == "test-notification":
+    from .selftest import run
+
+    sys.exit(run())
 elif command == "run":
     from .main import main
 
     sys.exit(main())
 else:
     sys.exit(
-        f"Unknown command {command!r}. Use: run | install-launcher | uninstall-launcher | install-autostart | uninstall-autostart"
+        f"Unknown command {command!r}. Use: run | test-notification | install-launcher | uninstall-launcher | install-autostart | uninstall-autostart"
     )
