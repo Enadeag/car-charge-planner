@@ -22,6 +22,8 @@ from PySide6.QtWidgets import (
 )
 
 from app import colours
+from app.i18n import _
+from app.names import weekdays_long
 from dataclasses import replace
 
 from planner.model import AwayRule, Config
@@ -42,7 +44,8 @@ class FieldTab(QWidget):
 
     def __init__(self, tab: TabSpec, cfg: Config) -> None:
         super().__init__()
-        self.title = tab.title
+        self.key = tab.key
+        self.title = _(tab.title)
         self.specs = tab.fields
         self.inputs: dict[str, QWidget] = {}
         self.baseline: dict[str, object] = {}  # exact values the boxes were last filled from
@@ -53,13 +56,13 @@ class FieldTab(QWidget):
         for spec in tab.fields:
             widget = self._make_input(spec)
             self.inputs[spec.key] = widget
-            grid.addWidget(QLabel(spec.label), row, 0)
+            grid.addWidget(QLabel(_(spec.label)), row, 0)
             grid.addWidget(widget, row, 1)
             hint = QLabel()
             hint.setWordWrap(True)
             hint.setTextFormat(hint.textFormat().RichText)
-            flag = f"<b style='color:{colours.warning(self)}'>{spec.flag}.</b> " if spec.flag else ""
-            hint.setText(f"{flag}{escape(spec.hint)}")
+            flag = f"<b style='color:{colours.warning(self)}'>{_(spec.flag)}.</b> " if spec.flag else ""
+            hint.setText(f"{flag}{escape(_(spec.hint))}")
             hint.setStyleSheet(f"{colours.MUTED_STYLE} font-size: 9pt; margin-bottom: 8px;")
             grid.addWidget(hint, row + 1, 1)
             row += 2
@@ -70,7 +73,7 @@ class FieldTab(QWidget):
         if spec.kind == "choice":
             box = QComboBox()
             for value, label in spec.choices:
-                box.addItem(label, value)
+                box.addItem(_(label), value)
             box.currentIndexChanged.connect(lambda _i: self.changed.emit())
             return box
         if spec.kind == "timezone":
@@ -94,7 +97,7 @@ class FieldTab(QWidget):
             spin.setDecimals(spec.decimals)
             spin.setSingleStep(spec.step)
         if spec.unit:
-            spin.setSuffix(f" {spec.unit}")
+            spin.setSuffix(f" {_(spec.unit)}")
         spin.valueChanged.connect(lambda _value: self.changed.emit())
         return spin
 
@@ -138,14 +141,11 @@ class FieldTab(QWidget):
         return cfg
 
 
-WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
-
-
 class RuleRow(QWidget):
     def __init__(self, rule: AwayRule, on_remove, on_change) -> None:
         super().__init__()
         self.weekday = QComboBox()
-        self.weekday.addItems(WEEKDAYS)
+        self.weekday.addItems(weekdays_long())
         self.weekday.setCurrentIndex(rule.weekday)
         self.start = QTimeEdit(QTime(rule.start.hour, rule.start.minute))
         self.end = QTimeEdit(QTime(rule.end.hour, rule.end.minute))
@@ -154,15 +154,15 @@ class RuleRow(QWidget):
         self.weekday.currentIndexChanged.connect(lambda _i: on_change())
         for edit in (self.start, self.end):
             edit.timeChanged.connect(lambda _t: on_change())
-        remove = QPushButton("Remove")
+        remove = QPushButton(_("Remove"))
         remove.clicked.connect(lambda: on_remove(self))
         self.remove_button = remove
         row = QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
         row.addWidget(self.weekday, 2)
-        row.addWidget(QLabel("from"))
+        row.addWidget(QLabel(_("from")))
         row.addWidget(self.start, 1)
-        row.addWidget(QLabel("to"))
+        row.addWidget(QLabel(_("to")))
         row.addWidget(self.end, 1)
         row.addWidget(remove)
 
@@ -179,22 +179,25 @@ class AwayRulesTab(QWidget):
 
     def __init__(self, cfg: Config) -> None:
         super().__init__()
-        self.title = "Away rules"
+        self.key = "away"
+        self.title = _("Away rules")
         self.rows: list[RuleRow] = []
         layout = QVBoxLayout(self)
         intro = QLabel(
-            "Times each week when the car is not at home. No charging is planned then. "
-            "One rule covers one weekday: add several rules for several days."
+            _(
+                "Times each week when the car is not at home. No charging is planned then. "
+                "One rule covers one weekday: add several rules for several days."
+            )
         )
         intro.setWordWrap(True)
         intro.setStyleSheet(f"{colours.MUTED_STYLE} font-size: 9pt;")
         layout.addWidget(intro)
         self.rows_box = QVBoxLayout()
         layout.addLayout(self.rows_box)
-        self.empty_note = QLabel("No rules: the car is treated as home all week.")
+        self.empty_note = QLabel(_("No rules: the car is treated as home all week."))
         self.empty_note.setStyleSheet(colours.MUTED_STYLE)
         layout.addWidget(self.empty_note)
-        self.add_button = QPushButton("Add rule")
+        self.add_button = QPushButton(_("Add rule"))
         self.add_button.clicked.connect(lambda: self.add_row(self.DEFAULT_NEW))
         add_line = QHBoxLayout()
         add_line.addWidget(self.add_button)

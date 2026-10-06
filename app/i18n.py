@@ -47,6 +47,17 @@ def pgettext(context: str, message: str) -> str:
     return _Active.translations.pgettext(context, message)
 
 
+def number(value: float, decimals: int = 0) -> str:
+    """A number for use inside a text: fixed decimals, with the language's own decimal separator.
+
+    Qt's input boxes follow the system locale by themselves; texts we build do not, so the separator is a
+    translatable text too (translators put "," where their language writes one).
+    """
+    text = f"{value:.{decimals}f}"
+    separator = pgettext("decimal separator", ".")
+    return text if separator == "." else text.replace(".", separator)
+
+
 # ---- markers for text defined before a language is chosen --------------------------------------------------------
 
 

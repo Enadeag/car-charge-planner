@@ -6,6 +6,7 @@ from typing import Callable
 
 from PySide6.QtCore import QCoreApplication, QEventLoop, QTimer
 
+from .i18n import _
 from .notification_actions import DEFAULT_ACTION, ActionListener
 from .notifier import Notifier
 
@@ -24,14 +25,14 @@ def run(
     listener = listener or ActionListener()
 
     notification_id = notifier.send(
-        "Car charge planner: test notification",
-        "Click this notification to check that clicks reach the app. (This is only a test.)",
+        _("Car charge planner: test notification"),
+        _("Click this notification to check that clicks reach the app. (This is only a test.)"),
         expire_ms=int(timeout_s * 1000),
     )
     if notification_id is None:
-        out("The notification could not be sent: is a notification service running on this session?")
+        out(_("The notification could not be sent: is a notification service running on this session?"))
         return 1
-    out(f"Test notification sent (id {notification_id}). Click it within {timeout_s:g} seconds.")
+    out(_("Test notification sent (id {id}). Click it within {seconds} seconds.").format(id=notification_id, seconds=f"{timeout_s:g}"))
 
     loop = QEventLoop()
     clicked = []
@@ -51,8 +52,12 @@ def run(
         app.processEvents()  # deliver anything still queued
 
     if clicked:
-        out("Click received: clicking a notification works on this desktop.")
+        out(_("Click received: clicking a notification works on this desktop."))
         return 0
-    out("No click received. If you clicked it, this desktop may not report clicks to the app; "
-        "if you did not, run the command again and click it.")
+    out(
+        _(
+            "No click received. If you clicked it, this desktop may not report clicks to the app; "
+            "if you did not, run the command again and click it."
+        )
+    )
     return 1

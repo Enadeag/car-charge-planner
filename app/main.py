@@ -14,6 +14,7 @@ from planner.model import ConfigError, load_config
 from . import gcguard, i18n, launcher
 from .config_file import ensure_config
 from .controller import Controller
+from .i18n import _
 from .identity import APP_NAME, DESKTOP_ENTRY
 from .instance import Outcome, claim_instance
 from .notification_actions import ActionListener, action_handler
@@ -49,9 +50,11 @@ def announce_tray_fallback(controller: Controller, choice: ShellChoice) -> bool:
     if not choice.fell_back or not mark_seen(NO_TRAY_HINT):  # once: it would nag at every start otherwise
         return False
     controller.notifier.send(
-        "No system tray found",
-        "The interface is set to a tray icon, but this desktop has none, so the app shows a window instead. "
-        "Change it in Settings, on the Interface tab.",
+        _("No system tray found"),
+        _(
+            "The interface is set to a tray icon, but this desktop has none, so the app shows a window instead. "
+            "Change it in Settings, on the Interface tab."
+        ),
     )
     return True
 
@@ -73,17 +76,21 @@ def main(argv: list[str] | None = None) -> int:
 
     outcome, instance = claim_instance()
     if outcome is Outcome.SIGNALLED:
-        print(f"{APP_NAME} is already running: asked it to show itself.", file=sys.stderr)
+        print(_("{app} is already running: asked it to show itself.").format(app=APP_NAME), file=sys.stderr)
         return 0
     if outcome is Outcome.UNAVAILABLE:
-        print("Could not set up the single-instance socket; a second copy could start.", file=sys.stderr)
+        print(_("Could not set up the single-instance socket; a second copy could start."), file=sys.stderr)
 
     config_file = ensure_config()
     try:
         cfg = load_config(config_file)
     except ConfigError as err:
         # started from autostart there is no terminal: show the problem where the owner will see it
-        QMessageBox.critical(None, "Car charge planner", f"{err}\n\nFix the file and start the app again:\n{config_file}")
+        QMessageBox.critical(
+            None,
+            _("Car charge planner"),
+            _("{error}\n\nFix the file and start the app again:\n{file}").format(error=err, file=config_file),
+        )
         print(err, file=sys.stderr)
         return 2
     background = "--background" in sys.argv[1:]  # the autostart entry starts the app hidden

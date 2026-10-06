@@ -33,6 +33,7 @@ from planner.model import AwayPeriod, AwayRule
 from storage.state import State
 
 from . import colours
+from .i18n import _, number
 from .away_input import away_summary, describe, describe_rule, make_away
 from .view_model import ATTRIBUTION, ViewModel, day_label
 
@@ -73,20 +74,20 @@ class PlanView(QWidget):
     battery_submitted = Signal(float)
     away_added = Signal(object)  # AwayPeriod
     away_removed = Signal(object)  # AwayPeriod
-    settings_requested = Signal(str)  # title of the Settings tab to open
+    settings_requested = Signal(str)  # key of the Settings tab to open
     layout_changed = Signal()  # the view resized itself to the page shown: a wrapping window should follow
 
     def __init__(self, tz: ZoneInfo | None = None) -> None:
         super().__init__(None)
-        self.tz = tz or ZoneInfo("Europe/Amsterdam")
+        self.tz = tz or ZoneInfo("UTC")
 
         # Our own header row: a QTabWidget only stretches its tab strip over the tabs plus its corner
         # widget, which left a close button stranded short of the right edge.
         self.tabs = QTabBar()
         self.tabs.setExpanding(False)
         self.tabs.setDrawBase(False)
-        self.tabs.addTab("Plan")
-        self.tabs.addTab("Update")
+        self.tabs.addTab(_("Plan"))
+        self.tabs.addTab(_("Update"))
         self.header = QWidget()
         self.header.setObjectName("header")
         self.header.setStyleSheet("#header { border-bottom: 1px solid palette(mid); }")
@@ -104,7 +105,7 @@ class PlanView(QWidget):
         self.tabs.currentChanged.connect(self._on_tab_changed)
 
         self.footer = _muted()
-        self.footer.setToolTip(ATTRIBUTION)
+        self.footer.setToolTip(_(ATTRIBUTION))
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)  # the wrapping window sets the margins
@@ -137,8 +138,8 @@ class PlanView(QWidget):
         box.addLayout(head)
 
         # shown only while not set up: the way to the place where the location is entered
-        self.setup_button = QPushButton("Open Settings...")
-        self.setup_button.clicked.connect(lambda: self.settings_requested.emit("Solar and location"))
+        self.setup_button = QPushButton(_("Open Settings..."))
+        self.setup_button.clicked.connect(lambda: self.settings_requested.emit("solar"))
         setup_row = QHBoxLayout()
         setup_row.addWidget(self.setup_button)
         setup_row.addStretch()
@@ -161,7 +162,7 @@ class PlanView(QWidget):
         outlook = QVBoxLayout(self.outlook_box)
         outlook.setContentsMargins(0, 0, 0, 0)
         outlook.setSpacing(4)
-        outlook.addWidget(_heading("Next days"))
+        outlook.addWidget(_heading(_("Next days")))
         self.outlook_grid = QGridLayout()
         self.outlook_grid.setHorizontalSpacing(14)
         self.outlook_grid.setVerticalSpacing(3)
@@ -182,12 +183,12 @@ class PlanView(QWidget):
         self.gauge.setTextVisible(False)
         self.gauge.setFixedHeight(8)
         self.gauge.setMaximumWidth(90)
-        self.edit_battery = QPushButton("Edit")
+        self.edit_battery = QPushButton(_("Edit"))
         self.edit_battery.setFlat(True)
         self.edit_battery.clicked.connect(lambda: self.show_update("battery"))
         self.away_status = QLabel()
         self.away_status.setWordWrap(True)
-        self.manage_away = QPushButton("Manage")
+        self.manage_away = QPushButton(_("Manage"))
         self.manage_away.setFlat(True)
         self.manage_away.clicked.connect(lambda: self.show_update())
         status.addWidget(self.battery_status, 0, 0)
@@ -207,14 +208,14 @@ class PlanView(QWidget):
         box.setContentsMargins(2, 14, 2, 4)
         box.setSpacing(8)
 
-        box.addWidget(_heading("Battery level"))
+        box.addWidget(_heading(_("Battery level")))
         self.battery_input = QDoubleSpinBox()
         self.battery_input.setRange(0, 100)
         self.battery_input.setDecimals(0)
         self.battery_input.setSuffix(" %")
         self.battery_input.setValue(50)
-        set_button = QPushButton("Set battery")
-        set_button.setToolTip("Saves immediately")
+        set_button = QPushButton(_("Set battery"))
+        set_button.setToolTip(_("Saves immediately"))
         set_button.clicked.connect(lambda: self.battery_submitted.emit(self.battery_input.value()))
         self.battery_input.lineEdit().returnPressed.connect(set_button.click)
         battery_row = QHBoxLayout()
@@ -227,13 +228,13 @@ class PlanView(QWidget):
         box.addWidget(self.battery)
         box.addSpacing(8)
 
-        box.addWidget(_heading("Car away"))
+        box.addWidget(_heading(_("Car away")))
         self.away_list = QVBoxLayout()
         self.away_list.setSpacing(4)
         box.addLayout(self.away_list)
-        edit_rules = QPushButton("Edit weekly rules in Settings...")
+        edit_rules = QPushButton(_("Edit weekly rules in Settings..."))
         edit_rules.setFlat(True)
-        edit_rules.clicked.connect(lambda: self.settings_requested.emit("Away rules"))
+        edit_rules.clicked.connect(lambda: self.settings_requested.emit("away"))
         edit_rules_row = QHBoxLayout()
         edit_rules_row.addWidget(edit_rules)
         edit_rules_row.addStretch()
@@ -241,15 +242,15 @@ class PlanView(QWidget):
 
         self.away_day = QComboBox()
         self.away_kind = QComboBox()
-        self.away_kind.addItems(["All day", "Time range"])
+        self.away_kind.addItems([_("All day"), _("Time range")])
         self.away_from = QTimeEdit(QTime(9, 0))
         self.away_to = QTimeEdit(QTime(17, 0))
         for edit in (self.away_from, self.away_to):
             edit.setDisplayFormat("HH:mm")
             edit.setVisible(False)
         self.away_kind.currentIndexChanged.connect(self._on_kind_changed)
-        add_button = QPushButton("Add")
-        add_button.setToolTip("Saves immediately")
+        add_button = QPushButton(_("Add"))
+        add_button.setToolTip(_("Saves immediately"))
         add_button.clicked.connect(self._on_add_away)
         add_row = QHBoxLayout()
         for widget in (self.away_day, self.away_kind, self.away_from, self.away_to, add_button):
@@ -298,13 +299,14 @@ class PlanView(QWidget):
         self.quiet.setVisible(bool(vm.quiet_days))
         self.outlook_box.setVisible(bool(vm.outlook) or bool(vm.quiet_days))
 
-        short = f"Battery {vm.battery_pct:.0f}%" + (" · please update" if vm.battery_stale else "")
+        pct = number(vm.battery_pct)
+        short = _("Battery {pct}% · please update").format(pct=pct) if vm.battery_stale else _("Battery {pct}%").format(pct=pct)
         self.battery_status.setText(short)
         self.battery_status.setStyleSheet(f"color: {colours.error(self)};" if vm.battery_stale else "")
         self.gauge.setValue(round(vm.battery_pct))
         self.battery.setText(vm.battery_line)
         self.battery.setStyleSheet(f"color: {colours.error(self)};" if vm.battery_stale else "")
-        self.tabs.setTabText(UPDATE, "Update •" if vm.battery_stale else "Update")
+        self.tabs.setTabText(UPDATE, _("Update •") if vm.battery_stale else _("Update"))
         self.footer.setText(vm.footer)
 
         now = datetime.combine(today, time(0), self.tz) if today else datetime.now(self.tz)
@@ -331,16 +333,16 @@ class PlanView(QWidget):
         """Weekly rules first, read-only (they are settings); then one-off days, which can be removed here."""
         _clear(self.away_list)
         for rule in rules:
-            self.away_list.addWidget(_muted(f"{describe_rule(rule)}  (weekly rule)", small=False))
+            self.away_list.addWidget(_muted(_("{rule}  (weekly rule)").format(rule=describe_rule(rule)), small=False))
         if not rules and not periods:
-            self.away_list.addWidget(_muted("No absences planned: the car is treated as home all week.", small=False))
+            self.away_list.addWidget(_muted(_("No absences planned: the car is treated as home all week."), small=False))
         for period in periods:
             row = QHBoxLayout()
             row.addWidget(QLabel(describe(period, self.tz)))
             row.addStretch()
-            remove = QPushButton("Remove")
+            remove = QPushButton(_("Remove"))
             remove.setFlat(True)
-            remove.clicked.connect(lambda _=False, p=period: self.away_removed.emit(p))
+            remove.clicked.connect(lambda _checked=False, p=period: self.away_removed.emit(p))
             row.addWidget(remove)
             self.away_list.addLayout(row)
 

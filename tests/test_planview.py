@@ -76,8 +76,8 @@ def test_the_view_signals_reach_the_popup_unchanged(cfg, qapp):
     popup.battery_submitted.connect(lambda v: got.append(("battery", v)))
     popup.settings_requested.connect(lambda t: got.append(("settings", t)))
     popup.view.battery_submitted.emit(55.0)
-    popup.view.settings_requested.emit("Away rules")
-    assert got == [("battery", 55.0), ("settings", "Away rules")]
+    popup.view.settings_requested.emit("away")
+    assert got == [("battery", 55.0), ("settings", "away")]
 
 
 def test_the_popup_wraps_one_view_and_adds_the_window_behaviour(cfg, qapp):

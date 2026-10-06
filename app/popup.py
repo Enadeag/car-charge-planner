@@ -17,6 +17,7 @@ from PySide6.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
 from planner.model import AwayRule
 from storage.state import State
 
+from .i18n import _
 from .planview import PLAN, UPDATE, PlanView
 
 __all__ = ["PLAN", "UPDATE", "PlanView", "Popup"]  # PLAN and UPDATE are re-exported for the tray and tests
@@ -29,7 +30,7 @@ class Popup(QWidget):
     battery_submitted = Signal(float)
     away_added = Signal(object)  # AwayPeriod
     away_removed = Signal(object)  # AwayPeriod
-    settings_requested = Signal(str)  # title of the Settings tab to open
+    settings_requested = Signal(str)  # key of the Settings tab to open
 
     def __init__(self, tz: ZoneInfo | None = None) -> None:
         super().__init__(None, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint)
@@ -43,7 +44,7 @@ class Popup(QWidget):
         self.view = PlanView(tz)
         close = QPushButton("\u00d7")
         close.setFlat(True)
-        close.setToolTip("Close")
+        close.setToolTip(_("Close"))
         close.setFixedSize(28, 28)
         close.setStyleSheet("font-size: 16pt;")
         close.clicked.connect(self.hide)

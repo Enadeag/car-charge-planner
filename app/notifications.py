@@ -8,6 +8,8 @@ from zoneinfo import ZoneInfo
 from planner.advice import GridAdvice
 from planner.model import Config, DayPlan, Window
 
+from .i18n import _, number
+
 MAX_FORECAST_AGE = timedelta(hours=6)
 SOLAR, GRID = "solar", "grid"
 
@@ -46,14 +48,19 @@ def due(
 
 def message(kind: str, window: Window, cfg: Config, tz: ZoneInfo) -> tuple[str, str]:
     span = f"{window.start.astimezone(tz):%H:%M}-{window.end.astimezone(tz):%H:%M}"
-    setting = f"Set the current to {window.amps} A ({window.power_kw:.1f} kW) in your charger's app."
+    setting = _("Set the current to {amps} A ({power} kW) in your charger's app.").format(
+        amps=window.amps, power=number(window.power_kw, 1)
+    )
     if kind == GRID:
         return (
-            f"Grid charge window {span}",
-            f"{setting} About {window.solar_kwh + window.import_kwh:.0f} kWh, needed to stay above "
-            f"{cfg.car.minimum_pct:.0f}%.",
+            _("Grid charge window {span}").format(span=span),
+            _("{setting} About {energy} kWh, needed to stay above {minimum}%.").format(
+                setting=setting, energy=number(window.solar_kwh + window.import_kwh), minimum=number(cfg.car.minimum_pct)
+            ),
         )
     return (
-        f"Charge window {span}",
-        f"{setting} About {window.solar_kwh:.1f} kWh, {window.solar_share:.0%} solar.",
+        _("Charge window {span}").format(span=span),
+        _("{setting} About {energy} kWh, {share}% solar.").format(
+            setting=setting, energy=number(window.solar_kwh, 1), share=number(window.solar_share * 100)
+        ),
     )

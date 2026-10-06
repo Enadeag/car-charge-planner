@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from app import colours
+from app.i18n import _
 from planner.config_io import write_config
 from planner.model import Config, ConfigError, require_location, validate
 
@@ -30,8 +31,8 @@ from .tabs import AwayRulesTab, FieldTab
 def ask_discard(parent) -> bool:
     answer = QMessageBox.question(
         parent,
-        "Settings",
-        "Discard your changes?",
+        _("Settings"),
+        _("Discard your changes?"),
         QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
         QMessageBox.StandardButton.Cancel,
     )
@@ -43,7 +44,7 @@ class SettingsWindow(QDialog):
 
     def __init__(self, cfg: Config, config_file: Path, on_save: Callable[[Config], None]) -> None:
         super().__init__(None)
-        self.setWindowTitle("Car charge planner: Settings")
+        self.setWindowTitle(_("Car charge planner: Settings"))
         self.setModal(False)
         self.setMinimumWidth(660)
         self.stored = cfg
@@ -63,15 +64,15 @@ class SettingsWindow(QDialog):
         self.errors.setWordWrap(True)
         self.errors.setVisible(False)
 
-        self.reset_button = QPushButton("Reset tab")
-        self.reset_button.setToolTip("Put this tab back to the built-in defaults. Nothing is saved until you press Save.")
+        self.reset_button = QPushButton(_("Reset tab"))
+        self.reset_button.setToolTip(_("Put this tab back to the built-in defaults. Nothing is saved until you press Save."))
         self.reset_button.clicked.connect(self.reset_tab)
-        self.cancel_button = QPushButton("Close")  # reads "Cancel" while there are unsaved edits
+        self.cancel_button = QPushButton(_("Close"))  # reads "Cancel" while there are unsaved edits
         self.cancel_button.clicked.connect(self.reject)
         for button in (self.reset_button, self.cancel_button):
             button.setAutoDefault(False)  # Enter runs the save action below, not whichever button is first
         metrics = QFontMetrics(self.cancel_button.font())
-        self.cancel_button.setMinimumWidth(max(metrics.horizontalAdvance(t) for t in ("Cancel", "Close")) + 32)  # no jump when the label flips
+        self.cancel_button.setMinimumWidth(max(metrics.horizontalAdvance(t) for t in (_("Cancel"), _("Close"))) + 32)  # no jump when the label flips
 
         # One split button: the main part runs the current mode, the arrow picks the mode.
         self.save_button = QToolButton()
@@ -80,8 +81,8 @@ class SettingsWindow(QDialog):
         menu = QMenu(self.save_button)
         modes = QActionGroup(menu)
         modes.setExclusive(True)
-        self.save_action = self._mode_action(menu, modes, "Save", "Save and keep this window open")
-        self.save_close_action = self._mode_action(menu, modes, "Save and close", "Save, then close this window")
+        self.save_action = self._mode_action(menu, modes, _("Save"), _("Save and keep this window open"))
+        self.save_close_action = self._mode_action(menu, modes, _("Save and close"), _("Save, then close this window"))
         self.save_button.setMenu(menu)
         modes.triggered.connect(self.set_mode)
         widest = max(QFontMetrics(self.save_button.font()).horizontalAdvance(a.text()) for a in modes.actions())
@@ -129,11 +130,11 @@ class SettingsWindow(QDialog):
     def refresh_close_button(self) -> None:
         """"Close" when nothing is unsaved, "Cancel" when closing would throw edits away."""
         if self.is_dirty():
-            self.cancel_button.setText("Cancel")
-            self.cancel_button.setToolTip("Discard your unsaved changes and close this window")
+            self.cancel_button.setText(_("Cancel"))
+            self.cancel_button.setToolTip(_("Discard your unsaved changes and close this window"))
         else:
-            self.cancel_button.setText("Close")
-            self.cancel_button.setToolTip("Close this window")
+            self.cancel_button.setText(_("Close"))
+            self.cancel_button.setToolTip(_("Close this window"))
 
     def set_mode(self, action: QAction) -> None:
         """Choose what the save button does. Only switches the mode; nothing is saved yet."""
@@ -161,12 +162,12 @@ class SettingsWindow(QDialog):
             self.show_errors(str(err).split("\n")[1:] or [str(err)])
             return False
         except TypeError as err:
-            self.show_errors([f"A value has the wrong type: {err}"])
+            self.show_errors([_("A value has the wrong type: {error}").format(error=err)])
             return False
         try:
             write_config(cfg, self.config_file)
         except OSError as err:
-            self.show_errors([f"Could not write {self.config_file}: {err}"])
+            self.show_errors([_("Could not write {file}: {error}").format(file=self.config_file, error=err)])
             return False
         self.stored = cfg
         self.errors.setVisible(False)
@@ -188,9 +189,9 @@ class SettingsWindow(QDialog):
             return
         super().reject()
 
-    def show_tab(self, title: str) -> None:
-        for index in range(self.tabs.count()):
-            if self.tabs.tabText(index) == title:
+    def show_tab(self, key: str) -> None:
+        for index, tab in enumerate(self.all_tabs):
+            if tab.key == key:
                 self.tabs.setCurrentIndex(index)
                 return
 

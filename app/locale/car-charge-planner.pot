@@ -16,3 +16,906 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
+#: app/__main__.py
+#, python-brace-format
+msgid "Autostart entry written to {path}"
+msgstr ""
+
+#: app/__main__.py
+msgid "Autostart entry removed"
+msgstr ""
+
+#: app/__main__.py
+msgid "No autostart entry found"
+msgstr ""
+
+#: app/__main__.py
+#, python-brace-format
+msgid ""
+"Launcher entry written to {entry}\n"
+"Icon written to {icon}"
+msgstr ""
+
+#: app/__main__.py
+msgid "Removed:"
+msgstr ""
+
+#: app/__main__.py
+msgid "No launcher entry found"
+msgstr ""
+
+#: app/__main__.py
+#, python-brace-format
+msgid "Unknown command {command!r}. Use: run | test-notification | install-launcher | uninstall-launcher | install-autostart | uninstall-autostart"
+msgstr ""
+
+#: app/away_input.py
+msgid "The end time must be after the start time"
+msgstr ""
+
+#: app/away_input.py
+#, python-brace-format
+msgid "{day}, all day"
+msgstr ""
+
+#: app/away_input.py
+#, python-brace-format
+msgid "{day}, {start}-{end}"
+msgstr ""
+
+#: app/away_input.py
+#, python-brace-format
+msgid "{start_day} {start} - {end_day} {end}"
+msgstr ""
+
+#: app/away_input.py
+#, python-brace-format
+msgid "Every {weekday}, {start}-{end}"
+msgstr ""
+
+#: app/away_input.py
+#, python-brace-format
+msgid "{weekday} weekly"
+msgstr ""
+
+#: app/away_input.py
+msgid "No absences planned"
+msgstr ""
+
+#: app/away_input.py app/view_model.py
+msgctxt "list separator"
+msgid ", "
+msgstr ""
+
+#: app/away_input.py
+#, python-brace-format
+msgid "Away: {items} +{n} more"
+msgstr ""
+
+#: app/away_input.py
+#, python-brace-format
+msgid "Away: {items}"
+msgstr ""
+
+#: app/controller.py
+msgid "Interface changed"
+msgstr ""
+
+#: app/controller.py
+msgid "The new interface applies the next time the app starts."
+msgstr ""
+
+#: app/controller.py
+msgid "Loading forecast..."
+msgstr ""
+
+#: app/i18n.py
+msgctxt "decimal separator"
+msgid "."
+msgstr ""
+
+#: app/main.py
+msgid "No system tray found"
+msgstr ""
+
+#: app/main.py
+msgid "The interface is set to a tray icon, but this desktop has none, so the app shows a window instead. Change it in Settings, on the Interface tab."
+msgstr ""
+
+#: app/main.py
+#, python-brace-format
+msgid "{app} is already running: asked it to show itself."
+msgstr ""
+
+#: app/main.py
+msgid "Could not set up the single-instance socket; a second copy could start."
+msgstr ""
+
+#: app/main.py
+msgid "Car charge planner"
+msgstr ""
+
+#: app/main.py
+#, python-brace-format
+msgid ""
+"{error}\n"
+"\n"
+"Fix the file and start the app again:\n"
+"{file}"
+msgstr ""
+
+#: app/names.py
+msgctxt "weekday, short"
+msgid "Mon"
+msgstr ""
+
+#: app/names.py
+msgctxt "weekday, short"
+msgid "Tue"
+msgstr ""
+
+#: app/names.py
+msgctxt "weekday, short"
+msgid "Wed"
+msgstr ""
+
+#: app/names.py
+msgctxt "weekday, short"
+msgid "Thu"
+msgstr ""
+
+#: app/names.py
+msgctxt "weekday, short"
+msgid "Fri"
+msgstr ""
+
+#: app/names.py
+msgctxt "weekday, short"
+msgid "Sat"
+msgstr ""
+
+#: app/names.py
+msgctxt "weekday, short"
+msgid "Sun"
+msgstr ""
+
+#: app/names.py
+msgctxt "weekday"
+msgid "Monday"
+msgstr ""
+
+#: app/names.py
+msgctxt "weekday"
+msgid "Tuesday"
+msgstr ""
+
+#: app/names.py
+msgctxt "weekday"
+msgid "Wednesday"
+msgstr ""
+
+#: app/names.py
+msgctxt "weekday"
+msgid "Thursday"
+msgstr ""
+
+#: app/names.py
+msgctxt "weekday"
+msgid "Friday"
+msgstr ""
+
+#: app/names.py
+msgctxt "weekday"
+msgid "Saturday"
+msgstr ""
+
+#: app/names.py
+msgctxt "weekday"
+msgid "Sunday"
+msgstr ""
+
+#: app/names.py
+msgctxt "month, short"
+msgid "Jan"
+msgstr ""
+
+#: app/names.py
+msgctxt "month, short"
+msgid "Feb"
+msgstr ""
+
+#: app/names.py
+msgctxt "month, short"
+msgid "Mar"
+msgstr ""
+
+#: app/names.py
+msgctxt "month, short"
+msgid "Apr"
+msgstr ""
+
+#: app/names.py
+msgctxt "month, short"
+msgid "May"
+msgstr ""
+
+#: app/names.py
+msgctxt "month, short"
+msgid "Jun"
+msgstr ""
+
+#: app/names.py
+msgctxt "month, short"
+msgid "Jul"
+msgstr ""
+
+#: app/names.py
+msgctxt "month, short"
+msgid "Aug"
+msgstr ""
+
+#: app/names.py
+msgctxt "month, short"
+msgid "Sep"
+msgstr ""
+
+#: app/names.py
+msgctxt "month, short"
+msgid "Oct"
+msgstr ""
+
+#: app/names.py
+msgctxt "month, short"
+msgid "Nov"
+msgstr ""
+
+#: app/names.py
+msgctxt "month, short"
+msgid "Dec"
+msgstr ""
+
+#: app/names.py
+#, python-brace-format
+msgid "{weekday} {day} {month}"
+msgstr ""
+
+#: app/notifications.py
+#, python-brace-format
+msgid "Set the current to {amps} A ({power} kW) in your charger's app."
+msgstr ""
+
+#: app/notifications.py
+#, python-brace-format
+msgid "Grid charge window {span}"
+msgstr ""
+
+#: app/notifications.py
+#, python-brace-format
+msgid "{setting} About {energy} kWh, needed to stay above {minimum}%."
+msgstr ""
+
+#: app/notifications.py
+#, python-brace-format
+msgid "Charge window {span}"
+msgstr ""
+
+#: app/notifications.py
+#, python-brace-format, python-format
+msgid "{setting} About {energy} kWh, {share}% solar."
+msgstr ""
+
+#: app/notifier.py
+msgid "Open"
+msgstr ""
+
+#: app/planview.py
+msgid "Plan"
+msgstr ""
+
+#: app/planview.py
+msgid "Update"
+msgstr ""
+
+#: app/planview.py
+msgid "Open Settings..."
+msgstr ""
+
+#: app/planview.py
+msgid "Next days"
+msgstr ""
+
+#: app/planview.py
+msgid "Edit"
+msgstr ""
+
+#: app/planview.py
+msgid "Manage"
+msgstr ""
+
+#: app/planview.py
+msgid "Battery level"
+msgstr ""
+
+#: app/planview.py
+msgid "Set battery"
+msgstr ""
+
+#: app/planview.py
+msgid "Saves immediately"
+msgstr ""
+
+#: app/planview.py
+msgid "Car away"
+msgstr ""
+
+#: app/planview.py
+msgid "Edit weekly rules in Settings..."
+msgstr ""
+
+#: app/planview.py
+msgid "All day"
+msgstr ""
+
+#: app/planview.py
+msgid "Time range"
+msgstr ""
+
+#: app/planview.py
+msgid "Add"
+msgstr ""
+
+#: app/planview.py
+#, python-brace-format
+msgid "Battery {pct}% · please update"
+msgstr ""
+
+#: app/planview.py app/view_model.py
+#, python-brace-format
+msgid "Battery {pct}%"
+msgstr ""
+
+#: app/planview.py
+msgid "Update •"
+msgstr ""
+
+#: app/planview.py
+#, python-brace-format
+msgid "{rule}  (weekly rule)"
+msgstr ""
+
+#: app/planview.py
+msgid "No absences planned: the car is treated as home all week."
+msgstr ""
+
+#: app/planview.py app/settings/tabs.py
+msgid "Remove"
+msgstr ""
+
+#: app/popup.py app/settings/window.py
+msgid "Close"
+msgstr ""
+
+#: app/selftest.py
+msgid "Car charge planner: test notification"
+msgstr ""
+
+#: app/selftest.py
+msgid "Click this notification to check that clicks reach the app. (This is only a test.)"
+msgstr ""
+
+#: app/selftest.py
+msgid "The notification could not be sent: is a notification service running on this session?"
+msgstr ""
+
+#: app/selftest.py
+#, python-brace-format
+msgid "Test notification sent (id {id}). Click it within {seconds} seconds."
+msgstr ""
+
+#: app/selftest.py
+msgid "Click received: clicking a notification works on this desktop."
+msgstr ""
+
+#: app/selftest.py
+msgid "No click received. If you clicked it, this desktop may not report clicks to the app; if you did not, run the command again and click it."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Solar and location"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Panel size"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Total peak power of all panels together, as stated on the installer's datasheet or in the inverter app."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Assumed"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Tilt"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Angle of the panels from horizontal: 0 is flat, 90 is vertical."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "degrees"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Direction"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Compass direction the panels face: 0 = south, -90 = east, 90 = west, 180 = north. South-east is -45."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "System losses"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Combined losses from the inverter, cables, heat and dirt. Typically 10-15%."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Latitude"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Decimal degrees of the panels' location. Positive is north. 0 and 0 together mean not set."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Longitude"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Decimal degrees of the panels' location. Positive is east of Greenwich."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Time zone"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "The time zone of the location. Start typing to search the list."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "House and car"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "House baseload"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Average power the household uses without the car. Monthly kWh divided by 730 gives a rough figure."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Usable battery"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "The net (usable) battery capacity in kWh. Manufacturers often list the gross capacity, which is higher."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Estimate"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Consumption"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Real-world average energy use of the car. Usually higher in winter than in summer."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Driving per day"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Average distance driven per day. Weekly distance divided by 7 gives a rough figure."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Minimum charge level"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "The battery should never drop below this level. Must be below the target."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Target charge level"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Everyday maximum charge level. Must be above the minimum."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Charger"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Minimum current"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "The lowest current the charger and car both accept, often 6 A."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Maximum current"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "The highest current the charger and the home connection allow. Must not be below the minimum."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Voltage"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Mains voltage at the charger, typically 230 V for a single-phase connection."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Charging efficiency"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Share of the energy taken from the grid that ends up in the battery, after losses in charger and car."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Planning and notifications"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Planning margin"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Plan on this share of the forecast surplus. Lower is more cautious."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Import tolerance"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Grid energy a window may draw before its power is lowered."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Minimum window length"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Shorter windows are dropped."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "minutes"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Notification lead time"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "How long before a window starts you are told."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Interface"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Show the app as"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "How the app shows itself. A tray icon needs a desktop with a system tray (KDE Plasma, or GNOME with the AppIndicator extension). Applies the next time the app starts."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Automatic: a tray icon if there is a tray, otherwise a window"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Tray icon with a popup"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "A window"
+msgstr ""
+
+#: app/settings/tabs.py
+msgid "from"
+msgstr ""
+
+#: app/settings/tabs.py
+msgid "to"
+msgstr ""
+
+#: app/settings/tabs.py
+msgid "Away rules"
+msgstr ""
+
+#: app/settings/tabs.py
+msgid "Times each week when the car is not at home. No charging is planned then. One rule covers one weekday: add several rules for several days."
+msgstr ""
+
+#: app/settings/tabs.py
+msgid "No rules: the car is treated as home all week."
+msgstr ""
+
+#: app/settings/tabs.py
+msgid "Add rule"
+msgstr ""
+
+#: app/settings/window.py
+msgid "Settings"
+msgstr ""
+
+#: app/settings/window.py
+msgid "Discard your changes?"
+msgstr ""
+
+#: app/settings/window.py
+msgid "Car charge planner: Settings"
+msgstr ""
+
+#: app/settings/window.py
+msgid "Reset tab"
+msgstr ""
+
+#: app/settings/window.py
+msgid "Put this tab back to the built-in defaults. Nothing is saved until you press Save."
+msgstr ""
+
+#: app/settings/window.py
+msgid "Cancel"
+msgstr ""
+
+#: app/settings/window.py
+msgid "Save"
+msgstr ""
+
+#: app/settings/window.py
+msgid "Save and keep this window open"
+msgstr ""
+
+#: app/settings/window.py
+msgid "Save and close"
+msgstr ""
+
+#: app/settings/window.py
+msgid "Save, then close this window"
+msgstr ""
+
+#: app/settings/window.py
+msgid "Discard your unsaved changes and close this window"
+msgstr ""
+
+#: app/settings/window.py
+msgid "Close this window"
+msgstr ""
+
+#: app/settings/window.py
+#, python-brace-format
+msgid "A value has the wrong type: {error}"
+msgstr ""
+
+#: app/settings/window.py
+#, python-brace-format
+msgid "Could not write {file}: {error}"
+msgstr ""
+
+#: app/shells/tray.py app/shells/window.py
+msgid "Refresh forecast"
+msgstr ""
+
+#: app/shells/tray.py app/shells/window.py
+msgid "Settings..."
+msgstr ""
+
+#: app/shells/tray.py app/shells/window.py
+msgid "Quit"
+msgstr ""
+
+#: app/shells/window.py
+msgid "Menu"
+msgstr ""
+
+#: app/shells/window.py
+msgid "Still running in the background"
+msgstr ""
+
+#: app/shells/window.py
+#, python-brace-format
+msgid "{app} keeps running so you get notifications. Open it again from the application menu; quit it from its menu (Ctrl+Q)."
+msgstr ""
+
+#: app/view_model.py
+msgid "Weather data by Open-Meteo.com (CC BY 4.0)"
+msgstr ""
+
+#: app/view_model.py
+msgid "Weather data: Open-Meteo.com"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "{power} kW ({amps} A)"
+msgstr ""
+
+#: app/view_model.py
+msgid "Today"
+msgstr ""
+
+#: app/view_model.py
+msgid "Tomorrow"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Battery {pct}% (assumed, not entered yet). Please enter it."
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Battery {pct}%, entered {n} day ago. Please update."
+msgid_plural "Battery {pct}%, entered {n} days ago. Please update."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Battery {level}% → {after}% by {time}"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Forecast {n} min old · {source}"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Forecast {n} min old, refresh failed · {source}"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Forecast {n} h old · {source}"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Forecast {n} h old, refresh failed · {source}"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Battery would drop to {level}% (minimum {minimum}%) by the end of today."
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Battery would drop to {level}% (minimum {minimum}%) by the end of tomorrow."
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Battery would drop to {level}% (minimum {minimum}%) by the end of {day}."
+msgstr ""
+
+#: app/view_model.py
+msgid "Grid charge needed"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "About {energy} kWh, but there is no free time at home to charge it."
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "{day} {span}"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Grid charge needed · {when}"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "{power} · about {energy} kWh"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "{energy} kWh"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "{days}: no good window"
+msgstr ""
+
+#: app/view_model.py
+msgid "Not set up yet"
+msgstr ""
+
+#: app/view_model.py
+msgid "Enter your location in Settings to get a plan."
+msgstr ""
+
+#: app/view_model.py
+msgid "No forecast available"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format, python-format
+msgid "{power} · {energy} kWh · {share}% solar"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Not enough solar surplus in the next {n} day."
+msgid_plural "Not enough solar surplus in the next {n} days."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Grid charge needed: {when}"
+msgstr ""
+
+#: app/view_model.py
+msgid "No good window coming up"
+msgstr ""
+
+#: app/view_model.py
+msgid "No good window"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Charge now until {end} at {amps} A"
+msgstr ""
+
+#: app/view_model.py
+msgid "Charge now"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Until {end} · {facts}"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Next: {day} {span}, {amps} A"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Next: {day} {span}"
+msgstr ""
+

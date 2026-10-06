@@ -15,11 +15,12 @@ from typing import Protocol
 
 log = logging.getLogger(__name__)
 
+from .i18n import N_, _
 from .identity import APP_NAME, DESKTOP_ENTRY, ICON_NAME  # noqa: F401  (DESKTOP_ENTRY ties a notification to the launcher entry)
 
 FALLBACK_ICON = "dialog-information"
 NOTIFY_SIGNATURE = "susssasa{sv}i"
-DEFAULT_ACTION = ("default", "Open")
+DEFAULT_ACTION = ("default", N_("Open"))  # the label is translated when the notification is sent
 REMEMBER = 50  # notification ids kept for matching clicks later
 
 
@@ -99,7 +100,7 @@ class Notifier:
                 self.icon,
                 title,
                 body,
-                list(DEFAULT_ACTION),
+                [DEFAULT_ACTION[0], _(DEFAULT_ACTION[1])],
                 {"desktop-entry": ("s", DESKTOP_ENTRY)},
                 expire_ms,
             )

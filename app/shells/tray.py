@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 
 from ..controller import Controller, ViewUpdate
+from ..i18n import _
 from ..popup import Popup
 from .icons import make_icon
 
@@ -25,10 +26,10 @@ class TrayShell:
 
         self.tray = QSystemTrayIcon(make_icon("none"))
         menu = QMenu()
-        menu.addAction("Refresh forecast", lambda: controller.refresh(force=True))
-        menu.addAction("Settings...", lambda: controller.open_settings())
+        menu.addAction(_("Refresh forecast"), lambda: controller.refresh(force=True))
+        menu.addAction(_("Settings..."), lambda: controller.open_settings())
         menu.addSeparator()
-        menu.addAction("Quit", QApplication.quit)
+        menu.addAction(_("Quit"), QApplication.quit)
         self.menu = menu
         self.tray.setContextMenu(menu)
         self.tray.activated.connect(self._on_activated)

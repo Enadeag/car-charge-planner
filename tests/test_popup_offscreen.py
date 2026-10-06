@@ -277,7 +277,7 @@ def test_the_settings_button_asks_for_the_away_rules_tab(cfg):
     seen = []
     popup.settings_requested.connect(seen.append)
     next(b for b in popup.findChildren(QPushButton) if b.text() == "Edit weekly rules in Settings...").click()
-    assert seen == ["Away rules"]
+    assert seen == ["away"]
 
 
 def test_tray_opens_settings_on_the_away_rules_tab_and_hides_the_popup(cfg, tmp_path, monkeypatch):
@@ -288,7 +288,7 @@ def test_tray_opens_settings_on_the_away_rules_tab_and_hides_the_popup(cfg, tmp_
     QApplication.instance() or QApplication([])
     app = TrayApp(cfg, tmp_path / "config.toml")
     app.popup.show()
-    app.popup.settings_requested.emit("Away rules")
+    app.popup.settings_requested.emit("away")
     window = app.settings_window
     assert window is not None and window.isVisible()
     assert window.tabs.tabText(window.tabs.currentIndex()) == "Away rules"
@@ -311,7 +311,7 @@ def test_a_rule_saved_in_settings_shows_up_in_the_popup(cfg, tmp_path, monkeypat
     app.result = ForecastResult(forecast_from([(date(2026, 7, 3), 900)]), at(date(2026, 7, 3), 6), True, False)
     app.rebuild()
     assert "Every Thursday, 06:00-19:00  (weekly rule)" in _away_text(app.popup)
-    app.open_settings("Away rules")
+    app.open_settings("away")
     row = app.settings_window.away_tab.rows[0]
     row.weekday.setCurrentIndex(0)  # Monday
     row.start.setTime(QTime(7, 0))

@@ -10,6 +10,8 @@ from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from app.i18n import _  # the messages reach the user in Settings, so they are translated
+
 
 def elapsed_hours(start: datetime, end: datetime) -> float:
     """Real elapsed hours. Same-timezone datetimes subtract by wall clock, which is wrong across DST."""
@@ -193,41 +195,46 @@ def validate(cfg: Config) -> Config:
         if not ok:
             problems.append(message)
 
-    need(cfg.panels.kwp > 0, "[panels] kwp must be above 0")
-    need(0 <= cfg.panels.tilt_deg <= 90, "[panels] tilt_deg must be between 0 and 90")
-    need(-180 <= cfg.panels.azimuth_deg <= 180, "[panels] azimuth_deg must be between -180 and 180")
-    need(0 <= cfg.panels.system_losses < 1, "[panels] system_losses must be at least 0 and below 1")
-    need(cfg.house.baseload_kw >= 0, "[house] baseload_kw cannot be negative")
-    need(cfg.car.usable_battery_kwh > 0, "[car] usable_battery_kwh must be above 0")
-    need(cfg.car.consumption_kwh_per_100km > 0, "[car] consumption_kwh_per_100km must be above 0")
-    need(cfg.car.km_per_day >= 0, "[car] km_per_day cannot be negative")
-    need(0 <= cfg.car.minimum_pct < cfg.car.target_pct <= 100, "[car] needs 0 <= minimum_pct < target_pct <= 100")
-    need(0 < cfg.charger.min_amps <= cfg.charger.max_amps, "[charger] needs 0 < min_amps <= max_amps")
-    need(cfg.charger.volts > 0, "[charger] volts must be above 0")
-    need(0 < cfg.charger.efficiency <= 1, "[charger] efficiency must be above 0 and at most 1")
-    need(0 < cfg.planning.margin <= 1, "[planning] margin must be above 0 and at most 1")
-    need(cfg.planning.import_tolerance_kwh >= 0, "[planning] import_tolerance_kwh cannot be negative")
-    need(cfg.planning.min_window_minutes > 0, "[planning] min_window_minutes must be above 0")
-    need(cfg.notify.lead_minutes >= 0, "[notify] lead_minutes cannot be negative")
-    need(cfg.interface.mode in INTERFACE_MODES, f"[interface] mode must be one of {', '.join(INTERFACE_MODES)}, not {cfg.interface.mode!r}")
-    need(-90 <= cfg.latitude <= 90, "latitude must be between -90 and 90")
-    need(-180 <= cfg.longitude <= 180, "longitude must be between -180 and 180")
+    need(cfg.panels.kwp > 0, _("[panels] kwp must be above 0"))
+    need(0 <= cfg.panels.tilt_deg <= 90, _("[panels] tilt_deg must be between 0 and 90"))
+    need(-180 <= cfg.panels.azimuth_deg <= 180, _("[panels] azimuth_deg must be between -180 and 180"))
+    need(0 <= cfg.panels.system_losses < 1, _("[panels] system_losses must be at least 0 and below 1"))
+    need(cfg.house.baseload_kw >= 0, _("[house] baseload_kw cannot be negative"))
+    need(cfg.car.usable_battery_kwh > 0, _("[car] usable_battery_kwh must be above 0"))
+    need(cfg.car.consumption_kwh_per_100km > 0, _("[car] consumption_kwh_per_100km must be above 0"))
+    need(cfg.car.km_per_day >= 0, _("[car] km_per_day cannot be negative"))
+    need(0 <= cfg.car.minimum_pct < cfg.car.target_pct <= 100, _("[car] needs 0 <= minimum_pct < target_pct <= 100"))
+    need(0 < cfg.charger.min_amps <= cfg.charger.max_amps, _("[charger] needs 0 < min_amps <= max_amps"))
+    need(cfg.charger.volts > 0, _("[charger] volts must be above 0"))
+    need(0 < cfg.charger.efficiency <= 1, _("[charger] efficiency must be above 0 and at most 1"))
+    need(0 < cfg.planning.margin <= 1, _("[planning] margin must be above 0 and at most 1"))
+    need(cfg.planning.import_tolerance_kwh >= 0, _("[planning] import_tolerance_kwh cannot be negative"))
+    need(cfg.planning.min_window_minutes > 0, _("[planning] min_window_minutes must be above 0"))
+    need(cfg.notify.lead_minutes >= 0, _("[notify] lead_minutes cannot be negative"))
+    need(
+        cfg.interface.mode in INTERFACE_MODES,
+        _("[interface] mode must be one of {modes}, not {mode!r}").format(
+            modes=", ".join(INTERFACE_MODES), mode=cfg.interface.mode
+        ),
+    )
+    need(-90 <= cfg.latitude <= 90, _("latitude must be between -90 and 90"))
+    need(-180 <= cfg.longitude <= 180, _("longitude must be between -180 and 180"))
     try:
         ZoneInfo(cfg.timezone)
     except (ZoneInfoNotFoundError, ValueError):
-        problems.append(f"timezone {cfg.timezone!r} is not a known time zone")
+        problems.append(_("timezone {zone!r} is not a known time zone").format(zone=cfg.timezone))
     for rule in cfg.away_rules:
-        need(0 <= rule.weekday <= 6, f"[away] weekday {rule.weekday} must be 0 (Monday) to 6 (Sunday)")
-        need(rule.start < rule.end, "[away] each rule must end after it starts on the same day (no overnight rules)")
+        need(0 <= rule.weekday <= 6, _("[away] weekday {weekday} must be 0 (Monday) to 6 (Sunday)").format(weekday=rule.weekday))
+        need(rule.start < rule.end, _("[away] each rule must end after it starts on the same day (no overnight rules)"))
     if problems:
-        raise ConfigError("Invalid config:\n- " + "\n- ".join(problems))
+        raise ConfigError(_("Invalid config:") + "\n- " + "\n- ".join(problems))
     return cfg
 
 
 def require_location(cfg: Config) -> Config:
     """For saving settings: a plan needs a real location, so (0, 0) is refused with a plain message."""
     if not cfg.is_set_up:
-        raise ConfigError("Enter your location: latitude and longitude cannot both be 0")
+        raise ConfigError(_("Enter your location: latitude and longitude cannot both be 0"))
     return cfg
 
 
@@ -236,7 +243,7 @@ def _parse_time(value: str) -> time:
         hour, minute = value.split(":")
         return time(int(hour), int(minute))
     except (ValueError, AttributeError) as err:
-        raise ConfigError(f"[away] time {value!r} must look like \"06:00\"") from err
+        raise ConfigError(_('[away] time {value!r} must look like "06:00"').format(value=value)) from err
 
 
 def load_config(path: Path | None) -> Config:
@@ -246,7 +253,7 @@ def load_config(path: Path | None) -> Config:
     try:
         data = tomllib.loads(Path(path).read_text())
     except tomllib.TOMLDecodeError as err:
-        raise ConfigError(f"Config file is not valid TOML: {err}") from err
+        raise ConfigError(_("Config file is not valid TOML: {error}").format(error=err)) from err
     cfg = Config()
     for section in ("panels", "house", "car", "charger", "planning", "notify", "interface"):
         if section in data:
@@ -254,7 +261,7 @@ def load_config(path: Path | None) -> Config:
             known = {f.name for f in fields(current)}
             unknown = set(data[section]) - known
             if unknown:
-                raise ConfigError(f"unknown keys in [{section}]: {sorted(unknown)}")
+                raise ConfigError(_("unknown keys in [{section}]: {keys}").format(section=section, keys=sorted(unknown)))
             cfg = replace(cfg, **{section: replace(current, **data[section])})
     for key in ("timezone", "latitude", "longitude"):
         if key in data:
@@ -271,4 +278,4 @@ def load_config(path: Path | None) -> Config:
     try:
         return validate(cfg)
     except TypeError as err:
-        raise ConfigError(f"A config value has the wrong type: {err}") from err
+        raise ConfigError(_("A config value has the wrong type: {error}").format(error=err)) from err

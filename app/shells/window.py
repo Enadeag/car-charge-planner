@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QMenu, QToolButton, QVB
 from storage.state import mark_seen
 
 from ..controller import Controller, ViewUpdate
+from ..i18n import _
 from ..identity import APP_NAME
 from ..planview import PlanView
 from .icons import make_icon
@@ -58,12 +59,12 @@ class WindowShell:
 
         # what the tray's context menu is on the tray shell
         self.menu = QMenu(self.window)
-        self.settings_action = self.menu.addAction("Settings...")
+        self.settings_action = self.menu.addAction(_("Settings..."))
         self.settings_action.triggered.connect(lambda: controller.open_settings())
-        self.refresh_action = self.menu.addAction("Refresh forecast")
+        self.refresh_action = self.menu.addAction(_("Refresh forecast"))
         self.refresh_action.triggered.connect(lambda: controller.refresh(force=True))
         self.menu.addSeparator()
-        self.quit_action = QAction("Quit", self.window)
+        self.quit_action = QAction(_("Quit"), self.window)
         self.quit_action.setShortcut(QKeySequence.StandardKey.Quit)  # Ctrl+Q
         self.quit_action.triggered.connect(lambda: QApplication.quit())
         self.menu.addAction(self.quit_action)
@@ -71,7 +72,7 @@ class WindowShell:
 
         self.menu_button = QToolButton()
         self.menu_button.setText("☰")
-        self.menu_button.setToolTip("Menu")
+        self.menu_button.setToolTip(_("Menu"))
         self.menu_button.setAutoRaise(True)
         self.menu_button.setFixedSize(28, 28)
         self.menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
@@ -122,7 +123,9 @@ class WindowShell:
         """The first time the window is closed, say that the app keeps running (once, ever)."""
         if mark_seen(BACKGROUND_HINT):
             self.controller.notifier.send(
-                "Still running in the background",
-                f"{APP_NAME} keeps running so you get notifications. Open it again from the application menu; "
-                "quit it from its menu (Ctrl+Q).",
+                _("Still running in the background"),
+                _(
+                    "{app} keeps running so you get notifications. Open it again from the application menu; "
+                    "quit it from its menu (Ctrl+Q)."
+                ).format(app=APP_NAME),
             )

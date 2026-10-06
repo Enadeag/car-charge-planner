@@ -22,6 +22,7 @@ from planner.model import AwayPeriod, AwayRule, Config
 from planner.projection import plan
 from storage.state import State, add_away, load_state, mark_notified, remove_away, set_battery
 
+from .i18n import _
 from .notifications import candidate_windows, due, message
 from .notifier import Notifier
 from .settings.window import SettingsWindow
@@ -115,7 +116,7 @@ class Controller(QObject):
             self.result, self.error = None, None  # a forecast for other panels or place would mislead
         if cfg.interface.mode != self.cfg.interface.mode:
             # the shell is chosen once at start: say so, since nothing visible happens now
-            self.notifier.send("Interface changed", "The new interface applies the next time the app starts.")
+            self.notifier.send(_("Interface changed"), _("The new interface applies the next time the app starts."))
         self.cfg = cfg
         self.tz = ZoneInfo(cfg.timezone)
         self.rebuild()
@@ -130,7 +131,7 @@ class Controller(QObject):
         if not self.cfg.is_set_up:
             vm = needs_setup(battery, now)
         elif self.result is None:
-            vm = no_forecast(self.error or "Loading forecast...", battery, now)
+            vm = no_forecast(self.error or _("Loading forecast..."), battery, now)
         else:
             days = plan(self.result.steps, self.cfg, battery.pct, now, list(state.away), list(state.notified))
             advice = grid_advice(days, self.result.steps, self.cfg, list(state.away), now)
