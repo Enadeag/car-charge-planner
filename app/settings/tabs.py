@@ -1,0 +1,208 @@
+"""A tab of input fields built from FieldSpecs."""
+
+from __future__ import annotations
+
+from html import escape
+from datetime import time
+from zoneinfo import available_timezones
+
+from PySide6.QtCore import QTime
+from PySide6.QtWidgets import (
+    QComboBox,
+    QCompleter,
+    QDoubleSpinBox,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSpinBox,
+    QTimeEdit,
+    QVBoxLayout,
+    QWidget,
+)
+
+from app import colours
+from dataclasses import replace
+
+from planner.model import AwayRule, Config
+
+from .fields import FieldSpec, TabSpec, get_value, set_value
+
+def shown_value(spec: FieldSpec, stored):
+    """The stored value as the input box shows it."""
+    if spec.kind == "timezone":
+        return str(stored)
+    if spec.kind == "int":
+        return int(stored)
+    return round(float(stored) * spec.scale, spec.decimals)
+
+
+class FieldTab(QWidget):
+    def __init__(self, tab: TabSpec, cfg: Config) -> None:
+        super().__init__()
+        self.title = tab.title
+        self.specs = tab.fields
+        self.inputs: dict[str, QWidget] = {}
+        self.baseline: dict[str, object] = {}  # exact values the boxes were last filled from
+        grid = QGridLayout(self)
+        grid.setColumnStretch(1, 1)
+        grid.setVerticalSpacing(2)
+        row = 0
+        for spec in tab.fields:
+            widget = self._make_input(spec)
+            self.inputs[spec.key] = widget
+            grid.addWidget(QLabel(spec.label), row, 0)
+            grid.addWidget(widget, row, 1)
+            hint = QLabel()
+            hint.setWordWrap(True)
+            hint.setTextFormat(hint.textFormat().RichText)
+            flag = f"<b style='color:{colours.warning(self)}'>{spec.flag}.</b> " if spec.flag else ""
+            hint.setText(f"{flag}{escape(spec.hint)}")
+            hint.setStyleSheet(f"{colours.MUTED_STYLE} font-size: 9pt; margin-bottom: 8px;")
+            grid.addWidget(hint, row + 1, 1)
+            row += 2
+        grid.setRowStretch(row, 1)
+        self.load(cfg)
+
+    def _make_input(self, spec: FieldSpec) -> QWidget:
+        if spec.kind == "timezone":
+            box = QComboBox()
+            box.setEditable(True)
+            box.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+            box.addItems(sorted(available_timezones()))
+            completer = QCompleter(box.model(), box)
+            completer.setCaseSensitivity(completer.caseSensitivity().CaseInsensitive)
+            completer.setFilterMode(completer.filterMode().MatchContains)
+            box.setCompleter(completer)
+            return box
+        if spec.kind == "int":
+            spin = QSpinBox()
+            spin.setRange(int(spec.minimum), int(spec.maximum))
+            spin.setSingleStep(int(spec.step))
+        else:
+            spin = QDoubleSpinBox()
+            spin.setRange(spec.minimum, spec.maximum)
+            spin.setDecimals(spec.decimals)
+            spin.setSingleStep(spec.step)
+        if spec.unit:
+            spin.setSuffix(f" {spec.unit}")
+        return spin
+
+    def _set_widget(self, spec: FieldSpec, stored) -> None:
+        widget = self.inputs[spec.key]
+        value = shown_value(spec, stored)
+        if spec.kind == "timezone":
+            widget.setCurrentText(value)
+        else:
+            widget.setValue(value)
+
+    def load(self, cfg: Config) -> None:
+        """Fill the boxes from a config and remember its exact values."""
+        for spec in self.specs:
+            stored = get_value(cfg, spec.key)
+            self.baseline[spec.key] = stored
+            self._set_widget(spec, stored)
+
+    def stored_value(self, spec: FieldSpec):
+        """What to store for a field. A box that still shows the baseline gives the exact baseline back."""
+        widget = self.inputs[spec.key]
+        baseline = self.baseline[spec.key]
+        if spec.kind == "timezone":
+            text = widget.currentText().strip()
+            return baseline if text == baseline else text
+        shown = widget.value()
+        if shown == shown_value(spec, baseline):
+            return baseline  # untouched: no rounding drift (85.714... must not become 85.7)
+        if spec.kind == "int":
+            return int(shown)
+        return round(shown / spec.scale, 10)
+
+    def apply_to(self, cfg: Config) -> Config:
+        for spec in self.specs:
+            cfg = set_value(cfg, spec.key, self.stored_value(spec))
+        return cfg
+
+
+WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+
+
+class RuleRow(QWidget):
+    def __init__(self, rule: AwayRule, on_remove) -> None:
+        super().__init__()
+        self.weekday = QComboBox()
+        self.weekday.addItems(WEEKDAYS)
+        self.weekday.setCurrentIndex(rule.weekday)
+        self.start = QTimeEdit(QTime(rule.start.hour, rule.start.minute))
+        self.end = QTimeEdit(QTime(rule.end.hour, rule.end.minute))
+        for edit in (self.start, self.end):
+            edit.setDisplayFormat("HH:mm")
+        remove = QPushButton("Remove")
+        remove.clicked.connect(lambda: on_remove(self))
+        self.remove_button = remove
+        row = QHBoxLayout(self)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.addWidget(self.weekday, 2)
+        row.addWidget(QLabel("from"))
+        row.addWidget(self.start, 1)
+        row.addWidget(QLabel("to"))
+        row.addWidget(self.end, 1)
+        row.addWidget(remove)
+
+    def rule(self) -> AwayRule:
+        return AwayRule(self.weekday.currentIndex(), self.start.time().toPython(), self.end.time().toPython())
+
+
+class AwayRulesTab(QWidget):
+    """Weekly times the car is not at home: one row per rule."""
+
+    DEFAULT_NEW = AwayRule(0, time(8, 0), time(17, 0))
+
+    def __init__(self, cfg: Config) -> None:
+        super().__init__()
+        self.title = "Away rules"
+        self.rows: list[RuleRow] = []
+        layout = QVBoxLayout(self)
+        intro = QLabel(
+            "Times each week when the car is not at home. No charging is planned then. "
+            "One rule covers one weekday: add several rules for several days."
+        )
+        intro.setWordWrap(True)
+        intro.setStyleSheet(f"{colours.MUTED_STYLE} font-size: 9pt;")
+        layout.addWidget(intro)
+        self.rows_box = QVBoxLayout()
+        layout.addLayout(self.rows_box)
+        self.empty_note = QLabel("No rules: the car is treated as home all week.")
+        self.empty_note.setStyleSheet(colours.MUTED_STYLE)
+        layout.addWidget(self.empty_note)
+        self.add_button = QPushButton("Add rule")
+        self.add_button.clicked.connect(lambda: self.add_row(self.DEFAULT_NEW))
+        add_line = QHBoxLayout()
+        add_line.addWidget(self.add_button)
+        add_line.addStretch()
+        layout.addLayout(add_line)
+        layout.addStretch()
+        self.load(cfg)
+
+    def add_row(self, rule: AwayRule) -> RuleRow:
+        row = RuleRow(rule, self.remove_row)
+        self.rows.append(row)
+        self.rows_box.addWidget(row)
+        self.empty_note.setVisible(False)
+        return row
+
+    def remove_row(self, row: RuleRow) -> None:
+        self.rows.remove(row)
+        self.rows_box.removeWidget(row)
+        row.deleteLater()
+        row.hide()
+        self.empty_note.setVisible(not self.rows)
+
+    def load(self, cfg: Config) -> None:
+        for row in list(self.rows):
+            self.remove_row(row)
+        for rule in cfg.away_rules:
+            self.add_row(rule)
+        self.empty_note.setVisible(not self.rows)
+
+    def apply_to(self, cfg: Config) -> Config:
+        return replace(cfg, away_rules=tuple(row.rule() for row in self.rows))

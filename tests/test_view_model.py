@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from app.config_file import DEFAULT_CONFIG_TOML, ensure_config
+from app.config_file import ensure_config
 from app.view_model import build, footer_text, no_forecast
 from planner.model import Config, load_config
 from planner.projection import plan
@@ -91,15 +91,14 @@ def test_no_forecast_view(cfg):
     assert vm.state == "no-forecast" and vm.detail == "offline"
 
 
-def test_default_config_file_matches_built_in_defaults(tmp_path):
-    f = tmp_path / "config.toml"
-    f.write_text(DEFAULT_CONFIG_TOML)
+def test_first_config_file_matches_built_in_defaults(tmp_path):
+    f = ensure_config(tmp_path / "config.toml")
     assert load_config(f) == Config()
 
 
 def test_ensure_config_creates_but_never_overwrites(tmp_path):
     f = tmp_path / "sub" / "config.toml"
-    assert ensure_config(f) == f and f.read_text() == DEFAULT_CONFIG_TOML
+    assert ensure_config(f) == f and f.exists()
     f.write_text("[panels]\nkwp = 6\n")
     ensure_config(f)
     assert f.read_text() == "[panels]\nkwp = 6\n"

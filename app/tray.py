@@ -8,8 +8,8 @@ from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from PySide6.QtCore import QLockFile, QObject, QPointF, Qt, QTime, QTimer, QUrl, Signal
-from PySide6.QtGui import QColor, QDesktopServices, QGuiApplication, QIcon, QPainter, QPixmap, QPolygonF
+from PySide6.QtCore import QLockFile, QObject, QPointF, Qt, QTime, QTimer, Signal
+from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPixmap, QPolygonF
 from PySide6.QtWidgets import (
     QApplication,
     QMessageBox,
@@ -26,15 +26,17 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from forecast.open_meteo import ForecastResult, ForecastUnavailable, get_forecast
+from forecast.open_meteo import ForecastResult, ForecastUnavailable, forecast_key, get_forecast
 from planner.advice import grid_advice
 from planner.model import AwayPeriod, Config, ConfigError, load_config
 from planner.projection import plan
 from storage.state import State, add_away, load_state, mark_notified, remove_away, set_battery
 
+from . import colours
 from .away_input import describe, make_away
 from .config_file import ensure_config
 from .notifications import candidate_windows, due, message
+from .settings.window import SettingsWindow
 from .view_model import ViewModel, build, day_label, no_forecast
 
 TICK_MS = 60_000  # recompute every minute; the forecast itself refreshes at most hourly
@@ -81,7 +83,7 @@ class Popup(QWidget):
         self.projection = QLabel()
         self.advice = QLabel()
         self.advice.setWordWrap(True)
-        self.advice.setStyleSheet("color: #d98c1f; font-weight: bold;")
+        self.advice.setStyleSheet("font-weight: bold;")
 
         self.battery = QLabel()
         self.battery.setWordWrap(True)
@@ -125,12 +127,11 @@ class Popup(QWidget):
             add_row.addWidget(widget)
         add_row.addStretch()
         self.away_error = QLabel()
-        self.away_error.setStyleSheet("color: #c4553b;")
         self.away_error.setVisible(False)
 
         self.footer = QLabel()
         self.footer.setWordWrap(True)
-        self.footer.setStyleSheet("color: palette(mid); font-size: 9pt;")
+        self.footer.setStyleSheet(f"{colours.MUTED_STYLE} font-size: 9pt;")
 
         def rule() -> QFrame:
             line = QFrame()
@@ -179,7 +180,8 @@ class Popup(QWidget):
         self.advice.setText(vm.advice)
         self.advice.setVisible(bool(vm.advice))
         self.battery.setText(vm.battery_line)
-        self.battery.setStyleSheet("color: #c4553b;" if vm.battery_stale else "")
+        self.battery.setStyleSheet(f"color: {colours.error(self)};" if vm.battery_stale else "")
+        self.advice.setStyleSheet(f"color: {colours.warning(self)}; font-weight: bold;")
         self.outlook.setText("\n".join(vm.outlook))
         self.outlook_title.setVisible(bool(vm.outlook))
         self.outlook.setVisible(bool(vm.outlook))
@@ -212,8 +214,8 @@ class Popup(QWidget):
             if item.widget():
                 item.widget().deleteLater()
         if not periods:
-            none = QLabel("Home all week apart from the weekly rule in the config.")
-            none.setStyleSheet("color: palette(mid);")
+            none = QLabel("Home all week, apart from the weekly rules in Settings.")
+            none.setStyleSheet(colours.MUTED_STYLE)
             self.away_list.addWidget(none)
         for period in periods:
             row = QHBoxLayout()
@@ -241,6 +243,7 @@ class Popup(QWidget):
                 self.tz,
             )
         except ValueError as err:
+            self.away_error.setStyleSheet(f"color: {colours.error(self)};")
             self.away_error.setText(str(err))
             self.away_error.setVisible(True)
             return
@@ -266,7 +269,7 @@ class Popup(QWidget):
 
 
 class TrayApp(QObject):
-    forecast_loaded = Signal(object)  # ForecastResult | Exception
+    forecast_loaded = Signal(object, object)  # the Config the fetch ran under, ForecastResult | Exception
 
     def __init__(self, cfg: Config, config_file: Path) -> None:
         super().__init__()
@@ -277,6 +280,7 @@ class TrayApp(QObject):
         self.error: str | None = None
         self.vm: ViewModel | None = None
         self._loading = False
+        self.settings_window: SettingsWindow | None = None
 
         self.popup = Popup(self.tz)
         self.popup.battery_submitted.connect(self._on_battery)
@@ -285,7 +289,7 @@ class TrayApp(QObject):
         self.tray = QSystemTrayIcon(make_icon("none"))
         menu = QMenu()
         menu.addAction("Refresh forecast", lambda: self.refresh(force=True))
-        menu.addAction("Open config file", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(config_file))))
+        menu.addAction("Settings...", self.open_settings)
         menu.addSeparator()
         menu.addAction("Quit", QApplication.quit)
         self.menu = menu
@@ -306,20 +310,42 @@ class TrayApp(QObject):
         if self._loading:
             return
         self._loading = True
+        cfg, tz = self.cfg, self.tz  # the worker keeps the config it started with
 
         def work() -> None:
             try:
-                outcome: object = get_forecast(self.cfg, datetime.now(self.tz), force=force)
+                outcome: object = get_forecast(cfg, datetime.now(tz), force=force)
             except ForecastUnavailable as err:
                 outcome = err
             except Exception as err:  # never let a worker crash the tray silently
                 outcome = err
-            self.forecast_loaded.emit(outcome)
+            self.forecast_loaded.emit(cfg, outcome)
 
         threading.Thread(target=work, daemon=True).start()
 
-    def _on_forecast(self, outcome: object) -> None:
+    def open_settings(self) -> None:
+        """One Settings window at a time: opening it again brings the open one forward."""
+        if self.settings_window is not None and self.settings_window.isVisible():
+            self.settings_window.show_centred()
+            return
+        self.settings_window = SettingsWindow(self.cfg, self.config_file, self.apply_config)
+        self.settings_window.show_centred()
+
+    def apply_config(self, cfg: Config) -> None:
+        """Switch to a new config without a restart (settings spec 3.3)."""
+        if forecast_key(cfg) != forecast_key(self.cfg):
+            self.result, self.error = None, None  # a forecast for other panels or place would mislead
+        self.cfg = cfg
+        self.tz = ZoneInfo(cfg.timezone)
+        self.popup.tz = self.tz
+        self.rebuild()
+        self.refresh()  # reuses the cache when the forecast key is unchanged
+
+    def _on_forecast(self, cfg: Config, outcome: object) -> None:
         self._loading = False
+        if cfg is not self.cfg:
+            self.refresh()  # started under an older config: its result must not replace the new one
+            return
         if isinstance(outcome, ForecastResult):
             self.result, self.error = outcome, None
         else:

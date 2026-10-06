@@ -12,6 +12,7 @@ Built for one home (Hometown, 12 solar panels, single-phase 7.4 kW ChargerBrand 
 - Recommends charge windows within the hours the car is at home, with one constant power per window (in kW and amps), aiming for almost no grid draw.
 - Tray icon: green while a window is active, blue when one is coming, grey when there is none, orange when a grid charge is needed, red when there is no forecast.
 - Click the icon for a popup: next window, the battery level you expect after it, an outlook for the next days, and the inputs below.
+- Right-click the icon for **Settings...**, a window with all configuration, grouped over tabs.
 - Sends a desktop notification 15 minutes before each window, once per window.
 - **Grid-charge advice:** if the battery would end a day below the minimum (30%), it says how much to charge from the grid and picks the time that uses the most leftover sun.
 
@@ -26,13 +27,13 @@ Everything you enter saves immediately and replans at once. Close the popup with
 
 ## Current state
 
-All six build tickets are done and reviewed against the spec (`.scratch/car-charge-planner/review.md`). 137 tests pass.
+All six planner tickets and all seven Settings-window tickets are done and reviewed against their specs (`.scratch/car-charge-planner/review.md`, `.scratch/settings-window/review.md`). The test suite passes; run it as shown under Tests.
 
 Not done or not verified:
 
-- **Panel size and tilt are assumed** (4.8 kWp, 35 degrees, south-east) until you get access to the InverterBrand account (ticket 08).
-- The CarModel's real consumption, charging losses and minimum charge current are estimates (ticket 09).
-- Calendar sync for away periods is saved for later (ticket 01).
+- **Panel size and tilt are assumed** (4.8 kWp, 35 degrees, south-east) until you get access to the InverterBrand account (planner ticket 08).
+- The CarModel's real consumption, charging losses and minimum charge current are estimates (planner ticket 09).
+- Calendar sync for away periods is saved for later (planner ticket 01).
 - No measured data yet: no P1 smart-meter reader, no InverterBrand production data. The plan is forecast-only.
 - Popup placement on Wayland was checked offscreen only.
 
@@ -99,11 +100,23 @@ This deletes only that `.desktop` file. A running instance keeps running until y
 
 ## Configuration
 
-The config file is `~/.config/car-charge-planner/config.toml`. Open it from the tray icon's right-click menu ("Open config file"). **Restart the app after editing.** Every value is commented, and values marked "(assumed)" or "(estimate)" are the ones to correct first.
+Open **Settings...** from the tray icon's right-click menu. Settings are grouped over five tabs:
 
-If a value is invalid, the app shows a dialog listing every problem and exits. Fix the file and start it again.
+| Tab | What it holds |
+| --- | --- |
+| Solar and location | Panel size, tilt, direction, system losses, latitude, longitude, time zone |
+| House and car | House baseload, usable battery, consumption, driving per day, minimum and target charge level |
+| Charger | Minimum and maximum current, voltage, charging efficiency |
+| Planning and notifications | Planning margin, import tolerance, minimum window length, notification lead time |
+| Away rules | Weekly times the car is not at home, one row per rule |
 
-Main settings: panel size, tilt and orientation, house baseload, battery size and consumption, minimum and target battery percentage, charger limits, the planning margin, and the away rules.
+- **Save** checks all values together. If something is wrong it lists every problem and writes nothing. Otherwise it writes the file, applies the change straight away (no restart) and closes the window. Changing tilt, direction, location or time zone fetches a fresh forecast.
+- **Cancel**, the close button and Escape ask "Discard your changes?" only if something changed.
+- **Reset tab** puts the current tab back to the built-in defaults. Nothing is saved until you press Save.
+- Pressing Enter in a field has the same effect as Save.
+- Values tagged **Assumed** or **Estimate** are guesses until you replace them with real numbers.
+
+The settings live in `~/.config/car-charge-planner/config.toml`, a plain TOML file. The Settings window manages it: saving rewrites the whole file and does not keep comments. The app reads the file only at startup, so if you want to edit it by hand, do it while the app is closed. An invalid value makes the app show a dialog listing the problems and exit.
 
 ## Where things are stored
 
@@ -128,13 +141,15 @@ No network or display is needed: the forecast client runs against a recorded res
 
 | Folder | Contents |
 | --- | --- |
-| `planner/` | The planning logic, with no network or UI: surplus, windows, projection, grid advice, config, CLI. |
+| `planner/` | The planning logic, with no network or UI: surplus, windows, projection, grid advice, config reading and writing (`config_io.py`), CLI. |
 | `forecast/` | Open-Meteo client and cache. |
 | `storage/` | Reading and writing `state.json`. |
-| `app/` | Tray, popup, notifications, autostart. |
+| `app/` | Tray, popup, notifications, autostart, theme-aware colours. |
+| `app/settings/` | The Settings window: field definitions, tabs, window. |
 | `tests/` | Test suite and the recorded forecast. |
 | `CONTEXT.md` | Glossary of the domain terms used throughout (feed-in, surplus, charge window, ...). |
-| `.scratch/car-charge-planner/` | The spec, the tickets and the review. |
+| `.scratch/car-charge-planner/` | The planner's spec, tickets and review. |
+| `.scratch/settings-window/` | The Settings window's spec, tickets and review. |
 | `docs/agents/` | Configuration for the engineering skills (issue tracker, labels). |
 
 ## How it plans, briefly

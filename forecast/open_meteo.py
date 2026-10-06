@@ -79,6 +79,11 @@ def parse(raw: dict, cfg: Config) -> list[ForecastStep]:
     return steps
 
 
+def forecast_key(cfg: Config) -> dict:
+    """The settings a forecast depends on; when they change, a cached forecast no longer applies."""
+    return _cache_key(cfg)
+
+
 def _cache_key(cfg: Config) -> dict:
     return {
         "latitude": cfg.latitude,
