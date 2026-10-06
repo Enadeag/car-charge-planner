@@ -192,7 +192,7 @@ def test_tray_notifies_once_ahead_of_the_window_and_not_again(cfg, tmp_path, mon
     app, sent = _tray_with_frozen_clock(cfg, tmp_path, monkeypatch, 8, 50)  # window starts 09:00
     app.rebuild()
     assert len(sent) == 1 and sent[0][0].startswith("Charge window 09:00")
-    assert "ChargerBrand" in sent[0][1]
+    assert "in your charger's app" in sent[0][1]
     app.rebuild()  # next tick
     assert len(sent) == 1
 

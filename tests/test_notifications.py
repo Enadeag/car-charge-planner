@@ -77,7 +77,7 @@ def test_candidates_include_solar_and_grid_windows_in_time_order():
 def test_messages_say_what_to_set(cfg):
     title, body = message(SOLAR, win(10, 15), cfg, TZ)
     assert title == "Charge window 10:00-15:00"
-    assert "7 A" in body and "ChargerBrand" in body and "solar" in body
+    assert "7 A" in body and "in your charger's app" in body and "solar" in body and "ChargerBrand" not in body
     title, body = message(GRID, win(0, 6, amps=13), cfg, TZ)
     assert title == "Grid charge window 00:00-06:00"
     assert "13 A" in body and "30%" in body

@@ -2,7 +2,7 @@
 
 A personal tray app for KDE Plasma that tells you when to charge the car so that as much of your own solar energy as possible is used and as little as possible is fed back to the grid.
 
-It is advisory only: it recommends a **charge window** and a **charge power**, and you set the current in the ChargerBrand app yourself.
+It is advisory only: it recommends a **charge window** and a **charge power**, and you set the current in your charger's app yourself.
 
 Built for one home (Hometown, 12 solar panels, single-phase 7.4 kW ChargerBrand charger, CarBrand CarModel, fixed energy contract). The numbers it assumes are in the config file.
 

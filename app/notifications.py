@@ -46,7 +46,7 @@ def due(
 
 def message(kind: str, window: Window, cfg: Config, tz: ZoneInfo) -> tuple[str, str]:
     span = f"{window.start.astimezone(tz):%H:%M}-{window.end.astimezone(tz):%H:%M}"
-    setting = f"Set the current to {window.amps} A ({window.power_kw:.1f} kW) in the ChargerBrand app."
+    setting = f"Set the current to {window.amps} A ({window.power_kw:.1f} kW) in your charger's app."
     if kind == GRID:
         return (
             f"Grid charge window {span}",
