@@ -49,3 +49,14 @@ _Avoid_: Default, assumed value, guess
 **Charger phases**:
 Whether the charger charges on one phase or three. Each amp delivers three times the power on three phases, and so does the minimum current.
 _Avoid_: Single/three-phase connection (the home connection can have three phases while the charger uses one)
+
+## Forecasts
+
+**Forecast provider**:
+A service the app asks for the expected solar power of the user's system over the next days. The app hands it a description of the system and gets back power per time step.
+_Avoid_: Weather source, weather service, API
+
+**Fallback provider**:
+A second forecast provider, chosen in Settings, asked only when the first has no forecast that is still usable.
+_Avoid_: Backup provider, secondary source
+
