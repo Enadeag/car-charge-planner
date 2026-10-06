@@ -48,7 +48,7 @@ Not done or not verified:
 ```bash
 cd ~/projects/car-charge-notification
 python3 -m venv .venv
-.venv/bin/pip install PySide6-Essentials pytest
+.venv/bin/pip install PySide6-Essentials jeepney pytest
 ```
 
 ## Run
@@ -98,6 +98,20 @@ This writes `~/.config/autostart/car-charge-planner.desktop`, which starts the a
 
 This deletes only that `.desktop` file. A running instance keeps running until you quit it.
 
+## Application menu entry and icon
+
+```bash
+.venv/bin/python -m app install-launcher
+```
+
+This adds the app to your application menu with its own icon (the bolt on a blue disc) and writes the launcher to `~/.local/share/applications/car-charge-planner.desktop` and the icon to `~/.local/share/icons/hicolor/scalable/apps/`. The desktop uses the same entry to tie the app's notifications and windows to it, so they show its name and icon. Like the autostart entry, it stores absolute paths, so run it again if you move the project.
+
+To remove both files:
+
+```bash
+.venv/bin/python -m app uninstall-launcher
+```
+
 ## Configuration
 
 Open **Settings...** from the tray icon's right-click menu. Settings are grouped over five tabs:
@@ -145,7 +159,7 @@ No network or display is needed: the forecast client runs against a recorded res
 | `planner/` | The planning logic, with no network or UI: surplus, windows, projection, grid advice, config reading and writing (`config_io.py`), CLI. |
 | `forecast/` | Open-Meteo client and cache. |
 | `storage/` | Reading and writing `state.json`. |
-| `app/` | Tray, popup (`popup.py`), notifications, autostart, theme-aware colours. |
+| `app/` | Tray, the popup (`popup.py`, a window around the reusable `planview.py`), notifications over D-Bus (`notifier.py`), the launcher and autostart entries, theme-aware colours. |
 | `app/settings/` | The Settings window: field definitions, tabs, window. |
 | `tests/` | Test suite and the recorded forecast. |
 | `CONTEXT.md` | Glossary of the domain terms used throughout (feed-in, surplus, charge window, ...). |

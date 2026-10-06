@@ -21,6 +21,17 @@ def at(day: date, hour: int, minute: int = 0) -> datetime:
     return datetime(day.year, day.month, day.day, hour, minute, tzinfo=TZ)
 
 
+class FakeNotifier:
+    """Stands in for Notifier: records what would have been shown."""
+
+    def __init__(self):
+        self.sent = []
+
+    def send(self, title, body, expire_ms=20_000):
+        self.sent.append((title, body))
+        return len(self.sent)
+
+
 @pytest.fixture
 def cfg() -> Config:
     return Config()

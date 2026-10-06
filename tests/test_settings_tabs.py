@@ -172,8 +172,9 @@ def test_a_saved_lead_time_changes_when_the_next_notification_is_due(tmp_path, m
     monkeypatch.setattr("app.tray.get_forecast", lambda cfg, now, force=False: None)
     app = TrayApp(Config(), tmp_path / "config.toml")
     app.result = ForecastResult(forecast_from([(day, 900)]), at(day, 6), True, False)
-    sent = []
-    app.tray.showMessage = lambda title, body, icon, ms: sent.append(title)
+    from conftest import FakeNotifier
+
+    app.notifier = FakeNotifier()
 
     class Frozen:
         @staticmethod
@@ -182,10 +183,11 @@ def test_a_saved_lead_time_changes_when_the_next_notification_is_due(tmp_path, m
 
     monkeypatch.setattr("app.tray.datetime", Frozen)
     app.rebuild()
-    assert sent == []  # 30 minutes ahead, lead time is 15
+    assert app.notifier.sent == []  # 30 minutes ahead, lead time is 15
     app.cfg = replace(app.cfg, notify=replace(app.cfg.notify, lead_minutes=30))
     app.rebuild()
-    assert len(sent) == 1 and sent[0].startswith("Charge window 09:00")
+    titles = [title for title, _ in app.notifier.sent]
+    assert len(titles) == 1 and titles[0].startswith("Charge window 09:00")
 
 
 # ---- ticket 06: away rules --------------------------------------------------

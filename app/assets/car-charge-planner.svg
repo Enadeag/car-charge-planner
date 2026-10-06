@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Car charge planner</title>
+  <circle cx="32" cy="32" r="28" fill="#3b82c4"/>
+  <polygon points="36,10 18,36 30,36 26,54 46,26 34,26" fill="#ffffff"/>
+</svg>

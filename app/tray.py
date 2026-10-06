@@ -20,7 +20,10 @@ from planner.projection import plan
 from storage.state import State, add_away, load_state, mark_notified, remove_away, set_battery
 
 from .config_file import ensure_config
+from . import launcher
+from .identity import DESKTOP_ENTRY
 from .notifications import candidate_windows, due, message
+from .notifier import Notifier
 from .popup import Popup
 from .settings.window import SettingsWindow
 from .view_model import ViewModel, build, no_forecast
@@ -48,8 +51,9 @@ def make_icon(state: str) -> QIcon:
 class TrayApp(QObject):
     forecast_loaded = Signal(object, object)  # the Config the fetch ran under, ForecastResult | Exception
 
-    def __init__(self, cfg: Config, config_file: Path) -> None:
+    def __init__(self, cfg: Config, config_file: Path, notifier: Notifier | None = None) -> None:
         super().__init__()
+        self.notifier = notifier or Notifier()
         self.cfg = cfg
         self.config_file = config_file
         self.tz = ZoneInfo(cfg.timezone)
@@ -156,7 +160,7 @@ class TrayApp(QObject):
             windows, state.notified, now, self.cfg.notify.lead_minutes, self.result.age(now), self.result.stale
         ):
             title, body = message(kind, window, self.cfg, self.tz)
-            self.tray.showMessage(title, body, QSystemTrayIcon.MessageIcon.Information, 20_000)
+            self.notifier.send(title, body)
             mark_notified(window, now)
 
     def _on_battery(self, pct: float) -> None:
@@ -185,6 +189,8 @@ class TrayApp(QObject):
 def main(argv: list[str] | None = None) -> int:
     app = QApplication(argv if argv is not None else sys.argv)
     app.setApplicationName("car-charge-planner")
+    if launcher.is_installed():  # the portal looks the id up: set it only when there is an entry to find
+        app.setDesktopFileName(DESKTOP_ENTRY)  # the Wayland app id: matches the launcher entry
     app.setQuitOnLastWindowClosed(False)
 
     lock_path = Path.home() / ".cache" / "car-charge-planner.lock"

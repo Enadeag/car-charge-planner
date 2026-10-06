@@ -176,8 +176,10 @@ def _tray_with_frozen_clock(cfg, tmp_path, monkeypatch, hour, minute, failed=Fal
     day = date(2026, 7, 3)
     app = TrayApp(cfg, tmp_path / "config.toml")
     app.result = ForecastResult(forecast_from([(day, 900)]), at(day, hour, 0), True, failed)
-    sent = []
-    app.tray.showMessage = lambda title, body, icon, ms: sent.append((title, body))
+    from conftest import FakeNotifier
+
+    app.notifier = FakeNotifier()
+    sent = app.notifier.sent
 
     class Frozen:
         @staticmethod

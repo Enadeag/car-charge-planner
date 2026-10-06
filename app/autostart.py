@@ -5,7 +5,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-ENTRY_NAME = "car-charge-planner.desktop"
+from .identity import APP_NAME, COMMENT, DESKTOP_ENTRY, ICON_NAME
+
+ENTRY_NAME = f"{DESKTOP_ENTRY}.desktop"
 
 
 def autostart_dir() -> Path:
@@ -15,9 +17,10 @@ def autostart_dir() -> Path:
 def desktop_entry(python: Path, project: Path) -> str:
     return f"""[Desktop Entry]
 Type=Application
-Name=Car charge planner
-Comment=Tells you when to charge the car from your solar panels
+Name={APP_NAME}
+Comment={COMMENT}
 Exec={python} -m app
+Icon={ICON_NAME}
 Path={project}
 Terminal=false
 X-KDE-autostart-after=panel
