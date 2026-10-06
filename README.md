@@ -40,7 +40,7 @@ Limits to know about:
 
 ## Requirements
 
-- Linux with KDE Plasma (tray icon via StatusNotifier). Developed on KDE Plasma under Wayland.
+- Linux. The tray icon needs a desktop with a system tray (KDE Plasma; GNOME only with an extension). Without one the app shows a window instead. Developed on KDE Plasma under Wayland.
 - Python 3.12 or newer (developed on 3.14).
 - Internet access for the forecast. Without it the app uses its cached forecast and says so.
 
@@ -115,7 +115,7 @@ To remove both files:
 
 ## Configuration
 
-Open **Settings...** from the tray icon's right-click menu. Settings are grouped over five tabs:
+Open **Settings...** from the tray icon's right-click menu. Settings are grouped over six tabs:
 
 | Tab | What it holds |
 | --- | --- |
@@ -123,6 +123,7 @@ Open **Settings...** from the tray icon's right-click menu. Settings are grouped
 | House and car | House baseload, usable battery, consumption, driving per day, minimum and target charge level |
 | Charger | Minimum and maximum current, voltage, charging efficiency |
 | Planning and notifications | Planning margin, import tolerance, minimum window length, notification lead time |
+| Interface | Whether the app shows itself as a tray icon with a popup, as a window, or automatically (a tray if the desktop has one, otherwise a window). Applies the next time the app starts. |
 | Away rules | Weekly times the car is not at home, one row per rule |
 
 - **Save** checks all values together. If something is wrong it lists every problem and writes nothing. Otherwise it writes the file and applies the change straight away (no restart). Changing tilt, direction, location or time zone fetches a fresh forecast.

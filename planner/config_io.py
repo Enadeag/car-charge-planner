@@ -14,7 +14,7 @@ HEADER = """\
 # Edit by hand only while the app is closed; comments are not kept when the window saves.
 """
 
-SECTIONS = ("panels", "house", "car", "charger", "planning", "notify")
+SECTIONS = ("panels", "house", "car", "charger", "planning", "notify", "interface")
 
 
 def _value(value: object) -> str:

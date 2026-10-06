@@ -110,6 +110,9 @@ class Controller(QObject):
         """Switch to a new config without a restart (settings spec 3.3)."""
         if forecast_key(cfg) != forecast_key(self.cfg):
             self.result, self.error = None, None  # a forecast for other panels or place would mislead
+        if cfg.interface.mode != self.cfg.interface.mode:
+            # the shell is chosen once at start: say so, since nothing visible happens now
+            self.notifier.send("Interface changed", "The new interface applies the next time the app starts.")
         self.cfg = cfg
         self.tz = ZoneInfo(cfg.timezone)
         self.rebuild()

@@ -30,7 +30,7 @@ from .fields import FieldSpec, TabSpec, get_value, set_value
 
 def shown_value(spec: FieldSpec, stored):
     """The stored value as the input box shows it."""
-    if spec.kind == "timezone":
+    if spec.kind in ("timezone", "choice"):
         return str(stored)
     if spec.kind == "int":
         return int(stored)
@@ -67,6 +67,12 @@ class FieldTab(QWidget):
         self.load(cfg)
 
     def _make_input(self, spec: FieldSpec) -> QWidget:
+        if spec.kind == "choice":
+            box = QComboBox()
+            for value, label in spec.choices:
+                box.addItem(label, value)
+            box.currentIndexChanged.connect(lambda _i: self.changed.emit())
+            return box
         if spec.kind == "timezone":
             box = QComboBox()
             box.setEditable(True)
@@ -97,6 +103,8 @@ class FieldTab(QWidget):
         value = shown_value(spec, stored)
         if spec.kind == "timezone":
             widget.setCurrentText(value)
+        elif spec.kind == "choice":
+            widget.setCurrentIndex(max(widget.findData(value), 0))
         else:
             widget.setValue(value)
 
@@ -111,6 +119,9 @@ class FieldTab(QWidget):
         """What to store for a field. A box that still shows the baseline gives the exact baseline back."""
         widget = self.inputs[spec.key]
         baseline = self.baseline[spec.key]
+        if spec.kind == "choice":
+            data = widget.currentData()
+            return baseline if data == baseline else data
         if spec.kind == "timezone":
             text = widget.currentText().strip()
             return baseline if text == baseline else text

@@ -13,13 +13,14 @@ class FieldSpec:
     label: str
     hint: str
     unit: str = ""
-    kind: str = "float"  # "float" | "int" | "timezone"
+    kind: str = "float"  # "float" | "int" | "timezone" | "choice"
     minimum: float = 0  # limits of the input box, in shown units; validate() stays the judge
     maximum: float = 1000
     decimals: int = 1
     step: float = 1.0
     scale: float = 1.0  # shown = stored * scale, so a fraction can be shown as a percent
     flag: str = ""  # "Assumed" or "Estimate": a value that is not measured yet
+    choices: tuple[tuple[str, str], ...] = ()  # for kind "choice": (stored value, label shown)
 
 
 @dataclass(frozen=True)
@@ -139,4 +140,22 @@ PLANNING = TabSpec(
 )
 
 # the Away rules tab is not a list of numbers: it has its own widget (tabs.py)
-TABS: tuple[TabSpec, ...] = (SOLAR, HOUSE_CAR, CHARGER, PLANNING)
+INTERFACE = TabSpec(
+    "Interface",
+    (
+        FieldSpec(
+            "interface.mode",
+            "Show the app as",
+            "How the app shows itself. A tray icon needs a desktop with a system tray (KDE Plasma, or GNOME with the "
+            "AppIndicator extension). Applies the next time the app starts.",
+            kind="choice",
+            choices=(
+                ("auto", "Automatic: a tray icon if there is a tray, otherwise a window"),
+                ("tray", "Tray icon with a popup"),
+                ("window", "A window"),
+            ),
+        ),
+    ),
+)
+
+TABS: tuple[TabSpec, ...] = (SOLAR, HOUSE_CAR, CHARGER, PLANNING, INTERFACE)

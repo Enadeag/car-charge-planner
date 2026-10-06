@@ -91,6 +91,16 @@ class Notify:
     lead_minutes: int = 15
 
 
+INTERFACE_MODES = ("auto", "tray", "window")
+
+
+@dataclass(frozen=True)
+class Interface:
+    """How the app shows itself: a tray icon with a popup, an ordinary window, or whichever the desktop supports."""
+
+    mode: str = "auto"
+
+
 def _default_away() -> tuple[AwayRule, ...]:
     return (AwayRule(weekday=3, start=time(6, 0), end=time(19, 0)),)
 
@@ -103,6 +113,7 @@ class Config:
     charger: Charger = field(default_factory=Charger)
     planning: Planning = field(default_factory=Planning)
     notify: Notify = field(default_factory=Notify)
+    interface: Interface = field(default_factory=Interface)
     away_rules: tuple[AwayRule, ...] = field(default_factory=_default_away)
     timezone: str = "Europe/Amsterdam"
     latitude: float = 0.0
@@ -164,6 +175,7 @@ def validate(cfg: Config) -> Config:
     need(cfg.planning.import_tolerance_kwh >= 0, "[planning] import_tolerance_kwh cannot be negative")
     need(cfg.planning.min_window_minutes > 0, "[planning] min_window_minutes must be above 0")
     need(cfg.notify.lead_minutes >= 0, "[notify] lead_minutes cannot be negative")
+    need(cfg.interface.mode in INTERFACE_MODES, f"[interface] mode must be one of {', '.join(INTERFACE_MODES)}, not {cfg.interface.mode!r}")
     need(-90 <= cfg.latitude <= 90, "latitude must be between -90 and 90")
     need(-180 <= cfg.longitude <= 180, "longitude must be between -180 and 180")
     try:
@@ -195,7 +207,7 @@ def load_config(path: Path | None) -> Config:
     except tomllib.TOMLDecodeError as err:
         raise ConfigError(f"Config file is not valid TOML: {err}") from err
     cfg = Config()
-    for section in ("panels", "house", "car", "charger", "planning", "notify"):
+    for section in ("panels", "house", "car", "charger", "planning", "notify", "interface"):
         if section in data:
             current = getattr(cfg, section)
             known = {f.name for f in fields(current)}
