@@ -4,27 +4,14 @@ from __future__ import annotations
 
 import sys
 import threading
-from datetime import date, datetime, time, timedelta
+import time
+from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from PySide6.QtCore import QLockFile, QObject, QPointF, Qt, QTime, QTimer, Signal
-from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPixmap, QPolygonF
-from PySide6.QtWidgets import (
-    QApplication,
-    QMessageBox,
-    QComboBox,
-    QDoubleSpinBox,
-    QFrame,
-    QHBoxLayout,
-    QLabel,
-    QMenu,
-    QPushButton,
-    QSystemTrayIcon,
-    QTimeEdit,
-    QVBoxLayout,
-    QWidget,
-)
+from PySide6.QtCore import QLockFile, QObject, QPointF, Qt, QTimer, Signal
+from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap, QPolygonF
+from PySide6.QtWidgets import QApplication, QMenu, QMessageBox, QSystemTrayIcon
 
 from forecast.open_meteo import ForecastResult, ForecastUnavailable, forecast_key, get_forecast
 from planner.advice import grid_advice
@@ -32,13 +19,13 @@ from planner.model import AwayPeriod, Config, ConfigError, load_config
 from planner.projection import plan
 from storage.state import State, add_away, load_state, mark_notified, remove_away, set_battery
 
-from . import colours
-from .away_input import describe, make_away
 from .config_file import ensure_config
 from .notifications import candidate_windows, due, message
+from .popup import Popup
 from .settings.window import SettingsWindow
-from .view_model import ViewModel, build, day_label, no_forecast
+from .view_model import ViewModel, build, no_forecast
 
+CLICK_CLOSE_GRACE_S = 0.5
 TICK_MS = 60_000  # recompute every minute; the forecast itself refreshes at most hourly
 COLORS = {"active": "#2e9e5b", "upcoming": "#3b82c4", "none": "#7a7f87", "grid": "#d98c1f", "no-forecast": "#c4553b"}
 
@@ -56,216 +43,6 @@ def make_icon(state: str) -> QIcon:
     p.drawPolygon(QPolygonF([QPointF(x, y) for x, y in bolt]))
     p.end()
     return QIcon(pix)
-
-
-class Popup(QWidget):
-    """Window with the plan and the inputs. Closes with the buttons, Escape, or a click on the tray icon."""
-
-    battery_submitted = Signal(float)
-    away_added = Signal(object)  # AwayPeriod
-    away_removed = Signal(object)  # AwayPeriod
-
-    def __init__(self, tz: ZoneInfo | None = None) -> None:
-        super().__init__(None, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint)
-        self.tz = tz or ZoneInfo("Europe/Amsterdam")
-        self.setMinimumWidth(400)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 14, 16, 12)
-        layout.setSpacing(6)
-
-        self.headline = QLabel()
-        font = self.headline.font()
-        font.setPointSizeF(font.pointSizeF() * 1.4)
-        font.setBold(True)
-        self.headline.setFont(font)
-        self.detail = QLabel()
-        self.detail.setWordWrap(True)
-        self.projection = QLabel()
-        self.advice = QLabel()
-        self.advice.setWordWrap(True)
-        self.advice.setStyleSheet("font-weight: bold;")
-
-        self.battery = QLabel()
-        self.battery.setWordWrap(True)
-        self.battery_input = QDoubleSpinBox()
-        self.battery_input.setRange(0, 100)
-        self.battery_input.setDecimals(0)
-        self.battery_input.setSuffix(" %")
-        self.battery_input.setValue(50)
-        set_button = QPushButton("Set battery")
-        set_button.setToolTip("Saves immediately")
-        set_button.clicked.connect(lambda: self.battery_submitted.emit(self.battery_input.value()))
-        self.battery_input.lineEdit().returnPressed.connect(set_button.click)
-        battery_row = QHBoxLayout()
-        battery_row.addWidget(self.battery_input)
-        battery_row.addWidget(set_button)
-        battery_row.addStretch()
-
-        self.outlook_title = QLabel("Outlook")
-        self.outlook_title.setStyleSheet("font-weight: bold;")
-        self.outlook = QLabel()
-        self.outlook.setTextFormat(Qt.TextFormat.PlainText)
-
-        away_title = QLabel("Car away (saved as you add or remove)")
-        away_title.setStyleSheet("font-weight: bold;")
-        self.away_list = QVBoxLayout()
-        self.away_list.setSpacing(2)
-        self.away_day = QComboBox()
-        self.away_kind = QComboBox()
-        self.away_kind.addItems(["All day", "Time range"])
-        self.away_from = QTimeEdit(QTime(9, 0))
-        self.away_to = QTimeEdit(QTime(17, 0))
-        for edit in (self.away_from, self.away_to):
-            edit.setDisplayFormat("HH:mm")
-            edit.setVisible(False)
-        self.away_kind.currentIndexChanged.connect(self._on_kind_changed)
-        add_button = QPushButton("Add")
-        add_button.setToolTip("Saves immediately")
-        add_button.clicked.connect(self._on_add_away)
-        add_row = QHBoxLayout()
-        for widget in (self.away_day, self.away_kind, self.away_from, self.away_to, add_button):
-            add_row.addWidget(widget)
-        add_row.addStretch()
-        self.away_error = QLabel()
-        self.away_error.setVisible(False)
-
-        self.footer = QLabel()
-        self.footer.setWordWrap(True)
-        self.footer.setStyleSheet(f"{colours.MUTED_STYLE} font-size: 9pt;")
-
-        def rule() -> QFrame:
-            line = QFrame()
-            line.setFrameShape(QFrame.Shape.HLine)
-            line.setFrameShadow(QFrame.Shadow.Sunken)
-            return line
-
-        close_x = QPushButton("\u00d7")
-        close_x.setFlat(True)
-        close_x.setToolTip("Close")
-        close_x.setFixedSize(28, 28)
-        close_x.clicked.connect(self.hide)
-        header = QHBoxLayout()
-        header.addWidget(self.headline)
-        header.addStretch()
-        header.addWidget(close_x)
-        layout.addLayout(header)
-        for widget in (self.detail, self.projection, self.advice):
-            layout.addWidget(widget)
-        layout.addWidget(rule())
-        layout.addWidget(self.battery)
-        layout.addLayout(battery_row)
-        layout.addWidget(rule())
-        layout.addWidget(self.outlook_title)
-        layout.addWidget(self.outlook)
-        layout.addWidget(rule())
-        layout.addWidget(away_title)
-        layout.addLayout(self.away_list)
-        layout.addLayout(add_row)
-        layout.addWidget(self.away_error)
-        layout.addWidget(self.footer)
-        close_button = QPushButton("Close")
-        close_button.clicked.connect(self.hide)
-        close_row = QHBoxLayout()
-        close_row.addStretch()
-        close_row.addWidget(close_button)
-        layout.addLayout(close_row)
-        self.setObjectName("popup")
-        self.setStyleSheet("#popup { border: 1px solid palette(mid); background: palette(window); }")
-
-    def update_view(self, vm: ViewModel, state: State | None = None, today: date | None = None) -> None:
-        self.headline.setText(vm.headline)
-        self.detail.setText(vm.detail)
-        self.projection.setText(vm.projection)
-        self.projection.setVisible(bool(vm.projection))
-        self.advice.setText(vm.advice)
-        self.advice.setVisible(bool(vm.advice))
-        self.battery.setText(vm.battery_line)
-        self.battery.setStyleSheet(f"color: {colours.error(self)};" if vm.battery_stale else "")
-        self.advice.setStyleSheet(f"color: {colours.warning(self)}; font-weight: bold;")
-        self.outlook.setText("\n".join(vm.outlook))
-        self.outlook_title.setVisible(bool(vm.outlook))
-        self.outlook.setVisible(bool(vm.outlook))
-        self.footer.setText(vm.footer)
-        if state is not None:
-            if not self.battery_input.hasFocus():
-                self.battery_input.setValue(round(state.battery.pct))
-            self._fill_away(state.away)
-        if today is not None:
-            self._fill_days(today)
-        self.adjustSize()
-
-    def _fill_days(self, today: date) -> None:
-        chosen = self.away_day.currentData()
-        self.away_day.clear()
-        for offset in range(8):
-            day = today + timedelta(days=offset)
-            self.away_day.addItem(day_label(day, today), day)
-        index = self.away_day.findData(chosen)
-        self.away_day.setCurrentIndex(max(index, 0))
-
-    def _fill_away(self, periods: tuple[AwayPeriod, ...]) -> None:
-        while self.away_list.count():
-            item = self.away_list.takeAt(0)
-            if item.layout():
-                while item.layout().count():
-                    child = item.layout().takeAt(0)
-                    if child.widget():
-                        child.widget().deleteLater()
-            if item.widget():
-                item.widget().deleteLater()
-        if not periods:
-            none = QLabel("Home all week, apart from the weekly rules in Settings.")
-            none.setStyleSheet(colours.MUTED_STYLE)
-            self.away_list.addWidget(none)
-        for period in periods:
-            row = QHBoxLayout()
-            row.addWidget(QLabel(describe(period, self.tz)))
-            row.addStretch()
-            remove = QPushButton("Remove")
-            remove.setFlat(True)
-            remove.clicked.connect(lambda _=False, p=period: self.away_removed.emit(p))
-            row.addWidget(remove)
-            self.away_list.addLayout(row)
-
-    def _on_kind_changed(self) -> None:
-        ranged = self.away_kind.currentIndex() == 1
-        self.away_from.setVisible(ranged)
-        self.away_to.setVisible(ranged)
-        self.adjustSize()
-
-    def _on_add_away(self) -> None:
-        try:
-            period = make_away(
-                self.away_day.currentData(),
-                self.away_kind.currentIndex() == 0,
-                self.away_from.time().toPython(),
-                self.away_to.time().toPython(),
-                self.tz,
-            )
-        except ValueError as err:
-            self.away_error.setStyleSheet(f"color: {colours.error(self)};")
-            self.away_error.setText(str(err))
-            self.away_error.setVisible(True)
-            return
-        self.away_error.setVisible(False)
-        self.away_added.emit(period)
-
-    def keyPressEvent(self, event) -> None:
-        if event.key() == Qt.Key.Key_Escape:
-            self.hide()
-        else:
-            super().keyPressEvent(event)
-
-    def show_near(self, anchor) -> None:
-        screen = QGuiApplication.screenAt(anchor.center()) or QGuiApplication.primaryScreen()
-        area = screen.availableGeometry()
-        self.adjustSize()
-        x = min(max(area.left() + 8, anchor.center().x() - self.width() // 2), area.right() - self.width() - 8)
-        top_panel = anchor.isValid() and anchor.center().y() < area.center().y()
-        y = area.top() + 8 if top_panel else area.bottom() - self.height() - 8
-        self.move(x, y)
-        self.show()
-        self.activateWindow()
 
 
 class TrayApp(QObject):
@@ -286,10 +63,11 @@ class TrayApp(QObject):
         self.popup.battery_submitted.connect(self._on_battery)
         self.popup.away_added.connect(self._on_away_added)
         self.popup.away_removed.connect(self._on_away_removed)
+        self.popup.settings_requested.connect(self._on_settings_requested)
         self.tray = QSystemTrayIcon(make_icon("none"))
         menu = QMenu()
         menu.addAction("Refresh forecast", lambda: self.refresh(force=True))
-        menu.addAction("Settings...", self.open_settings)
+        menu.addAction("Settings...", lambda: self.open_settings())
         menu.addSeparator()
         menu.addAction("Quit", QApplication.quit)
         self.menu = menu
@@ -323,13 +101,17 @@ class TrayApp(QObject):
 
         threading.Thread(target=work, daemon=True).start()
 
-    def open_settings(self) -> None:
+    def open_settings(self, tab: str | None = None) -> None:
         """One Settings window at a time: opening it again brings the open one forward."""
-        if self.settings_window is not None and self.settings_window.isVisible():
-            self.settings_window.show_centred()
-            return
-        self.settings_window = SettingsWindow(self.cfg, self.config_file, self.apply_config)
+        if self.settings_window is None or not self.settings_window.isVisible():
+            self.settings_window = SettingsWindow(self.cfg, self.config_file, self.apply_config)
+        if tab:
+            self.settings_window.show_tab(tab)
         self.settings_window.show_centred()
+
+    def _on_settings_requested(self, tab: str) -> None:
+        self.popup.hide()
+        self.open_settings(tab)
 
     def apply_config(self, cfg: Config) -> None:
         """Switch to a new config without a restart (settings spec 3.3)."""
@@ -366,7 +148,7 @@ class TrayApp(QObject):
         self.vm = vm
         self.tray.setIcon(make_icon(vm.state))
         self.tray.setToolTip(vm.tooltip)
-        self.popup.update_view(vm, state, now.date())
+        self.popup.update_view(vm, state, now.date(), self.cfg.away_rules)
 
     def _announce(self, windows, state: State, now: datetime) -> None:
         """Notify once per window, a few minutes ahead (spec 5)."""
@@ -393,6 +175,8 @@ class TrayApp(QObject):
         if reason in (QSystemTrayIcon.ActivationReason.Trigger, QSystemTrayIcon.ActivationReason.MiddleClick):
             if self.popup.isVisible():
                 self.popup.hide()
+            elif time.monotonic() - self.popup.auto_closed_at < CLICK_CLOSE_GRACE_S:
+                pass  # this click is what just closed it (it took the focus): do not reopen
             else:
                 self.rebuild()
                 self.popup.show_near(self.tray.geometry())

@@ -188,6 +188,12 @@ class SettingsWindow(QDialog):
             return
         super().reject()
 
+    def show_tab(self, title: str) -> None:
+        for index in range(self.tabs.count()):
+            if self.tabs.tabText(index) == title:
+                self.tabs.setCurrentIndex(index)
+                return
+
     def show_centred(self) -> None:
         screen = QGuiApplication.primaryScreen()
         self.adjustSize()

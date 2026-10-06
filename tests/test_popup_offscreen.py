@@ -24,8 +24,8 @@ def test_popup_shows_view_model_text(cfg):
     popup = Popup(TZ)
     popup.update_view(vm)
     assert popup.headline.text() == vm.headline
-    assert "Tomorrow: no good window" in popup.outlook.text()
-    assert popup.width() >= 380
+    assert popup.quiet.text() == "Tomorrow: no good window"
+    assert popup.width() >= 440
 
 
 def test_icons_exist_for_every_state():
@@ -141,25 +141,25 @@ def test_tray_app_round_trip_persists_and_replans(cfg, tmp_path, monkeypatch):
     monkeypatch.setattr("app.tray.datetime", FrozenNow)
     app._on_battery(33)
     assert load_state().battery.pct == 33
-    assert app.vm.projection.startswith("Battery 33% ->")
+    assert app.vm.projection.startswith("Battery 33% \u2192")
     app._on_away_added(make_away(day, True, time(), time(), TZ))
     assert len(load_state().away) == 1
-    assert app.vm.outlook[0] == "Today: no good window"
+    assert "Today" in app.vm.quiet_days
     app._on_away_removed(load_state().away[0])
     assert load_state().away == ()
-    assert app.vm.outlook[0] != "Today: no good window"
+    assert "Today" not in app.vm.quiet_days
 
 
-def test_popup_has_close_buttons_and_stays_open_when_focus_moves(cfg):
+def test_popup_has_a_close_button_and_stays_open_when_focus_moves(cfg):
     from PySide6.QtWidgets import QPushButton
 
     QApplication.instance() or QApplication([])
     popup, _ = _popup_and_vm(cfg)
     popup.show()
-    for label in ("×", "Close"):
-        popup.show()
-        next(b for b in popup.findChildren(QPushButton) if b.text() == label).click()
-        assert not popup.isVisible()
+    labels = [b.text() for b in popup.findChildren(QPushButton)]
+    assert "\u00d7" in labels and "Close" not in labels  # one close control: the x in the corner
+    next(b for b in popup.findChildren(QPushButton) if b.text() == "\u00d7").click()
+    assert not popup.isVisible()
     popup.show()
     from PySide6.QtCore import QEvent
 
@@ -215,3 +215,106 @@ def test_tray_is_silent_when_the_forecast_refresh_failed(cfg, tmp_path, monkeypa
     app, sent = _tray_with_frozen_clock(cfg, tmp_path, monkeypatch, 8, 50, failed=True)
     app.rebuild()
     assert sent == []
+
+
+# ---- weekly rules in the popup are read-only; they are edited in Settings -----
+
+
+def _away_text(popup):
+    from PySide6.QtWidgets import QLabel
+
+    return [label.text() for label in popup.findChildren(QLabel)]
+
+
+def test_popup_lists_weekly_rules_as_read_only_text(cfg):
+    from datetime import time
+
+    from PySide6.QtWidgets import QPushButton
+
+    from app.away_input import make_away
+    from storage.state import BatteryReading, State
+
+    QApplication.instance() or QApplication([])
+    now = at(date(2026, 7, 3), 7)
+    one_off = make_away(date(2026, 7, 4), True, time(), time(), TZ)
+    popup, vm = _popup_and_vm(cfg)
+    popup.update_view(vm, State(BatteryReading(50, now), (one_off,)), now.date(), cfg.away_rules)
+    texts = _away_text(popup)
+    assert "Every Thursday, 06:00-19:00  (weekly rule)" in texts
+    assert any("Sat 4 Jul, all day" in t for t in texts)
+    removes = [b for b in popup.findChildren(QPushButton) if b.text() == "Remove"]
+    assert len(removes) == 1  # only the one-off day can be removed here, not the weekly rule
+
+
+def test_popup_says_so_when_there_are_no_absences_at_all(cfg):
+    from storage.state import State
+
+    QApplication.instance() or QApplication([])
+    popup, vm = _popup_and_vm(cfg)
+    popup.update_view(vm, State(), date(2026, 7, 3), ())
+    assert any("No absences planned" in t for t in _away_text(popup))
+
+
+def test_popup_has_no_controls_for_editing_weekly_rules(cfg):
+    from PySide6.QtWidgets import QPushButton
+
+    QApplication.instance() or QApplication([])
+    popup, vm = _popup_and_vm(cfg)
+    popup.update_view(vm, None, date(2026, 7, 3), cfg.away_rules)
+    labels = {b.text() for b in popup.findChildren(QPushButton)}
+    assert "Edit weekly rules in Settings..." in labels
+    assert "Add rule" not in labels  # the rule editor lives in Settings only
+
+
+def test_the_settings_button_asks_for_the_away_rules_tab(cfg):
+    from PySide6.QtWidgets import QPushButton
+
+    QApplication.instance() or QApplication([])
+    popup, _ = _popup_and_vm(cfg)
+    seen = []
+    popup.settings_requested.connect(seen.append)
+    next(b for b in popup.findChildren(QPushButton) if b.text() == "Edit weekly rules in Settings...").click()
+    assert seen == ["Away rules"]
+
+
+def test_tray_opens_settings_on_the_away_rules_tab_and_hides_the_popup(cfg, tmp_path, monkeypatch):
+    from app.tray import TrayApp
+
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
+    monkeypatch.setattr("app.tray.get_forecast", lambda *a, **k: None)
+    QApplication.instance() or QApplication([])
+    app = TrayApp(cfg, tmp_path / "config.toml")
+    app.popup.show()
+    app.popup.settings_requested.emit("Away rules")
+    window = app.settings_window
+    assert window is not None and window.isVisible()
+    assert window.tabs.tabText(window.tabs.currentIndex()) == "Away rules"
+    assert not app.popup.isVisible()
+    window.close()
+
+
+def test_a_rule_saved_in_settings_shows_up_in_the_popup(cfg, tmp_path, monkeypatch):
+    from datetime import time
+
+    from PySide6.QtCore import QTime
+
+    from app.tray import TrayApp
+    from forecast.open_meteo import ForecastResult
+
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
+    monkeypatch.setattr("app.tray.get_forecast", lambda *a, **k: None)
+    QApplication.instance() or QApplication([])
+    app = TrayApp(cfg, tmp_path / "config.toml")
+    app.result = ForecastResult(forecast_from([(date(2026, 7, 3), 900)]), at(date(2026, 7, 3), 6), True, False)
+    app.rebuild()
+    assert "Every Thursday, 06:00-19:00  (weekly rule)" in _away_text(app.popup)
+    app.open_settings("Away rules")
+    row = app.settings_window.away_tab.rows[0]
+    row.weekday.setCurrentIndex(0)  # Monday
+    row.start.setTime(QTime(7, 0))
+    row.end.setTime(QTime(12, 30))
+    app.settings_window.save_button.click()
+    texts = _away_text(app.popup)
+    assert "Every Monday, 07:00-12:30  (weekly rule)" in texts
+    assert "Every Thursday, 06:00-19:00  (weekly rule)" not in texts
+    app.settings_window.close()

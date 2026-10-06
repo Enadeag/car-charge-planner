@@ -105,9 +105,16 @@ def test_popup_text_colours_follow_the_theme(dark):
 
     cfg = Config()
     now = at(date(2026, 7, 3), 7)
-    vm = build(plan(forecast_from([(date(2026, 7, 3), 900)]), cfg, 50, now), now, cfg, BatteryReading(50, None), None, False)
+    from planner.advice import grid_advice
+
+    forecast = forecast_from([(date(2026, 7, 3 + i), 120) for i in range(3)])  # dull days: advice appears
+    days = plan(forecast, cfg, 35, now)
+    advice = grid_advice(days, forecast, cfg, None, now)
+    vm = build(days, now, cfg, BatteryReading(35, None), None, False, advice)
+    assert vm.advice is not None
     popup = Popup(TZ)
     popup.update_view(vm, State(), now.date())
     assert colours.ERROR["dark"] in popup.battery.styleSheet()  # never entered: flagged
-    assert colours.WARNING["dark"] in popup.advice.styleSheet()
+    assert colours.ERROR["dark"] in popup.battery_status.styleSheet()
+    assert colours.WARNING["dark"] in popup.advice_title.styleSheet()
     assert "placeholder-text" in popup.footer.styleSheet()

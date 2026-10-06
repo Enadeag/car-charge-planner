@@ -34,7 +34,7 @@ def test_active_window_says_charge_now(cfg):
 def test_no_window_state(cfg):
     vm = view(cfg, at(DAY, 7), days=((DAY, 150),))
     assert vm.state == "none"
-    assert vm.outlook == ("Today: no good window",)
+    assert vm.outlook == () and vm.quiet_days == ""  # the headline already says there is nothing
 
 
 def test_next_window_can_be_tomorrow(cfg):
@@ -42,9 +42,50 @@ def test_next_window_can_be_tomorrow(cfg):
     assert vm.headline.startswith("Next: Tomorrow")
 
 
-def test_outlook_labels_days(cfg):
+def test_outlook_lists_the_later_days_and_not_the_headline_window_again(cfg):
     vm = view(cfg, at(DAY, 7), days=[(DAY + timedelta(days=i), 900) for i in range(4)])
-    assert [line.split(":")[0] for line in vm.outlook] == ["Today", "Tomorrow", "Sun 5 Jul", "Mon 6 Jul"]
+    assert vm.headline.startswith("Next: Today")
+    assert [r.day for r in vm.outlook] == ["Tomorrow", "Sun 5 Jul", "Mon 6 Jul"]  # today is the headline
+    first = vm.outlook[0]
+    assert first.span == "10:00-15:00" or first.span[2] == ":"  # a clock span
+    assert first.power.endswith(" A)") and first.energy.endswith(" kWh")
+    assert vm.quiet_days == ""
+
+
+def test_days_without_a_window_are_merged_into_one_quiet_line(cfg):
+    days = [(DAY, 900), (DAY + timedelta(days=1), 120), (DAY + timedelta(days=2), 120), (DAY + timedelta(days=3), 900)]
+    vm = view(cfg, at(DAY, 7), days=days)
+    assert vm.quiet_days == "Tomorrow, Sun: no good window"
+    assert [r.day for r in vm.outlook] == ["Mon 6 Jul"]
+
+
+def test_a_second_window_the_same_day_gets_its_own_row_without_a_repeated_day(cfg):
+    from planner.model import DayPlan, Window
+
+    w1 = Window(at(DAY, 9), at(DAY, 11), 8, 1.8, 3.0, 0.0)
+    w2 = Window(at(DAY, 13), at(DAY, 15), 7, 1.6, 3.0, 0.0)
+    nxt = Window(at(date(2026, 7, 4), 10), at(date(2026, 7, 4), 14), 9, 2.1, 7.0, 0.0)
+    days = [DayPlan(DAY, 40, (w1, w2), 60, 45), DayPlan(date(2026, 7, 4), 45, (nxt,), 60, 45)]
+    vm = build(days, at(DAY, 7), cfg, BatteryReading(40, at(DAY, 7)), None, False)
+    assert [r.day for r in vm.outlook] == ["Today", "Tomorrow"] and vm.outlook[0].span == "13:00-15:00"
+    two = DayPlan(DAY, 40, (w1, w2, replace_window(w2)), 60, 45)
+    vm2 = build([two], at(DAY, 7), cfg, BatteryReading(40, at(DAY, 7)), None, False)
+    assert [r.day for r in vm2.outlook] == ["Today", ""]
+
+
+def replace_window(w):
+    from dataclasses import replace
+
+    return replace(w, start=at(DAY, 16), end=at(DAY, 17))
+
+
+def test_a_finished_window_is_not_listed(cfg):
+    from planner.model import DayPlan, Window
+
+    done = Window(at(DAY, 9), at(DAY, 11), 8, 1.8, 3.0, 0.0)
+    later = Window(at(DAY, 14), at(DAY, 16), 7, 1.6, 3.0, 0.0)
+    vm = build([DayPlan(DAY, 40, (done, later), 60, 45)], at(DAY, 12), cfg, BatteryReading(40, at(DAY, 7)), None, False)
+    assert vm.outlook == () and vm.headline == "Next: Today 14:00-16:00"
 
 
 def test_assumed_battery_is_flagged_and_prompts(cfg):
@@ -64,15 +105,15 @@ def test_old_battery_entry_shows_age(cfg):
 
 def test_projection_shows_battery_before_and_after_window(cfg):
     vm = view(cfg, at(DAY, 7))
-    assert vm.projection.startswith("Battery 45% -> ")
+    assert vm.projection.startswith("Battery 45% \u2192 ")
     assert vm.projection.endswith("by 15:00")
-    after = int(vm.projection.split("-> ")[1].split("%")[0])
+    after = int(vm.projection.split("\u2192 ")[1].split("%")[0])
     assert 45 < after <= 80
 
 
 def test_projection_is_capped_at_target(cfg):
     vm = view(cfg, at(DAY, 7), battery=BatteryReading(78, at(DAY, 7)))
-    assert int(vm.projection.split("-> ")[1].split("%")[0]) == 80
+    assert int(vm.projection.split("\u2192 ")[1].split("%")[0]) == 80
 
 
 def test_no_projection_without_a_window(cfg):
@@ -111,7 +152,7 @@ def test_missing_state_gives_assumed_battery(tmp_path):
 
 def test_active_window_also_shows_projection(cfg):
     vm = view(cfg, at(DAY, 11))
-    assert vm.state == "active" and vm.projection.startswith("Battery 45% -> ")
+    assert vm.state == "active" and vm.projection.startswith("Battery 45% \u2192 ")
 
 
 def _advice_view(cfg, days, soc, now):
@@ -127,36 +168,38 @@ def test_dull_days_and_low_battery_give_grid_state(cfg):
     days = [(DAY + timedelta(days=i), 120) for i in range(3)]
     vm = _advice_view(cfg, days, 35, at(DAY, 7))
     assert vm.state == "grid" and vm.headline == "Grid charge needed"
-    assert vm.advice.startswith("Grid charge needed: battery would drop to")
-    assert "kWh from the grid" in vm.advice and "minimum 30%" in vm.advice
+    assert vm.advice.title.startswith("Grid charge needed \u00b7 ")  # when, as a fact
+    assert "kW (" in vm.advice.detail and "about" in vm.advice.detail and "kWh" in vm.advice.detail
+    assert vm.advice.reason.startswith("Battery would drop to") and "minimum 30%" in vm.advice.reason
     assert "Grid charge needed" in vm.tooltip
 
 
 def test_comfortable_battery_on_dull_day_shows_no_advice(cfg):
     vm = _advice_view(cfg, [(DAY, 120)], 70, at(DAY, 7))
-    assert vm.state == "none" and vm.advice == "" and vm.headline == "No good window"
+    assert vm.state == "none" and vm.advice is None and vm.headline == "No good window"
 
 
 def test_advice_block_also_shows_alongside_a_solar_window(cfg):
     days = [(DAY, 900), (date(2026, 7, 4), 120), (date(2026, 7, 5), 120), (date(2026, 7, 6), 120)]
     vm = _advice_view(cfg, days, 40, at(DAY, 7))
     assert vm.state in ("active", "upcoming")
-    assert vm.advice.startswith("Grid charge needed")
+    assert vm.advice is not None and vm.advice.title.startswith("Grid charge needed")
 
 
-def test_advice_text_when_there_is_no_room_at_home(cfg):
+def test_advice_when_there_is_no_room_at_home(cfg):
     from planner.advice import GridAdvice
-    from app.view_model import advice_text
+    from app.view_model import advice_view
 
-    text = advice_text(GridAdvice(DAY, 12.0, 18.0, 14.0, None), at(DAY, 7), cfg, TZ)
-    assert "no free time at home" in text and "14 kWh" in text
+    view_ = advice_view(GridAdvice(DAY, 12.0, 18.0, 14.0, None), at(DAY, 7), cfg, TZ)
+    assert view_.title == "Grid charge needed"
+    assert "no free time at home" in view_.detail and "14 kWh" in view_.detail
 
 
 def test_advice_day_label_keeps_weekday_capitalised(cfg):
     from planner.advice import GridAdvice
-    from app.view_model import advice_text
+    from app.view_model import advice_view
 
-    later = advice_text(GridAdvice(date(2026, 7, 8), 8.0, 22.0, 17.0, None), at(DAY, 7), cfg, TZ)
-    assert "by the end of Wed 8 Jul" in later
-    today = advice_text(GridAdvice(DAY, 8.0, 22.0, 17.0, None), at(DAY, 7), cfg, TZ)
-    assert "by the end of today" in today
+    later = advice_view(GridAdvice(date(2026, 7, 8), 8.0, 22.0, 17.0, None), at(DAY, 7), cfg, TZ)
+    assert later.reason.endswith("by the end of Wed 8 Jul.")
+    today = advice_view(GridAdvice(DAY, 8.0, 22.0, 17.0, None), at(DAY, 7), cfg, TZ)
+    assert today.reason.endswith("by the end of today.")

@@ -11,19 +11,19 @@ Built for one home (Hometown, 12 solar panels, single-phase 7.4 kW ChargerBrand 
 - Fetches a solar forecast from [Open-Meteo](https://open-meteo.com) (free, no account) and turns it into expected surplus: panel output minus the house's own use.
 - Recommends charge windows within the hours the car is at home, with one constant power per window (in kW and amps), aiming for almost no grid draw.
 - Tray icon: green while a window is active, blue when one is coming, grey when there is none, orange when a grid charge is needed, red when there is no forecast.
-- Click the icon for a popup: next window, the battery level you expect after it, an outlook for the next days, and the inputs below.
+- Click the icon for a popup with two pages. **Plan** answers "when do I charge?": the next window, the battery level you expect after it, grid-charge advice when needed, a short table of the next days, and a battery and away status line. **Update** holds the daily inputs.
 - Right-click the icon for **Settings...**, a window with all configuration, grouped over tabs.
 - Sends a desktop notification 15 minutes before each window, once per window.
 - **Grid-charge advice:** if the battery would end a day below the minimum (30%), it says how much to charge from the grid and picks the time that uses the most leftover sun.
 
-### Inputs in the popup
+### Inputs (the popup's Update page)
 
 | Input | Notes |
 | --- | --- |
 | Battery level | You enter it by hand ("Set battery"). Flagged red when never entered or a day old. |
-| Car away | Add a day, all day or a time range, and remove it again. A recurring Thursday 06:00-19:00 rule comes from the config. |
+| Car away | Add a one-off day (all day or a time range) and remove it again. The weekly rules are listed there too, read-only; the **Edit weekly rules in Settings...** button opens Settings on the Away rules tab. |
 
-Everything you enter saves immediately and replans at once. Close the popup with the × or Close button, Escape, or a click on the tray icon.
+Where things are edited: **settings** (panel size, charger, weekly away rules and so on) only in the Settings window; **daily inputs** (battery level, one-off away days) in the popup. Nothing is editable in both places. Everything you enter in the popup saves immediately and replans at once. Close the popup with the × in its corner, Escape, a click on the tray icon, or a click outside it.
 
 ## Current state
 
@@ -145,12 +145,13 @@ No network or display is needed: the forecast client runs against a recorded res
 | `planner/` | The planning logic, with no network or UI: surplus, windows, projection, grid advice, config reading and writing (`config_io.py`), CLI. |
 | `forecast/` | Open-Meteo client and cache. |
 | `storage/` | Reading and writing `state.json`. |
-| `app/` | Tray, popup, notifications, autostart, theme-aware colours. |
+| `app/` | Tray, popup (`popup.py`), notifications, autostart, theme-aware colours. |
 | `app/settings/` | The Settings window: field definitions, tabs, window. |
 | `tests/` | Test suite and the recorded forecast. |
 | `CONTEXT.md` | Glossary of the domain terms used throughout (feed-in, surplus, charge window, ...). |
 | `.scratch/car-charge-planner/` | The planner's spec, tickets and review. |
 | `.scratch/settings-window/` | The Settings window's spec, tickets and review. |
+| `.scratch/popup-redesign/` | The popup redesign: problem, design and review notes. |
 | `docs/agents/` | Configuration for the engineering skills (issue tracker, labels). |
 
 ## How it plans, briefly
