@@ -96,7 +96,7 @@ This sends a labelled test notification and waits up to a minute for you to clic
 | --- | --- |
 | `--live` | Real Open-Meteo forecast, cached for an hour. `--refresh` ignores the cache. Needs a location in the config (`--config`). |
 | `--demo summer\|overcast\|mixed\|winter` | Invented forecast, no network. |
-| `--forecast file.json` | Your own forecast: a list of `{"start", "end", "gti"}` (ISO times, W/m2). |
+| `--forecast file.json` | Your own forecast: a list of `{"start", "end", "power_kw"}` (ISO times with a time zone, expected solar power in kW). Files in the earlier `gti` (W/m2) format are refused with a message saying so. |
 | `--battery N` | Current battery percentage (required). |
 | `--now ISO` | Pretend it is another time. |
 | `--config path` | Use another config file. |
@@ -239,7 +239,7 @@ The language follows your system (`LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`, t
 
 ## How it plans, briefly
 
-1. Surplus per hour = panel output (size x forecast irradiance x losses) minus the house baseload, scaled by a planning margin (85% by default) so it errs towards too little power rather than grid draw.
+1. Surplus per hour = the forecast provider's expected solar power (for Open-Meteo: panel size x forecast irradiance x losses) minus the house baseload, scaled by a planning margin (85% by default) so it errs towards too little power rather than grid draw.
 2. A step counts only if the surplus covers at least your charger's minimum current (6 A by default, about 1.4 kW on a single-phase 230 V connection).
 3. Within the hours the car is home, it picks the window and power that bring in the most solar for the energy the car needs, up to your target charge level (80% by default).
 4. It projects the battery day by day, subtracting your average driving per day (a setting). If a day would end more than one point under your minimum charge level, it adds the grid-charge advice.

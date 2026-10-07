@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+from forecast.open_meteo import power_kw
 from planner.demo import bell_day
 from planner.model import AwayRule, Config, ForecastStep
 
@@ -70,10 +71,12 @@ def no_network(monkeypatch):
 
 
 def forecast_from(days: list[tuple[date, float]]) -> list[ForecastStep]:
+    """Bell-shaped days given by their peak irradiance (W/m2), turned into the power of the example system."""
+    panels = example_config().panels
     steps = []
     for day, peak in days:
         for start, gti in bell_day(day, peak, TZ):
-            steps.append(ForecastStep(start, start + timedelta(hours=1), gti))
+            steps.append(ForecastStep(start, start + timedelta(hours=1), power_kw(gti, panels.kwp, panels.system_losses)))
     return steps
 
 

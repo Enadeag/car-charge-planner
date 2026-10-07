@@ -22,14 +22,14 @@ def test_parse_shifts_to_preceding_hour(cfg):
     assert all(s.end - s.start == timedelta(hours=1) for s in steps)
     # the value stamped 09:00 local (156.6 W/m2) covers 08:00-09:00
     nine = next(s for s in steps if s.end.hour == 9 and s.end.day == 6)
-    assert nine.gti_wm2 == 156.6
+    assert nine.power_kw == pytest.approx(4.8 * 0.1566 * (1 - 0.14))  # the example system: 4.8 kWp, 14% losses
     assert nine.start.hour == 8
     assert steps[0].end.utcoffset() == timedelta(hours=2)  # CEST, timezone-aware
 
 
 def test_parse_treats_null_as_zero(cfg):
     raw = {"hourly": {"time": [1791237600], "global_tilted_irradiance": [None]}}
-    assert parse(raw, cfg)[0].gti_wm2 == 0.0
+    assert parse(raw, cfg)[0].power_kw == 0.0
 
 
 def test_parse_raises_on_api_error(cfg):

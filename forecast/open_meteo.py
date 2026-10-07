@@ -66,6 +66,11 @@ def http_get(url: str) -> dict:
         return json.load(resp)
 
 
+def power_kw(gti_wm2: float, kwp: float, system_losses: float) -> float:
+    """AC power of a system from the irradiance on its panels. (Moves into the provider with ticket P3.)"""
+    return kwp * (gti_wm2 / 1000) * (1 - system_losses)
+
+
 def parse(raw: dict, cfg: Config) -> list[ForecastStep]:
     if raw.get("error"):
         raise ValueError(f"Open-Meteo error: {raw.get('reason')}")
@@ -75,7 +80,8 @@ def parse(raw: dict, cfg: Config) -> list[ForecastStep]:
     for stamp, gti in zip(hourly["time"], hourly["global_tilted_irradiance"]):
         end = datetime.fromtimestamp(stamp, timezone.utc).astimezone(tz)
         start = (end.astimezone(timezone.utc) - timedelta(hours=1)).astimezone(tz)
-        steps.append(ForecastStep(start, end, float(gti or 0.0)))  # null at the horizon edge
+        irradiance = float(gti or 0.0)  # null at the horizon edge
+        steps.append(ForecastStep(start, end, power_kw(irradiance, cfg.panels.kwp, cfg.panels.system_losses)))
     return steps
 
 

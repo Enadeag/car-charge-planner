@@ -26,11 +26,11 @@ def add_hours(moment: datetime, hours: float) -> datetime:
 
 @dataclass(frozen=True)
 class ForecastStep:
-    """Solar irradiance on the panel plane (W/m2) for [start, end)."""
+    """Expected AC power of the solar system (kW) for [start, end), as a forecast provider gives it."""
 
     start: datetime
     end: datetime
-    gti_wm2: float
+    power_kw: float
 
     @property
     def hours(self) -> float:

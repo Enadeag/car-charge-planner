@@ -8,13 +8,9 @@ from zoneinfo import ZoneInfo
 from .model import AwayPeriod, AwayRule, Config, ForecastStep
 
 
-def pv_kw(step: ForecastStep, cfg: Config) -> float:
-    return cfg.panels.kwp * (step.gti_wm2 / 1000) * (1 - cfg.panels.system_losses)
-
-
 def usable_kw(step: ForecastStep, cfg: Config) -> float:
-    """Surplus after the house, scaled down by the planning margin."""
-    surplus = pv_kw(step, cfg) - cfg.house.baseload_kw
+    """Surplus after the house, scaled down by the planning margin. The provider already accounted for the panels."""
+    surplus = step.power_kw - cfg.house.baseload_kw
     return max(0.0, surplus) * cfg.planning.margin
 
 

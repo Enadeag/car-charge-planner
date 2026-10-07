@@ -4,7 +4,7 @@
     python -m planner.cli --live --battery 45
     python -m planner.cli --forecast forecast.json --battery 45 --config config.toml
 
-Forecast file: JSON list of {"start": ISO8601, "end": ISO8601, "gti": W/m2}.
+Forecast file: JSON list of {"start": ISO8601, "end": ISO8601, "power_kw": expected solar power in kW}.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from .demo import bell_day
-from .model import ForecastStep, add_hours, load_config
+from .model import Config, ForecastStep, add_hours, load_config
 from .advice import grid_advice
 from .projection import plan
 
@@ -28,18 +28,24 @@ DEMOS = {
 }
 
 
-def demo_forecast(name: str, first_day: date, tz: ZoneInfo) -> list[ForecastStep]:
+def demo_forecast(name: str, first_day: date, tz: ZoneInfo, cfg: Config | None = None) -> list[ForecastStep]:
+    """A synthetic forecast: bell-shaped irradiance turned into power for the configured (or default) panels."""
+    from forecast.open_meteo import power_kw
+
+    panels = (cfg or Config()).panels
     steps = []
     for offset, peak in enumerate(DEMOS[name]):
         sunrise, sunset = (8, 16) if name == "winter" else (6, 18)
         for start, gti in bell_day(first_day + timedelta(days=offset), peak, tz, sunrise, sunset):
-            steps.append(ForecastStep(start, add_hours(start, 1), gti))
+            steps.append(ForecastStep(start, add_hours(start, 1), power_kw(gti, panels.kwp, panels.system_losses)))
     return steps
 
 
 def load_forecast(path: Path) -> list[ForecastStep]:
     rows = json.loads(path.read_text())
-    return [ForecastStep(datetime.fromisoformat(r["start"]), datetime.fromisoformat(r["end"]), r["gti"]) for r in rows]
+    if any("gti" in row and "power_kw" not in row for row in rows):
+        raise SystemExit(f"{path}: this file uses the old format ('gti', W/m2). Give 'power_kw' (expected solar power in kW) instead.")
+    return [ForecastStep(datetime.fromisoformat(r["start"]), datetime.fromisoformat(r["end"]), float(r["power_kw"])) for r in rows]
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -70,7 +76,7 @@ def main(argv: list[str] | None = None) -> None:
         note = " (STALE: refresh failed)" if result.stale else ""
         print(f"Forecast fetched {result.age(now).total_seconds() / 60:.0f} min ago{note}. Weather data by Open-Meteo.com (CC BY 4.0).")
     else:
-        forecast = demo_forecast(args.demo, now.date(), tz) if args.demo else load_forecast(args.forecast)
+        forecast = demo_forecast(args.demo, now.date(), tz, cfg) if args.demo else load_forecast(args.forecast)
 
     days = plan(forecast, cfg, args.battery, now)
     for day in days:

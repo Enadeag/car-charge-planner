@@ -42,7 +42,7 @@ def test_surplus_below_minimum_power_is_not_chargeable(cfg):
 
 
 def test_amps_are_floored_and_capped(cfg):
-    step = ForecastStep(at(SUMMER_FRI, 12), at(SUMMER_FRI, 13), 900)
+    step = ForecastStep(at(SUMMER_FRI, 12), at(SUMMER_FRI, 13), 3.7)  # kW
     assert amps_for(usable_kw(step, cfg), cfg) == int(usable_kw(step, cfg) * 1000 / 230)
     assert amps_for(50, cfg) == 32
 
@@ -114,7 +114,7 @@ def test_fall_back_day_plans_without_error(cfg):
 
 def test_run_across_midnight_is_one_window_assigned_to_start_day(cfg):
     start = at(date(2026, 7, 3), 22)
-    fc = [ForecastStep(start + timedelta(hours=h), start + timedelta(hours=h + 1), 800) for h in range(6)]
+    fc = [ForecastStep(start + timedelta(hours=h), start + timedelta(hours=h + 1), 3.3) for h in range(6)]
     runs = build_runs(fc, cfg, [], start)
     assert len(runs) == 1
     assert list(group_runs_by_day(runs, TZ)) == [date(2026, 7, 3)]
