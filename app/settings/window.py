@@ -110,6 +110,9 @@ class SettingsWindow(QDialog):
         self.set_mode(self.save_action)  # every time the window opens: Save, window stays open
         for tab in self.all_tabs:
             tab.changed.connect(self.refresh_close_button)
+        self.interface_tab = next(t for t in self.field_tabs if t.key == "interface")
+        self.interface_tab.changed.connect(self._sync_units)
+        self._sync_units()  # the car fields show what the Units choice says
         buttons = QHBoxLayout()
         buttons.addWidget(self.reset_button)
         buttons.addStretch()
@@ -121,6 +124,12 @@ class SettingsWindow(QDialog):
         layout.addWidget(self.tabs)
         layout.addWidget(self.errors)
         layout.addLayout(buttons)
+
+    def _sync_units(self) -> None:
+        """The Units choice is shown at once on every field that has a unit system (no need to save first)."""
+        system = self.interface_tab.inputs["interface.units"].currentData()
+        for tab in self.field_tabs:
+            tab.set_units(system)
 
     def _mode_action(self, menu: QMenu, group: QActionGroup, text: str, tip: str) -> QAction:
         action = menu.addAction(text)

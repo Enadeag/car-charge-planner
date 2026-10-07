@@ -98,6 +98,7 @@ class Notify:
 
 
 INTERFACE_MODES = ("auto", "tray", "window")
+UNIT_SYSTEMS = ("metric", "imperial")
 
 
 @dataclass(frozen=True)
@@ -105,6 +106,7 @@ class Interface:
     """How the app shows itself: a tray icon with a popup, an ordinary window, or whichever the desktop supports."""
 
     mode: str = "auto"
+    units: str = "metric"  # how distances and consumption are shown and typed; stored values stay metric
     language: str = "auto"  # "auto" follows the system; otherwise a language code such as "nl" or "pt_BR"
 
 
@@ -254,6 +256,12 @@ def validate(cfg: Config) -> Config:
                 bool(SETTING_KEY.match(str(key))) and isinstance(value, str),
                 _("[forecast.{id}] {key} must be a text").format(id=provider_id, key=key),
             )
+    need(
+        cfg.interface.units in UNIT_SYSTEMS,
+        _("[interface] units must be one of {units}, not {value!r}").format(
+            units=", ".join(UNIT_SYSTEMS), value=cfg.interface.units
+        ),
+    )
     need(
         cfg.interface.mode in INTERFACE_MODES,
         _("[interface] mode must be one of {modes}, not {mode!r}").format(

@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app import colours
+from app import colours, units
 from app.i18n import _, available_languages, language_name
 from app.names import weekdays_long
 from dataclasses import replace
@@ -63,14 +63,16 @@ class SecretInput(QWidget):
 LANGUAGE_KEY = "interface.language"
 
 
-def shown_value(spec: FieldSpec, stored):
-    """The stored value as the input box shows it."""
+def shown_value(spec: FieldSpec, stored, system: str = units.METRIC):
+    """The stored value as the input box shows it (in the chosen unit system, for distances and consumption)."""
     if spec.kind == "choice":
         return stored  # the stored value itself: a text for most choices, a number for the charger's phases
     if spec.kind in ("timezone", "text", "secret"):
         return str(stored)
     if spec.kind == "int":
         return int(stored)
+    if spec.quantity:
+        return round(units.to_display(spec.quantity, float(stored), system), units.display_decimals(spec.quantity, spec.decimals, system))
     return round(float(stored) * spec.scale, spec.decimals)
 
 
@@ -81,6 +83,8 @@ class FieldTab(QWidget):
         """`secrets` holds the values of the tab's secret fields by field key; they are not part of the Config."""
         super().__init__()
         self._secrets = dict(secrets or {})
+        self.units = units.METRIC  # set_units() changes how distances and consumption are shown
+        self._exact: dict[str, float] = {}  # an edited value as it was before a unit switch rounded what the box shows
         self.key = tab.key
         self.title = _(tab.title)
         languages = available_languages()
@@ -151,17 +155,45 @@ class FieldTab(QWidget):
             spin.setSingleStep(int(spec.step))
         else:
             spin = QDoubleSpinBox()
-            spin.setRange(spec.minimum, spec.maximum)
-            spin.setDecimals(spec.decimals)
-            spin.setSingleStep(spec.step)
-        if spec.unit:
+            self._shape(spec, spin)
+        if spec.unit and not spec.quantity:
             spin.setSuffix(f" {_(spec.unit)}")
         spin.valueChanged.connect(lambda _value: self.changed.emit())
         return spin
 
+    def _shape(self, spec: FieldSpec, spin: QDoubleSpinBox) -> None:
+        """Range, decimals, step and unit of a decimal box, in the unit system being shown."""
+        if spec.quantity:
+            low, high = units.display_range(spec.quantity, spec.minimum, spec.maximum, self.units)
+            spin.setRange(low, high)
+            spin.setDecimals(units.display_decimals(spec.quantity, spec.decimals, self.units))
+            spin.setSingleStep(units.display_step(spec.quantity, spec.step, self.units))
+            spin.setSuffix(units.suffix(spec.quantity, self.units))
+        else:
+            spin.setRange(spec.minimum, spec.maximum)
+            spin.setDecimals(spec.decimals)
+            spin.setSingleStep(spec.step)
+
+    def set_units(self, system: str) -> None:
+        """Show distances and consumption in another unit system. What they stand for does not change: the stored
+        (metric) values are kept as they are, so switching back and forth cannot drift."""
+        if system == self.units:
+            return
+        held = {s.key: self.stored_value(s) for s in self.specs if s.quantity}  # in the system that is shown now
+        self.units = system
+        for spec in self.specs:
+            if spec.quantity:
+                widget = self.inputs[spec.key]
+                self._shape(spec, widget)
+                self._set_widget(spec, held[spec.key])
+                if held[spec.key] != self.baseline[spec.key]:
+                    self._exact[spec.key] = held[spec.key]  # 100 km shows as 62.1 mi: coming back must give 100, not 99.9
+                else:
+                    self._exact.pop(spec.key, None)
+
     def _set_widget(self, spec: FieldSpec, stored) -> None:
         widget = self.inputs[spec.key]
-        value = shown_value(spec, stored)
+        value = shown_value(spec, stored, self.units)
         if spec.kind == "timezone":
             widget.setCurrentText(value)
         elif spec.kind in ("text", "secret"):
@@ -176,6 +208,7 @@ class FieldTab(QWidget):
         for spec in self.specs:
             stored = self._secrets.get(spec.key, "") if spec.kind == "secret" else get_value(cfg, spec.key)
             self.baseline[spec.key] = stored
+            self._exact.pop(spec.key, None)
             self._set_widget(spec, stored)
 
     def stored_value(self, spec: FieldSpec):
@@ -192,10 +225,13 @@ class FieldTab(QWidget):
             text = widget.currentText().strip()
             return baseline if text == baseline else text
         shown = widget.value()
-        if shown == shown_value(spec, baseline):
-            return baseline  # untouched: no rounding drift (85.714... must not become 85.7)
+        reference = self._exact.get(spec.key, baseline)
+        if shown == shown_value(spec, reference, self.units):
+            return reference  # untouched: no rounding drift (85.714... must not become 85.7)
         if spec.kind == "int":
             return int(shown)
+        if spec.quantity:
+            return round(units.from_display(spec.quantity, shown, self.units), 10)
         return round(shown / spec.scale, 10)
 
     def apply_to(self, cfg: Config) -> Config:

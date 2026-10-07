@@ -100,7 +100,7 @@ def test_with_only_english_there_is_no_picker(cfg, qapp, tmp_path, monkeypatch):
     window = window_for(cfg, tmp_path)
     tab = interface_tab(window)
     assert "interface.language" not in tab.inputs
-    assert [s.key for s in tab.specs] == ["interface.mode"]
+    assert [s.key for s in tab.specs] == ["interface.mode", "interface.units"]
 
 
 def test_a_stored_language_is_kept_when_the_picker_is_absent(cfg, qapp, tmp_path, monkeypatch):

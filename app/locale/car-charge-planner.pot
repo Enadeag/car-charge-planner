@@ -666,6 +666,22 @@ msgid "A window"
 msgstr ""
 
 #: app/settings/fields.py
+msgid "Units"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "How distances and consumption are shown: kilometres and kWh/100 km, or miles and miles per kWh. Energy and power are the same in both."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Metric (km, kWh/100 km)"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Imperial (miles, mi/kWh)"
+msgstr ""
+
+#: app/settings/fields.py
 msgid "Language"
 msgstr ""
 
@@ -1306,6 +1322,11 @@ msgstr ""
 #: planner/model.py
 #, python-brace-format
 msgid "[forecast.{id}] {key} must be a text"
+msgstr ""
+
+#: planner/model.py
+#, python-brace-format
+msgid "[interface] units must be one of {units}, not {value!r}"
 msgstr ""
 
 #: planner/model.py

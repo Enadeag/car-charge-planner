@@ -178,7 +178,7 @@ Open **Settings...** from the tray icon's right-click menu. Settings are grouped
 | Charger | One or three phases, minimum and maximum current (per phase), voltage, charging efficiency |
 | Planning and notifications | Planning margin, import tolerance, minimum window length, notification lead time |
 | Forecast | Which forecast provider to use, an optional fallback provider, and each one's settings (a server address or an API key, if it takes any). Each provider is described with what it sends, its limits and its terms, and a **Test** button asks it for a forecast right now without saving anything. API keys are kept apart from the config file, in `secrets.toml`. |
-| Interface | Whether the app shows itself as a tray icon with a popup, as a window, or automatically (a tray if the desktop has one, otherwise a window). Applies the next time the app starts. |
+| Interface | Whether the app shows itself as a tray icon with a popup, as a window, or automatically (a tray if the desktop has one, otherwise a window); the language (once a translation is installed); and the **units**: metric (km, kWh/100 km) or imperial (miles, miles per kWh) for the distance and consumption fields, which change at once. Stored values stay metric. The mode and language apply the next time the app starts. |
 | Away rules | Weekly times the car is not at home, one row per rule |
 
 - **Save** checks all values together. If something is wrong it lists every problem and writes nothing. Otherwise it writes the file and applies the change straight away (no restart). Changing panel size, tilt, direction, location, time zone or the forecast providers fetches a fresh forecast.

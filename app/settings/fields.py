@@ -21,6 +21,7 @@ class FieldSpec:
     decimals: int = 1
     step: float = 1.0
     scale: float = 1.0  # shown = stored * scale, so a fraction can be shown as a percent
+    quantity: str = ""  # "distance" | "consumption": stored metric, shown in the chosen unit system (app/units.py)
     flag: str = ""  # "Assumed" or "Estimate": a value that is not measured yet
     choices: tuple[tuple[str, str], ...] = ()  # for kind "choice": (stored value, label shown)
 
@@ -105,11 +106,11 @@ HOUSE_CAR = TabSpec(
         ),
         FieldSpec(
             "car.consumption_kwh_per_100km", N_("Consumption"), N_("Real-world average energy use of the car. Usually higher in winter than in summer."),
-            unit="kWh/100 km", minimum=5, maximum=60, decimals=1, step=0.5, flag=N_("Estimate"),
+            unit="kWh/100 km", minimum=5, maximum=60, decimals=1, step=0.5, flag=N_("Estimate"), quantity="consumption",
         ),
         FieldSpec(
             "car.km_per_day", N_("Driving per day"), N_("Average distance driven per day. Weekly distance divided by 7 gives a rough figure."),
-            unit="km", minimum=0, maximum=1000, decimals=1, step=5,
+            unit="km", minimum=0, maximum=1000, decimals=1, step=5, quantity="distance",
         ),
         FieldSpec(
             "car.minimum_pct", N_("Minimum charge level"), N_("The battery should never drop below this level. Must be below the target."),
@@ -192,6 +193,13 @@ INTERFACE = TabSpec(
                 ("tray", N_("Tray icon with a popup")),
                 ("window", N_("A window")),
             ),
+        ),
+        FieldSpec(
+            "interface.units",
+            N_("Units"),
+            N_("How distances and consumption are shown: kilometres and kWh/100 km, or miles and miles per kWh. Energy and power are the same in both."),
+            kind="choice",
+            choices=(("metric", N_("Metric (km, kWh/100 km)")), ("imperial", N_("Imperial (miles, mi/kWh)"))),
         ),
         FieldSpec(
             "interface.language",
