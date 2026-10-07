@@ -144,7 +144,7 @@ def test_english_can_be_chosen_on_a_system_that_speaks_another_language(catalogu
 
 def test_a_changed_language_is_announced_like_a_changed_interface(cfg, qapp, tmp_path, monkeypatch):
     from app.controller import Controller
-    from conftest import FakeNotifier
+    from conftest import FakeNotifier, settle_controller
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     monkeypatch.setattr("forecast.service.ForecastService.get", lambda *a, **k: None)
@@ -152,3 +152,4 @@ def test_a_changed_language_is_announced_like_a_changed_interface(cfg, qapp, tmp
     controller = Controller(cfg, tmp_path / "config.toml", notifier)
     controller.apply_config(replace(cfg, interface=Interface(language="nl")))
     assert len(notifier.sent) == 1
+    settle_controller(controller)  # apply_config starts a fetch

@@ -67,6 +67,8 @@ class OpenMeteo:
             secret=True,
         ),
     )
+    place_attribution = "Place data: GeoNames, via Open-Meteo.com"  # shown where its place search is used
+
     def __init__(self, transport: Transport = urllib_transport) -> None:
         self.transport = transport
         self.search_places = OpenMeteoGeocoder(transport)  # its place search: the same service family and terms

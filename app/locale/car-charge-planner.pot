@@ -478,26 +478,26 @@ msgid "System losses"
 msgstr ""
 
 #: app/settings/fields.py
-msgid "Latitude"
-msgstr ""
-
-#: app/settings/fields.py
 msgid "Decimal degrees of the panels' location. Positive is north. 0 and 0 together mean not set."
 msgstr ""
 
-#: app/settings/fields.py
-msgid "Longitude"
+#: app/settings/fields.py app/setup/location.py
+msgid "Latitude"
 msgstr ""
 
 #: app/settings/fields.py
 msgid "Decimal degrees of the panels' location. Positive is east of Greenwich."
 msgstr ""
 
+#: app/settings/fields.py app/setup/location.py
+msgid "Longitude"
+msgstr ""
+
 #: app/settings/fields.py
 msgid "The time zone of the location. Start typing to search the list."
 msgstr ""
 
-#: app/settings/fields.py app/setup/recap.py
+#: app/settings/fields.py app/setup/location.py app/setup/recap.py
 msgid "Time zone"
 msgstr ""
 
@@ -882,7 +882,7 @@ msgstr ""
 msgid "Choose a place first: the plan needs to know where the panels are."
 msgstr ""
 
-#: app/setup/finish.py
+#: app/setup/finish.py app/setup/location.py
 msgid "the forecast service"
 msgstr ""
 
@@ -901,6 +901,85 @@ msgstr[1] ""
 #: app/setup/finish.py
 #, python-brace-format
 msgid "{reason} You can still finish; the app tries again by itself."
+msgstr ""
+
+#: app/setup/location.py
+msgid "Where are your solar panels?"
+msgstr ""
+
+#: app/setup/location.py
+msgid "Town, or postcode"
+msgstr ""
+
+#: app/setup/location.py
+msgid "Enter coordinates instead"
+msgstr ""
+
+#: app/setup/location.py
+msgid "In a map app, press and hold (or right-click) on your roof to read its coordinates, for example 52.3702, 4.8952. Positive latitude is north, positive longitude is east. 0 and 0 together mean not set."
+msgstr ""
+
+#: app/setup/location.py
+msgid "Advanced"
+msgstr ""
+
+#: app/setup/location.py
+#, python-brace-format
+msgid "What you type here is sent to {provider} to find the place."
+msgstr ""
+
+#: app/setup/location.py
+#, python-brace-format
+msgid "{provider} has no place search, so enter the coordinates of your panels instead."
+msgstr ""
+
+#: app/setup/location.py
+msgid "Type at least two characters."
+msgstr ""
+
+#: app/setup/location.py
+msgid "Searching..."
+msgstr ""
+
+#: app/setup/location.py
+msgid "No place found. Try another spelling, or enter the coordinates instead."
+msgstr ""
+
+#: app/setup/location.py
+#, python-brace-format
+msgid "{n} place found. Pick yours."
+msgid_plural "{n} places found. Pick yours."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/setup/location.py
+msgid "The search service is busy. Try again in a minute, or enter the coordinates instead."
+msgstr ""
+
+#: app/setup/location.py
+msgid "Could not reach the search service. Check your internet connection, or enter the coordinates instead."
+msgstr ""
+
+#: app/setup/location.py
+msgid "The search service gave an answer the app does not understand. Enter the coordinates instead."
+msgstr ""
+
+#: app/setup/location.py
+msgid "That is not a time zone the app knows. Pick one from the list."
+msgstr ""
+
+#: app/setup/location.py
+msgid "No place chosen yet."
+msgstr ""
+
+#: app/setup/location.py app/setup/recap.py
+#, python-brace-format
+msgid "{latitude}, {longitude}"
+msgstr ""
+
+#: app/setup/location.py
+#, python-brace-format
+msgid "Chosen: {place} ({zone})"
 msgstr ""
 
 #: app/setup/recap.py
@@ -951,11 +1030,6 @@ msgstr ""
 #: app/setup/recap.py
 #, python-brace-format
 msgid "{degrees}°"
-msgstr ""
-
-#: app/setup/recap.py
-#, python-brace-format
-msgid "{latitude}, {longitude}"
 msgstr ""
 
 #: app/setup/recap.py

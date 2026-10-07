@@ -22,12 +22,13 @@ from planner.config_io import write_config
 from planner.model import Config, ConfigError
 
 from .finish import FinishPage
+from .location import LocationPage
 from .pages import Page
 from .state import SetupState
 from .welcome import WelcomePage
 
-# the pages in the order of the flow; the Location, Solar, Car and Hub pages are added by their own tickets
-PAGES: list[type[Page]] = [WelcomePage, FinishPage]
+# the pages in the order of the flow; the Solar, Car and Hub pages are added by their own tickets
+PAGES: list[type[Page]] = [WelcomePage, LocationPage, FinishPage]
 
 
 def ask_leave(parent) -> bool:

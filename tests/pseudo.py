@@ -67,13 +67,14 @@ def install(tmp_path: Path) -> None:
 
 # ---- reading what is on screen ----------------------------------------------------------------------------------
 
+_STYLES = re.compile(r"<style>.*?</style>", re.S)  # a rule that colours a link is not text
 _TAGS = re.compile(r"<[^>]+>")
 # what is not a word to translate: numbers, times, units and symbols, which the app shows as they are
 _NOT_TEXT = re.compile(r"^(?:[0-9.,:%/–\-·→•×+()\s]|kWp|kWh|kW|km|[AV]|min|h)*$")
 
 
 def plain(text: str) -> str:
-    return html.unescape(_TAGS.sub("", text)).strip()
+    return html.unescape(_TAGS.sub("", _STYLES.sub("", text))).strip()
 
 
 def is_zone(text: str) -> bool:
@@ -123,7 +124,12 @@ def proper_nouns() -> set[str]:
     """What stays as it is in every language: the forecast providers' names and the credits they ask for."""
     from forecast.registry import registry
 
-    return {text for provider in registry.all() for text in (provider.name, provider.attribution)}
+    return {
+        text
+        for provider in registry.all()
+        for text in (provider.name, provider.attribution, getattr(provider, "place_attribution", ""))
+        if text
+    }
 
 
 def untranslated(root: QWidget) -> list[str]:

@@ -47,6 +47,40 @@ def main_thread_garbage_collection():
 
 
 @pytest.fixture(autouse=True)
+def no_window_or_worker_left_running():
+    """A test must not leave a window open or a worker thread running behind it.
+
+    A window left open (Settings, set-up, a popup) keeps its controller, timers and queued signals alive for the rest
+    of the session, and a worker (a forecast fetch, a place search, a connection check) that finishes after its test
+    has ended delivers its result to a window that is going away. Both crashed an unrelated test later, as a rare
+    segmentation fault in the next event loop. So: close what is left, deliver what is queued, wait for the workers.
+    """
+    import threading
+
+    yield
+    from PySide6.QtCore import QEvent
+    from PySide6.QtWidgets import QApplication
+
+    if QApplication.instance() is not None:
+        # a window a test opened (Settings, set-up, a popup) must not live on into the next test: it keeps its
+        # controller, timers and queued signals alive, and their events are delivered during unrelated tests
+        for widget in QApplication.topLevelWidgets():
+            widget.hide()
+            widget.deleteLater()
+        QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+    for round_ in range(8):  # delivering an event can start another worker (a refresh), so go round until it is quiet
+        if QApplication.instance() is not None:
+            QApplication.processEvents()
+        workers = [t for t in threading.enumerate() if t.daemon and t is not threading.main_thread() and t.is_alive()]
+        if not workers:
+            return
+        for thread in workers:
+            thread.join(5)
+    raise AssertionError("worker threads keep starting after the test")
+
+
+@pytest.fixture(autouse=True)
 def no_network(monkeypatch):
     """Fail loudly if a test opens an internet connection: tests use recorded responses and fakes.
 
@@ -78,6 +112,20 @@ def forecast_from(days: list[tuple[date, float]]) -> list[ForecastStep]:
         for start, gti in bell_day(day, peak, TZ):
             steps.append(ForecastStep(start, start + timedelta(hours=1), power_kw(gti, panels.kwp, panels.system_losses)))
     return steps
+
+
+def settle_controller(controller, seconds: float = 5.0) -> None:
+    """Wait until the fetch a controller started has been delivered. A test must not end while its worker is running:
+    the result would be delivered to a controller that is already gone, during whichever test runs next."""
+    import time
+
+    from PySide6.QtTest import QTest
+
+    deadline = time.time() + seconds
+    while controller._loading and time.time() < deadline:
+        QTest.qWait(20)
+    QTest.qWait(30)  # the queued result is handled on the next pass of the event loop
+    assert not controller._loading, "the fetch did not finish"
 
 
 def at(day: date, hour: int, minute: int = 0) -> datetime:

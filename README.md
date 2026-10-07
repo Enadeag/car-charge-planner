@@ -272,6 +272,7 @@ step with them), and the terms that go with using it (read on 2026-10-07; the pr
   public plan may be used commercially; ask them.
 - **Credit.** The credit above is shown in the app next to the age of the forecast, because both providers ask for
   it (Open-Meteo's data is CC BY 4.0). It is shown for whichever provider made the forecast on screen.
+- **While you set the app up**, the place you type in the search box on the Location page is sent to the place search of the forecast provider you have chosen (Open-Meteo by default), which answers with matching places and their coordinates. The page names that provider and says so. A provider without a place search is never sent it: the page asks for coordinates instead. The place names come from [GeoNames](https://www.geonames.org) (CC BY 4.0), via Open-Meteo.
 - **Nothing else.** The battery level, your away times, your panels' size (except to Forecast.Solar, which needs
   it), the house and car settings and the plan itself never leave the computer. The place you type is only ever
   sent as coordinates.
@@ -300,4 +301,4 @@ use are credited in `tests/fixtures/NOTICE.md`.
 
 ## Attribution
 
-Weather data by [Open-Meteo.com](https://open-meteo.com), licensed CC BY 4.0, used here for non-commercial personal use. Solar forecasts by [Forecast.Solar](https://forecast.solar).
+Weather data by [Open-Meteo.com](https://open-meteo.com), licensed CC BY 4.0, used here for non-commercial personal use. Place data: [GeoNames](https://www.geonames.org), via the Open-Meteo geocoding service. Solar forecasts by [Forecast.Solar](https://forecast.solar).

@@ -10,11 +10,13 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QLabel
 
 from app.setup.pages import Page
+from app.setup.finish import FinishPage
 from app.setup.wizard import PAGES, SetupWizard
+from app.setup.welcome import WelcomePage
 from forecast.check import Attempt
 from planner.model import Config, Setup, load_config
 
-from conftest import example_config
+from conftest import example_config, settle_controller
 
 NL = {"LANG": "nl_NL.UTF-8"}
 US = {"LANG": "en_US.UTF-8"}
@@ -64,7 +66,7 @@ class Rig:
         QTest.qWait(40)
 
     def at_finish(self):
-        self.wizard.next()
+        self.wizard.navigate("finish")  # straight there: the pages in between have their own tests
         self.settle()
         return self.wizard.pages["finish"]
 
@@ -83,18 +85,21 @@ def texts(widget):
 
 def test_it_opens_on_welcome_with_next_and_no_back(rig):
     w = rig.wizard
-    assert w.current == "welcome" and w.heading.text() == "Welcome" and w.step.text() == "Step 1 of 2"
+    assert w.current == "welcome" and w.heading.text() == "Welcome" and w.step.text() == "Step 1 of 3"
     assert not w.back_button.isEnabled() and w.next_button.isEnabled() and w.next_button.text() == "Next"
-    assert [type(p) for p in w.pages.values()] == PAGES and w.sequence == ["welcome", "finish"]
+    assert [type(p) for p in w.pages.values()] == PAGES and w.sequence == ["welcome", "location", "finish"]
 
 
 def test_next_and_back_move_through_the_pages_and_keep_the_answers(rig):
     w = rig.wizard
     w.pages["welcome"].units.setCurrentIndex(w.pages["welcome"].units.findData("imperial"))
     w.next()
-    assert w.current == "finish" and w.heading.text() == "Finish" and w.step.text() == "Step 2 of 2"
+    assert w.current == "location" and w.step.text() == "Step 2 of 3"
+    w.next()
+    assert w.current == "finish" and w.heading.text() == "Finish" and w.step.text() == "Step 3 of 3"
     assert w.back_button.isEnabled() and w.next_button.text() == "Finish"
     rig.settle()
+    w.back()
     w.back()
     assert w.current == "welcome" and w.pages["welcome"].units.currentData() == "imperial"  # what was chosen is still there
     assert not w.back_button.isEnabled()
@@ -109,7 +114,7 @@ def test_a_page_can_stop_next(rig):
         def can_continue(self):
             return self.allowed
 
-    w = Rig(sub(rig.file.parent, "two"), pages=[Stubborn, PAGES[1]]).wizard
+    w = Rig(sub(rig.file.parent, "two"), pages=[Stubborn, FinishPage]).wizard
     assert not w.next_button.isEnabled()
     w.next()
     assert w.current == "welcome"  # Next did nothing
@@ -195,7 +200,8 @@ def test_finish_shows_the_recap_with_typical_values_marked(tmp_path, qapp):
 
 def test_a_group_has_a_change_link_only_when_its_page_exists(rig):
     page = rig.at_finish()
-    assert not any("Change" in t for t in texts(page))  # the Location, Solar, Car, House and Away pages come later
+    links = [l for l in page.findChildren(QLabel) if "href=" in l.text()]
+    assert [l.text().split("href='")[1].split("'")[0] for l in links] == ["location"]  # the Solar, Car, House and Away pages come later
 
 
 def test_a_change_link_returns_to_that_page_and_back_comes_back(tmp_path, qapp):
@@ -203,7 +209,7 @@ def test_a_change_link_returns_to_that_page_and_back_comes_back(tmp_path, qapp):
         id = "location"
         title = "Location"
 
-    rig = Rig(tmp_path, pages=[PAGES[0], Location, PAGES[1]])
+    rig = Rig(tmp_path, pages=[WelcomePage, Location, FinishPage])
     rig.wizard.next()  # welcome -> location
     rig.wizard.next()  # location -> finish
     rig.settle()
@@ -319,7 +325,7 @@ def test_closing_after_a_change_asks_and_staying_keeps_everything(rig):
     rig.wizard.next()
     rig.answer = False
     rig.wizard.reject()
-    assert rig.asked == [1] and rig.wizard.isVisible() and rig.wizard.current == "finish"
+    assert rig.asked == [1] and rig.wizard.isVisible() and rig.wizard.current == "location"
 
 
 def test_leaving_discards_everything_and_writes_nothing(rig):
@@ -382,8 +388,10 @@ def test_finishing_applies_the_new_config_in_the_running_app(tmp_path, qapp, mon
     wizard = controller.setup_wizard
     wizard.check = lambda cfg: Attempt(True, 2, "OK: 2 days of forecast")
     wizard.pages["welcome"].units.setCurrentIndex(wizard.pages["welcome"].units.findData("imperial"))
-    wizard.next()
+    wizard.next()  # welcome -> location (the place is already there)
+    wizard.next()  # location -> finish
     for thread in list(wizard.pages["finish"]._threads):
         thread.join(5)
     wizard.next()
+    settle_controller(controller)  # applying the config starts a fetch
     assert controller.cfg.interface.units == "imperial" and load_config(tmp_path / "config.toml").interface.units == "imperial"

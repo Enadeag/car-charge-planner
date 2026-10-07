@@ -25,6 +25,15 @@ def test_each_provider_is_described_with_what_it_sends_its_credit_and_its_terms(
     assert provider.terms_url.removeprefix("https://") in text, f"README does not link {provider.name}'s terms"
 
 
+@pytest.mark.parametrize("provider", [p for p in registry.all() if p.search_places is not None], ids=lambda p: p.id)
+def test_a_providers_place_search_is_in_the_privacy_section_with_its_credit(provider):
+    text = " ".join(section().split())
+    assert "place you type in the search box" in text and provider.name in text
+    credit = getattr(provider, "place_attribution", "")
+    if credit:  # "Place data: GeoNames, via Open-Meteo.com": both names must be in the README
+        assert "GeoNames" in README and provider.name in README
+
+
 def test_the_section_says_what_matters():
     text = section()
     for phrase in ("no telemetry", "Commercial use", "secrets.toml", "Local only", "Third-party software"):

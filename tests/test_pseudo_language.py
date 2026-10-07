@@ -178,3 +178,52 @@ def test_the_setup_wizard_failure_texts_are_translated_too(cfg, qapp, pseudo_lan
     settle(wizard)
     assert pseudo.untranslated(wizard) == [] and pseudo.clipped(wizard) == []
     wizard.close()
+
+
+def test_the_location_page_is_fully_translated_in_each_of_its_states(cfg, qapp, pseudo_language, tmp_path):
+    from dataclasses import replace
+
+    from app.setup.wizard import SetupWizard
+    from fake_provider import FakeProvider
+    from forecast.check import Attempt
+    from forecast.provider import Place, PlaceResults, Problem
+    from forecast.registry import ProviderRegistry
+    from planner.model import Config, Forecast
+
+    place = Place("Utrecht", 52.09, 5.12, "Europe/Amsterdam", "Utrecht", "The Netherlands", "Utrecht")
+    states = {
+        "start": PlaceResults(),
+        "results": PlaceResults(places=(place, replace(place, name="Utrecht", country="Elsewhere"))),
+        "none found": PlaceResults(),
+        "unavailable": PlaceResults(problem=Problem.UNAVAILABLE),
+        "busy": PlaceResults(problem=Problem.RATE_LIMITED),
+        "odd answer": PlaceResults(problem=Problem.BAD_RESPONSE),
+    }
+    problems = []
+    for name, answer in states.items():
+        registry = ProviderRegistry()
+        registry.register(FakeProvider(id="finder", name="Finder", search_places=lambda text, language="en", a=answer: a))
+        registry.register(FakeProvider(id="plain", name="Plain"))
+        for primary in ("finder", "plain"):
+            if primary == "plain" and name != "start":
+                continue
+            config = replace(Config(), forecast=Forecast(primary, "", {}))
+            wizard = SetupWizard(config, tmp_path / f"{name}-{primary}.toml", lambda c: None, registry=registry, check=lambda c: Attempt(True, 2, "OK"), environ={"LANG": "nl_NL"}, qt_locale_name="")
+            wizard.confirm_leave = lambda: True
+            wizard.show()
+            wizard.navigate("location")
+            page = wizard.pages["location"]
+            if name != "start":
+                page.search.setText("Utrecht")
+                page.search_now()
+                for thread in list(page._threads):
+                    thread.join(5)
+                QApplication.processEvents()
+            if name == "results":
+                page.results.itemClicked.emit(page.results.item(0))  # the page then shows the chosen place
+            page.advanced_toggle.setChecked(True)
+            page.coordinates_toggle.setChecked(True)
+            settle(wizard)
+            problems += [f"{name}/{primary}: {p}" for p in pseudo.untranslated(wizard) + pseudo.clipped(wizard)]
+            wizard.close()
+    assert problems == []

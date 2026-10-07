@@ -60,6 +60,19 @@ class SecretInput(QWidget):
         self.line.setText(value)
 
 
+def timezone_box() -> QComboBox:
+    """An editable list of every time zone, searchable by typing any part of a name."""
+    box = QComboBox()
+    box.setEditable(True)
+    box.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+    box.addItems(sorted(available_timezones()))
+    completer = QCompleter(box.model(), box)
+    completer.setCaseSensitivity(completer.caseSensitivity().CaseInsensitive)
+    completer.setFilterMode(completer.filterMode().MatchContains)
+    box.setCompleter(completer)
+    return box
+
+
 LANGUAGE_KEY = "interface.language"
 
 
@@ -159,14 +172,7 @@ class FieldTab(QWidget):
             secret.textChanged.connect(lambda _text: self.changed.emit())
             return secret
         if spec.kind == "timezone":
-            box = QComboBox()
-            box.setEditable(True)
-            box.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
-            box.addItems(sorted(available_timezones()))
-            completer = QCompleter(box.model(), box)
-            completer.setCaseSensitivity(completer.caseSensitivity().CaseInsensitive)
-            completer.setFilterMode(completer.filterMode().MatchContains)
-            box.setCompleter(completer)
+            box = timezone_box()
             box.currentTextChanged.connect(lambda _text: self.changed.emit())
             return box
         if spec.kind == "int":
