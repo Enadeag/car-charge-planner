@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QWidget
 ERROR = {"dark": "#f08a74", "light": "#b3402a"}
 WARNING = {"dark": "#f0b34a", "light": "#8f5400"}
 SUCCESS = {"dark": "#7fd18b", "light": "#2a6f39"}
+LINK = {"dark": "#7fb4f0", "light": "#1a5fb4"}
 
 # Secondary text (hints, footers). palette(mid) is too close to the background in dark themes.
 MUTED_STYLE = "color: palette(placeholder-text);"
@@ -24,6 +25,10 @@ def is_dark(widget: QWidget) -> bool:
 
 def error(widget: QWidget) -> str:
     return ERROR["dark" if is_dark(widget) else "light"]
+
+
+def link(widget: QWidget) -> str:
+    return LINK["dark" if is_dark(widget) else "light"]
 
 
 def success(widget: QWidget) -> str:

@@ -46,6 +46,14 @@ class _Outcome(QObject):
     done = Signal(str, bool, str)  # role, worked, message
 
 
+def forecast_days(steps, now: datetime, tz: ZoneInfo) -> int:
+    """How many days, today onwards, the steps cover. A step is placed by its middle: Open-Meteo's first step is the
+    hour before midnight, which belongs to yesterday and must not count."""
+    today = now.astimezone(tz).date()
+    middles = (s.start + (s.end - s.start) / 2 for s in steps)
+    return len({m.astimezone(tz).date() for m in middles if m.astimezone(tz).date() >= today})
+
+
 def describe_failure(provider: ForecastProvider, err: Exception) -> str:
     """What went wrong, in plain words, for the Test button."""
     if isinstance(err, RateLimited):
@@ -91,7 +99,9 @@ class ProviderCard(QWidget):
         every = ngettext("Asks at most once every {n} minute.", "Asks at most once every {n} minutes.", minutes).format(n=minutes)
         ahead = ngettext("Looks {n} day ahead.", "Looks {n} days ahead.", days).format(n=days)
         note(f"{every} {ahead}")
-        self.terms = note(f'<a href="{provider.terms_url}">{_("Terms and limits")}</a>', rich=True)
+        # the default link blue is unreadable on a dark window, and a style sheet hides the palette's link colour
+        colour = colours.link(self)
+        self.terms = note(f'<style>a {{ color: {colour}; }}</style><a href="{provider.terms_url}">{_("Terms and limits")}</a>', rich=True)
 
         flat = {f"forecast.{provider.id}.{key}": value for key, value in secrets.get(provider.id, {}).items()}
         fields = TabSpec(provider.id, provider.name, provider_fields(provider))
@@ -152,6 +162,8 @@ class ForecastTab(QWidget):
             ("primary", _("Forecast provider"), ""),
             ("fallback", _("Fallback provider"), _("Asked only when the first provider has no forecast that is still usable.")),
         ):
+            if role == "fallback":
+                layout.addSpacing(14)
             title = QLabel(heading)
             title.setStyleSheet("font-weight: bold;")
             layout.addWidget(title)
@@ -298,7 +310,7 @@ class ForecastTab(QWidget):
         def work() -> None:
             try:
                 steps = provider.fetch(system, settings, datetime.now(tz))
-                days = len({s.start.astimezone(tz).date() for s in steps})
+                days = forecast_days(steps, datetime.now(tz), tz)
                 message = ngettext("OK: {n} day of forecast", "OK: {n} days of forecast", days).format(n=days)
                 self._outcome.done.emit(role, True, message)
             except ProviderError as err:

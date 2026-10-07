@@ -7,7 +7,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import stat
 import threading
 from dataclasses import replace
-from datetime import date, timedelta
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pytest
 from PySide6.QtTest import QTest
@@ -23,7 +24,7 @@ from planner.model import Forecast, load_config
 
 from conftest import example_config
 
-DAY = date(2026, 7, 3)
+DAY = datetime.now(ZoneInfo("Europe/Amsterdam")).date()  # the Test button counts days from today
 KEY = "TAB-SECRET-KEY-1"
 
 
@@ -382,5 +383,36 @@ def test_results_use_the_accent_colours_of_the_theme(tmp_path, qapp):
         rig.tab.test_buttons["primary"].click()
         rig.wait_for_test("primary")
         assert colours.ERROR["dark"] in rig.tab.results["primary"].styleSheet()
+    finally:
+        qapp.setPalette(original)
+
+
+def test_the_days_counted_are_today_onwards_even_when_the_first_step_belongs_to_yesterday():
+    """Found in the live check: Open-Meteo's first step is the hour before midnight, so four days of data
+    touch five dates, and the Test button said "5 days"."""
+    from app.settings.forecast_tab import forecast_days
+    from planner.model import ForecastStep
+
+    tz = ZoneInfo("Europe/Amsterdam")
+    start = datetime(2026, 7, 2, 23, tzinfo=tz)  # yesterday 23:00
+    steps = [ForecastStep(start + timedelta(hours=h), start + timedelta(hours=h + 1), 1.0) for h in range(96)]
+    assert forecast_days(steps, datetime(2026, 7, 3, 7, tzinfo=tz), tz) == 4
+    assert forecast_days(steps[:25], datetime(2026, 7, 3, 7, tzinfo=tz), tz) == 1
+    assert forecast_days([], datetime(2026, 7, 3, 7, tzinfo=tz), tz) == 0
+
+
+def test_the_terms_link_is_readable_on_a_dark_window(tmp_path, qapp):
+    """Found by looking at the rendered tab: the default link blue was nearly invisible on a dark window."""
+    from PySide6.QtGui import QColor, QPalette
+
+    original = qapp.palette()
+    palette = QPalette(original)
+    palette.setColor(QPalette.ColorRole.Window, QColor("#31363b"))
+    palette.setColor(QPalette.ColorRole.WindowText, QColor("#eff0f1"))
+    qapp.setPalette(palette)
+    try:
+        rig = Rig(tmp_path)
+        link = rig.tab.cards["beta"].terms
+        assert colours.LINK["dark"] in link.text() and "https://" in link.text()
     finally:
         qapp.setPalette(original)

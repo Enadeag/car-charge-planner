@@ -55,7 +55,7 @@ def light(qapp):
     qapp.setPalette(original)
 
 
-@pytest.mark.parametrize("name", ["ERROR", "WARNING", "SUCCESS"])
+@pytest.mark.parametrize("name", ["ERROR", "WARNING", "SUCCESS", "LINK"])
 def test_accent_colours_are_readable_on_typical_backgrounds(name):
     table = getattr(colours, name)
     for background in ("#31363b", "#1e1e1e"):
