@@ -60,3 +60,13 @@ _Avoid_: Weather source, weather service, API
 A second forecast provider, chosen in Settings, asked only when the first has no forecast that is still usable.
 _Avoid_: Backup provider, secondary source
 
+## Running on a computer
+
+**Start at login**:
+The app launching itself, hidden, when the user signs in to their computer. A choice in Settings, the same on every system.
+_Avoid_: Autostart, run at boot, startup item
+
+**Supported / beta**:
+A system is supported when a person has checked every release on it; it is beta while releases are only tested automatically or by someone not always available.
+_Avoid_: Experimental, unofficial
+
