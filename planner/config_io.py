@@ -3,17 +3,19 @@
 from __future__ import annotations
 
 import json
+import re
 import os
 from dataclasses import fields
 from pathlib import Path
 
-from .model import Config, validate
+from .model import Config, ConfigError, validate
 
 HEADER = """\
 # Managed by the car charge planner's Settings window.
 # Edit by hand only while the app is closed; comments are not kept when the window saves.
 """
 
+SECRET_LOOKING = re.compile(r"key|secret|token|password|passwd", re.IGNORECASE)
 SECTIONS = ("panels", "house", "car", "charger", "planning", "notify", "interface")
 
 
@@ -40,6 +42,14 @@ def dump_config(cfg: Config) -> str:
         section = getattr(cfg, name)
         lines += ["", f"[{name}]"]
         lines += [f"{f.name} = {_value(getattr(section, f.name))}" for f in fields(section)]
+    lines += ["", "[forecast]", f"primary = {_value(cfg.forecast.primary)}", f"fallback = {_value(cfg.forecast.fallback)}"]
+    for provider_id in sorted(cfg.forecast.settings):
+        values = cfg.forecast.settings[provider_id]
+        for key in values:
+            if SECRET_LOOKING.search(key):  # a backstop: secrets belong in secrets.toml, never here
+                raise ConfigError(f"{key!r} looks like a secret and must not be written to the config file")
+        lines += ["", f"[forecast.{provider_id}]"]
+        lines += [f"{key} = {_value(values[key])}" for key in sorted(values)]
     lines += ["", "[away]"]
     # always written, even empty: a missing key would bring back the default rule on the next start
     if cfg.away_rules:

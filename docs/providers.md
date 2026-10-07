@@ -48,3 +48,16 @@ What it checks:
 For tests of the code that *uses* providers (the forecast service, the Settings tab) there is a scripted
 `FakeProvider` in `tests/fake_provider.py`: successes, errors, rate limits with retry times, and `Held` entries
 that wait for an event so a test can have a fetch in flight.
+
+## Settings and secrets
+
+A provider declares the settings it needs as `SettingSpec`s (a key, a label and a hint, whether it is optional,
+whether it is secret). The app stores them for you:
+
+- plain settings in `config.toml`, under `[forecast.<provider id>]`;
+- secret ones (an API key) in `secrets.toml` beside it, mode 0600, as `[<provider id>]`. They are never written to
+  `config.toml`, never logged, and shown masked in Settings.
+
+`fetch` receives one dictionary of the provider's declared settings with both kinds merged; a setting that is empty
+is simply absent. Labels and hints are marked with `N_()` so they can be translated. A secret must be declared
+`secret=True`: that is what keeps it out of the config file.

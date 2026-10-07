@@ -15,7 +15,7 @@ class FieldSpec:
     label: str
     hint: str
     unit: str = ""
-    kind: str = "float"  # "float" | "int" | "timezone" | "choice"
+    kind: str = "float"  # "float" | "int" | "timezone" | "choice" | "text" | "secret" (masked)
     minimum: float = 0  # limits of the input box, in shown units; validate() stays the judge
     maximum: float = 1000
     decimals: int = 1
@@ -32,7 +32,15 @@ class TabSpec:
     fields: tuple[FieldSpec, ...]
 
 
+def _provider_key(key: str) -> tuple[str, str] | None:
+    """"forecast.<provider id>.<setting>" -> (id, setting): a setting a forecast provider declares."""
+    parts = key.split(".")
+    return (parts[1], parts[2]) if len(parts) == 3 and parts[0] == "forecast" else None
+
+
 def get_value(cfg: Config, key: str):
+    if (provider := _provider_key(key)) is not None:
+        return cfg.forecast.settings.get(provider[0], {}).get(provider[1], "")
     if "." in key:
         section, name = key.split(".")
         return getattr(getattr(cfg, section), name)
@@ -40,6 +48,17 @@ def get_value(cfg: Config, key: str):
 
 
 def set_value(cfg: Config, key: str, value) -> Config:
+    if (provider := _provider_key(key)) is not None:
+        provider_id, setting = provider
+        settings = {pid: dict(values) for pid, values in cfg.forecast.settings.items()}
+        values = settings.setdefault(provider_id, {})
+        if value:
+            values[setting] = value
+        else:
+            values.pop(setting, None)  # an empty setting is no setting
+        if not values:
+            settings.pop(provider_id)
+        return replace(cfg, forecast=replace(cfg.forecast, settings=settings))
     if "." in key:
         section, name = key.split(".")
         return replace(cfg, **{section: replace(getattr(cfg, section), **{name: value})})

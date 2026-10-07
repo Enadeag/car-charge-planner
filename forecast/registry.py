@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import re
+
 from .provider import ForecastProvider
+
+ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")  # the same rule as the config file's
 
 
 class ProviderRegistry:
@@ -10,8 +14,8 @@ class ProviderRegistry:
         self._providers: dict[str, ForecastProvider] = {}
 
     def register(self, provider: ForecastProvider) -> ForecastProvider:
-        if not provider.id or provider.id != provider.id.strip().lower() or " " in provider.id:
-            raise ValueError(f"a provider id is short, lower case and without spaces, not {provider.id!r}")
+        if not ID_PATTERN.match(provider.id):
+            raise ValueError(f"a provider id is lower case letters, digits and hyphens, not {provider.id!r}")
         if provider.id in self._providers:
             raise ValueError(f"a provider with the id {provider.id!r} is already registered")
         self._providers[provider.id] = provider

@@ -107,6 +107,19 @@ class Interface:
     language: str = "auto"  # "auto" follows the system; otherwise a language code such as "nl" or "pt_BR"
 
 
+ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")  # a forecast provider's id, as written in the config file
+SETTING_KEY = re.compile(r"^[a-z0-9_]+$")
+
+
+@dataclass(frozen=True)
+class Forecast:
+    """Which forecast providers to use, and each one's settings that are not secret (those live in secrets.toml)."""
+
+    primary: str = "open-meteo"
+    fallback: str = ""  # empty means none
+    settings: dict[str, dict[str, str]] = field(default_factory=dict)  # provider id -> {setting key: value}
+
+
 LANGUAGE_CODE = re.compile(r"^[A-Za-z]{2,3}([_-][A-Za-z0-9]{2,8})*$")
 
 
@@ -149,6 +162,7 @@ class Config:
     planning: Planning = field(default_factory=Planning)
     notify: Notify = field(default_factory=Notify)
     interface: Interface = field(default_factory=Interface)
+    forecast: Forecast = field(default_factory=Forecast)
     away_rules: tuple[AwayRule, ...] = ()
     timezone: str = field(default_factory=system_timezone)
     # (0, 0) means "not set": a new install has no location until the user gives one
@@ -222,6 +236,22 @@ def validate(cfg: Config) -> Config:
             language=cfg.interface.language
         ),
     )
+    need(bool(ID_PATTERN.match(str(cfg.forecast.primary))), _("[forecast] primary must be a provider id such as \"open-meteo\""))
+    need(
+        cfg.forecast.fallback == "" or bool(ID_PATTERN.match(str(cfg.forecast.fallback))),
+        _("[forecast] fallback must be empty or a provider id"),
+    )
+    need(
+        not cfg.forecast.fallback or cfg.forecast.fallback != cfg.forecast.primary,
+        _("[forecast] the fallback must be a different provider than the primary"),
+    )
+    for provider_id, values in cfg.forecast.settings.items():
+        need(bool(ID_PATTERN.match(str(provider_id))), _("[forecast.{id}] is not a provider id").format(id=provider_id))
+        for key, value in values.items():
+            need(
+                bool(SETTING_KEY.match(str(key))) and isinstance(value, str),
+                _("[forecast.{id}] {key} must be a text").format(id=provider_id, key=key),
+            )
     need(
         cfg.interface.mode in INTERFACE_MODES,
         _("[interface] mode must be one of {modes}, not {mode!r}").format(
@@ -257,6 +287,19 @@ def _parse_time(value: str) -> time:
         raise ConfigError(_('[away] time {value!r} must look like "06:00"').format(value=value)) from err
 
 
+def _read_forecast(table: dict) -> Forecast:
+    primary = table.get("primary", Forecast.primary)
+    fallback = table.get("fallback", Forecast.fallback)
+    settings: dict[str, dict[str, str]] = {}
+    for key, value in table.items():
+        if key in ("primary", "fallback"):
+            continue
+        if not isinstance(value, dict):  # a provider's settings are a table of their own: [forecast.<id>]
+            raise ConfigError(_("unknown keys in [{section}]: {keys}").format(section="forecast", keys=[key]))
+        settings[key] = dict(value)
+    return Forecast(primary, fallback, settings)
+
+
 def load_config(path: Path | None) -> Config:
     """Load config from TOML, falling back to defaults for anything missing."""
     if path is None:
@@ -274,6 +317,8 @@ def load_config(path: Path | None) -> Config:
             if unknown:
                 raise ConfigError(_("unknown keys in [{section}]: {keys}").format(section=section, keys=sorted(unknown)))
             cfg = replace(cfg, **{section: replace(current, **data[section])})
+    if "forecast" in data:
+        cfg = replace(cfg, forecast=_read_forecast(data["forecast"]))
     for key in ("timezone", "latitude", "longitude"):
         if key in data:
             cfg = replace(cfg, **{key: data[key]})

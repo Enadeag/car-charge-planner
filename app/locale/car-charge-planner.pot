@@ -653,6 +653,14 @@ msgid "The language of the app. Applies the next time the app starts."
 msgstr ""
 
 #: app/settings/tabs.py
+msgid "Show"
+msgstr ""
+
+#: app/settings/tabs.py
+msgid "Hide"
+msgstr ""
+
+#: app/settings/tabs.py
 msgid "Automatic: follow the system"
 msgstr ""
 
@@ -733,7 +741,7 @@ msgstr ""
 msgid "A value has the wrong type: {error}"
 msgstr ""
 
-#: app/settings/window.py
+#: app/settings/window.py forecast/secret_store.py
 #, python-brace-format
 msgid "Could not write {file}: {error}"
 msgstr ""
@@ -967,6 +975,45 @@ msgstr ""
 msgid "Only for a paid plan (commercial use). Free use needs none."
 msgstr ""
 
+#: forecast/secret_store.py
+#, python-brace-format
+msgid "{file} is readable by other users and could not be made private: {error}"
+msgstr ""
+
+#: forecast/secret_store.py
+#, python-brace-format
+msgid "Could not read {file}: {error}"
+msgstr ""
+
+#: forecast/secret_store.py
+#, python-brace-format
+msgid "{file} is not valid TOML. Fix it or delete it and enter the keys again."
+msgstr ""
+
+#: forecast/secret_store.py
+#, python-brace-format
+msgid "{file}: [{id}] must hold texts only"
+msgstr ""
+
+#: forecast/secret_store.py
+msgid "A provider id or setting name has characters that are not allowed"
+msgstr ""
+
+#: forecast/selection.py
+#, python-brace-format
+msgid "The {role} forecast provider {id!r} is not known to this version of the app"
+msgstr ""
+
+#: forecast/selection.py
+#, python-brace-format
+msgid "{provider}: unknown setting {key!r}"
+msgstr ""
+
+#: forecast/selection.py
+#, python-brace-format
+msgid "{provider}: {setting} is required"
+msgstr ""
+
 #: planner/model.py
 msgid "[panels] kwp must be above 0"
 msgstr ""
@@ -1037,6 +1084,28 @@ msgid "[interface] language must be \"auto\" or a language code such as \"nl\", 
 msgstr ""
 
 #: planner/model.py
+msgid "[forecast] primary must be a provider id such as \"open-meteo\""
+msgstr ""
+
+#: planner/model.py
+msgid "[forecast] fallback must be empty or a provider id"
+msgstr ""
+
+#: planner/model.py
+msgid "[forecast] the fallback must be a different provider than the primary"
+msgstr ""
+
+#: planner/model.py
+#, python-brace-format
+msgid "[forecast.{id}] is not a provider id"
+msgstr ""
+
+#: planner/model.py
+#, python-brace-format
+msgid "[forecast.{id}] {key} must be a text"
+msgstr ""
+
+#: planner/model.py
 #, python-brace-format
 msgid "[interface] mode must be one of {modes}, not {mode!r}"
 msgstr ""
@@ -1078,12 +1147,12 @@ msgstr ""
 
 #: planner/model.py
 #, python-brace-format
-msgid "Config file is not valid TOML: {error}"
+msgid "unknown keys in [{section}]: {keys}"
 msgstr ""
 
 #: planner/model.py
 #, python-brace-format
-msgid "unknown keys in [{section}]: {keys}"
+msgid "Config file is not valid TOML: {error}"
 msgstr ""
 
 #: planner/model.py

@@ -13,6 +13,11 @@ def config_path() -> Path:
     return base / "car-charge-planner" / "config.toml"
 
 
+def secrets_path() -> Path:
+    """secrets.toml, beside the config file."""
+    return config_path().with_name("secrets.toml")
+
+
 def ensure_config(path: Path | None = None) -> Path:
     """Create the default config file if missing; never overwrite an existing one."""
     path = path or config_path()

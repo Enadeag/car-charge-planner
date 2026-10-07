@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
     QSpinBox,
     QTimeEdit,
@@ -30,12 +31,41 @@ from planner.model import AwayRule, Config
 
 from .fields import FieldSpec, TabSpec, get_value, set_value
 
+class SecretInput(QWidget):
+    """A text box that shows dots, with a button to look at what was typed."""
+
+    textChanged = Signal(str)
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.line = QLineEdit()
+        self.line.setEchoMode(QLineEdit.EchoMode.Password)
+        self.line.textChanged.connect(self.textChanged)
+        self.toggle = QPushButton(_("Show"))
+        self.toggle.setCheckable(True)
+        self.toggle.toggled.connect(self._show)
+        row = QHBoxLayout(self)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.addWidget(self.line, 1)
+        row.addWidget(self.toggle)
+
+    def _show(self, visible: bool) -> None:
+        self.line.setEchoMode(QLineEdit.EchoMode.Normal if visible else QLineEdit.EchoMode.Password)
+        self.toggle.setText(_("Hide") if visible else _("Show"))
+
+    def text(self) -> str:
+        return self.line.text()
+
+    def setText(self, value: str) -> None:
+        self.line.setText(value)
+
+
 LANGUAGE_KEY = "interface.language"
 
 
 def shown_value(spec: FieldSpec, stored):
     """The stored value as the input box shows it."""
-    if spec.kind in ("timezone", "choice"):
+    if spec.kind in ("timezone", "choice", "text", "secret"):
         return str(stored)
     if spec.kind == "int":
         return int(stored)
@@ -45,8 +75,10 @@ def shown_value(spec: FieldSpec, stored):
 class FieldTab(QWidget):
     changed = Signal()  # any box edited, or the tab (re)loaded
 
-    def __init__(self, tab: TabSpec, cfg: Config) -> None:
+    def __init__(self, tab: TabSpec, cfg: Config, secrets: dict[str, str] | None = None) -> None:
+        """`secrets` holds the values of the tab's secret fields by field key; they are not part of the Config."""
         super().__init__()
+        self._secrets = dict(secrets or {})
         self.key = tab.key
         self.title = _(tab.title)
         languages = available_languages()
@@ -75,6 +107,10 @@ class FieldTab(QWidget):
         grid.setRowStretch(row, 1)
         self.load(cfg)
 
+    def collect_secrets(self) -> dict[str, str]:
+        """What the tab's secret fields hold now, by field key (an empty one is left out)."""
+        return {s.key: self.stored_value(s) for s in self.specs if s.kind == "secret" and self.stored_value(s)}
+
     def _choices(self, spec: FieldSpec) -> list[tuple[str, str]]:
         if spec.key == LANGUAGE_KEY:
             installed = sorted({"en", *self.languages})
@@ -88,6 +124,14 @@ class FieldTab(QWidget):
                 box.addItem(label, value)
             box.currentIndexChanged.connect(lambda _i: self.changed.emit())
             return box
+        if spec.kind == "text":
+            line = QLineEdit()
+            line.textChanged.connect(lambda _text: self.changed.emit())
+            return line
+        if spec.kind == "secret":
+            secret = SecretInput()
+            secret.textChanged.connect(lambda _text: self.changed.emit())
+            return secret
         if spec.kind == "timezone":
             box = QComboBox()
             box.setEditable(True)
@@ -118,6 +162,8 @@ class FieldTab(QWidget):
         value = shown_value(spec, stored)
         if spec.kind == "timezone":
             widget.setCurrentText(value)
+        elif spec.kind in ("text", "secret"):
+            widget.setText(value)
         elif spec.kind == "choice":
             widget.setCurrentIndex(max(widget.findData(value), 0))
         else:
@@ -126,7 +172,7 @@ class FieldTab(QWidget):
     def load(self, cfg: Config) -> None:
         """Fill the boxes from a config and remember its exact values."""
         for spec in self.specs:
-            stored = get_value(cfg, spec.key)
+            stored = self._secrets.get(spec.key, "") if spec.kind == "secret" else get_value(cfg, spec.key)
             self.baseline[spec.key] = stored
             self._set_widget(spec, stored)
 
@@ -137,6 +183,9 @@ class FieldTab(QWidget):
         if spec.kind == "choice":
             data = widget.currentData()
             return baseline if data == baseline else data
+        if spec.kind in ("text", "secret"):
+            text = widget.text().strip()  # a pasted key often carries a space or a newline
+            return baseline if text == baseline else text
         if spec.kind == "timezone":
             text = widget.currentText().strip()
             return baseline if text == baseline else text
@@ -149,7 +198,8 @@ class FieldTab(QWidget):
 
     def apply_to(self, cfg: Config) -> Config:
         for spec in self.specs:
-            cfg = set_value(cfg, spec.key, self.stored_value(spec))
+            if spec.kind != "secret":  # secrets are not in the Config: see collect_secrets
+                cfg = set_value(cfg, spec.key, self.stored_value(spec))
         return cfg
 
 
