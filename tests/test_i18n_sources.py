@@ -4,7 +4,7 @@ import ast
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SOURCES = sorted(p for d in ("app", "planner") for p in (ROOT / d).rglob("*.py"))
+SOURCES = sorted(p for d in ("app", "planner", "forecast", "storage") for p in (ROOT / d).rglob("*.py"))
 
 LOOKUPS = {"_", "ngettext", "pgettext", "N_", "NC_"}
 # calls that put a text in front of the user: a plain English string given to one of these is untranslated

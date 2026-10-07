@@ -328,8 +328,14 @@ def test_the_template_header_has_no_placeholder_author_or_version(sample_package
 
 def test_the_committed_template_is_up_to_date_with_the_code(tmp_path):
     fresh = tmp_path / "fresh.pot"
-    i18n_tools.extract(i18n_tools.PACKAGE_DIR, fresh)
+    i18n_tools.extract(pot=fresh)
     assert fresh.read_bytes() == i18n_tools.POT.read_bytes(), "run: python -m app.i18n_tools extract"
+
+
+def test_the_template_holds_the_texts_of_every_package_the_user_reads_messages_from():
+    text = i18n_tools.POT.read_text()
+    assert "#: planner/model.py" in text and "[panels] kwp must be above 0" in text  # validation messages
+    assert "#: app/view_model.py" in text
 
 
 def test_a_language_goes_from_template_to_a_working_translation(sample_package, tmp_path):

@@ -931,3 +931,127 @@ msgstr ""
 msgid "Next: {day} {span}"
 msgstr ""
 
+#: planner/model.py
+msgid "[panels] kwp must be above 0"
+msgstr ""
+
+#: planner/model.py
+msgid "[panels] tilt_deg must be between 0 and 90"
+msgstr ""
+
+#: planner/model.py
+msgid "[panels] azimuth_deg must be between -180 and 180"
+msgstr ""
+
+#: planner/model.py
+msgid "[panels] system_losses must be at least 0 and below 1"
+msgstr ""
+
+#: planner/model.py
+msgid "[house] baseload_kw cannot be negative"
+msgstr ""
+
+#: planner/model.py
+msgid "[car] usable_battery_kwh must be above 0"
+msgstr ""
+
+#: planner/model.py
+msgid "[car] consumption_kwh_per_100km must be above 0"
+msgstr ""
+
+#: planner/model.py
+msgid "[car] km_per_day cannot be negative"
+msgstr ""
+
+#: planner/model.py
+msgid "[car] needs 0 <= minimum_pct < target_pct <= 100"
+msgstr ""
+
+#: planner/model.py
+msgid "[charger] needs 0 < min_amps <= max_amps"
+msgstr ""
+
+#: planner/model.py
+msgid "[charger] volts must be above 0"
+msgstr ""
+
+#: planner/model.py
+msgid "[charger] efficiency must be above 0 and at most 1"
+msgstr ""
+
+#: planner/model.py
+msgid "[planning] margin must be above 0 and at most 1"
+msgstr ""
+
+#: planner/model.py
+msgid "[planning] import_tolerance_kwh cannot be negative"
+msgstr ""
+
+#: planner/model.py
+msgid "[planning] min_window_minutes must be above 0"
+msgstr ""
+
+#: planner/model.py
+msgid "[notify] lead_minutes cannot be negative"
+msgstr ""
+
+#: planner/model.py
+#, python-brace-format
+msgid "[interface] language must be \"auto\" or a language code such as \"nl\", not {language!r}"
+msgstr ""
+
+#: planner/model.py
+#, python-brace-format
+msgid "[interface] mode must be one of {modes}, not {mode!r}"
+msgstr ""
+
+#: planner/model.py
+msgid "latitude must be between -90 and 90"
+msgstr ""
+
+#: planner/model.py
+msgid "longitude must be between -180 and 180"
+msgstr ""
+
+#: planner/model.py
+#, python-brace-format
+msgid "timezone {zone!r} is not a known time zone"
+msgstr ""
+
+#: planner/model.py
+#, python-brace-format
+msgid "[away] weekday {weekday} must be 0 (Monday) to 6 (Sunday)"
+msgstr ""
+
+#: planner/model.py
+msgid "[away] each rule must end after it starts on the same day (no overnight rules)"
+msgstr ""
+
+#: planner/model.py
+msgid "Invalid config:"
+msgstr ""
+
+#: planner/model.py
+msgid "Enter your location: latitude and longitude cannot both be 0"
+msgstr ""
+
+#: planner/model.py
+#, python-brace-format
+msgid "[away] time {value!r} must look like \"06:00\""
+msgstr ""
+
+#: planner/model.py
+#, python-brace-format
+msgid "Config file is not valid TOML: {error}"
+msgstr ""
+
+#: planner/model.py
+#, python-brace-format
+msgid "unknown keys in [{section}]: {keys}"
+msgstr ""
+
+#: planner/model.py
+#, python-brace-format
+msgid "A config value has the wrong type: {error}"
+msgstr ""
+

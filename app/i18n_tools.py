@@ -46,8 +46,16 @@ def _babel():
         raise SystemExit("Babel is needed for this command: pip install babel")
 
 
-def extract(package_dir: Path = PACKAGE_DIR, pot: Path = POT, prefix: str = "app") -> int:
-    """Write the template from every marked text under `package_dir`. Returns how many messages."""
+# every package whose texts reach the user: the app itself and the libraries it shows messages from
+SOURCE_DIRS = tuple(d for d in (ROOT / name for name in ("app", "planner", "forecast", "storage")) if d.is_dir())
+
+
+def extract(package_dir: Path | None = None, pot: Path = POT, prefix: str = "app") -> int:
+    """Write the template from every marked text. Returns how many messages.
+
+    Without `package_dir` that is every directory in `SOURCE_DIRS`, each file named after its folder;
+    with one, just that folder, its files named under `prefix` (what the tests use).
+    """
     _babel()
     from babel.messages.catalog import Catalog
     from babel.messages.extract import extract_from_dir
@@ -63,16 +71,18 @@ def extract(package_dir: Path = PACKAGE_DIR, pot: Path = POT, prefix: str = "app
         language_team="",
         charset="utf-8",
     )
-    found = extract_from_dir(
-        str(package_dir),
-        method_map=[("**.py", "python")],
-        options_map={"**.py": {}},
-        keywords=KEYWORDS,
-        comment_tags=(COMMENT_TAG,),
-        strip_comment_tags=True,
-    )
-    for filename, lineno, message, comments, context in found:
-        catalog.add(message, None, [(f"{prefix}/{filename}", lineno)], auto_comments=comments, context=context)
+    sources = [(package_dir, prefix)] if package_dir else [(d, d.name) for d in SOURCE_DIRS]
+    for directory, name in sources:
+        found = extract_from_dir(
+            str(directory),
+            method_map=[("**.py", "python")],
+            options_map={"**.py": {}},
+            keywords=KEYWORDS,
+            comment_tags=(COMMENT_TAG,),
+            strip_comment_tags=True,
+        )
+        for filename, lineno, message, comments, context in found:
+            catalog.add(message, None, [(f"{name}/{filename}", lineno)], auto_comments=comments, context=context)
     pot.parent.mkdir(parents=True, exist_ok=True)
     with open(pot, "wb") as handle:
         write_po(handle, catalog, width=0, sort_by_file=True, include_lineno=False, include_previous=False)
