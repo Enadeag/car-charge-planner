@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 from .model import AwayPeriod, Config, DayPlan, ForecastStep, Window, add_hours
 from .projection import away_periods
-from .surplus import usable_kw
+from .surplus import charge_power_kw, usable_kw
 
 SLOT = timedelta(minutes=15)
 SLOT_H = 0.25
@@ -72,7 +72,7 @@ def _best_placement(
     best = None
     best_key = None
     for amps in range(cfg.charger.min_amps, cfg.charger.max_amps + 1):
-        power = amps * cfg.charger.volts / 1000
+        power = charge_power_kw(amps, cfg)
         hours = energy_kwh / power
         n = math.ceil(hours / SLOT_H - _EPS)
         if n < 1 or n > len(slots):

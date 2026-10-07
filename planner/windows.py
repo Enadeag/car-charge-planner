@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from .model import AwayPeriod, Config, ForecastStep, Window, add_hours, elapsed_hours
-from .surplus import amps_for, usable_kw
+from .surplus import amps_for, charge_power_kw, usable_kw
 
 _EPS = 1e-9
 _ROUND_TO = timedelta(minutes=5)
@@ -69,7 +69,7 @@ def _best_candidate(run: list[Segment], remaining: float, cfg: Config):
     min_window = timedelta(minutes=cfg.planning.min_window_minutes)
     tolerance = cfg.planning.import_tolerance_kwh
     for amps in range(cfg.charger.max_amps, cfg.charger.min_amps - 1, -1):
-        power = amps * cfg.charger.volts / 1000
+        power = charge_power_kw(amps, cfg)
         for i in range(len(run)):
             solar = imported = 0.0
             for j in range(i, len(run)):
@@ -93,7 +93,7 @@ def _best_candidate(run: list[Segment], remaining: float, cfg: Config):
 
 def _make_window(run: list[Segment], amps: int, i: int, j: int, remaining: float, cfg: Config) -> Window:
     """Trim the chosen interval to the energy needed, but keep the minimum length."""
-    power = amps * cfg.charger.volts / 1000
+    power = charge_power_kw(amps, cfg)
     start = run[i].start
     end = run[j].end
     cumulative = 0.0

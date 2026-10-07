@@ -127,11 +127,22 @@ CHARGER = TabSpec(
     N_("Charger"),
     (
         FieldSpec(
-            "charger.min_amps", N_("Minimum current"), N_("The lowest current the charger and car both accept, often 6 A."),
+            "charger.phases",
+            N_("Phases"),
+            N_(
+                "Whether the charger charges on one phase or three. The charger's label or manual says, and so does the "
+                "fuse box. Three phases deliver three times the power at the same current. Some chargers can be switched "
+                "to single-phase charging, which suits solar surplus better. Currents below are per phase."
+            ),
+            kind="choice",
+            choices=((1, N_("One phase")), (3, N_("Three phases"))),
+        ),
+        FieldSpec(
+            "charger.min_amps", N_("Minimum current"), N_("The lowest current the charger and car both accept, often 6 A. Per phase on a three-phase charger."),
             unit="A", kind="int", minimum=1, maximum=80, step=1,
         ),
         FieldSpec(
-            "charger.max_amps", N_("Maximum current"), N_("The highest current the charger and the home connection allow. Must not be below the minimum."),
+            "charger.max_amps", N_("Maximum current"), N_("The highest current the charger and the home connection allow, per phase. Must not be below the minimum."),
             unit="A", kind="int", minimum=1, maximum=80, step=1,
         ),
         FieldSpec("charger.volts", N_("Voltage"), N_("Mains voltage at the charger, typically 230 V for a single-phase connection."), unit="V", minimum=100, maximum=400, decimals=0, step=1),

@@ -78,6 +78,7 @@ class Car:
 
 @dataclass(frozen=True)
 class Charger:
+    phases: int = 1  # 1 or 3: each phase carries the current, so three phases deliver three times the power
     min_amps: int = 6
     max_amps: int = 32
     volts: float = 230
@@ -224,6 +225,7 @@ def validate(cfg: Config) -> Config:
     need(cfg.car.km_per_day >= 0, _("[car] km_per_day cannot be negative"))
     need(0 <= cfg.car.minimum_pct < cfg.car.target_pct <= 100, _("[car] needs 0 <= minimum_pct < target_pct <= 100"))
     need(0 < cfg.charger.min_amps <= cfg.charger.max_amps, _("[charger] needs 0 < min_amps <= max_amps"))
+    need(cfg.charger.phases in (1, 3) and not isinstance(cfg.charger.phases, bool), _("[charger] phases must be 1 or 3"))
     need(cfg.charger.volts > 0, _("[charger] volts must be above 0"))
     need(0 < cfg.charger.efficiency <= 1, _("[charger] efficiency must be above 0 and at most 1"))
     need(0 < cfg.planning.margin <= 1, _("[planning] margin must be above 0 and at most 1"))

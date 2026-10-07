@@ -65,7 +65,9 @@ LANGUAGE_KEY = "interface.language"
 
 def shown_value(spec: FieldSpec, stored):
     """The stored value as the input box shows it."""
-    if spec.kind in ("timezone", "choice", "text", "secret"):
+    if spec.kind == "choice":
+        return stored  # the stored value itself: a text for most choices, a number for the charger's phases
+    if spec.kind in ("timezone", "text", "secret"):
         return str(stored)
     if spec.kind == "int":
         return int(stored)

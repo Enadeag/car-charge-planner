@@ -14,9 +14,14 @@ def usable_kw(step: ForecastStep, cfg: Config) -> float:
     return max(0.0, surplus) * cfg.planning.margin
 
 
+def charge_power_kw(amps: int, cfg: Config) -> float:
+    """Power the charger delivers at this current: every phase carries it. (230 V, 6 A: 1.4 kW on one phase, 4.1 kW on three.)"""
+    return amps * cfg.charger.volts * cfg.charger.phases / 1000
+
+
 def amps_for(power_kw: float, cfg: Config) -> int:
-    """Whole amps (floored) that fit under power_kw on the configured charger."""
-    return min(cfg.charger.max_amps, int(power_kw * 1000 / cfg.charger.volts))
+    """Whole amps (floored), per phase, that fit under power_kw on the configured charger."""
+    return min(cfg.charger.max_amps, int(power_kw * 1000 / (cfg.charger.volts * cfg.charger.phases)))
 
 
 def expand_away(

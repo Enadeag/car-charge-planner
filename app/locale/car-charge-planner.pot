@@ -281,6 +281,11 @@ msgstr ""
 
 #: app/notifications.py
 #, python-brace-format
+msgid "Set the current to {amps} A per phase ({power} kW) in your charger's app."
+msgstr ""
+
+#: app/notifications.py
+#, python-brace-format
 msgid "Set the current to {amps} A ({power} kW) in your charger's app."
 msgstr ""
 
@@ -549,11 +554,27 @@ msgid "Charger"
 msgstr ""
 
 #: app/settings/fields.py
+msgid "Phases"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Whether the charger charges on one phase or three. The charger's label or manual says, and so does the fuse box. Three phases deliver three times the power at the same current. Some chargers can be switched to single-phase charging, which suits solar surplus better. Currents below are per phase."
+msgstr ""
+
+#: app/settings/fields.py
+msgid "One phase"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Three phases"
+msgstr ""
+
+#: app/settings/fields.py
 msgid "Minimum current"
 msgstr ""
 
 #: app/settings/fields.py
-msgid "The lowest current the charger and car both accept, often 6 A."
+msgid "The lowest current the charger and car both accept, often 6 A. Per phase on a three-phase charger."
 msgstr ""
 
 #: app/settings/fields.py
@@ -561,7 +582,7 @@ msgid "Maximum current"
 msgstr ""
 
 #: app/settings/fields.py
-msgid "The highest current the charger and the home connection allow. Must not be below the minimum."
+msgid "The highest current the charger and the home connection allow, per phase. Must not be below the minimum."
 msgstr ""
 
 #: app/settings/fields.py
@@ -895,6 +916,11 @@ msgstr ""
 
 #: app/view_model.py
 #, python-brace-format
+msgid "{power} kW ({amps} A per phase)"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
 msgid "{power} kW ({amps} A)"
 msgstr ""
 
@@ -1060,6 +1086,11 @@ msgstr ""
 
 #: app/view_model.py
 #, python-brace-format
+msgid "Charge now until {end} at {amps} A per phase"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
 msgid "Charge now until {end} at {amps} A"
 msgstr ""
 
@@ -1070,6 +1101,11 @@ msgstr ""
 #: app/view_model.py
 #, python-brace-format
 msgid "Until {end} · {facts}"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Next: {day} {span}, {amps} A per phase"
 msgstr ""
 
 #: app/view_model.py
@@ -1215,6 +1251,10 @@ msgstr ""
 
 #: planner/model.py
 msgid "[charger] needs 0 < min_amps <= max_amps"
+msgstr ""
+
+#: planner/model.py
+msgid "[charger] phases must be 1 or 3"
 msgstr ""
 
 #: planner/model.py

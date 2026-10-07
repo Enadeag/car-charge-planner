@@ -175,7 +175,7 @@ Open **Settings...** from the tray icon's right-click menu. Settings are grouped
 | --- | --- |
 | Solar and location | Panel size, tilt, direction, system losses, latitude, longitude, time zone |
 | House and car | House baseload, usable battery, consumption, driving per day, minimum and target charge level |
-| Charger | Minimum and maximum current, voltage, charging efficiency |
+| Charger | One or three phases, minimum and maximum current (per phase), voltage, charging efficiency |
 | Planning and notifications | Planning margin, import tolerance, minimum window length, notification lead time |
 | Forecast | Which forecast provider to use, an optional fallback provider, and each one's settings (a server address or an API key, if it takes any). Each provider is described with what it sends, its limits and its terms, and a **Test** button asks it for a forecast right now without saving anything. API keys are kept apart from the config file, in `secrets.toml`. |
 | Interface | Whether the app shows itself as a tray icon with a popup, as a window, or automatically (a tray if the desktop has one, otherwise a window). Applies the next time the app starts. |
@@ -242,7 +242,7 @@ The language follows your system (`LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`, t
 ## How it plans, briefly
 
 1. Surplus per hour = the forecast provider's expected solar power (for Open-Meteo: panel size x forecast irradiance x losses) minus the house baseload, scaled by a planning margin (85% by default) so it errs towards too little power rather than grid draw.
-2. A step counts only if the surplus covers at least your charger's minimum current (6 A by default, about 1.4 kW on a single-phase 230 V connection).
+2. A step counts only if the surplus covers at least your charger's minimum current (6 A by default: about 1.4 kW on a single-phase 230 V charger, about 4.1 kW on a three-phase one; set the phases on the Charger tab).
 3. Within the hours the car is home, it picks the window and power that bring in the most solar for the energy the car needs, up to your target charge level (80% by default).
 4. It projects the battery day by day, subtracting your average driving per day (a setting). If a day would end more than one point under your minimum charge level, it adds the grid-charge advice.
 5. A window you have been notified about is kept as announced while it runs, so the power on screen matches what you set.

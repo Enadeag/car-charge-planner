@@ -48,9 +48,12 @@ def due(
 
 def message(kind: str, window: Window, cfg: Config, tz: ZoneInfo) -> tuple[str, str]:
     span = f"{window.start.astimezone(tz):%H:%M}-{window.end.astimezone(tz):%H:%M}"
-    setting = _("Set the current to {amps} A ({power} kW) in your charger's app.").format(
-        amps=window.amps, power=number(window.power_kw, 1)
+    template = (
+        _("Set the current to {amps} A per phase ({power} kW) in your charger's app.")
+        if cfg.charger.phases == 3
+        else _("Set the current to {amps} A ({power} kW) in your charger's app.")
     )
+    setting = template.format(amps=window.amps, power=number(window.power_kw, 1))
     if kind == GRID:
         return (
             _("Grid charge window {span}").format(span=span),

@@ -67,7 +67,9 @@ def _span(w: Window, tz: ZoneInfo) -> str:
     return f"{_clock(w.start, tz)}-{_clock(w.end, tz)}"
 
 
-def _power(w: Window) -> str:
+def _power(w: Window, phases: int = 1) -> str:
+    if phases == 3:  # the current is on each of the three phases: say so, or it reads as a third of the power
+        return _("{power} kW ({amps} A per phase)").format(power=number(w.power_kw, 1), amps=w.amps)
     return _("{power} kW ({amps} A)").format(power=number(w.power_kw, 1), amps=w.amps)
 
 
@@ -165,7 +167,7 @@ def advice_view(advice: GridAdvice, now: datetime, cfg: Config, tz: ZoneInfo) ->
     when = _("{day} {span}").format(day=day_label(w.start.astimezone(tz).date(), today), span=_span(w, tz))
     return AdviceView(
         _("Grid charge needed \u00b7 {when}").format(when=when),
-        _("{power} \u00b7 about {energy} kWh").format(power=_power(w), energy=number(advice.energy_kwh)),
+        _("{power} \u00b7 about {energy} kWh").format(power=_power(w, cfg.charger.phases), energy=number(advice.energy_kwh)),
         reason,
     )
 
@@ -176,7 +178,7 @@ def _quiet_label(day: date, today: date) -> str:
     return weekday_short(day.weekday())
 
 
-def _outlook(days: list[DayPlan], headline_window: Window | None, now: datetime, tz: ZoneInfo, today: date):
+def _outlook(days: list[DayPlan], headline_window: Window | None, now: datetime, tz: ZoneInfo, today: date, phases: int = 1):
     rows: list[OutlookRow] = []
     quiet: list[str] = []
     for d in days:
@@ -188,7 +190,7 @@ def _outlook(days: list[DayPlan], headline_window: Window | None, now: datetime,
                 OutlookRow(
                     "" if shown_day else day_label(d.date, today),
                     _span(w, tz),
-                    _power(w),
+                    _power(w, phases),
                     _("{energy} kWh").format(energy=number(w.solar_kwh, 1)),
                 )
             )
@@ -237,9 +239,9 @@ def no_forecast(reason: str, battery: BatteryReading, now: datetime) -> ViewMode
     )
 
 
-def _facts(window: Window) -> str:
+def _facts(window: Window, phases: int = 1) -> str:
     return _("{power} \u00b7 {energy} kWh \u00b7 {share}% solar").format(
-        power=_power(window), energy=number(window.solar_kwh, 1), share=number(window.solar_share * 100)
+        power=_power(window, phases), energy=number(window.solar_kwh, 1), share=number(window.solar_share * 100)
     )
 
 
@@ -257,7 +259,7 @@ def build(
     today = now.astimezone(tz).date()
     upcoming = [(d, w) for d in days for w in d.windows if w.end > now]
     headline_window = upcoming[0][1] if upcoming else None
-    outlook, quiet_days = _outlook(days, headline_window, now, tz, today)
+    outlook, quiet_days = _outlook(days, headline_window, now, tz, today, cfg.charger.phases)
     battery_line, battery_stale = battery_status(battery, now)
     common = dict(
         battery_line=battery_line,
@@ -293,14 +295,17 @@ def build(
             **common,
         )
 
+    three = cfg.charger.phases == 3
     day_plan, window = upcoming[0]
     projection = _projection(day_plan, window, cfg, tz)
     if window.start <= now + timedelta(seconds=1):
         return ViewModel(
             state="active",
-            tooltip=_("Charge now until {end} at {amps} A").format(end=_clock(window.end, tz), amps=window.amps),
+            tooltip=(
+                _("Charge now until {end} at {amps} A per phase") if three else _("Charge now until {end} at {amps} A")
+            ).format(end=_clock(window.end, tz), amps=window.amps),
             headline=_("Charge now"),
-            detail=_("Until {end} \u00b7 {facts}").format(end=_clock(window.end, tz), facts=_facts(window)),
+            detail=_("Until {end} \u00b7 {facts}").format(end=_clock(window.end, tz), facts=_facts(window, cfg.charger.phases)),
             projection=projection,
             **common,
         )
@@ -308,9 +313,11 @@ def build(
     span = _span(window, tz)
     return ViewModel(
         state="upcoming",
-        tooltip=_("Next: {day} {span}, {amps} A").format(day=label, span=span, amps=window.amps),
+        tooltip=(_("Next: {day} {span}, {amps} A per phase") if three else _("Next: {day} {span}, {amps} A")).format(
+            day=label, span=span, amps=window.amps
+        ),
         headline=_("Next: {day} {span}").format(day=label, span=span),
-        detail=_facts(window),
+        detail=_facts(window, cfg.charger.phases),
         projection=projection,
         **common,
     )
