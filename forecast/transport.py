@@ -13,7 +13,8 @@ import urllib.request
 from dataclasses import dataclass, field
 from typing import Callable
 
-USER_AGENT = "car-charge-planner (personal use)"
+PROJECT_URL = "https://github.com/Enadeag/car-charge-planner"  # the address after the repository is renamed
+USER_AGENT = f"car-charge-planner (+{PROJECT_URL})"
 TIMEOUT_S = 15
 
 

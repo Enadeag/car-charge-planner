@@ -931,6 +931,22 @@ msgstr ""
 msgid "Next: {day} {span}"
 msgstr ""
 
+#: forecast/providers/forecast_solar.py
+msgid "A solar forecast service (Forecast.Solar) that estimates the output of your system itself, with its own allowance for losses, so the system losses setting is not used. The free public plan gives today and tomorrow, hour by hour, and allows 12 requests an hour for everyone behind your internet address."
+msgstr ""
+
+#: forecast/providers/forecast_solar.py
+msgid "Your location (latitude and longitude), the tilt and direction of your panels and their size in kWp. With an API key, the key too."
+msgstr ""
+
+#: forecast/providers/forecast_solar.py forecast/providers/open_meteo.py
+msgid "API key"
+msgstr ""
+
+#: forecast/providers/forecast_solar.py
+msgid "Only for a paid plan, which adds more days and finer steps. The free public plan needs none."
+msgstr ""
+
 #: forecast/providers/open_meteo.py
 msgid "A free weather service run by Open-Meteo.com. It forecasts the sunlight on your panels and the app turns that into the power of your system. For non-commercial use."
 msgstr ""
@@ -945,10 +961,6 @@ msgstr ""
 
 #: forecast/providers/open_meteo.py
 msgid "Leave empty for the free public service. A paid plan, or a server of your own, has its own address."
-msgstr ""
-
-#: forecast/providers/open_meteo.py
-msgid "API key"
 msgstr ""
 
 #: forecast/providers/open_meteo.py

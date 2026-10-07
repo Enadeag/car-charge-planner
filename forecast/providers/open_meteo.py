@@ -25,13 +25,11 @@ from ..provider import (
     Unavailable,
     require_valid_steps,
 )
-from ..transport import Reply, Request, Transport, urllib_transport
+from ..transport import USER_AGENT, Reply, Request, Transport, urllib_transport
 
 PUBLIC_SERVER = "https://api.open-meteo.com"
 PATH = "/v1/forecast"
 FORECAST_DAYS = 4
-PROJECT_URL = "https://github.com/Enadeag/car-charge-planner"
-USER_AGENT = f"car-charge-planner (+{PROJECT_URL})"
 
 
 def power_kw(irradiance_wm2: float, kwp: float, system_losses: float) -> float:

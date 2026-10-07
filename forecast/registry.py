@@ -40,9 +40,11 @@ registry = ProviderRegistry()  # the built-in providers register themselves here
 
 
 def _register_builtin() -> None:
+    from .providers.forecast_solar import ForecastSolar
     from .providers.open_meteo import OpenMeteo
 
     registry.register(OpenMeteo())
+    registry.register(ForecastSolar())
 
 
 _register_builtin()
