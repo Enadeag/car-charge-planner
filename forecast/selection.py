@@ -6,7 +6,7 @@ from __future__ import annotations
 from app.i18n import _
 from planner.model import Config
 
-from .provider import ForecastProvider
+from .provider import ForecastProvider, PlaceSearch
 from .registry import ProviderRegistry, registry as builtin
 from .secret_store import Secrets
 
@@ -29,6 +29,15 @@ def split_settings(provider: ForecastProvider, values: dict[str, str]) -> tuple[
     plain = {k: v for k, v in values.items() if v and k not in secret_keys}
     secret = {k: v for k, v in values.items() if v and k in secret_keys}
     return plain, secret
+
+
+def place_search(cfg: Config, registry: ProviderRegistry = builtin) -> tuple[ForecastProvider, PlaceSearch] | None:
+    """The primary provider and its place search, or None when it has none (or is not known): then the person
+    types coordinates, and the page says why."""
+    if cfg.forecast.primary not in registry:
+        return None
+    provider = registry.get(cfg.forecast.primary)
+    return (provider, provider.search_places) if provider.search_places is not None else None
 
 
 def check_selection(cfg: Config, secrets: Secrets, registry: ProviderRegistry = builtin) -> list[str]:

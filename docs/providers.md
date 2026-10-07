@@ -205,6 +205,24 @@ For tests of the code that *uses* providers (the forecast service, the Settings 
 `FakeProvider` in `tests/fake_provider.py`: successes, errors, rate limits with retry times, and `Held` entries
 that wait for an event so a test can have a fetch in flight.
 
+## Place search (optional)
+
+A provider may also offer to turn what a person typed ("Utrecht", a postcode) into places with coordinates and a
+time zone; the set-up screen's Location page uses the **primary** provider's. Set `search_places` to a callable
+`search(text, language="en") -> PlaceResults` (`forecast/provider.py`), or leave it `None`: the page then asks for
+coordinates only and says why. Open-Meteo has one (`forecast/providers/open_meteo_geocoding.py`); Forecast.Solar
+does not.
+
+- `PlaceResults` holds `places` (each a `Place`: name, latitude, longitude, an IANA `timezone`, and the optional
+  `region`, `country` and finer `area` for telling two places that read alike apart) or a `problem`:
+  `TOO_SHORT` (fewer than two characters: nothing may be sent), `UNAVAILABLE` (no network, a timeout, a 5xx),
+  `RATE_LIMITED` (with `retry_after` when the service says) or `BAD_RESPONSE`. Matching nothing is not a problem:
+  it is `ok` with no places.
+- It **never raises**, and uses a short timeout (a person is waiting at a search box): set `Request.timeout_s`.
+- Leave out results that lack coordinates or a time zone you know.
+- The text typed is sent to the provider: say so in `sends` (or in its terms) and in the README.
+- Test it with `PlaceSearchConformance` and a `PlaceCase` (`tests/provider_kit.py`), like the forecast itself.
+
 ## Credit and attribution
 
 `attribution` is the credit your provider's terms ask for ("Weather data: Open-Meteo.com (CC BY 4.0)"). The app

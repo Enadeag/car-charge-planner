@@ -178,7 +178,7 @@ def test_it_declares_what_the_spec_says():
     assert provider.min_refresh == timedelta(minutes=60) and provider.max_useful_age == timedelta(hours=12)
     assert provider.attribution == "Weather data: Open-Meteo.com (CC BY 4.0)"
     assert [(s.key, s.secret, s.optional) for s in provider.settings] == [("base_url", False, True), ("api_key", True, True)]
-    assert provider.search_places is None
+    assert callable(provider.search_places)  # its place search, from ticket S4 and P9
 
 
 def test_it_is_a_built_in_provider():

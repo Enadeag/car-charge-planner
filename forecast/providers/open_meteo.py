@@ -25,6 +25,7 @@ from ..provider import (
     Unavailable,
     require_valid_steps,
 )
+from .open_meteo_geocoding import OpenMeteoGeocoder
 from ..transport import USER_AGENT, Reply, Request, Transport, urllib_transport
 
 PUBLIC_SERVER = "https://api.open-meteo.com"
@@ -66,10 +67,9 @@ class OpenMeteo:
             secret=True,
         ),
     )
-    search_places = None  # added by ticket P9
-
     def __init__(self, transport: Transport = urllib_transport) -> None:
         self.transport = transport
+        self.search_places = OpenMeteoGeocoder(transport)  # its place search: the same service family and terms
 
     # -- the request -------------------------------------------------------------------------------------------
 

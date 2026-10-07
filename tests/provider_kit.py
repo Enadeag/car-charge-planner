@@ -32,6 +32,8 @@ from forecast.provider import (
     BadResponse,
     ForecastProvider,
     NotConfigured,
+    PlaceSearch,
+    Problem,
     ProviderError,
     RateLimited,
     SystemDescription,
@@ -225,6 +227,85 @@ def check_secrets_stay_secret(case: ProviderCase) -> None:
     shown = "\n".join(capture.text + messages)
     for key, value in case.secrets.items():
         assert value not in shown, f"the secret {key!r} appears in a log line or an error message"
+
+
+# ---- place search (a provider's optional ability) ---------------------------------------------------------------
+
+
+@dataclass
+class PlaceCase:
+    """Describes a place search for `PlaceSearchConformance`, the way `ProviderCase` describes a provider."""
+
+    make: Callable[[Transport], PlaceSearch]
+    ok: Routes  # an answer with places
+    empty: Routes  # an answer to something that matches nothing
+    server_error: Routes
+    bad_body: Routes
+    rate_limited: Routes | None = None
+    retry_after: timedelta | None = None
+    query: str = "Amsterdam"
+
+    def search(self, routes: Routes) -> tuple[PlaceSearch, ReplayTransport]:
+        transport = ReplayTransport(routes)
+        return self.make(transport), transport
+
+
+def check_places_found(case: PlaceCase) -> None:
+    from zoneinfo import ZoneInfo
+
+    search, transport = case.search(case.ok)
+    results = search(case.query)
+    assert results.ok and results.places, "a good answer must give places"
+    assert transport.requests and not transport.unexpected, "it must ask through the transport, and only for what was recorded"
+    for place in results.places:
+        assert place.name.strip() and place.label.strip()
+        assert -90 <= place.latitude <= 90 and -180 <= place.longitude <= 180
+        ZoneInfo(place.timezone)  # raises for a time zone nobody knows
+    assert all(r.timeout_s <= 10 for r in transport.requests), "a search box needs a short timeout"
+
+
+def check_places_too_short(case: PlaceCase) -> None:
+    search, transport = case.search(case.ok)
+    for text in ("", " ", "a", " a "):
+        results = search(text)
+        assert results.problem is Problem.TOO_SHORT and not results.places
+    assert transport.requests == [], "nothing is sent for fewer than two characters"
+
+
+def check_places_nothing_found(case: PlaceCase) -> None:
+    search, _ = case.search(case.empty)
+    results = search(case.query)
+    assert results.ok and results.no_results
+
+
+def check_places_failures(case: PlaceCase) -> None:
+    for failure in (OSError("unreachable"), TimeoutError("slow")):
+        assert case.search([("", failure)])[0](case.query).problem is Problem.UNAVAILABLE
+    assert case.search(case.server_error)[0](case.query).problem is Problem.UNAVAILABLE
+    assert case.search(case.bad_body)[0](case.query).problem is Problem.BAD_RESPONSE
+    if case.rate_limited is not None:
+        limited = case.search(case.rate_limited)[0](case.query)
+        assert limited.problem is Problem.RATE_LIMITED and limited.retry_after == case.retry_after
+
+
+class PlaceSearchConformance:
+    """Subclass as `Test<Provider>Places` and provide a `place_case` fixture."""
+
+    @pytest.fixture
+    def place_case(self) -> PlaceCase:  # pragma: no cover - the subclass provides it
+        raise NotImplementedError
+
+    def test_it_finds_places_with_coordinates_and_a_time_zone(self, place_case):
+        check_places_found(place_case)
+
+    def test_it_asks_for_nothing_when_there_is_too_little_to_search(self, place_case):
+        check_places_too_short(place_case)
+
+    def test_a_search_that_matches_nothing_is_an_answer_not_a_problem(self, place_case):
+        check_places_nothing_found(place_case)
+
+    def test_failures_come_back_typed_and_never_raise(self, place_case):
+        check_places_failures(place_case)
 
 
 # ---- the suite a provider's test module inherits ------------------------------------------------------------------

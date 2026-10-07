@@ -22,6 +22,7 @@ TIMEOUT_S = 15
 class Request:
     url: str
     headers: dict[str, str] = field(default_factory=dict)
+    timeout_s: float = TIMEOUT_S  # a search box wants a short one
 
 
 @dataclass(frozen=True)
@@ -50,7 +51,7 @@ def urllib_transport(request: Request) -> Reply:
     """The real one."""
     headers = {"User-Agent": USER_AGENT, **request.headers}
     try:
-        with urllib.request.urlopen(urllib.request.Request(request.url, headers=headers), timeout=TIMEOUT_S) as response:
+        with urllib.request.urlopen(urllib.request.Request(request.url, headers=headers), timeout=request.timeout_s) as response:
             return Reply(response.status, response.read(), dict(response.headers))
     except urllib.error.HTTPError as err:  # the server answered, with a refusal
         return Reply(err.code, err.read() if err.fp else b"", dict(err.headers or {}))

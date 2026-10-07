@@ -54,7 +54,7 @@ class FakeProvider:
     horizon: timedelta = timedelta(days=2)
     max_useful_age: timedelta = timedelta(hours=6)
     settings: tuple[SettingSpec, ...] = ()
-    search_places: None = None
+    search_places: object = None  # an optional place search: a callable (text, language) -> PlaceResults
     calls: list[tuple[SystemDescription, dict, datetime]] = field(default_factory=list)
 
     def fetch(self, system: SystemDescription, settings: dict[str, str], now: datetime) -> list[ForecastStep]:

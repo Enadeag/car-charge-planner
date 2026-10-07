@@ -10,7 +10,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Callable, Protocol, Sequence
+from enum import Enum
+from typing import Protocol, Sequence
 
 from planner.model import Config, ForecastStep
 
@@ -51,7 +52,58 @@ class SettingSpec:
     secret: bool = False  # kept in secrets.toml, shown masked
 
 
-PlaceSearch = Callable[[str], Sequence[object]]  # an optional ability; its result type comes with ticket P9
+@dataclass(frozen=True)
+class Place:
+    """A place a person can pick as the location of their panels."""
+
+    name: str
+    latitude: float
+    longitude: float
+    timezone: str  # an IANA name
+    region: str = ""  # the first administrative area: a state, a province
+    country: str = ""
+    area: str = ""  # a finer one (county, municipality): tells apart two places with the same name
+
+    @property
+    def label(self) -> str:
+        """"Name, region, country": what the list shows."""
+        return ", ".join(part for part in (self.name, self.region if self.region != self.name else "", self.country) if part)
+
+    @property
+    def detailed_label(self) -> str:
+        """The same with the finer area, for when two results would read alike."""
+        parts = (self.name, self.area if self.area not in (self.name, self.region) else "", self.region if self.region != self.name else "", self.country)
+        return ", ".join(part for part in parts if part)
+
+
+class Problem(Enum):
+    TOO_SHORT = "too short"  # fewer than two characters: nothing was asked
+    UNAVAILABLE = "unavailable"  # no network, a timeout, a server error
+    RATE_LIMITED = "rate limited"
+    BAD_RESPONSE = "bad response"
+
+
+@dataclass(frozen=True)
+class PlaceResults:
+    """What a place search gives back: places, or why not. No places and no problem means nothing matched."""
+
+    places: tuple[Place, ...] = ()
+    problem: Problem | None = None
+    retry_after: timedelta | None = None
+
+    @property
+    def ok(self) -> bool:
+        return self.problem is None
+
+    @property
+    def no_results(self) -> bool:
+        return self.ok and not self.places
+
+
+class PlaceSearch(Protocol):
+    """An optional ability of a provider: turn what a person typed into places. Blocking; never raises."""
+
+    def __call__(self, text: str, language: str = "en") -> PlaceResults: ...
 
 
 class ProviderError(Exception):
