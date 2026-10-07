@@ -931,6 +931,30 @@ msgstr ""
 msgid "Next: {day} {span}"
 msgstr ""
 
+#: forecast/providers/open_meteo.py
+msgid "A free weather service run by Open-Meteo.com. It forecasts the sunlight on your panels and the app turns that into the power of your system. For non-commercial use."
+msgstr ""
+
+#: forecast/providers/open_meteo.py
+msgid "Your location (latitude and longitude) and the tilt and direction of your panels. With an API key, the key too."
+msgstr ""
+
+#: forecast/providers/open_meteo.py
+msgid "Server address"
+msgstr ""
+
+#: forecast/providers/open_meteo.py
+msgid "Leave empty for the free public service. A paid plan, or a server of your own, has its own address."
+msgstr ""
+
+#: forecast/providers/open_meteo.py
+msgid "API key"
+msgstr ""
+
+#: forecast/providers/open_meteo.py
+msgid "Only for a paid plan (commercial use). Free use needs none."
+msgstr ""
+
 #: planner/model.py
 msgid "[panels] kwp must be above 0"
 msgstr ""

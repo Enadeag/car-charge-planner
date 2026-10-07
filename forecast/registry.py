@@ -37,3 +37,12 @@ class ProviderRegistry:
 
 
 registry = ProviderRegistry()  # the built-in providers register themselves here (tickets P3 and P4)
+
+
+def _register_builtin() -> None:
+    from .providers.open_meteo import OpenMeteo
+
+    registry.register(OpenMeteo())
+
+
+_register_builtin()
