@@ -3,7 +3,7 @@ from datetime import date, timedelta
 
 from app.config_file import ensure_config
 from app.view_model import ForecastSource, build, footer_text, footer_tooltip, needs_setup, no_forecast
-from planner.model import Config, load_config
+from planner.model import TYPICAL_KEYS, Config, load_config
 from planner.projection import plan
 from storage.state import BatteryReading, load_battery
 
@@ -216,9 +216,11 @@ def test_no_forecast_view(cfg):
     assert vm.state == "no-forecast" and vm.detail == "offline"
 
 
-def test_first_config_file_matches_built_in_defaults(tmp_path):
+def test_first_config_file_matches_built_in_defaults_and_marks_them_all_typical(tmp_path):
     f = ensure_config(tmp_path / "config.toml")
-    assert load_config(f) == Config()
+    first = load_config(f)
+    assert replace(first, setup=Config().setup) == Config()  # the values are the built-in defaults...
+    assert first.setup.typical == TYPICAL_KEYS  # ...and every one of them is a typical value until the owner gives their own
 
 
 def test_ensure_config_creates_but_never_overwrites(tmp_path):

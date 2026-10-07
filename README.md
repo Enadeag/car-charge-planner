@@ -186,7 +186,7 @@ Open **Settings...** from the tray icon's right-click menu. Settings are grouped
 - The button next to Save reads **Close** while nothing is unsaved and **Cancel** while there are edits. Cancel, the window's close button and Escape ask "Discard your changes?" only if something changed since the last save.
 - **Reset tab** puts the current tab back to the built-in defaults. Nothing is saved until you press Save.
 - Pressing Enter in a field does what the Save button currently does.
-- Values tagged **Assumed** or **Estimate** are guesses until you replace them with real numbers.
+- Values tagged **Typical value** are ones the app filled in because you had none of your own (every value on a fresh install). The tag goes away as soon as you change the value, and the plan page says "Based on typical values for: ..." with a link back here until you have replaced them. A config file from an earlier version has no such list, so none of its values are tagged.
 
 The settings live in `~/.config/car-charge-planner/config.toml`, a plain TOML file. The Settings window manages it: saving rewrites the whole file and does not keep comments. The app reads the file only at startup, so if you want to edit it by hand, do it while the app is closed. An invalid value makes the app show a dialog listing the problems and exit.
 

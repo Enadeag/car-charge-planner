@@ -27,7 +27,7 @@ from app.i18n import _, available_languages, language_name
 from app.names import weekdays_long
 from dataclasses import replace
 
-from planner.model import AwayRule, Config
+from planner.model import TYPICAL_KEYS, AwayRule, Config, Setup
 
 from .fields import FieldSpec, TabSpec, get_value, set_value
 
@@ -85,6 +85,8 @@ class FieldTab(QWidget):
         self._secrets = dict(secrets or {})
         self.units = units.METRIC  # set_units() changes how distances and consumption are shown
         self._exact: dict[str, float] = {}  # an edited value as it was before a unit switch rounded what the box shows
+        self.typical: set[str] = set()  # this tab's settings that are still typical values (tagged until edited)
+        self.hints: dict[str, QLabel] = {}
         self.key = tab.key
         self.title = _(tab.title)
         languages = available_languages()
@@ -105,13 +107,31 @@ class FieldTab(QWidget):
             hint = QLabel()
             hint.setWordWrap(True)
             hint.setTextFormat(hint.textFormat().RichText)
-            flag = f"<b style='color:{colours.warning(self)}'>{_(spec.flag)}.</b> " if spec.flag else ""
-            hint.setText(f"{flag}{escape(_(spec.hint))}")
             hint.setStyleSheet(f"{colours.MUTED_STYLE} font-size: 9pt; margin-bottom: 8px;")
+            self.hints[spec.key] = hint
             grid.addWidget(hint, row + 1, 1)
             row += 2
         grid.setRowStretch(row, 1)
         self.load(cfg)
+        self.changed.connect(self._refresh_hints)
+
+    def _tag(self, spec: FieldSpec) -> str:
+        """The tag before a hint: the field's own ("Required"), or "Typical value" while the value is one."""
+        if spec.flag:
+            return _(spec.flag)
+        if spec.key in self.typical and not self._edited(spec):
+            return _("Typical value")
+        return ""
+
+    def _refresh_hints(self) -> None:
+        for spec in self.specs:
+            tag = self._tag(spec)
+            flag = f"<b style='color:{colours.warning(self)}'>{tag}.</b> " if tag else ""
+            self.hints[spec.key].setText(f"{flag}{escape(_(spec.hint))}")
+
+    def _edited(self, spec: FieldSpec) -> bool:
+        """Has the owner changed this field since it was loaded?"""
+        return spec.kind != "secret" and self.stored_value(spec) != self.baseline[spec.key]
 
     def collect_secrets(self) -> dict[str, str]:
         """What the tab's secret fields hold now, by field key (an empty one is left out)."""
@@ -210,6 +230,14 @@ class FieldTab(QWidget):
             self.baseline[spec.key] = stored
             self._exact.pop(spec.key, None)
             self._set_widget(spec, stored)
+        self.typical = {s.key for s in self.specs if s.key in cfg.setup.typical}
+        self._refresh_hints()
+
+    def reset(self) -> None:
+        """Back to the built-in values, which are typical ones again."""
+        self.load(Config())
+        self.typical = {s.key for s in self.specs if s.key in TYPICAL_KEYS}
+        self._refresh_hints()
 
     def stored_value(self, spec: FieldSpec):
         """What to store for a field. A box that still shows the baseline gives the exact baseline back."""
@@ -238,7 +266,15 @@ class FieldTab(QWidget):
         for spec in self.specs:
             if spec.kind != "secret":  # secrets are not in the Config: see collect_secrets
                 cfg = set_value(cfg, spec.key, self.stored_value(spec))
-        return cfg
+        return replace(cfg, setup=Setup(self._typical_after(cfg.setup.typical)))
+
+    def _typical_after(self, before: tuple[str, ...]) -> tuple[str, ...]:
+        """The typical list with this tab's part brought up to date: a setting the owner edited is no longer typical;
+        one that is still typical (or was reset) is. Settings of other tabs are left as they were."""
+        own = {s.key for s in self.specs}
+        still = {s.key for s in self.specs if s.key in self.typical and not self._edited(s)}
+        kept = {key for key in before if key not in own} | still
+        return tuple(key for key in TYPICAL_KEYS if key in kept)
 
 
 class RuleRow(QWidget):

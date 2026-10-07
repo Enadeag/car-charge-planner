@@ -8,7 +8,7 @@ import pytest
 from PySide6.QtWidgets import QApplication, QDialog
 
 from app.settings.window import SettingsWindow
-from planner.model import Config, load_config
+from planner.model import Config, Setup, first_run_config, load_config
 
 from conftest import example_config
 
@@ -46,12 +46,14 @@ def test_shows_the_stored_values(h):
     assert h.box("timezone").currentText() == "Europe/Amsterdam"
 
 
-def test_units_and_assumed_labels_are_visible(h):
+def test_units_and_typical_value_tags_are_visible(tmp_path, qapp):
+    typical = replace(example_config(), setup=Setup(("panels.kwp", "panels.tilt_deg")))
+    h = Harness(tmp_path, typical)
     assert h.box("panels.kwp").suffix() == " kWp" and h.box("panels.system_losses").suffix() == " %"
     texts = [label.text() for label in h.window.field_tabs[0].findChildren(__import__("PySide6.QtWidgets", fromlist=["QLabel"]).QLabel)]
-    assert any("Assumed." in t and "Total peak power" in t for t in texts)
-    assert any("Assumed." in t and "flat" in t for t in texts)
-    assert not any("Assumed." in t and "South-east is -45" in t for t in texts)  # direction is not an assumption
+    assert any("Typical value." in t and "Total peak power" in t for t in texts)
+    assert any("Typical value." in t and "flat" in t for t in texts)
+    assert not any("Typical value." in t and "South-east is -45" in t for t in texts)  # direction was not left to a typical value
 
 
 def test_save_writes_the_file_applies_and_keeps_the_window_open(h):
@@ -160,7 +162,8 @@ def test_reset_tab_restores_defaults_without_saving(tmp_path, qapp):
     h.box("latitude").setValue(52.37)  # a plan needs a location, so saving asks for one
     h.box("longitude").setValue(4.9)
     h.window.save_button.click()
-    expected = replace(Config(), latitude=52.37, longitude=4.9, away_rules=base.away_rules)  # the other tabs were untouched
+    solar_keys = ("panels.kwp", "panels.tilt_deg", "panels.azimuth_deg", "panels.system_losses")  # typical again after a reset
+    expected = replace(Config(), latitude=52.37, longitude=4.9, away_rules=base.away_rules, setup=Setup(solar_keys))  # the other tabs were untouched
     assert load_config(h.file) == expected
 
 
@@ -349,8 +352,8 @@ def test_it_follows_the_away_rule_rows(h):
 
 
 def test_reset_tab_changes_the_label_only_when_it_changes_something(tmp_path, qapp):
-    h = Harness(tmp_path, Config())
-    h.window.reset_button.click()  # stored values already are the built-in defaults
+    h = Harness(tmp_path, first_run_config())
+    h.window.reset_button.click()  # stored values already are the built-in defaults, and all typical
     assert h.window.cancel_button.text() == "Close"
     custom = replace(Config(), panels=replace(Config().panels, kwp=9.0))
     h2 = Harness(tmp_path, custom)

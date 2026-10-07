@@ -24,6 +24,14 @@ DAY = date(2026, 7, 3)
 NOW = at(DAY, 7)
 
 
+def first_run_config_for(cfg):
+    from dataclasses import replace
+
+    from planner.model import TYPICAL_KEYS, Setup
+
+    return replace(cfg, setup=Setup(TYPICAL_KEYS))
+
+
 @pytest.fixture
 def qapp():
     return QApplication.instance() or QApplication([])
@@ -47,7 +55,9 @@ def settle(widget):
 OPEN_METEO = ForecastSource("Weather data: Open-Meteo.com (CC BY 4.0)", "Open-Meteo")
 
 
-def popup_with(cfg, days, soc=45, battery=None, stale=False, kind="plan", source=OPEN_METEO):
+def popup_with(cfg, days, soc=45, battery=None, stale=False, kind="plan", source=OPEN_METEO, typical=False):
+    if typical:
+        cfg = first_run_config_for(cfg)
     forecast = forecast_from(list(days))
     plans = plan(forecast, cfg, soc, NOW)
     advice = grid_advice(plans, forecast, cfg, None, NOW)
@@ -74,6 +84,7 @@ SITUATIONS = {
         days=[(DAY, 900)], source=ForecastSource("Solar forecast: Forecast.Solar", "Forecast.Solar", from_fallback=True, primary_name="Open-Meteo")
     ),
     "a provider that is busy": dict(days=[(DAY, 900)], stale=True, source=ForecastSource("Weather data: Open-Meteo.com (CC BY 4.0)", "Open-Meteo", cooling_down=True)),
+    "typical values": dict(days=[(DAY, 900)], typical=True),
     "not set up": dict(days=[(DAY, 900)], kind="needs-setup"),
     "no forecast": dict(days=[(DAY, 900)], kind="no-forecast"),
 }

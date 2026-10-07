@@ -11,6 +11,7 @@ close button and click-away; another shell can put it in an ordinary window.
 from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta
+from html import escape
 from zoneinfo import ZoneInfo
 
 from PySide6.QtCore import QTime, Qt, Signal
@@ -197,6 +198,13 @@ class PlanView(QWidget):
         status.addWidget(self.manage_away, 1, 2)
         status.setColumnStretch(0, 1)
         box.addWidget(self.status_box)
+
+        # "Based on typical values for: ..." with a way to the settings that should be replaced by real ones
+        self.typical = _muted()
+        self.typical.setTextFormat(Qt.TextFormat.RichText)
+        self.typical.linkActivated.connect(lambda _href: self.settings_requested.emit(self._typical_tab))
+        self._typical_tab = "solar"
+        box.addWidget(self.typical)
         return page
 
     # -- the Update page -------------------------------------------------------
@@ -306,6 +314,14 @@ class PlanView(QWidget):
         self.battery.setText(vm.battery_line)
         self.battery.setStyleSheet(f"color: {colours.error(self)};" if vm.battery_stale else "")
         self.tabs.setTabText(UPDATE, _("Update •") if vm.battery_stale else _("Update"))
+        self._typical_tab = vm.typical_tab or "solar"
+        link = _("Check them in Settings")
+        self.typical.setText(
+            f"<style>a {{ color: {colours.link(self)}; }}</style>{escape(vm.typical_line)} <a href='settings'>{escape(link)}</a>"
+            if vm.typical_line
+            else ""
+        )
+        self.typical.setVisible(bool(vm.typical_line))
         self.footer.setText(vm.footer)
         self.footer.setToolTip(vm.footer_tooltip)
 

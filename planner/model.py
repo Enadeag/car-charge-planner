@@ -110,6 +110,32 @@ class Interface:
     language: str = "auto"  # "auto" follows the system; otherwise a language code such as "nl" or "pt_BR"
 
 
+# The settings a person can give no value for ("I don't know"): the app then uses a typical value and remembers
+# that it did, in [setup] typical. Charge levels, the planning margin and the like are preferences, not here.
+TYPICAL_KEYS = (
+    "panels.kwp",
+    "panels.tilt_deg",
+    "panels.azimuth_deg",
+    "panels.system_losses",
+    "house.baseload_kw",
+    "car.usable_battery_kwh",
+    "car.consumption_kwh_per_100km",
+    "car.km_per_day",
+    "charger.phases",
+    "charger.min_amps",
+    "charger.max_amps",
+    "charger.volts",
+    "charger.efficiency",
+)
+
+
+@dataclass(frozen=True)
+class Setup:
+    """What set-up has filled in with typical values and the owner has not yet replaced with their own."""
+
+    typical: tuple[str, ...] = ()
+
+
 ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")  # a forecast provider's id, as written in the config file
 SETTING_KEY = re.compile(r"^[a-z0-9_]+$")
 
@@ -166,6 +192,7 @@ class Config:
     notify: Notify = field(default_factory=Notify)
     interface: Interface = field(default_factory=Interface)
     forecast: Forecast = field(default_factory=Forecast)
+    setup: Setup = field(default_factory=Setup)
     away_rules: tuple[AwayRule, ...] = ()
     timezone: str = field(default_factory=system_timezone)
     # (0, 0) means "not set": a new install has no location until the user gives one
@@ -256,6 +283,9 @@ def validate(cfg: Config) -> Config:
                 bool(SETTING_KEY.match(str(key))) and isinstance(value, str),
                 _("[forecast.{id}] {key} must be a text").format(id=provider_id, key=key),
             )
+    unknown = [k for k in cfg.setup.typical if k not in TYPICAL_KEYS]
+    need(not unknown, _("[setup] typical lists settings that do not exist: {keys}").format(keys=", ".join(map(str, unknown))))
+    need(len(set(cfg.setup.typical)) == len(cfg.setup.typical), _("[setup] typical lists a setting twice"))
     need(
         cfg.interface.units in UNIT_SYSTEMS,
         _("[interface] units must be one of {units}, not {value!r}").format(
@@ -310,6 +340,21 @@ def _read_forecast(table: dict) -> Forecast:
     return Forecast(primary, fallback, settings)
 
 
+def _read_setup(table: dict) -> Setup:
+    unknown = set(table) - {"typical"}
+    if unknown:
+        raise ConfigError(_("unknown keys in [{section}]: {keys}").format(section="setup", keys=sorted(unknown)))
+    typical = table.get("typical", [])
+    if not isinstance(typical, list) or not all(isinstance(k, str) for k in typical):
+        raise ConfigError(_("[setup] typical must be a list of setting names"))
+    return Setup(tuple(typical))
+
+
+def first_run_config() -> Config:
+    """The config a new install starts with: every value is a typical one, until the owner gives their own."""
+    return replace(Config(), setup=Setup(TYPICAL_KEYS))
+
+
 def load_config(path: Path | None) -> Config:
     """Load config from TOML, falling back to defaults for anything missing."""
     if path is None:
@@ -329,6 +374,8 @@ def load_config(path: Path | None) -> Config:
             cfg = replace(cfg, **{section: replace(current, **data[section])})
     if "forecast" in data:
         cfg = replace(cfg, forecast=_read_forecast(data["forecast"]))
+    if "setup" in data:
+        cfg = replace(cfg, setup=_read_setup(data["setup"]))
     for key in ("timezone", "latitude", "longitude"):
         if key in data:
             cfg = replace(cfg, **{key: data[key]})

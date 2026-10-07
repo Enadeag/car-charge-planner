@@ -12,7 +12,7 @@ from PySide6.QtWidgets import QApplication, QLabel
 from app import colours
 from app.settings.window import SettingsWindow
 from app.popup import Popup
-from planner.model import Config
+from planner.model import Config, first_run_config
 
 from conftest import TZ
 
@@ -80,8 +80,8 @@ def test_secondary_text_uses_the_placeholder_role_not_mid():
     assert "placeholder-text" in colours.MUTED_STYLE and "mid" not in colours.MUTED_STYLE
 
 
-def test_settings_hints_use_the_muted_role_and_assumed_tag_matches_the_theme(dark, tmp_path):
-    w = SettingsWindow(Config(), tmp_path / "c.toml", lambda c: None)
+def test_settings_hints_use_the_muted_role_and_the_typical_value_tag_matches_the_theme(dark, tmp_path):
+    w = SettingsWindow(first_run_config(), tmp_path / "c.toml", lambda c: None)
     labels = w.field_tabs[0].findChildren(QLabel)
     hints = [l for l in labels if "font-size: 9pt" in l.styleSheet()]
     assert hints and all("placeholder-text" in l.styleSheet() for l in hints)

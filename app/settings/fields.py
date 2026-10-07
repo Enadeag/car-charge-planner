@@ -22,7 +22,7 @@ class FieldSpec:
     step: float = 1.0
     scale: float = 1.0  # shown = stored * scale, so a fraction can be shown as a percent
     quantity: str = ""  # "distance" | "consumption": stored metric, shown in the chosen unit system (app/units.py)
-    flag: str = ""  # "Assumed" or "Estimate": a value that is not measured yet
+    flag: str = ""  # a tag before the hint, for what the field itself says (a provider's "Required" setting)
     choices: tuple[tuple[str, str], ...] = ()  # for kind "choice": (stored value, label shown)
 
 
@@ -72,11 +72,11 @@ SOLAR = TabSpec(
     (
         FieldSpec(
             "panels.kwp", N_("Panel size"), N_("Total peak power of all panels together, as stated on the installer's datasheet or in the inverter app."),
-            unit="kWp", minimum=0.1, maximum=100, decimals=2, step=0.1, flag=N_("Assumed"),
+            unit="kWp", minimum=0.1, maximum=100, decimals=2, step=0.1,
         ),
         FieldSpec(
             "panels.tilt_deg", N_("Tilt"), N_("Angle of the panels from horizontal: 0 is flat, 90 is vertical."),
-            unit=N_("degrees"), minimum=0, maximum=90, decimals=1, step=1, flag=N_("Assumed"),
+            unit=N_("degrees"), minimum=0, maximum=90, decimals=1, step=1,
         ),
         FieldSpec(
             "panels.azimuth_deg", N_("Direction"), N_("Compass direction the panels face: 0 = south, -90 = east, 90 = west, 180 = north. South-east is -45."),
@@ -102,11 +102,11 @@ HOUSE_CAR = TabSpec(
         ),
         FieldSpec(
             "car.usable_battery_kwh", N_("Usable battery"), N_("The net (usable) battery capacity in kWh. Manufacturers often list the gross capacity, which is higher."),
-            unit="kWh", minimum=1, maximum=200, decimals=1, step=1, flag=N_("Estimate"),
+            unit="kWh", minimum=1, maximum=200, decimals=1, step=1,
         ),
         FieldSpec(
             "car.consumption_kwh_per_100km", N_("Consumption"), N_("Real-world average energy use of the car. Usually higher in winter than in summer."),
-            unit="kWh/100 km", minimum=5, maximum=60, decimals=1, step=0.5, flag=N_("Estimate"), quantity="consumption",
+            unit="kWh/100 km", minimum=5, maximum=60, decimals=1, step=0.5, quantity="consumption",
         ),
         FieldSpec(
             "car.km_per_day", N_("Driving per day"), N_("Average distance driven per day. Weekly distance divided by 7 gives a rough figure."),
@@ -149,7 +149,7 @@ CHARGER = TabSpec(
         FieldSpec("charger.volts", N_("Voltage"), N_("Mains voltage at the charger, typically 230 V for a single-phase connection."), unit="V", minimum=100, maximum=400, decimals=0, step=1),
         FieldSpec(
             "charger.efficiency", N_("Charging efficiency"), N_("Share of the energy taken from the grid that ends up in the battery, after losses in charger and car."),
-            unit="%", minimum=1, maximum=100, decimals=1, step=1, scale=100, flag=N_("Estimate"),
+            unit="%", minimum=1, maximum=100, decimals=1, step=1, scale=100,
         ),
     ),
 )

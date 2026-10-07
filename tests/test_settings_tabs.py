@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication, QLabel
 
 from app.settings.tabs import AwayRulesTab
 from app.settings.window import SettingsWindow
-from planner.model import AwayRule, Config, load_config
+from planner.model import AwayRule, Config, Setup, load_config
 
 from conftest import at, example_config
 
@@ -67,7 +67,8 @@ def test_the_window_has_the_seven_tabs_in_order(h):
 # ---- ticket 04: house and car, charger ------------------------------------
 
 
-def test_house_and_car_shows_values_with_units_and_estimate_labels(h):
+def test_house_and_car_shows_values_with_units_and_typical_value_tags(tmp_path, qapp):
+    h = Harness(tmp_path, replace(example_config(), setup=Setup(("car.usable_battery_kwh", "car.consumption_kwh_per_100km"))))
     t = "House and car"
     assert h.box(t, "house.baseload_kw").value() == 0.6
     assert h.box(t, "car.usable_battery_kwh").value() == 70
@@ -76,16 +77,17 @@ def test_house_and_car_shows_values_with_units_and_estimate_labels(h):
     assert h.box(t, "car.minimum_pct").value() == 30 and h.box(t, "car.target_pct").value() == 80
     assert h.box(t, "car.consumption_kwh_per_100km").suffix() == " kWh/100 km"
     tagged = texts(h.tab(t))
-    assert sum("Estimate." in x for x in tagged) == 2  # battery size and consumption, nothing else
+    assert sum("Typical value." in x for x in tagged) == 2  # battery size and consumption, nothing else
 
 
-def test_charger_shows_values_with_units_and_an_estimate_label(h):
+def test_charger_shows_values_with_units_and_a_typical_value_tag(tmp_path, qapp):
+    h = Harness(tmp_path, replace(example_config(), setup=Setup(("charger.efficiency",))))
     t = "Charger"
     assert h.box(t, "charger.min_amps").value() == 6 and h.box(t, "charger.max_amps").value() == 32
     assert h.box(t, "charger.volts").value() == 230
     assert h.box(t, "charger.efficiency").value() == 90.0  # fraction stored, percent shown
     assert h.box(t, "charger.min_amps").suffix() == " A"
-    assert sum("Estimate." in x for x in texts(h.tab(t))) == 1
+    assert sum("Typical value." in x for x in texts(h.tab(t))) == 1
 
 
 def test_editing_house_car_and_charger_saves_everything(h):

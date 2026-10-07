@@ -384,6 +384,10 @@ msgid "Update •"
 msgstr ""
 
 #: app/planview.py
+msgid "Check them in Settings"
+msgstr ""
+
+#: app/planview.py
 #, python-brace-format
 msgid "{rule}  (weekly rule)"
 msgstr ""
@@ -435,10 +439,6 @@ msgstr ""
 
 #: app/settings/fields.py
 msgid "Total peak power of all panels together, as stated on the installer's datasheet or in the inverter app."
-msgstr ""
-
-#: app/settings/fields.py
-msgid "Assumed"
 msgstr ""
 
 #: app/settings/fields.py
@@ -511,10 +511,6 @@ msgstr ""
 
 #: app/settings/fields.py
 msgid "The net (usable) battery capacity in kWh. Manufacturers often list the gross capacity, which is higher."
-msgstr ""
-
-#: app/settings/fields.py
-msgid "Estimate"
 msgstr ""
 
 #: app/settings/fields.py
@@ -820,6 +816,10 @@ msgid "Hide"
 msgstr ""
 
 #: app/settings/tabs.py
+msgid "Typical value"
+msgstr ""
+
+#: app/settings/tabs.py
 msgid "Automatic: follow the system"
 msgstr ""
 
@@ -964,6 +964,18 @@ msgstr[1] ""
 #, python-brace-format
 msgid "Battery {level}% → {after}% by {time}"
 msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Based on typical values for: {items} and {n} more."
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "Based on a typical value for: {items}."
+msgid_plural "Based on typical values for: {items}."
+msgstr[0] ""
+msgstr[1] ""
 
 #: app/view_model.py
 #, python-brace-format
@@ -1326,6 +1338,15 @@ msgstr ""
 
 #: planner/model.py
 #, python-brace-format
+msgid "[setup] typical lists settings that do not exist: {keys}"
+msgstr ""
+
+#: planner/model.py
+msgid "[setup] typical lists a setting twice"
+msgstr ""
+
+#: planner/model.py
+#, python-brace-format
 msgid "[interface] units must be one of {units}, not {value!r}"
 msgstr ""
 
@@ -1372,6 +1393,10 @@ msgstr ""
 #: planner/model.py
 #, python-brace-format
 msgid "unknown keys in [{section}]: {keys}"
+msgstr ""
+
+#: planner/model.py
+msgid "[setup] typical must be a list of setting names"
 msgstr ""
 
 #: planner/model.py

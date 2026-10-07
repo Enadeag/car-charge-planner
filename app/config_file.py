@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 from planner.config_io import write_config
-from planner.model import Config
+from planner.model import first_run_config
 
 def config_path() -> Path:
     base = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
@@ -22,5 +22,5 @@ def ensure_config(path: Path | None = None) -> Path:
     """Create the default config file if missing; never overwrite an existing one."""
     path = path or config_path()
     if not path.exists():
-        write_config(Config(), path)
+        write_config(first_run_config(), path)
     return path

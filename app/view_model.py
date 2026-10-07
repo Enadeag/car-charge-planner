@@ -56,6 +56,8 @@ class ViewModel:
     quiet_days: str  # "Thu, Fri: no good window", empty when nothing is worth saying
     footer: str
     advice: AdviceView | None = None
+    typical_line: str = ""  # "Based on typical values for: ..."; empty when the owner has given every value
+    typical_tab: str = ""  # the Settings tab to open from it
     footer_tooltip: str = ""  # the full credit and, when it matters, why this provider answered
 
 
@@ -108,6 +110,27 @@ def _projection(day: DayPlan, window: Window, cfg: Config, tz: ZoneInfo) -> str:
             )
         level = after
     return ""
+
+
+SHOWN_TYPICAL = 3  # names listed in the line; the rest are counted
+
+
+def typical_line(typical: tuple[str, ...]) -> tuple[str, str]:
+    """("Based on typical values for: Panel size, Tilt, Direction and 5 more.", the Settings tab of the first one)."""
+    from .settings.fields import TABS  # data only: no Qt
+
+    names = {spec.key: (spec.label, tab.key) for tab in TABS for spec in tab.fields}
+    known = [key for key in typical if key in names]
+    if not known:
+        return "", ""
+    shown = pgettext("list separator", ", ").join(_(names[key][0]) for key in known[:SHOWN_TYPICAL])
+    if len(known) > SHOWN_TYPICAL:
+        text = _("Based on typical values for: {items} and {n} more.").format(items=shown, n=len(known) - SHOWN_TYPICAL)
+    else:
+        text = ngettext(
+            "Based on a typical value for: {items}.", "Based on typical values for: {items}.", len(known)
+        ).format(items=shown)
+    return text, names[known[0]][1]
 
 
 def footer_text(age: timedelta | None, stale: bool, source: ForecastSource | None = None) -> str:
@@ -261,6 +284,7 @@ def build(
     headline_window = upcoming[0][1] if upcoming else None
     outlook, quiet_days = _outlook(days, headline_window, now, tz, today, cfg.charger.phases)
     battery_line, battery_stale = battery_status(battery, now)
+    typical = typical_line(cfg.setup.typical)
     common = dict(
         battery_line=battery_line,
         battery_stale=battery_stale,
@@ -269,6 +293,8 @@ def build(
         quiet_days=quiet_days,
         footer=footer_text(forecast_age, stale, source),
         footer_tooltip=footer_tooltip(source),
+        typical_line=typical[0],
+        typical_tab=typical[1],
         advice=advice_view(advice, now, cfg, tz) if advice else None,
     )
 

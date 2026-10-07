@@ -50,6 +50,8 @@ def dump_config(cfg: Config) -> str:
                 raise ConfigError(f"{key!r} looks like a secret and must not be written to the config file")
         lines += ["", f"[forecast.{provider_id}]"]
         lines += [f"{key} = {_value(values[key])}" for key in sorted(values)]
+    typical = ", ".join(_value(key) for key in cfg.setup.typical)
+    lines += ["", "[setup]", f"typical = [{typical}]"]
     lines += ["", "[away]"]
     # always written, even empty: a missing key would bring back the default rule on the next start
     if cfg.away_rules:
