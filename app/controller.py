@@ -16,7 +16,7 @@ from zoneinfo import ZoneInfo
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
-from forecast.open_meteo import ForecastResult, ForecastUnavailable, forecast_key, get_forecast
+from forecast.service import ForecastResult, ForecastService, ForecastUnavailable, forecast_key
 from planner.advice import grid_advice
 from planner.model import AwayPeriod, AwayRule, Config
 from planner.projection import plan
@@ -46,9 +46,12 @@ class Controller(QObject):
     forecast_loaded = Signal(object, object)  # the Config the fetch ran under, ForecastResult | Exception
     view_changed = Signal(object)  # a ViewUpdate
 
-    def __init__(self, cfg: Config, config_file: Path, notifier: Notifier | None = None) -> None:
+    def __init__(
+        self, cfg: Config, config_file: Path, notifier: Notifier | None = None, forecasts: ForecastService | None = None
+    ) -> None:
         super().__init__()
         self.notifier = notifier or Notifier()
+        self.forecasts = forecasts or ForecastService()
         self.cfg = cfg
         self.config_file = config_file
         self.tz = ZoneInfo(cfg.timezone)
@@ -80,7 +83,7 @@ class Controller(QObject):
 
         def work() -> None:
             try:
-                outcome: object = get_forecast(cfg, datetime.now(tz), force=force)
+                outcome: object = self.forecasts.get(cfg, datetime.now(tz), force=force)
             except ForecastUnavailable as err:
                 outcome = err
             except Exception as err:  # never let a worker crash the app silently

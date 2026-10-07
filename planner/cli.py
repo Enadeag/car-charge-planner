@@ -30,7 +30,7 @@ DEMOS = {
 
 def demo_forecast(name: str, first_day: date, tz: ZoneInfo, cfg: Config | None = None) -> list[ForecastStep]:
     """A synthetic forecast: bell-shaped irradiance turned into power for the configured (or default) panels."""
-    from forecast.open_meteo import power_kw
+    from forecast.providers.open_meteo import power_kw
 
     panels = (cfg or Config()).panels
     steps = []
@@ -53,7 +53,7 @@ def main(argv: list[str] | None = None) -> None:
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--demo", choices=sorted(DEMOS))
     source.add_argument("--forecast", type=Path)
-    source.add_argument("--live", action="store_true", help="Open-Meteo forecast (cached for an hour)")
+    source.add_argument("--live", action="store_true", help="the configured forecast provider (cached)")
     parser.add_argument("--refresh", action="store_true", help="with --live: ignore the cache")
     parser.add_argument("--battery", type=float, required=True, help="current battery %%")
     parser.add_argument("--config", type=Path)
@@ -64,17 +64,18 @@ def main(argv: list[str] | None = None) -> None:
     tz = ZoneInfo(cfg.timezone)
     now = datetime.fromisoformat(args.now).astimezone(tz) if args.now else datetime.now(tz)
     if args.live:
-        from forecast.open_meteo import ForecastUnavailable, get_forecast
+        from forecast.service import ForecastService, ForecastUnavailable
 
         if not cfg.is_set_up:
             raise SystemExit("No location is set: give latitude and longitude in a config file (--config) or in Settings. --demo needs none.")
         try:
-            result = get_forecast(cfg, now, force=args.refresh)
+            result = ForecastService().get(cfg, now, force=args.refresh)
         except ForecastUnavailable as err:
             raise SystemExit(f"no forecast available: {err}")
         forecast = result.steps
         note = " (STALE: refresh failed)" if result.stale else ""
-        print(f"Forecast fetched {result.age(now).total_seconds() / 60:.0f} min ago{note}. Weather data by Open-Meteo.com (CC BY 4.0).")
+        source = f" from {result.provider_name} (the fallback)" if result.from_fallback else f" from {result.provider_name}"
+        print(f"Forecast fetched {result.age(now).total_seconds() / 60:.0f} min ago{source}{note}. {result.attribution}.")
     else:
         forecast = demo_forecast(args.demo, now.date(), tz, cfg) if args.demo else load_forecast(args.forecast)
 

@@ -147,7 +147,7 @@ def test_a_changed_language_is_announced_like_a_changed_interface(cfg, qapp, tmp
     from conftest import FakeNotifier
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("app.controller.get_forecast", lambda *a, **k: None)
+    monkeypatch.setattr("forecast.service.ForecastService.get", lambda *a, **k: None)
     notifier = FakeNotifier()
     controller = Controller(cfg, tmp_path / "config.toml", notifier)
     controller.apply_config(replace(cfg, interface=Interface(language="nl")))

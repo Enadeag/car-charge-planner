@@ -141,7 +141,7 @@ def test_the_tray_app_announces_through_the_notifier(cfg, tmp_path, monkeypatch)
 
     from conftest import TrayApp
     from conftest import FakeNotifier, at, forecast_from
-    from forecast.open_meteo import ForecastResult
+    from forecast.service import ForecastResult
 
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     QApplication.instance() or QApplication([])

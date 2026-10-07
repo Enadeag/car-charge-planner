@@ -163,14 +163,14 @@ def test_planning_reset_tab(tmp_path, qapp):
 
 
 def test_a_saved_lead_time_changes_when_the_next_notification_is_due(tmp_path, monkeypatch, qapp):
-    from forecast.open_meteo import ForecastResult
+    from forecast.service import ForecastResult
     from conftest import TrayApp
 
     from conftest import forecast_from
 
     day = date(2026, 7, 3)
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("app.controller.get_forecast", lambda cfg, now, force=False: None)
+    monkeypatch.setattr("forecast.service.ForecastService.get", lambda self, cfg, now, force=False: None)
     app = TrayApp(example_config(), tmp_path / "config.toml")
     app.result = ForecastResult(forecast_from([(day, 900)]), at(day, 6), True, False)
     from conftest import FakeNotifier

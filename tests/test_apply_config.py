@@ -13,7 +13,7 @@ import pytest
 from PySide6.QtWidgets import QApplication
 
 from conftest import TrayApp
-from forecast.open_meteo import ForecastResult, forecast_key
+from forecast.service import ForecastResult, forecast_key
 from planner.model import Config
 from storage.state import load_state, mark_notified
 
@@ -57,7 +57,7 @@ class FakeForecast:
 
 def make_app(tmp_path, monkeypatch, fake, cfg=None):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("app.controller.get_forecast", fake)
+    monkeypatch.setattr("forecast.service.ForecastService.get", lambda self, cfg, now, force=False: fake(cfg, now, force))
     return TrayApp(cfg or example_config(), tmp_path / "config.toml")
 
 
@@ -66,12 +66,16 @@ def loaded(app, fake, qapp, calls=1):
     wait_until(lambda: app.result is not None and len(fake.calls) >= calls and not app._loading, qapp)
 
 
-def test_forecast_key_ignores_planning_settings_but_not_place_or_panel_angle(cfg):
+def test_forecast_key_ignores_planning_settings_but_not_the_system_or_the_providers(cfg):
     base = forecast_key(cfg)
     assert forecast_key(replace(cfg, planning=replace(cfg.planning, margin=0.5))) == base
     assert forecast_key(replace(cfg, house=replace(cfg.house, baseload_kw=1.2))) == base
-    assert forecast_key(replace(cfg, panels=replace(cfg.panels, kwp=9))) == base
     for changed in (
+        replace(cfg, panels=replace(cfg.panels, kwp=9)),  # the provider turns sunlight into power: size and losses matter
+        replace(cfg, panels=replace(cfg.panels, system_losses=0.2)),
+        replace(cfg, forecast=replace(cfg.forecast, primary="forecast-solar")),
+        replace(cfg, forecast=replace(cfg.forecast, fallback="forecast-solar")),
+        replace(cfg, forecast=replace(cfg.forecast, settings={"open-meteo": {"base_url": "https://x.test"}})),
         replace(cfg, panels=replace(cfg.panels, tilt_deg=20)),
         replace(cfg, panels=replace(cfg.panels, azimuth_deg=0)),
         replace(cfg, latitude=51.0),

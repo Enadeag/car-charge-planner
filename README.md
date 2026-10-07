@@ -10,7 +10,7 @@ It suits a fixed-price energy contract, where the goal is simply to use your own
 
 ## What it does
 
-- Fetches a solar forecast from [Open-Meteo](https://open-meteo.com) (free, no account) and turns it into expected surplus: panel output minus the house's own use.
+- Fetches a solar forecast from a forecast provider ([Open-Meteo](https://open-meteo.com) by default, or [Forecast.Solar](https://forecast.solar); both free, no account) and turns it into expected surplus: panel output minus the house's own use. A second provider can be set as a fallback.
 - Recommends charge windows within the hours the car is at home, with one constant power per window (in kW and amps), aiming for almost no grid draw.
 - Tray icon: green while a window is active, blue when one is coming, grey when there is none, orange when a grid charge is needed, red when there is no forecast.
 - Click the icon for a popup with two pages. **Plan** answers "when do I charge?": the next window, the battery level you expect after it, grid-charge advice when needed, a short table of the next days, and a battery and away status line. **Update** holds the daily inputs.
@@ -94,7 +94,7 @@ This sends a labelled test notification and waits up to a minute for you to clic
 
 | Option | Meaning |
 | --- | --- |
-| `--live` | Real Open-Meteo forecast, cached for an hour. `--refresh` ignores the cache. Needs a location in the config (`--config`). |
+| `--live` | The forecast from the providers in the config (Open-Meteo by default), cached. `--refresh` ignores the cache interval. Needs a location in the config (`--config`). |
 | `--demo summer\|overcast\|mixed\|winter` | Invented forecast, no network. |
 | `--forecast file.json` | Your own forecast: a list of `{"start", "end", "power_kw"}` (ISO times with a time zone, expected solar power in kW). Files in the earlier `gti` (W/m2) format are refused with a message saying so. |
 | `--battery N` | Current battery percentage (required). |
@@ -195,7 +195,8 @@ The settings live in `~/.config/car-charge-planner/config.toml`, a plain TOML fi
 | --- | --- |
 | Config | `~/.config/car-charge-planner/config.toml` |
 | Battery level, away periods, announced windows | `~/.local/state/car-charge-planner/state.json` |
-| Forecast cache | `~/.cache/car-charge-planner/forecast.json` |
+| Forecast cache | `~/.cache/car-charge-planner/forecast-<provider>.json`, one per provider |
+| API keys | `~/.config/car-charge-planner/secrets.toml` (private, only if you use a paid plan) |
 | Single-instance socket | `$XDG_RUNTIME_DIR/car-charge-planner.sock` (a private directory under the temp directory if there is no runtime directory) |
 
 Delete the state file to reset your entries. The other files are recreated as needed.
@@ -226,7 +227,7 @@ The language follows your system (`LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`, t
 | Folder | Contents |
 | --- | --- |
 | `planner/` | The planning logic, with no network or UI: surplus, windows, projection, grid advice, config reading and writing (`config_io.py`), CLI. |
-| `forecast/` | Open-Meteo client and cache. |
+| `forecast/` | The forecast providers (`providers/`), the service that chooses between them and caches their answers (`service.py`), and the secrets file. See [docs/providers.md](docs/providers.md). |
 | `storage/` | Reading and writing `state.json`. |
 | `app/` | `controller.py` (what the app does: refresh, plan, announce, the owner's edits) and `shells/` (how it shows itself: the tray icon with its popup). The popup (`popup.py`) is a window around the reusable `planview.py`. Also notifications over D-Bus (`notifier.py`), the launcher and autostart entries, theme-aware colours. |
 | `app/settings/` | The Settings window: field definitions, tabs, window. |

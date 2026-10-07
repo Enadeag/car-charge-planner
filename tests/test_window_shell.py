@@ -14,7 +14,7 @@ from PySide6.QtWidgets import QApplication, QPushButton, QToolButton
 from app.controller import Controller
 from app.shells.icons import make_icon
 from app.shells.window import BACKGROUND_HINT, WindowShell
-from forecast.open_meteo import ForecastResult
+from forecast.service import ForecastResult
 from storage.state import load_state
 
 from conftest import FakeNotifier, at, forecast_from
@@ -30,7 +30,7 @@ def qapp():
 class Setup:
     def __init__(self, cfg, tmp_path, monkeypatch, hour=7, minute=0):
         monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-        monkeypatch.setattr("app.controller.get_forecast", lambda *a, **k: None)
+        monkeypatch.setattr("forecast.service.ForecastService.get", lambda *a, **k: None)
         self.notifier = FakeNotifier()
         self.controller = Controller(cfg, tmp_path / "config.toml", self.notifier)
         self.controller.result = ForecastResult(

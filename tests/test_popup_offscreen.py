@@ -125,7 +125,7 @@ def test_tray_app_round_trip_persists_and_replans(cfg, tmp_path, monkeypatch):
 
     from app.away_input import make_away
     from conftest import TrayApp
-    from forecast.open_meteo import ForecastResult
+    from forecast.service import ForecastResult
     from storage.state import load_state
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
@@ -170,7 +170,7 @@ def test_popup_has_a_close_button_and_stays_open_when_focus_moves(cfg):
 
 def _tray_with_frozen_clock(cfg, tmp_path, monkeypatch, hour, minute, failed=False):
     from conftest import TrayApp
-    from forecast.open_meteo import ForecastResult
+    from forecast.service import ForecastResult
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     QApplication.instance() or QApplication([])
@@ -284,7 +284,7 @@ def test_tray_opens_settings_on_the_away_rules_tab_and_hides_the_popup(cfg, tmp_
     from conftest import TrayApp
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("app.controller.get_forecast", lambda *a, **k: None)
+    monkeypatch.setattr("forecast.service.ForecastService.get", lambda *a, **k: None)
     QApplication.instance() or QApplication([])
     app = TrayApp(cfg, tmp_path / "config.toml")
     app.popup.show()
@@ -302,10 +302,10 @@ def test_a_rule_saved_in_settings_shows_up_in_the_popup(cfg, tmp_path, monkeypat
     from PySide6.QtCore import QTime
 
     from conftest import TrayApp
-    from forecast.open_meteo import ForecastResult
+    from forecast.service import ForecastResult
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("app.controller.get_forecast", lambda *a, **k: None)
+    monkeypatch.setattr("forecast.service.ForecastService.get", lambda *a, **k: None)
     QApplication.instance() or QApplication([])
     app = TrayApp(cfg, tmp_path / "config.toml")
     app.result = ForecastResult(forecast_from([(date(2026, 7, 3), 900)]), at(date(2026, 7, 3), 6), True, False)

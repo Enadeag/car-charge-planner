@@ -21,7 +21,7 @@ from app.notifier import Notifier
 from app.popup import Popup
 from app.shells.tray import TrayShell
 from app.shells.window import WindowShell
-from forecast.open_meteo import ForecastResult
+from forecast.service import ForecastResult
 
 from conftest import TZ, FakeNotifier, at, forecast_from
 
@@ -96,7 +96,7 @@ def test_the_default_action_key_is_the_one_the_notifier_sends():
 
 def make_controller(cfg, tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("app.controller.get_forecast", lambda *a, **k: None)
+    monkeypatch.setattr("forecast.service.ForecastService.get", lambda *a, **k: None)
     controller = Controller(cfg, tmp_path / "config.toml", FakeNotifier())
     controller.result = ForecastResult(forecast_from([(DAY + timedelta(days=i), 900) for i in range(3)]), at(DAY, 6), True, False)
     return controller

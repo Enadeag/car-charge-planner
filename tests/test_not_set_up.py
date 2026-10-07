@@ -22,7 +22,7 @@ from app.shells.icons import COLORS, make_icon
 from app.shells.tray import TrayShell
 from app.shells.window import WindowShell
 from app.view_model import needs_setup
-from forecast.open_meteo import ForecastResult
+from forecast.service import ForecastResult
 from planner.model import Config, ConfigError, find_timezone, load_config, require_location, system_timezone
 from storage.state import BatteryReading
 
@@ -166,7 +166,7 @@ def settle(controller, seconds=3.0):
 def make_controller(cfg, tmp_path, monkeypatch, fetch=None):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     fetch = fetch or CountingFetch()
-    monkeypatch.setattr("app.controller.get_forecast", fetch)
+    monkeypatch.setattr("forecast.service.ForecastService.get", lambda self, cfg, now, force=False: fetch(cfg, now, force))
     return Controller(cfg, tmp_path / "config.toml", FakeNotifier()), fetch
 
 

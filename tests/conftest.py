@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from forecast.open_meteo import power_kw
+from forecast.providers.open_meteo import power_kw
 from planner.demo import bell_day
 from planner.model import AwayRule, Config, ForecastStep
 

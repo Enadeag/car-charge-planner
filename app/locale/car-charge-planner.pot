@@ -1014,6 +1014,26 @@ msgstr ""
 msgid "{provider}: {setting} is required"
 msgstr ""
 
+#: forecast/service.py
+#, python-brace-format
+msgid "The forecast provider {id!r} is not known to this version of the app"
+msgstr ""
+
+#: forecast/service.py
+#, python-brace-format
+msgid "{provider}: {settings} is required"
+msgstr ""
+
+#: forecast/service.py
+#, python-brace-format
+msgid "{provider}: not asked again until {time}"
+msgstr ""
+
+#: forecast/service.py
+#, python-brace-format
+msgid "an unexpected error ({kind})"
+msgstr ""
+
 #: planner/model.py
 msgid "[panels] kwp must be above 0"
 msgstr ""

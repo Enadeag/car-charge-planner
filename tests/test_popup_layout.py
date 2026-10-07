@@ -311,7 +311,7 @@ def _tray(cfg, tmp_path, monkeypatch):
     from conftest import TrayApp
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("app.controller.get_forecast", lambda *a, **k: None)
+    monkeypatch.setattr("forecast.service.ForecastService.get", lambda *a, **k: None)
     return TrayApp(cfg, tmp_path / "config.toml")
 
 
