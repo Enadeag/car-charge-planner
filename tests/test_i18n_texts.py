@@ -7,7 +7,7 @@ import pytest
 from app.away_input import away_summary, describe_rule
 from app.i18n import init, number
 from app.names import month_short, short_date, weekday_long
-from app.view_model import battery_status, day_label, footer_text
+from app.view_model import ForecastSource, battery_status, day_label, footer_text
 from planner.model import AwayRule
 from storage.state import BatteryReading
 from datetime import time
@@ -50,7 +50,7 @@ def test_a_comma_can_replace_the_decimal_point(tmp_path):
     make_catalogue(tmp_path, "xx", {("decimal separator", "."): ","})
     init(["xx"], tmp_path)
     assert number(1.55, 1) == "1,6" and number(7) == "7"
-    assert footer_text(None, False)  # texts that carry no number are untouched
+    assert footer_text(None, False, ForecastSource("Credit"))  # texts that carry no number are untouched
 
 
 def test_the_battery_line_has_a_plural_and_a_word_order_of_its_own(tmp_path):

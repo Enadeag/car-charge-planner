@@ -117,3 +117,53 @@ def test_saving_settings_lets_a_provider_that_failed_be_asked_again(qapp, tmp_pa
     controller.apply_config(replace(controller.cfg, planning=replace(controller.cfg.planning, margin=0.9)))
     settle(controller, qapp)
     assert controller.result.provider_id == "main" and main.call_count == 2  # not after the five minutes
+
+
+# ---- what the footer says (ticket P8) -----------------------------------------------------------------------
+
+
+def footer_of(controller):
+    update = []
+    controller.view_changed.connect(update.append)
+    controller.rebuild()
+    return update[-1].vm.footer, update[-1].vm.footer_tooltip
+
+
+def test_the_footer_credits_the_provider_that_made_the_forecast(qapp, tmp_path, monkeypatch, cfg):
+    controller, *_ = make(cfg, tmp_path, monkeypatch, [steps_today()])
+    controller.refresh()
+    settle(controller, qapp)
+    footer, tooltip = footer_of(controller)
+    assert footer.endswith("Forecast by Main") and footer.startswith("Forecast ") and "primary unavailable" not in footer
+    assert tooltip == "Forecast by Main"
+
+
+def test_a_fallback_forecast_says_so_and_credits_the_fallback(qapp, tmp_path, monkeypatch, cfg):
+    controller, *_ = make(cfg, tmp_path, monkeypatch, [Unavailable("down")], [steps_today()])
+    controller.refresh()
+    settle(controller, qapp)
+    footer, tooltip = footer_of(controller)
+    assert "from Backup, primary unavailable" in footer and footer.endswith("Forecast by Backup")
+    assert tooltip.splitlines()[1] == "Backup is used because Main has no forecast that is still usable."
+
+
+def test_during_a_cool_down_the_footer_says_the_provider_is_busy_and_after_it_does_not(qapp, tmp_path, monkeypatch, cfg):
+    from datetime import timezone
+
+    from forecast.provider import RateLimited
+
+    controller, main, _backup = make(cfg, tmp_path, monkeypatch, [steps_today(), RateLimited("busy", timedelta(hours=1))], fallback=False)
+    controller.refresh()
+    settle(controller, qapp)
+    controller.refresh(force=True)  # the owner pushes; the provider says wait
+    settle(controller, qapp)
+    assert "provider busy, retrying later" in footer_of(controller)[0]
+    controller.result = replace(controller.result, cooldown_until=datetime.now(timezone.utc) - timedelta(minutes=1))
+    assert "provider busy" not in footer_of(controller)[0]
+
+
+def test_before_a_forecast_arrives_the_footer_is_empty(qapp, tmp_path, monkeypatch, cfg):
+    controller, *_ = make(cfg, tmp_path, monkeypatch, [Unavailable("down")], fallback=False)
+    controller.refresh()
+    settle(controller, qapp)
+    assert footer_of(controller) == ("", "")

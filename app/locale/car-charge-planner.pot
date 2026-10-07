@@ -894,14 +894,6 @@ msgid "{app} keeps running so you get notifications. Open it again from the appl
 msgstr ""
 
 #: app/view_model.py
-msgid "Weather data by Open-Meteo.com (CC BY 4.0)"
-msgstr ""
-
-#: app/view_model.py
-msgid "Weather data: Open-Meteo.com"
-msgstr ""
-
-#: app/view_model.py
 #, python-brace-format
 msgid "{power} kW ({amps} A)"
 msgstr ""
@@ -933,22 +925,51 @@ msgstr ""
 
 #: app/view_model.py
 #, python-brace-format
-msgid "Forecast {n} min old · {source}"
+msgid "Forecast {n} min old"
 msgstr ""
 
 #: app/view_model.py
 #, python-brace-format
-msgid "Forecast {n} min old, refresh failed · {source}"
+msgid "Forecast {n} min old, refresh failed"
 msgstr ""
 
 #: app/view_model.py
 #, python-brace-format
-msgid "Forecast {n} h old · {source}"
+msgid "Forecast {n} h old"
 msgstr ""
 
 #: app/view_model.py
 #, python-brace-format
-msgid "Forecast {n} h old, refresh failed · {source}"
+msgid "Forecast {n} h old, refresh failed"
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "from {provider}, primary unavailable"
+msgstr ""
+
+#: app/view_model.py
+msgid "provider busy, retrying later"
+msgstr ""
+
+#: app/view_model.py
+msgctxt "footer separator"
+msgid " · "
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "{provider} is used because {primary} has no forecast that is still usable."
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "{provider} is used because the first provider has no forecast that is still usable."
+msgstr ""
+
+#: app/view_model.py
+#, python-brace-format
+msgid "{provider} asked not to be asked again yet. The app waits and tries again later."
 msgstr ""
 
 #: app/view_model.py

@@ -1,7 +1,8 @@
+from dataclasses import replace
 from datetime import date, timedelta
 
 from app.config_file import ensure_config
-from app.view_model import build, footer_text, no_forecast
+from app.view_model import ForecastSource, build, footer_text, footer_tooltip, needs_setup, no_forecast
 from planner.model import Config, load_config
 from planner.projection import plan
 from storage.state import BatteryReading, load_battery
@@ -120,11 +121,94 @@ def test_no_projection_without_a_window(cfg):
     assert view(cfg, at(DAY, 7), days=((DAY, 150),)).projection == ""
 
 
-def test_footer_reports_age_stale_and_attribution():
-    assert "5 min" in footer_text(timedelta(minutes=5), False)
-    assert "refresh failed" in footer_text(timedelta(hours=5), True)
-    assert "5 h old" in footer_text(timedelta(hours=5), True)
-    assert "Open-Meteo.com" in footer_text(None, False)
+OPEN_METEO = ForecastSource("Weather data: Open-Meteo.com (CC BY 4.0)", "Open-Meteo")
+BACKUP = ForecastSource("Solar forecast: Forecast.Solar", "Forecast.Solar", from_fallback=True, primary_name="Open-Meteo")
+
+
+def test_footer_reports_age_stale_and_the_providers_own_credit():
+    assert footer_text(timedelta(minutes=5), False, OPEN_METEO) == "Forecast 5 min old \u00b7 Weather data: Open-Meteo.com (CC BY 4.0)"
+    assert footer_text(timedelta(minutes=119), False, OPEN_METEO).startswith("Forecast 119 min old")
+    assert footer_text(timedelta(hours=5), True, OPEN_METEO) == "Forecast 5 h old, refresh failed \u00b7 Weather data: Open-Meteo.com (CC BY 4.0)"
+    assert footer_text(timedelta(minutes=5), True, OPEN_METEO).startswith("Forecast 5 min old, refresh failed")
+    assert footer_text(None, False, OPEN_METEO) == "Weather data: Open-Meteo.com (CC BY 4.0)"
+
+
+def test_the_credit_is_whatever_the_provider_says():
+    assert footer_text(timedelta(minutes=5), False, ForecastSource("Solar forecast: Forecast.Solar")).endswith("Solar forecast: Forecast.Solar")
+
+
+def test_a_fallback_forecast_says_where_it_is_from_and_credits_that_provider():
+    assert footer_text(timedelta(minutes=5), False, BACKUP) == (
+        "Forecast 5 min old \u00b7 from Forecast.Solar, primary unavailable \u00b7 Solar forecast: Forecast.Solar"
+    )
+
+
+def test_a_cool_down_says_the_provider_is_busy():
+    busy = ForecastSource("Weather data: Open-Meteo.com (CC BY 4.0)", "Open-Meteo", cooling_down=True)
+    assert footer_text(timedelta(hours=2), True, busy) == (
+        "Forecast 2 h old, refresh failed \u00b7 provider busy, retrying later \u00b7 Weather data: Open-Meteo.com (CC BY 4.0)"
+    )
+    both = replace(BACKUP, cooling_down=True)
+    assert footer_text(timedelta(minutes=5), False, both).count("\u00b7") == 3
+
+
+def test_without_a_source_there_is_only_the_age_and_without_either_nothing():
+    assert footer_text(timedelta(minutes=5), False) == "Forecast 5 min old"
+    assert footer_text(None, False) == ""
+
+
+def test_the_tooltip_carries_the_full_credit_and_the_reason(cfg):
+    assert footer_tooltip(None) == "" and footer_tooltip(OPEN_METEO) == "Weather data: Open-Meteo.com (CC BY 4.0)"
+    lines = footer_tooltip(BACKUP).split("\n")
+    assert lines[0] == "Solar forecast: Forecast.Solar"
+    assert lines[1] == "Forecast.Solar is used because Open-Meteo has no forecast that is still usable."
+    unnamed = footer_tooltip(replace(BACKUP, primary_name="")).split("\n")[1]
+    assert unnamed == "Forecast.Solar is used because the first provider has no forecast that is still usable."
+    busy = footer_tooltip(replace(OPEN_METEO, cooling_down=True)).split("\n")
+    assert busy[1] == "Open-Meteo asked not to be asked again yet. The app waits and tries again later."
+
+
+def test_the_build_puts_the_footer_and_its_tooltip_in_the_view(cfg):
+    fc = forecast_from([(DAY, 900)])
+    now = at(DAY, 7)
+    vm = build(plan(fc, cfg, 45, now), now, cfg, BATTERY, timedelta(minutes=5), False, None, BACKUP)
+    assert "from Forecast.Solar, primary unavailable" in vm.footer and "Open-Meteo has no forecast" in vm.footer_tooltip
+
+
+def test_before_there_is_a_forecast_the_footer_is_empty(cfg):
+    assert needs_setup(BATTERY, at(DAY, 7)).footer == "" and no_forecast("offline", BATTERY, at(DAY, 7)).footer == ""
+
+
+# ---- short horizons ------------------------------------------------------------------------------------------
+
+
+def horizon_view(cfg, peaks, now=None):
+    now = now or at(DAY, 7)
+    fc = forecast_from([(DAY + timedelta(days=i), peak) for i, peak in enumerate(peaks)])
+    return build(plan(fc, cfg, 60, now), now, cfg, BATTERY, timedelta(minutes=5), False, None, OPEN_METEO)
+
+
+def test_a_one_day_forecast_has_no_outlook_and_says_one_day(cfg):
+    vm = horizon_view(cfg, [900])
+    assert vm.state == "upcoming" and vm.outlook == () and vm.quiet_days == ""
+    dull = horizon_view(cfg, [120])
+    assert dull.state == "none" and dull.detail == "Not enough solar surplus in the next 1 day."
+
+
+def test_a_two_day_forecast_shows_the_second_day_only(cfg):
+    vm = horizon_view(cfg, [900, 900])
+    assert [row.day for row in vm.outlook] == ["Tomorrow"] and vm.quiet_days == ""
+    assert horizon_view(cfg, [120, 120]).detail == "Not enough solar surplus in the next 2 days."
+
+
+def test_a_quiet_second_day_is_named_and_a_quiet_only_day_is_not_repeated(cfg):
+    assert horizon_view(cfg, [900, 120]).quiet_days == "Tomorrow: no good window"
+    assert horizon_view(cfg, [120]).quiet_days == ""  # the headline already says it
+
+
+def test_late_in_the_day_a_short_forecast_still_plans(cfg):
+    vm = horizon_view(cfg, [900, 900], now=at(DAY, 23))
+    assert vm.state == "upcoming" and vm.headline.startswith("Next: Tomorrow")
 
 
 def test_no_forecast_view(cfg):

@@ -13,7 +13,7 @@ import pseudo
 from app import i18n
 from app.popup import PLAN, UPDATE, Popup
 from app.settings.window import SettingsWindow
-from app.view_model import build, needs_setup, no_forecast
+from app.view_model import ForecastSource, build, needs_setup, no_forecast
 from planner.advice import grid_advice
 from planner.projection import plan
 from storage.state import BatteryReading, State
@@ -44,7 +44,10 @@ def settle(widget):
     QApplication.processEvents()
 
 
-def popup_with(cfg, days, soc=45, battery=None, stale=False, kind="plan"):
+OPEN_METEO = ForecastSource("Weather data: Open-Meteo.com (CC BY 4.0)", "Open-Meteo")
+
+
+def popup_with(cfg, days, soc=45, battery=None, stale=False, kind="plan", source=OPEN_METEO):
     forecast = forecast_from(list(days))
     plans = plan(forecast, cfg, soc, NOW)
     advice = grid_advice(plans, forecast, cfg, None, NOW)
@@ -54,7 +57,7 @@ def popup_with(cfg, days, soc=45, battery=None, stale=False, kind="plan"):
     elif kind == "no-forecast":
         vm = no_forecast(i18n._("Loading forecast..."), battery, NOW)
     else:
-        vm = build(plans, NOW, cfg, battery, timedelta(minutes=5), stale, advice)
+        vm = build(plans, NOW, cfg, battery, timedelta(minutes=5), stale, advice, source)
     popup = Popup(TZ)
     popup.update_view(vm, State(battery), NOW.date(), cfg.away_rules)
     return popup
@@ -67,6 +70,10 @@ SITUATIONS = {
         days=[(DAY, 900)], battery=BatteryReading(50, NOW - timedelta(days=3))
     ),
     "a stale forecast": dict(days=[(DAY, 900)], stale=True),
+    "a fallback forecast": dict(
+        days=[(DAY, 900)], source=ForecastSource("Solar forecast: Forecast.Solar", "Forecast.Solar", from_fallback=True, primary_name="Open-Meteo")
+    ),
+    "a provider that is busy": dict(days=[(DAY, 900)], stale=True, source=ForecastSource("Weather data: Open-Meteo.com (CC BY 4.0)", "Open-Meteo", cooling_down=True)),
     "not set up": dict(days=[(DAY, 900)], kind="needs-setup"),
     "no forecast": dict(days=[(DAY, 900)], kind="no-forecast"),
 }

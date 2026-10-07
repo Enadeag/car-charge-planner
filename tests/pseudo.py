@@ -109,15 +109,21 @@ def visible_texts(root: QWidget) -> list[tuple[str, str]]:
 
 
 def proper_nouns() -> set[str]:
-    """Names that stay as they are in every language: the forecast providers'."""
+    """What stays as it is in every language: the forecast providers' names and the credits they ask for."""
     from forecast.registry import registry
 
-    return {provider.name for provider in registry.all()}
+    return {text for provider in registry.all() for text in (provider.name, provider.attribution)}
 
 
 def untranslated(root: QWidget) -> list[str]:
-    names = proper_nouns()
-    return [f"{what}: {text!r}" for what, text in visible_texts(root) if needs_translation(text) and text not in names]
+    names = sorted(proper_nouns(), key=len, reverse=True)
+    found = []
+    for what, text in visible_texts(root):
+        for name in names:
+            text = text.replace(name, "")
+        if needs_translation(text.strip(" \u00b7")):
+            found.append(f"{what}: {text!r}")
+    return found
 
 
 def clipped(root: QWidget) -> list[str]:

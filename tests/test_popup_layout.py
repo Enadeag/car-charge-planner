@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication, QLabel
 
 from app.away_input import away_summary, make_away
 from app.popup import PLAN, UPDATE, Popup
-from app.view_model import build
+from app.view_model import ForecastSource, build
 from planner.advice import grid_advice
 from planner.model import AwayRule, Config
 from planner.projection import plan
@@ -33,7 +33,7 @@ def view(cfg, days, soc=45, battery=None, state=None):
     plans = plan(forecast, cfg, soc, NOW)
     advice = grid_advice(plans, forecast, cfg, None, NOW)
     battery = battery or BatteryReading(soc, NOW)
-    vm = build(plans, NOW, cfg, battery, timedelta(minutes=5), False, advice)
+    vm = build(plans, NOW, cfg, battery, timedelta(minutes=5), False, advice, ForecastSource("Weather data: Open-Meteo.com (CC BY 4.0)"))
     popup = Popup(TZ)
     popup.update_view(vm, state or State(battery), NOW.date(), cfg.away_rules)
     return popup, vm
@@ -142,7 +142,7 @@ def test_each_page_is_only_as_tall_as_its_content(cfg, qapp):
 
 def test_footer_is_short_and_keeps_the_attribution(cfg, qapp):
     popup, _ = view(cfg, [(DAY, 900)])
-    assert popup.footer.text() == "Forecast 5 min old · Weather data: Open-Meteo.com"
+    assert popup.footer.text() == "Forecast 5 min old · Weather data: Open-Meteo.com (CC BY 4.0)"
     assert "CC BY 4.0" in popup.footer.toolTip()
 
 
@@ -345,3 +345,31 @@ def test_the_popup_grows_for_the_taller_page_and_shrinks_back(cfg, qapp):
     assert update_height > plan_height
     assert popup.height() == plan_height  # no stale minimum left behind by the taller page
     popup.hide()
+
+
+def test_the_footer_and_its_tooltip_follow_the_view(cfg, qapp):
+    from app.view_model import ForecastSource
+
+    popup, vm = view(cfg, [(DAY, 900)])
+    assert popup.footer.text() == vm.footer and popup.footer.toolTip() == vm.footer_tooltip
+    forecast = forecast_from([(DAY, 900)])
+    plans = plan(forecast, cfg, 45, NOW)
+    source = ForecastSource("Solar forecast: Forecast.Solar", "Forecast.Solar", from_fallback=True, primary_name="Open-Meteo")
+    popup.update_view(build(plans, NOW, cfg, BatteryReading(45, NOW), timedelta(minutes=5), False, None, source), State(BatteryReading(45, NOW)), NOW.date(), cfg.away_rules)
+    assert "from Forecast.Solar, primary unavailable" in popup.footer.text()
+    assert "Open-Meteo has no forecast" in popup.footer.toolTip()
+    popup.update_view(needs_setup_vm(), State(BatteryReading(45, NOW)), NOW.date(), cfg.away_rules)
+    assert popup.footer.text() == "" and popup.footer.toolTip() == ""
+
+
+def needs_setup_vm():
+    from app.view_model import needs_setup
+
+    return needs_setup(BatteryReading(45, NOW), NOW)
+
+
+def test_a_short_forecast_shows_a_short_outlook_without_gaps(cfg, qapp):
+    popup, vm = view(cfg, [(DAY, 900)])
+    assert popup.outlook_box.isHidden() and not popup.quiet.isVisible()
+    popup, vm = view(cfg, [(DAY, 900), (DAY + timedelta(days=1), 120)])
+    assert not popup.outlook_box.isHidden() and popup.quiet.text() == "Tomorrow: no good window"

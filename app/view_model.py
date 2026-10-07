@@ -6,14 +6,23 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from .i18n import N_, _, ngettext, number, pgettext
+from .i18n import _, ngettext, number, pgettext
 from .names import short_date, weekday_short
 from planner.advice import GridAdvice
 from planner.model import Config, DayPlan, Window
 from storage.state import BatteryReading
 
-ATTRIBUTION = N_("Weather data by Open-Meteo.com (CC BY 4.0)")
-SOURCE = N_("Weather data: Open-Meteo.com")
+
+
+@dataclass(frozen=True)
+class ForecastSource:
+    """Who made the forecast on screen, for the footer. The credit is the provider's own text."""
+
+    attribution: str
+    provider_name: str = ""
+    from_fallback: bool = False  # the primary had nothing usable
+    primary_name: str = ""
+    cooling_down: bool = False  # the provider asked not to be asked again yet
 
 
 @dataclass(frozen=True)
@@ -47,6 +56,7 @@ class ViewModel:
     quiet_days: str  # "Thu, Fri: no good window", empty when nothing is worth saying
     footer: str
     advice: AdviceView | None = None
+    footer_tooltip: str = ""  # the full credit and, when it matters, why this provider answered
 
 
 def _clock(moment: datetime, tz: ZoneInfo) -> str:
@@ -98,15 +108,38 @@ def _projection(day: DayPlan, window: Window, cfg: Config, tz: ZoneInfo) -> str:
     return ""
 
 
-def footer_text(age: timedelta | None, stale: bool) -> str:
-    if age is None:
-        return _(SOURCE)
-    minutes = int(age.total_seconds() // 60)
-    if minutes < 120:
-        text = _("Forecast {n} min old \u00b7 {source}") if not stale else _("Forecast {n} min old, refresh failed \u00b7 {source}")
-    else:
-        text = _("Forecast {n} h old \u00b7 {source}") if not stale else _("Forecast {n} h old, refresh failed \u00b7 {source}")
-    return text.format(n=minutes if minutes < 120 else minutes // 60, source=_(SOURCE))
+def footer_text(age: timedelta | None, stale: bool, source: ForecastSource | None = None) -> str:
+    """"Forecast 12 min old · [from Forecast.Solar, primary unavailable ·] Weather data: Open-Meteo.com (CC BY 4.0)"."""
+    items: list[str] = []
+    if age is not None:
+        minutes = int(age.total_seconds() // 60)
+        if minutes < 120:
+            text = _("Forecast {n} min old") if not stale else _("Forecast {n} min old, refresh failed")
+        else:
+            text = _("Forecast {n} h old") if not stale else _("Forecast {n} h old, refresh failed")
+        items.append(text.format(n=minutes if minutes < 120 else minutes // 60))
+    if source is not None:
+        if source.from_fallback:
+            items.append(_("from {provider}, primary unavailable").format(provider=source.provider_name))
+        if source.cooling_down:
+            items.append(_("provider busy, retrying later"))
+        items.append(source.attribution)
+    return pgettext("footer separator", " \u00b7 ").join(items)
+
+
+def footer_tooltip(source: ForecastSource | None) -> str:
+    """The full credit, and what the footer's short notes mean."""
+    if source is None:
+        return ""
+    lines = [source.attribution]
+    if source.from_fallback:
+        if source.primary_name:
+            lines.append(_("{provider} is used because {primary} has no forecast that is still usable.").format(provider=source.provider_name, primary=source.primary_name))
+        else:
+            lines.append(_("{provider} is used because the first provider has no forecast that is still usable.").format(provider=source.provider_name))
+    if source.cooling_down:
+        lines.append(_("{provider} asked not to be asked again yet. The app waits and tries again later.").format(provider=source.provider_name))
+    return "\n".join(lines)
 
 
 def advice_view(advice: GridAdvice, now: datetime, cfg: Config, tz: ZoneInfo) -> AdviceView:
@@ -183,7 +216,7 @@ def needs_setup(battery: BatteryReading, now: datetime) -> ViewModel:
         projection="",
         outlook=(),
         quiet_days="",
-        footer=_(SOURCE),
+        footer="",
     )
 
 
@@ -200,7 +233,7 @@ def no_forecast(reason: str, battery: BatteryReading, now: datetime) -> ViewMode
         projection="",
         outlook=(),
         quiet_days="",
-        footer=_(SOURCE),
+        footer="",
     )
 
 
@@ -218,6 +251,7 @@ def build(
     forecast_age: timedelta | None,
     stale: bool,
     advice: GridAdvice | None = None,
+    source: ForecastSource | None = None,
 ) -> ViewModel:
     tz = ZoneInfo(cfg.timezone)
     today = now.astimezone(tz).date()
@@ -231,7 +265,8 @@ def build(
         battery_pct=battery.pct,
         outlook=outlook,
         quiet_days=quiet_days,
-        footer=footer_text(forecast_age, stale),
+        footer=footer_text(forecast_age, stale, source),
+        footer_tooltip=footer_tooltip(source),
         advice=advice_view(advice, now, cfg, tz) if advice else None,
     )
 

@@ -26,7 +26,7 @@ from .i18n import _
 from .notifications import candidate_windows, due, message
 from .notifier import Notifier
 from .settings.window import SettingsWindow
-from .view_model import ViewModel, build, needs_setup, no_forecast
+from .view_model import ForecastSource, ViewModel, build, needs_setup, no_forecast
 
 TICK_MS = 60_000  # recompute every minute; the forecast itself refreshes at most hourly
 
@@ -139,10 +139,20 @@ class Controller(QObject):
         else:
             days = plan(self.result.steps, self.cfg, battery.pct, now, list(state.away), list(state.notified))
             advice = grid_advice(days, self.result.steps, self.cfg, list(state.away), now)
-            vm = build(days, now, self.cfg, battery, self.result.age(now), self.result.stale, advice)
+            vm = build(days, now, self.cfg, battery, self.result.age(now), self.result.stale, advice, self._source(now))
             self._announce(candidate_windows(days, advice), state, now)
         self.vm = vm
         self.view_changed.emit(ViewUpdate(vm, state, now.date(), self.cfg.away_rules, self.tz))
+
+    def _source(self, now: datetime) -> ForecastSource:
+        result = self.result
+        return ForecastSource(
+            result.attribution,
+            result.provider_name,
+            result.from_fallback,
+            result.primary_name,
+            cooling_down=result.cooldown_until is not None and now < result.cooldown_until,
+        )
 
     def _announce(self, windows, state: State, now: datetime) -> None:
         """Notify once per window, a few minutes ahead (spec 5)."""

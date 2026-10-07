@@ -49,6 +49,13 @@ For tests of the code that *uses* providers (the forecast service, the Settings 
 `FakeProvider` in `tests/fake_provider.py`: successes, errors, rate limits with retry times, and `Held` entries
 that wait for an event so a test can have a fetch in flight.
 
+## Credit and attribution
+
+`attribution` is the credit your provider's terms ask for ("Weather data: Open-Meteo.com (CC BY 4.0)"). The app
+shows it as it is, next to the age of the forecast, whenever that provider made the forecast on screen; it is not
+translated. If the forecast comes from the fallback, the footer also says so, and the tooltip explains. `sends`
+and `description` are translated (mark them with `N_()`).
+
 ## Settings and secrets
 
 A provider declares the settings it needs as `SettingSpec`s (a key, a label and a hint, whether it is optional,

@@ -35,7 +35,7 @@ from storage.state import State
 from . import colours
 from .i18n import _, number
 from .away_input import away_summary, describe, describe_rule, make_away
-from .view_model import ATTRIBUTION, ViewModel, day_label
+from .view_model import ViewModel, day_label
 
 PLAN, UPDATE = 0, 1
 SMALL = "font-size: 9pt;"
@@ -105,7 +105,6 @@ class PlanView(QWidget):
         self.tabs.currentChanged.connect(self._on_tab_changed)
 
         self.footer = _muted()
-        self.footer.setToolTip(_(ATTRIBUTION))
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)  # the wrapping window sets the margins
@@ -308,6 +307,7 @@ class PlanView(QWidget):
         self.battery.setStyleSheet(f"color: {colours.error(self)};" if vm.battery_stale else "")
         self.tabs.setTabText(UPDATE, _("Update •") if vm.battery_stale else _("Update"))
         self.footer.setText(vm.footer)
+        self.footer.setToolTip(vm.footer_tooltip)
 
         now = datetime.combine(today, time(0), self.tz) if today else datetime.now(self.tz)
         periods = state.away if state is not None else ()
