@@ -9,6 +9,9 @@ from planner.model import Config
 from ..i18n import N_
 
 
+UNITS_CHOICES = (("metric", N_("Metric (km, kWh/100 km)")), ("imperial", N_("Imperial (miles, mi/kWh)")))
+
+
 @dataclass(frozen=True)
 class FieldSpec:
     key: str  # "panels.kwp", or "latitude" for a top-level value
@@ -199,7 +202,7 @@ INTERFACE = TabSpec(
             N_("Units"),
             N_("How distances and consumption are shown: kilometres and kWh/100 km, or miles and miles per kWh. Energy and power are the same in both."),
             kind="choice",
-            choices=(("metric", N_("Metric (km, kWh/100 km)")), ("imperial", N_("Imperial (miles, mi/kWh)"))),
+            choices=UNITS_CHOICES,
         ),
         FieldSpec(
             "interface.language",

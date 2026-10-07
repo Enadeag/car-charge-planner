@@ -82,7 +82,7 @@ msgstr ""
 msgid "No absences planned"
 msgstr ""
 
-#: app/away_input.py app/view_model.py
+#: app/away_input.py app/setup/recap.py app/view_model.py
 msgctxt "list separator"
 msgid ", "
 msgstr ""
@@ -349,7 +349,7 @@ msgstr ""
 msgid "Saves immediately"
 msgstr ""
 
-#: app/planview.py
+#: app/planview.py app/setup/recap.py
 msgid "Car away"
 msgstr ""
 
@@ -430,6 +430,14 @@ msgid "No click received. If you clicked it, this desktop may not report clicks 
 msgstr ""
 
 #: app/settings/fields.py
+msgid "Metric (km, kWh/100 km)"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "Imperial (miles, mi/kWh)"
+msgstr ""
+
+#: app/settings/fields.py
 msgid "Solar and location"
 msgstr ""
 
@@ -442,11 +450,11 @@ msgid "Total peak power of all panels together, as stated on the installer's dat
 msgstr ""
 
 #: app/settings/fields.py
-msgid "Tilt"
+msgid "Angle of the panels from horizontal: 0 is flat, 90 is vertical."
 msgstr ""
 
-#: app/settings/fields.py
-msgid "Angle of the panels from horizontal: 0 is flat, 90 is vertical."
+#: app/settings/fields.py app/setup/recap.py
+msgid "Tilt"
 msgstr ""
 
 #: app/settings/fields.py
@@ -454,19 +462,19 @@ msgid "degrees"
 msgstr ""
 
 #: app/settings/fields.py
+msgid "Compass direction the panels face: 0 = south, -90 = east, 90 = west, 180 = north. South-east is -45."
+msgstr ""
+
+#: app/settings/fields.py app/setup/recap.py
 msgid "Direction"
 msgstr ""
 
 #: app/settings/fields.py
-msgid "Compass direction the panels face: 0 = south, -90 = east, 90 = west, 180 = north. South-east is -45."
-msgstr ""
-
-#: app/settings/fields.py
-msgid "System losses"
-msgstr ""
-
-#: app/settings/fields.py
 msgid "Combined losses from the inverter, cables, heat and dirt. Typically 10-15%."
+msgstr ""
+
+#: app/settings/fields.py app/setup/recap.py
+msgid "System losses"
 msgstr ""
 
 #: app/settings/fields.py
@@ -486,11 +494,11 @@ msgid "Decimal degrees of the panels' location. Positive is east of Greenwich."
 msgstr ""
 
 #: app/settings/fields.py
-msgid "Time zone"
+msgid "The time zone of the location. Start typing to search the list."
 msgstr ""
 
-#: app/settings/fields.py
-msgid "The time zone of the location. Start typing to search the list."
+#: app/settings/fields.py app/setup/recap.py
+msgid "Time zone"
 msgstr ""
 
 #: app/settings/fields.py
@@ -506,27 +514,27 @@ msgid "Average power the household uses without the car. Monthly kWh divided by 
 msgstr ""
 
 #: app/settings/fields.py
-msgid "Usable battery"
-msgstr ""
-
-#: app/settings/fields.py
 msgid "The net (usable) battery capacity in kWh. Manufacturers often list the gross capacity, which is higher."
 msgstr ""
 
-#: app/settings/fields.py
-msgid "Consumption"
+#: app/settings/fields.py app/setup/recap.py
+msgid "Usable battery"
 msgstr ""
 
 #: app/settings/fields.py
 msgid "Real-world average energy use of the car. Usually higher in winter than in summer."
 msgstr ""
 
-#: app/settings/fields.py
-msgid "Driving per day"
+#: app/settings/fields.py app/setup/recap.py
+msgid "Consumption"
 msgstr ""
 
 #: app/settings/fields.py
 msgid "Average distance driven per day. Weekly distance divided by 7 gives a rough figure."
+msgstr ""
+
+#: app/settings/fields.py app/setup/recap.py
+msgid "Driving per day"
 msgstr ""
 
 #: app/settings/fields.py
@@ -545,11 +553,11 @@ msgstr ""
 msgid "Everyday maximum charge level. Must be above the minimum."
 msgstr ""
 
-#: app/settings/fields.py
+#: app/settings/fields.py app/setup/recap.py
 msgid "Charger"
 msgstr ""
 
-#: app/settings/fields.py
+#: app/settings/fields.py app/setup/recap.py
 msgid "Phases"
 msgstr ""
 
@@ -661,7 +669,7 @@ msgstr ""
 msgid "A window"
 msgstr ""
 
-#: app/settings/fields.py
+#: app/settings/fields.py app/setup/welcome.py
 msgid "Units"
 msgstr ""
 
@@ -670,51 +678,11 @@ msgid "How distances and consumption are shown: kilometres and kWh/100 km, or mi
 msgstr ""
 
 #: app/settings/fields.py
-msgid "Metric (km, kWh/100 km)"
-msgstr ""
-
-#: app/settings/fields.py
-msgid "Imperial (miles, mi/kWh)"
-msgstr ""
-
-#: app/settings/fields.py
 msgid "Language"
 msgstr ""
 
 #: app/settings/fields.py
 msgid "The language of the app. Applies the next time the app starts."
-msgstr ""
-
-#: app/settings/forecast_tab.py
-#, python-brace-format
-msgid "{provider} says there were too many requests. Try again in {n} minute."
-msgid_plural "{provider} says there were too many requests. Try again in {n} minutes."
-msgstr[0] ""
-msgstr[1] ""
-
-#: app/settings/forecast_tab.py
-#, python-brace-format
-msgid "{provider} says there were too many requests. Try again later."
-msgstr ""
-
-#: app/settings/forecast_tab.py
-#, python-brace-format
-msgid "Could not get a forecast from {provider}: {reason}"
-msgstr ""
-
-#: app/settings/forecast_tab.py
-#, python-brace-format
-msgid "{provider} is not set up completely: {reason}"
-msgstr ""
-
-#: app/settings/forecast_tab.py
-#, python-brace-format
-msgid "{provider} gave an answer the app does not understand: {reason}"
-msgstr ""
-
-#: app/settings/forecast_tab.py
-#, python-brace-format
-msgid "{provider}: {reason}"
 msgstr ""
 
 #: app/settings/forecast_tab.py
@@ -781,7 +749,7 @@ msgstr ""
 msgid "Enter your location first, on the Solar and location tab."
 msgstr ""
 
-#: app/settings/forecast_tab.py
+#: app/settings/forecast_tab.py forecast/check.py
 #, python-brace-format
 msgid "{setting} is required."
 msgstr ""
@@ -789,18 +757,6 @@ msgstr ""
 #: app/settings/forecast_tab.py
 #, python-brace-format
 msgid "Asking {provider}..."
-msgstr ""
-
-#: app/settings/forecast_tab.py
-#, python-brace-format
-msgid "OK: {n} day of forecast"
-msgid_plural "OK: {n} days of forecast"
-msgstr[0] ""
-msgstr[1] ""
-
-#: app/settings/forecast_tab.py
-#, python-brace-format
-msgid "{provider}: unexpected error ({kind})"
 msgstr ""
 
 #: app/settings/providers.py
@@ -900,9 +856,245 @@ msgstr ""
 msgid "A value has the wrong type: {error}"
 msgstr ""
 
-#: app/settings/window.py forecast/secret_store.py
+#: app/settings/window.py app/setup/wizard.py forecast/secret_store.py
 #, python-brace-format
 msgid "Could not write {file}: {error}"
+msgstr ""
+
+#: app/setup/finish.py
+msgid "Finish"
+msgstr ""
+
+#: app/setup/finish.py
+msgid "Check again"
+msgstr ""
+
+#: app/setup/finish.py
+msgid "Change"
+msgstr ""
+
+#: app/setup/finish.py
+#, python-brace-format
+msgid "{value} (typical value)"
+msgstr ""
+
+#: app/setup/finish.py
+msgid "Choose a place first: the plan needs to know where the panels are."
+msgstr ""
+
+#: app/setup/finish.py
+msgid "the forecast service"
+msgstr ""
+
+#: app/setup/finish.py
+#, python-brace-format
+msgid "Asking {provider} for a forecast..."
+msgstr ""
+
+#: app/setup/finish.py
+#, python-brace-format
+msgid "Forecast received for {place}: {n} day."
+msgid_plural "Forecast received for {place}: {n} days."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/setup/finish.py
+#, python-brace-format
+msgid "{reason} You can still finish; the app tries again by itself."
+msgstr ""
+
+#: app/setup/recap.py
+msgctxt "compass direction"
+msgid "South"
+msgstr ""
+
+#: app/setup/recap.py
+msgctxt "compass direction"
+msgid "South-east"
+msgstr ""
+
+#: app/setup/recap.py
+msgctxt "compass direction"
+msgid "East"
+msgstr ""
+
+#: app/setup/recap.py
+msgctxt "compass direction"
+msgid "North-east"
+msgstr ""
+
+#: app/setup/recap.py
+msgctxt "compass direction"
+msgid "North"
+msgstr ""
+
+#: app/setup/recap.py
+msgctxt "compass direction"
+msgid "North-west"
+msgstr ""
+
+#: app/setup/recap.py
+msgctxt "compass direction"
+msgid "West"
+msgstr ""
+
+#: app/setup/recap.py
+msgctxt "compass direction"
+msgid "South-west"
+msgstr ""
+
+#: app/setup/recap.py
+#, python-brace-format
+msgid "{direction} ({degrees}°)"
+msgstr ""
+
+#: app/setup/recap.py
+#, python-brace-format
+msgid "{degrees}°"
+msgstr ""
+
+#: app/setup/recap.py
+#, python-brace-format
+msgid "{latitude}, {longitude}"
+msgstr ""
+
+#: app/setup/recap.py
+msgid "not chosen yet"
+msgstr ""
+
+#: app/setup/recap.py
+#, python-brace-format
+msgid "{weekday} {start}-{end}"
+msgstr ""
+
+#: app/setup/recap.py
+msgid "the car is treated as home all day"
+msgstr ""
+
+#: app/setup/recap.py
+msgid "Place"
+msgstr ""
+
+#: app/setup/recap.py
+msgid "Location"
+msgstr ""
+
+#: app/setup/recap.py
+msgid "Solar panels"
+msgstr ""
+
+#: app/setup/recap.py
+msgid "Size"
+msgstr ""
+
+#: app/setup/recap.py
+#, python-brace-format
+msgid "{kwp} kWp"
+msgstr ""
+
+#: app/setup/recap.py
+#, python-brace-format
+msgid "{percent}%"
+msgstr ""
+
+#: app/setup/recap.py
+msgid "Car"
+msgstr ""
+
+#: app/setup/recap.py
+#, python-brace-format
+msgid "{kwh} kWh"
+msgstr ""
+
+#: app/setup/recap.py
+msgid "Charge level"
+msgstr ""
+
+#: app/setup/recap.py
+#, python-brace-format
+msgid "keep above {minimum}%, charge up to {target}%"
+msgstr ""
+
+#: app/setup/recap.py
+msgid "Current"
+msgstr ""
+
+#: app/setup/recap.py
+#, python-brace-format
+msgid "{low} to {high} A"
+msgstr ""
+
+#: app/setup/recap.py
+msgid "House"
+msgstr ""
+
+#: app/setup/recap.py
+msgid "Own use"
+msgstr ""
+
+#: app/setup/recap.py
+#, python-brace-format
+msgid "{kw} kW"
+msgstr ""
+
+#: app/setup/recap.py
+msgid "Away times"
+msgstr ""
+
+#: app/setup/welcome.py
+msgid "Nothing leaves your computer except what the forecast service needs: your location and the angles of your panels. There is no account and no tracking."
+msgstr ""
+
+#: app/setup/welcome.py
+#, python-brace-format
+msgid "Nothing leaves your computer except what is needed for the forecast. {provider} is sent: {sends} There is no account and no tracking."
+msgstr ""
+
+#: app/setup/welcome.py
+#, python-brace-format
+msgid "The place you type in the next step is sent to {provider} to find it."
+msgstr ""
+
+#: app/setup/welcome.py
+msgid "Welcome"
+msgstr ""
+
+#: app/setup/welcome.py
+msgid "This app tells you when to charge your electric car, so that as much of the power as possible comes from your own solar panels. It needs a few facts about your home and your car, and takes a few minutes."
+msgstr ""
+
+#: app/setup/welcome.py
+msgid "For distances and consumption. You can change it later in Settings."
+msgstr ""
+
+#: app/setup/wizard.py
+msgid "Set-up"
+msgstr ""
+
+#: app/setup/wizard.py
+msgid "Leave set-up? Nothing has been saved yet."
+msgstr ""
+
+#: app/setup/wizard.py
+msgid "Car charge planner: Set-up"
+msgstr ""
+
+#: app/setup/wizard.py
+msgid "Back"
+msgstr ""
+
+#: app/setup/wizard.py
+msgid "Next"
+msgstr ""
+
+#: app/setup/wizard.py
+#, python-brace-format
+msgid "The forecast provider {id!r} is not known to this version of the app."
+msgstr ""
+
+#: app/setup/wizard.py
+#, python-brace-format
+msgid "Step {n} of {total}"
 msgstr ""
 
 #: app/shells/tray.py app/shells/window.py
@@ -1145,6 +1337,50 @@ msgstr ""
 #, python-brace-format
 msgid "Next: {day} {span}"
 msgstr ""
+
+#: forecast/check.py
+#, python-brace-format
+msgid "{provider} says there were too many requests. Try again in {n} minute."
+msgid_plural "{provider} says there were too many requests. Try again in {n} minutes."
+msgstr[0] ""
+msgstr[1] ""
+
+#: forecast/check.py
+#, python-brace-format
+msgid "{provider} says there were too many requests. Try again later."
+msgstr ""
+
+#: forecast/check.py
+#, python-brace-format
+msgid "Could not get a forecast from {provider}: {reason}"
+msgstr ""
+
+#: forecast/check.py
+#, python-brace-format
+msgid "{provider} is not set up completely: {reason}"
+msgstr ""
+
+#: forecast/check.py
+#, python-brace-format
+msgid "{provider} gave an answer the app does not understand: {reason}"
+msgstr ""
+
+#: forecast/check.py
+#, python-brace-format
+msgid "{provider}: {reason}"
+msgstr ""
+
+#: forecast/check.py
+#, python-brace-format
+msgid "{provider}: unexpected error ({kind})"
+msgstr ""
+
+#: forecast/check.py
+#, python-brace-format
+msgid "OK: {n} day of forecast"
+msgid_plural "OK: {n} days of forecast"
+msgstr[0] ""
+msgstr[1] ""
 
 #: forecast/providers/forecast_solar.py
 msgid "A solar forecast service (Forecast.Solar) that estimates the output of your system itself, with its own allowance for losses, so the system losses setting is not used. The free public plan gives today and tomorrow, hour by hour, and allows 12 requests an hour for everyone behind your internet address."

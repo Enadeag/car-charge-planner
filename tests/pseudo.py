@@ -76,8 +76,19 @@ def plain(text: str) -> str:
     return html.unescape(_TAGS.sub("", text)).strip()
 
 
+def is_zone(text: str) -> bool:
+    """A time zone's name ("Europe/Amsterdam") is data, like a place name."""
+    from zoneinfo import ZoneInfo
+
+    try:
+        ZoneInfo(text)
+        return "/" in text or text == "UTC"
+    except Exception:
+        return False
+
+
 def needs_translation(text: str) -> bool:
-    return bool(text) and not _NOT_TEXT.match(text) and MARK not in text
+    return bool(text) and not _NOT_TEXT.match(text) and MARK not in text and not is_zone(text)
 
 
 def shown(root: QWidget) -> list[QWidget]:

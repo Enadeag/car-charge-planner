@@ -26,6 +26,7 @@ from .i18n import _
 from .notifications import candidate_windows, due, message
 from .notifier import Notifier
 from .settings.window import SettingsWindow
+from .setup.wizard import SetupWizard
 from .view_model import ForecastSource, ViewModel, build, needs_setup, no_forecast
 
 TICK_MS = 60_000  # recompute every minute; the forecast itself refreshes at most hourly
@@ -60,6 +61,7 @@ class Controller(QObject):
         self.vm: ViewModel | None = None
         self._loading = False
         self.settings_window: SettingsWindow | None = None
+        self.setup_wizard: SetupWizard | None = None
 
         self.forecast_loaded.connect(self._on_forecast)
         self.timer = QTimer(self)
@@ -112,6 +114,14 @@ class Controller(QObject):
         if tab:
             self.settings_window.show_tab(tab)
         self.settings_window.show_centred()
+
+    def open_setup(self) -> None:
+        """One set-up wizard at a time: opening it again brings the open one forward. It starts from the current config."""
+        if self.setup_wizard is None or not self.setup_wizard.isVisible():
+            self.setup_wizard = SetupWizard(self.cfg, self.config_file, self.apply_config)
+        self.setup_wizard.show()
+        self.setup_wizard.raise_()
+        self.setup_wizard.activateWindow()
 
     def apply_config(self, cfg: Config) -> None:
         """Switch to a new config without a restart (settings spec 3.3)."""

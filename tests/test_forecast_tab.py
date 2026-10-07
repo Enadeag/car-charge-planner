@@ -390,7 +390,7 @@ def test_results_use_the_accent_colours_of_the_theme(tmp_path, qapp):
 def test_the_days_counted_are_today_onwards_even_when_the_first_step_belongs_to_yesterday():
     """Found in the live check: Open-Meteo's first step is the hour before midnight, so four days of data
     touch five dates, and the Test button said "5 days"."""
-    from app.settings.forecast_tab import forecast_days
+    from forecast.check import forecast_days
     from planner.model import ForecastStep
 
     tz = ZoneInfo("Europe/Amsterdam")

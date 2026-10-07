@@ -10,27 +10,17 @@ from __future__ import annotations
 
 import threading
 from dataclasses import replace
-from datetime import datetime
 from typing import Callable
-from zoneinfo import ZoneInfo
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QComboBox, QFrame, QHBoxLayout, QLabel, QPushButton, QScrollArea, QVBoxLayout, QWidget
 
 from app import colours
 from app.i18n import _, ngettext
-from forecast.provider import (
-    BadResponse,
-    ForecastProvider,
-    NotConfigured,
-    ProviderError,
-    RateLimited,
-    SystemDescription,
-    Unavailable,
-)
+from forecast.check import missing_settings, try_provider
+from forecast.provider import ForecastProvider
 from forecast.registry import ProviderRegistry, registry as builtin
 from forecast.secret_store import Secrets
-from forecast.selection import provider_settings
 from planner.model import Config
 
 from .fields import TabSpec
@@ -44,34 +34,6 @@ class _Outcome(QObject):
     """Carries a test's result from its worker thread to the window."""
 
     done = Signal(str, bool, str)  # role, worked, message
-
-
-def forecast_days(steps, now: datetime, tz: ZoneInfo) -> int:
-    """How many days, today onwards, the steps cover. A step is placed by its middle: Open-Meteo's first step is the
-    hour before midnight, which belongs to yesterday and must not count."""
-    today = now.astimezone(tz).date()
-    middles = (s.start + (s.end - s.start) / 2 for s in steps)
-    return len({m.astimezone(tz).date() for m in middles if m.astimezone(tz).date() >= today})
-
-
-def describe_failure(provider: ForecastProvider, err: Exception) -> str:
-    """What went wrong, in plain words, for the Test button."""
-    if isinstance(err, RateLimited):
-        if err.retry_after is not None:
-            minutes = max(1, round(err.retry_after.total_seconds() / 60))
-            return ngettext(
-                "{provider} says there were too many requests. Try again in {n} minute.",
-                "{provider} says there were too many requests. Try again in {n} minutes.",
-                minutes,
-            ).format(provider=provider.name, n=minutes)
-        return _("{provider} says there were too many requests. Try again later.").format(provider=provider.name)
-    if isinstance(err, Unavailable):
-        return _("Could not get a forecast from {provider}: {reason}").format(provider=provider.name, reason=err)
-    if isinstance(err, NotConfigured):
-        return _("{provider} is not set up completely: {reason}").format(provider=provider.name, reason=err)
-    if isinstance(err, BadResponse):
-        return _("{provider} gave an answer the app does not understand: {reason}").format(provider=provider.name, reason=err)
-    return _("{provider}: {reason}").format(provider=provider.name, reason=err)
 
 
 class ProviderCard(QWidget):
@@ -297,26 +259,17 @@ class ForecastTab(QWidget):
             self._show_result(role, False, _("Enter your location first, on the Solar and location tab."))
             return
         secrets = self.collect_secrets()
-        settings = provider_settings(cfg, secrets, provider)
-        missing = [_(s.label) for s in provider.settings if not s.optional and not settings.get(s.key)]
+        missing = missing_settings(provider, cfg, secrets)
         if missing:
             self._show_result(role, False, _("{setting} is required.").format(setting=", ".join(missing)))
             return
         self.test_buttons[role].setEnabled(False)
         self.results[role].setStyleSheet(f"{colours.MUTED_STYLE}")
         self.results[role].setText(_("Asking {provider}...").format(provider=provider.name))
-        system, tz = SystemDescription.from_config(cfg), ZoneInfo(cfg.timezone)
 
         def work() -> None:
-            try:
-                steps = provider.fetch(system, settings, datetime.now(tz))
-                days = forecast_days(steps, datetime.now(tz), tz)
-                message = ngettext("OK: {n} day of forecast", "OK: {n} days of forecast", days).format(n=days)
-                self._outcome.done.emit(role, True, message)
-            except ProviderError as err:
-                self._outcome.done.emit(role, False, describe_failure(provider, err))
-            except Exception as err:  # a provider bug: say what kind, not what it said (it may hold a key)
-                self._outcome.done.emit(role, False, _("{provider}: unexpected error ({kind})").format(provider=provider.name, kind=type(err).__name__))
+            attempt = try_provider(provider, cfg, secrets)
+            self._outcome.done.emit(role, attempt.worked, attempt.message)
 
         thread = threading.Thread(target=work, daemon=True)
         self._threads.append(thread)

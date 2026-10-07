@@ -139,3 +139,42 @@ def test_numbers_times_and_units_need_no_translation():
     for text in ("62%", "09:00-15:00", "1.6 kW (7 A)", "7.9 kWh", "5 min", "99% · 5.8 kWh"):
         assert not pseudo.needs_translation(text), text
     assert pseudo.needs_translation("Charge now")
+
+
+def test_the_setup_wizard_pages_are_fully_translated_and_nothing_is_clipped(cfg, qapp, pseudo_language, tmp_path):
+    from dataclasses import replace
+
+    from app.setup.wizard import SetupWizard
+    from forecast.check import Attempt
+    from planner.model import TYPICAL_KEYS, Setup
+
+    typical = replace(cfg, setup=Setup(TYPICAL_KEYS))
+    wizard = SetupWizard(typical, tmp_path / "config.toml", lambda c: None, check=lambda c: Attempt(True, 2, "OK"), environ={"LANG": "nl_NL"}, qt_locale_name="")
+    problems = []
+    wizard.confirm_leave = lambda: True  # closing after moving on would ask: not in a test
+    wizard.show()
+    for page_id in wizard.sequence:
+        if wizard.current != page_id:
+            wizard.navigate(page_id)
+        for thread in list(getattr(wizard.pages[page_id], "_threads", [])):
+            thread.join(5)
+        settle(wizard)
+        QApplication.processEvents()
+        problems += [f"{page_id}: {p}" for p in pseudo.untranslated(wizard) + pseudo.clipped(wizard)]
+    wizard.close()
+    assert problems == []
+
+
+def test_the_setup_wizard_failure_texts_are_translated_too(cfg, qapp, pseudo_language, tmp_path):
+    from app.setup.wizard import SetupWizard
+    from forecast.check import Attempt
+
+    wizard = SetupWizard(cfg, tmp_path / "config.toml", lambda c: None, check=lambda c: Attempt(False, message=i18n._("Could not get a forecast from {provider}: {reason}").format(provider="Open-Meteo", reason="x")), environ={"LANG": "nl_NL"}, qt_locale_name="")
+    wizard.confirm_leave = lambda: True
+    wizard.show()
+    wizard.next()
+    for thread in list(wizard.pages["finish"]._threads):
+        thread.join(5)
+    settle(wizard)
+    assert pseudo.untranslated(wizard) == [] and pseudo.clipped(wizard) == []
+    wizard.close()
