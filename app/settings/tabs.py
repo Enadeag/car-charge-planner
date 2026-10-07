@@ -22,13 +22,16 @@ from PySide6.QtWidgets import (
 )
 
 from app import colours
-from app.i18n import _
+from app.i18n import _, available_languages, language_name
 from app.names import weekdays_long
 from dataclasses import replace
 
 from planner.model import AwayRule, Config
 
 from .fields import FieldSpec, TabSpec, get_value, set_value
+
+LANGUAGE_KEY = "interface.language"
+
 
 def shown_value(spec: FieldSpec, stored):
     """The stored value as the input box shows it."""
@@ -46,14 +49,17 @@ class FieldTab(QWidget):
         super().__init__()
         self.key = tab.key
         self.title = _(tab.title)
-        self.specs = tab.fields
+        languages = available_languages()
+        # the language choice exists only when there is a language to choose besides English
+        self.specs = tuple(s for s in tab.fields if s.key != LANGUAGE_KEY or languages)
+        self.languages = languages
         self.inputs: dict[str, QWidget] = {}
         self.baseline: dict[str, object] = {}  # exact values the boxes were last filled from
         grid = QGridLayout(self)
         grid.setColumnStretch(1, 1)
         grid.setVerticalSpacing(2)
         row = 0
-        for spec in tab.fields:
+        for spec in self.specs:
             widget = self._make_input(spec)
             self.inputs[spec.key] = widget
             grid.addWidget(QLabel(_(spec.label)), row, 0)
@@ -69,11 +75,17 @@ class FieldTab(QWidget):
         grid.setRowStretch(row, 1)
         self.load(cfg)
 
+    def _choices(self, spec: FieldSpec) -> list[tuple[str, str]]:
+        if spec.key == LANGUAGE_KEY:
+            installed = sorted({"en", *self.languages})
+            return [("auto", _("Automatic: follow the system")), *((code, language_name(code)) for code in installed)]
+        return [(value, _(label)) for value, label in spec.choices]
+
     def _make_input(self, spec: FieldSpec) -> QWidget:
         if spec.kind == "choice":
             box = QComboBox()
-            for value, label in spec.choices:
-                box.addItem(_(label), value)
+            for value, label in self._choices(spec):
+                box.addItem(label, value)
             box.currentIndexChanged.connect(lambda _i: self.changed.emit())
             return box
         if spec.kind == "timezone":

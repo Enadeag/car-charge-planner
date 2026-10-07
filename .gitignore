@@ -19,3 +19,6 @@ dist/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# compiled translations: built from the .po files (python -m app.i18n_tools compile)
+*.mo

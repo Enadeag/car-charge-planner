@@ -161,6 +161,22 @@ def init(
     return language
 
 
+def available_languages(localedir: Path | str | None = None) -> list[str]:
+    """The languages with a compiled catalogue, sorted. English is the source text and needs none."""
+    root = Path(localedir or LOCALE_DIR)
+    if not root.is_dir():
+        return []
+    return sorted(d.name for d in root.iterdir() if (d / "LC_MESSAGES" / f"{DOMAIN}.mo").is_file())
+
+
+def language_name(code: str) -> str:
+    """A language's own name for itself ("Nederlands"), so a user can find theirs whatever language is on screen."""
+    from PySide6.QtCore import QLocale
+
+    name = "English" if code == "en" else QLocale(code).nativeLanguageName()  # Qt says "American English" for "en"
+    return (name[:1].upper() + name[1:]) if name else code
+
+
 def current_language() -> str:
     return _Active.language
 

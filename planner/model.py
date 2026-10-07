@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import tomllib
 from functools import lru_cache
 from dataclasses import dataclass, field, fields, replace
@@ -103,6 +104,10 @@ class Interface:
     """How the app shows itself: a tray icon with a popup, an ordinary window, or whichever the desktop supports."""
 
     mode: str = "auto"
+    language: str = "auto"  # "auto" follows the system; otherwise a language code such as "nl" or "pt_BR"
+
+
+LANGUAGE_CODE = re.compile(r"^[A-Za-z]{2,3}([_-][A-Za-z0-9]{2,8})*$")
 
 
 def find_timezone(environ: dict[str, str], etc_timezone: str, localtime_target: str) -> str:
@@ -211,6 +216,12 @@ def validate(cfg: Config) -> Config:
     need(cfg.planning.import_tolerance_kwh >= 0, _("[planning] import_tolerance_kwh cannot be negative"))
     need(cfg.planning.min_window_minutes > 0, _("[planning] min_window_minutes must be above 0"))
     need(cfg.notify.lead_minutes >= 0, _("[notify] lead_minutes cannot be negative"))
+    need(
+        cfg.interface.language == "auto" or bool(LANGUAGE_CODE.match(cfg.interface.language)),
+        _("[interface] language must be \"auto\" or a language code such as \"nl\", not {language!r}").format(
+            language=cfg.interface.language
+        ),
+    )
     need(
         cfg.interface.mode in INTERFACE_MODES,
         _("[interface] mode must be one of {modes}, not {mode!r}").format(

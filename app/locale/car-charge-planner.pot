@@ -644,6 +644,18 @@ msgstr ""
 msgid "A window"
 msgstr ""
 
+#: app/settings/fields.py
+msgid "Language"
+msgstr ""
+
+#: app/settings/fields.py
+msgid "The language of the app. Applies the next time the app starts."
+msgstr ""
+
+#: app/settings/tabs.py
+msgid "Automatic: follow the system"
+msgstr ""
+
 #: app/settings/tabs.py
 msgid "from"
 msgstr ""

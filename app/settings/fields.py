@@ -163,6 +163,13 @@ INTERFACE = TabSpec(
                 ("window", N_("A window")),
             ),
         ),
+        FieldSpec(
+            "interface.language",
+            N_("Language"),
+            N_("The language of the app. Applies the next time the app starts."),
+            kind="choice",
+            choices=(),  # filled from the installed catalogues; the field is left out when there are none
+        ),
     ),
 )
 

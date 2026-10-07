@@ -219,7 +219,7 @@ All texts the app shows are translatable (gettext). English is the source langua
 .venv/bin/python -m app.i18n_tools compile     # .po -> .mo, which is what the app loads
 ```
 
-The language follows your system (`LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`, then the desktop's setting); with no matching catalogue the app stays in English. Try one with `LANGUAGE=nl .venv/bin/python -m app`.
+The language follows your system (`LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`, then the desktop's setting); with no matching catalogue the app stays in English. Compiled catalogues (`.mo`) are not in the repository: run `compile` once before trying a language from a clone. Try one with `LANGUAGE=nl .venv/bin/python -m app`. Once a translation is installed, Settings > Interface offers a Language choice (applied at the next start). To add a language, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Project layout
 

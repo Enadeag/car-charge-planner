@@ -93,6 +93,8 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(err, file=sys.stderr)
         return 2
+    if cfg.interface.language != "auto":
+        i18n.setup(app, [cfg.interface.language])  # the owner's choice replaces the system language
     background = "--background" in sys.argv[1:]  # the autostart entry starts the app hidden
     controller = Controller(cfg, config_file)
     wants_tray = cfg.interface.mode != "window"
