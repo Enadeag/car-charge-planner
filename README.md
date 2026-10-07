@@ -249,6 +249,55 @@ The language follows your system (`LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`, t
 
 The full design is in `.scratch/car-charge-planner/spec.md`.
 
+## Data and privacy
+
+The app runs on your computer and has no account, no telemetry and no update check. This is everything that
+leaves it, and everything it keeps.
+
+### What is sent, and to whom
+
+Only the **forecast provider** you chose (and the fallback, if you set one) is contacted, and only to ask for a
+forecast. Whatever you ask it, it also sees your internet address, as any website does. What each one is sent,
+in its own words (these texts come from the providers' descriptions in the app, and a test keeps this section in
+step with them), and the terms that go with using it (read on 2026-10-07; the providers can change them):
+
+| Provider | What is sent | Free plan | Credit shown in the app | Terms |
+| --- | --- | --- | --- | --- |
+| Open-Meteo | Your location (latitude and longitude) and the tilt and direction of your panels. With an API key, the key too. | Non-commercial use only, under 10,000 requests a day. | Weather data: Open-Meteo.com (CC BY 4.0) | [open-meteo.com/en/terms](https://open-meteo.com/en/terms) |
+| Forecast.Solar | Your location (latitude and longitude), the tilt and direction of your panels and their size in kWp. With an API key, the key too. | The public plan needs no key: today and tomorrow, one plane, 12 requests an hour for everything behind the same internet address. | Solar forecast: Forecast.Solar | [doc.forecast.solar/account_models](https://doc.forecast.solar/account_models) |
+
+- **Commercial use.** The free plans are for personal use. If you use the app for a business, take the provider's
+  own commercial plan or run your own server (Open-Meteo can be self-hosted or taken as a paid plan, with its own
+  server address and key: both go in Settings, on the Forecast tab). Forecast.Solar's pages do not say whether the
+  public plan may be used commercially; ask them.
+- **Credit.** The credit above is shown in the app next to the age of the forecast, because both providers ask for
+  it (Open-Meteo's data is CC BY 4.0). It is shown for whichever provider made the forecast on screen.
+- **Nothing else.** The battery level, your away times, your panels' size (except to Forecast.Solar, which needs
+  it), the house and car settings and the plan itself never leave the computer. The place you type is only ever
+  sent as coordinates.
+- **Local only.** The notifications go over the desktop's own message bus on your computer. The second-start check
+  (clicking the launcher again shows the running window) uses a local socket in a private folder. Nothing listens
+  on the network.
+
+### What is kept, and where
+
+See [Where things are stored](#where-things-are-stored). In short: your settings and, if you use a paid plan, your
+API keys (in `secrets.toml`, readable only by you, and never in the settings file); your battery level and away
+times; a cache of the last forecast of each provider. Delete any of them to start over. Uninstalling the launcher
+or autostart entry removes only those entries.
+
+### Third-party software
+
+| Package | Used for | Licence |
+| --- | --- | --- |
+| [PySide6](https://doc.qt.io/qtforpython-6/) (Qt for Python; also Shiboken) | The windows, the tray icon and the popup | LGPL-3.0-only, or GPL-2.0-only / GPL-3.0-only |
+| [jeepney](https://gitlab.com/takluyver/jeepney) | Notifications over D-Bus | MIT |
+| [Babel](https://babel.pocoo.org) (development only) | Collecting and compiling the translations | BSD-3-Clause |
+| [pytest](https://pytest.org) (development only) | The tests | MIT |
+
+The weather and solar data come from the providers above under their own terms. The recorded answers the tests
+use are credited in `tests/fixtures/NOTICE.md`.
+
 ## Attribution
 
-Weather data by [Open-Meteo.com](https://open-meteo.com), licensed CC BY 4.0, used here for non-commercial personal use.
+Weather data by [Open-Meteo.com](https://open-meteo.com), licensed CC BY 4.0, used here for non-commercial personal use. Solar forecasts by [Forecast.Solar](https://forecast.solar).
