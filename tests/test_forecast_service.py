@@ -384,3 +384,19 @@ def test_a_two_day_forecast_plans_without_trouble(rig, cfg):
     result = rig.get()
     days = plan(result.steps, rig.cfg, 45, T0)
     assert len(days) == 2 and all(d.windows for d in days)
+
+
+def test_a_saved_setting_makes_the_service_try_again_at_once(rig):
+    rig.main.script = [Unavailable("down"), steps_for(DAY, 800)]
+    assert rig.get().from_fallback
+    assert rig.get(later(minutes=1)).from_fallback and rig.main.call_count == 1  # waiting out the short delay
+    rig.service.forget_failures()
+    assert not rig.get(later(minutes=2)).from_fallback and rig.main.call_count == 2
+
+
+def test_forgetting_failures_does_not_forget_a_rate_limit(rig):
+    rig.main.script = [RateLimited("busy", timedelta(hours=1)), steps_for(DAY)]
+    rig.get()
+    rig.service.forget_failures()
+    rig.get(later(minutes=5))
+    assert rig.main.call_count == 1  # the provider's own word stands

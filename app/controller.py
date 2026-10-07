@@ -115,6 +115,7 @@ class Controller(QObject):
 
     def apply_config(self, cfg: Config) -> None:
         """Switch to a new config without a restart (settings spec 3.3)."""
+        self.forecasts.forget_failures()  # a corrected key or address deserves a try at once, not after the wait
         if forecast_key(cfg) != forecast_key(self.cfg):
             self.result, self.error = None, None  # a forecast for other panels or place would mislead
         if cfg.interface.mode != self.cfg.interface.mode or cfg.interface.language != self.cfg.interface.language:

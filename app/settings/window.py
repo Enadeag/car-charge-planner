@@ -21,10 +21,14 @@ from PySide6.QtWidgets import (
 
 from app import colours
 from app.i18n import _
+from forecast.registry import ProviderRegistry, registry as builtin
+from forecast.secret_store import Secrets, SecretsError, load_secrets, save_secrets
+from forecast.selection import check_selection
 from planner.config_io import write_config
 from planner.model import Config, ConfigError, require_location, validate
 
 from .fields import TABS
+from .forecast_tab import ForecastTab
 from .tabs import AwayRulesTab, FieldTab
 
 
@@ -42,7 +46,13 @@ def ask_discard(parent) -> bool:
 class SettingsWindow(QDialog):
     """Not modal: the tray and popup keep working while it is open."""
 
-    def __init__(self, cfg: Config, config_file: Path, on_save: Callable[[Config], None]) -> None:
+    def __init__(
+        self,
+        cfg: Config,
+        config_file: Path,
+        on_save: Callable[[Config], None],
+        registry: ProviderRegistry | None = None,
+    ) -> None:
         super().__init__(None)
         self.setWindowTitle(_("Car charge planner: Settings"))
         self.setModal(False)
@@ -54,9 +64,18 @@ class SettingsWindow(QDialog):
         self.closes_after_save = False
 
         self.tabs = QTabWidget()
+        self.registry = registry or builtin
+        self.secrets_file = config_file.with_name("secrets.toml")  # beside the config file
+        try:
+            self.stored_secrets: Secrets = load_secrets(self.secrets_file)
+            secrets_problem = ""
+        except SecretsError as err:
+            self.stored_secrets, secrets_problem = {}, str(err)
         self.field_tabs: list[FieldTab] = [FieldTab(spec, cfg) for spec in TABS]
+        self.forecast_tab = ForecastTab(cfg, self.stored_secrets, self.registry, lambda: self.current_config(), secrets_problem)
         self.away_tab = AwayRulesTab(cfg)
-        self.all_tabs = [*self.field_tabs, self.away_tab]  # every tab has load(cfg) and apply_to(cfg)
+        planning = next(i for i, t in enumerate(self.field_tabs) if t.key == "planning")
+        self.all_tabs = [*self.field_tabs[: planning + 1], self.forecast_tab, *self.field_tabs[planning + 1 :], self.away_tab]
         for tab in self.all_tabs:
             self.tabs.addTab(tab, tab.title)
 
@@ -118,13 +137,17 @@ class SettingsWindow(QDialog):
             cfg = tab.apply_to(cfg)
         return cfg
 
+    def current_secrets(self) -> Secrets:
+        return self.forecast_tab.collect_secrets()
+
     def is_dirty(self) -> bool:
-        return self.current_config() != self.stored
+        return self.current_config() != self.stored or self.current_secrets() != self.stored_secrets
 
     # -- actions -----------------------------------------------------------
 
     def reset_tab(self) -> None:
-        self.all_tabs[self.tabs.currentIndex()].load(Config())
+        tab = self.all_tabs[self.tabs.currentIndex()]
+        tab.reset() if hasattr(tab, "reset") else tab.load(Config())
         self.refresh_close_button()
 
     def refresh_close_button(self) -> None:
@@ -164,12 +187,23 @@ class SettingsWindow(QDialog):
         except TypeError as err:
             self.show_errors([_("A value has the wrong type: {error}").format(error=err)])
             return False
+        secrets = self.current_secrets()
+        problems = check_selection(cfg, secrets, self.registry)
+        if problems:
+            self.show_errors(problems)
+            return False
         try:
+            if secrets != self.stored_secrets:  # keys first: if they cannot be written, nothing else is
+                save_secrets(secrets, self.secrets_file)
             write_config(cfg, self.config_file)
+        except SecretsError as err:
+            self.show_errors([str(err)])
+            return False
         except OSError as err:
             self.show_errors([_("Could not write {file}: {error}").format(file=self.config_file, error=err)])
             return False
-        self.stored = cfg
+        self.stored, self.stored_secrets = cfg, secrets
+        self.forecast_tab.remember_secrets(secrets)
         self.errors.setVisible(False)
         for tab in self.all_tabs:
             tab.load(cfg)  # the window stays usable: what is saved is now the baseline for "changed"

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from app.i18n import N_
 from forecast.provider import ForecastProvider
 
 from .fields import FieldSpec
@@ -16,6 +17,7 @@ def provider_fields(provider: ForecastProvider) -> tuple[FieldSpec, ...]:
             spec.label,
             spec.hint,
             kind="secret" if spec.secret else "text",
+            flag="" if spec.optional else N_("Required"),
         )
         for spec in provider.settings
     )

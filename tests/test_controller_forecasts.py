@@ -107,3 +107,13 @@ def test_a_planning_change_keeps_the_forecast_and_asks_nobody(qapp, tmp_path, mo
     controller.apply_config(replace(controller.cfg, planning=replace(controller.cfg.planning, margin=0.5)))
     settle(controller, qapp)
     assert controller.result.steps == kept.steps and controller.result.from_cache and main.call_count == 1  # the cache answered
+
+
+def test_saving_settings_lets_a_provider_that_failed_be_asked_again(qapp, tmp_path, monkeypatch, cfg):
+    controller, main, backup = make(cfg, tmp_path, monkeypatch, [Unavailable("down"), steps_today()], [steps_today(peak=500)])
+    controller.refresh()
+    settle(controller, qapp)
+    assert controller.result.from_fallback and main.call_count == 1
+    controller.apply_config(replace(controller.cfg, planning=replace(controller.cfg.planning, margin=0.9)))
+    settle(controller, qapp)
+    assert controller.result.provider_id == "main" and main.call_count == 2  # not after the five minutes

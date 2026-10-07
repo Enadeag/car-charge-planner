@@ -652,6 +652,128 @@ msgstr ""
 msgid "The language of the app. Applies the next time the app starts."
 msgstr ""
 
+#: app/settings/forecast_tab.py
+#, python-brace-format
+msgid "{provider} says there were too many requests. Try again in {n} minute."
+msgid_plural "{provider} says there were too many requests. Try again in {n} minutes."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/settings/forecast_tab.py
+#, python-brace-format
+msgid "{provider} says there were too many requests. Try again later."
+msgstr ""
+
+#: app/settings/forecast_tab.py
+#, python-brace-format
+msgid "Could not get a forecast from {provider}: {reason}"
+msgstr ""
+
+#: app/settings/forecast_tab.py
+#, python-brace-format
+msgid "{provider} is not set up completely: {reason}"
+msgstr ""
+
+#: app/settings/forecast_tab.py
+#, python-brace-format
+msgid "{provider} gave an answer the app does not understand: {reason}"
+msgstr ""
+
+#: app/settings/forecast_tab.py
+#, python-brace-format
+msgid "{provider}: {reason}"
+msgstr ""
+
+#: app/settings/forecast_tab.py
+#, python-brace-format
+msgid "What is sent: {sends}"
+msgstr ""
+
+#: app/settings/forecast_tab.py
+#, python-brace-format
+msgid "Asks at most once every {n} minute."
+msgid_plural "Asks at most once every {n} minutes."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/settings/forecast_tab.py
+#, python-brace-format
+msgid "Looks {n} day ahead."
+msgid_plural "Looks {n} days ahead."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/settings/forecast_tab.py
+msgid "Terms and limits"
+msgstr ""
+
+#: app/settings/forecast_tab.py
+msgid "Forecast"
+msgstr ""
+
+#: app/settings/forecast_tab.py
+msgid "Forecast provider"
+msgstr ""
+
+#: app/settings/forecast_tab.py
+msgid "Fallback provider"
+msgstr ""
+
+#: app/settings/forecast_tab.py
+msgid "Asked only when the first provider has no forecast that is still usable."
+msgstr ""
+
+#: app/settings/forecast_tab.py
+msgid "Test"
+msgstr ""
+
+#: app/settings/forecast_tab.py
+msgid "Ask this provider for a forecast now, with what is entered here. Nothing is saved."
+msgstr ""
+
+#: app/settings/forecast_tab.py
+msgid "None"
+msgstr ""
+
+#: app/settings/forecast_tab.py
+#, python-brace-format
+msgid "{id} (not available)"
+msgstr ""
+
+#: app/settings/forecast_tab.py
+msgid "Choose a different provider than the first one."
+msgstr ""
+
+#: app/settings/forecast_tab.py
+msgid "Enter your location first, on the Solar and location tab."
+msgstr ""
+
+#: app/settings/forecast_tab.py
+#, python-brace-format
+msgid "{setting} is required."
+msgstr ""
+
+#: app/settings/forecast_tab.py
+#, python-brace-format
+msgid "Asking {provider}..."
+msgstr ""
+
+#: app/settings/forecast_tab.py
+#, python-brace-format
+msgid "OK: {n} day of forecast"
+msgid_plural "OK: {n} days of forecast"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/settings/forecast_tab.py
+#, python-brace-format
+msgid "{provider}: unexpected error ({kind})"
+msgstr ""
+
+#: app/settings/providers.py
+msgid "Required"
+msgstr ""
+
 #: app/settings/tabs.py
 msgid "Show"
 msgstr ""

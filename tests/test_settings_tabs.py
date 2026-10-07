@@ -52,12 +52,13 @@ def texts(tab):
 # ---- the five tabs ---------------------------------------------------------
 
 
-def test_the_window_has_the_six_tabs_in_order(h):
+def test_the_window_has_the_seven_tabs_in_order(h):
     assert [h.window.tabs.tabText(i) for i in range(h.window.tabs.count())] == [
         "Solar and location",
         "House and car",
         "Charger",
         "Planning and notifications",
+        "Forecast",
         "Interface",
         "Away rules",
     ]

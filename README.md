@@ -169,7 +169,7 @@ Its current version lists GNOME Shell 45 to 51. A new GNOME release can outrun a
 
 ## Configuration
 
-Open **Settings...** from the tray icon's right-click menu. Settings are grouped over six tabs:
+Open **Settings...** from the tray icon's right-click menu. Settings are grouped over seven tabs:
 
 | Tab | What it holds |
 | --- | --- |
@@ -177,10 +177,11 @@ Open **Settings...** from the tray icon's right-click menu. Settings are grouped
 | House and car | House baseload, usable battery, consumption, driving per day, minimum and target charge level |
 | Charger | Minimum and maximum current, voltage, charging efficiency |
 | Planning and notifications | Planning margin, import tolerance, minimum window length, notification lead time |
+| Forecast | Which forecast provider to use, an optional fallback provider, and each one's settings (a server address or an API key, if it takes any). Each provider is described with what it sends, its limits and its terms, and a **Test** button asks it for a forecast right now without saving anything. API keys are kept apart from the config file, in `secrets.toml`. |
 | Interface | Whether the app shows itself as a tray icon with a popup, as a window, or automatically (a tray if the desktop has one, otherwise a window). Applies the next time the app starts. |
 | Away rules | Weekly times the car is not at home, one row per rule |
 
-- **Save** checks all values together. If something is wrong it lists every problem and writes nothing. Otherwise it writes the file and applies the change straight away (no restart). Changing tilt, direction, location or time zone fetches a fresh forecast.
+- **Save** checks all values together. If something is wrong it lists every problem and writes nothing. Otherwise it writes the file and applies the change straight away (no restart). Changing panel size, tilt, direction, location, time zone or the forecast providers fetches a fresh forecast.
 - The Save button is a split button. Its main part saves and **keeps the window open**. The arrow beside it opens a menu with **Save** and **Save and close**; picking one changes what the button does (the label follows) but does not save yet. The window opens in Save mode every time.
 - The button next to Save reads **Close** while nothing is unsaved and **Cancel** while there are edits. Cancel, the window's close button and Escape ask "Discard your changes?" only if something changed since the last save.
 - **Reset tab** puts the current tab back to the built-in defaults. Nothing is saved until you press Save.

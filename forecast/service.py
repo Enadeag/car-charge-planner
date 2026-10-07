@@ -109,6 +109,12 @@ class ForecastService:
         self._lock = threading.Lock()  # one fetch at a time: two at once would both spend the provider's allowance
         self._retry_at: dict[str, datetime] = {}  # provider id -> not before (after a failed or unanswered attempt)
 
+    def forget_failures(self) -> None:
+        """Settings changed: what failed before may work now, so do not wait out the retry delays. (A rate limit
+        stays: that is the provider's word, not ours.)"""
+        with self._lock:
+            self._retry_at.clear()
+
     # -- asking ----------------------------------------------------------------------------------------------
 
     def get(self, cfg: Config, now: datetime, force: bool = False) -> ForecastResult:
