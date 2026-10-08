@@ -21,7 +21,7 @@ Solar production minus the house's own use at a given moment; what is left over 
 _Avoid_: Excess, spare solar
 
 **Away period**:
-A span of time when the car is not at home and so cannot be charged. Recurring (for example Thursdays 06:00–19:00) or entered by hand for a specific day.
+A span of time when the car is not at home and so cannot be charged. Recurring (for example weekdays 06:00–19:00) or entered by hand for a specific day.
 _Avoid_: Absence, trip
 
 **Minimum charge level**:
@@ -47,7 +47,7 @@ A setting the user did not give ("I don't know") and the app filled in with a co
 _Avoid_: Default, assumed value, guess
 
 **Place search**:
-Finding a place's coordinates and time zone from a name or postcode the owner types. A forecast provider may offer one; the typed text goes to the primary provider, and without one the owner types coordinates.
+Finding a place's coordinates and time zone from a name or postcode the user types. A forecast provider may offer one; the typed text goes to the primary provider, and without one the user types coordinates.
 _Avoid_: Geocoding, location lookup, address search
 
 **Charger phases**:

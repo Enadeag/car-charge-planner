@@ -264,7 +264,7 @@ The code is one package, `src/car_charge_planner/`:
 | `storage/` | Reading and writing `state.json`. |
 | `settings/` | The Settings window: field definitions, tabs, window. |
 | `setup/` | The set-up wizard: one module per page (welcome, location, solar, car, hub, house, away, finish), the answers (`state.py`), the typical values (`typical.py`) and the helpers each page uses. |
-| (the package itself) | `controller.py` (what the app does: refresh, plan, announce, the owner's edits) and `shells/` (how it shows itself: the tray icon with its popup). The popup (`popup.py`) is a window around the reusable `planview.py`. Also notifications over D-Bus (`notifier.py`), the launcher and autostart entries, theme-aware colours, the translations (`locale/`) and the icon (`assets/`). |
+| (the package itself) | `controller.py` (what the app does: refresh, plan, announce, the user's edits) and `shells/` (how it shows itself: the tray icon with its popup). The popup (`popup.py`) is a window around the reusable `planview.py`. Also notifications over D-Bus (`notifier.py`), the launcher and autostart entries, theme-aware colours, the translations (`locale/`) and the icon (`assets/`). |
 
 Beside it:
 
