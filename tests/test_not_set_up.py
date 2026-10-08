@@ -17,15 +17,14 @@ from PySide6.QtWidgets import QApplication, QPushButton
 
 from car_charge_planner.config_file import ensure_config
 from car_charge_planner.controller import Controller
+from car_charge_planner.forecast.service import ForecastResult
+from car_charge_planner.planner.model import Config, ConfigError, find_timezone, load_config, require_location, system_timezone
 from car_charge_planner.settings.window import SettingsWindow
 from car_charge_planner.shells.icons import COLORS, make_icon
 from car_charge_planner.shells.tray import TrayShell
 from car_charge_planner.shells.window import WindowShell
-from car_charge_planner.view_model import needs_setup
-from car_charge_planner.forecast.service import ForecastResult
-from car_charge_planner.planner.model import Config, ConfigError, find_timezone, load_config, require_location, system_timezone
 from car_charge_planner.storage.state import BatteryReading
-
+from car_charge_planner.view_model import needs_setup
 from conftest import FakeNotifier, NetworkAccessInTests, at, example_config, forecast_from
 
 DAY = date(2026, 7, 3)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from .model import AwayPeriod, Config, DayPlan, ForecastStep, Window, add_hours
@@ -28,9 +28,9 @@ class GridAdvice:
 
 def _day_slots(day: date, tz: ZoneInfo) -> list[tuple[datetime, datetime]]:
     """15-minute slots over one local day, built on the UTC timeline so DST days are right."""
-    start = datetime.combine(day, datetime.min.time(), tz).astimezone(timezone.utc)
-    end = datetime.combine(day + timedelta(days=1), datetime.min.time(), tz).astimezone(timezone.utc)
-    slots = []
+    start = datetime.combine(day, datetime.min.time(), tz).astimezone(UTC)
+    end = datetime.combine(day + timedelta(days=1), datetime.min.time(), tz).astimezone(UTC)
+    slots: list[tuple[datetime, datetime]] = []
     while start < end:
         slots.append((start.astimezone(tz), (start + SLOT).astimezone(tz)))
         start += SLOT

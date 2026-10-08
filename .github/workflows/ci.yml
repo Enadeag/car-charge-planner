@@ -34,5 +34,7 @@ jobs:
           pip install -e ".[dev]" ruff
       - name: Lint
         run: ruff check .
+      - name: Type check
+        run: pyright
       - name: Test
         run: pytest -q

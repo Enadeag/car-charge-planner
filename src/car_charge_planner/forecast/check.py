@@ -3,12 +3,13 @@ screen's connection check. Nothing is cached or saved, and the answer is in plai
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from car_charge_planner.i18n import _, ngettext
-from car_charge_planner.planner.model import Config
+from car_charge_planner.planner.model import Config, ForecastStep
 
 from .provider import (
     BadResponse,
@@ -30,7 +31,7 @@ class Attempt:
     message: str = ""  # for the person: "OK: 4 days of forecast", or what went wrong
 
 
-def forecast_days(steps, now: datetime, tz: ZoneInfo) -> int:
+def forecast_days(steps: Sequence[ForecastStep], now: datetime, tz: ZoneInfo) -> int:
     """How many days, today onwards, the steps cover. A step is placed by its middle: Open-Meteo's first step is the
     hour before midnight, which belongs to yesterday and must not count."""
     today = now.astimezone(tz).date()

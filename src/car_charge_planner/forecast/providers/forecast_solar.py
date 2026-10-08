@@ -13,7 +13,8 @@ it), so that key gives no step; the others give one step each, as long as the pe
 from __future__ import annotations
 
 import math
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
+from typing import Any, cast
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from car_charge_planner.i18n import N_
@@ -21,6 +22,7 @@ from car_charge_planner.planner.model import ForecastStep
 
 from ..provider import (
     BadResponse,
+    PlaceSearch,
     RateLimited,
     SettingSpec,
     SystemDescription,
@@ -62,7 +64,7 @@ class ForecastSolar:
             secret=True,
         ),
     )
-    search_places = None
+    search_places: PlaceSearch | None = None
 
     def __init__(self, transport: Transport = urllib_transport) -> None:
         self.transport = transport
@@ -121,24 +123,25 @@ class ForecastSolar:
             message = raw["message"]
             if message.get("code", 0) != 0:
                 raise BadResponse(f"Forecast.Solar reports a problem: {message.get('text') or message.get('type')}")
-            series = raw["result"]
-            if not isinstance(series, dict) or not series:
+            result = raw["result"]
+            if not isinstance(result, dict) or not result:
                 raise BadResponse("Forecast.Solar gave no forecast")
+            series = cast("dict[str, Any]", result)
             place_zone = ZoneInfo(message.get("info", {}).get("timezone") or system.timezone)
             return _steps_from(series, place_zone, ZoneInfo(system.timezone))
         except (KeyError, TypeError, AttributeError, ValueError, OverflowError, ZoneInfoNotFoundError):
             raise BadResponse("Forecast.Solar gave an answer that is not what it documents") from None
 
 
-def _steps_from(series: dict, place_zone: ZoneInfo, out_zone: ZoneInfo) -> list[ForecastStep]:
+def _steps_from(series: dict[str, Any], place_zone: ZoneInfo, out_zone: ZoneInfo) -> list[ForecastStep]:
     """Each key is a local time at the place; each value the Wh of the period ending at it."""
-    points = []
+    points: list[tuple[datetime, date, float]] = []
     for key, watt_hours in series.items():
         local = datetime.strptime(key, "%Y-%m-%d %H:%M:%S").replace(tzinfo=place_zone)
         energy = float(watt_hours or 0.0)
         if not math.isfinite(energy):
             raise ValueError("energy is not a finite number")
-        points.append((local.astimezone(timezone.utc), local.date(), energy))
+        points.append((local.astimezone(UTC), local.date(), energy))
     points.sort(key=lambda p: p[0])
     steps: list[ForecastStep] = []
     previous = None

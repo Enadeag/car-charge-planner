@@ -127,7 +127,7 @@ def select_windows(runs: list[list[Segment]], need_grid_kwh: float, cfg: Config)
     unused = list(runs)
     chosen: list[Window] = []
     while remaining > _EPS and unused:
-        scored = []
+        scored: list[tuple[float, float, list[Segment], Window]] = []
         for run in unused:
             candidate = _best_candidate(run, remaining, cfg)
             if candidate is not None:

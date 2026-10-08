@@ -6,20 +6,19 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import time
 from dataclasses import replace
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
 from car_charge_planner.controller import Controller
-from fake_provider import FakeProvider, steps_for
 from car_charge_planner.forecast.provider import Unavailable
 from car_charge_planner.forecast.registry import ProviderRegistry
 from car_charge_planner.forecast.service import ForecastService
 from car_charge_planner.planner.model import Forecast
-
 from conftest import FakeNotifier
+from fake_provider import FakeProvider, steps_for
 
 TODAY = datetime.now().date()
 
@@ -148,7 +147,6 @@ def test_a_fallback_forecast_says_so_and_credits_the_fallback(qapp, tmp_path, mo
 
 
 def test_during_a_cool_down_the_footer_says_the_provider_is_busy_and_after_it_does_not(qapp, tmp_path, monkeypatch, cfg):
-    from datetime import timezone
 
     from car_charge_planner.forecast.provider import RateLimited
 
@@ -158,7 +156,7 @@ def test_during_a_cool_down_the_footer_says_the_provider_is_busy_and_after_it_do
     controller.refresh(force=True)  # the owner pushes; the provider says wait
     settle(controller, qapp)
     assert "provider busy, retrying later" in footer_of(controller)[0]
-    controller.result = replace(controller.result, cooldown_until=datetime.now(timezone.utc) - timedelta(minutes=1))
+    controller.result = replace(controller.result, cooldown_until=datetime.now(UTC) - timedelta(minutes=1))
     assert "provider busy" not in footer_of(controller)[0]
 
 

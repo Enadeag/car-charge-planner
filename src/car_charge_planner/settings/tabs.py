@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from html import escape
+from dataclasses import replace
 from datetime import time
+from html import escape
+from typing import Any, cast
 from zoneinfo import available_timezones
 
 from PySide6.QtCore import QTime, Signal
@@ -25,11 +27,10 @@ from PySide6.QtWidgets import (
 from car_charge_planner import colours, units
 from car_charge_planner.i18n import _, available_languages, language_name
 from car_charge_planner.names import weekdays_long
-from dataclasses import replace
-
 from car_charge_planner.planner.model import TYPICAL_KEYS, AwayRule, Config, Setup
 
 from .fields import FieldSpec, TabSpec, get_value, set_value
+
 
 class SecretInput(QWidget):
     """A text box that shows dots, with a button to look at what was typed."""
@@ -106,7 +107,7 @@ class FieldTab(QWidget):
         # the language choice exists only when there is a language to choose besides English
         self.specs = tuple(s for s in tab.fields if s.key != LANGUAGE_KEY or languages)
         self.languages = languages
-        self.inputs: dict[str, QWidget] = {}
+        self.inputs: dict[str, Any] = {}  # a box of another Qt class for each kind of field
         self.baseline: dict[str, object] = {}  # exact values the boxes were last filled from
         grid = QGridLayout(self)
         grid.setColumnStretch(1, 1)
@@ -150,7 +151,7 @@ class FieldTab(QWidget):
         """What the tab's secret fields hold now, by field key (an empty one is left out)."""
         return {s.key: self.stored_value(s) for s in self.specs if s.kind == "secret" and self.stored_value(s)}
 
-    def _choices(self, spec: FieldSpec) -> list[tuple[str, str]]:
+    def _choices(self, spec: FieldSpec) -> list[tuple[str | int, str]]:
         if spec.key == LANGUAGE_KEY:
             installed = sorted({"en", *self.languages})
             return [("auto", _("Automatic: follow the system")), *((code, language_name(code)) for code in installed)]
@@ -245,7 +246,7 @@ class FieldTab(QWidget):
         self.typical = {s.key for s in self.specs if s.key in TYPICAL_KEYS}
         self._refresh_hints()
 
-    def stored_value(self, spec: FieldSpec):
+    def stored_value(self, spec: FieldSpec) -> Any:
         """What to store for a field. A box that still shows the baseline gives the exact baseline back."""
         widget = self.inputs[spec.key]
         baseline = self.baseline[spec.key]
@@ -309,7 +310,11 @@ class RuleRow(QWidget):
         row.addWidget(remove)
 
     def rule(self) -> AwayRule:
-        return AwayRule(self.weekday.currentIndex(), self.start.time().toPython(), self.end.time().toPython())
+        return AwayRule(
+            self.weekday.currentIndex(),
+            cast("time", self.start.time().toPython()),  # the stub says `object`
+            cast("time", self.end.time().toPython()),
+        )
 
 
 class AwayRulesTab(QWidget):

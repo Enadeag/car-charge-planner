@@ -1,17 +1,15 @@
 """Texts built by the app follow the language: word order, plurals, numbers, names, tab keys (ticket I2)."""
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 
 import pytest
 
 from car_charge_planner.away_input import away_summary, describe_rule
 from car_charge_planner.i18n import init, number
 from car_charge_planner.names import month_short, short_date, weekday_long
-from car_charge_planner.view_model import ForecastSource, battery_status, day_label, footer_text
 from car_charge_planner.planner.model import AwayRule
 from car_charge_planner.storage.state import BatteryReading
-from datetime import time
-
+from car_charge_planner.view_model import ForecastSource, battery_status, day_label, footer_text
 from conftest import TZ, at
 from test_i18n import make_catalogue
 
@@ -81,8 +79,8 @@ def test_today_and_tomorrow_are_translated_but_other_days_use_the_names(tmp_path
 
 
 def test_the_advice_reason_is_a_whole_phrase_for_today_tomorrow_and_a_named_day(tmp_path, cfg):
-    from car_charge_planner.view_model import advice_view
     from car_charge_planner.planner.advice import GridAdvice
+    from car_charge_planner.view_model import advice_view
 
     make_catalogue(
         tmp_path,
@@ -114,8 +112,8 @@ def test_away_texts_follow_the_language(tmp_path):
 def test_a_tab_is_found_by_its_key_in_any_language(tmp_path):
     from PySide6.QtWidgets import QApplication
 
-    from car_charge_planner.settings.window import SettingsWindow
     from car_charge_planner.planner.model import Config
+    from car_charge_planner.settings.window import SettingsWindow
 
     QApplication.instance() or QApplication([])
     make_catalogue(tmp_path, "xx", {"Away rules": "Afwezigheid", "Solar and location": "Zon en locatie"})

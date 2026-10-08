@@ -12,10 +12,11 @@ import json
 import logging
 import os
 import threading
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Callable
+from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 from car_charge_planner.i18n import _
@@ -30,7 +31,8 @@ from .provider import (
     Unavailable,
     check_steps,
 )
-from .registry import ProviderRegistry, registry as builtin
+from .registry import ProviderRegistry
+from .registry import registry as builtin
 from .secret_store import Secrets, SecretsError, load_secrets
 from .selection import provider_settings
 
@@ -71,7 +73,7 @@ def _default_secrets() -> Secrets:
     return load_secrets(secrets_path())
 
 
-def forecast_key(cfg: Config) -> dict:
+def forecast_key(cfg: Config) -> dict[str, Any]:
     """What a forecast depends on. When it changes, a forecast shown or cached for the old one no longer applies."""
     return {
         "primary": cfg.forecast.primary,
@@ -146,7 +148,7 @@ class ForecastService:
                 reasons.append(problem)
             raise ForecastUnavailable("; ".join(reasons))
 
-    def _from(self, provider_id: str, cfg: Config, system: SystemDescription, secrets: Secrets, now: datetime, force: bool):
+    def _from(self, provider_id: str, cfg: Config, system: SystemDescription, secrets: Secrets, now: datetime, force: bool) -> _Usable | _Failure:
         if provider_id not in self.registry:
             return _Failure(_("The forecast provider {id!r} is not known to this version of the app").format(id=provider_id))
         provider = self.registry.get(provider_id)
@@ -162,12 +164,13 @@ class ForecastService:
         cooling = cooldown_until is not None and now < cooldown_until
         usable = cached is not None and now - cached[1] <= provider.max_useful_age
 
-        if cached and not force and now - cached[1] < provider.min_refresh:
+        if cached is not None and not force and now - cached[1] < provider.min_refresh:
             return _Usable(cached[0], cached[1], True, False, provider, cooldown_until if cooling else None)
         waiting = self._retry_at.get(provider.id)
         if cooling or (waiting is not None and now < waiting and not force):
             until = cooldown_until if cooling else waiting
-            if usable:
+            assert until is not None  # `cooling` or `waiting` got us here
+            if usable and cached is not None:
                 return _Usable(cached[0], cached[1], True, True, provider, cooldown_until if cooling else None)
             return _Failure(_("{provider}: not asked again until {time}").format(provider=provider.name, time=until.astimezone(now.tzinfo).strftime("%H:%M")))
 
@@ -191,13 +194,19 @@ class ForecastService:
             self._retry_at[provider.id] = now + provider.min_refresh
             return self._after_failure(provider, BadResponse(_("an unexpected error ({kind})").format(kind=type(err).__name__)), cached, usable, None)
         self._retry_at.pop(provider.id, None)
-        fetched_at = now.astimezone(timezone.utc)
+        fetched_at = now.astimezone(UTC)
         _write_blob(path, {"key": key, "fetched_at": fetched_at.timestamp(), "steps": _dump_steps(steps), "cooldown_until": None})
         return _Usable(list(steps), fetched_at, False, False, provider)
 
     @staticmethod
-    def _after_failure(provider, err: ProviderError, cached, usable: bool, cooldown_until):
-        if usable:
+    def _after_failure(
+        provider: ForecastProvider,
+        err: ProviderError,
+        cached: tuple[list[ForecastStep], datetime] | None,
+        usable: bool,
+        cooldown_until: datetime | None,
+    ) -> _Usable | _Failure:
+        if usable and cached is not None:
             return _Usable(cached[0], cached[1], True, True, provider, cooldown_until)
         return _Failure(f"{provider.name}: {err}")
 
@@ -205,20 +214,20 @@ class ForecastService:
 # ---- the cache -------------------------------------------------------------------------------------------------
 
 
-def _cache_key(system: SystemDescription, provider: ForecastProvider, cfg: Config) -> dict:
+def _cache_key(system: SystemDescription, provider: ForecastProvider, cfg: Config) -> dict[str, Any]:
     plain = {k: v for k, v in cfg.forecast.settings.get(provider.id, {}).items() if k in {s.key for s in provider.settings if not s.secret}}
     return {"system": asdict(system), "settings": plain}
 
 
-def _read_blob(path: Path) -> dict:
+def _read_blob(path: Path) -> dict[str, Any]:
     try:
         blob = json.loads(path.read_text())
-        return blob if isinstance(blob, dict) else {}
+        return cast("dict[str, Any]", blob) if isinstance(blob, dict) else {}
     except (OSError, ValueError):
         return {}
 
 
-def _write_blob(path: Path, updates: dict) -> None:
+def _write_blob(path: Path, updates: dict[str, Any]) -> None:
     blob = _read_blob(path)
     blob.update(updates)
     try:
@@ -234,15 +243,15 @@ def _dump_steps(steps: list[ForecastStep]) -> list[list[float]]:
     return [[s.start.timestamp(), s.end.timestamp(), s.power_kw] for s in steps]
 
 
-def _cached_forecast(blob: dict, key: dict, tz: ZoneInfo) -> tuple[list[ForecastStep], datetime] | None:
+def _cached_forecast(blob: dict[str, Any], key: dict[str, Any], tz: ZoneInfo) -> tuple[list[ForecastStep], datetime] | None:
     """The cached steps and when they were fetched, if they are for this system and settings and intact."""
     try:
         if blob["key"] != key:
             return None
-        fetched_at = datetime.fromtimestamp(blob["fetched_at"], timezone.utc)
+        fetched_at = datetime.fromtimestamp(blob["fetched_at"], UTC)
         steps = [
             ForecastStep(
-                datetime.fromtimestamp(a, timezone.utc).astimezone(tz), datetime.fromtimestamp(b, timezone.utc).astimezone(tz), float(p)
+                datetime.fromtimestamp(a, UTC).astimezone(tz), datetime.fromtimestamp(b, UTC).astimezone(tz), float(p)
             )
             for a, b, p in blob["steps"]
         ]
@@ -251,9 +260,9 @@ def _cached_forecast(blob: dict, key: dict, tz: ZoneInfo) -> tuple[list[Forecast
         return None
 
 
-def _cooldown(blob: dict) -> datetime | None:
+def _cooldown(blob: dict[str, Any]) -> datetime | None:
     try:
         stamp = blob.get("cooldown_until")
-        return datetime.fromtimestamp(stamp, timezone.utc) if stamp else None
+        return datetime.fromtimestamp(stamp, UTC) if stamp else None
     except (TypeError, ValueError, OverflowError, OSError):
         return None

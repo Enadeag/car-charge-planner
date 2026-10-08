@@ -15,14 +15,14 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QLabel, QLineEdit
 
 from car_charge_planner import colours
-from car_charge_planner.settings.window import SettingsWindow
-from fake_provider import FakeProvider, Held, steps_for
 from car_charge_planner.forecast.provider import BadResponse, NotConfigured, RateLimited, SettingSpec, Unavailable
-from car_charge_planner.forecast.registry import ProviderRegistry, registry as builtin
+from car_charge_planner.forecast.registry import ProviderRegistry
+from car_charge_planner.forecast.registry import registry as builtin
 from car_charge_planner.forecast.secret_store import dump_secrets, load_secrets
 from car_charge_planner.planner.model import Forecast, load_config
-
+from car_charge_planner.settings.window import SettingsWindow
 from conftest import example_config
+from fake_provider import FakeProvider, Held, steps_for
 
 DAY = datetime.now(ZoneInfo("Europe/Amsterdam")).date()  # the Test button counts days from today
 KEY = "TAB-SECRET-KEY-1"

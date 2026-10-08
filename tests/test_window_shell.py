@@ -12,11 +12,10 @@ from PySide6.QtGui import QCloseEvent, QKeySequence
 from PySide6.QtWidgets import QApplication, QPushButton, QToolButton
 
 from car_charge_planner.controller import Controller
+from car_charge_planner.forecast.service import ForecastResult
 from car_charge_planner.shells.icons import make_icon
 from car_charge_planner.shells.window import BACKGROUND_HINT, WindowShell
-from car_charge_planner.forecast.service import ForecastResult
 from car_charge_planner.storage.state import load_state
-
 from conftest import FakeNotifier, at, forecast_from
 
 DAY = date(2026, 7, 3)

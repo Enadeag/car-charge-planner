@@ -5,12 +5,12 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import time
 
-from PySide6.QtWidgets import QButtonGroup, QLabel, QPushButton, QRadioButton, QVBoxLayout, QHBoxLayout, QWidget
+from PySide6.QtWidgets import QButtonGroup, QHBoxLayout, QLabel, QPushButton, QRadioButton, QVBoxLayout, QWidget
 
 from car_charge_planner import colours
 from car_charge_planner.i18n import _
-from car_charge_planner.settings.tabs import RuleRow
 from car_charge_planner.planner.model import AwayRule
+from car_charge_planner.settings.tabs import RuleRow
 
 from .home import away_problems
 from .pages import Page

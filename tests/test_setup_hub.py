@@ -11,6 +11,8 @@ import pytest
 from PySide6.QtCore import QTime
 from PySide6.QtWidgets import QApplication, QLabel
 
+from car_charge_planner.forecast.check import Attempt
+from car_charge_planner.planner.model import AwayRule, Config, Setup, load_config
 from car_charge_planner.setup.home import (
     HOURS_PER_YEAR,
     MAX_BASELOAD_KW,
@@ -21,9 +23,6 @@ from car_charge_planner.setup.home import (
 )
 from car_charge_planner.setup.recap import build_recap
 from car_charge_planner.setup.wizard import SetupWizard
-from car_charge_planner.forecast.check import Attempt
-from car_charge_planner.planner.model import AwayRule, Config, Setup, load_config
-
 from conftest import example_config
 
 NL = {"LANG": "nl_NL.UTF-8"}

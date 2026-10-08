@@ -12,6 +12,7 @@ from car_charge_planner.planner.model import Config
 from .panels import COMPASS
 from .state import SetupState
 
+
 def compass_label(azimuth: float) -> str:
     """"South-east (-45°)" for the eight compass directions, plain degrees for anything else."""
     degrees = round(azimuth)

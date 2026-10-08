@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import sys
 import time
-from typing import Callable
+from collections.abc import Callable
 
 from PySide6.QtCore import QThread
 from PySide6.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
 
 from car_charge_planner.planner.model import ConfigError, load_config
+from car_charge_planner.storage.state import mark_seen
 
 from . import gcguard, i18n, launcher
 from .config_file import ensure_config
@@ -21,8 +22,6 @@ from .notification_actions import ActionListener, action_handler
 from .shells import Shell, ShellChoice, choose_shell
 from .shells.tray import TrayShell
 from .shells.window import WindowShell
-from car_charge_planner.storage.state import mark_seen
-
 
 TRAY_WAIT_BACKGROUND_S = 5.0  # started at login: the panel or the tray extension may still be starting
 TRAY_WAIT_INTERACTIVE_S = 1.0

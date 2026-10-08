@@ -2,7 +2,7 @@
 
 import json
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -39,7 +39,7 @@ def case(skeleton):
         rate_limited=[("", Reply(429, b"", {"Retry-After": "120"}))],
         retry_after=timedelta(seconds=120),
         secrets={"api_key": "SECRET-KEY-123"},
-        now=datetime(2026, 7, 3, 7, 0, tzinfo=timezone.utc),
+        now=datetime(2026, 7, 3, 7, 0, tzinfo=UTC),
     )
 
 

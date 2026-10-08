@@ -7,9 +7,8 @@ from dataclasses import replace
 import pytest
 from PySide6.QtWidgets import QApplication, QDialog
 
-from car_charge_planner.settings.window import SettingsWindow
 from car_charge_planner.planner.model import Config, Setup, first_run_config, load_config
-
+from car_charge_planner.settings.window import SettingsWindow
 from conftest import example_config
 
 

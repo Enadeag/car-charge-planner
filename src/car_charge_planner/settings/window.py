@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QActionGroup, QFontMetrics, QGuiApplication
@@ -20,10 +20,11 @@ from PySide6.QtWidgets import (
 )
 
 from car_charge_planner import colours
-from car_charge_planner.i18n import _
-from car_charge_planner.forecast.registry import ProviderRegistry, registry as builtin
+from car_charge_planner.forecast.registry import ProviderRegistry
+from car_charge_planner.forecast.registry import registry as builtin
 from car_charge_planner.forecast.secret_store import Secrets, SecretsError, load_secrets, save_secrets
 from car_charge_planner.forecast.selection import check_selection
+from car_charge_planner.i18n import _
 from car_charge_planner.planner.config_io import write_config
 from car_charge_planner.planner.model import Config, ConfigError, require_location, validate
 

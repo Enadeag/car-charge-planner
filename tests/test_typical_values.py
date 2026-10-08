@@ -10,15 +10,14 @@ from datetime import date, timedelta
 import pytest
 from PySide6.QtWidgets import QApplication, QLabel
 
-from car_charge_planner.popup import Popup
-from car_charge_planner.settings.fields import TABS
-from car_charge_planner.settings.window import SettingsWindow
-from car_charge_planner.view_model import build, needs_setup, no_forecast, typical_line
 from car_charge_planner.planner.config_io import dump_config, write_config
 from car_charge_planner.planner.model import TYPICAL_KEYS, Config, ConfigError, Setup, first_run_config, load_config, validate
 from car_charge_planner.planner.projection import plan
+from car_charge_planner.popup import Popup
+from car_charge_planner.settings.fields import TABS
+from car_charge_planner.settings.window import SettingsWindow
 from car_charge_planner.storage.state import BatteryReading, State
-
+from car_charge_planner.view_model import build, needs_setup, no_forecast, typical_line
 from conftest import at, forecast_from
 
 DAY = date(2026, 7, 3)

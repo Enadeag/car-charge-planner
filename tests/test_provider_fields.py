@@ -7,11 +7,11 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import pytest
 from PySide6.QtWidgets import QApplication, QLineEdit
 
+from car_charge_planner.forecast.providers.forecast_solar import ForecastSolar
+from car_charge_planner.forecast.providers.open_meteo import OpenMeteo
 from car_charge_planner.settings.fields import TabSpec, get_value, set_value
 from car_charge_planner.settings.providers import provider_fields
 from car_charge_planner.settings.tabs import FieldTab, SecretInput
-from car_charge_planner.forecast.providers.forecast_solar import ForecastSolar
-from car_charge_planner.forecast.providers.open_meteo import OpenMeteo
 
 SECRET = "FIELD-SECRET-77"
 

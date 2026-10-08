@@ -5,7 +5,6 @@ from car_charge_planner.planner.model import AwayPeriod, AwayRule, Config, Forec
 from car_charge_planner.planner.projection import energy_needed_kwh, plan
 from car_charge_planner.planner.surplus import amps_for, usable_kw
 from car_charge_planner.planner.windows import build_runs, group_runs_by_day, select_windows
-
 from conftest import TZ, at, forecast_from
 
 SUMMER_FRI = date(2026, 7, 3)
@@ -201,7 +200,7 @@ def test_no_second_window_is_planned_on_top_of_a_pinned_one(cfg):
     announced = _announced(cfg)
     day = plan(forecast_from([(SUMMER_FRI, 900)]), cfg, 10, at(SUMMER_FRI, 11), pinned=[announced])[0]
     spans = sorted((w.start, w.end) for w in day.windows)
-    assert all(a_end <= b_start for (_, a_end), (b_start, _) in zip(spans, spans[1:]))
+    assert all(a_end <= b_start for (_, a_end), (b_start, _) in zip(spans, spans[1:], strict=False))
 
 
 def test_pinned_window_that_is_over_or_not_started_is_ignored(cfg):

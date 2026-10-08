@@ -139,9 +139,8 @@ def test_the_tray_app_announces_through_the_notifier(cfg, tmp_path, monkeypatch)
 
     from PySide6.QtWidgets import QApplication
 
-    from conftest import TrayApp
-    from conftest import FakeNotifier, at, forecast_from
     from car_charge_planner.forecast.service import ForecastResult
+    from conftest import FakeNotifier, TrayApp, at, forecast_from
 
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     QApplication.instance() or QApplication([])

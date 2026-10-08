@@ -10,13 +10,12 @@ import pytest
 from PySide6.QtWidgets import QApplication, QLabel
 
 from car_charge_planner.away_input import away_summary, make_away
-from car_charge_planner.popup import PLAN, UPDATE, Popup
-from car_charge_planner.view_model import ForecastSource, build
 from car_charge_planner.planner.advice import grid_advice
 from car_charge_planner.planner.model import AwayRule
 from car_charge_planner.planner.projection import plan
+from car_charge_planner.popup import PLAN, UPDATE, Popup
 from car_charge_planner.storage.state import BatteryReading, State
-
+from car_charge_planner.view_model import ForecastSource, build
 from conftest import TZ, at, forecast_from
 
 DAY = date(2026, 7, 3)

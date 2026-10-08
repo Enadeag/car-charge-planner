@@ -1,7 +1,7 @@
 """Open-Meteo as a provider (ticket P3): the conformance kit with the recorded answer, plus what is specific to it."""
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -14,7 +14,7 @@ from car_charge_planner.forecast.transport import Reply
 from provider_kit import EXAMPLE_SYSTEM, ProviderCase, ProviderConformance, ReplayTransport
 
 RECORDED = (Path(__file__).parent / "fixtures" / "open_meteo_3days.json").read_bytes()
-NOW = datetime(2026, 10, 6, 7, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 10, 6, 7, 0, tzinfo=UTC)
 SECRET = "OM-SECRET-KEY-9876"
 
 

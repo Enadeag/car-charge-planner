@@ -9,11 +9,10 @@ from dataclasses import replace
 import pytest
 from PySide6.QtWidgets import QApplication, QLabel
 
-from car_charge_planner.setup.vehicle import CAR_KEYS, CHARGER_KEYS, daily_to_weekly, problems, weekly_to_daily
-from car_charge_planner.setup.wizard import SetupWizard
 from car_charge_planner.forecast.check import Attempt
 from car_charge_planner.planner.model import TYPICAL_KEYS, Config, Setup, load_config
-
+from car_charge_planner.setup.vehicle import CAR_KEYS, CHARGER_KEYS, daily_to_weekly, problems, weekly_to_daily
+from car_charge_planner.setup.wizard import SetupWizard
 from conftest import example_config
 
 NL = {"LANG": "nl_NL.UTF-8"}

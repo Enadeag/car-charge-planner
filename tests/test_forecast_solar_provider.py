@@ -1,7 +1,7 @@
 """Forecast.Solar as a provider (ticket P4): the conformance kit with the recorded answer, plus what is specific to it."""
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -17,7 +17,7 @@ RECORDED = (FIXTURES / "forecast_solar_2days.json").read_bytes()
 RATE_LIMITED = (FIXTURES / "forecast_solar_429.json").read_bytes()
 SPRING = (FIXTURES / "forecast_solar_dst_spring.json").read_bytes()
 AUTUMN = (FIXTURES / "forecast_solar_dst_autumn.json").read_bytes()
-NOW = datetime(2026, 10, 7, 7, 52, 51, tzinfo=timezone.utc)  # when the answer was recorded
+NOW = datetime(2026, 10, 7, 7, 52, 51, tzinfo=UTC)  # when the answer was recorded
 RETRY_AT = "2026-10-07T10:19:59+02:00"  # in the 429 fixture: 08:19:59 UTC
 SECRET = "FS-SECRET-KEY-5555"
 
@@ -78,7 +78,7 @@ def test_the_energy_of_the_steps_is_the_energy_of_the_answer():
 def test_night_gives_no_steps_and_the_steps_satisfy_the_contract():
     steps, _ = fetch()
     assert check_steps(steps) == []
-    overnight = [b.start - a.end for a, b in zip(steps, steps[1:]) if b.start != a.end]
+    overnight = [b.start - a.end for a, b in zip(steps, steps[1:], strict=False) if b.start != a.end]
     assert len(overnight) == 1 and overnight[0] > timedelta(hours=10)  # the gap between the two days
 
 
@@ -92,7 +92,7 @@ def test_the_time_zone_of_the_place_in_the_answer_is_what_the_keys_are_read_in()
     raw = json.loads(RECORDED)
     raw["message"]["info"]["timezone"] = "America/New_York"
     steps, _ = fetch(json.dumps(raw).encode())
-    assert steps[0].start.astimezone(timezone.utc).hour == 11  # 07:51 in New York (EDT) is 11:51 UTC
+    assert steps[0].start.astimezone(UTC).hour == 11  # 07:51 in New York (EDT) is 11:51 UTC
 
 
 def test_the_system_losses_setting_is_not_applied():
@@ -108,7 +108,7 @@ def test_across_the_missing_hour_a_period_is_the_real_elapsed_time():
     assert check_steps(steps) == []
     across = steps[0]  # 01:30 (CET) to 03:30 (CEST) on 2026-03-29: one hour has gone, not two
     assert across.hours == pytest.approx(1.0) and across.power_kw == pytest.approx(0.120)  # 120 Wh in that hour
-    assert across.start.astimezone(timezone.utc).hour == 0 and across.end.astimezone(timezone.utc).hour == 1
+    assert across.start.astimezone(UTC).hour == 0 and across.end.astimezone(UTC).hour == 1
 
 
 def test_across_the_repeated_hour_a_period_is_the_real_elapsed_time():
@@ -175,7 +175,7 @@ def test_else_from_the_body():
 
 
 def test_a_retry_time_already_past_is_zero():
-    assert rate_limit(now=datetime(2026, 10, 7, 12, 0, tzinfo=timezone.utc)) == timedelta(0)
+    assert rate_limit(now=datetime(2026, 10, 7, 12, 0, tzinfo=UTC)) == timedelta(0)
 
 
 @pytest.mark.parametrize("headers, body", [({}, b"{}"), ({}, b"not json"), ({"X-Ratelimit-Retry-At": "soon"}, b"{}"), ({"X-Ratelimit-Retry-At": "2026-10-07T10:00:00"}, b"{}")])

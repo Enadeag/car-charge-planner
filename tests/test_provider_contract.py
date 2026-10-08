@@ -2,8 +2,8 @@
 
 import json
 import math
-from dataclasses import replace
-from datetime import datetime, timedelta, timezone
+from dataclasses import FrozenInstanceError, replace
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
@@ -24,12 +24,10 @@ from car_charge_planner.planner.cli import demo_forecast, load_forecast
 from car_charge_planner.planner.model import ForecastStep, Panels
 from car_charge_planner.planner.projection import plan
 from car_charge_planner.planner.surplus import usable_kw
-
 from conftest import TZ, at, forecast_from
-from datetime import date
 
 DAY = date(2026, 7, 3)
-UTC = timezone.utc
+UTC = UTC
 
 
 def step(hour, power=1.0, length=1):
@@ -94,7 +92,7 @@ def test_a_system_description_is_built_from_the_config(cfg):
     system = SystemDescription.from_config(cfg)
     assert (system.latitude, system.longitude, system.timezone) == (52.37, 4.90, "Europe/Amsterdam")
     assert (system.kwp, system.tilt_deg, system.azimuth_deg, system.system_losses) == (4.8, 35, -45, 0.14)
-    with pytest.raises(Exception):
+    with pytest.raises(FrozenInstanceError):
         system.kwp = 1  # frozen
 
 

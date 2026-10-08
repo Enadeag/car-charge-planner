@@ -25,7 +25,7 @@ classifiers = [
 dependencies = ["PySide6-Essentials", "jeepney", "tzdata"]
 
 [project.optional-dependencies]
-dev = ["pytest", "ruff", "babel", "hatchling"]  # babel and hatchling: also the build requirements (a test builds the wheel)
+dev = ["pytest", "ruff", "pyright", "babel", "hatchling"]  # babel and hatchling: also the build requirements (a test builds the wheel)
 
 [project.urls]
 Homepage = "https://github.com/Enadeag/car-charge-planner"
@@ -57,7 +57,13 @@ target-version = "py312"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F"]  # syntax errors, pyflakes: unused names and imports
+select = ["E4", "E7", "E9", "F", "B", "UP", "I"]  # syntax errors, pyflakes (unused names), bugbear, pyupgrade, import sorting
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E402", "E741"]  # tests set QT_QPA_PLATFORM before importing Qt; short names like `l` are fine there
+
+[tool.pyright]
+include = ["src"]  # tests are left out: they poke Qt widgets and private attributes, which is mostly stub noise
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
+strict = ["src/car_charge_planner/planner", "src/car_charge_planner/forecast"]  # the packages without Qt

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import urllib.parse
 from datetime import timedelta
+from typing import Any, cast
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from ..provider import Place, PlaceResults, Problem
@@ -47,14 +48,18 @@ class OpenMeteoGeocoder:
             return PlaceResults(problem=Problem.BAD_RESPONSE)
         try:
             raw = reply.json()
-            if not isinstance(raw, dict) or raw.get("error"):
+            if not isinstance(raw, dict):
                 return PlaceResults(problem=Problem.BAD_RESPONSE)
-            return PlaceResults(places=tuple(p for p in (_place(r) for r in raw.get("results") or []) if p is not None))
+            body = cast("dict[str, Any]", raw)
+            if body.get("error"):
+                return PlaceResults(problem=Problem.BAD_RESPONSE)
+            rows: list[Any] = body.get("results") or []
+            return PlaceResults(places=tuple(p for p in (_place(r) for r in rows) if p is not None))
         except (ValueError, TypeError, AttributeError):
             return PlaceResults(problem=Problem.BAD_RESPONSE)
 
 
-def _place(row) -> Place | None:
+def _place(row: Any) -> Place | None:
     """One result, or None when it lacks what a location needs (coordinates, a time zone we know)."""
     try:
         latitude, longitude = float(row["latitude"]), float(row["longitude"])

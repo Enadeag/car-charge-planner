@@ -5,17 +5,17 @@ import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from dataclasses import replace
+
 import pytest
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QLabel
 
-from car_charge_planner.setup.pages import Page
-from car_charge_planner.setup.finish import FinishPage
-from car_charge_planner.setup.wizard import PAGES, SetupWizard
-from car_charge_planner.setup.welcome import WelcomePage
 from car_charge_planner.forecast.check import Attempt
 from car_charge_planner.planner.model import Config, Setup, load_config
-
+from car_charge_planner.setup.finish import FinishPage
+from car_charge_planner.setup.pages import Page
+from car_charge_planner.setup.welcome import WelcomePage
+from car_charge_planner.setup.wizard import PAGES, SetupWizard
 from conftest import example_config, settle_controller
 
 NL = {"LANG": "nl_NL.UTF-8"}

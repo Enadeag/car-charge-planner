@@ -96,7 +96,8 @@ class InstanceServer(QObject):
 
     def _read(self, socket: QLocalSocket) -> None:
         while socket.canReadLine():
-            if bytes(socket.readLine()).strip() == SHOW:
+            line = bytes(socket.readLine())  # pyright: ignore[reportArgumentType]  # the stub does not know a QByteArray is bytes-like
+            if line.strip() == SHOW:
                 self.show_requested.emit()
 
 

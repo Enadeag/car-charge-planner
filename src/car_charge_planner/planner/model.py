@@ -5,10 +5,12 @@ from __future__ import annotations
 import os
 import re
 import tomllib
-from functools import lru_cache
 from dataclasses import dataclass, field, fields, replace
-from datetime import datetime, time, timedelta, timezone
+from datetime import UTC, datetime, time, timedelta
+from datetime import date as DateType
+from functools import lru_cache
 from pathlib import Path
+from typing import Any, cast
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from car_charge_planner.i18n import _  # the messages reach the user in Settings, so they are translated
@@ -16,12 +18,12 @@ from car_charge_planner.i18n import _  # the messages reach the user in Settings
 
 def elapsed_hours(start: datetime, end: datetime) -> float:
     """Real elapsed hours. Same-timezone datetimes subtract by wall clock, which is wrong across DST."""
-    return (end.astimezone(timezone.utc) - start.astimezone(timezone.utc)) / timedelta(hours=1)
+    return (end.astimezone(UTC) - start.astimezone(UTC)) / timedelta(hours=1)
 
 
 def add_hours(moment: datetime, hours: float) -> datetime:
     """moment + elapsed hours. Plain addition on a zoned datetime moves the wall clock, which is wrong across DST."""
-    return (moment.astimezone(timezone.utc) + timedelta(hours=hours)).astimezone(moment.tzinfo)
+    return (moment.astimezone(UTC) + timedelta(hours=hours)).astimezone(moment.tzinfo)
 
 
 @dataclass(frozen=True)
@@ -146,7 +148,7 @@ class Forecast:
 
     primary: str = "open-meteo"
     fallback: str = ""  # empty means none
-    settings: dict[str, dict[str, str]] = field(default_factory=dict)  # provider id -> {setting key: value}
+    settings: dict[str, dict[str, str]] = field(default_factory=dict[str, dict[str, str]])  # provider id -> {setting key: value}
 
 
 LANGUAGE_CODE = re.compile(r"^[A-Za-z]{2,3}([_-][A-Za-z0-9]{2,8})*$")
@@ -224,7 +226,7 @@ class Window:
 
 @dataclass(frozen=True)
 class DayPlan:
-    date: object  # datetime.date
+    date: DateType  # not `date`: the field name would hide the class
     soc_start_pct: float
     windows: tuple[Window, ...]
     soc_after_charging_pct: float
@@ -254,7 +256,10 @@ def validate(cfg: Config) -> Config:
     need(cfg.car.km_per_day >= 0, _("[car] km_per_day cannot be negative"))
     need(0 <= cfg.car.minimum_pct < cfg.car.target_pct <= 100, _("[car] needs 0 <= minimum_pct < target_pct <= 100"))
     need(0 < cfg.charger.min_amps <= cfg.charger.max_amps, _("[charger] needs 0 < min_amps <= max_amps"))
-    need(cfg.charger.phases in (1, 3) and not isinstance(cfg.charger.phases, bool), _("[charger] phases must be 1 or 3"))
+    need(
+        cfg.charger.phases in (1, 3) and not isinstance(cfg.charger.phases, bool),  # pyright: ignore[reportUnnecessaryIsInstance]  # TOML `true` equals 1
+        _("[charger] phases must be 1 or 3"),
+    )
     need(cfg.charger.volts > 0, _("[charger] volts must be above 0"))
     need(0 < cfg.charger.efficiency <= 1, _("[charger] efficiency must be above 0 and at most 1"))
     need(0 < cfg.planning.margin <= 1, _("[planning] margin must be above 0 and at most 1"))
@@ -280,7 +285,7 @@ def validate(cfg: Config) -> Config:
         need(bool(ID_PATTERN.match(str(provider_id))), _("[forecast.{id}] is not a provider id").format(id=provider_id))
         for key, value in values.items():
             need(
-                bool(SETTING_KEY.match(str(key))) and isinstance(value, str),
+                bool(SETTING_KEY.match(str(key))) and isinstance(value, str),  # pyright: ignore[reportUnnecessaryIsInstance]  # the values come from a TOML file
                 _("[forecast.{id}] {key} must be a text").format(id=provider_id, key=key),
             )
     unknown = [k for k in cfg.setup.typical if k not in TYPICAL_KEYS]
@@ -327,7 +332,7 @@ def _parse_time(value: str) -> time:
         raise ConfigError(_('[away] time {value!r} must look like "06:00"').format(value=value)) from err
 
 
-def _read_forecast(table: dict) -> Forecast:
+def _read_forecast(table: dict[str, Any]) -> Forecast:
     primary = table.get("primary", Forecast.primary)
     fallback = table.get("fallback", Forecast.fallback)
     settings: dict[str, dict[str, str]] = {}
@@ -336,18 +341,18 @@ def _read_forecast(table: dict) -> Forecast:
             continue
         if not isinstance(value, dict):  # a provider's settings are a table of their own: [forecast.<id>]
             raise ConfigError(_("unknown keys in [{section}]: {keys}").format(section="forecast", keys=[key]))
-        settings[key] = dict(value)
+        settings[key] = dict(cast("dict[str, str]", value))
     return Forecast(primary, fallback, settings)
 
 
-def _read_setup(table: dict) -> Setup:
+def _read_setup(table: dict[str, Any]) -> Setup:
     unknown = set(table) - {"typical"}
     if unknown:
         raise ConfigError(_("unknown keys in [{section}]: {keys}").format(section="setup", keys=sorted(unknown)))
-    typical = table.get("typical", [])
-    if not isinstance(typical, list) or not all(isinstance(k, str) for k in typical):
+    typical: Any = table.get("typical", [])
+    if not isinstance(typical, list) or not all(isinstance(k, str) for k in cast("list[Any]", typical)):
         raise ConfigError(_("[setup] typical must be a list of setting names"))
-    return Setup(tuple(typical))
+    return Setup(tuple(cast("list[str]", typical)))
 
 
 def first_run_config() -> Config:

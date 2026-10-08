@@ -5,20 +5,19 @@ import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from dataclasses import replace
+from datetime import date, timedelta
 
 import pytest
 from PySide6.QtWidgets import QApplication, QPushButton
 
 from car_charge_planner.controller import Controller
-from car_charge_planner.shells.tray import TrayShell
-from car_charge_planner.shells.window import WindowShell
 from car_charge_planner.forecast.check import Attempt
 from car_charge_planner.forecast.service import ForecastResult
 from car_charge_planner.planner.model import first_run_config, load_config
+from car_charge_planner.shells.tray import TrayShell
+from car_charge_planner.shells.window import WindowShell
 from car_charge_planner.storage.state import load_state
-
 from conftest import FakeNotifier, at, example_config, forecast_from, settle_controller
-from datetime import date, timedelta
 
 DAY = date(2026, 7, 3)
 

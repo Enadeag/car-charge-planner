@@ -6,12 +6,11 @@ that should catch them. That is what makes a green kit mean something for the re
 
 import json
 import threading
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
 import provider_kit as kit
-from fake_provider import FakeProvider, Held, steps_for
 from car_charge_planner.forecast.provider import (
     BadResponse,
     NotConfigured,
@@ -22,12 +21,11 @@ from car_charge_planner.forecast.provider import (
 )
 from car_charge_planner.forecast.transport import Reply, Request
 from car_charge_planner.planner.model import ForecastStep
+from conftest import at
+from fake_provider import FakeProvider, Held, steps_for
 from provider_kit import ProviderCase, ProviderConformance, ReplayTransport, UnexpectedRequest
 
-from conftest import at
-from datetime import date
-
-UTC = timezone.utc
+UTC = UTC
 URL = "https://example.test/forecast"
 GOOD = json.dumps(
     {"steps": [{"start": "2026-07-03T08:00:00+00:00", "end": "2026-07-03T09:00:00+00:00", "kw": 1.5},

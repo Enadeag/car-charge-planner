@@ -12,9 +12,10 @@ from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta
 from html import escape
+from typing import cast
 from zoneinfo import ZoneInfo
 
-from PySide6.QtCore import QTime, Qt, Signal
+from PySide6.QtCore import Qt, QTime, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -34,8 +35,8 @@ from car_charge_planner.planner.model import AwayPeriod, AwayRule
 from car_charge_planner.storage.state import State
 
 from . import colours
-from .i18n import _, number
 from .away_input import away_summary, describe, describe_rule, make_away
+from .i18n import _, number
 from .view_model import ViewModel, day_label
 
 PLAN, UPDATE = 0, 1
@@ -382,8 +383,8 @@ class PlanView(QWidget):
     def fit_to_page(self, *_args) -> None:
         """A stack is as tall as its tallest page. Make it as tall as the page being shown."""
         page = self.stack.currentWidget()
-        page.layout().activate()
-        self.stack.setFixedHeight(page.sizeHint().height())
+        page.layout().activate()  # pyright: ignore[reportOptionalMemberAccess]  # the stack always has a current page, which has a layout
+        self.stack.setFixedHeight(page.sizeHint().height())  # pyright: ignore[reportOptionalMemberAccess]  # as above
         self.adjustSize()
         self.layout_changed.emit()
 
@@ -398,8 +399,8 @@ class PlanView(QWidget):
             period = make_away(
                 self.away_day.currentData(),
                 self.away_kind.currentIndex() == 0,
-                self.away_from.time().toPython(),
-                self.away_to.time().toPython(),
+                cast("time", self.away_from.time().toPython()),  # the stub says `object`
+                cast("time", self.away_to.time().toPython()),
                 self.tz,
             )
         except ValueError as err:

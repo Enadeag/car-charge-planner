@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
-from typing import Mapping
 
 from car_charge_planner import units
 from car_charge_planner.planner.model import TYPICAL_KEYS, Config, Setup, require_location, validate
@@ -20,7 +20,7 @@ class SetupState:
     done: set[str] = field(default_factory=set)  # hub cards completed (S9)
 
     @classmethod
-    def starting_from(cls, cfg: Config, environ: Mapping[str, str] | None = None, qt_locale_name: str | None = None) -> "SetupState":
+    def starting_from(cls, cfg: Config, environ: Mapping[str, str] | None = None, qt_locale_name: str | None = None) -> SetupState:
         """Pre-filled from the current config. A config that is not set up yet starts as a first run: every value
         typical, and the units the region suggests (imperial for US, GB, LR and MM, else metric)."""
         draft = cfg

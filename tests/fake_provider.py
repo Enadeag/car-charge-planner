@@ -13,13 +13,12 @@ can have a fetch "in flight" while it changes something. When the script runs ou
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
-from typing import Callable, Union
 
 from car_charge_planner.forecast.provider import SettingSpec, SystemDescription
 from car_charge_planner.planner.model import ForecastStep
-
 from conftest import forecast_from
 
 
@@ -32,7 +31,7 @@ class Held:
     timeout: float = 5.0
 
 
-Outcome = Union[list, Exception, Callable[[], object], Held]
+Outcome = list | Exception | Callable[[], object] | Held
 
 
 def steps_for(day: date, peak: float = 900.0) -> list[ForecastStep]:

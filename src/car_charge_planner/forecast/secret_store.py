@@ -14,6 +14,7 @@ import os
 import re
 import tomllib
 from pathlib import Path
+from typing import Any, cast
 
 from car_charge_planner.i18n import _
 
@@ -63,9 +64,9 @@ def load_secrets(path: Path) -> Secrets:
         raise SecretsError(_("{file} is not valid TOML. Fix it or delete it and enter the keys again.").format(file=path)) from None
     secrets: Secrets = {}
     for provider_id, values in data.items():
-        if not isinstance(values, dict) or not all(isinstance(v, str) for v in values.values()):
+        if not isinstance(values, dict) or not all(isinstance(v, str) for v in cast("dict[str, Any]", values).values()):
             raise SecretsError(_("{file}: [{id}] must hold texts only").format(file=path, id=provider_id))
-        secrets[provider_id] = dict(values)
+        secrets[provider_id] = dict(cast("dict[str, str]", values))
     return secrets
 
 

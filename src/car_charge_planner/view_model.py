@@ -4,14 +4,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from typing import TypedDict
 from zoneinfo import ZoneInfo
 
-from .i18n import _, ngettext, number, pgettext
-from .names import short_date, weekday_short
 from car_charge_planner.planner.advice import GridAdvice
 from car_charge_planner.planner.model import Config, DayPlan, Window
 from car_charge_planner.storage.state import BatteryReading
 
+from .i18n import _, ngettext, number, pgettext
+from .names import short_date, weekday_short
 
 
 @dataclass(frozen=True)
@@ -85,7 +86,7 @@ def day_label(day: date, today: date) -> str:
 
 def battery_status(battery: BatteryReading, now: datetime) -> tuple[str, bool]:
     """Line to show and whether the reading needs updating (spec 4.7)."""
-    if battery.assumed:
+    if battery.entered_at is None:  # assumed: never entered
         return _("Battery {pct}% (assumed, not entered yet). Please enter it.").format(pct=number(battery.pct)), True
     days = (now - battery.entered_at).days
     if days < 1:
@@ -268,6 +269,21 @@ def _facts(window: Window, phases: int = 1) -> str:
     )
 
 
+class _Common(TypedDict):
+    """The fields every ViewModel of a plan shares, apart from its state and texts."""
+
+    battery_line: str
+    battery_stale: bool
+    battery_pct: float
+    outlook: tuple[OutlookRow, ...]
+    quiet_days: str
+    footer: str
+    footer_tooltip: str
+    typical_line: str
+    typical_tab: str
+    advice: AdviceView | None
+
+
 def build(
     days: list[DayPlan],
     now: datetime,
@@ -285,7 +301,7 @@ def build(
     outlook, quiet_days = _outlook(days, headline_window, now, tz, today, cfg.charger.phases)
     battery_line, battery_stale = battery_status(battery, now)
     typical = typical_line(cfg.setup.typical)
-    common = dict(
+    common = _Common(
         battery_line=battery_line,
         battery_stale=battery_stale,
         battery_pct=battery.pct,

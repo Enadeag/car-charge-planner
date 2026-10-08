@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field, replace
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from car_charge_planner.planner.model import AwayPeriod, Window
@@ -38,7 +38,7 @@ def state_path() -> Path:
 
 
 def _instant(stamp: float) -> datetime:
-    return datetime.fromtimestamp(stamp, timezone.utc)
+    return datetime.fromtimestamp(stamp, UTC)
 
 
 def load_state(path: Path | None = None) -> State:

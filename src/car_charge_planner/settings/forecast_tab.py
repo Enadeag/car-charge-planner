@@ -9,18 +9,19 @@ window.
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from dataclasses import replace
-from typing import Callable
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QComboBox, QFrame, QHBoxLayout, QLabel, QPushButton, QScrollArea, QVBoxLayout, QWidget
 
 from car_charge_planner import colours
-from car_charge_planner.i18n import _, ngettext
 from car_charge_planner.forecast.check import missing_settings, try_provider
 from car_charge_planner.forecast.provider import ForecastProvider
-from car_charge_planner.forecast.registry import ProviderRegistry, registry as builtin
+from car_charge_planner.forecast.registry import ProviderRegistry
+from car_charge_planner.forecast.registry import registry as builtin
 from car_charge_planner.forecast.secret_store import Secrets
+from car_charge_planner.i18n import _, ngettext
 from car_charge_planner.planner.model import Config
 
 from .fields import TabSpec
@@ -208,9 +209,10 @@ class ForecastTab(QWidget):
         for slot in self.slots.values():
             while slot.count():
                 item = slot.takeAt(0)
-                if item.widget() is not None:
-                    item.widget().hide()
-                    item.widget().setParent(self)
+                widget = item.widget()  # pyright: ignore[reportOptionalMemberAccess]  # takeAt(0) of a non-empty layout
+                if widget is not None:
+                    widget.hide()
+                    widget.setParent(self)
         primary, fallback = self._chosen("primary"), self._chosen("fallback")
         for role, provider_id in (("primary", primary), ("fallback", fallback)):
             card = self.cards.get(provider_id)

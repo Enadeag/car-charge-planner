@@ -9,13 +9,12 @@ from dataclasses import replace
 import pytest
 from PySide6.QtWidgets import QApplication, QLabel
 
+from car_charge_planner.forecast.check import Attempt
+from car_charge_planner.planner.model import TYPICAL_KEYS, Config, Setup, load_config, validate
 from car_charge_planner.setup.panels import COMPASS, TILT_PRESETS, azimuth_for, compass_key_for, panels_to_kwp, tilt_preset_for
 from car_charge_planner.setup.state import SetupState
 from car_charge_planner.setup.typical import TYPICAL_VALUES, with_typical, with_values
 from car_charge_planner.setup.wizard import SetupWizard
-from car_charge_planner.forecast.check import Attempt
-from car_charge_planner.planner.model import TYPICAL_KEYS, Config, Setup, load_config, validate
-
 from conftest import example_config
 
 NL = {"LANG": "nl_NL.UTF-8"}

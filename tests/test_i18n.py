@@ -13,8 +13,8 @@ from PySide6.QtWidgets import QApplication
 from car_charge_planner import i18n, i18n_tools
 from car_charge_planner.i18n import (
     DOMAIN,
-    NC_,
     N_,
+    NC_,
     _,
     current_language,
     init,

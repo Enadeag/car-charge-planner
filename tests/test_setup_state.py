@@ -4,10 +4,9 @@ from dataclasses import replace
 
 import pytest
 
+from car_charge_planner.planner.model import TYPICAL_KEYS, AwayRule, Config, ConfigError, Setup, first_run_config
 from car_charge_planner.setup.recap import build_recap, compass_label
 from car_charge_planner.setup.state import SetupState
-from car_charge_planner.planner.model import TYPICAL_KEYS, AwayRule, Config, ConfigError, Setup, first_run_config
-
 from conftest import example_config
 
 US = {"LANG": "en_US.UTF-8"}

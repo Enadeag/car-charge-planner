@@ -4,18 +4,17 @@ import json
 import logging
 import threading
 from dataclasses import replace
-from datetime import date, timedelta, timezone
+from datetime import UTC, date, timedelta
 
 import pytest
 
-from fake_provider import FakeProvider, Held, steps_for
 from car_charge_planner.forecast.provider import BadResponse, RateLimited, SettingSpec, Unavailable
 from car_charge_planner.forecast.registry import ProviderRegistry
 from car_charge_planner.forecast.secret_store import SecretsError
 from car_charge_planner.forecast.service import ForecastService, ForecastUnavailable
 from car_charge_planner.planner.model import Forecast
-
 from conftest import at
+from fake_provider import FakeProvider, Held, steps_for
 
 DAY = date(2026, 7, 3)
 T0 = at(DAY, 7)
@@ -68,7 +67,7 @@ def test_the_primary_is_asked_and_the_result_says_who_answered(rig):
     result = rig.get()
     assert (result.provider_id, result.provider_name, result.attribution) == ("main", "Main", "Forecast by Main")
     assert not result.from_cache and not result.stale and not result.from_fallback and result.cooldown_until is None
-    assert result.steps == steps_for(DAY) and result.fetched_at == T0.astimezone(timezone.utc)
+    assert result.steps == steps_for(DAY) and result.fetched_at == T0.astimezone(UTC)
     assert rig.main.call_count == 1 and rig.backup.call_count == 0
     assert (rig.cache / "forecast-main.json").exists()
 
@@ -219,7 +218,7 @@ def test_a_rate_limit_starts_a_cool_down_that_even_a_forced_refresh_respects(rig
     rig.main.script = [steps_for(DAY), RateLimited("busy", timedelta(minutes=30))]
     rig.get()
     limited = rig.get(later(hours=2))
-    assert limited.stale and limited.cooldown_until == (later(hours=2) + timedelta(minutes=30)).astimezone(timezone.utc)
+    assert limited.stale and limited.cooldown_until == (later(hours=2) + timedelta(minutes=30)).astimezone(UTC)
     assert rig.main.call_count == 2
     for minutes in (125, 140):
         rig.get(later(minutes=minutes), force=True)

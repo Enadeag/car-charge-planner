@@ -2,11 +2,10 @@ from dataclasses import replace
 from datetime import date, timedelta
 
 from car_charge_planner.config_file import ensure_config
-from car_charge_planner.view_model import ForecastSource, build, footer_text, footer_tooltip, needs_setup, no_forecast
 from car_charge_planner.planner.model import TYPICAL_KEYS, Config, load_config
 from car_charge_planner.planner.projection import plan
 from car_charge_planner.storage.state import BatteryReading, load_battery
-
+from car_charge_planner.view_model import ForecastSource, build, footer_text, footer_tooltip, needs_setup, no_forecast
 from conftest import TZ, at, forecast_from
 
 DAY = date(2026, 7, 3)  # a Friday

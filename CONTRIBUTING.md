@@ -20,6 +20,14 @@ QT_QPA_PLATFORM=offscreen .venv/bin/pytest -q    # about two minutes; no window 
 .venv/bin/ruff check .
 ```
 
+`ruff check .` also checks import order and a few common mistakes (bugbear, pyupgrade). Types are checked with [pyright](https://github.com/microsoft/pyright), which CI runs too and which must report no errors:
+
+```bash
+PATH="$PWD/.venv/bin:$PATH" pyright    # or activate the venv first; pyright then finds PySide6
+```
+
+The code is checked in basic mode, and `planner/` and `forecast/` (no Qt) in strict mode, so give new code there full type hints. The tests are not type-checked. Where the Qt stubs are wrong, a `# pyright: ignore[rule]` with a short reason is fine.
+
 A change comes with a test that fails without it. New or changed texts need a refreshed template (see below).
 
 ## Code layout

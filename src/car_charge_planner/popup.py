@@ -10,7 +10,7 @@ import time as clock
 from datetime import date
 from zoneinfo import ZoneInfo
 
-from PySide6.QtCore import QEvent, QPoint, QTimer, Qt, Signal
+from PySide6.QtCore import QEvent, QPoint, Qt, QTimer, Signal
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
 

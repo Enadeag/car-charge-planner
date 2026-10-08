@@ -8,10 +8,11 @@ provider. See `docs/design/forecast-providers/spec.md` and, for contributors, `d
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Protocol, Sequence
+from typing import Protocol
 
 from car_charge_planner.planner.model import Config, ForecastStep
 
@@ -29,7 +30,7 @@ class SystemDescription:
     timezone: str
 
     @classmethod
-    def from_config(cls, cfg: Config) -> "SystemDescription":
+    def from_config(cls, cfg: Config) -> SystemDescription:
         return cls(
             latitude=cfg.latitude,
             longitude=cfg.longitude,
@@ -168,7 +169,7 @@ def check_steps(steps: Sequence[ForecastStep]) -> list[str]:
             problems.append(f"step {index}: must end after it starts")
         if previous_end is not None and step.start < previous_end:
             problems.append(f"step {index}: overlaps or precedes the step before it")
-        if not (isinstance(step.power_kw, (int, float)) and math.isfinite(step.power_kw)):
+        if not (isinstance(step.power_kw, (int, float)) and math.isfinite(step.power_kw)):  # pyright: ignore[reportUnnecessaryIsInstance]  # a provider may break its type
             problems.append(f"step {index}: power must be a finite number")
         elif step.power_kw < 0:
             problems.append(f"step {index}: power cannot be negative")

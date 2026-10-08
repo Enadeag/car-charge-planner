@@ -8,7 +8,6 @@ from car_charge_planner.planner.model import Config
 
 from ..i18n import N_
 
-
 UNITS_CHOICES = (("metric", N_("Metric (km, kWh/100 km)")), ("imperial", N_("Imperial (miles, mi/kWh)")))
 
 
@@ -26,7 +25,7 @@ class FieldSpec:
     scale: float = 1.0  # shown = stored * scale, so a fraction can be shown as a percent
     quantity: str = ""  # "distance" | "consumption": stored metric, shown in the chosen unit system (app/units.py)
     flag: str = ""  # a tag before the hint, for what the field itself says (a provider's "Required" setting)
-    choices: tuple[tuple[str, str], ...] = ()  # for kind "choice": (stored value, label shown)
+    choices: tuple[tuple[str | int, str], ...] = ()  # for kind "choice": (stored value, label shown)
 
 
 @dataclass(frozen=True)

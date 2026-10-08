@@ -19,8 +19,8 @@ from __future__ import annotations
 
 import gettext
 import os
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Mapping, Sequence
 
 DOMAIN = "car-charge-planner"
 LOCALE_DIR = Path(__file__).parent / "locale"

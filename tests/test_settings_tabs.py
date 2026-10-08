@@ -9,9 +9,8 @@ import pytest
 from PySide6.QtCore import QTime
 from PySide6.QtWidgets import QApplication, QLabel
 
-from car_charge_planner.settings.window import SettingsWindow
 from car_charge_planner.planner.model import AwayRule, Config, Setup, load_config
-
+from car_charge_planner.settings.window import SettingsWindow
 from conftest import at, example_config
 
 
@@ -166,9 +165,7 @@ def test_planning_reset_tab(tmp_path, qapp):
 
 def test_a_saved_lead_time_changes_when_the_next_notification_is_due(tmp_path, monkeypatch, qapp):
     from car_charge_planner.forecast.service import ForecastResult
-    from conftest import TrayApp
-
-    from conftest import forecast_from
+    from conftest import TrayApp, forecast_from
 
     day = date(2026, 7, 3)
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))

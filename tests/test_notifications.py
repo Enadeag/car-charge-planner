@@ -5,7 +5,6 @@ from car_charge_planner.notifications import GRID, SOLAR, candidate_windows, due
 from car_charge_planner.planner.advice import GridAdvice
 from car_charge_planner.planner.model import DayPlan, Window
 from car_charge_planner.storage.state import load_state, mark_notified
-
 from conftest import TZ, at
 
 DAY = date(2026, 7, 3)

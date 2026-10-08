@@ -180,6 +180,7 @@ class Controller(QObject):
 
     def _source(self, now: datetime) -> ForecastSource:
         result = self.result
+        assert result is not None  # only asked for once there is a forecast
         return ForecastSource(
             result.attribution,
             result.provider_name,
@@ -190,6 +191,7 @@ class Controller(QObject):
 
     def _announce(self, windows, state: State, now: datetime) -> None:
         """Notify once per window, a few minutes ahead (spec 5)."""
+        assert self.result is not None  # only called with a forecast
         for kind, window in due(
             windows, state.notified, now, self.cfg.notify.lead_minutes, self.result.age(now), self.result.stale
         ):

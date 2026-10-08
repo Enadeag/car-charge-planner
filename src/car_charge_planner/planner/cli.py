@@ -15,9 +15,9 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from .advice import grid_advice
 from .demo import bell_day
 from .model import Config, ForecastStep, add_hours, load_config
-from .advice import grid_advice
 from .projection import plan
 
 DEMOS = {
@@ -33,7 +33,7 @@ def demo_forecast(name: str, first_day: date, tz: ZoneInfo, cfg: Config | None =
     from car_charge_planner.forecast.providers.open_meteo import power_kw
 
     panels = (cfg or Config()).panels
-    steps = []
+    steps: list[ForecastStep] = []
     for offset, peak in enumerate(DEMOS[name]):
         sunrise, sunset = (8, 16) if name == "winter" else (6, 18)
         for start, gti in bell_day(first_day + timedelta(days=offset), peak, tz, sunrise, sunset):
@@ -71,7 +71,7 @@ def main(argv: list[str] | None = None) -> None:
         try:
             result = ForecastService().get(cfg, now, force=args.refresh)
         except ForecastUnavailable as err:
-            raise SystemExit(f"no forecast available: {err}")
+            raise SystemExit(f"no forecast available: {err}") from err
         forecast = result.steps
         note = " (STALE: refresh failed)" if result.stale else ""
         source = f" from {result.provider_name} (the fallback)" if result.from_fallback else f" from {result.provider_name}"

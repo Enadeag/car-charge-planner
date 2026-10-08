@@ -1,8 +1,8 @@
 import gc
 import os
 import socket
-from pathlib import Path
 from datetime import date, datetime, time, timedelta
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -79,7 +79,7 @@ def no_window_or_worker_left_running():
             widget.deleteLater()
         QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
-    for round_ in range(8):  # delivering an event can start another worker (a refresh), so go round until it is quiet
+    for _ in range(8):  # delivering an event can start another worker (a refresh), so go round until it is quiet
         if QApplication.instance() is not None:
             QApplication.processEvents()
         workers = [t for t in threading.enumerate() if t.daemon and t is not threading.main_thread() and t.is_alive()]

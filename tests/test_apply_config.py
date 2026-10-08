@@ -12,11 +12,9 @@ from datetime import date
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from conftest import TrayApp
 from car_charge_planner.forecast.service import ForecastResult, forecast_key
 from car_charge_planner.storage.state import load_state, mark_notified
-
-from conftest import at, example_config, forecast_from
+from conftest import TrayApp, at, example_config, forecast_from
 
 DAY = date(2026, 7, 3)
 

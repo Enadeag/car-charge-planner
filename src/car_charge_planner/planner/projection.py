@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from .model import AwayPeriod, Config, DayPlan, ForecastStep, Window, elapsed_hours
@@ -39,13 +39,13 @@ def _share_of_day_left(now: datetime, tz: ZoneInfo) -> float:
     """Fraction of today still to come: driving already done is in the battery reading."""
     local = now.astimezone(tz)
     midnight = datetime.combine(local.date() + timedelta(days=1), datetime.min.time(), tz)
-    left = (midnight.astimezone(timezone.utc) - now.astimezone(timezone.utc)) / timedelta(hours=24)
+    left = (midnight.astimezone(UTC) - now.astimezone(UTC)) / timedelta(hours=24)
     return min(1.0, max(0.0, left))
 
 
 def _remaining_parts(windows: list[Window], now: datetime) -> list[Window]:
     """The same windows with only the energy still to come, start and power unchanged."""
-    parts = []
+    parts: list[Window] = []
     for w in windows:
         share = elapsed_hours(now, w.end) / elapsed_hours(w.start, w.end)
         parts.append(replace(w, solar_kwh=w.solar_kwh * share, import_kwh=w.import_kwh * share))

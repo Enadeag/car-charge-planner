@@ -7,9 +7,9 @@ from dataclasses import replace
 from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QVBoxLayout
 
 from car_charge_planner import colours
+from car_charge_planner.forecast.provider import ForecastProvider
 from car_charge_planner.i18n import _
 from car_charge_planner.settings.fields import UNITS_CHOICES
-from car_charge_planner.forecast.provider import ForecastProvider
 
 from .pages import Page
 

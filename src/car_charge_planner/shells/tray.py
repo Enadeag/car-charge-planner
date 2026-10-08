@@ -7,7 +7,6 @@ import time
 
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
-
 from ..controller import Controller, ViewUpdate
 from ..i18n import _
 from ..popup import Popup

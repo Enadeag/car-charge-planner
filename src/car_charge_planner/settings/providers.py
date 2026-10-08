@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from car_charge_planner.i18n import N_
 from car_charge_planner.forecast.provider import ForecastProvider
+from car_charge_planner.i18n import N_
 
 from .fields import FieldSpec
 

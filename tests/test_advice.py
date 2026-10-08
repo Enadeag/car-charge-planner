@@ -4,7 +4,6 @@ from car_charge_planner.away_input import make_away
 from car_charge_planner.planner.advice import grid_advice
 from car_charge_planner.planner.model import AwayPeriod, elapsed_hours
 from car_charge_planner.planner.projection import plan
-
 from conftest import TZ, at, forecast_from
 
 FRI = date(2026, 7, 3)

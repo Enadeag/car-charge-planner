@@ -13,17 +13,16 @@ from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QLabel
 
-from car_charge_planner.setup.wizard import SetupWizard
-from fake_provider import FakeProvider
 from car_charge_planner.forecast.check import Attempt
 from car_charge_planner.forecast.provider import Place, PlaceResults, Problem
 from car_charge_planner.forecast.providers.open_meteo import OpenMeteo
 from car_charge_planner.forecast.registry import ProviderRegistry
 from car_charge_planner.forecast.transport import Reply
 from car_charge_planner.planner.model import Config, Forecast, load_config
-from provider_kit import ReplayTransport
-
+from car_charge_planner.setup.wizard import SetupWizard
 from conftest import example_config
+from fake_provider import FakeProvider
+from provider_kit import ReplayTransport
 
 FIXTURES = Path(__file__).parent / "fixtures"
 AMSTERDAM = (FIXTURES / "open_meteo_geocoding_amsterdam.json").read_bytes()

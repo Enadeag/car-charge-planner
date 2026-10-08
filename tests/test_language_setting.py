@@ -11,10 +11,9 @@ from PySide6.QtWidgets import QApplication, QComboBox
 
 from car_charge_planner import i18n
 from car_charge_planner.i18n import available_languages, init, language_name
-from car_charge_planner.settings.window import SettingsWindow
 from car_charge_planner.planner.config_io import dump_config, write_config
 from car_charge_planner.planner.model import Config, ConfigError, Interface, load_config, validate
-
+from car_charge_planner.settings.window import SettingsWindow
 from test_i18n import make_catalogue
 
 

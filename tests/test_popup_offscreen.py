@@ -8,12 +8,11 @@ from datetime import date
 
 from PySide6.QtWidgets import QApplication
 
+from car_charge_planner.planner.projection import plan
 from car_charge_planner.popup import Popup
 from car_charge_planner.shells.tray import make_icon
-from car_charge_planner.view_model import build
-from car_charge_planner.planner.projection import plan
 from car_charge_planner.storage.state import BatteryReading
-
+from car_charge_planner.view_model import build
 from conftest import TZ, at, forecast_from
 
 
@@ -124,9 +123,9 @@ def test_tray_app_round_trip_persists_and_replans(cfg, tmp_path, monkeypatch):
     from PySide6.QtWidgets import QApplication as QA
 
     from car_charge_planner.away_input import make_away
-    from conftest import TrayApp
     from car_charge_planner.forecast.service import ForecastResult
     from car_charge_planner.storage.state import load_state
+    from conftest import TrayApp
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     QA.instance() or QA([])
@@ -169,8 +168,8 @@ def test_popup_has_a_close_button_and_stays_open_when_focus_moves(cfg):
 
 
 def _tray_with_frozen_clock(cfg, tmp_path, monkeypatch, hour, minute, failed=False):
-    from conftest import TrayApp
     from car_charge_planner.forecast.service import ForecastResult
+    from conftest import TrayApp
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     QApplication.instance() or QApplication([])
@@ -300,8 +299,8 @@ def test_a_rule_saved_in_settings_shows_up_in_the_popup(cfg, tmp_path, monkeypat
 
     from PySide6.QtCore import QTime
 
-    from conftest import TrayApp
     from car_charge_planner.forecast.service import ForecastResult
+    from conftest import TrayApp
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda *a, **k: None)

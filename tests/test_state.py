@@ -6,7 +6,6 @@ from car_charge_planner.away_input import describe, make_away
 from car_charge_planner.planner.model import AwayPeriod, ForecastStep, elapsed_hours
 from car_charge_planner.planner.projection import plan
 from car_charge_planner.storage.state import State, add_away, load_state, remove_away, set_battery
-
 from conftest import TZ, at, forecast_from
 
 DAY = date(2026, 7, 3)
@@ -72,7 +71,7 @@ def test_corrupt_or_missing_state_gives_defaults(tmp_path):
 
 def test_partly_broken_state_keeps_what_is_valid(tmp_path):
     f = tmp_path / "s.json"
-    f.write_text('{"battery_pct": 70, "battery_entered_at": %s, "away": [{"start": 1}, "junk"]}' % NOW.timestamp())
+    f.write_text(f'{{"battery_pct": 70, "battery_entered_at": {NOW.timestamp()}, "away": [{{"start": 1}}, "junk"]}}')
     state = load_state(f)
     assert state.battery.pct == 70 and state.away == ()
 

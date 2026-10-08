@@ -37,6 +37,7 @@ class Bus(Protocol):
         expire_ms: int,
     ) -> int:
         """Call Notify and return the new notification's id."""
+        ...
 
 
 class NotifyError(Exception):

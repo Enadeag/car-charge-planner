@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import Callable, Protocol
+from collections.abc import Callable
+from typing import Protocol
 
 from PySide6.QtCore import QObject, Signal
 

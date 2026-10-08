@@ -11,14 +11,13 @@ from PySide6.QtWidgets import QApplication
 
 from car_charge_planner.controller import Controller
 from car_charge_planner.main import NO_TRAY_HINT, announce_tray_fallback, create_shell, wait_for_tray
+from car_charge_planner.planner.config_io import dump_config, write_config
+from car_charge_planner.planner.model import INTERFACE_MODES, Config, ConfigError, Interface, load_config
 from car_charge_planner.settings.window import SettingsWindow
 from car_charge_planner.shells import ShellChoice, choose_shell
 from car_charge_planner.shells.tray import TrayShell
 from car_charge_planner.shells.window import WindowShell
-from car_charge_planner.planner.config_io import dump_config, write_config
-from car_charge_planner.planner.model import INTERFACE_MODES, Config, ConfigError, Interface, load_config
 from car_charge_planner.storage.state import load_state
-
 from conftest import FakeNotifier, example_config
 
 

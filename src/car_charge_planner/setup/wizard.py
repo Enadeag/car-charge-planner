@@ -7,28 +7,29 @@ writes nothing. Opening it again starts from the current config, so "Run set-up 
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Callable, Mapping
 
 from PySide6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QPushButton, QStackedWidget, QVBoxLayout
 
 from car_charge_planner import colours
-from car_charge_planner.i18n import _
 from car_charge_planner.forecast.check import Attempt, try_provider
 from car_charge_planner.forecast.provider import ForecastProvider
-from car_charge_planner.forecast.registry import ProviderRegistry, registry as builtin
+from car_charge_planner.forecast.registry import ProviderRegistry
+from car_charge_planner.forecast.registry import registry as builtin
 from car_charge_planner.forecast.secret_store import SecretsError, load_secrets
+from car_charge_planner.i18n import _
 from car_charge_planner.planner.config_io import write_config
 from car_charge_planner.planner.model import Config, ConfigError
 
-from .car import CarPage
 from .away import AwayPage
+from .car import CarPage
 from .finish import FinishPage
 from .house import HousePage
 from .hub import HubPage
 from .location import LocationPage
-from .solar import SolarPage
 from .pages import Page
+from .solar import SolarPage
 from .state import SetupState
 from .welcome import WelcomePage
 

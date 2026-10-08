@@ -11,15 +11,14 @@ import pytest
 from PySide6.QtWidgets import QApplication, QLabel
 
 from car_charge_planner.notifications import message
-from car_charge_planner.settings.window import SettingsWindow
-from car_charge_planner.view_model import ForecastSource, build
 from car_charge_planner.planner.advice import grid_advice
 from car_charge_planner.planner.config_io import dump_config, write_config
 from car_charge_planner.planner.model import Charger, ConfigError, ForecastStep, load_config, validate
 from car_charge_planner.planner.projection import plan
 from car_charge_planner.planner.surplus import amps_for, charge_power_kw, usable_kw
+from car_charge_planner.settings.window import SettingsWindow
 from car_charge_planner.storage.state import BatteryReading
-
+from car_charge_planner.view_model import ForecastSource, build
 from conftest import TZ, at, forecast_from
 
 DAY = date(2026, 7, 3)

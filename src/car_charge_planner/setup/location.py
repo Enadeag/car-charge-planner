@@ -24,11 +24,11 @@ from PySide6.QtWidgets import (
 )
 
 from car_charge_planner import colours, i18n
-from car_charge_planner.i18n import _, ngettext
-from car_charge_planner.settings.tabs import timezone_box
 from car_charge_planner.forecast.provider import Place, PlaceResults, Problem
 from car_charge_planner.forecast.selection import place_search
+from car_charge_planner.i18n import _, ngettext
 from car_charge_planner.planner.model import system_timezone
+from car_charge_planner.settings.tabs import timezone_box
 
 from .pages import Page, fold
 
@@ -214,7 +214,7 @@ class LocationPage(Page):
             self.status.setText(_("No place found. Try another spelling, or enter the coordinates instead."))
             return
         labels = [p.label for p in results.places]
-        for place, label in zip(results.places, labels):
+        for place, label in zip(results.places, labels, strict=True):
             item = QListWidgetItem(place.detailed_label if labels.count(label) > 1 else label)  # tell two alike apart
             self.results.addItem(item)
         self.status.setStyleSheet(colours.MUTED_STYLE)

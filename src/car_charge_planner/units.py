@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import math
 import os
-from typing import Mapping
+from collections.abc import Mapping
 
 METRIC = "metric"
 IMPERIAL = "imperial"

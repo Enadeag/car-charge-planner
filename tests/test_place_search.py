@@ -8,7 +8,6 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 
-from fake_provider import FakeProvider
 from car_charge_planner.forecast.provider import Place, PlaceResults, Problem
 from car_charge_planner.forecast.providers.forecast_solar import ForecastSolar
 from car_charge_planner.forecast.providers.open_meteo import OpenMeteo
@@ -17,6 +16,7 @@ from car_charge_planner.forecast.registry import ProviderRegistry
 from car_charge_planner.forecast.selection import place_search
 from car_charge_planner.forecast.transport import Reply
 from car_charge_planner.planner.model import Forecast
+from fake_provider import FakeProvider
 from provider_kit import PlaceCase, PlaceSearchConformance, ReplayTransport
 
 FIXTURES = Path(__file__).parent / "fixtures"

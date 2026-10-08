@@ -10,8 +10,9 @@ from __future__ import annotations
 import json
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
+from typing import Any
 
 PROJECT_URL = "https://github.com/Enadeag/car-charge-planner"  # the address after the repository is renamed
 USER_AGENT = f"car-charge-planner (+{PROJECT_URL})"
@@ -21,7 +22,7 @@ TIMEOUT_S = 15
 @dataclass(frozen=True)
 class Request:
     url: str
-    headers: dict[str, str] = field(default_factory=dict)
+    headers: dict[str, str] = field(default_factory=dict[str, str])
     timeout_s: float = TIMEOUT_S  # a search box wants a short one
 
 
@@ -29,7 +30,7 @@ class Request:
 class Reply:
     status: int
     body: bytes = b""
-    headers: dict[str, str] = field(default_factory=dict)
+    headers: dict[str, str] = field(default_factory=dict[str, str])
 
     @property
     def ok(self) -> bool:
@@ -40,7 +41,7 @@ class Reply:
         wanted = name.lower()
         return next((value for key, value in self.headers.items() if key.lower() == wanted), None)
 
-    def json(self):
+    def json(self) -> Any:
         return json.loads(self.body.decode("utf-8"))
 
 

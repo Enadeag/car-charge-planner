@@ -7,7 +7,8 @@ from car_charge_planner.i18n import _
 from car_charge_planner.planner.model import Config
 
 from .provider import ForecastProvider, PlaceSearch
-from .registry import ProviderRegistry, registry as builtin
+from .registry import ProviderRegistry
+from .registry import registry as builtin
 from .secret_store import Secrets
 
 
@@ -15,7 +16,7 @@ def provider_settings(cfg: Config, secrets: Secrets, provider: ForecastProvider)
     """What a provider's `fetch` is given: its declared settings only, secret ones from the secrets file."""
     plain = cfg.forecast.settings.get(provider.id, {})
     hidden = secrets.get(provider.id, {})
-    values = {}
+    values: dict[str, str] = {}
     for spec in provider.settings:
         value = (hidden if spec.secret else plain).get(spec.key, "")
         if value:

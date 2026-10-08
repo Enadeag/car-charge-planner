@@ -10,7 +10,8 @@ Hourly irradiance is the mean of the *preceding* hour, so the value stamped T co
 from __future__ import annotations
 
 import urllib.parse
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from car_charge_planner.i18n import N_
@@ -19,14 +20,15 @@ from car_charge_planner.planner.model import ForecastStep
 from ..provider import (
     BadResponse,
     NotConfigured,
+    PlaceSearch,
     RateLimited,
     SettingSpec,
     SystemDescription,
     Unavailable,
     require_valid_steps,
 )
-from .open_meteo_geocoding import OpenMeteoGeocoder
 from ..transport import USER_AGENT, Reply, Request, Transport, urllib_transport
+from .open_meteo_geocoding import OpenMeteoGeocoder
 
 PUBLIC_SERVER = "https://api.open-meteo.com"
 PATH = "/v1/forecast"
@@ -71,7 +73,7 @@ class OpenMeteo:
 
     def __init__(self, transport: Transport = urllib_transport) -> None:
         self.transport = transport
-        self.search_places = OpenMeteoGeocoder(transport)  # its place search: the same service family and terms
+        self.search_places: PlaceSearch | None = OpenMeteoGeocoder(transport)  # its place search: the same service family and terms
 
     # -- the request -------------------------------------------------------------------------------------------
 
@@ -126,6 +128,7 @@ class OpenMeteo:
             raise BadResponse("Open-Meteo gave an answer that is not JSON") from None
         if not isinstance(raw, dict):
             raise BadResponse("Open-Meteo gave an unexpected answer")
+        raw = cast("dict[str, Any]", raw)
         if raw.get("error"):
             raise BadResponse(f"Open-Meteo reports an error: {raw.get('reason', 'no reason given')}")
         try:
@@ -134,10 +137,10 @@ class OpenMeteo:
             if len(stamps) != len(irradiance):
                 raise ValueError("the lists differ in length")
             tz = ZoneInfo(system.timezone)
-            steps = []
-            for stamp, value in zip(stamps, irradiance):
-                end = datetime.fromtimestamp(stamp, timezone.utc).astimezone(tz)
-                start = (end.astimezone(timezone.utc) - timedelta(hours=1)).astimezone(tz)
+            steps: list[ForecastStep] = []
+            for stamp, value in zip(stamps, irradiance, strict=False):
+                end = datetime.fromtimestamp(stamp, UTC).astimezone(tz)
+                start = (end.astimezone(UTC) - timedelta(hours=1)).astimezone(tz)
                 watts = float(value or 0.0)  # null at the edge of the horizon
                 steps.append(ForecastStep(start, end, power_kw(watts, system.kwp, system.system_losses)))
         except (KeyError, TypeError, ValueError, OverflowError, OSError, ZoneInfoNotFoundError):

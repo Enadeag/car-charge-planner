@@ -26,12 +26,12 @@ from PySide6.QtGui import QColor, QPalette  # noqa: E402
 from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from car_charge_planner.setup.wizard import SetupWizard  # noqa: E402
 from car_charge_planner.forecast.check import Attempt  # noqa: E402
 from car_charge_planner.forecast.providers.open_meteo import OpenMeteo  # noqa: E402
 from car_charge_planner.forecast.registry import ProviderRegistry  # noqa: E402
 from car_charge_planner.forecast.transport import Reply  # noqa: E402
 from car_charge_planner.planner.model import Config  # noqa: E402
+from car_charge_planner.setup.wizard import SetupWizard  # noqa: E402
 
 OUT = ROOT / "docs" / "images"
 PLACES = (ROOT / "tests" / "fixtures" / "open_meteo_geocoding_amsterdam.json").read_bytes()

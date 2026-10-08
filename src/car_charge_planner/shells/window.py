@@ -118,8 +118,8 @@ class WindowShell:
         self.window.setWindowIcon(make_icon(update.vm.state))
 
     def _fit(self) -> None:
-        self.window.centralWidget().layout().activate()
-        self.window.layout().activate()
+        self.window.centralWidget().layout().activate()  # pyright: ignore[reportOptionalMemberAccess]  # both exist once built
+        self.window.layout().activate()  # pyright: ignore[reportOptionalMemberAccess]
         self.window.adjustSize()
 
     def _after_close(self) -> None:

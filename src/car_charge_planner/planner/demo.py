@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 
@@ -12,9 +12,9 @@ def bell_day(day: date, peak_wm2: float, tz: ZoneInfo, sunrise: float = 6, sunse
 
     Steps are built on the UTC timeline so DST days have 23 or 25 steps.
     """
-    midnight = datetime.combine(day, datetime.min.time(), tz).astimezone(timezone.utc)
-    nxt = datetime.combine(day + timedelta(days=1), datetime.min.time(), tz).astimezone(timezone.utc)
-    out = []
+    midnight = datetime.combine(day, datetime.min.time(), tz).astimezone(UTC)
+    nxt = datetime.combine(day + timedelta(days=1), datetime.min.time(), tz).astimezone(UTC)
+    out: list[tuple[datetime, float]] = []
     moment = midnight
     while moment < nxt:
         local = moment.astimezone(tz)

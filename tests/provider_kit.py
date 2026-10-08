@@ -22,9 +22,9 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from typing import Callable, Union
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -42,11 +42,11 @@ from car_charge_planner.forecast.provider import (
 )
 from car_charge_planner.forecast.transport import Reply, Request, Transport
 
-Match = Union[str, Callable[[Request], bool]]
-Routes = list[tuple[Match, Union[Reply, Exception]]]
+Match = str | Callable[[Request], bool]
+Routes = list[tuple[Match, Reply | Exception]]
 
 EXAMPLE_SYSTEM = SystemDescription(52.37, 4.90, 4.8, 35, -45, 0.14, "Europe/Amsterdam")
-EXAMPLE_NOW = datetime(2026, 7, 3, 7, 0, tzinfo=timezone.utc)
+EXAMPLE_NOW = datetime(2026, 7, 3, 7, 0, tzinfo=UTC)
 HORIZON_SLACK = timedelta(days=1)
 
 

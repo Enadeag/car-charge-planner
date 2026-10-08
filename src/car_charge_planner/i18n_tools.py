@@ -12,7 +12,7 @@ committed template changes only when a text changes.
 from __future__ import annotations
 
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from .i18n import DOMAIN, LOCALE_DIR
@@ -21,7 +21,7 @@ PACKAGE_DIR = Path(__file__).resolve().parent
 PACKAGE_NAME = PACKAGE_DIR.name  # "car_charge_planner": what the template calls a file's folder
 ROOT = PACKAGE_DIR.parent.parent  # the repository (the package is src/car_charge_planner)
 POT = LOCALE_DIR / f"{DOMAIN}.pot"
-FIXED_DATE = datetime(2026, 1, 1, tzinfo=timezone.utc)  # a template that changes only when the texts do
+FIXED_DATE = datetime(2026, 1, 1, tzinfo=UTC)  # a template that changes only when the texts do
 COMMENT_TAG = "i18n:"  # `# i18n: {n} is a number` before a text becomes a note for the translator
 
 ISSUES_URL = "https://github.com/Enadeag/car-charge-planner/issues"  # where translators send problems with a text
