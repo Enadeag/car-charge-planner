@@ -85,26 +85,25 @@ def texts(widget):
 
 def test_it_opens_on_welcome_with_next_and_no_back(rig):
     w = rig.wizard
-    assert w.current == "welcome" and w.heading.text() == "Welcome" and w.step.text() == "Step 1 of 5"
+    assert w.current == "welcome" and w.heading.text() == "Welcome" and w.step.text() == "Step 1 of 6"
     assert not w.back_button.isEnabled() and w.next_button.isEnabled() and w.next_button.text() == "Next"
-    assert [type(p) for p in w.pages.values()] == PAGES and w.sequence == ["welcome", "location", "solar", "car", "finish"]
+    assert [type(p) for p in w.pages.values()] == PAGES and w.sequence == ["welcome", "location", "solar", "car", "next", "finish"]
 
 
 def test_next_and_back_move_through_the_pages_and_keep_the_answers(rig):
     w = rig.wizard
     w.pages["welcome"].units.setCurrentIndex(w.pages["welcome"].units.findData("imperial"))
     w.next()
-    assert w.current == "location" and w.step.text() == "Step 2 of 5"
+    assert w.current == "location" and w.step.text() == "Step 2 of 6"
     w.next()
     w.next()
     w.next()
-    assert w.current == "finish" and w.heading.text() == "Finish" and w.step.text() == "Step 5 of 5"
+    w.next()
+    assert w.current == "finish" and w.heading.text() == "Finish" and w.step.text() == "Step 6 of 6"
     assert w.back_button.isEnabled() and w.next_button.text() == "Finish"
     rig.settle()
-    w.back()
-    w.back()
-    w.back()
-    w.back()
+    for _ in range(5):
+        w.back()
     assert w.current == "welcome" and w.pages["welcome"].units.currentData() == "imperial"  # what was chosen is still there
     assert not w.back_button.isEnabled()
 
@@ -205,7 +204,7 @@ def test_finish_shows_the_recap_with_typical_values_marked(tmp_path, qapp):
 def test_a_group_has_a_change_link_only_when_its_page_exists(rig):
     page = rig.at_finish()
     links = [l for l in page.findChildren(QLabel) if "href=" in l.text()]
-    assert [l.text().split("href='")[1].split("'")[0] for l in links] == ["location", "solar", "car", "car"]  # the Car and Charger groups both change on the car page; House and Away come later
+    assert [l.text().split("href='")[1].split("'")[0] for l in links] == ["location", "solar", "car", "car", "house", "away"]  # the Car and Charger groups both change on the car page
 
 
 def test_a_change_link_returns_to_that_page_and_back_comes_back(tmp_path, qapp):
@@ -395,7 +394,8 @@ def test_finishing_applies_the_new_config_in_the_running_app(tmp_path, qapp, mon
     wizard.next()  # welcome -> location (the place is already there)
     wizard.next()  # location -> solar
     wizard.next()  # solar -> car
-    wizard.next()  # car -> finish
+    wizard.next()  # car -> the hub
+    wizard.next()  # the hub -> finish
     for thread in list(wizard.pages["finish"]._threads):
         thread.join(5)
     wizard.next()

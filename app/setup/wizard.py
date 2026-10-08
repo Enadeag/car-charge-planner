@@ -22,15 +22,18 @@ from planner.config_io import write_config
 from planner.model import Config, ConfigError
 
 from .car import CarPage
+from .away import AwayPage
 from .finish import FinishPage
+from .house import HousePage
+from .hub import HubPage
 from .location import LocationPage
 from .solar import SolarPage
 from .pages import Page
 from .state import SetupState
 from .welcome import WelcomePage
 
-# the pages in the order of the flow; the Hub page (and the pages it opens) is added by its own ticket
-PAGES: list[type[Page]] = [WelcomePage, LocationPage, SolarPage, CarPage, FinishPage]
+# the pages in the order of the flow; House and Away are opened from the hub and not part of the sequence
+PAGES: list[type[Page]] = [WelcomePage, LocationPage, SolarPage, CarPage, HubPage, HousePage, AwayPage, FinishPage]
 
 
 def ask_leave(parent) -> bool:
@@ -169,6 +172,9 @@ class SetupWizard(QDialog):
     def next(self) -> None:
         page = self.pages[self.current]
         if not page.can_continue():
+            return
+        if self.current not in self.sequence:  # a page the hub opened: done, back to where we came from
+            self.back()
             return
         if self.current == self.sequence[-1]:
             self.finish()

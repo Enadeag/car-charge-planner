@@ -227,3 +227,37 @@ def test_the_location_page_is_fully_translated_in_each_of_its_states(cfg, qapp, 
             problems += [f"{name}/{primary}: {p}" for p in pseudo.untranslated(wizard) + pseudo.clipped(wizard)]
             wizard.close()
     assert problems == []
+
+
+def test_the_hub_and_the_pages_it_opens_are_fully_translated(cfg, qapp, pseudo_language, tmp_path):
+    from app.setup.wizard import SetupWizard
+    from forecast.check import Attempt
+
+    wizard = SetupWizard(cfg, tmp_path / "config.toml", lambda c: None, check=lambda c: Attempt(True, 2, "OK"), environ={"LANG": "nl_NL"}, qt_locale_name="")
+    wizard.confirm_leave = lambda: True
+    wizard.show()
+    problems = []
+
+    def look(label):
+        settle(wizard)
+        QApplication.processEvents()
+        problems.extend(f"{label}: {p}" for p in pseudo.untranslated(wizard) + pseudo.clipped(wizard))
+
+    wizard.navigate("next")
+    look("hub, nothing done")
+    wizard.navigate("house")
+    look("house, empty")
+    wizard.pages["house"].yearly.setValue(5000)
+    wizard.pages["house"].includes_car.setChecked(True)
+    look("house, a value")
+    wizard.back()
+    wizard.navigate("away")
+    wizard.pages["away"].some_days.click()
+    look("away, one row")
+    wizard.pages["away"].rows[0].end.setTime(wizard.pages["away"].rows[0].start.time().addSecs(-3600))
+    look("away, a problem")
+    wizard.pages["away"].rows[0].end.setTime(wizard.pages["away"].rows[0].start.time().addSecs(3600))
+    wizard.back()
+    look("hub, both done")
+    wizard.close()
+    assert problems == []

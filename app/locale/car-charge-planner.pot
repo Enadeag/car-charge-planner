@@ -82,7 +82,8 @@ msgstr ""
 msgid "No absences planned"
 msgstr ""
 
-#: app/away_input.py app/setup/recap.py app/setup/solar.py app/view_model.py
+#: app/away_input.py app/setup/hub.py app/setup/recap.py app/setup/solar.py
+#: app/view_model.py
 msgctxt "list separator"
 msgid ", "
 msgstr ""
@@ -861,6 +862,34 @@ msgstr ""
 msgid "Could not write {file}: {error}"
 msgstr ""
 
+#: app/setup/away.py app/setup/hub.py
+msgid "When is the car away?"
+msgstr ""
+
+#: app/setup/away.py
+msgid "No charging is planned while the car is out, for example at work. Without this the car is treated as home all day, every day."
+msgstr ""
+
+#: app/setup/away.py
+msgid "The car is usually home"
+msgstr ""
+
+#: app/setup/away.py
+msgid "The car is away at set times each week"
+msgstr ""
+
+#: app/setup/away.py
+msgid "Add a time"
+msgstr ""
+
+#: app/setup/away.py
+msgid "One time covers one weekday: add several for several days. Each runs from a start to an end on the same day."
+msgstr ""
+
+#: app/setup/away.py app/setup/house.py
+msgid "Done"
+msgstr ""
+
 #: app/setup/car.py
 msgid "Your car and charger"
 msgstr ""
@@ -986,6 +1015,126 @@ msgstr[1] ""
 #: app/setup/finish.py
 #, python-brace-format
 msgid "{reason} You can still finish; the app tries again by itself."
+msgstr ""
+
+#: app/setup/house.py app/setup/hub.py
+msgid "House electricity"
+msgstr ""
+
+#: app/setup/house.py
+msgid "The plan needs to know how much power the house itself uses, to know what is left over for the car. Your year's use is on your energy bill, or in your supplier's app."
+msgstr ""
+
+#: app/setup/house.py
+msgid "not entered"
+msgstr ""
+
+#: app/setup/house.py
+msgid "Electricity used in a year"
+msgstr ""
+
+#: app/setup/house.py
+msgid "My bill already includes charging the car"
+msgstr ""
+
+#: app/setup/house.py
+msgid "The year's total is turned into an average power over the year's 8,760 hours. If the car is on the same meter, its share is taken off, using what you said about the car."
+msgstr ""
+
+#: app/setup/house.py
+msgid "I don't know"
+msgstr ""
+
+#: app/setup/house.py
+msgid "Use a typical value for a house. You can change it later in Settings."
+msgstr ""
+
+#: app/setup/house.py
+#, python-brace-format
+msgid "= an average of {kw} kW for the house"
+msgstr ""
+
+#: app/setup/house.py
+#, python-brace-format
+msgid "(about {kwh} kWh of the car taken off)"
+msgstr ""
+
+#: app/setup/house.py
+#, python-brace-format
+msgid "That is more than the plan can use ({max} kW). Check the number."
+msgstr ""
+
+#: app/setup/house.py
+#, python-brace-format
+msgid "In use now: {kw} kW, a typical value (about {kwh} kWh a year)."
+msgstr ""
+
+#: app/setup/house.py
+#, python-brace-format
+msgid "In use now: {kw} kW (about {kwh} kWh a year)."
+msgstr ""
+
+#: app/setup/hub.py
+msgid "✓ Done"
+msgstr ""
+
+#: app/setup/hub.py
+msgid "What next?"
+msgstr ""
+
+#: app/setup/hub.py
+msgid "You can finish now. These two make the plan better, and you can do them later in Settings."
+msgstr ""
+
+#: app/setup/hub.py
+msgid "Tells the plan how much power the house itself uses, so it knows what is left for the car."
+msgstr ""
+
+#: app/setup/hub.py
+msgid "If skipped: a typical value is used."
+msgstr ""
+
+#: app/setup/hub.py
+msgid "Add house electricity"
+msgstr ""
+
+#: app/setup/hub.py
+msgid "Stops the plan recommending charging while the car is out, for example at work."
+msgstr ""
+
+#: app/setup/hub.py
+msgid "If skipped: the car is treated as home all day."
+msgstr ""
+
+#: app/setup/hub.py
+msgid "Set the car's away times"
+msgstr ""
+
+#: app/setup/hub.py
+msgid "If you drive to work, set this."
+msgstr ""
+
+#: app/setup/hub.py
+msgid "Review and finish"
+msgstr ""
+
+#: app/setup/hub.py
+#, python-brace-format
+msgid "{kw} kW, a typical value"
+msgstr ""
+
+#: app/setup/hub.py app/setup/recap.py
+#, python-brace-format
+msgid "{kw} kW"
+msgstr ""
+
+#: app/setup/hub.py app/setup/recap.py
+#, python-brace-format
+msgid "{weekday} {start}-{end}"
+msgstr ""
+
+#: app/setup/hub.py
+msgid "usually home"
 msgstr ""
 
 #: app/setup/location.py
@@ -1173,11 +1322,6 @@ msgid "not chosen yet"
 msgstr ""
 
 #: app/setup/recap.py
-#, python-brace-format
-msgid "{weekday} {start}-{end}"
-msgstr ""
-
-#: app/setup/recap.py
 msgid "the car is treated as home all day"
 msgstr ""
 
@@ -1240,11 +1384,6 @@ msgstr ""
 
 #: app/setup/recap.py
 msgid "Own use"
-msgstr ""
-
-#: app/setup/recap.py
-#, python-brace-format
-msgid "{kw} kW"
 msgstr ""
 
 #: app/setup/recap.py
