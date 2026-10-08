@@ -1,11 +1,10 @@
 from datetime import date, timedelta
-from pathlib import Path
 
 from car_charge_planner.autostart import ENTRY_NAME, desktop_entry, install, uninstall
 from car_charge_planner.notifications import GRID, SOLAR, candidate_windows, due, message
 from car_charge_planner.planner.advice import GridAdvice
-from car_charge_planner.planner.model import AwayPeriod, DayPlan, Window
-from car_charge_planner.storage.state import load_state, mark_notified, save_state, State
+from car_charge_planner.planner.model import DayPlan, Window
+from car_charge_planner.storage.state import load_state, mark_notified
 
 from conftest import TZ, at
 

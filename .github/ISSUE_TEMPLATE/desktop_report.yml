@@ -1,0 +1,45 @@
+name: Does it work on my desktop?
+description: Tell us how the app behaves on your desktop environment
+labels: [needs-triage, desktop-report]
+body:
+  - type: input
+    id: desktop
+    attributes:
+      label: Desktop
+      description: "For example: GNOME 47, KDE Plasma 6, XFCE, Cinnamon, Sway"
+    validations:
+      required: true
+  - type: dropdown
+    id: session
+    attributes:
+      label: Session type
+      options: [Wayland, X11, Not sure]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+    validations:
+      required: true
+  - type: dropdown
+    id: shell
+    attributes:
+      label: What did you get?
+      options: [Tray icon, Window, Nothing appeared]
+    validations:
+      required: true
+  - type: checkboxes
+    id: checked
+    attributes:
+      label: What did you check?
+      options:
+        - label: The app starts and shows the plan (or the set-up wizard on a first run)
+        - label: Clicking the tray icon, or the window, shows the plan
+        - label: A notification appears (`car-charge-planner test-notification`), and clicking it shows the app
+        - label: The Settings window opens and saving works
+        - label: Starting at login works (`car-charge-planner install-autostart`)
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything that did not work, or looked wrong

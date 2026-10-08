@@ -1,5 +1,5 @@
 from dataclasses import replace
-from datetime import date, datetime, time, timedelta
+from datetime import date, time, timedelta
 
 from car_charge_planner.planner.model import AwayPeriod, AwayRule, Config, ForecastStep, load_config
 from car_charge_planner.planner.projection import energy_needed_kwh, plan

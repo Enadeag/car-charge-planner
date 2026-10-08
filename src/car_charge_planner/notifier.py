@@ -13,10 +13,10 @@ import os
 from pathlib import Path
 from typing import Protocol
 
-log = logging.getLogger(__name__)
-
 from .i18n import N_, _
 from .identity import APP_NAME, DESKTOP_ENTRY, ICON_NAME  # noqa: F401  (DESKTOP_ENTRY ties a notification to the launcher entry)
+
+log = logging.getLogger(__name__)
 
 FALLBACK_ICON = "dialog-information"
 NOTIFY_SIGNATURE = "susssasa{sv}i"

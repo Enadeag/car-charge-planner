@@ -14,7 +14,6 @@ from PySide6.QtWidgets import QApplication
 
 from conftest import TrayApp
 from car_charge_planner.forecast.service import ForecastResult, forecast_key
-from car_charge_planner.planner.model import Config
 from car_charge_planner.storage.state import load_state, mark_notified
 
 from conftest import at, example_config, forecast_from

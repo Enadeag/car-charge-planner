@@ -1,7 +1,6 @@
 import gc
 import os
 import socket
-import sys
 from pathlib import Path
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo

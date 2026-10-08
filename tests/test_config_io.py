@@ -1,7 +1,6 @@
 import os
 from dataclasses import replace
 from datetime import time
-from pathlib import Path
 
 import pytest
 

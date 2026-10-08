@@ -1,7 +1,47 @@
 # Contributing
 
-The rest of this guide (reporting problems, code style, the pull request routine) is still to be written.
-For now it covers one thing people ask first: translating the app.
+Thank you for helping. Small fixes can go straight to a pull request; for anything bigger, open an issue first so we can agree on the approach. Be kind: this project follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Set up
+
+You need Python 3.12 or newer. From a clone:
+
+```bash
+python -m venv .venv
+.venv/bin/pip install -e ".[dev]"
+```
+
+Run the app with `.venv/bin/car-charge-planner`.
+
+## Tests and lint
+
+```bash
+QT_QPA_PLATFORM=offscreen .venv/bin/pytest -q    # about two minutes; no window appears and nothing touches the network
+.venv/bin/ruff check .
+```
+
+A change comes with a test that fails without it. New or changed texts need a refreshed template (see below).
+
+## Code layout
+
+Everything is in `src/car_charge_planner/`:
+
+| Folder or file | What it holds |
+| --- | --- |
+| `planner/` | The planning itself: surplus, windows, projection, advice. No Qt. |
+| `forecast/` | Forecast providers (Open-Meteo, Forecast.Solar), the service that picks and caches, place search, key storage. How to add a provider: `docs/providers.md`. |
+| `storage/`, `config_file.py` | The state file and the TOML configuration. |
+| `controller.py` | Ties it together: fetches, plans, announces, opens the windows. |
+| `shells/` | The tray shell and the window shell (the two ways the app shows itself). |
+| `planview.py`, `popup.py`, `view_model.py` | The plan page and its Qt-free view model. |
+| `settings/`, `setup/` | The Settings window and the first-run set-up wizard. |
+| `locale/` | Translations. |
+
+`CONTEXT.md` explains the words the project uses (window, charge power, away and so on).
+
+## Reporting how it runs on your desktop
+
+The app is developed on KDE Plasma under Wayland. If you try it on another desktop, please open a **Does it work on my desktop?** issue: it takes five minutes and tells us what works where.
 
 ## Adding a language
 

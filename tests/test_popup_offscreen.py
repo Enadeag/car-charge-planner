@@ -18,7 +18,7 @@ from conftest import TZ, at, forecast_from
 
 
 def test_popup_shows_view_model_text(cfg):
-    app = QApplication.instance() or QApplication([])
+    _app = QApplication.instance() or QApplication([])  # kept alive for the test
     now = at(date(2026, 7, 3), 7)
     fc = forecast_from([(date(2026, 7, 3), 900), (date(2026, 7, 4), 150)])
     vm = build(plan(fc, cfg, 45, now), now, cfg, BatteryReading(45, now), None, False)
@@ -30,7 +30,7 @@ def test_popup_shows_view_model_text(cfg):
 
 
 def test_icons_exist_for_every_state():
-    app = QApplication.instance() or QApplication([])
+    _app = QApplication.instance() or QApplication([])  # kept alive for the test
     for state in ("active", "upcoming", "none", "no-forecast"):
         assert not make_icon(state).isNull()
 
@@ -119,7 +119,7 @@ def test_existing_away_is_listed_and_removable(cfg):
 
 
 def test_tray_app_round_trip_persists_and_replans(cfg, tmp_path, monkeypatch):
-    from datetime import time, timedelta, timezone
+    from datetime import time
 
     from PySide6.QtWidgets import QApplication as QA
 
@@ -297,7 +297,6 @@ def test_tray_opens_settings_on_the_away_rules_tab_and_hides_the_popup(cfg, tmp_
 
 
 def test_a_rule_saved_in_settings_shows_up_in_the_popup(cfg, tmp_path, monkeypatch):
-    from datetime import time
 
     from PySide6.QtCore import QTime
 

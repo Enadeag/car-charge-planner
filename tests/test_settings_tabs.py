@@ -9,7 +9,6 @@ import pytest
 from PySide6.QtCore import QTime
 from PySide6.QtWidgets import QApplication, QLabel
 
-from car_charge_planner.settings.tabs import AwayRulesTab
 from car_charge_planner.settings.window import SettingsWindow
 from car_charge_planner.planner.model import AwayRule, Config, Setup, load_config
 

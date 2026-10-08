@@ -2,8 +2,6 @@ import os
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from dataclasses import replace
-from pathlib import Path
 
 import pytest
 from PySide6.QtGui import QColor, QPalette
@@ -19,7 +17,9 @@ from conftest import TZ
 
 def luminance(hex_colour):
     r, g, b = (int(hex_colour[i : i + 2], 16) / 255 for i in (1, 3, 5))
-    f = lambda v: v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+    def f(v):
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+
     return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
 
 
