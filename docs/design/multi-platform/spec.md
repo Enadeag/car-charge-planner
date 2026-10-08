@@ -2,6 +2,8 @@
 
 Status: agreed in a grilling session, 2026-10-07. Vocabulary: `CONTEXT.md` (**start at login**, **supported / beta**). Related: the open-source plan (package rename 04, launch gate 11).
 
+**Tracked on GitHub:** the tickets M1-M13 below are issues #18-#30, in the milestones `v0.2.0 Windows` and `v0.3.0 macOS beta`, with tracking issue #54. The issues are current; the copies in `issues/` are the plan as it was written.
+
 ## 1. Goal
 
 The app runs on Windows 10+ and macOS as well as Linux (KDE, GNOME), with installers for the first two. Windows ships with the public launch; macOS follows it. The planner, forecast, view model, popup, Settings and translations are already portable; the work is the places where the app talks to the operating system.

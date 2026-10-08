@@ -12,7 +12,7 @@ Each folder is one feature and holds a **spec** (what and why, with the decision
 | `gnome-support/` | Notifications over D-Bus, the window shell, single instance, the launcher entry |
 | `setup-screen/` | The first-run set-up wizard, typical values, units, and the translation machinery |
 | `forecast-providers/` | The forecast provider contract, the service, Open-Meteo and Forecast.Solar |
-| `multi-platform/` | The plan for Windows and macOS (not built yet) |
+| `multi-platform/` | The plan for Windows and macOS (not built yet; the open work is GitHub issue #54 and the issues it lists) |
 
 ## Reading them
 
