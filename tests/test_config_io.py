@@ -105,7 +105,7 @@ def test_overwrites_an_existing_file(tmp_path):
 
 
 def test_values_are_written_as_toml_types(tmp_path):
-    text = dump_config(Config())
+    text = dump_config(Config(timezone="Europe/Amsterdam"))  # not the default: that is this computer's own zone
     assert 'timezone = "Europe/Amsterdam"' in text
     assert "min_amps = 6\n" in text  # an int stays an int
     assert "kwp = 5.0\n" in text  # a float stays a float
