@@ -19,7 +19,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -31,21 +30,9 @@ from forecast.provider import Place, PlaceResults, Problem
 from forecast.selection import place_search
 from planner.model import system_timezone
 
-from .pages import Page
+from .pages import Page, fold
 
 PAUSE_MS = 400  # after the last key: so a search is not sent for every letter
-
-
-def _fold(text: str) -> QToolButton:
-    """A small button that opens and closes a part of the page: an arrow and a name."""
-    button = QToolButton()
-    button.setText(text)
-    button.setCheckable(True)
-    button.setAutoRaise(True)
-    button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-    button.setArrowType(Qt.ArrowType.RightArrow)
-    button.toggled.connect(lambda open_: button.setArrowType(Qt.ArrowType.DownArrow if open_ else Qt.ArrowType.RightArrow))
-    return button
 
 
 class _Found(QObject):
@@ -95,7 +82,7 @@ class LocationPage(Page):
         self.chosen.setStyleSheet("font-weight: bold;")
         layout.addWidget(self.chosen)
 
-        self.coordinates_toggle = _fold(_("Enter coordinates instead"))
+        self.coordinates_toggle = fold(_("Enter coordinates instead"))
         layout.addWidget(self.coordinates_toggle, 0, Qt.AlignmentFlag.AlignLeft)
         self.coordinates_box = QWidget()
         coords = QFormLayout(self.coordinates_box)
@@ -118,7 +105,7 @@ class LocationPage(Page):
         coords.addRow(hint)
         layout.addWidget(self.coordinates_box)
 
-        self.advanced_toggle = _fold(_("Advanced"))
+        self.advanced_toggle = fold(_("Advanced"))
         layout.addWidget(self.advanced_toggle, 0, Qt.AlignmentFlag.AlignLeft)
         self.advanced_box = QWidget()
         advanced = QFormLayout(self.advanced_box)

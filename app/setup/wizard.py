@@ -21,6 +21,7 @@ from forecast.secret_store import SecretsError, load_secrets
 from planner.config_io import write_config
 from planner.model import Config, ConfigError
 
+from .car import CarPage
 from .finish import FinishPage
 from .location import LocationPage
 from .solar import SolarPage
@@ -28,8 +29,8 @@ from .pages import Page
 from .state import SetupState
 from .welcome import WelcomePage
 
-# the pages in the order of the flow; the Car and Hub pages are added by their own tickets
-PAGES: list[type[Page]] = [WelcomePage, LocationPage, SolarPage, FinishPage]
+# the pages in the order of the flow; the Hub page (and the pages it opens) is added by its own ticket
+PAGES: list[type[Page]] = [WelcomePage, LocationPage, SolarPage, CarPage, FinishPage]
 
 
 def ask_leave(parent) -> bool:

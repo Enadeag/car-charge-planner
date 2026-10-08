@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QToolButton, QWidget
 
 
 class Page(QWidget):
@@ -37,3 +37,15 @@ class Page(QWidget):
     def next_label(self) -> str | None:
         """A different text for the Next button, or None for the usual one."""
         return None
+
+
+def fold(text: str) -> QToolButton:
+    """A small button that opens and closes a part of a page: an arrow and a name."""
+    button = QToolButton()
+    button.setText(text)
+    button.setCheckable(True)
+    button.setAutoRaise(True)
+    button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+    button.setArrowType(Qt.ArrowType.RightArrow)
+    button.toggled.connect(lambda open_: button.setArrowType(Qt.ArrowType.DownArrow if open_ else Qt.ArrowType.RightArrow))
+    return button

@@ -517,7 +517,7 @@ msgstr ""
 msgid "The net (usable) battery capacity in kWh. Manufacturers often list the gross capacity, which is higher."
 msgstr ""
 
-#: app/settings/fields.py app/setup/recap.py
+#: app/settings/fields.py app/setup/car.py app/setup/recap.py
 msgid "Usable battery"
 msgstr ""
 
@@ -525,7 +525,7 @@ msgstr ""
 msgid "Real-world average energy use of the car. Usually higher in winter than in summer."
 msgstr ""
 
-#: app/settings/fields.py app/setup/recap.py
+#: app/settings/fields.py app/setup/car.py app/setup/recap.py
 msgid "Consumption"
 msgstr ""
 
@@ -557,7 +557,7 @@ msgstr ""
 msgid "Charger"
 msgstr ""
 
-#: app/settings/fields.py app/setup/recap.py
+#: app/settings/fields.py app/setup/car.py app/setup/recap.py
 msgid "Phases"
 msgstr ""
 
@@ -565,11 +565,11 @@ msgstr ""
 msgid "Whether the charger charges on one phase or three. The charger's label or manual says, and so does the fuse box. Three phases deliver three times the power at the same current. Some chargers can be switched to single-phase charging, which suits solar surplus better. Currents below are per phase."
 msgstr ""
 
-#: app/settings/fields.py
+#: app/settings/fields.py app/setup/car.py
 msgid "One phase"
 msgstr ""
 
-#: app/settings/fields.py
+#: app/settings/fields.py app/setup/car.py
 msgid "Three phases"
 msgstr ""
 
@@ -590,11 +590,11 @@ msgid "The highest current the charger and the home connection allow, per phase.
 msgstr ""
 
 #: app/settings/fields.py
-msgid "Voltage"
+msgid "Mains voltage at the charger, typically 230 V for a single-phase connection."
 msgstr ""
 
-#: app/settings/fields.py
-msgid "Mains voltage at the charger, typically 230 V for a single-phase connection."
+#: app/settings/fields.py app/setup/car.py
+msgid "Voltage"
 msgstr ""
 
 #: app/settings/fields.py
@@ -861,6 +861,91 @@ msgstr ""
 msgid "Could not write {file}: {error}"
 msgstr ""
 
+#: app/setup/car.py
+msgid "Your car and charger"
+msgstr ""
+
+#: app/setup/car.py
+msgid "The car"
+msgstr ""
+
+#: app/setup/car.py
+msgid "I don't know the car's numbers"
+msgstr ""
+
+#: app/setup/car.py
+msgid "Use typical values for the battery, consumption and distance. You can change them later in Settings."
+msgstr ""
+
+#: app/setup/car.py
+msgid "Typical: about 40 to 100 kWh. Give the usable (net) capacity: makers often list the gross figure, which is higher."
+msgstr ""
+
+#: app/setup/car.py
+msgid "Distance driven in a week"
+msgstr ""
+
+#: app/setup/car.py
+msgid "Everything added up and averaged over the year: work, shopping, holidays. The plan uses a seventh of it a day."
+msgstr ""
+
+#: app/setup/car.py
+msgid "Never below"
+msgstr ""
+
+#: app/setup/car.py
+msgid "Charge up to"
+msgstr ""
+
+#: app/setup/car.py
+msgid "The battery should never drop below the first; if it would, the plan advises charging from the grid. The second is the everyday maximum: 80 is gentle on the battery."
+msgstr ""
+
+#: app/setup/car.py
+msgid "The charger"
+msgstr ""
+
+#: app/setup/car.py
+msgid "I don't know the charger's numbers"
+msgstr ""
+
+#: app/setup/car.py
+msgid "Use typical values for the phases and the current. You can change them later in Settings."
+msgstr ""
+
+#: app/setup/car.py
+msgid "The charger's label or manual says, and so does the fuse box (three fuses in a row, or a three-pole one). Some chargers can be switched to single-phase charging, which suits solar power better: a three-phase charger needs about three times the surplus before it can start."
+msgstr ""
+
+#: app/setup/car.py
+msgid "Highest current"
+msgstr ""
+
+#: app/setup/car.py
+msgid "Lowest current"
+msgstr ""
+
+#: app/setup/car.py
+msgid "Per phase. The highest is what the charger and the home connection allow: typically 16 or 32 A. The lowest is what the charger and car both accept, often 6 A."
+msgstr ""
+
+#: app/setup/car.py app/setup/location.py
+msgid "Advanced"
+msgstr ""
+
+#: app/setup/car.py
+msgid "Mains voltage at the charger: 230 V in most of Europe."
+msgstr ""
+
+#: app/setup/car.py
+#, python-brace-format
+msgid "Typical: {low} to {high} {unit}. The car's trip computer average is a good guide; it is higher in winter."
+msgstr ""
+
+#: app/setup/car.py
+msgid "Typical values in use for some of these. Enter your own, or leave them."
+msgstr ""
+
 #: app/setup/finish.py
 msgid "Finish"
 msgstr ""
@@ -917,10 +1002,6 @@ msgstr ""
 
 #: app/setup/location.py
 msgid "In a map app, press and hold (or right-click) on your roof to read its coordinates, for example 52.3702, 4.8952. Positive latitude is north, positive longitude is east. 0 and 0 together mean not set."
-msgstr ""
-
-#: app/setup/location.py
-msgid "Advanced"
 msgstr ""
 
 #: app/setup/location.py
