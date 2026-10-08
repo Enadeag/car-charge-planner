@@ -3,12 +3,20 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 from car_charge_planner.planner.model import AwayPeriod, Window
+from car_charge_planner.planner.schema import KEY, Migration, NewerVersionError, SchemaError, upgrade
+
+log = logging.getLogger(__name__)
+
+STATE_SCHEMA = 1  # the state.json format this version writes; raise it with a migrate_<n>_to_<n+1> below
+STATE_MIGRATIONS: dict[int, Migration] = {}  # source version -> the step to the next one; empty until the format changes
 
 DEFAULT_BATTERY_PCT = 50.0
 KEEP_PAST_AWAY = timedelta(days=1)  # drop away periods that ended more than a day ago
@@ -41,11 +49,24 @@ def _instant(stamp: float) -> datetime:
     return datetime.fromtimestamp(stamp, UTC)
 
 
+def _read_blob(path: Path) -> Any:
+    """The file's data brought up to the current format. Raises OSError, ValueError or SchemaError."""
+    blob: Any = json.loads(path.read_text())
+    if isinstance(blob, dict):
+        blob = upgrade(blob, STATE_SCHEMA, STATE_MIGRATIONS, path.name)
+    return blob
+
+
 def load_state(path: Path | None = None) -> State:
-    """Missing or unreadable state gives the defaults; it never raises."""
+    """Missing or unreadable state gives the defaults; it never raises.
+
+    A file from a newer version of the app also gives the defaults, and save_state leaves that file alone."""
+    path = path or state_path()
     try:
-        blob = json.loads((path or state_path()).read_text())
-    except (OSError, ValueError):
+        blob = _read_blob(path)
+    except (OSError, ValueError) as err:  # SchemaError is a ValueError
+        if isinstance(err, SchemaError):
+            log.warning("%s", err)
         return State()
     state = State()
     try:
@@ -79,9 +100,24 @@ def load_state(path: Path | None = None) -> State:
     return replace(state, away=tuple(sorted(away, key=lambda a: a.start)), notified=tuple(notified), seen=seen)
 
 
+def _written_by_newer_version(path: Path) -> bool:
+    try:
+        _read_blob(path)
+    except NewerVersionError as err:
+        log.warning("%s Not saving over it.", err)
+        return True
+    except (OSError, ValueError):
+        return False  # unreadable files are replaced, as before
+    return False
+
+
 def save_state(state: State, path: Path | None = None) -> None:
+    """Write the state atomically. A file from a newer version of the app is kept as it is: nothing is written."""
     path = path or state_path()
+    if _written_by_newer_version(path):
+        return
     blob: dict = {
+        KEY: STATE_SCHEMA,
         "away": [{"start": a.start.timestamp(), "end": a.end.timestamp()} for a in state.away],
         "notified": [
             {

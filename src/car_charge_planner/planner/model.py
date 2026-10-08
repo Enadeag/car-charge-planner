@@ -15,6 +15,11 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from car_charge_planner.i18n import _  # the messages reach the user in Settings, so they are translated
 
+from .schema import Migration, SchemaError, upgrade
+
+CONFIG_SCHEMA = 1  # the config.toml format this version writes; raise it with a migrate_<n>_to_<n+1> below
+CONFIG_MIGRATIONS: dict[int, Migration] = {}  # source version -> the step to the next one; empty until the format changes
+
 
 def elapsed_hours(start: datetime, end: datetime) -> float:
     """Real elapsed hours. Same-timezone datetimes subtract by wall clock, which is wrong across DST."""
@@ -368,6 +373,10 @@ def load_config(path: Path | None) -> Config:
         data = tomllib.loads(Path(path).read_text())
     except tomllib.TOMLDecodeError as err:
         raise ConfigError(_("Config file is not valid TOML: {error}").format(error=err)) from err
+    try:
+        data = upgrade(data, CONFIG_SCHEMA, CONFIG_MIGRATIONS, Path(path).name)  # before any value is read
+    except SchemaError as err:
+        raise ConfigError(str(err)) from err
     cfg = Config()
     for section in ("panels", "house", "car", "charger", "planning", "notify", "interface"):
         if section in data:

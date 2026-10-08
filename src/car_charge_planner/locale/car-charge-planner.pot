@@ -643,6 +643,21 @@ msgstr ""
 msgid "A config value has the wrong type: {error}"
 msgstr ""
 
+#: car_charge_planner/planner/schema.py
+#, python-brace-format
+msgid "{name}: schema must be a whole number from 1 up, not {value!r}"
+msgstr ""
+
+#: car_charge_planner/planner/schema.py
+#, python-brace-format
+msgid "{name} was written by a newer version of the app (file format {found}, this version reads up to {current}). Update the app to use it."
+msgstr ""
+
+#: car_charge_planner/planner/schema.py
+#, python-brace-format
+msgid "{name} is in file format {found} and cannot be upgraded to {current}."
+msgstr ""
+
 #: car_charge_planner/planview.py
 msgid "Plan"
 msgstr ""

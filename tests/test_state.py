@@ -5,7 +5,7 @@ import pytest
 from car_charge_planner.away_input import describe, make_away
 from car_charge_planner.planner.model import AwayPeriod, ForecastStep, elapsed_hours
 from car_charge_planner.planner.projection import plan
-from car_charge_planner.storage.state import State, add_away, load_state, remove_away, set_battery
+from car_charge_planner.storage.state import State, add_away, load_state, mark_seen, remove_away, set_battery
 from conftest import TZ, at, forecast_from
 
 DAY = date(2026, 7, 3)
@@ -118,3 +118,51 @@ def test_step_across_the_spring_forward_gap_is_one_hour():
     start = at(date(2026, 3, 29), 1)
     step = ForecastStep(start, (start.astimezone(__import__("datetime").timezone.utc) + timedelta(hours=1)).astimezone(TZ), 0)
     assert step.end.hour == 3 and step.hours == 1.0
+
+
+def test_saved_state_carries_the_schema_version(tmp_path):
+    import json
+
+    from car_charge_planner.storage.state import STATE_SCHEMA, save_state
+
+    f = tmp_path / "s.json"
+    save_state(State(), f)
+    assert json.loads(f.read_text())["schema"] == STATE_SCHEMA == 1
+    set_battery(61, NOW, f)
+    assert load_state(f).battery.pct == 61  # round trip with the key present
+
+
+def test_state_without_a_schema_key_still_loads(tmp_path):
+    f = tmp_path / "s.json"
+    f.write_text(f'{{"battery_pct": 70, "battery_entered_at": {NOW.timestamp()}}}')
+    assert load_state(f).battery.pct == 70
+
+
+def test_a_newer_state_file_is_not_read_and_never_overwritten(tmp_path, caplog):
+    from car_charge_planner.storage.state import save_state
+
+    f = tmp_path / "s.json"
+    text = '{"schema": 99, "battery_pct": 70, "something_new": [1, 2]}'
+    f.write_text(text)
+    assert load_state(f) == State()  # nothing in it is trusted
+    with caplog.at_level("WARNING"):
+        set_battery(10, NOW, f)
+        save_state(State(), f)
+        assert mark_seen("hint", f) is True  # callers keep working; nothing raises
+    assert f.read_text() == text
+    assert "written by a newer version of the app" in caplog.text
+    assert list(tmp_path.iterdir()) == [f]
+
+
+def test_state_migrations_run_before_reading(tmp_path, monkeypatch):
+    from car_charge_planner.storage import state as state_module
+
+    def one_to_two(data):  # pretend v1 stored the percentage under another name
+        data["battery_pct"] = data.pop("pct")
+        return data
+
+    monkeypatch.setattr(state_module, "STATE_SCHEMA", 2)
+    monkeypatch.setitem(state_module.STATE_MIGRATIONS, 1, one_to_two)
+    f = tmp_path / "s.json"
+    f.write_text(f'{{"pct": 44, "battery_entered_at": {NOW.timestamp()}}}')
+    assert load_state(f).battery.pct == 44

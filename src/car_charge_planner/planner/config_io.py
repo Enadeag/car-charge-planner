@@ -8,7 +8,8 @@ import re
 from dataclasses import fields
 from pathlib import Path
 
-from .model import Config, ConfigError, validate
+from .model import CONFIG_SCHEMA, Config, ConfigError, validate
+from .schema import KEY
 
 HEADER = """\
 # Managed by the car charge planner's Settings window.
@@ -32,7 +33,7 @@ def _value(value: object) -> str:
 
 
 def dump_config(cfg: Config) -> str:
-    lines = [HEADER.rstrip("\n"), ""]
+    lines = [HEADER.rstrip("\n"), "", f"{KEY} = {CONFIG_SCHEMA}", ""]
     lines += [
         f"timezone = {_value(cfg.timezone)}",
         f"latitude = {_value(cfg.latitude)}",

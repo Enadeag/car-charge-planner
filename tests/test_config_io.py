@@ -109,3 +109,73 @@ def test_values_are_written_as_toml_types(tmp_path):
     assert 'timezone = "Europe/Amsterdam"' in text
     assert "min_amps = 6\n" in text  # an int stays an int
     assert "kwp = 5.0\n" in text  # a float stays a float
+
+
+def test_file_carries_the_schema_version_first(tmp_path):
+    from car_charge_planner.planner.model import CONFIG_SCHEMA
+
+    lines = [line for line in dump_config(Config()).splitlines() if line and not line.startswith("#")]
+    assert lines[0] == f"schema = {CONFIG_SCHEMA}" and CONFIG_SCHEMA == 1
+    assert round_trip(Config(), tmp_path) == Config()  # the key is not an unknown key, nor a Config field
+
+
+def test_a_file_without_a_schema_key_loads_as_version_1(tmp_path):
+    f = tmp_path / "config.toml"
+    f.write_text("[panels]\nkwp = 4.5\n")
+    assert load_config(f).panels.kwp == 4.5
+
+
+def test_a_file_from_a_newer_version_gets_the_newer_version_message(tmp_path):
+    f = tmp_path / "config.toml"
+    f.write_text("schema = 99\n[panels]\nsome_future_key = 1\n")
+    with pytest.raises(ConfigError, match="written by a newer version of the app") as caught:
+        load_config(f)
+    assert "unknown keys" not in str(caught.value)
+
+
+@pytest.mark.parametrize("bad", ['"two"', "0", "-1", "1.5", "true"])
+def test_a_schema_that_is_not_a_positive_whole_number_is_refused(tmp_path, bad):
+    f = tmp_path / "config.toml"
+    f.write_text(f"schema = {bad}\n")
+    with pytest.raises(ConfigError, match="schema"):
+        load_config(f)
+
+
+def test_migrations_run_in_order_before_the_values_are_read(tmp_path, monkeypatch):
+    from car_charge_planner.planner import model
+
+    seen = []
+
+    def one_to_two(data):  # pretend v1 called the panel size "peak_kw"
+        seen.append(1)
+        data["panels"]["kwp"] = data["panels"].pop("peak_kw")
+        return data
+
+    def two_to_three(data):
+        seen.append(2)
+        data["car"] = {"minimum_pct": 33}
+        return data
+
+    monkeypatch.setattr(model, "CONFIG_SCHEMA", 3)
+    monkeypatch.setitem(model.CONFIG_MIGRATIONS, 1, one_to_two)
+    monkeypatch.setitem(model.CONFIG_MIGRATIONS, 2, two_to_three)
+    f = tmp_path / "config.toml"
+    f.write_text("[panels]\npeak_kw = 6.5\n")  # no schema key: version 1
+    cfg = load_config(f)
+    assert seen == [1, 2] and cfg.panels.kwp == 6.5 and cfg.car.minimum_pct == 33
+    f.write_text("schema = 2\n[panels]\nkwp = 3.0\n")  # starts at the right step
+    seen.clear()
+    assert load_config(f).car.minimum_pct == 33 and seen == [2]
+    f.write_text("schema = 4\n")
+    with pytest.raises(ConfigError, match="newer version"):
+        load_config(f)
+
+
+def test_a_missing_migration_is_an_error_not_a_silent_skip(tmp_path, monkeypatch):
+    from car_charge_planner.planner import model
+
+    monkeypatch.setattr(model, "CONFIG_SCHEMA", 2)
+    f = tmp_path / "config.toml"
+    f.write_text("schema = 1\n")
+    with pytest.raises(ConfigError, match="cannot be upgraded"):
+        load_config(f)
