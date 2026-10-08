@@ -120,7 +120,7 @@ def test_the_not_set_up_view_says_where_to_go():
     now = at(DAY, 7)
     vm = needs_setup(BatteryReading(50, None), now)
     assert vm.state == "needs-setup" and vm.headline == "Not set up yet" and vm.tooltip == "Not set up yet"
-    assert "Settings" in vm.detail and "location" in vm.detail
+    assert vm.detail == "Set up the app to get a plan. It takes a few minutes."
     assert vm.outlook == () and vm.advice is None and vm.projection == ""
 
 
@@ -224,18 +224,18 @@ def test_the_window_shell_shows_the_state(tmp_path, monkeypatch, qapp):
     assert shell.window.windowIcon().pixmap(32, 32).toImage() == make_icon("needs-setup").pixmap(32, 32).toImage()
 
 
-def test_the_plan_page_offers_a_way_to_the_location_only_while_not_set_up(tmp_path, monkeypatch, qapp):
+def test_the_plan_page_offers_the_set_up_wizard_only_while_not_set_up(tmp_path, monkeypatch, qapp):
     controller, _ = make_controller(Config(), tmp_path, monkeypatch)
     shell = WindowShell(controller)
     shell.show_plan()
-    button = next(b for b in shell.view.findChildren(QPushButton) if b.text() == "Open Settings...")
+    button = next(b for b in shell.view.findChildren(QPushButton) if b.text() == "Set up")
     assert button.isVisible()
     button.click()
-    window = controller.settings_window
-    assert window.isVisible() and window.tabs.tabText(window.tabs.currentIndex()) == "Solar and location"
-    window.confirm_discard = lambda: True
-    window.close()
-    controller.apply_config(example_config())
+    wizard = controller.setup_wizard
+    assert wizard is not None and wizard.isVisible() and wizard.current == "welcome"
+    wizard.confirm_leave = lambda: True
+    wizard.close()
+    controller.apply_config(example_config())  # a location entered some other way: set up
     settle(controller)
     assert not button.isVisible()  # once there is a location the button goes away
     shell.window.hide()

@@ -52,6 +52,7 @@ class SettingsWindow(QDialog):
         config_file: Path,
         on_save: Callable[[Config], None],
         registry: ProviderRegistry | None = None,
+        on_setup: Callable[[], None] | None = None,
     ) -> None:
         super().__init__(None)
         self.setWindowTitle(_("Car charge planner: Settings"))
@@ -60,6 +61,7 @@ class SettingsWindow(QDialog):
         self.stored = cfg
         self.config_file = config_file
         self.on_save = on_save
+        self.on_setup = on_setup
         self.confirm_discard: Callable[[], bool] = lambda: ask_discard(self)
         self.closes_after_save = False
 
@@ -113,8 +115,14 @@ class SettingsWindow(QDialog):
         self.interface_tab = next(t for t in self.field_tabs if t.key == "interface")
         self.interface_tab.changed.connect(self._sync_units)
         self._sync_units()  # the car fields show what the Units choice says
+        self.setup_button = QPushButton(_("Run set-up again..."))
+        self.setup_button.setToolTip(_("Open the set-up wizard, filled in with what is saved now."))
+        self.setup_button.setAutoDefault(False)
+        self.setup_button.setVisible(on_setup is not None)
+        self.setup_button.clicked.connect(self.run_setup)
         buttons = QHBoxLayout()
         buttons.addWidget(self.reset_button)
+        buttons.addWidget(self.setup_button)
         buttons.addStretch()
         buttons.addWidget(self.cancel_button)
         buttons.addWidget(self.save_button)
@@ -158,6 +166,15 @@ class SettingsWindow(QDialog):
         tab = self.all_tabs[self.tabs.currentIndex()]
         tab.reset() if hasattr(tab, "reset") else tab.load(Config())
         self.refresh_close_button()
+
+    def run_setup(self) -> None:
+        """Close this window (asking first if there is something unsaved) and open the wizard, which starts from what
+        is saved."""
+        if self.is_dirty() and not self.confirm_discard():
+            return
+        QDialog.reject(self)  # closed without asking again
+        if self.on_setup is not None:
+            self.on_setup()
 
     def refresh_close_button(self) -> None:
         """"Close" when nothing is unsaved, "Cancel" when closing would throw edits away."""

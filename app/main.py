@@ -107,5 +107,7 @@ def main(argv: list[str] | None = None) -> int:
     listener.action_invoked.connect(action_handler(controller.notifier, shell.show_plan))
     app.aboutToQuit.connect(listener.stop)
     listener.start()
+    controller.setup_completed.connect(shell.show_plan)  # finishing set-up shows the plan
     shell.start(background=background)
+    controller.offer_setup(background)  # not set up yet: open the wizard (or, hidden at login, only offer it)
     return app.exec()

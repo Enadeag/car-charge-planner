@@ -102,7 +102,7 @@ def test_the_popup_is_fully_translated_and_nothing_is_clipped(cfg, qapp, pseudo_
 
 
 def test_the_settings_window_is_fully_translated_and_nothing_is_clipped(cfg, qapp, pseudo_language, tmp_path):
-    window = SettingsWindow(cfg, tmp_path / "config.toml", lambda c: None)
+    window = SettingsWindow(cfg, tmp_path / "config.toml", lambda c: None, on_setup=lambda: None)  # with the Run set-up again button
     settle(window)
     problems = []
     for index in range(window.tabs.count()):

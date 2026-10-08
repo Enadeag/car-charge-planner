@@ -99,6 +99,14 @@ msgid "Away: {items}"
 msgstr ""
 
 #: app/controller.py
+msgid "Set-up needed"
+msgstr ""
+
+#: app/controller.py
+msgid "Click here, then press Set up, to describe your solar panels and car. It takes a few minutes."
+msgstr ""
+
+#: app/controller.py
 msgid "Interface changed"
 msgstr ""
 
@@ -323,7 +331,7 @@ msgid "Update"
 msgstr ""
 
 #: app/planview.py
-msgid "Open Settings..."
+msgid "Set up"
 msgstr ""
 
 #: app/planview.py
@@ -842,6 +850,14 @@ msgstr ""
 
 #: app/settings/window.py
 msgid "Save, then close this window"
+msgstr ""
+
+#: app/settings/window.py
+msgid "Run set-up again..."
+msgstr ""
+
+#: app/settings/window.py
+msgid "Open the set-up wizard, filled in with what is saved now."
 msgstr ""
 
 #: app/settings/window.py
@@ -1690,7 +1706,7 @@ msgid "Not set up yet"
 msgstr ""
 
 #: app/view_model.py
-msgid "Enter your location in Settings to get a plan."
+msgid "Set up the app to get a plan. It takes a few minutes."
 msgstr ""
 
 #: app/view_model.py

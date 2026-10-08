@@ -23,6 +23,7 @@ class TrayShell:
         self.popup.away_added.connect(controller.add_away_period)
         self.popup.away_removed.connect(controller.remove_away_period)
         self.popup.settings_requested.connect(self._on_settings_requested)
+        self.popup.setup_requested.connect(self._on_setup_requested)
 
         self.tray = QSystemTrayIcon(make_icon("none"))
         menu = QMenu()
@@ -49,6 +50,10 @@ class TrayShell:
         self.tray.setIcon(make_icon(update.vm.state))
         self.tray.setToolTip(update.vm.tooltip)
         self.popup.update_view(update.vm, update.state, update.today, update.rules)
+
+    def _on_setup_requested(self) -> None:
+        self.popup.hide()
+        self.controller.open_setup()
 
     def _on_settings_requested(self, tab: str) -> None:
         self.popup.hide()

@@ -234,7 +234,7 @@ def needs_setup(battery: BatteryReading, now: datetime) -> ViewModel:
         state="needs-setup",
         tooltip=_("Not set up yet"),
         headline=_("Not set up yet"),
-        detail=_("Enter your location in Settings to get a plan."),
+        detail=_("Set up the app to get a plan. It takes a few minutes."),
         battery_line=line,
         battery_stale=False,  # no prompt to update the battery before there is anything to plan
         battery_pct=battery.pct,

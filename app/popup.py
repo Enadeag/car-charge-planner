@@ -31,6 +31,7 @@ class Popup(QWidget):
     away_added = Signal(object)  # AwayPeriod
     away_removed = Signal(object)  # AwayPeriod
     settings_requested = Signal(str)  # key of the Settings tab to open
+    setup_requested = Signal()  # the owner wants the set-up wizard
 
     def __init__(self, tz: ZoneInfo | None = None) -> None:
         super().__init__(None, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint)
@@ -49,7 +50,7 @@ class Popup(QWidget):
         close.setStyleSheet("font-size: 16pt;")
         close.clicked.connect(self.hide)
         self.view.add_to_header(close)
-        for name in ("battery_submitted", "away_added", "away_removed", "settings_requested"):
+        for name in ("battery_submitted", "away_added", "away_removed", "settings_requested", "setup_requested"):
             getattr(self.view, name).connect(getattr(self, name))
         self.view.layout_changed.connect(self.adjustSize)
 

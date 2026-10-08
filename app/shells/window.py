@@ -49,6 +49,7 @@ class WindowShell:
         self.view.away_added.connect(controller.add_away_period)
         self.view.away_removed.connect(controller.remove_away_period)
         self.view.settings_requested.connect(controller.open_settings)
+        self.view.setup_requested.connect(controller.open_setup)
         self.view.layout_changed.connect(self._fit)
 
         central = QWidget()

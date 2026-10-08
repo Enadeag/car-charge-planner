@@ -70,13 +70,16 @@ pkill -f "python -m app$"
 
 ### First run
 
-The first start creates the config file and shows **Not set up yet**. The app knows nothing about you at that point: it has no location, it **fetches nothing** (no request leaves your machine) and there is no plan.
+The first start creates the config file and opens the **set-up wizard**. Until you have said where your panels are, the app knows nothing about you: it **fetches nothing** (no request leaves your machine) and there is no plan; the popup and the window say **Not set up yet** and have a **Set up** button.
 
-1. Open **Settings...** (the button on the plan page, or the menu) and, on the first tab, enter your **latitude and longitude**. Both at 0 means "not set". Saving without a location is refused.
-2. Check the other values, especially your panels, car and charger. Whatever you leave alone starts as an **example value**, not a measurement.
-3. Press Save. The app fetches its first forecast and shows the plan.
+The wizard takes a few minutes and has six steps: a welcome (with what leaves your computer, and your units: km or miles), the **place** of your panels (searched by name, or typed as coordinates), the panels' **size, direction and tilt**, your **car and charger**, then **What next?** (two optional extras: the house's electricity use, and when the car is away, which matters if you drive to work) and a final review. Every question says where to find the answer, and **"I don't know"** uses a typical value. Typical values are marked as such in Settings and on the plan page until you give your own.
 
-Your time zone is taken from the system, and there are no away rules to begin with, so the car is treated as home all week until you add some (Settings, Away rules). A guided set-up screen that walks you through all of this is planned.
+- **Nothing is saved until Finish.** Closing the wizard earlier asks "Leave set-up?" and discards what you entered; the app stays not set up, and the **Set up** button is still there.
+- Finish writes the settings, fetches the first forecast (the last page does a test fetch and says what it got, but a failure never stops you finishing) and shows the plan.
+- When the app is started hidden at login (the autostart entry), the wizard does **not** open by itself; one notification offers it, once.
+- **Settings has "Run set-up again..."**, which opens the wizard filled in with what is saved. A location entered directly in Settings also counts as set up.
+
+Your time zone comes with the place you pick (or from the system for typed coordinates), and you can change it in the wizard under Advanced or in Settings.
 
 ### Check that clicking a notification works on your desktop
 

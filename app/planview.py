@@ -76,6 +76,7 @@ class PlanView(QWidget):
     away_added = Signal(object)  # AwayPeriod
     away_removed = Signal(object)  # AwayPeriod
     settings_requested = Signal(str)  # key of the Settings tab to open
+    setup_requested = Signal()  # the owner wants the set-up wizard
     layout_changed = Signal()  # the view resized itself to the page shown: a wrapping window should follow
 
     def __init__(self, tz: ZoneInfo | None = None) -> None:
@@ -137,9 +138,9 @@ class PlanView(QWidget):
             head.addWidget(widget)
         box.addLayout(head)
 
-        # shown only while not set up: the way to the place where the location is entered
-        self.setup_button = QPushButton(_("Open Settings..."))
-        self.setup_button.clicked.connect(lambda: self.settings_requested.emit("solar"))
+        # shown only while not set up: the way into the set-up wizard
+        self.setup_button = QPushButton(_("Set up"))
+        self.setup_button.clicked.connect(self.setup_requested.emit)
         setup_row = QHBoxLayout()
         setup_row.addWidget(self.setup_button)
         setup_row.addStretch()
