@@ -132,7 +132,7 @@ def test_typing_the_same_value_back_is_not_giving_a_value_of_your_own(tmp_path, 
     box = window.field_tabs[0].inputs["panels.kwp"]
     box.setValue(6.0)
     assert not tags(window, "solar")["panels.kwp"]
-    box.setValue(cfg.panels.kwp)
+    box.setValue(cfg.panels[0].kwp)
     assert tags(window, "solar")["panels.kwp"] and window.current_config().setup.typical == ("panels.kwp",)
 
 

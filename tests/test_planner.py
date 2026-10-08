@@ -35,7 +35,7 @@ def test_overcast_day_has_no_window(cfg):
 
 def test_surplus_below_minimum_power_is_not_chargeable(cfg):
     # peak surplus ~1.0 kW (< 1.38 kW of 6 A)
-    peak = (1.0 / 0.85 + cfg.house.baseload_kw) / (cfg.panels.kwp * (1 - cfg.panels.system_losses)) * 1000
+    peak = (1.0 / 0.85 + cfg.house.baseload_kw) / (cfg.panels[0].kwp * (1 - cfg.panels[0].system_losses)) * 1000
     p = day_plan(cfg, SUMMER_FRI, peak, soc=40)
     assert p.windows == ()
 
@@ -147,7 +147,7 @@ def test_load_config_defaults_and_overrides(tmp_path):
     f = tmp_path / "c.toml"
     f.write_text('[panels]\nkwp = 5.2\n[away]\nrecurring = [{weekday = 5, start = "08:00", end = "20:30"}]\n')
     cfg = load_config(f)
-    assert cfg.panels.kwp == 5.2 and cfg.panels.tilt_deg == 35
+    assert cfg.panels[0].kwp == 5.2 and cfg.panels[0].tilt_deg == 35
     assert cfg.away_rules == (AwayRule(5, time(8, 0), time(20, 30)),)
 
 

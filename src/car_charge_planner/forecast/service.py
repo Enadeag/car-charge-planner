@@ -216,7 +216,10 @@ class ForecastService:
 
 def _cache_key(system: SystemDescription, provider: ForecastProvider, cfg: Config) -> dict[str, Any]:
     plain = {k: v for k, v in cfg.forecast.settings.get(provider.id, {}).items() if k in {s.key for s in provider.settings if not s.secret}}
-    return {"system": asdict(system), "settings": plain}
+    key = {"system": asdict(system), "settings": plain}
+    # as it reads back from the cache file (the arrays' tuple becomes a list), or it would never match; a key in
+    # an older shape (one array, before there could be several) simply does not match, and the cache is not used
+    return cast("dict[str, Any]", json.loads(json.dumps(key)))
 
 
 def _read_blob(path: Path) -> dict[str, Any]:

@@ -8,6 +8,9 @@ Each entry of the script is one answer: a list of steps is returned, an exceptio
 called (and its result treated the same way), and `Held(event, then)` waits for the event first, so a test
 can have a fetch "in flight" while it changes something. When the script runs out, the last entry repeats
 (`repeat_last`) or `IndexError` says the test asked more often than it planned.
+
+Instead of a script, `per_array` makes it a provider that forecasts one panel array at a time (a function from the
+array to its steps) and adds the arrays up the way a real provider does (`each_array`).
 """
 
 from __future__ import annotations
@@ -17,7 +20,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 
-from car_charge_planner.forecast.provider import SettingSpec, SystemDescription
+from car_charge_planner.forecast.provider import PanelArray, SettingSpec, SystemDescription, each_array
 from car_charge_planner.planner.model import ForecastStep
 from conftest import forecast_from
 
@@ -55,9 +58,12 @@ class FakeProvider:
     settings: tuple[SettingSpec, ...] = ()
     search_places: object = None  # an optional place search: a callable (text, language) -> PlaceResults
     calls: list[tuple[SystemDescription, dict, datetime]] = field(default_factory=list)
+    per_array: Callable[[PanelArray], list[ForecastStep]] | None = None
 
     def fetch(self, system: SystemDescription, settings: dict[str, str], now: datetime) -> list[ForecastStep]:
         self.calls.append((system, dict(settings), now))
+        if self.per_array is not None:
+            return each_array(system, self.per_array)
         index = len(self.calls) - 1
         if not self.script:
             raise IndexError("the fake provider has no script")

@@ -25,7 +25,7 @@ def example_config() -> Config:
     06:00-19:00 away rule.
     """
     return Config(
-        panels=Panels(kwp=4.8, tilt_deg=35, azimuth_deg=-45, system_losses=0.14),
+        panels=(Panels(kwp=4.8, tilt_deg=35, azimuth_deg=-45, system_losses=0.14),),
         house=House(baseload_kw=0.6),
         car=Car(usable_battery_kwh=70, consumption_kwh_per_100km=18, km_per_day=600 / 7, minimum_pct=30, target_pct=80),
         charger=Charger(phases=1, min_amps=6, max_amps=32, volts=230, efficiency=0.90),
@@ -116,7 +116,7 @@ def no_network(monkeypatch):
 
 def forecast_from(days: list[tuple[date, float]]) -> list[ForecastStep]:
     """Bell-shaped days given by their peak irradiance (W/m2), turned into the power of the example system."""
-    panels = example_config().panels
+    panels = example_config().panels[0]
     steps = []
     for day, peak in days:
         for start, gti in bell_day(day, peak, TZ):

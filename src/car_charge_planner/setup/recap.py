@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from car_charge_planner import units
 from car_charge_planner.i18n import _, number, pgettext, translate
 from car_charge_planner.names import weekday_short
-from car_charge_planner.planner.model import Config
+from car_charge_planner.planner.model import Config, Panels, panel_key
 
 from .panels import COMPASS
 from .state import SetupState
@@ -21,6 +21,11 @@ def compass_label(azimuth: float) -> str:
     if azimuth == degrees and angle in names:
         return _("{direction} ({degrees}\u00b0)").format(direction=translate(names[angle]), degrees=angle)
     return _("{degrees}\u00b0").format(degrees=number(azimuth, 0 if azimuth == degrees else 1))
+
+
+def array_title(index: int, panels: Panels) -> str:
+    """What a panel array is called: its name, or "Array 2"."""
+    return panels.name or _("Array {number}").format(number=index + 1)
 
 
 @dataclass(frozen=True)
@@ -53,12 +58,39 @@ def _consumption(config: Config, kwh_per_100km: float) -> str:
     return f"{number(units.to_display(units.CONSUMPTION, kwh_per_100km, system), decimals)} {units.unit_label(units.CONSUMPTION, system)}"
 
 
+def _losses(panels: Panels) -> str:
+    return _("{percent}%").format(percent=number(panels.system_losses * 100, 0))
+
+
+def _panel_lines(cfg: Config) -> tuple[RecapLine, ...]:
+    """One array: its size, direction, tilt and losses. Several: the total size, then a line for each array."""
+    arrays = cfg.panels
+    if len(arrays) == 1:
+        p = arrays[0]
+        return (
+            _line(_("Size"), _("{kwp} kWp").format(kwp=number(p.kwp, 2)), cfg, "panels.kwp"),
+            _line(_("Direction"), compass_label(p.azimuth_deg), cfg, "panels.azimuth_deg"),
+            _line(_("Tilt"), _("{degrees}°").format(degrees=number(p.tilt_deg, 0)), cfg, "panels.tilt_deg"),
+            _line(_("System losses"), _losses(p), cfg, "panels.system_losses"),
+        )
+    keys = range(len(arrays))
+    lines = [_line(_("Total size"), _("{kwp} kWp").format(kwp=number(cfg.total_kwp, 2)), cfg, *(panel_key(i, "kwp") for i in keys))]
+    for index, p in enumerate(arrays):
+        value = _("{kwp} kWp, facing {direction}, tilt {tilt}°").format(
+            kwp=number(p.kwp, 2), direction=compass_label(p.azimuth_deg), tilt=number(p.tilt_deg, 0)
+        )
+        lines.append(_line(array_title(index, p), value, cfg, *(panel_key(index, name) for name in ("kwp", "azimuth_deg", "tilt_deg"))))
+    losses = list(dict.fromkeys(_losses(p) for p in arrays))  # one figure when they are all the same
+    lines.append(_line(_("System losses"), pgettext("list separator", ", ").join(losses), cfg, *(panel_key(i, "system_losses") for i in keys)))
+    return tuple(lines)
+
+
 def build_recap(state: SetupState) -> list[RecapGroup]:
     cfg = state.config
     place = state.place_label or (
         _("{latitude}, {longitude}").format(latitude=number(cfg.latitude, 4), longitude=number(cfg.longitude, 4)) if cfg.is_set_up else _("not chosen yet")
     )
-    p, car, ch = cfg.panels, cfg.car, cfg.charger
+    car, ch = cfg.car, cfg.charger
     if cfg.away_rules:
         away = pgettext("list separator", ", ").join(
             _("{weekday} {start}-{end}").format(weekday=weekday_short(r.weekday), start=f"{r.start:%H:%M}", end=f"{r.end:%H:%M}") for r in cfg.away_rules
@@ -70,12 +102,7 @@ def build_recap(state: SetupState) -> list[RecapGroup]:
             RecapLine(_("Location"), place),
             RecapLine(_("Time zone"), cfg.timezone),
         )),
-        RecapGroup("panels", _("Solar panels"), "solar", (
-            _line(_("Size"), _("{kwp} kWp").format(kwp=number(p.kwp, 2)), cfg, "panels.kwp"),
-            _line(_("Direction"), compass_label(p.azimuth_deg), cfg, "panels.azimuth_deg"),
-            _line(_("Tilt"), _("{degrees}°").format(degrees=number(p.tilt_deg, 0)), cfg, "panels.tilt_deg"),
-            _line(_("System losses"), _("{percent}%").format(percent=number(p.system_losses * 100, 0)), cfg, "panels.system_losses"),
-        )),
+        RecapGroup("panels", _("Solar panels"), "solar", _panel_lines(cfg)),
         RecapGroup("car", _("Car"), "car", (
             _line(_("Usable battery"), _("{kwh} kWh").format(kwh=number(car.usable_battery_kwh, 0)), cfg, "car.usable_battery_kwh"),
             _line(_("Consumption"), _consumption(cfg, car.consumption_kwh_per_100km), cfg, "car.consumption_kwh_per_100km"),

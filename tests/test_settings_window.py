@@ -7,7 +7,7 @@ from dataclasses import replace
 import pytest
 from PySide6.QtWidgets import QApplication, QDialog
 
-from car_charge_planner.planner.model import Config, Setup, first_run_config, load_config
+from car_charge_planner.planner.model import Config, Panels, Setup, first_run_config, load_config
 from car_charge_planner.settings.window import SettingsWindow
 from conftest import example_config
 
@@ -50,7 +50,7 @@ def test_units_and_typical_value_tags_are_visible(tmp_path, qapp):
     h = Harness(tmp_path, typical)
     assert h.box("panels.kwp").suffix() == " kWp" and h.box("panels.system_losses").suffix() == " %"
     texts = [label.text() for label in h.window.field_tabs[0].findChildren(__import__("PySide6.QtWidgets", fromlist=["QLabel"]).QLabel)]
-    assert any("Typical value." in t and "Total peak power" in t for t in texts)
+    assert any("Typical value." in t and "Peak power of the panels" in t for t in texts)
     assert any("Typical value." in t and "flat" in t for t in texts)
     assert not any("Typical value." in t and "South-east is -45" in t for t in texts)  # direction was not left to a typical value
 
@@ -58,32 +58,32 @@ def test_units_and_typical_value_tags_are_visible(tmp_path, qapp):
 def test_save_writes_the_file_applies_and_keeps_the_window_open(h):
     h.box("panels.kwp").setValue(5.2)
     h.window.save_button.click()
-    assert load_config(h.file).panels.kwp == 5.2
-    assert [c.panels.kwp for c in h.saved] == [5.2]
+    assert load_config(h.file).panels[0].kwp == 5.2
+    assert [c.panels[0].kwp for c in h.saved] == [5.2]
     assert h.window.isVisible()
 
 
 def test_percent_is_stored_as_a_fraction(h):
     h.box("panels.system_losses").setValue(12.5)
     h.window.save_button.click()
-    assert load_config(h.file).panels.system_losses == 0.125
+    assert load_config(h.file).panels[0].system_losses == 0.125
 
 
 def test_untouched_fields_keep_their_exact_values(tmp_path, qapp):
-    odd = replace(example_config(), latitude=52.123456789, panels=replace(Config().panels, system_losses=0.1234567))
+    odd = replace(example_config(), latitude=52.123456789, panels=(replace(Config().panels[0], system_losses=0.1234567),))
     h = Harness(tmp_path, odd)
     h.box("panels.kwp").setValue(6.0)  # edit one field only
     h.window.save_button.click()
     saved = load_config(h.file)
     assert saved.latitude == 52.123456789  # the box only shows 4 decimals
-    assert saved.panels.system_losses == 0.1234567
-    assert saved.panels.tilt_deg == 35 and isinstance(saved.panels.tilt_deg, int)
+    assert saved.panels[0].system_losses == 0.1234567
+    assert saved.panels[0].tilt_deg == 35 and isinstance(saved.panels[0].tilt_deg, int)
 
 
 def test_a_changed_field_is_stored_as_shown(h):
     h.box("panels.tilt_deg").setValue(28.5)
     h.window.save_button.click()
-    assert load_config(h.file).panels.tilt_deg == 28.5
+    assert load_config(h.file).panels[0].tilt_deg == 28.5
 
 
 def test_invalid_value_lists_the_problem_and_writes_nothing(h):
@@ -150,11 +150,11 @@ def test_editing_back_to_the_stored_value_is_not_a_change(h):
 
 def test_reset_tab_restores_defaults_without_saving(tmp_path, qapp):
     base = example_config()
-    custom = replace(base, panels=replace(base.panels, kwp=9.0, tilt_deg=10), latitude=51.5)
+    custom = replace(base, panels=(replace(base.panels[0], kwp=9.0, tilt_deg=10),), latitude=51.5)
     h = Harness(tmp_path, custom)
     assert h.box("panels.kwp").value() == 9.0
     h.window.reset_button.click()
-    assert h.box("panels.kwp").value() == Config().panels.kwp and h.box("panels.tilt_deg").value() == 35
+    assert h.box("panels.kwp").value() == Config().panels[0].kwp and h.box("panels.tilt_deg").value() == 35
     assert h.box("latitude").value() == 0.0 and h.box("longitude").value() == 0.0  # the location is not set
     assert not h.file.exists() and h.saved == []  # nothing saved yet
     assert h.window.is_dirty()  # it differs from what is stored
@@ -167,11 +167,11 @@ def test_reset_tab_restores_defaults_without_saving(tmp_path, qapp):
 
 
 def test_reset_then_cancel_keeps_the_stored_config(tmp_path, qapp):
-    custom = replace(example_config(), panels=replace(Config().panels, kwp=9.0))
+    custom = replace(example_config(), panels=(replace(Config().panels[0], kwp=9.0),))
     h = Harness(tmp_path, custom)
     h.window.reset_button.click()
     h.window.cancel_button.click()
-    assert h.asked == [1] and h.window.stored.panels.kwp == 9.0 and not h.file.exists()
+    assert h.asked == [1] and h.window.stored.panels[0].kwp == 9.0 and not h.file.exists()
 
 
 # ---- the split save button ---------------------------------------------------
@@ -205,7 +205,7 @@ def test_save_and_close_saves_then_closes(h):
     h.box("panels.kwp").setValue(5.2)
     choose(h, h.window.save_close_action)
     h.window.save_button.click()
-    assert load_config(h.file).panels.kwp == 5.2
+    assert load_config(h.file).panels[0].kwp == 5.2
     assert not h.window.isVisible() and h.window.result() == QDialog.DialogCode.Accepted
 
 
@@ -247,7 +247,7 @@ def test_editing_after_a_save_makes_it_dirty_again_and_cancel_asks(h):
     assert h.window.is_dirty()
     h.window.cancel_button.click()
     assert h.asked == [1]
-    assert load_config(h.file).panels.kwp == 5.2  # the unsaved 6.0 never reached the file
+    assert load_config(h.file).panels[0].kwp == 5.2  # the unsaved 6.0 never reached the file
 
 
 def test_saving_twice_keeps_both_edits_and_exact_values(h):
@@ -256,7 +256,7 @@ def test_saving_twice_keeps_both_edits_and_exact_values(h):
     h.window.field_tabs[1].inputs["car.minimum_pct"].setValue(25)
     h.window.save_button.click()
     saved = load_config(h.file)
-    assert saved.panels.kwp == 5.2 and saved.car.minimum_pct == 25
+    assert saved.panels[0].kwp == 5.2 and saved.car.minimum_pct == 25
     assert saved.car.km_per_day == 600 / 7  # still exact after two saves
 
 
@@ -276,11 +276,11 @@ def test_enter_runs_the_current_mode(h):
 
     h.box("panels.kwp").setValue(5.2)
     QTest.keyClick(h.window, Qt.Key.Key_Return)
-    assert load_config(h.file).panels.kwp == 5.2 and h.window.isVisible()  # Save mode: stays open
+    assert load_config(h.file).panels[0].kwp == 5.2 and h.window.isVisible()  # Save mode: stays open
     choose(h, h.window.save_close_action)
     h.box("panels.kwp").setValue(5.4)
     QTest.keyClick(h.window, Qt.Key.Key_Return)
-    assert load_config(h.file).panels.kwp == 5.4 and not h.window.isVisible()
+    assert load_config(h.file).panels[0].kwp == 5.4 and not h.window.isVisible()
 
 
 def test_enter_does_not_press_reset_or_cancel(h):
@@ -292,7 +292,7 @@ def test_enter_does_not_press_reset_or_cancel(h):
     h.window.reset_button.setFocus()
     QTest.keyClick(h.window.reset_button, Qt.Key.Key_Return)
     assert h.window.isVisible() and h.asked == []
-    assert load_config(h.file).panels.kwp == 5.2  # it saved; it did not reset or cancel
+    assert load_config(h.file).panels[0].kwp == 5.2  # it saved; it did not reset or cancel
 
 
 # ---- Close / Cancel label ------------------------------------------------------
@@ -354,7 +354,7 @@ def test_reset_tab_changes_the_label_only_when_it_changes_something(tmp_path, qa
     h = Harness(tmp_path, first_run_config())
     h.window.reset_button.click()  # stored values already are the built-in defaults, and all typical
     assert h.window.cancel_button.text() == "Close"
-    custom = replace(Config(), panels=replace(Config().panels, kwp=9.0))
+    custom = replace(Config(), panels=(replace(Config().panels[0], kwp=9.0),))
     h2 = Harness(tmp_path, custom)
     h2.window.reset_button.click()
     assert h2.window.cancel_button.text() == "Cancel"
@@ -372,3 +372,63 @@ def test_cancel_with_unsaved_edits_still_asks(h):
     assert h.window.cancel_button.text() == "Cancel"
     h.window.cancel_button.click()
     assert h.asked == [1]
+
+
+# ---- several panel arrays ------------------------------------------------------------------------------------
+
+
+def solar(h):
+    return h.window.field_tabs[0]
+
+
+def test_one_array_has_no_heading_name_or_remove(h):
+    tab = solar(h)
+    assert len(tab.boxes) == 1 and tab.boxes[0].heading.isHidden() and tab.boxes[0].remove_button.isHidden()
+    assert "panels.name" not in tab.inputs and tab.add_button.isVisible()
+    assert [s.key for s in tab.specs][:4] == ["panels.kwp", "panels.tilt_deg", "panels.azimuth_deg", "panels.system_losses"]
+
+
+def test_an_added_array_is_tagged_typical_and_saved_with_its_name(h):
+    tab = solar(h)
+    tab.add_button.click()
+    assert [box.heading.text() for box in tab.boxes] == ["Array 1", "Array 2"]
+    assert all(box.heading.isVisible() and box.remove_button.isVisible() for box in tab.boxes)
+    assert h.box("panels.kwp").value() == 4.8 and h.box("panels.2.kwp").value() == 5.0  # what was there is kept
+    assert all("Typical value." in tab.hints[k].text() for k in ("panels.2.kwp", "panels.2.tilt_deg", "panels.2.azimuth_deg"))
+    assert h.window.is_dirty()
+    h.box("panels.2.kwp").setValue(2.4)
+    h.box("panels.2.azimuth_deg").setValue(90)
+    h.box("panels.2.name").setText("Garage")
+    assert tab.boxes[1].heading.text() == "Array 2: Garage"
+    h.window.save_button.click()
+    saved = load_config(h.file)
+    assert saved.panels == (example_config().panels[0], Panels(kwp=2.4, tilt_deg=35, azimuth_deg=90, system_losses=0.14, name="Garage"))
+    assert saved.setup.typical == ("panels.2.tilt_deg", "panels.2.system_losses")
+    assert len(solar(h).boxes) == 2  # the saved arrays are shown again
+
+
+def test_an_edit_made_before_adding_an_array_is_kept(h):
+    h.box("panels.kwp").setValue(6.1)
+    solar(h).add_button.click()
+    assert h.box("panels.kwp").value() == 6.1 and h.window.current_config().panels[0].kwp == 6.1
+
+
+def test_removing_an_array_moves_the_later_ones_up(tmp_path, qapp):
+    arrays = (Panels(kwp=3.0, azimuth_deg=-90, name="East"), Panels(kwp=2.0, azimuth_deg=90, name="West"))
+    h = Harness(tmp_path, replace(example_config(), panels=arrays, setup=Setup(("panels.2.tilt_deg",))))
+    tab = solar(h)
+    assert [box.heading.text() for box in tab.boxes] == ["Array 1: East", "Array 2: West"]
+    tab.boxes[0].remove_button.click()
+    assert len(tab.boxes) == 1 and tab.boxes[0].heading.isHidden() and h.box("panels.kwp").value() == 2.0
+    assert "Typical value." in tab.hints["panels.tilt_deg"].text()  # the West array's flag came with it
+    h.window.save_button.click()
+    saved = load_config(h.file)
+    assert saved.panels == (arrays[1],) and saved.setup.typical == ("panels.tilt_deg",)  # its name is kept
+
+
+def test_reset_brings_back_one_typical_array(tmp_path, qapp):
+    arrays = (Panels(kwp=3.0, name="East"), Panels(kwp=2.0, name="West"))
+    h = Harness(tmp_path, replace(example_config(), panels=arrays))
+    h.window.reset_button.click()
+    assert len(solar(h).boxes) == 1 and h.window.current_config().panels == (Panels(),)
+    assert h.window.current_config().setup.typical[:4] == ("panels.kwp", "panels.tilt_deg", "panels.azimuth_deg", "panels.system_losses")

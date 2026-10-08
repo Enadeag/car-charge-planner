@@ -6,9 +6,7 @@ phase at 16 A. Settings and the plan page flag them as typical until the owner e
 
 from __future__ import annotations
 
-from dataclasses import replace
-
-from car_charge_planner.planner.model import TYPICAL_KEYS, Config
+from car_charge_planner.planner.model import TYPICAL_KEYS, Config, base_key, with_setting
 
 TYPICAL_VALUES: dict[str, float | int] = {
     "panels.kwp": 5.0,
@@ -29,13 +27,12 @@ assert set(TYPICAL_VALUES) == set(TYPICAL_KEYS)  # a typical value for every set
 
 
 def with_values(config: Config, values: dict[str, float | int]) -> Config:
-    """The config with these settings (by key, "panels.kwp") set."""
+    """The config with these settings (by key, "panels.kwp", "panels.2.kwp") set."""
     for key, value in values.items():
-        section, name = key.split(".")
-        config = replace(config, **{section: replace(getattr(config, section), **{name: value})})
+        config = with_setting(config, key, value)
     return config
 
 
 def with_typical(config: Config, *keys: str) -> Config:
-    """The config with the typical value for each of these settings."""
-    return with_values(config, {key: TYPICAL_VALUES[key] for key in keys})
+    """The config with the typical value for each of these settings (the same for every panel array)."""
+    return with_values(config, {key: TYPICAL_VALUES[base_key(key)] for key in keys})

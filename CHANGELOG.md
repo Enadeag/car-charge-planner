@@ -4,6 +4,12 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Added
+- More than one panel array: panels on different roof faces (east and west, a garage) each with their own size, tilt and direction, and an optional name. The forecast is the sum of the arrays. Add them in the set-up wizard or on the Settings window's Solar tab.
+
+### Changed
+- The config file format is now version 2: each panel array is a `[[panels]]` table. A config file with the old single `[panels]` table is read as one array and written in the new form on the next save.
+
 ## [0.1.0]
 
 First public version.

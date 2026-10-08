@@ -8,7 +8,7 @@ from typing import TypedDict
 from zoneinfo import ZoneInfo
 
 from car_charge_planner.planner.advice import GridAdvice
-from car_charge_planner.planner.model import Config, DayPlan, Window
+from car_charge_planner.planner.model import Config, DayPlan, Window, base_key
 from car_charge_planner.storage.state import BatteryReading
 
 from .i18n import _, ngettext, number, pgettext
@@ -121,7 +121,10 @@ def typical_line(typical: tuple[str, ...]) -> tuple[str, str]:
     from .settings.fields import TABS  # data only: no Qt
 
     names = {spec.key: (spec.label, tab.key) for tab in TABS for spec in tab.fields}
-    known = [key for key in typical if key in names]
+    known: list[str] = []  # by the key of the first panel array: the size of two arrays is one "Panel size"
+    for key in map(base_key, typical):
+        if key in names and key not in known:
+            known.append(key)
     if not known:
         return "", ""
     shown = pgettext("list separator", ", ").join(_(names[key][0]) for key in known[:SHOWN_TYPICAL])

@@ -17,7 +17,7 @@ HEADER = """\
 """
 
 SECRET_LOOKING = re.compile(r"key|secret|token|password|passwd", re.IGNORECASE)
-SECTIONS = ("panels", "house", "car", "charger", "planning", "notify", "interface")
+SECTIONS = ("house", "car", "charger", "planning", "notify", "interface")  # after the [[panels]] arrays
 
 
 def _value(value: object) -> str:
@@ -39,6 +39,9 @@ def dump_config(cfg: Config) -> str:
         f"latitude = {_value(cfg.latitude)}",
         f"longitude = {_value(cfg.longitude)}",
     ]
+    for panels in cfg.panels:  # one [[panels]] table for each array; the name only when there is one
+        lines += ["", "[[panels]]"] + ([f"name = {_value(panels.name)}"] if panels.name else [])
+        lines += [f"{f.name} = {_value(getattr(panels, f.name))}" for f in fields(panels) if f.name != "name"]
     for name in SECTIONS:
         section = getattr(cfg, name)
         lines += ["", f"[{name}]"]

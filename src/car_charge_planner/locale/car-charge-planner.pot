@@ -170,7 +170,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: car_charge_planner/forecast/providers/forecast_solar.py
-msgid "A solar forecast service (Forecast.Solar) that estimates the output of your system itself, with its own allowance for losses, so the system losses setting is not used. The free public plan gives today and tomorrow, hour by hour, and allows 12 requests an hour for everyone behind your internet address."
+msgid "A solar forecast service (Forecast.Solar) that estimates the output of your system itself, with its own allowance for losses, so the system losses setting is not used. The free public plan gives today and tomorrow, hour by hour, and allows 12 requests an hour for everyone behind your internet address. Each panel array takes one request."
 msgstr ""
 
 #: car_charge_planner/forecast/providers/forecast_solar.py
@@ -476,19 +476,32 @@ msgid "Open"
 msgstr ""
 
 #: car_charge_planner/planner/model.py
-msgid "[panels] kwp must be above 0"
+msgid "[panels] there must be at least one panel array"
 msgstr ""
 
 #: car_charge_planner/planner/model.py
-msgid "[panels] tilt_deg must be between 0 and 90"
+#, python-brace-format
+msgid "{panels} kwp must be above 0"
 msgstr ""
 
 #: car_charge_planner/planner/model.py
-msgid "[panels] azimuth_deg must be between -180 and 180"
+#, python-brace-format
+msgid "{panels} tilt_deg must be between 0 and 90"
 msgstr ""
 
 #: car_charge_planner/planner/model.py
-msgid "[panels] system_losses must be at least 0 and below 1"
+#, python-brace-format
+msgid "{panels} azimuth_deg must be between -180 and 180"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+#, python-brace-format
+msgid "{panels} system_losses must be at least 0 and below 1"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+#, python-brace-format
+msgid "{panels} name must be a text"
 msgstr ""
 
 #: car_charge_planner/planner/model.py
@@ -616,6 +629,11 @@ msgid "Invalid config:"
 msgstr ""
 
 #: car_charge_planner/planner/model.py
+#, python-brace-format
+msgid "[panels] array {number}"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
 msgid "Enter your location: latitude and longitude cannot both be 0"
 msgstr ""
 
@@ -631,6 +649,15 @@ msgstr ""
 
 #: car_charge_planner/planner/model.py
 msgid "[setup] typical must be a list of setting names"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[[panels]] must be one or more tables, one for each panel array"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+#, python-brace-format
+msgid "unknown keys in {panels}: {keys}"
 msgstr ""
 
 #: car_charge_planner/planner/model.py
@@ -783,15 +810,11 @@ msgid "Imperial (miles, mi/kWh)"
 msgstr ""
 
 #: car_charge_planner/settings/fields.py
-msgid "Solar and location"
-msgstr ""
-
-#: car_charge_planner/settings/fields.py
 msgid "Panel size"
 msgstr ""
 
 #: car_charge_planner/settings/fields.py
-msgid "Total peak power of all panels together, as stated on the installer's datasheet or in the inverter app."
+msgid "Peak power of the panels together, as stated on the installer's datasheet or in the inverter app. With more than one array: of this array."
 msgstr ""
 
 #: car_charge_planner/settings/fields.py
@@ -824,6 +847,14 @@ msgid "System losses"
 msgstr ""
 
 #: car_charge_planner/settings/fields.py
+msgid "Optional: what you call this array, such as \"East roof\" or \"Garage\"."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py car_charge_planner/setup/solar.py
+msgid "Name"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
 msgid "Decimal degrees of the panels' location. Positive is north. 0 and 0 together mean not set."
 msgstr ""
 
@@ -846,6 +877,10 @@ msgstr ""
 #: car_charge_planner/settings/fields.py car_charge_planner/setup/location.py
 #: car_charge_planner/setup/recap.py
 msgid "Time zone"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Solar and location"
 msgstr ""
 
 #: car_charge_planner/settings/fields.py
@@ -1122,6 +1157,28 @@ msgstr ""
 
 #: car_charge_planner/settings/tabs.py
 msgid "Automatic: follow the system"
+msgstr ""
+
+#: car_charge_planner/settings/tabs.py
+msgid "Remove this array. Nothing is saved until you press Save."
+msgstr ""
+
+#: car_charge_planner/settings/tabs.py
+#, python-brace-format
+msgid "Array {number}: {name}"
+msgstr ""
+
+#: car_charge_planner/settings/tabs.py car_charge_planner/setup/recap.py
+#, python-brace-format
+msgid "Array {number}"
+msgstr ""
+
+#: car_charge_planner/settings/tabs.py car_charge_planner/setup/solar.py
+msgid "Add another array"
+msgstr ""
+
+#: car_charge_planner/settings/tabs.py
+msgid "For panels that face another way or have another tilt, such as an east and a west roof."
 msgstr ""
 
 #: car_charge_planner/settings/tabs.py
@@ -1665,6 +1722,29 @@ msgid "{degrees}°"
 msgstr ""
 
 #: car_charge_planner/setup/recap.py
+#, python-brace-format
+msgid "{percent}%"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py car_charge_planner/setup/solar.py
+#, python-brace-format
+msgid "{kwp} kWp"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py car_charge_planner/setup/solar.py
+msgid "Size"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py car_charge_planner/setup/solar.py
+msgid "Total size"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py
+#, python-brace-format
+msgid "{kwp} kWp, facing {direction}, tilt {tilt}°"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py
 msgid "not chosen yet"
 msgstr ""
 
@@ -1682,20 +1762,6 @@ msgstr ""
 
 #: car_charge_planner/setup/recap.py
 msgid "Solar panels"
-msgstr ""
-
-#: car_charge_planner/setup/recap.py car_charge_planner/setup/solar.py
-msgid "Size"
-msgstr ""
-
-#: car_charge_planner/setup/recap.py car_charge_planner/setup/solar.py
-#, python-brace-format
-msgid "{kwp} kWp"
-msgstr ""
-
-#: car_charge_planner/setup/recap.py
-#, python-brace-format
-msgid "{percent}%"
 msgstr ""
 
 #: car_charge_planner/setup/recap.py
@@ -1746,7 +1812,11 @@ msgid "Use typical values for the size, direction and tilt. You can change them 
 msgstr ""
 
 #: car_charge_planner/setup/solar.py
-msgid "Total size"
+msgid "Optional, such as East roof"
+msgstr ""
+
+#: car_charge_planner/setup/solar.py
+msgid "Remove this array"
 msgstr ""
 
 #: car_charge_planner/setup/solar.py
@@ -1779,7 +1849,7 @@ msgid "The angle of the panels from flat. Most pitched roofs are 30 to 40 degree
 msgstr ""
 
 #: car_charge_planner/setup/solar.py
-msgid "Panels on both an east and a west roof? Enter the total size, face them south and choose a flat tilt (about 10 degrees). It is only an approximation, but it gives a similar curve through the day."
+msgid "Panels on more than one roof, such as an east and a west roof? Add each as its own array, with its own size, direction and tilt."
 msgstr ""
 
 #: car_charge_planner/setup/solar.py

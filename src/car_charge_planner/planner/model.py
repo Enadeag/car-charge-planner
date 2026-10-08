@@ -17,8 +17,18 @@ from car_charge_planner.i18n import _  # the messages reach the user in Settings
 
 from .schema import Migration, SchemaError, upgrade
 
-CONFIG_SCHEMA = 1  # the config.toml format this version writes; raise it with a migrate_<n>_to_<n+1> below
-CONFIG_MIGRATIONS: dict[int, Migration] = {}  # source version -> the step to the next one; empty until the format changes
+CONFIG_SCHEMA = 2  # the config.toml format this version writes; raise it with a migrate_<n>_to_<n+1> below
+
+
+def migrate_1_to_2(data: dict[str, Any]) -> dict[str, Any]:
+    """Version 2 allows several panel arrays: the one `[panels]` table becomes a list of one (`[[panels]]`)."""
+    panels = data.get("panels")
+    if isinstance(panels, dict):
+        data["panels"] = [panels]
+    return data
+
+
+CONFIG_MIGRATIONS: dict[int, Migration] = {1: migrate_1_to_2}  # source version -> the step to the next one
 
 
 def elapsed_hours(start: datetime, end: datetime) -> float:
@@ -63,10 +73,13 @@ class AwayRule:
 
 @dataclass(frozen=True)
 class Panels:
+    """One panel array: panels with the same tilt and direction. A home may have several (east and west roofs)."""
+
     kwp: float = 5.0
     tilt_deg: float = 35
     azimuth_deg: float = 0  # south
     system_losses: float = 0.14
+    name: str = ""  # optional, for the owner: "Garage roof"
 
 
 @dataclass(frozen=True)
@@ -119,6 +132,8 @@ class Interface:
 
 # The settings a person can give no value for ("I don't know"): the app then uses a typical value and remembers
 # that it did, in [setup] typical. Charge levels, the planning margin and the like are preferences, not here.
+# The "panels." keys are those of the first panel array; the second array's are "panels.2.kwp" and so on
+# (see panel_key and typical_keys).
 TYPICAL_KEYS = (
     "panels.kwp",
     "panels.tilt_deg",
@@ -191,7 +206,7 @@ def system_timezone() -> str:
 
 @dataclass(frozen=True)
 class Config:
-    panels: Panels = field(default_factory=Panels)
+    panels: tuple[Panels, ...] = (Panels(),)  # one or more panel arrays: [[panels]] in the file
     house: House = field(default_factory=House)
     car: Car = field(default_factory=Car)
     charger: Charger = field(default_factory=Charger)
@@ -210,6 +225,101 @@ class Config:
     def is_set_up(self) -> bool:
         """Has the user given a location? Until then nothing is fetched and there is no plan."""
         return (self.latitude, self.longitude) != (0, 0)
+
+    @property
+    def total_kwp(self) -> float:
+        """The size of all panel arrays together."""
+        return sum(p.kwp for p in self.panels)
+
+
+# ---- settings by key: "car.km_per_day", "panels.kwp" (the first array), "panels.2.kwp" (the second), "latitude" ----
+
+PANEL_TYPICAL_FIELDS = ("kwp", "tilt_deg", "azimuth_deg", "system_losses")  # what each array can have typical
+_PANEL_FIELDS = tuple(f.name for f in fields(Panels))
+
+
+def panel_key(index: int, name: str) -> str:
+    """The key of a value of panel array `index` (counted from 0): "panels.kwp" for the first array, as it was
+    before there could be several, and "panels.2.kwp" for the second."""
+    return f"panels.{name}" if index == 0 else f"panels.{index + 1}.{name}"
+
+
+def split_panel_key(key: str) -> tuple[int, str] | None:
+    """(array index from 0, field name) for a panel key, None for any other key."""
+    parts = key.split(".")
+    if parts[0] != "panels" or parts[-1] not in _PANEL_FIELDS:
+        return None
+    if len(parts) == 2:
+        return 0, parts[1]
+    if len(parts) == 3 and parts[1].isdigit() and parts[1] == str(int(parts[1])) and int(parts[1]) >= 2:
+        return int(parts[1]) - 1, parts[2]
+    return None
+
+
+def base_key(key: str) -> str:
+    """The key with the array number taken out: "panels.2.kwp" -> "panels.kwp". Other keys are returned as they are."""
+    split = split_panel_key(key)
+    return f"panels.{split[1]}" if split is not None else key
+
+
+def typical_keys(cfg: Config) -> tuple[str, ...]:
+    """Every setting of this config that can be a typical value, in the order the file lists them."""
+    arrays = tuple(panel_key(i, name) for i in range(len(cfg.panels)) for name in PANEL_TYPICAL_FIELDS)
+    return arrays + tuple(key for key in TYPICAL_KEYS if split_panel_key(key) is None)
+
+
+def setting(cfg: Config, key: str) -> Any:
+    """A value by its key."""
+    split = split_panel_key(key)
+    if split is not None:
+        return getattr(cfg.panels[split[0]], split[1])
+    if "." in key:
+        section, name = key.split(".")
+        return getattr(getattr(cfg, section), name)
+    return getattr(cfg, key)
+
+
+def with_setting(cfg: Config, key: str, value: Any) -> Config:
+    """The config with one value changed, by its key. A panel key needs its array to exist."""
+    split = split_panel_key(key)
+    if split is not None:
+        index, name = split
+        arrays = list(cfg.panels)
+        arrays[index] = replace(arrays[index], **{name: value})
+        return replace(cfg, panels=tuple(arrays))
+    if "." in key:
+        section, name = key.split(".")
+        return replace(cfg, **{section: replace(getattr(cfg, section), **{name: value})})
+    return replace(cfg, **{key: value})
+
+
+def with_array(cfg: Config, array: Panels | None = None, typical: bool = True) -> Config:
+    """The config with one more panel array at the end: typical values unless one is given, and flagged as typical
+    (`typical`) until the owner enters their own."""
+    cfg = replace(cfg, panels=(*cfg.panels, array or Panels()))
+    if not typical:
+        return cfg
+    index = len(cfg.panels) - 1
+    added = {panel_key(index, name) for name in PANEL_TYPICAL_FIELDS}
+    kept = set(cfg.setup.typical) | added
+    return replace(cfg, setup=Setup(tuple(key for key in typical_keys(cfg) if key in kept)))
+
+
+def without_array(cfg: Config, index: int) -> Config:
+    """The config without panel array `index`; the arrays after it move up, and so do their typical flags."""
+    if len(cfg.panels) <= 1:
+        raise ValueError("the last panel array cannot be removed")
+    typical: list[str] = []
+    for key in cfg.setup.typical:
+        split = split_panel_key(key)
+        if split is None:
+            typical.append(key)
+        elif split[0] < index:
+            typical.append(key)
+        elif split[0] > index:
+            typical.append(panel_key(split[0] - 1, split[1]))
+    arrays = cfg.panels[:index] + cfg.panels[index + 1 :]
+    return replace(cfg, panels=arrays, setup=Setup(tuple(typical)))
 
 
 @dataclass(frozen=True)
@@ -251,10 +361,14 @@ def validate(cfg: Config) -> Config:
         if not ok:
             problems.append(message)
 
-    need(cfg.panels.kwp > 0, _("[panels] kwp must be above 0"))
-    need(0 <= cfg.panels.tilt_deg <= 90, _("[panels] tilt_deg must be between 0 and 90"))
-    need(-180 <= cfg.panels.azimuth_deg <= 180, _("[panels] azimuth_deg must be between -180 and 180"))
-    need(0 <= cfg.panels.system_losses < 1, _("[panels] system_losses must be at least 0 and below 1"))
+    need(len(cfg.panels) >= 1, _("[panels] there must be at least one panel array"))
+    for index, panels in enumerate(cfg.panels):
+        where = array_section(index, len(cfg.panels))
+        need(panels.kwp > 0, _("{panels} kwp must be above 0").format(panels=where))
+        need(0 <= panels.tilt_deg <= 90, _("{panels} tilt_deg must be between 0 and 90").format(panels=where))
+        need(-180 <= panels.azimuth_deg <= 180, _("{panels} azimuth_deg must be between -180 and 180").format(panels=where))
+        need(0 <= panels.system_losses < 1, _("{panels} system_losses must be at least 0 and below 1").format(panels=where))
+        need(isinstance(panels.name, str), _("{panels} name must be a text").format(panels=where))  # pyright: ignore[reportUnnecessaryIsInstance]  # the values come from a TOML file
     need(cfg.house.baseload_kw >= 0, _("[house] baseload_kw cannot be negative"))
     need(cfg.car.usable_battery_kwh > 0, _("[car] usable_battery_kwh must be above 0"))
     need(cfg.car.consumption_kwh_per_100km > 0, _("[car] consumption_kwh_per_100km must be above 0"))
@@ -293,7 +407,8 @@ def validate(cfg: Config) -> Config:
                 bool(SETTING_KEY.match(str(key))) and isinstance(value, str),  # pyright: ignore[reportUnnecessaryIsInstance]  # the values come from a TOML file
                 _("[forecast.{id}] {key} must be a text").format(id=provider_id, key=key),
             )
-    unknown = [k for k in cfg.setup.typical if k not in TYPICAL_KEYS]
+    possible = typical_keys(cfg)
+    unknown = [k for k in cfg.setup.typical if k not in possible]
     need(not unknown, _("[setup] typical lists settings that do not exist: {keys}").format(keys=", ".join(map(str, unknown))))
     need(len(set(cfg.setup.typical)) == len(cfg.setup.typical), _("[setup] typical lists a setting twice"))
     need(
@@ -320,6 +435,11 @@ def validate(cfg: Config) -> Config:
     if problems:
         raise ConfigError(_("Invalid config:") + "\n- " + "\n- ".join(problems))
     return cfg
+
+
+def array_section(index: int, count: int) -> str:
+    """How a message names a panel array: "[panels]" when there is one, "[panels] array 2" when there are several."""
+    return "[panels]" if count == 1 else _("[panels] array {number}").format(number=index + 1)
 
 
 def require_location(cfg: Config) -> Config:
@@ -365,6 +485,20 @@ def first_run_config() -> Config:
     return replace(Config(), setup=Setup(TYPICAL_KEYS))
 
 
+def _read_panels(value: Any) -> tuple[Panels, ...]:
+    if not isinstance(value, list) or not value or not all(isinstance(t, dict) for t in cast("list[Any]", value)):
+        raise ConfigError(_("[[panels]] must be one or more tables, one for each panel array"))
+    tables = cast("list[dict[str, Any]]", value)
+    known = set(_PANEL_FIELDS)
+    arrays: list[Panels] = []
+    for index, table in enumerate(tables):
+        unknown = set(table) - known
+        if unknown:
+            raise ConfigError(_("unknown keys in {panels}: {keys}").format(panels=array_section(index, len(tables)), keys=sorted(unknown)))
+        arrays.append(replace(Panels(), **table))
+    return tuple(arrays)
+
+
 def load_config(path: Path | None) -> Config:
     """Load config from TOML, falling back to defaults for anything missing."""
     if path is None:
@@ -378,7 +512,9 @@ def load_config(path: Path | None) -> Config:
     except SchemaError as err:
         raise ConfigError(str(err)) from err
     cfg = Config()
-    for section in ("panels", "house", "car", "charger", "planning", "notify", "interface"):
+    if "panels" in data:
+        cfg = replace(cfg, panels=_read_panels(data["panels"]))
+    for section in ("house", "car", "charger", "planning", "notify", "interface"):
         if section in data:
             current = getattr(cfg, section)
             known = {f.name for f in fields(current)}

@@ -117,7 +117,7 @@ pkill -f "car-charge-planner$"
 
 The first start creates the config file and opens the **set-up wizard**. Until you have said where your panels are, the app knows nothing about you: it **fetches nothing** (no request leaves your machine) and there is no plan; the popup and the window say **Not set up yet** and have a **Set up** button.
 
-The wizard takes a few minutes and has six steps: a welcome (with what leaves your computer, and your units: km or miles), the **place** of your panels (searched by name, or typed as coordinates), the panels' **size, direction and tilt**, your **car and charger**, then **What next?** (two optional extras: the house's electricity use, and when the car is away, which matters if you drive to work) and a final review. Every question says where to find the answer, and **"I don't know"** uses a typical value. Typical values are marked as such in Settings and on the plan page until you give your own.
+The wizard takes a few minutes and has six steps: a welcome (with what leaves your computer, and your units: km or miles), the **place** of your panels (searched by name, or typed as coordinates), the panels' **size, direction and tilt** (with **Add another array** for panels on another roof face), your **car and charger**, then **What next?** (two optional extras: the house's electricity use, and when the car is away, which matters if you drive to work) and a final review. Every question says where to find the answer, and **"I don't know"** uses a typical value. Typical values are marked as such in Settings and on the plan page until you give your own.
 
 <p>
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/setup-welcome-dark.png"><img alt="Welcome: what the app does, what leaves your computer, and your units." src="docs/images/setup-welcome-light.png" width="300"></picture>
@@ -234,7 +234,7 @@ Open **Settings...** from the tray icon's right-click menu. Settings are grouped
 
 | Tab | What it holds |
 | --- | --- |
-| Solar and location | Panel size, tilt, direction, system losses, latitude, longitude, time zone |
+| Solar and location | Panel size, tilt, direction, system losses, latitude, longitude, time zone. Panels on more than one roof face (east and west, a garage) are separate **arrays**: **Add another array** adds one, with an optional name and its own size, tilt, direction and losses; the forecast is the sum of the arrays. |
 | House and car | House baseload, usable battery, consumption, driving per day, minimum and target charge level |
 | Charger | One or three phases, minimum and maximum current (per phase), voltage, charging efficiency |
 | Planning and notifications | Planning margin, import tolerance, minimum window length, notification lead time |
@@ -340,8 +340,8 @@ step with them), and the terms that go with using it (read on 2026-10-07; the pr
 
 | Provider | What is sent | Free plan | Credit shown in the app | Terms |
 | --- | --- | --- | --- | --- |
-| Open-Meteo | Your location (latitude and longitude), your time zone and the tilt and direction of your panels. With an API key, the key too. | Non-commercial use only, under 10,000 requests a day. | Weather data: Open-Meteo.com (CC BY 4.0) | [open-meteo.com/en/terms](https://open-meteo.com/en/terms) |
-| Forecast.Solar | Your location (latitude and longitude), the tilt and direction of your panels and their size in kWp. With an API key, the key too. | The public plan needs no key: today and tomorrow, one plane, 12 requests an hour for everything behind the same internet address. | Solar forecast: Forecast.Solar | [doc.forecast.solar/account_models](https://doc.forecast.solar/account_models) |
+| Open-Meteo | Your location (latitude and longitude), your time zone and the tilt and direction of your panels. With an API key, the key too. | Non-commercial use only, under 10,000 requests a day. The app asks once for each panel array. | Weather data: Open-Meteo.com (CC BY 4.0) | [open-meteo.com/en/terms](https://open-meteo.com/en/terms) |
+| Forecast.Solar | Your location (latitude and longitude), the tilt and direction of your panels and their size in kWp. With an API key, the key too. | The public plan needs no key: today and tomorrow, one plane, 12 requests an hour for everything behind the same internet address. The app asks once for each panel array. | Solar forecast: Forecast.Solar | [doc.forecast.solar/account_models](https://doc.forecast.solar/account_models) |
 
 - **Commercial use.** The free plans are for personal use. If you use the app for a business, take the provider's
   own commercial plan or run your own server (Open-Meteo can be self-hosted or taken as a paid plan, with its own

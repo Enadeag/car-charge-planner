@@ -29,7 +29,8 @@ DEMOS = {
 
 
 def demo_forecast(name: str, first_day: date, tz: ZoneInfo, cfg: Config | None = None) -> list[ForecastStep]:
-    """A synthetic forecast: bell-shaped irradiance turned into power for the configured (or default) panels."""
+    """A synthetic forecast: bell-shaped irradiance turned into power for the configured (or default) panels. The
+    sunlight is the same on every array (the demo has no sun position), so their power is added up."""
     from car_charge_planner.forecast.providers.open_meteo import power_kw
 
     panels = (cfg or Config()).panels
@@ -37,7 +38,8 @@ def demo_forecast(name: str, first_day: date, tz: ZoneInfo, cfg: Config | None =
     for offset, peak in enumerate(DEMOS[name]):
         sunrise, sunset = (8, 16) if name == "winter" else (6, 18)
         for start, gti in bell_day(first_day + timedelta(days=offset), peak, tz, sunrise, sunset):
-            steps.append(ForecastStep(start, add_hours(start, 1), power_kw(gti, panels.kwp, panels.system_losses)))
+            power = sum(power_kw(gti, p.kwp, p.system_losses) for p in panels)
+            steps.append(ForecastStep(start, add_hours(start, 1), power))
     return steps
 
 

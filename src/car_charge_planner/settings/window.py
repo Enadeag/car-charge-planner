@@ -28,9 +28,9 @@ from car_charge_planner.i18n import _
 from car_charge_planner.planner.config_io import write_config
 from car_charge_planner.planner.model import Config, ConfigError, require_location, validate
 
-from .fields import TABS
+from .fields import SOLAR, TABS
 from .forecast_tab import ForecastTab
-from .tabs import AwayRulesTab, FieldTab
+from .tabs import AwayRulesTab, FieldTab, SolarTab
 
 
 def ask_discard(parent) -> bool:
@@ -74,7 +74,7 @@ class SettingsWindow(QDialog):
             secrets_problem = ""
         except SecretsError as err:
             self.stored_secrets, secrets_problem = {}, str(err)
-        self.field_tabs: list[FieldTab] = [FieldTab(spec, cfg) for spec in TABS]
+        self.field_tabs: list[FieldTab | SolarTab] = [SolarTab(spec, cfg) if spec is SOLAR else FieldTab(spec, cfg) for spec in TABS]
         self.forecast_tab = ForecastTab(cfg, self.stored_secrets, self.registry, lambda: self.current_config(), secrets_problem)
         self.away_tab = AwayRulesTab(cfg)
         planning = next(i for i, t in enumerate(self.field_tabs) if t.key == "planning")

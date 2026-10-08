@@ -1,16 +1,16 @@
 """What a forecast provider is: the contract every provider fulfils and the planner relies on.
 
-A provider is given a description of the user's solar system and returns the expected solar power per time
-step. Everything else (caching, the fallback, the settings screens) lives outside it and works with any
+A provider is given a description of the user's solar system (one or more panel arrays) and returns the expected
+solar power of all of them together per time step. Everything else (caching, the fallback, the settings screens) lives outside it and works with any
 provider. See `docs/design/forecast-providers/spec.md` and, for contributors, `docs/providers.md`.
 """
 
 from __future__ import annotations
 
 import math
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Protocol
 
@@ -18,26 +18,35 @@ from car_charge_planner.planner.model import Config, ForecastStep
 
 
 @dataclass(frozen=True)
-class SystemDescription:
-    """What a provider needs to know to forecast this system. Azimuth: 0 = south, -90 = east, 90 = west."""
+class PanelArray:
+    """Panels with one tilt and one direction. Azimuth: 0 = south, -90 = east, 90 = west, 180 = north."""
 
-    latitude: float
-    longitude: float
     kwp: float
     tilt_deg: float
     azimuth_deg: float
     system_losses: float  # a fraction, 0.14 = 14%
+
+
+@dataclass(frozen=True)
+class SystemDescription:
+    """What a provider needs to know to forecast this system: where it is and its panel arrays (at least one)."""
+
+    latitude: float
+    longitude: float
+    arrays: tuple[PanelArray, ...]
     timezone: str
+
+    @property
+    def kwp(self) -> float:
+        """The size of all arrays together."""
+        return sum(a.kwp for a in self.arrays)
 
     @classmethod
     def from_config(cls, cfg: Config) -> SystemDescription:
         return cls(
             latitude=cfg.latitude,
             longitude=cfg.longitude,
-            kwp=cfg.panels.kwp,
-            tilt_deg=cfg.panels.tilt_deg,
-            azimuth_deg=cfg.panels.azimuth_deg,
-            system_losses=cfg.panels.system_losses,
+            arrays=tuple(PanelArray(p.kwp, p.tilt_deg, p.azimuth_deg, p.system_losses) for p in cfg.panels),
             timezone=cfg.timezone,
         )
 
@@ -183,3 +192,47 @@ def require_valid_steps(steps: Sequence[ForecastStep]) -> list[ForecastStep]:
     if problems:
         raise BadResponse("; ".join(problems[:3]))
     return list(steps)
+
+
+# ---- several panel arrays --------------------------------------------------------------------------------------
+
+
+def add_up(forecasts: Sequence[Sequence[ForecastStep]]) -> list[ForecastStep]:
+    """The forecasts of several panel arrays as one: the power of all of them per step.
+
+    When the arrays' steps line up (the same start and end, as they do when one service is asked for each array)
+    each step's power is the sum of theirs. When they do not, the steps are cut wherever any array's step starts or
+    ends, and each piece gets the sum of the powers that cover it, so no energy is lost or counted twice. An array
+    without a step at some time (night) adds nothing then; a time no array has a step for stays a gap. The result
+    covers only the time every array's forecast covers, so a shorter answer for one array never shows as a drop at
+    the end. One forecast is returned as it is. The steps are in the time zone of the first forecast's.
+    """
+    lists = [list(steps) for steps in forecasts]
+    if len(lists) == 1:
+        return lists[0]
+    if not lists or any(not steps for steps in lists):
+        return []
+    zone = lists[0][0].start.tzinfo
+    first = max(steps[0].start for steps in lists)
+    last = min(steps[-1].end for steps in lists)
+    cuts = sorted({moment.astimezone(UTC) for steps in lists for step in steps for moment in (step.start, step.end) if first <= moment <= last})
+    positions = [0] * len(lists)
+    total: list[ForecastStep] = []
+    for start, end in zip(cuts, cuts[1:], strict=False):
+        power, covered = 0.0, False
+        for index, steps in enumerate(lists):
+            while positions[index] < len(steps) and steps[positions[index]].end <= start:
+                positions[index] += 1
+            if positions[index] < len(steps) and steps[positions[index]].start <= start:
+                power += steps[positions[index]].power_kw  # the step reaches past `start`, so it covers [start, end)
+                covered = True
+        if covered:
+            total.append(ForecastStep(start.astimezone(zone), end.astimezone(zone), power))
+    return total
+
+
+def each_array(system: SystemDescription, fetch_one: Callable[[PanelArray], list[ForecastStep]]) -> list[ForecastStep]:
+    """For a service that forecasts one array per request: asks `fetch_one` for each array in turn and adds the
+    answers up (`add_up`). Each answer must satisfy `check_steps`. A failure for any array (a `ProviderError`) is
+    the failure of the whole forecast: a total without one of the arrays would be wrong."""
+    return add_up([fetch_one(array) for array in system.arrays])

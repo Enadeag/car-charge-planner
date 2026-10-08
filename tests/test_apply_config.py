@@ -68,13 +68,13 @@ def test_forecast_key_ignores_planning_settings_but_not_the_system_or_the_provid
     assert forecast_key(replace(cfg, planning=replace(cfg.planning, margin=0.5))) == base
     assert forecast_key(replace(cfg, house=replace(cfg.house, baseload_kw=1.2))) == base
     for changed in (
-        replace(cfg, panels=replace(cfg.panels, kwp=9)),  # the provider turns sunlight into power: size and losses matter
-        replace(cfg, panels=replace(cfg.panels, system_losses=0.2)),
+        replace(cfg, panels=(replace(cfg.panels[0], kwp=9),)),  # the provider turns sunlight into power: size and losses matter
+        replace(cfg, panels=(replace(cfg.panels[0], system_losses=0.2),)),
         replace(cfg, forecast=replace(cfg.forecast, primary="forecast-solar")),
         replace(cfg, forecast=replace(cfg.forecast, fallback="forecast-solar")),
         replace(cfg, forecast=replace(cfg.forecast, settings={"open-meteo": {"base_url": "https://x.test"}})),
-        replace(cfg, panels=replace(cfg.panels, tilt_deg=20)),
-        replace(cfg, panels=replace(cfg.panels, azimuth_deg=0)),
+        replace(cfg, panels=(replace(cfg.panels[0], tilt_deg=20),)),
+        replace(cfg, panels=(replace(cfg.panels[0], azimuth_deg=0),)),
         replace(cfg, latitude=51.0),
         replace(cfg, longitude=5.0),
         replace(cfg, timezone="Europe/Brussels"),
@@ -101,11 +101,11 @@ def test_applying_a_place_or_angle_change_drops_the_old_forecast_until_the_new_o
     fake.hold_first = True
     fake.calls.clear()
     fake.release.clear()
-    app.apply_config(replace(cfg, panels=replace(cfg.panels, tilt_deg=20)))
+    app.apply_config(replace(cfg, panels=(replace(cfg.panels[0], tilt_deg=20),)))
     assert app.result is None and app.vm.state == "no-forecast"
     fake.release.set()
     wait_until(lambda: app.result is not None, qapp)
-    assert app.vm.state != "no-forecast" and fake.calls[0].panels.tilt_deg == 20
+    assert app.vm.state != "no-forecast" and fake.calls[0].panels[0].tilt_deg == 20
 
 
 def test_time_zone_change_updates_the_app_and_popup(qapp, tmp_path, monkeypatch, cfg):
@@ -122,11 +122,11 @@ def test_a_fetch_started_before_the_change_does_not_overwrite_the_new_settings(q
     app = make_app(tmp_path, monkeypatch, fake)
     app.refresh()
     assert fake.first_started.wait(2)  # the old-config fetch is now in flight
-    new = replace(cfg, panels=replace(cfg.panels, tilt_deg=20))
+    new = replace(cfg, panels=(replace(cfg.panels[0], tilt_deg=20),))
     app.apply_config(new)
     fake.release.set()  # the old fetch finishes after the change
     wait_until(lambda: len(fake.calls) == 2 and not app._loading and app.result is not None, qapp)
-    assert fake.calls[0].panels.tilt_deg == 35 and fake.calls[1].panels.tilt_deg == 20
+    assert fake.calls[0].panels[0].tilt_deg == 35 and fake.calls[1].panels[0].tilt_deg == 20
     assert app.cfg is new and app.result is not None
     assert app.vm.state != "no-forecast"
 
@@ -177,7 +177,7 @@ def test_saving_in_the_window_applies_to_the_running_app(qapp, tmp_path, monkeyp
     window = app.settings_window
     window.field_tabs[0].inputs["panels.tilt_deg"].setValue(20)
     window.save_button.click()
-    assert app.cfg.panels.tilt_deg == 20
+    assert app.cfg.panels[0].tilt_deg == 20
     assert (tmp_path / "config.toml").exists()
     wait_until(lambda: not app._loading and app.result is not None, qapp)
-    assert fake.calls[-1].panels.tilt_deg == 20  # a new forecast was fetched for the new angle
+    assert fake.calls[-1].panels[0].tilt_deg == 20  # a new forecast was fetched for the new angle

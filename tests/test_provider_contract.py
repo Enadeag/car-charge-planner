@@ -11,6 +11,7 @@ from car_charge_planner.forecast.provider import (
     BadResponse,
     ForecastProvider,
     NotConfigured,
+    PanelArray,
     ProviderError,
     RateLimited,
     SettingSpec,
@@ -91,9 +92,9 @@ def test_the_errors_are_provider_errors_the_service_can_tell_apart():
 def test_a_system_description_is_built_from_the_config(cfg):
     system = SystemDescription.from_config(cfg)
     assert (system.latitude, system.longitude, system.timezone) == (52.37, 4.90, "Europe/Amsterdam")
-    assert (system.kwp, system.tilt_deg, system.azimuth_deg, system.system_losses) == (4.8, 35, -45, 0.14)
+    assert system.arrays == (PanelArray(4.8, 35, -45, 0.14),) and system.kwp == 4.8
     with pytest.raises(FrozenInstanceError):
-        system.kwp = 1  # frozen
+        system.latitude = 1  # frozen
 
 
 def test_a_setting_is_optional_and_plain_by_default():
@@ -156,7 +157,7 @@ def test_an_unknown_id_says_so():
 def test_the_planner_no_longer_applies_panel_size_or_losses(cfg):
     """The same power steps give the same plan for any panel settings: the provider did that work already."""
     steps = forecast_from([(DAY, 900)])
-    bigger = replace(cfg, panels=Panels(kwp=20, system_losses=0.0))
+    bigger = replace(cfg, panels=(Panels(kwp=20, system_losses=0.0),))
     assert plan(steps, cfg, 40, at(DAY, 0)) == plan(steps, bigger, 40, at(DAY, 0))
 
 
@@ -178,7 +179,7 @@ def test_the_test_helper_gives_the_power_of_the_example_system():
 
 def test_the_demo_forecast_is_power_for_the_configured_panels(cfg):
     small = demo_forecast("summer", DAY, TZ, cfg)
-    big = demo_forecast("summer", DAY, TZ, replace(cfg, panels=Panels(kwp=9.6)))
+    big = demo_forecast("summer", DAY, TZ, replace(cfg, panels=(Panels(kwp=9.6),)))
     assert check_steps(small) == []
     assert max(s.power_kw for s in big) == pytest.approx(2 * max(s.power_kw for s in small))
 

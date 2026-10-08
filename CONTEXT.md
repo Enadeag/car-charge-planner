@@ -42,6 +42,10 @@ _Avoid_: Onboarding, configuration, wizard (the wizard is only the form set-up t
 The state before a real location has been saved: no forecast is fetched and no plan is shown, only a way into set-up.
 _Avoid_: Unconfigured, first run (first run is the moment, not the state)
 
+**Panel array**:
+Solar panels that share one tilt and one direction, described by their size (kWp), tilt, direction, losses and an optional name. A home has one or more (an east and a west roof, a garage); the forecast is the sum of all of them.
+_Avoid_: Plane (the forecast services' word), string (an electrical term), roof
+
 **Typical value**:
 A setting the user did not give ("I don't know") and the app filled in with a common value. It is flagged as an estimate until the user saves a value of their own.
 _Avoid_: Default, assumed value, guess

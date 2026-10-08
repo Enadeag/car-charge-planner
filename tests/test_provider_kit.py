@@ -6,6 +6,7 @@ that should catch them. That is what makes a green kit mean something for the re
 
 import json
 import threading
+from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 
 import pytest
@@ -17,6 +18,7 @@ from car_charge_planner.forecast.provider import (
     RateLimited,
     SettingSpec,
     Unavailable,
+    add_up,
     check_steps,
 )
 from car_charge_planner.forecast.transport import Reply, Request
@@ -159,6 +161,23 @@ class NaiveTimes(Tiny):
                 for s in super().fetch(system, settings, now)]
 
 
+class KeepsOnlyTheLastArray(Tiny):
+    def fetch(self, system, settings, now):
+        answers = [super(KeepsOnlyTheLastArray, self).fetch(replace(system, arrays=(a,)), settings, now) for a in system.arrays]
+        return answers[-1]  # asked for each, but did not add them up
+
+
+class LeavesOutAnArrayThatFailed(Tiny):
+    def fetch(self, system, settings, now):
+        answers = []
+        for array in system.arrays:
+            try:
+                answers.append(super().fetch(replace(system, arrays=(array,)), settings, now))
+            except Unavailable:
+                pass  # a total without this array looks fine and is wrong
+        return add_up(answers)
+
+
 # (the broken provider, the check that must catch it, how the check fails)
 BROKEN = [
     (NegativePower, kit.check_good_answer, AssertionError),
@@ -170,6 +189,8 @@ BROKEN = [
     (SendsBeforeCheckingSettings, kit.check_missing_required_settings, AssertionError),
     (AsksForSomethingElse, kit.check_good_answer, UnexpectedRequest),
     (SwallowsTheUnexpected, kit.check_good_answer, AssertionError),
+    (KeepsOnlyTheLastArray, kit.check_several_arrays, AssertionError),
+    (LeavesOutAnArrayThatFailed, kit.check_several_arrays, pytest.fail.Exception),  # Unavailable was expected
 ]
 
 

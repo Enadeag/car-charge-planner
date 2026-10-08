@@ -10,7 +10,7 @@ import pytest
 from PySide6.QtWidgets import QApplication, QLabel
 
 from car_charge_planner.forecast.check import Attempt
-from car_charge_planner.planner.model import TYPICAL_KEYS, Config, Setup, load_config, validate
+from car_charge_planner.planner.model import TYPICAL_KEYS, Config, Panels, Setup, load_config, validate
 from car_charge_planner.setup.panels import COMPASS, TILT_PRESETS, azimuth_for, compass_key_for, panels_to_kwp, tilt_preset_for
 from car_charge_planner.setup.state import SetupState
 from car_charge_planner.setup.typical import TYPICAL_VALUES, with_typical, with_values
@@ -82,17 +82,17 @@ def test_the_built_in_defaults_are_the_typical_values_so_settings_reset_and_the_
 
 def test_the_typical_panels_are_five_kwp_facing_south_at_35_degrees():
     config = with_typical(Config(), "panels.kwp", "panels.azimuth_deg", "panels.tilt_deg")
-    assert (config.panels.kwp, config.panels.azimuth_deg, config.panels.tilt_deg) == (5.0, 0, 35)
+    assert (config.panels[0].kwp, config.panels[0].azimuth_deg, config.panels[0].tilt_deg) == (5.0, 0, 35)
 
 
 def test_a_new_install_starts_with_the_typical_values_not_the_built_in_defaults():
     state = SetupState.starting_from(Config(), NL)
-    assert state.config.panels.kwp == 5.0 and state.config.panels.azimuth_deg == 0 and state.config.house.baseload_kw == 0.5
+    assert state.config.panels[0].kwp == 5.0 and state.config.panels[0].azimuth_deg == 0 and state.config.house.baseload_kw == 0.5
     assert state.config.charger.max_amps == 16 and state.config.setup.typical == TYPICAL_KEYS
 
 
 def test_a_config_that_is_set_up_is_not_touched():
-    assert SetupState.starting_from(example_config(), NL).config.panels.kwp == 4.8
+    assert SetupState.starting_from(example_config(), NL).config.panels[0].kwp == 4.8
 
 
 # ---- the page ----------------------------------------------------------------------------------------------
@@ -143,7 +143,7 @@ def test_a_set_up_config_shows_its_own_values_without_the_typical_note(tmp_path,
 
 def test_typing_the_size_gives_that_value_and_it_stops_being_typical(rig):
     rig.page.kwp.setValue(6.4)
-    assert rig.panels.kwp == 6.4 and "panels.kwp" not in rig.typical
+    assert rig.panels[0].kwp == 6.4 and "panels.kwp" not in rig.typical
     assert "panels.tilt_deg" in rig.typical and "panels.azimuth_deg" in rig.typical  # the others are still typical
     assert "panels.system_losses" in rig.typical  # never asked here
 
@@ -152,10 +152,10 @@ def test_panels_times_watts_gives_the_size_and_shows_the_sum(rig):
     rig.page.by_count.setChecked(True)
     rig.page.count.setValue(12)
     rig.page.watts.setValue(400)
-    assert rig.panels.kwp == pytest.approx(4.8) and rig.page.kwp.value() == pytest.approx(4.8)
+    assert rig.panels[0].kwp == pytest.approx(4.8) and rig.page.kwp.value() == pytest.approx(4.8)
     assert rig.page.product.text() == "= 4.80 kWp" and "panels.kwp" not in rig.typical
     rig.page.watts.setValue(450)
-    assert rig.panels.kwp == pytest.approx(5.4)
+    assert rig.panels[0].kwp == pytest.approx(5.4)
 
 
 def test_the_note_lists_only_the_values_that_are_still_typical(rig):
@@ -169,7 +169,7 @@ def test_the_note_lists_only_the_values_that_are_still_typical(rig):
 def test_the_sum_is_shown_even_before_that_way_is_chosen_but_does_not_change_the_answer(rig):
     rig.page.count.setValue(10)
     rig.page.watts.setValue(500)
-    assert rig.page.product.text() == "= 5.00 kWp" and rig.panels.kwp == 5.0 and "panels.kwp" in rig.typical
+    assert rig.page.product.text() == "= 5.00 kWp" and rig.panels[0].kwp == 5.0 and "panels.kwp" in rig.typical
 
 
 def test_the_size_has_the_limits_settings_has(rig):
@@ -183,10 +183,10 @@ def test_the_size_has_the_limits_settings_has(rig):
 
 def test_a_compass_button_sets_the_degrees_and_the_answer(rig):
     rig.page.compass_buttons["e"].click()
-    assert rig.page.degrees.value() == -90 and rig.panels.azimuth_deg == -90 and "panels.azimuth_deg" not in rig.typical
+    assert rig.page.degrees.value() == -90 and rig.panels[0].azimuth_deg == -90 and "panels.azimuth_deg" not in rig.typical
     assert rig.page.direction_name.text() == "East (-90°)"
     rig.page.compass_buttons["n"].click()
-    assert rig.page.degrees.value() == 180 and rig.panels.azimuth_deg == 180
+    assert rig.page.degrees.value() == 180 and rig.panels[0].azimuth_deg == 180
 
 
 def test_typing_degrees_presses_the_matching_button_or_none(rig):
@@ -194,7 +194,7 @@ def test_typing_degrees_presses_the_matching_button_or_none(rig):
     assert rig.page.compass_buttons["sw"].isChecked() and not rig.page.compass_buttons["s"].isChecked()
     rig.page.degrees.setValue(20)
     assert not any(b.isChecked() for b in rig.page.compass_buttons.values())
-    assert rig.panels.azimuth_deg == 20 and rig.page.direction_name.text() == "20°"
+    assert rig.panels[0].azimuth_deg == 20 and rig.page.direction_name.text() == "20°"
     rig.page.degrees.setValue(-180)
     assert rig.page.compass_buttons["n"].isChecked()
 
@@ -202,23 +202,23 @@ def test_typing_degrees_presses_the_matching_button_or_none(rig):
 def test_clicking_the_direction_that_is_already_shown_is_still_an_answer(rig):
     assert "panels.azimuth_deg" in rig.typical
     rig.page.compass_buttons["s"].click()  # the typical value, but now the person's own choice
-    assert rig.panels.azimuth_deg == 0 and "panels.azimuth_deg" not in rig.typical
+    assert rig.panels[0].azimuth_deg == 0 and "panels.azimuth_deg" not in rig.typical
 
 
 # tilt
 
 def test_a_tilt_preset_sets_the_angle_and_the_answer(rig):
     rig.page.tilt_buttons["flat"].click()
-    assert rig.page.tilt.value() == 10 and rig.panels.tilt_deg == 10 and "panels.tilt_deg" not in rig.typical
+    assert rig.page.tilt.value() == 10 and rig.panels[0].tilt_deg == 10 and "panels.tilt_deg" not in rig.typical
     rig.page.tilt_buttons["steep"].click()
-    assert rig.panels.tilt_deg == 45
+    assert rig.panels[0].tilt_deg == 45
 
 
 def test_typing_an_angle_presses_the_matching_preset_or_none(rig):
     rig.page.tilt.setValue(45)
     assert rig.page.tilt_buttons["steep"].isChecked()
     rig.page.tilt.setValue(30)
-    assert not any(b.isChecked() for b in rig.page.tilt_buttons.values()) and rig.panels.tilt_deg == 30
+    assert not any(b.isChecked() for b in rig.page.tilt_buttons.values()) and rig.panels[0].tilt_deg == 30
 
 
 def test_clicking_the_preset_that_is_already_shown_is_still_an_answer(rig):
@@ -236,7 +236,7 @@ def test_i_dont_know_puts_the_typical_values_back_and_remembers_them_as_typical(
     rig.page.tilt_buttons["steep"].click()
     assert rig.typical == ()
     rig.page.dont_know.click()
-    assert (rig.panels.kwp, rig.panels.azimuth_deg, rig.panels.tilt_deg) == (5.0, 0, 35)
+    assert (rig.panels[0].kwp, rig.panels[0].azimuth_deg, rig.panels[0].tilt_deg) == (5.0, 0, 35)
     assert rig.typical == ("panels.kwp", "panels.tilt_deg", "panels.azimuth_deg")  # not the losses: never asked of this owner
     assert (rig.page.kwp.value(), rig.page.degrees.value(), rig.page.tilt.value()) == (5.0, 0, 35)
     assert rig.page.compass_buttons["s"].isChecked() and "Typical values in use" in rig.page.typical_note.text()
@@ -246,7 +246,7 @@ def test_changing_one_value_after_i_dont_know_gives_only_that_one(rig):
     rig.page.dont_know.click()
     rig.page.tilt.setValue(25)
     assert [k for k in rig.typical if k.startswith("panels.")] == ["panels.kwp", "panels.azimuth_deg", "panels.system_losses"]
-    assert rig.panels.tilt_deg == 25
+    assert rig.panels[0].tilt_deg == 25
 
 
 def test_i_dont_know_leaves_the_rest_of_the_answers_alone(tmp_path, qapp):
@@ -274,19 +274,80 @@ def test_finishing_writes_the_panels_and_what_is_still_typical(tmp_path, qapp):
         thread.join(5)
     assert rig.wizard.finish()
     written = load_config(rig.file)
-    assert (written.panels.kwp, written.panels.azimuth_deg) == (6.0, 0)
+    assert (written.panels[0].kwp, written.panels[0].azimuth_deg) == (6.0, 0)
     assert "panels.kwp" not in written.setup.typical and "panels.azimuth_deg" not in written.setup.typical
     assert "panels.tilt_deg" in written.setup.typical and "car.km_per_day" in written.setup.typical
 
 
 # the explanations
 
-def test_each_value_has_its_where_to_find_line_and_the_east_west_note(rig):
+def test_each_value_has_its_where_to_find_line_and_the_note_on_several_arrays(rig):
     shown = " ".join(texts(rig.page))
     assert "installer's datasheet or invoice, and in the inverter's app" in shown
     assert "A satellite view in a map app shows it" in shown and "0 is south, -90 east, 90 west, 180 north" in shown
     assert "Most pitched roofs are 30 to 40 degrees" in shown
-    assert "both an east and a west roof" in shown and "face them south" in shown and "flat tilt (about 10 degrees)" in shown
+    assert "an east and a west roof? Add each as its own array" in shown and "face them south" not in shown
+
+
+# several panel arrays
+
+def test_one_array_shows_no_tabs_names_or_remove(rig):
+    assert rig.page.array_tabs.isHidden() and rig.page.name.isHidden() and rig.page.remove_button.isHidden()
+    assert rig.page.add_button.isVisible()
+
+
+def test_another_array_starts_typical_gets_a_tab_and_is_the_one_asked_about(tmp_path, qapp):
+    rig = Rig(tmp_path, cfg=example_config())
+    rig.page.add_button.click()
+    assert len(rig.panels) == 2 and rig.page.current == 1 and rig.page.array_tabs.count() == 2
+    assert rig.page.array_tabs.isVisible() and rig.page.name.isVisible() and rig.page.remove_button.isVisible()
+    assert rig.page.array_tabs.tabText(1) == "Array 2" and rig.page.kwp.value() == 5.0
+    assert rig.typical == ("panels.2.kwp", "panels.2.tilt_deg", "panels.2.azimuth_deg", "panels.2.system_losses")
+    assert "Typical values in use: 5.0 kWp" in rig.page.typical_note.text()
+    rig.page.kwp.setValue(2.4)
+    rig.page.compass_buttons["w"].click()
+    rig.page.name.setText("Garage")
+    rig.page.name.textEdited.emit("Garage")
+    assert rig.panels[1] == Panels(kwp=2.4, tilt_deg=35, azimuth_deg=90, system_losses=0.14, name="Garage")
+    assert rig.panels[0] == example_config().panels[0]  # the first array is left alone
+    assert rig.page.array_tabs.tabText(1) == "Garage"
+    assert rig.typical == ("panels.2.tilt_deg", "panels.2.system_losses")
+
+
+def test_choosing_a_tab_shows_that_arrays_answers(tmp_path, qapp):
+    rig = Rig(tmp_path, cfg=example_config())
+    rig.page.add_button.click()
+    rig.page.kwp.setValue(2.0)
+    rig.page.array_tabs.setCurrentIndex(0)
+    assert rig.page.current == 0 and rig.page.kwp.value() == 4.8 and rig.page.degrees.value() == -45
+    assert rig.page.typical_note.text() == ""
+    rig.page.dont_know.click()  # only for the array shown
+    assert rig.panels[0].kwp == 5.0 and rig.panels[1].kwp == 2.0
+    assert rig.typical == ("panels.kwp", "panels.tilt_deg", "panels.azimuth_deg", "panels.2.tilt_deg", "panels.2.azimuth_deg", "panels.2.system_losses")
+
+
+def test_removing_an_array_goes_back_to_the_simple_page(tmp_path, qapp):
+    rig = Rig(tmp_path, cfg=example_config())
+    rig.page.add_button.click()
+    rig.page.kwp.setValue(2.0)
+    rig.page.array_tabs.setCurrentIndex(0)
+    rig.page.remove_button.click()  # removes the first: the second moves up, with its typical flags
+    assert rig.panels == (Panels(kwp=2.0),) and rig.page.current == 0 and rig.page.kwp.value() == 2.0
+    assert rig.typical == ("panels.tilt_deg", "panels.azimuth_deg", "panels.system_losses")
+    assert rig.page.array_tabs.isHidden() and rig.page.remove_button.isHidden()
+
+
+def test_finishing_writes_every_array(tmp_path, qapp):
+    rig = Rig(tmp_path, cfg=example_config())
+    rig.page.add_button.click()
+    rig.page.compass_buttons["w"].click()
+    rig.wizard.navigate("finish")
+    for thread in list(rig.wizard.pages["finish"]._threads):
+        thread.join(5)
+    assert rig.wizard.finish()
+    written = load_config(rig.file)
+    assert written.panels == (example_config().panels[0], Panels(azimuth_deg=90))
+    assert written.setup.typical == ("panels.2.kwp", "panels.2.tilt_deg", "panels.2.system_losses")
 
 
 def test_the_buttons_are_named_in_the_language(tmp_path, qapp):

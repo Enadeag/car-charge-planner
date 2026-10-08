@@ -8,6 +8,11 @@ The provider asks for `estimate/watthours/period`: the energy (Wh) of each perio
 defines as "from the last timestamp to the timestamp in the key". The timestamps are local time at the place
 (its time zone is in the answer). A day starts with a key at sunrise whose value is 0 (nothing came before
 it), so that key gives no step; the others give one step each, as long as the period it covers.
+
+Several panel arrays: the public plan forecasts one plane per request, so the provider asks once for each array
+and adds the answers up (each request counts towards the 12 an hour). Paid plans can take several planes in one
+request, but how many depends on the plan, which the app cannot see from the key; so they are asked once per
+array too. A rate limit on any of the requests is a rate limit for the whole forecast.
 """
 
 from __future__ import annotations
@@ -22,11 +27,13 @@ from car_charge_planner.planner.model import ForecastStep
 
 from ..provider import (
     BadResponse,
+    PanelArray,
     PlaceSearch,
     RateLimited,
     SettingSpec,
     SystemDescription,
     Unavailable,
+    each_array,
     require_valid_steps,
 )
 from ..transport import USER_AGENT, Reply, Request, Transport, urllib_transport
@@ -45,7 +52,8 @@ class ForecastSolar:
     description = N_(
         "A solar forecast service (Forecast.Solar) that estimates the output of your system itself, with its "
         "own allowance for losses, so the system losses setting is not used. The free public plan gives today "
-        "and tomorrow, hour by hour, and allows 12 requests an hour for everyone behind your internet address."
+        "and tomorrow, hour by hour, and allows 12 requests an hour for everyone behind your internet address. "
+        "Each panel array takes one request."
     )
     terms_url = "https://doc.forecast.solar/account_models"
     attribution = "Solar forecast: Forecast.Solar"
@@ -53,7 +61,7 @@ class ForecastSolar:
         "Your location (latitude and longitude), the tilt and direction of your panels and their size in kWp. "
         "With an API key, the key too."
     )
-    min_refresh = timedelta(minutes=60)  # 12 calls an hour are shared by everything behind your address
+    min_refresh = timedelta(minutes=60)  # 12 calls an hour are shared by everything behind your address (one per array)
     horizon = timedelta(days=2)  # the public plan: this day and the next
     max_useful_age = timedelta(hours=6)
     settings = (
@@ -72,12 +80,12 @@ class ForecastSolar:
     # -- the request -------------------------------------------------------------------------------------------
 
     @staticmethod
-    def request_url(system: SystemDescription, settings: dict[str, str]) -> str:
-        """Tilt and direction are whole degrees in this API; 0 = south, -90 = east, 90 = west, ±180 = north,
-        the same convention as ours."""
+    def request_url(system: SystemDescription, array: PanelArray, settings: dict[str, str]) -> str:
+        """The request for one panel array of the system. Tilt and direction are whole degrees in this API;
+        0 = south, -90 = east, 90 = west, ±180 = north, the same convention as ours."""
         key = (settings.get("api_key") or "").strip()
-        tilt = min(90, max(0, round(system.tilt_deg)))
-        azimuth = min(180, max(-180, round(system.azimuth_deg)))
+        tilt = min(90, max(0, round(array.tilt_deg)))
+        azimuth = min(180, max(-180, round(array.azimuth_deg)))
         parts = [
             SERVER,
             *([key] if key else []),
@@ -86,14 +94,17 @@ class ForecastSolar:
             _number(system.longitude, 4),
             str(tilt),
             str(azimuth),
-            _number(system.kwp, 3),
+            _number(array.kwp, 3),
         ]
         return "/".join(parts)
 
     # -- fetching ----------------------------------------------------------------------------------------------
 
     def fetch(self, system: SystemDescription, settings: dict[str, str], now: datetime) -> list[ForecastStep]:
-        url = self.request_url(system, settings)
+        return require_valid_steps(each_array(system, lambda array: self._fetch_array(system, array, settings, now)))
+
+    def _fetch_array(self, system: SystemDescription, array: PanelArray, settings: dict[str, str], now: datetime) -> list[ForecastStep]:
+        url = self.request_url(system, array, settings)
         try:
             reply = self.transport(Request(url, {"User-Agent": USER_AGENT, "Accept": "application/json"}))
         except OSError as err:  # the text never carries the URL: it holds the key

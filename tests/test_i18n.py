@@ -334,7 +334,7 @@ def test_the_committed_template_is_up_to_date_with_the_code(tmp_path):
 
 def test_the_template_holds_the_texts_of_every_package_the_user_reads_messages_from():
     text = i18n_tools.POT.read_text()
-    assert "#: car_charge_planner/planner/model.py" in text and "[panels] kwp must be above 0" in text  # validation messages
+    assert "#: car_charge_planner/planner/model.py" in text and "{panels} kwp must be above 0" in text  # validation messages
     assert "#: car_charge_planner/view_model.py" in text
 
 

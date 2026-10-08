@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from car_charge_planner.planner.model import Config
+from car_charge_planner.planner.model import Config, panel_key, setting, with_setting
 
 from ..i18n import N_
 
@@ -13,7 +13,7 @@ UNITS_CHOICES = (("metric", N_("Metric (km, kWh/100 km)")), ("imperial", N_("Imp
 
 @dataclass(frozen=True)
 class FieldSpec:
-    key: str  # "panels.kwp", or "latitude" for a top-level value
+    key: str  # "panels.kwp" ("panels.2.kwp" for the second panel array), or "latitude" for a top-level value
     label: str
     hint: str
     unit: str = ""
@@ -44,10 +44,7 @@ def _provider_key(key: str) -> tuple[str, str] | None:
 def get_value(cfg: Config, key: str):
     if (provider := _provider_key(key)) is not None:
         return cfg.forecast.settings.get(provider[0], {}).get(provider[1], "")
-    if "." in key:
-        section, name = key.split(".")
-        return getattr(getattr(cfg, section), name)
-    return getattr(cfg, key)
+    return setting(cfg, key)
 
 
 def set_value(cfg: Config, key: str, value) -> Config:
@@ -62,37 +59,48 @@ def set_value(cfg: Config, key: str, value) -> Config:
         if not values:
             settings.pop(provider_id)
         return replace(cfg, forecast=replace(cfg.forecast, settings=settings))
-    if "." in key:
-        section, name = key.split(".")
-        return replace(cfg, **{section: replace(getattr(cfg, section), **{name: value})})
-    return replace(cfg, **{key: value})
+    return with_setting(cfg, key, value)
 
 
-SOLAR = TabSpec(
-    "solar",
-    N_("Solar and location"),
-    (
-        FieldSpec(
-            "panels.kwp", N_("Panel size"), N_("Total peak power of all panels together, as stated on the installer's datasheet or in the inverter app."),
-            unit="kWp", minimum=0.1, maximum=100, decimals=2, step=0.1,
-        ),
-        FieldSpec(
-            "panels.tilt_deg", N_("Tilt"), N_("Angle of the panels from horizontal: 0 is flat, 90 is vertical."),
-            unit=N_("degrees"), minimum=0, maximum=90, decimals=1, step=1,
-        ),
-        FieldSpec(
-            "panels.azimuth_deg", N_("Direction"), N_("Compass direction the panels face: 0 = south, -90 = east, 90 = west, 180 = north. South-east is -45."),
-            unit=N_("degrees"), minimum=-180, maximum=180, decimals=1, step=5,
-        ),
-        FieldSpec(
-            "panels.system_losses", N_("System losses"), N_("Combined losses from the inverter, cables, heat and dirt. Typically 10-15%."),
-            unit="%", minimum=0, maximum=99.9, decimals=1, step=1, scale=100,
-        ),
-        FieldSpec("latitude", N_("Latitude"), N_("Decimal degrees of the panels' location. Positive is north. 0 and 0 together mean not set."), unit=N_("degrees"), minimum=-90, maximum=90, decimals=4, step=0.01),
-        FieldSpec("longitude", N_("Longitude"), N_("Decimal degrees of the panels' location. Positive is east of Greenwich."), unit=N_("degrees"), minimum=-180, maximum=180, decimals=4, step=0.01),
-        FieldSpec("timezone", N_("Time zone"), N_("The time zone of the location. Start typing to search the list."), kind="timezone"),
+# One panel array's fields, with the keys of the first array; array_fields() gives them for any array.
+PANEL_FIELDS = (
+    FieldSpec(
+        "panels.kwp", N_("Panel size"),
+        N_("Peak power of the panels together, as stated on the installer's datasheet or in the inverter app. With more than one array: of this array."),
+        unit="kWp", minimum=0.1, maximum=100, decimals=2, step=0.1,
+    ),
+    FieldSpec(
+        "panels.tilt_deg", N_("Tilt"), N_("Angle of the panels from horizontal: 0 is flat, 90 is vertical."),
+        unit=N_("degrees"), minimum=0, maximum=90, decimals=1, step=1,
+    ),
+    FieldSpec(
+        "panels.azimuth_deg", N_("Direction"), N_("Compass direction the panels face: 0 = south, -90 = east, 90 = west, 180 = north. South-east is -45."),
+        unit=N_("degrees"), minimum=-180, maximum=180, decimals=1, step=5,
+    ),
+    FieldSpec(
+        "panels.system_losses", N_("System losses"), N_("Combined losses from the inverter, cables, heat and dirt. Typically 10-15%."),
+        unit="%", minimum=0, maximum=99.9, decimals=1, step=1, scale=100,
     ),
 )
+ARRAY_NAME = FieldSpec("panels.name", N_("Name"), N_("Optional: what you call this array, such as \"East roof\" or \"Garage\"."), kind="text")
+
+LOCATION_FIELDS = (
+    FieldSpec("latitude", N_("Latitude"), N_("Decimal degrees of the panels' location. Positive is north. 0 and 0 together mean not set."), unit=N_("degrees"), minimum=-90, maximum=90, decimals=4, step=0.01),
+    FieldSpec("longitude", N_("Longitude"), N_("Decimal degrees of the panels' location. Positive is east of Greenwich."), unit=N_("degrees"), minimum=-180, maximum=180, decimals=4, step=0.01),
+    FieldSpec("timezone", N_("Time zone"), N_("The time zone of the location. Start typing to search the list."), kind="timezone"),
+)
+
+
+def array_fields(index: int, named: bool) -> tuple[FieldSpec, ...]:
+    """The fields of panel array `index` (from 0), keyed "panels.kwp" for the first and "panels.2.kwp" for the
+    second; with a name field first when `named` (there is more than one array)."""
+    specs = ((ARRAY_NAME,) if named else ()) + PANEL_FIELDS
+    return tuple(replace(spec, key=panel_key(index, spec.key.split(".")[1])) for spec in specs)
+
+
+# The Solar tab as a list: one array and the location. With several arrays it repeats the array's fields
+# (settings/tabs.py, SolarTab).
+SOLAR = TabSpec("solar", N_("Solar and location"), PANEL_FIELDS + LOCATION_FIELDS)
 
 HOUSE_CAR = TabSpec(
     "house_car",

@@ -1,8 +1,8 @@
 # Forecast providers
 
 A **forecast provider** tells the app how much power the user's solar system is expected to produce over the next
-days. The app hands it a description of the system and gets back one number per time step: expected power in
-kW. Everything else (when to ask, what to keep, what to do when it fails, the Settings screen) is done for every
+days. The app hands it a description of the system (one or more panel arrays) and gets back one number per time
+step: the expected power of all arrays together, in kW. Everything else (when to ask, what to keep, what to do when it fails, the Settings screen) is done for every
 provider by the app.
 
 Two providers are built in, [Open-Meteo](../src/car_charge_planner/forecast/providers/open_meteo.py) and
@@ -15,11 +15,15 @@ All of it is in [`src/car_charge_planner/forecast/provider.py`](../src/car_charg
 
 ```python
 @dataclass(frozen=True)
-class SystemDescription:           # what the provider is told
-    latitude: float; longitude: float
+class PanelArray:                  # panels with one tilt and one direction
     kwp: float; tilt_deg: float; azimuth_deg: float   # azimuth: 0 = south, -90 = east, 90 = west, 180 = north
     system_losses: float                              # a fraction (0.14 = 14%)
-    timezone: str                                     # the user's time zone, an IANA name
+
+@dataclass(frozen=True)
+class SystemDescription:           # what the provider is told
+    latitude: float; longitude: float
+    arrays: tuple[PanelArray, ...] # at least one; system.kwp is the size of all of them together
+    timezone: str                  # the user's time zone, an IANA name
 
 @dataclass(frozen=True)
 class ForecastStep:                # what it returns, a list of them (src/car_charge_planner/planner/model.py)
@@ -46,7 +50,17 @@ in order, must not overlap, and may have gaps (night). Power is finite and not n
 returns what is wrong with a list of steps in words; the app and the conformance kit use it, and
 `require_valid_steps(steps)` raises `BadResponse` for you.
 
-**Losses.** `system.system_losses` is given to you. If your service does not model losses itself, apply it
+**Several panel arrays.** A home can have panels facing different ways (an east and a west roof, a garage);
+each is a `PanelArray` in `system.arrays`, and the forecast you return is their total. A service that takes one
+plane per request is asked once per array: `each_array(system, fetch_one)` calls `fetch_one(array)` for each and
+adds the answers up with `add_up`. When the steps line up (one service, the same place) each step's power is the
+sum; when they do not, the steps are cut where any array's step starts or ends, so no energy is lost; an array
+without a step at some time adds nothing then, and the total only covers the time every array's answer covers. A
+failure for any array must fail the whole `fetch`: a total without one of the arrays would look right and be
+wrong. A service that takes several planes in one request may use that instead. Remember that every request
+counts towards a rate limit: a household with three arrays spends three requests per refresh.
+
+**Losses.** Each array's `system_losses` is given to you. If your service does not model losses itself, apply it
 (Open-Meteo: `kwp x irradiance / 1000 x (1 - losses)`). If it does (Forecast.Solar), do not apply it twice and
 say so in the `description`.
 
@@ -79,7 +93,7 @@ from datetime import datetime, timedelta
 
 from car_charge_planner.i18n import N_
 from car_charge_planner.forecast.provider import (
-    BadResponse, RateLimited, SettingSpec, Unavailable, require_valid_steps,
+    BadResponse, RateLimited, SettingSpec, Unavailable, each_array, require_valid_steps,
 )
 from car_charge_planner.forecast.transport import Request, urllib_transport
 from car_charge_planner.planner.model import ForecastStep
@@ -102,8 +116,15 @@ class Example:
         self.transport = transport
 
     def fetch(self, system, settings, now):
+        # the service forecasts one plane per request: ask for each panel array and add them up
+        return require_valid_steps(each_array(system, lambda array: self._fetch_array(system, array, settings)))
+
+    def _fetch_array(self, system, array, settings):
         key = settings.get("api_key", "")
-        url = f"https://api.example.com/v1/solar?lat={system.latitude}&lon={system.longitude}&kwp={system.kwp}"
+        url = (
+            f"https://api.example.com/v1/solar?lat={system.latitude}&lon={system.longitude}"
+            f"&kwp={array.kwp}&tilt={array.tilt_deg}&azimuth={array.azimuth_deg}"
+        )
         try:
             reply = self.transport(Request(url, {"Authorization": f"Bearer {key}"} if key else {}))
         except OSError as err:  # the text never carries the URL
@@ -194,6 +215,7 @@ What it checks:
 | --- | --- |
 | Metadata | A lower-case id, a name, description, attribution and a plain-words "what is sent", an `https` terms link, positive refresh interval and horizon, a useful age that is at least the refresh interval, unique setting keys with labels and hints. |
 | A good answer | At least one step; steps carry a time zone, last a positive time, follow each other without overlap, have finite non-negative power, and stay within the declared horizon; it went through the transport and asked for nothing unrecorded. |
+| Several panel arrays | A system with a second array gives one valid forecast. If the provider asks once per array, it is the sum of the single-array forecasts, and a failure for the second array fails the whole forecast. |
 | Same answer, same steps | Deterministic; it leaves its inputs alone. |
 | Rate limit | A refusal for too many requests raises `RateLimited` with the retry time the server gave (or `None`). |
 | Server error, no network | A 5xx and a failed connection (`OSError`, timeout, reset) raise `Unavailable`. |
@@ -203,7 +225,8 @@ What it checks:
 
 For tests of the code that *uses* providers (the forecast service, the Settings tab) there is a scripted
 `FakeProvider` in `tests/fake_provider.py`: successes, errors, rate limits with retry times, and `Held` entries
-that wait for an event so a test can have a fetch in flight.
+that wait for an event so a test can have a fetch in flight. Given `per_array` (a function from a `PanelArray` to
+its steps) instead of a script, it forecasts each array and adds them up the way a real provider does.
 
 ## Place search (optional)
 

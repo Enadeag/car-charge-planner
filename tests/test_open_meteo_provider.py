@@ -7,7 +7,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 
-from car_charge_planner.forecast.provider import BadResponse, NotConfigured, RateLimited, SystemDescription, Unavailable
+from car_charge_planner.forecast.provider import BadResponse, NotConfigured, PanelArray, RateLimited, SystemDescription, Unavailable
 from car_charge_planner.forecast.providers.open_meteo import OpenMeteo, power_kw
 from car_charge_planner.forecast.registry import registry
 from car_charge_planner.forecast.transport import Reply
@@ -53,8 +53,8 @@ def test_the_value_stamped_at_nine_covers_the_hour_before_it_and_becomes_power()
 
 
 def test_losses_and_size_are_applied_by_the_provider():
-    small, _ = fetch(system=SystemDescription(52.37, 4.9, 2.4, 35, -45, 0.14, "Europe/Amsterdam"))
-    lossless, _ = fetch(system=SystemDescription(52.37, 4.9, 4.8, 35, -45, 0.0, "Europe/Amsterdam"))
+    small, _ = fetch(system=SystemDescription(52.37, 4.9, (PanelArray(2.4, 35, -45, 0.14),), "Europe/Amsterdam"))
+    lossless, _ = fetch(system=SystemDescription(52.37, 4.9, (PanelArray(4.8, 35, -45, 0.0),), "Europe/Amsterdam"))
     base, _ = fetch()
     assert max(s.power_kw for s in small) == pytest.approx(max(s.power_kw for s in base) / 2)
     assert max(s.power_kw for s in lossless) == pytest.approx(max(s.power_kw for s in base) / 0.86)
@@ -104,7 +104,7 @@ def test_the_retry_time_is_none_when_the_server_gives_none():
 
 
 def test_a_timezone_the_system_does_not_know_is_a_bad_response():
-    odd = SystemDescription(52.37, 4.9, 4.8, 35, -45, 0.14, "Mars/Olympus")
+    odd = SystemDescription(52.37, 4.9, (PanelArray(4.8, 35, -45, 0.14),), "Mars/Olympus")
     with pytest.raises(BadResponse):
         fetch(system=odd)
 
@@ -183,3 +183,24 @@ def test_it_declares_what_the_spec_says():
 
 def test_it_is_a_built_in_provider():
     assert registry.get("open-meteo").name == "Open-Meteo"
+
+
+# ---- several panel arrays ------------------------------------------------------------------------------------
+
+
+def test_each_array_is_one_request_with_its_own_tilt_and_direction_and_the_power_is_added_up():
+    east, west = PanelArray(3.0, 30, -90, 0.14), PanelArray(2.0, 10, 90, 0.0)
+    system = SystemDescription(52.37, 4.9, (east, west), "Europe/Amsterdam")
+    steps, transport = fetch(system=system)
+    assert [(query(r.url)["tilt"], query(r.url)["azimuth"]) for r in transport.requests] == [("30", "-90"), ("10", "90")]
+    nine = next(s for s in steps if s.end.hour == 9 and s.end.day == 6)
+    assert nine.power_kw == pytest.approx(power_kw(156.6, 3.0, 0.14) + power_kw(156.6, 2.0, 0.0))  # the recording is replayed for both
+    assert len(steps) == 72
+
+
+def test_a_bad_server_address_is_refused_before_any_array_is_asked():
+    transport = ReplayTransport([("", Reply(200, RECORDED))])
+    system = SystemDescription(52.37, 4.9, (PanelArray(3.0, 30, -90, 0.14), PanelArray(2.0, 10, 90, 0.0)), "Europe/Amsterdam")
+    with pytest.raises(NotConfigured):
+        OpenMeteo(transport).fetch(system, {"base_url": "http://example.org"}, NOW)
+    assert transport.requests == []

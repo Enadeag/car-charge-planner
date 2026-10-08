@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from car_charge_planner.forecast.provider import BadResponse, RateLimited, SystemDescription, Unavailable, check_steps
+from car_charge_planner.forecast.provider import BadResponse, PanelArray, RateLimited, SystemDescription, Unavailable, check_steps
 from car_charge_planner.forecast.providers.forecast_solar import ForecastSolar
 from car_charge_planner.forecast.registry import registry
 from car_charge_planner.forecast.transport import Reply
@@ -83,7 +83,7 @@ def test_night_gives_no_steps_and_the_steps_satisfy_the_contract():
 
 
 def test_steps_are_in_the_system_time_zone_whatever_the_place_says():
-    in_utc = SystemDescription(52.37, 4.9, 4.8, 35, -45, 0.14, "UTC")
+    in_utc = SystemDescription(52.37, 4.9, (PanelArray(4.8, 35, -45, 0.14),), "UTC")
     steps, _ = fetch(system=in_utc)
     assert steps[0].start.tzinfo.key == "UTC" and local(steps[0]) == ("05:51:52", "06:00:00")  # same instants
 
@@ -96,7 +96,7 @@ def test_the_time_zone_of_the_place_in_the_answer_is_what_the_keys_are_read_in()
 
 
 def test_the_system_losses_setting_is_not_applied():
-    lossy = SystemDescription(52.37, 4.9, 4.8, 35, -45, 0.5, "Europe/Amsterdam")
+    lossy = SystemDescription(52.37, 4.9, (PanelArray(4.8, 35, -45, 0.5),), "Europe/Amsterdam")
     assert fetch(system=lossy)[0] == fetch()[0]
 
 
@@ -146,15 +146,15 @@ def test_blank_key_means_the_public_plan():
 )
 def test_our_azimuth_is_theirs(direction, azimuth, sent):
     """Both use 0 = south, -90 = east, 90 = west and 180 / -180 = north, so it passes through unchanged."""
-    system = SystemDescription(52.37, 4.9, 4.8, 35, azimuth, 0.14, "Europe/Amsterdam")
-    assert ForecastSolar.request_url(system, {}).split("/")[-2] == sent
+    system = SystemDescription(52.37, 4.9, (PanelArray(4.8, 35, azimuth, 0.14),), "Europe/Amsterdam")
+    assert ForecastSolar.request_url(system, system.arrays[0], {}).split("/")[-2] == sent
 
 
 def test_numbers_are_whole_degrees_and_short_decimals():
-    system = SystemDescription(52.37123456, -4.123456, 4.123456, 34.6, 12.4, 0.14, "Europe/Amsterdam")
-    assert ForecastSolar.request_url(system, {}).endswith("/52.3712/-4.1235/35/12/4.123")
-    flat = SystemDescription(52.0, 4.0, 5.0, 120, 250, 0.14, "Europe/Amsterdam")
-    assert ForecastSolar.request_url(flat, {}).endswith("/52/4/90/180/5")  # limited to what the API accepts
+    system = SystemDescription(52.37123456, -4.123456, (PanelArray(4.123456, 34.6, 12.4, 0.14),), "Europe/Amsterdam")
+    assert ForecastSolar.request_url(system, system.arrays[0], {}).endswith("/52.3712/-4.1235/35/12/4.123")
+    flat = SystemDescription(52.0, 4.0, (PanelArray(5.0, 120, 250, 0.14),), "Europe/Amsterdam")
+    assert ForecastSolar.request_url(flat, flat.arrays[0], {}).endswith("/52/4/90/180/5")  # limited to what the API accepts
 
 
 # ---- failures -------------------------------------------------------------------------------------------------
@@ -242,3 +242,34 @@ def test_it_declares_the_public_plan():
 
 def test_both_providers_are_built_in():
     assert set(registry.ids()) >= {"open-meteo", "forecast-solar"}
+
+
+# ---- several panel arrays -------------------------------------------------------------------------------------
+
+TWO_ARRAYS = SystemDescription(52.37, 4.9, (PanelArray(3.0, 30, -90, 0.14), PanelArray(2.0, 10, 90, 0.14)), "Europe/Amsterdam")
+
+
+def test_the_public_plan_is_asked_once_for_each_array_and_the_energy_is_added_up():
+    steps, transport = fetch(system=TWO_ARRAYS)
+    assert [r.url.split("period/")[1] for r in transport.requests] == ["52.37/4.9/30/-90/3", "52.37/4.9/10/90/2"]
+    single, _ = fetch()
+    assert [s.power_kw for s in steps] == pytest.approx([2 * s.power_kw for s in single])  # the recording, twice
+    assert check_steps(steps) == []
+
+
+def test_a_key_is_sent_with_every_request():
+    _, transport = fetch(system=TWO_ARRAYS, settings={"api_key": SECRET})
+    assert len(transport.requests) == 2 and all(f"/{SECRET}/estimate/" in r.url for r in transport.requests)
+
+
+def test_a_rate_limit_on_the_second_array_is_a_rate_limit_for_the_whole_forecast():
+    answers = [Reply(200, RECORDED), Reply(429, RATE_LIMITED, {"X-Ratelimit-Retry-At": RETRY_AT})]
+    asked = []
+
+    def transport(request):
+        asked.append(request)
+        return answers[len(asked) - 1]
+
+    with pytest.raises(RateLimited) as caught:
+        ForecastSolar(transport).fetch(TWO_ARRAYS, {}, NOW)
+    assert caught.value.retry_after == timedelta(minutes=27, seconds=8) and len(asked) == 2

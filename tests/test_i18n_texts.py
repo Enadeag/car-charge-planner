@@ -132,8 +132,8 @@ def test_validation_messages_reach_the_user_in_their_language(tmp_path):
 
     from car_charge_planner.planner.model import Config, ConfigError, Panels, validate
 
-    make_catalogue(tmp_path, "xx", {"Invalid config:": "Ongeldig:", "[panels] kwp must be above 0": "kwp moet boven 0 zijn"})
+    make_catalogue(tmp_path, "xx", {"Invalid config:": "Ongeldig:", "{panels} kwp must be above 0": "{panels} kwp moet boven 0 zijn"})
     init(["xx"], tmp_path)
     with pytest.raises(ConfigError) as err:
-        validate(replace(Config(), panels=Panels(kwp=0)))
+        validate(replace(Config(), panels=(Panels(kwp=0),)))
     assert str(err.value).startswith("Ongeldig:") and "kwp moet boven 0 zijn" in str(err.value)

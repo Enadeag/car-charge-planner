@@ -5,6 +5,9 @@ into the power of the user's system. The free public service is for non-commerci
 credit is shown with the forecast); a paid plan has its own server address and an API key.
 
 Hourly irradiance is the mean of the *preceding* hour, so the value stamped T covers [T-1h, T).
+
+The irradiance is for one plane (one tilt, one direction), so a system with several panel arrays is one request
+per array; the hours of the answers are the same, and the power of the arrays is added up hour by hour.
 """
 
 from __future__ import annotations
@@ -20,11 +23,13 @@ from car_charge_planner.planner.model import ForecastStep
 from ..provider import (
     BadResponse,
     NotConfigured,
+    PanelArray,
     PlaceSearch,
     RateLimited,
     SettingSpec,
     SystemDescription,
     Unavailable,
+    each_array,
     require_valid_steps,
 )
 from ..transport import USER_AGENT, Reply, Request, Transport, urllib_transport
@@ -78,7 +83,8 @@ class OpenMeteo:
     # -- the request -------------------------------------------------------------------------------------------
 
     @staticmethod
-    def request_url(system: SystemDescription, settings: dict[str, str]) -> str:
+    def request_url(system: SystemDescription, array: PanelArray, settings: dict[str, str]) -> str:
+        """The request for one panel array of the system."""
         server = (settings.get("base_url") or "").strip().rstrip("/") or PUBLIC_SERVER
         if not (server.startswith("https://") or server.startswith("http://localhost") or server.startswith("http://127.0.0.1")):
             raise NotConfigured("the server address must start with https://")
@@ -86,8 +92,8 @@ class OpenMeteo:
             "latitude": system.latitude,
             "longitude": system.longitude,
             "hourly": "global_tilted_irradiance",
-            "tilt": system.tilt_deg,
-            "azimuth": system.azimuth_deg,
+            "tilt": array.tilt_deg,
+            "azimuth": array.azimuth_deg,
             "timezone": system.timezone,
             "forecast_days": FORECAST_DAYS,
             "timeformat": "unixtime",
@@ -100,13 +106,18 @@ class OpenMeteo:
     # -- fetching ----------------------------------------------------------------------------------------------
 
     def fetch(self, system: SystemDescription, settings: dict[str, str], now: datetime) -> list[ForecastStep]:
-        url = self.request_url(system, settings)  # may raise NotConfigured: before anything is sent
+        for array in system.arrays:
+            self.request_url(system, array, settings)  # may raise NotConfigured: before anything is sent
+        return require_valid_steps(each_array(system, lambda array: self._fetch_array(system, array, settings)))
+
+    def _fetch_array(self, system: SystemDescription, array: PanelArray, settings: dict[str, str]) -> list[ForecastStep]:
+        url = self.request_url(system, array, settings)
         try:
             reply = self.transport(Request(url, {"User-Agent": USER_AGENT}))
         except OSError as err:  # includes timeouts and URLError; the text never carries the URL (it may hold the key)
             raise Unavailable(f"could not reach Open-Meteo ({type(err).__name__})") from None
         self._check_status(reply)
-        return require_valid_steps(self._steps(reply, system))
+        return require_valid_steps(self._steps(reply, system, array))
 
     @staticmethod
     def _check_status(reply: Reply) -> None:
@@ -121,7 +132,7 @@ class OpenMeteo:
         raise BadResponse(f"Open-Meteo did not accept the request (status {reply.status}){_reason(reply)}")
 
     @staticmethod
-    def _steps(reply: Reply, system: SystemDescription) -> list[ForecastStep]:
+    def _steps(reply: Reply, system: SystemDescription, array: PanelArray) -> list[ForecastStep]:
         try:
             raw = reply.json()
         except ValueError:
@@ -142,7 +153,7 @@ class OpenMeteo:
                 end = datetime.fromtimestamp(stamp, UTC).astimezone(tz)
                 start = (end.astimezone(UTC) - timedelta(hours=1)).astimezone(tz)
                 watts = float(value or 0.0)  # null at the edge of the horizon
-                steps.append(ForecastStep(start, end, power_kw(watts, system.kwp, system.system_losses)))
+                steps.append(ForecastStep(start, end, power_kw(watts, array.kwp, array.system_losses)))
         except (KeyError, TypeError, ValueError, OverflowError, OSError, ZoneInfoNotFoundError):
             raise BadResponse("Open-Meteo gave an answer that is not what it documents") from None
         return steps

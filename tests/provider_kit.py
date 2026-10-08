@@ -20,10 +20,11 @@ tested against deliberately broken providers.
 
 from __future__ import annotations
 
+import itertools
 import logging
 import re
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -32,12 +33,14 @@ from car_charge_planner.forecast.provider import (
     BadResponse,
     ForecastProvider,
     NotConfigured,
+    PanelArray,
     PlaceSearch,
     Problem,
     ProviderError,
     RateLimited,
     SystemDescription,
     Unavailable,
+    add_up,
     check_steps,
 )
 from car_charge_planner.forecast.transport import Reply, Request, Transport
@@ -45,7 +48,8 @@ from car_charge_planner.forecast.transport import Reply, Request, Transport
 Match = str | Callable[[Request], bool]
 Routes = list[tuple[Match, Reply | Exception]]
 
-EXAMPLE_SYSTEM = SystemDescription(52.37, 4.90, 4.8, 35, -45, 0.14, "Europe/Amsterdam")
+EXAMPLE_SYSTEM = SystemDescription(52.37, 4.90, (PanelArray(4.8, 35, -45, 0.14),), "Europe/Amsterdam")
+SECOND_ARRAY = PanelArray(2.4, 15, 90, 0.10)  # added to the case's system for the several-arrays check
 EXAMPLE_NOW = datetime(2026, 7, 3, 7, 0, tzinfo=UTC)
 HORIZON_SLACK = timedelta(days=1)
 
@@ -125,6 +129,26 @@ def check_good_answer(case: ProviderCase) -> None:
     assert transport.requests, "the provider answered without asking: it must go through the transport it was given"
     assert not transport.unexpected, f"unexpected requests: {[r.url for r in transport.unexpected]}"
     assert max(s.end for s in steps) <= case.now + provider.horizon + HORIZON_SLACK, "steps reach past the declared horizon"
+
+
+def check_several_arrays(case: ProviderCase) -> None:
+    """A system with two panel arrays gives one valid forecast. A provider that asks once per array (the recorded
+    answer is replayed for each request) gives the sum of the two single-array forecasts, and a failure for the
+    second array is a failure of the whole forecast, not a total without it."""
+    system = replace(case.system, arrays=(*case.system.arrays, SECOND_ARRAY))
+    provider, transport = case.provider(case.ok)
+    total = provider.fetch(system, case.all_settings(), case.now)
+    assert total and check_steps(total) == []
+    assert not transport.unexpected, f"unexpected requests: {[r.url for r in transport.unexpected]}"
+    if len(transport.requests) != len(system.arrays):
+        return  # one request for all arrays: the recorded answer cannot tell what the sum should be
+    singles = [case.provider(case.ok)[0].fetch(replace(system, arrays=(array,)), case.all_settings(), case.now) for array in system.arrays]
+    expected = add_up(singles)
+    assert [(s.start, s.end) for s in total] == [(s.start, s.end) for s in expected]
+    assert [s.power_kw for s in total] == pytest.approx([s.power_kw for s in expected])
+    counter = itertools.count()
+    second_fails = [(lambda _request: next(counter) >= 1, Reply(503, b"Service Unavailable")), *case.ok]
+    _raises(replace(case, system=system), second_fails, Unavailable)
 
 
 def check_deterministic(case: ProviderCase) -> None:
@@ -323,6 +347,9 @@ class ProviderConformance:
 
     def test_a_good_answer_gives_valid_steps_through_the_transport(self, case):
         check_good_answer(case)
+
+    def test_several_panel_arrays_give_one_forecast_of_their_sum(self, case):
+        check_several_arrays(case)
 
     def test_the_same_answer_gives_the_same_steps(self, case):
         check_deterministic(case)

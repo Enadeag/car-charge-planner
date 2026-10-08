@@ -75,7 +75,7 @@ def test_the_primary_is_asked_and_the_result_says_who_answered(rig):
 def test_the_provider_is_given_the_system_the_settings_and_the_time(rig, cfg):
     rig.get()
     system, settings, now = rig.main.calls[0]
-    assert (system.latitude, system.kwp, system.timezone) == (cfg.latitude, cfg.panels.kwp, cfg.timezone)
+    assert (system.latitude, system.kwp, system.timezone) == (cfg.latitude, cfg.panels[0].kwp, cfg.timezone)
     assert settings == {} and now == T0
 
 
@@ -266,7 +266,7 @@ def test_a_cool_down_that_has_passed_is_forgotten(rig):
 
 def test_a_changed_system_or_setting_makes_the_cache_not_apply(rig, cfg):
     rig.get()
-    bigger = replace(rig.cfg, panels=replace(cfg.panels, kwp=9.0))
+    bigger = replace(rig.cfg, panels=(replace(cfg.panels[0], kwp=9.0),))
     assert not rig.get(later(minutes=5), cfg=bigger).from_cache
     moved = replace(rig.cfg, latitude=51.0)
     assert not rig.get(later(minutes=6), cfg=moved).from_cache
