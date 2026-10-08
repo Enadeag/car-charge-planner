@@ -1,13 +1,19 @@
 import gc
+import os
 import socket
+import sys
+from pathlib import Path
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 import pytest
 
-from forecast.providers.open_meteo import power_kw
-from planner.demo import bell_day
-from planner.model import AwayRule, Car, Charger, Config, ForecastStep, House, Panels
+from car_charge_planner.forecast.providers.open_meteo import power_kw
+from car_charge_planner.planner.demo import bell_day
+from car_charge_planner.planner.model import AwayRule, Car, Charger, Config, ForecastStep, House, Panels
+
+# the package lives in src/: tests that start the app as a program find it without an install
+os.environ["PYTHONPATH"] = str(Path(__file__).resolve().parent.parent / "src") + os.pathsep + os.environ.get("PYTHONPATH", "")
 
 TZ = ZoneInfo("Europe/Amsterdam")  # the tests' time zone: it has the DST dates the tests use (2026-03-29, 2026-10-25)
 
@@ -162,8 +168,8 @@ class TrayApp:
     controller; the drawing (popup, tray, menu, tray clicks) on the shell."""
 
     def __init__(self, cfg, config_file, notifier=None):
-        from app.controller import Controller
-        from app.shells.tray import TrayShell
+        from car_charge_planner.controller import Controller
+        from car_charge_planner.shells.tray import TrayShell
 
         object.__setattr__(self, "controller", Controller(cfg, config_file, notifier))
         object.__setattr__(self, "shell", TrayShell(self.controller))

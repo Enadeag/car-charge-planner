@@ -7,8 +7,8 @@ from dataclasses import replace
 import pytest
 from PySide6.QtWidgets import QApplication, QDialog
 
-from app.settings.window import SettingsWindow
-from planner.model import Config, Setup, first_run_config, load_config
+from car_charge_planner.settings.window import SettingsWindow
+from car_charge_planner.planner.model import Config, Setup, first_run_config, load_config
 
 from conftest import example_config
 
@@ -99,7 +99,7 @@ def test_a_failed_write_is_reported_and_keeps_the_window_open(h, monkeypatch):
     def boom(cfg, path):
         raise OSError("disk full")
 
-    monkeypatch.setattr("app.settings.window.write_config", boom)
+    monkeypatch.setattr("car_charge_planner.settings.window.write_config", boom)
     h.box("panels.kwp").setValue(5.5)
     h.window.save_button.click()
     assert h.window.isVisible() and "disk full" in h.window.errors.text() and h.saved == []

@@ -9,14 +9,14 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 
 from fake_provider import FakeProvider
-from forecast.provider import Place, PlaceResults, Problem
-from forecast.providers.forecast_solar import ForecastSolar
-from forecast.providers.open_meteo import OpenMeteo
-from forecast.providers.open_meteo_geocoding import OpenMeteoGeocoder
-from forecast.registry import ProviderRegistry
-from forecast.selection import place_search
-from forecast.transport import Reply
-from planner.model import Forecast
+from car_charge_planner.forecast.provider import Place, PlaceResults, Problem
+from car_charge_planner.forecast.providers.forecast_solar import ForecastSolar
+from car_charge_planner.forecast.providers.open_meteo import OpenMeteo
+from car_charge_planner.forecast.providers.open_meteo_geocoding import OpenMeteoGeocoder
+from car_charge_planner.forecast.registry import ProviderRegistry
+from car_charge_planner.forecast.selection import place_search
+from car_charge_planner.forecast.transport import Reply
+from car_charge_planner.planner.model import Forecast
 from provider_kit import PlaceCase, PlaceSearchConformance, ReplayTransport
 
 FIXTURES = Path(__file__).parent / "fixtures"

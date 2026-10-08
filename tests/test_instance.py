@@ -9,7 +9,7 @@ import pytest
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-from app.instance import InstanceServer, Outcome, claim_instance, request_show, socket_path
+from car_charge_planner.instance import InstanceServer, Outcome, claim_instance, request_show, socket_path
 
 PROJECT = Path(__file__).resolve().parent.parent
 
@@ -159,7 +159,7 @@ def test_a_directory_that_is_open_to_others_is_not_trusted(monkeypatch, tmp_path
 
 
 def test_a_second_launch_of_the_real_app_hands_over_and_exits(tmp_path):
-    """Process A is the running instance; `python -m app` is the second start."""
+    """Process A is the running instance; `car-charge-planner` is the second start."""
     runtime = tmp_path / "run"
     runtime.mkdir(mode=0o700)
     env = {**os.environ, "XDG_RUNTIME_DIR": str(runtime), "QT_QPA_PLATFORM": "offscreen", "HOME": str(tmp_path)}
@@ -172,7 +172,7 @@ def test_a_second_launch_of_the_real_app_hands_over_and_exits(tmp_path):
                 import sys
                 from PySide6.QtCore import QTimer
                 from PySide6.QtWidgets import QApplication
-                from app.instance import Outcome, claim_instance
+                from car_charge_planner.instance import Outcome, claim_instance
                 app = QApplication([])
                 outcome, server = claim_instance()
                 print(outcome.value, flush=True)
@@ -189,7 +189,7 @@ def test_a_second_launch_of_the_real_app_hands_over_and_exits(tmp_path):
     )
     try:
         assert first.stdout.readline().strip() == "primary"
-        second = subprocess.run([sys.executable, "-m", "app"], cwd=PROJECT, env=env, capture_output=True, text=True, timeout=30)
+        second = subprocess.run([sys.executable, "-m", "car_charge_planner"], cwd=PROJECT, env=env, capture_output=True, text=True, timeout=30)
         assert second.returncode == 0 and "already running" in second.stderr
         assert first.stdout.readline().strip() == "SHOW"  # the first instance was asked to show itself
     finally:
@@ -198,7 +198,7 @@ def test_a_second_launch_of_the_real_app_hands_over_and_exits(tmp_path):
 
 
 def test_two_copies_starting_at_once_the_loser_signals_instead_of_removing_the_socket(qapp, path, monkeypatch):
-    import app.instance as instance
+    import car_charge_planner.instance as instance
 
     winner = InstanceServer(path)
     assert winner.listen()  # the other copy won the race

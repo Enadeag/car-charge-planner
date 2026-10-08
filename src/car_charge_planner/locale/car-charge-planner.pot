@@ -1,0 +1,2086 @@
+# Translations template for car-charge-planner.
+# Copyright (C) 2026 Kelvin Vroegop
+# This file is distributed under the same license as the car-charge-planner project (MIT).
+
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: car-charge-planner source\n"
+"Report-Msgid-Bugs-To: https://github.com/Enadeag/car-charge-planner/issues\n"
+"POT-Creation-Date: 2026-01-01 00:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: car_charge_planner/__main__.py
+#, python-brace-format
+msgid "Autostart entry written to {path}"
+msgstr ""
+
+#: car_charge_planner/__main__.py
+msgid "Autostart entry removed"
+msgstr ""
+
+#: car_charge_planner/__main__.py
+msgid "No autostart entry found"
+msgstr ""
+
+#: car_charge_planner/__main__.py
+#, python-brace-format
+msgid ""
+"Launcher entry written to {entry}\n"
+"Icon written to {icon}"
+msgstr ""
+
+#: car_charge_planner/__main__.py
+msgid "Removed:"
+msgstr ""
+
+#: car_charge_planner/__main__.py
+msgid "No launcher entry found"
+msgstr ""
+
+#: car_charge_planner/__main__.py
+#, python-brace-format
+msgid "Unknown command {command!r}. Use: {commands}"
+msgstr ""
+
+#: car_charge_planner/away_input.py
+msgid "The end time must be after the start time"
+msgstr ""
+
+#: car_charge_planner/away_input.py
+#, python-brace-format
+msgid "{day}, all day"
+msgstr ""
+
+#: car_charge_planner/away_input.py
+#, python-brace-format
+msgid "{day}, {start}-{end}"
+msgstr ""
+
+#: car_charge_planner/away_input.py
+#, python-brace-format
+msgid "{start_day} {start} - {end_day} {end}"
+msgstr ""
+
+#: car_charge_planner/away_input.py
+#, python-brace-format
+msgid "Every {weekday}, {start}-{end}"
+msgstr ""
+
+#: car_charge_planner/away_input.py
+#, python-brace-format
+msgid "{weekday} weekly"
+msgstr ""
+
+#: car_charge_planner/away_input.py
+msgid "No absences planned"
+msgstr ""
+
+#: car_charge_planner/away_input.py car_charge_planner/setup/hub.py
+#: car_charge_planner/setup/recap.py car_charge_planner/setup/solar.py
+#: car_charge_planner/view_model.py
+msgctxt "list separator"
+msgid ", "
+msgstr ""
+
+#: car_charge_planner/away_input.py
+#, python-brace-format
+msgid "Away: {items} +{n} more"
+msgstr ""
+
+#: car_charge_planner/away_input.py
+#, python-brace-format
+msgid "Away: {items}"
+msgstr ""
+
+#: car_charge_planner/controller.py
+msgid "Set-up needed"
+msgstr ""
+
+#: car_charge_planner/controller.py
+msgid "Click here, then press Set up, to describe your solar panels and car. It takes a few minutes."
+msgstr ""
+
+#: car_charge_planner/controller.py
+msgid "Interface changed"
+msgstr ""
+
+#: car_charge_planner/controller.py
+msgid "The new interface applies the next time the app starts."
+msgstr ""
+
+#: car_charge_planner/controller.py
+msgid "Loading forecast..."
+msgstr ""
+
+#: car_charge_planner/forecast/check.py
+#, python-brace-format
+msgid "{provider} says there were too many requests. Try again in {n} minute."
+msgid_plural "{provider} says there were too many requests. Try again in {n} minutes."
+msgstr[0] ""
+msgstr[1] ""
+
+#: car_charge_planner/forecast/check.py
+#, python-brace-format
+msgid "{provider} says there were too many requests. Try again later."
+msgstr ""
+
+#: car_charge_planner/forecast/check.py
+#, python-brace-format
+msgid "Could not get a forecast from {provider}: {reason}"
+msgstr ""
+
+#: car_charge_planner/forecast/check.py
+#, python-brace-format
+msgid "{provider} is not set up completely: {reason}"
+msgstr ""
+
+#: car_charge_planner/forecast/check.py
+#, python-brace-format
+msgid "{provider} gave an answer the app does not understand: {reason}"
+msgstr ""
+
+#: car_charge_planner/forecast/check.py
+#, python-brace-format
+msgid "{provider}: {reason}"
+msgstr ""
+
+#: car_charge_planner/forecast/check.py
+#: car_charge_planner/settings/forecast_tab.py
+#, python-brace-format
+msgid "{setting} is required."
+msgstr ""
+
+#: car_charge_planner/forecast/check.py
+#, python-brace-format
+msgid "{provider}: unexpected error ({kind})"
+msgstr ""
+
+#: car_charge_planner/forecast/check.py
+#, python-brace-format
+msgid "OK: {n} day of forecast"
+msgid_plural "OK: {n} days of forecast"
+msgstr[0] ""
+msgstr[1] ""
+
+#: car_charge_planner/forecast/providers/forecast_solar.py
+msgid "A solar forecast service (Forecast.Solar) that estimates the output of your system itself, with its own allowance for losses, so the system losses setting is not used. The free public plan gives today and tomorrow, hour by hour, and allows 12 requests an hour for everyone behind your internet address."
+msgstr ""
+
+#: car_charge_planner/forecast/providers/forecast_solar.py
+msgid "Your location (latitude and longitude), the tilt and direction of your panels and their size in kWp. With an API key, the key too."
+msgstr ""
+
+#: car_charge_planner/forecast/providers/forecast_solar.py
+#: car_charge_planner/forecast/providers/open_meteo.py
+msgid "API key"
+msgstr ""
+
+#: car_charge_planner/forecast/providers/forecast_solar.py
+msgid "Only for a paid plan, which adds more days and finer steps. The free public plan needs none."
+msgstr ""
+
+#: car_charge_planner/forecast/providers/open_meteo.py
+msgid "A free weather service run by Open-Meteo.com. It forecasts the sunlight on your panels and the app turns that into the power of your system. For non-commercial use."
+msgstr ""
+
+#: car_charge_planner/forecast/providers/open_meteo.py
+msgid "Your location (latitude and longitude), your time zone and the tilt and direction of your panels. With an API key, the key too."
+msgstr ""
+
+#: car_charge_planner/forecast/providers/open_meteo.py
+msgid "Server address"
+msgstr ""
+
+#: car_charge_planner/forecast/providers/open_meteo.py
+msgid "Leave empty for the free public service. A paid plan, or a server of your own, has its own address."
+msgstr ""
+
+#: car_charge_planner/forecast/providers/open_meteo.py
+msgid "Only for a paid plan (commercial use). Free use needs none."
+msgstr ""
+
+#: car_charge_planner/forecast/secret_store.py
+#, python-brace-format
+msgid "{file} is readable by other users and could not be made private: {error}"
+msgstr ""
+
+#: car_charge_planner/forecast/secret_store.py
+#, python-brace-format
+msgid "Could not read {file}: {error}"
+msgstr ""
+
+#: car_charge_planner/forecast/secret_store.py
+#, python-brace-format
+msgid "{file} is not valid TOML. Fix it or delete it and enter the keys again."
+msgstr ""
+
+#: car_charge_planner/forecast/secret_store.py
+#, python-brace-format
+msgid "{file}: [{id}] must hold texts only"
+msgstr ""
+
+#: car_charge_planner/forecast/secret_store.py
+msgid "A provider id or setting name has characters that are not allowed"
+msgstr ""
+
+#: car_charge_planner/forecast/secret_store.py
+#: car_charge_planner/settings/window.py car_charge_planner/setup/wizard.py
+#, python-brace-format
+msgid "Could not write {file}: {error}"
+msgstr ""
+
+#: car_charge_planner/forecast/selection.py
+#, python-brace-format
+msgid "The {role} forecast provider {id!r} is not known to this version of the app"
+msgstr ""
+
+#: car_charge_planner/forecast/selection.py
+#, python-brace-format
+msgid "{provider}: unknown setting {key!r}"
+msgstr ""
+
+#: car_charge_planner/forecast/selection.py
+#, python-brace-format
+msgid "{provider}: {setting} is required"
+msgstr ""
+
+#: car_charge_planner/forecast/service.py
+#, python-brace-format
+msgid "The forecast provider {id!r} is not known to this version of the app"
+msgstr ""
+
+#: car_charge_planner/forecast/service.py
+#, python-brace-format
+msgid "{provider}: {settings} is required"
+msgstr ""
+
+#: car_charge_planner/forecast/service.py
+#, python-brace-format
+msgid "{provider}: not asked again until {time}"
+msgstr ""
+
+#: car_charge_planner/forecast/service.py
+#, python-brace-format
+msgid "an unexpected error ({kind})"
+msgstr ""
+
+#: car_charge_planner/i18n.py
+msgctxt "decimal separator"
+msgid "."
+msgstr ""
+
+#: car_charge_planner/main.py
+msgid "No system tray found"
+msgstr ""
+
+#: car_charge_planner/main.py
+msgid "The interface is set to a tray icon, but this desktop has none, so the app shows a window instead. Change it in Settings, on the Interface tab."
+msgstr ""
+
+#: car_charge_planner/main.py
+#, python-brace-format
+msgid "{app} is already running: asked it to show itself."
+msgstr ""
+
+#: car_charge_planner/main.py
+msgid "Could not set up the single-instance socket; a second copy could start."
+msgstr ""
+
+#: car_charge_planner/main.py
+msgid "Car charge planner"
+msgstr ""
+
+#: car_charge_planner/main.py
+#, python-brace-format
+msgid ""
+"{error}\n"
+"\n"
+"Fix the file and start the app again:\n"
+"{file}"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "weekday, short"
+msgid "Mon"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "weekday, short"
+msgid "Tue"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "weekday, short"
+msgid "Wed"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "weekday, short"
+msgid "Thu"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "weekday, short"
+msgid "Fri"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "weekday, short"
+msgid "Sat"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "weekday, short"
+msgid "Sun"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "weekday"
+msgid "Monday"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "weekday"
+msgid "Tuesday"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "weekday"
+msgid "Wednesday"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "weekday"
+msgid "Thursday"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "weekday"
+msgid "Friday"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "weekday"
+msgid "Saturday"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "weekday"
+msgid "Sunday"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "month, short"
+msgid "Jan"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "month, short"
+msgid "Feb"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "month, short"
+msgid "Mar"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "month, short"
+msgid "Apr"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "month, short"
+msgid "May"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "month, short"
+msgid "Jun"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "month, short"
+msgid "Jul"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "month, short"
+msgid "Aug"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "month, short"
+msgid "Sep"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "month, short"
+msgid "Oct"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "month, short"
+msgid "Nov"
+msgstr ""
+
+#: car_charge_planner/names.py
+msgctxt "month, short"
+msgid "Dec"
+msgstr ""
+
+#: car_charge_planner/names.py
+#, python-brace-format
+msgid "{weekday} {day} {month}"
+msgstr ""
+
+#: car_charge_planner/notifications.py
+#, python-brace-format
+msgid "Set the current to {amps} A per phase ({power} kW) in your charger's app."
+msgstr ""
+
+#: car_charge_planner/notifications.py
+#, python-brace-format
+msgid "Set the current to {amps} A ({power} kW) in your charger's app."
+msgstr ""
+
+#: car_charge_planner/notifications.py
+#, python-brace-format
+msgid "Grid charge window {span}"
+msgstr ""
+
+#: car_charge_planner/notifications.py
+#, python-brace-format
+msgid "{setting} About {energy} kWh, needed to stay above {minimum}%."
+msgstr ""
+
+#: car_charge_planner/notifications.py
+#, python-brace-format
+msgid "Charge window {span}"
+msgstr ""
+
+#: car_charge_planner/notifications.py
+#, python-brace-format, python-format
+msgid "{setting} About {energy} kWh, {share}% solar."
+msgstr ""
+
+#: car_charge_planner/notifier.py
+msgid "Open"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[panels] kwp must be above 0"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[panels] tilt_deg must be between 0 and 90"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[panels] azimuth_deg must be between -180 and 180"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[panels] system_losses must be at least 0 and below 1"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[house] baseload_kw cannot be negative"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[car] usable_battery_kwh must be above 0"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[car] consumption_kwh_per_100km must be above 0"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[car] km_per_day cannot be negative"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[car] needs 0 <= minimum_pct < target_pct <= 100"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[charger] needs 0 < min_amps <= max_amps"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[charger] phases must be 1 or 3"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[charger] volts must be above 0"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[charger] efficiency must be above 0 and at most 1"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[planning] margin must be above 0 and at most 1"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[planning] import_tolerance_kwh cannot be negative"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[planning] min_window_minutes must be above 0"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[notify] lead_minutes cannot be negative"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+#, python-brace-format
+msgid "[interface] language must be \"auto\" or a language code such as \"nl\", not {language!r}"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[forecast] primary must be a provider id such as \"open-meteo\""
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[forecast] fallback must be empty or a provider id"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[forecast] the fallback must be a different provider than the primary"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+#, python-brace-format
+msgid "[forecast.{id}] is not a provider id"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+#, python-brace-format
+msgid "[forecast.{id}] {key} must be a text"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+#, python-brace-format
+msgid "[setup] typical lists settings that do not exist: {keys}"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[setup] typical lists a setting twice"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+#, python-brace-format
+msgid "[interface] units must be one of {units}, not {value!r}"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+#, python-brace-format
+msgid "[interface] mode must be one of {modes}, not {mode!r}"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "latitude must be between -90 and 90"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "longitude must be between -180 and 180"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+#, python-brace-format
+msgid "timezone {zone!r} is not a known time zone"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+#, python-brace-format
+msgid "[away] weekday {weekday} must be 0 (Monday) to 6 (Sunday)"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[away] each rule must end after it starts on the same day (no overnight rules)"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "Invalid config:"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "Enter your location: latitude and longitude cannot both be 0"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+#, python-brace-format
+msgid "[away] time {value!r} must look like \"06:00\""
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+#, python-brace-format
+msgid "unknown keys in [{section}]: {keys}"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+msgid "[setup] typical must be a list of setting names"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+#, python-brace-format
+msgid "Config file is not valid TOML: {error}"
+msgstr ""
+
+#: car_charge_planner/planner/model.py
+#, python-brace-format
+msgid "A config value has the wrong type: {error}"
+msgstr ""
+
+#: car_charge_planner/planview.py
+msgid "Plan"
+msgstr ""
+
+#: car_charge_planner/planview.py
+msgid "Update"
+msgstr ""
+
+#: car_charge_planner/planview.py
+msgid "Set up"
+msgstr ""
+
+#: car_charge_planner/planview.py
+msgid "Next days"
+msgstr ""
+
+#: car_charge_planner/planview.py
+msgid "Edit"
+msgstr ""
+
+#: car_charge_planner/planview.py
+msgid "Manage"
+msgstr ""
+
+#: car_charge_planner/planview.py
+msgid "Battery level"
+msgstr ""
+
+#: car_charge_planner/planview.py
+msgid "Set battery"
+msgstr ""
+
+#: car_charge_planner/planview.py
+msgid "Saves immediately"
+msgstr ""
+
+#: car_charge_planner/planview.py car_charge_planner/setup/recap.py
+msgid "Car away"
+msgstr ""
+
+#: car_charge_planner/planview.py
+msgid "Edit weekly rules in Settings..."
+msgstr ""
+
+#: car_charge_planner/planview.py
+msgid "All day"
+msgstr ""
+
+#: car_charge_planner/planview.py
+msgid "Time range"
+msgstr ""
+
+#: car_charge_planner/planview.py
+msgid "Add"
+msgstr ""
+
+#: car_charge_planner/planview.py
+#, python-brace-format
+msgid "Battery {pct}% · please update"
+msgstr ""
+
+#: car_charge_planner/planview.py car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Battery {pct}%"
+msgstr ""
+
+#: car_charge_planner/planview.py
+msgid "Update •"
+msgstr ""
+
+#: car_charge_planner/planview.py
+msgid "Check them in Settings"
+msgstr ""
+
+#: car_charge_planner/planview.py
+#, python-brace-format
+msgid "{rule}  (weekly rule)"
+msgstr ""
+
+#: car_charge_planner/planview.py
+msgid "No absences planned: the car is treated as home all week."
+msgstr ""
+
+#: car_charge_planner/planview.py car_charge_planner/settings/tabs.py
+msgid "Remove"
+msgstr ""
+
+#: car_charge_planner/popup.py car_charge_planner/settings/window.py
+msgid "Close"
+msgstr ""
+
+#: car_charge_planner/selftest.py
+msgid "Car charge planner: test notification"
+msgstr ""
+
+#: car_charge_planner/selftest.py
+msgid "Click this notification to check that clicks reach the app. (This is only a test.)"
+msgstr ""
+
+#: car_charge_planner/selftest.py
+msgid "The notification could not be sent: is a notification service running on this session?"
+msgstr ""
+
+#: car_charge_planner/selftest.py
+#, python-brace-format
+msgid "Test notification sent (id {id}). Click it within {seconds} seconds."
+msgstr ""
+
+#: car_charge_planner/selftest.py
+msgid "Click received: clicking a notification works on this desktop."
+msgstr ""
+
+#: car_charge_planner/selftest.py
+msgid "No click received. If you clicked it, this desktop may not report clicks to the app; if you did not, run the command again and click it."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Metric (km, kWh/100 km)"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Imperial (miles, mi/kWh)"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Solar and location"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Panel size"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Total peak power of all panels together, as stated on the installer's datasheet or in the inverter app."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Angle of the panels from horizontal: 0 is flat, 90 is vertical."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py car_charge_planner/setup/recap.py
+#: car_charge_planner/setup/solar.py
+msgid "Tilt"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "degrees"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Compass direction the panels face: 0 = south, -90 = east, 90 = west, 180 = north. South-east is -45."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py car_charge_planner/setup/recap.py
+msgid "Direction"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Combined losses from the inverter, cables, heat and dirt. Typically 10-15%."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py car_charge_planner/setup/recap.py
+msgid "System losses"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Decimal degrees of the panels' location. Positive is north. 0 and 0 together mean not set."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py car_charge_planner/setup/location.py
+msgid "Latitude"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Decimal degrees of the panels' location. Positive is east of Greenwich."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py car_charge_planner/setup/location.py
+msgid "Longitude"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "The time zone of the location. Start typing to search the list."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py car_charge_planner/setup/location.py
+#: car_charge_planner/setup/recap.py
+msgid "Time zone"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "House and car"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "House baseload"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Average power the household uses without the car. Monthly kWh divided by 730 gives a rough figure."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "The net (usable) battery capacity in kWh. Manufacturers often list the gross capacity, which is higher."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py car_charge_planner/setup/car.py
+#: car_charge_planner/setup/recap.py
+msgid "Usable battery"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Real-world average energy use of the car. Usually higher in winter than in summer."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py car_charge_planner/setup/car.py
+#: car_charge_planner/setup/recap.py
+msgid "Consumption"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Average distance driven per day. Weekly distance divided by 7 gives a rough figure."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py car_charge_planner/setup/recap.py
+msgid "Driving per day"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Minimum charge level"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "The battery should never drop below this level. Must be below the target."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Target charge level"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Everyday maximum charge level. Must be above the minimum."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py car_charge_planner/setup/recap.py
+msgid "Charger"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py car_charge_planner/setup/car.py
+#: car_charge_planner/setup/recap.py
+msgid "Phases"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Whether the charger charges on one phase or three. The charger's label or manual says, and so does the fuse box. Three phases deliver three times the power at the same current. Some chargers can be switched to single-phase charging, which suits solar surplus better. Currents below are per phase."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py car_charge_planner/setup/car.py
+msgid "One phase"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py car_charge_planner/setup/car.py
+msgid "Three phases"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Minimum current"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "The lowest current the charger and car both accept, often 6 A. Per phase on a three-phase charger."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Maximum current"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "The highest current the charger and the home connection allow, per phase. Must not be below the minimum."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Mains voltage at the charger, typically 230 V for a single-phase connection."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py car_charge_planner/setup/car.py
+msgid "Voltage"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Charging efficiency"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Share of the energy taken from the grid that ends up in the battery, after losses in charger and car."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Planning and notifications"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Planning margin"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Plan on this share of the forecast surplus. Lower is more cautious."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Import tolerance"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Grid energy a window may draw before its power is lowered."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Minimum window length"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Shorter windows are dropped."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "minutes"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Notification lead time"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "How long before a window starts you are told."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Interface"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Show the app as"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "How the app shows itself. A tray icon needs a desktop with a system tray (KDE Plasma, or GNOME with the AppIndicator extension). Applies the next time the app starts."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Automatic: a tray icon if there is a tray, otherwise a window"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Tray icon with a popup"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "A window"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py car_charge_planner/setup/welcome.py
+msgid "Units"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "How distances and consumption are shown: kilometres and kWh/100 km, or miles and miles per kWh. Energy and power are the same in both."
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Language"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "The language of the app. Applies the next time the app starts."
+msgstr ""
+
+#: car_charge_planner/settings/forecast_tab.py
+#, python-brace-format
+msgid "What is sent: {sends}"
+msgstr ""
+
+#: car_charge_planner/settings/forecast_tab.py
+#, python-brace-format
+msgid "Asks at most once every {n} minute."
+msgid_plural "Asks at most once every {n} minutes."
+msgstr[0] ""
+msgstr[1] ""
+
+#: car_charge_planner/settings/forecast_tab.py
+#, python-brace-format
+msgid "Looks {n} day ahead."
+msgid_plural "Looks {n} days ahead."
+msgstr[0] ""
+msgstr[1] ""
+
+#: car_charge_planner/settings/forecast_tab.py
+msgid "Terms and limits"
+msgstr ""
+
+#: car_charge_planner/settings/forecast_tab.py
+msgid "Forecast"
+msgstr ""
+
+#: car_charge_planner/settings/forecast_tab.py
+msgid "Forecast provider"
+msgstr ""
+
+#: car_charge_planner/settings/forecast_tab.py
+msgid "Fallback provider"
+msgstr ""
+
+#: car_charge_planner/settings/forecast_tab.py
+msgid "Asked only when the first provider has no forecast that is still usable."
+msgstr ""
+
+#: car_charge_planner/settings/forecast_tab.py
+msgid "Test"
+msgstr ""
+
+#: car_charge_planner/settings/forecast_tab.py
+msgid "Ask this provider for a forecast now, with what is entered here. Nothing is saved."
+msgstr ""
+
+#: car_charge_planner/settings/forecast_tab.py
+msgid "None"
+msgstr ""
+
+#: car_charge_planner/settings/forecast_tab.py
+#, python-brace-format
+msgid "{id} (not available)"
+msgstr ""
+
+#: car_charge_planner/settings/forecast_tab.py
+msgid "Choose a different provider than the first one."
+msgstr ""
+
+#: car_charge_planner/settings/forecast_tab.py
+msgid "Enter your location first, on the Solar and location tab."
+msgstr ""
+
+#: car_charge_planner/settings/forecast_tab.py
+#, python-brace-format
+msgid "Asking {provider}..."
+msgstr ""
+
+#: car_charge_planner/settings/providers.py
+msgid "Required"
+msgstr ""
+
+#: car_charge_planner/settings/tabs.py
+msgid "Show"
+msgstr ""
+
+#: car_charge_planner/settings/tabs.py
+msgid "Hide"
+msgstr ""
+
+#: car_charge_planner/settings/tabs.py
+msgid "Typical value"
+msgstr ""
+
+#: car_charge_planner/settings/tabs.py
+msgid "Automatic: follow the system"
+msgstr ""
+
+#: car_charge_planner/settings/tabs.py
+msgid "from"
+msgstr ""
+
+#: car_charge_planner/settings/tabs.py
+msgid "to"
+msgstr ""
+
+#: car_charge_planner/settings/tabs.py
+msgid "Away rules"
+msgstr ""
+
+#: car_charge_planner/settings/tabs.py
+msgid "Times each week when the car is not at home. No charging is planned then. One rule covers one weekday: add several rules for several days."
+msgstr ""
+
+#: car_charge_planner/settings/tabs.py
+msgid "No rules: the car is treated as home all week."
+msgstr ""
+
+#: car_charge_planner/settings/tabs.py
+msgid "Add rule"
+msgstr ""
+
+#: car_charge_planner/settings/window.py
+msgid "Settings"
+msgstr ""
+
+#: car_charge_planner/settings/window.py
+msgid "Discard your changes?"
+msgstr ""
+
+#: car_charge_planner/settings/window.py
+msgid "Car charge planner: Settings"
+msgstr ""
+
+#: car_charge_planner/settings/window.py
+msgid "Reset tab"
+msgstr ""
+
+#: car_charge_planner/settings/window.py
+msgid "Put this tab back to the built-in defaults. Nothing is saved until you press Save."
+msgstr ""
+
+#: car_charge_planner/settings/window.py
+msgid "Cancel"
+msgstr ""
+
+#: car_charge_planner/settings/window.py
+msgid "Save"
+msgstr ""
+
+#: car_charge_planner/settings/window.py
+msgid "Save and keep this window open"
+msgstr ""
+
+#: car_charge_planner/settings/window.py
+msgid "Save and close"
+msgstr ""
+
+#: car_charge_planner/settings/window.py
+msgid "Save, then close this window"
+msgstr ""
+
+#: car_charge_planner/settings/window.py
+msgid "Run set-up again..."
+msgstr ""
+
+#: car_charge_planner/settings/window.py
+msgid "Open the set-up wizard, filled in with what is saved now."
+msgstr ""
+
+#: car_charge_planner/settings/window.py
+msgid "Discard your unsaved changes and close this window"
+msgstr ""
+
+#: car_charge_planner/settings/window.py
+msgid "Close this window"
+msgstr ""
+
+#: car_charge_planner/settings/window.py
+#, python-brace-format
+msgid "A value has the wrong type: {error}"
+msgstr ""
+
+#: car_charge_planner/setup/away.py car_charge_planner/setup/hub.py
+msgid "When is the car away?"
+msgstr ""
+
+#: car_charge_planner/setup/away.py
+msgid "No charging is planned while the car is out, for example at work. Without this the car is treated as home all day, every day."
+msgstr ""
+
+#: car_charge_planner/setup/away.py
+msgid "The car is usually home"
+msgstr ""
+
+#: car_charge_planner/setup/away.py
+msgid "The car is away at set times each week"
+msgstr ""
+
+#: car_charge_planner/setup/away.py
+msgid "Add a time"
+msgstr ""
+
+#: car_charge_planner/setup/away.py
+msgid "One time covers one weekday: add several for several days. Each runs from a start to an end on the same day."
+msgstr ""
+
+#: car_charge_planner/setup/away.py car_charge_planner/setup/house.py
+msgid "Done"
+msgstr ""
+
+#: car_charge_planner/setup/car.py
+msgid "Your car and charger"
+msgstr ""
+
+#: car_charge_planner/setup/car.py
+msgid "The car"
+msgstr ""
+
+#: car_charge_planner/setup/car.py
+msgid "I don't know the car's numbers"
+msgstr ""
+
+#: car_charge_planner/setup/car.py
+msgid "Use typical values for the battery, consumption and distance. You can change them later in Settings."
+msgstr ""
+
+#: car_charge_planner/setup/car.py
+msgid "Typical: about 40 to 100 kWh. Give the usable (net) capacity: makers often list the gross figure, which is higher."
+msgstr ""
+
+#: car_charge_planner/setup/car.py
+msgid "Distance driven in a week"
+msgstr ""
+
+#: car_charge_planner/setup/car.py
+msgid "Everything added up and averaged over the year: work, shopping, holidays. The plan uses a seventh of it a day."
+msgstr ""
+
+#: car_charge_planner/setup/car.py
+msgid "Never below"
+msgstr ""
+
+#: car_charge_planner/setup/car.py
+msgid "Charge up to"
+msgstr ""
+
+#: car_charge_planner/setup/car.py
+msgid "The battery should never drop below the first; if it would, the plan advises charging from the grid. The second is the everyday maximum: 80 is gentle on the battery."
+msgstr ""
+
+#: car_charge_planner/setup/car.py
+msgid "The charger"
+msgstr ""
+
+#: car_charge_planner/setup/car.py
+msgid "I don't know the charger's numbers"
+msgstr ""
+
+#: car_charge_planner/setup/car.py
+msgid "Use typical values for the phases and the current. You can change them later in Settings."
+msgstr ""
+
+#: car_charge_planner/setup/car.py
+msgid "The charger's label or manual says, and so does the fuse box (three fuses in a row, or a three-pole one). Some chargers can be switched to single-phase charging, which suits solar power better: a three-phase charger needs about three times the surplus before it can start."
+msgstr ""
+
+#: car_charge_planner/setup/car.py car_charge_planner/setup/recap.py
+msgid "Highest current"
+msgstr ""
+
+#: car_charge_planner/setup/car.py car_charge_planner/setup/recap.py
+msgid "Lowest current"
+msgstr ""
+
+#: car_charge_planner/setup/car.py
+msgid "Per phase. The highest is what the charger and the home connection allow: typically 16 or 32 A. The lowest is what the charger and car both accept, often 6 A."
+msgstr ""
+
+#: car_charge_planner/setup/car.py car_charge_planner/setup/location.py
+msgid "Advanced"
+msgstr ""
+
+#: car_charge_planner/setup/car.py
+msgid "Mains voltage at the charger: 230 V in most of Europe."
+msgstr ""
+
+#: car_charge_planner/setup/car.py
+#, python-brace-format
+msgid "Typical: {low} to {high} {unit}. The car's trip computer average is a good guide; it is higher in winter."
+msgstr ""
+
+#: car_charge_planner/setup/car.py
+msgid "Typical values in use for some of these. Enter your own, or leave them."
+msgstr ""
+
+#: car_charge_planner/setup/finish.py
+msgid "Finish"
+msgstr ""
+
+#: car_charge_planner/setup/finish.py
+msgid "Check again"
+msgstr ""
+
+#: car_charge_planner/setup/finish.py
+msgid "Change"
+msgstr ""
+
+#: car_charge_planner/setup/finish.py
+#, python-brace-format
+msgid "{value} (typical value)"
+msgstr ""
+
+#: car_charge_planner/setup/finish.py
+msgid "Choose a place first: the plan needs to know where the panels are."
+msgstr ""
+
+#: car_charge_planner/setup/finish.py car_charge_planner/setup/location.py
+msgid "the forecast service"
+msgstr ""
+
+#: car_charge_planner/setup/finish.py
+#, python-brace-format
+msgid "Asking {provider} for a forecast..."
+msgstr ""
+
+#: car_charge_planner/setup/finish.py
+#, python-brace-format
+msgid "Forecast received for {place}: {n} day."
+msgid_plural "Forecast received for {place}: {n} days."
+msgstr[0] ""
+msgstr[1] ""
+
+#: car_charge_planner/setup/finish.py
+#, python-brace-format
+msgid "{reason} You can still finish; the app tries again by itself."
+msgstr ""
+
+#: car_charge_planner/setup/house.py car_charge_planner/setup/hub.py
+msgid "House electricity"
+msgstr ""
+
+#: car_charge_planner/setup/house.py
+msgid "The plan needs to know how much power the house itself uses, to know what is left over for the car. Your year's use is on your energy bill, or in your supplier's app."
+msgstr ""
+
+#: car_charge_planner/setup/house.py
+msgid "not entered"
+msgstr ""
+
+#: car_charge_planner/setup/house.py
+msgid "Electricity used in a year"
+msgstr ""
+
+#: car_charge_planner/setup/house.py
+msgid "My bill already includes charging the car"
+msgstr ""
+
+#: car_charge_planner/setup/house.py
+msgid "The year's total is turned into an average power over the year's 8,760 hours. If the car is on the same meter, its share is taken off, using what you said about the car."
+msgstr ""
+
+#: car_charge_planner/setup/house.py
+msgid "I don't know"
+msgstr ""
+
+#: car_charge_planner/setup/house.py
+msgid "Use a typical value for a house. You can change it later in Settings."
+msgstr ""
+
+#: car_charge_planner/setup/house.py
+#, python-brace-format
+msgid "= an average of {kw} kW for the house"
+msgstr ""
+
+#: car_charge_planner/setup/house.py
+#, python-brace-format
+msgid "(about {kwh} kWh of the car taken off)"
+msgstr ""
+
+#: car_charge_planner/setup/house.py
+#, python-brace-format
+msgid "That is more than the plan can use ({max} kW). Check the number."
+msgstr ""
+
+#: car_charge_planner/setup/house.py
+#, python-brace-format
+msgid "In use now: {kw} kW, a typical value (about {kwh} kWh a year)."
+msgstr ""
+
+#: car_charge_planner/setup/house.py
+#, python-brace-format
+msgid "In use now: {kw} kW (about {kwh} kWh a year)."
+msgstr ""
+
+#: car_charge_planner/setup/hub.py
+msgid "✓ Done"
+msgstr ""
+
+#: car_charge_planner/setup/hub.py
+msgid "What next?"
+msgstr ""
+
+#: car_charge_planner/setup/hub.py
+msgid "You can finish now. These two make the plan better, and you can do them later in Settings."
+msgstr ""
+
+#: car_charge_planner/setup/hub.py
+msgid "Tells the plan how much power the house itself uses, so it knows what is left for the car."
+msgstr ""
+
+#: car_charge_planner/setup/hub.py
+msgid "If skipped: a typical value is used."
+msgstr ""
+
+#: car_charge_planner/setup/hub.py
+msgid "Add house electricity"
+msgstr ""
+
+#: car_charge_planner/setup/hub.py
+msgid "Stops the plan recommending charging while the car is out, for example at work."
+msgstr ""
+
+#: car_charge_planner/setup/hub.py
+msgid "If skipped: the car is treated as home all day."
+msgstr ""
+
+#: car_charge_planner/setup/hub.py
+msgid "Set the car's away times"
+msgstr ""
+
+#: car_charge_planner/setup/hub.py
+msgid "If you drive to work, set this."
+msgstr ""
+
+#: car_charge_planner/setup/hub.py
+msgid "Review and finish"
+msgstr ""
+
+#: car_charge_planner/setup/hub.py
+#, python-brace-format
+msgid "{kw} kW, a typical value"
+msgstr ""
+
+#: car_charge_planner/setup/hub.py car_charge_planner/setup/recap.py
+#, python-brace-format
+msgid "{kw} kW"
+msgstr ""
+
+#: car_charge_planner/setup/hub.py car_charge_planner/setup/recap.py
+#, python-brace-format
+msgid "{weekday} {start}-{end}"
+msgstr ""
+
+#: car_charge_planner/setup/hub.py
+msgid "usually home"
+msgstr ""
+
+#: car_charge_planner/setup/location.py
+msgid "Where are your solar panels?"
+msgstr ""
+
+#: car_charge_planner/setup/location.py
+msgid "Town, or postcode"
+msgstr ""
+
+#: car_charge_planner/setup/location.py
+msgid "Enter coordinates instead"
+msgstr ""
+
+#: car_charge_planner/setup/location.py
+msgid "In a map app, press and hold (or right-click) on your roof to read its coordinates, for example 52.3702, 4.8952. Positive latitude is north, positive longitude is east. 0 and 0 together mean not set."
+msgstr ""
+
+#: car_charge_planner/setup/location.py
+#, python-brace-format
+msgid "What you type here is sent to {provider} to find the place."
+msgstr ""
+
+#: car_charge_planner/setup/location.py
+#, python-brace-format
+msgid "{provider} has no place search, so enter the coordinates of your panels instead."
+msgstr ""
+
+#: car_charge_planner/setup/location.py
+msgid "Type at least two characters."
+msgstr ""
+
+#: car_charge_planner/setup/location.py
+msgid "Searching..."
+msgstr ""
+
+#: car_charge_planner/setup/location.py
+msgid "No place found. Try another spelling, or enter the coordinates instead."
+msgstr ""
+
+#: car_charge_planner/setup/location.py
+#, python-brace-format
+msgid "{n} place found. Pick yours."
+msgid_plural "{n} places found. Pick yours."
+msgstr[0] ""
+msgstr[1] ""
+
+#: car_charge_planner/setup/location.py
+msgid "The search service is busy. Try again in a minute, or enter the coordinates instead."
+msgstr ""
+
+#: car_charge_planner/setup/location.py
+msgid "Could not reach the search service. Check your internet connection, or enter the coordinates instead."
+msgstr ""
+
+#: car_charge_planner/setup/location.py
+msgid "The search service gave an answer the app does not understand. Enter the coordinates instead."
+msgstr ""
+
+#: car_charge_planner/setup/location.py
+msgid "That is not a time zone the app knows. Pick one from the list."
+msgstr ""
+
+#: car_charge_planner/setup/location.py
+msgid "No place chosen yet."
+msgstr ""
+
+#: car_charge_planner/setup/location.py car_charge_planner/setup/recap.py
+#, python-brace-format
+msgid "{latitude}, {longitude}"
+msgstr ""
+
+#: car_charge_planner/setup/location.py
+#, python-brace-format
+msgid "Chosen: {place} ({zone})"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "compass, short"
+msgid "NW"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "compass direction"
+msgid "North-west"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "compass, short"
+msgid "N"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "compass direction"
+msgid "North"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "compass, short"
+msgid "NE"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "compass direction"
+msgid "North-east"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "compass, short"
+msgid "W"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "compass direction"
+msgid "West"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "compass, short"
+msgid "E"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "compass direction"
+msgid "East"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "compass, short"
+msgid "SW"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "compass direction"
+msgid "South-west"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "compass, short"
+msgid "S"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "compass direction"
+msgid "South"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "compass, short"
+msgid "SE"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "compass direction"
+msgid "South-east"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "roof tilt"
+msgid "Flat roof"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "roof tilt"
+msgid "Pitched roof"
+msgstr ""
+
+#: car_charge_planner/setup/panels.py
+msgctxt "roof tilt"
+msgid "Steep roof"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py
+#, python-brace-format
+msgid "{direction} ({degrees}°)"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py
+#, python-brace-format
+msgid "{degrees}°"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py
+msgid "not chosen yet"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py
+msgid "the car is treated as home all day"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py
+msgid "Place"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py
+msgid "Location"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py
+msgid "Solar panels"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py car_charge_planner/setup/solar.py
+msgid "Size"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py car_charge_planner/setup/solar.py
+#, python-brace-format
+msgid "{kwp} kWp"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py
+#, python-brace-format
+msgid "{percent}%"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py
+msgid "Car"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py
+#, python-brace-format
+msgid "{kwh} kWh"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py
+msgid "Charge level"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py
+#, python-brace-format
+msgid "keep above {minimum}%, charge up to {target}%"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py
+#, python-brace-format
+msgid "{amps} A"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py
+msgid "House"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py
+msgid "Own use"
+msgstr ""
+
+#: car_charge_planner/setup/recap.py
+msgid "Away times"
+msgstr ""
+
+#: car_charge_planner/setup/solar.py
+msgid "Your solar panels"
+msgstr ""
+
+#: car_charge_planner/setup/solar.py
+msgid "I don't know these"
+msgstr ""
+
+#: car_charge_planner/setup/solar.py
+msgid "Use typical values for the size, direction and tilt. You can change them later in Settings."
+msgstr ""
+
+#: car_charge_planner/setup/solar.py
+msgid "Total size"
+msgstr ""
+
+#: car_charge_planner/setup/solar.py
+msgid "Or the number of panels"
+msgstr ""
+
+#: car_charge_planner/setup/solar.py
+msgid "W each"
+msgstr ""
+
+#: car_charge_planner/setup/solar.py
+msgid "The total is on the installer's datasheet or invoice, and in the inverter's app. Otherwise count the panels on the roof and read the watts on the label of one."
+msgstr ""
+
+#: car_charge_planner/setup/solar.py
+msgid "Direction the panels face"
+msgstr ""
+
+#: car_charge_planner/setup/solar.py
+msgid "The direction the panels face, not the way the roof runs. A satellite view in a map app shows it. 0 is south, -90 east, 90 west, 180 north."
+msgstr ""
+
+#: car_charge_planner/setup/solar.py
+#, python-brace-format
+msgid "{name} ({degrees}°)"
+msgstr ""
+
+#: car_charge_planner/setup/solar.py
+msgid "The angle of the panels from flat. Most pitched roofs are 30 to 40 degrees; the installer or the roof's papers know."
+msgstr ""
+
+#: car_charge_planner/setup/solar.py
+msgid "Panels on both an east and a west roof? Enter the total size, face them south and choose a flat tilt (about 10 degrees). It is only an approximation, but it gives a similar curve through the day."
+msgstr ""
+
+#: car_charge_planner/setup/solar.py
+#, python-brace-format
+msgid "= {kwp} kWp"
+msgstr ""
+
+#: car_charge_planner/setup/solar.py
+#, python-brace-format
+msgid "facing {direction}"
+msgstr ""
+
+#: car_charge_planner/setup/solar.py
+#, python-brace-format
+msgid "tilt {tilt}°"
+msgstr ""
+
+#: car_charge_planner/setup/solar.py
+#, python-brace-format
+msgid "Typical values in use: {values}. Enter your own, or leave them."
+msgstr ""
+
+#: car_charge_planner/setup/welcome.py
+msgid "Nothing leaves your computer except what the forecast service needs: your location and the angles of your panels. There is no account and no tracking."
+msgstr ""
+
+#: car_charge_planner/setup/welcome.py
+#, python-brace-format
+msgid "Nothing leaves your computer except what is needed for the forecast. {provider} is sent: {sends} There is no account and no tracking."
+msgstr ""
+
+#: car_charge_planner/setup/welcome.py
+#, python-brace-format
+msgid "The place you type in the next step is sent to {provider} to find it."
+msgstr ""
+
+#: car_charge_planner/setup/welcome.py
+msgid "Welcome"
+msgstr ""
+
+#: car_charge_planner/setup/welcome.py
+msgid "This app tells you when to charge your electric car, so that as much of the power as possible comes from your own solar panels. It needs a few facts about your home and your car, and takes a few minutes."
+msgstr ""
+
+#: car_charge_planner/setup/welcome.py
+msgid "For distances and consumption. You can change it later in Settings."
+msgstr ""
+
+#: car_charge_planner/setup/wizard.py
+msgid "Set-up"
+msgstr ""
+
+#: car_charge_planner/setup/wizard.py
+msgid "Leave set-up? Nothing has been saved yet."
+msgstr ""
+
+#: car_charge_planner/setup/wizard.py
+msgid "Car charge planner: Set-up"
+msgstr ""
+
+#: car_charge_planner/setup/wizard.py
+msgid "Back"
+msgstr ""
+
+#: car_charge_planner/setup/wizard.py
+msgid "Next"
+msgstr ""
+
+#: car_charge_planner/setup/wizard.py
+#, python-brace-format
+msgid "The forecast provider {id!r} is not known to this version of the app."
+msgstr ""
+
+#: car_charge_planner/setup/wizard.py
+#, python-brace-format
+msgid "Step {n} of {total}"
+msgstr ""
+
+#: car_charge_planner/shells/tray.py car_charge_planner/shells/window.py
+msgid "Refresh forecast"
+msgstr ""
+
+#: car_charge_planner/shells/tray.py car_charge_planner/shells/window.py
+msgid "Settings..."
+msgstr ""
+
+#: car_charge_planner/shells/tray.py car_charge_planner/shells/window.py
+msgid "Quit"
+msgstr ""
+
+#: car_charge_planner/shells/window.py
+msgid "Menu"
+msgstr ""
+
+#: car_charge_planner/shells/window.py
+msgid "Still running in the background"
+msgstr ""
+
+#: car_charge_planner/shells/window.py
+#, python-brace-format
+msgid "{app} keeps running so you get notifications. Open it again from the application menu; quit it from its menu (Ctrl+Q)."
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "{power} kW ({amps} A per phase)"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "{power} kW ({amps} A)"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+msgid "Today"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+msgid "Tomorrow"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Battery {pct}% (assumed, not entered yet). Please enter it."
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Battery {pct}%, entered {n} day ago. Please update."
+msgid_plural "Battery {pct}%, entered {n} days ago. Please update."
+msgstr[0] ""
+msgstr[1] ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Battery {level}% → {after}% by {time}"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Based on typical values for: {items} and {n} more."
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Based on a typical value for: {items}."
+msgid_plural "Based on typical values for: {items}."
+msgstr[0] ""
+msgstr[1] ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Forecast {n} min old"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Forecast {n} min old, refresh failed"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Forecast {n} h old"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Forecast {n} h old, refresh failed"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "from {provider}, primary unavailable"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+msgid "provider busy, retrying later"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+msgctxt "footer separator"
+msgid " · "
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "{provider} is used because {primary} has no forecast that is still usable."
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "{provider} is used because the first provider has no forecast that is still usable."
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "{provider} asked not to be asked again yet. The app waits and tries again later."
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Battery would drop to {level}% (minimum {minimum}%) by the end of today."
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Battery would drop to {level}% (minimum {minimum}%) by the end of tomorrow."
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Battery would drop to {level}% (minimum {minimum}%) by the end of {day}."
+msgstr ""
+
+#: car_charge_planner/view_model.py
+msgid "Grid charge needed"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "About {energy} kWh, but there is no free time at home to charge it."
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "{day} {span}"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Grid charge needed · {when}"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "{power} · about {energy} kWh"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "{energy} kWh"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "{days}: no good window"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+msgid "Not set up yet"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+msgid "Set up the app to get a plan. It takes a few minutes."
+msgstr ""
+
+#: car_charge_planner/view_model.py
+msgid "No forecast available"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format, python-format
+msgid "{power} · {energy} kWh · {share}% solar"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Not enough solar surplus in the next {n} day."
+msgid_plural "Not enough solar surplus in the next {n} days."
+msgstr[0] ""
+msgstr[1] ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Grid charge needed: {when}"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+msgid "No good window coming up"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+msgid "No good window"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Charge now until {end} at {amps} A per phase"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Charge now until {end} at {amps} A"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+msgid "Charge now"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Until {end} · {facts}"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Next: {day} {span}, {amps} A per phase"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Next: {day} {span}, {amps} A"
+msgstr ""
+
+#: car_charge_planner/view_model.py
+#, python-brace-format
+msgid "Next: {day} {span}"
+msgstr ""
+

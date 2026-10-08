@@ -13,14 +13,14 @@ from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QLabel
 
-from app.setup.wizard import SetupWizard
+from car_charge_planner.setup.wizard import SetupWizard
 from fake_provider import FakeProvider
-from forecast.check import Attempt
-from forecast.provider import Place, PlaceResults, Problem
-from forecast.providers.open_meteo import OpenMeteo
-from forecast.registry import ProviderRegistry
-from forecast.transport import Reply
-from planner.model import Config, Forecast, load_config
+from car_charge_planner.forecast.check import Attempt
+from car_charge_planner.forecast.provider import Place, PlaceResults, Problem
+from car_charge_planner.forecast.providers.open_meteo import OpenMeteo
+from car_charge_planner.forecast.registry import ProviderRegistry
+from car_charge_planner.forecast.transport import Reply
+from car_charge_planner.planner.model import Config, Forecast, load_config
 from provider_kit import ReplayTransport
 
 from conftest import example_config
@@ -163,7 +163,7 @@ def test_pressing_enter_searches_at_once(rig):
 
 
 def test_the_search_is_in_the_apps_language(tmp_path, qapp):
-    from app import i18n
+    from car_charge_planner import i18n
     from test_i18n import make_catalogue
 
     make_catalogue(tmp_path, "nl", {})
@@ -283,7 +283,7 @@ def test_the_coordinates_are_behind_a_button_with_a_hint_on_reading_them(rig):
 
 
 def test_typed_coordinates_make_a_location_with_the_computers_time_zone(rig, monkeypatch):
-    monkeypatch.setattr("app.setup.location.system_timezone", lambda: "Europe/Lisbon")
+    monkeypatch.setattr("car_charge_planner.setup.location.system_timezone", lambda: "Europe/Lisbon")
     rig.page.latitude.setValue(38.72)
     rig.page.longitude.setValue(-9.14)
     cfg = rig.wizard.state.config
@@ -338,7 +338,7 @@ def test_a_time_zone_the_app_does_not_know_is_refused_and_put_in_sight(rig):
 
 
 def test_a_time_zone_chosen_by_hand_survives_typing_coordinates(rig, monkeypatch):
-    monkeypatch.setattr("app.setup.location.system_timezone", lambda: "Europe/Lisbon")
+    monkeypatch.setattr("car_charge_planner.setup.location.system_timezone", lambda: "Europe/Lisbon")
     rig.page.timezone.setCurrentText("Asia/Tokyo")
     rig.page.latitude.setValue(35.68)
     rig.page.longitude.setValue(139.69)

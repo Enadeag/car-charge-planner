@@ -17,8 +17,8 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import Callable, Union
 
-from forecast.provider import SettingSpec, SystemDescription
-from planner.model import ForecastStep
+from car_charge_planner.forecast.provider import SettingSpec, SystemDescription
+from car_charge_planner.planner.model import ForecastStep
 
 from conftest import forecast_from
 

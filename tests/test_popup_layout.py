@@ -9,13 +9,13 @@ from datetime import date, time, timedelta
 import pytest
 from PySide6.QtWidgets import QApplication, QLabel
 
-from app.away_input import away_summary, make_away
-from app.popup import PLAN, UPDATE, Popup
-from app.view_model import ForecastSource, build
-from planner.advice import grid_advice
-from planner.model import AwayRule, Config
-from planner.projection import plan
-from storage.state import BatteryReading, State
+from car_charge_planner.away_input import away_summary, make_away
+from car_charge_planner.popup import PLAN, UPDATE, Popup
+from car_charge_planner.view_model import ForecastSource, build
+from car_charge_planner.planner.advice import grid_advice
+from car_charge_planner.planner.model import AwayRule, Config
+from car_charge_planner.planner.projection import plan
+from car_charge_planner.storage.state import BatteryReading, State
 
 from conftest import TZ, at, forecast_from
 
@@ -311,7 +311,7 @@ def _tray(cfg, tmp_path, monkeypatch):
     from conftest import TrayApp
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("forecast.service.ForecastService.get", lambda *a, **k: None)
+    monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda *a, **k: None)
     return TrayApp(cfg, tmp_path / "config.toml")
 
 
@@ -348,7 +348,7 @@ def test_the_popup_grows_for_the_taller_page_and_shrinks_back(cfg, qapp):
 
 
 def test_the_footer_and_its_tooltip_follow_the_view(cfg, qapp):
-    from app.view_model import ForecastSource
+    from car_charge_planner.view_model import ForecastSource
 
     popup, vm = view(cfg, [(DAY, 900)])
     assert popup.footer.text() == vm.footer and popup.footer.toolTip() == vm.footer_tooltip
@@ -363,7 +363,7 @@ def test_the_footer_and_its_tooltip_follow_the_view(cfg, qapp):
 
 
 def needs_setup_vm():
-    from app.view_model import needs_setup
+    from car_charge_planner.view_model import needs_setup
 
     return needs_setup(BatteryReading(45, NOW), NOW)
 

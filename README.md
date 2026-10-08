@@ -44,20 +44,34 @@ Limits to know about:
 - Python 3.12 or newer (developed on 3.14).
 - Internet access for the forecast. Without it the app uses its cached forecast and says so.
 
-## Setup
+## Install
+
+With [pipx](https://pipx.pypa.io), which keeps the app and its libraries apart from everything else on your system:
+
+```bash
+pipx install git+https://github.com/Enadeag/car-charge-planner
+```
+
+This puts a `car-charge-planner` command on your path. To remove it again: `pipx uninstall car-charge-planner` (and `car-charge-planner uninstall-launcher` and `uninstall-autostart` first, if you used them).
+
+### From a clone
+
+To run it from a clone, or to work on it:
 
 ```bash
 # in the folder you cloned this repository into
 python3 -m venv .venv
-.venv/bin/pip install PySide6-Essentials jeepney pytest
+.venv/bin/pip install -e ".[dev]"
 ```
+
+The command is then `.venv/bin/car-charge-planner` (or `.venv/bin/python -m car_charge_planner`). The editable install also builds the translations; see Translations. The commands in the rest of this document are written as `car-charge-planner`: from a clone, use the one in `.venv/bin/`.
 
 ## Run
 
 Start the tray app:
 
 ```bash
-.venv/bin/python -m app
+car-charge-planner
 ```
 
 It runs until you choose **Quit** in the tray icon's right-click menu. Starting it again while it runs does not start a second copy: it asks the running one to show its popup and exits. The first start creates the config file.
@@ -65,7 +79,7 @@ It runs until you choose **Quit** in the tray icon's right-click menu. Starting 
 Stop a running instance from a terminal:
 
 ```bash
-pkill -f "python -m app$"
+pkill -f "car-charge-planner$"
 ```
 
 ### First run
@@ -97,7 +111,7 @@ Your time zone comes with the place you pick (or from the system for typed coord
 ### Check that clicking a notification works on your desktop
 
 ```bash
-.venv/bin/python -m app test-notification
+car-charge-planner test-notification
 ```
 
 This sends a labelled test notification and waits up to a minute for you to click it. It says whether the click reached the app. If it does not, the notification itself still works; only the click-to-open step does not.
@@ -105,7 +119,7 @@ This sends a labelled test notification and waits up to a minute for you to clic
 ### Without the tray: print the plan in a terminal
 
 ```bash
-.venv/bin/python -m planner.cli --live --battery 45
+python -m car_charge_planner.planner.cli --live --battery 45
 ```
 
 | Option | Meaning |
@@ -120,15 +134,15 @@ This sends a labelled test notification and waits up to a minute for you to clic
 ## Start automatically at login
 
 ```bash
-.venv/bin/python -m app install-autostart
+car-charge-planner install-autostart
 ```
 
-This writes `~/.config/autostart/car-charge-planner.desktop`, which starts the app at your next login. It stores absolute paths to this venv and folder, so run it again if you move the project.
+This writes `~/.config/autostart/car-charge-planner.desktop`, which starts the app at your next login. It stores the full path of the installed command, so run it again if you reinstall the app somewhere else.
 
 ## Remove the autostart entry
 
 ```bash
-.venv/bin/python -m app uninstall-autostart
+car-charge-planner uninstall-autostart
 ```
 
 This deletes only that `.desktop` file. A running instance keeps running until you quit it.
@@ -136,7 +150,7 @@ This deletes only that `.desktop` file. A running instance keeps running until y
 ## Application menu entry and icon
 
 ```bash
-.venv/bin/python -m app install-launcher
+car-charge-planner install-launcher
 ```
 
 This adds the app to your application menu with its own icon (the bolt on a blue disc) and writes the launcher to `~/.local/share/applications/car-charge-planner.desktop` and the icon to `~/.local/share/icons/hicolor/scalable/apps/`. The desktop uses the same entry to tie the app's notifications and windows to it, so they show its name and icon. Like the autostart entry, it stores absolute paths, so run it again if you move the project.
@@ -144,7 +158,7 @@ This adds the app to your application menu with its own icon (the bolt on a blue
 To remove both files:
 
 ```bash
-.venv/bin/python -m app uninstall-launcher
+car-charge-planner uninstall-launcher
 ```
 
 ## Running on GNOME
@@ -160,7 +174,7 @@ GNOME has no system tray of its own, so the app shows a window there instead of 
 | A Wayland session | Required | The Qt libraries in the PySide6 package include the Wayland plugin; no extra Qt package is needed. |
 | Python 3.12+, `PySide6-Essentials`, `jeepney` | Required | As under Setup. |
 | The notification service | Required | GNOME Shell provides it. |
-| A launcher entry | Recommended | Run `python -m app install-launcher`. GNOME ties the app's windows and notifications to it, so they show its name and icon. |
+| A launcher entry | Recommended | Run `car-charge-planner install-launcher`. GNOME ties the app's windows and notifications to it, so they show its name and icon. |
 | The **AppIndicator and KStatusNotifierItem Support** extension | **Optional** | Only needed if you want the tray icon and popup instead of a window. |
 
 **The optional tray extension.** With it, the app shows its tray icon with a popup, as on KDE. Ubuntu ships it enabled. Elsewhere, install it and turn it on in the Extensions app, then log out and in:
@@ -176,11 +190,11 @@ Its current version lists GNOME Shell 45 to 51. A new GNOME release can outrun a
 
 **How it behaves**
 
-- **Start it** from the application menu (after `install-launcher`) or with `python -m app`. Starting it again shows the window that is already running instead of starting a second copy.
+- **Start it** from the application menu (after `install-launcher`) or with `car-charge-planner`. Starting it again shows the window that is already running instead of starting a second copy.
 - **Closing the window hides it.** The app keeps running in the background so you still get notifications; the first time you close it, it tells you so. Quit from the window's menu or with Ctrl+Q.
-- **At login:** `python -m app install-autostart` starts it hidden in the background. If you set up autostart before this version, run the command again to update it.
+- **At login:** `car-charge-planner install-autostart` starts it hidden in the background. If you set up autostart before this version, run the command again to update it.
 - **Choose how it shows itself** under Settings, on the Interface tab: Automatic (a tray icon if the desktop has one, otherwise a window), Tray icon, or Window. Automatic waits a few seconds for a tray at login, since the tray can appear a moment after the app starts. The change applies the next time the app starts.
-- **Clicking a notification** shows the plan. Check that it works on your desktop with `python -m app test-notification`.
+- **Clicking a notification** shows the plan. Check that it works on your desktop with `car-charge-planner test-notification`.
 - **Look and feel:** it is a Qt application, so without an Adwaita Qt theme it can look less native on GNOME. Light and dark follow the system.
 
 ## Configuration
@@ -231,24 +245,31 @@ No network or display is needed: the forecast client runs against a recorded res
 All texts the app shows are translatable (gettext). English is the source language and the only one provided so far; a language is one `.po` file. For developers, with Babel installed (`pip install babel`):
 
 ```bash
-.venv/bin/python -m app.i18n_tools extract     # collect the marked texts into app/locale/car-charge-planner.pot
-.venv/bin/python -m app.i18n_tools init nl     # start a new language
-.venv/bin/python -m app.i18n_tools update      # bring every language up to date with the template
-.venv/bin/python -m app.i18n_tools compile     # .po -> .mo, which is what the app loads
+.venv/bin/python -m car_charge_planner.i18n_tools extract     # collect the marked texts into src/car_charge_planner/locale/car-charge-planner.pot
+.venv/bin/python -m car_charge_planner.i18n_tools init nl     # start a new language
+.venv/bin/python -m car_charge_planner.i18n_tools update      # bring every language up to date with the template
+.venv/bin/python -m car_charge_planner.i18n_tools compile     # .po -> .mo, which is what the app loads
 ```
 
-The language follows your system (`LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`, then the desktop's setting); with no matching catalogue the app stays in English. Compiled catalogues (`.mo`) are not in the repository: run `compile` once before trying a language from a clone. Try one with `LANGUAGE=nl .venv/bin/python -m app`. Once a translation is installed, Settings > Interface offers a Language choice (applied at the next start). To add a language, see [CONTRIBUTING.md](CONTRIBUTING.md).
+The language follows your system (`LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`, then the desktop's setting); with no matching catalogue the app stays in English. Compiled catalogues (`.mo`) are not in the repository: run `compile` once before trying a language from a clone. Try one with `LANGUAGE=nl car-charge-planner`. Once a translation is installed, Settings > Interface offers a Language choice (applied at the next start). To add a language, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Project layout
 
-| Folder | Contents |
+The code is one package, `src/car_charge_planner/`:
+
+| In `src/car_charge_planner/` | Contents |
 | --- | --- |
 | `planner/` | The planning logic, with no network or UI: surplus, windows, projection, grid advice, config reading and writing (`config_io.py`), CLI. |
 | `forecast/` | The forecast providers (`providers/`), the service that chooses between them and caches their answers (`service.py`), and the secrets file. See [docs/providers.md](docs/providers.md). |
 | `storage/` | Reading and writing `state.json`. |
-| `app/` | `controller.py` (what the app does: refresh, plan, announce, the owner's edits) and `shells/` (how it shows itself: the tray icon with its popup). The popup (`popup.py`) is a window around the reusable `planview.py`. Also notifications over D-Bus (`notifier.py`), the launcher and autostart entries, theme-aware colours. |
-| `app/settings/` | The Settings window: field definitions, tabs, window. |
-| `app/setup/` | The set-up wizard: one module per page (welcome, location, solar, car, hub, house, away, finish), the answers (`state.py`), the typical values (`typical.py`) and the helpers each page uses. |
+| `settings/` | The Settings window: field definitions, tabs, window. |
+| `setup/` | The set-up wizard: one module per page (welcome, location, solar, car, hub, house, away, finish), the answers (`state.py`), the typical values (`typical.py`) and the helpers each page uses. |
+| (the package itself) | `controller.py` (what the app does: refresh, plan, announce, the owner's edits) and `shells/` (how it shows itself: the tray icon with its popup). The popup (`popup.py`) is a window around the reusable `planview.py`. Also notifications over D-Bus (`notifier.py`), the launcher and autostart entries, theme-aware colours, the translations (`locale/`) and the icon (`assets/`). |
+
+Beside it:
+
+| Folder | Contents |
+| --- | --- |
 | `docs/` | `providers.md` (writing a forecast provider), `screenshots.py` and `images/` (the set-up pictures). |
 | `tests/` | Test suite and the recorded forecast. |
 | `CONTEXT.md` | Glossary of the domain terms used throughout (feed-in, surplus, charge window, ...). |

@@ -1,11 +1,11 @@
 from datetime import date, timedelta
 from pathlib import Path
 
-from app.autostart import ENTRY_NAME, desktop_entry, install, uninstall
-from app.notifications import GRID, SOLAR, candidate_windows, due, message
-from planner.advice import GridAdvice
-from planner.model import AwayPeriod, DayPlan, Window
-from storage.state import load_state, mark_notified, save_state, State
+from car_charge_planner.autostart import ENTRY_NAME, desktop_entry, install, uninstall
+from car_charge_planner.notifications import GRID, SOLAR, candidate_windows, due, message
+from car_charge_planner.planner.advice import GridAdvice
+from car_charge_planner.planner.model import AwayPeriod, DayPlan, Window
+from car_charge_planner.storage.state import load_state, mark_notified, save_state, State
 
 from conftest import TZ, at
 
@@ -92,7 +92,7 @@ def test_notified_windows_persist_and_old_ones_are_pruned(tmp_path):
 
 
 def test_other_state_changes_keep_notified(tmp_path):
-    from storage.state import set_battery
+    from car_charge_planner.storage.state import set_battery
 
     f = tmp_path / "s.json"
     mark_notified(win(10, 15), at(DAY, 9, 50), f)
@@ -100,20 +100,20 @@ def test_other_state_changes_keep_notified(tmp_path):
     assert len(load_state(f).notified) == 1
 
 
-def test_desktop_entry_has_exec_and_working_directory():
-    text = desktop_entry(Path("/p/.venv/bin/python"), Path("/p"))
-    assert "Exec=/p/.venv/bin/python -m app" in text
-    assert "Path=/p" in text and "Type=Application" in text and "Terminal=false" in text
+def test_desktop_entry_has_exec_and_no_working_directory():
+    text = desktop_entry(["/p/.venv/bin/car-charge-planner"])
+    assert "Exec=/p/.venv/bin/car-charge-planner --background\n" in text
+    assert "Path=" not in text and "Type=Application" in text and "Terminal=false" in text
 
 
 def test_the_autostart_entry_starts_the_app_hidden_and_suits_both_desktops():
-    text = desktop_entry(Path("/p/.venv/bin/python"), Path("/p"))
-    assert "Exec=/p/.venv/bin/python -m app --background\n" in text  # window mode must not pop up at login
+    text = desktop_entry(["/p/.venv/bin/python", "-m", "car_charge_planner"])
+    assert "Exec=/p/.venv/bin/python -m car_charge_planner --background\n" in text  # window mode must not pop up at login
     assert "X-KDE-autostart-after=panel" in text and "X-GNOME-Autostart-enabled=true" in text
 
 
 def test_install_and_uninstall_autostart(tmp_path):
-    target = install(Path("/p/.venv/bin/python"), Path("/p"), tmp_path / "autostart")
+    target = install(["/p/.venv/bin/car-charge-planner"], tmp_path / "autostart")
     assert target.name == ENTRY_NAME and target.exists()
     assert uninstall(tmp_path / "autostart") is True
     assert not target.exists()

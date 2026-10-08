@@ -7,11 +7,11 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import pytest
 from PySide6.QtWidgets import QApplication, QLineEdit
 
-from app.settings.fields import TabSpec, get_value, set_value
-from app.settings.providers import provider_fields
-from app.settings.tabs import FieldTab, SecretInput
-from forecast.providers.forecast_solar import ForecastSolar
-from forecast.providers.open_meteo import OpenMeteo
+from car_charge_planner.settings.fields import TabSpec, get_value, set_value
+from car_charge_planner.settings.providers import provider_fields
+from car_charge_planner.settings.tabs import FieldTab, SecretInput
+from car_charge_planner.forecast.providers.forecast_solar import ForecastSolar
+from car_charge_planner.forecast.providers.open_meteo import OpenMeteo
 
 SECRET = "FIELD-SECRET-77"
 
@@ -95,7 +95,7 @@ def test_editing_a_field_signals_a_change(qapp, cfg):
 
 
 def test_the_fields_are_translated_when_shown(qapp, cfg, tmp_path):
-    from app import i18n
+    from car_charge_planner import i18n
     from test_i18n import make_catalogue
 
     make_catalogue(tmp_path, "xx", {"Server address": "Serveradres", "API key": "API-sleutel"})

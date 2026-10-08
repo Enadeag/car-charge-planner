@@ -13,9 +13,9 @@ import pytest
 from PySide6.QtWidgets import QApplication
 
 from conftest import TrayApp
-from forecast.service import ForecastResult, forecast_key
-from planner.model import Config
-from storage.state import load_state, mark_notified
+from car_charge_planner.forecast.service import ForecastResult, forecast_key
+from car_charge_planner.planner.model import Config
+from car_charge_planner.storage.state import load_state, mark_notified
 
 from conftest import at, example_config, forecast_from
 
@@ -57,7 +57,7 @@ class FakeForecast:
 
 def make_app(tmp_path, monkeypatch, fake, cfg=None):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("forecast.service.ForecastService.get", lambda self, cfg, now, force=False: fake(cfg, now, force))
+    monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda self, cfg, now, force=False: fake(cfg, now, force))
     return TrayApp(cfg or example_config(), tmp_path / "config.toml")
 
 
@@ -147,7 +147,7 @@ def test_announced_windows_are_unaffected(qapp, tmp_path, monkeypatch, cfg):
 
 
 def plan_window(cfg):
-    from planner.projection import plan
+    from car_charge_planner.planner.projection import plan
 
     return plan(forecast_from([(DAY, 900)]), cfg, 40, at(DAY, 7))[0].windows[0]
 

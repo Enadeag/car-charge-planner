@@ -12,12 +12,12 @@ import pytest
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-from app.controller import Controller
+from car_charge_planner.controller import Controller
 from fake_provider import FakeProvider, steps_for
-from forecast.provider import Unavailable
-from forecast.registry import ProviderRegistry
-from forecast.service import ForecastService
-from planner.model import Forecast
+from car_charge_planner.forecast.provider import Unavailable
+from car_charge_planner.forecast.registry import ProviderRegistry
+from car_charge_planner.forecast.service import ForecastService
+from car_charge_planner.planner.model import Forecast
 
 from conftest import FakeNotifier
 
@@ -150,7 +150,7 @@ def test_a_fallback_forecast_says_so_and_credits_the_fallback(qapp, tmp_path, mo
 def test_during_a_cool_down_the_footer_says_the_provider_is_busy_and_after_it_does_not(qapp, tmp_path, monkeypatch, cfg):
     from datetime import timezone
 
-    from forecast.provider import RateLimited
+    from car_charge_planner.forecast.provider import RateLimited
 
     controller, main, _backup = make(cfg, tmp_path, monkeypatch, [steps_today(), RateLimited("busy", timedelta(hours=1))], fallback=False)
     controller.refresh()

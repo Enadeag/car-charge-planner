@@ -1,11 +1,11 @@
 from dataclasses import replace
 from datetime import date, timedelta
 
-from app.config_file import ensure_config
-from app.view_model import ForecastSource, build, footer_text, footer_tooltip, needs_setup, no_forecast
-from planner.model import TYPICAL_KEYS, Config, load_config
-from planner.projection import plan
-from storage.state import BatteryReading, load_battery
+from car_charge_planner.config_file import ensure_config
+from car_charge_planner.view_model import ForecastSource, build, footer_text, footer_tooltip, needs_setup, no_forecast
+from car_charge_planner.planner.model import TYPICAL_KEYS, Config, load_config
+from car_charge_planner.planner.projection import plan
+from car_charge_planner.storage.state import BatteryReading, load_battery
 
 from conftest import TZ, at, forecast_from
 
@@ -61,7 +61,7 @@ def test_days_without_a_window_are_merged_into_one_quiet_line(cfg):
 
 
 def test_a_second_window_the_same_day_gets_its_own_row_without_a_repeated_day(cfg):
-    from planner.model import DayPlan, Window
+    from car_charge_planner.planner.model import DayPlan, Window
 
     w1 = Window(at(DAY, 9), at(DAY, 11), 8, 1.8, 3.0, 0.0)
     w2 = Window(at(DAY, 13), at(DAY, 15), 7, 1.6, 3.0, 0.0)
@@ -81,7 +81,7 @@ def replace_window(w):
 
 
 def test_a_finished_window_is_not_listed(cfg):
-    from planner.model import DayPlan, Window
+    from car_charge_planner.planner.model import DayPlan, Window
 
     done = Window(at(DAY, 9), at(DAY, 11), 8, 1.8, 3.0, 0.0)
     later = Window(at(DAY, 14), at(DAY, 16), 7, 1.6, 3.0, 0.0)
@@ -242,7 +242,7 @@ def test_active_window_also_shows_projection(cfg):
 
 
 def _advice_view(cfg, days, soc, now):
-    from planner.advice import grid_advice
+    from car_charge_planner.planner.advice import grid_advice
 
     fc = forecast_from(list(days))
     plans = plan(fc, cfg, soc, now)
@@ -273,8 +273,8 @@ def test_advice_block_also_shows_alongside_a_solar_window(cfg):
 
 
 def test_advice_when_there_is_no_room_at_home(cfg):
-    from planner.advice import GridAdvice
-    from app.view_model import advice_view
+    from car_charge_planner.planner.advice import GridAdvice
+    from car_charge_planner.view_model import advice_view
 
     view_ = advice_view(GridAdvice(DAY, 12.0, 18.0, 14.0, None), at(DAY, 7), cfg, TZ)
     assert view_.title == "Grid charge needed"
@@ -282,8 +282,8 @@ def test_advice_when_there_is_no_room_at_home(cfg):
 
 
 def test_advice_day_label_keeps_weekday_capitalised(cfg):
-    from planner.advice import GridAdvice
-    from app.view_model import advice_view
+    from car_charge_planner.planner.advice import GridAdvice
+    from car_charge_planner.view_model import advice_view
 
     later = advice_view(GridAdvice(date(2026, 7, 8), 8.0, 22.0, 17.0, None), at(DAY, 7), cfg, TZ)
     assert later.reason.endswith("by the end of Wed 8 Jul.")

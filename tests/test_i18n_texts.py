@@ -4,12 +4,12 @@ from datetime import date, datetime, timedelta
 
 import pytest
 
-from app.away_input import away_summary, describe_rule
-from app.i18n import init, number
-from app.names import month_short, short_date, weekday_long
-from app.view_model import ForecastSource, battery_status, day_label, footer_text
-from planner.model import AwayRule
-from storage.state import BatteryReading
+from car_charge_planner.away_input import away_summary, describe_rule
+from car_charge_planner.i18n import init, number
+from car_charge_planner.names import month_short, short_date, weekday_long
+from car_charge_planner.view_model import ForecastSource, battery_status, day_label, footer_text
+from car_charge_planner.planner.model import AwayRule
+from car_charge_planner.storage.state import BatteryReading
 from datetime import time
 
 from conftest import TZ, at
@@ -81,8 +81,8 @@ def test_today_and_tomorrow_are_translated_but_other_days_use_the_names(tmp_path
 
 
 def test_the_advice_reason_is_a_whole_phrase_for_today_tomorrow_and_a_named_day(tmp_path, cfg):
-    from app.view_model import advice_view
-    from planner.advice import GridAdvice
+    from car_charge_planner.view_model import advice_view
+    from car_charge_planner.planner.advice import GridAdvice
 
     make_catalogue(
         tmp_path,
@@ -114,8 +114,8 @@ def test_away_texts_follow_the_language(tmp_path):
 def test_a_tab_is_found_by_its_key_in_any_language(tmp_path):
     from PySide6.QtWidgets import QApplication
 
-    from app.settings.window import SettingsWindow
-    from planner.model import Config
+    from car_charge_planner.settings.window import SettingsWindow
+    from car_charge_planner.planner.model import Config
 
     QApplication.instance() or QApplication([])
     make_catalogue(tmp_path, "xx", {"Away rules": "Afwezigheid", "Solar and location": "Zon en locatie"})
@@ -132,7 +132,7 @@ def test_a_tab_is_found_by_its_key_in_any_language(tmp_path):
 def test_validation_messages_reach_the_user_in_their_language(tmp_path):
     from dataclasses import replace
 
-    from planner.model import Config, ConfigError, Panels, validate
+    from car_charge_planner.planner.model import Config, ConfigError, Panels, validate
 
     make_catalogue(tmp_path, "xx", {"Invalid config:": "Ongeldig:", "[panels] kwp must be above 0": "kwp moet boven 0 zijn"})
     init(["xx"], tmp_path)

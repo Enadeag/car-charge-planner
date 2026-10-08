@@ -28,7 +28,7 @@ from typing import Callable, Union
 
 import pytest
 
-from forecast.provider import (
+from car_charge_planner.forecast.provider import (
     BadResponse,
     ForecastProvider,
     NotConfigured,
@@ -40,7 +40,7 @@ from forecast.provider import (
     Unavailable,
     check_steps,
 )
-from forecast.transport import Reply, Request, Transport
+from car_charge_planner.forecast.transport import Reply, Request, Transport
 
 Match = Union[str, Callable[[Request], bool]]
 Routes = list[tuple[Match, Union[Reply, Exception]]]

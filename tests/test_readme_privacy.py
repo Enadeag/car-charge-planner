@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from forecast.registry import registry
+from car_charge_planner.forecast.registry import registry
 
 README = (Path(__file__).resolve().parent.parent / "README.md").read_text()
 
@@ -55,14 +55,14 @@ def test_the_attribution_section_credits_both_providers():
 
 def test_the_readme_quotes_what_the_first_page_of_the_wizard_says():
     """The privacy text of the Welcome page and the README say the same words (for the default provider)."""
-    from app.setup.welcome import privacy_text
+    from car_charge_planner.setup.welcome import privacy_text
 
     quoted = " ".join(section().split())
     assert " ".join(privacy_text(registry.get("open-meteo")).split()) in quoted
 
 
 def test_every_set_up_picture_the_readme_shows_exists_in_both_themes():
-    from app.setup.wizard import PAGES
+    from car_charge_planner.setup.wizard import PAGES
 
     root = Path(__file__).resolve().parent.parent
     pictures = re.findall(r"docs/images/(setup-[a-z]+-(?:light|dark)\.png)", README)

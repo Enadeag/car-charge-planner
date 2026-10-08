@@ -9,9 +9,9 @@ import pytest
 from PySide6.QtCore import QTime
 from PySide6.QtWidgets import QApplication, QLabel
 
-from app.settings.tabs import AwayRulesTab
-from app.settings.window import SettingsWindow
-from planner.model import AwayRule, Config, Setup, load_config
+from car_charge_planner.settings.tabs import AwayRulesTab
+from car_charge_planner.settings.window import SettingsWindow
+from car_charge_planner.planner.model import AwayRule, Config, Setup, load_config
 
 from conftest import at, example_config
 
@@ -166,14 +166,14 @@ def test_planning_reset_tab(tmp_path, qapp):
 
 
 def test_a_saved_lead_time_changes_when_the_next_notification_is_due(tmp_path, monkeypatch, qapp):
-    from forecast.service import ForecastResult
+    from car_charge_planner.forecast.service import ForecastResult
     from conftest import TrayApp
 
     from conftest import forecast_from
 
     day = date(2026, 7, 3)
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("forecast.service.ForecastService.get", lambda self, cfg, now, force=False: None)
+    monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda self, cfg, now, force=False: None)
     app = TrayApp(example_config(), tmp_path / "config.toml")
     app.result = ForecastResult(forecast_from([(day, 900)]), at(day, 6), True, False)
     from conftest import FakeNotifier
@@ -185,7 +185,7 @@ def test_a_saved_lead_time_changes_when_the_next_notification_is_due(tmp_path, m
         def now(tz=None):
             return at(day, 8, 30)  # the window starts at 09:00
 
-    monkeypatch.setattr("app.controller.datetime", Frozen)
+    monkeypatch.setattr("car_charge_planner.controller.datetime", Frozen)
     app.rebuild()
     assert app.notifier.sent == []  # 30 minutes ahead, lead time is 15
     app.cfg = replace(app.cfg, notify=replace(app.cfg.notify, lead_minutes=30))

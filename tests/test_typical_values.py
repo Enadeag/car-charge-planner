@@ -10,14 +10,14 @@ from datetime import date, timedelta
 import pytest
 from PySide6.QtWidgets import QApplication, QLabel
 
-from app.popup import Popup
-from app.settings.fields import TABS
-from app.settings.window import SettingsWindow
-from app.view_model import build, needs_setup, no_forecast, typical_line
-from planner.config_io import dump_config, write_config
-from planner.model import TYPICAL_KEYS, Config, ConfigError, Setup, first_run_config, load_config, validate
-from planner.projection import plan
-from storage.state import BatteryReading, State
+from car_charge_planner.popup import Popup
+from car_charge_planner.settings.fields import TABS
+from car_charge_planner.settings.window import SettingsWindow
+from car_charge_planner.view_model import build, needs_setup, no_forecast, typical_line
+from car_charge_planner.planner.config_io import dump_config, write_config
+from car_charge_planner.planner.model import TYPICAL_KEYS, Config, ConfigError, Setup, first_run_config, load_config, validate
+from car_charge_planner.planner.projection import plan
+from car_charge_planner.storage.state import BatteryReading, State
 
 from conftest import at, forecast_from
 
@@ -168,7 +168,7 @@ def test_reset_tab_makes_that_tabs_built_in_values_typical_again(tmp_path, qapp,
 
 
 def test_the_tag_wording_is_translated(tmp_path, qapp, cfg):
-    from app import i18n
+    from car_charge_planner import i18n
     from test_i18n import make_catalogue
 
     make_catalogue(tmp_path, "xx", {"Typical value": "Standaardwaarde"})
@@ -206,7 +206,7 @@ def test_the_link_goes_to_the_tab_of_the_first_value():
 
 
 def test_the_wording_follows_the_language_with_a_plural_and_an_order_of_its_own(tmp_path):
-    from app import i18n
+    from car_charge_planner import i18n
     from test_i18n import make_catalogue
 
     make_catalogue(
@@ -262,7 +262,7 @@ def test_there_is_no_line_before_there_is_a_plan(qapp, cfg):
 def test_the_line_is_readable_on_a_dark_window_and_unclipped(qapp, cfg):
     from PySide6.QtGui import QColor, QPalette
 
-    from app import colours
+    from car_charge_planner import colours
 
     original = qapp.palette()
     palette = QPalette(original)

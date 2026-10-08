@@ -10,8 +10,8 @@ import pytest
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QApplication
 
-from app import i18n, i18n_tools
-from app.i18n import (
+from car_charge_planner import i18n, i18n_tools
+from car_charge_planner.i18n import (
     DOMAIN,
     NC_,
     N_,
@@ -266,7 +266,7 @@ def test_setup_called_twice_does_not_leave_translators_behind(qapp, tmp_path):
 # ---- the developer tools --------------------------------------------------------------------------------------------------
 
 
-SAMPLE = '''from app.i18n import _, ngettext, pgettext, N_, NC_
+SAMPLE = '''from car_charge_planner.i18n import _, ngettext, pgettext, N_, NC_
 
 # i18n: {name} is the place the user chose
 greeting = _("Welcome to {name}")
@@ -329,13 +329,13 @@ def test_the_template_header_has_no_placeholder_author_or_version(sample_package
 def test_the_committed_template_is_up_to_date_with_the_code(tmp_path):
     fresh = tmp_path / "fresh.pot"
     i18n_tools.extract(pot=fresh)
-    assert fresh.read_bytes() == i18n_tools.POT.read_bytes(), "run: python -m app.i18n_tools extract"
+    assert fresh.read_bytes() == i18n_tools.POT.read_bytes(), "run: python -m car_charge_planner.i18n_tools extract"
 
 
 def test_the_template_holds_the_texts_of_every_package_the_user_reads_messages_from():
     text = i18n_tools.POT.read_text()
-    assert "#: planner/model.py" in text and "[panels] kwp must be above 0" in text  # validation messages
-    assert "#: app/view_model.py" in text
+    assert "#: car_charge_planner/planner/model.py" in text and "[panels] kwp must be above 0" in text  # validation messages
+    assert "#: car_charge_planner/view_model.py" in text
 
 
 def test_a_language_goes_from_template_to_a_working_translation(sample_package, tmp_path):
@@ -406,7 +406,7 @@ def test_the_whole_app_starts_under_other_languages_and_locales(tmp_path, enviro
         XDG_RUNTIME_DIR=str(tmp_path / "run"),
         XDG_DATA_HOME=str(tmp_path / "data"),
     )
-    process = subprocess.Popen([sys.executable, "-m", "app"], cwd=project, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    process = subprocess.Popen([sys.executable, "-m", "car_charge_planner"], cwd=project, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
         time.sleep(4)
         assert process.poll() is None, process.stderr.read()

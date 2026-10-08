@@ -9,10 +9,10 @@ from dataclasses import replace
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from app import units
-from app.settings.window import SettingsWindow
-from planner.model import Config, ConfigError, load_config, validate
-from planner.config_io import dump_config, write_config
+from car_charge_planner import units
+from car_charge_planner.settings.window import SettingsWindow
+from car_charge_planner.planner.model import Config, ConfigError, load_config, validate
+from car_charge_planner.planner.config_io import dump_config, write_config
 
 
 

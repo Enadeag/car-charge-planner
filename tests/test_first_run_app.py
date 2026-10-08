@@ -22,14 +22,14 @@ DRIVER = textwrap.dedent(
     from PySide6.QtCore import QTimer
     from PySide6.QtWidgets import QApplication
 
-    from forecast.check import Attempt
-    from forecast.service import ForecastResult, ForecastService
-    from planner.demo import bell_day
-    from planner.model import ForecastStep
-    from forecast.providers.open_meteo import power_kw
-    import app.main as appmain
-    import app.notifier as notifier_module
-    import app.setup.wizard as wizard_module
+    from car_charge_planner.forecast.check import Attempt
+    from car_charge_planner.forecast.service import ForecastResult, ForecastService
+    from car_charge_planner.planner.demo import bell_day
+    from car_charge_planner.planner.model import ForecastStep
+    from car_charge_planner.forecast.providers.open_meteo import power_kw
+    import car_charge_planner.main as appmain
+    import car_charge_planner.notifier as notifier_module
+    import car_charge_planner.setup.wizard as wizard_module
 
     sent = []
     notifier_module.Notifier.send = lambda self, title, body, expire_ms=20000: (sent.append(title), 1)[1]

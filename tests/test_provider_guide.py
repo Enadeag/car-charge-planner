@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 import provider_kit as kit
-from forecast.transport import Reply
+from car_charge_planner.forecast.transport import Reply
 from provider_kit import ProviderCase
 
 GUIDE = (Path(__file__).resolve().parent.parent / "docs" / "providers.md").read_text()

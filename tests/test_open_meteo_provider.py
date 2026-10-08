@@ -7,10 +7,10 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 
-from forecast.provider import BadResponse, NotConfigured, RateLimited, SystemDescription, Unavailable
-from forecast.providers.open_meteo import OpenMeteo, power_kw
-from forecast.registry import registry
-from forecast.transport import Reply
+from car_charge_planner.forecast.provider import BadResponse, NotConfigured, RateLimited, SystemDescription, Unavailable
+from car_charge_planner.forecast.providers.open_meteo import OpenMeteo, power_kw
+from car_charge_planner.forecast.registry import registry
+from car_charge_planner.forecast.transport import Reply
 from provider_kit import EXAMPLE_SYSTEM, ProviderCase, ProviderConformance, ReplayTransport
 
 RECORDED = (Path(__file__).parent / "fixtures" / "open_meteo_3days.json").read_bytes()

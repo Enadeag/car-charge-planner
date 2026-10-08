@@ -14,13 +14,13 @@ import pytest
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QLabel, QLineEdit
 
-from app import colours
-from app.settings.window import SettingsWindow
+from car_charge_planner import colours
+from car_charge_planner.settings.window import SettingsWindow
 from fake_provider import FakeProvider, Held, steps_for
-from forecast.provider import BadResponse, NotConfigured, RateLimited, SettingSpec, Unavailable
-from forecast.registry import ProviderRegistry, registry as builtin
-from forecast.secret_store import dump_secrets, load_secrets
-from planner.model import Forecast, load_config
+from car_charge_planner.forecast.provider import BadResponse, NotConfigured, RateLimited, SettingSpec, Unavailable
+from car_charge_planner.forecast.registry import ProviderRegistry, registry as builtin
+from car_charge_planner.forecast.secret_store import dump_secrets, load_secrets
+from car_charge_planner.planner.model import Forecast, load_config
 
 from conftest import example_config
 
@@ -235,11 +235,11 @@ def test_a_file_that_cannot_be_written_stops_everything_else(rig, monkeypatch):
     rig.field("alpha", "api_key").setText(KEY)
 
     def refuse(secrets, path):
-        from forecast.secret_store import SecretsError
+        from car_charge_planner.forecast.secret_store import SecretsError
 
         raise SecretsError("Could not write secrets.toml: Permission denied")
 
-    monkeypatch.setattr("app.settings.window.save_secrets", refuse)
+    monkeypatch.setattr("car_charge_planner.settings.window.save_secrets", refuse)
     assert not rig.window.save()
     assert "Permission denied" in rig.window.errors.text() and not rig.file.exists()
 
@@ -390,8 +390,8 @@ def test_results_use_the_accent_colours_of_the_theme(tmp_path, qapp):
 def test_the_days_counted_are_today_onwards_even_when_the_first_step_belongs_to_yesterday():
     """Found in the live check: Open-Meteo's first step is the hour before midnight, so four days of data
     touch five dates, and the Test button said "5 days"."""
-    from forecast.check import forecast_days
-    from planner.model import ForecastStep
+    from car_charge_planner.forecast.check import forecast_days
+    from car_charge_planner.planner.model import ForecastStep
 
     tz = ZoneInfo("Europe/Amsterdam")
     start = datetime(2026, 7, 2, 23, tzinfo=tz)  # yesterday 23:00

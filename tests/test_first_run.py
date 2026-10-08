@@ -9,13 +9,13 @@ from dataclasses import replace
 import pytest
 from PySide6.QtWidgets import QApplication, QPushButton
 
-from app.controller import Controller
-from app.shells.tray import TrayShell
-from app.shells.window import WindowShell
-from forecast.check import Attempt
-from forecast.service import ForecastResult
-from planner.model import first_run_config, load_config
-from storage.state import load_state
+from car_charge_planner.controller import Controller
+from car_charge_planner.shells.tray import TrayShell
+from car_charge_planner.shells.window import WindowShell
+from car_charge_planner.forecast.check import Attempt
+from car_charge_planner.forecast.service import ForecastResult
+from car_charge_planner.planner.model import first_run_config, load_config
+from car_charge_planner.storage.state import load_state
 
 from conftest import FakeNotifier, at, example_config, forecast_from, settle_controller
 from datetime import date, timedelta
@@ -33,7 +33,7 @@ def make(cfg, tmp_path, monkeypatch, fetch=None):
     steps = forecast_from([(DAY + timedelta(days=i), 900) for i in range(3)])
     result = ForecastResult(steps, at(DAY, 6), False, False, "open-meteo", "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)")
     calls = []
-    monkeypatch.setattr("forecast.service.ForecastService.get", lambda self, cfg, now, force=False: (calls.append(cfg), fetch or result)[1])
+    monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda self, cfg, now, force=False: (calls.append(cfg), fetch or result)[1])
     notifier = FakeNotifier()
     controller = Controller(cfg, tmp_path / "config.toml", notifier)
     controller.calls = calls
@@ -146,7 +146,7 @@ def test_finishing_applies_the_config_starts_the_first_fetch_and_shows_the_plan(
 
 
 def test_settings_has_run_set_up_again_only_when_the_app_can_open_it(tmp_path, monkeypatch, qapp):
-    from app.settings.window import SettingsWindow
+    from car_charge_planner.settings.window import SettingsWindow
 
     assert SettingsWindow(example_config(), tmp_path / "c.toml", lambda c: None).setup_button.isHidden()
     controller, _ = make(example_config(), tmp_path, monkeypatch)

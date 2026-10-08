@@ -15,16 +15,16 @@ from zoneinfo import ZoneInfo
 import pytest
 from PySide6.QtWidgets import QApplication, QPushButton
 
-from app.config_file import ensure_config
-from app.controller import Controller
-from app.settings.window import SettingsWindow
-from app.shells.icons import COLORS, make_icon
-from app.shells.tray import TrayShell
-from app.shells.window import WindowShell
-from app.view_model import needs_setup
-from forecast.service import ForecastResult
-from planner.model import Config, ConfigError, find_timezone, load_config, require_location, system_timezone
-from storage.state import BatteryReading
+from car_charge_planner.config_file import ensure_config
+from car_charge_planner.controller import Controller
+from car_charge_planner.settings.window import SettingsWindow
+from car_charge_planner.shells.icons import COLORS, make_icon
+from car_charge_planner.shells.tray import TrayShell
+from car_charge_planner.shells.window import WindowShell
+from car_charge_planner.view_model import needs_setup
+from car_charge_planner.forecast.service import ForecastResult
+from car_charge_planner.planner.model import Config, ConfigError, find_timezone, load_config, require_location, system_timezone
+from car_charge_planner.storage.state import BatteryReading
 
 from conftest import FakeNotifier, NetworkAccessInTests, at, example_config, forecast_from
 
@@ -100,7 +100,7 @@ def test_the_first_config_file_loads_as_not_set_up(tmp_path):
 
 
 def test_a_config_with_a_location_behaves_as_before(tmp_path):
-    from planner.config_io import write_config
+    from car_charge_planner.planner.config_io import write_config
 
     write_config(example_config(), tmp_path / "c.toml")
     loaded = load_config(tmp_path / "c.toml")
@@ -166,7 +166,7 @@ def settle(controller, seconds=3.0):
 def make_controller(cfg, tmp_path, monkeypatch, fetch=None):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     fetch = fetch or CountingFetch()
-    monkeypatch.setattr("forecast.service.ForecastService.get", lambda self, cfg, now, force=False: fetch(cfg, now, force))
+    monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda self, cfg, now, force=False: fetch(cfg, now, force))
     return Controller(cfg, tmp_path / "config.toml", FakeNotifier()), fetch
 
 
@@ -282,7 +282,7 @@ def test_the_hint_says_what_zero_zero_means(tmp_path, qapp):
 
 
 def run_cli(*args, cwd=PROJECT):
-    return subprocess.run([sys.executable, "-m", "planner.cli", *args], cwd=cwd, capture_output=True, text=True, timeout=60)
+    return subprocess.run([sys.executable, "-m", "car_charge_planner.planner.cli", *args], cwd=cwd, capture_output=True, text=True, timeout=60)
 
 
 def test_the_live_command_refuses_without_a_location_and_fetches_nothing():
@@ -313,7 +313,7 @@ def test_a_first_start_of_the_whole_app_makes_no_forecast_request(tmp_path):
         "XDG_RUNTIME_DIR": str(tmp_path / "run"),
         "XDG_DATA_HOME": str(tmp_path / "data"),
     }
-    process = subprocess.Popen([sys.executable, "-m", "app"], cwd=PROJECT, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    process = subprocess.Popen([sys.executable, "-m", "car_charge_planner"], cwd=PROJECT, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
         time.sleep(5)  # the first refresh and several ticks' worth of startup
         assert process.poll() is None, process.stderr.read()
@@ -380,7 +380,7 @@ def test_the_collector_is_kept_on_the_main_thread(qapp):
 
     from PySide6.QtCore import QObject, QTimer
 
-    from app import gcguard
+    from car_charge_planner import gcguard
 
     destroyed_on = []
 

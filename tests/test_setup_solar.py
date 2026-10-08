@@ -9,12 +9,12 @@ from dataclasses import replace
 import pytest
 from PySide6.QtWidgets import QApplication, QLabel
 
-from app.setup.panels import COMPASS, TILT_PRESETS, azimuth_for, compass_key_for, panels_to_kwp, tilt_preset_for
-from app.setup.state import SetupState
-from app.setup.typical import TYPICAL_VALUES, with_typical, with_values
-from app.setup.wizard import SetupWizard
-from forecast.check import Attempt
-from planner.model import TYPICAL_KEYS, Config, Setup, load_config, validate
+from car_charge_planner.setup.panels import COMPASS, TILT_PRESETS, azimuth_for, compass_key_for, panels_to_kwp, tilt_preset_for
+from car_charge_planner.setup.state import SetupState
+from car_charge_planner.setup.typical import TYPICAL_VALUES, with_typical, with_values
+from car_charge_planner.setup.wizard import SetupWizard
+from car_charge_planner.forecast.check import Attempt
+from car_charge_planner.planner.model import TYPICAL_KEYS, Config, Setup, load_config, validate
 
 from conftest import example_config
 
@@ -75,7 +75,7 @@ def test_there_is_a_typical_value_for_every_setting_that_can_be_one_and_they_are
 
 def test_the_built_in_defaults_are_the_typical_values_so_settings_reset_and_the_wizard_agree():
     """One source of truth: what Reset tab gives, what a new install starts with and "I don't know" uses."""
-    from app.settings.fields import get_value
+    from car_charge_planner.settings.fields import get_value
 
     defaults = Config()
     assert {key: get_value(defaults, key) for key in TYPICAL_VALUES} == TYPICAL_VALUES
@@ -291,7 +291,7 @@ def test_each_value_has_its_where_to_find_line_and_the_east_west_note(rig):
 
 
 def test_the_buttons_are_named_in_the_language(tmp_path, qapp):
-    from app import i18n
+    from car_charge_planner import i18n
     from test_i18n import make_catalogue
 
     make_catalogue(tmp_path, "xx", {("compass, short", "SE"): "ZO", ("compass direction", "South-east"): "Zuidoost", ("roof tilt", "Flat roof"): "Plat dak"})

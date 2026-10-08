@@ -10,13 +10,13 @@ import pytest
 from PySide6.QtWidgets import QApplication
 
 import pseudo
-from app import i18n
-from app.popup import PLAN, UPDATE, Popup
-from app.settings.window import SettingsWindow
-from app.view_model import ForecastSource, build, needs_setup, no_forecast
-from planner.advice import grid_advice
-from planner.projection import plan
-from storage.state import BatteryReading, State
+from car_charge_planner import i18n
+from car_charge_planner.popup import PLAN, UPDATE, Popup
+from car_charge_planner.settings.window import SettingsWindow
+from car_charge_planner.view_model import ForecastSource, build, needs_setup, no_forecast
+from car_charge_planner.planner.advice import grid_advice
+from car_charge_planner.planner.projection import plan
+from car_charge_planner.storage.state import BatteryReading, State
 
 from conftest import TZ, at, forecast_from
 
@@ -27,7 +27,7 @@ NOW = at(DAY, 7)
 def first_run_config_for(cfg):
     from dataclasses import replace
 
-    from planner.model import TYPICAL_KEYS, Setup
+    from car_charge_planner.planner.model import TYPICAL_KEYS, Setup
 
     return replace(cfg, setup=Setup(TYPICAL_KEYS))
 
@@ -144,9 +144,9 @@ def test_numbers_times_and_units_need_no_translation():
 def test_the_setup_wizard_pages_are_fully_translated_and_nothing_is_clipped(cfg, qapp, pseudo_language, tmp_path):
     from dataclasses import replace
 
-    from app.setup.wizard import SetupWizard
-    from forecast.check import Attempt
-    from planner.model import TYPICAL_KEYS, Setup
+    from car_charge_planner.setup.wizard import SetupWizard
+    from car_charge_planner.forecast.check import Attempt
+    from car_charge_planner.planner.model import TYPICAL_KEYS, Setup
 
     typical = replace(cfg, setup=Setup(TYPICAL_KEYS))
     wizard = SetupWizard(typical, tmp_path / "config.toml", lambda c: None, check=lambda c: Attempt(True, 2, "OK"), environ={"LANG": "nl_NL"}, qt_locale_name="")
@@ -166,8 +166,8 @@ def test_the_setup_wizard_pages_are_fully_translated_and_nothing_is_clipped(cfg,
 
 
 def test_the_setup_wizard_failure_texts_are_translated_too(cfg, qapp, pseudo_language, tmp_path):
-    from app.setup.wizard import SetupWizard
-    from forecast.check import Attempt
+    from car_charge_planner.setup.wizard import SetupWizard
+    from car_charge_planner.forecast.check import Attempt
 
     wizard = SetupWizard(cfg, tmp_path / "config.toml", lambda c: None, check=lambda c: Attempt(False, message=i18n._("Could not get a forecast from {provider}: {reason}").format(provider="Open-Meteo", reason="x")), environ={"LANG": "nl_NL"}, qt_locale_name="")
     wizard.confirm_leave = lambda: True
@@ -183,12 +183,12 @@ def test_the_setup_wizard_failure_texts_are_translated_too(cfg, qapp, pseudo_lan
 def test_the_location_page_is_fully_translated_in_each_of_its_states(cfg, qapp, pseudo_language, tmp_path):
     from dataclasses import replace
 
-    from app.setup.wizard import SetupWizard
+    from car_charge_planner.setup.wizard import SetupWizard
     from fake_provider import FakeProvider
-    from forecast.check import Attempt
-    from forecast.provider import Place, PlaceResults, Problem
-    from forecast.registry import ProviderRegistry
-    from planner.model import Config, Forecast
+    from car_charge_planner.forecast.check import Attempt
+    from car_charge_planner.forecast.provider import Place, PlaceResults, Problem
+    from car_charge_planner.forecast.registry import ProviderRegistry
+    from car_charge_planner.planner.model import Config, Forecast
 
     place = Place("Utrecht", 52.09, 5.12, "Europe/Amsterdam", "Utrecht", "The Netherlands", "Utrecht")
     states = {
@@ -230,8 +230,8 @@ def test_the_location_page_is_fully_translated_in_each_of_its_states(cfg, qapp, 
 
 
 def test_the_hub_and_the_pages_it_opens_are_fully_translated(cfg, qapp, pseudo_language, tmp_path):
-    from app.setup.wizard import SetupWizard
-    from forecast.check import Attempt
+    from car_charge_planner.setup.wizard import SetupWizard
+    from car_charge_planner.forecast.check import Attempt
 
     wizard = SetupWizard(cfg, tmp_path / "config.toml", lambda c: None, check=lambda c: Attempt(True, 2, "OK"), environ={"LANG": "nl_NL"}, qt_locale_name="")
     wizard.confirm_leave = lambda: True

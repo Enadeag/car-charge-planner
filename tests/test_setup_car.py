@@ -9,10 +9,10 @@ from dataclasses import replace
 import pytest
 from PySide6.QtWidgets import QApplication, QLabel
 
-from app.setup.vehicle import CAR_KEYS, CHARGER_KEYS, daily_to_weekly, problems, weekly_to_daily
-from app.setup.wizard import SetupWizard
-from forecast.check import Attempt
-from planner.model import TYPICAL_KEYS, Config, Setup, load_config
+from car_charge_planner.setup.vehicle import CAR_KEYS, CHARGER_KEYS, daily_to_weekly, problems, weekly_to_daily
+from car_charge_planner.setup.wizard import SetupWizard
+from car_charge_planner.forecast.check import Attempt
+from car_charge_planner.planner.model import TYPICAL_KEYS, Config, Setup, load_config
 
 from conftest import example_config
 

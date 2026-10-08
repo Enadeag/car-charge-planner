@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from forecast.provider import BadResponse, RateLimited, SystemDescription, Unavailable, check_steps
-from forecast.providers.forecast_solar import ForecastSolar
-from forecast.registry import registry
-from forecast.transport import Reply
+from car_charge_planner.forecast.provider import BadResponse, RateLimited, SystemDescription, Unavailable, check_steps
+from car_charge_planner.forecast.providers.forecast_solar import ForecastSolar
+from car_charge_planner.forecast.registry import registry
+from car_charge_planner.forecast.transport import Reply
 from provider_kit import EXAMPLE_SYSTEM, ProviderCase, ProviderConformance, ReplayTransport
 
 FIXTURES = Path(__file__).parent / "fixtures"

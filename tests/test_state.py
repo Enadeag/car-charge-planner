@@ -3,10 +3,10 @@ from datetime import date, time, timedelta
 
 import pytest
 
-from app.away_input import describe, make_away
-from planner.model import AwayPeriod, ForecastStep, elapsed_hours
-from planner.projection import plan
-from storage.state import State, add_away, load_state, remove_away, save_state, set_battery
+from car_charge_planner.away_input import describe, make_away
+from car_charge_planner.planner.model import AwayPeriod, ForecastStep, elapsed_hours
+from car_charge_planner.planner.projection import plan
+from car_charge_planner.storage.state import State, add_away, load_state, remove_away, save_state, set_battery
 
 from conftest import TZ, at, forecast_from
 

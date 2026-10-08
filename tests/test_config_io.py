@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from planner.config_io import HEADER, dump_config, write_config
-from planner.model import AwayRule, Config, ConfigError, load_config
+from car_charge_planner.planner.config_io import HEADER, dump_config, write_config
+from car_charge_planner.planner.model import AwayRule, Config, ConfigError, load_config
 
 
 def round_trip(cfg, tmp_path):

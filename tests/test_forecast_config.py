@@ -8,12 +8,12 @@ from datetime import timedelta
 
 import pytest
 
-from forecast.provider import SettingSpec
-from forecast.registry import ProviderRegistry, registry
-from forecast.secret_store import SecretsError, dump_secrets, load_secrets, save_secrets
-from forecast.selection import check_selection, provider_settings, split_settings
-from planner.config_io import dump_config, write_config
-from planner.model import Config, ConfigError, Forecast, load_config, validate
+from car_charge_planner.forecast.provider import SettingSpec
+from car_charge_planner.forecast.registry import ProviderRegistry, registry
+from car_charge_planner.forecast.secret_store import SecretsError, dump_secrets, load_secrets, save_secrets
+from car_charge_planner.forecast.selection import check_selection, provider_settings, split_settings
+from car_charge_planner.planner.config_io import dump_config, write_config
+from car_charge_planner.planner.model import Config, ConfigError, Forecast, load_config, validate
 
 SECRET = "SUPER-SECRET-VALUE-42"
 
@@ -148,7 +148,7 @@ def test_a_file_open_to_others_that_cannot_be_fixed_is_refused_without_the_secre
 
 
 def test_where_there_are_no_file_modes_nothing_is_changed(tmp_path, monkeypatch):
-    monkeypatch.setattr("forecast.secret_store._has_file_modes", lambda: False)
+    monkeypatch.setattr("car_charge_planner.forecast.secret_store._has_file_modes", lambda: False)
     path = tmp_path / "secrets.toml"
     path.write_text(dump_secrets({"open-meteo": {"api_key": SECRET}}))
     os.chmod(path, 0o644)

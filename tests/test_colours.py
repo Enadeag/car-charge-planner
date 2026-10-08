@@ -9,10 +9,10 @@ import pytest
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication, QLabel
 
-from app import colours
-from app.settings.window import SettingsWindow
-from app.popup import Popup
-from planner.model import Config, first_run_config
+from car_charge_planner import colours
+from car_charge_planner.settings.window import SettingsWindow
+from car_charge_planner.popup import Popup
+from car_charge_planner.planner.model import Config, first_run_config
 
 from conftest import TZ
 
@@ -97,15 +97,15 @@ def test_settings_errors_use_the_theme_error_colour(dark, tmp_path):
 def test_popup_text_colours_follow_the_theme(dark):
     from datetime import date
 
-    from app.view_model import build
-    from planner.projection import plan
-    from storage.state import BatteryReading, State
+    from car_charge_planner.view_model import build
+    from car_charge_planner.planner.projection import plan
+    from car_charge_planner.storage.state import BatteryReading, State
 
     from conftest import at, forecast_from
 
     cfg = Config()
     now = at(date(2026, 7, 3), 7)
-    from planner.advice import grid_advice
+    from car_charge_planner.planner.advice import grid_advice
 
     forecast = forecast_from([(date(2026, 7, 3 + i), 120) for i in range(3)])  # dull days: advice appears
     days = plan(forecast, cfg, 35, now)

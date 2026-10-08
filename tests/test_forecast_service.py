@@ -9,11 +9,11 @@ from datetime import date, timedelta, timezone
 import pytest
 
 from fake_provider import FakeProvider, Held, steps_for
-from forecast.provider import BadResponse, RateLimited, SettingSpec, Unavailable
-from forecast.registry import ProviderRegistry
-from forecast.secret_store import SecretsError
-from forecast.service import ForecastService, ForecastUnavailable
-from planner.model import Forecast
+from car_charge_planner.forecast.provider import BadResponse, RateLimited, SettingSpec, Unavailable
+from car_charge_planner.forecast.registry import ProviderRegistry
+from car_charge_planner.forecast.secret_store import SecretsError
+from car_charge_planner.forecast.service import ForecastService, ForecastUnavailable
+from car_charge_planner.planner.model import Forecast
 
 from conftest import at
 
@@ -190,7 +190,7 @@ def test_a_bad_answer_counts_as_a_request_and_waits_the_full_interval(rig):
 
 
 def test_a_provider_that_breaks_the_contract_is_treated_as_a_bad_answer(rig):
-    from planner.model import ForecastStep
+    from car_charge_planner.planner.model import ForecastStep
 
     negative = [ForecastStep(T0, T0 + MIN, -1.0)]
     rig.main.script = [negative]
@@ -378,7 +378,7 @@ def test_two_fetches_at_once_ask_the_provider_once(tmp_path, cfg):
 
 
 def test_a_two_day_forecast_plans_without_trouble(rig, cfg):
-    from planner.projection import plan
+    from car_charge_planner.planner.projection import plan
 
     rig.main.script = [steps_for(DAY) + steps_for(DAY + timedelta(days=1))]
     result = rig.get()

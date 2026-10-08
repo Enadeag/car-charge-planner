@@ -4,9 +4,9 @@ from dataclasses import replace
 
 import pytest
 
-from app.setup.recap import build_recap, compass_label
-from app.setup.state import SetupState
-from planner.model import TYPICAL_KEYS, AwayRule, Config, ConfigError, Setup, first_run_config
+from car_charge_planner.setup.recap import build_recap, compass_label
+from car_charge_planner.setup.state import SetupState
+from car_charge_planner.planner.model import TYPICAL_KEYS, AwayRule, Config, ConfigError, Setup, first_run_config
 
 from conftest import example_config
 
@@ -147,7 +147,7 @@ def test_the_eight_compass_directions_are_named_and_anything_else_is_degrees(azi
 
 
 def test_the_wording_of_the_recap_is_translated(tmp_path):
-    from app import i18n
+    from car_charge_planner import i18n
     from test_i18n import make_catalogue
 
     make_catalogue(tmp_path, "xx", {"Solar panels": "Zonnepanelen", ("compass direction", "South-east"): "Zuidoost"})

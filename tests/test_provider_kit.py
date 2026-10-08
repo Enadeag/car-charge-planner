@@ -12,7 +12,7 @@ import pytest
 
 import provider_kit as kit
 from fake_provider import FakeProvider, Held, steps_for
-from forecast.provider import (
+from car_charge_planner.forecast.provider import (
     BadResponse,
     NotConfigured,
     RateLimited,
@@ -20,8 +20,8 @@ from forecast.provider import (
     Unavailable,
     check_steps,
 )
-from forecast.transport import Reply, Request
-from planner.model import ForecastStep
+from car_charge_planner.forecast.transport import Reply, Request
+from car_charge_planner.planner.model import ForecastStep
 from provider_kit import ProviderCase, ProviderConformance, ReplayTransport, UnexpectedRequest
 
 from conftest import at

@@ -9,12 +9,12 @@ import pytest
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QLabel
 
-from app.setup.pages import Page
-from app.setup.finish import FinishPage
-from app.setup.wizard import PAGES, SetupWizard
-from app.setup.welcome import WelcomePage
-from forecast.check import Attempt
-from planner.model import Config, Setup, load_config
+from car_charge_planner.setup.pages import Page
+from car_charge_planner.setup.finish import FinishPage
+from car_charge_planner.setup.wizard import PAGES, SetupWizard
+from car_charge_planner.setup.welcome import WelcomePage
+from car_charge_planner.forecast.check import Attempt
+from car_charge_planner.planner.model import Config, Setup, load_config
 
 from conftest import example_config, settle_controller
 
@@ -364,11 +364,11 @@ def test_a_finished_wizard_does_not_ask_when_it_closes(rig):
 
 
 def make_controller(cfg, tmp_path, monkeypatch):
-    from app.controller import Controller
+    from car_charge_planner.controller import Controller
     from conftest import FakeNotifier
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("forecast.service.ForecastService.get", lambda *a, **k: None)
+    monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda *a, **k: None)
     return Controller(cfg, tmp_path / "config.toml", FakeNotifier())
 
 

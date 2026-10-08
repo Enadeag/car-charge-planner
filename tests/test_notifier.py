@@ -3,7 +3,7 @@ import os
 
 import pytest
 
-from app.notifier import (
+from car_charge_planner.notifier import (
     APP_NAME,
     DESKTOP_ENTRY,
     FALLBACK_ICON,
@@ -141,7 +141,7 @@ def test_the_tray_app_announces_through_the_notifier(cfg, tmp_path, monkeypatch)
 
     from conftest import TrayApp
     from conftest import FakeNotifier, at, forecast_from
-    from forecast.service import ForecastResult
+    from car_charge_planner.forecast.service import ForecastResult
 
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     QApplication.instance() or QApplication([])
@@ -156,6 +156,6 @@ def test_the_tray_app_announces_through_the_notifier(cfg, tmp_path, monkeypatch)
         def now(tz=None):
             return at(day, 8, 50)
 
-    monkeypatch.setattr("app.controller.datetime", Frozen)
+    monkeypatch.setattr("car_charge_planner.controller.datetime", Frozen)
     app.rebuild()
     assert len(fake.sent) == 1 and fake.sent[0][0].startswith("Charge window 09:00")

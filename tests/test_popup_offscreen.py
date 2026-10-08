@@ -8,11 +8,11 @@ from datetime import date
 
 from PySide6.QtWidgets import QApplication
 
-from app.popup import Popup
-from app.shells.tray import make_icon
-from app.view_model import build
-from planner.projection import plan
-from storage.state import BatteryReading
+from car_charge_planner.popup import Popup
+from car_charge_planner.shells.tray import make_icon
+from car_charge_planner.view_model import build
+from car_charge_planner.planner.projection import plan
+from car_charge_planner.storage.state import BatteryReading
 
 from conftest import TZ, at, forecast_from
 
@@ -36,7 +36,7 @@ def test_icons_exist_for_every_state():
 
 
 def _popup_and_vm(cfg, state=None):
-    from storage.state import State
+    from car_charge_planner.storage.state import State
 
     now = at(date(2026, 7, 3), 7)
     fc = forecast_from([(date(2026, 7, 3), 900), (date(2026, 7, 4), 900)])
@@ -79,7 +79,7 @@ def test_add_all_day_and_time_range_away(cfg):
 
 
 def describe_first(periods):
-    from app.away_input import describe
+    from car_charge_planner.away_input import describe
 
     return describe(periods[0], TZ)
 
@@ -105,8 +105,8 @@ def test_existing_away_is_listed_and_removable(cfg):
 
     from PySide6.QtWidgets import QPushButton
 
-    from app.away_input import make_away
-    from storage.state import BatteryReading, State
+    from car_charge_planner.away_input import make_away
+    from car_charge_planner.storage.state import BatteryReading, State
 
     QApplication.instance() or QApplication([])
     period = make_away(date(2026, 7, 4), True, time(), time(), TZ)
@@ -123,10 +123,10 @@ def test_tray_app_round_trip_persists_and_replans(cfg, tmp_path, monkeypatch):
 
     from PySide6.QtWidgets import QApplication as QA
 
-    from app.away_input import make_away
+    from car_charge_planner.away_input import make_away
     from conftest import TrayApp
-    from forecast.service import ForecastResult
-    from storage.state import load_state
+    from car_charge_planner.forecast.service import ForecastResult
+    from car_charge_planner.storage.state import load_state
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     QA.instance() or QA([])
@@ -139,7 +139,7 @@ def test_tray_app_round_trip_persists_and_replans(cfg, tmp_path, monkeypatch):
         def now(tz=None):
             return at(day, 7)
 
-    monkeypatch.setattr("app.controller.datetime", FrozenNow)
+    monkeypatch.setattr("car_charge_planner.controller.datetime", FrozenNow)
     app.set_battery(33)
     assert load_state().battery.pct == 33
     assert app.vm.projection.startswith("Battery 33% \u2192")
@@ -170,7 +170,7 @@ def test_popup_has_a_close_button_and_stays_open_when_focus_moves(cfg):
 
 def _tray_with_frozen_clock(cfg, tmp_path, monkeypatch, hour, minute, failed=False):
     from conftest import TrayApp
-    from forecast.service import ForecastResult
+    from car_charge_planner.forecast.service import ForecastResult
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     QApplication.instance() or QApplication([])
@@ -187,7 +187,7 @@ def _tray_with_frozen_clock(cfg, tmp_path, monkeypatch, hour, minute, failed=Fal
         def now(tz=None):
             return at(day, hour, minute)
 
-    monkeypatch.setattr("app.controller.datetime", Frozen)
+    monkeypatch.setattr("car_charge_planner.controller.datetime", Frozen)
     return app, sent
 
 
@@ -234,8 +234,8 @@ def test_popup_lists_weekly_rules_as_read_only_text(cfg):
 
     from PySide6.QtWidgets import QPushButton
 
-    from app.away_input import make_away
-    from storage.state import BatteryReading, State
+    from car_charge_planner.away_input import make_away
+    from car_charge_planner.storage.state import BatteryReading, State
 
     QApplication.instance() or QApplication([])
     now = at(date(2026, 7, 3), 7)
@@ -250,7 +250,7 @@ def test_popup_lists_weekly_rules_as_read_only_text(cfg):
 
 
 def test_popup_says_so_when_there_are_no_absences_at_all(cfg):
-    from storage.state import State
+    from car_charge_planner.storage.state import State
 
     QApplication.instance() or QApplication([])
     popup, vm = _popup_and_vm(cfg)
@@ -284,7 +284,7 @@ def test_tray_opens_settings_on_the_away_rules_tab_and_hides_the_popup(cfg, tmp_
     from conftest import TrayApp
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("forecast.service.ForecastService.get", lambda *a, **k: None)
+    monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda *a, **k: None)
     QApplication.instance() or QApplication([])
     app = TrayApp(cfg, tmp_path / "config.toml")
     app.popup.show()
@@ -302,10 +302,10 @@ def test_a_rule_saved_in_settings_shows_up_in_the_popup(cfg, tmp_path, monkeypat
     from PySide6.QtCore import QTime
 
     from conftest import TrayApp
-    from forecast.service import ForecastResult
+    from car_charge_planner.forecast.service import ForecastResult
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("forecast.service.ForecastService.get", lambda *a, **k: None)
+    monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda *a, **k: None)
     QApplication.instance() or QApplication([])
     app = TrayApp(cfg, tmp_path / "config.toml")
     app.result = ForecastResult(forecast_from([(date(2026, 7, 3), 900)]), at(date(2026, 7, 3), 6), True, False)

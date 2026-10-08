@@ -11,10 +11,10 @@ README, plus Babel (`pip install babel`). Run the commands from the project root
 1. **Start the file.** Use the language code, `nl` for Dutch, `pt_BR` for Brazilian Portuguese:
 
    ```bash
-   .venv/bin/python -m app.i18n_tools init nl
+   .venv/bin/python -m car_charge_planner.i18n_tools init nl
    ```
 
-   This creates `app/locale/nl/LC_MESSAGES/car-charge-planner.po`, a copy of the template with every text
+   This creates `src/car_charge_planner/locale/nl/LC_MESSAGES/car-charge-planner.po`, a copy of the template with every text
    waiting for a translation.
 
 2. **Translate.** Open the `.po` file in a translation editor (Poedit, Lokalize, Gtranslator) or a text editor.
@@ -31,8 +31,8 @@ README, plus Babel (`pip install babel`). Run the commands from the project root
 3. **Compile and try it.**
 
    ```bash
-   .venv/bin/python -m app.i18n_tools compile
-   LANGUAGE=nl .venv/bin/python -m app
+   .venv/bin/python -m car_charge_planner.i18n_tools compile
+   LANGUAGE=nl .venv/bin/car-charge-planner
    ```
 
    The app follows `LANGUAGE`, then `LC_ALL`, `LC_MESSAGES` and `LANG`. Once at least one translation is installed,
@@ -50,6 +50,6 @@ README, plus Babel (`pip install babel`). Run the commands from the project root
 
 ### When the English texts change
 
-`python -m app.i18n_tools extract` rewrites the template from the code, and `python -m app.i18n_tools update` merges
+`python -m car_charge_planner.i18n_tools extract` rewrites the template from the code, and `python -m car_charge_planner.i18n_tools update` merges
 it into every language's `.po`; new and changed texts show up untranslated (or marked fuzzy: check those). A test
 fails when the committed template is behind the code, so a text added to the code comes with a refreshed template.

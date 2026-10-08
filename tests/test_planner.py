@@ -1,10 +1,10 @@
 from dataclasses import replace
 from datetime import date, datetime, time, timedelta
 
-from planner.model import AwayPeriod, AwayRule, Config, ForecastStep, load_config
-from planner.projection import energy_needed_kwh, plan
-from planner.surplus import amps_for, usable_kw
-from planner.windows import build_runs, group_runs_by_day, select_windows
+from car_charge_planner.planner.model import AwayPeriod, AwayRule, Config, ForecastStep, load_config
+from car_charge_planner.planner.projection import energy_needed_kwh, plan
+from car_charge_planner.planner.surplus import amps_for, usable_kw
+from car_charge_planner.planner.windows import build_runs, group_runs_by_day, select_windows
 
 from conftest import TZ, at, forecast_from
 
@@ -215,7 +215,7 @@ def test_pinned_window_that_is_over_or_not_started_is_ignored(cfg):
 
 import pytest
 
-from planner.model import ConfigError
+from car_charge_planner.planner.model import ConfigError
 
 
 @pytest.mark.parametrize(
@@ -257,6 +257,6 @@ def test_all_problems_are_reported_together(tmp_path):
 
 
 def test_built_in_defaults_are_valid():
-    from planner.model import validate
+    from car_charge_planner.planner.model import validate
 
     assert validate(Config()) == Config()

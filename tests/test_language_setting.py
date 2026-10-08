@@ -9,11 +9,11 @@ from dataclasses import replace
 import pytest
 from PySide6.QtWidgets import QApplication, QComboBox
 
-from app import i18n
-from app.i18n import available_languages, init, language_name
-from app.settings.window import SettingsWindow
-from planner.config_io import dump_config, write_config
-from planner.model import Config, ConfigError, Interface, load_config, validate
+from car_charge_planner import i18n
+from car_charge_planner.i18n import available_languages, init, language_name
+from car_charge_planner.settings.window import SettingsWindow
+from car_charge_planner.planner.config_io import dump_config, write_config
+from car_charge_planner.planner.model import Config, ConfigError, Interface, load_config, validate
 
 from test_i18n import make_catalogue
 
@@ -143,11 +143,11 @@ def test_english_can_be_chosen_on_a_system_that_speaks_another_language(catalogu
 
 
 def test_a_changed_language_is_announced_like_a_changed_interface(cfg, qapp, tmp_path, monkeypatch):
-    from app.controller import Controller
+    from car_charge_planner.controller import Controller
     from conftest import FakeNotifier, settle_controller
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("forecast.service.ForecastService.get", lambda *a, **k: None)
+    monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda *a, **k: None)
     notifier = FakeNotifier()
     controller = Controller(cfg, tmp_path / "config.toml", notifier)
     controller.apply_config(replace(cfg, interface=Interface(language="nl")))

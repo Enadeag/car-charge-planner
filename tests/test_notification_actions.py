@@ -15,13 +15,13 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-from app.controller import Controller
-from app.notification_actions import DEFAULT_ACTION, ActionListener, JeepneySource, action_handler
-from app.notifier import Notifier
-from app.popup import Popup
-from app.shells.tray import TrayShell
-from app.shells.window import WindowShell
-from forecast.service import ForecastResult
+from car_charge_planner.controller import Controller
+from car_charge_planner.notification_actions import DEFAULT_ACTION, ActionListener, JeepneySource, action_handler
+from car_charge_planner.notifier import Notifier
+from car_charge_planner.popup import Popup
+from car_charge_planner.shells.tray import TrayShell
+from car_charge_planner.shells.window import WindowShell
+from car_charge_planner.forecast.service import ForecastResult
 
 from conftest import TZ, FakeNotifier, at, forecast_from
 
@@ -86,7 +86,7 @@ def test_other_actions_are_ignored():
 
 
 def test_the_default_action_key_is_the_one_the_notifier_sends():
-    from app.notifier import DEFAULT_ACTION as sent
+    from car_charge_planner.notifier import DEFAULT_ACTION as sent
 
     assert DEFAULT_ACTION == sent[0] == "default"
 
@@ -96,7 +96,7 @@ def test_the_default_action_key_is_the_one_the_notifier_sends():
 
 def make_controller(cfg, tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("forecast.service.ForecastService.get", lambda *a, **k: None)
+    monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda *a, **k: None)
     controller = Controller(cfg, tmp_path / "config.toml", FakeNotifier())
     controller.result = ForecastResult(forecast_from([(DAY + timedelta(days=i), 900) for i in range(3)]), at(DAY, 6), True, False)
     return controller
@@ -264,7 +264,7 @@ class Said(list):
 
 
 def test_the_selftest_reports_a_click_that_arrives(qapp):
-    from app import selftest
+    from car_charge_planner import selftest
 
     notifier = Notifier(RecordingBus(), icon="x")
     said = Said()
@@ -274,7 +274,7 @@ def test_the_selftest_reports_a_click_that_arrives(qapp):
 
 
 def test_the_selftest_ignores_clicks_on_other_notifications(qapp):
-    from app import selftest
+    from car_charge_planner import selftest
 
     said = Said()
     source = FakeSource([(55, "default"), (101, "dismiss")])  # not ours, and not the default action
@@ -283,7 +283,7 @@ def test_the_selftest_ignores_clicks_on_other_notifications(qapp):
 
 
 def test_the_selftest_says_so_when_the_notification_cannot_be_sent(qapp):
-    from app import selftest
+    from car_charge_planner import selftest
 
     class Broken:
         def notify(self, *args):
@@ -300,5 +300,5 @@ def test_the_command_is_listed_and_wired():
     from pathlib import Path
 
     project = Path(__file__).resolve().parent.parent
-    done = subprocess.run([sys.executable, "-m", "app", "frobnicate"], cwd=project, capture_output=True, text=True, timeout=30)
+    done = subprocess.run([sys.executable, "-m", "car_charge_planner", "frobnicate"], cwd=project, capture_output=True, text=True, timeout=30)
     assert "test-notification" in done.stderr

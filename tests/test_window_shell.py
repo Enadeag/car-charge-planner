@@ -11,11 +11,11 @@ from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QCloseEvent, QKeySequence
 from PySide6.QtWidgets import QApplication, QPushButton, QToolButton
 
-from app.controller import Controller
-from app.shells.icons import make_icon
-from app.shells.window import BACKGROUND_HINT, WindowShell
-from forecast.service import ForecastResult
-from storage.state import load_state
+from car_charge_planner.controller import Controller
+from car_charge_planner.shells.icons import make_icon
+from car_charge_planner.shells.window import BACKGROUND_HINT, WindowShell
+from car_charge_planner.forecast.service import ForecastResult
+from car_charge_planner.storage.state import load_state
 
 from conftest import FakeNotifier, at, forecast_from
 
@@ -30,7 +30,7 @@ def qapp():
 class Setup:
     def __init__(self, cfg, tmp_path, monkeypatch, hour=7, minute=0):
         monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-        monkeypatch.setattr("forecast.service.ForecastService.get", lambda *a, **k: None)
+        monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda *a, **k: None)
         self.notifier = FakeNotifier()
         self.controller = Controller(cfg, tmp_path / "config.toml", self.notifier)
         self.controller.result = ForecastResult(
@@ -47,14 +47,14 @@ class Setup:
                 return at(DAY, hour, minute)
 
         self.monkeypatch_target = Frozen
-        import app.controller as controller_module
+        import car_charge_planner.controller as controller_module
 
         controller_module.datetime = Frozen
 
 
 @pytest.fixture
 def s(cfg, tmp_path, monkeypatch, qapp):
-    import app.controller as controller_module
+    import car_charge_planner.controller as controller_module
 
     real = controller_module.datetime
     setup = Setup(cfg, tmp_path, monkeypatch)
@@ -230,7 +230,7 @@ def test_start_in_the_background_keeps_the_window_hidden_but_runs_the_controller
 
 
 def test_a_second_launch_shows_the_hidden_window(s):
-    from app.instance import InstanceServer, request_show
+    from car_charge_planner.instance import InstanceServer, request_show
 
     server = InstanceServer(os.path.join(os.environ["XDG_STATE_HOME"], "i.sock"))
     assert server.listen()
@@ -262,7 +262,7 @@ def test_setting_the_battery_in_the_window_reaches_the_state_and_the_view(s):
 
 
 def test_the_tray_shell_and_the_window_shell_share_their_icon_code():
-    from app.shells import tray
+    from car_charge_planner.shells import tray
 
     assert tray.make_icon is make_icon
 

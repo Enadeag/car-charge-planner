@@ -1,12 +1,52 @@
+[build-system]
+requires = ["hatchling>=1.27", "babel"]
+build-backend = "hatchling.build"
+
 [project]
 name = "car-charge-planner"
 version = "0.1.0"
+description = "Tells you when to charge your electric car so that as much of the power as possible comes from your own solar panels."
+readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["PySide6-Essentials", "jeepney"]
+license = "MIT"
+authors = [{ name = "Kelvin Vroegop" }]
+keywords = ["solar", "electric vehicle", "ev charging", "forecast", "tray"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Home Automation",
+]
+dependencies = ["PySide6-Essentials", "jeepney", "tzdata"]
 
 [project.optional-dependencies]
-dev = ["pytest", "babel"]  # babel: only for the translation commands
+dev = ["pytest", "babel", "hatchling"]  # babel and hatchling: also the build requirements (a test builds the wheel)
+
+[project.urls]
+Homepage = "https://github.com/Enadeag/car-charge-planner"
+Source = "https://github.com/Enadeag/car-charge-planner"
+Issues = "https://github.com/Enadeag/car-charge-planner/issues"
+
+# The command is a console script. A Windows build will add a windowed (gui) script of the same name.
+[project.scripts]
+car-charge-planner = "car_charge_planner.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/car_charge_planner"]
+artifacts = ["*.mo"]  # compiled translations are not in git, so they are named here to be included
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests", "docs", "README.md", "CONTRIBUTING.md", "CONTEXT.md", "babel.cfg", "hatch_build.py", "pyproject.toml"]
+artifacts = ["*.mo"]
+
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = ["src"]

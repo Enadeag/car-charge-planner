@@ -10,11 +10,11 @@ import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QLabel, QPushButton
 
-from app.planview import PLAN, UPDATE, PlanView
-from app.popup import Popup
-from app.view_model import build
-from planner.projection import plan
-from storage.state import BatteryReading, State
+from car_charge_planner.planview import PLAN, UPDATE, PlanView
+from car_charge_planner.popup import Popup
+from car_charge_planner.view_model import build
+from car_charge_planner.planner.projection import plan
+from car_charge_planner.storage.state import BatteryReading, State
 
 from conftest import TZ, at, forecast_from
 

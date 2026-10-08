@@ -11,7 +11,7 @@ import pytest
 from PySide6.QtCore import QTime
 from PySide6.QtWidgets import QApplication, QLabel
 
-from app.setup.home import (
+from car_charge_planner.setup.home import (
     HOURS_PER_YEAR,
     MAX_BASELOAD_KW,
     away_problems,
@@ -19,10 +19,10 @@ from app.setup.home import (
     car_kwh_per_year,
     yearly_from_baseload,
 )
-from app.setup.recap import build_recap
-from app.setup.wizard import SetupWizard
-from forecast.check import Attempt
-from planner.model import AwayRule, Config, Setup, load_config
+from car_charge_planner.setup.recap import build_recap
+from car_charge_planner.setup.wizard import SetupWizard
+from car_charge_planner.forecast.check import Attempt
+from car_charge_planner.planner.model import AwayRule, Config, Setup, load_config
 
 from conftest import example_config
 
@@ -316,7 +316,7 @@ def test_finishing_writes_what_was_answered_on_all_three_pages(tmp_path, qapp):
 
 
 def test_the_hub_and_its_pages_are_in_the_language(tmp_path, qapp):
-    from app import i18n
+    from car_charge_planner import i18n
     from test_i18n import make_catalogue
 
     make_catalogue(tmp_path, "xx", {"What next?": "Wat nu?", "House electricity": "Huisstroom", "If you drive to work, set this.": "Rijd je naar je werk? Vul dit in."})

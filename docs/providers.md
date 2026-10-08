@@ -5,13 +5,13 @@ days. The app hands it a description of the system and gets back one number per 
 kW. Everything else (when to ask, what to keep, what to do when it fails, the Settings screen) is done for every
 provider by the app.
 
-Two providers are built in, [Open-Meteo](../forecast/providers/open_meteo.py) and
-[Forecast.Solar](../forecast/providers/forecast_solar.py). Adding one is a pull request: one module, one test
+Two providers are built in, [Open-Meteo](../src/car_charge_planner/forecast/providers/open_meteo.py) and
+[Forecast.Solar](../src/car_charge_planner/forecast/providers/forecast_solar.py). Adding one is a pull request: one module, one test
 module, a recorded answer. This guide is everything a contributor needs.
 
 ## The contract
 
-All of it is in [`forecast/provider.py`](../forecast/provider.py).
+All of it is in [`src/car_charge_planner/forecast/provider.py`](../src/car_charge_planner/forecast/provider.py).
 
 ```python
 @dataclass(frozen=True)
@@ -22,7 +22,7 @@ class SystemDescription:           # what the provider is told
     timezone: str                                     # the user's time zone, an IANA name
 
 @dataclass(frozen=True)
-class ForecastStep:                # what it returns, a list of them (planner/model.py)
+class ForecastStep:                # what it returns, a list of them (src/car_charge_planner/planner/model.py)
     start: datetime; end: datetime # timezone-aware, [start, end)
     power_kw: float                # expected AC power of this system over the step
 
@@ -65,7 +65,7 @@ error. Error messages are shown to the user: **never put the URL (it may hold a 
 ## The transport
 
 A provider never opens a connection itself. It takes a `Transport` when it is created and makes every request
-through it (`forecast/transport.py`): a `Request` (URL, headers) goes in, a `Reply` (status, body, headers) comes
+through it (`src/car_charge_planner/forecast/transport.py`): a `Request` (URL, headers) goes in, a `Reply` (status, body, headers) comes
 out. A refusal such as a 429 or a 503 is a `Reply` with that status; only "could not talk to the server at all"
 raises, as an `OSError`. The default transport is the real one; tests give yours a `ReplayTransport`.
 
@@ -77,12 +77,12 @@ This is a complete provider for an imaginary service, and it passes the conforma
 ```python skeleton
 from datetime import datetime, timedelta
 
-from app.i18n import N_
-from forecast.provider import (
+from car_charge_planner.i18n import N_
+from car_charge_planner.forecast.provider import (
     BadResponse, RateLimited, SettingSpec, Unavailable, require_valid_steps,
 )
-from forecast.transport import Request, urllib_transport
-from planner.model import ForecastStep
+from car_charge_planner.forecast.transport import Request, urllib_transport
+from car_charge_planner.planner.model import ForecastStep
 
 
 class Example:
@@ -134,9 +134,9 @@ and the recorded answer its test replays:
 
 ## Adding yours
 
-1. **The module**: `forecast/providers/<your_id>.py`, as above. Mark `description`, `sends` and every setting's
+1. **The module**: `src/car_charge_planner/forecast/providers/<your_id>.py`, as above. Mark `description`, `sends` and every setting's
    label and hint with `N_()` so they are translated; the name and the attribution are shown as they are.
-2. **Register it**: add it to `_register_builtin()` in `forecast/registry.py`.
+2. **Register it**: add it to `_register_builtin()` in `src/car_charge_planner/forecast/registry.py`.
 3. **Check the service's live documentation** before you write a line: the URL shape, the azimuth convention,
    the time zone of the answer (Forecast.Solar answers in the place's local time), what a timestamp means (the
    start or the end of a period: Open-Meteo's value covers the hour *before* its stamp), and what the free
@@ -209,8 +209,8 @@ that wait for an event so a test can have a fetch in flight.
 
 A provider may also offer to turn what a person typed ("Utrecht", a postcode) into places with coordinates and a
 time zone; the set-up screen's Location page uses the **primary** provider's. Set `search_places` to a callable
-`search(text, language="en") -> PlaceResults` (`forecast/provider.py`), or leave it `None`: the page then asks for
-coordinates only and says why. Open-Meteo has one (`forecast/providers/open_meteo_geocoding.py`); Forecast.Solar
+`search(text, language="en") -> PlaceResults` (`src/car_charge_planner/forecast/provider.py`), or leave it `None`: the page then asks for
+coordinates only and says why. Open-Meteo has one (`src/car_charge_planner/forecast/providers/open_meteo_geocoding.py`); Forecast.Solar
 does not.
 
 - `PlaceResults` holds `places` (each a `Place`: name, latitude, longitude, an IANA `timezone`, and the optional

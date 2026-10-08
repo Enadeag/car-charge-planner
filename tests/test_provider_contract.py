@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from forecast.provider import (
+from car_charge_planner.forecast.provider import (
     BadResponse,
     ForecastProvider,
     NotConfigured,
@@ -19,11 +19,11 @@ from forecast.provider import (
     check_steps,
     require_valid_steps,
 )
-from forecast.registry import ProviderRegistry
-from planner.cli import demo_forecast, load_forecast
-from planner.model import ForecastStep, Panels
-from planner.projection import plan
-from planner.surplus import usable_kw
+from car_charge_planner.forecast.registry import ProviderRegistry
+from car_charge_planner.planner.cli import demo_forecast, load_forecast
+from car_charge_planner.planner.model import ForecastStep, Panels
+from car_charge_planner.planner.projection import plan
+from car_charge_planner.planner.surplus import usable_kw
 
 from conftest import TZ, at, forecast_from
 from datetime import date

@@ -24,8 +24,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app import i18n
-from app.i18n import DOMAIN
+from car_charge_planner import i18n
+from car_charge_planner.i18n import DOMAIN
 
 LANGUAGE = "en"  # plural rules of English; the directory name is all gettext looks at
 GROWTH = 0.3
@@ -122,7 +122,7 @@ def visible_texts(root: QWidget) -> list[tuple[str, str]]:
 
 def proper_nouns() -> set[str]:
     """What stays as it is in every language: the forecast providers' names and the credits they ask for."""
-    from forecast.registry import registry
+    from car_charge_planner.forecast.registry import registry
 
     return {
         text

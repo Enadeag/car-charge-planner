@@ -9,15 +9,15 @@ from dataclasses import replace
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from app.controller import Controller
-from app.main import NO_TRAY_HINT, announce_tray_fallback, create_shell, wait_for_tray
-from app.settings.window import SettingsWindow
-from app.shells import ShellChoice, choose_shell
-from app.shells.tray import TrayShell
-from app.shells.window import WindowShell
-from planner.config_io import dump_config, write_config
-from planner.model import INTERFACE_MODES, Config, ConfigError, Interface, load_config
-from storage.state import load_state
+from car_charge_planner.controller import Controller
+from car_charge_planner.main import NO_TRAY_HINT, announce_tray_fallback, create_shell, wait_for_tray
+from car_charge_planner.settings.window import SettingsWindow
+from car_charge_planner.shells import ShellChoice, choose_shell
+from car_charge_planner.shells.tray import TrayShell
+from car_charge_planner.shells.window import WindowShell
+from car_charge_planner.planner.config_io import dump_config, write_config
+from car_charge_planner.planner.model import INTERFACE_MODES, Config, ConfigError, Interface, load_config
+from car_charge_planner.storage.state import load_state
 
 from conftest import FakeNotifier, example_config
 
@@ -122,7 +122,7 @@ def test_no_tray_at_all_gives_up_after_the_timeout():
 
 
 def test_background_starts_wait_longer_than_interactive_ones():
-    from app.main import TRAY_WAIT_BACKGROUND_S, TRAY_WAIT_INTERACTIVE_S
+    from car_charge_planner.main import TRAY_WAIT_BACKGROUND_S, TRAY_WAIT_INTERACTIVE_S
 
     assert TRAY_WAIT_BACKGROUND_S > TRAY_WAIT_INTERACTIVE_S >= 0
 
@@ -266,11 +266,11 @@ def test_without_a_tray_the_app_starts_as_a_window_instead_of_exiting(tmp_path):
 
     project = Path(__file__).resolve().parent.parent
     env = _env(tmp_path)
-    first = subprocess.Popen([sys.executable, "-m", "app"], cwd=project, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    first = subprocess.Popen([sys.executable, "-m", "car_charge_planner"], cwd=project, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
         time.sleep(4)  # a second to look for a tray, then it carries on as a window
         assert first.poll() is None, first.stderr.read()  # still running: it did not exit with "no system tray"
-        second = subprocess.run([sys.executable, "-m", "app"], cwd=project, env=env, capture_output=True, text=True, timeout=30)
+        second = subprocess.run([sys.executable, "-m", "car_charge_planner"], cwd=project, env=env, capture_output=True, text=True, timeout=30)
         assert second.returncode == 0 and "already running" in second.stderr
         assert first.poll() is None  # and the first one is still there
     finally:
@@ -284,7 +284,7 @@ def test_without_a_tray_the_app_starts_as_a_window_instead_of_exiting(tmp_path):
 
 
 def test_the_autostart_flag_starts_the_whole_app_without_a_tray_too(tmp_path):
-    """What the autostart entry runs: `python -m app --background`, here on a desktop with no tray."""
+    """What the autostart entry runs: `car-charge-planner --background`, here on a desktop with no tray."""
     import subprocess
     import sys
     import time
@@ -292,7 +292,7 @@ def test_the_autostart_flag_starts_the_whole_app_without_a_tray_too(tmp_path):
 
     project = Path(__file__).resolve().parent.parent
     process = subprocess.Popen(
-        [sys.executable, "-m", "app", "--background"], cwd=project, env=_env(tmp_path), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        [sys.executable, "-m", "car_charge_planner", "--background"], cwd=project, env=_env(tmp_path), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
     )
     try:
         time.sleep(8)  # up to five seconds looking for a tray at login, then the hidden window

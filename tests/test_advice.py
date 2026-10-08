@@ -1,10 +1,10 @@
 from dataclasses import replace
 from datetime import date, time, timedelta
 
-from app.away_input import make_away
-from planner.advice import grid_advice
-from planner.model import AwayPeriod, elapsed_hours
-from planner.projection import plan
+from car_charge_planner.away_input import make_away
+from car_charge_planner.planner.advice import grid_advice
+from car_charge_planner.planner.model import AwayPeriod, elapsed_hours
+from car_charge_planner.planner.projection import plan
 
 from conftest import TZ, at, forecast_from
 
@@ -130,7 +130,7 @@ def test_advice_is_for_the_first_dip_only(cfg):
 
 def test_a_tiny_shortfall_is_not_worth_a_warning(cfg):
     # land the first day's end level about 0.5 points under the minimum
-    from planner.projection import daily_driving_pct
+    from car_charge_planner.planner.projection import daily_driving_pct
 
     soc = cfg.car.minimum_pct - 0.5 + daily_driving_pct(cfg)
     advice, plans = advise(cfg, dull(1), soc=soc, now=at(FRI, 0))
