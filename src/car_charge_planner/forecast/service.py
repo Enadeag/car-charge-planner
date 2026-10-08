@@ -2,7 +2,7 @@
 
 Per refresh it asks the primary provider first and keeps using the primary's last good forecast for as long as
 that is still useful; only when the primary has nothing usable is the fallback asked. A provider that says it
-is rate limited is left alone until it says it may be asked again. See `.scratch/forecast-providers/spec.md`
+is rate limited is left alone until it says it may be asked again. See `docs/design/forecast-providers/spec.md`
 section 5. The service is blocking: the controller runs it off the UI thread.
 """
 

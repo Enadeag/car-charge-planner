@@ -2,7 +2,7 @@
 
 A provider is given a description of the user's solar system and returns the expected solar power per time
 step. Everything else (caching, the fallback, the settings screens) lives outside it and works with any
-provider. See `.scratch/forecast-providers/spec.md` and, for contributors, `docs/providers.md`.
+provider. See `docs/design/forecast-providers/spec.md` and, for contributors, `docs/providers.md`.
 """
 
 from __future__ import annotations

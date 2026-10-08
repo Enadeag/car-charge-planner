@@ -12,7 +12,7 @@ The functions look the active catalogue up at call time, so a text created befor
 is translated, and nothing needs re-importing when the language changes.
 
 Catalogues live in `locale/<language>/LC_MESSAGES/car-charge-planner.mo` inside this package (compiled from
-the `.po` files; see `app/i18n_tools.py`). With no matching catalogue everything stays English.
+the `.po` files; see `i18n_tools.py`). With no matching catalogue everything stays English.
 """
 
 from __future__ import annotations
