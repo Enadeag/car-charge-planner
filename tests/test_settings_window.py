@@ -385,6 +385,9 @@ def test_one_array_has_no_heading_name_or_remove(h):
     tab = solar(h)
     assert len(tab.boxes) == 1 and tab.boxes[0].heading.isHidden() and tab.boxes[0].remove_button.isHidden()
     assert "panels.name" not in tab.inputs and tab.add_button.isVisible()
+    assert tab.location_heading.text() == "Location" and tab.location_heading.isVisible()
+    assert tab.location_heading.styleSheet().startswith(tab.boxes[0].heading.styleSheet().rstrip(";"))
+    assert "of this array" not in tab.hints["panels.kwp"].text()  # the plain hint, as before
     assert [s.key for s in tab.specs][:4] == ["panels.kwp", "panels.tilt_deg", "panels.azimuth_deg", "panels.system_losses"]
 
 
@@ -405,6 +408,17 @@ def test_an_added_array_is_tagged_typical_and_saved_with_its_name(h):
     assert saved.panels == (example_config().panels[0], Panels(kwp=2.4, tilt_deg=35, azimuth_deg=90, system_losses=0.14, name="Garage"))
     assert saved.setup.typical == ("panels.2.tilt_deg", "panels.2.system_losses")
     assert len(solar(h).boxes) == 2  # the saved arrays are shown again
+
+
+def test_the_add_button_sits_under_the_arrays_and_the_location_has_its_own_heading(h):
+    tab = solar(h)
+    tab.add_button.click()
+    y = lambda widget: widget.mapTo(tab, widget.rect().topLeft()).y()  # noqa: E731
+    last = tab.boxes[-1]
+    assert y(last) + last.height() <= y(tab.add_button) < y(tab.location_heading) < y(tab.location)
+    assert tab.location_heading.text() == "Location"
+    for key in ("panels.kwp", "panels.2.kwp"):  # with several arrays the hint speaks of this array
+        assert "Peak power of the panels in this array, as stated" in tab.hints[key].text()
 
 
 def test_an_edit_made_before_adding_an_array_is_kept(h):

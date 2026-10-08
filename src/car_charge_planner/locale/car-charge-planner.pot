@@ -814,7 +814,7 @@ msgid "Panel size"
 msgstr ""
 
 #: car_charge_planner/settings/fields.py
-msgid "Peak power of the panels together, as stated on the installer's datasheet or in the inverter app. With more than one array: of this array."
+msgid "Peak power of the panels together, as stated on the installer's datasheet or in the inverter app."
 msgstr ""
 
 #: car_charge_planner/settings/fields.py
@@ -844,6 +844,10 @@ msgstr ""
 
 #: car_charge_planner/settings/fields.py car_charge_planner/setup/recap.py
 msgid "System losses"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Peak power of the panels in this array, as stated on the installer's datasheet or in the inverter app."
 msgstr ""
 
 #: car_charge_planner/settings/fields.py
@@ -1179,6 +1183,10 @@ msgstr ""
 
 #: car_charge_planner/settings/tabs.py
 msgid "For panels that face another way or have another tilt, such as an east and a west roof."
+msgstr ""
+
+#: car_charge_planner/settings/tabs.py car_charge_planner/setup/recap.py
+msgid "Location"
 msgstr ""
 
 #: car_charge_planner/settings/tabs.py
@@ -1754,10 +1762,6 @@ msgstr ""
 
 #: car_charge_planner/setup/recap.py
 msgid "Place"
-msgstr ""
-
-#: car_charge_planner/setup/recap.py
-msgid "Location"
 msgstr ""
 
 #: car_charge_planner/setup/recap.py

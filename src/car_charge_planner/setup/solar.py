@@ -31,6 +31,8 @@ from .panels import COMPASS, TILT_PRESETS, azimuth_for, compass_key_for, panels_
 from .recap import array_title, compass_label
 from .typical import with_typical
 
+DEFAULT_COUNT = 12  # the panels and watts each array starts with
+DEFAULT_WATTS = 400
 KWP = " kWp"  # a unit symbol: the same in every language, so not translated
 PAGE_FIELDS = ("kwp", "azimuth_deg", "tilt_deg")  # what this page asks of each array (the losses stay typical)
 
@@ -64,6 +66,7 @@ class SolarPage(Page):
         super().__init__(wizard)
         self._filling = False
         self.current = 0  # the array the questions are about
+        self.counts: list[tuple[int, int]] = []  # per array: the number of panels and the watts of one
         layout = QVBoxLayout(self)
 
         top = QHBoxLayout()
@@ -109,18 +112,19 @@ class SolarPage(Page):
         self.by_count = QRadioButton(_("Or the number of panels"))
         self.count = QSpinBox()
         self.count.setRange(1, 500)
-        self.count.setValue(12)
+        self.count.setValue(DEFAULT_COUNT)
         self.watts = QSpinBox()
         self.watts.setRange(50, 1000)
         self.watts.setSingleStep(10)
-        self.watts.setValue(400)
+        self.watts.setValue(DEFAULT_WATTS)
         self.watts.setSuffix(" " + _("W each"))
         self.product = QLabel()
         row.addWidget(self.by_count)
         row.addWidget(self.count)
         row.addWidget(QLabel("×"))
         row.addWidget(self.watts)
-        row.addWidget(self.product, 1)
+        row.addWidget(self.product)
+        row.addStretch()  # the boxes keep their width while the sum is hidden
         layout.addLayout(row)
         modes = QButtonGroup(self)
         modes.addButton(self.by_total)
@@ -206,6 +210,7 @@ class SolarPage(Page):
     # -- showing what the answers say ----------------------------------------------------------------------------
 
     def enter(self) -> None:
+        self._match_counts()
         self.current = min(self.current, len(self.state.config.panels) - 1)
         self._show()
 
@@ -214,13 +219,22 @@ class SolarPage(Page):
         """The array the questions are about."""
         return self.state.config.panels[self.current]
 
+    def _match_counts(self) -> None:
+        """One count and watts per array: a new array starts with the defaults."""
+        wanted = len(self.state.config.panels)
+        del self.counts[wanted:]
+        self.counts += [(DEFAULT_COUNT, DEFAULT_WATTS)] * (wanted - len(self.counts))
+
     def _show(self) -> None:
         panels = self.panels
+        self._match_counts()
         self._filling = True
         self._show_arrays()
         self.name.setText(panels.name)
         self.kwp.setValue(panels.kwp)
         self.by_total.setChecked(True)
+        self.count.setValue(self.counts[self.current][0])
+        self.watts.setValue(self.counts[self.current][1])
         self.degrees.setValue(round(panels.azimuth_deg))
         self.tilt.setValue(round(panels.tilt_deg))
         self._filling = False
@@ -245,6 +259,8 @@ class SolarPage(Page):
         self.direction_name.setText(compass_label(self.degrees.value()))
 
     def _refresh_product(self) -> None:
+        """The sum of panels times watts, only while the number of panels is the way the size is given."""
+        self.product.setVisible(self.by_count.isChecked())
         self.product.setText(_("= {kwp} kWp").format(kwp=number(panels_to_kwp(self.count.value(), self.watts.value()), 2)))
 
     def _show_arrays(self) -> None:
@@ -314,6 +330,7 @@ class SolarPage(Page):
         if len(self.state.config.panels) <= 1:
             return
         self.state.config = without_array(self.state.config, self.current)
+        del self.counts[self.current]
         self.current = max(0, self.current - 1)
         self._show()
         self.changed.emit()
@@ -324,10 +341,13 @@ class SolarPage(Page):
             self._refresh_product()
 
     def _mode_changed(self, by_total: bool) -> None:
+        self._refresh_product()
         if not by_total and not self._filling:
             self._count_edited(0)
 
     def _count_edited(self, _value: int) -> None:
+        if not self._filling:
+            self.counts[self.current] = (self.count.value(), self.watts.value())
         self._refresh_product()
         if self._filling or self.by_total.isChecked():
             return

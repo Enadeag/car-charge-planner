@@ -166,10 +166,40 @@ def test_the_note_lists_only_the_values_that_are_still_typical(rig):
     assert rig.page.typical_note.text() == ""
 
 
-def test_the_sum_is_shown_even_before_that_way_is_chosen_but_does_not_change_the_answer(rig):
+def test_the_sum_is_shown_only_while_the_number_of_panels_is_the_way_the_size_is_given(rig):
+    assert rig.page.product.isHidden()  # "Total size" is chosen: no sum next to it
     rig.page.count.setValue(10)
     rig.page.watts.setValue(500)
-    assert rig.page.product.text() == "= 5.00 kWp" and rig.panels[0].kwp == 5.0 and "panels.kwp" in rig.typical
+    assert rig.page.product.isHidden() and rig.panels[0].kwp == 5.0 and "panels.kwp" in rig.typical  # no answer given
+    rig.page.by_count.setChecked(True)
+    assert rig.page.product.isVisible() and rig.page.product.text() == "= 5.00 kWp"
+    rig.page.by_total.setChecked(True)
+    assert rig.page.product.isHidden()
+
+
+def test_going_back_to_the_total_size_keeps_the_last_computed_size(rig):
+    rig.page.by_count.setChecked(True)
+    rig.page.count.setValue(8)
+    rig.page.by_total.setChecked(True)
+    assert rig.page.kwp.value() == pytest.approx(3.2) and rig.panels[0].kwp == pytest.approx(3.2)
+
+
+def test_each_array_has_its_own_number_of_panels_and_watts(tmp_path, qapp):
+    rig = Rig(tmp_path, cfg=example_config())
+    rig.page.count.setValue(10)
+    rig.page.watts.setValue(450)
+    rig.page.add_button.click()
+    assert (rig.page.count.value(), rig.page.watts.value()) == (12, 400)  # a new array starts with the defaults
+    rig.page.by_count.setChecked(True)
+    rig.page.count.setValue(8)
+    assert rig.panels[1].kwp == pytest.approx(3.2) and rig.page.product.text() == "= 3.20 kWp"
+    rig.page.array_tabs.setCurrentIndex(0)
+    assert (rig.page.count.value(), rig.page.watts.value()) == (10, 450) and rig.page.product.isHidden()
+    rig.page.array_tabs.setCurrentIndex(1)
+    assert (rig.page.count.value(), rig.page.watts.value()) == (8, 400)
+    rig.page.array_tabs.setCurrentIndex(0)
+    rig.page.remove_button.click()  # the second array moves up and keeps its values
+    assert (rig.page.count.value(), rig.page.watts.value()) == (8, 400)
 
 
 def test_the_size_has_the_limits_settings_has(rig):

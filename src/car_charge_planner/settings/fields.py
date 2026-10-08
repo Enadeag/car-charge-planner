@@ -66,7 +66,7 @@ def set_value(cfg: Config, key: str, value) -> Config:
 PANEL_FIELDS = (
     FieldSpec(
         "panels.kwp", N_("Panel size"),
-        N_("Peak power of the panels together, as stated on the installer's datasheet or in the inverter app. With more than one array: of this array."),
+        N_("Peak power of the panels together, as stated on the installer's datasheet or in the inverter app."),
         unit="kWp", minimum=0.1, maximum=100, decimals=2, step=0.1,
     ),
     FieldSpec(
@@ -82,6 +82,8 @@ PANEL_FIELDS = (
         unit="%", minimum=0, maximum=99.9, decimals=1, step=1, scale=100,
     ),
 )
+# With several arrays the size is that of one array, which the plain hint does not say.
+PANEL_SIZE_OF_ARRAY_HINT = N_("Peak power of the panels in this array, as stated on the installer's datasheet or in the inverter app.")
 ARRAY_NAME = FieldSpec("panels.name", N_("Name"), N_("Optional: what you call this array, such as \"East roof\" or \"Garage\"."), kind="text")
 
 LOCATION_FIELDS = (
@@ -95,6 +97,8 @@ def array_fields(index: int, named: bool) -> tuple[FieldSpec, ...]:
     """The fields of panel array `index` (from 0), keyed "panels.kwp" for the first and "panels.2.kwp" for the
     second; with a name field first when `named` (there is more than one array)."""
     specs = ((ARRAY_NAME,) if named else ()) + PANEL_FIELDS
+    if named:
+        specs = tuple(replace(spec, hint=PANEL_SIZE_OF_ARRAY_HINT) if spec.key == "panels.kwp" else spec for spec in specs)
     return tuple(replace(spec, key=panel_key(index, spec.key.split(".")[1])) for spec in specs)
 
 
