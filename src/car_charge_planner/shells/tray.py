@@ -29,6 +29,7 @@ class TrayShell:
         menu = QMenu()
         menu.addAction(_("Refresh forecast"), lambda: controller.refresh(force=True))
         menu.addAction(_("Settings..."), lambda: controller.open_settings())
+        menu.addAction(_("Set up..."), lambda: controller.open_setup())
         menu.addSeparator()
         menu.addAction(_("Quit"), QApplication.quit)
         self.menu = menu

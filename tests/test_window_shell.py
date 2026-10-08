@@ -168,8 +168,8 @@ def test_the_note_is_not_repeated_after_a_restart(cfg, tmp_path, monkeypatch, qa
 # ---- the menu ---------------------------------------------------------------------
 
 
-def test_the_menu_has_settings_refresh_and_quit(s):
-    assert actions(s.shell.menu) == ["Settings...", "Refresh forecast", "Quit"]
+def test_the_menu_has_settings_set_up_refresh_and_quit(s):
+    assert actions(s.shell.menu) == ["Settings...", "Set up...", "Refresh forecast", "Quit"]
     assert s.shell.menu_button.popupMode() == QToolButton.ToolButtonPopupMode.InstantPopup
     assert s.shell.menu_button.menu() is s.shell.menu
 

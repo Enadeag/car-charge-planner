@@ -104,7 +104,7 @@ msgid "Set-up needed"
 msgstr ""
 
 #: car_charge_planner/controller.py
-msgid "Click here, then press Set up, to describe your solar panels and car. It takes a few minutes."
+msgid "Click here to describe your solar panels and car. It takes a few minutes."
 msgstr ""
 
 #: car_charge_planner/controller.py
@@ -1849,6 +1849,10 @@ msgstr ""
 
 #: car_charge_planner/shells/tray.py car_charge_planner/shells/window.py
 msgid "Settings..."
+msgstr ""
+
+#: car_charge_planner/shells/tray.py car_charge_planner/shells/window.py
+msgid "Set up..."
 msgstr ""
 
 #: car_charge_planner/shells/tray.py car_charge_planner/shells/window.py

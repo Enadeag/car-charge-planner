@@ -9,6 +9,7 @@ listens. Both shells therefore behave the same, and the logic is tested without 
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -137,7 +138,14 @@ class Controller(QObject):
         if not background:
             self.open_setup()
         elif mark_seen(SETUP_OFFER):  # once: a notification at every login would nag
-            self.notifier.send(_("Set-up needed"), _("Click here, then press Set up, to describe your solar panels and car. It takes a few minutes."))
+            self.notifier.send(_("Set-up needed"), _("Click here to describe your solar panels and car. It takes a few minutes."))
+
+    def notification_clicked(self, show_plan: Callable[[], None]) -> None:
+        """A click on one of our notifications: the wizard while not set up (that is what the offer asked for), else the plan."""
+        if self.cfg.is_set_up:
+            show_plan()
+        else:
+            self.open_setup()
 
     def apply_config(self, cfg: Config) -> None:
         """Switch to a new config without a restart (settings spec 3.3)."""

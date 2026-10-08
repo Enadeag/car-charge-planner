@@ -57,11 +57,32 @@ def test_a_start_that_is_already_set_up_does_not_open_it(tmp_path, monkeypatch, 
     assert controller.setup_wizard is None and notifier.sent == []
 
 
+def test_clicking_the_offer_opens_the_wizard_and_a_later_click_shows_the_plan(tmp_path, monkeypatch, qapp):
+    controller, _ = make(first_run_config(), tmp_path, monkeypatch)
+    shown = []
+    controller.notification_clicked(lambda: shown.append(1))
+    assert controller.setup_wizard is not None and controller.setup_wizard.isVisible() and shown == []
+    controller.setup_wizard.close()
+    done, _ = make(example_config(), tmp_path, monkeypatch)
+    done.notification_clicked(lambda: shown.append(1))
+    assert shown == [1] and done.setup_wizard is None
+
+
+@pytest.mark.parametrize("shell_class", [TrayShell, WindowShell])
+def test_every_shell_has_a_set_up_entry_in_its_menu_even_when_set_up(shell_class, tmp_path, monkeypatch, qapp):
+    controller, _ = make(example_config(), tmp_path, monkeypatch)
+    shell = shell_class(controller)
+    entry = next(a for a in shell.menu.actions() if a.text() == "Set up...")
+    entry.trigger()
+    assert controller.setup_wizard is not None and controller.setup_wizard.isVisible()
+    controller.setup_wizard.close()
+
+
 def test_a_hidden_start_at_login_never_opens_it_and_offers_it_in_a_notification_once(tmp_path, monkeypatch, qapp):
     controller, notifier = make(first_run_config(), tmp_path, monkeypatch)
     controller.offer_setup(background=True)
     assert controller.setup_wizard is None
-    assert len(notifier.sent) == 1 and notifier.sent[0][0] == "Set-up needed" and "press Set up" in notifier.sent[0][1]
+    assert len(notifier.sent) == 1 and notifier.sent[0][0] == "Set-up needed" and "Click here" in notifier.sent[0][1]
     again, second = make(first_run_config(), tmp_path, monkeypatch)  # the next login: the same state folder
     again.offer_setup(background=True)
     assert again.setup_wizard is None and second.sent == []  # said once, not at every login

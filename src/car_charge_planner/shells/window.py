@@ -62,6 +62,8 @@ class WindowShell:
         self.menu = QMenu(self.window)
         self.settings_action = self.menu.addAction(_("Settings..."))
         self.settings_action.triggered.connect(lambda: controller.open_settings())
+        self.setup_action = self.menu.addAction(_("Set up..."))
+        self.setup_action.triggered.connect(lambda: controller.open_setup())
         self.refresh_action = self.menu.addAction(_("Refresh forecast"))
         self.refresh_action.triggered.connect(lambda: controller.refresh(force=True))
         self.menu.addSeparator()
