@@ -1,12 +1,9 @@
 name: CI
 
-# Switched off until the project is published: it only runs when started by hand ("Run workflow").
-# At launch, replace the trigger below with:
-#   on:
-#     push:
-#       branches: [main]
-#     pull_request:
 on:
+  push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
