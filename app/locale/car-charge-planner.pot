@@ -82,7 +82,7 @@ msgstr ""
 msgid "No absences planned"
 msgstr ""
 
-#: app/away_input.py app/setup/recap.py app/view_model.py
+#: app/away_input.py app/setup/recap.py app/setup/solar.py app/view_model.py
 msgctxt "list separator"
 msgid ", "
 msgstr ""
@@ -453,7 +453,7 @@ msgstr ""
 msgid "Angle of the panels from horizontal: 0 is flat, 90 is vertical."
 msgstr ""
 
-#: app/settings/fields.py app/setup/recap.py
+#: app/settings/fields.py app/setup/recap.py app/setup/solar.py
 msgid "Tilt"
 msgstr ""
 
@@ -982,44 +982,99 @@ msgstr ""
 msgid "Chosen: {place} ({zone})"
 msgstr ""
 
-#: app/setup/recap.py
-msgctxt "compass direction"
-msgid "South"
+#: app/setup/panels.py
+msgctxt "compass, short"
+msgid "NW"
 msgstr ""
 
-#: app/setup/recap.py
-msgctxt "compass direction"
-msgid "South-east"
-msgstr ""
-
-#: app/setup/recap.py
-msgctxt "compass direction"
-msgid "East"
-msgstr ""
-
-#: app/setup/recap.py
-msgctxt "compass direction"
-msgid "North-east"
-msgstr ""
-
-#: app/setup/recap.py
-msgctxt "compass direction"
-msgid "North"
-msgstr ""
-
-#: app/setup/recap.py
+#: app/setup/panels.py
 msgctxt "compass direction"
 msgid "North-west"
 msgstr ""
 
-#: app/setup/recap.py
+#: app/setup/panels.py
+msgctxt "compass, short"
+msgid "N"
+msgstr ""
+
+#: app/setup/panels.py
+msgctxt "compass direction"
+msgid "North"
+msgstr ""
+
+#: app/setup/panels.py
+msgctxt "compass, short"
+msgid "NE"
+msgstr ""
+
+#: app/setup/panels.py
+msgctxt "compass direction"
+msgid "North-east"
+msgstr ""
+
+#: app/setup/panels.py
+msgctxt "compass, short"
+msgid "W"
+msgstr ""
+
+#: app/setup/panels.py
 msgctxt "compass direction"
 msgid "West"
 msgstr ""
 
-#: app/setup/recap.py
+#: app/setup/panels.py
+msgctxt "compass, short"
+msgid "E"
+msgstr ""
+
+#: app/setup/panels.py
+msgctxt "compass direction"
+msgid "East"
+msgstr ""
+
+#: app/setup/panels.py
+msgctxt "compass, short"
+msgid "SW"
+msgstr ""
+
+#: app/setup/panels.py
 msgctxt "compass direction"
 msgid "South-west"
+msgstr ""
+
+#: app/setup/panels.py
+msgctxt "compass, short"
+msgid "S"
+msgstr ""
+
+#: app/setup/panels.py
+msgctxt "compass direction"
+msgid "South"
+msgstr ""
+
+#: app/setup/panels.py
+msgctxt "compass, short"
+msgid "SE"
+msgstr ""
+
+#: app/setup/panels.py
+msgctxt "compass direction"
+msgid "South-east"
+msgstr ""
+
+#: app/setup/panels.py
+msgctxt "roof tilt"
+msgid "Flat roof"
+msgstr ""
+
+#: app/setup/panels.py
+msgctxt "roof tilt"
+msgid "Pitched roof"
+msgstr ""
+
+#: app/setup/panels.py
+msgctxt "roof tilt"
+msgid "Steep roof"
 msgstr ""
 
 #: app/setup/recap.py
@@ -1057,11 +1112,11 @@ msgstr ""
 msgid "Solar panels"
 msgstr ""
 
-#: app/setup/recap.py
+#: app/setup/recap.py app/setup/solar.py
 msgid "Size"
 msgstr ""
 
-#: app/setup/recap.py
+#: app/setup/recap.py app/setup/solar.py
 #, python-brace-format
 msgid "{kwp} kWp"
 msgstr ""
@@ -1113,6 +1168,75 @@ msgstr ""
 
 #: app/setup/recap.py
 msgid "Away times"
+msgstr ""
+
+#: app/setup/solar.py
+msgid "Your solar panels"
+msgstr ""
+
+#: app/setup/solar.py
+msgid "I don't know these"
+msgstr ""
+
+#: app/setup/solar.py
+msgid "Use typical values for the size, direction and tilt. You can change them later in Settings."
+msgstr ""
+
+#: app/setup/solar.py
+msgid "Total size"
+msgstr ""
+
+#: app/setup/solar.py
+msgid "Or the number of panels"
+msgstr ""
+
+#: app/setup/solar.py
+msgid "W each"
+msgstr ""
+
+#: app/setup/solar.py
+msgid "The total is on the installer's datasheet or invoice, and in the inverter's app. Otherwise count the panels on the roof and read the watts on the label of one."
+msgstr ""
+
+#: app/setup/solar.py
+msgid "Direction the panels face"
+msgstr ""
+
+#: app/setup/solar.py
+msgid "The direction the panels face, not the way the roof runs. A satellite view in a map app shows it. 0 is south, -90 east, 90 west, 180 north."
+msgstr ""
+
+#: app/setup/solar.py
+#, python-brace-format
+msgid "{name} ({degrees}°)"
+msgstr ""
+
+#: app/setup/solar.py
+msgid "The angle of the panels from flat. Most pitched roofs are 30 to 40 degrees; the installer or the roof's papers know."
+msgstr ""
+
+#: app/setup/solar.py
+msgid "Panels on both an east and a west roof? Enter the total size, face them south and choose a flat tilt (about 10 degrees). It is only an approximation, but it gives a similar curve through the day."
+msgstr ""
+
+#: app/setup/solar.py
+#, python-brace-format
+msgid "= {kwp} kWp"
+msgstr ""
+
+#: app/setup/solar.py
+#, python-brace-format
+msgid "facing {direction}"
+msgstr ""
+
+#: app/setup/solar.py
+#, python-brace-format
+msgid "tilt {tilt}°"
+msgstr ""
+
+#: app/setup/solar.py
+#, python-brace-format
+msgid "Typical values in use: {values}. Enter your own, or leave them."
 msgstr ""
 
 #: app/setup/welcome.py

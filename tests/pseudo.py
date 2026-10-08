@@ -70,7 +70,7 @@ def install(tmp_path: Path) -> None:
 _STYLES = re.compile(r"<style>.*?</style>", re.S)  # a rule that colours a link is not text
 _TAGS = re.compile(r"<[^>]+>")
 # what is not a word to translate: numbers, times, units and symbols, which the app shows as they are
-_NOT_TEXT = re.compile(r"^(?:[0-9.,:%/–\-·→•×+()\s]|kWp|kWh|kW|km|[AV]|min|h)*$")
+_NOT_TEXT = re.compile(r"^(?:[0-9.,:%/–\-·→•×°+()\s]|kWp|kWh|kW|km|[AV]|min|h)*$")
 
 
 def plain(text: str) -> str:

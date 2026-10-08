@@ -9,6 +9,8 @@ from typing import Mapping
 from app import units
 from planner.model import TYPICAL_KEYS, Config, Setup, require_location, validate
 
+from .typical import with_typical
+
 
 @dataclass
 class SetupState:
@@ -24,7 +26,7 @@ class SetupState:
         draft = cfg
         if not cfg.is_set_up:
             if not cfg.setup.typical:
-                draft = replace(draft, setup=Setup(TYPICAL_KEYS))
+                draft = replace(with_typical(draft, *TYPICAL_KEYS), setup=Setup(TYPICAL_KEYS))  # all typical, and typical values
             system = units.suggest_system(os.environ if environ is None else environ, units.system_qt_locale_name() if qt_locale_name is None else qt_locale_name)
             draft = replace(draft, interface=replace(draft.interface, units=system))
         return cls(config=draft, initial=draft)

@@ -5,29 +5,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app import units
-from app.i18n import NC_, _, number, pgettext, translate
+from app.i18n import _, number, pgettext, translate
 from app.names import weekday_short
 from planner.model import Config
 
+from .panels import COMPASS
 from .state import SetupState
-
-_COMPASS = (
-    (0, NC_("compass direction", "South")),
-    (-45, NC_("compass direction", "South-east")),
-    (-90, NC_("compass direction", "East")),
-    (-135, NC_("compass direction", "North-east")),
-    (180, NC_("compass direction", "North")),
-    (135, NC_("compass direction", "North-west")),
-    (90, NC_("compass direction", "West")),
-    (45, NC_("compass direction", "South-west")),
-)
-
 
 def compass_label(azimuth: float) -> str:
     """"South-east (-45°)" for the eight compass directions, plain degrees for anything else."""
     degrees = round(azimuth)
     angle = 180 if degrees == -180 else degrees  # north is 180 whichever way round
-    names = dict(_COMPASS)
+    names = {a: long_name for _key, _short, long_name, a in COMPASS}
     if azimuth == degrees and angle in names:
         return _("{direction} ({degrees}\u00b0)").format(direction=translate(names[angle]), degrees=angle)
     return _("{degrees}\u00b0").format(degrees=number(azimuth, 0 if azimuth == degrees else 1))
