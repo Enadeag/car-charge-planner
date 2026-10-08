@@ -157,7 +157,7 @@ def test_pages_outside_the_sequence_are_reached_by_navigating_and_left_with_back
 def test_welcome_says_what_the_app_does_and_what_leaves_the_computer(rig):
     shown = " ".join(texts(rig.wizard.pages["welcome"]))
     assert "tells you when to charge your electric car" in shown
-    assert "Open-Meteo is sent: Your location (latitude and longitude) and the tilt and direction of your panels." in shown
+    assert "Open-Meteo is sent: Your location (latitude and longitude), your time zone and the tilt and direction of your panels." in shown
     assert "The place you type in the next step is sent to Open-Meteo to find it." in shown
     assert "no account and no tracking" in shown
 

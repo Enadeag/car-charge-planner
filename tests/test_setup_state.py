@@ -101,7 +101,7 @@ def test_the_recap_shows_what_was_answered_in_the_chosen_units():
     shown = lines(state)
     assert shown["panels"]["Size"].value == "4.80 kWp" and shown["panels"]["Direction"].value == "South-east (-45°)"
     assert shown["car"]["Driving per day"].value == "86 km" and shown["car"]["Consumption"].value == "18.0 kWh/100 km"
-    assert shown["charger"]["Phases"].value == "1" and shown["charger"]["Current"].value == "6 to 32 A"
+    assert shown["charger"]["Phases"].value == "1" and shown["charger"]["Highest current"].value == "32 A" and shown["charger"]["Lowest current"].value == "6 A"
     assert shown["house"]["Own use"].value == "0.60 kW" and shown["place"]["Time zone"].value == "Europe/Amsterdam"
     state.config = replace(state.config, interface=replace(state.config.interface, units="imperial"))
     shown = lines(state)
@@ -113,7 +113,7 @@ def test_typical_values_are_marked_as_such_and_the_owners_own_are_not():
     shown = lines(state)
     assert shown["panels"]["Size"].typical and not shown["panels"]["Tilt"].typical
     assert shown["car"]["Driving per day"].typical and not shown["car"]["Usable battery"].typical
-    assert shown["charger"]["Current"].typical  # either of its two values being typical is enough
+    assert shown["charger"]["Highest current"].typical and not shown["charger"]["Lowest current"].typical  # each on its own line
     assert not any(line.typical for line in lines(SetupState.starting_from(example_config(), NL))["panels"].values())
 
 

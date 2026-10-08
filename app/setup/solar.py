@@ -20,7 +20,7 @@ from app import colours
 from app.i18n import _, number, pgettext, translate
 from planner.model import Panels
 
-from .pages import Page
+from .pages import CHOICE_BUTTON_STYLE, Page
 from .panels import COMPASS, TILT_PRESETS, azimuth_for, compass_key_for, panels_to_kwp, tilt_preset_for
 from .recap import compass_label
 from .typical import with_typical
@@ -114,6 +114,7 @@ class SolarPage(Page):
             button.setAutoDefault(False)
             button.setToolTip(translate(long_name))
             button.setMinimumWidth(46)  # a longer abbreviation in another language widens it
+            button.setStyleSheet(CHOICE_BUTTON_STYLE)
             group.addButton(button)
             compass.addWidget(button, *positions[key])
             self.compass_buttons[key] = button
@@ -141,6 +142,7 @@ class SolarPage(Page):
             button.setCheckable(True)
             button.setAutoDefault(False)
             tilt_group.addButton(button)
+            button.setStyleSheet(CHOICE_BUTTON_STYLE)
             row.addWidget(button)
             self.tilt_buttons[key] = button
             button.clicked.connect(lambda _checked=False, d=degrees: self._tilt_preset(d))

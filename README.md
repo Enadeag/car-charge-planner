@@ -74,6 +74,19 @@ The first start creates the config file and opens the **set-up wizard**. Until y
 
 The wizard takes a few minutes and has six steps: a welcome (with what leaves your computer, and your units: km or miles), the **place** of your panels (searched by name, or typed as coordinates), the panels' **size, direction and tilt**, your **car and charger**, then **What next?** (two optional extras: the house's electricity use, and when the car is away, which matters if you drive to work) and a final review. Every question says where to find the answer, and **"I don't know"** uses a typical value. Typical values are marked as such in Settings and on the plan page until you give your own.
 
+<p>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/setup-welcome-dark.png"><img alt="Welcome: what the app does, what leaves your computer, and your units." src="docs/images/setup-welcome-light.png" width="300"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/setup-location-dark.png"><img alt="Location: search by name, or type the coordinates." src="docs/images/setup-location-light.png" width="300"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/setup-solar-dark.png"><img alt="Solar panels: size, direction and tilt, with where to find each." src="docs/images/setup-solar-light.png" width="300"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/setup-car-dark.png"><img alt="Car and charger: battery, consumption, distance in a week, charge levels, phases and current." src="docs/images/setup-car-light.png" width="300"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/setup-next-dark.png"><img alt="What next?: two optional extras, ticked when done." src="docs/images/setup-next-light.png" width="300"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/setup-house-dark.png"><img alt="House electricity: from the year's bill." src="docs/images/setup-house-light.png" width="300"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/setup-away-dark.png"><img alt="When the car is away: weekly times, if you drive to work." src="docs/images/setup-away-light.png" width="300"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/setup-finish-dark.png"><img alt="Finish: a recap with Change links, typical values marked, and a test of the forecast." src="docs/images/setup-finish-light.png" width="300"></picture>
+</p>
+
+The pictures are made by `docs/screenshots.py` (offscreen, neutral example answers); a real desktop theme looks a little different.
+
 - **Nothing is saved until Finish.** Closing the wizard earlier asks "Leave set-up?" and discards what you entered; the app stays not set up, and the **Set up** button is still there.
 - Finish writes the settings, fetches the first forecast (the last page does a test fetch and says what it got, but a failure never stops you finishing) and shows the plan.
 - When the app is started hidden at login (the autostart entry), the wizard does **not** open by itself; one notification offers it, once.
@@ -235,6 +248,8 @@ The language follows your system (`LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`, t
 | `storage/` | Reading and writing `state.json`. |
 | `app/` | `controller.py` (what the app does: refresh, plan, announce, the owner's edits) and `shells/` (how it shows itself: the tray icon with its popup). The popup (`popup.py`) is a window around the reusable `planview.py`. Also notifications over D-Bus (`notifier.py`), the launcher and autostart entries, theme-aware colours. |
 | `app/settings/` | The Settings window: field definitions, tabs, window. |
+| `app/setup/` | The set-up wizard: one module per page (welcome, location, solar, car, hub, house, away, finish), the answers (`state.py`), the typical values (`typical.py`) and the helpers each page uses. |
+| `docs/` | `providers.md` (writing a forecast provider), `screenshots.py` and `images/` (the set-up pictures). |
 | `tests/` | Test suite and the recorded forecast. |
 | `CONTEXT.md` | Glossary of the domain terms used throughout (feed-in, surplus, charge window, ...). |
 | `.scratch/car-charge-planner/` | The planner's spec, tickets and review. |
@@ -259,6 +274,11 @@ leaves it, and everything it keeps.
 
 ### What is sent, and to whom
 
+The first page of the set-up wizard says it in these words (for the default provider; the name and the list follow the provider you pick):
+
+> Nothing leaves your computer except what is needed for the forecast. Open-Meteo is sent: Your location (latitude and longitude), your time zone and the tilt and direction of your panels. With an API key, the key too. There is no account and no tracking. The place you type in the next step is sent to Open-Meteo to find it.
+
+
 Only the **forecast provider** you chose (and the fallback, if you set one) is contacted, and only to ask for a
 forecast. Whatever you ask it, it also sees your internet address, as any website does. What each one is sent,
 in its own words (these texts come from the providers' descriptions in the app, and a test keeps this section in
@@ -266,7 +286,7 @@ step with them), and the terms that go with using it (read on 2026-10-07; the pr
 
 | Provider | What is sent | Free plan | Credit shown in the app | Terms |
 | --- | --- | --- | --- | --- |
-| Open-Meteo | Your location (latitude and longitude) and the tilt and direction of your panels. With an API key, the key too. | Non-commercial use only, under 10,000 requests a day. | Weather data: Open-Meteo.com (CC BY 4.0) | [open-meteo.com/en/terms](https://open-meteo.com/en/terms) |
+| Open-Meteo | Your location (latitude and longitude), your time zone and the tilt and direction of your panels. With an API key, the key too. | Non-commercial use only, under 10,000 requests a day. | Weather data: Open-Meteo.com (CC BY 4.0) | [open-meteo.com/en/terms](https://open-meteo.com/en/terms) |
 | Forecast.Solar | Your location (latitude and longitude), the tilt and direction of your panels and their size in kWp. With an API key, the key too. | The public plan needs no key: today and tomorrow, one plane, 12 requests an hour for everything behind the same internet address. | Solar forecast: Forecast.Solar | [doc.forecast.solar/account_models](https://doc.forecast.solar/account_models) |
 
 - **Commercial use.** The free plans are for personal use. If you use the app for a business, take the provider's

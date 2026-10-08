@@ -73,6 +73,14 @@ def test_there_is_a_typical_value_for_every_setting_that_can_be_one_and_they_are
     validate(with_values(Config(latitude=1.0, longitude=1.0), TYPICAL_VALUES))  # all together make a config the planner accepts
 
 
+def test_the_built_in_defaults_are_the_typical_values_so_settings_reset_and_the_wizard_agree():
+    """One source of truth: what Reset tab gives, what a new install starts with and "I don't know" uses."""
+    from app.settings.fields import get_value
+
+    defaults = Config()
+    assert {key: get_value(defaults, key) for key in TYPICAL_VALUES} == TYPICAL_VALUES
+
+
 def test_the_typical_panels_are_five_kwp_facing_south_at_35_degrees():
     config = with_typical(Config(), "panels.kwp", "panels.azimuth_deg", "panels.tilt_deg")
     assert (config.panels.kwp, config.panels.azimuth_deg, config.panels.tilt_deg) == (5.0, 0, 35)

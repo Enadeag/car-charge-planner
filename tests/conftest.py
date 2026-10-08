@@ -7,7 +7,7 @@ import pytest
 
 from forecast.providers.open_meteo import power_kw
 from planner.demo import bell_day
-from planner.model import AwayRule, Config, ForecastStep
+from planner.model import AwayRule, Car, Charger, Config, ForecastStep, House, Panels
 
 TZ = ZoneInfo("Europe/Amsterdam")  # the tests' time zone: it has the DST dates the tests use (2026-03-29, 2026-10-25)
 
@@ -16,9 +16,14 @@ def example_config() -> Config:
     """The profile the tests plan for. Explicit on purpose: the built-in defaults are neutral (no location,
     the system's time zone, no away rule) and no test may depend on them being anything else.
 
-    A neutral city centre, a typical 4.8 kWp roof facing south-east, and a weekly Thursday 06:00-19:00 away rule.
+    A neutral city centre, a 4.8 kWp roof facing south-east, a 70 kWh car, a 32 A charger and a weekly Thursday
+    06:00-19:00 away rule.
     """
     return Config(
+        panels=Panels(kwp=4.8, tilt_deg=35, azimuth_deg=-45, system_losses=0.14),
+        house=House(baseload_kw=0.6),
+        car=Car(usable_battery_kwh=70, consumption_kwh_per_100km=18, km_per_day=600 / 7, minimum_pct=30, target_pct=80),
+        charger=Charger(phases=1, min_amps=6, max_amps=32, volts=230, efficiency=0.90),
         latitude=52.37,
         longitude=4.90,
         timezone="Europe/Amsterdam",

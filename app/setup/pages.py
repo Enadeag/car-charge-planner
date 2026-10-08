@@ -39,6 +39,13 @@ class Page(QWidget):
         return None
 
 
+# A button of a row of choices (a compass direction, a roof tilt): the one that is down must be plain to see in any theme.
+CHOICE_BUTTON_STYLE = (
+    "QPushButton { border: 1px solid palette(mid); border-radius: 3px; padding: 4px 8px; }"
+    "QPushButton:checked { background-color: palette(highlight); color: palette(highlighted-text); border-color: palette(highlight); }"
+)
+
+
 def fold(text: str) -> QToolButton:
     """A small button that opens and closes a part of a page: an arrow and a name."""
     button = QToolButton()

@@ -155,7 +155,7 @@ def test_reset_tab_restores_defaults_without_saving(tmp_path, qapp):
     h = Harness(tmp_path, custom)
     assert h.box("panels.kwp").value() == 9.0
     h.window.reset_button.click()
-    assert h.box("panels.kwp").value() == 4.8 and h.box("panels.tilt_deg").value() == 35
+    assert h.box("panels.kwp").value() == Config().panels.kwp and h.box("panels.tilt_deg").value() == 35
     assert h.box("latitude").value() == 0.0 and h.box("longitude").value() == 0.0  # the location is not set
     assert not h.file.exists() and h.saved == []  # nothing saved yet
     assert h.window.is_dirty()  # it differs from what is stored
@@ -163,7 +163,7 @@ def test_reset_tab_restores_defaults_without_saving(tmp_path, qapp):
     h.box("longitude").setValue(4.9)
     h.window.save_button.click()
     solar_keys = ("panels.kwp", "panels.tilt_deg", "panels.azimuth_deg", "panels.system_losses")  # typical again after a reset
-    expected = replace(Config(), latitude=52.37, longitude=4.9, away_rules=base.away_rules, setup=Setup(solar_keys))  # the other tabs were untouched
+    expected = replace(base, panels=Config().panels, timezone=Config().timezone, latitude=52.37, longitude=4.9, setup=Setup(solar_keys))  # the other tabs were untouched
     assert load_config(h.file) == expected
 
 

@@ -51,3 +51,22 @@ def test_the_third_party_licences_are_the_installed_ones():
 def test_the_attribution_section_credits_both_providers():
     tail = README[README.index("## Attribution"):]
     assert "Open-Meteo.com" in tail and "Forecast.Solar" in tail
+
+
+def test_the_readme_quotes_what_the_first_page_of_the_wizard_says():
+    """The privacy text of the Welcome page and the README say the same words (for the default provider)."""
+    from app.setup.welcome import privacy_text
+
+    quoted = " ".join(section().split())
+    assert " ".join(privacy_text(registry.get("open-meteo")).split()) in quoted
+
+
+def test_every_set_up_picture_the_readme_shows_exists_in_both_themes():
+    from app.setup.wizard import PAGES
+
+    root = Path(__file__).resolve().parent.parent
+    pictures = re.findall(r"docs/images/(setup-[a-z]+-(?:light|dark)\.png)", README)
+    assert pictures and len(pictures) == len(set(pictures))  # each file once: a picture has a light and a dark source
+    wanted = {f"setup-{page.id}-{theme}.png" for page in PAGES for theme in ("light", "dark")}
+    assert set(pictures) == wanted, "the README shows a picture for every page of the wizard, in both themes"
+    assert all((root / "docs" / "images" / name).is_file() for name in wanted)

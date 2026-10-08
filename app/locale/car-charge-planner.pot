@@ -962,11 +962,11 @@ msgstr ""
 msgid "The charger's label or manual says, and so does the fuse box (three fuses in a row, or a three-pole one). Some chargers can be switched to single-phase charging, which suits solar power better: a three-phase charger needs about three times the surplus before it can start."
 msgstr ""
 
-#: app/setup/car.py
+#: app/setup/car.py app/setup/recap.py
 msgid "Highest current"
 msgstr ""
 
-#: app/setup/car.py
+#: app/setup/car.py app/setup/recap.py
 msgid "Lowest current"
 msgstr ""
 
@@ -1386,12 +1386,8 @@ msgid "keep above {minimum}%, charge up to {target}%"
 msgstr ""
 
 #: app/setup/recap.py
-msgid "Current"
-msgstr ""
-
-#: app/setup/recap.py
 #, python-brace-format
-msgid "{low} to {high} A"
+msgid "{amps} A"
 msgstr ""
 
 #: app/setup/recap.py
@@ -1837,7 +1833,7 @@ msgid "A free weather service run by Open-Meteo.com. It forecasts the sunlight o
 msgstr ""
 
 #: forecast/providers/open_meteo.py
-msgid "Your location (latitude and longitude) and the tilt and direction of your panels. With an API key, the key too."
+msgid "Your location (latitude and longitude), your time zone and the tilt and direction of your panels. With an API key, the key too."
 msgstr ""
 
 #: forecast/providers/open_meteo.py

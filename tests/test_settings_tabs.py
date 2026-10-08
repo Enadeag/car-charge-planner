@@ -122,17 +122,17 @@ def test_both_cross_field_problems_are_listed_together(h):
 def test_reset_tab_works_on_house_car_and_on_charger(tmp_path, qapp):
     custom = replace(
         example_config(),
-        car=replace(Config().car, usable_battery_kwh=60, target_pct=90),
-        charger=replace(Config().charger, volts=240, max_amps=16),
+        car=replace(Config().car, usable_battery_kwh=75, target_pct=90),
+        charger=replace(Config().charger, volts=240, max_amps=25),
     )
     h = Harness(tmp_path, custom)
     h.show("House and car")
     h.window.reset_button.click()
-    assert h.box("House and car", "car.usable_battery_kwh").value() == 70
+    assert h.box("House and car", "car.usable_battery_kwh").value() == Config().car.usable_battery_kwh
     assert h.box("Charger", "charger.volts").value() == 240  # other tab untouched
     h.show("Charger")
     h.window.reset_button.click()
-    assert h.box("Charger", "charger.volts").value() == 230 and h.box("Charger", "charger.max_amps").value() == 32
+    assert h.box("Charger", "charger.volts").value() == 230 and h.box("Charger", "charger.max_amps").value() == Config().charger.max_amps
     assert not h.file.exists()  # reset alone saves nothing
 
 

@@ -56,22 +56,22 @@ class AwayRule:
 
 @dataclass(frozen=True)
 class Panels:
-    kwp: float = 4.8
+    kwp: float = 5.0
     tilt_deg: float = 35
-    azimuth_deg: float = -45
+    azimuth_deg: float = 0  # south
     system_losses: float = 0.14
 
 
 @dataclass(frozen=True)
 class House:
-    baseload_kw: float = 0.6
+    baseload_kw: float = 0.5
 
 
 @dataclass(frozen=True)
 class Car:
-    usable_battery_kwh: float = 70
+    usable_battery_kwh: float = 60
     consumption_kwh_per_100km: float = 18
-    km_per_day: float = 600 / 7
+    km_per_day: float = 40
     minimum_pct: float = 30
     target_pct: float = 80
 
@@ -80,7 +80,7 @@ class Car:
 class Charger:
     phases: int = 1  # 1 or 3: each phase carries the current, so three phases deliver three times the power
     min_amps: int = 6
-    max_amps: int = 32
+    max_amps: int = 16
     volts: float = 230
     efficiency: float = 0.90
 

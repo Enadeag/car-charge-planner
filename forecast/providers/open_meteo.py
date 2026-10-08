@@ -48,7 +48,7 @@ class OpenMeteo:
     terms_url = "https://open-meteo.com/en/terms"
     attribution = "Weather data: Open-Meteo.com (CC BY 4.0)"
     sends = N_(
-        "Your location (latitude and longitude) and the tilt and direction of your panels. "
+        "Your location (latitude and longitude), your time zone and the tilt and direction of your panels. "
         "With an API key, the key too."
     )
     min_refresh = timedelta(minutes=60)

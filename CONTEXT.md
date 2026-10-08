@@ -46,6 +46,10 @@ _Avoid_: Unconfigured, first run (first run is the moment, not the state)
 A setting the user did not give ("I don't know") and the app filled in with a common value. It is flagged as an estimate until the user saves a value of their own.
 _Avoid_: Default, assumed value, guess
 
+**Place search**:
+Finding a place's coordinates and time zone from a name or postcode the owner types. A forecast provider may offer one; the typed text goes to the primary provider, and without one the owner types coordinates.
+_Avoid_: Geocoding, location lookup, address search
+
 **Charger phases**:
 Whether the charger charges on one phase or three. Each amp delivers three times the power on three phases, and so does the minimum current.
 _Avoid_: Single/three-phase connection (the home connection can have three phases while the charger uses one)

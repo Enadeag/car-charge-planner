@@ -83,7 +83,8 @@ def build_recap(state: SetupState) -> list[RecapGroup]:
         )),
         RecapGroup("charger", _("Charger"), "car", (
             _line(_("Phases"), number(ch.phases), cfg, "charger.phases"),
-            _line(_("Current"), _("{low} to {high} A").format(low=number(ch.min_amps), high=number(ch.max_amps)), cfg, "charger.min_amps", "charger.max_amps"),
+            _line(_("Highest current"), _("{amps} A").format(amps=number(ch.max_amps)), cfg, "charger.max_amps"),
+            _line(_("Lowest current"), _("{amps} A").format(amps=number(ch.min_amps)), cfg, "charger.min_amps"),
         )),
         RecapGroup("house", _("House"), "house", (
             _line(_("Own use"), _("{kw} kW").format(kw=number(cfg.house.baseload_kw, 2)), cfg, "house.baseload_kw"),
