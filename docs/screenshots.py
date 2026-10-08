@@ -1,4 +1,5 @@
-"""Regenerate the set-up wizard screenshots in docs/images (light and dark), offscreen and without a network.
+"""Regenerate the screenshots in docs/images (light and dark), offscreen and without a network: the set-up wizard
+(`setup-*`) and the app itself (`app-*`: the plan, the update page, the Settings window and the window shell).
 
     .venv/bin/python docs/screenshots.py
 
@@ -8,9 +9,13 @@ The look is Qt's default style with a light and a dark palette: a real desktop t
 
 from __future__ import annotations
 
+import math
 import os
 import sys
+import tempfile
+from datetime import date, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 ROOT = Path(__file__).resolve().parent.parent
@@ -101,6 +106,102 @@ def walk(app: QApplication, theme: str) -> None:
     wizard.close()
 
 
+TZ = ZoneInfo("Europe/Amsterdam")
+DAY = date(2026, 7, 3)
+NOW = datetime(2026, 7, 3, 7, 30, tzinfo=TZ)  # a summer morning, the plan is for later today
+
+
+def example_config() -> Config:
+    """The same neutral example as the wizard's: central Amsterdam, a 6.4 kWp roof facing south-west."""
+    from car_charge_planner.planner.model import Car, Charger, House, Panels
+
+    return Config(
+        panels=Panels(kwp=6.4, tilt_deg=35, azimuth_deg=45, system_losses=0.14),
+        house=House(baseload_kw=0.4),
+        car=Car(usable_battery_kwh=64, consumption_kwh_per_100km=17.5, km_per_day=300 / 7, minimum_pct=30, target_pct=80),
+        charger=Charger(phases=1, min_amps=6, max_amps=20, volts=230, efficiency=0.9),
+        latitude=52.37,
+        longitude=4.90,
+        timezone="Europe/Amsterdam",
+    )
+
+
+def example_forecast(cfg: Config) -> list:
+    """Four bell-shaped days: a bright one, a mixed one, an overcast one and a bright one."""
+    from car_charge_planner.forecast.provider import ForecastStep
+
+    steps = []
+    for index, strength in enumerate((0.85, 0.55, 0.2, 0.8)):
+        day = DAY + timedelta(days=index)
+        for hour in range(5, 21):
+            start = datetime(day.year, day.month, day.day, hour, tzinfo=TZ)
+            sun = max(0.0, math.sin(math.pi * (hour + 0.5 - 5) / 16)) ** 1.5
+            steps.append(ForecastStep(start, start + timedelta(hours=1), cfg.panels.kwp * (1 - cfg.panels.system_losses) * strength * sun))
+    return steps
+
+
+def app_shots(app: QApplication, theme: str) -> None:
+    """The plan, the update page, the Settings window and the window shell, for an example home at a fixed time."""
+    import car_charge_planner.controller as controller_module
+    from car_charge_planner.controller import Controller
+    from car_charge_planner.forecast.service import ForecastResult, ForecastService
+    from car_charge_planner.shells.tray import TrayShell
+    from car_charge_planner.shells.window import WindowShell
+    from car_charge_planner.storage.state import set_battery
+
+    class Frozen:
+        @staticmethod
+        def now(tz=None):
+            return NOW
+
+    class Silent:
+        def send(self, *args, **kwargs):
+            return 0
+
+        def owns(self, _id):
+            return False
+
+    real_datetime, real_get = controller_module.datetime, ForecastService.get
+    with tempfile.TemporaryDirectory() as folder:
+        os.environ["XDG_STATE_HOME"] = folder
+        controller_module.datetime = Frozen
+        ForecastService.get = lambda *a, **k: None  # nothing is fetched
+        try:
+            set_battery(45, NOW)
+            cfg = example_config()
+            controller = Controller(cfg, Path(folder) / "config.toml", Silent())
+            controller.result = ForecastResult(example_forecast(cfg), NOW - timedelta(minutes=12), False, False, "open-meteo", "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)")
+            tray = TrayShell(controller)
+            controller.rebuild()
+            QTest.qWait(80)
+            popup = tray.popup
+            popup.show()
+            popup.view.fit_to_page()
+            QTest.qWait(80)
+            popup.grab().save(str(OUT / f"app-plan-{theme}.png"))
+            popup.view.tabs.setCurrentIndex(1)
+            popup.view.fit_to_page()
+            QTest.qWait(80)
+            popup.grab().save(str(OUT / f"app-update-{theme}.png"))
+            popup.hide()
+            controller.open_settings()
+            settings = controller.settings_window
+            settings.resize(760, 600)
+            QTest.qWait(120)
+            settings.grab().save(str(OUT / f"app-settings-{theme}.png"))
+            settings.close()
+            window = WindowShell(controller)
+            controller.rebuild()  # a shell made later has not been told the plan yet
+            window.window.resize(window.window.sizeHint())
+            window.window.show()
+            QTest.qWait(120)
+            window.window.grab().save(str(OUT / f"app-window-{theme}.png"))
+            window.window.hide()
+        finally:
+            controller_module.datetime = real_datetime
+            ForecastService.get = real_get
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     QLocale.setDefault(QLocale("en_GB"))  # decimal points in the boxes, whatever the computer that makes the pictures uses
@@ -108,7 +209,8 @@ def main() -> None:
     for theme in ("light", "dark"):
         palette(app, theme == "dark")
         walk(app, theme)
-    print(f"{len(PAGES) * 2} screenshots written to {OUT}")
+        app_shots(app, theme)
+    print(f"{len(PAGES) * 2 + 8} screenshots written to {OUT}")
 
 
 if __name__ == "__main__":

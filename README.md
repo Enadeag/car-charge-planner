@@ -1,5 +1,9 @@
 # Car charge planner
 
+[![CI](https://github.com/Enadeag/car-charge-planner/actions/workflows/ci.yml/badge.svg)](https://github.com/Enadeag/car-charge-planner/actions/workflows/ci.yml)
+[![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+![Python 3.12 | 3.13 | 3.14](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue.svg)
+
 A tray app for Linux desktops that tells you when to charge your electric car so that as much of your own solar energy as possible is used and as little as possible is fed back to the grid.
 
 It is advisory only: it recommends a **charge window** and a **charge power**, and you set the current in your charger's app yourself.
@@ -8,13 +12,36 @@ It plans from a description of your set-up: your solar panels (size, tilt, direc
 
 It suits a fixed-price energy contract, where the goal is simply to use your own solar power instead of feeding it back. It does not look at hourly energy prices.
 
+<p>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/app-plan-dark.png"><img alt="The Plan page: the next charge window, the power to set, the expected battery level, the next days." src="docs/images/app-plan-light.png" width="300"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/app-update-dark.png"><img alt="The Update page: the battery level and the days the car is away." src="docs/images/app-update-light.png" width="300"></picture>
+</p>
+<p>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/app-window-dark.png"><img alt="The same plan in a window, for desktops without a tray." src="docs/images/app-window-light.png" width="300"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/app-settings-dark.png"><img alt="The Settings window, on the Solar and location tab." src="docs/images/app-settings-light.png" width="420"></picture>
+</p>
+
+The pictures are made by `docs/screenshots.py` (offscreen, a neutral example home); a real desktop theme looks a little different.
+
+## Supported systems
+
+| System | Status |
+| --- | --- |
+| **Linux, KDE Plasma, Wayland** | Verified: this is where the app is developed and used. |
+| **Linux, GNOME 48 to 51, Wayland** | Built and tested automatically (as a window, or with the AppIndicator extension as a tray icon), awaiting reports from real desktops. |
+| Other Linux desktops (XFCE, Cinnamon, Sway, X11 sessions and so on) | Untested. A tray icon needs a desktop with a system tray; without one the app shows a window. |
+| Windows | An installer is planned: see [the multi-platform plan](docs/design/multi-platform/spec.md). |
+| macOS | Planned, as a beta once someone has checked a release on it. |
+
+Tried it on your desktop? Please tell us, whether it works or not, with the **Does it work on my desktop?** issue form.
+
 ## What it does
 
 - Fetches a solar forecast from a forecast provider ([Open-Meteo](https://open-meteo.com) by default, or [Forecast.Solar](https://forecast.solar); both free, no account) and turns it into expected surplus: panel output minus the house's own use. A second provider can be set as a fallback.
 - Recommends charge windows within the hours the car is at home, with one constant power per window (in kW and amps), aiming for almost no grid draw.
 - Tray icon: green while a window is active, blue when one is coming, grey when there is none, orange when a grid charge is needed, red when there is no forecast.
 - Click the icon for a popup with two pages. **Plan** answers "when do I charge?": the next window, the battery level you expect after it, grid-charge advice when needed, a short table of the next days, and a battery and away status line. **Update** holds the daily inputs.
-- Right-click the icon for **Settings...**, a window with all configuration, grouped over tabs.
+- Right-click the icon for **Settings...**, a window with all configuration grouped over tabs, and **Set up...**, which opens the set-up wizard again.
 - Sends a desktop notification a few minutes before each window (the lead time is a setting), once per window. Clicking the notification shows the plan. Notifications go straight to the desktop's notification service (D-Bus), so they work with or without a tray.
 - **Grid-charge advice:** if the battery would end a day below your minimum charge level, it says how much to charge from the grid and picks the time that uses the most leftover sun.
 
@@ -29,14 +56,14 @@ Where things are edited: **settings** (panel size, charger, weekly away rules an
 
 ## Current state
 
-The planner, the tray app and the Settings window work. Design notes and reviews are under `.scratch/`.
+The planner, the tray app, the Settings window and the set-up wizard work. The reasoning behind them, with the reviews, is in [docs/design](docs/design/README.md).
 
 Limits to know about:
 
 - **The plan is forecast-only.** It uses a weather forecast and the values you enter, not measured data: no smart-meter, inverter or car readings. The more accurate your panel, battery and consumption values, the better the plan. Values tagged **Assumed** or **Estimate** in Settings are the ones most worth checking.
 - **You enter the battery level by hand**, and away times by hand or as weekly rules. There is no calendar sync and no connection to the car.
 - **You set the charge current yourself**, in your charger's own app. The app only recommends it.
-- **Tested on KDE Plasma under Wayland.** GNOME support is built and tested automatically but not yet tried on a real GNOME desktop (see Running on GNOME).
+- **Tested on KDE Plasma under Wayland.** GNOME support is built and tested automatically but not yet tried on a real GNOME desktop (see Supported systems and Running on GNOME).
 
 ## Requirements
 
@@ -52,7 +79,11 @@ With [pipx](https://pipx.pypa.io), which keeps the app and its libraries apart f
 pipx install git+https://github.com/Enadeag/car-charge-planner
 ```
 
-This puts a `car-charge-planner` command on your path. To remove it again: `pipx uninstall car-charge-planner` (and `car-charge-planner uninstall-launcher` and `uninstall-autostart` first, if you used them).
+This puts a `car-charge-planner` command on your path. Then run `car-charge-planner` (see Run below); the first start opens the set-up wizard.
+
+**Update:** `pipx upgrade car-charge-planner`; if you set up autostart or the menu entry, run `car-charge-planner install-autostart` and `install-launcher` again.
+
+**Uninstall:** first `car-charge-planner uninstall-launcher` and `car-charge-planner uninstall-autostart` (only if you used them), then `pipx uninstall car-charge-planner`. Your settings and data stay where they are, listed under [Where things are stored](#where-things-are-stored); delete them if you want them gone.
 
 ### From a clone
 
@@ -163,11 +194,11 @@ car-charge-planner uninstall-launcher
 
 ## Running on GNOME
 
-**Status:** the GNOME support is built and covered by automated tests, but it has not yet been tried on a real GNOME desktop. The check list for that is in `.scratch/gnome-support/issues/10-verify-on-gnome.md`.
+**Status:** the GNOME support is built and covered by automated tests, but it has not yet been tried on a real GNOME desktop. The check list for that is in [docs/design/gnome-support/issues/10-verify-on-gnome.md](docs/design/gnome-support/issues/10-verify-on-gnome.md); reports are welcome (see Supported systems).
 
 **Target:** GNOME 48 to 51 (the current release and the three before it, as of October 2026), in a Wayland session. GNOME 50 and later have no X11 session at all.
 
-GNOME has no system tray of its own, so the app shows a window there instead of a tray icon and popup. The window has the same two pages (Plan and Update), a menu button (Settings, Refresh forecast, Quit) and the same notifications.
+GNOME has no system tray of its own, so the app shows a window there instead of a tray icon and popup. The window has the same two pages (Plan and Update), a menu button (Settings, Set up, Refresh forecast, Quit) and the same notifications.
 
 | What | Needed? | Notes |
 | --- | --- | --- |
@@ -236,6 +267,7 @@ Delete the state file to reset your entries. The other files are recreated as ne
 
 ```bash
 .venv/bin/pytest -q
+.venv/bin/ruff check .
 ```
 
 No network or display is needed: the forecast client runs against a recorded response, and the Qt tests run offscreen.
@@ -270,13 +302,10 @@ Beside it:
 
 | Folder | Contents |
 | --- | --- |
-| `docs/` | `providers.md` (writing a forecast provider), `screenshots.py` and `images/` (the set-up pictures). |
+| `docs/` | `providers.md` (writing a forecast provider), `design/` (the specs, reviews and tickets the code was built from), `screenshots.py` and `images/` (the pictures in this README). |
 | `tests/` | Test suite and the recorded forecast. |
 | `CONTEXT.md` | Glossary of the domain terms used throughout (feed-in, surplus, charge window, ...). |
-| `.scratch/car-charge-planner/` | The planner's spec, tickets and review. |
-| `.scratch/settings-window/` | The Settings window's spec, tickets and review. |
-| `.scratch/popup-redesign/` | The popup redesign: problem, design and review notes. |
-| `docs/agents/` | Configuration for the engineering skills (issue tracker, labels). |
+| `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`, `LICENSE` | How to contribute, behave and report a problem; what changed in each release; the licence. |
 
 ## How it plans, briefly
 
@@ -286,7 +315,11 @@ Beside it:
 4. It projects the battery day by day, subtracting your average driving per day (a setting). If a day would end more than one point under your minimum charge level, it adds the grid-charge advice.
 5. A window you have been notified about is kept as announced while it runs, so the power on screen matches what you set.
 
-The full design is in `.scratch/car-charge-planner/spec.md`.
+The full design is in [docs/design/planner/spec.md](docs/design/planner/spec.md).
+
+## Contributing
+
+Bug reports, desktop reports, translations and pull requests are welcome: start with [CONTRIBUTING.md](CONTRIBUTING.md). Please follow the [Code of Conduct](CODE_OF_CONDUCT.md); report security problems as described in [SECURITY.md](SECURITY.md). What changed in each release is in the [changelog](CHANGELOG.md), the reasoning behind the code is in the [design documents](docs/design/README.md), and the project is under the [MIT licence](LICENSE).
 
 ## Data and privacy
 
