@@ -134,6 +134,7 @@ def test_the_right_shell_is_created(mode, tray, shell_class, fell_back, tmp_path
 
 
 def test_the_missing_tray_is_announced_once_ever(tmp_path, monkeypatch, qapp):
+    monkeypatch.setattr(sys, "platform", "linux")
     controller = controller_with("tray", tmp_path, monkeypatch)
     choice = choose_shell("tray", False)
     assert announce_tray_fallback(controller, choice) is True
@@ -142,6 +143,14 @@ def test_the_missing_tray_is_announced_once_ever(tmp_path, monkeypatch, qapp):
     assert NO_TRAY_HINT in load_state().seen
     assert announce_tray_fallback(controller, choice) is False  # not at every start
     assert len(controller.notifier.sent) == 1
+
+
+@pytest.mark.parametrize("system", ["win32", "darwin"])
+def test_windows_and_macos_never_announce_a_missing_tray(system, tmp_path, monkeypatch, qapp):
+    monkeypatch.setattr(sys, "platform", system)
+    controller = controller_with("tray", tmp_path, monkeypatch)
+    assert announce_tray_fallback(controller, choose_shell("tray", False)) is False
+    assert controller.notifier.sent == [] and NO_TRAY_HINT not in load_state().seen
 
 
 def test_nothing_is_announced_when_nothing_fell_back(tmp_path, monkeypatch, qapp):

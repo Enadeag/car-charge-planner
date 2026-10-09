@@ -13,6 +13,7 @@ from typing import Protocol
 from car_charge_planner import paths
 from car_charge_planner.identity import APP_NAME, COMMENT
 
+ICON = Path(__file__).parent.parent / "assets" / "car-charge-planner.ico"  # made by tools/make_ico.py
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 
 
@@ -90,13 +91,14 @@ $link = $shell.CreateShortcut($env:CCP_LINK)
 $link.TargetPath = $env:CCP_TARGET
 $link.Arguments = $env:CCP_ARGUMENTS
 $link.Description = $env:CCP_DESCRIPTION
+$link.IconLocation = $env:CCP_ICON
 $link.Save()
 """
 
 
-def create_shortcut(link: Path, target: str, arguments: str, description: str) -> None:
+def create_shortcut(link: Path, target: str, arguments: str, description: str, icon: Path) -> None:
     """Write a `.lnk` file. It needs COM; PowerShell's WScript.Shell is the way that adds no dependency."""
-    env = {**os.environ, "CCP_LINK": str(link), "CCP_TARGET": target, "CCP_ARGUMENTS": arguments, "CCP_DESCRIPTION": description}
+    env = {**os.environ, "CCP_LINK": str(link), "CCP_TARGET": target, "CCP_ARGUMENTS": arguments, "CCP_DESCRIPTION": description, "CCP_ICON": str(icon)}
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     done = subprocess.run(
         ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", _CREATE_SHORTCUT],
@@ -109,7 +111,7 @@ def create_shortcut(link: Path, target: str, arguments: str, description: str) -
 class WindowsMenuEntry:
     own_entry = True
 
-    def __init__(self, directory: Path | None = None, make_shortcut: Callable[[Path, str, str, str], None] = create_shortcut) -> None:
+    def __init__(self, directory: Path | None = None, make_shortcut: Callable[[Path, str, str, str, Path], None] = create_shortcut) -> None:
         self._directory = directory
         self._make_shortcut = make_shortcut
 
@@ -119,7 +121,7 @@ class WindowsMenuEntry:
 
     def install(self, command: list[str]) -> list[str]:
         self._link.parent.mkdir(parents=True, exist_ok=True)
-        self._make_shortcut(self._link, command[0], command_line(command[1:]), COMMENT)
+        self._make_shortcut(self._link, command[0], command_line(command[1:]), COMMENT, ICON)
         return [str(self._link)]
 
     def uninstall(self) -> list[str]:

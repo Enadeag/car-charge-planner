@@ -48,8 +48,11 @@ def wait_for_tray(
 
 
 def announce_tray_fallback(controller: Controller, choice: ShellChoice) -> bool:
-    """Say once that the asked-for tray is missing and a window is shown instead. True if it was said now."""
-    if not choice.fell_back or not mark_seen(NO_TRAY_HINT):  # once: it would nag at every start otherwise
+    """Say once that the asked-for tray is missing and a window is shown instead. True if it was said now.
+
+    Only on Linux, where a desktop may have no tray (stock GNOME). Windows and macOS always have one.
+    """
+    if sys.platform != "linux" or not choice.fell_back or not mark_seen(NO_TRAY_HINT):  # once: it would nag at every start otherwise
         return False
     controller.notifier.send(
         _("No system tray found"),

@@ -127,6 +127,6 @@ class WindowShell:
                 _("Still running in the background"),
                 _(
                     "{app} keeps running so you get notifications. Open it again from the application menu; "
-                    "quit it from its menu (Ctrl+Q)."
-                ).format(app=APP_NAME),
+                    "quit it from its menu ({shortcut})."
+                ).format(app=APP_NAME, shortcut=self.quit_action.shortcut().toString(QKeySequence.SequenceFormat.NativeText)),
             )

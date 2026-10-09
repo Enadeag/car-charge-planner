@@ -110,8 +110,8 @@ def test_linux_autostart_entry_is_found_in_the_users_autostart_folder(tmp_path):
 
 
 def fake_shortcut(made):
-    def make(link, target, arguments, description):
-        made.append((link.name, target, arguments))
+    def make(link, target, arguments, description, icon):
+        made.append((link.name, target, arguments, icon))
         link.write_bytes(b"lnk")
 
     return make
@@ -122,7 +122,7 @@ def test_windows_menu_entry_is_a_start_menu_shortcut_to_the_command(tmp_path):
     menu = windows.WindowsMenuEntry(tmp_path / "Programs", fake_shortcut(made))
     assert not menu.is_installed()
     menu.install(MODULE)
-    assert made == [("Car charge planner.lnk", MODULE[0], "-m car_charge_planner")]  # no --background: the menu opens the window
+    assert made == [("Car charge planner.lnk", MODULE[0], "-m car_charge_planner", windows.ICON)]  # no --background: the menu opens the window
     assert menu.is_installed()
     assert menu.uninstall() == [str(tmp_path / "Programs" / "Car charge planner.lnk")] and not menu.is_installed()
     assert menu.uninstall() == []
@@ -133,6 +133,6 @@ def test_the_real_shortcut_points_at_the_command(tmp_path):
     menu = windows.WindowsMenuEntry(tmp_path)
     menu.install([sys.executable, "-m", "car_charge_planner"])
     link = tmp_path / "Car charge planner.lnk"
-    read = "$s = (New-Object -ComObject WScript.Shell).CreateShortcut($env:LINK); $s.TargetPath; $s.Arguments"
+    read = "$s = (New-Object -ComObject WScript.Shell).CreateShortcut($env:LINK); $s.TargetPath; $s.Arguments; $s.IconLocation"
     done = subprocess.run(["powershell.exe", "-NoProfile", "-Command", read], env={**os.environ, "LINK": str(link)}, capture_output=True, text=True, check=True)
-    assert done.stdout.splitlines()[:2] == [sys.executable, "-m car_charge_planner"]
+    assert done.stdout.splitlines()[:3] == [sys.executable, "-m car_charge_planner", f"{windows.ICON},0"]

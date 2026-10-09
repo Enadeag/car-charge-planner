@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import sys
 import time
 
+from PySide6.QtCore import QRect, QSize
+from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 from ..controller import Controller, ViewUpdate
@@ -44,6 +47,13 @@ class TrayShell:
         self.controller.rebuild()
         self.popup.show_near(self.tray.geometry())
 
+    def _click_anchor(self) -> QRect:
+        """Where the icon is. Windows reports no geometry for an icon in the overflow flyout, but the click was on it."""
+        geometry = self.tray.geometry()
+        if geometry.isValid() or sys.platform == "linux":  # on Wayland the pointer position is not known to the app
+            return geometry
+        return QRect(QCursor.pos(), QSize(1, 1))
+
     def _on_view_changed(self, update: ViewUpdate) -> None:
         self.popup.tz = update.tz
         self.tray.setIcon(make_icon(update.vm.state))
@@ -65,4 +75,5 @@ class TrayShell:
             elif time.monotonic() - self.popup.auto_closed_at < CLICK_CLOSE_GRACE_S:
                 pass  # this click is what just closed it (it took the focus): do not reopen
             else:
-                self.show_plan()
+                self.controller.rebuild()
+                self.popup.show_near(self._click_anchor())

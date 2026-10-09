@@ -14,6 +14,7 @@ from car_charge_planner.planner.model import AwayRule
 from car_charge_planner.storage.state import State
 
 from .i18n import _
+from .placement import MARGIN, keep_inside, popup_position
 from .planview import PLAN, UPDATE, PlanView
 
 __all__ = ["PLAN", "UPDATE", "PlanView", "Popup"]
@@ -110,14 +111,14 @@ class Popup(QWidget):
         area = screen.availableGeometry()
         self.view.fit_to_page()
         if anchor.isValid():
-            x = min(max(area.left() + 8, anchor.center().x() - self.width() // 2), area.right() - self.width() - 8)
-            top_panel = anchor.center().y() < area.center().y()
-            y = area.top() + 8 if top_panel else area.bottom() - self.height() - 8
+            position = popup_position(anchor, self.size(), area)
         elif self.last_position is not None:  # no tray icon to go by (a notification click, a second start)
-            x, y = self.last_position.x(), self.last_position.y()
+            position = keep_inside(self.last_position, self.size(), area)
         else:
-            x, y = area.right() - self.width() - 8, area.top() + 8  # near the top right, where notifications appear
-        self.move(x, y)
-        self.last_position = QPoint(x, y)
+            position = keep_inside(  # near the top right, where notifications appear
+                QPoint(area.x() + area.width(), area.top() + MARGIN), self.size(), area.adjusted(MARGIN, MARGIN, -MARGIN, -MARGIN)
+            )
+        self.move(position)
+        self.last_position = position
         self.show()
         self.activateWindow()

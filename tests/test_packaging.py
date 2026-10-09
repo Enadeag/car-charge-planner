@@ -50,6 +50,7 @@ def test_the_wheel_holds_the_package_its_translations_and_icon_and_no_tests(whee
         "car_charge_planner/locale/nl/LC_MESSAGES/car-charge-planner.po",
         "car_charge_planner/locale/car-charge-planner.pot",
         "car_charge_planner/assets/car-charge-planner.svg",
+        "car_charge_planner/assets/car-charge-planner.ico",
     ):
         assert shipped in names
     assert not [n for n in names if n.startswith(("tests/", ".scratch/", "docs/")) or "__pycache__" in n]

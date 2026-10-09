@@ -1994,7 +1994,7 @@ msgstr ""
 
 #: car_charge_planner/shells/window.py
 #, python-brace-format
-msgid "{app} keeps running so you get notifications. Open it again from the application menu; quit it from its menu (Ctrl+Q)."
+msgid "{app} keeps running so you get notifications. Open it again from the application menu; quit it from its menu ({shortcut})."
 msgstr ""
 
 #: car_charge_planner/view_model.py

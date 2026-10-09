@@ -124,7 +124,7 @@ def test_the_first_close_says_the_app_keeps_running_and_only_once(s):
     s.window.close()
     assert len(s.notifier.sent) == 1
     title, body = s.notifier.sent[0]
-    assert "background" in title.lower() and "Ctrl+Q" in body
+    assert "background" in title.lower() and QKeySequence(QKeySequence.StandardKey.Quit).toString(QKeySequence.SequenceFormat.NativeText) in body
     s.shell.show_plan()
     s.window.close()
     assert len(s.notifier.sent) == 1
@@ -139,6 +139,17 @@ def test_the_note_is_not_repeated_after_a_restart(cfg, tmp_path, monkeypatch, qa
     second.shell.show_plan()
     second.window.close()
     assert second.notifier.sent == []
+
+
+def test_quitting_from_the_menu_ends_the_event_loop_after_the_window_was_closed(s, qapp):
+    from PySide6.QtCore import QTimer
+
+    qapp.setQuitOnLastWindowClosed(False)  # as main() sets it
+    s.shell.show_plan()
+    s.window.close()  # hidden: the app keeps running
+    QTimer.singleShot(0, s.shell.quit_action.trigger)
+    QTimer.singleShot(5000, lambda: qapp.exit(99))  # a quit that does not work ends the loop here instead
+    assert qapp.exec() == 0
 
 
 def test_quit_has_the_standard_shortcut_and_ends_the_app(s, monkeypatch):
