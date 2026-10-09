@@ -160,11 +160,6 @@ def test_spring_forward_window_across_the_switch_counts_real_hours():
     assert day.soc_after_charging_pct == pytest.approx(80)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="suspected bug: _share_of_day_left divides by a fixed 24 h, so at midnight of the 23-hour day it "
-    "takes only 23/24 of a day's driving (17.25%)",
-)
 def test_spring_forward_day_planned_from_midnight_takes_a_whole_days_driving():
     day = plan(hourly(SPRING_FORWARD, {}), golden_config(), 60, at(SPRING_FORWARD, 0))[0]
     assert (day.driving_pct, day.soc_end_of_day_pct) == pytest.approx((18, 42))
@@ -179,11 +174,6 @@ def test_fall_back_day_plans_the_afternoon_by_local_time_and_one_days_driving():
     assert (day.soc_after_charging_pct, day.driving_pct, day.soc_end_of_day_pct) == pytest.approx((80, 18, 62))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="suspected bug: same-zone datetimes compare by wall clock, so build_runs drops the repeated 02:00 hour "
-    "(its end is not after its start) and _ceil_to_five_minutes moves 02:30 winter time to 02:30 summer time",
-)
 def test_fall_back_window_across_the_repeated_hour_counts_real_hours():
     # keys 1-3 are 01:00 summer time, 02:00 summer time and 02:00 winter time
     fc = hourly(FALL_BACK, {1: 4.4, 2: 4.4, 3: 4.4})

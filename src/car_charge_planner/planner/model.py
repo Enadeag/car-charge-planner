@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 import re
 import tomllib
@@ -29,6 +30,21 @@ def migrate_1_to_2(data: dict[str, Any]) -> dict[str, Any]:
 
 
 CONFIG_MIGRATIONS: dict[int, Migration] = {1: migrate_1_to_2}  # source version -> the step to the next one
+
+
+def utc(moment: datetime) -> datetime:
+    """The same instant in UTC. Compare in UTC: datetimes in one zone compare by wall clock, so the repeated hour would vanish."""
+    return moment.astimezone(UTC)
+
+
+_FIVE_MINUTES = timedelta(minutes=5)
+
+
+def ceil_to_five_minutes(moment: datetime) -> datetime:
+    """moment rounded up to whole five minutes of real time since its local midnight."""
+    midnight = utc(moment.replace(hour=0, minute=0, second=0, microsecond=0, fold=0))
+    steps = math.ceil((utc(moment) - midnight) / _FIVE_MINUTES - 1e-9)
+    return (midnight + steps * _FIVE_MINUTES).astimezone(moment.tzinfo)
 
 
 def elapsed_hours(start: datetime, end: datetime) -> float:

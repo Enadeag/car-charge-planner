@@ -9,11 +9,11 @@ from __future__ import annotations
 import math
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Protocol
 
-from car_charge_planner.planner.model import Config, ForecastStep
+from car_charge_planner.planner.model import Config, ForecastStep, utc
 
 
 @dataclass(frozen=True)
@@ -172,9 +172,9 @@ def check_steps(steps: Sequence[ForecastStep]) -> list[str]:
         if not (_aware(step.start) and _aware(step.end)):
             problems.append(f"step {index}: start and end must carry a time zone")
             continue
-        if step.end <= step.start:
+        if utc(step.end) <= utc(step.start):
             problems.append(f"step {index}: must end after it starts")
-        if previous_end is not None and step.start < previous_end:
+        if previous_end is not None and utc(step.start) < utc(previous_end):
             problems.append(f"step {index}: overlaps or precedes the step before it")
         if not (isinstance(step.power_kw, (int, float)) and math.isfinite(step.power_kw)):  # pyright: ignore[reportUnnecessaryIsInstance]  # a provider may break its type
             problems.append(f"step {index}: power must be a finite number")
@@ -207,9 +207,9 @@ def add_up(forecasts: Sequence[Sequence[ForecastStep]]) -> list[ForecastStep]:
     if not lists or any(not steps for steps in lists):
         return []
     zone = lists[0][0].start.tzinfo
-    first = max(steps[0].start for steps in lists)
-    last = min(steps[-1].end for steps in lists)
-    cuts = sorted({moment.astimezone(UTC) for steps in lists for step in steps for moment in (step.start, step.end) if first <= moment <= last})
+    first = max(utc(steps[0].start) for steps in lists)
+    last = min(utc(steps[-1].end) for steps in lists)
+    cuts = sorted({utc(moment) for steps in lists for step in steps for moment in (step.start, step.end) if first <= utc(moment) <= last})
     positions = [0] * len(lists)
     total: list[ForecastStep] = []
     for start, end in zip(cuts, cuts[1:], strict=False):

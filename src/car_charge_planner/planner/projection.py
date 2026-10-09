@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from .model import AwayPeriod, Config, DayPlan, ForecastStep, Window, elapsed_hours
+from .model import AwayPeriod, Config, DayPlan, ForecastStep, Window, elapsed_hours, utc
 from .surplus import expand_away
 from .windows import build_runs, group_runs_by_day, select_windows
 
@@ -25,22 +25,22 @@ def energy_needed_kwh(soc_pct: float, cfg: Config) -> float:
 def away_periods(forecast: list[ForecastStep], cfg: Config, manual: list[AwayPeriod] | None) -> list[AwayPeriod]:
     """Recurring rules plus manual entries, covering every forecast day."""
     tz = ZoneInfo(cfg.timezone)
-    first_day = min(s.start for s in forecast).astimezone(tz).date()
+    first_day = min((s.start for s in forecast), key=utc).astimezone(tz).date()
     last_day = _last_day(forecast, tz)
     return expand_away(cfg.away_rules, manual or [], first_day, (last_day - first_day).days + 2, tz)
 
 
 def _last_day(forecast: list[ForecastStep], tz: ZoneInfo):
     # a step ending exactly at midnight belongs to the day before
-    return (max(s.end for s in forecast) - timedelta(microseconds=1)).astimezone(tz).date()
+    return (max(utc(s.end) for s in forecast) - timedelta(microseconds=1)).astimezone(tz).date()
 
 
 def _share_of_day_left(now: datetime, tz: ZoneInfo) -> float:
     """Fraction of today still to come: driving already done is in the battery reading."""
-    local = now.astimezone(tz)
-    midnight = datetime.combine(local.date() + timedelta(days=1), datetime.min.time(), tz)
-    left = (midnight.astimezone(UTC) - now.astimezone(UTC)) / timedelta(hours=24)
-    return min(1.0, max(0.0, left))
+    today = now.astimezone(tz).date()
+    start = datetime.combine(today, datetime.min.time(), tz)
+    end = datetime.combine(today + timedelta(days=1), datetime.min.time(), tz)
+    return min(1.0, max(0.0, elapsed_hours(now, end) / elapsed_hours(start, end)))
 
 
 def _remaining_parts(windows: list[Window], now: datetime) -> list[Window]:
@@ -75,11 +75,11 @@ def plan(
     tz = ZoneInfo(cfg.timezone)
     last_day = _last_day(forecast, tz)
     away = away_periods(forecast, cfg, manual_away)
-    running = _remaining_parts([w for w in pinned or [] if w.start <= now < w.end], now)
+    running = _remaining_parts([w for w in pinned or [] if utc(w.start) <= utc(now) < utc(w.end)], now)
     blocked = away + [AwayPeriod(w.start, w.end) for w in running]
     runs = build_runs(forecast, cfg, blocked, now)
     # sun left over right before or after a running window belongs to it: no second window there
-    runs = [r for r in runs if not any(r[0].start == w.end or r[-1].end == w.start for w in running)]
+    runs = [r for r in runs if not any(utc(r[0].start) == utc(w.end) or utc(r[-1].end) == utc(w.start) for w in running)]
     by_day = group_runs_by_day(runs, tz)
 
     plans: list[DayPlan] = []
@@ -89,7 +89,7 @@ def plan(
     while day <= last_day:
         kept = [w for w in running if w.start.astimezone(tz).date() == day]
         need = max(0.0, energy_needed_kwh(soc, cfg) - sum(w.solar_kwh for w in kept))
-        windows = tuple(sorted([*kept, *select_windows(by_day.get(day, []), need, cfg)], key=lambda w: w.start))
+        windows = tuple(sorted([*kept, *select_windows(by_day.get(day, []), need, cfg)], key=lambda w: utc(w.start)))
         gained = sum(w.solar_kwh for w in windows) * cfg.charger.efficiency
         after = max(soc, min(cfg.car.target_pct, soc + gained / cfg.car.usable_battery_kwh * 100))
         driving = daily_driving_pct(cfg) * (_share_of_day_left(now, tz) if day == today else 1.0)

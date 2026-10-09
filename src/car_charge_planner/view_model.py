@@ -8,7 +8,7 @@ from typing import TypedDict
 from zoneinfo import ZoneInfo
 
 from car_charge_planner.planner.advice import GridAdvice
-from car_charge_planner.planner.model import Config, DayPlan, Window, base_key
+from car_charge_planner.planner.model import Config, DayPlan, Window, base_key, utc
 from car_charge_planner.storage.state import BatteryReading
 
 from .i18n import _, ngettext, number, pgettext
@@ -211,7 +211,7 @@ def _outlook(days: list[DayPlan], headline_window: Window | None, now: datetime,
     for d in days:
         shown_day = False
         for w in d.windows:
-            if w is headline_window or w.end <= now:
+            if w is headline_window or utc(w.end) <= utc(now):
                 continue  # the headline already says it
             rows.append(
                 OutlookRow(
@@ -299,7 +299,7 @@ def build(
 ) -> ViewModel:
     tz = ZoneInfo(cfg.timezone)
     today = now.astimezone(tz).date()
-    upcoming = [(d, w) for d in days for w in d.windows if w.end > now]
+    upcoming = [(d, w) for d in days for w in d.windows if utc(w.end) > utc(now)]
     headline_window = upcoming[0][1] if upcoming else None
     outlook, quiet_days = _outlook(days, headline_window, now, tz, today, cfg.charger.phases)
     battery_line, battery_stale = battery_status(battery, now)
@@ -343,7 +343,7 @@ def build(
     three = cfg.charger.phases == 3
     day_plan, window = upcoming[0]
     projection = _projection(day_plan, window, cfg, tz)
-    if window.start <= now + timedelta(seconds=1):
+    if utc(window.start) <= utc(now) + timedelta(seconds=1):
         return ViewModel(
             state="active",
             tooltip=(

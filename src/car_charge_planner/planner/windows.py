@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from .model import AwayPeriod, Config, ForecastStep, Window, add_hours, elapsed_hours
+from .model import AwayPeriod, Config, ForecastStep, Window, add_hours, ceil_to_five_minutes, elapsed_hours, utc
 from .surplus import amps_for, charge_power_kw, usable_kw
 
 _EPS = 1e-9
-_ROUND_TO = timedelta(minutes=5)
 
 
 @dataclass(frozen=True)
@@ -36,15 +34,15 @@ def build_runs(
     """Contiguous runs of steps where the car is home and solar can power it."""
     runs: list[list[Segment]] = []
     current: list[Segment] = []
-    for step in sorted(forecast, key=lambda s: s.start):
-        start = max(step.start, now)
-        if step.end <= start:
+    for step in sorted(forecast, key=lambda s: utc(s.start)):
+        start = max(step.start, now, key=utc)
+        if utc(step.end) <= utc(start):
             continue
         seg = Segment(start, step.end, usable_kw(step, cfg))
-        at_home = not any(a.start < seg.end and seg.start < a.end for a in away)
+        at_home = not any(utc(a.start) < utc(seg.end) and utc(seg.start) < utc(a.end) for a in away)
         chargeable = amps_for(seg.usable_kw, cfg) >= cfg.charger.min_amps
         if at_home and chargeable:
-            if current and current[-1].end != seg.start:
+            if current and utc(current[-1].end) != utc(seg.start):
                 runs.append(current)
                 current = []
             current.append(seg)
@@ -54,12 +52,6 @@ def build_runs(
     if current:
         runs.append(current)
     return runs
-
-
-def _ceil_to_five_minutes(moment: datetime) -> datetime:
-    midnight = moment.replace(hour=0, minute=0, second=0, microsecond=0)
-    steps = math.ceil((moment - midnight) / _ROUND_TO - _EPS)
-    return midnight + steps * _ROUND_TO
 
 
 def _best_candidate(run: list[Segment], remaining: float, cfg: Config):
@@ -78,7 +70,7 @@ def _best_candidate(run: list[Segment], remaining: float, cfg: Config):
                 imported += max(0.0, power - run[j].usable_kw) * hours
                 if imported > tolerance + _EPS:
                     break
-                if run[j].end - run[i].start < min_window:
+                if utc(run[j].end) - utc(run[i].start) < min_window:
                     continue
                 key = (
                     round(min(solar, remaining), 6),
@@ -103,17 +95,17 @@ def _make_window(run: list[Segment], amps: int, i: int, j: int, remaining: float
         if cumulative + delivered >= remaining - _EPS:
             rate = min(power, seg.usable_kw)
             needed_hours = (remaining - cumulative) / rate if rate > 0 else seg.hours
-            trimmed_end = _ceil_to_five_minutes(add_hours(seg.start, needed_hours))
+            trimmed_end = ceil_to_five_minutes(add_hours(seg.start, needed_hours))
             break
         cumulative += delivered
-    trimmed_end = min(trimmed_end, end)
+    trimmed_end = min(trimmed_end, end, key=utc)
     minimum = timedelta(minutes=cfg.planning.min_window_minutes)
-    end = min(max(trimmed_end, start + minimum), end)
+    end = min(max(trimmed_end, (utc(start) + minimum).astimezone(start.tzinfo), key=utc), end, key=utc)
 
     solar = imported = 0.0
     for seg in run[i : j + 1]:
-        overlap_start, overlap_end = max(seg.start, start), min(seg.end, end)
-        if overlap_end <= overlap_start:
+        overlap_start, overlap_end = max(seg.start, start, key=utc), min(seg.end, end, key=utc)
+        if utc(overlap_end) <= utc(overlap_start):
             continue
         hours = elapsed_hours(overlap_start, overlap_end)
         solar += min(power, seg.usable_kw) * hours
@@ -141,7 +133,7 @@ def select_windows(runs: list[list[Segment]], need_grid_kwh: float, cfg: Config)
         chosen.append(window)
         remaining -= window.solar_kwh
         unused.remove(run)
-    return sorted(chosen, key=lambda w: w.start)
+    return sorted(chosen, key=lambda w: utc(w.start))
 
 
 def group_runs_by_day(runs: list[list[Segment]], tz: ZoneInfo) -> dict[date, list[list[Segment]]]:

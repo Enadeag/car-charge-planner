@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from .model import AwayPeriod, Config, DayPlan, ForecastStep, Window, add_hours
+from .model import AwayPeriod, Config, DayPlan, ForecastStep, Window, add_hours, ceil_to_five_minutes, utc
 from .projection import away_periods
 from .surplus import charge_power_kw, usable_kw
 
@@ -37,11 +37,6 @@ def _day_slots(day: date, tz: ZoneInfo) -> list[tuple[datetime, datetime]]:
     return slots
 
 
-def _ceil_five_minutes(moment: datetime) -> datetime:
-    midnight = moment.replace(hour=0, minute=0, second=0, microsecond=0)
-    return midnight + math.ceil((moment - midnight) / timedelta(minutes=5) - _EPS) * timedelta(minutes=5)
-
-
 def _best_placement(
     day: date,
     energy_kwh: float,
@@ -55,13 +50,13 @@ def _best_placement(
     slots = _day_slots(day, tz)
     usable: list[float | None] = []
     for start, _ in slots:
-        step = next((s for s in forecast if s.start <= start < s.end), None)
+        step = next((s for s in forecast if utc(s.start) <= utc(start) < utc(s.end)), None)
         usable.append(usable_kw(step, cfg) if step else None)
     free = [
         usable[i] is not None
-        and slots[i][0] >= now
-        and not any(a.start < slots[i][1] and slots[i][0] < a.end for a in away)
-        and not any(w.start < slots[i][1] and slots[i][0] < w.end for w in planned)
+        and utc(slots[i][0]) >= utc(now)
+        and not any(utc(a.start) < utc(slots[i][1]) and utc(slots[i][0]) < utc(a.end) for a in away)
+        and not any(utc(w.start) < utc(slots[i][1]) and utc(slots[i][0]) < utc(w.end) for w in planned)
         for i in range(len(slots))
     ]
     run = [0] * (len(slots) + 1)  # consecutive free slots starting at i
@@ -92,7 +87,7 @@ def _best_placement(
             if best_key is None or key < best_key:
                 best_key = key
                 start = slots[i][0]
-                end = min(_ceil_five_minutes(add_hours(start, hours)), slots[i + n - 1][1])
+                end = min(ceil_to_five_minutes(add_hours(start, hours)), slots[i + n - 1][1], key=utc)
                 best = Window(start, end, amps, power, solar, imported)
     return best
 

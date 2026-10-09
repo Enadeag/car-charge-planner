@@ -1,4 +1,4 @@
-from datetime import date, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 
 import pytest
 
@@ -174,3 +174,19 @@ def test_advice_on_the_25_hour_fall_back_day(cfg):
     assert w.end > w.start
     hours = elapsed_hours(w.start, w.end)
     assert abs(w.power_kw * hours - advice.energy_kwh) < w.power_kw * 5 / 60 + 1e-6
+
+
+def test_grid_advice_across_the_repeated_hour_ends_in_winter_time():
+    day = date(2026, 10, 25)
+    fc = hourly(day, {})
+    # 3 h 25 min at 6 A (1.38 kW) from 00:00 summer time (22:00 UTC) ends at 02:25 winter time (01:25 UTC)
+    soc = 30 + 18 - 1.38 * 41 / 12 * 0.9 / 70 * 100
+    cfg = golden_config()
+    advice = grid_advice(plan(fc, cfg, soc, at(day, 0)), fc, cfg, None, at(day, 0))
+    assert advice is not None and advice.window is not None
+    w = advice.window
+    assert (w.start.astimezone(UTC), w.end.astimezone(UTC), w.amps) == (
+        datetime(2026, 10, 24, 22, 0, tzinfo=UTC),
+        datetime(2026, 10, 25, 1, 25, tzinfo=UTC),
+        6,
+    )

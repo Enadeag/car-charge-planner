@@ -24,7 +24,7 @@ from car_charge_planner.planner.cli import demo_forecast, load_forecast
 from car_charge_planner.planner.model import ForecastStep, Panels
 from car_charge_planner.planner.projection import plan
 from car_charge_planner.planner.surplus import usable_kw
-from conftest import TZ, at, forecast_from
+from conftest import TZ, at, forecast_from, hourly
 
 DAY = date(2026, 7, 3)
 UTC = UTC
@@ -49,6 +49,11 @@ def test_a_step_must_end_after_it_starts():
     flat = ForecastStep(step(8).start, step(8).start, 1.0)
     backwards = ForecastStep(step(9).start, step(8).start, 1.0)
     assert check_steps([flat]) and check_steps([backwards])
+
+
+def test_local_steps_through_the_repeated_hour_are_in_order():
+    # one of the steps runs from 02:00 summer time to 02:00 winter time
+    assert check_steps(hourly(date(2026, 10, 25), {})) == []
 
 
 def test_steps_must_be_in_order_without_overlap():
