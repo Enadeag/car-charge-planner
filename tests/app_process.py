@@ -15,6 +15,9 @@ PROJECT = Path(__file__).resolve().parent.parent
 
 LAUNCHER = """
 import runpy, sys
+sys.path.insert(0, {tests!r})
+import xdg_paths
+xdg_paths.apply()  # every variable is set: the app keeps its files where the test says, on every system
 from PySide6.QtWidgets import QApplication
 
 run = QApplication.exec
@@ -47,7 +50,7 @@ class RunningApp:
         self.out_path, self.err_path = home / "app.out", home / "app.err"
         self.out, self.err = open(self.out_path, "w", encoding="utf-8"), open(self.err_path, "w", encoding="utf-8")
         self.process = subprocess.Popen(
-            [sys.executable, "-c", LAUNCHER, *flags], cwd=PROJECT, env=env or app_environment(home), stdout=self.out, stderr=self.err, text=True,
+            [sys.executable, "-c", LAUNCHER.format(tests=str(PROJECT / "tests")), *flags], cwd=PROJECT, env=env or app_environment(home), stdout=self.out, stderr=self.err, text=True,
             encoding="utf-8",
         )
 

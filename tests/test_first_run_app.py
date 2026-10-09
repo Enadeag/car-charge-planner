@@ -17,6 +17,9 @@ DRIVER = textwrap.dedent(
     """
     import json, sys
     sys.path.insert(0, {repo!r})
+    sys.path.insert(0, {tests!r})
+    import xdg_paths
+    xdg_paths.apply()  # every variable is set: the app keeps its files where the test says, on every system
     sys.argv = ["car-charge-planner"] + {argv!r}
     from datetime import datetime, timedelta, timezone
     from PySide6.QtCore import QTimer
@@ -99,7 +102,7 @@ def run_app(tmp_path, argv, act):
         (tmp_path / name).mkdir()
     (tmp_path / "runtime").chmod(0o700)
     driver = tmp_path / "driver.py"
-    driver.write_text(DRIVER.format(repo=str(REPO), argv=argv, act=act, config=str(config)), encoding="utf-8")
+    driver.write_text(DRIVER.format(repo=str(REPO), tests=str(REPO / 'tests'), argv=argv, act=act, config=str(config)), encoding="utf-8")
     env = {
         **{k: v for k, v in os.environ.items() if k not in ("DBUS_SESSION_BUS_ADDRESS", "LANGUAGE", "LC_ALL")},
         "QT_QPA_PLATFORM": "offscreen",

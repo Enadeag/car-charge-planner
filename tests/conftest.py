@@ -47,6 +47,19 @@ def pytest_collection_modifyitems(items):
             item.add_marker(pytest.mark.skip(reason=f"only runs on {' or '.join(wanted)} (this is {sys.platform})"))
 
 
+@pytest.fixture(autouse=True)
+def files_stay_in_a_temporary_folder(tmp_path_factory, monkeypatch):
+    """Keep the app's config, state, cache and data out of the real user folders on every system.
+
+    A test that needs a folder of its own sets the XDG_*_HOME variable, as on Linux; `paths` follows it on every system.
+    """
+    import xdg_paths
+    from car_charge_planner import paths
+
+    for name, function in xdg_paths.locations(tmp_path_factory.mktemp("home")).items():
+        monkeypatch.setattr(paths, name, function)
+
+
 class NetworkAccessInTests(AssertionError):
     pass
 

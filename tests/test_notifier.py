@@ -168,6 +168,7 @@ def test_the_tray_app_announces_through_the_notifier(cfg, tmp_path, monkeypatch)
 @pytest.mark.parametrize("name", ["notifier", "notification_actions", "controller", "main"])
 def test_the_app_imports_without_jeepney(monkeypatch, name):
     package = importlib.import_module("car_charge_planner")
+    importlib.import_module(f"car_charge_planner.{name}")  # not imported yet when this test runs first or alone
     monkeypatch.setitem(sys.modules, "jeepney", None)  # an import of it now fails, as on a system where it is not installed
     monkeypatch.delitem(sys.modules, f"car_charge_planner.{name}")
     monkeypatch.setattr(package, name, getattr(package, name))  # the fresh import replaces this attribute; put the module the other tests use back

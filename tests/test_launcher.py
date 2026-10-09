@@ -116,10 +116,11 @@ def test_is_installed_follows_the_entry_file(tmp_path):
 def test_the_launch_command_is_the_installed_command_next_to_the_interpreter(tmp_path, monkeypatch):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    (bin_dir / "car-charge-planner").write_text("#!/bin/sh\n", encoding="utf-8")
-    (bin_dir / "car-charge-planner").chmod(0o755)
+    command = bin_dir / ("car-charge-planner.exe" if sys.platform == "win32" else "car-charge-planner")  # Windows finds commands by extension
+    command.write_text("#!/bin/sh\n", encoding="utf-8")
+    command.chmod(0o755)
     monkeypatch.setattr(sys, "executable", str(bin_dir / "python"))
-    assert identity.launch_command() == [str(bin_dir / "car-charge-planner")]
+    assert identity.launch_command() == [str(command)]
 
 
 def test_without_an_installed_command_it_is_this_interpreter_running_the_package(tmp_path, monkeypatch):
