@@ -32,11 +32,6 @@ def first_run_config_for(cfg):
 
 
 @pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
-
-
-@pytest.fixture
 def pseudo_language(tmp_path):
     pseudo.install(tmp_path)
     yield

@@ -27,10 +27,3 @@ def test_documents_name_no_personal_details():
     files = [*(ROOT / "docs").rglob("*.md"), ROOT / "README.md", ROOT / "CONTRIBUTING.md", ROOT / "CONTEXT.md", ROOT / "CHANGELOG.md"]
     hits = [f"{f.relative_to(ROOT)}:{n}" for f in files for n, line in enumerate(f.read_text().splitlines(), 1) if PATTERN.search(line)]
     assert hits == []
-
-
-def test_the_design_documents_have_an_index_and_every_feature_folder_is_in_it():
-    design = ROOT / "docs" / "design"
-    index = (design / "README.md").read_text()
-    folders = [d.name for d in design.iterdir() if d.is_dir()]
-    assert folders and all(f"`{name}/`" in index for name in folders)

@@ -7,16 +7,11 @@ from datetime import date, time
 
 import pytest
 from PySide6.QtCore import QTime
-from PySide6.QtWidgets import QApplication, QLabel
+from PySide6.QtWidgets import QLabel
 
 from car_charge_planner.planner.model import AwayRule, Config, Setup, load_config
 from car_charge_planner.settings.window import SettingsWindow
 from conftest import at, example_config
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 class Harness:
@@ -251,13 +246,6 @@ def test_rules_count_as_changes_for_the_discard_question(h):
     assert h.asked == [1] and not h.window.isVisible()
 
 
-def test_putting_a_rule_back_is_not_a_change(h):
-    rows(h)[0].end.setTime(QTime(18, 0))
-    assert h.window.is_dirty()
-    rows(h)[0].end.setTime(QTime(19, 0))
-    assert not h.window.is_dirty()
-
-
 def test_rule_order_is_kept(tmp_path, qapp):
     cfg = replace(example_config(), away_rules=(AwayRule(4, time(8, 0), time(9, 0)), AwayRule(1, time(8, 0), time(9, 0))))
     h = Harness(tmp_path, cfg)
@@ -265,20 +253,3 @@ def test_rule_order_is_kept(tmp_path, qapp):
     rows(h)[0].end.setTime(QTime(10, 0))
     h.window.save_button.click()
     assert [r.weekday for r in load_config(h.file).away_rules] == [4, 1]
-
-
-def test_no_hint_text_is_clipped_on_any_tab(tmp_path, qapp):
-    from PySide6.QtWidgets import QLabel as Label
-
-    window = SettingsWindow(example_config(), tmp_path / "c.toml", lambda c: None)
-    window.show_centred()
-    for index in range(window.tabs.count()):
-        window.tabs.setCurrentIndex(index)
-        for _ in range(3):
-            qapp.processEvents()
-        tab = window.tabs.widget(index)
-        for label in tab.findChildren(Label):
-            if label.wordWrap() and label.text():
-                needed = label.heightForWidth(label.width())
-                assert label.height() >= needed, f"{window.tabs.tabText(index)}: {label.text()[:40]!r} is clipped ({label.height()} < {needed})"
-    window.close()

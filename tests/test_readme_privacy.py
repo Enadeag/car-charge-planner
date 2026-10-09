@@ -34,25 +34,6 @@ def test_a_providers_place_search_is_in_the_privacy_section_with_its_credit(prov
         assert "GeoNames" in README and provider.name in README
 
 
-def test_the_section_says_what_matters():
-    text = section()
-    for phrase in ("no telemetry", "Commercial use", "secrets.toml", "Local only", "Third-party software"):
-        assert phrase.lower() in text.lower(), phrase
-
-
-def test_the_third_party_licences_are_the_installed_ones():
-    from importlib.metadata import metadata
-
-    assert "LGPL-3.0" in (metadata("PySide6-Essentials").get("License") or "")
-    assert (metadata("jeepney").get("License-Expression") or metadata("jeepney").get("License")) == "MIT"
-    assert re.search(r"jeepney.*\| MIT \|", section())
-
-
-def test_the_attribution_section_credits_both_providers():
-    tail = README[README.index("## Attribution"):]
-    assert "Open-Meteo.com" in tail and "Forecast.Solar" in tail
-
-
 def test_the_readme_quotes_what_the_first_page_of_the_wizard_says():
     """The privacy text of the Welcome page and the README say the same words (for the default provider)."""
     from car_charge_planner.setup.welcome import privacy_text

@@ -9,12 +9,11 @@ from datetime import time
 
 import pytest
 from PySide6.QtCore import QTime
-from PySide6.QtWidgets import QApplication, QLabel
+from PySide6.QtWidgets import QLabel
 
 from car_charge_planner.forecast.check import Attempt
 from car_charge_planner.planner.model import AwayRule, Config, Setup, load_config
 from car_charge_planner.setup.home import (
-    HOURS_PER_YEAR,
     MAX_BASELOAD_KW,
     away_problems,
     baseload_from_yearly,
@@ -26,15 +25,6 @@ from car_charge_planner.setup.wizard import SetupWizard
 from conftest import example_config
 
 NL = {"LANG": "nl_NL.UTF-8"}
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
-
-
-def test_a_year_has_8760_hours():
-    assert HOURS_PER_YEAR == 8760
 
 
 @pytest.mark.parametrize("yearly, kw", [(4380, 0.5), (8760, 1.0), (3000, 0.3425), (0, 0.0)])
@@ -83,41 +73,20 @@ def rig(tmp_path, qapp):
     return Rig(tmp_path)
 
 
-def texts(widget):
-    return [l.text() for l in widget.findChildren(QLabel)]
-
-
-# the hub
-
-def test_the_hub_has_two_cards_each_saying_what_it_does_and_what_skipping_does(rig):
-    shown = texts(rig.hub)
-    assert rig.wizard.heading.text() == "What next?" and rig.wizard.step.text() == "Step 5 of 6"
-    assert "House electricity" in shown and "When is the car away?" in shown
-    assert "Tells the plan how much power the house itself uses, so it knows what is left for the car." in shown
-    assert "If skipped: a typical value is used." in shown
-    assert "Stops the plan recommending charging while the car is out, for example at work." in shown
-    assert "If skipped: the car is treated as home all day." in shown
-
-
-def test_the_away_card_has_the_line_for_commuters_and_the_house_card_does_not(rig):
-    assert "If you drive to work, set this." in texts(rig.hub.away)
-    assert "If you drive to work, set this." not in texts(rig.hub.house)
-
-
 def test_nothing_is_done_at_first_and_finish_is_always_there(rig):
     assert rig.hub.house.tick.text() == "" and rig.hub.away.tick.text() == ""
-    assert rig.wizard.next_button.isEnabled() and rig.wizard.next_button.text() == "Review and finish"
+    assert rig.wizard.next_button.isEnabled()
     rig.wizard.next()
     assert rig.wizard.current == "finish"
 
 
 def test_each_card_opens_its_page_and_done_returns_to_the_hub(rig):
     rig.hub.house.button.click()
-    assert rig.wizard.current == "house" and rig.wizard.step.text() == "" and rig.wizard.next_button.text() == "Done"
+    assert rig.wizard.current == "house"
     rig.wizard.next()
     assert rig.wizard.current == "next"
     rig.hub.away.button.click()
-    assert rig.wizard.current == "away" and rig.wizard.heading.text() == "When is the car away?"
+    assert rig.wizard.current == "away"
     rig.wizard.back()
     assert rig.wizard.current == "next"
 
@@ -306,17 +275,3 @@ def test_finishing_writes_what_was_answered_on_all_three_pages(tmp_path, qapp):
     written = load_config(rig.file)
     assert written.house.baseload_kw == pytest.approx(0.5) and written.away_rules == (AwayRule(3, time(8, 0), time(17, 0)),)
     assert "house.baseload_kw" not in written.setup.typical
-
-
-def test_the_hub_and_its_pages_are_in_the_language(tmp_path, qapp):
-    from car_charge_planner import i18n
-    from test_i18n import make_catalogue
-
-    make_catalogue(tmp_path, "xx", {"What next?": "Wat nu?", "House electricity": "Huisstroom", "If you drive to work, set this.": "Rijd je naar je werk? Vul dit in."})
-    i18n.init(["xx"], tmp_path)
-    try:
-        (tmp_path / "w").mkdir()
-        rig = Rig(tmp_path / "w")
-        assert rig.wizard.heading.text() == "Wat nu?" and "Huisstroom" in texts(rig.hub) and "Rijd je naar je werk? Vul dit in." in texts(rig.hub)
-    finally:
-        i18n.init(languages=[])

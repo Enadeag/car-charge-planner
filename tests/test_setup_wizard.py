@@ -8,7 +8,7 @@ from dataclasses import replace
 
 import pytest
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QLabel
+from PySide6.QtWidgets import QLabel
 
 from car_charge_planner.forecast.check import Attempt
 from car_charge_planner.planner.model import Config, Setup, load_config
@@ -26,11 +26,6 @@ def sub(tmp_path, name):
     folder = tmp_path / name
     folder.mkdir()
     return folder
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 class Rig:

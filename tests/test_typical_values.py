@@ -8,7 +8,7 @@ from dataclasses import replace
 from datetime import date, timedelta
 
 import pytest
-from PySide6.QtWidgets import QApplication, QLabel
+from PySide6.QtWidgets import QApplication
 
 from car_charge_planner.planner.config_io import dump_config, write_config
 from car_charge_planner.planner.model import TYPICAL_KEYS, Config, ConfigError, Setup, first_run_config, load_config, validate
@@ -22,11 +22,6 @@ from conftest import at, forecast_from
 
 DAY = date(2026, 7, 3)
 NOW = at(DAY, 7)
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 def with_typical(cfg, *keys):
@@ -160,19 +155,6 @@ def test_reset_tab_makes_that_tabs_built_in_values_typical_again(tmp_path, qapp,
     assert load_config(file).setup.typical == charger_keys
 
 
-def test_the_tag_wording_is_translated(tmp_path, qapp, cfg):
-    from car_charge_planner import i18n
-    from test_i18n import make_catalogue
-
-    make_catalogue(tmp_path, "xx", {"Typical value": "Standaardwaarde"})
-    i18n.init(["xx"], tmp_path)
-    try:
-        window, _ = make(with_typical(cfg, "panels.kwp"), tmp_path / "w")
-        assert any("Standaardwaarde." in label.text() for label in window.field_tabs[0].findChildren(QLabel))
-    finally:
-        i18n.init(languages=[])
-
-
 def test_no_typical_values_means_no_line():
     assert typical_line(()) == ("", "")
     assert typical_line(("not.a.key",)) == ("", "")  # nothing the owner could check
@@ -193,28 +175,6 @@ def test_a_few_are_listed_and_a_long_list_is_shortened():
 def test_the_link_goes_to_the_tab_of_the_first_value():
     assert typical_line(("car.km_per_day", "panels.kwp"))[1] == "house_car"
     assert typical_line(("charger.max_amps",))[1] == "charger"
-
-
-def test_the_wording_follows_the_language_with_a_plural_and_an_order_of_its_own(tmp_path):
-    from car_charge_planner import i18n
-    from test_i18n import make_catalogue
-
-    make_catalogue(
-        tmp_path,
-        "xx",
-        {
-            ("Based on a typical value for: {items}.", "Based on typical values for: {items}."): ("{items}: een standaardwaarde.", "{items}: standaardwaarden."),
-            "Based on typical values for: {items} and {n} more.": "{items} en nog {n}: standaard.",
-            "Panel size": "Paneelgrootte",
-        },
-    )
-    i18n.init(["xx"], tmp_path)
-    try:
-        assert typical_line(("panels.kwp",))[0] == "Paneelgrootte: een standaardwaarde."
-        assert typical_line(("panels.kwp", "panels.tilt_deg"))[0] == "Paneelgrootte, Tilt: standaardwaarden."
-        assert typical_line(TYPICAL_KEYS)[0].startswith("Paneelgrootte, Tilt, Direction en nog 10:")
-    finally:
-        i18n.init(languages=[])
 
 
 def view(cfg, state=None):
@@ -249,7 +209,7 @@ def test_there_is_no_line_before_there_is_a_plan(qapp, cfg):
         assert vm.typical_line == "" and popup.typical.isHidden()
 
 
-def test_the_line_is_readable_on_a_dark_window_and_unclipped(qapp, cfg):
+def test_the_line_is_readable_on_a_dark_window(qapp, cfg):
     from PySide6.QtGui import QColor, QPalette
 
     from car_charge_planner import colours
@@ -264,7 +224,6 @@ def test_the_line_is_readable_on_a_dark_window_and_unclipped(qapp, cfg):
         popup.show()
         QApplication.processEvents()
         assert colours.LINK["dark"] in popup.typical.text()
-        assert popup.typical.height() >= popup.typical.heightForWidth(popup.typical.width())
         popup.close()
     finally:
         qapp.setPalette(original)

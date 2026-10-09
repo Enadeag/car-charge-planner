@@ -1,9 +1,8 @@
 """A small provider passes the conformance kit and each broken variant fails the check that should catch it."""
 
 import json
-import threading
 from dataclasses import replace
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -15,12 +14,9 @@ from car_charge_planner.forecast.provider import (
     SettingSpec,
     Unavailable,
     add_up,
-    check_steps,
 )
 from car_charge_planner.forecast.transport import Reply, Request
 from car_charge_planner.planner.model import ForecastStep
-from conftest import at
-from fake_provider import FakeProvider, Held, steps_for
 from provider_kit import ProviderCase, ProviderConformance, ReplayTransport, UnexpectedRequest
 
 UTC = UTC
@@ -221,79 +217,5 @@ def test_the_replay_transport_answers_what_was_recorded_and_fails_on_anything_el
     with pytest.raises(UnexpectedRequest):
         replay(Request("https://example.test/c"))
     assert [r.url for r in replay.unexpected] == ["https://example.test/c"] and len(replay.requests) == 3
-
-
-def test_a_recorded_exception_is_raised():
-    with pytest.raises(OSError, match="down"):
+    with pytest.raises(OSError, match="down"):  # a recorded exception is raised
         ReplayTransport([("", OSError("down"))])(Request("https://example.test/"))
-
-
-def test_reply_headers_are_case_insensitive_and_json_decodes():
-    reply = Reply(200, b'{"a": 1}', {"Retry-After": "5"})
-    assert reply.header("retry-after") == "5" and reply.header("missing") is None
-    assert reply.json() == {"a": 1} and reply.ok and not Reply(429).ok
-
-
-DAY = date(2026, 7, 3)
-
-
-def ask(fake):
-    return fake.fetch(None, {}, at(DAY, 7))
-
-
-def test_the_script_runs_in_order_and_the_last_entry_repeats():
-    fake = FakeProvider(script=[steps_for(DAY), Unavailable("down"), RateLimited("busy", timedelta(minutes=5))])
-    assert check_steps(ask(fake)) == []
-    with pytest.raises(Unavailable):
-        ask(fake)
-    for _ in range(2):
-        with pytest.raises(RateLimited) as caught:
-            ask(fake)
-        assert caught.value.retry_after == timedelta(minutes=5)
-    assert fake.call_count == 4
-
-
-def test_a_script_that_must_not_repeat_says_so():
-    fake = FakeProvider(script=[steps_for(DAY)], repeat_last=False)
-    ask(fake)
-    with pytest.raises(IndexError, match="asked 2 times"):
-        ask(fake)
-
-
-def test_the_fake_records_what_it_was_asked():
-    fake = FakeProvider(script=[steps_for(DAY)])
-    fake.fetch("system", {"api_key": "k"}, at(DAY, 7))
-    assert fake.calls == [("system", {"api_key": "k"}, at(DAY, 7))]
-
-
-def test_a_callable_entry_is_called_each_time():
-    counter = iter(range(10))
-    fake = FakeProvider(script=[lambda: steps_for(DAY, 100 * (next(counter) + 1))], repeat_last=True)
-    first, second = max(s.power_kw for s in ask(fake)), max(s.power_kw for s in ask(fake))
-    assert second > first
-
-
-def test_a_held_fetch_waits_until_released():
-    release = threading.Event()
-    fake = FakeProvider(script=[Held(release, steps_for(DAY))])
-    result = []
-    worker = threading.Thread(target=lambda: result.append(ask(fake)))
-    worker.start()
-    worker.join(0.2)
-    assert worker.is_alive() and not result
-    release.set()
-    worker.join(2)
-    assert result and check_steps(result[0]) == []
-
-
-def test_a_held_fetch_can_end_in_an_error():
-    release = threading.Event()
-    release.set()
-    fake = FakeProvider(script=[Held(release, Unavailable("late failure"))])
-    with pytest.raises(Unavailable, match="late"):
-        ask(fake)
-
-
-def test_the_fake_meets_the_metadata_rules_of_the_kit():
-    case = ProviderCase(make=lambda t: FakeProvider(), ok=[], server_error=[], bad_body=[], empty_body=[])
-    kit.check_metadata(case)

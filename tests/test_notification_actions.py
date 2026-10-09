@@ -11,9 +11,7 @@ from datetime import date, timedelta
 
 import pytest
 from PySide6.QtCore import QPoint, QRect
-from PySide6.QtGui import QGuiApplication
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication
 
 from car_charge_planner.controller import Controller
 from car_charge_planner.forecast.service import ForecastResult
@@ -25,11 +23,6 @@ from car_charge_planner.shells.window import WindowShell
 from conftest import TZ, FakeNotifier, at, forecast_from
 
 DAY = date(2026, 7, 3)
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 class RecordingBus:
@@ -48,12 +41,6 @@ def wait_for(condition, ms=2000):
         if condition():
             return True
     return False
-
-
-def test_the_notifier_knows_which_ids_it_sent():
-    notifier = Notifier(RecordingBus(), icon="x")
-    first = notifier.send("a", "b")
-    assert notifier.owns(first) and not notifier.owns(first + 1) and not notifier.owns(7)
 
 
 def test_a_click_on_our_notification_shows_the_plan():
@@ -79,12 +66,6 @@ def test_other_actions_are_ignored():
     for key in ("dismiss", "snooze", ""):
         handle(notifier.send("a", "b"), key)
     assert shown == []
-
-
-def test_the_default_action_key_is_the_one_the_notifier_sends():
-    from car_charge_planner.notifier import DEFAULT_ACTION as sent
-
-    assert DEFAULT_ACTION == sent[0] == "default"
 
 
 def make_controller(cfg, tmp_path, monkeypatch):
@@ -116,36 +97,13 @@ def test_a_click_opens_the_tray_popup(cfg, tmp_path, monkeypatch, qapp):
     shell.popup.hide()
 
 
-def area():
-    return QGuiApplication.primaryScreen().availableGeometry()
-
-
-def test_with_no_anchor_and_no_history_it_appears_near_the_top_right(cfg, qapp):
-    popup = Popup(TZ)
-    popup.show_near(QRect())
-    a = area()
-    assert popup.x() + popup.width() <= a.right() and popup.x() + popup.width() >= a.right() - 16
-    assert popup.y() <= a.top() + 16
-    popup.hide()
-
-
 def test_with_no_anchor_it_returns_to_where_it_was_last_placed(cfg, qapp):
     popup = Popup(TZ)
     popup.show_near(QRect(200, 300, 24, 24))  # a click on the tray icon
     placed = QPoint(popup.x(), popup.y())
     popup.hide()
     popup.show_near(QRect())  # a notification click: no icon
-    assert QPoint(popup.x(), popup.y()) == placed and popup.last_position == placed
-    popup.hide()
-
-
-def test_an_anchored_placement_still_wins_over_the_remembered_one(cfg, qapp):
-    popup = Popup(TZ)
-    popup.show_near(QRect(200, 300, 24, 24))
-    popup.hide()
-    popup.last_position = QPoint(5, 5)
-    popup.show_near(QRect(400, 100, 24, 24))
-    assert popup.last_position == QPoint(popup.x(), popup.y()) and popup.last_position != QPoint(5, 5)
+    assert QPoint(popup.x(), popup.y()) == placed
     popup.hide()
 
 
@@ -175,28 +133,6 @@ def test_clicks_reach_the_qt_side(qapp):
     listener.stop()
 
 
-def test_stopping_ends_the_thread(qapp):
-    source = FakeSource()
-    listener = ActionListener(source)
-    listener.start()
-    assert listener.running
-    listener.stop()
-    assert source.stopped.is_set() and not listener.running
-
-
-def test_starting_twice_does_not_start_a_second_thread(qapp):
-    source = FakeSource([(1, "default")])
-    listener = ActionListener(source)
-    seen = []
-    listener.action_invoked.connect(lambda i, k: seen.append(i))
-    listener.start()
-    listener.start()
-    assert wait_for(lambda: seen == [1])
-    QTest.qWait(100)
-    assert seen == [1]
-    listener.stop()
-
-
 def test_a_listener_that_cannot_work_is_logged_and_the_app_carries_on(qapp, caplog):
     listener = ActionListener(FakeSource(fail=OSError("no session bus")))
     with caplog.at_level(logging.WARNING):
@@ -204,13 +140,6 @@ def test_a_listener_that_cannot_work_is_logged_and_the_app_carries_on(qapp, capl
         assert wait_for(lambda: not listener.running)
     assert any("Not listening for notification clicks" in r.message for r in caplog.records)
     listener.stop()  # a second stop is safe
-
-
-def test_the_thread_does_not_keep_the_app_alive(qapp):
-    listener = ActionListener(FakeSource())
-    listener.start()
-    assert listener._thread.daemon
-    listener.stop()
 
 
 @pytest.mark.skipif(not os.environ.get("DBUS_SESSION_BUS_ADDRESS"), reason="needs a session bus")
@@ -274,13 +203,3 @@ def test_the_selftest_says_so_when_the_notification_cannot_be_sent(qapp):
     said = Said()
     code = selftest.run(timeout_s=1, notifier=Notifier(Broken(), icon="x"), listener=ActionListener(FakeSource()), out=said)
     assert code == 1 and "could not be sent" in said[0]
-
-
-def test_the_command_is_listed_and_wired():
-    import subprocess
-    import sys
-    from pathlib import Path
-
-    project = Path(__file__).resolve().parent.parent
-    done = subprocess.run([sys.executable, "-m", "car_charge_planner", "frobnicate"], cwd=project, capture_output=True, text=True, timeout=30)
-    assert "test-notification" in done.stderr

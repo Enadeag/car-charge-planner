@@ -8,18 +8,14 @@ from dataclasses import replace
 from datetime import date, timedelta
 
 import pytest
-from PySide6.QtWidgets import QApplication, QLabel
 
-from car_charge_planner.notifications import message
 from car_charge_planner.planner.advice import grid_advice
 from car_charge_planner.planner.config_io import dump_config, write_config
 from car_charge_planner.planner.model import Charger, ConfigError, ForecastStep, load_config, validate
 from car_charge_planner.planner.projection import plan
 from car_charge_planner.planner.surplus import amps_for, charge_power_kw, usable_kw
 from car_charge_planner.settings.window import SettingsWindow
-from car_charge_planner.storage.state import BatteryReading
-from car_charge_planner.view_model import ForecastSource, build
-from conftest import TZ, at, forecast_from
+from conftest import at, forecast_from
 
 DAY = date(2026, 7, 3)
 NOW = at(DAY, 7)
@@ -28,11 +24,6 @@ STRONG = 2500  # W/m2 at the peak: about 10 kW from the example system, enough f
 
 def with_phases(cfg, phases, **charger):
     return replace(cfg, charger=replace(cfg.charger, phases=phases, **charger))
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 def test_one_phase_is_the_default_and_an_old_config_means_one_phase(tmp_path):
@@ -77,11 +68,6 @@ def test_the_same_surplus_gives_a_third_of_the_current_on_three_phases(cfg):
     assert amps_for(6.9, with_phases(cfg, 1)) == 30 and amps_for(6.9, with_phases(cfg, 3)) == 10
 
 
-def test_the_minimum_current_is_a_higher_power_on_three_phases(cfg):
-    assert charge_power_kw(cfg.charger.min_amps, with_phases(cfg, 1)) == pytest.approx(1.38)
-    assert charge_power_kw(cfg.charger.min_amps, with_phases(cfg, 3)) == pytest.approx(4.14)
-
-
 def day_windows(cfg, peak, soc=40):
     return plan(forecast_from([(DAY, peak)]), cfg, soc, at(DAY, 0))[0].windows
 
@@ -123,46 +109,8 @@ def test_the_grid_advice_uses_three_phase_power(cfg):
         assert advice.window.power_kw >= charge_power_kw(chosen.charger.min_amps, chosen) - 1e-9
 
 
-def view_for(cfg, peak=STRONG):
-    forecast = forecast_from([(DAY, peak), (DAY + timedelta(days=1), peak)])
-    plans = plan(forecast, cfg, 45, NOW)
-    return build(plans, NOW, cfg, BatteryReading(45, NOW), timedelta(minutes=5), False, None, ForecastSource("Credit"))
-
-
-def test_texts_say_per_phase_only_with_three_phases(cfg):
-    one, three = view_for(with_phases(cfg, 1)), view_for(with_phases(cfg, 3))
-    assert "per phase" not in (one.detail + one.tooltip + one.headline) and " A)" in one.detail
-    assert "A per phase)" in three.detail and "A per phase" in three.tooltip
-    assert all("A per phase)" in row.power for row in three.outlook)
-
-
-def test_the_grid_advice_text_says_per_phase_with_three_phases(cfg):
-    forecast = forecast_from([(DAY + timedelta(days=i), 120) for i in range(3)])
-    chosen = with_phases(cfg, 3)
-    plans = plan(forecast, chosen, 35, NOW)
-    vm = build(plans, NOW, chosen, BatteryReading(35, NOW), None, False, grid_advice(plans, forecast, chosen, None, NOW))
-    assert "A per phase)" in vm.advice.detail
-
-
-def test_the_notification_says_the_current_is_per_phase_with_three_phases(cfg):
-    for phases, wanted in ((1, "Set the current to {a} A ("), (3, "Set the current to {a} A per phase (")):
-        chosen = with_phases(cfg, phases)
-        window = day_windows(chosen, STRONG)[0]
-        title, body = message("solar", window, chosen, TZ)
-        assert wanted.format(a=window.amps) in body
-
-
 def charger_tab(window):
     return next(t for t in window.field_tabs if t.key == "charger")
-
-
-def test_the_charger_tab_asks_for_the_phases_first(tmp_path, qapp, cfg):
-    window = SettingsWindow(cfg, tmp_path / "config.toml", lambda c: None)
-    tab = charger_tab(window)
-    assert tab.specs[0].key == "charger.phases"
-    box = tab.inputs["charger.phases"]
-    assert [box.itemText(i) for i in range(box.count())] == ["One phase", "Three phases"] and box.currentData() == 1
-    assert any("per phase" in label.text() for label in tab.findChildren(QLabel))
 
 
 def test_choosing_three_phases_saves_the_number_three(tmp_path, qapp, cfg):

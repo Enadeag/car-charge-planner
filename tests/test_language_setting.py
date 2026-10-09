@@ -7,7 +7,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from dataclasses import replace
 
 import pytest
-from PySide6.QtWidgets import QApplication, QComboBox
+from PySide6.QtWidgets import QComboBox
 
 from car_charge_planner import i18n
 from car_charge_planner.i18n import available_languages, init, language_name
@@ -21,11 +21,6 @@ from test_i18n import make_catalogue
 def english_after_every_test():
     yield
     init(languages=[])
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 @pytest.fixture

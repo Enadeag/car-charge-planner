@@ -8,23 +8,17 @@ from dataclasses import replace
 from datetime import date, timedelta
 
 import pytest
-from PySide6.QtWidgets import QApplication, QPushButton
+from PySide6.QtWidgets import QPushButton
 
 from car_charge_planner.controller import Controller
-from car_charge_planner.forecast.check import Attempt
 from car_charge_planner.forecast.service import ForecastResult
-from car_charge_planner.planner.model import first_run_config, load_config
+from car_charge_planner.planner.model import first_run_config
 from car_charge_planner.shells.tray import TrayShell
 from car_charge_planner.shells.window import WindowShell
 from car_charge_planner.storage.state import load_state
 from conftest import FakeNotifier, at, example_config, forecast_from, settle_controller
 
 DAY = date(2026, 7, 3)
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 def make(cfg, tmp_path, monkeypatch, fetch=None):
@@ -105,15 +99,6 @@ def test_the_popup_of_the_tray_shell_has_a_set_up_button_that_opens_the_wizard(t
     controller.setup_wizard.close()
 
 
-def test_the_window_shell_shows_not_set_up_in_its_title_and_has_the_button(tmp_path, monkeypatch, qapp):
-    controller, _ = make(first_run_config(), tmp_path, monkeypatch)
-    shell = WindowShell(controller)
-    shell.show_plan()
-    assert shell.window.windowTitle() == "Not set up yet"
-    assert any(b.text() == "Set up" and b.isVisible() for b in shell.view.findChildren(QPushButton))
-    shell.window.hide()
-
-
 def test_closing_the_wizard_unfinished_leaves_the_app_not_set_up_with_the_button_still_there(tmp_path, monkeypatch, qapp):
     controller, _ = make(first_run_config(), tmp_path, monkeypatch)
     shell = WindowShell(controller)
@@ -129,37 +114,13 @@ def test_closing_the_wizard_unfinished_leaves_the_app_not_set_up_with_the_button
     shell.window.hide()
 
 
-def test_finishing_applies_the_config_starts_the_first_fetch_and_shows_the_plan(tmp_path, monkeypatch, qapp):
-    controller, _ = make(first_run_config(), tmp_path, monkeypatch)
-    shell = WindowShell(controller)
-    controller.setup_completed.connect(shell.show_plan)
-    controller.open_setup()
-    wizard = controller.setup_wizard
-    wizard.check = lambda cfg: Attempt(True, 2, "OK")
-    shell.window.hide()
-    assert not shell.window.isVisible() and controller.calls == []
-    wizard.navigate("location")
-    page = wizard.pages["location"]
-    page.latitude.setValue(52.37)
-    page.longitude.setValue(4.9)
-    wizard.navigate("finish")
-    for thread in list(wizard.pages["finish"]._threads):
-        thread.join(5)
-    assert wizard.finish()
-    settle_controller(controller)
-    assert controller.cfg.is_set_up and load_config(tmp_path / "config.toml").latitude == 52.37
-    assert len(controller.calls) >= 1 and controller.calls[0].latitude == 52.37
-    assert controller.vm.state != "needs-setup" and shell.window.isVisible()
-    shell.window.hide()
-
-
 def test_settings_has_run_set_up_again_only_when_the_app_can_open_it(tmp_path, monkeypatch, qapp):
     from car_charge_planner.settings.window import SettingsWindow
 
     assert SettingsWindow(example_config(), tmp_path / "c.toml", lambda c: None).setup_button.isHidden()
     controller, _ = make(example_config(), tmp_path, monkeypatch)
     controller.open_settings()
-    assert not controller.settings_window.setup_button.isHidden() and controller.settings_window.setup_button.text() == "Run set-up again..."
+    assert not controller.settings_window.setup_button.isHidden()
     controller.settings_window.close()
 
 

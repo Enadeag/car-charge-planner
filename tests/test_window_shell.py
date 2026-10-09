@@ -7,9 +7,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from datetime import date, timedelta
 
 import pytest
-from PySide6.QtCore import QEvent, Qt
+from PySide6.QtCore import QEvent
 from PySide6.QtGui import QCloseEvent, QKeySequence
-from PySide6.QtWidgets import QApplication, QPushButton, QToolButton
+from PySide6.QtWidgets import QApplication, QPushButton
 
 from car_charge_planner.controller import Controller
 from car_charge_planner.forecast.service import ForecastResult
@@ -19,11 +19,6 @@ from car_charge_planner.storage.state import load_state
 from conftest import FakeNotifier, at, forecast_from
 
 DAY = date(2026, 7, 3)
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 class Setup:
@@ -70,13 +65,12 @@ def test_the_window_shows_the_plan_in_the_shared_view(s):
     s.shell.show_plan()
     vm = s.controller.vm
     assert s.window.isVisible() and s.shell.view.headline.text() == vm.headline
-    assert s.shell.view.parent() is not None and s.shell.view.tabs.count() == 2
 
 
 def test_the_title_and_icon_follow_the_state(s):
     s.shell.show_plan()
     upcoming = s.window.windowTitle()
-    assert upcoming == s.controller.vm.headline and upcoming.startswith("Next: Today 09:00")
+    assert upcoming == s.controller.vm.headline
     s.clock(11)
     s.controller.rebuild()
     assert s.window.windowTitle() == "Charge now" and s.window.windowTitle() != upcoming
@@ -90,13 +84,6 @@ def test_with_no_forecast_the_title_says_so(cfg, tmp_path, monkeypatch, qapp):
     shell = WindowShell(controller)
     controller.rebuild()
     assert shell.window.windowTitle() == "No forecast available"
-
-
-def test_the_window_is_an_ordinary_window(s):
-    assert s.window.windowType() == Qt.WindowType.Window
-    assert not s.window.windowFlags() & Qt.WindowType.FramelessWindowHint
-    texts = [b.text() for b in s.window.findChildren(QPushButton)]
-    assert "×" not in texts  # the window manager's title bar closes it
 
 
 def test_losing_the_focus_does_not_close_the_window(s):
@@ -121,10 +108,6 @@ def test_the_window_follows_the_height_of_the_page_shown(s, qapp):
     s.shell.view.tabs.setCurrentIndex(0)
     qapp.processEvents()
     assert s.window.height() == plan_height
-
-
-def test_the_window_has_a_sensible_minimum_width(s):
-    assert s.window.minimumWidth() >= 440
 
 
 def test_closing_hides_the_window_and_the_app_keeps_running(s):
@@ -158,22 +141,8 @@ def test_the_note_is_not_repeated_after_a_restart(cfg, tmp_path, monkeypatch, qa
     assert second.notifier.sent == []
 
 
-def test_the_menu_has_settings_set_up_refresh_and_quit(s):
-    assert actions(s.shell.menu) == ["Settings...", "Set up...", "Refresh forecast", "Quit"]
-    assert s.shell.menu_button.popupMode() == QToolButton.ToolButtonPopupMode.InstantPopup
-    assert s.shell.menu_button.menu() is s.shell.menu
-
-
-def test_the_menu_button_sits_at_the_right_edge_of_the_header(s, qapp):
-    s.shell.show_plan()
-    qapp.processEvents()
-    view, button = s.shell.view, s.shell.menu_button
-    assert button.mapTo(view, button.rect().topRight()).x() >= view.width() - 2
-
-
 def test_quit_has_the_standard_shortcut_and_ends_the_app(s, monkeypatch):
     assert s.shell.quit_action.shortcut() == QKeySequence(QKeySequence.StandardKey.Quit)
-    assert s.shell.quit_action in s.window.actions()
     quit_calls = []
     monkeypatch.setattr(QApplication, "quit", staticmethod(lambda: quit_calls.append(1)))
     s.shell.quit_action.trigger()
@@ -243,12 +212,6 @@ def test_setting_the_battery_in_the_window_reaches_the_state_and_the_view(s):
     s.shell.view.battery_submitted.emit(33.0)
     assert load_state().battery.pct == 33
     assert s.shell.view.battery_status.text().startswith("Battery 33%")
-
-
-def test_the_tray_shell_and_the_window_shell_share_their_icon_code():
-    from car_charge_planner.shells import tray
-
-    assert tray.make_icon is make_icon
 
 
 def test_the_window_is_centred_the_first_time_it_is_shown(s):

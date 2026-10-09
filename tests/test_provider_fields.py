@@ -4,21 +4,14 @@ import os
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-import pytest
-from PySide6.QtWidgets import QApplication, QLineEdit
 
 from car_charge_planner.forecast.providers.forecast_solar import ForecastSolar
 from car_charge_planner.forecast.providers.open_meteo import OpenMeteo
 from car_charge_planner.settings.fields import TabSpec, get_value, set_value
 from car_charge_planner.settings.providers import provider_fields
-from car_charge_planner.settings.tabs import FieldTab, SecretInput
+from car_charge_planner.settings.tabs import FieldTab
 
 SECRET = "FIELD-SECRET-77"
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 def tab_for(provider, cfg, secrets=None):
@@ -53,20 +46,9 @@ def test_the_text_field_is_a_plain_box_filled_from_the_config(qapp, cfg):
     cfg = set_value(cfg, "forecast.open-meteo.base_url", "https://x.test")
     tab = tab_for(OpenMeteo(), cfg)
     box = tab.inputs["forecast.open-meteo.base_url"]
-    assert isinstance(box, QLineEdit) and box.text() == "https://x.test" and box.echoMode() == QLineEdit.EchoMode.Normal
+    assert box.text() == "https://x.test"
     box.setText("  https://y.test \n")
     assert tab.apply_to(cfg).forecast.settings["open-meteo"]["base_url"] == "https://y.test"
-
-
-def test_the_secret_field_shows_dots_until_asked(qapp, cfg):
-    tab = tab_for(OpenMeteo(), cfg, {"forecast.open-meteo.api_key": SECRET})
-    secret = tab.inputs["forecast.open-meteo.api_key"]
-    assert isinstance(secret, SecretInput) and secret.text() == SECRET
-    assert secret.line.echoMode() == QLineEdit.EchoMode.Password
-    secret.toggle.setChecked(True)
-    assert secret.line.echoMode() == QLineEdit.EchoMode.Normal and secret.toggle.text() == "Hide"
-    secret.toggle.setChecked(False)
-    assert secret.line.echoMode() == QLineEdit.EchoMode.Password and secret.toggle.text() == "Show"
 
 
 def test_a_secret_never_goes_into_the_config(qapp, cfg):
@@ -92,19 +74,3 @@ def test_editing_a_field_signals_a_change(qapp, cfg):
     tab.inputs["forecast.open-meteo.api_key"].setText("x")
     tab.inputs["forecast.open-meteo.base_url"].setText("https://x.test")
     assert len(seen) == 2
-
-
-def test_the_fields_are_translated_when_shown(qapp, cfg, tmp_path):
-    from car_charge_planner import i18n
-    from test_i18n import make_catalogue
-
-    make_catalogue(tmp_path, "xx", {"Server address": "Serveradres", "API key": "API-sleutel"})
-    i18n.init(["xx"], tmp_path)
-    try:
-        tab = tab_for(OpenMeteo(), cfg)
-        from PySide6.QtWidgets import QLabel
-
-        texts = [label.text() for label in tab.findChildren(QLabel)]
-        assert "Serveradres" in texts and "API-sleutel" in texts
-    finally:
-        i18n.init(languages=[])

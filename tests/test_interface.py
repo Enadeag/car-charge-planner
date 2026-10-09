@@ -1,14 +1,16 @@
 """The interface setting and the choice between the tray shell and the window shell."""
 
 import os
+import subprocess
+import sys
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from dataclasses import replace
 
 import pytest
-from PySide6.QtWidgets import QApplication
 
+from app_process import PROJECT, RunningApp, app_environment
 from car_charge_planner.controller import Controller
 from car_charge_planner.main import NO_TRAY_HINT, announce_tray_fallback, create_shell, wait_for_tray
 from car_charge_planner.planner.config_io import dump_config, write_config
@@ -19,11 +21,6 @@ from car_charge_planner.shells.tray import TrayShell
 from car_charge_planner.shells.window import WindowShell
 from car_charge_planner.storage.state import load_state
 from conftest import FakeNotifier, example_config
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 def with_mode(mode):
@@ -220,66 +217,24 @@ def test_reset_tab_goes_back_to_automatic_without_saving(tmp_path, qapp):
     assert h.box.currentData() == "auto" and not h.file.exists()
 
 
-def _env(tmp_path, **extra):
-    for name in ("config", "state", "cache", "run"):
-        (tmp_path / name).mkdir(mode=0o700, exist_ok=True)
-    return {
-        **os.environ,
-        "QT_QPA_PLATFORM": "offscreen",  # an offscreen desktop has no system tray
-        "HOME": str(tmp_path),
-        "XDG_CONFIG_HOME": str(tmp_path / "config"),
-        "XDG_STATE_HOME": str(tmp_path / "state"),
-        "XDG_CACHE_HOME": str(tmp_path / "cache"),
-        "XDG_RUNTIME_DIR": str(tmp_path / "run"),
-        "XDG_DATA_HOME": str(tmp_path / "data"),
-        **extra,
-    }
-
-
 def test_without_a_tray_the_app_starts_as_a_window_instead_of_exiting(tmp_path):
-    import subprocess
-    import sys
-    import time
-    from pathlib import Path
-
-    project = Path(__file__).resolve().parent.parent
-    env = _env(tmp_path)
-    first = subprocess.Popen([sys.executable, "-m", "car_charge_planner"], cwd=project, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    app = RunningApp(tmp_path)
     try:
-        time.sleep(4)  # a second to look for a tray, then it carries on as a window
-        assert first.poll() is None, first.stderr.read()  # still running: it did not exit with "no system tray"
-        second = subprocess.run([sys.executable, "-m", "car_charge_planner"], cwd=project, env=env, capture_output=True, text=True, timeout=30)
+        app.wait_until_running()  # after looking for a tray, it carries on as a window
+        second = subprocess.run([sys.executable, "-m", "car_charge_planner"], cwd=PROJECT, env=app_environment(tmp_path), capture_output=True, text=True, timeout=30)
         assert second.returncode == 0 and "already running" in second.stderr
-        assert first.poll() is None
+        assert app.still_running_after()
     finally:
-        first.terminate()
-        try:
-            out, err = first.communicate(timeout=10)
-        except subprocess.TimeoutExpired:
-            first.kill()
-            out, err = first.communicate()
+        err = app.stop()
     assert "Traceback" not in err and "No system tray" not in err
 
 
 def test_the_autostart_flag_starts_the_whole_app_without_a_tray_too(tmp_path):
     """What the autostart entry runs: `car-charge-planner --background`, here on a desktop with no tray."""
-    import subprocess
-    import sys
-    import time
-    from pathlib import Path
-
-    project = Path(__file__).resolve().parent.parent
-    process = subprocess.Popen(
-        [sys.executable, "-m", "car_charge_planner", "--background"], cwd=project, env=_env(tmp_path), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-    )
+    app = RunningApp(tmp_path, "--background")
     try:
-        time.sleep(8)  # up to five seconds looking for a tray at login, then the hidden window
-        assert process.poll() is None, process.stderr.read()
+        app.wait_until_running()  # after up to five seconds looking for a tray at login
+        assert app.still_running_after()
     finally:
-        process.terminate()
-        try:
-            out, err = process.communicate(timeout=10)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            out, err = process.communicate()
+        err = app.stop()
     assert "Traceback" not in err and "unknown command" not in err.lower()

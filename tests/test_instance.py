@@ -7,16 +7,10 @@ from pathlib import Path
 
 import pytest
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication
 
 from car_charge_planner.instance import InstanceServer, Outcome, claim_instance, request_show, socket_path
 
 PROJECT = Path(__file__).resolve().parent.parent
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 @pytest.fixture

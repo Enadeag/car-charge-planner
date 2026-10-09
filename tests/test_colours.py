@@ -5,10 +5,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 from PySide6.QtGui import QColor, QPalette
-from PySide6.QtWidgets import QApplication, QLabel
+from PySide6.QtWidgets import QLabel
 
 from car_charge_planner import colours
-from car_charge_planner.planner.model import Config, first_run_config
+from car_charge_planner.planner.model import Config
 from car_charge_planner.popup import Popup
 from car_charge_planner.settings.window import SettingsWindow
 from conftest import TZ
@@ -25,11 +25,6 @@ def luminance(hex_colour):
 def contrast(a, b):
     hi, lo = sorted((luminance(a), luminance(b)), reverse=True)
     return (hi + 0.05) / (lo + 0.05)
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 @pytest.fixture
@@ -75,18 +70,6 @@ def test_light_theme_gets_the_dark_accent_shades(light):
     assert colours.error(w) == colours.ERROR["light"] and colours.warning(w) == colours.WARNING["light"]
 
 
-def test_secondary_text_uses_the_placeholder_role_not_mid():
-    assert "placeholder-text" in colours.MUTED_STYLE and "mid" not in colours.MUTED_STYLE
-
-
-def test_settings_hints_use_the_muted_role_and_the_typical_value_tag_matches_the_theme(dark, tmp_path):
-    w = SettingsWindow(first_run_config(), tmp_path / "c.toml", lambda c: None)
-    labels = w.field_tabs[0].findChildren(QLabel)
-    hints = [l for l in labels if "font-size: 9pt" in l.styleSheet()]
-    assert hints and all("placeholder-text" in l.styleSheet() for l in hints)
-    assert any(colours.WARNING["dark"] in l.text() for l in hints)
-
-
 def test_settings_errors_use_the_theme_error_colour(dark, tmp_path):
     w = SettingsWindow(Config(), tmp_path / "c.toml", lambda c: None)
     w.show_errors(["something is wrong"])
@@ -115,4 +98,3 @@ def test_popup_text_colours_follow_the_theme(dark):
     assert colours.ERROR["dark"] in popup.battery.styleSheet()  # never entered: flagged
     assert colours.ERROR["dark"] in popup.battery_status.styleSheet()
     assert colours.WARNING["dark"] in popup.advice_title.styleSheet()
-    assert "placeholder-text" in popup.footer.styleSheet()

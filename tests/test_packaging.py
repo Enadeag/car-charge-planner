@@ -3,12 +3,14 @@
 import shutil
 import subprocess
 import sys
+import tomllib
 import zipfile
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
+VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
 PO = """msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=utf-8\\n"
@@ -39,16 +41,17 @@ def wheel(tmp_path_factory):
     return zipfile.ZipFile(built[0])
 
 
-def test_the_wheel_has_one_package_and_nothing_stray(wheel):
-    tops = {name.split("/")[0] for name in wheel.namelist()}
-    assert tops == {"car_charge_planner", "car_charge_planner-0.1.0.dist-info"}
-
-
-def test_the_compiled_translations_are_built_and_shipped(wheel):
+def test_the_wheel_holds_the_package_its_translations_and_icon_and_no_tests(wheel):
     names = wheel.namelist()
-    assert "car_charge_planner/locale/nl/LC_MESSAGES/car-charge-planner.mo" in names
-    assert "car_charge_planner/locale/nl/LC_MESSAGES/car-charge-planner.po" in names
-    assert "car_charge_planner/locale/car-charge-planner.pot" in names
+    assert {name.split("/")[0] for name in names} == {"car_charge_planner", f"car_charge_planner-{VERSION}.dist-info"}
+    for shipped in (
+        "car_charge_planner/locale/nl/LC_MESSAGES/car-charge-planner.mo",
+        "car_charge_planner/locale/nl/LC_MESSAGES/car-charge-planner.po",
+        "car_charge_planner/locale/car-charge-planner.pot",
+        "car_charge_planner/assets/car-charge-planner.svg",
+    ):
+        assert shipped in names
+    assert not [n for n in names if n.startswith(("tests/", ".scratch/", "docs/")) or "__pycache__" in n]
 
 
 def test_the_compiled_catalogue_really_translates(wheel, tmp_path):
@@ -63,28 +66,12 @@ def test_the_compiled_catalogue_really_translates(wheel, tmp_path):
         i18n.init(languages=[])
 
 
-def test_the_icon_and_the_package_data_are_in_it(wheel):
-    assert "car_charge_planner/assets/car-charge-planner.svg" in wheel.namelist()
-    assert "car_charge_planner/py.typed" not in wheel.namelist()
-
-
-def test_no_test_or_scratch_file_is_shipped(wheel):
-    assert not [n for n in wheel.namelist() if n.startswith(("tests/", ".scratch/", "docs/")) or "__pycache__" in n]
-
-
 def test_the_command_and_the_metadata(wheel):
-    entry = wheel.read("car_charge_planner-0.1.0.dist-info/entry_points.txt").decode()
-    assert "car-charge-planner = car_charge_planner.__main__:main" in entry
-    metadata = wheel.read("car_charge_planner-0.1.0.dist-info/METADATA").decode()
+    dist_info = f"car_charge_planner-{VERSION}.dist-info"
+    assert "car-charge-planner = car_charge_planner.__main__:main" in wheel.read(f"{dist_info}/entry_points.txt").decode()
+    metadata = wheel.read(f"{dist_info}/METADATA").decode()
     metadata = metadata.replace("Requires-Dist: pyside6-essentials", "Requires-Dist: PySide6-Essentials")
-    for needle in ("Name: car-charge-planner", "Requires-Python: >=3.12", "License-Expression: MIT", "Requires-Dist: PySide6-Essentials",
+    for needle in ("Name: car-charge-planner", f"Version: {VERSION}", "Requires-Python: >=3.12", "License-Expression: MIT", "Requires-Dist: PySide6-Essentials",
                    "Requires-Dist: jeepney", "Requires-Dist: tzdata", "Classifier: Operating System :: POSIX :: Linux", "Project-URL: Source"):
         assert needle in metadata, needle
-    assert "Requires-Dist: pytest" not in metadata.split("Provides-Extra")[0]
-
-
-def test_the_package_imports_nothing_from_the_old_top_level_names():
-    """`app`, `planner`, `forecast` and `storage` must not come back as top-level packages."""
-    for old in ("app", "planner", "forecast", "storage"):
-        assert not (ROOT / old).exists(), f"{old}/ is back at the top level"
-        assert not list((ROOT / "src").glob(old)), f"src/{old} is back"
+    assert "Requires-Dist: pytest" not in metadata.split("Provides-Extra")[0]  # the test tools are not run-time requirements

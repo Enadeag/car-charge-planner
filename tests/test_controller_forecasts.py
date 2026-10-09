@@ -8,9 +8,7 @@ import time
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
-import pytest
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication
 
 from car_charge_planner.controller import Controller
 from car_charge_planner.forecast.provider import Unavailable
@@ -21,11 +19,6 @@ from conftest import FakeNotifier
 from fake_provider import FakeProvider, steps_for
 
 TODAY = datetime.now().date()
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 def make(cfg, tmp_path, monkeypatch, main_script, backup_script=None, fallback=True):

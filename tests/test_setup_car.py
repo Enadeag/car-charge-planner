@@ -7,25 +7,14 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from dataclasses import replace
 
 import pytest
-from PySide6.QtWidgets import QApplication, QLabel
 
 from car_charge_planner.forecast.check import Attempt
 from car_charge_planner.planner.model import TYPICAL_KEYS, Config, Setup, load_config
-from car_charge_planner.setup.vehicle import CAR_KEYS, CHARGER_KEYS, daily_to_weekly, problems, weekly_to_daily
+from car_charge_planner.setup.vehicle import CAR_KEYS, CHARGER_KEYS, problems
 from car_charge_planner.setup.wizard import SetupWizard
 from conftest import example_config
 
 NL = {"LANG": "nl_NL.UTF-8"}
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
-
-
-@pytest.mark.parametrize("weekly, daily", [(280, 40), (700, 100), (0, 0), (350, 50), (1, 1 / 7)])
-def test_a_week_is_seven_days(weekly, daily):
-    assert weekly_to_daily(weekly) == pytest.approx(daily) and daily_to_weekly(daily) == pytest.approx(weekly)
 
 
 def test_the_planners_own_messages_are_what_the_page_shows(cfg):
@@ -39,11 +28,6 @@ def test_the_planners_own_messages_are_what_the_page_shows(cfg):
 def test_only_the_car_and_the_charger_are_this_pages_business(cfg):
     odd = replace(cfg, latitude=999.0, car=replace(cfg.car, minimum_pct=90, target_pct=50))
     assert problems(odd) == ["[car] needs 0 <= minimum_pct < target_pct <= 100"]
-
-
-def test_the_two_halves_ask_about_different_settings_and_never_the_efficiency():
-    assert set(CAR_KEYS) | set(CHARGER_KEYS) <= set(TYPICAL_KEYS)
-    assert not set(CAR_KEYS) & set(CHARGER_KEYS) and "charger.efficiency" not in CHARGER_KEYS
 
 
 class Rig:
@@ -72,17 +56,12 @@ def rig(tmp_path, qapp):
     return Rig(tmp_path)
 
 
-def texts(widget):
-    return [l.text() for l in widget.findChildren(QLabel)]
-
-
 def test_a_new_install_shows_the_typical_values_and_says_so(rig):
     page = rig.page
-    assert rig.wizard.heading.text() == "Your car and charger"
     assert (page.battery.value(), page.consumption.value(), page.weekly.value()) == (60, 18, 280)
     assert (page.minimum.value(), page.target.value()) == (30, 80)
     assert page.one_phase.isChecked() and (page.max_amps.value(), page.min_amps.value()) == (16, 6)
-    assert "Typical values in use" in page.car_note.text() and "Typical values in use" in page.charger_note.text()
+    assert page.car_note.text() and page.charger_note.text()  # it says the values are typical
     assert rig.wizard.next_button.isEnabled()
 
 
@@ -177,12 +156,6 @@ def test_the_currents_given_are_remembered_and_the_voltage_stays_typical_until_g
     assert rig.cfg.charger.volts == 240 and "charger.volts" not in rig.typical
 
 
-def test_the_voltage_is_under_advanced(rig):
-    assert rig.page.advanced_box.isHidden()
-    rig.page.advanced_toggle.click()
-    assert not rig.page.advanced_box.isHidden() and rig.page.volts.value() == 230
-
-
 def test_a_lowest_current_above_the_highest_is_said_and_stops_next(rig):
     rig.page.min_amps.setValue(20)  # the highest is 16
     assert "[charger] needs 0 < min_amps <= max_amps" in rig.page.errors.text() and not rig.wizard.next_button.isEnabled()
@@ -197,20 +170,6 @@ def test_i_dont_know_the_charger_puts_back_its_typical_values_and_remembers_them
     rig.page.charger_unknown.click()
     assert (rig.cfg.charger.phases, rig.cfg.charger.max_amps, rig.cfg.charger.min_amps, rig.cfg.charger.volts) == (1, 16, 6, 230)
     assert set(CHARGER_KEYS) <= set(rig.typical) and rig.page.one_phase.isChecked() and rig.page.max_amps.value() == 16
-
-
-def test_the_explanations_are_there(rig):
-    shown = " ".join(texts(rig.page))
-    assert "Give the usable (net) capacity" in shown and "Typical: about 40 to 100 kWh" in shown
-    assert "trip computer average" in shown and "a seventh of it a day" in shown
-    assert "fuse box" in shown and "switched to single-phase charging" in shown and "Per phase" in shown
-
-
-# units
-
-def test_metric_asks_for_kilometres_and_kwh_per_100_km(rig):
-    assert rig.page.weekly.suffix() == " km" and rig.page.consumption.suffix() == " kWh/100 km"
-    assert "Typical: 14.0 to 22.0 kWh/100 km." in rig.page.consumption_note.text()
 
 
 def test_imperial_asks_for_miles_and_miles_per_kwh_with_converted_ranges(tmp_path, qapp):

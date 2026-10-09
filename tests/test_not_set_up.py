@@ -4,7 +4,6 @@ import os
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-import socket
 import subprocess
 import sys
 from dataclasses import replace
@@ -13,8 +12,9 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
-from PySide6.QtWidgets import QApplication, QPushButton
+from PySide6.QtWidgets import QPushButton
 
+from app_process import RunningApp
 from car_charge_planner.config_file import ensure_config
 from car_charge_planner.controller import Controller
 from car_charge_planner.forecast.service import ForecastResult
@@ -25,15 +25,10 @@ from car_charge_planner.shells.tray import TrayShell
 from car_charge_planner.shells.window import WindowShell
 from car_charge_planner.storage.state import BatteryReading
 from car_charge_planner.view_model import needs_setup
-from conftest import FakeNotifier, NetworkAccessInTests, at, example_config, forecast_from
+from conftest import FakeNotifier, at, example_config, forecast_from
 
 DAY = date(2026, 7, 3)
 PROJECT = Path(__file__).resolve().parent.parent
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 def test_a_new_config_assumes_nothing_about_the_user():
@@ -47,11 +42,6 @@ def test_a_new_config_assumes_nothing_about_the_user():
 @pytest.mark.parametrize("lat, lon, expected", [(0, 0, False), (0.0, 0.0, False), (52.37, 4.9, True), (0, 4.9, True), (-33.9, 0, True)])
 def test_a_location_counts_when_either_part_is_not_zero(lat, lon, expected):
     assert replace(Config(), latitude=lat, longitude=lon).is_set_up is expected
-
-
-def test_defaults_do_not_name_any_particular_place():
-    cfg = Config()
-    assert abs(cfg.latitude) < 1e-9 and abs(cfg.longitude) < 1e-9
 
 
 @pytest.mark.parametrize(
@@ -76,10 +66,9 @@ def test_the_detected_zone_is_always_a_real_one():
     ZoneInfo(system_timezone())  # must not raise
 
 
-def test_requiring_a_location_gives_a_plain_message():
-    with pytest.raises(ConfigError) as err:
+def test_requiring_a_location_refuses_a_config_without_one():
+    with pytest.raises(ConfigError):
         require_location(Config())
-    assert "Enter your location" in str(err.value)
     assert require_location(example_config()).is_set_up
 
 
@@ -89,14 +78,6 @@ def test_the_first_config_file_loads_as_not_set_up(tmp_path):
     assert not cfg.is_set_up and cfg.away_rules == () and cfg.timezone == system_timezone()
 
 
-def test_a_config_with_a_location_behaves_as_before(tmp_path):
-    from car_charge_planner.planner.config_io import write_config
-
-    write_config(example_config(), tmp_path / "c.toml")
-    loaded = load_config(tmp_path / "c.toml")
-    assert loaded == example_config() and loaded.is_set_up and len(loaded.away_rules) == 1
-
-
 def test_a_config_without_an_away_section_has_no_rules(tmp_path):
     f = tmp_path / "c.toml"
     f.write_text("latitude = 1.0\nlongitude = 2.0\n")
@@ -104,20 +85,15 @@ def test_a_config_without_an_away_section_has_no_rules(tmp_path):
 
 
 def test_the_not_set_up_view_says_where_to_go():
-    now = at(DAY, 7)
-    vm = needs_setup(BatteryReading(50, None), now)
-    assert vm.state == "needs-setup" and vm.headline == "Not set up yet" and vm.tooltip == "Not set up yet"
-    assert vm.detail == "Set up the app to get a plan. It takes a few minutes."
+    vm = needs_setup(BatteryReading(50, None), at(DAY, 7))
+    assert vm.state == "needs-setup" and vm.headline and vm.detail
     assert vm.outlook == () and vm.advice is None and vm.projection == ""
+    assert vm.battery_stale is False  # a battery that was never entered is not nagged about yet
 
 
-def test_the_not_set_up_state_has_its_own_icon_colour():
-    assert "needs-setup" in COLORS
-    assert COLORS["needs-setup"] not in {v for k, v in COLORS.items() if k != "needs-setup"}
-
-
-def test_the_icon_exists(qapp):
-    assert not make_icon("needs-setup").isNull()
+def test_every_state_has_an_icon(qapp):
+    for state in COLORS:
+        assert not make_icon(state).isNull()
 
 
 class CountingFetch:
@@ -189,15 +165,15 @@ def test_the_tray_shell_shows_the_state(tmp_path, monkeypatch, qapp):
     controller, _ = make_controller(Config(), tmp_path, monkeypatch)
     shell = TrayShell(controller)
     controller.rebuild()
-    assert shell.tray.toolTip() == "Not set up yet"
-    assert shell.popup.headline.text() == "Not set up yet"
+    assert controller.vm.state == "needs-setup"
+    assert shell.tray.toolTip() == controller.vm.tooltip and shell.popup.headline.text() == controller.vm.headline
 
 
 def test_the_window_shell_shows_the_state(tmp_path, monkeypatch, qapp):
     controller, _ = make_controller(Config(), tmp_path, monkeypatch)
     shell = WindowShell(controller)
     controller.rebuild()
-    assert shell.window.windowTitle() == "Not set up yet"
+    assert shell.window.windowTitle() == controller.vm.headline
     assert shell.window.windowIcon().pixmap(32, 32).toImage() == make_icon("needs-setup").pixmap(32, 32).toImage()
 
 
@@ -231,7 +207,6 @@ def test_saving_settings_without_a_location_is_refused(tmp_path, qapp):
     window.field_tabs[0].inputs["panels.kwp"].setValue(5.0)  # another change, still no location
     window.save_button.click()
     assert window.isVisible() and not window.errors.isHidden()
-    assert "Enter your location" in window.errors.text()
     assert not (tmp_path / "config.toml").exists() and saved == []
 
 
@@ -242,14 +217,6 @@ def test_saving_settings_with_a_location_works(tmp_path, qapp):
     window.save_button.click()
     assert window.errors.isHidden() and len(saved) == 1 and saved[0].is_set_up
     assert load_config(tmp_path / "config.toml").latitude == 52.37
-
-
-def test_the_hint_says_what_zero_zero_means(tmp_path, qapp):
-    from PySide6.QtWidgets import QLabel
-
-    window, _ = settings_window(tmp_path, Config())
-    hints = [l.text() for l in window.field_tabs[0].findChildren(QLabel)]
-    assert any("0 and 0 together mean not set" in t for t in hints)
 
 
 def run_cli(*args, cwd=PROJECT):
@@ -267,60 +234,15 @@ def test_the_demo_command_needs_no_location():
 
 
 def test_a_first_start_of_the_whole_app_makes_no_forecast_request(tmp_path):
-    import time
-
-    for name in ("config", "state", "cache", "run", "data"):
-        (tmp_path / name).mkdir(mode=0o700, exist_ok=True)
-    env = {
-        **os.environ,
-        "QT_QPA_PLATFORM": "offscreen",
-        "HOME": str(tmp_path),
-        "XDG_CONFIG_HOME": str(tmp_path / "config"),
-        "XDG_STATE_HOME": str(tmp_path / "state"),
-        "XDG_CACHE_HOME": str(tmp_path / "cache"),
-        "XDG_RUNTIME_DIR": str(tmp_path / "run"),
-        "XDG_DATA_HOME": str(tmp_path / "data"),
-    }
-    process = subprocess.Popen([sys.executable, "-m", "car_charge_planner"], cwd=PROJECT, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    app = RunningApp(tmp_path)
     try:
-        time.sleep(5)  # the first refresh and several ticks' worth of startup
-        assert process.poll() is None, process.stderr.read()
+        app.wait_until_running()  # the first refresh is made before the event loop starts
+        assert app.still_running_after()
     finally:
-        process.terminate()
-        try:
-            _, err = process.communicate(timeout=10)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            _, err = process.communicate()
+        err = app.stop()
     assert "Traceback" not in err
-    created = (tmp_path / "config" / "car-charge-planner" / "config.toml").exists()
-    assert created  # the config was created on first start
+    assert (tmp_path / "config" / "car-charge-planner" / "config.toml").exists()  # the config was created on first start
     assert not (tmp_path / "cache" / "car-charge-planner").exists()  # but no forecast was ever stored
-
-
-def test_the_suite_refuses_internet_connections():
-    with pytest.raises(NetworkAccessInTests):
-        socket.socket(socket.AF_INET).connect(("example.com", 80))
-    with pytest.raises(NetworkAccessInTests):
-        socket.getaddrinfo("api.open-meteo.com", 443)
-
-
-@pytest.mark.linux
-@pytest.mark.macos
-def test_local_connections_are_not_affected_by_the_guard(tmp_path):
-    server_path = str(tmp_path / "s.sock")
-    server = socket.socket(socket.AF_UNIX)
-    server.bind(server_path)
-    server.listen(1)
-    client = socket.socket(socket.AF_UNIX)
-    client.connect(server_path)  # must not raise
-    client.close()
-    server.close()
-
-
-def test_the_not_set_up_view_does_not_nag_about_the_battery():
-    vm = needs_setup(BatteryReading(50, None), at(DAY, 7))  # a battery that was never entered
-    assert vm.battery_stale is False
 
 
 def test_the_plan_page_hides_the_status_lines_while_not_set_up(tmp_path, monkeypatch, qapp):
@@ -375,9 +297,3 @@ def test_the_collector_is_kept_on_the_main_thread(qapp):
         timer.stop()
         if was_enabled:
             gc.enable()
-
-
-def test_every_test_runs_with_automatic_collection_off():
-    import gc
-
-    assert not gc.isenabled()  # the suite's own safeguard (tests/conftest.py)

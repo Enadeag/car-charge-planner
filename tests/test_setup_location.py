@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QLabel
+from PySide6.QtWidgets import QLabel
 
 from car_charge_planner.forecast.check import Attempt
 from car_charge_planner.forecast.provider import Place, PlaceResults, Problem
@@ -36,11 +36,6 @@ def sub(tmp_path, name):
     folder = tmp_path / name
     folder.mkdir()
     return folder
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 class Finder:

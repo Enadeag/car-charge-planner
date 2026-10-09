@@ -7,17 +7,11 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from dataclasses import replace
 
 import pytest
-from PySide6.QtWidgets import QApplication
 
 from car_charge_planner import units
 from car_charge_planner.planner.config_io import dump_config, write_config
 from car_charge_planner.planner.model import Config, ConfigError, load_config, validate
 from car_charge_planner.settings.window import SettingsWindow
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 def test_a_mile_is_1609_metres():

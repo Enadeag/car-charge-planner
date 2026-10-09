@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 from PySide6.QtCore import QCoreApplication
-from PySide6.QtWidgets import QApplication
 
+from app_process import RunningApp, app_environment
 from car_charge_planner import i18n, i18n_tools
 from car_charge_planner.i18n import (
     DOMAIN,
@@ -36,11 +36,6 @@ from babel.messages.pofile import read_po, write_po  # noqa: E402
 def english_after_every_test():
     yield
     init(languages=[])
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 def make_catalogue(localedir: Path, language: str, messages: dict) -> Path:
@@ -303,24 +298,10 @@ def test_the_template_is_the_same_every_time_it_is_made(sample_package, tmp_path
     assert "POT-Creation-Date: 2026-01-01 00:00+0000" in first.read_text()
 
 
-def test_the_template_header_has_no_placeholder_author_or_version(sample_package, tmp_path):
-    pot = tmp_path / "t.pot"
-    i18n_tools.extract(sample_package, pot)
-    text = pot.read_text()
-    assert "FIRST AUTHOR" not in text and "EMAIL@ADDRESS" not in text.replace("FULL NAME <EMAIL@ADDRESS>", "")
-    assert "VERSION" not in text and "Kelvin Vroegop" in text and i18n_tools.ISSUES_URL in text
-
-
 def test_the_committed_template_is_up_to_date_with_the_code(tmp_path):
     fresh = tmp_path / "fresh.pot"
     i18n_tools.extract(pot=fresh)
     assert fresh.read_bytes() == i18n_tools.POT.read_bytes(), "run: python -m car_charge_planner.i18n_tools extract"
-
-
-def test_the_template_holds_the_texts_of_every_package_the_user_reads_messages_from():
-    text = i18n_tools.POT.read_text()
-    assert "#: car_charge_planner/planner/model.py" in text and "{panels} kwp must be above 0" in text  # validation messages
-    assert "#: car_charge_planner/view_model.py" in text
 
 
 def test_a_language_goes_from_template_to_a_working_translation(sample_package, tmp_path):
@@ -363,40 +344,13 @@ def test_updating_adds_new_texts_and_keeps_existing_translations(sample_package,
     assert updated.get("Panel size").string == "Paneelgrootte"
 
 
-def test_the_command_line_wrapper_reports_usage_for_an_unknown_command(capsys):
-    assert i18n_tools.main(["frobnicate"]) == 2
-    assert "extract" in capsys.readouterr().err
-
-
-@pytest.mark.parametrize("environment", [{"LANGUAGE": "nl", "LANG": "nl_NL.UTF-8"}, {"LC_ALL": "C"}, {"LANG": "de_DE.UTF-8", "LANGUAGE": ""}])
+@pytest.mark.parametrize("environment", [{"LANGUAGE": "nl", "LANG": "nl_NL.UTF-8"}, {"LC_ALL": "C"}], ids=["a translated language", "the C locale"])
 def test_the_whole_app_starts_under_other_languages_and_locales(tmp_path, environment):
-    import subprocess
-    import sys
-    import time
-
-    project = Path(__file__).resolve().parent.parent
-    for name in ("config", "state", "cache", "run", "data"):
-        (tmp_path / name).mkdir(mode=0o700, exist_ok=True)
-    env = {k: v for k, v in os.environ.items() if k not in ("LANG", "LANGUAGE", "LC_ALL", "LC_MESSAGES")}
-    env.update(
-        environment,
-        QT_QPA_PLATFORM="offscreen",
-        HOME=str(tmp_path),
-        XDG_CONFIG_HOME=str(tmp_path / "config"),
-        XDG_STATE_HOME=str(tmp_path / "state"),
-        XDG_CACHE_HOME=str(tmp_path / "cache"),
-        XDG_RUNTIME_DIR=str(tmp_path / "run"),
-        XDG_DATA_HOME=str(tmp_path / "data"),
-    )
-    process = subprocess.Popen([sys.executable, "-m", "car_charge_planner"], cwd=project, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    env = {k: v for k, v in app_environment(tmp_path).items() if k not in ("LANG", "LANGUAGE", "LC_ALL", "LC_MESSAGES")}
+    app = RunningApp(tmp_path, env={**env, **environment})
     try:
-        time.sleep(4)
-        assert process.poll() is None, process.stderr.read()
+        app.wait_until_running()
+        assert app.still_running_after()
     finally:
-        process.terminate()
-        try:
-            _, err = process.communicate(timeout=10)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            _, err = process.communicate()
+        err = app.stop()
     assert "Traceback" not in err

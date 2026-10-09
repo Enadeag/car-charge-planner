@@ -14,7 +14,6 @@ from car_charge_planner.forecast.provider import (
     PanelArray,
     ProviderError,
     RateLimited,
-    SettingSpec,
     SystemDescription,
     Unavailable,
     check_steps,
@@ -91,11 +90,6 @@ def test_a_system_description_is_built_from_the_config(cfg):
         system.latitude = 1  # frozen
 
 
-def test_a_setting_is_optional_and_plain_by_default():
-    spec = SettingSpec("api_key", "API key", "Only for paid plans.", secret=True)
-    assert spec.optional and spec.secret
-
-
 class Tiny:
     name = "Tiny"
     description = ""
@@ -153,13 +147,6 @@ def test_usable_power_is_power_minus_baseload_times_margin(cfg):
     s = step(12, power=3.0)
     assert usable_kw(s, cfg) == pytest.approx((3.0 - cfg.house.baseload_kw) * cfg.planning.margin)
     assert usable_kw(step(12, power=0.2), cfg) == 0.0
-
-
-def test_the_test_helper_gives_the_power_of_the_example_system():
-    steps = forecast_from([(DAY, 1000)])
-    peak = max(s.power_kw for s in steps)
-    assert peak == pytest.approx(4.8 * 1.0 * 0.86, rel=0.01)  # about 4.1 kW at a sine peak of 1000 W/m2
-    assert check_steps(steps) == []
 
 
 def test_the_demo_forecast_is_power_for_the_configured_panels(cfg):

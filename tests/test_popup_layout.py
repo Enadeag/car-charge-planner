@@ -7,7 +7,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from datetime import date, time, timedelta
 
 import pytest
-from PySide6.QtWidgets import QApplication, QLabel
+from PySide6.QtWidgets import QApplication, QLabel, QPushButton
 
 from car_charge_planner.away_input import away_summary, make_away
 from car_charge_planner.planner.advice import grid_advice
@@ -20,11 +20,6 @@ from conftest import TZ, at, forecast_from
 
 DAY = date(2026, 7, 3)
 NOW = at(DAY, 7)
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 def view(cfg, days, soc=45, battery=None, state=None):
@@ -72,15 +67,12 @@ def test_outlook_is_a_grid_of_columns_and_does_not_repeat_the_headline(cfg, qapp
     assert "Today" not in cells
 
 
-def test_quiet_days_are_one_dim_line(cfg, qapp):
-    popup, vm = view(cfg, [(DAY, 900), (DAY + timedelta(days=1), 120), (DAY + timedelta(days=2), 120)])
-    assert popup.quiet.text() == "Tomorrow, Sun: no good window" and not popup.quiet.isHidden()
-
-
-def test_the_outlook_section_hides_when_there_is_nothing_to_list(cfg, qapp):
+def test_the_outlook_hides_when_there_is_nothing_to_list_and_lists_quiet_days(cfg, qapp):
     popup, vm = view(cfg, [(DAY, 900)])
     assert vm.outlook == () and vm.quiet_days == ""
-    assert popup.outlook_box.isHidden()
+    assert popup.outlook_box.isHidden() and popup.quiet.isHidden()
+    popup, vm = view(cfg, [(DAY, 900), (DAY + timedelta(days=1), 120)])
+    assert not popup.outlook_box.isHidden() and not popup.quiet.isHidden()
 
 
 def test_refreshing_does_not_pile_up_outlook_rows(cfg, qapp):
@@ -88,13 +80,6 @@ def test_refreshing_does_not_pile_up_outlook_rows(cfg, qapp):
     popup.update_view(vm, State(BatteryReading(45, NOW)), NOW.date(), cfg.away_rules)
     popup.update_view(vm, State(BatteryReading(45, NOW)), NOW.date(), cfg.away_rules)
     assert popup.outlook_grid.count() == 8
-
-
-def test_battery_is_a_status_line_with_a_gauge(cfg, qapp):
-    popup, _ = view(cfg, [(DAY, 900)], soc=62)
-    assert popup.battery_status.text() == "Battery 62%" and popup.gauge.value() == 62
-    assert not popup.gauge.isTextVisible()
-    assert popup.tabs.tabText(UPDATE) == "Update"
 
 
 def test_a_stale_battery_is_flagged_on_the_plan_page_and_the_update_tab(cfg, qapp):
@@ -108,7 +93,7 @@ def test_the_away_summary_and_edit_buttons_lead_to_the_update_page(cfg, qapp):
     from PySide6.QtWidgets import QPushButton
 
     popup, _ = view(cfg, [(DAY, 900)])
-    assert popup.away_status.text() == "Away: Thu weekly"
+    assert "Thu" in popup.away_status.text()
     popup.show()
     assert popup.tabs.currentIndex() == PLAN
     next(b for b in popup.findChildren(QPushButton) if b.text() == "Manage").click()
@@ -128,93 +113,23 @@ def test_clicking_the_tray_always_opens_on_the_plan(cfg, qapp):
     popup.hide()
 
 
-def test_each_page_is_only_as_tall_as_its_content(cfg, qapp):
-    popup, _ = view(cfg, [(DAY + timedelta(days=i), 900) for i in range(3)])
-    popup.show()
-    plan_height = popup.height()
-    popup.tabs.setCurrentIndex(UPDATE)
-    assert popup.height() != plan_height
-    page = popup.stack.currentWidget()
-    assert popup.stack.height() >= page.sizeHint().height()
-    popup.hide()
+def _one_off(day, whole_day=True, start=time(), end=time()):
+    return make_away(day, whole_day, start, end, TZ)
 
 
-def test_footer_is_short_and_keeps_the_attribution(cfg, qapp):
-    popup, _ = view(cfg, [(DAY, 900)])
-    assert popup.footer.text() == "Forecast 5 min old · Weather data: Open-Meteo.com (CC BY 4.0)"
-    assert "CC BY 4.0" in popup.footer.toolTip()
-
-
-def test_there_is_a_close_button_but_no_bottom_close_button(cfg, qapp):
-    from PySide6.QtWidgets import QPushButton
-
-    popup, _ = view(cfg, [(DAY, 900)])
-    texts = [b.text() for b in popup.findChildren(QPushButton)]
-    assert "×" in texts and "Close" not in texts
-
-
-def test_the_popup_has_no_horizontal_rules(cfg, qapp):
-    from PySide6.QtWidgets import QFrame
-
-    popup, _ = view(cfg, [(DAY, 900)])
-    assert not [f for f in popup.findChildren(QFrame) if f.frameShape() == QFrame.Shape.HLine]
-
-
-def summary(rules=(), periods=(), limit=3):
-    return away_summary(tuple(rules), tuple(periods), NOW, TZ, limit)
-
-
-def test_summary_with_nothing_planned():
-    assert summary() == "No absences planned"
-
-
-def test_summary_lists_weekly_rules_by_weekday_then_one_off_days():
-    one = make_away(date(2026, 7, 9), True, time(), time(), TZ)
-    assert summary([AwayRule(3, time(6), time(19))], [one]) == "Away: Thu weekly, Thu 9 Jul"
-
-
-def test_summary_keeps_the_time_range_of_a_one_off():
-    ranged = make_away(date(2026, 7, 5), False, time(10), time(16, 30), TZ)
-    assert summary(periods=[ranged]) == "Away: Sun 5 Jul, 10:00-16:30"
-
-
-def test_summary_does_not_repeat_a_weekday_and_ignores_past_days():
-    rules = [AwayRule(3, time(6), time(12)), AwayRule(3, time(14), time(19))]
-    past = make_away(date(2026, 7, 1), True, time(), time(), TZ)
-    assert summary(rules, [past]) == "Away: Thu weekly"
-
-
-def test_summary_is_cut_off_with_a_count():
-    days = [make_away(date(2026, 7, d), True, time(), time(), TZ) for d in (4, 5, 6, 7, 8)]
-    text = summary(periods=days, limit=3)
-    assert text.endswith("+2 more") and text.count(",") == 2
-
-
-def _right_edge_in_popup(widget, popup):
-    return widget.mapTo(popup, widget.rect().topRight()).x()
-
-
-def test_the_close_button_sits_at_the_right_edge_of_the_content(cfg, qapp):
-    from PySide6.QtWidgets import QPushButton
-
-    popup, _ = view(cfg, [(DAY, 900), (DAY + timedelta(days=1), 900)])
-    popup.show()
-    qapp.processEvents()
-    close = next(b for b in popup.findChildren(QPushButton) if b.text() == "×")
-    manage = next(b for b in popup.findChildren(QPushButton) if b.text() == "Manage")
-    content_right = _right_edge_in_popup(manage, popup)
-    assert abs(_right_edge_in_popup(close, popup) - content_right) <= 8, "the x is not aligned with the content"
-    assert _right_edge_in_popup(close, popup) >= popup.width() - 24
-    popup.hide()
-
-
-def test_the_header_spans_the_full_width_so_its_line_reaches_the_edge(cfg, qapp):
-    popup, _ = view(cfg, [(DAY, 900)])
-    popup.show()
-    qapp.processEvents()
-    page = popup.stack.currentWidget()
-    assert abs(popup.header.width() - page.width()) <= 2
-    popup.hide()
+@pytest.mark.parametrize(
+    "rules, periods, limit, expected",
+    [
+        ((), (), 3, "No absences planned"),
+        ((AwayRule(3, time(6), time(19)),), (_one_off(date(2026, 7, 9)),), 3, "Away: Thu weekly, Thu 9 Jul"),
+        ((), (_one_off(date(2026, 7, 5), False, time(10), time(16, 30)),), 3, "Away: Sun 5 Jul, 10:00-16:30"),
+        ((AwayRule(3, time(6), time(12)), AwayRule(3, time(14), time(19))), (_one_off(date(2026, 7, 1)),), 3, "Away: Thu weekly"),
+        ((), tuple(_one_off(date(2026, 7, d)) for d in (4, 5, 6, 7, 8)), 3, "Away: Sat 4 Jul, Sun 5 Jul, Mon 6 Jul +2 more"),
+    ],
+    ids=["nothing planned", "weekly then one-off", "time range kept", "no repeated weekday, past day ignored", "cut off with a count"],
+)
+def test_the_away_summary(rules, periods, limit, expected):
+    assert away_summary(rules, periods, NOW, TZ, limit) == expected
 
 
 def _focus(popup, active):
@@ -358,8 +273,127 @@ def needs_setup_vm():
     return needs_setup(BatteryReading(45, NOW), NOW)
 
 
-def test_a_short_forecast_shows_a_short_outlook_without_gaps(cfg, qapp):
+def button(popup, text):
+    from PySide6.QtWidgets import QPushButton
+
+    return next(b for b in popup.findChildren(QPushButton) if b.text() == text)
+
+
+def test_the_set_battery_button_emits_the_entered_value(cfg, qapp):
+    popup, _ = view(cfg, [(DAY, 900)])
+    seen = []
+    popup.battery_submitted.connect(seen.append)
+    popup.battery_input.setValue(42)
+    button(popup, "Set battery").click()
+    assert seen == [42.0]
+
+
+def test_an_absence_is_added_for_a_whole_day_or_a_time_range(cfg, qapp):
+    from PySide6.QtCore import QTime
+
+    from car_charge_planner.away_input import describe
+
+    popup, _ = view(cfg, [(DAY, 900), (DAY + timedelta(days=1), 900)])
+    seen = []
+    popup.away_added.connect(seen.append)
+    popup.away_day.setCurrentIndex(1)
+    button(popup, "Add").click()
+    popup.away_kind.setCurrentIndex(1)
+    popup.away_from.setTime(QTime(10, 0))
+    popup.away_to.setTime(QTime(16, 30))
+    button(popup, "Add").click()
+    assert [describe(period, TZ) for period in seen] == ["Sat 4 Jul, all day", "Sat 4 Jul, 10:00-16:30"]
+
+
+def test_a_range_that_ends_before_it_starts_is_refused(cfg, qapp):
+    from PySide6.QtCore import QTime
+
+    popup, _ = view(cfg, [(DAY, 900)])
+    seen = []
+    popup.away_added.connect(seen.append)
+    popup.away_kind.setCurrentIndex(1)
+    popup.away_from.setTime(QTime(16, 0))
+    popup.away_to.setTime(QTime(10, 0))
+    button(popup, "Add").click()
+    assert seen == [] and not popup.away_error.isHidden()
+
+
+def test_a_planned_absence_can_be_removed_and_the_stored_battery_is_shown(cfg, qapp):
+    period = make_away(DAY + timedelta(days=1), True, time(), time(), TZ)
+    popup, _ = view(cfg, [(DAY, 900)], state=State(BatteryReading(61, at(DAY, 6)), (period,)))
+    removed = []
+    popup.away_removed.connect(removed.append)
+    button(popup, "Remove").click()
+    assert removed == [period]
+    assert popup.battery_input.value() == 61
+
+
+def test_weekly_rules_are_listed_read_only_next_to_the_removable_one_off_days(cfg, qapp):
+    one_off = make_away(DAY + timedelta(days=1), True, time(), time(), TZ)
+    popup, _ = view(cfg, [(DAY, 900)], state=State(BatteryReading(50, NOW), (one_off,)))
+    texts = labels(popup)
+    assert any("Thursday" in t and "06:00-19:00" in t for t in texts) and any("Sat 4 Jul" in t for t in texts)
+    assert len([b for b in popup.findChildren(QPushButton) if b.text() == "Remove"]) == 1
+
+
+def test_the_popup_says_so_when_there_are_no_absences_at_all(cfg, qapp):
     popup, vm = view(cfg, [(DAY, 900)])
-    assert popup.outlook_box.isHidden() and not popup.quiet.isVisible()
-    popup, vm = view(cfg, [(DAY, 900), (DAY + timedelta(days=1), 120)])
-    assert not popup.outlook_box.isHidden() and popup.quiet.text() == "Tomorrow: no good window"
+    popup.update_view(vm, State(), DAY, ())
+    assert any("No absences planned" in t for t in labels(popup))
+
+
+def test_the_settings_button_asks_for_the_away_rules_tab(cfg, qapp):
+    popup, _ = view(cfg, [(DAY, 900)])
+    seen = []
+    popup.settings_requested.connect(seen.append)
+    button(popup, "Edit weekly rules in Settings...").click()
+    assert seen == ["away"]
+
+
+def test_the_tray_opens_settings_on_the_away_rules_tab_and_hides_the_popup(cfg, tmp_path, monkeypatch, qapp):
+    app = _tray(cfg, tmp_path, monkeypatch)
+    app.popup.show()
+    app.popup.settings_requested.emit("away")
+    window = app.settings_window
+    assert window.isVisible() and window.tabs.currentWidget() is window.away_tab
+    assert not app.popup.isVisible()
+
+
+def test_a_rule_saved_in_settings_shows_up_in_the_popup(cfg, tmp_path, monkeypatch, qapp):
+    from PySide6.QtCore import QTime
+
+    from car_charge_planner.forecast.service import ForecastResult
+
+    app = _tray(cfg, tmp_path, monkeypatch)
+    app.result = ForecastResult(forecast_from([(DAY, 900)]), at(DAY, 6), True, False)
+    app.rebuild()
+    assert any("Thursday" in t for t in labels(app.popup))
+    app.open_settings("away")
+    row = app.settings_window.away_tab.rows[0]
+    row.weekday.setCurrentIndex(0)
+    row.start.setTime(QTime(7, 0))
+    row.end.setTime(QTime(12, 30))
+    app.settings_window.save_button.click()
+    texts = labels(app.popup)
+    assert any("Monday" in t and "07:00-12:30" in t for t in texts) and not any("Thursday" in t for t in texts)
+
+
+def test_the_battery_and_absences_entered_in_the_tray_are_stored_and_replan(cfg, tmp_path, monkeypatch, qapp):
+    from car_charge_planner.forecast.service import ForecastResult
+    from car_charge_planner.storage.state import load_state
+
+    app = _tray(cfg, tmp_path, monkeypatch)
+    app.result = ForecastResult(forecast_from([(DAY, 900), (DAY + timedelta(days=1), 900)]), at(DAY, 6), True, False)
+
+    class FrozenNow:
+        @staticmethod
+        def now(tz=None):
+            return NOW
+
+    monkeypatch.setattr("car_charge_planner.controller.datetime", FrozenNow)
+    app.set_battery(33)
+    assert load_state().battery.pct == 33 and app.vm.projection.startswith("Battery 33%")
+    app.add_away_period(make_away(DAY, True, time(), time(), TZ))
+    assert len(load_state().away) == 1 and "Today" in app.vm.quiet_days
+    app.remove_away_period(load_state().away[0])
+    assert load_state().away == () and "Today" not in app.vm.quiet_days

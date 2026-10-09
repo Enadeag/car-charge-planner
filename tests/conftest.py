@@ -159,6 +159,13 @@ class FakeNotifier:
 
 
 @pytest.fixture
+def qapp():
+    from PySide6.QtWidgets import QApplication
+
+    return QApplication.instance() or QApplication([])
+
+
+@pytest.fixture
 def cfg() -> Config:
     return example_config()
 

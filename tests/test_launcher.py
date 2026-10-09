@@ -1,7 +1,6 @@
 import os
 import subprocess
 import sys
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
@@ -11,13 +10,6 @@ from car_charge_planner import autostart, identity, launcher, notifier
 PROJECT = Path(__file__).resolve().parent.parent
 COMMAND = ["/home/me/.local/bin/car-charge-planner"]  # what pipx puts on the path
 MODULE = ["/p/.venv/bin/python", "-m", "car_charge_planner"]  # when there is no installed command
-
-
-def test_the_icon_is_a_valid_svg_with_the_bolt_on_a_disc():
-    root = ET.parse(launcher.ICON_SOURCE).getroot()
-    assert root.tag.endswith("svg") and root.get("viewBox") == "0 0 64 64"
-    tags = {child.tag.split("}")[-1] for child in root}
-    assert {"circle", "polygon"} <= tags
 
 
 @pytest.mark.linux
@@ -109,7 +101,7 @@ def test_the_commands_work_end_to_end_without_touching_the_real_menu(tmp_path):
 
 def test_an_unknown_command_lists_the_new_ones(tmp_path):
     done = _run("frobnicate", tmp_path)
-    assert done.returncode != 0 and "install-launcher" in done.stderr and "uninstall-launcher" in done.stderr
+    assert done.returncode != 0 and "install-launcher" in done.stderr and "uninstall-launcher" in done.stderr and "test-notification" in done.stderr
 
 
 @pytest.mark.linux

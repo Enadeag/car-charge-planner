@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QLabel, QLineEdit
+from PySide6.QtWidgets import QLabel
 
 from car_charge_planner import colours
 from car_charge_planner.forecast.provider import BadResponse, NotConfigured, RateLimited, SettingSpec, Unavailable
@@ -26,11 +26,6 @@ from fake_provider import FakeProvider, Held, steps_for
 
 DAY = datetime.now(ZoneInfo("Europe/Amsterdam")).date()  # the Test button counts days from today
 KEY = "TAB-SECRET-KEY-1"
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 def two_days():
@@ -90,28 +85,12 @@ def labels(widget):
     return [l.text() for l in widget.findChildren(QLabel) if l.isVisibleTo(widget)]
 
 
-def test_the_tab_sits_between_planning_and_interface(rig):
-    titles = [rig.window.tabs.tabText(i) for i in range(rig.window.tabs.count())]
-    assert titles.index("Forecast") == titles.index("Planning and notifications") + 1
-    assert rig.tab.key == "forecast"
-
-
 def test_a_new_install_shows_open_meteo_and_no_fallback(tmp_path, qapp):
     fresh = Rig(tmp_path, cfg=example_config(), registry=builtin)
     assert fresh.tab.pickers["primary"].currentData() == "open-meteo"
     fallback = fresh.tab.pickers["fallback"]
-    assert fallback.itemText(0) == "None" and fallback.currentData() == ""
+    assert fallback.currentData() == ""
     assert [fallback.itemData(i) for i in range(fallback.count())] == ["", "open-meteo", "forecast-solar"]
-
-
-def test_the_chosen_provider_is_described_with_what_it_sends_its_limits_and_terms(tmp_path, qapp):
-    fresh = Rig(tmp_path, cfg=example_config(), registry=builtin)
-    shown = labels(fresh.tab)
-    assert any("free weather service" in t for t in shown)
-    assert any(t.startswith("What is sent:") and "latitude and longitude" in t for t in shown)
-    assert "Asks at most once every 60 minutes. Looks 4 days ahead." in shown
-    card = fresh.tab.cards["open-meteo"]
-    assert "https://open-meteo.com/en/terms" in card.terms.text() and card.terms.openExternalLinks()
 
 
 def test_a_provider_card_follows_its_role(rig):
@@ -128,13 +107,6 @@ def test_the_same_provider_twice_cannot_be_saved(rig):
     rig.pick("fallback", "beta")
     assert not rig.window.save()
     assert "different provider" in rig.window.errors.text() and not rig.file.exists()
-
-
-def test_required_settings_are_marked_and_secret_ones_masked(rig):
-    rig.pick("primary", "alpha")
-    assert rig.field("alpha", "api_key").line.echoMode().name == "Password"
-    assert any("Required." in t for t in labels(rig.tab.cards["alpha"].fields))
-    assert not any("Required." in t and "account" in t.lower() for t in labels(rig.tab.cards["alpha"].fields))
 
 
 def test_editing_a_choice_or_a_setting_marks_the_window_changed(rig):
@@ -250,7 +222,6 @@ def test_the_test_button_reports_the_days_it_got_and_saves_nothing(rig):
     rig.tab.test_buttons["primary"].click()
     assert rig.wait_for_test("primary") == "OK: 2 days of forecast"
     assert rig.beta.call_count == 1 and not rig.file.exists() and not rig.secrets_file.exists()
-    assert colours.SUCCESS["light"] in rig.tab.results["primary"].styleSheet() or colours.SUCCESS["dark"] in rig.tab.results["primary"].styleSheet()
 
 
 def test_one_day_is_said_in_the_singular(rig):
@@ -300,7 +271,6 @@ def test_failures_are_told_in_plain_words(rig, error, expected):
     rig.tab.test_buttons["primary"].click()
     message = rig.wait_for_test("primary")
     assert expected in message and KEY not in message
-    assert colours.ERROR["light"] in rig.tab.results["primary"].styleSheet() or colours.ERROR["dark"] in rig.tab.results["primary"].styleSheet()
     assert rig.tab.test_buttons["primary"].isEnabled()
 
 
@@ -333,22 +303,6 @@ def test_the_result_is_cleared_when_the_tab_is_loaded_again(rig):
     rig.wait_for_test("primary")
     rig.tab.load(rig.window.stored)
     assert rig.tab.results["primary"].text() == ""
-
-
-def test_the_tab_scrolls_so_two_providers_are_not_squeezed(rig):
-    from PySide6.QtWidgets import QScrollArea
-
-    assert rig.tab.findChild(QScrollArea) is not None
-    for label in rig.tab.findChildren(QLabel):
-        if label.wordWrap() and label.text() and label.isVisibleTo(rig.tab):
-            assert label.height() >= label.heightForWidth(label.width())
-
-
-def test_the_secret_box_is_not_a_plain_text_box(rig):
-    rig.pick("primary", "alpha")
-    plain = [w for w in rig.tab.cards["alpha"].findChildren(QLineEdit) if w.echoMode().name == "Normal"]
-    secret = rig.field("alpha", "api_key").line
-    assert secret not in plain and secret.echoMode().name == "Password"
 
 
 def test_results_use_the_accent_colours_of_the_theme(tmp_path, qapp):

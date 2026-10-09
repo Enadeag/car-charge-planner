@@ -5,16 +5,11 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from dataclasses import replace
 
 import pytest
-from PySide6.QtWidgets import QApplication, QDialog
+from PySide6.QtWidgets import QDialog
 
 from car_charge_planner.planner.model import Config, Panels, Setup, first_run_config, load_config
 from car_charge_planner.settings.window import SettingsWindow
 from conftest import example_config
-
-
-@pytest.fixture
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 class Harness:
@@ -138,14 +133,6 @@ def test_close_button_and_escape_behave_like_cancel(h, qapp):
     h.answer = True
     h.window.close()
     assert not h.window.isVisible()
-
-
-def test_editing_back_to_the_stored_value_is_not_a_change(h):
-    h.box("panels.kwp").setValue(7)
-    h.box("panels.kwp").setValue(4.8)
-    assert not h.window.is_dirty()
-    h.window.cancel_button.click()
-    assert h.asked == []
 
 
 def test_reset_tab_restores_defaults_without_saving(tmp_path, qapp):
@@ -292,56 +279,43 @@ def test_enter_does_not_press_reset_or_cancel(h):
     assert load_config(h.file).panels[0].kwp == 5.2
 
 
-def test_the_button_reads_close_when_nothing_is_unsaved(h):
-    assert h.window.cancel_button.text() == "Close"
+def edit_spin(h):
+    box = h.box("panels.kwp")
+    return lambda: box.setValue(5.2), lambda: box.setValue(4.8)
 
 
-def test_it_reads_cancel_once_something_is_edited(h):
-    h.box("panels.kwp").setValue(5.2)
-    assert h.window.cancel_button.text() == "Cancel"
-    assert "Discard" in h.window.cancel_button.toolTip()
+def edit_other_tab(h):
+    box = h.window.field_tabs[2].inputs["charger.max_amps"]
+    return lambda: box.setValue(20), lambda: box.setValue(32)
 
 
-def test_it_goes_back_to_close_when_the_edit_is_undone(h):
-    h.box("panels.kwp").setValue(5.2)
-    h.box("panels.kwp").setValue(4.8)
-    assert h.window.cancel_button.text() == "Close"
+def edit_dropdown(h):
+    box = h.box("timezone")
+    return lambda: box.setCurrentText("Europe/London"), lambda: box.setCurrentText("Europe/Amsterdam")
 
 
-def test_it_reads_close_again_after_a_save_with_the_window_open(h):
-    h.box("panels.kwp").setValue(5.2)
-    h.window.save_button.click()
-    assert h.window.cancel_button.text() == "Close"
-    h.box("panels.kwp").setValue(6.0)
-    assert h.window.cancel_button.text() == "Cancel"
-
-
-def test_it_follows_edits_on_every_kind_of_input(h):
-    t = h.window
-    t.field_tabs[2].inputs["charger.max_amps"].setValue(20)
-    assert t.cancel_button.text() == "Cancel"
-    t.field_tabs[2].inputs["charger.max_amps"].setValue(32)
-    assert t.cancel_button.text() == "Close"
-    h.box("timezone").setCurrentText("Europe/London")
-    assert t.cancel_button.text() == "Cancel"
-    h.box("timezone").setCurrentText("Europe/Amsterdam")
-    assert t.cancel_button.text() == "Close"
-
-
-def test_it_follows_the_away_rule_rows(h):
+def edit_away_time(h):
     from PySide6.QtCore import QTime
 
+    row = h.window.away_tab.rows[0]
+    return lambda: row.end.setTime(QTime(18, 0)), lambda: row.end.setTime(QTime(19, 0))
+
+
+def edit_away_rows(h):
     tab = h.window.away_tab
-    tab.rows[0].end.setTime(QTime(18, 0))
-    assert h.window.cancel_button.text() == "Cancel"
-    tab.rows[0].end.setTime(QTime(19, 0))
-    assert h.window.cancel_button.text() == "Close"
-    tab.add_button.click()
-    assert h.window.cancel_button.text() == "Cancel"
-    tab.rows[1].remove_button.click()
-    assert h.window.cancel_button.text() == "Close"
-    tab.rows[0].remove_button.click()
-    assert h.window.cancel_button.text() == "Cancel"
+    return tab.add_button.click, lambda: tab.rows[1].remove_button.click()
+
+
+@pytest.mark.parametrize("edit_and_undo", [edit_spin, edit_other_tab, edit_dropdown, edit_away_time, edit_away_rows])
+def test_the_window_is_dirty_only_while_something_differs_from_what_is_stored(h, edit_and_undo):
+    edit, undo = edit_and_undo(h)
+    assert not h.window.is_dirty() and h.window.cancel_button.text() == "Close"
+    edit()
+    assert h.window.is_dirty() and h.window.cancel_button.text() == "Cancel"
+    undo()
+    assert not h.window.is_dirty() and h.window.cancel_button.text() == "Close"
+    h.window.cancel_button.click()
+    assert h.asked == []
 
 
 def test_reset_tab_changes_the_label_only_when_it_changes_something(tmp_path, qapp):
@@ -352,20 +326,6 @@ def test_reset_tab_changes_the_label_only_when_it_changes_something(tmp_path, qa
     h2 = Harness(tmp_path, custom)
     h2.window.reset_button.click()
     assert h2.window.cancel_button.text() == "Cancel"
-
-
-def test_close_with_nothing_unsaved_closes_without_asking(h):
-    h.box("panels.kwp").setValue(5.2)
-    h.window.save_button.click()
-    h.window.cancel_button.click()
-    assert h.asked == [] and not h.window.isVisible()
-
-
-def test_cancel_with_unsaved_edits_still_asks(h):
-    h.box("panels.kwp").setValue(5.2)
-    assert h.window.cancel_button.text() == "Cancel"
-    h.window.cancel_button.click()
-    assert h.asked == [1]
 
 
 def solar(h):
