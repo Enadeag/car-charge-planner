@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 import math
-import os
 import re
 import tomllib
 from dataclasses import dataclass, field, fields, replace
 from datetime import UTC, datetime, time, timedelta
 from datetime import date as DateType
-from functools import lru_cache
 from pathlib import Path
 from typing import Any, cast
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+import tzlocal
 
 from car_charge_planner.i18n import _  # the messages reach the user in Settings, so they are translated
 
@@ -190,34 +190,14 @@ class Forecast:
 LANGUAGE_CODE = re.compile(r"^[A-Za-z]{2,3}([_-][A-Za-z0-9]{2,8})*$")
 
 
-def find_timezone(environ: dict[str, str], etc_timezone: str, localtime_target: str) -> str:
-    """The system's IANA time zone name from what the system offers, or UTC.
-
-    Looks at TZ, then /etc/timezone (Debian style), then the target of the /etc/localtime link.
-    """
-    candidates = [environ.get("TZ", "").lstrip(":"), etc_timezone.strip()]
-    if "zoneinfo/" in localtime_target:
-        candidates.append(localtime_target.split("zoneinfo/", 1)[1])
-    for name in candidates:
-        for prefix in ("posix/", "right/"):
-            name = name.removeprefix(prefix)
-        if not name:
-            continue
-        try:
-            ZoneInfo(name)
-        except (ZoneInfoNotFoundError, ValueError):
-            continue
-        return name
-    return "UTC"
-
-
-@lru_cache(maxsize=1)
 def system_timezone() -> str:
+    """The system's IANA time zone name, or UTC when tzlocal cannot tell or names a zone we do not know."""
     try:
-        etc_timezone = Path("/etc/timezone").read_text()
-    except OSError:
-        etc_timezone = ""
-    return find_timezone(dict(os.environ), etc_timezone, os.path.realpath("/etc/localtime"))
+        name = tzlocal.get_localzone_name()
+        ZoneInfo(name)
+    except Exception:  # tzlocal raises whatever its platform backend does (missing keys, unreadable links)
+        return "UTC"
+    return name
 
 
 @dataclass(frozen=True)
@@ -516,7 +496,7 @@ def load_config(path: Path | None) -> Config:
     if path is None:
         return Config()
     try:
-        data = tomllib.loads(Path(path).read_text())
+        data = tomllib.loads(Path(path).read_text(encoding="utf-8"))
     except tomllib.TOMLDecodeError as err:
         raise ConfigError(_("Config file is not valid TOML: {error}").format(error=err)) from err
     try:

@@ -18,7 +18,7 @@ ALLOWED_PLAIN = {"×"}
 
 
 def _calls(path):
-    return [n for n in ast.walk(ast.parse(path.read_text())) if isinstance(n, ast.Call)]
+    return [n for n in ast.walk(ast.parse(path.read_text(encoding="utf-8"))) if isinstance(n, ast.Call)]
 
 
 def _name(call):
@@ -66,7 +66,7 @@ def test_no_sentence_is_built_by_joining_translated_pieces():
     """`_("a") + x + _("b")` fixes the word order; a template with named placeholders does not."""
     bad = []
     for path in SOURCES:
-        for node in ast.walk(ast.parse(path.read_text())):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
                 sides = [node.left, node.right]
                 if sum(isinstance(s, ast.Call) and _name(s) == "_" for s in sides) == 2:

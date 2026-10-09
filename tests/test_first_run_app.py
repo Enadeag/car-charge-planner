@@ -82,7 +82,7 @@ DRIVER = textwrap.dedent(
         report["set_up"] = c.cfg.is_set_up
         report["state_at_end"] = c.vm.state if c.vm else None
         report["window_visible"] = any(w.isVisible() and w.windowTitle() != "" and "Set-up" not in w.windowTitle() for w in QApplication.topLevelWidgets())
-        report["config_written"] = open({config!r}).read().count("[forecast]") == 1
+        report["config_written"] = open({config!r}, encoding="utf-8").read().count("[forecast]") == 1
         print("REPORT " + json.dumps(report), flush=True)
         QApplication.quit()
 
@@ -94,12 +94,12 @@ DRIVER = textwrap.dedent(
 def run_app(tmp_path, argv, act):
     config = tmp_path / "config" / "car-charge-planner" / "config.toml"
     config.parent.mkdir(parents=True)
-    config.write_text('[interface]\nmode = "window"\n')  # a window: this desktop has no tray (and nothing to wait for)
+    config.write_text('[interface]\nmode = "window"\n', encoding="utf-8")  # a window: this desktop has no tray (and nothing to wait for)
     for name in ("state", "cache", "runtime"):
         (tmp_path / name).mkdir()
     (tmp_path / "runtime").chmod(0o700)
     driver = tmp_path / "driver.py"
-    driver.write_text(DRIVER.format(repo=str(REPO), argv=argv, act=act, config=str(config)))
+    driver.write_text(DRIVER.format(repo=str(REPO), argv=argv, act=act, config=str(config)), encoding="utf-8")
     env = {
         **{k: v for k, v in os.environ.items() if k not in ("DBUS_SESSION_BUS_ADDRESS", "LANGUAGE", "LC_ALL")},
         "QT_QPA_PLATFORM": "offscreen",
@@ -110,7 +110,7 @@ def run_app(tmp_path, argv, act):
         "XDG_DATA_HOME": str(tmp_path / "data"),
         "LANG": "nl_NL.UTF-8",
     }
-    done = subprocess.run([sys.executable, str(driver)], env=env, capture_output=True, text=True, timeout=60, cwd=REPO)
+    done = subprocess.run([sys.executable, str(driver)], env=env, capture_output=True, text=True, timeout=60, cwd=REPO, encoding="utf-8")
     lines = [line for line in done.stdout.splitlines() if line.startswith("REPORT ")]
     assert lines, f"the app did not report (exit {done.returncode}):\n{done.stderr[-1500:]}"
     return json.loads(lines[-1][len("REPORT "):])

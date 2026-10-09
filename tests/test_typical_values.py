@@ -31,7 +31,7 @@ def with_typical(cfg, *keys):
 def test_nothing_is_typical_by_default_and_an_old_config_means_the_values_are_the_owners(tmp_path):
     assert Config().setup.typical == ()
     path = tmp_path / "config.toml"
-    path.write_text("[panels]\nkwp = 6.0\n")  # the file of an earlier version
+    path.write_text("[panels]\nkwp = 6.0\n", encoding="utf-8")  # the file of an earlier version
     assert load_config(path).setup.typical == ()
 
 
@@ -39,7 +39,7 @@ def test_the_list_is_written_and_read_back(tmp_path, cfg):
     chosen = with_typical(cfg, "panels.kwp", "car.km_per_day")
     path = tmp_path / "config.toml"
     write_config(chosen, path)
-    assert '[setup]\ntypical = ["panels.kwp", "car.km_per_day"]' in path.read_text()
+    assert '[setup]\ntypical = ["panels.kwp", "car.km_per_day"]' in path.read_text(encoding="utf-8")
     assert load_config(path).setup.typical == ("panels.kwp", "car.km_per_day")
     assert "typical = []" in dump_config(cfg)
 
@@ -60,7 +60,7 @@ def test_a_list_that_makes_no_sense_is_refused(cfg, keys, message):
 @pytest.mark.parametrize("text, message", [("typical = 5", "list of setting names"), ("typical = [1, 2]", "list of setting names"), ("typicl = []", "unknown keys in .setup.")])
 def test_a_file_that_makes_no_sense_is_refused(tmp_path, text, message):
     path = tmp_path / "config.toml"
-    path.write_text(f"[setup]\n{text}\n")
+    path.write_text(f"[setup]\n{text}\n", encoding="utf-8")
     with pytest.raises(ConfigError, match=message):
         load_config(path)
 

@@ -25,5 +25,5 @@ PATTERN = re.compile("|".join(TERMS), re.IGNORECASE)
 
 def test_documents_name_no_personal_details():
     files = [*(ROOT / "docs").rglob("*.md"), ROOT / "README.md", ROOT / "CONTRIBUTING.md", ROOT / "CONTEXT.md", ROOT / "CHANGELOG.md"]
-    hits = [f"{f.relative_to(ROOT)}:{n}" for f in files for n, line in enumerate(f.read_text().splitlines(), 1) if PATTERN.search(line)]
+    hits = [f"{f.relative_to(ROOT)}:{n}" for f in files for n, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1) if PATTERN.search(line)]
     assert hits == []

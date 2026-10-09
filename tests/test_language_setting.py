@@ -52,7 +52,7 @@ def test_the_default_follows_the_system_and_survives_a_round_trip(tmp_path):
 
 def test_an_old_config_without_the_key_still_loads(tmp_path):
     path = tmp_path / "config.toml"
-    path.write_text('[interface]\nmode = "window"\n')
+    path.write_text('[interface]\nmode = "window"\n', encoding="utf-8")
     cfg = load_config(path)
     assert cfg.interface.mode == "window" and cfg.interface.language == "auto"
 

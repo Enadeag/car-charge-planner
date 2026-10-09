@@ -220,7 +220,7 @@ def test_sunny_day_after_dull_day_charges_from_lower_start(cfg):
 def test_load_config_defaults_and_overrides(tmp_path):
     assert load_config(None) == Config()
     f = tmp_path / "c.toml"
-    f.write_text('[panels]\nkwp = 5.2\n[away]\nrecurring = [{weekday = 5, start = "08:00", end = "20:30"}]\n')
+    f.write_text('[panels]\nkwp = 5.2\n[away]\nrecurring = [{weekday = 5, start = "08:00", end = "20:30"}]\n', encoding="utf-8")
     cfg = load_config(f)
     assert cfg.panels[0].kwp == 5.2 and cfg.panels[0].tilt_deg == 35
     assert cfg.away_rules == (AwayRule(5, time(8, 0), time(20, 30)),)
@@ -228,7 +228,7 @@ def test_load_config_defaults_and_overrides(tmp_path):
 
 def test_unknown_config_key_is_rejected(tmp_path):
     f = tmp_path / "c.toml"
-    f.write_text("[panels]\nkwhp = 5\n")
+    f.write_text("[panels]\nkwhp = 5\n", encoding="utf-8")
     try:
         load_config(f)
     except ValueError as err:
@@ -314,7 +314,7 @@ from car_charge_planner.planner.model import ConfigError
 )
 def test_bad_config_is_rejected_with_a_readable_message(tmp_path, toml, fragment):
     f = tmp_path / "c.toml"
-    f.write_text(toml + "\n")
+    f.write_text(toml + "\n", encoding="utf-8")
     with pytest.raises(ConfigError) as err:
         load_config(f)
     assert fragment in str(err.value)
@@ -322,7 +322,7 @@ def test_bad_config_is_rejected_with_a_readable_message(tmp_path, toml, fragment
 
 def test_all_problems_are_reported_together(tmp_path):
     f = tmp_path / "c.toml"
-    f.write_text("[charger]\nvolts = 0\n[planning]\nmargin = 0\n")
+    f.write_text("[charger]\nvolts = 0\n[planning]\nmargin = 0\n", encoding="utf-8")
     with pytest.raises(ConfigError) as err:
         load_config(f)
     assert "volts" in str(err.value) and "margin" in str(err.value)

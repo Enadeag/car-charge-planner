@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
+from . import paths
 from .identity import APP_NAME, COMMENT, DESKTOP_ENTRY, ICON_NAME, exec_line
 
 ICON_SOURCE = Path(__file__).parent / "assets" / f"{ICON_NAME}.svg"
 
 
 def data_home() -> Path:
-    return Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+    return paths.shared_data_dir()
 
 
 def applications_dir(base: Path | None = None) -> Path:
@@ -45,7 +45,7 @@ def install(command: list[str], base: Path | None = None) -> tuple[Path, Path]:
     icon = icons_dir(base) / f"{ICON_NAME}.svg"
     entry.parent.mkdir(parents=True, exist_ok=True)
     icon.parent.mkdir(parents=True, exist_ok=True)
-    entry.write_text(desktop_entry(command))
+    entry.write_text(desktop_entry(command), encoding="utf-8")
     icon.write_bytes(ICON_SOURCE.read_bytes())
     return entry, icon
 

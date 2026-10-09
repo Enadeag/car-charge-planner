@@ -1,0 +1,5 @@
+# Text is stored and checked out with LF on every system, so a Windows checkout compares equal to the committed
+# translation template and to the files the tests regenerate.
+* text=auto eol=lf
+*.png binary
+*.mo binary

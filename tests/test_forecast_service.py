@@ -265,7 +265,7 @@ def test_a_changed_system_or_setting_makes_the_cache_not_apply(rig, cfg):
 def test_a_corrupt_cache_is_ignored(rig):
     rig.get()
     for junk in ("not json", "[]", '{"key": 1}', '{"key": {}, "fetched_at": "x", "steps": 5}', ""):
-        (rig.cache / "forecast-main.json").write_text(junk)
+        (rig.cache / "forecast-main.json").write_text(junk, encoding="utf-8")
         rig.main.script = [steps_for(DAY)]
         rig.main.calls.clear()
         assert not rig.get(later(minutes=5), force=True).from_cache and rig.main.call_count == 1
@@ -274,9 +274,9 @@ def test_a_corrupt_cache_is_ignored(rig):
 def test_a_cache_with_steps_that_break_the_contract_is_ignored(rig):
     rig.get()
     path = rig.cache / "forecast-main.json"
-    blob = json.loads(path.read_text())
+    blob = json.loads(path.read_text(encoding="utf-8"))
     blob["steps"][3][2] = -4.0
-    path.write_text(json.dumps(blob))
+    path.write_text(json.dumps(blob), encoding="utf-8")
     rig.main.script = [Unavailable("down")]
     rig.backup.script = [steps_for(DAY, 400)]
     assert rig.get(later(hours=1, minutes=1)).from_fallback  # the damaged cache is not worth using
@@ -284,13 +284,13 @@ def test_a_cache_with_steps_that_break_the_contract_is_ignored(rig):
 
 def test_the_old_single_cache_file_is_ignored(rig):
     (rig.cache).mkdir(parents=True)
-    (rig.cache / "forecast.json").write_text(json.dumps({"key": {}, "fetched_at": 1, "response": {}}))
+    (rig.cache / "forecast.json").write_text(json.dumps({"key": {}, "fetched_at": 1, "response": {}}), encoding="utf-8")
     assert not rig.get().from_cache
 
 
 def test_an_unwritable_cache_directory_does_not_break_planning(tmp_path, cfg):
     blocker = tmp_path / "cache"
-    blocker.write_text("a file where the directory should be")
+    blocker.write_text("a file where the directory should be", encoding="utf-8")
     rig = Rig(tmp_path, cfg)
     assert rig.get().steps  # the fetch worked; nothing could be saved
 

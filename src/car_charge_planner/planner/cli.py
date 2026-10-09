@@ -44,7 +44,7 @@ def demo_forecast(name: str, first_day: date, tz: ZoneInfo, cfg: Config | None =
 
 
 def load_forecast(path: Path) -> list[ForecastStep]:
-    rows = json.loads(path.read_text())
+    rows = json.loads(path.read_text(encoding="utf-8"))
     if any("gti" in row and "power_kw" not in row for row in rows):
         raise SystemExit(f"{path}: this file uses the old format ('gti', W/m2). Give 'power_kw' (expected solar power in kW) instead.")
     return [ForecastStep(datetime.fromisoformat(r["start"]), datetime.fromisoformat(r["end"]), float(r["power_kw"])) for r in rows]

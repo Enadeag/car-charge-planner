@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
+from . import paths
 from .identity import APP_NAME, COMMENT, DESKTOP_ENTRY, ICON_NAME, exec_line
 
 ENTRY_NAME = f"{DESKTOP_ENTRY}.desktop"
 
 
 def autostart_dir() -> Path:
-    return Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "autostart"
+    return paths.shared_config_dir() / "autostart"
 
 
 def desktop_entry(command: list[str]) -> str:
@@ -30,7 +30,7 @@ X-GNOME-Autostart-enabled=true
 def install(command: list[str], directory: Path | None = None) -> Path:
     target = (directory or autostart_dir()) / ENTRY_NAME
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(desktop_entry(command))
+    target.write_text(desktop_entry(command), encoding="utf-8")
     return target
 
 

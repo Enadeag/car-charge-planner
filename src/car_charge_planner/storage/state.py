@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from car_charge_planner import paths
 from car_charge_planner.planner.model import AwayPeriod, Window
 from car_charge_planner.planner.schema import KEY, Migration, NewerVersionError, SchemaError, upgrade
 
@@ -41,8 +41,7 @@ class State:
 
 
 def state_path() -> Path:
-    base = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
-    return base / "car-charge-planner" / "state.json"
+    return paths.state_dir() / "state.json"
 
 
 def _instant(stamp: float) -> datetime:
@@ -51,7 +50,7 @@ def _instant(stamp: float) -> datetime:
 
 def _read_blob(path: Path) -> Any:
     """The file's data brought up to the current format. Raises OSError, ValueError or SchemaError."""
-    blob: Any = json.loads(path.read_text())
+    blob: Any = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(blob, dict):
         blob = upgrade(blob, STATE_SCHEMA, STATE_MIGRATIONS, path.name)
     return blob
@@ -138,7 +137,7 @@ def save_state(state: State, path: Path | None = None) -> None:
         blob["battery_entered_at"] = state.battery.entered_at.timestamp()
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(blob, indent=2))
+    tmp.write_text(json.dumps(blob, indent=2), encoding="utf-8")
     tmp.replace(path)
 
 

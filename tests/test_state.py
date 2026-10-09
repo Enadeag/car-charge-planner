@@ -65,13 +65,13 @@ def test_old_away_periods_are_pruned_when_adding(tmp_path):
 def test_corrupt_or_missing_state_gives_defaults(tmp_path):
     assert load_state(tmp_path / "none.json") == State()
     bad = tmp_path / "bad.json"
-    bad.write_text("{oops")
+    bad.write_text("{oops", encoding="utf-8")
     assert load_state(bad) == State()
 
 
 def test_partly_broken_state_keeps_what_is_valid(tmp_path):
     f = tmp_path / "s.json"
-    f.write_text(f'{{"battery_pct": 70, "battery_entered_at": {NOW.timestamp()}, "away": [{{"start": 1}}, "junk"]}}')
+    f.write_text(f'{{"battery_pct": 70, "battery_entered_at": {NOW.timestamp()}, "away": [{{"start": 1}}, "junk"]}}', encoding="utf-8")
     state = load_state(f)
     assert state.battery.pct == 70 and state.away == ()
 
@@ -127,14 +127,14 @@ def test_saved_state_carries_the_schema_version(tmp_path):
 
     f = tmp_path / "s.json"
     save_state(State(), f)
-    assert json.loads(f.read_text())["schema"] == STATE_SCHEMA == 1
+    assert json.loads(f.read_text(encoding="utf-8"))["schema"] == STATE_SCHEMA == 1
     set_battery(61, NOW, f)
     assert load_state(f).battery.pct == 61  # round trip with the key present
 
 
 def test_state_without_a_schema_key_still_loads(tmp_path):
     f = tmp_path / "s.json"
-    f.write_text(f'{{"battery_pct": 70, "battery_entered_at": {NOW.timestamp()}}}')
+    f.write_text(f'{{"battery_pct": 70, "battery_entered_at": {NOW.timestamp()}}}', encoding="utf-8")
     assert load_state(f).battery.pct == 70
 
 
@@ -143,13 +143,13 @@ def test_a_newer_state_file_is_not_read_and_never_overwritten(tmp_path, caplog):
 
     f = tmp_path / "s.json"
     text = '{"schema": 99, "battery_pct": 70, "something_new": [1, 2]}'
-    f.write_text(text)
+    f.write_text(text, encoding="utf-8")
     assert load_state(f) == State()  # nothing in it is trusted
     with caplog.at_level("WARNING"):
         set_battery(10, NOW, f)
         save_state(State(), f)
         assert mark_seen("hint", f) is True  # callers keep working; nothing raises
-    assert f.read_text() == text
+    assert f.read_text(encoding="utf-8") == text
     assert "written by a newer version of the app" in caplog.text
     assert list(tmp_path.iterdir()) == [f]
 
@@ -164,5 +164,5 @@ def test_state_migrations_run_before_reading(tmp_path, monkeypatch):
     monkeypatch.setattr(state_module, "STATE_SCHEMA", 2)
     monkeypatch.setitem(state_module.STATE_MIGRATIONS, 1, one_to_two)
     f = tmp_path / "s.json"
-    f.write_text(f'{{"pct": 44, "battery_entered_at": {NOW.timestamp()}}}')
+    f.write_text(f'{{"pct": 44, "battery_entered_at": {NOW.timestamp()}}}', encoding="utf-8")
     assert load_state(f).battery.pct == 44

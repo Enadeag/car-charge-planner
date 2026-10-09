@@ -9,7 +9,7 @@ import sys
 from dataclasses import replace
 from datetime import date, timedelta
 from pathlib import Path
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfoNotFoundError
 
 import pytest
 from PySide6.QtWidgets import QPushButton
@@ -18,7 +18,7 @@ from app_process import RunningApp
 from car_charge_planner.config_file import ensure_config
 from car_charge_planner.controller import Controller
 from car_charge_planner.forecast.service import ForecastResult
-from car_charge_planner.planner.model import Config, ConfigError, find_timezone, load_config, require_location, system_timezone
+from car_charge_planner.planner.model import Config, ConfigError, load_config, require_location, system_timezone
 from car_charge_planner.settings.window import SettingsWindow
 from car_charge_planner.shells.icons import COLORS, make_icon
 from car_charge_planner.shells.tray import TrayShell
@@ -44,26 +44,56 @@ def test_a_location_counts_when_either_part_is_not_zero(lat, lon, expected):
     assert replace(Config(), latitude=lat, longitude=lon).is_set_up is expected
 
 
+def fake_tzlocal(monkeypatch, answer):
+    def get_localzone_name():
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    monkeypatch.setattr("tzlocal.get_localzone_name", get_localzone_name)
+
+
 @pytest.mark.parametrize(
-    "environ, etc_timezone, localtime, expected",
+    "answer, expected",
     [
-        ({"TZ": "Europe/Berlin"}, "", "", "Europe/Berlin"),
-        ({"TZ": ":Europe/Berlin"}, "", "", "Europe/Berlin"),  # the leading colon form
-        ({}, "Asia/Tokyo\n", "", "Asia/Tokyo"),
-        ({}, "", "/usr/share/zoneinfo/America/New_York", "America/New_York"),
-        ({}, "", "/usr/share/zoneinfo/posix/Europe/Paris", "Europe/Paris"),
-        ({"TZ": "Europe/Berlin"}, "Asia/Tokyo", "/usr/share/zoneinfo/America/New_York", "Europe/Berlin"),  # TZ wins
-        ({"TZ": "Not/AZone"}, "Asia/Tokyo", "", "Asia/Tokyo"),  # a bad candidate is skipped
-        ({}, "", "", "UTC"),
-        ({"TZ": "Nonsense"}, "also nonsense", "/etc/localtime", "UTC"),
+        ("Europe/Berlin", "Europe/Berlin"),
+        ("Not/AZone", "UTC"),
+        ("", "UTC"),
+        (ZoneInfoNotFoundError("no zone"), "UTC"),
+        (OSError("unreadable"), "UTC"),
     ],
 )
-def test_the_time_zone_comes_from_the_system(environ, etc_timezone, localtime, expected):
-    assert find_timezone(environ, etc_timezone, localtime) == expected
+def test_the_time_zone_comes_from_tzlocal_and_falls_back_to_utc(monkeypatch, answer, expected):
+    fake_tzlocal(monkeypatch, answer)
+    assert system_timezone() == expected
+    assert Config().timezone == expected
 
 
-def test_the_detected_zone_is_always_a_real_one():
-    ZoneInfo(system_timezone())  # must not raise
+@pytest.fixture
+def fresh_tzlocal(monkeypatch):
+    """tzlocal remembers its first answer: start without one, and put the memory back afterwards."""
+    monkeypatch.setattr("tzlocal.unix._cache_tz_name", None)
+    monkeypatch.delenv("TZ", raising=False)
+
+
+@pytest.mark.linux
+def test_a_tz_variable_still_decides(monkeypatch, fresh_tzlocal):
+    monkeypatch.setenv("TZ", "Asia/Tokyo")
+    assert system_timezone() == "Asia/Tokyo"
+
+
+@pytest.mark.linux
+def test_an_etc_localtime_link_still_decides(monkeypatch, tmp_path, fresh_tzlocal):
+    import tzlocal.unix
+
+    zone_file = tmp_path / "usr" / "share" / "zoneinfo" / "Asia" / "Tokyo"
+    zone_file.parent.mkdir(parents=True)
+    zone_file.touch()
+    (tmp_path / "etc").mkdir()
+    (tmp_path / "etc" / "localtime").symlink_to(zone_file)
+    read_below_the_fake_root = tzlocal.unix._get_localzone_name  # tzlocal can look for /etc/localtime below another root
+    monkeypatch.setattr("tzlocal.unix._get_localzone_name", lambda: read_below_the_fake_root(_root=str(tmp_path)))
+    assert system_timezone() == "Asia/Tokyo"
 
 
 def test_requiring_a_location_refuses_a_config_without_one():
@@ -80,7 +110,7 @@ def test_the_first_config_file_loads_as_not_set_up(tmp_path):
 
 def test_a_config_without_an_away_section_has_no_rules(tmp_path):
     f = tmp_path / "c.toml"
-    f.write_text("latitude = 1.0\nlongitude = 2.0\n")
+    f.write_text("latitude = 1.0\nlongitude = 2.0\n", encoding="utf-8")
     assert load_config(f).away_rules == ()
 
 
@@ -220,7 +250,7 @@ def test_saving_settings_with_a_location_works(tmp_path, qapp):
 
 
 def run_cli(*args, cwd=PROJECT):
-    return subprocess.run([sys.executable, "-m", "car_charge_planner.planner.cli", *args], cwd=cwd, capture_output=True, text=True, timeout=60)
+    return subprocess.run([sys.executable, "-m", "car_charge_planner.planner.cli", *args], cwd=cwd, capture_output=True, text=True, timeout=60, encoding="utf-8")
 
 
 def test_the_live_command_refuses_without_a_location_and_fetches_nothing():

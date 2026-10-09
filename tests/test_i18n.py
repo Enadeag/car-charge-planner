@@ -262,7 +262,7 @@ not_marked = "a plain string"
 def sample_package(tmp_path):
     package = tmp_path / "pkg"
     package.mkdir()
-    (package / "sample.py").write_text(SAMPLE)
+    (package / "sample.py").write_text(SAMPLE, encoding="utf-8")
     return package
 
 
@@ -278,13 +278,13 @@ def test_extraction_finds_every_kind_of_marker(sample_package, tmp_path):
         (None, "Panel size"),
         ("weekday, short", "Mon"),
     }
-    assert "a plain string" not in pot.read_text()
+    assert "a plain string" not in pot.read_text(encoding="utf-8")
 
 
 def test_extraction_keeps_the_note_for_the_translator_and_the_file_but_no_line_numbers(sample_package, tmp_path):
     pot = tmp_path / "t.pot"
     i18n_tools.extract(sample_package, pot, prefix="app")
-    text = pot.read_text()
+    text = pot.read_text(encoding="utf-8")
     assert "#. {name} is the place the user chose" in text
     assert "#: app/sample.py\n" in text and "sample.py:" not in text  # a file, never a line number
     assert "python-brace-format" in text  # translators are warned that {name} must stay
@@ -295,7 +295,7 @@ def test_the_template_is_the_same_every_time_it_is_made(sample_package, tmp_path
     i18n_tools.extract(sample_package, first)
     i18n_tools.extract(sample_package, second)
     assert first.read_bytes() == second.read_bytes()
-    assert "POT-Creation-Date: 2026-01-01 00:00+0000" in first.read_text()
+    assert "POT-Creation-Date: 2026-01-01 00:00+0000" in first.read_text(encoding="utf-8")
 
 
 def test_the_committed_template_is_up_to_date_with_the_code(tmp_path):
@@ -336,7 +336,7 @@ def test_updating_adds_new_texts_and_keeps_existing_translations(sample_package,
     catalogue.get("Panel size").string = "Paneelgrootte"
     with open(po, "wb") as handle:
         write_po(handle, catalogue)
-    (sample_package / "sample.py").write_text(SAMPLE + '\nextra = _("A brand new text")\n')
+    (sample_package / "sample.py").write_text(SAMPLE + '\nextra = _("A brand new text")\n', encoding="utf-8")
     i18n_tools.extract(sample_package, pot)
     i18n_tools.update(pot, locale_dir)
     updated = read_po(open(po, "rb"), locale="nl")

@@ -77,7 +77,7 @@ def write_config(cfg: Config, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
     try:
-        tmp.write_text(dump_config(cfg))
+        tmp.write_text(dump_config(cfg), encoding="utf-8")
         os.replace(tmp, path)
     except OSError:
         tmp.unlink(missing_ok=True)

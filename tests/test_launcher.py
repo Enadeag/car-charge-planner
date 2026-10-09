@@ -27,7 +27,7 @@ def test_install_writes_the_entry_and_the_icon(tmp_path):
     entry, icon = launcher.install(COMMAND, tmp_path)
     assert entry == tmp_path / "applications" / "car-charge-planner.desktop"
     assert icon == tmp_path / "icons" / "hicolor" / "scalable" / "apps" / "car-charge-planner.svg"
-    assert "Exec=/home/me/.local/bin/car-charge-planner" in entry.read_text()
+    assert "Exec=/home/me/.local/bin/car-charge-planner" in entry.read_text(encoding="utf-8")
     assert icon.read_bytes() == launcher.ICON_SOURCE.read_bytes()
 
 
@@ -43,14 +43,14 @@ def test_installing_twice_changes_nothing(tmp_path):
 def test_installing_again_with_another_command_updates_the_entry(tmp_path):
     launcher.install(MODULE, tmp_path)
     entry, _ = launcher.install(COMMAND, tmp_path)
-    assert "Exec=/home/me/.local/bin/car-charge-planner" in entry.read_text() and "/p/.venv" not in entry.read_text()
+    assert "Exec=/home/me/.local/bin/car-charge-planner" in entry.read_text(encoding="utf-8") and "/p/.venv" not in entry.read_text(encoding="utf-8")
 
 
 @pytest.mark.linux
 def test_uninstall_removes_both_files_and_nothing_else(tmp_path):
     launcher.install(COMMAND, tmp_path)
     other = tmp_path / "applications" / "someone-else.desktop"
-    other.write_text("[Desktop Entry]\n")
+    other.write_text("[Desktop Entry]\n", encoding="utf-8")
     removed = launcher.uninstall(tmp_path)
     assert len(removed) == 2 and all(not p.exists() for p in removed)
     assert other.exists()
@@ -81,7 +81,7 @@ def test_every_place_that_names_the_app_agrees(tmp_path):
 
 def _run(command, data_home):
     env = {**os.environ, "XDG_DATA_HOME": str(data_home)}
-    return subprocess.run([sys.executable, "-m", "car_charge_planner", command], cwd=PROJECT, env=env, capture_output=True, text=True, timeout=30)
+    return subprocess.run([sys.executable, "-m", "car_charge_planner", command], cwd=PROJECT, env=env, capture_output=True, text=True, timeout=30, encoding="utf-8")
 
 
 @pytest.mark.linux
@@ -89,7 +89,7 @@ def test_the_commands_work_end_to_end_without_touching_the_real_menu(tmp_path):
     done = _run("install-launcher", tmp_path)
     assert done.returncode == 0 and "Launcher entry written" in done.stdout
     entry = tmp_path / "applications" / "car-charge-planner.desktop"
-    text = entry.read_text()
+    text = entry.read_text(encoding="utf-8")
     assert "Path=" not in text and "-m app\n" not in text
     exec_line = next(line for line in text.splitlines() if line.startswith("Exec="))
     assert exec_line.endswith("car-charge-planner") or exec_line.endswith("-m car_charge_planner")  # this installation's own command
@@ -116,7 +116,7 @@ def test_is_installed_follows_the_entry_file(tmp_path):
 def test_the_launch_command_is_the_installed_command_next_to_the_interpreter(tmp_path, monkeypatch):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    (bin_dir / "car-charge-planner").write_text("#!/bin/sh\n")
+    (bin_dir / "car-charge-planner").write_text("#!/bin/sh\n", encoding="utf-8")
     (bin_dir / "car-charge-planner").chmod(0o755)
     monkeypatch.setattr(sys, "executable", str(bin_dir / "python"))
     assert identity.launch_command() == [str(bin_dir / "car-charge-planner")]
@@ -131,7 +131,7 @@ def test_a_command_from_another_environment_is_not_taken(tmp_path, monkeypatch):
     """A `car-charge-planner` somewhere else on the PATH may be another version: only the one beside this interpreter counts."""
     elsewhere = tmp_path / "elsewhere"
     elsewhere.mkdir()
-    (elsewhere / "car-charge-planner").write_text("#!/bin/sh\n")
+    (elsewhere / "car-charge-planner").write_text("#!/bin/sh\n", encoding="utf-8")
     (elsewhere / "car-charge-planner").chmod(0o755)
     monkeypatch.setenv("PATH", f"{elsewhere}{os.pathsep}{os.environ['PATH']}")
     monkeypatch.setattr(sys, "executable", str(tmp_path / "python"))

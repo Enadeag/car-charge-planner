@@ -94,13 +94,13 @@ def test_metric_is_the_default_and_the_choice_survives_a_round_trip(tmp_path, cf
     assert Config().interface.units == "metric"
     path = tmp_path / "config.toml"
     write_config(replace(cfg, interface=replace(cfg.interface, units="imperial")), path)
-    assert 'units = "imperial"' in path.read_text() and load_config(path).interface.units == "imperial"
+    assert 'units = "imperial"' in path.read_text(encoding="utf-8") and load_config(path).interface.units == "imperial"
     assert 'units = "metric"' in dump_config(cfg)
 
 
 def test_an_old_config_means_metric(tmp_path):
     path = tmp_path / "config.toml"
-    path.write_text('[interface]\nmode = "window"\n')
+    path.write_text('[interface]\nmode = "window"\n', encoding="utf-8")
     assert load_config(path).interface.units == "metric"
 
 

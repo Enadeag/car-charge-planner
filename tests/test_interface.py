@@ -41,13 +41,13 @@ def test_the_mode_is_read_written_and_round_trips(tmp_path):
 
 def test_a_file_without_the_section_means_automatic(tmp_path):
     f = tmp_path / "c.toml"
-    f.write_text("[panels]\nkwp = 5\n")  # no [interface] section
+    f.write_text("[panels]\nkwp = 5\n", encoding="utf-8")  # no [interface] section
     assert load_config(f).interface.mode == "auto"
 
 
 def test_an_unknown_mode_is_a_readable_error(tmp_path):
     f = tmp_path / "c.toml"
-    f.write_text('[interface]\nmode = "popup"\n')
+    f.write_text('[interface]\nmode = "popup"\n', encoding="utf-8")
     with pytest.raises(ConfigError) as err:
         load_config(f)
     assert "mode must be one of auto, tray, window" in str(err.value) and "popup" in str(err.value)
@@ -55,7 +55,7 @@ def test_an_unknown_mode_is_a_readable_error(tmp_path):
 
 def test_an_unknown_key_in_the_section_is_rejected(tmp_path):
     f = tmp_path / "c.toml"
-    f.write_text('[interface]\nstyle = "dark"\n')
+    f.write_text('[interface]\nstyle = "dark"\n', encoding="utf-8")
     with pytest.raises(ConfigError) as err:
         load_config(f)
     assert "style" in str(err.value)
@@ -221,7 +221,7 @@ def test_without_a_tray_the_app_starts_as_a_window_instead_of_exiting(tmp_path):
     app = RunningApp(tmp_path)
     try:
         app.wait_until_running()  # after looking for a tray, it carries on as a window
-        second = subprocess.run([sys.executable, "-m", "car_charge_planner"], cwd=PROJECT, env=app_environment(tmp_path), capture_output=True, text=True, timeout=30)
+        second = subprocess.run([sys.executable, "-m", "car_charge_planner"], cwd=PROJECT, env=app_environment(tmp_path), capture_output=True, text=True, timeout=30, encoding="utf-8")
         assert second.returncode == 0 and "already running" in second.stderr
         assert app.still_running_after()
     finally:

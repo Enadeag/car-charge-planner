@@ -57,7 +57,7 @@ def load_secrets(path: Path) -> Secrets:
         return {}
     ensure_private(path)
     try:
-        data = tomllib.loads(path.read_text())
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
     except OSError as err:
         raise SecretsError(_("Could not read {file}: {error}").format(file=path, error=err.strerror)) from None
     except tomllib.TOMLDecodeError:  # its text would quote part of the file: say where, not what
@@ -91,7 +91,7 @@ def save_secrets(secrets: Secrets, path: Path) -> None:
     tmp = path.with_name(path.name + ".tmp")
     try:
         fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-        with os.fdopen(fd, "w") as handle:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
             handle.write(text)
         if _has_file_modes():
             os.chmod(tmp, 0o600)  # also when an old temporary file existed with another mode

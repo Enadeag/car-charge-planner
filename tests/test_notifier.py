@@ -1,5 +1,7 @@
+import importlib
 import logging
 import os
+import sys
 
 import pytest
 
@@ -133,7 +135,7 @@ def test_the_icon_is_the_apps_own_once_installed_and_a_stock_one_before(tmp_path
     assert default_icon() == FALLBACK_ICON
     icons = tmp_path / "icons" / "hicolor" / "scalable" / "apps"
     icons.mkdir(parents=True)
-    (icons / f"{ICON_NAME}.svg").write_text("<svg/>")
+    (icons / f"{ICON_NAME}.svg").write_text("<svg/>", encoding="utf-8")
     assert default_icon() == ICON_NAME
 
 
@@ -161,3 +163,12 @@ def test_the_tray_app_announces_through_the_notifier(cfg, tmp_path, monkeypatch)
     monkeypatch.setattr("car_charge_planner.controller.datetime", Frozen)
     app.rebuild()
     assert len(fake.sent) == 1 and fake.sent[0][0].startswith("Charge window 09:00")
+
+
+@pytest.mark.parametrize("name", ["notifier", "notification_actions", "controller", "main"])
+def test_the_app_imports_without_jeepney(monkeypatch, name):
+    package = importlib.import_module("car_charge_planner")
+    monkeypatch.setitem(sys.modules, "jeepney", None)  # an import of it now fails, as on a system where it is not installed
+    monkeypatch.delitem(sys.modules, f"car_charge_planner.{name}")
+    monkeypatch.setattr(package, name, getattr(package, name))  # the fresh import replaces this attribute; put the module the other tests use back
+    importlib.import_module(f"car_charge_planner.{name}")

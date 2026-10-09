@@ -56,12 +56,12 @@ def test_an_array_without_a_name_is_written_without_one(cfg):
 
 def test_an_old_file_with_one_panels_table_is_one_array(tmp_path):
     path = tmp_path / "config.toml"
-    path.write_text('latitude = 52.37\nlongitude = 4.9\n[panels]\nkwp = 4.2\ntilt_deg = 20\n[setup]\ntypical = ["panels.azimuth_deg"]\n')
+    path.write_text('latitude = 52.37\nlongitude = 4.9\n[panels]\nkwp = 4.2\ntilt_deg = 20\n[setup]\ntypical = ["panels.azimuth_deg"]\n', encoding="utf-8")
     cfg = load_config(path)
     assert cfg.panels == (Panels(kwp=4.2, tilt_deg=20),)
     assert cfg.setup.typical == ("panels.azimuth_deg",)
     write_config(cfg, path)
-    assert "schema = 2" in path.read_text() and "[[panels]]" in path.read_text()
+    assert "schema = 2" in path.read_text(encoding="utf-8") and "[[panels]]" in path.read_text(encoding="utf-8")
     assert load_config(path) == cfg
 
 
@@ -73,7 +73,7 @@ def test_the_migration_turns_the_table_into_a_list_of_one_and_leaves_the_rest():
 
 def test_a_file_without_panels_has_the_one_default_array(tmp_path):
     path = tmp_path / "config.toml"
-    path.write_text("schema = 2\n")
+    path.write_text("schema = 2\n", encoding="utf-8")
     assert load_config(path).panels == (Panels(),)
 
 
@@ -89,7 +89,7 @@ def test_a_file_without_panels_has_the_one_default_array(tmp_path):
 )
 def test_a_file_with_arrays_that_make_no_sense_is_refused(tmp_path, text, message):
     path = tmp_path / "config.toml"
-    path.write_text(text)
+    path.write_text(text, encoding="utf-8")
     with pytest.raises(ConfigError, match=message):
         load_config(path)
 
@@ -257,7 +257,7 @@ def test_a_cache_written_for_one_array_in_the_old_shape_is_not_used_and_does_not
     old_key = {"system": {"latitude": cfg.latitude, "longitude": cfg.longitude, "kwp": 4.8, "tilt_deg": 35, "azimuth_deg": -45, "system_losses": 0.14, "timezone": cfg.timezone}, "settings": {}}
     cache = tmp_path / "cache"
     cache.mkdir()
-    (cache / "forecast-fake.json").write_text(json.dumps({"key": old_key, "fetched_at": now.timestamp(), "steps": [[now.timestamp(), now.timestamp() + 3600, 9.9]]}))
+    (cache / "forecast-fake.json").write_text(json.dumps({"key": old_key, "fetched_at": now.timestamp(), "steps": [[now.timestamp(), now.timestamp() + 3600, 9.9]]}), encoding="utf-8")
     result = service_for(tmp_path, fake).get(cfg, now)
     assert not result.from_cache and len(fake.calls) == 1 and all(s.power_kw != 9.9 for s in result.steps)
 

@@ -29,14 +29,14 @@ def with_phases(cfg, phases, **charger):
 def test_one_phase_is_the_default_and_an_old_config_means_one_phase(tmp_path):
     assert Charger().phases == 1
     path = tmp_path / "config.toml"
-    path.write_text("[charger]\nmin_amps = 6\nmax_amps = 16\n")  # no phases key
+    path.write_text("[charger]\nmin_amps = 6\nmax_amps = 16\n", encoding="utf-8")  # no phases key
     assert load_config(path).charger.phases == 1
 
 
 def test_the_phases_are_written_and_read_back(tmp_path, cfg):
     path = tmp_path / "config.toml"
     write_config(with_phases(cfg, 3), path)
-    assert "phases = 3" in path.read_text() and load_config(path).charger.phases == 3
+    assert "phases = 3" in path.read_text(encoding="utf-8") and load_config(path).charger.phases == 3
     assert "phases = 1" in dump_config(cfg)
 
 

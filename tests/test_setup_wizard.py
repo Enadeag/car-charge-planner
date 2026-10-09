@@ -290,7 +290,7 @@ def test_a_draft_that_does_not_pass_the_checks_writes_nothing_and_says_why(tmp_p
 
 def test_a_file_that_cannot_be_written_is_said_and_the_wizard_stays(tmp_path, qapp):
     blocker = tmp_path / "blocked"
-    blocker.write_text("a file where the directory should be")
+    blocker.write_text("a file where the directory should be", encoding="utf-8")
     rig = Rig(tmp_path)
     rig.wizard.config_file = blocker / "config.toml"
     rig.at_finish()

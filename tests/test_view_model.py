@@ -206,9 +206,9 @@ def test_first_config_file_matches_built_in_defaults_and_marks_them_all_typical(
 def test_ensure_config_creates_but_never_overwrites(tmp_path):
     f = tmp_path / "sub" / "config.toml"
     assert ensure_config(f) == f and f.exists()
-    f.write_text("[panels]\nkwp = 6\n")
+    f.write_text("[panels]\nkwp = 6\n", encoding="utf-8")
     ensure_config(f)
-    assert f.read_text() == "[panels]\nkwp = 6\n"
+    assert f.read_text(encoding="utf-8") == "[panels]\nkwp = 6\n"
 
 
 def test_missing_state_gives_assumed_battery(tmp_path):

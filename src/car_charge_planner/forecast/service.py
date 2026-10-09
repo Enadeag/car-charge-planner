@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import threading
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
@@ -18,6 +17,7 @@ from pathlib import Path
 from typing import Any, cast
 from zoneinfo import ZoneInfo
 
+from car_charge_planner import paths
 from car_charge_planner.i18n import _
 from car_charge_planner.planner.model import Config, ForecastStep
 
@@ -62,8 +62,7 @@ class ForecastResult:
 
 
 def default_cache_dir() -> Path:
-    base = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
-    return base / "car-charge-planner"
+    return paths.cache_dir()
 
 
 def _default_secrets() -> Secrets:
@@ -218,7 +217,7 @@ def _cache_key(system: SystemDescription, provider: ForecastProvider, cfg: Confi
 
 def _read_blob(path: Path) -> dict[str, Any]:
     try:
-        blob = json.loads(path.read_text())
+        blob = json.loads(path.read_text(encoding="utf-8"))
         return cast("dict[str, Any]", blob) if isinstance(blob, dict) else {}
     except (OSError, ValueError):
         return {}
@@ -230,7 +229,7 @@ def _write_blob(path: Path, updates: dict[str, Any]) -> None:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(blob))
+        tmp.write_text(json.dumps(blob), encoding="utf-8")
         tmp.replace(path)  # never leave a half-written cache
     except OSError:
         pass  # a read-only cache directory must not break planning

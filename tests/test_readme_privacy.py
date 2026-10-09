@@ -7,7 +7,7 @@ import pytest
 
 from car_charge_planner.forecast.registry import registry
 
-README = (Path(__file__).resolve().parent.parent / "README.md").read_text()
+README = (Path(__file__).resolve().parent.parent / "README.md").read_text(encoding="utf-8")
 
 
 def section() -> str:

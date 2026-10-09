@@ -9,10 +9,9 @@ small pure-Python `jeepney` library.
 from __future__ import annotations
 
 import logging
-import os
-from pathlib import Path
 from typing import Protocol
 
+from . import launcher
 from .i18n import N_, _
 from .identity import APP_NAME, DESKTOP_ENTRY, ICON_NAME
 
@@ -75,8 +74,7 @@ class JeepneyBus:
 
 def default_icon() -> str:
     """The app's icon once the launcher is installed, a stock icon until then."""
-    data_home = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
-    installed = data_home / "icons" / "hicolor" / "scalable" / "apps" / f"{ICON_NAME}.svg"
+    installed = launcher.icons_dir() / f"{ICON_NAME}.svg"
     return ICON_NAME if installed.exists() else FALLBACK_ICON
 
 

@@ -216,7 +216,7 @@ def test_an_empty_list_round_trips_and_does_not_bring_back_the_default(h):
     assert rows(h) == [] and not h.tab("Away rules").empty_note.isHidden()
     h.window.save_button.click()
     assert load_config(h.file).away_rules == ()
-    assert "recurring = []" in h.file.read_text()
+    assert "recurring = []" in h.file.read_text(encoding="utf-8")
 
 
 def test_a_rule_that_ends_before_it_starts_is_reported_and_nothing_is_written(h):

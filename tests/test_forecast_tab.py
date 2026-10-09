@@ -52,7 +52,7 @@ class Rig:
         self.file = tmp_path / "config.toml"
         self.secrets_file = tmp_path / "secrets.toml"
         if secrets is not None:
-            self.secrets_file.write_text(dump_secrets(secrets))
+            self.secrets_file.write_text(dump_secrets(secrets), encoding="utf-8")
             os.chmod(self.secrets_file, 0o600)
         base = cfg or example_config()
         self.cfg = replace(base, forecast=Forecast("beta", "", {})) if cfg is None else cfg
@@ -137,7 +137,7 @@ def test_saving_writes_plain_settings_to_the_config_and_secrets_to_their_own_fil
     rig.field("alpha", "account").setText("me")
     rig.field("alpha", "api_key").setText(f"  {KEY}\n")
     assert rig.window.save()
-    config_text = rig.file.read_text()
+    config_text = rig.file.read_text(encoding="utf-8")
     assert KEY not in config_text and 'primary = "alpha"' in config_text and 'fallback = "beta"' in config_text
     assert '[forecast.alpha]\naccount = "me"' in config_text
     assert load_secrets(rig.secrets_file) == {"alpha": {"api_key": KEY}}
@@ -208,14 +208,14 @@ def test_a_file_that_cannot_be_written_stops_everything_else(rig, monkeypatch):
 
 
 def test_an_unreadable_secrets_file_is_said_on_the_tab_and_does_not_block_other_saves(tmp_path, qapp):
-    (tmp_path / "secrets.toml").write_text("this is [not toml")
+    (tmp_path / "secrets.toml").write_text("this is [not toml", encoding="utf-8")
     os.chmod(tmp_path / "secrets.toml", 0o600)
     rig = Rig(tmp_path)
     assert any("not valid TOML" in t for t in labels(rig.tab))
     rig.pick("primary", "beta")
     rig.field("alpha", "account").setText("me")  # a plain setting changes; no secret is typed
     assert rig.window.save()
-    assert (tmp_path / "secrets.toml").read_text() == "this is [not toml"  # left as it was
+    assert (tmp_path / "secrets.toml").read_text(encoding="utf-8") == "this is [not toml"  # left as it was
 
 
 def test_the_test_button_reports_the_days_it_got_and_saves_nothing(rig):

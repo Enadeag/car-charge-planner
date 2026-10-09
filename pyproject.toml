@@ -22,7 +22,13 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Topic :: Home Automation",
 ]
-dependencies = ["PySide6-Essentials", "jeepney", "tzdata"]
+dependencies = [
+    "PySide6-Essentials",
+    "platformdirs",
+    "tzlocal",
+    'jeepney; sys_platform == "linux"',
+    "tzdata",  # zone data on every system, so the app does not depend on the system providing it
+]
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff", "pyright", "babel", "hatchling"]  # babel and hatchling: also the build requirements (a test builds the wheel)
@@ -62,7 +68,9 @@ target-version = "py312"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "B", "UP", "I"]  # syntax errors, pyflakes (unused names), bugbear, pyupgrade, import sorting
+select = ["E4", "E7", "E9", "F", "B", "UP", "I", "PLW1514"]  # syntax errors, pyflakes (unused names), bugbear, pyupgrade, import sorting, text files opened without an encoding
+preview = true  # PLW1514 is still a preview rule; with explicit-preview-rules no other preview rule is switched on
+explicit-preview-rules = true
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E402", "E741"]  # tests set QT_QPA_PLATFORM before importing Qt; short names like `l` are fine there

@@ -163,12 +163,12 @@ def test_the_demo_forecast_is_power_for_the_configured_panels(cfg):
 
 def test_a_forecast_file_gives_power_in_kw(tmp_path):
     path = tmp_path / "forecast.json"
-    path.write_text(json.dumps([{"start": "2026-07-03T12:00:00+02:00", "end": "2026-07-03T13:00:00+02:00", "power_kw": 3.5}]))
+    path.write_text(json.dumps([{"start": "2026-07-03T12:00:00+02:00", "end": "2026-07-03T13:00:00+02:00", "power_kw": 3.5}]), encoding="utf-8")
     assert load_forecast(path)[0].power_kw == 3.5
 
 
 def test_an_old_forecast_file_is_refused_with_a_clear_message(tmp_path):
     path = tmp_path / "old.json"
-    path.write_text(json.dumps([{"start": "2026-07-03T12:00:00+02:00", "end": "2026-07-03T13:00:00+02:00", "gti": 800}]))
+    path.write_text(json.dumps([{"start": "2026-07-03T12:00:00+02:00", "end": "2026-07-03T13:00:00+02:00", "gti": 800}]), encoding="utf-8")
     with pytest.raises(SystemExit, match="old format"):
         load_forecast(path)

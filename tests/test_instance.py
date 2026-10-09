@@ -89,7 +89,7 @@ def test_after_the_instance_ends_the_next_start_becomes_the_instance(qapp, path)
 
 
 def test_a_stale_socket_file_from_a_crash_is_replaced(qapp, path):
-    Path(path).write_text("left behind by a crashed instance")  # nobody listens on it
+    Path(path).write_text("left behind by a crashed instance", encoding="utf-8")  # nobody listens on it
     outcome, server = claim_instance(path)
     assert outcome is Outcome.PRIMARY
     assert request_show(path)
@@ -184,10 +184,11 @@ def test_a_second_launch_of_the_real_app_hands_over_and_exits(tmp_path):
         env=env,
         stdout=subprocess.PIPE,
         text=True,
+        encoding="utf-8",
     )
     try:
         assert first.stdout.readline().strip() == "primary"
-        second = subprocess.run([sys.executable, "-m", "car_charge_planner"], cwd=PROJECT, env=env, capture_output=True, text=True, timeout=30)
+        second = subprocess.run([sys.executable, "-m", "car_charge_planner"], cwd=PROJECT, env=env, capture_output=True, text=True, timeout=30, encoding="utf-8")
         assert second.returncode == 0 and "already running" in second.stderr
         assert first.stdout.readline().strip() == "SHOW"
     finally:

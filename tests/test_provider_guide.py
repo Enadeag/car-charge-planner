@@ -11,7 +11,7 @@ import provider_kit as kit
 from car_charge_planner.forecast.transport import Reply
 from provider_kit import ProviderCase
 
-GUIDE = (Path(__file__).resolve().parent.parent / "docs" / "providers.md").read_text()
+GUIDE = (Path(__file__).resolve().parent.parent / "docs" / "providers.md").read_text(encoding="utf-8")
 
 
 def block(language: str) -> str:

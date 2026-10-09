@@ -24,7 +24,7 @@ def with_forecast(cfg, **changes):
 
 def test_a_config_without_the_section_means_open_meteo_and_no_fallback(tmp_path):
     path = tmp_path / "config.toml"
-    path.write_text('latitude = 52.37\nlongitude = 4.9\n[panels]\nkwp = 5.0\n')  # no [forecast] section
+    path.write_text('latitude = 52.37\nlongitude = 4.9\n[panels]\nkwp = 5.0\n', encoding="utf-8")  # no [forecast] section
     cfg = load_config(path)
     assert cfg.forecast == Forecast("open-meteo", "", {})
 
@@ -36,7 +36,7 @@ def test_the_section_is_written_and_read_back_exactly(tmp_path, cfg):
     )
     path = tmp_path / "config.toml"
     write_config(chosen, path)
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     assert '[forecast]\nprimary = "forecast-solar"\nfallback = "open-meteo"' in text
     assert '[forecast.open-meteo]\nbase_url = "https://customer-api.open-meteo.com"' in text
     loaded = load_config(path)
@@ -68,7 +68,7 @@ def test_a_selection_that_makes_no_sense_is_refused(cfg, changes, message):
 
 def test_an_unknown_key_in_the_section_is_refused_like_everywhere_else(tmp_path):
     path = tmp_path / "config.toml"
-    path.write_text('[forecast]\nprimry = "open-meteo"\n')
+    path.write_text('[forecast]\nprimry = "open-meteo"\n', encoding="utf-8")
     with pytest.raises(ConfigError, match="unknown keys in .forecast."):
         load_config(path)
 
@@ -108,7 +108,7 @@ def test_the_file_is_never_open_to_others_not_even_with_a_permissive_umask(tmp_p
     previous = os.umask(0)
     try:
         path = tmp_path / "secrets.toml"
-        (tmp_path / "secrets.toml.tmp").write_text("old leftover")
+        (tmp_path / "secrets.toml.tmp").write_text("old leftover", encoding="utf-8")
         os.chmod(tmp_path / "secrets.toml.tmp", 0o666)
         save_secrets({"open-meteo": {"api_key": SECRET}}, path)
     finally:
@@ -120,7 +120,7 @@ def test_empty_values_are_not_stored(tmp_path):
     path = tmp_path / "secrets.toml"
     save_secrets({"open-meteo": {"api_key": ""}, "forecast-solar": {}}, path)
     assert load_secrets(path) == {}
-    assert "api_key" not in path.read_text()
+    assert "api_key" not in path.read_text(encoding="utf-8")
 
 
 def test_no_file_means_no_secrets(tmp_path):
@@ -131,7 +131,7 @@ def test_no_file_means_no_secrets(tmp_path):
 @pytest.mark.macos
 def test_a_file_open_to_others_is_corrected_when_read(tmp_path):
     path = tmp_path / "secrets.toml"
-    path.write_text(dump_secrets({"open-meteo": {"api_key": SECRET}}))
+    path.write_text(dump_secrets({"open-meteo": {"api_key": SECRET}}), encoding="utf-8")
     os.chmod(path, 0o644)
     assert load_secrets(path)["open-meteo"]["api_key"] == SECRET
     assert mode(path) == 0o600
@@ -141,7 +141,7 @@ def test_a_file_open_to_others_is_corrected_when_read(tmp_path):
 @pytest.mark.macos
 def test_a_file_open_to_others_that_cannot_be_fixed_is_refused_without_the_secret(tmp_path, monkeypatch):
     path = tmp_path / "secrets.toml"
-    path.write_text(dump_secrets({"open-meteo": {"api_key": SECRET}}))
+    path.write_text(dump_secrets({"open-meteo": {"api_key": SECRET}}), encoding="utf-8")
     os.chmod(path, 0o644)
     monkeypatch.setattr(os, "chmod", lambda *a, **k: (_ for _ in ()).throw(PermissionError(1, "Operation not permitted")))
     with pytest.raises(SecretsError, match="readable by other users") as caught:
@@ -154,7 +154,7 @@ def test_a_file_open_to_others_that_cannot_be_fixed_is_refused_without_the_secre
 def test_where_there_are_no_file_modes_nothing_is_changed(tmp_path, monkeypatch):
     monkeypatch.setattr("car_charge_planner.forecast.secret_store._has_file_modes", lambda: False)
     path = tmp_path / "secrets.toml"
-    path.write_text(dump_secrets({"open-meteo": {"api_key": SECRET}}))
+    path.write_text(dump_secrets({"open-meteo": {"api_key": SECRET}}), encoding="utf-8")
     os.chmod(path, 0o644)
     assert load_secrets(path)
     assert mode(path) == 0o644
@@ -162,7 +162,7 @@ def test_where_there_are_no_file_modes_nothing_is_changed(tmp_path, monkeypatch)
 
 def test_a_broken_file_is_reported_without_quoting_it(tmp_path):
     path = tmp_path / "secrets.toml"
-    path.write_text(f'[open-meteo]\napi_key = "{SECRET}" oops\n')
+    path.write_text(f'[open-meteo]\napi_key = "{SECRET}" oops\n', encoding="utf-8")
     with pytest.raises(SecretsError, match="not valid TOML") as caught:
         load_secrets(path)
     assert SECRET not in str(caught.value)
@@ -171,7 +171,7 @@ def test_a_broken_file_is_reported_without_quoting_it(tmp_path):
 @pytest.mark.parametrize("text", ["api_key = 5\n", "[open-meteo]\napi_key = 5\n"])
 def test_a_file_of_the_wrong_shape_is_refused(tmp_path, text):
     path = tmp_path / "secrets.toml"
-    path.write_text(text)
+    path.write_text(text, encoding="utf-8")
     with pytest.raises(SecretsError, match="texts only"):
         load_secrets(path)
 

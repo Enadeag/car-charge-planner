@@ -78,7 +78,7 @@ def test_invalid_config_is_refused_and_nothing_is_written(tmp_path):
 def test_a_failed_write_keeps_the_old_file_and_removes_the_temp_file(tmp_path, monkeypatch):
     f = tmp_path / "config.toml"
     write_config(Config(), f)
-    before = f.read_text()
+    before = f.read_text(encoding="utf-8")
 
     def boom(src, dst):
         raise OSError("disk full")
@@ -87,7 +87,7 @@ def test_a_failed_write_keeps_the_old_file_and_removes_the_temp_file(tmp_path, m
     changed = replace(Config(), panels=(replace(Config().panels[0], kwp=9.9),))
     with pytest.raises(OSError):
         write_config(changed, f)
-    assert f.read_text() == before
+    assert f.read_text(encoding="utf-8") == before
     assert [p.name for p in tmp_path.iterdir()] == ["config.toml"]
 
 
@@ -99,9 +99,9 @@ def test_creates_the_folder_when_missing(tmp_path):
 
 def test_overwrites_an_existing_file(tmp_path):
     f = tmp_path / "config.toml"
-    f.write_text("[panels]\nkwp = 1\n# my own comment\n")
+    f.write_text("[panels]\nkwp = 1\n# my own comment\n", encoding="utf-8")
     write_config(Config(), f)
-    assert "my own comment" not in f.read_text() and load_config(f) == Config()
+    assert "my own comment" not in f.read_text(encoding="utf-8") and load_config(f) == Config()
 
 
 def test_values_are_written_as_toml_types(tmp_path):
@@ -121,13 +121,13 @@ def test_file_carries_the_schema_version_first(tmp_path):
 
 def test_a_file_without_a_schema_key_loads_as_version_1(tmp_path):
     f = tmp_path / "config.toml"
-    f.write_text("[panels]\nkwp = 4.5\n")
+    f.write_text("[panels]\nkwp = 4.5\n", encoding="utf-8")
     assert load_config(f).panels[0].kwp == 4.5
 
 
 def test_a_file_from_a_newer_version_gets_the_newer_version_message(tmp_path):
     f = tmp_path / "config.toml"
-    f.write_text("schema = 99\n[panels]\nsome_future_key = 1\n")
+    f.write_text("schema = 99\n[panels]\nsome_future_key = 1\n", encoding="utf-8")
     with pytest.raises(ConfigError, match="written by a newer version of the app") as caught:
         load_config(f)
     assert "unknown keys" not in str(caught.value)
@@ -136,7 +136,7 @@ def test_a_file_from_a_newer_version_gets_the_newer_version_message(tmp_path):
 @pytest.mark.parametrize("bad", ['"two"', "0", "-1", "1.5", "true"])
 def test_a_schema_that_is_not_a_positive_whole_number_is_refused(tmp_path, bad):
     f = tmp_path / "config.toml"
-    f.write_text(f"schema = {bad}\n")
+    f.write_text(f"schema = {bad}\n", encoding="utf-8")
     with pytest.raises(ConfigError, match="schema"):
         load_config(f)
 
@@ -161,13 +161,13 @@ def test_migrations_run_in_order_before_the_values_are_read(tmp_path, monkeypatc
     monkeypatch.setitem(model.CONFIG_MIGRATIONS, 2, two_to_three)
     monkeypatch.setitem(model.CONFIG_MIGRATIONS, 3, three_to_four)
     f = tmp_path / "config.toml"
-    f.write_text("[panels]\npeak_kw = 6.5\n")  # no schema key: version 1, which has one [panels] table
+    f.write_text("[panels]\npeak_kw = 6.5\n", encoding="utf-8")  # no schema key: version 1, which has one [panels] table
     cfg = load_config(f)
     assert seen == [2, 3] and cfg.panels[0].kwp == 6.5 and cfg.car.minimum_pct == 33
-    f.write_text("schema = 3\n[[panels]]\nkwp = 3.0\n")  # starts at the right step
+    f.write_text("schema = 3\n[[panels]]\nkwp = 3.0\n", encoding="utf-8")  # starts at the right step
     seen.clear()
     assert load_config(f).car.minimum_pct == 33 and seen == [3]
-    f.write_text("schema = 5\n")
+    f.write_text("schema = 5\n", encoding="utf-8")
     with pytest.raises(ConfigError, match="newer version"):
         load_config(f)
 
@@ -177,6 +177,6 @@ def test_a_missing_migration_is_an_error_not_a_silent_skip(tmp_path, monkeypatch
 
     monkeypatch.setattr(model, "CONFIG_SCHEMA", 3)
     f = tmp_path / "config.toml"
-    f.write_text("schema = 2\n")
+    f.write_text("schema = 2\n", encoding="utf-8")
     with pytest.raises(ConfigError, match="cannot be upgraded"):
         load_config(f)

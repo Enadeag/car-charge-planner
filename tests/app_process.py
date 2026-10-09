@@ -31,6 +31,7 @@ def app_environment(home: Path, **extra) -> dict:
     return {
         **os.environ,
         "QT_QPA_PLATFORM": "offscreen",
+        "PYTHONUTF8": "1",  # the app's output is read as UTF-8; Windows would otherwise write it in its own code page
         "HOME": str(home),
         "XDG_CONFIG_HOME": str(home / "config"),
         "XDG_STATE_HOME": str(home / "state"),
@@ -44,17 +45,18 @@ def app_environment(home: Path, **extra) -> dict:
 class RunningApp:
     def __init__(self, home: Path, *flags: str, env: dict | None = None):
         self.out_path, self.err_path = home / "app.out", home / "app.err"
-        self.out, self.err = open(self.out_path, "w"), open(self.err_path, "w")
+        self.out, self.err = open(self.out_path, "w", encoding="utf-8"), open(self.err_path, "w", encoding="utf-8")
         self.process = subprocess.Popen(
-            [sys.executable, "-c", LAUNCHER, *flags], cwd=PROJECT, env=env or app_environment(home), stdout=self.out, stderr=self.err, text=True
+            [sys.executable, "-c", LAUNCHER, *flags], cwd=PROJECT, env=env or app_environment(home), stdout=self.out, stderr=self.err, text=True,
+            encoding="utf-8",
         )
 
     def wait_until_running(self, timeout: float = 60.0) -> None:
         """Return once the event loop is about to start; fail with the app's stderr if it exits first or never gets there."""
         deadline = time.monotonic() + timeout
-        while "READY" not in self.out_path.read_text():
-            assert self.process.poll() is None, f"the app exited with {self.process.returncode}: {self.err_path.read_text()}"
-            assert time.monotonic() < deadline, f"the app did not start within {timeout:.0f} s: {self.err_path.read_text()}"
+        while "READY" not in self.out_path.read_text(encoding="utf-8"):
+            assert self.process.poll() is None, f"the app exited with {self.process.returncode}: {self.err_path.read_text(encoding="utf-8")}"
+            assert time.monotonic() < deadline, f"the app did not start within {timeout:.0f} s: {self.err_path.read_text(encoding="utf-8")}"
             time.sleep(0.05)
 
     def still_running_after(self, seconds: float = 0.5) -> bool:
@@ -75,4 +77,4 @@ class RunningApp:
             self.process.wait()
         self.out.close()
         self.err.close()
-        return self.err_path.read_text()
+        return self.err_path.read_text(encoding="utf-8")
