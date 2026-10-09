@@ -1,4 +1,6 @@
-"""Desktop notifications over D-Bus (org.freedesktop.Notifications), the same on KDE and GNOME.
+"""Desktop notifications: over D-Bus (org.freedesktop.Notifications) on Linux, through the tray icon elsewhere.
+
+On Linux it is the same on KDE and GNOME.
 
 Qt's tray-icon messages need a tray, and GNOME has none by default. The notification service
 itself is available on both, so the app talks to it directly. QtDBus cannot make this call from
@@ -9,6 +11,7 @@ small pure-Python `jeepney` library.
 from __future__ import annotations
 
 import logging
+import sys
 from typing import Protocol
 
 from . import launcher
@@ -21,6 +24,14 @@ FALLBACK_ICON = "dialog-information"
 NOTIFY_SIGNATURE = "susssasa{sv}i"
 DEFAULT_ACTION = ("default", N_("Open"))  # the label is translated when the notification is sent
 REMEMBER = 50  # notification ids kept for matching clicks later
+
+
+class Notifying(Protocol):
+    def send(self, title: str, body: str, expire_ms: int = 20_000) -> int | None:
+        ...
+
+    def owns(self, notification_id: int) -> bool:
+        ...
 
 
 class Bus(Protocol):
@@ -109,3 +120,12 @@ class Notifier:
             return None
         self.sent_ids = [*self.sent_ids, notification_id][-REMEMBER:]
         return notification_id
+
+
+def make_notifier() -> Notifying:
+    """The notifier of this system: the tray icon on Windows and macOS, D-Bus elsewhere."""
+    if sys.platform in ("win32", "darwin"):
+        from .tray_notifier import TrayNotifier
+
+        return TrayNotifier()
+    return Notifier()

@@ -12,7 +12,8 @@ from typing import Protocol
 
 from PySide6.QtCore import QObject, Signal
 
-from .notifier import Notifier
+from .notifier import Notifying
+from .tray_notifier import TrayNotifier
 
 log = logging.getLogger(__name__)
 
@@ -88,7 +89,7 @@ class ActionListener(QObject):
             log.warning("Not listening for notification clicks: %s", err)
 
 
-def action_handler(notifier: Notifier, show_plan: Callable[[], None]) -> Callable[[int, str], None]:
+def action_handler(notifier: Notifying, show_plan: Callable[[], None]) -> Callable[[int, str], None]:
     """What a click does: show the plan, but only for the default action of a notification we sent."""
 
     def handle(notification_id: int, key: str) -> None:
@@ -96,3 +97,8 @@ def action_handler(notifier: Notifier, show_plan: Callable[[], None]) -> Callabl
             show_plan()
 
     return handle
+
+
+def click_listener(notifier: Notifying) -> ActionListener | TrayNotifier:
+    """What reports the clicks on this notifier's notifications: the tray notifier itself, else the D-Bus listener."""
+    return notifier if isinstance(notifier, TrayNotifier) else ActionListener()

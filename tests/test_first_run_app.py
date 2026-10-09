@@ -35,7 +35,9 @@ DRIVER = textwrap.dedent(
     import car_charge_planner.setup.wizard as wizard_module
 
     sent = []
-    notifier_module.Notifier.send = lambda self, title, body, expire_ms=20000: (sent.append(title), 1)[1]
+    from car_charge_planner.tray_notifier import TrayNotifier
+    for notifier_class in (notifier_module.Notifier, TrayNotifier):  # the one this system picks
+        notifier_class.send = lambda self, title, body, expire_ms=20000: (sent.append(title), 1)[1]
 
     def fake_get(self, cfg, now, force=False):  # no network: three bell-shaped days
         from zoneinfo import ZoneInfo

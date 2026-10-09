@@ -5,24 +5,35 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from PySide6.QtCore import QCoreApplication, QEventLoop, QTimer
+from PySide6.QtWidgets import QApplication, QSystemTrayIcon
 
 from .i18n import _
-from .notification_actions import DEFAULT_ACTION, ActionListener
-from .notifier import Notifier
+from .notification_actions import DEFAULT_ACTION, ActionListener, click_listener
+from .notifier import Notifying, make_notifier
+from .shells.icons import make_icon
+from .tray_notifier import TrayNotifier
 
 TIMEOUT_S = 60
 
 
 def run(
     timeout_s: float = TIMEOUT_S,
-    notifier: Notifier | None = None,
-    listener: ActionListener | None = None,
+    notifier: Notifying | None = None,
+    listener: ActionListener | TrayNotifier | None = None,
     out: Callable[[str], None] = print,
 ) -> int:
     """Send a test notification and wait for a click on it. Exit code 0 when the click arrived."""
-    app = QCoreApplication.instance() or QCoreApplication([])  # the event loop needs one
-    notifier = notifier or Notifier()
-    listener = listener or ActionListener()
+    notifier = notifier or make_notifier()
+    # a tray icon needs a QApplication; it must be shown for its balloon to appear, and stay alive while we wait
+    tray = None
+    if isinstance(notifier, TrayNotifier):
+        app = QApplication.instance() or QApplication([])
+        tray = QSystemTrayIcon(make_icon("none"))
+        tray.show()
+        notifier.use_tray(tray)
+    else:
+        app = QCoreApplication.instance() or QCoreApplication([])  # the event loop needs one
+    listener = listener or click_listener(notifier)
 
     notification_id = notifier.send(
         _("Car charge planner: test notification"),
@@ -50,6 +61,8 @@ def run(
     finally:
         listener.stop()
         app.processEvents()  # deliver anything still queued
+        if tray is not None:
+            tray.hide()
 
     if clicked:
         out(_("Click received: clicking a notification works on this desktop."))

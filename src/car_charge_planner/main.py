@@ -18,10 +18,12 @@ from .controller import Controller
 from .i18n import _
 from .identity import APP_NAME, DESKTOP_ENTRY
 from .instance import Outcome, claim_instance
-from .notification_actions import ActionListener, action_handler
+from .notification_actions import action_handler, click_listener
 from .shells import Shell, ShellChoice, choose_shell
+from .shells.icons import make_icon
 from .shells.tray import TrayShell
 from .shells.window import WindowShell
+from .tray_notifier import TrayNotifier
 
 TRAY_WAIT_BACKGROUND_S = 5.0  # started at login: the panel or the tray extension may still be starting
 TRAY_WAIT_INTERACTIVE_S = 1.0
@@ -64,6 +66,15 @@ def create_shell(controller: Controller, tray_available: bool) -> tuple[Shell, S
     return shell, choice
 
 
+def notification_tray(show: Callable[[], None]) -> QSystemTrayIcon:
+    """Windows and macOS show notifications through a tray icon, so in window mode there is one just for them."""
+    tray = QSystemTrayIcon(make_icon("none"))
+    tray.setToolTip(APP_NAME)
+    tray.activated.connect(lambda _reason: show())
+    tray.show()
+    return tray
+
+
 def main(argv: list[str] | None = None) -> int:
     app = QApplication(argv if argv is not None else sys.argv)
     app.setApplicationName("car-charge-planner")
@@ -99,10 +110,13 @@ def main(argv: list[str] | None = None) -> int:
     wants_tray = cfg.interface.mode != "window"
     tray_available = wants_tray and wait_for_tray(TRAY_WAIT_BACKGROUND_S if background else TRAY_WAIT_INTERACTIVE_S)
     shell, choice = create_shell(controller, tray_available)
+    if isinstance(controller.notifier, TrayNotifier):
+        tray = shell.tray if isinstance(shell, TrayShell) else notification_tray(shell.show_plan)
+        controller.notifier.use_tray(tray)
     announce_tray_fallback(controller, choice)
     if instance is not None:
         instance.show_requested.connect(shell.show_plan)
-    listener = ActionListener()
+    listener = click_listener(controller.notifier)
     listener.action_invoked.connect(action_handler(controller.notifier, lambda: controller.notification_clicked(shell.show_plan)))
     app.aboutToQuit.connect(listener.stop)
     listener.start()

@@ -19,7 +19,7 @@ from car_charge_planner.storage.state import State, add_away, load_state, mark_n
 
 from .i18n import _
 from .notifications import candidate_windows, due, message
-from .notifier import Notifier
+from .notifier import Notifying, make_notifier
 from .settings.window import SettingsWindow
 from .setup.wizard import SetupWizard
 from .view_model import ForecastSource, ViewModel, build, needs_setup, no_forecast
@@ -43,10 +43,10 @@ class Controller(QObject):
     view_changed = Signal(object)
 
     def __init__(
-        self, cfg: Config, config_file: Path, notifier: Notifier | None = None, forecasts: ForecastService | None = None
+        self, cfg: Config, config_file: Path, notifier: Notifying | None = None, forecasts: ForecastService | None = None
     ) -> None:
         super().__init__()
-        self.notifier = notifier or Notifier()
+        self.notifier = notifier or make_notifier()
         self.forecasts = forecasts or ForecastService()
         self.cfg = cfg
         self.config_file = config_file
