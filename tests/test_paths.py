@@ -47,6 +47,8 @@ def test_windows_and_macos_use_their_usual_places(system, tmp_path, monkeypatch)
     else:
         from platformdirs.macos import MacOS as SystemDirs
 
+        for name in ("CONFIG", "STATE", "CACHE", "DATA"):
+            monkeypatch.delenv(f"XDG_{name}_HOME", raising=False)  # platformdirs honours them on macOS too, and CI runners set some
         monkeypatch.setenv("HOME", str(tmp_path))
         monkeypatch.setenv("USERPROFILE", str(tmp_path))
         support, caches = tmp_path / "Library" / "Application Support", tmp_path / "Library" / "Caches"
