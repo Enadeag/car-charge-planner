@@ -1,21 +1,25 @@
 import os
+import shutil
 import stat
 import subprocess
 import sys
+import tempfile
 import textwrap
+import uuid
 from pathlib import Path
 
 import pytest
 from PySide6.QtTest import QTest
 
+from another_thread import from_another_thread
 from car_charge_planner.instance import InstanceServer, Outcome, claim_instance, request_show, socket_path
 
 PROJECT = Path(__file__).resolve().parent.parent
 
 
 @pytest.fixture
-def path(tmp_path):
-    return str(tmp_path / "instance.sock")
+def path(socket_name):
+    return socket_name
 
 
 def settle(ms=150):
@@ -31,7 +35,7 @@ def test_a_request_reaches_the_running_instance_once(qapp, path):
     assert server.listen()
     seen = []
     server.show_requested.connect(lambda: seen.append(1))
-    assert request_show(path) is True
+    assert from_another_thread(request_show, path) is True
     settle()
     assert seen == [1]
     server.close()
@@ -43,7 +47,7 @@ def test_every_request_is_delivered(qapp, path):
     seen = []
     server.show_requested.connect(lambda: seen.append(1))
     for _ in range(3):
-        assert request_show(path)
+        assert from_another_thread(request_show, path)
     settle(250)
     assert len(seen) == 3
     server.close()
@@ -73,7 +77,7 @@ def test_the_first_claim_becomes_the_instance_the_second_signals_it(qapp, path):
     assert first_outcome is Outcome.PRIMARY and first is not None
     seen = []
     first.show_requested.connect(lambda: seen.append(1))
-    second_outcome, second = claim_instance(path)
+    second_outcome, second = from_another_thread(claim_instance, path)
     assert second_outcome is Outcome.SIGNALLED and second is None
     settle()
     assert seen == [1]
@@ -88,6 +92,8 @@ def test_after_the_instance_ends_the_next_start_becomes_the_instance(qapp, path)
     again.close()
 
 
+@pytest.mark.linux
+@pytest.mark.macos
 def test_a_stale_socket_file_from_a_crash_is_replaced(qapp, path):
     Path(path).write_text("left behind by a crashed instance", encoding="utf-8")  # nobody listens on it
     outcome, server = claim_instance(path)
@@ -101,15 +107,19 @@ def test_a_live_instances_socket_is_never_removed(qapp, path):
     for _ in range(3):
         again, _server = claim_instance(path)
         assert again is Outcome.SIGNALLED
-    assert Path(path).exists() and request_show(path)
+    assert request_show(path)
     first.close()
 
 
+@pytest.mark.linux
+@pytest.mark.macos
 def test_when_no_socket_can_be_made_the_app_carries_on(qapp, tmp_path):
     outcome, server = claim_instance(str(tmp_path / "missing-directory" / "x.sock"))
     assert outcome is Outcome.UNAVAILABLE and server is None
 
 
+@pytest.mark.linux
+@pytest.mark.macos
 def test_the_socket_file_is_private_to_the_user(qapp, path):
     outcome, server = claim_instance(path)
     mode = stat.S_IMODE(os.stat(path).st_mode)
@@ -127,6 +137,8 @@ def test_a_second_server_cannot_take_over_a_path_a_live_server_holds(qapp, path)
     live.close()
 
 
+@pytest.mark.linux
+@pytest.mark.macos
 def test_the_path_lives_in_the_runtime_directory(monkeypatch):
     monkeypatch.setenv("XDG_RUNTIME_DIR", "/run/user/1234")
     assert socket_path() == "/run/user/1234/car-charge-planner.sock"
@@ -156,11 +168,52 @@ def test_a_directory_that_is_open_to_others_is_not_trusted(monkeypatch, tmp_path
     assert outcome is Outcome.UNAVAILABLE and server is None
 
 
+@pytest.mark.windows
+def test_on_windows_the_name_is_a_pipe_name_per_user(monkeypatch):
+    monkeypatch.setattr("getpass.getuser", lambda: "alice")
+    alice = socket_path()
+    monkeypatch.setattr("getpass.getuser", lambda: "bob")
+    assert alice == "car-charge-planner-alice"
+    assert socket_path() == "car-charge-planner-bob"
+
+
+@pytest.mark.windows
+def test_on_windows_a_second_start_signals_the_first_by_the_per_user_name(qapp, monkeypatch):
+    user = f"test-{uuid.uuid4().hex}"
+    monkeypatch.setattr("getpass.getuser", lambda: user)
+    outcome, first = claim_instance()
+    assert outcome is Outcome.PRIMARY and first is not None
+    seen = []
+    first.show_requested.connect(lambda: seen.append(1))
+    assert from_another_thread(claim_instance) == (Outcome.SIGNALLED, None)
+    settle()
+    assert seen == [1]
+    first.close()
+
+
+@pytest.mark.macos
+def test_on_macos_a_second_start_signals_the_first_in_the_private_directory(qapp, monkeypatch):
+    directory = tempfile.mkdtemp(prefix="ccp")  # short: a socket path is limited to about 100 characters
+    monkeypatch.setattr("tempfile.gettempdir", lambda: directory)
+    monkeypatch.delenv("XDG_RUNTIME_DIR", raising=False)
+    try:
+        outcome, first = claim_instance()
+        assert outcome is Outcome.PRIMARY and first is not None
+        seen = []
+        first.show_requested.connect(lambda: seen.append(1))
+        assert from_another_thread(claim_instance) == (Outcome.SIGNALLED, None)
+        settle()
+        assert seen == [1]
+        first.close()
+    finally:
+        shutil.rmtree(directory, ignore_errors=True)
+
+
 def test_a_second_launch_of_the_real_app_hands_over_and_exits(tmp_path):
     """Process A is the running instance; `car-charge-planner` is the second start."""
     runtime = tmp_path / "run"
     runtime.mkdir(mode=0o700)
-    env = {**os.environ, "XDG_RUNTIME_DIR": str(runtime), "QT_QPA_PLATFORM": "offscreen", "HOME": str(tmp_path)}
+    env = {**os.environ, "XDG_RUNTIME_DIR": str(runtime), "QT_QPA_PLATFORM": "offscreen", "HOME": str(tmp_path), "USERNAME": f"test-{uuid.uuid4().hex}"}
     first = subprocess.Popen(
         [
             sys.executable,
@@ -212,10 +265,9 @@ def test_two_copies_starting_at_once_the_loser_signals_instead_of_removing_the_s
         return False if len(calls) == 1 else real(p, timeout_ms)
 
     monkeypatch.setattr(instance, "request_show", first_look_comes_too_early)
-    outcome, server = claim_instance(path)
+    outcome, server = from_another_thread(claim_instance, path)
     assert outcome is Outcome.SIGNALLED and server is None
     assert len(calls) == 2  # it looked again before deciding the socket was stale
-    assert Path(path).exists()
     settle()
     assert seen == [1]
     winner.close()

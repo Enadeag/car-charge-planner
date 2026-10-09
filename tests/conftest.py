@@ -2,6 +2,7 @@ import gc
 import os
 import socket
 import sys
+import uuid
 from dataclasses import replace
 from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
@@ -58,6 +59,14 @@ def files_stay_in_a_temporary_folder(tmp_path_factory, monkeypatch):
 
     for name, function in xdg_paths.locations(tmp_path_factory.mktemp("home")).items():
         monkeypatch.setattr(paths, name, function)
+
+
+@pytest.fixture
+def socket_name(tmp_path):
+    """A local socket for a test's own instance server: a file in the temp folder, or a pipe name on Windows."""
+    if sys.platform == "win32":
+        return f"car-charge-planner-test-{uuid.uuid4().hex}"
+    return str(tmp_path / "instance.sock")
 
 
 class NetworkAccessInTests(AssertionError):

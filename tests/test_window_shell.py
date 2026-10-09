@@ -185,14 +185,15 @@ def test_start_in_the_background_keeps_the_window_hidden_but_runs_the_controller
     assert not s.window.isVisible() and started == [1]
 
 
-def test_a_second_launch_shows_the_hidden_window(s):
+def test_a_second_launch_shows_the_hidden_window(s, socket_name):
+    from another_thread import from_another_thread
     from car_charge_planner.instance import InstanceServer, request_show
 
-    server = InstanceServer(os.path.join(os.environ["XDG_STATE_HOME"], "i.sock"))
+    server = InstanceServer(socket_name)
     assert server.listen()
     server.show_requested.connect(s.shell.show_plan)  # as main() connects it
     assert not s.window.isVisible()
-    assert request_show(server.path)
+    assert from_another_thread(request_show, server.path)
     from PySide6.QtTest import QTest
 
     QTest.qWait(250)
