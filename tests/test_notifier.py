@@ -67,6 +67,7 @@ def test_a_missing_service_is_logged_once_not_every_minute(caplog):
     assert len([r for r in caplog.records if "Could not show a notification" in r.message]) == 1
 
 
+@pytest.mark.linux
 def test_the_message_is_built_with_the_exact_types_the_protocol_needs():
     pytest.importorskip("jeepney")
     message = JeepneyBus.build_message(APP_NAME, 0, "icon", "title", "body", ["default", "Open"], {"desktop-entry": ("s", "x")}, 5000)
@@ -80,6 +81,7 @@ def test_the_message_is_built_with_the_exact_types_the_protocol_needs():
     assert message.header.fields[HeaderFields.destination] == "org.freedesktop.Notifications"
 
 
+@pytest.mark.linux
 def test_an_error_reply_from_the_service_becomes_a_notify_error(monkeypatch):
     pytest.importorskip("jeepney")
     from types import SimpleNamespace
@@ -103,6 +105,7 @@ def test_an_error_reply_from_the_service_becomes_a_notify_error(monkeypatch):
         JeepneyBus().notify(APP_NAME, 0, "i", "t", "b", [], {}, 1000)
 
 
+@pytest.mark.linux
 def test_a_success_reply_gives_the_notification_id(monkeypatch):
     pytest.importorskip("jeepney")
     from types import SimpleNamespace

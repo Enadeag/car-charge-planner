@@ -1,5 +1,7 @@
 from datetime import date, timedelta
 
+import pytest
+
 from car_charge_planner.autostart import ENTRY_NAME, desktop_entry, install, uninstall
 from car_charge_planner.notifications import GRID, SOLAR, candidate_windows, due, message
 from car_charge_planner.planner.advice import GridAdvice
@@ -98,18 +100,21 @@ def test_other_state_changes_keep_notified(tmp_path):
     assert len(load_state(f).notified) == 1
 
 
+@pytest.mark.linux
 def test_desktop_entry_has_exec_and_no_working_directory():
     text = desktop_entry(["/p/.venv/bin/car-charge-planner"])
     assert "Exec=/p/.venv/bin/car-charge-planner --background\n" in text
     assert "Path=" not in text and "Type=Application" in text and "Terminal=false" in text
 
 
+@pytest.mark.linux
 def test_the_autostart_entry_starts_the_app_hidden_and_suits_both_desktops():
     text = desktop_entry(["/p/.venv/bin/python", "-m", "car_charge_planner"])
     assert "Exec=/p/.venv/bin/python -m car_charge_planner --background\n" in text  # window mode must not pop up at login
     assert "X-KDE-autostart-after=panel" in text and "X-GNOME-Autostart-enabled=true" in text
 
 
+@pytest.mark.linux
 def test_install_and_uninstall_autostart(tmp_path):
     target = install(["/p/.venv/bin/car-charge-planner"], tmp_path / "autostart")
     assert target.name == ENTRY_NAME and target.exists()

@@ -36,5 +36,52 @@ jobs:
         run: ruff check .
       - name: Type check
         run: pyright
+      - name: Compile the translations
+        # Fails on a broken catalogue. There are no catalogues yet (only the template), and compile then errors: skip until the first one.
+        run: |
+          if [ -n "$(find src/car_charge_planner/locale -name '*.po')" ]; then
+            python -m car_charge_planner.i18n_tools compile
+          else
+            echo "No translation catalogues yet: nothing to compile."
+          fi
+      - name: Test
+        run: pytest -q
+
+  # Informational until the platform work is done (#30 makes them required): the failures are the to-do list.
+  windows:
+    runs-on: windows-latest
+    continue-on-error: true
+    timeout-minutes: 20
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Test
+        run: pytest -q
+
+  macos:
+    # Remove this condition at the public launch (#31): macOS minutes cost 10x while the repository is private.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    continue-on-error: true
+    timeout-minutes: 20
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
       - name: Test
         run: pytest -q

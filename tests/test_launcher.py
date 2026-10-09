@@ -4,6 +4,8 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+import pytest
+
 from car_charge_planner import autostart, identity, launcher, notifier
 
 PROJECT = Path(__file__).resolve().parent.parent
@@ -18,6 +20,7 @@ def test_the_icon_is_a_valid_svg_with_the_bolt_on_a_disc():
     assert {"circle", "polygon"} <= tags
 
 
+@pytest.mark.linux
 def test_the_entry_names_the_app_icon_and_command_and_no_folder():
     text = launcher.desktop_entry(COMMAND)
     assert "Type=Application" in text and "Name=Car charge planner" in text
@@ -27,6 +30,7 @@ def test_the_entry_names_the_app_icon_and_command_and_no_folder():
     assert f"StartupWMClass={identity.DESKTOP_ENTRY}" in text and "Terminal=false" in text
 
 
+@pytest.mark.linux
 def test_install_writes_the_entry_and_the_icon(tmp_path):
     entry, icon = launcher.install(COMMAND, tmp_path)
     assert entry == tmp_path / "applications" / "car-charge-planner.desktop"
@@ -35,6 +39,7 @@ def test_install_writes_the_entry_and_the_icon(tmp_path):
     assert icon.read_bytes() == launcher.ICON_SOURCE.read_bytes()
 
 
+@pytest.mark.linux
 def test_installing_twice_changes_nothing(tmp_path):
     first = launcher.install(COMMAND, tmp_path)
     before = [p.read_bytes() for p in first]
@@ -42,12 +47,14 @@ def test_installing_twice_changes_nothing(tmp_path):
     assert first == second and [p.read_bytes() for p in second] == before
 
 
+@pytest.mark.linux
 def test_installing_again_with_another_command_updates_the_entry(tmp_path):
     launcher.install(MODULE, tmp_path)
     entry, _ = launcher.install(COMMAND, tmp_path)
     assert "Exec=/home/me/.local/bin/car-charge-planner" in entry.read_text() and "/p/.venv" not in entry.read_text()
 
 
+@pytest.mark.linux
 def test_uninstall_removes_both_files_and_nothing_else(tmp_path):
     launcher.install(COMMAND, tmp_path)
     other = tmp_path / "applications" / "someone-else.desktop"
@@ -57,10 +64,12 @@ def test_uninstall_removes_both_files_and_nothing_else(tmp_path):
     assert other.exists()
 
 
+@pytest.mark.linux
 def test_uninstalling_nothing_is_fine(tmp_path):
     assert launcher.uninstall(tmp_path) == []
 
 
+@pytest.mark.linux
 def test_the_installed_icon_is_what_the_notifier_then_uses(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
     assert notifier.default_icon() == notifier.FALLBACK_ICON
@@ -68,6 +77,7 @@ def test_the_installed_icon_is_what_the_notifier_then_uses(tmp_path, monkeypatch
     assert notifier.default_icon() == identity.ICON_NAME
 
 
+@pytest.mark.linux
 def test_every_place_that_names_the_app_agrees(tmp_path):
     assert notifier.DESKTOP_ENTRY == identity.DESKTOP_ENTRY and notifier.ICON_NAME == identity.ICON_NAME
     assert autostart.ENTRY_NAME == f"{identity.DESKTOP_ENTRY}.desktop"
@@ -82,6 +92,7 @@ def _run(command, data_home):
     return subprocess.run([sys.executable, "-m", "car_charge_planner", command], cwd=PROJECT, env=env, capture_output=True, text=True, timeout=30)
 
 
+@pytest.mark.linux
 def test_the_commands_work_end_to_end_without_touching_the_real_menu(tmp_path):
     done = _run("install-launcher", tmp_path)
     assert done.returncode == 0 and "Launcher entry written" in done.stdout
@@ -101,6 +112,7 @@ def test_an_unknown_command_lists_the_new_ones(tmp_path):
     assert done.returncode != 0 and "install-launcher" in done.stderr and "uninstall-launcher" in done.stderr
 
 
+@pytest.mark.linux
 def test_is_installed_follows_the_entry_file(tmp_path):
     assert not launcher.is_installed(tmp_path)
     launcher.install(COMMAND, tmp_path)
@@ -137,6 +149,7 @@ def test_a_command_from_another_environment_is_not_taken(tmp_path, monkeypatch):
     assert identity.launch_command()[-2:] == ["-m", "car_charge_planner"]
 
 
+@pytest.mark.linux
 def test_a_path_with_a_space_is_quoted_in_the_entry():
     assert identity.exec_line(["/home/me/my apps/car-charge-planner"]) == '"/home/me/my apps/car-charge-planner"'
     assert identity.exec_line(["/p/python", "-m", "car_charge_planner"], "--background") == "/p/python -m car_charge_planner --background"

@@ -339,6 +339,8 @@ def test_the_suite_refuses_internet_connections():
         socket.getaddrinfo("api.open-meteo.com", 443)
 
 
+@pytest.mark.linux
+@pytest.mark.macos
 def test_local_connections_are_not_affected_by_the_guard(tmp_path):
     server_path = str(tmp_path / "s.sock")
     server = socket.socket(socket.AF_UNIX)

@@ -50,6 +50,11 @@ path = "hatch_build.py"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+    "linux: only makes sense on Linux; skipped on other systems",
+    "windows: only makes sense on Windows; skipped on other systems",
+    "macos: only makes sense on macOS; skipped on other systems",
+]
 
 [tool.ruff]
 line-length = 140

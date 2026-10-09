@@ -229,6 +229,7 @@ def test_the_thread_does_not_keep_the_app_alive(qapp):
 
 
 @pytest.mark.skipif(not os.environ.get("DBUS_SESSION_BUS_ADDRESS"), reason="needs a session bus")
+@pytest.mark.linux
 def test_a_real_action_signal_on_the_session_bus_is_heard(qapp):
     """Emits a fake ActionInvoked for an id nobody owns, so no notification is involved."""
     from jeepney import DBusAddress, new_signal

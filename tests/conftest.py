@@ -1,6 +1,7 @@
 import gc
 import os
 import socket
+import sys
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -34,6 +35,17 @@ def example_config() -> Config:
         timezone="Europe/Amsterdam",
         away_rules=(AwayRule(weekday=3, start=time(6, 0), end=time(19, 0)),),
     )
+
+
+_PLATFORM_MARKERS = {"linux": "linux", "windows": "win32", "macos": "darwin"}
+
+
+def pytest_collection_modifyitems(items):
+    """A test marked `linux`, `windows` or `macos` runs only on that system (several marks: on any of them)."""
+    for item in items:
+        wanted = [name for name in _PLATFORM_MARKERS if item.get_closest_marker(name)]
+        if wanted and not any(sys.platform.startswith(_PLATFORM_MARKERS[name]) for name in wanted):
+            item.add_marker(pytest.mark.skip(reason=f"only runs on {' or '.join(wanted)} (this is {sys.platform})"))
 
 
 class NetworkAccessInTests(AssertionError):

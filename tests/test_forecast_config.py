@@ -98,6 +98,8 @@ def mode(path):
     return stat.S_IMODE(path.stat().st_mode)
 
 
+@pytest.mark.linux
+@pytest.mark.macos
 def test_secrets_are_written_private_and_read_back(tmp_path):
     path = tmp_path / "secrets.toml"
     save_secrets({"open-meteo": {"api_key": SECRET}, "forecast-solar": {"api_key": "other"}}, path)
@@ -106,6 +108,8 @@ def test_secrets_are_written_private_and_read_back(tmp_path):
     assert not list(tmp_path.glob("*.tmp"))  # the atomic write left nothing behind
 
 
+@pytest.mark.linux
+@pytest.mark.macos
 def test_the_file_is_never_open_to_others_not_even_with_a_permissive_umask(tmp_path):
     previous = os.umask(0)
     try:
@@ -129,6 +133,8 @@ def test_no_file_means_no_secrets(tmp_path):
     assert load_secrets(tmp_path / "missing.toml") == {}
 
 
+@pytest.mark.linux
+@pytest.mark.macos
 def test_a_file_open_to_others_is_corrected_when_read(tmp_path):
     path = tmp_path / "secrets.toml"
     path.write_text(dump_secrets({"open-meteo": {"api_key": SECRET}}))
@@ -137,6 +143,8 @@ def test_a_file_open_to_others_is_corrected_when_read(tmp_path):
     assert mode(path) == 0o600
 
 
+@pytest.mark.linux
+@pytest.mark.macos
 def test_a_file_open_to_others_that_cannot_be_fixed_is_refused_without_the_secret(tmp_path, monkeypatch):
     path = tmp_path / "secrets.toml"
     path.write_text(dump_secrets({"open-meteo": {"api_key": SECRET}}))
@@ -147,6 +155,8 @@ def test_a_file_open_to_others_that_cannot_be_fixed_is_refused_without_the_secre
     assert SECRET not in str(caught.value)
 
 
+@pytest.mark.linux
+@pytest.mark.macos
 def test_where_there_are_no_file_modes_nothing_is_changed(tmp_path, monkeypatch):
     monkeypatch.setattr("car_charge_planner.forecast.secret_store._has_file_modes", lambda: False)
     path = tmp_path / "secrets.toml"

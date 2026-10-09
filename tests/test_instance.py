@@ -138,6 +138,8 @@ def test_the_path_lives_in_the_runtime_directory(monkeypatch):
     assert socket_path() == "/run/user/1234/car-charge-planner.sock"
 
 
+@pytest.mark.linux
+@pytest.mark.macos
 def test_without_a_runtime_directory_it_uses_a_private_directory_of_its_own(monkeypatch, tmp_path):
     monkeypatch.delenv("XDG_RUNTIME_DIR", raising=False)
     monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
@@ -146,6 +148,8 @@ def test_without_a_runtime_directory_it_uses_a_private_directory_of_its_own(monk
     assert stat.S_IMODE(path.parent.stat().st_mode) == 0o700
 
 
+@pytest.mark.linux
+@pytest.mark.macos
 def test_a_directory_that_is_open_to_others_is_not_trusted(monkeypatch, tmp_path, qapp):
     monkeypatch.delenv("XDG_RUNTIME_DIR", raising=False)
     monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
