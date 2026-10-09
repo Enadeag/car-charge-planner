@@ -217,6 +217,14 @@ msgid "{file} is readable by other users and could not be made private: {error}"
 msgstr ""
 
 #: car_charge_planner/forecast/secret_store.py
+msgid "A provider id or setting name has characters that are not allowed"
+msgstr ""
+
+#: car_charge_planner/forecast/secret_store.py
+msgid "The system keychain did not keep a value that was written to it"
+msgstr ""
+
+#: car_charge_planner/forecast/secret_store.py
 #, python-brace-format
 msgid "Could not read {file}: {error}"
 msgstr ""
@@ -232,13 +240,13 @@ msgid "{file}: [{id}] must hold texts only"
 msgstr ""
 
 #: car_charge_planner/forecast/secret_store.py
-msgid "A provider id or setting name has characters that are not allowed"
-msgstr ""
-
-#: car_charge_planner/forecast/secret_store.py
 #: car_charge_planner/settings/window.py car_charge_planner/setup/wizard.py
 #, python-brace-format
 msgid "Could not write {file}: {error}"
+msgstr ""
+
+#: car_charge_planner/forecast/secret_store.py
+msgid "The system keychain could not be read. Unlock it, or enter the keys again."
 msgstr ""
 
 #: car_charge_planner/forecast/selection.py
@@ -1108,6 +1116,16 @@ msgstr[1] ""
 
 #: car_charge_planner/settings/forecast_tab.py
 msgid "Terms and limits"
+msgstr ""
+
+#: car_charge_planner/settings/forecast_tab.py
+#, python-brace-format
+msgid "No system keychain is available, so API keys are kept in {file}, which only you can read."
+msgstr ""
+
+#: car_charge_planner/settings/forecast_tab.py
+#, python-brace-format
+msgid "No system keychain is available, so API keys are kept in the file {file}, which is not encrypted."
 msgstr ""
 
 #: car_charge_planner/settings/forecast_tab.py

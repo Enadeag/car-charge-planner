@@ -1,4 +1,4 @@
-"""The [forecast] section of the config, secrets.toml, and the settings a provider declares."""
+"""The [forecast] section of the config, secrets.toml as the fallback without a keychain, and the settings a provider declares."""
 
 import logging
 import os
@@ -16,6 +16,8 @@ from car_charge_planner.planner.config_io import dump_config, write_config
 from car_charge_planner.planner.model import Config, ConfigError, Forecast, load_config, validate
 
 SECRET = "SUPER-SECRET-VALUE-42"
+
+pytestmark = pytest.mark.usefixtures("no_keychain")  # the file is the fallback: these tests are about it
 
 
 def with_forecast(cfg, **changes):

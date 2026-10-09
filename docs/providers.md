@@ -182,8 +182,8 @@ it, and some services punish ignoring it.
 
 ### Secrets
 
-Declare a setting `secret=True`. The app keeps it in `secrets.toml` beside the config (mode 0600), never in
-`config.toml`, shows it masked in Settings, and passes it to `fetch` in `settings` with the other settings.
+Declare a setting `secret=True`. The app keeps it in the system keychain (or, where there is none, in `secrets.toml` beside the config,
+mode 0600), never in `config.toml`, shows it masked in Settings, and passes it to `fetch` in `settings` with the other settings.
 A setting that is empty is absent from the dictionary.
 
 ## Testing a provider: the conformance kit

@@ -1,14 +1,16 @@
 """The Forecast tab: the primary and fallback providers, their settings and a way to try them.
 
-Every provider has a card under the role it is chosen for. Plain settings go to config.toml; secret ones are saved to
-secrets.toml by the window.
+Every provider has a card under the role it is chosen for. Plain settings go to config.toml; secret ones are saved by
+the window to the system keychain, or to secrets.toml when there is none.
 """
 
 from __future__ import annotations
 
+import os
 import threading
 from collections.abc import Callable
 from dataclasses import replace
+from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QComboBox, QFrame, QHBoxLayout, QLabel, QPushButton, QScrollArea, QVBoxLayout, QWidget
@@ -18,7 +20,7 @@ from car_charge_planner.forecast.check import missing_settings, try_provider
 from car_charge_planner.forecast.provider import ForecastProvider
 from car_charge_planner.forecast.registry import ProviderRegistry
 from car_charge_planner.forecast.registry import registry as builtin
-from car_charge_planner.forecast.secret_store import Secrets
+from car_charge_planner.forecast.secret_store import Secrets, storage_in_use
 from car_charge_planner.i18n import _, ngettext
 from car_charge_planner.planner.model import Config
 
@@ -70,6 +72,15 @@ class ProviderCard(QWidget):
         layout.addWidget(self.fields)
 
 
+def storage_note(secrets_file: Path) -> str:
+    """What to tell about where the keys are kept: nothing while they are in the system keychain."""
+    if storage_in_use(secrets_file) == "keychain":
+        return ""
+    if os.name == "posix":
+        return _("No system keychain is available, so API keys are kept in {file}, which only you can read.").format(file=secrets_file)
+    return _("No system keychain is available, so API keys are kept in the file {file}, which is not encrypted.").format(file=secrets_file)
+
+
 class ForecastTab(QWidget):
     changed = Signal()  # any choice or setting edited, or the tab (re)loaded
 
@@ -80,6 +91,7 @@ class ForecastTab(QWidget):
         registry: ProviderRegistry | None = None,
         current_config: Callable[[], Config] | None = None,
         secrets_problem: str = "",
+        storage: str = "",
     ) -> None:
         super().__init__()
         self.key = "forecast"
@@ -109,6 +121,11 @@ class ForecastTab(QWidget):
             problem.setWordWrap(True)
             problem.setStyleSheet(f"color: {colours.error(self)};")
             layout.addWidget(problem)
+        self.storage_label = QLabel()
+        self.storage_label.setWordWrap(True)
+        self.storage_label.setStyleSheet(f"{colours.MUTED_STYLE} font-size: 9pt;")
+        layout.addWidget(self.storage_label)
+        self.show_storage(storage)
         self.cards: dict[str, ProviderCard] = {}
         for provider in self.registry.all():
             card = ProviderCard(provider, cfg, self.saved_secrets)
@@ -186,6 +203,10 @@ class ForecastTab(QWidget):
         for card in self.cards.values():
             card.fields._secrets = {}
         self.load(Config())
+
+    def show_storage(self, note: str) -> None:
+        self.storage_label.setText(note)
+        self.storage_label.setVisible(bool(note))
 
     def remember_secrets(self, secrets: Secrets) -> None:
         """What was saved; a reload (after Save) starts from it."""

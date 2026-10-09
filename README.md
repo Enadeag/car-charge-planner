@@ -238,7 +238,7 @@ Open **Settings...** from the tray icon's right-click menu. Settings are grouped
 | House and car | House baseload, usable battery, consumption, driving per day, minimum and target charge level |
 | Charger | One or three phases, minimum and maximum current (per phase), voltage, charging efficiency |
 | Planning and notifications | Planning margin, import tolerance, minimum window length, notification lead time |
-| Forecast | Which forecast provider to use, an optional fallback provider, and each one's settings (a server address or an API key, if it takes any). Each provider is described with what it sends, its limits and its terms, and a **Test** button asks it for a forecast right now without saving anything. API keys are kept apart from the config file, in `secrets.toml`. |
+| Forecast | Which forecast provider to use, an optional fallback provider, and each one's settings (a server address or an API key, if it takes any). Each provider is described with what it sends, its limits and its terms, and a **Test** button asks it for a forecast right now without saving anything. API keys are kept apart from the config file, in the system keychain (see [What is kept, and where](#what-is-kept-and-where)). |
 | Interface | Whether the app shows itself as a tray icon with a popup, as a window, or automatically (a tray if the desktop has one, otherwise a window); the language (once a translation is installed); and the **units**: metric (km, kWh/100 km) or imperial (miles, miles per kWh) for the distance and consumption fields, which change at once. Stored values stay metric. The mode and language apply the next time the app starts. |
 | Away rules | Weekly times the car is not at home, one row per rule |
 
@@ -258,7 +258,7 @@ The settings live in `~/.config/car-charge-planner/config.toml`, a plain TOML fi
 | Config | `~/.config/car-charge-planner/config.toml` |
 | Battery level, away periods, announced windows | `~/.local/state/car-charge-planner/state.json` |
 | Forecast cache | `~/.cache/car-charge-planner/forecast-<provider>.json`, one per provider |
-| API keys | `~/.config/car-charge-planner/secrets.toml` (private, only if you use a paid plan) |
+| API keys | The system keychain; `~/.config/car-charge-planner/secrets.toml` (private) only where there is none. Only if you use a paid plan. See [What is kept, and where](#what-is-kept-and-where) |
 | Single-instance socket | `$XDG_RUNTIME_DIR/car-charge-planner.sock` (a private directory under the temp directory if there is no runtime directory) |
 
 Delete the state file to reset your entries. The other files are recreated as needed.
@@ -292,7 +292,7 @@ The code is one package, `src/car_charge_planner/`:
 | In `src/car_charge_planner/` | Contents |
 | --- | --- |
 | `planner/` | The planning logic, with no network or UI: surplus, windows, projection, grid advice, config reading and writing (`config_io.py`), CLI. |
-| `forecast/` | The forecast providers (`providers/`), the service that chooses between them and caches their answers (`service.py`), and the secrets file. See [docs/providers.md](docs/providers.md). |
+| `forecast/` | The forecast providers (`providers/`), the service that chooses between them and caches their answers (`service.py`), and the key storage. See [docs/providers.md](docs/providers.md). |
 | `storage/` | Reading and writing `state.json`. |
 | `settings/` | The Settings window: field definitions, tabs, window. |
 | `setup/` | The set-up wizard: one module per page (welcome, location, solar, car, hub, house, away, finish), the answers (`state.py`), the typical values (`typical.py`) and the helpers each page uses. |
@@ -360,9 +360,24 @@ step with them), and the terms that go with using it (read on 2026-10-07; the pr
 ### What is kept, and where
 
 See [Where things are stored](#where-things-are-stored). In short: your settings and, if you use a paid plan, your
-API keys (in `secrets.toml`, readable only by you, and never in the settings file); your battery level and away
+API keys (in the system keychain, and never in the settings file); your battery level and away
 times; a cache of the last forecast of each provider. Delete any of them to start over. Uninstalling the launcher
 or autostart entry removes only those entries.
+
+API keys are kept by the system, not in a file:
+
+| System | Where the keys are kept |
+| --- | --- |
+| Linux | The Secret Service: GNOME Keyring, KWallet or another that offers it. Look for entries of `car-charge-planner` in Passwords and Keys or KWalletManager |
+| Windows | Credential Manager (Windows Credentials), as generic credentials named `car-charge-planner` |
+| macOS | The login Keychain, as items of the service `car-charge-planner` |
+
+The entries are named `forecast/<provider>/<key>`, and one more entry, `index`, lists the names (no values) because a
+keychain cannot be asked what it holds. Without a usable keychain (a Linux machine with no Secret Service, for one) the
+keys are kept in `secrets.toml` beside the settings file, readable only by you on Linux and macOS (mode 0600), and the
+Forecast tab in Settings says so. Whenever a keychain is available, a `secrets.toml` from an earlier version is moved
+into it at the next start, and the file is removed once every value has been written and read back; if anything goes
+wrong the file stays and keeps being used.
 
 ### Third-party software
 
@@ -370,6 +385,7 @@ or autostart entry removes only those entries.
 | --- | --- | --- |
 | [PySide6](https://doc.qt.io/qtforpython-6/) (Qt for Python; also Shiboken) | The windows, the tray icon and the popup | LGPL-3.0-only, or GPL-2.0-only / GPL-3.0-only |
 | [jeepney](https://gitlab.com/takluyver/jeepney) | Notifications over D-Bus | MIT |
+| [keyring](https://github.com/jaraco/keyring) | Keeping API keys in the system keychain | MIT |
 | [Babel](https://babel.pocoo.org) (development only) | Collecting and compiling the translations | BSD-3-Clause |
 | [pytest](https://pytest.org) (development only) | The tests | MIT |
 

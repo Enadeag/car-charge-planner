@@ -131,7 +131,7 @@ def test_changing_only_a_secret_counts_as_a_change(tmp_path, qapp):
     assert not rig.window.is_dirty()
 
 
-def test_saving_writes_plain_settings_to_the_config_and_secrets_to_their_own_file(rig):
+def test_saving_writes_plain_settings_to_the_config_and_secrets_to_the_keychain(rig, keychain):
     rig.pick("primary", "alpha")
     rig.pick("fallback", "beta")
     rig.field("alpha", "account").setText("me")
@@ -140,10 +140,27 @@ def test_saving_writes_plain_settings_to_the_config_and_secrets_to_their_own_fil
     config_text = rig.file.read_text(encoding="utf-8")
     assert KEY not in config_text and 'primary = "alpha"' in config_text and 'fallback = "beta"' in config_text
     assert '[forecast.alpha]\naccount = "me"' in config_text
-    assert load_secrets(rig.secrets_file) == {"alpha": {"api_key": KEY}}
-    assert stat.S_IMODE(rig.secrets_file.stat().st_mode) == 0o600
+    assert keychain.entries[("car-charge-planner", "forecast/alpha/api_key")] == KEY
+    assert not rig.secrets_file.exists()
     assert load_config(rig.file).forecast.primary == "alpha" and rig.saved[-1].forecast.fallback == "beta"
     assert not rig.window.is_dirty() and rig.window.cancel_button.text() == "Close"
+
+
+def test_without_a_keychain_secrets_go_to_a_private_file_and_the_tab_says_so(tmp_path, qapp, no_keychain):
+    rig = Rig(tmp_path)
+    assert not rig.tab.storage_label.isHidden()
+    rig.pick("primary", "alpha")
+    rig.field("alpha", "api_key").setText(KEY)
+    assert rig.window.save()
+    assert KEY not in rig.file.read_text(encoding="utf-8")
+    assert load_secrets(rig.secrets_file) == {"alpha": {"api_key": KEY}}
+    if os.name == "posix":
+        assert stat.S_IMODE(rig.secrets_file.stat().st_mode) == 0o600
+    assert str(rig.secrets_file) in rig.tab.storage_label.text()
+
+
+def test_the_tab_says_nothing_about_storage_while_the_keychain_is_used(rig):
+    assert rig.tab.storage_label.isHidden()
 
 
 def test_the_saved_key_is_there_again_when_the_window_is_reopened(tmp_path, qapp):

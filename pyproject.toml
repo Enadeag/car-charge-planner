@@ -27,6 +27,7 @@ dependencies = [
     "platformdirs",
     "tzlocal",
     'jeepney; sys_platform == "linux"',
+    "keyring",  # API keys and tokens: Secret Service, Credential Manager or Keychain
     "tzdata",  # zone data on every system, so the app does not depend on the system providing it
 ]
 

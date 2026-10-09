@@ -8,7 +8,12 @@ from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import keyring
+import keyring.core
 import pytest
+from keyring.backend import KeyringBackend
+from keyring.backends.fail import Keyring as FailKeyring
+from keyring.errors import PasswordDeleteError
 
 from car_charge_planner.forecast.providers.open_meteo import power_kw
 from car_charge_planner.planner.demo import bell_day
@@ -59,6 +64,43 @@ def files_stay_in_a_temporary_folder(tmp_path_factory, monkeypatch):
 
     for name, function in xdg_paths.locations(tmp_path_factory.mktemp("home")).items():
         monkeypatch.setattr(paths, name, function)
+
+
+class MemoryKeyring(KeyringBackend):
+    """A keychain that lives in a dict: no test may touch the real one."""
+
+    priority = 1  # type: ignore[assignment]
+
+    def __init__(self):
+        super().__init__()
+        self.entries: dict[tuple[str, str], str] = {}
+
+    def get_password(self, service, username):
+        return self.entries.get((service, username))
+
+    def set_password(self, service, username, password):
+        self.entries[(service, username)] = password
+
+    def delete_password(self, service, username):
+        if (service, username) not in self.entries:
+            raise PasswordDeleteError("not found")
+        del self.entries[(service, username)]
+
+
+@pytest.fixture(autouse=True)
+def keychain(monkeypatch):
+    """An empty in-memory keychain instead of the user's real one, here and in any program a test starts."""
+    monkeypatch.setenv("PYTHON_KEYRING_BACKEND", "keyring.backends.null.Keyring")  # for child processes
+    monkeypatch.setattr(keyring.core, "_keyring_backend", None)  # restored afterwards, without initialising the real backend
+    backend = MemoryKeyring()
+    keyring.set_keyring(backend)
+    return backend
+
+
+@pytest.fixture
+def no_keychain(keychain):
+    """A system without a usable keychain: the keys fall back to secrets.toml."""
+    keyring.set_keyring(FailKeyring())
 
 
 @pytest.fixture

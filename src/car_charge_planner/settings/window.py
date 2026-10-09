@@ -32,7 +32,7 @@ from car_charge_planner.planner.model import Config, ConfigError, require_locati
 from car_charge_planner.platform import StartAtLogin, start_at_login
 
 from .fields import SOLAR, START_AT_LOGIN, TABS
-from .forecast_tab import ForecastTab
+from .forecast_tab import ForecastTab, storage_note
 from .tabs import AwayRulesTab, FieldTab, SolarTab
 
 
@@ -81,7 +81,7 @@ class SettingsWindow(QDialog):
         except SecretsError as err:
             self.stored_secrets, secrets_problem = {}, str(err)
         self.field_tabs: list[FieldTab | SolarTab] = [SolarTab(spec, cfg) if spec is SOLAR else FieldTab(spec, cfg, switches={START_AT_LOGIN: self.stored_login}) for spec in TABS]
-        self.forecast_tab = ForecastTab(cfg, self.stored_secrets, self.registry, lambda: self.current_config(), secrets_problem)
+        self.forecast_tab = ForecastTab(cfg, self.stored_secrets, self.registry, lambda: self.current_config(), secrets_problem, storage_note(self.secrets_file))
         self.away_tab = AwayRulesTab(cfg)
         planning = next(i for i, t in enumerate(self.field_tabs) if t.key == "planning")
         self.all_tabs = [*self.field_tabs[: planning + 1], self.forecast_tab, *self.field_tabs[planning + 1 :], self.away_tab]
@@ -244,6 +244,7 @@ class SettingsWindow(QDialog):
             return False
         self.stored, self.stored_secrets = cfg, secrets
         self.forecast_tab.remember_secrets(secrets)
+        self.forecast_tab.show_storage(storage_note(self.secrets_file))  # a keychain that failed just now means the file
         self.errors.setVisible(False)
         self.interface_tab.switches[START_AT_LOGIN] = self.stored_login
         for tab in self.all_tabs:
