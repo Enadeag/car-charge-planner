@@ -63,8 +63,15 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-      - name: Test
-        run: pytest -q
+      - name: Test (each file in its own process, so a crash hides only that file)
+        run: |
+          $failed = @()
+          foreach ($file in Get-ChildItem tests -Filter 'test_*.py' | Sort-Object Name) {
+            pytest -q -rfE -p no:cacheprovider $file.FullName
+            if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 5) { $failed += "$($file.Name) (exit code $LASTEXITCODE)" }
+          }
+          if ($failed) { "Failed or crashed:"; $failed; exit 1 }
+          exit 0
 
   macos:
     # Remove this condition at the public launch (#31): macOS minutes cost 10x while the repository is private.
