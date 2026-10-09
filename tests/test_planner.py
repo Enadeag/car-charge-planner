@@ -1,11 +1,13 @@
 from dataclasses import replace
-from datetime import date, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
+
+import pytest
 
 from car_charge_planner.planner.model import AwayPeriod, AwayRule, Config, ForecastStep, load_config
 from car_charge_planner.planner.projection import energy_needed_kwh, plan
 from car_charge_planner.planner.surplus import amps_for, usable_kw
 from car_charge_planner.planner.windows import build_runs, group_runs_by_day, select_windows
-from conftest import TZ, at, forecast_from
+from conftest import TZ, at, forecast_from, golden_config, hourly
 
 SUMMER_FRI = date(2026, 7, 3)
 SUMMER_THU = date(2026, 7, 2)
@@ -25,6 +27,53 @@ def test_clear_summer_day_gives_one_long_window_near_surplus_peak(cfg):
     assert w.import_kwh <= cfg.planning.import_tolerance_kwh
     assert at(SUMMER_FRI, 8) <= w.start and w.end <= at(SUMMER_FRI, 17)
     assert w.solar_share > 0.95
+
+
+# after the 0.6 kW baseload and the 0.85 margin: 1.6 kW leaves 0.85 kW (3 A, not chargeable), 2.6 kW leaves
+# 1.7 kW (7 A) and 4.4 kW leaves 3.23 kW: 14 A (3.22 kW), while 15 A would import 0.22 kWh an hour
+SUNNY = {8: 1.6, 9: 2.6, 10: 4.4, 11: 4.4, 12: 4.4, 13: 4.4, 14: 4.4, 15: 2.6}
+QUIET = {hour: 1.6 for hour in range(9, 16)}
+
+
+def test_golden_sunny_day():
+    day = plan(hourly(SUMMER_FRI, SUNNY), golden_config(), 62, at(SUMMER_FRI, 0))[0]
+    # need 18% of 70 kWh / 0.9 = 14 kWh: 12.88 kWh by 14:00, the rest in 1.12 / 3.22 h = 21 min, rounded up to 14:25
+    assert [(w.start, w.end, w.amps, w.power_kw, w.import_kwh) for w in day.windows] == [
+        (at(SUMMER_FRI, 10), at(SUMMER_FRI, 14, 25), 14, 3.22, 0.0)
+    ]
+    assert day.windows[0].solar_kwh == pytest.approx(3.22 * 53 / 12)
+    # 14.22 kWh * 0.9 would reach 80.3%: capped at the 80% target
+    assert (day.soc_after_charging_pct, day.driving_pct, day.soc_end_of_day_pct) == pytest.approx((80, 18, 62))
+
+
+def test_golden_three_days_with_quiet_days_carrying_the_level_over():
+    sat, sun = SUMMER_FRI + timedelta(days=1), SUMMER_FRI + timedelta(days=2)
+    fc = hourly(SUMMER_FRI, QUIET) + hourly(sat, SUNNY) + hourly(sun, QUIET)
+    days = plan(fc, golden_config(), 62, at(SUMMER_FRI, 0))
+    assert [d.date for d in days] == [SUMMER_FRI, sat, sun]
+    assert days[0].windows == () and days[2].windows == ()
+    # Saturday needs 36% of 70 kWh / 0.9 = 28 kWh, more than the five hours at 3.22 kW give
+    assert [(w.start, w.end, w.amps) for w in days[1].windows] == [(at(sat, 10), at(sat, 15), 14)]
+    assert days[1].windows[0].solar_kwh == pytest.approx(16.1)
+    # 16.1 kWh * 0.9 / 70 kWh = 20.7%
+    assert [pct for d in days for pct in (d.soc_start_pct, d.soc_after_charging_pct, d.soc_end_of_day_pct)] == pytest.approx(
+        [62, 62, 44, 44, 64.7, 46.7, 46.7, 46.7, 28.7]
+    )
+
+
+def test_golden_sunny_day_on_three_phases():
+    cfg = golden_config()
+    cfg = replace(cfg, charger=replace(cfg.charger, phases=3))
+    # 8.1 kW leaves 6.375 kW: 9 A on three phases (6.21 kW); 10 A (6.9 kW) imports too much and the 1.7 kW of the
+    # 2.6 kW hours is below the 6 A minimum of 4.14 kW
+    fc = hourly(SUMMER_FRI, {9: 2.6, 10: 8.1, 11: 8.1, 12: 8.1, 13: 8.1, 14: 8.1, 15: 2.6})
+    day = plan(fc, cfg, 62, at(SUMMER_FRI, 0))[0]
+    # 14 kWh: 12.42 kWh by 12:00, the rest in 1.58 / 6.21 h = 15.3 min, rounded up to 12:20
+    assert [(w.start, w.end, w.amps, w.power_kw, w.import_kwh) for w in day.windows] == [
+        (at(SUMMER_FRI, 10), at(SUMMER_FRI, 12, 20), 9, 6.21, 0.0)
+    ]
+    assert day.windows[0].solar_kwh == pytest.approx(6.21 * 7 / 3)
+    assert day.soc_after_charging_pct == pytest.approx(80)
 
 
 def test_overcast_day_has_no_window(cfg):
@@ -95,20 +144,56 @@ def test_expected_import_stays_within_tolerance_on_every_peak(cfg):
             assert w.import_kwh <= cfg.planning.import_tolerance_kwh + 1e-6
 
 
-def test_spring_forward_day_plans_without_error(cfg):
-    day = date(2026, 3, 29)  # 23 local hours
-    fc = forecast_from([(day, 800)])
-    assert len(fc) == 23
-    p = plan(fc, cfg, 40, at(day, 0))[0]
-    for w in p.windows:
-        assert w.start.tzinfo is not None and w.end > w.start
+SPRING_FORWARD = date(2026, 3, 29)  # 23 hours: 02:00 winter time becomes 03:00 summer time
+FALL_BACK = date(2026, 10, 25)  # 25 hours: 03:00 summer time becomes 02:00 winter time
 
 
-def test_fall_back_day_plans_without_error(cfg):
-    day = date(2026, 10, 25)  # 25 local hours
-    fc = forecast_from([(day, 400)])
-    assert len(fc) == 25
-    plan(fc, cfg, 40, at(day, 0))
+def test_spring_forward_window_across_the_switch_counts_real_hours():
+    # sun at night is artificial: it puts the window across the switch. Keys 1-3 are 01:00 winter time, 03:00, 04:00
+    fc = hourly(SPRING_FORWARD, {1: 4.4, 2: 4.4, 3: 4.4})
+    # need 10.35% of 70 kWh / 0.9 = 8.05 kWh: 2.5 real hours at 14 A (3.22 kW), 3.5 hours on the clock
+    day = plan(fc, golden_config(), 69.65, at(SPRING_FORWARD, 0))[0]
+    assert [(w.start, w.end, w.amps, w.import_kwh) for w in day.windows] == [
+        (at(SPRING_FORWARD, 1), at(SPRING_FORWARD, 4, 30), 14, 0.0)
+    ]
+    assert day.windows[0].solar_kwh == pytest.approx(8.05)
+    assert day.soc_after_charging_pct == pytest.approx(80)
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="suspected bug: _share_of_day_left divides by a fixed 24 h, so at midnight of the 23-hour day it "
+    "takes only 23/24 of a day's driving (17.25%)",
+)
+def test_spring_forward_day_planned_from_midnight_takes_a_whole_days_driving():
+    day = plan(hourly(SPRING_FORWARD, {}), golden_config(), 60, at(SPRING_FORWARD, 0))[0]
+    assert (day.driving_pct, day.soc_end_of_day_pct) == pytest.approx((18, 42))
+
+
+def test_fall_back_day_plans_the_afternoon_by_local_time_and_one_days_driving():
+    # keys count real hours, so after the repeated 02:00 hour key 11 is 10:00 local time
+    fc = hourly(FALL_BACK, {10: 2.6, 11: 4.4, 12: 4.4, 13: 4.4, 14: 4.4, 15: 4.4, 16: 2.6})
+    day = plan(fc, golden_config(), 62, at(FALL_BACK, 0))[0]
+    assert [(w.start, w.end, w.amps) for w in day.windows] == [(at(FALL_BACK, 10), at(FALL_BACK, 14, 25), 14)]
+    assert day.windows[0].solar_kwh == pytest.approx(3.22 * 53 / 12)
+    assert (day.soc_after_charging_pct, day.driving_pct, day.soc_end_of_day_pct) == pytest.approx((80, 18, 62))
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="suspected bug: same-zone datetimes compare by wall clock, so build_runs drops the repeated 02:00 hour "
+    "(its end is not after its start) and _ceil_to_five_minutes moves 02:30 winter time to 02:30 summer time",
+)
+def test_fall_back_window_across_the_repeated_hour_counts_real_hours():
+    # keys 1-3 are 01:00 summer time, 02:00 summer time and 02:00 winter time
+    fc = hourly(FALL_BACK, {1: 4.4, 2: 4.4, 3: 4.4})
+    # need 8.05 kWh: 2.5 real hours at 3.22 kW, so from 01:00 summer time (23:00 UTC) to 02:30 winter time (01:30 UTC)
+    day = plan(fc, golden_config(), 69.65, at(FALL_BACK, 0))[0]
+    assert [(w.start.astimezone(UTC), w.end.astimezone(UTC), w.amps) for w in day.windows] == [
+        (datetime(2026, 10, 24, 23, 0, tzinfo=UTC), datetime(2026, 10, 25, 1, 30, tzinfo=UTC), 14)
+    ]
+    assert day.windows[0].solar_kwh == pytest.approx(8.05)
+    assert day.soc_after_charging_pct == pytest.approx(80)
 
 
 def test_run_across_midnight_is_one_window_assigned_to_start_day(cfg):
@@ -211,8 +296,6 @@ def test_pinned_window_that_is_over_or_not_started_is_ignored(cfg):
     after = plan(fc, cfg, 40, at(SUMMER_FRI, 16), pinned=[announced])[0].windows
     assert all(w != announced for w in after)
 
-
-import pytest
 
 from car_charge_planner.planner.model import ConfigError
 

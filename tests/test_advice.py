@@ -1,10 +1,12 @@
 from datetime import date, time, timedelta
 
+import pytest
+
 from car_charge_planner.away_input import make_away
 from car_charge_planner.planner.advice import grid_advice
 from car_charge_planner.planner.model import AwayPeriod, elapsed_hours
 from car_charge_planner.planner.projection import plan
-from conftest import TZ, at, forecast_from
+from conftest import TZ, at, forecast_from, golden_config, hourly
 
 FRI = date(2026, 7, 3)
 
@@ -114,10 +116,38 @@ def test_late_evening_does_not_count_a_whole_days_driving_again(cfg):
     assert plans[0].driving_pct < 2
 
 
-def test_advice_on_dst_day_does_not_crash(cfg):
-    day = date(2026, 3, 29)
-    advice, _ = advise(cfg, [(day, 100), (day + timedelta(days=1), 100)], soc=32, now=at(day, 0))
-    assert advice is None or advice.window is None or advice.window.end > advice.window.start
+def test_advice_window_across_the_spring_forward_switch_lasts_the_real_hours_needed():
+    sat, sun = date(2026, 3, 28), date(2026, 3, 29)  # Sunday has 23 hours
+    fc = hourly(sat, {}) + hourly(sun, {})
+    cfg = golden_config()
+    now = at(sat, 0)
+    plans = plan(fc, cfg, 57, now)
+    advice = grid_advice(plans, fc, cfg, None, now)
+    # 57% - 18% - 18% = 21% on Sunday: 9% of 70 kWh / 0.9 = 7 kWh
+    assert (advice.day, advice.soc_end_pct, advice.deficit_pct, advice.energy_kwh) == (sun, pytest.approx(21), pytest.approx(9), pytest.approx(7))
+    w = advice.window
+    # no sun: the lowest current from the earliest free slot; 7 / 1.38 = 5.07 real hours, so 06:05 on the summer-time clock
+    assert (w.start, w.end, w.amps, w.power_kw, w.solar_kwh) == (at(sun, 0), at(sun, 6, 5), 6, 1.38, 0.0)
+    assert w.import_kwh == pytest.approx(7)
+    assert elapsed_hours(w.start, w.end) == pytest.approx(61 / 12)
+
+
+def test_golden_advice_tops_up_a_day_the_sun_cannot_fill():
+    # 4.4 kW leaves 3.23 kW (a 14 A window); 1.6 kW leaves 0.85 kW, below the 6 A minimum but it offsets grid draw
+    fc = hourly(FRI, {10: 4.4, 11: 4.4, 12: 1.6, 13: 1.6, 14: 1.6, 15: 1.6})
+    cfg = golden_config()
+    now = at(FRI, 0)
+    plans = plan(fc, cfg, 38, now)
+    assert [(w.start, w.end, w.amps) for w in plans[0].windows] == [(at(FRI, 10), at(FRI, 12), 14)]
+    advice = grid_advice(plans, fc, cfg, None, now)
+    # 6.44 kWh * 0.9 / 70 kWh = 8.28%: 38 + 8.28 - 18 = 28.28%, 1.72% short: 1.204 kWh / 0.9
+    assert (advice.day, advice.soc_end_pct, advice.deficit_pct) == (FRI, pytest.approx(28.28), pytest.approx(1.72))
+    assert advice.energy_kwh == pytest.approx(1.204 / 0.9)
+    w = advice.window
+    # 6 A right after the solar window, in the leftover sun: 1.3378 / 1.38 h = 58.2 min, rounded up to 13:00
+    assert (w.start, w.end, w.amps, w.power_kw) == (at(FRI, 12), at(FRI, 13), 6, 1.38)
+    hours = 1.204 / 0.9 / 1.38
+    assert (w.solar_kwh, w.import_kwh) == pytest.approx((0.85 * hours, 0.53 * hours))
 
 
 def test_advice_is_for_the_first_dip_only(cfg):

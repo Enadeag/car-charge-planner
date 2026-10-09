@@ -2,7 +2,8 @@ import gc
 import os
 import socket
 import sys
-from datetime import date, datetime, time, timedelta
+from dataclasses import replace
+from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -126,6 +127,24 @@ def forecast_from(days: list[tuple[date, float]]) -> list[ForecastStep]:
     for day, peak in days:
         for start, gti in bell_day(day, peak, TZ):
             steps.append(ForecastStep(start, start + timedelta(hours=1), power_kw(gti, panels.kwp, panels.system_losses)))
+    return steps
+
+
+def golden_config() -> Config:
+    """The example profile driving 70 km a day: 12.6 kWh, a round 18% of the 70 kWh battery."""
+    cfg = example_config()
+    return replace(cfg, car=replace(cfg.car, km_per_day=70))
+
+
+def hourly(day: date, power_kw: dict[int, float]) -> list[ForecastStep]:
+    """One local day of hourly steps, 0 kW unless `power_kw` gives a value. The keys count real hours from local
+    midnight, so on a DST day key 3 is 04:00 (23-hour day) or the second 02:00 (25-hour day)."""
+    start = datetime.combine(day, time(), TZ).astimezone(UTC)
+    end = datetime.combine(day + timedelta(days=1), time(), TZ).astimezone(UTC)
+    steps = []
+    for index in range(round((end - start) / timedelta(hours=1))):
+        moment = start + timedelta(hours=index)
+        steps.append(ForecastStep(moment.astimezone(TZ), (moment + timedelta(hours=1)).astimezone(TZ), power_kw.get(index, 0.0)))
     return steps
 
 
