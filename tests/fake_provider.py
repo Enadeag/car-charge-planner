@@ -1,16 +1,11 @@
-"""A scripted forecast provider for the orchestration tests (ticket P2; used by the service tests in P6).
+"""A scripted forecast provider for the orchestration tests.
 
-    fake = FakeProvider(script=[steps_for(DAY), Unavailable("no network"), RateLimited(retry_after=timedelta(minutes=5))])
-    fake.fetch(...)   # the first answer, then the second raises, then the third raises
-    fake.calls        # what it was asked, in order
+    fake = FakeProvider(script=[steps_for(DAY), Unavailable("no network")])   # first call returns, second raises
 
-Each entry of the script is one answer: a list of steps is returned, an exception is raised, a callable is
-called (and its result treated the same way), and `Held(event, then)` waits for the event first, so a test
-can have a fetch "in flight" while it changes something. When the script runs out, the last entry repeats
-(`repeat_last`) or `IndexError` says the test asked more often than it planned.
-
-Instead of a script, `per_array` makes it a provider that forecasts one panel array at a time (a function from the
-array to its steps) and adds the arrays up the way a real provider does (`each_array`).
+Each script entry is one answer: a list of steps is returned, an exception raised, a callable called (its result
+treated the same way), and `Held(event, then)` waits for the event first so a test can hold a fetch "in flight".
+When the script runs out, the last entry repeats (`repeat_last`) or `IndexError` flags an unplanned call.
+`per_array` replaces the script with a function from one panel array to its steps, summed like a real provider.
 """
 
 from __future__ import annotations
@@ -27,8 +22,6 @@ from conftest import forecast_from
 
 @dataclass
 class Held:
-    """Wait for `release` (up to `timeout` seconds) before giving `then`."""
-
     release: threading.Event
     then: object
     timeout: float = 5.0
@@ -38,7 +31,6 @@ Outcome = list | Exception | Callable[[], object] | Held
 
 
 def steps_for(day: date, peak: float = 900.0) -> list[ForecastStep]:
-    """One bell-shaped day of steps for the example system."""
     return forecast_from([(day, peak)])
 
 

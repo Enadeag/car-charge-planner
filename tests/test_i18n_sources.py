@@ -1,4 +1,4 @@
-"""The source code keeps to the translation rules (ticket I2). Read as text, so no Qt and no catalogue is needed."""
+"""The source code keeps to the translation rules. Read as text, so no Qt and no catalogue is needed."""
 
 import ast
 from pathlib import Path

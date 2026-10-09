@@ -15,7 +15,6 @@ def config_path() -> Path:
 
 
 def secrets_path() -> Path:
-    """secrets.toml, beside the config file."""
     return config_path().with_name("secrets.toml")
 
 

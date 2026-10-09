@@ -1,13 +1,7 @@
-"""Open-Meteo as a forecast provider.
+"""Open-Meteo (https://open-meteo.com) as a forecast provider: it forecasts irradiance on a tilted plane, which is turned into power.
 
-Open-Meteo (https://open-meteo.com) forecasts the solar irradiance on a tilted plane; the provider turns that
-into the power of the user's system. The free public service is for non-commercial use under CC BY 4.0 (the
-credit is shown with the forecast); a paid plan has its own server address and an API key.
-
-Hourly irradiance is the mean of the *preceding* hour, so the value stamped T covers [T-1h, T).
-
-The irradiance is for one plane (one tilt, one direction), so a system with several panel arrays is one request
-per array; the hours of the answers are the same, and the power of the arrays is added up hour by hour.
+Hourly irradiance is the mean of the *preceding* hour, so the value stamped T covers [T-1h, T). The irradiance is for one
+plane, so each panel array is one request and the arrays' power is added up hour by hour.
 """
 
 from __future__ import annotations
@@ -80,8 +74,6 @@ class OpenMeteo:
         self.transport = transport
         self.search_places: PlaceSearch | None = OpenMeteoGeocoder(transport)  # its place search: the same service family and terms
 
-    # -- the request -------------------------------------------------------------------------------------------
-
     @staticmethod
     def request_url(system: SystemDescription, array: PanelArray, settings: dict[str, str]) -> str:
         """The request for one panel array of the system."""
@@ -102,8 +94,6 @@ class OpenMeteo:
         if key:
             query["apikey"] = key  # the way Open-Meteo documents it for its customer servers
         return f"{server}{PATH}?{urllib.parse.urlencode(query)}"
-
-    # -- fetching ----------------------------------------------------------------------------------------------
 
     def fetch(self, system: SystemDescription, settings: dict[str, str], now: datetime) -> list[ForecastStep]:
         for array in system.arrays:

@@ -34,9 +34,9 @@ def vm_for(cfg):
 def test_the_view_is_a_plain_widget_with_no_window_behaviour(cfg, qapp):
     view = PlanView(TZ)
     assert not view.windowFlags() & Qt.WindowType.FramelessWindowHint
-    assert view.windowType() == Qt.WindowType.Window  # an ordinary widget, not a tool window or popup
+    assert view.windowType() == Qt.WindowType.Window
     assert not hasattr(view, "show_near") and not hasattr(view, "auto_closed_at")
-    assert "×" not in [b.text() for b in view.findChildren(QPushButton)]  # no close button of its own
+    assert "×" not in [b.text() for b in view.findChildren(QPushButton)]
 
 
 def test_the_view_works_on_its_own(cfg, qapp):
@@ -55,7 +55,7 @@ def test_a_control_can_be_added_at_the_right_end_of_the_header(cfg, qapp):
     view.add_to_header(extra)
     view.show()
     qapp.processEvents()
-    assert extra.mapTo(view, extra.rect().topRight()).x() >= view.width() - 2  # at the right edge
+    assert extra.mapTo(view, extra.rect().topRight()).x() >= view.width() - 2
     assert view.header.width() == view.width()
     view.hide()
 
@@ -66,7 +66,7 @@ def test_the_view_announces_when_it_resized_itself_to_a_page(cfg, qapp):
     seen = []
     view.layout_changed.connect(lambda: seen.append(1))
     view.show_update()
-    assert seen  # a wrapping window follows the page height
+    assert seen
 
 
 def test_the_view_signals_reach_the_popup_unchanged(cfg, qapp):
@@ -114,4 +114,4 @@ def test_the_popup_follows_the_views_height_when_the_page_changes(cfg, qapp):
 def test_labels_and_inputs_live_in_the_view_not_the_popup_itself(cfg, qapp):
     popup = Popup(TZ)
     own = [c for c in popup.children() if isinstance(c, (QLabel, QPushButton)) and c.parent() is popup]
-    assert own == []  # everything is inside the PlanView
+    assert own == []

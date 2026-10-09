@@ -1,9 +1,8 @@
 """The forecast service: which provider to ask, when, and what to do when it cannot answer.
 
-Per refresh it asks the primary provider first and keeps using the primary's last good forecast for as long as
-that is still useful; only when the primary has nothing usable is the fallback asked. A provider that says it
-is rate limited is left alone until it says it may be asked again. See `docs/design/forecast-providers/spec.md`
-section 5. The service is blocking: the controller runs it off the UI thread.
+Per refresh it asks the primary provider first and keeps using the primary's last good forecast for as long as that is
+still useful; only when the primary has nothing usable is the fallback asked. A provider that says it is rate limited is
+left alone until it says it may be asked again. The service is blocking: the controller runs it off the UI thread.
 """
 
 from __future__ import annotations
@@ -117,8 +116,6 @@ class ForecastService:
         with self._lock:
             self._retry_at.clear()
 
-    # -- asking ----------------------------------------------------------------------------------------------
-
     def get(self, cfg: Config, now: datetime, force: bool = False) -> ForecastResult:
         """A forecast for the config, or `ForecastUnavailable`. `force` skips the minimum refresh interval (the
         owner pressed refresh) but never a provider's cool-down."""
@@ -211,14 +208,11 @@ class ForecastService:
         return _Failure(f"{provider.name}: {err}")
 
 
-# ---- the cache -------------------------------------------------------------------------------------------------
-
-
 def _cache_key(system: SystemDescription, provider: ForecastProvider, cfg: Config) -> dict[str, Any]:
     plain = {k: v for k, v in cfg.forecast.settings.get(provider.id, {}).items() if k in {s.key for s in provider.settings if not s.secret}}
     key = {"system": asdict(system), "settings": plain}
-    # as it reads back from the cache file (the arrays' tuple becomes a list), or it would never match; a key in
-    # an older shape (one array, before there could be several) simply does not match, and the cache is not used
+    # as it reads back from the cache file (the arrays' tuple becomes a list), or it would never match; a key of
+    # another shape simply does not match, and the cache is not used
     return cast("dict[str, Any]", json.loads(json.dumps(key)))
 
 

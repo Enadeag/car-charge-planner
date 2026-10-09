@@ -1,4 +1,4 @@
-"""Grid-charge advice: when the battery would drop below the minimum (spec 4.6)."""
+"""Grid-charge advice: when the battery would drop below the minimum."""
 
 from __future__ import annotations
 
@@ -51,7 +51,6 @@ def _best_placement(
     planned: list[Window],
     now: datetime,
 ) -> Window | None:
-    """The window on one day that draws the least from the grid, at the lowest power that gets there."""
     tz = ZoneInfo(cfg.timezone)
     slots = _day_slots(day, tz)
     usable: list[float | None] = []

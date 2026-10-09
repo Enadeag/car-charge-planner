@@ -1,4 +1,4 @@
-"""More than one panel array (GitHub issue #2): the config, its migration, the forecast as the sum of the arrays."""
+"""More than one panel array: the config, its migration, the forecast as the sum of the arrays."""
 
 import json
 from dataclasses import replace
@@ -40,9 +40,6 @@ def two_arrays(cfg):
     return replace(cfg, panels=(EAST, WEST))
 
 
-# ---- the config file -----------------------------------------------------------------------------------------
-
-
 def test_the_file_has_a_panels_table_for_each_array_and_reads_back(tmp_path, cfg):
     cfg = two_arrays(cfg)
     text = dump_config(cfg)
@@ -62,16 +59,16 @@ def test_an_old_file_with_one_panels_table_is_one_array(tmp_path):
     path.write_text('latitude = 52.37\nlongitude = 4.9\n[panels]\nkwp = 4.2\ntilt_deg = 20\n[setup]\ntypical = ["panels.azimuth_deg"]\n')
     cfg = load_config(path)
     assert cfg.panels == (Panels(kwp=4.2, tilt_deg=20),)
-    assert cfg.setup.typical == ("panels.azimuth_deg",)  # still the first (and only) array's
-    write_config(cfg, path)  # the next save writes the new form
+    assert cfg.setup.typical == ("panels.azimuth_deg",)
+    write_config(cfg, path)
     assert "schema = 2" in path.read_text() and "[[panels]]" in path.read_text()
     assert load_config(path) == cfg
 
 
 def test_the_migration_turns_the_table_into_a_list_of_one_and_leaves_the_rest():
     assert migrate_1_to_2({"panels": {"kwp": 4.0}, "car": {"km_per_day": 10}}) == {"panels": [{"kwp": 4.0}], "car": {"km_per_day": 10}}
-    assert migrate_1_to_2({}) == {}  # no panels: the default array
-    assert migrate_1_to_2({"panels": [{"kwp": 4.0}]}) == {"panels": [{"kwp": 4.0}]}  # written by hand in the new form
+    assert migrate_1_to_2({}) == {}
+    assert migrate_1_to_2({"panels": [{"kwp": 4.0}]}) == {"panels": [{"kwp": 4.0}]}
 
 
 def test_a_file_without_panels_has_the_one_default_array(tmp_path):
@@ -109,9 +106,6 @@ def test_there_is_always_at_least_one_array(cfg):
 
 def test_the_total_size_is_the_sum_of_the_arrays(cfg):
     assert two_arrays(cfg).total_kwp == pytest.approx(5.5) and cfg.total_kwp == 4.8
-
-
-# ---- keys and typical values ------------------------------------------------------------------------------------
 
 
 def test_the_first_array_keeps_its_old_keys_and_the_others_are_numbered():
@@ -160,9 +154,6 @@ def test_removing_an_array_moves_the_typical_flags_of_the_later_ones_up(cfg):
         without_array(cfg, 0)
 
 
-# ---- adding up -----------------------------------------------------------------------------------------------
-
-
 def hour(h, minute=0):
     return datetime(2026, 7, 3, h, minute, tzinfo=TZ)
 
@@ -178,7 +169,7 @@ def test_steps_that_line_up_are_added_step_by_step():
 
 
 def test_steps_that_do_not_line_up_are_cut_and_no_energy_is_lost():
-    a = steps((hour(8), hour(10), 1.0))  # two hours at 1 kW
+    a = steps((hour(8), hour(10), 1.0))
     b = steps((hour(8), hour(8, 30), 2.0), (hour(8, 30), hour(10), 0.5))
     total = add_up([a, b])
     assert total == steps((hour(8), hour(8, 30), 3.0), (hour(8, 30), hour(10), 1.5))
@@ -187,7 +178,7 @@ def test_steps_that_do_not_line_up_are_cut_and_no_energy_is_lost():
 
 def test_a_gap_in_one_array_adds_nothing_and_a_gap_in_all_stays_a_gap():
     a = steps((hour(8), hour(9), 1.0), (hour(9), hour(10), 1.0), (hour(12), hour(13), 1.0))
-    b = steps((hour(8), hour(9), 2.0), (hour(12), hour(13), 2.0))  # nothing from 9 to 10
+    b = steps((hour(8), hour(9), 2.0), (hour(12), hour(13), 2.0))
     assert add_up([a, b]) == steps((hour(8), hour(9), 3.0), (hour(9), hour(10), 1.0), (hour(12), hour(13), 3.0))
 
 
@@ -202,7 +193,7 @@ def test_one_forecast_is_returned_as_it_is_and_the_total_keeps_the_contract():
     a = steps((hour(8), hour(9), 1.0))
     assert add_up([a]) == a
     utc = [ForecastStep(s.start.astimezone(UTC), s.end.astimezone(UTC), 1.0) for s in a]
-    total = add_up([a, utc])  # the same hours in another zone
+    total = add_up([a, utc])
     assert total == steps((hour(8), hour(9), 2.0)) and total[0].start.tzinfo == TZ and check_steps(total) == []
 
 
@@ -216,9 +207,6 @@ def test_each_array_is_asked_on_its_own_and_in_order():
 
     assert each_array(system, one) == steps((hour(8), hour(9), 5.5))
     assert asked == list(system.arrays) and system.kwp == pytest.approx(5.5)
-
-
-# ---- the acceptance test: two arrays give the sum of the two single-array forecasts -----------------------------
 
 
 def bell_for(array: PanelArray) -> list[ForecastStep]:
@@ -247,13 +235,10 @@ def test_two_arrays_give_the_sum_of_the_two_single_array_forecasts(tmp_path, cfg
         return service_for(tmp_path / str(len(fake.calls)), fake).get(replace(cfg, panels=panels), now).steps
 
     east, west, both = forecast((EAST,)), forecast((WEST,)), forecast((EAST, WEST))
-    assert east != west  # they really differ: east is early, west is late
+    assert east != west
     assert [s.start for s in both] == [s.start for s in east] and [s.end for s in both] == [s.end for s in east]
     assert [s.power_kw for s in both] == pytest.approx([e.power_kw + w.power_kw for e, w in zip(east, west, strict=True)])
     assert len(fake.calls[-1][0].arrays) == 2
-
-
-# ---- the cache -----------------------------------------------------------------------------------------------
 
 
 def test_a_forecast_for_several_arrays_is_served_from_the_cache(tmp_path, cfg):
@@ -261,7 +246,7 @@ def test_a_forecast_for_several_arrays_is_served_from_the_cache(tmp_path, cfg):
     fake = FakeProvider(per_array=bell_for)
     now = at(DAY, 7)
     assert not service_for(tmp_path, fake).get(cfg, now).from_cache
-    again = service_for(tmp_path, fake).get(cfg, now + timedelta(minutes=10))  # a new start, the same cache file
+    again = service_for(tmp_path, fake).get(cfg, now + timedelta(minutes=10))
     assert again.from_cache and len(fake.calls) == 1
 
 
@@ -280,10 +265,7 @@ def test_a_cache_written_for_one_array_in_the_old_shape_is_not_used_and_does_not
 def test_adding_or_changing_an_array_changes_what_the_forecast_depends_on(cfg):
     assert forecast_key(two_arrays(cfg)) != forecast_key(cfg)
     assert forecast_key(two_arrays(cfg)) != forecast_key(replace(cfg, panels=(EAST, replace(WEST, tilt_deg=10))))
-    assert forecast_key(replace(cfg, panels=(EAST, WEST))) == forecast_key(replace(cfg, panels=(EAST, replace(WEST, name="Garage"))))  # a name is not sent
-
-
-# ---- what is shown elsewhere ----------------------------------------------------------------------------------
+    assert forecast_key(replace(cfg, panels=(EAST, WEST))) == forecast_key(replace(cfg, panels=(EAST, replace(WEST, name="Garage"))))
 
 
 def test_the_finish_page_lists_the_total_and_each_array(cfg):
@@ -299,7 +281,7 @@ def test_the_finish_page_lists_the_total_and_each_array(cfg):
         ("System losses", "14%, 10%", False),
     ]
     one = next(g for g in build_recap(SetupState(config=cfg, initial=cfg)) if g.key == "panels")
-    assert [line.label for line in one.lines] == ["Size", "Direction", "Tilt", "System losses"]  # as it always was
+    assert [line.label for line in one.lines] == ["Size", "Direction", "Tilt", "System losses"]
 
 
 def test_the_plan_page_names_a_typical_setting_once_whichever_array_it_is_of():

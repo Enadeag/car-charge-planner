@@ -1,18 +1,7 @@
-"""Translations (gettext). English is the source language; a language is a catalogue file, nothing more.
+"""Translations (gettext): English is the source language, and a language is one catalogue file under `locale/`.
 
-    from car_charge_planner.i18n import _, ngettext, pgettext, N_, NC_, translate
-
-    _("Charge now")                          # translated now
-    ngettext("{n} day", "{n} days", n)       # plural forms, per language
-    pgettext("month", "May")                 # same English, different meaning: a context
-    LABEL = N_("Panel size")                 # module level: marked now, translated when shown:  _(LABEL)
-    CTX = NC_("weekday, short", "Mon")       # the same with a context:  translate(CTX)
-
-The functions look the active catalogue up at call time, so a text created before `init()` and shown after it
-is translated, and nothing needs re-importing when the language changes.
-
-Catalogues live in `locale/<language>/LC_MESSAGES/car-charge-planner.mo` inside this package (compiled from
-the `.po` files; see `i18n_tools.py`). With no matching catalogue everything stays English.
+`_` translates now; `N_` and `NC_` (with a context) mark a module-level text to translate when shown, with `_` or
+`translate`. The catalogue is looked up at call time, so a text made before `init()` is translated when shown.
 """
 
 from __future__ import annotations
@@ -31,9 +20,6 @@ class _Active:
     language: str = ""  # the catalogue in use; empty means untranslated English
 
 
-# ---- looking messages up -----------------------------------------------------------------------------------
-
-
 def _(message: str) -> str:
     # gettext("") returns the catalogue's header, never what a caller means by it
     return _Active.translations.gettext(message) if message else message
@@ -50,35 +36,27 @@ def pgettext(context: str, message: str) -> str:
 def number(value: float, decimals: int = 0) -> str:
     """A number for use inside a text: fixed decimals, with the language's own decimal separator.
 
-    Qt's input boxes follow the system locale by themselves; texts we build do not, so the separator is a
-    translatable text too (translators put "," where their language writes one).
+    Qt's input boxes follow the system locale by themselves; texts we build do not, so the separator is a translatable text.
     """
     text = f"{value:.{decimals}f}"
     separator = pgettext("decimal separator", ".")
     return text if separator == "." else text.replace(".", separator)
 
 
-# ---- markers for text defined before a language is chosen --------------------------------------------------------
-
-
 def N_(message: str) -> str:
-    """Mark a text for extraction and translate it later, when it is shown."""
+    """Mark a text for extraction; translate it later, when it is shown."""
     return message
 
 
 def NC_(context: str, message: str) -> tuple[str, str]:
-    """`N_` for a text that needs a context. Translate with `translate`."""
+    """`N_` with a context; translate with `translate`."""
     return (context, message)
 
 
 def translate(marker: str | tuple[str, str]) -> str:
-    """Translate what `N_` or `NC_` returned."""
     if isinstance(marker, tuple):
         return pgettext(*marker)
     return _(marker)
-
-
-# ---- choosing the language ----------------------------------------------------------------------------------------
 
 
 def _clean(code: str) -> str | None:
@@ -102,10 +80,8 @@ def _add(found: list[str], code: str | None) -> None:
 def resolve_languages(environ: Mapping[str, str], qt_languages: Sequence[str] = ()) -> list[str]:
     """The languages to try, best first, from the environment the way gettext tools do it.
 
-    LC_ALL, LC_MESSAGES and LANG say which locale is in use (the first one set wins). If that is the plain
-    C locale the answer is "none" (English), whatever else is set. Otherwise LANGUAGE, a colon-separated
-    preference list, comes first, then the locale itself. With none of them set, Qt's idea of the system
-    language is used.
+    The first of LC_ALL, LC_MESSAGES and LANG that is set gives the locale; the plain C locale means English
+    whatever else is set. Otherwise the LANGUAGE preference list comes first, then the locale. With none set, Qt's system language.
     """
     effective = next((environ[k] for k in ("LC_ALL", "LC_MESSAGES", "LANG") if environ.get(k)), None)
     found: list[str] = []
@@ -162,7 +138,7 @@ def init(
 
 
 def available_languages(localedir: Path | str | None = None) -> list[str]:
-    """The languages with a compiled catalogue, sorted. English is the source text and needs none."""
+    """The languages with a compiled catalogue, sorted (English is the source and needs none)."""
     root = Path(localedir or LOCALE_DIR)
     if not root.is_dir():
         return []
@@ -202,7 +178,7 @@ def install_qt_translations(app, language: str | None = None) -> list:
 
 
 def setup(app, languages: Sequence[str] | None = None, localedir: Path | str | None = None) -> str:
-    """What `main()` calls once, before any widget text exists: the catalogue, then Qt's own texts."""
+    """Called once by `main()` before any widget text exists: the catalogue, then Qt's own texts."""
     language = init(languages, localedir)
     for translator in getattr(app, "_qt_translators", []):
         app.removeTranslator(translator)  # a language change replaces Qt's texts, it does not stack on the old ones

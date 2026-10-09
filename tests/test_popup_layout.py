@@ -1,4 +1,4 @@
-"""The redesigned popup: a calm Plan page, an Update page for inputs."""
+"""The popup: a calm Plan page and an Update page for inputs."""
 
 import os
 
@@ -56,7 +56,7 @@ def test_advice_is_split_into_facts_and_reason(cfg, qapp):
     assert popup.advice_title.text().startswith("Grid charge needed · ")
     assert "kW (" in popup.advice_detail.text()
     assert popup.advice_reason.text().startswith("Battery would drop to")
-    assert len(popup.advice_title.text()) < 60  # a line, not a paragraph
+    assert len(popup.advice_title.text()) < 60
 
 
 def test_no_advice_block_when_there_is_nothing_to_warn_about(cfg, qapp):
@@ -67,9 +67,9 @@ def test_no_advice_block_when_there_is_nothing_to_warn_about(cfg, qapp):
 def test_outlook_is_a_grid_of_columns_and_does_not_repeat_the_headline(cfg, qapp):
     popup, vm = view(cfg, [(DAY + timedelta(days=i), 900) for i in range(3)])
     cells = [popup.outlook_grid.itemAt(i).widget().text() for i in range(popup.outlook_grid.count())]
-    assert len(vm.outlook) == 2 and len(cells) == 8  # four columns per row
+    assert len(vm.outlook) == 2 and len(cells) == 8
     assert cells[0] == "Tomorrow" and cells[3].endswith("kWh")
-    assert "Today" not in cells  # today is the headline
+    assert "Today" not in cells
 
 
 def test_quiet_days_are_one_dim_line(cfg, qapp):
@@ -133,7 +133,7 @@ def test_each_page_is_only_as_tall_as_its_content(cfg, qapp):
     popup.show()
     plan_height = popup.height()
     popup.tabs.setCurrentIndex(UPDATE)
-    assert popup.height() != plan_height  # the popup follows the page instead of the tallest one
+    assert popup.height() != plan_height
     page = popup.stack.currentWidget()
     assert popup.stack.height() >= page.sizeHint().height()
     popup.hide()
@@ -158,9 +158,6 @@ def test_the_popup_has_no_horizontal_rules(cfg, qapp):
 
     popup, _ = view(cfg, [(DAY, 900)])
     assert not [f for f in popup.findChildren(QFrame) if f.frameShape() == QFrame.Shape.HLine]
-
-
-# ---- the away summary line ---------------------------------------------------
 
 
 def summary(rules=(), periods=(), limit=3):
@@ -193,9 +190,6 @@ def test_summary_is_cut_off_with_a_count():
     assert text.endswith("+2 more") and text.count(",") == 2
 
 
-# ---- the header: tabs on the left, the close button at the right edge ---------
-
-
 def _right_edge_in_popup(widget, popup):
     return widget.mapTo(popup, widget.rect().topRight()).x()
 
@@ -208,7 +202,7 @@ def test_the_close_button_sits_at_the_right_edge_of_the_content(cfg, qapp):
     qapp.processEvents()
     close = next(b for b in popup.findChildren(QPushButton) if b.text() == "×")
     manage = next(b for b in popup.findChildren(QPushButton) if b.text() == "Manage")
-    content_right = _right_edge_in_popup(manage, popup)  # a control that ends the content column
+    content_right = _right_edge_in_popup(manage, popup)
     assert abs(_right_edge_in_popup(close, popup) - content_right) <= 8, "the x is not aligned with the content"
     assert _right_edge_in_popup(close, popup) >= popup.width() - 24
     popup.hide()
@@ -221,9 +215,6 @@ def test_the_header_spans_the_full_width_so_its_line_reaches_the_edge(cfg, qapp)
     page = popup.stack.currentWidget()
     assert abs(popup.header.width() - page.width()) <= 2
     popup.hide()
-
-
-# ---- closing: the x, Escape, the tray icon, or a click outside -----------------
 
 
 def _focus(popup, active):
@@ -244,7 +235,7 @@ def test_losing_the_focus_after_having_it_closes_the_popup(cfg, qapp):
     popup, _ = view(cfg, [(DAY, 900)])
     popup.show()
     _focus(popup, True)
-    _focus(popup, False)  # a click somewhere else
+    _focus(popup, False)
     _wait()
     assert not popup.isVisible() and popup.auto_closed_at > 0
 
@@ -263,7 +254,7 @@ def test_getting_the_focus_back_quickly_keeps_it_open(cfg, qapp):
     popup.show()
     _focus(popup, True)
     _focus(popup, False)
-    _focus(popup, True)  # e.g. one of our dropdowns closed again
+    _focus(popup, True)
     _wait()
     assert popup.isVisible()
     popup.hide()
@@ -285,7 +276,7 @@ def test_hiding_resets_the_have_had_focus_flag(cfg, qapp):
     popup.show()
     _focus(popup, True)
     popup.hide()
-    popup.show()  # shown again, not yet focused
+    popup.show()
     _focus(popup, False)
     _wait()
     assert popup.isVisible()
@@ -321,13 +312,13 @@ def test_the_click_that_closed_the_popup_does_not_reopen_it(cfg, tmp_path, monke
 
     app = _tray(cfg, tmp_path, monkeypatch)
     trigger = QSystemTrayIcon.ActivationReason.Trigger
-    app.popup.auto_closed_at = clock.monotonic()  # focus loss closed it a moment ago
+    app.popup.auto_closed_at = clock.monotonic()
     app._on_activated(trigger)
     assert not app.popup.isVisible()
     app.popup.auto_closed_at = clock.monotonic() - 5  # long ago: a fresh click opens it
     app._on_activated(trigger)
     assert app.popup.isVisible()
-    app._on_activated(trigger)  # and a click while it is open closes it
+    app._on_activated(trigger)
     assert not app.popup.isVisible()
 
 
@@ -342,7 +333,7 @@ def test_the_popup_grows_for_the_taller_page_and_shrinks_back(cfg, qapp):
     popup.tabs.setCurrentIndex(PLAN)
     qapp.processEvents()
     assert update_height > plan_height
-    assert popup.height() == plan_height  # no stale minimum left behind by the taller page
+    assert popup.height() == plan_height
     popup.hide()
 
 

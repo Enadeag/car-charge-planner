@@ -1,4 +1,4 @@
-"""Every page, rendered in the pseudo-language: nothing untranslated, nothing clipped (ticket I3)."""
+"""Every page, rendered in the pseudo-language: nothing untranslated, nothing clipped."""
 
 import os
 
@@ -101,7 +101,7 @@ def test_the_popup_is_fully_translated_and_nothing_is_clipped(cfg, qapp, pseudo_
 
 
 def test_the_settings_window_is_fully_translated_and_nothing_is_clipped(cfg, qapp, pseudo_language, tmp_path):
-    window = SettingsWindow(cfg, tmp_path / "config.toml", lambda c: None, on_setup=lambda: None)  # with the Run set-up again button
+    window = SettingsWindow(cfg, tmp_path / "config.toml", lambda c: None, on_setup=lambda: None)
     settle(window)
     problems = []
     for index in range(window.tabs.count()):
@@ -150,7 +150,7 @@ def test_the_setup_wizard_pages_are_fully_translated_and_nothing_is_clipped(cfg,
     typical = replace(cfg, setup=Setup(TYPICAL_KEYS))
     wizard = SetupWizard(typical, tmp_path / "config.toml", lambda c: None, check=lambda c: Attempt(True, 2, "OK"), environ={"LANG": "nl_NL"}, qt_locale_name="")
     problems = []
-    wizard.confirm_leave = lambda: True  # closing after moving on would ask: not in a test
+    wizard.confirm_leave = lambda: True
     wizard.show()
     for page_id in wizard.sequence:
         if wizard.current != page_id:
@@ -219,7 +219,7 @@ def test_the_location_page_is_fully_translated_in_each_of_its_states(cfg, qapp, 
                     thread.join(5)
                 QApplication.processEvents()
             if name == "results":
-                page.results.itemClicked.emit(page.results.item(0))  # the page then shows the chosen place
+                page.results.itemClicked.emit(page.results.item(0))
             page.advanced_toggle.setChecked(True)
             page.coordinates_toggle.setChecked(True)
             settle(wizard)

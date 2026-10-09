@@ -30,9 +30,6 @@ def with_mode(mode):
     return replace(Config(), interface=Interface(mode))
 
 
-# ---- the config key ----------------------------------------------------------------
-
-
 def test_the_default_is_automatic():
     assert Config().interface.mode == "auto" and INTERFACE_MODES == ("auto", "tray", "window")
 
@@ -47,7 +44,7 @@ def test_the_mode_is_read_written_and_round_trips(tmp_path):
 
 def test_a_file_without_the_section_means_automatic(tmp_path):
     f = tmp_path / "c.toml"
-    f.write_text("[panels]\nkwp = 5\n")  # an older config
+    f.write_text("[panels]\nkwp = 5\n")  # no [interface] section
     assert load_config(f).interface.mode == "auto"
 
 
@@ -67,9 +64,6 @@ def test_an_unknown_key_in_the_section_is_rejected(tmp_path):
     assert "style" in str(err.value)
 
 
-# ---- choosing the shell --------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     "mode, tray, expected",
     [
@@ -83,9 +77,6 @@ def test_an_unknown_key_in_the_section_is_rejected(tmp_path):
 )
 def test_the_choice_matrix(mode, tray, expected):
     assert choose_shell(mode, tray) == expected
-
-
-# ---- waiting for the tray at login -----------------------------------------------------
 
 
 class FakeTime:
@@ -126,9 +117,6 @@ def test_background_starts_wait_longer_than_interactive_ones():
     assert TRAY_WAIT_BACKGROUND_S > TRAY_WAIT_INTERACTIVE_S >= 0
 
 
-# ---- making the shell ------------------------------------------------------------------
-
-
 def controller_with(mode, tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     return Controller(with_mode(mode), tmp_path / "config.toml", FakeNotifier())
@@ -166,21 +154,15 @@ def test_nothing_is_announced_when_nothing_fell_back(tmp_path, monkeypatch, qapp
     assert controller.notifier.sent == []
 
 
-# ---- changing it while the app runs ------------------------------------------------------
-
-
 def test_changing_the_interface_says_it_applies_at_the_next_start(tmp_path, monkeypatch, qapp):
     controller = controller_with("auto", tmp_path, monkeypatch)
     monkeypatch.setattr(controller, "rebuild", lambda: None)
     monkeypatch.setattr(controller, "refresh", lambda force=False: None)
     controller.apply_config(with_mode("window"))
     assert len(controller.notifier.sent) == 1 and "next time" in controller.notifier.sent[0][1]
-    controller.apply_config(with_mode("window"))  # unchanged: silent
+    controller.apply_config(with_mode("window"))
     controller.apply_config(replace(with_mode("window"), planning=replace(Config().planning, margin=0.5)))
     assert len(controller.notifier.sent) == 1
-
-
-# ---- the Interface tab in Settings --------------------------------------------------------
 
 
 class Harness:
@@ -238,9 +220,6 @@ def test_reset_tab_goes_back_to_automatic_without_saving(tmp_path, qapp):
     assert h.box.currentData() == "auto" and not h.file.exists()
 
 
-# ---- the whole app, on a desktop without a tray -------------------------------------------
-
-
 def _env(tmp_path, **extra):
     for name in ("config", "state", "cache", "run"):
         (tmp_path / name).mkdir(mode=0o700, exist_ok=True)
@@ -271,7 +250,7 @@ def test_without_a_tray_the_app_starts_as_a_window_instead_of_exiting(tmp_path):
         assert first.poll() is None, first.stderr.read()  # still running: it did not exit with "no system tray"
         second = subprocess.run([sys.executable, "-m", "car_charge_planner"], cwd=project, env=env, capture_output=True, text=True, timeout=30)
         assert second.returncode == 0 and "already running" in second.stderr
-        assert first.poll() is None  # and the first one is still there
+        assert first.poll() is None
     finally:
         first.terminate()
         try:

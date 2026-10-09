@@ -1,4 +1,4 @@
-"""The conformance kit: what every forecast provider must do, run against recorded answers (ticket P2).
+"""The conformance kit: what every forecast provider must do, run against recorded answers.
 
 A provider's test module describes the provider in a `ProviderCase` and subclasses `ProviderConformance`:
 
@@ -100,9 +100,6 @@ class ProviderCase:
 
     def all_settings(self) -> dict[str, str]:
         return {**self.settings, **self.secrets}
-
-
-# ---- the checks ------------------------------------------------------------------------------------------------
 
 
 def check_metadata(case: ProviderCase) -> None:
@@ -253,9 +250,6 @@ def check_secrets_stay_secret(case: ProviderCase) -> None:
         assert value not in shown, f"the secret {key!r} appears in a log line or an error message"
 
 
-# ---- place search (a provider's optional ability) ---------------------------------------------------------------
-
-
 @dataclass
 class PlaceCase:
     """Describes a place search for `PlaceSearchConformance`, the way `ProviderCase` describes a provider."""
@@ -330,9 +324,6 @@ class PlaceSearchConformance:
 
     def test_failures_come_back_typed_and_never_raise(self, place_case):
         check_places_failures(place_case)
-
-
-# ---- the suite a provider's test module inherits ------------------------------------------------------------------
 
 
 class ProviderConformance:

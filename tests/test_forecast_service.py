@@ -1,4 +1,4 @@
-"""The forecast service: primary, fallback, cache, cool-down (ticket P6). Spec section 5 and the matrix of section 8."""
+"""The forecast service: primary, fallback, cache, cool-down."""
 
 import json
 import logging
@@ -19,7 +19,7 @@ from fake_provider import FakeProvider, Held, steps_for
 DAY = date(2026, 7, 3)
 T0 = at(DAY, 7)
 MIN = timedelta(hours=1)  # the fake providers' minimum refresh
-USEFUL = timedelta(hours=6)  # and their useful age
+USEFUL = timedelta(hours=6)  # their useful age
 SECRET = "SERVICE-SECRET-31"
 
 
@@ -58,9 +58,6 @@ def rig(tmp_path, cfg):
 
 def later(minutes=0, hours=0):
     return T0 + timedelta(minutes=minutes, hours=hours)
-
-
-# ---- the happy path and the cache ---------------------------------------------------------------------------
 
 
 def test_the_primary_is_asked_and_the_result_says_who_answered(rig):
@@ -107,9 +104,6 @@ def test_a_fresh_cache_with_a_failing_provider_is_never_a_reason_to_ask(rig):
     rig.main.script = [steps_for(DAY), Unavailable("down")]
     rig.get()
     assert rig.get(later(minutes=30)).from_cache and rig.main.call_count == 1
-
-
-# ---- the primary fails ----------------------------------------------------------------------------------------
 
 
 def test_a_failure_keeps_the_primarys_last_good_forecast_while_it_is_still_useful(rig):
@@ -211,9 +205,6 @@ def test_a_bug_in_a_provider_does_not_stop_the_app_and_does_not_log_its_message(
             raise
 
 
-# ---- rate limits and the cool-down ---------------------------------------------------------------------------
-
-
 def test_a_rate_limit_starts_a_cool_down_that_even_a_forced_refresh_respects(rig):
     rig.main.script = [steps_for(DAY), RateLimited("busy", timedelta(minutes=30))]
     rig.get()
@@ -243,7 +234,7 @@ def test_during_a_cool_down_with_no_usable_cache_the_fallback_answers(rig):
     first = rig.get()
     assert first.from_fallback and rig.main.call_count == 1
     second = rig.get(later(minutes=30), force=True)
-    assert second.from_fallback and rig.main.call_count == 1  # the primary was left alone
+    assert second.from_fallback and rig.main.call_count == 1
 
 
 def test_the_cool_down_is_remembered_across_a_restart(rig):
@@ -259,9 +250,6 @@ def test_a_cool_down_that_has_passed_is_forgotten(rig):
     rig.get()
     rig.restart()
     assert not rig.get(later(minutes=11)).from_fallback and rig.main.call_count == 2
-
-
-# ---- what a cache is for -----------------------------------------------------------------------------------
 
 
 def test_a_changed_system_or_setting_makes_the_cache_not_apply(rig, cfg):
@@ -305,9 +293,6 @@ def test_an_unwritable_cache_directory_does_not_break_planning(tmp_path, cfg):
     blocker.write_text("a file where the directory should be")
     rig = Rig(tmp_path, cfg)
     assert rig.get().steps  # the fetch worked; nothing could be saved
-
-
-# ---- settings and secrets -----------------------------------------------------------------------------------
 
 
 def needy(**kwargs):
@@ -359,9 +344,6 @@ def test_an_unknown_provider_is_a_reason_not_a_crash(tmp_path, cfg):
         rig.get(cfg=only)
 
 
-# ---- threads and the controller ------------------------------------------------------------------------------
-
-
 def test_two_fetches_at_once_ask_the_provider_once(tmp_path, cfg):
     release = threading.Event()
     rig = Rig(tmp_path, cfg, main=provider("main", script=[Held(release, steps_for(DAY))]))
@@ -398,4 +380,4 @@ def test_forgetting_failures_does_not_forget_a_rate_limit(rig):
     rig.get()
     rig.service.forget_failures()
     rig.get(later(minutes=5))
-    assert rig.main.call_count == 1  # the provider's own word stands
+    assert rig.main.call_count == 1

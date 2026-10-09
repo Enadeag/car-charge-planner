@@ -1,4 +1,4 @@
-"""The controller on the forecast service, with fake providers (ticket P6)."""
+"""The controller on the forecast service, with fake providers."""
 
 import os
 
@@ -105,7 +105,7 @@ def test_a_planning_change_keeps_the_forecast_and_asks_nobody(qapp, tmp_path, mo
     kept = controller.result
     controller.apply_config(replace(controller.cfg, planning=replace(controller.cfg.planning, margin=0.5)))
     settle(controller, qapp)
-    assert controller.result.steps == kept.steps and controller.result.from_cache and main.call_count == 1  # the cache answered
+    assert controller.result.steps == kept.steps and controller.result.from_cache and main.call_count == 1
 
 
 def test_saving_settings_lets_a_provider_that_failed_be_asked_again(qapp, tmp_path, monkeypatch, cfg):
@@ -116,9 +116,6 @@ def test_saving_settings_lets_a_provider_that_failed_be_asked_again(qapp, tmp_pa
     controller.apply_config(replace(controller.cfg, planning=replace(controller.cfg.planning, margin=0.9)))
     settle(controller, qapp)
     assert controller.result.provider_id == "main" and main.call_count == 2  # not after the five minutes
-
-
-# ---- what the footer says (ticket P8) -----------------------------------------------------------------------
 
 
 def footer_of(controller):

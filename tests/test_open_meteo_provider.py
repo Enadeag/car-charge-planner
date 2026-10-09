@@ -1,4 +1,4 @@
-"""Open-Meteo as a provider (ticket P3): the conformance kit with the recorded answer, plus what is specific to it."""
+"""Open-Meteo as a provider: the conformance kit with the recorded answer, plus what is specific to it."""
 
 import json
 from datetime import UTC, datetime, timedelta
@@ -39,9 +39,6 @@ def fetch(routes=None, settings=None, system=EXAMPLE_SYSTEM):
     transport = ReplayTransport(routes or [("", Reply(200, RECORDED))])
     provider = OpenMeteo(transport)
     return provider.fetch(system, settings or {}, NOW), transport
-
-
-# ---- the answer ----------------------------------------------------------------------------------------------
 
 
 def test_the_value_stamped_at_nine_covers_the_hour_before_it_and_becomes_power():
@@ -109,9 +106,6 @@ def test_a_timezone_the_system_does_not_know_is_a_bad_response():
         fetch(system=odd)
 
 
-# ---- the request ---------------------------------------------------------------------------------------------
-
-
 def query(url):
     return {k: v[0] for k, v in parse_qs(urlparse(url).query).items()}
 
@@ -169,23 +163,17 @@ def test_the_key_never_appears_in_an_error_message():
         assert SECRET not in str(caught.value)
 
 
-# ---- who it is -----------------------------------------------------------------------------------------------
-
-
 def test_it_declares_what_the_spec_says():
     provider = OpenMeteo()
     assert provider.id == "open-meteo" and provider.horizon == timedelta(days=4)
     assert provider.min_refresh == timedelta(minutes=60) and provider.max_useful_age == timedelta(hours=12)
     assert provider.attribution == "Weather data: Open-Meteo.com (CC BY 4.0)"
     assert [(s.key, s.secret, s.optional) for s in provider.settings] == [("base_url", False, True), ("api_key", True, True)]
-    assert callable(provider.search_places)  # its place search, from ticket S4 and P9
+    assert callable(provider.search_places)
 
 
 def test_it_is_a_built_in_provider():
     assert registry.get("open-meteo").name == "Open-Meteo"
-
-
-# ---- several panel arrays ------------------------------------------------------------------------------------
 
 
 def test_each_array_is_one_request_with_its_own_tilt_and_direction_and_the_power_is_added_up():

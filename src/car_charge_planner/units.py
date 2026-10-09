@@ -1,8 +1,7 @@
-"""Metric and imperial units for what the user types and reads: distances and consumption. No Qt.
+"""Metric and imperial units for distances and consumption shown to the user. No Qt.
 
-Everything stored and planned stays metric (km, kWh/100 km); only the Settings fields and the set-up pages show
-the other system. Consumption converts by the **reciprocal**: 18 kWh/100 km is 100/18 km per kWh, which is
-62.1371/18 = 3.45 miles per kWh. Energy (kWh), power and the charge levels are the same in both systems.
+Everything stored and planned stays metric (km, kWh/100 km). Consumption converts by the **reciprocal**: 18 kWh/100 km
+is 100/18 km per kWh, which is 62.1371/18 = 3.45 miles per kWh.
 """
 
 from __future__ import annotations
@@ -44,7 +43,7 @@ def miles_per_kwh_to_kwh_per_100km(miles_per_kwh: float) -> float:
 
 
 def unit_label(quantity: str, system: str) -> str:
-    """The unit symbol. Symbols are the same in every language, so they are not translated."""
+    """The unit symbol (not translated: symbols are the same in every language)."""
     if quantity == DISTANCE:
         return "mi" if system == IMPERIAL else "km"
     if quantity == CONSUMPTION:
@@ -53,7 +52,6 @@ def unit_label(quantity: str, system: str) -> str:
 
 
 def suffix(quantity: str, system: str) -> str:
-    """The unit as a box's suffix, with the space in front."""
     return f" {unit_label(quantity, system)}"
 
 
@@ -101,9 +99,6 @@ def display_step(quantity: str, metric_step: float, system: str) -> float:
     return metric_step
 
 
-# ---- which system to suggest ----------------------------------------------------------------------------------
-
-
 def _region(locale_name: str) -> str:
     """'en_GB.UTF-8' -> 'GB'; '' for the C locale and for names without a region."""
     name = locale_name.strip().split("@")[0].split(".")[0].replace("-", "_")
@@ -114,7 +109,7 @@ def _region(locale_name: str) -> str:
 
 
 def suggest_system(environ: Mapping[str, str] | None = None, qt_locale_name: str = "") -> str:
-    """Imperial for the United States, the United Kingdom, Liberia and Myanmar; metric everywhere else.
+    """Imperial for the regions in `IMPERIAL_REGIONS`, metric elsewhere.
 
     The region comes from the locale categories in the order the C library uses them: LC_ALL, then LC_MEASUREMENT
     (the one that is about units), then LANG. With none set, `qt_locale_name` (Qt's system locale, "en_US") is used.

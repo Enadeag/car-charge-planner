@@ -1,4 +1,4 @@
-"""Charge windows and charge power (spec 4.3-4.4)."""
+"""Charge windows and charge power."""
 
 from __future__ import annotations
 

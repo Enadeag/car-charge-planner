@@ -1,4 +1,4 @@
-"""Typical values are remembered (ticket S3): which settings are still ones the app filled in."""
+"""Typical values are remembered: which settings are still ones the app filled in."""
 
 import os
 
@@ -31,9 +31,6 @@ def qapp():
 
 def with_typical(cfg, *keys):
     return replace(cfg, setup=Setup(tuple(keys)))
-
-
-# ---- the config ---------------------------------------------------------------------------------------------
 
 
 def test_nothing_is_typical_by_default_and_an_old_config_means_the_values_are_the_owners(tmp_path):
@@ -76,10 +73,7 @@ def test_a_file_that_makes_no_sense_is_refused(tmp_path, text, message):
 def test_every_listed_key_is_a_field_in_settings():
     keys = {spec.key for tab in TABS for spec in tab.fields}
     assert set(TYPICAL_KEYS) <= keys
-    assert not any(spec.flag for tab in TABS for spec in tab.fields)  # the fixed per-field tags are gone
-
-
-# ---- Settings ----------------------------------------------------------------------------------------------
+    assert not any(spec.flag for tab in TABS for spec in tab.fields)
 
 
 def tags(window, tab_key):
@@ -113,11 +107,11 @@ def test_editing_a_value_clears_its_tag_at_once_and_saving_removes_the_key(tmp_p
     window, file = make(with_typical(cfg, "panels.kwp", "panels.tilt_deg", "car.km_per_day"), tmp_path)
     box = window.field_tabs[0].inputs["panels.kwp"]
     box.setValue(5.5)
-    assert not tags(window, "solar")["panels.kwp"] and tags(window, "solar")["panels.tilt_deg"]  # gone before saving
+    assert not tags(window, "solar")["panels.kwp"] and tags(window, "solar")["panels.tilt_deg"]
     assert window.current_config().setup.typical == ("panels.tilt_deg", "car.km_per_day")
     assert window.save()
     assert load_config(file).setup.typical == ("panels.tilt_deg", "car.km_per_day")
-    assert not tags(window, "solar")["panels.kwp"]  # and it stays gone after the reload
+    assert not tags(window, "solar")["panels.kwp"]
 
 
 def test_saving_without_touching_a_field_leaves_it_typical(tmp_path, qapp, cfg):
@@ -177,9 +171,6 @@ def test_the_tag_wording_is_translated(tmp_path, qapp, cfg):
         assert any("Standaardwaarde." in label.text() for label in window.field_tabs[0].findChildren(QLabel))
     finally:
         i18n.init(languages=[])
-
-
-# ---- the plan page ------------------------------------------------------------------------------------------
 
 
 def test_no_typical_values_means_no_line():

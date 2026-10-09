@@ -1,4 +1,4 @@
-"""The language setting and its picker (ticket I4)."""
+"""The language setting and its picker."""
 
 import os
 
@@ -46,9 +46,6 @@ def window_for(cfg, tmp_path):
     return SettingsWindow(cfg, tmp_path / "config.toml", lambda c: None)
 
 
-# ---- the setting ---------------------------------------------------------------------------------------------
-
-
 def test_the_default_follows_the_system_and_survives_a_round_trip(tmp_path):
     assert Config().interface.language == "auto"
     cfg = replace(Config(), interface=Interface(language="pt_BR"))
@@ -76,9 +73,6 @@ def test_anything_else_is_refused(value):
         validate(replace(Config(), interface=Interface(language=value)))
 
 
-# ---- which languages are installed ----------------------------------------------------------------------------
-
-
 def test_installed_languages_are_the_directories_with_a_compiled_catalogue(tmp_path):
     make_catalogue(tmp_path, "nl", {})
     (tmp_path / "xx" / "LC_MESSAGES").mkdir(parents=True)  # a folder without a catalogue is not a language
@@ -89,9 +83,6 @@ def test_installed_languages_are_the_directories_with_a_compiled_catalogue(tmp_p
 
 def test_a_language_is_named_in_its_own_language(qapp):
     assert language_name("nl") == "Nederlands" and language_name("de") == "Deutsch"
-
-
-# ---- the picker ----------------------------------------------------------------------------------------------
 
 
 def test_with_only_english_there_is_no_picker(cfg, qapp, tmp_path, monkeypatch):
@@ -128,12 +119,11 @@ def test_choosing_a_language_saves_it_and_it_applies_after_a_restart(cfg, qapp, 
     assert saved[-1].interface.language == "nl" and load_config(path).interface.language == "nl"
     assert i18n.current_language() == ""  # nothing changes while the app runs
 
-    # the next start reads the file and applies the choice
     init([load_config(path).interface.language], catalogues)
     assert i18n.current_language() == "nl" and i18n._("Language") == "Taal"
     restarted = window_for(load_config(path), tmp_path)
     assert interface_tab(restarted).inputs["interface.language"].currentData() == "nl"
-    assert restarted.tabs.tabText(restarted.tabs.count() - 1)  # the window builds in the new language
+    assert restarted.tabs.tabText(restarted.tabs.count() - 1)
 
 
 def test_english_can_be_chosen_on_a_system_that_speaks_another_language(catalogues):

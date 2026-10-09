@@ -98,7 +98,7 @@ def test_a_stale_socket_file_from_a_crash_is_replaced(qapp, path):
     Path(path).write_text("left behind by a crashed instance")  # nobody listens on it
     outcome, server = claim_instance(path)
     assert outcome is Outcome.PRIMARY
-    assert request_show(path)  # and it is a working socket now
+    assert request_show(path)
     server.close()
 
 
@@ -129,7 +129,7 @@ def test_a_second_server_cannot_take_over_a_path_a_live_server_holds(qapp, path)
     assert live.listen()
     intruder = InstanceServer(path)
     assert intruder.listen() is False
-    assert request_show(path)  # the live server is still the one answering
+    assert request_show(path)
     live.close()
 
 
@@ -195,7 +195,7 @@ def test_a_second_launch_of_the_real_app_hands_over_and_exits(tmp_path):
         assert first.stdout.readline().strip() == "primary"
         second = subprocess.run([sys.executable, "-m", "car_charge_planner"], cwd=PROJECT, env=env, capture_output=True, text=True, timeout=30)
         assert second.returncode == 0 and "already running" in second.stderr
-        assert first.stdout.readline().strip() == "SHOW"  # the first instance was asked to show itself
+        assert first.stdout.readline().strip() == "SHOW"
     finally:
         first.kill()
         first.wait()
@@ -205,7 +205,7 @@ def test_two_copies_starting_at_once_the_loser_signals_instead_of_removing_the_s
     import car_charge_planner.instance as instance
 
     winner = InstanceServer(path)
-    assert winner.listen()  # the other copy won the race
+    assert winner.listen()
     seen = []
     winner.show_requested.connect(lambda: seen.append(1))
 
@@ -220,7 +220,7 @@ def test_two_copies_starting_at_once_the_loser_signals_instead_of_removing_the_s
     outcome, server = claim_instance(path)
     assert outcome is Outcome.SIGNALLED and server is None
     assert len(calls) == 2  # it looked again before deciding the socket was stale
-    assert Path(path).exists()  # the winner's socket was not removed
+    assert Path(path).exists()
     settle()
     assert seen == [1]
     winner.close()

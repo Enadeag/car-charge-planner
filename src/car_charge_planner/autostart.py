@@ -1,4 +1,4 @@
-"""Start the tray app at login via an XDG autostart entry (works on KDE Plasma)."""
+"""Start the tray app at login via an XDG autostart entry."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Forecast.Solar as a provider (ticket P4): the conformance kit with the recorded answer, plus what is specific to it."""
+"""Forecast.Solar as a provider: the conformance kit with the recorded answer, plus what is specific to it."""
 
 import json
 from datetime import UTC, datetime, timedelta
@@ -49,9 +49,6 @@ def local(step):
     return step.start.strftime("%H:%M:%S"), step.end.strftime("%H:%M:%S")
 
 
-# ---- reading the answer ---------------------------------------------------------------------------------------
-
-
 def test_each_key_after_the_first_of_a_day_is_a_step_of_the_energy_since_the_key_before():
     steps, _ = fetch()
     assert len(steps) == 26  # two days of 14 keys, the sunrise key of each has nothing before it
@@ -100,9 +97,6 @@ def test_the_system_losses_setting_is_not_applied():
     assert fetch(system=lossy)[0] == fetch()[0]
 
 
-# ---- daylight saving ------------------------------------------------------------------------------------------
-
-
 def test_across_the_missing_hour_a_period_is_the_real_elapsed_time():
     steps, _ = fetch(SPRING)
     assert check_steps(steps) == []
@@ -118,9 +112,6 @@ def test_across_the_repeated_hour_a_period_is_the_real_elapsed_time():
     assert first.hours == pytest.approx(1.0) and second.hours == pytest.approx(2.0)  # the repeated hour is counted
     assert first.power_kw == pytest.approx(0.060) and second.power_kw == pytest.approx(0.045)  # 60 Wh in 1 h, 90 Wh in 2 h
     assert first.end == second.start
-
-
-# ---- the request ----------------------------------------------------------------------------------------------
 
 
 def test_the_public_request_has_the_documented_shape():
@@ -155,9 +146,6 @@ def test_numbers_are_whole_degrees_and_short_decimals():
     assert ForecastSolar.request_url(system, system.arrays[0], {}).endswith("/52.3712/-4.1235/35/12/4.123")
     flat = SystemDescription(52.0, 4.0, (PanelArray(5.0, 120, 250, 0.14),), "Europe/Amsterdam")
     assert ForecastSolar.request_url(flat, flat.arrays[0], {}).endswith("/52/4/90/180/5")  # limited to what the API accepts
-
-
-# ---- failures -------------------------------------------------------------------------------------------------
 
 
 def rate_limit(headers=None, body=RATE_LIMITED, now=NOW):
@@ -228,23 +216,18 @@ def test_the_key_never_appears_in_an_error_message():
         assert SECRET not in str(caught.value)
 
 
-# ---- who it is ------------------------------------------------------------------------------------------------
-
-
 def test_it_declares_the_public_plan():
     provider = ForecastSolar()
     assert provider.id == "forecast-solar" and provider.horizon == timedelta(days=2)
     assert provider.min_refresh == timedelta(minutes=60) and provider.search_places is None
     assert [(s.key, s.secret, s.optional) for s in provider.settings] == [("api_key", True, True)]
-    assert "losses" in provider.description  # the user is told the setting is not used
+    assert "losses" in provider.description  # the user is told this setting is not used
     assert provider.attribution == "Solar forecast: Forecast.Solar"
 
 
 def test_both_providers_are_built_in():
     assert set(registry.ids()) >= {"open-meteo", "forecast-solar"}
 
-
-# ---- several panel arrays -------------------------------------------------------------------------------------
 
 TWO_ARRAYS = SystemDescription(52.37, 4.9, (PanelArray(3.0, 30, -90, 0.14), PanelArray(2.0, 10, 90, 0.14)), "Europe/Amsterdam")
 
@@ -253,7 +236,7 @@ def test_the_public_plan_is_asked_once_for_each_array_and_the_energy_is_added_up
     steps, transport = fetch(system=TWO_ARRAYS)
     assert [r.url.split("period/")[1] for r in transport.requests] == ["52.37/4.9/30/-90/3", "52.37/4.9/10/90/2"]
     single, _ = fetch()
-    assert [s.power_kw for s in steps] == pytest.approx([2 * s.power_kw for s in single])  # the recording, twice
+    assert [s.power_kw for s in steps] == pytest.approx([2 * s.power_kw for s in single])
     assert check_steps(steps) == []
 
 

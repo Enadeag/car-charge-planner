@@ -1,8 +1,4 @@
-"""The conformance kit and the fake provider, tested (ticket P2).
-
-A small provider that really uses the transport passes the kit; broken variants of it each fail the check
-that should catch them. That is what makes a green kit mean something for the real providers.
-"""
+"""A small provider passes the conformance kit and each broken variant fails the check that should catch it."""
 
 import json
 import threading
@@ -36,8 +32,6 @@ GOOD = json.dumps(
 
 
 class Tiny:
-    """A well-behaved provider written the way a contributor would write one."""
-
     id = "tiny"
     name = "Tiny"
     description = "A tiny forecast service."
@@ -99,9 +93,6 @@ class TestTinyPassesTheKit(ProviderConformance):
     @pytest.fixture
     def case(self):
         return tiny_case()
-
-
-# ---- broken providers: each one must be caught --------------------------------------------------------------------
 
 
 class NegativePower(Tiny):
@@ -223,9 +214,6 @@ def test_the_kit_catches_steps_beyond_the_declared_horizon():
         kit.check_good_answer(tiny_case(ok_body=far))
 
 
-# ---- the replay transport ----------------------------------------------------------------------------------------
-
-
 def test_the_replay_transport_answers_what_was_recorded_and_fails_on_anything_else():
     replay = ReplayTransport([("example.test/a", Reply(200, b"a")), (lambda r: r.url.endswith("/b"), Reply(404))])
     assert replay(Request("https://example.test/a?x=1")).body == b"a"
@@ -245,8 +233,6 @@ def test_reply_headers_are_case_insensitive_and_json_decodes():
     assert reply.header("retry-after") == "5" and reply.header("missing") is None
     assert reply.json() == {"a": 1} and reply.ok and not Reply(429).ok
 
-
-# ---- the fake provider -------------------------------------------------------------------------------------------
 
 DAY = date(2026, 7, 3)
 
@@ -294,7 +280,7 @@ def test_a_held_fetch_waits_until_released():
     worker = threading.Thread(target=lambda: result.append(ask(fake)))
     worker.start()
     worker.join(0.2)
-    assert worker.is_alive() and not result  # in flight
+    assert worker.is_alive() and not result
     release.set()
     worker.join(2)
     assert result and check_steps(result[0]) == []

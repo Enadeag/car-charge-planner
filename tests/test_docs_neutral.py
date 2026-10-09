@@ -1,4 +1,4 @@
-"""The published documents say nothing about a person's home, equipment or workplace (open-source ticket 07).
+"""The published documents say nothing about a person's home, equipment or workplace.
 
 The words are written in pieces so that this file is not itself a hit for the searches that check the history.
 """

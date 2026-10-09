@@ -21,7 +21,7 @@ NEW_RULE = AwayRule(0, time(8, 0), time(17, 0))  # a Monday at work: a place to 
 
 class AwayPage(Page):
     id = "away"
-    in_sequence = False  # opened from the hub, left with Done
+    in_sequence = False
 
     @property
     def title(self) -> str:
@@ -68,8 +68,6 @@ class AwayPage(Page):
     def next_label(self) -> str:
         return _("Done")
 
-    # -- showing what the answers say ------------------------------------------------------------------------------
-
     def enter(self) -> None:
         rules = self.state.config.away_rules
         self._rebuild(rules)
@@ -98,8 +96,6 @@ class AwayPage(Page):
         self.rows.append(row)
         self.rows_layout.addWidget(row)
         return row
-
-    # -- what the person does -----------------------------------------------------------------------------------------
 
     def _commit(self) -> None:
         cfg = self.state.config

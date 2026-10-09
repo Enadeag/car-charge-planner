@@ -1,4 +1,4 @@
-"""The Location page of the set-up wizard (ticket S6): search, pick, coordinates, time zone."""
+"""The Location page of the set-up wizard: search, pick, coordinates, time zone."""
 
 import os
 
@@ -100,9 +100,6 @@ def texts(widget):
     return [l.text() for l in widget.findChildren(QLabel)]
 
 
-# ---- what the page says ------------------------------------------------------------------------------------
-
-
 def test_the_page_says_the_typed_text_goes_to_the_provider_by_name(rig):
     assert rig.page.privacy.text() == "What you type here is sent to Finder to find the place."
     assert rig.wizard.heading.text() == "Where are your solar panels?"
@@ -128,9 +125,6 @@ def test_without_a_place_search_the_page_says_why_and_asks_for_coordinates(tmp_p
 def test_a_provider_that_is_not_known_asks_for_coordinates_too(tmp_path, qapp):
     page = Rig(tmp_path, provider_id="solcast").page
     assert page.search_box.isHidden() and "forecast service has no place search" in page.privacy.text()
-
-
-# ---- searching ---------------------------------------------------------------------------------------------
 
 
 def test_a_search_is_sent_after_a_pause_and_only_for_the_final_text(rig):
@@ -241,9 +235,6 @@ def test_the_real_open_meteo_search_works_through_the_page(tmp_path, qapp):
     assert rig.wizard.state.config.timezone == "Europe/Amsterdam" and rig.wizard.state.config.latitude == 52.37403
 
 
-# ---- choosing ----------------------------------------------------------------------------------------------
-
-
 def test_nothing_is_chosen_at_first_and_next_waits(rig):
     assert rig.page.chosen.text() == "No place chosen yet." and not rig.wizard.next_button.isEnabled()
 
@@ -269,9 +260,6 @@ def test_the_place_picked_is_what_the_recap_and_the_written_config_say(rig):
     assert rig.wizard.finish()
     written = load_config(rig.file)
     assert (written.latitude, written.longitude, written.timezone) == (52.09, 5.12, "Europe/Amsterdam")
-
-
-# ---- coordinates ------------------------------------------------------------------------------------------
 
 
 def test_the_coordinates_are_behind_a_button_with_a_hint_on_reading_them(rig):
@@ -313,9 +301,6 @@ def test_typing_coordinates_after_a_search_result_forgets_its_name(rig):
     assert rig.wizard.state.place_label == "" and "52.1000" in rig.page.chosen.text()
 
 
-# ---- the time zone ----------------------------------------------------------------------------------------
-
-
 def test_the_time_zone_is_under_advanced_and_can_be_changed(rig):
     rig.type("Utrecht")
     rig.pick(0)
@@ -342,9 +327,6 @@ def test_a_time_zone_chosen_by_hand_survives_typing_coordinates(rig, monkeypatch
     rig.page.latitude.setValue(35.68)
     rig.page.longitude.setValue(139.69)
     assert rig.wizard.state.config.timezone == "Asia/Tokyo"
-
-
-# ---- running set-up again ---------------------------------------------------------------------------------
 
 
 def test_running_set_up_again_shows_the_place_it_has_and_lets_you_go_on(tmp_path, qapp):

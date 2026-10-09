@@ -14,12 +14,12 @@ from .pages import Page
 from .solar import note
 from .typical import with_typical
 
-KWH = " kWh"  # a unit symbol: the same in every language
+KWH = " kWh"
 
 
 class HousePage(Page):
     id = "house"
-    in_sequence = False  # opened from the hub, left with Done
+    in_sequence = False
 
     @property
     def title(self) -> str:

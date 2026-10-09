@@ -1,4 +1,4 @@
-"""The "What next?" hub, the House page and the Away page of the set-up wizard (ticket S9)."""
+"""The "What next?" hub, the House page and the Away page of the set-up wizard."""
 
 import os
 
@@ -33,9 +33,6 @@ def qapp():
     return QApplication.instance() or QApplication([])
 
 
-# ---- the helpers --------------------------------------------------------------------------------------------
-
-
 def test_a_year_has_8760_hours():
     assert HOURS_PER_YEAR == 8760
 
@@ -47,7 +44,7 @@ def test_a_years_use_is_an_average_power(yearly, kw):
 
 
 def test_the_cars_share_is_taken_off_when_the_bill_includes_it():
-    car = car_kwh_per_year(40, 18)  # 40 km a day at 18 kWh per 100 km
+    car = car_kwh_per_year(40, 18)
     assert car == pytest.approx(2628)
     assert baseload_from_yearly(5000, car) == pytest.approx((5000 - 2628) / 8760)
 
@@ -60,10 +57,7 @@ def test_the_away_rules_are_checked_in_settings_words(cfg):
     assert away_problems(cfg) == []
     bad = replace(cfg, away_rules=(AwayRule(0, time(17, 0), time(8, 0)),))
     assert away_problems(bad) == ["[away] each rule must end after it starts on the same day (no overnight rules)"]
-    assert away_problems(replace(bad, car=replace(bad.car, minimum_pct=90, target_pct=50))) == away_problems(bad)  # only the away ones
-
-
-# ---- the pages --------------------------------------------------------------------------------------------
+    assert away_problems(replace(bad, car=replace(bad.car, minimum_pct=90, target_pct=50))) == away_problems(bad)
 
 
 class Rig:
@@ -114,7 +108,7 @@ def test_nothing_is_done_at_first_and_finish_is_always_there(rig):
     assert rig.hub.house.tick.text() == "" and rig.hub.away.tick.text() == ""
     assert rig.wizard.next_button.isEnabled() and rig.wizard.next_button.text() == "Review and finish"
     rig.wizard.next()
-    assert rig.wizard.current == "finish"  # skipping both is fine
+    assert rig.wizard.current == "finish"
 
 
 def test_each_card_opens_its_page_and_done_returns_to_the_hub(rig):
@@ -130,8 +124,8 @@ def test_each_card_opens_its_page_and_done_returns_to_the_hub(rig):
 
 def test_finish_from_the_hub_is_the_next_page_of_the_flow_not_a_page_opened_from_it(rig):
     rig.hub.house.button.click()
-    rig.wizard.next()  # Done
-    rig.wizard.next()  # Review and finish
+    rig.wizard.next()
+    rig.wizard.next()
     assert rig.wizard.current == "finish" and rig.wizard.sequence.index("finish") == rig.wizard.sequence.index("next") + 1
 
 
@@ -215,7 +209,7 @@ def open_away(rig):
 
 
 def test_the_car_is_usually_home_is_an_answer_and_means_no_rules(tmp_path, qapp):
-    rig = Rig(tmp_path, cfg=example_config())  # it has a Thursday rule
+    rig = Rig(tmp_path, cfg=example_config())
     page = open_away(rig)
     assert page.some_days.isChecked() and len(page.rows) == 1
     page.at_home.click()

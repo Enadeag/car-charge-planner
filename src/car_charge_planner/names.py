@@ -1,9 +1,4 @@
-"""Names of weekdays and months, translated like any other text.
-
-They are translatable strings with a context (not looked up from the system) so that nothing here needs Qt
-or a locale database, and a translator writes them once, the way their language abbreviates them. The
-tuples are marked at import and translated when asked for.
-"""
+"""Names of weekdays and months as translatable texts with a context, so nothing here needs Qt or a locale database."""
 
 from __future__ import annotations
 

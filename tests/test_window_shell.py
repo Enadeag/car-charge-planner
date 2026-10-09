@@ -66,9 +66,6 @@ def actions(menu):
     return [a.text() for a in menu.actions() if a.text()]
 
 
-# ---- the window shows the plan --------------------------------------------------
-
-
 def test_the_window_shows_the_plan_in_the_shared_view(s):
     s.shell.show_plan()
     vm = s.controller.vm
@@ -80,7 +77,7 @@ def test_the_title_and_icon_follow_the_state(s):
     s.shell.show_plan()
     upcoming = s.window.windowTitle()
     assert upcoming == s.controller.vm.headline and upcoming.startswith("Next: Today 09:00")
-    s.clock(11)  # inside the window now
+    s.clock(11)
     s.controller.rebuild()
     assert s.window.windowTitle() == "Charge now" and s.window.windowTitle() != upcoming
     assert not s.window.windowIcon().isNull()
@@ -123,14 +120,11 @@ def test_the_window_follows_the_height_of_the_page_shown(s, qapp):
     assert s.window.height() != plan_height
     s.shell.view.tabs.setCurrentIndex(0)
     qapp.processEvents()
-    assert s.window.height() == plan_height  # and back again
+    assert s.window.height() == plan_height
 
 
 def test_the_window_has_a_sensible_minimum_width(s):
     assert s.window.minimumWidth() >= 440
-
-
-# ---- closing hides; the app keeps running ----------------------------------------
 
 
 def test_closing_hides_the_window_and_the_app_keeps_running(s):
@@ -150,7 +144,7 @@ def test_the_first_close_says_the_app_keeps_running_and_only_once(s):
     assert "background" in title.lower() and "Ctrl+Q" in body
     s.shell.show_plan()
     s.window.close()
-    assert len(s.notifier.sent) == 1  # not again
+    assert len(s.notifier.sent) == 1
 
 
 def test_the_note_is_not_repeated_after_a_restart(cfg, tmp_path, monkeypatch, qapp):
@@ -162,9 +156,6 @@ def test_the_note_is_not_repeated_after_a_restart(cfg, tmp_path, monkeypatch, qa
     second.shell.show_plan()
     second.window.close()
     assert second.notifier.sent == []
-
-
-# ---- the menu ---------------------------------------------------------------------
 
 
 def test_the_menu_has_settings_set_up_refresh_and_quit(s):
@@ -182,7 +173,7 @@ def test_the_menu_button_sits_at_the_right_edge_of_the_header(s, qapp):
 
 def test_quit_has_the_standard_shortcut_and_ends_the_app(s, monkeypatch):
     assert s.shell.quit_action.shortcut() == QKeySequence(QKeySequence.StandardKey.Quit)
-    assert s.shell.quit_action in s.window.actions()  # works from anywhere in the window
+    assert s.shell.quit_action in s.window.actions()
     quit_calls = []
     monkeypatch.setattr(QApplication, "quit", staticmethod(lambda: quit_calls.append(1)))
     s.shell.quit_action.trigger()
@@ -210,9 +201,6 @@ def test_the_edit_weekly_rules_button_opens_settings_on_the_away_rules_tab(s):
     assert window.isVisible() and window.tabs.tabText(window.tabs.currentIndex()) == "Away rules"
     window.confirm_discard = lambda: True
     window.close()
-
-
-# ---- starting, background, a second launch ---------------------------------------
 
 
 def test_start_shows_the_window(s, monkeypatch):
@@ -250,9 +238,6 @@ def test_show_plan_brings_a_minimised_window_back(s):
     assert not s.window.isMinimized() and s.window.isVisible()
 
 
-# ---- the owner's edits reach the controller --------------------------------------
-
-
 def test_setting_the_battery_in_the_window_reaches_the_state_and_the_view(s):
     s.shell.show_plan()
     s.shell.view.battery_submitted.emit(33.0)
@@ -266,9 +251,6 @@ def test_the_tray_shell_and_the_window_shell_share_their_icon_code():
     assert tray.make_icon is make_icon
 
 
-# ---- centred on first show, then left alone -------------------------------------------------------
-
-
 def test_the_window_is_centred_the_first_time_it_is_shown(s):
     from PySide6.QtGui import QGuiApplication
 
@@ -280,7 +262,7 @@ def test_the_window_is_centred_the_first_time_it_is_shown(s):
 
 def test_it_is_not_moved_again_after_the_owner_has_placed_it(s):
     s.shell.show_plan()
-    s.window.move(37, 53)  # the owner dragged it
+    s.window.move(37, 53)
     s.window.hide()
-    s.shell.show_plan()  # a second launch, a notification click
+    s.shell.show_plan()
     assert (s.window.x(), s.window.y()) == (37, 53)

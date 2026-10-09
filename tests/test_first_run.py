@@ -1,4 +1,4 @@
-"""The first run: the wizard opens by itself, or is offered; Set up, Run set-up again; finishing shows the plan (ticket S10)."""
+"""The first run: the wizard opens by itself, or is offered; Set up, Run set-up again; finishing shows the plan."""
 
 import os
 
@@ -37,9 +37,6 @@ def make(cfg, tmp_path, monkeypatch, fetch=None):
     controller = Controller(cfg, tmp_path / "config.toml", notifier)
     controller.calls = calls
     return controller, notifier
-
-
-# ---- when the wizard opens ----------------------------------------------------------------------------------------
 
 
 def test_a_first_start_opens_the_wizard_by_itself(tmp_path, monkeypatch, qapp):
@@ -82,9 +79,9 @@ def test_a_hidden_start_at_login_never_opens_it_and_offers_it_in_a_notification_
     controller.offer_setup(background=True)
     assert controller.setup_wizard is None
     assert len(notifier.sent) == 1 and notifier.sent[0][0] == "Set-up needed" and "Click here" in notifier.sent[0][1]
-    again, second = make(first_run_config(), tmp_path, monkeypatch)  # the next login: the same state folder
+    again, second = make(first_run_config(), tmp_path, monkeypatch)  # the next login
     again.offer_setup(background=True)
-    assert again.setup_wizard is None and second.sent == []  # said once, not at every login
+    assert again.setup_wizard is None and second.sent == []
     assert "set-up-offered" in load_state().seen
 
 
@@ -96,9 +93,6 @@ def test_a_location_entered_in_settings_counts_as_set_up(tmp_path, monkeypatch, 
     assert controller.setup_wizard is None and controller.vm.state != "needs-setup"
 
 
-# ---- the Set up button ----------------------------------------------------------------------------------------
-
-
 def test_the_popup_of_the_tray_shell_has_a_set_up_button_that_opens_the_wizard(tmp_path, monkeypatch, qapp):
     controller, _ = make(first_run_config(), tmp_path, monkeypatch)
     shell = TrayShell(controller)
@@ -107,7 +101,7 @@ def test_the_popup_of_the_tray_shell_has_a_set_up_button_that_opens_the_wizard(t
     button = next(b for b in shell.popup.findChildren(QPushButton) if b.text() == "Set up")
     assert button.isVisible()
     button.click()
-    assert controller.setup_wizard.isVisible() and not shell.popup.isVisible()  # the popup gets out of the way
+    assert controller.setup_wizard.isVisible() and not shell.popup.isVisible()
     controller.setup_wizard.close()
 
 
@@ -135,9 +129,6 @@ def test_closing_the_wizard_unfinished_leaves_the_app_not_set_up_with_the_button
     shell.window.hide()
 
 
-# ---- finishing --------------------------------------------------------------------------------------------
-
-
 def test_finishing_applies_the_config_starts_the_first_fetch_and_shows_the_plan(tmp_path, monkeypatch, qapp):
     controller, _ = make(first_run_config(), tmp_path, monkeypatch)
     shell = WindowShell(controller)
@@ -146,7 +137,7 @@ def test_finishing_applies_the_config_starts_the_first_fetch_and_shows_the_plan(
     wizard = controller.setup_wizard
     wizard.check = lambda cfg: Attempt(True, 2, "OK")
     shell.window.hide()
-    assert not shell.window.isVisible() and controller.calls == []  # not set up: nothing was asked of any provider
+    assert not shell.window.isVisible() and controller.calls == []
     wizard.navigate("location")
     page = wizard.pages["location"]
     page.latitude.setValue(52.37)
@@ -156,13 +147,10 @@ def test_finishing_applies_the_config_starts_the_first_fetch_and_shows_the_plan(
         thread.join(5)
     assert wizard.finish()
     settle_controller(controller)
-    assert controller.cfg.is_set_up and load_config(tmp_path / "config.toml").latitude == 52.37  # written once, applied
-    assert len(controller.calls) >= 1 and controller.calls[0].latitude == 52.37  # the first forecast fetch, for this place
-    assert controller.vm.state != "needs-setup" and shell.window.isVisible()  # and the plan is shown
+    assert controller.cfg.is_set_up and load_config(tmp_path / "config.toml").latitude == 52.37
+    assert len(controller.calls) >= 1 and controller.calls[0].latitude == 52.37
+    assert controller.vm.state != "needs-setup" and shell.window.isVisible()
     shell.window.hide()
-
-
-# ---- Run set-up again --------------------------------------------------------------------------------------
 
 
 def test_settings_has_run_set_up_again_only_when_the_app_can_open_it(tmp_path, monkeypatch, qapp):
@@ -182,7 +170,7 @@ def test_run_set_up_again_opens_the_wizard_filled_in_with_what_is_saved(tmp_path
     settings.setup_button.click()
     wizard = controller.setup_wizard
     assert not settings.isVisible() and wizard.isVisible()
-    assert wizard.state.config == controller.cfg  # pre-filled: a set-up config is taken as it is
+    assert wizard.state.config == controller.cfg
     assert wizard.pages["location"] is not None
     wizard.close()
 
@@ -195,8 +183,8 @@ def test_run_set_up_again_asks_before_throwing_away_unsaved_settings(tmp_path, m
     asked = []
     settings.confirm_discard = lambda: (asked.append(1), False)[1]
     settings.setup_button.click()
-    assert asked == [1] and settings.isVisible() and controller.setup_wizard is None  # said no: nothing changed
+    assert asked == [1] and settings.isVisible() and controller.setup_wizard is None
     settings.confirm_discard = lambda: (asked.append(1), True)[1]
     settings.setup_button.click()
-    assert asked == [1, 1] and not settings.isVisible() and controller.setup_wizard.isVisible()  # asked once, not twice
+    assert asked == [1, 1] and not settings.isVisible() and controller.setup_wizard.isVisible()
     controller.setup_wizard.close()

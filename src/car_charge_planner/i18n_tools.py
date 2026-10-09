@@ -1,12 +1,6 @@
-"""Developer commands for translations (needs Babel, a development dependency).
+"""Developer commands for translations (`extract`, `init`, `update`, `compile`; needs Babel); see CONTRIBUTING.md.
 
-    python -m car_charge_planner.i18n_tools extract          # code -> src/car_charge_planner/locale/car-charge-planner.pot
-    python -m car_charge_planner.i18n_tools init nl          # a new language, from the template
-    python -m car_charge_planner.i18n_tools update           # the template -> every language's .po
-    python -m car_charge_planner.i18n_tools compile          # .po -> .mo (what the app loads)
-
-Run from the project root. `extract` is deterministic (a fixed date in the header, no line numbers), so the
-committed template changes only when a text changes.
+Run from the project root. `extract` is deterministic (fixed header date, no line numbers), so the committed template changes only when a text does.
 """
 
 from __future__ import annotations
@@ -19,9 +13,9 @@ from .i18n import DOMAIN, LOCALE_DIR
 
 PACKAGE_DIR = Path(__file__).resolve().parent
 PACKAGE_NAME = PACKAGE_DIR.name  # "car_charge_planner": what the template calls a file's folder
-ROOT = PACKAGE_DIR.parent.parent  # the repository (the package is src/car_charge_planner)
+ROOT = PACKAGE_DIR.parent.parent
 POT = LOCALE_DIR / f"{DOMAIN}.pot"
-FIXED_DATE = datetime(2026, 1, 1, tzinfo=UTC)  # a template that changes only when the texts do
+FIXED_DATE = datetime(2026, 1, 1, tzinfo=UTC)  # keeps the template stable
 COMMENT_TAG = "i18n:"  # `# i18n: {n} is a number` before a text becomes a note for the translator
 
 ISSUES_URL = "https://github.com/Enadeag/car-charge-planner/issues"  # where translators send problems with a text

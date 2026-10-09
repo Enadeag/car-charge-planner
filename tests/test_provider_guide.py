@@ -1,4 +1,4 @@
-"""The guide's skeleton provider is run through the conformance kit, so the guide cannot go stale (ticket P10)."""
+"""The guide's skeleton provider is run through the conformance kit, so the guide cannot go stale."""
 
 import json
 import re

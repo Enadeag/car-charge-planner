@@ -28,7 +28,7 @@ from .pages import Page, fold
 from .solar import heading, note
 from .typical import with_typical
 
-KWH = " kWh"  # unit symbols are the same in every language, so they are not translated
+KWH = " kWh"
 PERCENT = " %"
 AMPS = " A"
 VOLTS = " V"
@@ -58,7 +58,6 @@ class CarPage(Page):
         scroll.setWidget(content)
         outer.addWidget(scroll)
 
-        # -- the car
         row = QHBoxLayout()
         row.addWidget(heading(_("The car")))
         self.car_unknown = QPushButton(_("I don't know the car's numbers"))
@@ -105,7 +104,6 @@ class CarPage(Page):
         layout.addLayout(form)
         layout.addWidget(note(_("The battery should never drop below the first; if it would, the plan advises charging from the grid. The second is the everyday maximum: 80 is gentle on the battery.")))
 
-        # -- the charger
         row = QHBoxLayout()
         row.addWidget(heading(_("The charger")))
         self.charger_unknown = QPushButton(_("I don't know the charger's numbers"))
@@ -172,8 +170,6 @@ class CarPage(Page):
         self.min_amps.valueChanged.connect(lambda v: self._charger("charger.min_amps", min_amps=v))
         self.volts.valueChanged.connect(lambda v: self._charger("charger.volts", volts=v))
 
-    # -- showing what the answers say ----------------------------------------------------------------------------
-
     def enter(self) -> None:
         self.system = self.state.config.interface.units  # the units chosen on the first page, which may have changed
         self._shape_unit_boxes()
@@ -235,8 +231,6 @@ class CarPage(Page):
 
     def can_continue(self) -> bool:
         return not problems(self.state.config)
-
-    # -- what the person does ------------------------------------------------------------------------------------
 
     def _car(self, key: str, **values) -> None:
         if self._filling:

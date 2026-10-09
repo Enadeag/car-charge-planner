@@ -1,4 +1,4 @@
-"""apply_config: switch settings while the app runs (settings spec 3.3)."""
+"""apply_config: switch settings while the app runs."""
 
 import os
 
@@ -163,7 +163,7 @@ def test_opening_settings_twice_gives_one_window(qapp, tmp_path, monkeypatch):
     assert app.settings_window is first and first.isVisible()
     first.confirm_discard = lambda: True
     first.close()
-    app.open_settings()  # after closing, a fresh window opens
+    app.open_settings()
     assert app.settings_window is not first and app.settings_window.isVisible()
     app.settings_window.close()
 
@@ -180,4 +180,4 @@ def test_saving_in_the_window_applies_to_the_running_app(qapp, tmp_path, monkeyp
     assert app.cfg.panels[0].tilt_deg == 20
     assert (tmp_path / "config.toml").exists()
     wait_until(lambda: not app._loading and app.result is not None, qapp)
-    assert fake.calls[-1].panels[0].tilt_deg == 20  # a new forecast was fetched for the new angle
+    assert fake.calls[-1].panels[0].tilt_deg == 20

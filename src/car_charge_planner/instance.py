@@ -1,7 +1,7 @@
 """One running copy of the app. A second start asks the first to show itself and exits.
 
-The first instance listens on a private local socket in the user's runtime directory. This replaces
-a lock file: a lock only says "someone runs", a socket also lets the second start say "show yourself".
+The first instance listens on a private local socket in the user's runtime directory: unlike a lock file, a socket also
+lets the second start say "show yourself".
 """
 
 from __future__ import annotations

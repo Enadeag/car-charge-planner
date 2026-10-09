@@ -1,5 +1,4 @@
-"""The tray shell: a tray icon with a popup, as used on KDE Plasma (and on GNOME with the
-AppIndicator extension)."""
+"""The tray shell: a tray icon with a popup, as used on KDE Plasma (and on GNOME with the AppIndicator extension)."""
 
 from __future__ import annotations
 
@@ -13,7 +12,7 @@ from ..popup import Popup
 from .icons import make_icon
 
 CLICK_CLOSE_GRACE_S = 0.5
-__all__ = ["CLICK_CLOSE_GRACE_S", "TrayShell", "make_icon"]  # make_icon is re-exported for older imports
+__all__ = ["CLICK_CLOSE_GRACE_S", "TrayShell", "make_icon"]
 class TrayShell:
     def __init__(self, controller: Controller) -> None:
         self.controller = controller

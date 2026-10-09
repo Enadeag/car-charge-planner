@@ -1,6 +1,6 @@
-"""The whole app, started as a program on a desktop without a tray (offscreen), with nothing set up (ticket S10).
+"""The whole app, started as a program on a desktop without a tray (offscreen), with nothing set up.
 
-Each test starts `app.main.main()` in a subprocess with its own folders and a fake forecast, so nothing touches the
+Each test starts `car_charge_planner.main.main()` in a subprocess with its own folders and a fake forecast, so nothing touches the
 network or the owner's files, and a small driver acts as the owner.
 """
 

@@ -62,9 +62,6 @@ def make_catalogue(localedir: Path, language: str, messages: dict) -> Path:
     return target
 
 
-# ---- choosing the language ---------------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     "environ, expected",
     [
@@ -77,7 +74,7 @@ def make_catalogue(localedir: Path, language: str, messages: dict) -> Path:
         ({"LANG": "nl_NL@euro"}, ["nl_NL", "nl"]),  # a modifier is dropped
         ({"LANG": "pt_BR.ISO-8859-1"}, ["pt_BR", "pt"]),
         ({"LANG": "nl-NL"}, ["nl_NL", "nl"]),
-        ({"LANGUAGE": "nl"}, ["nl"]),  # LANGUAGE alone
+        ({"LANGUAGE": "nl"}, ["nl"]),
         ({"LANGUAGE": "", "LANG": ""}, []),  # empty values count as unset
         ({}, []),
     ],
@@ -94,9 +91,6 @@ def test_with_nothing_set_qts_system_language_is_used_most_specific_first():
 
 def test_qts_language_is_ignored_when_the_environment_speaks():
     assert resolve_languages({"LANG": "de_DE"}, ["nl-NL"]) == ["de_DE", "de"]
-
-
-# ---- looking texts up ------------------------------------------------------------------------------------------
 
 
 def test_untranslated_english_is_the_default():
@@ -173,16 +167,13 @@ def test_init_falls_back_to_qts_language_when_the_environment_is_empty(tmp_path)
     assert init(environ={}, qt_languages=["en-GB", "en"], localedir=tmp_path) == ""
 
 
-# ---- the markers for texts defined before a language is chosen --------------------------------------------------------
-
-
 LABEL = N_("Charge now")  # defined at import, long before any language is chosen
 CONTEXT_LABEL = NC_("month", "May")
 
 
 def test_a_marker_returns_the_text_unchanged_and_translates_when_shown(tmp_path):
     assert LABEL == "Charge now" and CONTEXT_LABEL == ("month", "May")
-    assert translate(LABEL) == "Charge now"  # no language yet
+    assert translate(LABEL) == "Charge now"
     make_catalogue(tmp_path, "nl", {"Charge now": "Nu laden", ("month", "May"): "mei"})
     init(["nl"], tmp_path)
     assert translate(LABEL) == "Nu laden" and translate(CONTEXT_LABEL) == "mei"  # the module was not re-imported
@@ -197,9 +188,6 @@ def test_the_language_can_change_while_the_app_runs(tmp_path):
         init([language] if language else [], tmp_path)
         results.append(translate(LABEL))
     assert results == ["Nu laden", "Jetzt laden", "Charge now", "Nu laden"]
-
-
-# ---- Qt's own texts -----------------------------------------------------------------------------------------------------
 
 
 def test_qts_own_buttons_follow_the_language(qapp, tmp_path):
@@ -244,7 +232,7 @@ def test_changing_the_language_replaces_qts_texts_instead_of_stacking_them(qapp,
         setup(qapp, ["fr"], tmp_path)  # Qt has French, this app does not: stay consistently English
         assert QCoreApplication.translate("QPlatformTheme", "Cancel") == english
         setup(qapp, ["nl"], tmp_path)
-        assert QCoreApplication.translate("QPlatformTheme", "Cancel") == dutch  # and back again
+        assert QCoreApplication.translate("QPlatformTheme", "Cancel") == dutch
     finally:
         setup(qapp, [], tmp_path)
     assert QCoreApplication.translate("QPlatformTheme", "Cancel") == english
@@ -261,9 +249,6 @@ def test_setup_called_twice_does_not_leave_translators_behind(qapp, tmp_path):
             assert not qapp.removeTranslator(translator)
     finally:
         setup(qapp, [], tmp_path)
-
-
-# ---- the developer tools --------------------------------------------------------------------------------------------------
 
 
 SAMPLE = '''from car_charge_planner.i18n import _, ngettext, pgettext, N_, NC_
@@ -381,9 +366,6 @@ def test_updating_adds_new_texts_and_keeps_existing_translations(sample_package,
 def test_the_command_line_wrapper_reports_usage_for_an_unknown_command(capsys):
     assert i18n_tools.main(["frobnicate"]) == 2
     assert "extract" in capsys.readouterr().err
-
-
-# ---- the whole app -------------------------------------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("environment", [{"LANGUAGE": "nl", "LANG": "nl_NL.UTF-8"}, {"LC_ALL": "C"}, {"LANG": "de_DE.UTF-8", "LANGUAGE": ""}])

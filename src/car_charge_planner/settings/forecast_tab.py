@@ -1,9 +1,7 @@
-"""The Forecast tab: which providers give the forecast, their settings, and a way to try them (spec section 7).
+"""The Forecast tab: the primary and fallback providers, their settings and a way to try them.
 
-Two roles, the primary provider and an optional fallback, each picked from the providers the app knows. Every
-provider has a card (what it is, what it sends, its limits, its terms, its settings); a card sits under the role
-it is chosen for. Plain settings go to config.toml; secret ones are kept apart and saved to secrets.toml by the
-window.
+Every provider has a card under the role it is chosen for. Plain settings go to config.toml; secret ones are saved to
+secrets.toml by the window.
 """
 
 from __future__ import annotations
@@ -159,8 +157,6 @@ class ForecastTab(QWidget):
             picker.currentIndexChanged.connect(lambda _i, r=role: self._picked(r))
         self.load(cfg)
 
-    # -- the choices --------------------------------------------------------------------------------------------
-
     def _fill(self, role: str, chosen: str) -> None:
         picker = self.pickers[role]
         picker.blockSignals(True)
@@ -228,8 +224,6 @@ class ForecastTab(QWidget):
                 self.results[role].clear()
                 self.results[role].setStyleSheet("")
 
-    # -- reading the boxes --------------------------------------------------------------------------------------
-
     def apply_to(self, cfg: Config) -> Config:
         for card in self.cards.values():
             cfg = card.fields.apply_to(cfg)
@@ -248,8 +242,6 @@ class ForecastTab(QWidget):
             else:
                 secrets.pop(provider_id, None)
         return secrets
-
-    # -- the Test button ----------------------------------------------------------------------------------------
 
     def test(self, role: str) -> None:
         """One fetch on a worker thread, with what is entered now (nothing is saved)."""

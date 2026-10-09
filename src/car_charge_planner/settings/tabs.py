@@ -76,7 +76,6 @@ class SecretInput(QWidget):
 
 
 def timezone_box() -> QComboBox:
-    """An editable list of every time zone, searchable by typing any part of a name."""
     box = QComboBox()
     box.setEditable(True)
     box.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
@@ -162,7 +161,6 @@ class FieldTab(QWidget):
             self.hints[spec.key].setText(f"{flag}{escape(_(spec.hint))}")
 
     def _edited(self, spec: FieldSpec) -> bool:
-        """Has the owner changed this field since it was loaded?"""
         return spec.kind != "secret" and self.stored_value(spec) != self.baseline[spec.key]
 
     def collect_secrets(self) -> dict[str, str]:
@@ -331,7 +329,7 @@ class ArrayBox(QWidget):
         heading.addWidget(self.remove_button)
         layout.addLayout(heading)
         for widget in (self.heading, self.remove_button):
-            widget.setVisible(count > 1)  # one array looks as it always did: no heading, nothing to remove
+            widget.setVisible(count > 1)  # one array: no heading, nothing to remove
         self.fields = FieldTab(TabSpec("solar", "", array_fields(index, named=count > 1)), cfg)
         layout.addWidget(self.fields)
         if count > 1:
@@ -390,8 +388,6 @@ class SolarTab(QWidget):
         layout.addStretch(1)
         self.load(cfg)
 
-    # -- what the window asks of a tab ----------------------------------------------------------------------------
-
     def _tabs(self) -> list[FieldTab]:
         return [box.fields for box in self.boxes] + [self.location]
 
@@ -428,8 +424,6 @@ class SolarTab(QWidget):
         for tab in self._tabs():
             cfg = tab.apply_to(cfg)
         return cfg
-
-    # -- adding and removing arrays -------------------------------------------------------------------------------
 
     def add_array(self) -> None:
         """One more array, with typical values (tagged as such) until the owner enters their own."""

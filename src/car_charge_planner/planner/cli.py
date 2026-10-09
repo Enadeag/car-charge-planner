@@ -1,8 +1,8 @@
 """Print the plan from a forecast file or a synthetic demo forecast.
 
-    python -m planner.cli --demo summer --battery 45
-    python -m planner.cli --live --battery 45
-    python -m planner.cli --forecast forecast.json --battery 45 --config config.toml
+    python -m car_charge_planner.planner.cli --demo summer --battery 45
+    python -m car_charge_planner.planner.cli --live --battery 45
+    python -m car_charge_planner.planner.cli --forecast forecast.json --battery 45 --config config.toml
 
 Forecast file: JSON list of {"start": ISO8601, "end": ISO8601, "power_kw": expected solar power in kW}.
 """

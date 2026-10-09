@@ -1,11 +1,6 @@
-"""The plan and the daily inputs, without any window behaviour.
+"""The plan page ("when do I charge?") and the Update page (battery level, one-off away days), without window behaviour.
 
-Two pages so each stays calm: **Plan** answers "when do I charge?" and nothing else;
-**Update** holds the daily inputs (battery level, one-off away days).
-Weekly away rules are settings: shown here read-only, edited in the Settings window.
-
-`PlanView` is a plain widget. The tray popup (`popup.py`) puts it in a frameless window with a
-close button and click-away; another shell can put it in an ordinary window.
+Weekly away rules are settings: shown read-only here. `PlanView` is a plain widget that the popup or another shell wraps.
 """
 
 from __future__ import annotations
@@ -77,7 +72,7 @@ class PlanView(QWidget):
     away_added = Signal(object)  # AwayPeriod
     away_removed = Signal(object)  # AwayPeriod
     settings_requested = Signal(str)  # key of the Settings tab to open
-    setup_requested = Signal()  # the owner wants the set-up wizard
+    setup_requested = Signal()
     layout_changed = Signal()  # the view resized itself to the page shown: a wrapping window should follow
 
     def __init__(self, tz: ZoneInfo | None = None) -> None:
@@ -117,8 +112,6 @@ class PlanView(QWidget):
         outer.addWidget(self.footer)
         self.fit_to_page()
 
-    # -- the Plan page ---------------------------------------------------------
-
     def _build_plan_page(self) -> QWidget:
         page = QWidget()
         box = QVBoxLayout(page)
@@ -139,7 +132,6 @@ class PlanView(QWidget):
             head.addWidget(widget)
         box.addLayout(head)
 
-        # shown only while not set up: the way into the set-up wizard
         self.setup_button = QPushButton(_("Set up"))
         self.setup_button.clicked.connect(self.setup_requested.emit)
         setup_row = QHBoxLayout()
@@ -173,7 +165,6 @@ class PlanView(QWidget):
         outlook.addWidget(self.quiet)
         box.addWidget(self.outlook_box)
 
-        # compact status lines; the buttons jump to the Update page
         self.status_box = QWidget()  # hidden while not set up: a battery gauge means nothing before there is a plan
         status = QGridLayout(self.status_box)
         status.setContentsMargins(0, 0, 0, 0)
@@ -201,15 +192,12 @@ class PlanView(QWidget):
         status.setColumnStretch(0, 1)
         box.addWidget(self.status_box)
 
-        # "Based on typical values for: ..." with a way to the settings that should be replaced by real ones
         self.typical = _muted()
         self.typical.setTextFormat(Qt.TextFormat.RichText)
         self.typical.linkActivated.connect(lambda _href: self.settings_requested.emit(self._typical_tab))
         self._typical_tab = "solar"
         box.addWidget(self.typical)
         return page
-
-    # -- the Update page -------------------------------------------------------
 
     def _build_update_page(self) -> QWidget:
         page = QWidget()
@@ -272,8 +260,6 @@ class PlanView(QWidget):
         box.addWidget(self.away_error)
         box.addStretch()
         return page
-
-    # -- filling in the view ---------------------------------------------------
 
     def update_view(
         self,
@@ -364,10 +350,7 @@ class PlanView(QWidget):
             row.addWidget(remove)
             self.away_list.addLayout(row)
 
-    # -- behaviour -------------------------------------------------------------
-
     def add_to_header(self, widget: QWidget) -> None:
-        """Put a control at the right end of the header row (the popup's close button)."""
         self.header_row.addWidget(widget)
 
     def show_update(self, focus: str | None = None) -> None:

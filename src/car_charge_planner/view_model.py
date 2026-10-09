@@ -85,7 +85,7 @@ def day_label(day: date, today: date) -> str:
 
 
 def battery_status(battery: BatteryReading, now: datetime) -> tuple[str, bool]:
-    """Line to show and whether the reading needs updating (spec 4.7)."""
+    """Line to show and whether the reading needs updating."""
     if battery.entered_at is None:  # assumed: never entered
         return _("Battery {pct}% (assumed, not entered yet). Please enter it.").format(pct=number(battery.pct)), True
     days = (now - battery.entered_at).days

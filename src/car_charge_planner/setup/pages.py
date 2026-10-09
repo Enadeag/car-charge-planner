@@ -26,7 +26,7 @@ class Page(QWidget):
         return ""
 
     def enter(self) -> None:
-        """Shown: show what the answers say."""
+        """Show what the answers say."""
 
     def leave(self) -> None:
         """Left forwards or back: keep what was entered."""

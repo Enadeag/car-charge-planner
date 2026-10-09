@@ -1,10 +1,4 @@
-"""What the app does, apart from how it shows itself.
-
-The controller owns the config, the forecast refresh, planning, grid advice, announcing windows and
-the owner's edits (battery level, away days). It never touches a tray icon or a popup: after every
-change it emits `view_changed` with everything a shell needs to draw, and a shell (tray or window)
-listens. Both shells therefore behave the same, and the logic is tested without either.
-"""
+"""What the app does, apart from how it shows itself: after every change it emits `view_changed` for a shell to draw."""
 
 from __future__ import annotations
 
@@ -36,8 +30,6 @@ TICK_MS = 60_000  # recompute every minute; the forecast itself refreshes at mos
 
 @dataclass(frozen=True)
 class ViewUpdate:
-    """Everything a shell needs to draw the current plan."""
-
     vm: ViewModel
     state: State
     today: date
@@ -46,9 +38,9 @@ class ViewUpdate:
 
 
 class Controller(QObject):
-    setup_completed = Signal()  # the set-up wizard was finished: a shell shows the plan
+    setup_completed = Signal()
     forecast_loaded = Signal(object, object)  # the Config the fetch ran under, ForecastResult | Exception
-    view_changed = Signal(object)  # a ViewUpdate
+    view_changed = Signal(object)
 
     def __init__(
         self, cfg: Config, config_file: Path, notifier: Notifier | None = None, forecasts: ForecastService | None = None
@@ -74,10 +66,8 @@ class Controller(QObject):
     def start(self) -> None:
         self.refresh()
 
-    # -- the forecast ---------------------------------------------------------
-
     def refresh(self, force: bool = False) -> None:
-        """Fetch (cache-aware) off the UI thread; the result comes back as a signal."""
+        """Fetch off the UI thread (cache-aware); the result comes back as a signal."""
         if not self.cfg.is_set_up:
             self.rebuild()  # no location yet: there is nothing to ask a forecast service, and nothing leaves the machine
             return
@@ -108,8 +98,6 @@ class Controller(QObject):
             self.error = str(outcome)
         self.rebuild()
 
-    # -- settings -------------------------------------------------------------
-
     def open_settings(self, tab: str | None = None) -> None:
         """One Settings window at a time: opening it again brings the open one forward."""
         if self.settings_window is None or not self.settings_window.isVisible():
@@ -119,7 +107,7 @@ class Controller(QObject):
         self.settings_window.show_centred()
 
     def open_setup(self) -> None:
-        """One set-up wizard at a time: opening it again brings the open one forward. It starts from the current config."""
+        """One set-up wizard at a time, started from the current config."""
         if self.setup_wizard is None or not self.setup_wizard.isVisible():
             self.setup_wizard = SetupWizard(self.cfg, self.config_file, self._setup_finished)
         self.setup_wizard.show()
@@ -127,12 +115,11 @@ class Controller(QObject):
         self.setup_wizard.activateWindow()
 
     def _setup_finished(self, cfg: Config) -> None:
-        """The wizard wrote the config: apply it (which starts the first fetch) and let a shell show the plan."""
         self.apply_config(cfg)
         self.setup_completed.emit()
 
     def offer_setup(self, background: bool) -> None:
-        """At a start that is not set up: open the wizard, or, when started hidden (at login), only say it is there."""
+        """At a start that is not set up: open the wizard, or, when started hidden (at login), only offer it."""
         if self.cfg.is_set_up:
             return
         if not background:
@@ -141,14 +128,14 @@ class Controller(QObject):
             self.notifier.send(_("Set-up needed"), _("Click here to describe your solar panels and car. It takes a few minutes."))
 
     def notification_clicked(self, show_plan: Callable[[], None]) -> None:
-        """A click on one of our notifications: the wizard while not set up (that is what the offer asked for), else the plan."""
+        """A click on a notification opens the wizard while not set up (the offer asked for it), else the plan."""
         if self.cfg.is_set_up:
             show_plan()
         else:
             self.open_setup()
 
     def apply_config(self, cfg: Config) -> None:
-        """Switch to a new config without a restart (settings spec 3.3)."""
+        """Switch to a new config without a restart."""
         self.forecasts.forget_failures()  # a corrected key or address deserves a try at once, not after the wait
         if forecast_key(cfg) != forecast_key(self.cfg):
             self.result, self.error = None, None  # a forecast for other panels or place would mislead
@@ -159,8 +146,6 @@ class Controller(QObject):
         self.tz = ZoneInfo(cfg.timezone)
         self.rebuild()
         self.refresh()  # reuses the cache when the forecast key is unchanged
-
-    # -- planning and announcing ---------------------------------------------
 
     def rebuild(self) -> None:
         now = datetime.now(self.tz)
@@ -180,7 +165,7 @@ class Controller(QObject):
 
     def _source(self, now: datetime) -> ForecastSource:
         result = self.result
-        assert result is not None  # only asked for once there is a forecast
+        assert result is not None
         return ForecastSource(
             result.attribution,
             result.provider_name,
@@ -190,16 +175,14 @@ class Controller(QObject):
         )
 
     def _announce(self, windows, state: State, now: datetime) -> None:
-        """Notify once per window, a few minutes ahead (spec 5)."""
-        assert self.result is not None  # only called with a forecast
+        """Notify once per window, a few minutes ahead."""
+        assert self.result is not None
         for kind, window in due(
             windows, state.notified, now, self.cfg.notify.lead_minutes, self.result.age(now), self.result.stale
         ):
             title, body = message(kind, window, self.cfg, self.tz)
             self.notifier.send(title, body)
             mark_notified(window, now)
-
-    # -- the owner's edits ----------------------------------------------------
 
     def set_battery(self, pct: float) -> None:
         set_battery(pct, datetime.now(self.tz))

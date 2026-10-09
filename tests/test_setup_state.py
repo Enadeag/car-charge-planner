@@ -1,4 +1,4 @@
-"""The set-up wizard's answers and recap, without Qt (ticket S5)."""
+"""The set-up wizard's answers and recap, without Qt."""
 
 from dataclasses import replace
 
@@ -15,9 +15,6 @@ NL = {"LANG": "nl_NL.UTF-8"}
 
 def typical(*keys):
     return replace(example_config(), setup=Setup(keys))
-
-
-# ---- starting ------------------------------------------------------------------------------------------------
 
 
 def test_a_new_install_starts_with_every_value_typical_and_the_regions_units():
@@ -46,9 +43,6 @@ def test_nothing_has_been_done_until_something_is():
     assert hub.touched
 
 
-# ---- typical values --------------------------------------------------------------------------------------------
-
-
 def test_giving_a_value_and_saying_i_dont_know_move_keys_in_and_out_in_a_fixed_order():
     state = SetupState.starting_from(example_config(), NL)
     state.use_typical("charger.max_amps", "panels.kwp")
@@ -65,9 +59,6 @@ def test_only_known_keys_can_be_typical():
     assert state.config.setup.typical == ()  # not a setting a person can leave to a typical value
 
 
-# ---- the result ---------------------------------------------------------------------------------------------
-
-
 def test_the_result_is_checked_like_settings_checks_it():
     assert SetupState.starting_from(example_config(), NL).result().latitude == 52.37
     fresh = SetupState.starting_from(Config(), NL)
@@ -78,9 +69,6 @@ def test_the_result_is_checked_like_settings_checks_it():
     broken.config = replace(broken.config, charger=replace(broken.config.charger, phases=2))
     with pytest.raises(ConfigError, match="phases"):
         broken.result()
-
-
-# ---- the recap ---------------------------------------------------------------------------------------------
 
 
 def lines(state):
@@ -112,7 +100,7 @@ def test_typical_values_are_marked_as_such_and_the_owners_own_are_not():
     shown = lines(state)
     assert shown["panels"]["Size"].typical and not shown["panels"]["Tilt"].typical
     assert shown["car"]["Driving per day"].typical and not shown["car"]["Usable battery"].typical
-    assert shown["charger"]["Highest current"].typical and not shown["charger"]["Lowest current"].typical  # each on its own line
+    assert shown["charger"]["Highest current"].typical and not shown["charger"]["Lowest current"].typical
     assert not any(line.typical for line in lines(SetupState.starting_from(example_config(), NL))["panels"].values())
 
 

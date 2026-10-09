@@ -1,8 +1,6 @@
 """The window shell: the plan in an ordinary window, for desktops without a tray (stock GNOME).
 
-The same Plan and Update pages as the popup, in a normal top-level window. Closing the window hides
-it and the app keeps running, so notifications continue; Quit is in the window's menu (and Ctrl+Q).
-Wayland compositors place ordinary windows themselves, which is why this needs no anchoring.
+Closing the window hides it and the app keeps running, so notifications continue; Quit is in the window's menu.
 """
 
 from __future__ import annotations
@@ -68,7 +66,7 @@ class WindowShell:
         self.refresh_action.triggered.connect(lambda: controller.refresh(force=True))
         self.menu.addSeparator()
         self.quit_action = QAction(_("Quit"), self.window)
-        self.quit_action.setShortcut(QKeySequence.StandardKey.Quit)  # Ctrl+Q
+        self.quit_action.setShortcut(QKeySequence.StandardKey.Quit)
         self.quit_action.triggered.connect(lambda: QApplication.quit())
         self.menu.addAction(self.quit_action)
         self.window.addAction(self.quit_action)  # so the shortcut works anywhere in the window

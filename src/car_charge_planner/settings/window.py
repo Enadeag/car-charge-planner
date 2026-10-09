@@ -1,4 +1,4 @@
-"""The Settings window: tabs of fields, Save and Cancel (settings spec 3.1)."""
+"""The Settings window: tabs of fields, Save and Cancel."""
 
 from __future__ import annotations
 
@@ -147,8 +147,6 @@ class SettingsWindow(QDialog):
         group.addAction(action)
         return action
 
-    # -- reading the boxes -------------------------------------------------
-
     def current_config(self) -> Config:
         cfg = self.stored
         for tab in self.all_tabs:
@@ -160,8 +158,6 @@ class SettingsWindow(QDialog):
 
     def is_dirty(self) -> bool:
         return self.current_config() != self.stored or self.current_secrets() != self.stored_secrets
-
-    # -- actions -----------------------------------------------------------
 
     def reset_tab(self) -> None:
         tab = self.all_tabs[self.tabs.currentIndex()]

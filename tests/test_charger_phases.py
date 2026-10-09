@@ -1,4 +1,4 @@
-"""Charger phases: one or three (ticket S1). Three phases deliver three times the power at the same current."""
+"""Charger phases: one or three . Three phases deliver three times the power at the same current."""
 
 import os
 
@@ -35,13 +35,10 @@ def qapp():
     return QApplication.instance() or QApplication([])
 
 
-# ---- the setting -------------------------------------------------------------------------------------------
-
-
 def test_one_phase_is_the_default_and_an_old_config_means_one_phase(tmp_path):
     assert Charger().phases == 1
     path = tmp_path / "config.toml"
-    path.write_text("[charger]\nmin_amps = 6\nmax_amps = 16\n")  # the file of an older version
+    path.write_text("[charger]\nmin_amps = 6\nmax_amps = 16\n")  # no phases key
     assert load_config(path).charger.phases == 1
 
 
@@ -56,9 +53,6 @@ def test_the_phases_are_written_and_read_back(tmp_path, cfg):
 def test_only_one_or_three_phases_are_accepted(cfg, phases):
     with pytest.raises(ConfigError, match="phases"):
         validate(with_phases(cfg, phases))
-
-
-# ---- the power ---------------------------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -86,9 +80,6 @@ def test_the_same_surplus_gives_a_third_of_the_current_on_three_phases(cfg):
 def test_the_minimum_current_is_a_higher_power_on_three_phases(cfg):
     assert charge_power_kw(cfg.charger.min_amps, with_phases(cfg, 1)) == pytest.approx(1.38)
     assert charge_power_kw(cfg.charger.min_amps, with_phases(cfg, 3)) == pytest.approx(4.14)
-
-
-# ---- the plan ----------------------------------------------------------------------------------------------
 
 
 def day_windows(cfg, peak, soc=40):
@@ -132,9 +123,6 @@ def test_the_grid_advice_uses_three_phase_power(cfg):
         assert advice.window.power_kw >= charge_power_kw(chosen.charger.min_amps, chosen) - 1e-9
 
 
-# ---- what the texts say ------------------------------------------------------------------------------------
-
-
 def view_for(cfg, peak=STRONG):
     forecast = forecast_from([(DAY, peak), (DAY + timedelta(days=1), peak)])
     plans = plan(forecast, cfg, 45, NOW)
@@ -162,9 +150,6 @@ def test_the_notification_says_the_current_is_per_phase_with_three_phases(cfg):
         window = day_windows(chosen, STRONG)[0]
         title, body = message("solar", window, chosen, TZ)
         assert wanted.format(a=window.amps) in body
-
-
-# ---- Settings ----------------------------------------------------------------------------------------------
 
 
 def charger_tab(window):

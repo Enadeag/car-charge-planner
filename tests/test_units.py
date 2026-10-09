@@ -1,4 +1,4 @@
-"""Metric and imperial units (ticket S2)."""
+"""Metric and imperial units."""
 
 import os
 
@@ -20,9 +20,6 @@ def qapp():
     return QApplication.instance() or QApplication([])
 
 
-# ---- the conversions ---------------------------------------------------------------------------------------
-
-
 def test_a_mile_is_1609_metres():
     assert units.miles_to_km(1) == pytest.approx(1.609344) and units.km_to_miles(1.609344) == pytest.approx(1)
     assert units.km_to_miles(40) == pytest.approx(24.8548, rel=1e-5)
@@ -31,7 +28,7 @@ def test_a_mile_is_1609_metres():
 def test_consumption_converts_by_the_reciprocal():
     assert units.kwh_per_100km_to_miles_per_kwh(18) == pytest.approx(62.1371 / 18, rel=1e-5)  # 3.45 mi/kWh
     assert units.miles_per_kwh_to_kwh_per_100km(3.452) == pytest.approx(18, rel=1e-3)
-    assert units.kwh_per_100km_to_miles_per_kwh(10) > units.kwh_per_100km_to_miles_per_kwh(20)  # more thirsty, fewer miles
+    assert units.kwh_per_100km_to_miles_per_kwh(10) > units.kwh_per_100km_to_miles_per_kwh(20)
 
 
 @pytest.mark.parametrize("value", [0.1, 1, 5, 14, 18, 22, 60, 123.456])
@@ -41,7 +38,7 @@ def test_the_round_trips_agree(value):
     for quantity in (units.DISTANCE, units.CONSUMPTION):
         shown = units.to_display(quantity, value, units.IMPERIAL)
         assert units.from_display(quantity, shown, units.IMPERIAL) == pytest.approx(value, rel=1e-12)
-        assert units.to_display(quantity, value, units.METRIC) == value  # metric is the stored value itself
+        assert units.to_display(quantity, value, units.METRIC) == value
 
 
 def test_the_reciprocal_has_no_answer_for_no_consumption():
@@ -50,7 +47,7 @@ def test_the_reciprocal_has_no_answer_for_no_consumption():
             units.kwh_per_100km_to_miles_per_kwh(bad)
         with pytest.raises(ValueError):
             units.miles_per_kwh_to_kwh_per_100km(bad)
-    assert units.km_to_miles(0) == 0  # no distance is fine
+    assert units.km_to_miles(0) == 0
 
 
 def test_the_limits_of_a_box_are_converted_and_turned_round_for_consumption():
@@ -68,9 +65,6 @@ def test_labels_decimals_and_steps_follow_the_system():
     assert units.display_step(units.CONSUMPTION, 0.5, units.IMPERIAL) == 0.05 and units.display_step(units.DISTANCE, 5, units.IMPERIAL) == 5
     with pytest.raises(ValueError):
         units.unit_label("weight", units.METRIC)
-
-
-# ---- which system to suggest ---------------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("region", ["US", "GB", "LR", "MM"])
@@ -102,9 +96,6 @@ def test_a_dashed_or_scripted_name_still_has_its_region():
     assert isinstance(units.system_qt_locale_name(), str)
 
 
-# ---- the setting ---------------------------------------------------------------------------------------------
-
-
 def test_metric_is_the_default_and_the_choice_survives_a_round_trip(tmp_path, cfg):
     assert Config().interface.units == "metric"
     path = tmp_path / "config.toml"
@@ -123,9 +114,6 @@ def test_an_old_config_means_metric(tmp_path):
 def test_anything_else_is_refused(cfg, value):
     with pytest.raises(ConfigError, match="units"):
         validate(replace(cfg, interface=replace(cfg.interface, units=value)))
-
-
-# ---- Settings ------------------------------------------------------------------------------------------------
 
 
 def car_tab(window):
@@ -163,7 +151,7 @@ def test_an_untouched_field_keeps_its_exact_stored_value_in_both_systems(tmp_pat
     exact = replace(cfg, car=replace(cfg.car, km_per_day=600 / 7, consumption_kwh_per_100km=17.77))
     for system in ("metric", "imperial"):
         window = make_window(with_units(exact, system), tmp_path)
-        assert window.current_config().car == exact.car and not window.is_dirty()  # nothing rounded, nothing changed
+        assert window.current_config().car == exact.car and not window.is_dirty()
 
 
 def test_typing_miles_stores_kilometres(tmp_path, qapp, cfg):
@@ -186,7 +174,7 @@ def test_choosing_the_system_changes_the_boxes_at_once_and_keeps_the_stored_valu
     units_box.setCurrentIndex(units_box.findData("imperial"))
     assert distance.suffix() == " mi" and consumption.suffix() == " mi/kWh"
     assert distance.value() == pytest.approx(53.3, abs=0.05)
-    assert window.current_config().car == stored  # only the way it is shown changed
+    assert window.current_config().car == stored
     units_box.setCurrentIndex(units_box.findData("metric"))
     assert distance.suffix() == " km" and window.current_config().car == stored and not window.is_dirty()
 
@@ -198,7 +186,7 @@ def test_an_edit_made_in_one_system_survives_switching_to_the_other(tmp_path, qa
     units_box = window.interface_tab.inputs["interface.units"]
     units_box.setCurrentIndex(units_box.findData("imperial"))
     assert distance.value() == pytest.approx(62.1, abs=0.05)
-    assert window.current_config().car.km_per_day == pytest.approx(100, rel=1e-3)  # the value typed, not a fresh one
+    assert window.current_config().car.km_per_day == pytest.approx(100, rel=1e-3)
     units_box.setCurrentIndex(units_box.findData("metric"))
     assert distance.value() == 100 and window.current_config().car.km_per_day == 100  # exactly, not 99.9 from a rounded 62.1 mi
 
@@ -224,6 +212,6 @@ def test_the_units_choice_is_on_the_interface_tab_with_its_hint(tmp_path, qapp, 
 
 
 def test_a_value_only_one_system_can_hold_is_not_lost(tmp_path, qapp, cfg):
-    """A stored 0 km a day is a real value (a car that stays home); imperial shows 0 and saves 0."""
+    """A stored 0 km a day is a real value (a car that stays home)."""
     window = make_window(with_units(replace(cfg, car=replace(cfg.car, km_per_day=0.0)), "imperial"), tmp_path)
     assert boxes(window)[0].value() == 0 and window.current_config().car.km_per_day == 0.0

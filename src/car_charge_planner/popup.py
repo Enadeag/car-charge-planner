@@ -1,8 +1,4 @@
-"""The popup behind the tray icon. It closes with the x, Escape, a click on the tray icon, or a click outside it.
-
-A frameless tool window around a `PlanView` (the content). The window behaviour lives here:
-the close button, Escape, click-away, and placing the window near the tray icon.
-"""
+"""The popup behind the tray icon: a frameless tool window around a `PlanView`, closed by x, Escape or a click away."""
 
 from __future__ import annotations
 
@@ -20,7 +16,7 @@ from car_charge_planner.storage.state import State
 from .i18n import _
 from .planview import PLAN, UPDATE, PlanView
 
-__all__ = ["PLAN", "UPDATE", "PlanView", "Popup"]  # PLAN and UPDATE are re-exported for the tray and tests
+__all__ = ["PLAN", "UPDATE", "PlanView", "Popup"]
 from .view_model import ViewModel
 
 AWAY_CLOSE_DELAY_MS = 150  # long enough for a dropdown of ours to take over the focus and give it back
@@ -28,10 +24,10 @@ AWAY_CLOSE_DELAY_MS = 150  # long enough for a dropdown of ours to take over the
 
 class Popup(QWidget):
     battery_submitted = Signal(float)
-    away_added = Signal(object)  # AwayPeriod
-    away_removed = Signal(object)  # AwayPeriod
-    settings_requested = Signal(str)  # key of the Settings tab to open
-    setup_requested = Signal()  # the owner wants the set-up wizard
+    away_added = Signal(object)
+    away_removed = Signal(object)
+    settings_requested = Signal(str)
+    setup_requested = Signal()
 
     def __init__(self, tz: ZoneInfo | None = None) -> None:
         super().__init__(None, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint)
@@ -89,7 +85,6 @@ class Popup(QWidget):
             super().keyPressEvent(event)
 
     def changeEvent(self, event) -> None:
-        """Clicking outside takes the focus away: close, like other tray popups."""
         if event.type() == QEvent.Type.ActivationChange and self.isVisible():
             if self.isActiveWindow():
                 self._was_active = True
@@ -110,7 +105,7 @@ class Popup(QWidget):
         super().hideEvent(event)
 
     def show_near(self, anchor) -> None:
-        self.view.tabs.setCurrentIndex(PLAN)  # always open on the plan
+        self.view.tabs.setCurrentIndex(PLAN)
         screen = QGuiApplication.screenAt(anchor.center()) or QGuiApplication.primaryScreen()
         area = screen.availableGeometry()
         self.view.fit_to_page()

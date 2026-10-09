@@ -1,4 +1,4 @@
-"""Texts built by the app follow the language: word order, plurals, numbers, names, tab keys (ticket I2)."""
+"""Texts built by the app follow the language: word order, plurals, numbers, names, tab keys."""
 
 from datetime import date, datetime, time, timedelta
 

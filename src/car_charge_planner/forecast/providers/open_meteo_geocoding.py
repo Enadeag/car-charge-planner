@@ -1,9 +1,7 @@
 """Open-Meteo's geocoding service as a provider's place search.
 
-https://geocoding-api.open-meteo.com/v1/search?name=<text>&count=<n>&language=<xx>. Two characters match a name
-exactly, three or more by the start of a name; the answer lists places ranked by size, each with coordinates
-and a time zone; no match is an answer without a `results` list. Location data is from GeoNames. The same
-terms as the forecast service apply (the free service is for non-commercial use). Checked 2026-10-07.
+Two characters match a name exactly, three or more by the start of a name; results are ranked by size, with coordinates
+and a time zone; no match is an answer without a `results` list. The same terms as the forecast service apply.
 """
 
 from __future__ import annotations

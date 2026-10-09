@@ -1,4 +1,4 @@
-"""A pseudo-language for the offscreen UI tests (reused by every page that is added later).
+"""A pseudo-language for the offscreen UI tests.
 
 `install(tmp_path)` builds a catalogue from the committed `.pot` in which every text is wrapped and lengthened
 (`Charge now` -> `[!! Charge now~~~ !!]`) and makes it the active language. Anything the user can read that is
@@ -64,8 +64,6 @@ def install(tmp_path: Path) -> None:
     build(tmp_path)
     assert i18n.init([LANGUAGE], tmp_path) == LANGUAGE
 
-
-# ---- reading what is on screen ----------------------------------------------------------------------------------
 
 _STYLES = re.compile(r"<style>.*?</style>", re.S)  # a rule that colours a link is not text
 _TAGS = re.compile(r"<[^>]+>")

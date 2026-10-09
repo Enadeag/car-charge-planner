@@ -23,7 +23,7 @@ class FieldSpec:
     decimals: int = 1
     step: float = 1.0
     scale: float = 1.0  # shown = stored * scale, so a fraction can be shown as a percent
-    quantity: str = ""  # "distance" | "consumption": stored metric, shown in the chosen unit system (app/units.py)
+    quantity: str = ""  # "distance" | "consumption": stored metric, shown in the chosen unit system
     flag: str = ""  # a tag before the hint, for what the field itself says (a provider's "Required" setting)
     choices: tuple[tuple[str | int, str], ...] = ()  # for kind "choice": (stored value, label shown)
 

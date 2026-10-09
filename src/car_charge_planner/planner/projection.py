@@ -1,4 +1,4 @@
-"""Energy need and battery projection over the forecast days (spec 4.5)."""
+"""Energy need and battery projection over the forecast days."""
 
 from __future__ import annotations
 

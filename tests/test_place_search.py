@@ -1,4 +1,4 @@
-"""Place search as a provider ability: Open-Meteo's geocoder, the interface and who has it (tickets S4 and P9)."""
+"""Place search as a provider ability: Open-Meteo's geocoder, the interface and who has it."""
 
 import json
 from dataclasses import replace
@@ -43,16 +43,13 @@ def search(text="Amsterdam", language="en", body=AMSTERDAM, status=200):
     return OpenMeteoGeocoder(transport)(text, language), transport
 
 
-# ---- what it asks and what it makes of the answer ---------------------------------------------------------
-
-
 def test_the_recorded_answer_gives_places_in_the_order_the_service_ranks_them():
     results, _ = search()
     labels = [p.label for p in results.places]
     assert labels[0] == "Amsterdam, North Holland, The Netherlands" and len(labels) == 8
     first = results.places[0]
     assert (first.latitude, first.longitude, first.timezone) == (52.37403, 4.88969, "Europe/Amsterdam")
-    assert labels[4] == "eMvelo, Mpumalanga, South Africa"  # found by another name for the same place
+    assert labels[4] == "eMvelo, Mpumalanga, South Africa"
 
 
 def test_two_places_that_read_alike_can_be_told_apart_by_their_finer_area():
@@ -130,9 +127,6 @@ def test_the_retry_time_is_only_given_when_the_service_gives_one():
     assert search(status=429)[0].retry_after is None
 
 
-# ---- the labels -------------------------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     "place, label, detailed",
     [
@@ -143,9 +137,6 @@ def test_the_retry_time_is_only_given_when_the_service_gives_one():
 )
 def test_the_label_is_name_region_country_without_repeating_the_name(place, label, detailed):
     assert place.label == label and place.detailed_label == detailed
-
-
-# ---- who has the ability --------------------------------------------------------------------------------
 
 
 def test_open_meteo_has_a_place_search_and_forecast_solar_says_not_available():
@@ -182,7 +173,7 @@ def test_a_primary_without_a_search_means_coordinates_only(cfg):
 
 
 def test_the_fallback_is_not_asked_for_places(cfg):
-    assert selection(cfg, "plain", fallback="finder") is None  # the text would go to a provider the person did not pick first
+    assert selection(cfg, "plain", fallback="finder") is None
 
 
 def test_an_unknown_primary_means_coordinates_only(cfg):

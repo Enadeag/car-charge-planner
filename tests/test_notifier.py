@@ -71,7 +71,7 @@ def test_a_missing_service_is_logged_once_not_every_minute(caplog):
 def test_the_message_is_built_with_the_exact_types_the_protocol_needs():
     pytest.importorskip("jeepney")
     message = JeepneyBus.build_message(APP_NAME, 0, "icon", "title", "body", ["default", "Open"], {"desktop-entry": ("s", "x")}, 5000)
-    assert message.header.fields  # a real method call
+    assert message.header.fields
     assert message.body[0] == APP_NAME and message.body[1] == 0
     assert NOTIFY_SIGNATURE == "susssasa{sv}i"  # u for the id: QtDBus cannot send this from Python
     from jeepney.low_level import HeaderFields

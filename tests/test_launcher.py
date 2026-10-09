@@ -121,9 +121,6 @@ def test_is_installed_follows_the_entry_file(tmp_path):
     assert not launcher.is_installed(tmp_path)
 
 
-# ---- the command a launcher runs ----------------------------------------------------------------------------------
-
-
 def test_the_launch_command_is_the_installed_command_next_to_the_interpreter(tmp_path, monkeypatch):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()

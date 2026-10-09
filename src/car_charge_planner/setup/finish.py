@@ -55,8 +55,6 @@ class FinishPage(Page):
         row.addWidget(self.check_button)
         outer.addLayout(row)
 
-    # -- the recap ---------------------------------------------------------------------------------------------
-
     def enter(self) -> None:
         self._clear(self.recap)
         link = colours.link(self)
@@ -116,8 +114,6 @@ class FinishPage(Page):
 
     def next_label(self) -> str:
         return _("Finish")
-
-    # -- the connection check ------------------------------------------------------------------------------------
 
     def run_check(self) -> None:
         """One test fetch of the forecast with the chosen place, on a worker thread. A failure only says so."""

@@ -1,4 +1,4 @@
-"""The Car and charger page of the set-up wizard and its helpers (ticket S8)."""
+"""The Car and charger page of the set-up wizard and its helpers."""
 
 import os
 
@@ -23,9 +23,6 @@ def qapp():
     return QApplication.instance() or QApplication([])
 
 
-# ---- the helpers --------------------------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("weekly, daily", [(280, 40), (700, 100), (0, 0), (350, 50), (1, 1 / 7)])
 def test_a_week_is_seven_days(weekly, daily):
     assert weekly_to_daily(weekly) == pytest.approx(daily) and daily_to_weekly(daily) == pytest.approx(weekly)
@@ -34,14 +31,14 @@ def test_a_week_is_seven_days(weekly, daily):
 def test_the_planners_own_messages_are_what_the_page_shows(cfg):
     assert problems(cfg) == []
     low = replace(cfg, car=replace(cfg.car, minimum_pct=90, target_pct=50))
-    assert problems(low) == ["[car] needs 0 <= minimum_pct < target_pct <= 100"]  # the words Settings shows
+    assert problems(low) == ["[car] needs 0 <= minimum_pct < target_pct <= 100"]
     amps = replace(cfg, charger=replace(cfg.charger, min_amps=20, max_amps=10))
     assert problems(amps) == ["[charger] needs 0 < min_amps <= max_amps"]
 
 
 def test_only_the_car_and_the_charger_are_this_pages_business(cfg):
     odd = replace(cfg, latitude=999.0, car=replace(cfg.car, minimum_pct=90, target_pct=50))
-    assert problems(odd) == ["[car] needs 0 <= minimum_pct < target_pct <= 100"]  # the latitude is another page's
+    assert problems(odd) == ["[car] needs 0 <= minimum_pct < target_pct <= 100"]
 
 
 def test_the_two_halves_ask_about_different_settings_and_never_the_efficiency():
@@ -49,15 +46,12 @@ def test_the_two_halves_ask_about_different_settings_and_never_the_efficiency():
     assert not set(CAR_KEYS) & set(CHARGER_KEYS) and "charger.efficiency" not in CHARGER_KEYS
 
 
-# ---- the page ----------------------------------------------------------------------------------------------
-
-
 class Rig:
     def __init__(self, tmp_path, cfg=None, units="metric"):
         base = cfg if cfg is not None else Config()
         base = replace(base, interface=replace(base.interface, units=units))
         self.file = tmp_path / "config.toml"
-        region = {"LANG": "en_US.UTF-8"} if units == "imperial" else NL  # a new install takes its units from the region
+        region = {"LANG": "en_US.UTF-8"} if units == "imperial" else NL
         self.wizard = SetupWizard(base, self.file, lambda c: None, check=lambda c: Attempt(True, 2, "OK"), environ=region, qt_locale_name="")
         self.wizard.confirm_leave = lambda: True
         self.wizard.show()
@@ -85,7 +79,7 @@ def texts(widget):
 def test_a_new_install_shows_the_typical_values_and_says_so(rig):
     page = rig.page
     assert rig.wizard.heading.text() == "Your car and charger"
-    assert (page.battery.value(), page.consumption.value(), page.weekly.value()) == (60, 18, 280)  # 40 km a day, as a week
+    assert (page.battery.value(), page.consumption.value(), page.weekly.value()) == (60, 18, 280)
     assert (page.minimum.value(), page.target.value()) == (30, 80)
     assert page.one_phase.isChecked() and (page.max_amps.value(), page.min_amps.value()) == (16, 6)
     assert "Typical values in use" in page.car_note.text() and "Typical values in use" in page.charger_note.text()
@@ -94,8 +88,7 @@ def test_a_new_install_shows_the_typical_values_and_says_so(rig):
 
 @pytest.mark.parametrize("units", ["metric", "imperial"])
 def test_just_looking_at_the_page_changes_no_answer(tmp_path, qapp, units):
-    """Found while writing it: a box clamps its value when its range is set and says it changed, which recorded
-    a consumption of 5 as the person's own answer the moment the page opened."""
+    """A box clamps its value when its range is set and reports a change, which recorded a consumption of 5 as an answer."""
     for cfg in (Config(), example_config()):
         folder = tmp_path / f"{units}-{cfg.is_set_up}"
         folder.mkdir()
@@ -122,7 +115,7 @@ def test_each_car_value_given_is_remembered_and_stops_being_typical(rig):
     rig.page.weekly.setValue(350)
     assert (rig.cfg.car.usable_battery_kwh, rig.cfg.car.consumption_kwh_per_100km) == (75, 16.5)
     assert rig.cfg.car.km_per_day == pytest.approx(50) and not set(CAR_KEYS) & set(rig.typical)
-    assert set(CHARGER_KEYS) <= set(rig.typical)  # the charger half is untouched
+    assert set(CHARGER_KEYS) <= set(rig.typical)
     assert rig.page.car_note.text() == ""
 
 
@@ -134,9 +127,9 @@ def test_a_week_is_what_is_asked_and_a_day_is_what_is_stored(rig):
 def test_an_untouched_distance_is_not_rewritten_by_showing_it_rounded(tmp_path, qapp):
     odd = replace(example_config(), car=replace(example_config().car, km_per_day=600 / 7 + 0.123))
     rig = Rig(tmp_path, cfg=odd)
-    assert rig.page.weekly.value() == 601  # shown whole
+    assert rig.page.weekly.value() == 601
     rig.wizard.next()
-    assert rig.cfg.car.km_per_day == odd.car.km_per_day  # not changed by looking at it
+    assert rig.cfg.car.km_per_day == odd.car.km_per_day
 
 
 def test_the_charge_levels_are_preferences_not_typical_values(rig):
@@ -162,7 +155,7 @@ def test_i_dont_know_the_car_puts_back_its_typical_values_and_remembers_them(tmp
     rig.page.car_unknown.click()
     assert (rig.cfg.car.usable_battery_kwh, rig.cfg.car.consumption_kwh_per_100km, rig.cfg.car.km_per_day) == (60, 18, 40)
     assert set(CAR_KEYS) <= set(rig.typical) and not set(CHARGER_KEYS) & set(rig.typical)
-    assert rig.cfg.car.minimum_pct == 10  # a preference, not touched
+    assert rig.cfg.car.minimum_pct == 10
     assert (rig.page.battery.value(), rig.page.weekly.value()) == (60, 280)
 
 
@@ -224,7 +217,7 @@ def test_imperial_asks_for_miles_and_miles_per_kwh_with_converted_ranges(tmp_pat
     rig = Rig(tmp_path, units="imperial")
     page = rig.page
     assert page.weekly.suffix() == " mi" and page.consumption.suffix() == " mi/kWh"
-    assert page.weekly.value() == pytest.approx(174, abs=1)  # 280 km
+    assert page.weekly.value() == pytest.approx(174, abs=1)
     assert page.consumption.value() == pytest.approx(3.45, abs=0.005)
     assert "Typical: 2.82 to 4.44 mi/kWh." in page.consumption_note.text()
     assert (page.consumption.minimum(), page.consumption.maximum()) == (1.0, 12.5)
@@ -245,7 +238,7 @@ def test_going_back_to_welcome_and_changing_the_units_changes_this_page(tmp_path
     welcome.units.setCurrentIndex(welcome.units.findData("imperial"))
     rig.wizard.navigate("car")
     assert rig.page.weekly.suffix() == " mi" and rig.page.consumption.suffix() == " mi/kWh"
-    assert rig.cfg.car.km_per_day == 40  # what it stands for did not change
+    assert rig.cfg.car.km_per_day == 40
 
 
 # writing

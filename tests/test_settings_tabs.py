@@ -47,9 +47,6 @@ def texts(tab):
     return [label.text() for label in tab.findChildren(QLabel)]
 
 
-# ---- the five tabs ---------------------------------------------------------
-
-
 def test_the_window_has_the_seven_tabs_in_order(h):
     assert [h.window.tabs.tabText(i) for i in range(h.window.tabs.count())] == [
         "Solar and location",
@@ -62,9 +59,6 @@ def test_the_window_has_the_seven_tabs_in_order(h):
     ]
 
 
-# ---- ticket 04: house and car, charger ------------------------------------
-
-
 def test_house_and_car_shows_values_with_units_and_typical_value_tags(tmp_path, qapp):
     h = Harness(tmp_path, replace(example_config(), setup=Setup(("car.usable_battery_kwh", "car.consumption_kwh_per_100km"))))
     t = "House and car"
@@ -75,7 +69,7 @@ def test_house_and_car_shows_values_with_units_and_typical_value_tags(tmp_path, 
     assert h.box(t, "car.minimum_pct").value() == 30 and h.box(t, "car.target_pct").value() == 80
     assert h.box(t, "car.consumption_kwh_per_100km").suffix() == " kWh/100 km"
     tagged = texts(h.tab(t))
-    assert sum("Typical value." in x for x in tagged) == 2  # battery size and consumption, nothing else
+    assert sum("Typical value." in x for x in tagged) == 2
 
 
 def test_charger_shows_values_with_units_and_a_typical_value_tag(tmp_path, qapp):
@@ -83,7 +77,7 @@ def test_charger_shows_values_with_units_and_a_typical_value_tag(tmp_path, qapp)
     t = "Charger"
     assert h.box(t, "charger.min_amps").value() == 6 and h.box(t, "charger.max_amps").value() == 32
     assert h.box(t, "charger.volts").value() == 230
-    assert h.box(t, "charger.efficiency").value() == 90.0  # fraction stored, percent shown
+    assert h.box(t, "charger.efficiency").value() == 90.0
     assert h.box(t, "charger.min_amps").suffix() == " A"
     assert sum("Typical value." in x for x in texts(h.tab(t))) == 1
 
@@ -101,7 +95,7 @@ def test_editing_house_car_and_charger_saves_everything(h):
 
 
 def test_untouched_driving_per_day_keeps_its_exact_value(h):
-    h.box("Charger", "charger.max_amps").setValue(20)  # edit something else
+    h.box("Charger", "charger.max_amps").setValue(20)
     h.window.save_button.click()
     assert load_config(h.file).car.km_per_day == 600 / 7  # not the 85.7 shown
 
@@ -127,19 +121,16 @@ def test_reset_tab_works_on_house_car_and_on_charger(tmp_path, qapp):
     h.show("House and car")
     h.window.reset_button.click()
     assert h.box("House and car", "car.usable_battery_kwh").value() == Config().car.usable_battery_kwh
-    assert h.box("Charger", "charger.volts").value() == 240  # other tab untouched
+    assert h.box("Charger", "charger.volts").value() == 240
     h.show("Charger")
     h.window.reset_button.click()
     assert h.box("Charger", "charger.volts").value() == 230 and h.box("Charger", "charger.max_amps").value() == Config().charger.max_amps
     assert not h.file.exists()  # reset alone saves nothing
 
 
-# ---- ticket 05: planning and notifications ---------------------------------
-
-
 def test_planning_tab_shows_values_and_units(h):
     t = "Planning and notifications"
-    assert h.box(t, "planning.margin").value() == 85  # percent
+    assert h.box(t, "planning.margin").value() == 85
     assert h.box(t, "planning.import_tolerance_kwh").value() == 0.2
     assert h.box(t, "planning.min_window_minutes").value() == 45
     assert h.box(t, "notify.lead_minutes").value() == 15
@@ -183,14 +174,11 @@ def test_a_saved_lead_time_changes_when_the_next_notification_is_due(tmp_path, m
 
     monkeypatch.setattr("car_charge_planner.controller.datetime", Frozen)
     app.rebuild()
-    assert app.notifier.sent == []  # 30 minutes ahead, lead time is 15
+    assert app.notifier.sent == []  # lead time is 15 minutes, the window 30 away
     app.cfg = replace(app.cfg, notify=replace(app.cfg.notify, lead_minutes=30))
     app.rebuild()
     titles = [title for title, _ in app.notifier.sent]
     assert len(titles) == 1 and titles[0].startswith("Charge window 09:00")
-
-
-# ---- ticket 06: away rules --------------------------------------------------
 
 
 def rows(h):
@@ -209,7 +197,7 @@ def test_add_edit_and_save_a_rule(h):
     tab.add_button.click()
     assert len(rows(h)) == 2
     new = rows(h)[1]
-    new.weekday.setCurrentIndex(1)  # Tuesday
+    new.weekday.setCurrentIndex(1)
     new.start.setTime(QTime(7, 30))
     new.end.setTime(QTime(12, 45))
     h.window.save_button.click()
@@ -251,7 +239,7 @@ def test_reset_empties_the_rules_because_there_is_no_default_rule(tmp_path, qapp
     assert len(rows(h)) == 2
     h.show("Away rules")
     h.window.reset_button.click()
-    assert rows(h) == [] and not h.tab("Away rules").empty_note.isHidden()  # the car is treated as home all week
+    assert rows(h) == [] and not h.tab("Away rules").empty_note.isHidden()
     assert not h.file.exists()  # reset alone saves nothing
 
 
@@ -283,7 +271,7 @@ def test_no_hint_text_is_clipped_on_any_tab(tmp_path, qapp):
     from PySide6.QtWidgets import QLabel as Label
 
     window = SettingsWindow(example_config(), tmp_path / "c.toml", lambda c: None)
-    window.show_centred()  # the same path the tray uses
+    window.show_centred()
     for index in range(window.tabs.count()):
         window.tabs.setCurrentIndex(index)
         for _ in range(3):

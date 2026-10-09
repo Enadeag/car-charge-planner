@@ -1,8 +1,7 @@
 """What a forecast provider is: the contract every provider fulfils and the planner relies on.
 
-A provider is given a description of the user's solar system (one or more panel arrays) and returns the expected
-solar power of all of them together per time step. Everything else (caching, the fallback, the settings screens) lives outside it and works with any
-provider. See `docs/design/forecast-providers/spec.md` and, for contributors, `docs/providers.md`.
+A provider gets the user's solar system (one or more panel arrays) and returns the expected solar power of all of them
+together per time step. Caching, the fallback and the settings screens live outside it. See `docs/providers.md`.
 """
 
 from __future__ import annotations
@@ -38,7 +37,6 @@ class SystemDescription:
 
     @property
     def kwp(self) -> float:
-        """The size of all arrays together."""
         return sum(a.kwp for a in self.arrays)
 
     @classmethod
@@ -194,18 +192,14 @@ def require_valid_steps(steps: Sequence[ForecastStep]) -> list[ForecastStep]:
     return list(steps)
 
 
-# ---- several panel arrays --------------------------------------------------------------------------------------
-
-
 def add_up(forecasts: Sequence[Sequence[ForecastStep]]) -> list[ForecastStep]:
     """The forecasts of several panel arrays as one: the power of all of them per step.
 
-    When the arrays' steps line up (the same start and end, as they do when one service is asked for each array)
-    each step's power is the sum of theirs. When they do not, the steps are cut wherever any array's step starts or
-    ends, and each piece gets the sum of the powers that cover it, so no energy is lost or counted twice. An array
-    without a step at some time (night) adds nothing then; a time no array has a step for stays a gap. The result
-    covers only the time every array's forecast covers, so a shorter answer for one array never shows as a drop at
-    the end. One forecast is returned as it is. The steps are in the time zone of the first forecast's.
+    When the arrays' steps line up, each step's power is the sum of theirs. Otherwise the steps are cut wherever any array's
+    step starts or ends and each piece gets the sum of the powers that cover it, so no energy is lost or counted twice. An
+    array without a step at some time (night) adds nothing then; a time no array covers stays a gap. The result covers only
+    the time every array covers, so a shorter answer for one array never shows as a drop at the end. The steps are in the
+    time zone of the first forecast's.
     """
     lists = [list(steps) for steps in forecasts]
     if len(lists) == 1:
@@ -232,7 +226,8 @@ def add_up(forecasts: Sequence[Sequence[ForecastStep]]) -> list[ForecastStep]:
 
 
 def each_array(system: SystemDescription, fetch_one: Callable[[PanelArray], list[ForecastStep]]) -> list[ForecastStep]:
-    """For a service that forecasts one array per request: asks `fetch_one` for each array in turn and adds the
-    answers up (`add_up`). Each answer must satisfy `check_steps`. A failure for any array (a `ProviderError`) is
-    the failure of the whole forecast: a total without one of the arrays would be wrong."""
+    """For a service that forecasts one array per request: asks `fetch_one` for each array and adds the answers up (`add_up`).
+    Each answer must satisfy `check_steps`. A `ProviderError` for any array fails the whole forecast: a total without one of
+    the arrays would be wrong.
+    """
     return add_up([fetch_one(array) for array in system.arrays])

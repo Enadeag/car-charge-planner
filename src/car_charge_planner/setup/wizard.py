@@ -1,8 +1,7 @@
 """The set-up wizard window: pages, Back and Next, and one write at the end.
 
-Nothing is saved until Finish: the answers live in a `SetupState`, and Finish checks them, writes the config
-once and hands the result to `on_finish` (the controller applies it). Closing earlier asks "Leave set-up?" and
-writes nothing. Opening it again starts from the current config, so "Run set-up again" is pre-filled.
+Nothing is saved until Finish checks the answers (a `SetupState`) and hands the config to `on_finish`. Closing earlier
+asks "Leave set-up?" and writes nothing. Opening it again starts from the current config.
 """
 
 from __future__ import annotations
@@ -49,8 +48,6 @@ def ask_leave(parent) -> bool:
 
 
 class SetupWizard(QDialog):
-    """Not modal, like Settings: the tray and the popup keep working while it is open."""
-
     def __init__(
         self,
         cfg: Config,
@@ -116,8 +113,6 @@ class SetupWizard(QDialog):
         self.current = ""
         self._show(self.sequence[0])
 
-    # -- what pages ask of the wizard ---------------------------------------------------------------------------
-
     @property
     def page_ids(self) -> set[str]:
         return set(self.pages)
@@ -135,8 +130,6 @@ class SetupWizard(QDialog):
         except SecretsError:
             secrets = {}
         return try_provider(provider, cfg, secrets)
-
-    # -- moving about -------------------------------------------------------------------------------------------
 
     def _show(self, page_id: str) -> None:
         if self.current:
@@ -182,8 +175,6 @@ class SetupWizard(QDialog):
             return
         following = self.sequence[self.sequence.index(self.current) + 1] if self.current in self.sequence else self.sequence[0]
         self.navigate(following)
-
-    # -- the end ------------------------------------------------------------------------------------------------
 
     def finish(self) -> bool:
         """Check everything together, write the config once, hand it over. False (and nothing written) on a problem."""

@@ -30,6 +30,28 @@ The code is checked in basic mode, and `planner/` and `forecast/` (no Qt) in str
 
 A change comes with a test that fails without it. New or changed texts need a refreshed template (see below).
 
+## Comments and docstrings
+
+Write one only when it says something the name, signature and types cannot.
+
+- Do comment the why: a decision, a constraint, a trade-off, an edge case, a unit or format the types don't show.
+- Always comment a workaround for Qt, D-Bus, TOML, time-zone changes or another library, saying what breaks and why.
+- Public contracts (the provider protocol, the conformance kit) are documented fully but briefly, in one place.
+- A module docstring is one sentence about the module's role. Longer explanations go in `docs/`.
+- Leave out docstrings on trivial properties, private helpers, signals and overrides whose names say it all.
+- No spec section or ticket numbers, no history ("used to", "as before"): git keeps that. No section banners: split the file instead.
+- Delete a comment that restates the next line.
+
+## What a test should do
+
+- Test behaviour someone depends on: a plan, a saved file, a request sent, a message shown in the right language. Assert the effect, not that a mock was called or that a widget exists.
+- Every test must be able to fail when the behaviour breaks. Prefer exact expected values and recorded responses over "does not crash" or "is not None".
+- Don't pin exact UI wording, widget geometry, widget parentage or private attributes. Go through the public method, the signal or the saved result. The pseudo-language test already covers untranslated and clipped texts on every page.
+- One behaviour, one test. The same path with other inputs is a `parametrize`. A rule shared by all providers belongs in the conformance kit, not in each provider's tests.
+- Checks on the repository itself (docs, README, packaging, template) only when they are cheap and catch a real mistake.
+- A test that starts the app or uses real timers waits for a condition, never a fixed `sleep`.
+- Don't test test helpers, fixtures or constants. In tests too, the test name is the documentation: comment only what is surprising.
+
 ## Code layout
 
 Everything is in `src/car_charge_planner/`:

@@ -1,8 +1,7 @@
-"""The Solar panels page: size, direction and tilt, with "I don't know" for typical values.
+"""The Solar panels page: size, direction and tilt per panel array, with "I don't know" for typical values.
 
-One panel array is the simple case and looks like a single set of questions. "Add another array" adds one (an
-east and a west roof); the arrays then get tabs, an optional name and a Remove button, and the questions are
-about the array whose tab is chosen."""
+With several arrays they get tabs, an optional name and a Remove button; the questions are about the chosen tab's array.
+"""
 
 from __future__ import annotations
 
@@ -33,7 +32,7 @@ from .typical import with_typical
 
 DEFAULT_COUNT = 12  # the panels and watts each array starts with
 DEFAULT_WATTS = 400
-KWP = " kWp"  # a unit symbol: the same in every language, so not translated
+KWP = " kWp"
 PAGE_FIELDS = ("kwp", "azimuth_deg", "tilt_deg")  # what this page asks of each array (the losses stay typical)
 
 
@@ -65,7 +64,7 @@ class SolarPage(Page):
     def __init__(self, wizard) -> None:
         super().__init__(wizard)
         self._filling = False
-        self.current = 0  # the array the questions are about
+        self.current = 0
         self.counts: list[tuple[int, int]] = []  # per array: the number of panels and the watts of one
         layout = QVBoxLayout(self)
 
@@ -78,7 +77,6 @@ class SolarPage(Page):
         top.addWidget(self.typical_note, 1)
         layout.addLayout(top)
 
-        # -- the arrays: only shown when there is more than one
         self.array_tabs = QTabBar()
         self.array_tabs.setExpanding(False)
         self.array_tabs.setDrawBase(False)
@@ -94,7 +92,6 @@ class SolarPage(Page):
         self.array_row.addWidget(self.remove_button)
         layout.addLayout(self.array_row)
 
-        # -- size
         layout.addWidget(heading(_("Size")))
         row = QHBoxLayout()
         self.by_total = QRadioButton(_("Total size"))
@@ -131,7 +128,6 @@ class SolarPage(Page):
         modes.addButton(self.by_count)
         layout.addWidget(note(_("The total is on the installer's datasheet or invoice, and in the inverter's app. Otherwise count the panels on the roof and read the watts on the label of one.")))
 
-        # -- direction
         layout.addWidget(heading(_("Direction the panels face")))
         row = QHBoxLayout()
         compass = QGridLayout()
@@ -164,7 +160,6 @@ class SolarPage(Page):
         layout.addLayout(row)
         layout.addWidget(note(_("The direction the panels face, not the way the roof runs. A satellite view in a map app shows it. 0 is south, -90 east, 90 west, 180 north.")))
 
-        # -- tilt
         layout.addWidget(heading(_("Tilt")))
         row = QHBoxLayout()
         self.tilt_buttons: dict[str, QPushButton] = {}
@@ -185,7 +180,6 @@ class SolarPage(Page):
         layout.addLayout(row)
         layout.addWidget(note(_("The angle of the panels from flat. Most pitched roofs are 30 to 40 degrees; the installer or the roof's papers know.")))
 
-        # -- more arrays
         row = QHBoxLayout()
         self.add_button = QPushButton(_("Add another array"))
         self.add_button.setAutoDefault(False)
@@ -207,8 +201,6 @@ class SolarPage(Page):
         self.remove_button.clicked.connect(self._remove_array)
         self.add_button.clicked.connect(self._add_array)
 
-    # -- showing what the answers say ----------------------------------------------------------------------------
-
     def enter(self) -> None:
         self._match_counts()
         self.current = min(self.current, len(self.state.config.panels) - 1)
@@ -216,7 +208,6 @@ class SolarPage(Page):
 
     @property
     def panels(self) -> Panels:
-        """The array the questions are about."""
         return self.state.config.panels[self.current]
 
     def _match_counts(self) -> None:
@@ -293,8 +284,6 @@ class SolarPage(Page):
             )
         else:
             self.typical_note.setText("")
-
-    # -- what the person does ------------------------------------------------------------------------------------
 
     def _set_panels(self, field: str, value) -> None:
         """The person gave this value of the current array: it goes into the answers and is no longer a typical one."""

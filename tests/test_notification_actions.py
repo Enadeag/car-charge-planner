@@ -50,9 +50,6 @@ def wait_for(condition, ms=2000):
     return False
 
 
-# ---- which clicks count ---------------------------------------------------------------
-
-
 def test_the_notifier_knows_which_ids_it_sent():
     notifier = Notifier(RecordingBus(), icon="x")
     first = notifier.send("a", "b")
@@ -90,9 +87,6 @@ def test_the_default_action_key_is_the_one_the_notifier_sends():
     assert DEFAULT_ACTION == sent[0] == "default"
 
 
-# ---- the shells show their plan ------------------------------------------------------------
-
-
 def make_controller(cfg, tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda *a, **k: None)
@@ -120,9 +114,6 @@ def test_a_click_opens_the_tray_popup(cfg, tmp_path, monkeypatch, qapp):
     handle(1, DEFAULT_ACTION)
     assert shell.popup.isVisible() and shell.popup.tabs.currentIndex() == 0  # on the plan
     shell.popup.hide()
-
-
-# ---- where the popup appears with no tray icon to go by ------------------------------------
 
 
 def area():
@@ -156,9 +147,6 @@ def test_an_anchored_placement_still_wins_over_the_remembered_one(cfg, qapp):
     popup.show_near(QRect(400, 100, 24, 24))
     assert popup.last_position == QPoint(popup.x(), popup.y()) and popup.last_position != QPoint(5, 5)
     popup.hide()
-
-
-# ---- the listener ------------------------------------------------------------------------------
 
 
 class FakeSource:
@@ -215,7 +203,7 @@ def test_a_listener_that_cannot_work_is_logged_and_the_app_carries_on(qapp, capl
         listener.start()
         assert wait_for(lambda: not listener.running)
     assert any("Not listening for notification clicks" in r.message for r in caplog.records)
-    listener.stop()  # still safe
+    listener.stop()  # a second stop is safe
 
 
 def test_the_thread_does_not_keep_the_app_alive(qapp):
@@ -223,9 +211,6 @@ def test_the_thread_does_not_keep_the_app_alive(qapp):
     listener.start()
     assert listener._thread.daemon
     listener.stop()
-
-
-# ---- for real, over the session bus ----------------------------------------------------------------
 
 
 @pytest.mark.skipif(not os.environ.get("DBUS_SESSION_BUS_ADDRESS"), reason="needs a session bus")
@@ -253,9 +238,6 @@ def test_a_real_action_signal_on_the_session_bus_is_heard(qapp):
         started = time.time()
         listener.stop()
     assert time.time() - started < 3  # it stops promptly instead of hanging on a blocked read
-
-
-# ---- python -m app test-notification ------------------------------------------------------------
 
 
 class Said(list):

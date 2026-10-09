@@ -1,4 +1,4 @@
-"""Expected surplus from the forecast (spec 4.2)."""
+"""Expected surplus from the forecast."""
 
 from __future__ import annotations
 

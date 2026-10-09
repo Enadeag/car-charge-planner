@@ -1,5 +1,4 @@
-"""A launcher entry and icon, so the app appears in the application menu and the desktop can tie
-its windows and notifications to it (GNOME needs this; KDE benefits)."""
+"""A launcher entry and icon, so the desktop can tie the app's windows and notifications to it (GNOME needs this)."""
 
 from __future__ import annotations
 

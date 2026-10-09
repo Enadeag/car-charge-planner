@@ -34,7 +34,7 @@ def test_active_window_says_charge_now(cfg):
 def test_no_window_state(cfg):
     vm = view(cfg, at(DAY, 7), days=((DAY, 150),))
     assert vm.state == "none"
-    assert vm.outlook == () and vm.quiet_days == ""  # the headline already says there is nothing
+    assert vm.outlook == () and vm.quiet_days == ""
 
 
 def test_next_window_can_be_tomorrow(cfg):
@@ -47,7 +47,7 @@ def test_outlook_lists_the_later_days_and_not_the_headline_window_again(cfg):
     assert vm.headline.startswith("Next: Today")
     assert [r.day for r in vm.outlook] == ["Tomorrow", "Sun 5 Jul", "Mon 6 Jul"]  # today is the headline
     first = vm.outlook[0]
-    assert first.span == "10:00-15:00" or first.span[2] == ":"  # a clock span
+    assert first.span == "10:00-15:00" or first.span[2] == ":"
     assert first.power.endswith(" A)") and first.energy.endswith(" kWh")
     assert vm.quiet_days == ""
 
@@ -178,9 +178,6 @@ def test_before_there_is_a_forecast_the_footer_is_empty(cfg):
     assert needs_setup(BATTERY, at(DAY, 7)).footer == "" and no_forecast("offline", BATTERY, at(DAY, 7)).footer == ""
 
 
-# ---- short horizons ------------------------------------------------------------------------------------------
-
-
 def horizon_view(cfg, peaks, now=None):
     now = now or at(DAY, 7)
     fc = forecast_from([(DAY + timedelta(days=i), peak) for i, peak in enumerate(peaks)])
@@ -202,7 +199,7 @@ def test_a_two_day_forecast_shows_the_second_day_only(cfg):
 
 def test_a_quiet_second_day_is_named_and_a_quiet_only_day_is_not_repeated(cfg):
     assert horizon_view(cfg, [900, 120]).quiet_days == "Tomorrow: no good window"
-    assert horizon_view(cfg, [120]).quiet_days == ""  # the headline already says it
+    assert horizon_view(cfg, [120]).quiet_days == ""
 
 
 def test_late_in_the_day_a_short_forecast_still_plans(cfg):
@@ -253,7 +250,7 @@ def test_dull_days_and_low_battery_give_grid_state(cfg):
     days = [(DAY + timedelta(days=i), 120) for i in range(3)]
     vm = _advice_view(cfg, days, 35, at(DAY, 7))
     assert vm.state == "grid" and vm.headline == "Grid charge needed"
-    assert vm.advice.title.startswith("Grid charge needed \u00b7 ")  # when, as a fact
+    assert vm.advice.title.startswith("Grid charge needed \u00b7 ")
     assert "kW (" in vm.advice.detail and "about" in vm.advice.detail and "kWh" in vm.advice.detail
     assert vm.advice.reason.startswith("Battery would drop to") and "minimum 30%" in vm.advice.reason
     assert "Grid charge needed" in vm.tooltip

@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from car_charge_planner.i18n import NC_
 
-# the eight compass directions as buttons: (key, short name, long name, azimuth). Azimuth: 0 = south, -90 = east,
-# 90 = west, 180 = north: the convention of the planner and of the forecast providers.
+# the eight compass directions as buttons: (key, short name, long name, azimuth in degrees)
 COMPASS = (
     ("nw", NC_("compass, short", "NW"), NC_("compass direction", "North-west"), 135),
     ("n", NC_("compass, short", "N"), NC_("compass direction", "North"), 180),

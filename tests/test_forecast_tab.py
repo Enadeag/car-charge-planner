@@ -1,4 +1,4 @@
-"""The Forecast tab in Settings (ticket P7)."""
+"""The Forecast tab in Settings."""
 
 import os
 
@@ -90,9 +90,6 @@ def labels(widget):
     return [l.text() for l in widget.findChildren(QLabel) if l.isVisibleTo(widget)]
 
 
-# ---- the choices -----------------------------------------------------------------------------------------------
-
-
 def test_the_tab_sits_between_planning_and_interface(rig):
     titles = [rig.window.tabs.tabText(i) for i in range(rig.window.tabs.count())]
     assert titles.index("Forecast") == titles.index("Planning and notifications") + 1
@@ -138,9 +135,6 @@ def test_required_settings_are_marked_and_secret_ones_masked(rig):
     assert rig.field("alpha", "api_key").line.echoMode().name == "Password"
     assert any("Required." in t for t in labels(rig.tab.cards["alpha"].fields))
     assert not any("Required." in t and "account" in t.lower() for t in labels(rig.tab.cards["alpha"].fields))
-
-
-# ---- saving, dirty tracking, reset ---------------------------------------------------------------------------
 
 
 def test_editing_a_choice_or_a_setting_marks_the_window_changed(rig):
@@ -210,9 +204,6 @@ def test_reset_puts_the_tab_back_to_the_defaults_without_saving(tmp_path, qapp):
     assert load_secrets(rig.secrets_file) == {"alpha": {"api_key": KEY}}  # nothing is saved until Save
 
 
-# ---- validation ---------------------------------------------------------------------------------------------
-
-
 def test_a_missing_required_setting_stops_the_save_and_names_it(rig):
     rig.pick("primary", "alpha")
     assert not rig.window.save()
@@ -253,9 +244,6 @@ def test_an_unreadable_secrets_file_is_said_on_the_tab_and_does_not_block_other_
     rig.field("alpha", "account").setText("me")  # a plain setting changes; no secret is typed
     assert rig.window.save()
     assert (tmp_path / "secrets.toml").read_text() == "this is [not toml"  # left as it was
-
-
-# ---- the Test button ----------------------------------------------------------------------------------------
 
 
 def test_the_test_button_reports_the_days_it_got_and_saves_nothing(rig):
@@ -333,7 +321,7 @@ def test_while_a_test_runs_the_button_waits_and_the_window_stays_usable(rig):
     rig.beta.script = [Held(release, two_days())]
     rig.tab.test_buttons["primary"].click()
     assert not rig.tab.test_buttons["primary"].isEnabled() and "Asking Beta" in rig.tab.results["primary"].text()
-    rig.pick("fallback", "alpha")  # the window answers meanwhile
+    rig.pick("fallback", "alpha")
     assert rig.window.is_dirty()
     release.set()
     assert rig.wait_for_test("primary") == "OK: 2 days of forecast"
@@ -345,9 +333,6 @@ def test_the_result_is_cleared_when_the_tab_is_loaded_again(rig):
     rig.wait_for_test("primary")
     rig.tab.load(rig.window.stored)
     assert rig.tab.results["primary"].text() == ""
-
-
-# ---- the tab itself ---------------------------------------------------------------------------------------
 
 
 def test_the_tab_scrolls_so_two_providers_are_not_squeezed(rig):
@@ -388,8 +373,7 @@ def test_results_use_the_accent_colours_of_the_theme(tmp_path, qapp):
 
 
 def test_the_days_counted_are_today_onwards_even_when_the_first_step_belongs_to_yesterday():
-    """Found in the live check: Open-Meteo's first step is the hour before midnight, so four days of data
-    touch five dates, and the Test button said "5 days"."""
+    """Open-Meteo's first step is the hour before midnight: four days touch five dates, and Test said "5 days"."""
     from car_charge_planner.forecast.check import forecast_days
     from car_charge_planner.planner.model import ForecastStep
 
@@ -402,7 +386,7 @@ def test_the_days_counted_are_today_onwards_even_when_the_first_step_belongs_to_
 
 
 def test_the_terms_link_is_readable_on_a_dark_window(tmp_path, qapp):
-    """Found by looking at the rendered tab: the default link blue was nearly invisible on a dark window."""
+    """The default link blue was nearly invisible on a dark window."""
     from PySide6.QtGui import QColor, QPalette
 
     original = qapp.palette()

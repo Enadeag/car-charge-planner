@@ -1,18 +1,9 @@
-"""Forecast.Solar as a forecast provider.
+"""Forecast.Solar (https://forecast.solar) as a forecast provider; the public plan needs no key.
 
-Forecast.Solar (https://forecast.solar) estimates the output of a solar system itself, from the location, the
-tilt and direction of the plane and its kWp. The public plan needs no key: today and tomorrow, hour by hour,
-one plane, 12 requests an hour per internet address. A personal plan adds an API key, more days and finer steps.
-
-The provider asks for `estimate/watthours/period`: the energy (Wh) of each period, which the documentation
-defines as "from the last timestamp to the timestamp in the key". The timestamps are local time at the place
-(its time zone is in the answer). A day starts with a key at sunrise whose value is 0 (nothing came before
-it), so that key gives no step; the others give one step each, as long as the period it covers.
-
-Several panel arrays: the public plan forecasts one plane per request, so the provider asks once for each array
-and adds the answers up (each request counts towards the 12 an hour). Paid plans can take several planes in one
-request, but how many depends on the plan, which the app cannot see from the key; so they are asked once per
-array too. A rate limit on any of the requests is a rate limit for the whole forecast.
+Asks for `estimate/watthours/period`: the Wh of the period "from the last timestamp to the timestamp in the key", in the
+place's local time. A day's first key (sunrise, value 0) gives no step. The public plan forecasts one plane per request,
+and paid plans' multi-plane limits are not visible from the key, so each array is asked for separately and the answers
+added up; a rate limit on any request is one for the whole forecast.
 """
 
 from __future__ import annotations
@@ -77,12 +68,9 @@ class ForecastSolar:
     def __init__(self, transport: Transport = urllib_transport) -> None:
         self.transport = transport
 
-    # -- the request -------------------------------------------------------------------------------------------
-
     @staticmethod
     def request_url(system: SystemDescription, array: PanelArray, settings: dict[str, str]) -> str:
-        """The request for one panel array of the system. Tilt and direction are whole degrees in this API;
-        0 = south, -90 = east, 90 = west, ±180 = north, the same convention as ours."""
+        """The request for one panel array of the system. Tilt and direction are whole degrees in this API."""
         key = (settings.get("api_key") or "").strip()
         tilt = min(90, max(0, round(array.tilt_deg)))
         azimuth = min(180, max(-180, round(array.azimuth_deg)))
@@ -97,8 +85,6 @@ class ForecastSolar:
             _number(array.kwp, 3),
         ]
         return "/".join(parts)
-
-    # -- fetching ----------------------------------------------------------------------------------------------
 
     def fetch(self, system: SystemDescription, settings: dict[str, str], now: datetime) -> list[ForecastStep]:
         return require_valid_steps(each_array(system, lambda array: self._fetch_array(system, array, settings, now)))

@@ -1,8 +1,6 @@
-"""Hear when the owner clicks one of our notifications (org.freedesktop.Notifications ActionInvoked).
+"""Hear when the owner clicks one of our notifications (ActionInvoked over D-Bus), on a background thread.
 
-A small background thread keeps a D-Bus connection, listens for the signal and hands each one to the Qt
-side as a queued signal. The notification service says which notification was clicked by id; only ids
-this app sent count (`Notifier.owns`).
+The service names the clicked notification by id; only ids this app sent count (`Notifier.owns`).
 """
 
 from __future__ import annotations
@@ -57,8 +55,8 @@ class JeepneySource:
 
 
 class ActionListener(QObject):
-    action_invoked = Signal(int, str)  # notification id, action key; delivered on the Qt thread
-    _received = Signal(int, str)  # from the listening thread; queued onto the Qt thread
+    action_invoked = Signal(int, str)  # notification id, action key
+    _received = Signal(int, str)  # emitted on the listening thread, queued onto the Qt thread
 
     def __init__(self, source: ActionSource | None = None) -> None:
         super().__init__()

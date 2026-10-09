@@ -1,4 +1,4 @@
-"""The Solar panels page of the set-up wizard and its helpers (ticket S7)."""
+"""The Solar panels page of the set-up wizard and its helpers."""
 
 import os
 
@@ -23,9 +23,6 @@ NL = {"LANG": "nl_NL.UTF-8"}
 @pytest.fixture
 def qapp():
     return QApplication.instance() or QApplication([])
-
-
-# ---- the helpers --------------------------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("count, watts, kwp", [(12, 400, 4.8), (10, 410, 4.1), (20, 375, 7.5), (1, 50, 0.05), (500, 1000, 500.0), (14, 435, 6.09)])
@@ -64,16 +61,12 @@ def test_the_presets_are_the_three_roofs_people_know():
     assert [(k, d) for k, _n, d in TILT_PRESETS] == [("flat", 10), ("pitched", 35), ("steep", 45)]
 
 
-# ---- typical values -----------------------------------------------------------------------------------------
-
-
 def test_there_is_a_typical_value_for_every_setting_that_can_be_one_and_they_are_valid():
     assert set(TYPICAL_VALUES) == set(TYPICAL_KEYS)
-    validate(with_values(Config(latitude=1.0, longitude=1.0), TYPICAL_VALUES))  # all together make a config the planner accepts
+    validate(with_values(Config(latitude=1.0, longitude=1.0), TYPICAL_VALUES))
 
 
 def test_the_built_in_defaults_are_the_typical_values_so_settings_reset_and_the_wizard_agree():
-    """One source of truth: what Reset tab gives, what a new install starts with and "I don't know" uses."""
     from car_charge_planner.settings.fields import get_value
 
     defaults = Config()
@@ -93,9 +86,6 @@ def test_a_new_install_starts_with_the_typical_values_not_the_built_in_defaults(
 
 def test_a_config_that_is_set_up_is_not_touched():
     assert SetupState.starting_from(example_config(), NL).config.panels[0].kwp == 4.8
-
-
-# ---- the page ----------------------------------------------------------------------------------------------
 
 
 class Rig:
@@ -138,8 +128,6 @@ def test_a_set_up_config_shows_its_own_values_without_the_typical_note(tmp_path,
     assert (rig.page.kwp.value(), rig.page.degrees.value(), rig.page.tilt.value()) == (4.8, -45, 35)
     assert rig.page.compass_buttons["se"].isChecked() and rig.page.typical_note.text() == ""
 
-
-# size
 
 def test_typing_the_size_gives_that_value_and_it_stops_being_typical(rig):
     rig.page.kwp.setValue(6.4)
@@ -209,8 +197,6 @@ def test_the_size_has_the_limits_settings_has(rig):
     assert rig.page.kwp.value() == 0.1
 
 
-# direction
-
 def test_a_compass_button_sets_the_degrees_and_the_answer(rig):
     rig.page.compass_buttons["e"].click()
     assert rig.page.degrees.value() == -90 and rig.panels[0].azimuth_deg == -90 and "panels.azimuth_deg" not in rig.typical
@@ -235,8 +221,6 @@ def test_clicking_the_direction_that_is_already_shown_is_still_an_answer(rig):
     assert rig.panels[0].azimuth_deg == 0 and "panels.azimuth_deg" not in rig.typical
 
 
-# tilt
-
 def test_a_tilt_preset_sets_the_angle_and_the_answer(rig):
     rig.page.tilt_buttons["flat"].click()
     assert rig.page.tilt.value() == 10 and rig.panels[0].tilt_deg == 10 and "panels.tilt_deg" not in rig.typical
@@ -256,8 +240,6 @@ def test_clicking_the_preset_that_is_already_shown_is_still_an_answer(rig):
     rig.page.tilt_buttons["pitched"].click()
     assert "panels.tilt_deg" not in rig.typical
 
-
-# "I don't know"
 
 def test_i_dont_know_puts_the_typical_values_back_and_remembers_them_as_typical(tmp_path, qapp):
     rig = Rig(tmp_path, cfg=example_config())  # a set-up config: values of its own
@@ -285,8 +267,6 @@ def test_i_dont_know_leaves_the_rest_of_the_answers_alone(tmp_path, qapp):
     assert rig.wizard.state.config.latitude == 52.37 and rig.wizard.state.config.car == example_config().car
 
 
-# going on and back
-
 def test_the_answers_are_kept_when_leaving_and_coming_back(rig):
     rig.page.kwp.setValue(6.6)
     rig.page.compass_buttons["se"].click()
@@ -309,8 +289,6 @@ def test_finishing_writes_the_panels_and_what_is_still_typical(tmp_path, qapp):
     assert "panels.tilt_deg" in written.setup.typical and "car.km_per_day" in written.setup.typical
 
 
-# the explanations
-
 def test_each_value_has_its_where_to_find_line_and_the_note_on_several_arrays(rig):
     shown = " ".join(texts(rig.page))
     assert "installer's datasheet or invoice, and in the inverter's app" in shown
@@ -318,8 +296,6 @@ def test_each_value_has_its_where_to_find_line_and_the_note_on_several_arrays(ri
     assert "Most pitched roofs are 30 to 40 degrees" in shown
     assert "an east and a west roof? Add each as its own array" in shown and "face them south" not in shown
 
-
-# several panel arrays
 
 def test_one_array_shows_no_tabs_names_or_remove(rig):
     assert rig.page.array_tabs.isHidden() and rig.page.name.isHidden() and rig.page.remove_button.isHidden()
@@ -339,7 +315,7 @@ def test_another_array_starts_typical_gets_a_tab_and_is_the_one_asked_about(tmp_
     rig.page.name.setText("Garage")
     rig.page.name.textEdited.emit("Garage")
     assert rig.panels[1] == Panels(kwp=2.4, tilt_deg=35, azimuth_deg=90, system_losses=0.14, name="Garage")
-    assert rig.panels[0] == example_config().panels[0]  # the first array is left alone
+    assert rig.panels[0] == example_config().panels[0]
     assert rig.page.array_tabs.tabText(1) == "Garage"
     assert rig.typical == ("panels.2.tilt_deg", "panels.2.system_losses")
 

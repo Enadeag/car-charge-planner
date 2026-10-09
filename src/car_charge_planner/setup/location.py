@@ -135,8 +135,6 @@ class LocationPage(Page):
         self.longitude.valueChanged.connect(self._coordinates_edited)
         self.timezone.currentTextChanged.connect(self._zone_edited)
 
-    # -- showing what the answers say --------------------------------------------------------------------------
-
     def enter(self) -> None:
         cfg = self.state.config
         found = place_search(cfg, self.wizard.registry)
@@ -169,8 +167,6 @@ class LocationPage(Page):
 
     def can_continue(self) -> bool:
         return self.state.has_location and self._zone_ok()
-
-    # -- searching ---------------------------------------------------------------------------------------------
 
     def _typed(self, _text: str) -> None:
         self.timer.start()
@@ -229,8 +225,6 @@ class LocationPage(Page):
         else:
             self.status.setText(_("The search service gave an answer the app does not understand. Enter the coordinates instead."))
         self.coordinates_toggle.setChecked(True)  # the way out is in sight
-
-    # -- choosing ----------------------------------------------------------------------------------------------
 
     def _picked(self, item: QListWidgetItem) -> None:
         row = self.results.row(item)

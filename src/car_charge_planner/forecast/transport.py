@@ -14,7 +14,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-PROJECT_URL = "https://github.com/Enadeag/car-charge-planner"  # the address after the repository is renamed
+PROJECT_URL = "https://github.com/Enadeag/car-charge-planner"
 USER_AGENT = f"car-charge-planner (+{PROJECT_URL})"
 TIMEOUT_S = 15
 
@@ -49,7 +49,6 @@ Transport = Callable[[Request], Reply]
 
 
 def urllib_transport(request: Request) -> Reply:
-    """The real one."""
     headers = {"User-Agent": USER_AGENT, **request.headers}
     try:
         with urllib.request.urlopen(urllib.request.Request(request.url, headers=headers), timeout=request.timeout_s) as response:

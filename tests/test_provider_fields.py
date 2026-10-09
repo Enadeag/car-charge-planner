@@ -1,4 +1,4 @@
-"""The Settings field machinery for provider settings: text and masked secret fields built at run time (ticket P5)."""
+"""The Settings field machinery for provider settings: text and masked secret fields built at run time ."""
 
 import os
 
@@ -41,7 +41,7 @@ def test_values_live_in_the_forecast_section_of_the_config(cfg):
     chosen = set_value(cfg, key, "https://customer-api.open-meteo.com")
     assert chosen.forecast.settings == {"open-meteo": {"base_url": "https://customer-api.open-meteo.com"}}
     assert get_value(chosen, key) == "https://customer-api.open-meteo.com"
-    assert cfg.forecast.settings == {}  # the original is untouched
+    assert cfg.forecast.settings == {}
 
 
 def test_an_empty_value_is_no_setting_and_an_empty_provider_disappears(cfg):
@@ -55,7 +55,7 @@ def test_the_text_field_is_a_plain_box_filled_from_the_config(qapp, cfg):
     box = tab.inputs["forecast.open-meteo.base_url"]
     assert isinstance(box, QLineEdit) and box.text() == "https://x.test" and box.echoMode() == QLineEdit.EchoMode.Normal
     box.setText("  https://y.test \n")
-    assert tab.apply_to(cfg).forecast.settings["open-meteo"]["base_url"] == "https://y.test"  # trimmed
+    assert tab.apply_to(cfg).forecast.settings["open-meteo"]["base_url"] == "https://y.test"
 
 
 def test_the_secret_field_shows_dots_until_asked(qapp, cfg):
@@ -72,7 +72,7 @@ def test_the_secret_field_shows_dots_until_asked(qapp, cfg):
 def test_a_secret_never_goes_into_the_config(qapp, cfg):
     tab = tab_for(OpenMeteo(), cfg, {"forecast.open-meteo.api_key": SECRET})
     applied = tab.apply_to(cfg)
-    assert applied == cfg and SECRET not in repr(applied)  # unchanged: nothing of it is in the Config
+    assert applied == cfg and SECRET not in repr(applied)
     assert tab.collect_secrets() == {"forecast.open-meteo.api_key": SECRET}
 
 

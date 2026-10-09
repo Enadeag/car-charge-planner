@@ -36,9 +36,6 @@ def qapp():
     return QApplication.instance() or QApplication([])
 
 
-# ---- the defaults -------------------------------------------------------------------------
-
-
 def test_a_new_config_assumes_nothing_about_the_user():
     cfg = Config()
     assert (cfg.latitude, cfg.longitude) == (0.0, 0.0)
@@ -55,9 +52,6 @@ def test_a_location_counts_when_either_part_is_not_zero(lat, lon, expected):
 def test_defaults_do_not_name_any_particular_place():
     cfg = Config()
     assert abs(cfg.latitude) < 1e-9 and abs(cfg.longitude) < 1e-9
-
-
-# ---- the system time zone ---------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -80,9 +74,6 @@ def test_the_time_zone_comes_from_the_system(environ, etc_timezone, localtime, e
 
 def test_the_detected_zone_is_always_a_real_one():
     ZoneInfo(system_timezone())  # must not raise
-
-
-# ---- saving needs a location ---------------------------------------------------------------------
 
 
 def test_requiring_a_location_gives_a_plain_message():
@@ -112,9 +103,6 @@ def test_a_config_without_an_away_section_has_no_rules(tmp_path):
     assert load_config(f).away_rules == ()
 
 
-# ---- the view model --------------------------------------------------------------------------------
-
-
 def test_the_not_set_up_view_says_where_to_go():
     now = at(DAY, 7)
     vm = needs_setup(BatteryReading(50, None), now)
@@ -132,9 +120,6 @@ def test_the_icon_exists(qapp):
     assert not make_icon("needs-setup").isNull()
 
 
-# ---- the controller never fetches without a location ------------------------------------------------
-
-
 class CountingFetch:
     def __init__(self):
         self.calls = []
@@ -146,11 +131,7 @@ class CountingFetch:
 
 
 def settle(controller, seconds=3.0):
-    """Wait until a fetch started by the controller has been delivered.
-
-    A test must not end while its fetch thread is still running: the result would be delivered to a
-    controller that is already gone, during whichever test runs next.
-    """
+    """Wait until a fetch started by the controller has been delivered, so it is not delivered during the next test."""
     import time
 
     from PySide6.QtTest import QTest
@@ -158,7 +139,7 @@ def settle(controller, seconds=3.0):
     deadline = time.time() + seconds
     while controller._loading and time.time() < deadline:
         QTest.qWait(20)
-    QTest.qWait(20)  # the queued result is handled on the next pass of the event loop
+    QTest.qWait(20)
     assert not controller._loading, "the fetch did not finish"
 
 
@@ -204,9 +185,6 @@ def test_nothing_is_announced_while_not_set_up(tmp_path, monkeypatch, qapp):
     assert controller.notifier.sent == [] and controller.vm.state == "needs-setup"
 
 
-# ---- both shells -------------------------------------------------------------------------------------
-
-
 def test_the_tray_shell_shows_the_state(tmp_path, monkeypatch, qapp):
     controller, _ = make_controller(Config(), tmp_path, monkeypatch)
     shell = TrayShell(controller)
@@ -236,11 +214,8 @@ def test_the_plan_page_offers_the_set_up_wizard_only_while_not_set_up(tmp_path, 
     wizard.close()
     controller.apply_config(example_config())  # a location entered some other way: set up
     settle(controller)
-    assert not button.isVisible()  # once there is a location the button goes away
+    assert not button.isVisible()
     shell.window.hide()
-
-
-# ---- Settings ------------------------------------------------------------------------------------------
 
 
 def settings_window(tmp_path, cfg):
@@ -277,9 +252,6 @@ def test_the_hint_says_what_zero_zero_means(tmp_path, qapp):
     assert any("0 and 0 together mean not set" in t for t in hints)
 
 
-# ---- the command line --------------------------------------------------------------------------------------
-
-
 def run_cli(*args, cwd=PROJECT):
     return subprocess.run([sys.executable, "-m", "car_charge_planner.planner.cli", *args], cwd=cwd, capture_output=True, text=True, timeout=60)
 
@@ -292,9 +264,6 @@ def test_the_live_command_refuses_without_a_location_and_fetches_nothing():
 def test_the_demo_command_needs_no_location():
     done = run_cli("--demo", "summer", "--battery", "50", "--now", "2026-07-03T07:00+02:00")
     assert done.returncode == 0 and "Fri 03 Jul" in done.stdout
-
-
-# ---- the whole app: a first start fetches nothing -------------------------------------------------------------
 
 
 def test_a_first_start_of_the_whole_app_makes_no_forecast_request(tmp_path):
@@ -329,9 +298,6 @@ def test_a_first_start_of_the_whole_app_makes_no_forecast_request(tmp_path):
     assert not (tmp_path / "cache" / "car-charge-planner").exists()  # but no forecast was ever stored
 
 
-# ---- the guard that keeps the suite offline ---------------------------------------------------------------------------
-
-
 def test_the_suite_refuses_internet_connections():
     with pytest.raises(NetworkAccessInTests):
         socket.socket(socket.AF_INET).connect(("example.com", 80))
@@ -352,9 +318,6 @@ def test_local_connections_are_not_affected_by_the_guard(tmp_path):
     server.close()
 
 
-# ---- no nagging before there is a plan ---------------------------------------------------------------------
-
-
 def test_the_not_set_up_view_does_not_nag_about_the_battery():
     vm = needs_setup(BatteryReading(50, None), at(DAY, 7))  # a battery that was never entered
     assert vm.battery_stale is False
@@ -367,11 +330,8 @@ def test_the_plan_page_hides_the_status_lines_while_not_set_up(tmp_path, monkeyp
     assert shell.view.status_box.isHidden() and shell.view.tabs.tabText(1) == "Update"  # no dot, no red prompt
     controller.apply_config(example_config())
     settle(controller)
-    assert not shell.view.status_box.isHidden()  # they come back with the plan
+    assert not shell.view.status_box.isHidden()
     shell.window.hide()
-
-
-# ---- garbage collection stays on the main thread ---------------------------------------------------------------
 
 
 def test_the_collector_is_kept_on_the_main_thread(qapp):
@@ -399,7 +359,7 @@ def test_the_collector_is_kept_on_the_main_thread(qapp):
     timer = gcguard.install(qapp, interval_ms=60_000)
     try:
         assert not gc.isenabled() and timer.isActive()  # automatic collection is off
-        Leftover()  # created here, dropped at once
+        Leftover()
 
         def busy_background_thread():
             junk = [[object()] for _ in range(200_000)]  # plenty of allocations: would trigger collections
@@ -409,7 +369,7 @@ def test_the_collector_is_kept_on_the_main_thread(qapp):
         worker.start()
         worker.join()
         assert destroyed_on == []  # the worker did not collect it
-        timer.timeout.emit()  # the main thread's turn
+        timer.timeout.emit()
         assert destroyed_on == [threading.main_thread().name]
     finally:
         timer.stop()

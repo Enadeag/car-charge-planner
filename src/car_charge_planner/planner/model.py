@@ -228,19 +228,16 @@ class Config:
 
     @property
     def total_kwp(self) -> float:
-        """The size of all panel arrays together."""
         return sum(p.kwp for p in self.panels)
 
-
-# ---- settings by key: "car.km_per_day", "panels.kwp" (the first array), "panels.2.kwp" (the second), "latitude" ----
 
 PANEL_TYPICAL_FIELDS = ("kwp", "tilt_deg", "azimuth_deg", "system_losses")  # what each array can have typical
 _PANEL_FIELDS = tuple(f.name for f in fields(Panels))
 
 
 def panel_key(index: int, name: str) -> str:
-    """The key of a value of panel array `index` (counted from 0): "panels.kwp" for the first array, as it was
-    before there could be several, and "panels.2.kwp" for the second."""
+    """The key of a value of panel array `index` (counted from 0): "panels.kwp" for the first array and
+    "panels.2.kwp" for the second."""
     return f"panels.{name}" if index == 0 else f"panels.{index + 1}.{name}"
 
 
@@ -269,7 +266,6 @@ def typical_keys(cfg: Config) -> tuple[str, ...]:
 
 
 def setting(cfg: Config, key: str) -> Any:
-    """A value by its key."""
     split = split_panel_key(key)
     if split is not None:
         return getattr(cfg.panels[split[0]], split[1])
@@ -350,7 +346,7 @@ class DayPlan:
 
 
 class ConfigError(ValueError):
-    """The config file has a value the planner cannot work with."""
+    """A config value the planner cannot work with."""
 
 
 def validate(cfg: Config) -> Config:

@@ -1,4 +1,4 @@
-"""The set-up wizard window: navigation, Welcome, Finish, leaving early, one write (ticket S5). Offscreen, with a fake check."""
+"""The set-up wizard window: navigation, Welcome, Finish, leaving early, one write."""
 
 import os
 
@@ -23,7 +23,6 @@ US = {"LANG": "en_US.UTF-8"}
 
 
 def sub(tmp_path, name):
-    """A fresh folder, for a test that needs a second wizard."""
     folder = tmp_path / name
     folder.mkdir()
     return folder
@@ -66,7 +65,7 @@ class Rig:
         QTest.qWait(40)
 
     def at_finish(self):
-        self.wizard.navigate("finish")  # straight there: the pages in between have their own tests
+        self.wizard.navigate("finish")
         self.settle()
         return self.wizard.pages["finish"]
 
@@ -78,9 +77,6 @@ def rig(tmp_path, qapp):
 
 def texts(widget):
     return [l.text() for l in widget.findChildren(QLabel)]
-
-
-# ---- the frame -------------------------------------------------------------------------------------------
 
 
 def test_it_opens_on_welcome_with_next_and_no_back(rig):
@@ -120,7 +116,7 @@ def test_a_page_can_stop_next(rig):
     w = Rig(sub(rig.file.parent, "two"), pages=[Stubborn, FinishPage]).wizard
     assert not w.next_button.isEnabled()
     w.next()
-    assert w.current == "welcome"  # Next did nothing
+    assert w.current == "welcome"
     w.pages["welcome"].allowed = True
     w.pages["welcome"].changed.emit()
     assert w.next_button.isEnabled()
@@ -147,11 +143,8 @@ def test_pages_outside_the_sequence_are_reached_by_navigating_and_left_with_back
     assert w.current == "side" and w.step.text() == "" and w.back_button.isEnabled()
     w.back()
     assert w.current == "first"
-    w.navigate("nowhere")  # not a page: nothing happens
+    w.navigate("nowhere")
     assert w.current == "first"
-
-
-# ---- Welcome ---------------------------------------------------------------------------------------------
 
 
 def test_welcome_says_what_the_app_does_and_what_leaves_the_computer(rig):
@@ -189,9 +182,6 @@ def test_the_choice_of_units_is_kept_in_the_answers_when_the_page_is_left(rig):
     assert w.state.config.interface.units == "imperial"
 
 
-# ---- Finish ----------------------------------------------------------------------------------------------
-
-
 def test_finish_shows_the_recap_with_typical_values_marked(tmp_path, qapp):
     rig = Rig(tmp_path, cfg=replace(example_config(), setup=Setup(("panels.kwp", "car.km_per_day"))))
     page = rig.at_finish()
@@ -213,8 +203,8 @@ def test_a_change_link_returns_to_that_page_and_back_comes_back(tmp_path, qapp):
         title = "Location"
 
     rig = Rig(tmp_path, pages=[WelcomePage, Location, FinishPage])
-    rig.wizard.next()  # welcome -> location
-    rig.wizard.next()  # location -> finish
+    rig.wizard.next()
+    rig.wizard.next()
     rig.settle()
     links = [l for l in rig.wizard.pages["finish"].findChildren(QLabel) if "href='location'" in l.text()]
     assert len(links) == 1 and "Change" in links[0].text()
@@ -275,13 +265,10 @@ def test_the_check_runs_off_the_window_thread(tmp_path, qapp):
     assert seen and seen[0] is not threading.main_thread()
 
 
-# ---- writing, once, at the end ---------------------------------------------------------------------------
-
-
 def test_finish_writes_the_config_once_hands_it_over_and_closes(rig):
     rig.wizard.pages["welcome"].units.setCurrentIndex(rig.wizard.pages["welcome"].units.findData("imperial"))
     rig.at_finish()
-    assert not rig.file.exists() and rig.finished == []  # nothing before Finish
+    assert not rig.file.exists() and rig.finished == []
     rig.wizard.next()
     assert rig.wizard.finished_ok and not rig.wizard.isVisible()
     written = load_config(rig.file)
@@ -313,9 +300,6 @@ def test_a_file_that_cannot_be_written_is_said_and_the_wizard_stays(tmp_path, qa
     rig.wizard.config_file = blocker / "config.toml"
     rig.at_finish()
     assert not rig.wizard.finish() and "Could not write" in rig.wizard.errors.text() and rig.finished == []
-
-
-# ---- leaving early ---------------------------------------------------------------------------------------
 
 
 def test_closing_a_wizard_nobody_touched_just_closes(rig):
@@ -360,9 +344,6 @@ def test_a_finished_wizard_does_not_ask_when_it_closes(rig):
     assert rig.asked == []
 
 
-# ---- opened by the controller -----------------------------------------------------------------------------
-
-
 def make_controller(cfg, tmp_path, monkeypatch):
     from car_charge_planner.controller import Controller
     from conftest import FakeNotifier
@@ -376,7 +357,7 @@ def test_the_controller_opens_one_wizard_at_a_time(tmp_path, qapp, monkeypatch):
     controller = make_controller(example_config(), tmp_path, monkeypatch)
     controller.open_setup()
     first = controller.setup_wizard
-    assert first.isVisible() and first.state.config == controller.cfg  # it starts from the current config
+    assert first.isVisible() and first.state.config == controller.cfg
     controller.open_setup()
     assert controller.setup_wizard is first
     first.reject()  # untouched: closes without asking
@@ -391,11 +372,11 @@ def test_finishing_applies_the_new_config_in_the_running_app(tmp_path, qapp, mon
     wizard = controller.setup_wizard
     wizard.check = lambda cfg: Attempt(True, 2, "OK: 2 days of forecast")
     wizard.pages["welcome"].units.setCurrentIndex(wizard.pages["welcome"].units.findData("imperial"))
-    wizard.next()  # welcome -> location (the place is already there)
-    wizard.next()  # location -> solar
-    wizard.next()  # solar -> car
-    wizard.next()  # car -> the hub
-    wizard.next()  # the hub -> finish
+    wizard.next()
+    wizard.next()
+    wizard.next()
+    wizard.next()
+    wizard.next()
     for thread in list(wizard.pages["finish"]._threads):
         thread.join(5)
     wizard.next()

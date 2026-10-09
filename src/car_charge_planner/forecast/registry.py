@@ -40,7 +40,7 @@ class ProviderRegistry:
         return provider_id in self._providers
 
 
-registry = ProviderRegistry()  # the built-in providers register themselves here (tickets P3 and P4)
+registry = ProviderRegistry()  # the built-in providers register themselves here
 
 
 def _register_builtin() -> None:

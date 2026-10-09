@@ -1,4 +1,4 @@
-"""The [forecast] section of the config, secrets.toml, and the settings a provider declares (ticket P5)."""
+"""The [forecast] section of the config, secrets.toml, and the settings a provider declares."""
 
 import logging
 import os
@@ -22,12 +22,9 @@ def with_forecast(cfg, **changes):
     return replace(cfg, forecast=replace(cfg.forecast, **changes))
 
 
-# ---- the config section -------------------------------------------------------------------------------------
-
-
 def test_a_config_without_the_section_means_open_meteo_and_no_fallback(tmp_path):
     path = tmp_path / "config.toml"
-    path.write_text('latitude = 52.37\nlongitude = 4.9\n[panels]\nkwp = 5.0\n')  # the file of an older version
+    path.write_text('latitude = 52.37\nlongitude = 4.9\n[panels]\nkwp = 5.0\n')  # no [forecast] section
     cfg = load_config(path)
     assert cfg.forecast == Forecast("open-meteo", "", {})
 
@@ -45,7 +42,7 @@ def test_the_section_is_written_and_read_back_exactly(tmp_path, cfg):
     loaded = load_config(path)
     assert loaded.forecast.primary == "forecast-solar" and loaded.forecast.fallback == "open-meteo"
     assert loaded.forecast.settings["open-meteo"] == {"base_url": "https://customer-api.open-meteo.com"}
-    assert dump_config(loaded) == text  # the round trip is exact
+    assert dump_config(loaded) == text
 
 
 def test_the_default_config_names_open_meteo():
@@ -91,9 +88,6 @@ def test_nothing_that_looks_like_a_secret_is_written_to_the_config_file(tmp_path
     assert SECRET not in dump_config(with_forecast(cfg, settings={"open-meteo": {"base_url": "https://x.test"}}))
 
 
-# ---- secrets.toml -------------------------------------------------------------------------------------------
-
-
 def mode(path):
     return stat.S_IMODE(path.stat().st_mode)
 
@@ -105,7 +99,7 @@ def test_secrets_are_written_private_and_read_back(tmp_path):
     save_secrets({"open-meteo": {"api_key": SECRET}, "forecast-solar": {"api_key": "other"}}, path)
     assert mode(path) == 0o600
     assert load_secrets(path) == {"open-meteo": {"api_key": SECRET}, "forecast-solar": {"api_key": "other"}}
-    assert not list(tmp_path.glob("*.tmp"))  # the atomic write left nothing behind
+    assert not list(tmp_path.glob("*.tmp"))
 
 
 @pytest.mark.linux
@@ -162,7 +156,7 @@ def test_where_there_are_no_file_modes_nothing_is_changed(tmp_path, monkeypatch)
     path = tmp_path / "secrets.toml"
     path.write_text(dump_secrets({"open-meteo": {"api_key": SECRET}}))
     os.chmod(path, 0o644)
-    assert load_secrets(path)  # no complaint, no chmod
+    assert load_secrets(path)
     assert mode(path) == 0o644
 
 
@@ -213,9 +207,6 @@ def test_secrets_never_reach_the_log(tmp_path, caplog):
         save_secrets({"open-meteo": {"api_key": SECRET}}, path)
         load_secrets(path)
     assert SECRET not in caplog.text
-
-
-# ---- which settings go where -----------------------------------------------------------------------------------
 
 
 class Needy:

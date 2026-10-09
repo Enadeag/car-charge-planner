@@ -67,7 +67,7 @@ def test_add_all_day_and_time_range_away(cfg):
     seen = []
     popup.away_added.connect(seen.append)
     add = next(b for b in popup.findChildren(QPushButton) if b.text() == "Add")
-    popup.away_day.setCurrentIndex(1)  # tomorrow
+    popup.away_day.setCurrentIndex(1)
     add.click()
     assert describe_first(seen) == "Sat 4 Jul, all day"
     popup.away_kind.setCurrentIndex(1)
@@ -157,7 +157,7 @@ def test_popup_has_a_close_button_and_stays_open_when_focus_moves(cfg):
     popup, _ = _popup_and_vm(cfg)
     popup.show()
     labels = [b.text() for b in popup.findChildren(QPushButton)]
-    assert "\u00d7" in labels and "Close" not in labels  # one close control: the x in the corner
+    assert "\u00d7" in labels and "Close" not in labels
     next(b for b in popup.findChildren(QPushButton) if b.text() == "\u00d7").click()
     assert not popup.isVisible()
     popup.show()
@@ -191,11 +191,11 @@ def _tray_with_frozen_clock(cfg, tmp_path, monkeypatch, hour, minute, failed=Fal
 
 
 def test_tray_notifies_once_ahead_of_the_window_and_not_again(cfg, tmp_path, monkeypatch):
-    app, sent = _tray_with_frozen_clock(cfg, tmp_path, monkeypatch, 8, 50)  # window starts 09:00
+    app, sent = _tray_with_frozen_clock(cfg, tmp_path, monkeypatch, 8, 50)
     app.rebuild()
     assert len(sent) == 1 and sent[0][0].startswith("Charge window 09:00")
     assert "in your charger's app" in sent[0][1]
-    app.rebuild()  # next tick
+    app.rebuild()
     assert len(sent) == 1
 
 
@@ -217,9 +217,6 @@ def test_tray_is_silent_when_the_forecast_refresh_failed(cfg, tmp_path, monkeypa
     app, sent = _tray_with_frozen_clock(cfg, tmp_path, monkeypatch, 8, 50, failed=True)
     app.rebuild()
     assert sent == []
-
-
-# ---- weekly rules in the popup are read-only; they are edited in Settings -----
 
 
 def _away_text(popup):
@@ -245,7 +242,7 @@ def test_popup_lists_weekly_rules_as_read_only_text(cfg):
     assert "Every Thursday, 06:00-19:00  (weekly rule)" in texts
     assert any("Sat 4 Jul, all day" in t for t in texts)
     removes = [b for b in popup.findChildren(QPushButton) if b.text() == "Remove"]
-    assert len(removes) == 1  # only the one-off day can be removed here, not the weekly rule
+    assert len(removes) == 1
 
 
 def test_popup_says_so_when_there_are_no_absences_at_all(cfg):
@@ -265,7 +262,7 @@ def test_popup_has_no_controls_for_editing_weekly_rules(cfg):
     popup.update_view(vm, None, date(2026, 7, 3), cfg.away_rules)
     labels = {b.text() for b in popup.findChildren(QPushButton)}
     assert "Edit weekly rules in Settings..." in labels
-    assert "Add rule" not in labels  # the rule editor lives in Settings only
+    assert "Add rule" not in labels
 
 
 def test_the_settings_button_asks_for_the_away_rules_tab(cfg):
@@ -311,7 +308,7 @@ def test_a_rule_saved_in_settings_shows_up_in_the_popup(cfg, tmp_path, monkeypat
     assert "Every Thursday, 06:00-19:00  (weekly rule)" in _away_text(app.popup)
     app.open_settings("away")
     row = app.settings_window.away_tab.rows[0]
-    row.weekday.setCurrentIndex(0)  # Monday
+    row.weekday.setCurrentIndex(0)
     row.start.setTime(QTime(7, 0))
     row.end.setTime(QTime(12, 30))
     app.settings_window.save_button.click()

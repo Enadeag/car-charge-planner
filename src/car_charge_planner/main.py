@@ -68,7 +68,7 @@ def main(argv: list[str] | None = None) -> int:
     app = QApplication(argv if argv is not None else sys.argv)
     app.setApplicationName("car-charge-planner")
     if launcher.is_installed():  # the portal looks the id up: set it only when there is an entry to find
-        app.setDesktopFileName(DESKTOP_ENTRY)  # the Wayland app id: matches the launcher entry
+        app.setDesktopFileName(DESKTOP_ENTRY)  # the Wayland app id
     app.setQuitOnLastWindowClosed(False)
     gcguard.install(app)  # destroy Qt objects only on this thread, never from a background thread's allocation
     i18n.setup(app)  # the language, before any widget text is created
@@ -94,19 +94,19 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if cfg.interface.language != "auto":
         i18n.setup(app, [cfg.interface.language])  # the owner's choice replaces the system language
-    background = "--background" in sys.argv[1:]  # the autostart entry starts the app hidden
+    background = "--background" in sys.argv[1:]
     controller = Controller(cfg, config_file)
     wants_tray = cfg.interface.mode != "window"
     tray_available = wants_tray and wait_for_tray(TRAY_WAIT_BACKGROUND_S if background else TRAY_WAIT_INTERACTIVE_S)
     shell, choice = create_shell(controller, tray_available)
     announce_tray_fallback(controller, choice)
     if instance is not None:
-        instance.show_requested.connect(shell.show_plan)  # a second start shows the plan of this one
-    listener = ActionListener()  # a click on one of our notifications shows the plan
+        instance.show_requested.connect(shell.show_plan)
+    listener = ActionListener()
     listener.action_invoked.connect(action_handler(controller.notifier, lambda: controller.notification_clicked(shell.show_plan)))
     app.aboutToQuit.connect(listener.stop)
     listener.start()
-    controller.setup_completed.connect(shell.show_plan)  # finishing set-up shows the plan
+    controller.setup_completed.connect(shell.show_plan)
     shell.start(background=background)
-    controller.offer_setup(background)  # not set up yet: open the wizard (or, hidden at login, only offer it)
+    controller.offer_setup(background)
     return app.exec()

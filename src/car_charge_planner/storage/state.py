@@ -107,7 +107,7 @@ def _written_by_newer_version(path: Path) -> bool:
         log.warning("%s Not saving over it.", err)
         return True
     except (OSError, ValueError):
-        return False  # unreadable files are replaced, as before
+        return False  # unreadable files are replaced
     return False
 
 
