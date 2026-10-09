@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
+from typing import cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QActionGroup, QFontMetrics, QGuiApplication
@@ -25,10 +26,12 @@ from car_charge_planner.forecast.registry import registry as builtin
 from car_charge_planner.forecast.secret_store import Secrets, SecretsError, load_secrets, save_secrets
 from car_charge_planner.forecast.selection import check_selection
 from car_charge_planner.i18n import _
+from car_charge_planner.identity import launch_command
 from car_charge_planner.planner.config_io import write_config
 from car_charge_planner.planner.model import Config, ConfigError, require_location, validate
+from car_charge_planner.platform import StartAtLogin, start_at_login
 
-from .fields import SOLAR, TABS
+from .fields import SOLAR, START_AT_LOGIN, TABS
 from .forecast_tab import ForecastTab
 from .tabs import AwayRulesTab, FieldTab, SolarTab
 
@@ -54,6 +57,7 @@ class SettingsWindow(QDialog):
         on_save: Callable[[Config], None],
         registry: ProviderRegistry | None = None,
         on_setup: Callable[[], None] | None = None,
+        login: StartAtLogin | None = None,
     ) -> None:
         super().__init__(None)
         self.setWindowTitle(_("Car charge planner: Settings"))
@@ -65,6 +69,8 @@ class SettingsWindow(QDialog):
         self.on_setup = on_setup
         self.confirm_discard: Callable[[], bool] = lambda: ask_discard(self)
         self.closes_after_save = False
+        self.login = login or start_at_login()
+        self.stored_login = self._login_state()  # the system knows; the config file does not
 
         self.tabs = QTabWidget()
         self.registry = registry or builtin
@@ -74,7 +80,7 @@ class SettingsWindow(QDialog):
             secrets_problem = ""
         except SecretsError as err:
             self.stored_secrets, secrets_problem = {}, str(err)
-        self.field_tabs: list[FieldTab | SolarTab] = [SolarTab(spec, cfg) if spec is SOLAR else FieldTab(spec, cfg) for spec in TABS]
+        self.field_tabs: list[FieldTab | SolarTab] = [SolarTab(spec, cfg) if spec is SOLAR else FieldTab(spec, cfg, switches={START_AT_LOGIN: self.stored_login}) for spec in TABS]
         self.forecast_tab = ForecastTab(cfg, self.stored_secrets, self.registry, lambda: self.current_config(), secrets_problem)
         self.away_tab = AwayRulesTab(cfg)
         planning = next(i for i, t in enumerate(self.field_tabs) if t.key == "planning")
@@ -113,7 +119,7 @@ class SettingsWindow(QDialog):
         self.set_mode(self.save_action)  # every time the window opens: Save, window stays open
         for tab in self.all_tabs:
             tab.changed.connect(self.refresh_close_button)
-        self.interface_tab = next(t for t in self.field_tabs if t.key == "interface")
+        self.interface_tab = cast(FieldTab, next(t for t in self.field_tabs if t.key == "interface"))
         self.interface_tab.changed.connect(self._sync_units)
         self._sync_units()  # the car fields show what the Units choice says
         self.setup_button = QPushButton(_("Run set-up again..."))
@@ -156,8 +162,17 @@ class SettingsWindow(QDialog):
     def current_secrets(self) -> Secrets:
         return self.forecast_tab.collect_secrets()
 
+    def _login_state(self) -> bool:
+        try:
+            return self.login.is_enabled()
+        except OSError:
+            return False
+
+    def current_login(self) -> bool:
+        return self.interface_tab.collect_switches()[START_AT_LOGIN]
+
     def is_dirty(self) -> bool:
-        return self.current_config() != self.stored or self.current_secrets() != self.stored_secrets
+        return self.current_config() != self.stored or self.current_secrets() != self.stored_secrets or self.current_login() != self.stored_login
 
     def reset_tab(self) -> None:
         tab = self.all_tabs[self.tabs.currentIndex()]
@@ -215,6 +230,8 @@ class SettingsWindow(QDialog):
         if problems:
             self.show_errors(problems)
             return False
+        if not self._apply_login():
+            return False
         try:
             if secrets != self.stored_secrets:  # keys first: if they cannot be written, nothing else is
                 save_secrets(secrets, self.secrets_file)
@@ -228,10 +245,29 @@ class SettingsWindow(QDialog):
         self.stored, self.stored_secrets = cfg, secrets
         self.forecast_tab.remember_secrets(secrets)
         self.errors.setVisible(False)
+        self.interface_tab.switches[START_AT_LOGIN] = self.stored_login
         for tab in self.all_tabs:
             tab.load(cfg)  # the window stays usable: what is saved is now the baseline for "changed"
         self.refresh_close_button()
         self.on_save(cfg)
+        return True
+
+    def _apply_login(self) -> bool:
+        """Make the system match the Start when I log in box. On a failure the box goes back to what the system has
+        and False is returned: nothing is saved, the other edits stay."""
+        wanted = self.current_login()
+        if wanted == self.stored_login:
+            return True
+        try:
+            if wanted:
+                self.login.enable(launch_command())
+            else:
+                self.login.disable()
+        except OSError as err:
+            self.interface_tab.set_switch(START_AT_LOGIN, self._login_state())
+            self.show_errors([_("Could not change starting at login: {error}").format(error=err)])
+            return False
+        self.stored_login = wanted
         return True
 
     def show_errors(self, lines: list[str]) -> None:

@@ -30,10 +30,15 @@ msgid "No autostart entry found"
 msgstr ""
 
 #: car_charge_planner/__main__.py
-#, python-brace-format
-msgid ""
-"Launcher entry written to {entry}\n"
-"Icon written to {icon}"
+msgid "Nothing to install: on this system the application is its own menu entry"
+msgstr ""
+
+#: car_charge_planner/__main__.py
+msgid "Launcher entry written to:"
+msgstr ""
+
+#: car_charge_planner/__main__.py
+msgid "Nothing to remove: on this system the application is its own menu entry"
 msgstr ""
 
 #: car_charge_planner/__main__.py
@@ -1074,6 +1079,14 @@ msgstr ""
 msgid "The language of the app. Applies the next time the app starts."
 msgstr ""
 
+#: car_charge_planner/settings/fields.py
+msgid "Start when I log in"
+msgstr ""
+
+#: car_charge_planner/settings/fields.py
+msgid "Starts the app hidden in the background when you log in. Applies when you press Save."
+msgstr ""
+
 #: car_charge_planner/settings/forecast_tab.py
 #, python-brace-format
 msgid "What is sent: {sends}"
@@ -1272,6 +1285,11 @@ msgstr ""
 #: car_charge_planner/settings/window.py
 #, python-brace-format
 msgid "A value has the wrong type: {error}"
+msgstr ""
+
+#: car_charge_planner/settings/window.py
+#, python-brace-format
+msgid "Could not change starting at login: {error}"
 msgstr ""
 
 #: car_charge_planner/setup/away.py car_charge_planner/setup/hub.py

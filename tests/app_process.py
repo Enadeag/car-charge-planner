@@ -5,6 +5,7 @@ The app is started through a two-line launcher that runs the same `python -m car
 first refresh) has then run without crashing.
 """
 
+import hashlib
 import os
 import subprocess
 import sys
@@ -27,6 +28,14 @@ runpy.run_module("car_charge_planner", run_name="__main__")
 """
 
 
+def isolated_user(home: Path) -> dict[str, str]:
+    """A user name of the test's own: on Windows the single-instance pipe is named after the user, so a test app would
+    otherwise meet the developer's running app. getpass reads LOGNAME and USER before USERNAME, and Windows' OpenSSH
+    sets them, so all three."""
+    name = "test-" + hashlib.sha256(str(home).encode()).hexdigest()[:12]
+    return {"LOGNAME": name, "USER": name, "USERNAME": name}
+
+
 def app_environment(home: Path, **extra) -> dict:
     """An environment in which the app keeps everything under `home` and shows no tray (offscreen)."""
     for name in ("config", "state", "cache", "run", "data"):
@@ -41,6 +50,7 @@ def app_environment(home: Path, **extra) -> dict:
         "XDG_CACHE_HOME": str(home / "cache"),
         "XDG_RUNTIME_DIR": str(home / "run"),
         "XDG_DATA_HOME": str(home / "data"),
+        **isolated_user(home),
         **extra,
     }
 

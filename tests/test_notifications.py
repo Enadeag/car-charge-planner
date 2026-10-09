@@ -1,12 +1,14 @@
 from datetime import date, timedelta
+from pathlib import Path
 
 import pytest
 
-from car_charge_planner.autostart import ENTRY_NAME, desktop_entry, install, uninstall
 from car_charge_planner.forecast.service import ForecastResult
 from car_charge_planner.notifications import GRID, SOLAR, candidate_windows, due, message
 from car_charge_planner.planner.advice import GridAdvice
 from car_charge_planner.planner.model import DayPlan, Window
+from car_charge_planner.platform.linux import ENTRY_NAME, LinuxStartAtLogin
+from car_charge_planner.platform.linux import autostart_entry as desktop_entry
 from car_charge_planner.storage.state import load_state, mark_notified
 from conftest import TZ, FakeNotifier, TrayApp, at, forecast_from
 
@@ -110,11 +112,12 @@ def test_the_autostart_entry_starts_the_app_hidden_and_suits_both_desktops():
 
 @pytest.mark.linux
 def test_install_and_uninstall_autostart(tmp_path):
-    target = install(["/p/.venv/bin/car-charge-planner"], tmp_path / "autostart")
-    assert target.name == ENTRY_NAME and target.exists()
-    assert uninstall(tmp_path / "autostart") is True
-    assert not target.exists()
-    assert uninstall(tmp_path / "autostart") is False
+    login = LinuxStartAtLogin(tmp_path / "autostart")
+    target = Path(login.enable(["/p/.venv/bin/car-charge-planner"]))
+    assert target.name == ENTRY_NAME and target.exists() and login.is_enabled()
+    assert login.disable() is True
+    assert not target.exists() and not login.is_enabled()
+    assert login.disable() is False
 
 
 def tray_at(cfg, tmp_path, monkeypatch, hour, minute, failed=False):

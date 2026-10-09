@@ -14,9 +14,9 @@ import logging
 import sys
 from typing import Protocol
 
-from . import launcher
 from .i18n import N_, _
 from .identity import APP_NAME, DESKTOP_ENTRY, ICON_NAME
+from .platform.linux import icons_dir
 
 log = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ class JeepneyBus:
 
 def default_icon() -> str:
     """The app's icon once the launcher is installed, a stock icon until then."""
-    installed = launcher.icons_dir() / f"{ICON_NAME}.svg"
+    installed = icons_dir() / f"{ICON_NAME}.svg"
     return ICON_NAME if installed.exists() else FALLBACK_ICON
 
 

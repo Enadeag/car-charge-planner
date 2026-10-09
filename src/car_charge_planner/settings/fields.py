@@ -8,6 +8,8 @@ from car_charge_planner.planner.model import Config, panel_key, setting, with_se
 
 from ..i18n import N_
 
+START_AT_LOGIN = "interface.start_at_login"
+
 UNITS_CHOICES = (("metric", N_("Metric (km, kWh/100 km)")), ("imperial", N_("Imperial (miles, mi/kWh)")))
 
 
@@ -17,7 +19,7 @@ class FieldSpec:
     label: str
     hint: str
     unit: str = ""
-    kind: str = "float"  # "float" | "int" | "timezone" | "choice" | "text" | "secret" (masked)
+    kind: str = "float"  # "float" | "int" | "timezone" | "choice" | "text" | "secret" (masked) | "check" (a system setting, not in the Config)
     minimum: float = 0  # limits of the input box, in shown units; validate() stays the judge
     maximum: float = 1000
     decimals: int = 1
@@ -221,6 +223,12 @@ INTERFACE = TabSpec(
             N_("The language of the app. Applies the next time the app starts."),
             kind="choice",
             choices=(),  # filled from the installed catalogues; the field is left out when there are none
+        ),
+        FieldSpec(
+            START_AT_LOGIN,
+            N_("Start when I log in"),
+            N_("Starts the app hidden in the background when you log in. Applies when you press Save."),
+            kind="check",
         ),
     ),
 )

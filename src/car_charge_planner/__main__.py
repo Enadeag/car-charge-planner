@@ -14,25 +14,32 @@ def main(argv: list[str] | None = None) -> int:
     command = arguments[0] if arguments and not arguments[0].startswith("-") else "run"
 
     if command == "install-autostart":
-        from .autostart import install
         from .identity import launch_command
+        from .platform import start_at_login
 
-        print(_("Autostart entry written to {path}").format(path=install(launch_command())))
+        print(_("Autostart entry written to {path}").format(path=start_at_login().enable(launch_command())))
     elif command == "uninstall-autostart":
-        from .autostart import uninstall
+        from .platform import start_at_login
 
-        print(_("Autostart entry removed") if uninstall() else _("No autostart entry found"))
+        print(_("Autostart entry removed") if start_at_login().disable() else _("No autostart entry found"))
     elif command == "install-launcher":
         from .identity import launch_command
-        from .launcher import install
+        from .platform import menu_entry
 
-        entry, icon = install(launch_command())
-        print(_("Launcher entry written to {entry}\nIcon written to {icon}").format(entry=entry, icon=icon))
+        entry = menu_entry()
+        if not entry.own_entry:
+            print(_("Nothing to install: on this system the application is its own menu entry"))
+        else:
+            print(_("Launcher entry written to:") + "\n" + "\n".join(f"  {item}" for item in entry.install(launch_command())))
     elif command == "uninstall-launcher":
-        from .launcher import uninstall
+        from .platform import menu_entry
 
-        removed = uninstall()
-        print(_("Removed:") + "\n" + "\n".join(f"  {path}" for path in removed) if removed else _("No launcher entry found"))
+        entry = menu_entry()
+        removed = entry.uninstall()
+        if not entry.own_entry:
+            print(_("Nothing to remove: on this system the application is its own menu entry"))
+        else:
+            print(_("Removed:") + "\n" + "\n".join(f"  {path}" for path in removed) if removed else _("No launcher entry found"))
     elif command == "test-notification":
         from .selftest import run
 

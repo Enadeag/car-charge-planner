@@ -37,3 +37,13 @@ def shared_config_dir() -> Path:
 def shared_data_dir() -> Path:
     """The user's own data directory, shared with other programs (Linux: where launcher entries and icons live)."""
     return Path(_dirs(None).user_data_dir)
+
+
+def start_menu_dir() -> Path:
+    """The user's Start menu programs folder (Windows)."""
+    return shared_config_dir() / "Microsoft" / "Windows" / "Start Menu" / "Programs"
+
+
+def launch_agents_dir() -> Path:
+    """Where a per-user LaunchAgent goes (macOS)."""
+    return Path.home() / "Library" / "LaunchAgents"

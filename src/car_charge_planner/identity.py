@@ -17,11 +17,16 @@ COMMENT = "Tells you when to charge the car from your solar panels"
 def launch_command() -> list[str]:
     """What a launcher or autostart entry should run to start this very installation of the app.
 
-    The installed command when this interpreter has one next to it, otherwise this interpreter with `-m`. Never a
-    folder to change to: the entry works from wherever the desktop starts it.
+    The installer's executable in a packaged build, else the installed command when this interpreter has one next to
+    it, else this interpreter with `-m`. Never a folder to change to: the entry works from wherever the desktop
+    starts it.
     """
+    if getattr(sys, "frozen", False):
+        return [sys.executable]
     installed = shutil.which(COMMAND, path=str(Path(sys.executable).parent))
     if installed is not None:
+        if sys.platform == "win32":  # PATHEXT is in capitals (`.EXE`); the file is `.exe`, and a Windows path means the same either way
+            installed = str(Path(installed).with_suffix(Path(installed).suffix.lower()))
         return [installed]
     return [sys.executable, "-m", "car_charge_planner"]
 

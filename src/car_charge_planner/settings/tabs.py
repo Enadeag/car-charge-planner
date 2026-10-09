@@ -10,6 +10,7 @@ from zoneinfo import available_timezones
 
 from PySide6.QtCore import QTime, Signal
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QCompleter,
     QDoubleSpinBox,
@@ -92,7 +93,7 @@ LANGUAGE_KEY = "interface.language"
 
 def shown_value(spec: FieldSpec, stored, system: str = units.METRIC):
     """The stored value as the input box shows it (in the chosen unit system, for distances and consumption)."""
-    if spec.kind == "choice":
+    if spec.kind in ("choice", "check"):
         return stored  # the stored value itself: a text for most choices, a number for the charger's phases
     if spec.kind in ("timezone", "text", "secret"):
         return str(stored)
@@ -106,10 +107,12 @@ def shown_value(spec: FieldSpec, stored, system: str = units.METRIC):
 class FieldTab(QWidget):
     changed = Signal()  # any box edited, or the tab (re)loaded
 
-    def __init__(self, tab: TabSpec, cfg: Config, secrets: dict[str, str] | None = None) -> None:
-        """`secrets` holds the values of the tab's secret fields by field key; they are not part of the Config."""
+    def __init__(self, tab: TabSpec, cfg: Config, secrets: dict[str, str] | None = None, switches: dict[str, bool] | None = None) -> None:
+        """`secrets` holds the values of the tab's secret fields by field key; they are not part of the Config.
+        `switches` does the same for the check boxes, which show a state kept by the system."""
         super().__init__()
         self._secrets = dict(secrets or {})
+        self.switches = dict(switches or {})
         self.units = units.METRIC  # set_units() changes how distances and consumption are shown
         self._exact: dict[str, float] = {}  # an edited value as it was before a unit switch rounded what the box shows
         self.typical: set[str] = set()  # this tab's settings that are still typical values (tagged until edited)
@@ -173,7 +176,18 @@ class FieldTab(QWidget):
             return [("auto", _("Automatic: follow the system")), *((code, language_name(code)) for code in installed)]
         return [(value, _(label)) for value, label in spec.choices]
 
+    def set_switch(self, key: str, on: bool) -> None:
+        self.inputs[key].setChecked(on)
+
+    def collect_switches(self) -> dict[str, bool]:
+        """What the tab's check boxes show now, by field key."""
+        return {s.key: self.stored_value(s) for s in self.specs if s.kind == "check"}
+
     def _make_input(self, spec: FieldSpec) -> QWidget:
+        if spec.kind == "check":
+            box = QCheckBox()
+            box.toggled.connect(lambda _on: self.changed.emit())
+            return box
         if spec.kind == "choice":
             box = QComboBox()
             for value, label in self._choices(spec):
@@ -239,6 +253,8 @@ class FieldTab(QWidget):
         value = shown_value(spec, stored, self.units)
         if spec.kind == "timezone":
             widget.setCurrentText(value)
+        elif spec.kind == "check":
+            widget.setChecked(bool(value))
         elif spec.kind in ("text", "secret"):
             widget.setText(value)
         elif spec.kind == "choice":
@@ -249,7 +265,12 @@ class FieldTab(QWidget):
     def load(self, cfg: Config) -> None:
         """Fill the boxes from a config and remember its exact values."""
         for spec in self.specs:
-            stored = self._secrets.get(spec.key, "") if spec.kind == "secret" else get_value(cfg, spec.key)
+            if spec.kind == "secret":
+                stored = self._secrets.get(spec.key, "")
+            elif spec.kind == "check":
+                stored = self.switches.get(spec.key, False)
+            else:
+                stored = get_value(cfg, spec.key)
             self.baseline[spec.key] = stored
             self._exact.pop(spec.key, None)
             self._set_widget(spec, stored)
@@ -266,6 +287,8 @@ class FieldTab(QWidget):
         """What to store for a field. A box that still shows the baseline gives the exact baseline back."""
         widget = self.inputs[spec.key]
         baseline = self.baseline[spec.key]
+        if spec.kind == "check":
+            return widget.isChecked()
         if spec.kind == "choice":
             data = widget.currentData()
             return baseline if data == baseline else data
@@ -287,7 +310,7 @@ class FieldTab(QWidget):
 
     def apply_to(self, cfg: Config) -> Config:
         for spec in self.specs:
-            if spec.kind != "secret":  # secrets are not in the Config: see collect_secrets
+            if spec.kind not in ("secret", "check"):  # these are not in the Config: see collect_secrets, collect_switches
                 cfg = set_value(cfg, spec.key, self.stored_value(spec))
         return replace(cfg, setup=Setup(self._typical_after(cfg)))
 

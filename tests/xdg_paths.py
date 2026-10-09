@@ -24,6 +24,8 @@ def locations(fallback: Path) -> dict[str, object]:
         "data_dir": lambda: _base("XDG_DATA_HOME", fallback / "data") / app,
         "shared_config_dir": lambda: _base("XDG_CONFIG_HOME", fallback / "config"),
         "shared_data_dir": lambda: _base("XDG_DATA_HOME", fallback / "data"),
+        "start_menu_dir": lambda: fallback / "start-menu",
+        "launch_agents_dir": lambda: fallback / "launch-agents",
     }
 
 

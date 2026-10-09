@@ -12,6 +12,7 @@ import pytest
 from PySide6.QtTest import QTest
 
 from another_thread import from_another_thread
+from app_process import isolated_user
 from car_charge_planner.instance import InstanceServer, Outcome, claim_instance, request_show, socket_path
 
 PROJECT = Path(__file__).resolve().parent.parent
@@ -213,7 +214,7 @@ def test_a_second_launch_of_the_real_app_hands_over_and_exits(tmp_path):
     """Process A is the running instance; `car-charge-planner` is the second start."""
     runtime = tmp_path / "run"
     runtime.mkdir(mode=0o700)
-    env = {**os.environ, "XDG_RUNTIME_DIR": str(runtime), "QT_QPA_PLATFORM": "offscreen", "HOME": str(tmp_path), "USERNAME": f"test-{uuid.uuid4().hex}"}
+    env = {**os.environ, "XDG_RUNTIME_DIR": str(runtime), "QT_QPA_PLATFORM": "offscreen", "HOME": str(tmp_path), **isolated_user(tmp_path)}
     first = subprocess.Popen(
         [
             sys.executable,

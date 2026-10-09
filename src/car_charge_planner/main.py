@@ -12,13 +12,14 @@ from PySide6.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
 from car_charge_planner.planner.model import ConfigError, load_config
 from car_charge_planner.storage.state import mark_seen
 
-from . import gcguard, i18n, launcher
+from . import gcguard, i18n
 from .config_file import ensure_config
 from .controller import Controller
 from .i18n import _
 from .identity import APP_NAME, DESKTOP_ENTRY
 from .instance import Outcome, claim_instance
 from .notification_actions import action_handler, click_listener
+from .platform import menu_entry
 from .shells import Shell, ShellChoice, choose_shell
 from .shells.icons import make_icon
 from .shells.tray import TrayShell
@@ -78,7 +79,7 @@ def notification_tray(show: Callable[[], None]) -> QSystemTrayIcon:
 def main(argv: list[str] | None = None) -> int:
     app = QApplication(argv if argv is not None else sys.argv)
     app.setApplicationName("car-charge-planner")
-    if launcher.is_installed():  # the portal looks the id up: set it only when there is an entry to find
+    if menu_entry().is_installed():  # the portal looks the id up: set it only when there is an entry to find
         app.setDesktopFileName(DESKTOP_ENTRY)  # the Wayland app id
     app.setQuitOnLastWindowClosed(False)
     gcguard.install(app)  # destroy Qt objects only on this thread, never from a background thread's allocation

@@ -11,6 +11,8 @@ import sys
 import textwrap
 from pathlib import Path
 
+from app_process import isolated_user
+
 REPO = Path(__file__).resolve().parent.parent
 
 DRIVER = textwrap.dedent(
@@ -113,6 +115,7 @@ def run_app(tmp_path, argv, act):
         "XDG_CACHE_HOME": str(tmp_path / "cache"),
         "XDG_RUNTIME_DIR": str(tmp_path / "runtime"),
         "XDG_DATA_HOME": str(tmp_path / "data"),
+        **isolated_user(tmp_path),
         "LANG": "nl_NL.UTF-8",
     }
     done = subprocess.run([sys.executable, str(driver)], env=env, capture_output=True, text=True, timeout=60, cwd=REPO, encoding="utf-8")

@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from car_charge_planner import autostart, identity, launcher, notifier
+from car_charge_planner import identity, notifier
+from car_charge_planner.platform import linux
 
 PROJECT = Path(__file__).resolve().parent.parent
 COMMAND = ["/home/me/.local/bin/car-charge-planner"]  # what pipx puts on the path
@@ -14,7 +15,7 @@ MODULE = ["/p/.venv/bin/python", "-m", "car_charge_planner"]  # when there is no
 
 @pytest.mark.linux
 def test_the_entry_names_the_app_icon_and_command_and_no_folder():
-    text = launcher.desktop_entry(COMMAND)
+    text = linux.launcher_entry(COMMAND)
     assert "Type=Application" in text and "Name=Car charge planner" in text
     assert "Exec=/home/me/.local/bin/car-charge-planner\n" in text
     assert "Path=" not in text  # it works from wherever the desktop starts it
@@ -24,59 +25,61 @@ def test_the_entry_names_the_app_icon_and_command_and_no_folder():
 
 @pytest.mark.linux
 def test_install_writes_the_entry_and_the_icon(tmp_path):
-    entry, icon = launcher.install(COMMAND, tmp_path)
+    entry, icon = map(Path, linux.LinuxMenuEntry(tmp_path).install(COMMAND))
     assert entry == tmp_path / "applications" / "car-charge-planner.desktop"
     assert icon == tmp_path / "icons" / "hicolor" / "scalable" / "apps" / "car-charge-planner.svg"
     assert "Exec=/home/me/.local/bin/car-charge-planner" in entry.read_text(encoding="utf-8")
-    assert icon.read_bytes() == launcher.ICON_SOURCE.read_bytes()
+    assert icon.read_bytes() == linux.ICON_SOURCE.read_bytes()
 
 
 @pytest.mark.linux
 def test_installing_twice_changes_nothing(tmp_path):
-    first = launcher.install(COMMAND, tmp_path)
-    before = [p.read_bytes() for p in first]
-    second = launcher.install(COMMAND, tmp_path)
-    assert first == second and [p.read_bytes() for p in second] == before
+    menu = linux.LinuxMenuEntry(tmp_path)
+    first = menu.install(COMMAND)
+    before = [Path(p).read_bytes() for p in first]
+    second = menu.install(COMMAND)
+    assert first == second and [Path(p).read_bytes() for p in second] == before
 
 
 @pytest.mark.linux
 def test_installing_again_with_another_command_updates_the_entry(tmp_path):
-    launcher.install(MODULE, tmp_path)
-    entry, _ = launcher.install(COMMAND, tmp_path)
+    linux.LinuxMenuEntry(tmp_path).install(MODULE)
+    entry, _ = map(Path, linux.LinuxMenuEntry(tmp_path).install(COMMAND))
     assert "Exec=/home/me/.local/bin/car-charge-planner" in entry.read_text(encoding="utf-8") and "/p/.venv" not in entry.read_text(encoding="utf-8")
 
 
 @pytest.mark.linux
 def test_uninstall_removes_both_files_and_nothing_else(tmp_path):
-    launcher.install(COMMAND, tmp_path)
+    menu = linux.LinuxMenuEntry(tmp_path)
+    menu.install(COMMAND)
     other = tmp_path / "applications" / "someone-else.desktop"
     other.write_text("[Desktop Entry]\n", encoding="utf-8")
-    removed = launcher.uninstall(tmp_path)
-    assert len(removed) == 2 and all(not p.exists() for p in removed)
+    removed = menu.uninstall()
+    assert len(removed) == 2 and all(not Path(p).exists() for p in removed)
     assert other.exists()
 
 
 @pytest.mark.linux
 def test_uninstalling_nothing_is_fine(tmp_path):
-    assert launcher.uninstall(tmp_path) == []
+    assert linux.LinuxMenuEntry(tmp_path).uninstall() == []
 
 
 @pytest.mark.linux
 def test_the_installed_icon_is_what_the_notifier_then_uses(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
     assert notifier.default_icon() == notifier.FALLBACK_ICON
-    launcher.install(COMMAND, tmp_path)
+    linux.LinuxMenuEntry(tmp_path).install(COMMAND)
     assert notifier.default_icon() == identity.ICON_NAME
 
 
 @pytest.mark.linux
 def test_every_place_that_names_the_app_agrees(tmp_path):
     assert notifier.DESKTOP_ENTRY == identity.DESKTOP_ENTRY and notifier.ICON_NAME == identity.ICON_NAME
-    assert autostart.ENTRY_NAME == f"{identity.DESKTOP_ENTRY}.desktop"
-    entry, _ = launcher.install(COMMAND, tmp_path)
-    assert entry.name == autostart.ENTRY_NAME  # the same desktop id in both places
-    assert f"Icon={identity.ICON_NAME}" in autostart.desktop_entry(COMMAND)
-    assert f"Name={identity.APP_NAME}" in autostart.desktop_entry(COMMAND)
+    assert linux.ENTRY_NAME == f"{identity.DESKTOP_ENTRY}.desktop"
+    entry = Path(linux.LinuxMenuEntry(tmp_path).install(COMMAND)[0])
+    assert entry.name == linux.ENTRY_NAME  # the same desktop id in both places
+    assert f"Icon={identity.ICON_NAME}" in linux.autostart_entry(COMMAND)
+    assert f"Name={identity.APP_NAME}" in linux.autostart_entry(COMMAND)
 
 
 def _run(command, data_home):
@@ -106,11 +109,12 @@ def test_an_unknown_command_lists_the_new_ones(tmp_path):
 
 @pytest.mark.linux
 def test_is_installed_follows_the_entry_file(tmp_path):
-    assert not launcher.is_installed(tmp_path)
-    launcher.install(COMMAND, tmp_path)
-    assert launcher.is_installed(tmp_path)
-    launcher.uninstall(tmp_path)
-    assert not launcher.is_installed(tmp_path)
+    menu = linux.LinuxMenuEntry(tmp_path)
+    assert not menu.is_installed()
+    menu.install(COMMAND)
+    assert menu.is_installed()
+    menu.uninstall()
+    assert not menu.is_installed()
 
 
 def test_the_launch_command_is_the_installed_command_next_to_the_interpreter(tmp_path, monkeypatch):
@@ -120,7 +124,7 @@ def test_the_launch_command_is_the_installed_command_next_to_the_interpreter(tmp
     command.write_text("#!/bin/sh\n", encoding="utf-8")
     command.chmod(0o755)
     monkeypatch.setattr(sys, "executable", str(bin_dir / "python"))
-    assert identity.launch_command() == [str(command)]
+    assert [os.path.normcase(part) for part in identity.launch_command()] == [os.path.normcase(command)]  # Windows paths are case-insensitive: PATHEXT says .EXE
 
 
 def test_without_an_installed_command_it_is_this_interpreter_running_the_package(tmp_path, monkeypatch):
