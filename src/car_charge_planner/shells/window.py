@@ -64,6 +64,8 @@ class WindowShell:
         self.setup_action.triggered.connect(lambda: controller.open_setup())
         self.refresh_action = self.menu.addAction(_("Refresh forecast"))
         self.refresh_action.triggered.connect(lambda: controller.refresh(force=True))
+        self.about_action = self.menu.addAction(_("About..."))
+        self.about_action.triggered.connect(lambda: controller.open_about())
         self.menu.addSeparator()
         self.quit_action = QAction(_("Quit"), self.window)
         self.quit_action.setShortcut(QKeySequence.StandardKey.Quit)

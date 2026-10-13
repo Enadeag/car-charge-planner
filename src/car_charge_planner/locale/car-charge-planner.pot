@@ -1,6 +1,6 @@
 # Translations template for car-charge-planner.
 # Copyright (C) 2026 Kelvin Vroegop
-# This file is distributed under the same license as the car-charge-planner project (MIT).
+# This file is distributed under the same license as the car-charge-planner project (GPL-3.0-or-later).
 
 #, fuzzy
 msgid ""
@@ -52,6 +52,26 @@ msgstr ""
 #: car_charge_planner/__main__.py
 #, python-brace-format
 msgid "Unknown command {command!r}. Use: {commands}"
+msgstr ""
+
+#: car_charge_planner/about.py
+#, python-brace-format
+msgid "About {app}"
+msgstr ""
+
+#: car_charge_planner/about.py
+#, python-brace-format
+msgid "version {version}"
+msgstr ""
+
+#: car_charge_planner/about.py
+#, python-brace-format
+msgid "Licensed under the <a href=\"{url}\">GNU General Public License v3.0 or later</a>."
+msgstr ""
+
+#: car_charge_planner/about.py
+#, python-brace-format
+msgid "<a href=\"{url}\">Source code</a>"
 msgstr ""
 
 #: car_charge_planner/away_input.py
@@ -1978,6 +1998,10 @@ msgstr ""
 
 #: car_charge_planner/shells/tray.py car_charge_planner/shells/window.py
 msgid "Set up..."
+msgstr ""
+
+#: car_charge_planner/shells/tray.py car_charge_planner/shells/window.py
+msgid "About..."
 msgstr ""
 
 #: car_charge_planner/shells/tray.py car_charge_planner/shells/window.py

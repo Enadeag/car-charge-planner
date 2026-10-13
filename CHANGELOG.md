@@ -4,6 +4,12 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Changed
+- The licence is now the GNU General Public License, version 3 or later, with an additional term that asks modified versions to keep the author attribution. Version 0.1.0 stays under the MIT licence.
+
+### Added
+- An About screen, in the tray menu and the window menu, with the version, the licence and where the source is.
+
 ## [0.1.0] - 2026-10-08
 
 First version, for Linux.
