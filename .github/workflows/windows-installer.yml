@@ -38,11 +38,14 @@ jobs:
       - name: Build
         run: python tools/build_windows.py
       - name: Smoke test the program folder
+        # five times each: a crash at exit can depend on memory layout and show up only now and then
         run: |
           foreach ($program in "car-charge-planner.exe", "car-charge-planner-cli.exe") {
-            $run = Start-Process "dist\car-charge-planner\$program" -ArgumentList "--smoke-test" -Wait -PassThru
-            "$program --smoke-test: exit code $($run.ExitCode)"
-            if ($run.ExitCode -ne 0) { exit 1 }
+            foreach ($round in 1..5) {
+              $run = Start-Process "dist\car-charge-planner\$program" -ArgumentList "--smoke-test" -Wait -PassThru
+              "$program --smoke-test, run ${round}: exit code $($run.ExitCode)"
+              if ($run.ExitCode -ne 0) { exit 1 }
+            }
           }
       - name: Install, smoke test and uninstall
         run: |
