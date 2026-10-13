@@ -15,14 +15,27 @@ python -m venv .venv
 .venv/bin/pip install -e ".[dev]"
 ```
 
-Run the app with `.venv/bin/car-charge-planner`.
+Run the app with `.venv/bin/car-charge-planner` (Windows: `.venv\Scripts\car-charge-planner.exe`).
 
 ## Tests and lint
+
+On Linux:
 
 ```bash
 QT_QPA_PLATFORM=offscreen .venv/bin/pytest -q    # about two minutes; no window appears and nothing touches the network
 .venv/bin/ruff check .
 ```
+
+On Windows, in PowerShell, with the environment made as under Set up (the program is in `.venv\Scripts`):
+
+```powershell
+$env:QT_QPA_PLATFORM = "offscreen"
+$env:PYTHONUTF8 = "1"    # the tests read and write UTF-8 files; Windows defaults to a code page
+.venv\Scripts\python.exe -m pytest -q
+.venv\Scripts\python.exe -m ruff check .
+```
+
+A test that only makes sense on one system carries the marker `linux`, `windows` or `macos` (`@pytest.mark.windows`, or `pytestmark = pytest.mark.windows` for a file). `tests/conftest.py` skips it on the other systems; several markers mean any of them. Tests without a marker must pass on every system, so they use `paths` and not hard-coded folders.
 
 `ruff check .` also checks import order and a few common mistakes (bugbear, pyupgrade). Types are checked with [pyright](https://github.com/microsoft/pyright), which CI runs too and which must report no errors:
 
@@ -56,6 +69,16 @@ Write one only when it says something the name, signature and types cannot.
 - A test that starts the app or uses real timers waits for a condition, never a fixed `sleep`.
 - Don't test test helpers, fixtures or constants. In tests too, the test name is the documentation: comment only what is surprising.
 
+## Building the Windows installer
+
+On Windows, in the environment of the app with [PyInstaller](https://pyinstaller.org) and Babel added, and with [Inno Setup](https://jrsoftware.org/isinfo.php) 6 installed:
+
+```powershell
+.venv\Scripts\python.exe tools\build_windows.py
+```
+
+This writes the program folder to `dist\car-charge-planner\` and `dist\car-charge-planner-<version>-setup.exe` with its checksum beside it. The script finds `ISCC.exe` on the PATH, in Inno Setup's usual folders, or where the `ISCC` variable says. The release workflow does the same for a version tag. The installer is not signed yet.
+
 ## Code layout
 
 Everything is in `src/car_charge_planner/`:
@@ -75,7 +98,7 @@ Everything is in `src/car_charge_planner/`:
 
 ## Reporting how it runs on your desktop
 
-The app is developed on KDE Plasma under Wayland. If you try it on another desktop, please open a **Does it work on my desktop?** issue: it takes five minutes and tells us what works where.
+The app is developed on KDE Plasma under Wayland and checked on Windows. If you try it on another Linux desktop, please open a **Does it work on my desktop?** issue: it takes five minutes and tells us what works where.
 
 ## Adding a language
 

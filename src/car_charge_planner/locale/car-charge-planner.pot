@@ -1081,7 +1081,7 @@ msgid "Show the app as"
 msgstr ""
 
 #: car_charge_planner/settings/fields.py
-msgid "How the app shows itself. A tray icon needs a desktop with a system tray (KDE Plasma, or GNOME with the AppIndicator extension). Applies the next time the app starts."
+msgid "How the app shows itself. A tray icon needs a system tray: Windows and KDE Plasma have one, GNOME needs the AppIndicator extension. Applies the next time the app starts."
 msgstr ""
 
 #: car_charge_planner/settings/fields.py
