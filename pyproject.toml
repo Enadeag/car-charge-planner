@@ -40,7 +40,7 @@ Homepage = "https://github.com/Enadeag/car-charge-planner"
 Source = "https://github.com/Enadeag/car-charge-planner"
 Issues = "https://github.com/Enadeag/car-charge-planner/issues"
 
-# The command is a console script. A Windows build will add a windowed (gui) script of the same name.
+# The command is a console script. The Windows installer's program is a windowed one, with a console twin (installers/windows).
 [project.scripts]
 car-charge-planner = "car_charge_planner.__main__:main"
 
@@ -49,7 +49,7 @@ packages = ["src/car_charge_planner"]
 artifacts = ["*.mo"]  # compiled translations are not in git, so they are named here to be included
 
 [tool.hatch.build.targets.sdist]
-include = ["src", "tests", "docs", "README.md", "LICENSE", "NOTICE", "ADDITIONAL-TERMS.md", "CHANGELOG.md", "CONTRIBUTING.md", "CONTEXT.md", "babel.cfg", "hatch_build.py", "pyproject.toml"]
+include = ["src", "tests", "docs", "tools", "installers", "README.md", "LICENSE", "NOTICE", "ADDITIONAL-TERMS.md", "CHANGELOG.md", "CONTRIBUTING.md", "CONTEXT.md", "babel.cfg", "hatch_build.py", "pyproject.toml"]
 artifacts = ["*.mo"]
 
 [tool.hatch.build.hooks.custom]

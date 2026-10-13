@@ -12,17 +12,22 @@ DESKTOP_ENTRY = "car-charge-planner"  # the .desktop file name without extension
 ICON_NAME = "car-charge-planner"
 COMMAND = "car-charge-planner"  # the installed command (pip and pipx put it next to the interpreter)
 COMMENT = "Tells you when to charge the car from your solar panels"
+APP_USER_MODEL_ID = "CarChargePlanner.CarChargePlanner"  # Windows: the installer's Start menu shortcut carries the same id
+CONSOLE_SUFFIX = "-cli"  # Windows build: `car-charge-planner-cli.exe` is the console twin of the windowed program, for the commands that print
 
 
 def launch_command() -> list[str]:
     """What a launcher or autostart entry should run to start this very installation of the app.
 
-    The installer's executable in a packaged build, else the installed command when this interpreter has one next to
+    The program in a packaged build (the windowed one when started through its console twin, so that nothing opens a
+    console window at login), else the installed command when this interpreter has one next to
     it, else this interpreter with `-m`. Never a folder to change to: the entry works from wherever the desktop
     starts it.
     """
     if getattr(sys, "frozen", False):
-        return [sys.executable]
+        program = Path(sys.executable)
+        windowed = program.with_name(program.name.replace(CONSOLE_SUFFIX + ".", "."))
+        return [str(windowed if windowed.exists() else program)]
     installed = shutil.which(COMMAND, path=str(Path(sys.executable).parent))
     if installed is not None:
         if sys.platform == "win32":  # PATHEXT is in capitals (`.EXE`); the file is `.exe`, and a Windows path means the same either way

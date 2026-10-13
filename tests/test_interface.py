@@ -10,7 +10,7 @@ from dataclasses import replace
 
 import pytest
 
-from app_process import PROJECT, RunningApp, app_environment
+from app_process import LAUNCHER, PROJECT, RunningApp, app_environment
 from car_charge_planner.controller import Controller
 from car_charge_planner.main import NO_TRAY_HINT, announce_tray_fallback, create_shell, wait_for_tray
 from car_charge_planner.planner.config_io import dump_config, write_config
@@ -247,3 +247,32 @@ def test_the_autostart_flag_starts_the_whole_app_without_a_tray_too(tmp_path):
     finally:
         err = app.stop()
     assert "Traceback" not in err and "unknown command" not in err.lower()
+
+
+def smoke_test(env):
+    return subprocess.run(
+        [sys.executable, "-c", LAUNCHER.format(tests=str(PROJECT / "tests")), "--smoke-test"], cwd=PROJECT, env=env,
+        capture_output=True, text=True, timeout=60, encoding="utf-8",
+    )
+
+
+def test_the_smoke_test_flag_starts_the_app_and_exits_cleanly_while_another_copy_runs(tmp_path):
+    """What the packaged build is checked with: the whole start-up, then exit code 0, and the running copy is left alone."""
+    running = RunningApp(tmp_path)
+    try:
+        running.wait_until_running()
+        env = app_environment(tmp_path)
+        env.pop("PYTHON_KEYRING_BACKEND", None)  # the system's own keychain backend, as a real start has; it is only looked up, not read
+        check = smoke_test(env)
+        assert check.returncode == 0, check.stderr
+        assert "already running" not in check.stderr and "Traceback" not in check.stderr
+        assert running.still_running_after()
+    finally:
+        running.stop()
+
+
+@pytest.mark.windows
+@pytest.mark.macos
+def test_the_smoke_test_fails_when_the_build_lacks_a_keychain_backend(tmp_path):
+    check = smoke_test(app_environment(tmp_path, PYTHON_KEYRING_BACKEND="keyring.backends.null.Keyring"))
+    assert check.returncode == 3 and "no keychain backend" in check.stderr
