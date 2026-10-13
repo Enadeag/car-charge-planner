@@ -78,3 +78,15 @@ _Avoid_: Autostart, run at boot, startup item
 A system is supported when a person has checked every release on it; it is beta while releases are only tested automatically or by someone not always available.
 _Avoid_: Experimental, unofficial
 
+
+**Engine**:
+The part of the app that plans, fetches forecasts, talks to devices and owns all stored data, without any user interface. It runs inside the desktop app, and later can also run on its own on an always-on machine.
+_Avoid_: Backend, server, daemon, core
+
+**Client**:
+Anything that shows the engine's plan and passes on the user's changes: today the desktop app's tray, popup and windows; later perhaps a web or phone app. A client never stores data itself.
+_Avoid_: Frontend, UI (a client is more than its screens)
+
+**Desktop app**:
+What the user installs on their computer: the engine and the client together in one program.
+_Avoid_: Tray app, the application (too vague)
