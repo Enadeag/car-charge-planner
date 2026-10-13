@@ -1,0 +1,72 @@
+name: Windows installer
+
+# Windows minutes count double while the repository is private, so the installer is built when what goes into it
+# changes on main, for every version tag (path filters do not apply to tags) and by hand; not for every pull request.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths:
+      - "installers/**"
+      - "tools/build_windows.py"
+      - "tools/third_party_notices.py"
+      - "pyproject.toml"
+      - "src/car_charge_planner/assets/**"
+      - ".github/workflows/windows-installer.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e . "pyinstaller>=6.22,<7" babel
+      - name: Inno Setup
+        # preinstalled on the windows-2025 image; installed here only if a later image drops it
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+      - name: Build
+        run: python tools/build_windows.py
+      - name: Smoke test the program folder
+        run: |
+          foreach ($program in "car-charge-planner.exe", "car-charge-planner-cli.exe") {
+            $run = Start-Process "dist\car-charge-planner\$program" -ArgumentList "--smoke-test" -Wait -PassThru
+            "$program --smoke-test: exit code $($run.ExitCode)"
+            if ($run.ExitCode -ne 0) { exit 1 }
+          }
+      - name: Install, smoke test and uninstall
+        run: |
+          $setup = Get-ChildItem dist\car-charge-planner-*-setup.exe
+          $app = "$env:LOCALAPPDATA\Programs\Car charge planner"
+          $link = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Car charge planner.lnk"
+          $run = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+          $step = Start-Process $setup.FullName -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/CURRENTUSER", "/TASKS=startatlogin" -Wait -PassThru
+          if ($step.ExitCode -ne 0) { "install: exit code $($step.ExitCode)"; exit 1 }
+          if (-not (Test-Path $link)) { "no Start menu shortcut"; exit 1 }
+          $value = (Get-ItemProperty $run).'Car charge planner'
+          if ($value -ne "`"$app\car-charge-planner.exe`" --background") { "unexpected login entry: [$value]"; exit 1 }
+          $smoke = Start-Process "$app\car-charge-planner.exe" -ArgumentList "--smoke-test" -Wait -PassThru
+          if ($smoke.ExitCode -ne 0) { "installed program --smoke-test: exit code $($smoke.ExitCode)"; exit 1 }
+          $step = Start-Process "$app\unins000.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES" -Wait -PassThru
+          if ($step.ExitCode -ne 0) { "uninstall: exit code $($step.ExitCode)"; exit 1 }
+          Start-Sleep 2  # the uninstaller removes its own folder through a helper that outlives it
+          if ((Test-Path $link) -or (Get-ItemProperty $run).'Car charge planner' -or (Test-Path "$app\car-charge-planner.exe")) { "the uninstaller left something behind"; exit 1 }
+          "installed, started and removed cleanly"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            dist/car-charge-planner-*-setup.exe
+            dist/car-charge-planner-*-setup.exe.sha256
+          if-no-files-found: error
+          retention-days: 14

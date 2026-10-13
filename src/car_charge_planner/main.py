@@ -6,7 +6,7 @@ import sys
 import time
 from collections.abc import Callable
 
-from PySide6.QtCore import QThread
+from PySide6.QtCore import QThread, QTimer
 from PySide6.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
 
 from car_charge_planner.planner.model import ConfigError, load_config
@@ -16,7 +16,7 @@ from . import gcguard, i18n
 from .config_file import ensure_config
 from .controller import Controller
 from .i18n import _
-from .identity import APP_NAME, DESKTOP_ENTRY
+from .identity import APP_NAME, APP_USER_MODEL_ID, DESKTOP_ENTRY
 from .instance import Outcome, claim_instance
 from .notification_actions import action_handler, click_listener
 from .platform import menu_entry
@@ -29,6 +29,7 @@ from .tray_notifier import TrayNotifier
 TRAY_WAIT_BACKGROUND_S = 5.0  # started at login: the panel or the tray extension may still be starting
 TRAY_WAIT_INTERACTIVE_S = 1.0
 NO_TRAY_HINT = "no-tray"
+SMOKE_TEST = "--smoke-test"  # start up hidden, then quit with exit code 0 once the event loop runs: a check of a packaged build
 
 
 def wait_for_tray(
@@ -79,7 +80,26 @@ def notification_tray(show: Callable[[], None]) -> QSystemTrayIcon:
     return tray
 
 
+def missing_from_build() -> str | None:
+    """For --smoke-test: what a packaged build can lack and still start. Windows and macOS always have a keychain; a build
+    without keyring's backend for it would quietly keep API keys in a file instead."""
+    if sys.platform == "linux":
+        return None  # a Linux desktop may really have no keychain
+    import keyring
+    from keyring.backends import fail, null
+
+    backend = keyring.get_keyring()
+    return f"no keychain backend ({type(backend).__name__})" if isinstance(backend, fail.Keyring | null.Keyring) else None
+
+
 def main(argv: list[str] | None = None) -> int:
+    if sys.platform == "win32" and getattr(sys, "frozen", False):
+        # Only the installed build: its Start menu shortcut carries the same id, which gives notifications the app's name
+        # and icon. Run from source there is no such shortcut, and Windows would show the bare id instead.
+        from .platform.windows import set_app_user_model_id
+
+        set_app_user_model_id(APP_USER_MODEL_ID)
+    smoke_test = SMOKE_TEST in sys.argv[1:]
     app = QApplication(argv if argv is not None else sys.argv)
     app.setApplicationName("car-charge-planner")
     if menu_entry().is_installed():  # the portal looks the id up: set it only when there is an entry to find
@@ -88,12 +108,14 @@ def main(argv: list[str] | None = None) -> int:
     gcguard.install(app)  # destroy Qt objects only on this thread, never from a background thread's allocation
     i18n.setup(app)  # the language, before any widget text is created
 
-    outcome, instance = claim_instance()
-    if outcome is Outcome.SIGNALLED:
-        print(_("{app} is already running: asked it to show itself.").format(app=APP_NAME), file=sys.stderr)
-        return 0
-    if outcome is Outcome.UNAVAILABLE:
-        print(_("Could not set up the single-instance socket; a second copy could start."), file=sys.stderr)
+    instance = None
+    if not smoke_test:  # a check of the build must not wake a copy that is already running, nor take its place
+        outcome, instance = claim_instance()
+        if outcome is Outcome.SIGNALLED:
+            print(_("{app} is already running: asked it to show itself.").format(app=APP_NAME), file=sys.stderr)
+            return 0
+        if outcome is Outcome.UNAVAILABLE:
+            print(_("Could not set up the single-instance socket; a second copy could start."), file=sys.stderr)
 
     config_file = ensure_config()
     try:
@@ -109,7 +131,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if cfg.interface.language != "auto":
         i18n.setup(app, [cfg.interface.language])  # the owner's choice replaces the system language
-    background = "--background" in sys.argv[1:]
+    background = smoke_test or "--background" in sys.argv[1:]
     controller = Controller(cfg, config_file)
     wants_tray = cfg.interface.mode != "window"
     tray_available = wants_tray and wait_for_tray(TRAY_WAIT_BACKGROUND_S if background else TRAY_WAIT_INTERACTIVE_S)
@@ -126,5 +148,11 @@ def main(argv: list[str] | None = None) -> int:
     listener.start()
     controller.setup_completed.connect(shell.show_plan)
     shell.start(background=background)
-    controller.offer_setup(background)
+    if smoke_test:
+        if problem := missing_from_build():
+            print(problem, file=sys.stderr)
+            return 3
+        QTimer.singleShot(0, app.quit)
+    else:
+        controller.offer_setup(background)
     return app.exec()

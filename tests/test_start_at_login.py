@@ -69,6 +69,22 @@ def test_the_real_run_key_round_trips():
         key.delete(name)
 
 
+@pytest.mark.windows
+def test_the_process_takes_the_app_user_model_id_the_installer_gives_the_shortcut():
+    """In a process of its own: the id stays with a process for its lifetime."""
+    script = """
+import ctypes
+from car_charge_planner.identity import APP_USER_MODEL_ID
+from car_charge_planner.platform.windows import set_app_user_model_id
+assert set_app_user_model_id(APP_USER_MODEL_ID)
+found = ctypes.c_wchar_p()
+ctypes.windll.shell32.GetCurrentProcessExplicitAppUserModelID(ctypes.byref(found))
+print(found.value)
+"""
+    done = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=60, encoding="utf-8", check=True)
+    assert done.stdout.strip() == "CarChargePlanner.CarChargePlanner"
+
+
 def test_macos_writes_a_launch_agent_that_runs_the_command_hidden_at_login(tmp_path):
     login = macos.MacStartAtLogin(tmp_path / "LaunchAgents")
     where = login.enable(["/Applications/Car charge planner.app/Contents/MacOS/car-charge-planner"])

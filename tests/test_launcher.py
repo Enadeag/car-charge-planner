@@ -132,6 +132,15 @@ def test_without_an_installed_command_it_is_this_interpreter_running_the_package
     assert identity.launch_command() == [str(tmp_path / "python"), "-m", "car_charge_planner"]
 
 
+@pytest.mark.parametrize("started", ["car-charge-planner.exe", "car-charge-planner-cli.exe"])
+def test_a_packaged_build_launches_its_windowed_program_even_from_the_console_one(started, tmp_path, monkeypatch):
+    for program in ("car-charge-planner.exe", "car-charge-planner-cli.exe"):
+        (tmp_path / program).write_bytes(b"MZ")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / started))
+    assert identity.launch_command() == [str(tmp_path / "car-charge-planner.exe")]  # a console program at login would open a window
+
+
 def test_a_command_from_another_environment_is_not_taken(tmp_path, monkeypatch):
     """A `car-charge-planner` somewhere else on the PATH may be another version: only the one beside this interpreter counts."""
     elsewhere = tmp_path / "elsewhere"

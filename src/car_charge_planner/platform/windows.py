@@ -56,6 +56,23 @@ class RunKey:
         return True
 
 
+def set_app_user_model_id(app_id: str) -> bool:
+    """Make Windows group this process's windows and notifications under the shortcut that carries `app_id`.
+
+    Must run before the first window or tray icon exists. False when Windows refused it.
+    """
+    import ctypes
+
+    shell32 = ctypes.WinDLL("shell32")
+    shell32.SetCurrentProcessExplicitAppUserModelID.argtypes = [ctypes.c_wchar_p]
+    shell32.SetCurrentProcessExplicitAppUserModelID.restype = ctypes.HRESULT
+    try:
+        shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+    except OSError:  # ctypes raises a failing HRESULT as OSError
+        return False
+    return True
+
+
 def command_line(command: list[str], *extra: str) -> str:
     return subprocess.list2cmdline([*command, *extra])
 
