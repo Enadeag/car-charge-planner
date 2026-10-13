@@ -1,0 +1,114 @@
+name: Release
+
+# A tag vX.Y.Z builds the wheel, the sdist and the Windows installer and attaches them, with SHA256SUMS, to a DRAFT
+# GitHub Release. Nothing is ever published here: the maintainer reads the draft and publishes it by hand.
+# The macOS dmg joins the draft once its build exists.
+#
+# Dry run: start this workflow by hand (Actions, Release, Run workflow) and leave "dry_run" on. It builds everything
+# and makes a draft called "dry run", without a tag check and without creating the release branch.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run: build everything, make a draft named 'dry run', skip the tag check and the release branch"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read the version and compare it with the tag
+        id: version
+        run: |
+          version=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match the package version $version (expected v$version)"
+            exit 1
+          fi
+      - name: Stop early if release/X.Y.Z already points elsewhere
+        if: github.event_name == 'push'
+        run: |
+          existing=$(git ls-remote origin "refs/heads/release/${{ steps.version.outputs.version }}" | cut -f1)
+          if [ -n "$existing" ] && [ "$existing" != "$GITHUB_SHA" ]; then
+            echo "::error::release/${{ steps.version.outputs.version }} exists at $existing, not at this tag ($GITHUB_SHA); not moving it"
+            exit 1
+          fi
+
+  installer:
+    needs: prepare
+    uses: ./.github/workflows/windows-installer.yml
+
+  # Signing: the installer is unsigned until the public launch (docs/adr/0003-pyinstaller-unsigned-until-signpath.md).
+  # At the launch the SignPath Foundation signs it from this runner; the step below is prepared for that and stays
+  # skipped while the secret SIGNPATH_API_TOKEN does not exist. It is deliberately not wired up yet: the SignPath
+  # organisation, project and signing-policy slugs, and signing before the checksums are made, come with the launch.
+  release:
+    needs: [prepare, installer]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write  # create the draft release and push release/X.Y.Z
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Build the wheel and the sdist
+        # the build hook compiles the translations into the wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --outdir dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: dist/windows
+      - name: Sign the installer (SignPath)
+        if: env.SIGNPATH_API_TOKEN != ''
+        run: |
+          echo "::error::SignPath signing is prepared but not wired up yet; see the comment above this job"
+          exit 1
+      - name: Collect the files and checksums
+        run: |
+          mkdir release
+          cp dist/*.whl dist/*.tar.gz dist/windows/*-setup.exe release/
+          cd release
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+      - name: Create the release branch
+        if: env.DRY_RUN != 'true'
+        # With rulesets on release/** and v* after the public launch, this token needs the maintainer's bypass,
+        # or the branch is created by hand before the tag is pushed.
+        run: |
+          branch="release/$VERSION"
+          existing=$(git ls-remote origin "refs/heads/$branch" | cut -f1)
+          if [ -z "$existing" ]; then
+            git push origin "${GITHUB_REF_NAME}^{commit}:refs/heads/$branch"
+          elif [ "$existing" != "$(git rev-parse "${GITHUB_REF_NAME}^{commit}")" ]; then
+            echo "::error::$branch exists at $existing, not at tag $GITHUB_REF_NAME; not moving it"
+            exit 1
+          fi
+      - name: Create the draft release
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then
+            gh release create "dry-run-$GITHUB_RUN_ID" release/* --draft --target "$GITHUB_SHA" \
+              --title "dry run" --notes "Dry run of the release workflow (run $GITHUB_RUN_ID). Delete this draft."
+          else
+            gh release create "$GITHUB_REF_NAME" release/* --draft --verify-tag \
+              --title "Car charge planner $VERSION" --generate-notes
+          fi
