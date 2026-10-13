@@ -323,6 +323,11 @@ msgid "{app} is already running: asked it to show itself."
 msgstr ""
 
 #: car_charge_planner/main.py
+#, python-brace-format
+msgid "{app} is already running, but it did not respond."
+msgstr ""
+
+#: car_charge_planner/main.py
 msgid "Could not set up the single-instance socket; a second copy could start."
 msgstr ""
 

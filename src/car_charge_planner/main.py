@@ -114,6 +114,9 @@ def main(argv: list[str] | None = None) -> int:
         if outcome is Outcome.SIGNALLED:
             print(_("{app} is already running: asked it to show itself.").format(app=APP_NAME), file=sys.stderr)
             return 0
+        if outcome is Outcome.NO_ANSWER:
+            print(_("{app} is already running, but it did not respond.").format(app=APP_NAME), file=sys.stderr)
+            return 1
         if outcome is Outcome.UNAVAILABLE:
             print(_("Could not set up the single-instance socket; a second copy could start."), file=sys.stderr)
 

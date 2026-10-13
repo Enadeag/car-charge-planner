@@ -13,7 +13,7 @@ from PySide6.QtTest import QTest
 
 from another_thread import from_another_thread
 from app_process import isolated_user
-from car_charge_planner.instance import InstanceServer, Outcome, claim_instance, request_show, socket_path
+from car_charge_planner.instance import InstanceServer, Outcome, Reply, claim_instance, request_show, socket_path
 
 PROJECT = Path(__file__).resolve().parent.parent
 
@@ -28,7 +28,7 @@ def settle(ms=150):
 
 
 def test_with_no_server_a_request_finds_nobody(qapp, path):
-    assert request_show(path, timeout_ms=200) is False
+    assert request_show(path, timeout_ms=200) is Reply.NOBODY
 
 
 def test_a_request_reaches_the_running_instance_once(qapp, path):
@@ -36,10 +36,36 @@ def test_a_request_reaches_the_running_instance_once(qapp, path):
     assert server.listen()
     seen = []
     server.show_requested.connect(lambda: seen.append(1))
-    assert from_another_thread(request_show, path) is True
+    assert from_another_thread(request_show, path) is Reply.ANSWERED
     settle()
     assert seen == [1]
     server.close()
+
+
+def test_a_request_to_a_server_that_never_answers_is_reported_as_silent(qapp, path):
+    from PySide6.QtNetwork import QLocalServer
+
+    mute, held = QLocalServer(), []
+    mute.newConnection.connect(lambda: held.append(mute.nextPendingConnection()))  # accepts, never answers
+    assert mute.listen(path)
+    assert from_another_thread(request_show, path, 500, 200) is Reply.SILENT
+    settle()
+    for connection in held:
+        connection.close()
+    mute.close()
+
+
+def test_a_second_start_that_gets_no_answer_does_not_become_or_replace_the_instance(qapp, path):
+    from PySide6.QtNetwork import QLocalServer
+
+    mute, held = QLocalServer(), []
+    mute.newConnection.connect(lambda: held.append(mute.nextPendingConnection()))  # accepts, never answers
+    assert mute.listen(path)
+    assert from_another_thread(claim_instance, path) == (Outcome.NO_ANSWER, None)
+    settle()
+    for connection in held:
+        connection.close()
+    mute.close()
 
 
 def test_every_request_is_delivered(qapp, path):
@@ -48,7 +74,7 @@ def test_every_request_is_delivered(qapp, path):
     seen = []
     server.show_requested.connect(lambda: seen.append(1))
     for _ in range(3):
-        assert from_another_thread(request_show, path)
+        assert from_another_thread(request_show, path) is Reply.ANSWERED
     settle(250)
     assert len(seen) == 3
     server.close()
@@ -67,9 +93,10 @@ def test_other_messages_are_ignored(qapp, path):
     socket.write(b"quit\nshutdown now\n")
     socket.flush()
     socket.waitForBytesWritten(500)
+    settle()
+    assert seen == [] and socket.bytesAvailable() == 0
     socket.disconnectFromServer()
     settle()
-    assert seen == []
     server.close()
 
 
@@ -99,16 +126,18 @@ def test_a_stale_socket_file_from_a_crash_is_replaced(qapp, path):
     Path(path).write_text("left behind by a crashed instance", encoding="utf-8")  # nobody listens on it
     outcome, server = claim_instance(path)
     assert outcome is Outcome.PRIMARY
-    assert request_show(path)
+    assert from_another_thread(request_show, path) is Reply.ANSWERED
+    settle()
     server.close()
 
 
 def test_a_live_instances_socket_is_never_removed(qapp, path):
     outcome, first = claim_instance(path)
     for _ in range(3):
-        again, _server = claim_instance(path)
+        again, _server = from_another_thread(claim_instance, path)
         assert again is Outcome.SIGNALLED
-    assert request_show(path)
+    assert from_another_thread(request_show, path) is Reply.ANSWERED
+    settle()
     first.close()
 
 
@@ -134,7 +163,8 @@ def test_a_second_server_cannot_take_over_a_path_a_live_server_holds(qapp, path)
     assert live.listen()
     intruder = InstanceServer(path)
     assert intruder.listen() is False
-    assert request_show(path)
+    assert from_another_thread(request_show, path) is Reply.ANSWERED
+    settle()
     live.close()
 
 
@@ -250,6 +280,43 @@ def test_a_second_launch_of_the_real_app_hands_over_and_exits(tmp_path):
         first.wait()
 
 
+def test_a_second_launch_of_the_real_app_says_when_the_running_one_does_not_respond(tmp_path):
+    runtime = tmp_path / "run"
+    runtime.mkdir(mode=0o700)
+    env = {**os.environ, "XDG_RUNTIME_DIR": str(runtime), "QT_QPA_PLATFORM": "offscreen", "HOME": str(tmp_path), **isolated_user(tmp_path)}
+    first = subprocess.Popen(
+        [
+            sys.executable,
+            "-c",
+            textwrap.dedent(
+                """
+                from PySide6.QtCore import QCoreApplication, QTimer
+                from PySide6.QtNetwork import QLocalServer
+                from car_charge_planner.instance import socket_path
+                app = QCoreApplication([])
+                server = QLocalServer()
+                assert server.listen(socket_path())  # takes the socket but never answers
+                print("listening", flush=True)
+                QTimer.singleShot(15000, app.quit)
+                app.exec()
+                """
+            ),
+        ],
+        cwd=PROJECT,
+        env=env,
+        stdout=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+    )
+    try:
+        assert first.stdout.readline().strip() == "listening"
+        second = subprocess.run([sys.executable, "-m", "car_charge_planner"], cwd=PROJECT, env=env, capture_output=True, text=True, timeout=30, encoding="utf-8")
+        assert second.returncode == 1 and "did not respond" in second.stderr
+    finally:
+        first.kill()
+        first.wait()
+
+
 def test_two_copies_starting_at_once_the_loser_signals_instead_of_removing_the_socket(qapp, path, monkeypatch):
     import car_charge_planner.instance as instance
 
@@ -261,9 +328,9 @@ def test_two_copies_starting_at_once_the_loser_signals_instead_of_removing_the_s
     real = instance.request_show
     calls = []
 
-    def first_look_comes_too_early(p, timeout_ms=500):
+    def first_look_comes_too_early(p, *args):
         calls.append(1)
-        return False if len(calls) == 1 else real(p, timeout_ms)
+        return Reply.NOBODY if len(calls) == 1 else real(p, *args)
 
     monkeypatch.setattr(instance, "request_show", first_look_comes_too_early)
     outcome, server = from_another_thread(claim_instance, path)
