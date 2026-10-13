@@ -16,22 +16,33 @@ import tempfile
 from enum import Enum
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QElapsedTimer, QObject, QThread, Signal
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
+from shiboken6 import isValid
 
 from .identity import DESKTOP_ENTRY
 
 log = logging.getLogger(__name__)
 
 SHOW = b"show"
+OK = b"ok"
 CONNECT_TIMEOUT_MS = 500
+WAIT_SLICE_MS = 10
+ANSWER_TIMEOUT_MS = 2000  # a first instance that is busy planning may take a moment to get back to its event loop
 RACE_PAUSE_MS = 100  # another instance may be starting at this very moment
 
 
 class Outcome(Enum):
     PRIMARY = "primary"  # we are the running instance
     SIGNALLED = "signalled"  # another instance runs; it was asked to show itself
+    NO_ANSWER = "no_answer"  # another instance holds the socket but did not answer the request
     UNAVAILABLE = "unavailable"  # no socket could be made; carry on without single-instance protection
+
+
+class Reply(Enum):
+    NOBODY = "nobody"  # nothing listens on the socket
+    ANSWERED = "answered"
+    SILENT = "silent"  # connected, but no "ok" within the timeout
 
 
 ERROR_ALREADY_EXISTS = 183
@@ -53,19 +64,34 @@ def socket_path() -> str:
     return str(directory / "instance.sock")
 
 
-def request_show(path: str, timeout_ms: int = CONNECT_TIMEOUT_MS) -> bool:
-    """Ask a running instance to show itself. False when nobody answers on the socket."""
+def request_show(path: str, timeout_ms: int = CONNECT_TIMEOUT_MS, answer_timeout_ms: int = ANSWER_TIMEOUT_MS) -> Reply:
+    """Ask a running instance to show itself and wait for its "ok".
+
+    Waiting also keeps a Windows pipe client from disconnecting before the server has read its message.
+    """
     socket = QLocalSocket()
     socket.connectToServer(path)
     if not socket.waitForConnected(timeout_ms):
-        return False
+        return Reply.NOBODY
     socket.write(SHOW + b"\n")
     socket.flush()
     socket.waitForBytesWritten(timeout_ms)
+    reply = Reply.SILENT
+    clock = QElapsedTimer()
+    clock.start()
+    while True:
+        if socket.canReadLine():
+            if bytes(socket.readLine()).strip() == OK:  # pyright: ignore[reportArgumentType]  # a QByteArray is bytes-like
+                reply = Reply.ANSWERED
+            break
+        remaining = answer_timeout_ms - clock.elapsed()
+        if remaining <= 0:
+            break
+        socket.waitForReadyRead(min(remaining, WAIT_SLICE_MS))  # in slices: a long blocking call holds the interpreter lock
     socket.disconnectFromServer()
     if socket.state() != QLocalSocket.LocalSocketState.UnconnectedState:
         socket.waitForDisconnected(timeout_ms)
-    return True
+    return reply
 
 
 def _claim_name(name: str) -> int | None:
@@ -140,14 +166,21 @@ class InstanceServer(QObject):
         while self.server.hasPendingConnections():
             socket = self.server.nextPendingConnection()
             socket.readyRead.connect(lambda s=socket: self._read(s))
-            socket.disconnected.connect(lambda s=socket: (self._read(s), s.deleteLater()))
+            socket.disconnected.connect(lambda s=socket: (self._read(s), s.deleteLater() if isValid(s) else None))
             self._read(socket)  # the data may have arrived with the connection
 
     def _read(self, socket: QLocalSocket) -> None:
-        while socket.canReadLine():
+        while isValid(socket) and socket.canReadLine():  # closing the server deletes its sockets while signals are queued
             line = bytes(socket.readLine())  # pyright: ignore[reportArgumentType]  # the stub does not know a QByteArray is bytes-like
             if line.strip() == SHOW:
                 self.show_requested.emit()
+                if socket.state() == QLocalSocket.LocalSocketState.ConnectedState:
+                    socket.write(OK + b"\n")
+                    socket.flush()
+
+
+def _handed_over(reply: Reply) -> Outcome:
+    return Outcome.SIGNALLED if reply is Reply.ANSWERED else Outcome.NO_ANSWER
 
 
 def claim_instance(path: str | None = None) -> tuple[Outcome, InstanceServer | None]:
@@ -162,14 +195,16 @@ def claim_instance(path: str | None = None) -> tuple[Outcome, InstanceServer | N
     except OSError as err:
         log.warning("No private place for the single-instance socket: %s", err)
         return Outcome.UNAVAILABLE, None
-    if request_show(path):
-        return Outcome.SIGNALLED, None
+    reply = request_show(path)
+    if reply is not Reply.NOBODY:
+        return _handed_over(reply), None
     server = InstanceServer(path)
     if server.listen():
         return Outcome.PRIMARY, server
     QThread.msleep(RACE_PAUSE_MS)
-    if request_show(path):
-        return Outcome.SIGNALLED, None
+    reply = request_show(path)
+    if reply is not Reply.NOBODY:
+        return _handed_over(reply), None
     QLocalServer.removeServer(path)  # a stale socket file
     if server.listen():
         return Outcome.PRIMARY, server
