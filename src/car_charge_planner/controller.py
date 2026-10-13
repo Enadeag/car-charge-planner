@@ -17,6 +17,7 @@ from car_charge_planner.planner.model import AwayPeriod, AwayRule, Config
 from car_charge_planner.planner.projection import plan
 from car_charge_planner.storage.state import State, add_away, load_state, mark_notified, mark_seen, remove_away, set_battery
 
+from .about import AboutDialog
 from .i18n import _
 from .notifications import candidate_windows, due, message
 from .notifier import Notifying, make_notifier
@@ -57,6 +58,7 @@ class Controller(QObject):
         self._loading = False
         self.settings_window: SettingsWindow | None = None
         self.setup_wizard: SetupWizard | None = None
+        self.about_dialog: AboutDialog | None = None
 
         self.forecast_loaded.connect(self._on_forecast)
         self.timer = QTimer(self)
@@ -105,6 +107,13 @@ class Controller(QObject):
         if tab:
             self.settings_window.show_tab(tab)
         self.settings_window.show_centred()
+
+    def open_about(self) -> None:
+        if self.about_dialog is None:
+            self.about_dialog = AboutDialog()
+        self.about_dialog.show()
+        self.about_dialog.raise_()
+        self.about_dialog.activateWindow()
 
     def open_setup(self) -> None:
         """One set-up wizard at a time, started from the current config."""

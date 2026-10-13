@@ -22,7 +22,7 @@ ISSUES_URL = "https://github.com/Enadeag/car-charge-planner/issues"  # where tra
 HEADER_COMMENT = (
     f"# Translations template for {DOMAIN}.\n"
     "# Copyright (C) 2026 Kelvin Vroegop\n"
-    f"# This file is distributed under the same license as the {DOMAIN} project (MIT).\n"
+    f"# This file is distributed under the same license as the {DOMAIN} project (GPL-3.0-or-later).\n"
 )
 
 KEYWORDS = {

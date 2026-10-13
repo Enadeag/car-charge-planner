@@ -1,0 +1,17 @@
+Car charge planner
+Copyright (C) 2026 Kelvin Vroegop
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
+published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this program (LICENSE). If not, see
+<https://www.gnu.org/licenses/>.
+
+Additional terms under sections 7(b) and 7(c) of the GNU General Public License version 3 apply: see ADDITIONAL-TERMS.md.
+
+Version 0.1.0 was released under the MIT licence; later versions are under the terms above.
+
+Every source file in this repository is covered by this notice; there is no per-file header.

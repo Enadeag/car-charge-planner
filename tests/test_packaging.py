@@ -24,7 +24,7 @@ msgstr "Sluiten"
 @pytest.fixture(scope="module")
 def wheel(tmp_path_factory):
     work = tmp_path_factory.mktemp("build")
-    for name in ("pyproject.toml", "hatch_build.py", "README.md"):
+    for name in ("pyproject.toml", "hatch_build.py", "README.md", "LICENSE", "NOTICE", "ADDITIONAL-TERMS.md"):
         shutil.copy(ROOT / name, work / name)
     shutil.copytree(ROOT / "src", work / "src", ignore=shutil.ignore_patterns("__pycache__", "*.mo"))
     catalogue = work / "src" / "car_charge_planner" / "locale" / "nl" / "LC_MESSAGES"
@@ -73,7 +73,7 @@ def test_the_command_and_the_metadata(wheel):
     assert "car-charge-planner = car_charge_planner.__main__:main" in wheel.read(f"{dist_info}/entry_points.txt").decode()
     metadata = wheel.read(f"{dist_info}/METADATA").decode()
     metadata = metadata.replace("Requires-Dist: pyside6-essentials", "Requires-Dist: PySide6-Essentials")
-    for needle in ("Name: car-charge-planner", f"Version: {VERSION}", "Requires-Python: >=3.12", "License-Expression: MIT", "Requires-Dist: PySide6-Essentials",
+    for needle in ("Name: car-charge-planner", f"Version: {VERSION}", "Requires-Python: >=3.12", "License-Expression: GPL-3.0-or-later", "License-File: LICENSE", "License-File: ADDITIONAL-TERMS.md", "Requires-Dist: PySide6-Essentials",
                    "Requires-Dist: platformdirs", "Requires-Dist: tzlocal",
                    "Requires-Dist: jeepney; sys_platform == 'linux'", "Requires-Dist: tzdata", "Classifier: Operating System :: POSIX :: Linux", "Project-URL: Source"):
         assert needle in metadata, needle

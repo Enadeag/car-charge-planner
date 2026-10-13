@@ -8,7 +8,8 @@ version = "0.1.0"
 description = "Tells you when to charge your electric car so that as much of the power as possible comes from your own solar panels."
 readme = "README.md"
 requires-python = ">=3.12"
-license = "MIT"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE", "NOTICE", "ADDITIONAL-TERMS.md"]
 authors = [{ name = "Kelvin Vroegop" }]
 keywords = ["solar", "electric vehicle", "ev charging", "forecast", "tray"]
 classifiers = [
@@ -48,7 +49,7 @@ packages = ["src/car_charge_planner"]
 artifacts = ["*.mo"]  # compiled translations are not in git, so they are named here to be included
 
 [tool.hatch.build.targets.sdist]
-include = ["src", "tests", "docs", "README.md", "LICENSE", "CHANGELOG.md", "CONTRIBUTING.md", "CONTEXT.md", "babel.cfg", "hatch_build.py", "pyproject.toml"]
+include = ["src", "tests", "docs", "README.md", "LICENSE", "NOTICE", "ADDITIONAL-TERMS.md", "CHANGELOG.md", "CONTRIBUTING.md", "CONTEXT.md", "babel.cfg", "hatch_build.py", "pyproject.toml"]
 artifacts = ["*.mo"]
 
 [tool.hatch.build.hooks.custom]
