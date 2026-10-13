@@ -201,8 +201,8 @@ INTERFACE = TabSpec(
         FieldSpec(
             "interface.mode",
             N_("Show the app as"),
-            N_("How the app shows itself. A tray icon needs a desktop with a system tray (KDE Plasma, or GNOME with the "
-            "AppIndicator extension). Applies the next time the app starts."),
+            N_("How the app shows itself. A tray icon needs a system tray: Windows and KDE Plasma have one, GNOME needs the "
+            "AppIndicator extension. Applies the next time the app starts."),
             kind="choice",
             choices=(
                 ("auto", N_("Automatic: a tray icon if there is a tray, otherwise a window")),

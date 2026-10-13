@@ -4,7 +4,7 @@
 [![Licence: GPL-3.0-or-later](https://img.shields.io/badge/licence-GPL--3.0--or--later-blue.svg)](LICENSE)
 ![Python 3.12 | 3.13 | 3.14](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue.svg)
 
-A tray app for Linux desktops that tells you when to charge your electric car so that as much of your own solar energy as possible is used and as little as possible is fed back to the grid.
+A tray app for Linux and Windows desktops that tells you when to charge your electric car so that as much of your own solar energy as possible is used and as little as possible is fed back to the grid.
 
 It is advisory only: it recommends a **charge window** and a **charge power**, and you set the current in your charger's app yourself.
 
@@ -27,11 +27,13 @@ The pictures are made by `docs/screenshots.py` (offscreen, a neutral example hom
 
 | System | Status |
 | --- | --- |
-| **Linux, KDE Plasma, Wayland** | Verified: this is where the app is developed and used. |
-| **Linux, GNOME 48 to 51, Wayland** | Built and tested automatically (as a window, or with the AppIndicator extension as a tray icon), awaiting reports from real desktops. |
+| **Linux, KDE Plasma** (glibc 2.34 or newer) | Supported. KDE Plasma under Wayland is where the app is developed and used. |
+| Linux, GNOME 48 to 51 | Beta: built and tested automatically under Wayland, as a window or, with the AppIndicator extension, a tray icon; not yet checked by a person on a real GNOME desktop. |
 | Other Linux desktops (XFCE, Cinnamon, Sway, X11 sessions and so on) | Untested. A tray icon needs a desktop with a system tray; without one the app shows a window. |
-| Windows | An installer is planned: see [the multi-platform plan](docs/design/multi-platform/spec.md). |
-| macOS | Planned, as a beta once someone has checked a release on it. |
+| **Windows 10 or later** (x64; Windows on Arm through emulation) | Supported, with an installer. |
+| macOS 13 or later | Planned, as a beta. |
+
+"Supported" means a person has checked every release on that system; "beta" means releases are only tested automatically.
 
 Tried it on your desktop? Please tell us, whether it works or not, with the **Does it work on my desktop?** issue form.
 
@@ -63,15 +65,31 @@ Limits to know about:
 - **The plan is forecast-only.** It uses a weather forecast and the values you enter, not measured data: no smart-meter, inverter or car readings. The more accurate your panel, battery and consumption values, the better the plan. Values tagged **Assumed** or **Estimate** in Settings are the ones most worth checking.
 - **You enter the battery level by hand**, and away times by hand or as weekly rules. There is no calendar sync and no connection to the car.
 - **You set the charge current yourself**, in your charger's own app. The app only recommends it.
-- **Tested on KDE Plasma under Wayland.** GNOME support is built and tested automatically but not yet tried on a real GNOME desktop (see Supported systems and Running on GNOME).
+- **Developed on KDE Plasma under Wayland, and on Windows.** GNOME support is built and tested automatically but not yet tried on a real GNOME desktop (see Supported systems and Running on GNOME).
 
 ## Requirements
 
-- Linux. The tray icon needs a desktop with a system tray (KDE Plasma; GNOME only with an extension). Without one the app shows a window instead; see Running on GNOME. Developed on KDE Plasma under Wayland.
-- Python 3.12 or newer (developed on 3.14).
+- Linux with glibc 2.34 or newer, or Windows 10 or later (see Supported systems). On Linux the tray icon needs a desktop with a system tray (KDE Plasma; GNOME only with an extension). Without one the app shows a window instead; see Running on GNOME.
+- Python 3.12 or newer (developed on 3.14), for the Linux install and a clone. The Windows installer brings its own.
 - Internet access for the forecast. Without it the app uses its cached forecast and says so.
 
 ## Install
+
+### Windows
+
+Download `car-charge-planner-<version>-setup.exe` and `SHA256SUMS` from the [release page](https://github.com/Enadeag/car-charge-planner/releases). The installer needs no administrator rights. It installs for you only, in `%LOCALAPPDATA%\Programs\Car charge planner`, adds a Start menu entry, and can start the app when you log in (ticked by default). The first start opens the set-up wizard.
+
+**Check the download.** In PowerShell, in the download folder, run `(Get-FileHash .\car-charge-planner-<version>-setup.exe -Algorithm SHA256).Hash` and compare it with the line for the installer in `SHA256SUMS` (`Get-Content .\SHA256SUMS`). Capitals don't matter. If they differ, delete the file and download it again.
+
+**"Windows protected your PC".** The installer is not code-signed yet, so Microsoft Defender SmartScreen warns about a new download from an unknown publisher. Once the checksum matches, click **More info**, then **Run anyway**.
+
+Commands that print (`test-notification` and so on) are run with `car-charge-planner-cli.exe` in the install folder. Notifications come through the tray icon.
+
+**Update:** run the new installer; it replaces the old version and keeps your settings.
+
+**Uninstall:** in Settings, Apps, Installed apps. This removes the program, the Start menu entry and the login entry. It keeps your settings, state and API keys: the folders are listed under [Where things are stored](#where-things-are-stored), and the keys are in Credential Manager, under `car-charge-planner`. Delete them if you want them gone.
+
+### Linux
 
 With [pipx](https://pipx.pypa.io), which keeps the app and its libraries apart from everything else on your system:
 
@@ -95,7 +113,7 @@ python3 -m venv .venv
 .venv/bin/pip install -e ".[dev]"
 ```
 
-The command is then `.venv/bin/car-charge-planner` (or `.venv/bin/python -m car_charge_planner`). The editable install also builds the translations; see Translations. The commands in the rest of this document are written as `car-charge-planner`: from a clone, use the one in `.venv/bin/`.
+The command is then `.venv/bin/car-charge-planner` (or `.venv/bin/python -m car_charge_planner`). The editable install also builds the translations; see Translations. The commands in the rest of this document are written as `car-charge-planner`: from a clone, use the one in `.venv/bin/` (on Windows, `.venv\Scripts\`).
 
 ## Run
 
@@ -164,13 +182,15 @@ python -m car_charge_planner.planner.cli --live --battery 45
 
 ## Start automatically at login
 
+On every system, tick **Start when I log in** in Settings, on the Interface tab. On Windows the installer offers the same choice. On Linux you can also use the commands below.
+
 ```bash
 car-charge-planner install-autostart
 ```
 
 This writes `~/.config/autostart/car-charge-planner.desktop`, which starts the app at your next login. It stores the full path of the installed command, so run it again if you reinstall the app somewhere else.
 
-## Remove the autostart entry
+## Remove the autostart entry (Linux)
 
 ```bash
 car-charge-planner uninstall-autostart
@@ -178,7 +198,7 @@ car-charge-planner uninstall-autostart
 
 This deletes only that `.desktop` file. A running instance keeps running until you quit it.
 
-## Application menu entry and icon
+## Application menu entry and icon (Linux)
 
 ```bash
 car-charge-planner install-launcher
@@ -249,17 +269,19 @@ Open **Settings...** from the tray icon's right-click menu. Settings are grouped
 - Pressing Enter in a field does what the Save button currently does.
 - Values tagged **Typical value** are ones the app filled in because you had none of your own (every value on a fresh install). The tag goes away as soon as you change the value, and the plan page says "Based on typical values for: ..." with a link back here until you have replaced them. A config file from an earlier version has no such list, so none of its values are tagged.
 
-The settings live in `~/.config/car-charge-planner/config.toml`, a plain TOML file. The Settings window manages it: saving rewrites the whole file and does not keep comments. The app reads the file only at startup, so if you want to edit it by hand, do it while the app is closed. An invalid value makes the app show a dialog listing the problems and exit.
+The settings live in `config.toml` (see [Where things are stored](#where-things-are-stored)), a plain TOML file. The Settings window manages it: saving rewrites the whole file and does not keep comments. The app reads the file only at startup, so if you want to edit it by hand, do it while the app is closed. An invalid value makes the app show a dialog listing the problems and exit.
 
 ## Where things are stored
 
-| What | Path |
-| --- | --- |
-| Config | `~/.config/car-charge-planner/config.toml` |
-| Battery level, away periods, announced windows | `~/.local/state/car-charge-planner/state.json` |
-| Forecast cache | `~/.cache/car-charge-planner/forecast-<provider>.json`, one per provider |
-| API keys | The system keychain; `~/.config/car-charge-planner/secrets.toml` (private) only where there is none. Only if you use a paid plan. See [What is kept, and where](#what-is-kept-and-where) |
-| Single-instance socket | `$XDG_RUNTIME_DIR/car-charge-planner.sock` (a private directory under the temp directory if there is no runtime directory) |
+| What | Linux | Windows |
+| --- | --- | --- |
+| Config | `~/.config/car-charge-planner/config.toml` | `%APPDATA%\car-charge-planner\config.toml` |
+| Battery level, away periods, announced windows | `~/.local/state/car-charge-planner/state.json` | `%LOCALAPPDATA%\car-charge-planner\state.json` |
+| Forecast cache | `~/.cache/car-charge-planner/forecast-<provider>.json`, one per provider | `%LOCALAPPDATA%\car-charge-planner\Cache\forecast-<provider>.json`, one per provider |
+| API keys | The system keychain; `~/.config/car-charge-planner/secrets.toml` (private) only where there is none | Credential Manager |
+| Single-instance socket | `$XDG_RUNTIME_DIR/car-charge-planner.sock` (a private directory under the temp directory if there is no runtime directory) | A named pipe, one per user |
+
+API keys are only stored if you use a paid plan. See [What is kept, and where](#what-is-kept-and-where). On Windows, `%APPDATA%` is usually `C:\Users\<you>\AppData\Roaming` and `%LOCALAPPDATA%` is `C:\Users\<you>\AppData\Local`.
 
 Delete the state file to reset your entries. The other files are recreated as needed.
 
@@ -357,7 +379,7 @@ step with them), and the terms that go with using it (read on 2026-10-07; the pr
 - **Nothing else.** The battery level, your away times, your panels' size (except to Forecast.Solar, which needs
   it), the house and car settings and the plan itself never leave the computer. The place you type is only ever
   sent as coordinates.
-- **Local only.** The notifications go over the desktop's own message bus on your computer. The second-start check
+- **Local only.** The notifications go through your desktop's own notification service on your computer. The second-start check
   (clicking the launcher again shows the running window) uses a local socket in a private folder. Nothing listens
   on the network.
 
@@ -388,10 +410,18 @@ wrong the file stays and keeps being used.
 | Package | Used for | Licence |
 | --- | --- | --- |
 | [PySide6](https://doc.qt.io/qtforpython-6/) (Qt for Python; also Shiboken) | The windows, the tray icon and the popup | LGPL-3.0-only, or GPL-2.0-only / GPL-3.0-only |
-| [jeepney](https://gitlab.com/takluyver/jeepney) | Notifications over D-Bus | MIT |
+| [platformdirs](https://github.com/tox-dev/platformdirs) | Where each system keeps the app's files | MIT |
+| [tzlocal](https://github.com/regebro/tzlocal) | The computer's time zone | MIT |
+| [tzdata](https://github.com/python/tzdata) | Time-zone data, so the app does not depend on the system providing it | Apache-2.0 |
 | [keyring](https://github.com/jaraco/keyring) | Keeping API keys in the system keychain | MIT |
+| [jeepney](https://gitlab.com/takluyver/jeepney) (Linux only) | Notifications and the keychain over D-Bus | MIT |
+| [SecretStorage](https://github.com/mitya57/secretstorage), [cryptography](https://github.com/pyca/cryptography), [cffi](https://github.com/python-cffi/cffi), [pycparser](https://github.com/eliben/pycparser) (Linux only) | Keyring's access to the Secret Service | BSD-3-Clause; cryptography Apache-2.0 or BSD-3-Clause; cffi MIT-0 |
+| [pywin32-ctypes](https://github.com/enthought/pywin32-ctypes) (Windows only) | Keyring's access to Credential Manager | BSD-3-Clause |
+| [jaraco.classes](https://github.com/jaraco/jaraco.classes), [jaraco.functools](https://github.com/jaraco/jaraco.functools), [jaraco.context](https://github.com/jaraco/jaraco.context), [more-itertools](https://github.com/more-itertools/more-itertools) | Helpers of keyring | MIT |
 | [Babel](https://babel.pocoo.org) (development only) | Collecting and compiling the translations | BSD-3-Clause |
 | [pytest](https://pytest.org) (development only) | The tests | MIT |
+
+The Windows installer lists every bundled package with its licence in `THIRD-PARTY-NOTICES.txt`.
 
 The weather and solar data come from the providers above under their own terms. The recorded answers the tests
 use are credited in `tests/fixtures/NOTICE.md`.
