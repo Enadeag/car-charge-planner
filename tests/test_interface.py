@@ -3,6 +3,7 @@
 import os
 import subprocess
 import sys
+import textwrap
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -276,3 +277,19 @@ def test_the_smoke_test_flag_starts_the_app_and_exits_cleanly_while_another_copy
 def test_the_smoke_test_fails_when_the_build_lacks_a_keychain_backend(tmp_path):
     check = smoke_test(app_environment(tmp_path, PYTHON_KEYRING_BACKEND="keyring.backends.null.Keyring"))
     assert check.returncode == 3 and "no keychain backend" in check.stderr
+
+
+def test_the_app_deletes_its_windows_before_python_shuts_down(tmp_path):
+    """PySide's own clean-up at interpreter exit deletes leftover windows in no fixed order, which crashed the Windows
+    build now and then. What is left for it is printed after the app's main() has returned."""
+    launcher = "try:\n" + textwrap.indent(LAUNCHER.format(tests=str(PROJECT / "tests")), "    ") + (
+        "\nfinally:\n    print('LEFT', [type(w).__name__ for w in QApplication.topLevelWidgets() if w.parentWidget() is None])\n"
+    )
+    env = app_environment(tmp_path)
+    env.pop("PYTHON_KEYRING_BACKEND", None)  # Windows and macOS: the smoke test wants the system's keychain backend
+    check = subprocess.run(
+        [sys.executable, "-c", launcher, "--smoke-test"], cwd=PROJECT, env=env, capture_output=True, text=True, timeout=60,
+        encoding="utf-8",
+    )
+    assert check.returncode == 0, check.stderr
+    assert "LEFT []" in check.stdout.splitlines()

@@ -8,6 +8,7 @@ from collections.abc import Callable
 
 from PySide6.QtCore import QThread, QTimer
 from PySide6.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
+from shiboken6 import delete
 
 from car_charge_planner.planner.model import ConfigError, load_config
 from car_charge_planner.storage.state import mark_seen
@@ -92,6 +93,18 @@ def missing_from_build() -> str | None:
     return f"no keychain backend ({type(backend).__name__})" if isinstance(backend, fail.Keyring | null.Keyring) else None
 
 
+def delete_windows(app: QApplication) -> None:
+    """Delete every window that has no parent, with all its widgets, while Python and the QApplication are still whole.
+
+    Left alive, they are deleted by PySide's clean-up at interpreter exit, which goes through its objects in no fixed order.
+    A widget added to a layout before that layout had a widget stays owned by Python while Qt gives it a parent, so that
+    order can destroy it twice: an access violation at exit, now and then (seen on Windows).
+    """
+    # asked again after each one: deleting a window can delete other parentless windows Qt made for it
+    while windows := [widget for widget in app.topLevelWidgets() if widget.parentWidget() is None]:
+        delete(windows[0])
+
+
 def main(argv: list[str] | None = None) -> int:
     if sys.platform == "win32" and getattr(sys, "frozen", False):
         # Only the installed build: its Start menu shortcut carries the same id, which gives notifications the app's name
@@ -158,4 +171,6 @@ def main(argv: list[str] | None = None) -> int:
         QTimer.singleShot(0, app.quit)
     else:
         controller.offer_setup(background)
-    return app.exec()
+    exit_code = app.exec()
+    delete_windows(app)
+    return exit_code
