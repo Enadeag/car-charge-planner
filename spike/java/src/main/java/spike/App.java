@@ -60,7 +60,8 @@ public class App {
             stage.setOnCloseRequest(e -> { e.consume(); stage.hide(); log("closed to tray"); });
             stage.setOnShown(e -> Platform.runLater(() -> {
                 var started = ProcessHandle.current().info().startInstant().orElse(Instant.now());
-                log("window shown " + Duration.between(started, Instant.now()).toMillis() + " ms after process start");
+                log("window shown " + Duration.between(started, Instant.now()).toMillis() + " ms after process start"
+                        + " (OS start time, coarse); epochMillis=" + System.currentTimeMillis());
                 if (argList.contains("--exit-when-shown")) System.exit(0);
             }));
             if (!argList.contains("--hidden")) stage.show();
