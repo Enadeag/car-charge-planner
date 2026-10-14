@@ -12,8 +12,8 @@ import pytest
 from PySide6.QtTest import QTest
 
 from another_thread import from_another_thread
-from app_process import isolated_user
-from car_charge_planner.instance import InstanceServer, Outcome, Reply, claim_instance, request_show, socket_path
+from app_process import RunningApp, app_environment, isolated_user
+from car_charge_planner.instance import InstanceServer, Outcome, Reply, claim_instance, request_quit, request_show, socket_path
 
 PROJECT = Path(__file__).resolve().parent.parent
 
@@ -68,6 +68,22 @@ def test_a_second_start_that_gets_no_answer_does_not_become_or_replace_the_insta
     mute.close()
 
 
+def test_a_quit_request_is_answered_and_asks_the_instance_to_quit_without_showing(qapp, path):
+    server = InstanceServer(path)
+    assert server.listen()
+    seen = []
+    server.show_requested.connect(lambda: seen.append("show"))
+    server.quit_requested.connect(lambda: seen.append("quit"))
+    assert from_another_thread(request_quit, path) is Reply.ANSWERED
+    settle()
+    assert seen == ["quit"]
+    server.close()
+
+
+def test_with_no_server_a_quit_request_finds_nobody(qapp, path):
+    assert request_quit(path, timeout_ms=200) is Reply.NOBODY
+
+
 def test_every_request_is_delivered(qapp, path):
     server = InstanceServer(path)
     server.listen()
@@ -87,10 +103,11 @@ def test_other_messages_are_ignored(qapp, path):
     server.listen()
     seen = []
     server.show_requested.connect(lambda: seen.append(1))
+    server.quit_requested.connect(lambda: seen.append(2))
     socket = QLocalSocket()
     socket.connectToServer(path)
     assert socket.waitForConnected(500)
-    socket.write(b"quit\nshutdown now\n")
+    socket.write(b"restart\nshutdown now\n")
     socket.flush()
     socket.waitForBytesWritten(500)
     settle()
@@ -339,3 +356,59 @@ def test_two_copies_starting_at_once_the_loser_signals_instead_of_removing_the_s
     settle()
     assert seen == [1]
     winner.close()
+
+
+def test_the_quit_command_of_the_real_app_ends_the_running_app_cleanly(tmp_path):
+    app = RunningApp(tmp_path, "--background")
+    try:
+        app.wait_until_running()
+        done = subprocess.run([sys.executable, "-m", "car_charge_planner", "quit"], cwd=PROJECT, env=app_environment(tmp_path), capture_output=True, text=True, timeout=30, encoding="utf-8")
+        assert done.returncode == 0 and "confirmed" in done.stdout
+        assert app.process.wait(30) == 0
+    finally:
+        app.stop()
+
+
+@pytest.fixture
+def quit_command(monkeypatch, path, capsys):
+    monkeypatch.setattr("car_charge_planner.instance.socket_path", lambda: path)
+
+    def run():
+        from car_charge_planner.__main__ import main
+
+        code = from_another_thread(main, ["quit"])
+        captured = capsys.readouterr()
+        return code, captured.out, captured.err
+
+    return run
+
+
+def test_the_quit_command_reports_a_confirmed_quit(qapp, path, quit_command):
+    server = InstanceServer(path)
+    assert server.listen()
+    seen = []
+    server.quit_requested.connect(lambda: seen.append(1))
+    code, out, _err = quit_command()
+    settle()
+    assert (code, seen) == (0, [1]) and "confirmed" in out
+    server.close()
+
+
+def test_the_quit_command_says_when_nobody_runs(qapp, quit_command):
+    code, out, _err = quit_command()
+    assert code == 0 and "not running" in out
+
+
+def test_the_quit_command_fails_when_the_running_app_does_not_respond(qapp, path, quit_command, monkeypatch):
+    from PySide6.QtNetwork import QLocalServer
+
+    monkeypatch.setattr("car_charge_planner.instance.request_quit", lambda target: request_quit(target, 500, 200))  # not the full wait
+    mute, held = QLocalServer(), []
+    mute.newConnection.connect(lambda: held.append(mute.nextPendingConnection()))  # accepts, never answers
+    assert mute.listen(path)
+    code, _out, err = quit_command()
+    assert code == 1 and "did not respond" in err
+    settle()
+    for connection in held:
+        connection.close()
+    mute.close()

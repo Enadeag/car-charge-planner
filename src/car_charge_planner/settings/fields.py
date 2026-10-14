@@ -226,7 +226,7 @@ INTERFACE = TabSpec(
         ),
         FieldSpec(
             START_AT_LOGIN,
-            N_("Start when I log in"),
+            N_("Start at login"),
             N_("Starts the app hidden in the background when you log in. Applies when you press Save."),
             kind="check",
         ),

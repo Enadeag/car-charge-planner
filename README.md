@@ -77,17 +77,17 @@ Limits to know about:
 
 ### Windows
 
-Download `car-charge-planner-<version>-setup.exe` and `SHA256SUMS` from the [release page](https://github.com/Enadeag/car-charge-planner/releases). The installer needs no administrator rights. It installs for you only, in `%LOCALAPPDATA%\Programs\Car charge planner`, adds a Start menu entry, and can start the app when you log in (ticked by default). The first start opens the set-up wizard.
+Download `car-charge-planner-<version>-setup.exe` and `SHA256SUMS` from the [release page](https://github.com/Enadeag/car-charge-planner/releases). The installer needs no administrator rights. It installs for you only, in `%LOCALAPPDATA%\Programs\Car charge planner`, adds a Start menu entry, and can start the app at login (ticked by default). The first start opens the set-up wizard.
 
 **Check the download.** In PowerShell, in the download folder, run `(Get-FileHash .\car-charge-planner-<version>-setup.exe -Algorithm SHA256).Hash` and compare it with the line for the installer in `SHA256SUMS` (`Get-Content .\SHA256SUMS`). Capitals don't matter. If they differ, delete the file and download it again.
 
 **"Windows protected your PC".** The installer is not code-signed yet, so Microsoft Defender SmartScreen warns about a new download from an unknown publisher. Once the checksum matches, click **More info**, then **Run anyway**.
 
-Commands that print (`test-notification` and so on) are run with `car-charge-planner-cli.exe` in the install folder. Notifications come through the tray icon.
+Commands that print (`test-notification`, `quit` and so on) are run with `car-charge-planner-cli.exe` in the install folder. Notifications come through the tray icon.
 
-**Update:** run the new installer; it replaces the old version and keeps your settings.
+**Update:** run the new installer; it asks a running app to quit, replaces the old version and keeps your settings.
 
-**Uninstall:** in Settings, Apps, Installed apps. This removes the program, the Start menu entry and the login entry. It keeps your settings, state and API keys: the folders are listed under [Where things are stored](#where-things-are-stored), and the keys are in Credential Manager, under `car-charge-planner`. Delete them if you want them gone.
+**Uninstall:** in Settings, Apps, Installed apps. A running app is asked to quit first. This removes the program, the Start menu entry and the login entry. It keeps your settings, state and API keys: the folders are listed under [Where things are stored](#where-things-are-stored), and the keys are in Credential Manager, under `car-charge-planner`. Delete them if you want them gone.
 
 ### Linux
 
@@ -182,7 +182,7 @@ python -m car_charge_planner.planner.cli --live --battery 45
 
 ## Start automatically at login
 
-On every system, tick **Start when I log in** in Settings, on the Interface tab. On Windows the installer offers the same choice. On Linux you can also use the commands below.
+On every system, tick **Start at login** in Settings, on the Interface tab. On Windows the installer offers the same choice. On Linux you can also use the commands below.
 
 ```bash
 car-charge-planner install-autostart

@@ -254,7 +254,7 @@ class SettingsWindow(QDialog):
         return True
 
     def _apply_login(self) -> bool:
-        """Make the system match the Start when I log in box. On a failure the box goes back to what the system has
+        """Make the system match the Start at login box. On a failure the box goes back to what the system has
         and False is returned: nothing is saved, the other edits stay."""
         wanted = self.current_login()
         if wanted == self.stored_login:

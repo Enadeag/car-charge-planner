@@ -1,7 +1,7 @@
 """One running copy of the app. A second start asks the first to show itself and exits.
 
 The first instance listens on a private local socket (a named pipe on Windows): unlike a lock file, a socket also lets
-the second start say "show yourself".
+the second start say "show yourself", and the `quit` command say "quit".
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ from .identity import DESKTOP_ENTRY
 log = logging.getLogger(__name__)
 
 SHOW = b"show"
+QUIT = b"quit"
 OK = b"ok"
 CONNECT_TIMEOUT_MS = 500
 WAIT_SLICE_MS = 10
@@ -65,15 +66,22 @@ def socket_path() -> str:
 
 
 def request_show(path: str, timeout_ms: int = CONNECT_TIMEOUT_MS, answer_timeout_ms: int = ANSWER_TIMEOUT_MS) -> Reply:
-    """Ask a running instance to show itself and wait for its "ok".
+    """Ask a running instance to show itself and wait for its "ok"."""
+    return _request(SHOW, path, timeout_ms, answer_timeout_ms)
 
-    Waiting also keeps a Windows pipe client from disconnecting before the server has read its message.
-    """
+
+def request_quit(path: str, timeout_ms: int = CONNECT_TIMEOUT_MS, answer_timeout_ms: int = ANSWER_TIMEOUT_MS) -> Reply:
+    """Ask a running instance to quit and wait for its "ok", which it sends before it quits."""
+    return _request(QUIT, path, timeout_ms, answer_timeout_ms)
+
+
+def _request(message: bytes, path: str, timeout_ms: int, answer_timeout_ms: int) -> Reply:
+    """Waiting for the answer also keeps a Windows pipe client from disconnecting before the server has read its message."""
     socket = QLocalSocket()
     socket.connectToServer(path)
     if not socket.waitForConnected(timeout_ms):
         return Reply.NOBODY
-    socket.write(SHOW + b"\n")
+    socket.write(message + b"\n")
     socket.flush()
     socket.waitForBytesWritten(timeout_ms)
     reply = Reply.SILENT
@@ -123,6 +131,7 @@ def _release_name(handle: int) -> None:
 
 class InstanceServer(QObject):
     show_requested = Signal()
+    quit_requested = Signal()
 
     def __init__(self, path: str) -> None:
         super().__init__()
@@ -172,11 +181,16 @@ class InstanceServer(QObject):
     def _read(self, socket: QLocalSocket) -> None:
         while isValid(socket) and socket.canReadLine():  # closing the server deletes its sockets while signals are queued
             line = bytes(socket.readLine())  # pyright: ignore[reportArgumentType]  # the stub does not know a QByteArray is bytes-like
-            if line.strip() == SHOW:
+            message = line.strip()
+            if message not in (SHOW, QUIT):
+                continue
+            if message == SHOW:
                 self.show_requested.emit()
-                if socket.state() == QLocalSocket.LocalSocketState.ConnectedState:
-                    socket.write(OK + b"\n")
-                    socket.flush()
+            if socket.state() == QLocalSocket.LocalSocketState.ConnectedState:
+                socket.write(OK + b"\n")
+                socket.flush()
+            if message == QUIT:
+                self.quit_requested.emit()  # after the answer: quitting may close the server
 
 
 def _handed_over(reply: Reply) -> Outcome:
