@@ -103,14 +103,14 @@ def test_describe():
 def test_manual_all_day_away_removes_that_days_window(cfg):
     fc = forecast_from([(DAY, 900), (date(2026, 7, 4), 900)])
     away = [make_away(DAY, True, time(), time(), TZ)]
-    days = plan(fc, cfg, 40, NOW, away)
+    days = plan(fc, cfg.system, cfg.planning, 40, NOW, away)
     assert days[0].windows == () and days[1].windows
 
 
 def test_manual_away_range_leaves_the_rest_of_the_day(cfg):
     fc = forecast_from([(DAY, 900)])
     away = [make_away(DAY, False, time(0), time(13), TZ)]
-    windows = plan(fc, cfg, 40, NOW, away)[0].windows
+    windows = plan(fc, cfg.system, cfg.planning, 40, NOW, away)[0].windows
     assert windows and all(w.start >= at(DAY, 13) for w in windows)
 
 

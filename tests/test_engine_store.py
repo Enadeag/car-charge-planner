@@ -6,10 +6,11 @@ from datetime import datetime
 
 import pytest
 
+from car_charge_planner.config.model import Forecast, load_config
 from car_charge_planner.engine import Engine, FileStore, KeyStorage, run_here
 from car_charge_planner.forecast.provider import SettingSpec
 from car_charge_planner.forecast.registry import ProviderRegistry
-from car_charge_planner.planner.model import Forecast, Panels, load_config
+from car_charge_planner.planner.model import Panels
 from conftest import TZ, FakeNotifier, NoForecast, example_config
 from fake_provider import FakeProvider, steps_for
 
@@ -39,7 +40,7 @@ def registry_with(*providers):
 
 def test_saved_settings_are_written_and_used_at_once(tmp_path):
     e = engine(tmp_path)
-    tilted = replace(example_config(), panels=(Panels(kwp=6.0, tilt_deg=20),))
+    tilted = example_config().with_system(panels=(Panels(kwp=6.0, tilt_deg=20),))
     assert e.save_settings(tilted) == []
     assert load_config(tmp_path / "config.toml") == tilted and e.cfg == tilted
 
@@ -47,8 +48,8 @@ def test_saved_settings_are_written_and_used_at_once(tmp_path):
 @pytest.mark.parametrize(
     "change, problem",
     [
-        (lambda cfg: replace(cfg, panels=(Panels(kwp=0.0),)), "kwp must be above 0"),
-        (lambda cfg: replace(cfg, latitude=0.0, longitude=0.0), "Enter your location"),
+        (lambda cfg: cfg.with_system(panels=(Panels(kwp=0.0),)), "kwp must be above 0"),
+        (lambda cfg: cfg.with_system(latitude=0.0, longitude=0.0), "Enter your location"),
     ],
 )
 def test_settings_that_do_not_pass_the_checks_are_not_saved_and_say_why(tmp_path, change, problem):
@@ -62,7 +63,7 @@ def test_a_config_that_cannot_be_written_is_said_and_nothing_changes(tmp_path):
     blocker = tmp_path / "blocked"
     blocker.write_text("a file where the folder should be", encoding="utf-8")
     e = engine(tmp_path, config_file=blocker / "config.toml")
-    problems = e.save_settings(replace(example_config(), latitude=51.0))
+    problems = e.save_settings(example_config().with_system(latitude=51.0))
     assert len(problems) == 1 and "Could not write" in problems[0] and e.cfg == example_config()
 
 
@@ -85,7 +86,7 @@ def test_without_a_keychain_the_keys_are_in_secrets_toml_and_the_engine_says_whe
 def test_keys_that_cannot_be_stored_keep_the_settings_from_being_saved_too(tmp_path, no_keychain):
     (tmp_path / "secrets.toml").mkdir()  # a folder where the file should go: writing it fails on every system
     e = engine(tmp_path)
-    problems = e.save_settings(replace(example_config(), latitude=51.0), {"keyed": {"api_key": KEY}})
+    problems = e.save_settings(example_config().with_system(latitude=51.0), {"keyed": {"api_key": KEY}})
     assert len(problems) == 1 and KEY not in problems[0]
     assert not (tmp_path / "config.toml").exists() and e.cfg == example_config()
 
@@ -93,7 +94,7 @@ def test_keys_that_cannot_be_stored_keep_the_settings_from_being_saved_too(tmp_p
 def test_settings_saved_without_keys_leave_the_keys_alone(tmp_path, keychain):
     e = engine(tmp_path)
     e.save_settings(example_config(), {"keyed": {"api_key": KEY}})
-    assert e.save_settings(replace(example_config(), latitude=51.0)) == []
+    assert e.save_settings(example_config().with_system(latitude=51.0)) == []
     assert e.saved_keys().values == {"keyed": {"api_key": KEY}}
 
 
@@ -139,6 +140,6 @@ def test_a_hint_is_seen_once_also_after_a_restart(tmp_path):
 def test_a_settings_watcher_hears_the_old_and_the_new_settings(tmp_path):
     e = engine(tmp_path)
     heard = []
-    e.watch_settings(lambda old, new: heard.append((old.latitude, new.latitude)))
-    e.save_settings(replace(example_config(), latitude=51.0))
+    e.watch_settings(lambda old, new: heard.append((old.system.latitude, new.system.latitude)))
+    e.save_settings(example_config().with_system(latitude=51.0))
     assert heard == [(52.37, 51.0)]

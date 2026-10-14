@@ -4,7 +4,9 @@ from dataclasses import replace
 
 import pytest
 
-from car_charge_planner.planner.model import TYPICAL_KEYS, AwayRule, Config, ConfigError, Setup, first_run_config
+from car_charge_planner.app_settings import AppSettings
+from car_charge_planner.config.model import TYPICAL_KEYS, Config, ConfigError, Setup, first_run_config
+from car_charge_planner.planner.model import AwayRule
 from car_charge_planner.setup.recap import build_recap, compass_label
 from car_charge_planner.setup.state import SetupState
 from conftest import example_config
@@ -19,15 +21,15 @@ def typical(*keys):
 
 def test_a_new_install_starts_with_every_value_typical_and_the_regions_units():
     state = SetupState.starting_from(Config(), US)
-    assert state.config.setup.typical == TYPICAL_KEYS and state.config.interface.units == "imperial"
-    assert SetupState.starting_from(first_run_config(), NL).config.interface.units == "metric"
-    assert SetupState.starting_from(Config(), {}, "en_GB").config.interface.units == "imperial"
+    assert state.config.setup.typical == TYPICAL_KEYS and state.units == "imperial"
+    assert SetupState.starting_from(first_run_config(), NL).units == "metric"
+    assert SetupState.starting_from(Config(), {}, "en_GB").units == "imperial"
 
 
 def test_a_set_up_config_is_taken_as_it_is_so_running_set_up_again_is_pre_filled():
-    cfg = replace(typical("panels.kwp"), interface=replace(example_config().interface, units="metric"))
-    state = SetupState.starting_from(cfg, US)  # the region says imperial; the owner's own choice stands
-    assert state.config == cfg and state.initial == cfg and not state.touched
+    cfg = typical("panels.kwp")
+    state = SetupState.starting_from(cfg, US, app=AppSettings(units="metric"))  # the region says imperial; the owner's own choice stands
+    assert state.config == cfg and state.initial == cfg and state.units == "metric" and not state.touched
 
 
 def test_nothing_has_been_done_until_something_is():
@@ -36,7 +38,7 @@ def test_nothing_has_been_done_until_something_is():
     state.place_label = "Utrecht"
     assert state.touched
     other = SetupState.starting_from(example_config(), NL)
-    other.config = replace(other.config, latitude=1.0)
+    other.config = other.config.with_system(latitude=1.0)
     assert other.touched
     hub = SetupState.starting_from(example_config(), NL)
     hub.done.add("house")
@@ -60,13 +62,13 @@ def test_only_known_keys_can_be_typical():
 
 
 def test_the_result_is_checked_like_settings_checks_it():
-    assert SetupState.starting_from(example_config(), NL).result().latitude == 52.37
+    assert SetupState.starting_from(example_config(), NL).result().system.latitude == 52.37
     fresh = SetupState.starting_from(Config(), NL)
     assert not fresh.has_location
     with pytest.raises(ConfigError, match="location"):
         fresh.result()
     broken = SetupState.starting_from(example_config(), NL)
-    broken.config = replace(broken.config, charger=replace(broken.config.charger, phases=2))
+    broken.config = broken.config.with_system(charger=replace(broken.config.system.charger, phases=2))
     with pytest.raises(ConfigError, match="phases"):
         broken.result()
 
@@ -89,7 +91,7 @@ def test_the_recap_shows_what_was_answered_in_the_chosen_units():
     assert shown["car"]["Driving per day"].value == "86 km" and shown["car"]["Consumption"].value == "18.0 kWh/100 km"
     assert shown["charger"]["Phases"].value == "1" and shown["charger"]["Highest current"].value == "32 A" and shown["charger"]["Lowest current"].value == "6 A"
     assert shown["house"]["Own use"].value == "0.60 kW" and shown["place"]["Time zone"].value == "Europe/Amsterdam"
-    state.config = replace(state.config, interface=replace(state.config.interface, units="imperial"))
+    state.units = "imperial"
     shown = lines(state)
     assert shown["car"]["Driving per day"].value == "53 mi" and shown["car"]["Consumption"].value == "3.45 mi/kWh"
 
@@ -116,9 +118,9 @@ def test_away_times_are_listed_or_the_car_is_home_all_day():
 
     state = SetupState.starting_from(example_config(), NL)
     assert lines(state)["away"]["Away times"].value == "Thu 06:00-19:00"
-    state.config = replace(state.config, away_rules=(AwayRule(0, time(8, 0), time(17, 0)), AwayRule(4, time(9, 0), time(12, 30))))
+    state.config = state.config.with_system(away_rules=(AwayRule(0, time(8, 0), time(17, 0)), AwayRule(4, time(9, 0), time(12, 30))))
     assert lines(state)["away"]["Away times"].value == "Mon 08:00-17:00, Fri 09:00-12:30"
-    state.config = replace(state.config, away_rules=())
+    state.config = state.config.with_system(away_rules=())
     assert lines(state)["away"]["Away times"].value == "the car is treated as home all day"
 
 

@@ -28,13 +28,10 @@ from PySide6.QtWidgets import (
 )
 
 from car_charge_planner import colours, units
-from car_charge_planner.i18n import _, available_languages, language_name
-from car_charge_planner.names import weekdays_long
-from car_charge_planner.planner.model import (
+from car_charge_planner.app_settings import AppSettings
+from car_charge_planner.config.model import (
     TYPICAL_KEYS,
-    AwayRule,
     Config,
-    Panels,
     Setup,
     base_key,
     panel_key,
@@ -43,6 +40,9 @@ from car_charge_planner.planner.model import (
     with_array,
     without_array,
 )
+from car_charge_planner.i18n import _, available_languages, language_name
+from car_charge_planner.names import weekdays_long
+from car_charge_planner.planner.model import AwayRule, Panels
 
 from .fields import LOCATION_FIELDS, FieldSpec, TabSpec, array_fields, get_value, set_value
 
@@ -107,10 +107,12 @@ def shown_value(spec: FieldSpec, stored, system: str = units.METRIC):
 class FieldTab(QWidget):
     changed = Signal()  # any box edited, or the tab (re)loaded
 
-    def __init__(self, tab: TabSpec, cfg: Config, secrets: dict[str, str] | None = None, switches: dict[str, bool] | None = None) -> None:
-        """`secrets` holds the values of the tab's secret fields by field key; they are not part of the Config.
+    def __init__(self, tab: TabSpec, cfg: Config | AppSettings, secrets: dict[str, str] | None = None, switches: dict[str, bool] | None = None) -> None:
+        """The tab shows values of the engine's config, or of the app's own settings when `cfg` is those.
+        `secrets` holds the values of the tab's secret fields by field key; they are not part of the Config.
         `switches` does the same for the check boxes, which show a state kept by the system."""
         super().__init__()
+        self.defaults = type(cfg)()  # what Reset tab goes back to
         self._secrets = dict(secrets or {})
         self.switches = dict(switches or {})
         self.units = units.METRIC  # set_units() changes how distances and consumption are shown
@@ -262,8 +264,8 @@ class FieldTab(QWidget):
         else:
             widget.setValue(value)
 
-    def load(self, cfg: Config) -> None:
-        """Fill the boxes from a config and remember its exact values."""
+    def load(self, cfg: Config | AppSettings) -> None:
+        """Fill the boxes from a config (or the app's settings) and remember its exact values."""
         for spec in self.specs:
             if spec.kind == "secret":
                 stored = self._secrets.get(spec.key, "")
@@ -274,12 +276,12 @@ class FieldTab(QWidget):
             self.baseline[spec.key] = stored
             self._exact.pop(spec.key, None)
             self._set_widget(spec, stored)
-        self.typical = {s.key for s in self.specs if s.key in cfg.setup.typical}
+        self.typical = {s.key for s in self.specs if s.key in cfg.setup.typical} if isinstance(cfg, Config) else set()
         self._refresh_hints()
 
     def reset(self) -> None:
         """Back to the built-in values, which are typical ones again."""
-        self.load(Config())
+        self.load(self.defaults)
         self.typical = {s.key for s in self.specs if base_key(s.key) in TYPICAL_KEYS}
         self._refresh_hints()
 
@@ -308,10 +310,12 @@ class FieldTab(QWidget):
             return round(units.from_display(spec.quantity, shown, self.units), 10)
         return round(shown / spec.scale, 10)
 
-    def apply_to(self, cfg: Config) -> Config:
+    def apply_to[T: (Config, AppSettings)](self, cfg: T) -> T:
         for spec in self.specs:
             if spec.kind not in ("secret", "check"):  # these are not in the Config: see collect_secrets, collect_switches
                 cfg = set_value(cfg, spec.key, self.stored_value(spec))
+        if isinstance(cfg, AppSettings):
+            return cfg
         return replace(cfg, setup=Setup(self._typical_after(cfg)))
 
     def _typical_after(self, cfg: Config) -> tuple[str, ...]:
@@ -335,12 +339,12 @@ class ArrayBox(QWidget):
 
     def __init__(self, index: int, cfg: Config, on_remove) -> None:
         super().__init__()
-        count = len(cfg.panels)
+        count = len(cfg.system.panels)
         self.index = index
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         heading = QHBoxLayout()
-        name = cfg.panels[index].name
+        name = cfg.system.panels[index].name
         self.heading = QLabel()
         self._name_edited(name)
         self.heading.setStyleSheet("font-weight: bold;")
@@ -443,7 +447,7 @@ class SolarTab(QWidget):
 
     def apply_to(self, cfg: Config) -> Config:
         own = [key for key in cfg.setup.typical if split_panel_key(key) is None]  # the arrays' flags come from the boxes
-        cfg = replace(cfg, panels=tuple(self.arrays), setup=Setup(tuple(own)))
+        cfg = replace(cfg.with_system(panels=tuple(self.arrays)), setup=Setup(tuple(own)))
         for tab in self._tabs():
             cfg = tab.apply_to(cfg)
         return cfg
@@ -462,8 +466,8 @@ class SolarTab(QWidget):
             self.arrays_layout.removeWidget(box)
             box.hide()
             box.deleteLater()
-        self.arrays = list(cfg.panels)
-        self.boxes = [ArrayBox(index, cfg, self.remove_array) for index in range(len(cfg.panels))]
+        self.arrays = list(cfg.system.panels)
+        self.boxes = [ArrayBox(index, cfg, self.remove_array) for index in range(len(cfg.system.panels))]
         for box in self.boxes:
             box.fields.changed.connect(self.changed.emit)
             self.arrays_layout.addWidget(box)
@@ -562,9 +566,9 @@ class AwayRulesTab(QWidget):
     def load(self, cfg: Config) -> None:
         for row in list(self.rows):
             self.remove_row(row)
-        for rule in cfg.away_rules:
+        for rule in cfg.system.away_rules:
             self.add_row(rule)
         self.empty_note.setVisible(not self.rows)
 
     def apply_to(self, cfg: Config) -> Config:
-        return replace(cfg, away_rules=tuple(row.rule() for row in self.rows))
+        return cfg.with_system(away_rules=tuple(row.rule() for row in self.rows))

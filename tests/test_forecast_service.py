@@ -8,11 +8,11 @@ from datetime import UTC, date, timedelta
 
 import pytest
 
+from car_charge_planner.config.model import Forecast
 from car_charge_planner.forecast.provider import BadResponse, RateLimited, SettingSpec, Unavailable
 from car_charge_planner.forecast.registry import ProviderRegistry
 from car_charge_planner.forecast.secret_store import SecretsError
 from car_charge_planner.forecast.service import ForecastService, ForecastUnavailable
-from car_charge_planner.planner.model import Forecast
 from conftest import at
 from fake_provider import FakeProvider, Held, steps_for
 
@@ -72,7 +72,7 @@ def test_the_primary_is_asked_and_the_result_says_who_answered(rig):
 def test_the_provider_is_given_the_system_the_settings_and_the_time(rig, cfg):
     rig.get()
     system, settings, now = rig.main.calls[0]
-    assert (system.latitude, system.kwp, system.timezone) == (cfg.latitude, cfg.panels[0].kwp, cfg.timezone)
+    assert (system.latitude, system.kwp, system.timezone) == (cfg.system.latitude, cfg.system.panels[0].kwp, cfg.system.timezone)
     assert settings == {} and now == T0
 
 
@@ -254,9 +254,9 @@ def test_a_cool_down_that_has_passed_is_forgotten(rig):
 
 def test_a_changed_system_or_setting_makes_the_cache_not_apply(rig, cfg):
     rig.get()
-    bigger = replace(rig.cfg, panels=(replace(cfg.panels[0], kwp=9.0),))
+    bigger = rig.cfg.with_system(panels=(replace(cfg.system.panels[0], kwp=9.0),))
     assert not rig.get(later(minutes=5), cfg=bigger).from_cache
-    moved = replace(rig.cfg, latitude=51.0)
+    moved = rig.cfg.with_system(latitude=51.0)
     assert not rig.get(later(minutes=6), cfg=moved).from_cache
     assert rig.main.call_count == 3
     assert rig.get(later(minutes=7), cfg=moved).from_cache  # and the new one is cached in turn
@@ -363,7 +363,7 @@ def test_a_two_day_forecast_plans_without_trouble(rig, cfg):
 
     rig.main.script = [steps_for(DAY) + steps_for(DAY + timedelta(days=1))]
     result = rig.get()
-    days = plan(result.steps, rig.cfg, 45, T0)
+    days = plan(result.steps, rig.cfg.system, rig.cfg.planning, 45, T0)
     assert len(days) == 2 and all(d.windows for d in days)
 
 

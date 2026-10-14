@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from .model import AwayPeriod, Config, DayPlan, ForecastStep, Window, add_hours, ceil_to_five_minutes, utc
+from .model import AwayPeriod, DayPlan, ForecastStep, HomeSystem, PlanningPreferences, Window, add_hours, ceil_to_five_minutes, utc
 from .projection import away_periods
 from .surplus import charge_power_kw, usable_kw
 
@@ -41,17 +41,18 @@ def _best_placement(
     day: date,
     energy_kwh: float,
     forecast: list[ForecastStep],
-    cfg: Config,
+    system: HomeSystem,
+    preferences: PlanningPreferences,
     away: list[AwayPeriod],
     planned: list[Window],
     now: datetime,
 ) -> Window | None:
-    tz = ZoneInfo(cfg.timezone)
+    tz = ZoneInfo(system.timezone)
     slots = _day_slots(day, tz)
     usable: list[float | None] = []
     for start, _ in slots:
         step = next((s for s in forecast if utc(s.start) <= utc(start) < utc(s.end)), None)
-        usable.append(usable_kw(step, cfg) if step else None)
+        usable.append(usable_kw(step, system, preferences) if step else None)
     free = [
         usable[i] is not None
         and utc(slots[i][0]) >= utc(now)
@@ -65,8 +66,8 @@ def _best_placement(
 
     best = None
     best_key = None
-    for amps in range(cfg.charger.min_amps, cfg.charger.max_amps + 1):
-        power = charge_power_kw(amps, cfg)
+    for amps in range(system.charger.min_amps, system.charger.max_amps + 1):
+        power = charge_power_kw(amps, system)
         hours = energy_kwh / power
         n = math.ceil(hours / SLOT_H - _EPS)
         if n < 1 or n > len(slots):
@@ -95,7 +96,8 @@ def _best_placement(
 def grid_advice(
     days: list[DayPlan],
     forecast: list[ForecastStep],
-    cfg: Config,
+    system: HomeSystem,
+    preferences: PlanningPreferences,
     manual_away: list[AwayPeriod] | None,
     now: datetime,
 ) -> GridAdvice | None:
@@ -104,19 +106,19 @@ def grid_advice(
     Looks at the end-of-day level after planned solar charging and driving, so a dip
     that the sun will fix before it happens does not trigger a warning.
     """
-    minimum = cfg.car.minimum_pct
+    minimum = preferences.minimum_pct
     dip = next((d for d in days if d.soc_after_charging_pct - d.driving_pct < minimum - MIN_DEFICIT_PCT), None)
     if dip is None or not forecast:
         return None
     end_pct = dip.soc_after_charging_pct - dip.driving_pct
     deficit = minimum - end_pct
-    energy = deficit / 100 * cfg.car.usable_battery_kwh / cfg.charger.efficiency
+    energy = deficit / 100 * system.car.usable_battery_kwh / system.charger.efficiency
 
-    away = away_periods(forecast, cfg, manual_away)
+    away = away_periods(forecast, system, manual_away)
     by_date = {d.date: d for d in days}
     window = None
     day = dip.date
     while day >= days[0].date and window is None:  # latest feasible day first
-        window = _best_placement(day, energy, forecast, cfg, away, list(by_date[day].windows), now)
+        window = _best_placement(day, energy, forecast, system, preferences, away, list(by_date[day].windows), now)
         day -= timedelta(days=1)
     return GridAdvice(dip.date, end_pct, deficit, energy, window)

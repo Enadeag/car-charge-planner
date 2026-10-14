@@ -6,7 +6,7 @@ phase at 16 A. Settings and the plan page flag them as typical until the owner e
 
 from __future__ import annotations
 
-from car_charge_planner.planner.model import TYPICAL_KEYS, Config, base_key, with_setting
+from car_charge_planner.config.model import TYPICAL_KEYS, Config, base_key, with_setting
 
 TYPICAL_VALUES: dict[str, float | int] = {
     "panels.kwp": 5.0,

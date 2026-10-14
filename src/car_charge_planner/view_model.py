@@ -7,8 +7,9 @@ from datetime import date, datetime, timedelta
 from typing import TypedDict
 from zoneinfo import ZoneInfo
 
+from car_charge_planner.config.model import Config, base_key
 from car_charge_planner.planner.advice import GridAdvice
-from car_charge_planner.planner.model import Config, DayPlan, Window, base_key, utc
+from car_charge_planner.planner.model import DayPlan, Window, utc
 from car_charge_planner.storage.state import BatteryReading
 
 from .i18n import _, ngettext, number, pgettext
@@ -103,8 +104,8 @@ def _projection(day: DayPlan, window: Window, cfg: Config, tz: ZoneInfo) -> str:
     """Battery before and after this window, counting earlier windows the same day."""
     level = day.soc_start_pct
     for w in day.windows:
-        gained = w.solar_kwh * cfg.charger.efficiency / cfg.car.usable_battery_kwh * 100
-        after = max(level, min(cfg.car.target_pct, level + gained))
+        gained = w.solar_kwh * cfg.system.charger.efficiency / cfg.system.car.usable_battery_kwh * 100
+        after = max(level, min(cfg.planning.target_pct, level + gained))
         if w is window:
             return _("Battery {level}% \u2192 {after}% by {time}").format(
                 level=number(level), after=number(after), time=_clock(window.end, tz)
@@ -180,7 +181,7 @@ def advice_view(advice: GridAdvice, now: datetime, cfg: Config, tz: ZoneInfo) ->
     else:
         template = _("Battery would drop to {level}% (minimum {minimum}%) by the end of {day}.")
     reason = template.format(
-        level=number(max(0.0, advice.soc_end_pct)), minimum=number(cfg.car.minimum_pct), day=short_date(advice.day)
+        level=number(max(0.0, advice.soc_end_pct)), minimum=number(cfg.planning.minimum_pct), day=short_date(advice.day)
     )
     if advice.window is None:
         return AdviceView(
@@ -194,7 +195,7 @@ def advice_view(advice: GridAdvice, now: datetime, cfg: Config, tz: ZoneInfo) ->
     when = _("{day} {span}").format(day=day_label(w.start.astimezone(tz).date(), today), span=_span(w, tz))
     return AdviceView(
         _("Grid charge needed \u00b7 {when}").format(when=when),
-        _("{power} \u00b7 about {energy} kWh").format(power=_power(w, cfg.charger.phases), energy=number(advice.energy_kwh)),
+        _("{power} \u00b7 about {energy} kWh").format(power=_power(w, cfg.system.charger.phases), energy=number(advice.energy_kwh)),
         reason,
     )
 
@@ -297,11 +298,11 @@ def build(
     advice: GridAdvice | None = None,
     source: ForecastSource | None = None,
 ) -> ViewModel:
-    tz = ZoneInfo(cfg.timezone)
+    tz = ZoneInfo(cfg.system.timezone)
     today = now.astimezone(tz).date()
     upcoming = [(d, w) for d in days for w in d.windows if utc(w.end) > utc(now)]
     headline_window = upcoming[0][1] if upcoming else None
-    outlook, quiet_days = _outlook(days, headline_window, now, tz, today, cfg.charger.phases)
+    outlook, quiet_days = _outlook(days, headline_window, now, tz, today, cfg.system.charger.phases)
     battery_line, battery_stale = battery_status(battery, now)
     typical = typical_line(cfg.setup.typical)
     common = _Common(
@@ -340,7 +341,7 @@ def build(
             **common,
         )
 
-    three = cfg.charger.phases == 3
+    three = cfg.system.charger.phases == 3
     day_plan, window = upcoming[0]
     projection = _projection(day_plan, window, cfg, tz)
     if utc(window.start) <= utc(now) + timedelta(seconds=1):
@@ -350,7 +351,7 @@ def build(
                 _("Charge now until {end} at {amps} A per phase") if three else _("Charge now until {end} at {amps} A")
             ).format(end=_clock(window.end, tz), amps=window.amps),
             headline=_("Charge now"),
-            detail=_("Until {end} \u00b7 {facts}").format(end=_clock(window.end, tz), facts=_facts(window, cfg.charger.phases)),
+            detail=_("Until {end} \u00b7 {facts}").format(end=_clock(window.end, tz), facts=_facts(window, cfg.system.charger.phases)),
             projection=projection,
             **common,
         )
@@ -362,7 +363,7 @@ def build(
             day=label, span=span, amps=window.amps
         ),
         headline=_("Next: {day} {span}").format(day=label, span=span),
-        detail=_facts(window, cfg.charger.phases),
+        detail=_facts(window, cfg.system.charger.phases),
         projection=projection,
         **common,
     )

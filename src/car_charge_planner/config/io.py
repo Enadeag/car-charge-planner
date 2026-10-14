@@ -8,8 +8,9 @@ import re
 from dataclasses import fields
 from pathlib import Path
 
-from .model import CONFIG_SCHEMA, Config, ConfigError, validate
-from .schema import KEY
+from car_charge_planner.planner.schema import KEY
+
+from .model import CONFIG_SCHEMA, SYSTEM_SECTIONS, Config, ConfigError, load_config, stored_schema, validate
 
 HEADER = """\
 # Managed by the car charge planner's Settings window.
@@ -17,7 +18,6 @@ HEADER = """\
 """
 
 SECRET_LOOKING = re.compile(r"key|secret|token|password|passwd", re.IGNORECASE)
-SECTIONS = ("house", "car", "charger", "planning", "notify", "interface")  # after the [[panels]] arrays
 
 
 def _value(value: object) -> str:
@@ -34,16 +34,16 @@ def _value(value: object) -> str:
 
 def dump_config(cfg: Config) -> str:
     lines = [HEADER.rstrip("\n"), "", f"{KEY} = {CONFIG_SCHEMA}", ""]
+    system = cfg.system
     lines += [
-        f"timezone = {_value(cfg.timezone)}",
-        f"latitude = {_value(cfg.latitude)}",
-        f"longitude = {_value(cfg.longitude)}",
+        f"timezone = {_value(system.timezone)}",
+        f"latitude = {_value(system.latitude)}",
+        f"longitude = {_value(system.longitude)}",
     ]
-    for panels in cfg.panels:  # one [[panels]] table for each array; the name only when there is one
+    for panels in system.panels:  # one [[panels]] table for each array; the name only when there is one
         lines += ["", "[[panels]]"] + ([f"name = {_value(panels.name)}"] if panels.name else [])
         lines += [f"{f.name} = {_value(getattr(panels, f.name))}" for f in fields(panels) if f.name != "name"]
-    for name in SECTIONS:
-        section = getattr(cfg, name)
+    for name, section in [*((name, getattr(system, name)) for name in SYSTEM_SECTIONS), ("planning", cfg.planning)]:
         lines += ["", f"[{name}]"]
         lines += [f"{f.name} = {_value(getattr(section, f.name))}" for f in fields(section)]
     lines += ["", "[forecast]", f"primary = {_value(cfg.forecast.primary)}", f"fallback = {_value(cfg.forecast.fallback)}"]
@@ -58,9 +58,9 @@ def dump_config(cfg: Config) -> str:
     lines += ["", "[setup]", f"typical = [{typical}]"]
     lines += ["", "[away]"]
     # always written, even empty: a missing key would bring back the default rule on the next start
-    if cfg.away_rules:
+    if system.away_rules:
         lines.append("recurring = [")
-        for rule in cfg.away_rules:
+        for rule in system.away_rules:
             lines.append(
                 f'  {{weekday = {rule.weekday}, start = "{rule.start:%H:%M}", end = "{rule.end:%H:%M}"}},'
             )
@@ -82,3 +82,12 @@ def write_config(cfg: Config, path: Path) -> None:
     except OSError:
         tmp.unlink(missing_ok=True)
         raise
+
+
+def load_current(path: Path) -> Config:
+    """Load the config, and when the file is in an older format write it back in the current one. Raises `ConfigError`
+    when the file is wrong, `OSError` when the newer file cannot be written (the old one is then left as it was)."""
+    cfg = load_config(path)
+    if stored_schema(path) != CONFIG_SCHEMA:
+        write_config(cfg, path)
+    return cfg

@@ -89,6 +89,46 @@ msgstr ""
 msgid "<a href=\"{url}\">Source code</a>"
 msgstr ""
 
+#: car_charge_planner/app_settings.py
+#, python-brace-format
+msgid "[interface] mode must be one of {modes}, not {mode!r}"
+msgstr ""
+
+#: car_charge_planner/app_settings.py
+#, python-brace-format
+msgid "[interface] units must be one of {units}, not {value!r}"
+msgstr ""
+
+#: car_charge_planner/app_settings.py
+#, python-brace-format
+msgid "[interface] language must be \"auto\" or a language code such as \"nl\", not {language!r}"
+msgstr ""
+
+#: car_charge_planner/app_settings.py
+#, python-brace-format
+msgid "{name}: [interface] must be a table"
+msgstr ""
+
+#: car_charge_planner/app_settings.py car_charge_planner/config/model.py
+#, python-brace-format
+msgid "unknown keys in [{section}]: {keys}"
+msgstr ""
+
+#: car_charge_planner/app_settings.py
+#, python-brace-format
+msgid "Invalid settings in {name}:"
+msgstr ""
+
+#: car_charge_planner/app_settings.py
+#, python-brace-format
+msgid "{name} is not valid TOML: {error}"
+msgstr ""
+
+#: car_charge_planner/app_settings.py
+#, python-brace-format
+msgid "Could not write the app's settings: {error}"
+msgstr ""
+
 #: car_charge_planner/app_windows.py
 msgid "Set-up needed"
 msgstr ""
@@ -145,6 +185,181 @@ msgstr ""
 #: car_charge_planner/away_input.py
 #, python-brace-format
 msgid "Away: {items}"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[panels] there must be at least one panel array"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+#, python-brace-format
+msgid "{panels} kwp must be above 0"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+#, python-brace-format
+msgid "{panels} tilt_deg must be between 0 and 90"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+#, python-brace-format
+msgid "{panels} azimuth_deg must be between -180 and 180"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+#, python-brace-format
+msgid "{panels} system_losses must be at least 0 and below 1"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+#, python-brace-format
+msgid "{panels} name must be a text"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[house] baseload_kw cannot be negative"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[car] usable_battery_kwh must be above 0"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[car] consumption_kwh_per_100km must be above 0"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[car] km_per_day cannot be negative"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[planning] needs 0 <= minimum_pct < target_pct <= 100"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[charger] needs 0 < min_amps <= max_amps"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[charger] phases must be 1 or 3"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[charger] volts must be above 0"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[charger] efficiency must be above 0 and at most 1"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[planning] margin must be above 0 and at most 1"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[planning] import_tolerance_kwh cannot be negative"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[planning] min_window_minutes must be above 0"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[planning] notify_lead_minutes cannot be negative"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[forecast] primary must be a provider id such as \"open-meteo\""
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[forecast] fallback must be empty or a provider id"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[forecast] the fallback must be a different provider than the primary"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+#, python-brace-format
+msgid "[forecast.{id}] is not a provider id"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+#, python-brace-format
+msgid "[forecast.{id}] {key} must be a text"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+#, python-brace-format
+msgid "[setup] typical lists settings that do not exist: {keys}"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[setup] typical lists a setting twice"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "latitude must be between -90 and 90"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "longitude must be between -180 and 180"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+#, python-brace-format
+msgid "timezone {zone!r} is not a known time zone"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+#, python-brace-format
+msgid "[away] weekday {weekday} must be 0 (Monday) to 6 (Sunday)"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[away] each rule must end after it starts on the same day (no overnight rules)"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "Invalid config:"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+#, python-brace-format
+msgid "[panels] array {number}"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "Enter your location: latitude and longitude cannot both be 0"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+#, python-brace-format
+msgid "[away] time {value!r} must look like \"06:00\""
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[setup] typical must be a list of setting names"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+msgid "[[panels]] must be one or more tables, one for each panel array"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+#, python-brace-format
+msgid "unknown keys in {panels}: {keys}"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+#, python-brace-format
+msgid "Config file is not valid TOML: {error}"
+msgstr ""
+
+#: car_charge_planner/config/model.py
+#, python-brace-format
+msgid "A config value has the wrong type: {error}"
 msgstr ""
 
 #: car_charge_planner/controller.py
@@ -343,6 +558,19 @@ msgid "The interface is set to a tray icon, but this desktop has none, so the ap
 msgstr ""
 
 #: car_charge_planner/main.py
+msgid "Car charge planner"
+msgstr ""
+
+#: car_charge_planner/main.py
+#, python-brace-format
+msgid ""
+"{error}\n"
+"\n"
+"Fix the file and start the app again:\n"
+"{file}"
+msgstr ""
+
+#: car_charge_planner/main.py
 #, python-brace-format
 msgid "{app} is already running: asked it to show itself."
 msgstr ""
@@ -354,19 +582,6 @@ msgstr ""
 
 #: car_charge_planner/main.py
 msgid "Could not set up the single-instance socket; a second copy could start."
-msgstr ""
-
-#: car_charge_planner/main.py
-msgid "Car charge planner"
-msgstr ""
-
-#: car_charge_planner/main.py
-#, python-brace-format
-msgid ""
-"{error}\n"
-"\n"
-"Fix the file and start the app again:\n"
-"{file}"
 msgstr ""
 
 #: car_charge_planner/names.py
@@ -536,201 +751,6 @@ msgstr ""
 
 #: car_charge_planner/notifier.py
 msgid "Open"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[panels] there must be at least one panel array"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "{panels} kwp must be above 0"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "{panels} tilt_deg must be between 0 and 90"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "{panels} azimuth_deg must be between -180 and 180"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "{panels} system_losses must be at least 0 and below 1"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "{panels} name must be a text"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[house] baseload_kw cannot be negative"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[car] usable_battery_kwh must be above 0"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[car] consumption_kwh_per_100km must be above 0"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[car] km_per_day cannot be negative"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[car] needs 0 <= minimum_pct < target_pct <= 100"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[charger] needs 0 < min_amps <= max_amps"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[charger] phases must be 1 or 3"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[charger] volts must be above 0"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[charger] efficiency must be above 0 and at most 1"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[planning] margin must be above 0 and at most 1"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[planning] import_tolerance_kwh cannot be negative"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[planning] min_window_minutes must be above 0"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[notify] lead_minutes cannot be negative"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "[interface] language must be \"auto\" or a language code such as \"nl\", not {language!r}"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[forecast] primary must be a provider id such as \"open-meteo\""
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[forecast] fallback must be empty or a provider id"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[forecast] the fallback must be a different provider than the primary"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "[forecast.{id}] is not a provider id"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "[forecast.{id}] {key} must be a text"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "[setup] typical lists settings that do not exist: {keys}"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[setup] typical lists a setting twice"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "[interface] units must be one of {units}, not {value!r}"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "[interface] mode must be one of {modes}, not {mode!r}"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "latitude must be between -90 and 90"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "longitude must be between -180 and 180"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "timezone {zone!r} is not a known time zone"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "[away] weekday {weekday} must be 0 (Monday) to 6 (Sunday)"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[away] each rule must end after it starts on the same day (no overnight rules)"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "Invalid config:"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "[panels] array {number}"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "Enter your location: latitude and longitude cannot both be 0"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "[away] time {value!r} must look like \"06:00\""
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "unknown keys in [{section}]: {keys}"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[setup] typical must be a list of setting names"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-msgid "[[panels]] must be one or more tables, one for each panel array"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "unknown keys in {panels}: {keys}"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "Config file is not valid TOML: {error}"
-msgstr ""
-
-#: car_charge_planner/planner/model.py
-#, python-brace-format
-msgid "A config value has the wrong type: {error}"
 msgstr ""
 
 #: car_charge_planner/planner/schema.py

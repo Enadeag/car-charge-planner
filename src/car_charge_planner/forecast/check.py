@@ -8,8 +8,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from car_charge_planner.config.model import Config
 from car_charge_planner.i18n import _, ngettext
-from car_charge_planner.planner.model import Config, ForecastStep
+from car_charge_planner.planner.model import ForecastStep
 
 from .provider import (
     BadResponse,
@@ -67,13 +68,13 @@ def missing_settings(provider: ForecastProvider, cfg: Config, secrets: Secrets) 
 
 def try_provider(provider: ForecastProvider, cfg: Config, secrets: Secrets, now: datetime | None = None) -> Attempt:
     """One blocking fetch with these settings. Never raises. The caller has checked that the location is set."""
-    tz = ZoneInfo(cfg.timezone)
+    tz = ZoneInfo(cfg.system.timezone)
     now = now or datetime.now(tz)
     missing = missing_settings(provider, cfg, secrets)
     if missing:
         return Attempt(False, message=_("{setting} is required.").format(setting=", ".join(missing)))
     try:
-        steps = provider.fetch(SystemDescription.from_config(cfg), provider_settings(cfg, secrets, provider), now)
+        steps = provider.fetch(SystemDescription.of(cfg.system), provider_settings(cfg, secrets, provider), now)
     except ProviderError as err:
         return Attempt(False, message=describe_failure(provider, err))
     except Exception as err:  # a provider bug: say what kind, not what it said (it may hold a key)

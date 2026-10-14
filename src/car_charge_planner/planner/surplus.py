@@ -5,23 +5,24 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from .model import AwayPeriod, AwayRule, Config, ForecastStep
+from .model import AwayPeriod, AwayRule, ForecastStep, HomeSystem, PlanningPreferences
 
 
-def usable_kw(step: ForecastStep, cfg: Config) -> float:
+def usable_kw(step: ForecastStep, system: HomeSystem, preferences: PlanningPreferences) -> float:
     """Surplus after the house, scaled down by the planning margin. The provider already accounted for the panels."""
-    surplus = step.power_kw - cfg.house.baseload_kw
-    return max(0.0, surplus) * cfg.planning.margin
+    surplus = step.power_kw - system.house.baseload_kw
+    return max(0.0, surplus) * preferences.margin
 
 
-def charge_power_kw(amps: int, cfg: Config) -> float:
+def charge_power_kw(amps: int, system: HomeSystem) -> float:
     """Power the charger delivers at this current: every phase carries it. (230 V, 6 A: 1.4 kW on one phase, 4.1 kW on three.)"""
-    return amps * cfg.charger.volts * cfg.charger.phases / 1000
+    return amps * system.charger.volts * system.charger.phases / 1000
 
 
-def amps_for(power_kw: float, cfg: Config) -> int:
+def amps_for(power_kw: float, system: HomeSystem) -> int:
     """Whole amps (floored), per phase, that fit under power_kw on the configured charger."""
-    return min(cfg.charger.max_amps, int(power_kw * 1000 / (cfg.charger.volts * cfg.charger.phases)))
+    charger = system.charger
+    return min(charger.max_amps, int(power_kw * 1000 / (charger.volts * charger.phases)))
 
 
 def expand_away(

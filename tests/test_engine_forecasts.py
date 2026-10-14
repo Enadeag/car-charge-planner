@@ -3,11 +3,11 @@
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
+from car_charge_planner.config.model import Forecast
 from car_charge_planner.engine import Engine
 from car_charge_planner.forecast.provider import RateLimited, Unavailable
 from car_charge_planner.forecast.registry import ProviderRegistry
 from car_charge_planner.forecast.service import ForecastService
-from car_charge_planner.planner.model import Forecast
 from conftest import FakeClock, FakeNotifier
 from fake_provider import FakeProvider, steps_for
 

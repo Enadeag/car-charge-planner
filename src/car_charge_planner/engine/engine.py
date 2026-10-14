@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
+from car_charge_planner.config.model import Config, ConfigError, require_location, validate
 from car_charge_planner.forecast.check import Attempt, try_provider
 from car_charge_planner.forecast.registry import ProviderRegistry
 from car_charge_planner.forecast.registry import registry as builtin
@@ -14,7 +15,7 @@ from car_charge_planner.forecast.secret_store import Secrets, SecretsError
 from car_charge_planner.forecast.selection import check_selection
 from car_charge_planner.forecast.service import ForecastResult, ForecastService, forecast_key
 from car_charge_planner.planner.advice import grid_advice
-from car_charge_planner.planner.model import AwayPeriod, AwayRule, Config, ConfigError, Window, require_location, validate
+from car_charge_planner.planner.model import AwayPeriod, AwayRule, Window
 from car_charge_planner.planner.projection import plan
 from car_charge_planner.storage.state import State, with_away, with_battery, with_notified, with_seen, without_away
 
@@ -55,7 +56,7 @@ class Engine:
         registry: ProviderRegistry | None = None,
     ) -> None:
         self._cfg = cfg
-        self._tz = ZoneInfo(cfg.timezone)
+        self._tz = ZoneInfo(cfg.system.timezone)
         self._notifier = notifier
         self._store: Store = store or FileStore()
         self.registry = registry or builtin
@@ -134,7 +135,7 @@ class Engine:
         if forecast_key(cfg) != forecast_key(self._cfg):
             self._result, self._error = None, None  # a forecast for other panels or place would mislead
         self._cfg = cfg
-        self._tz = ZoneInfo(cfg.timezone)
+        self._tz = ZoneInfo(cfg.system.timezone)
         self.rebuild()
         self.refresh()  # reuses the cache when the forecast key is unchanged
 
@@ -217,19 +218,19 @@ class Engine:
         elif self._result is None:
             vm = no_forecast(self._error or _("Loading forecast..."), battery, now)
         else:
-            result = self._result
-            days = plan(result.steps, self._cfg, battery.pct, now, list(state.away), list(state.notified))
-            advice = grid_advice(days, result.steps, self._cfg, list(state.away), now)
+            result, system, preferences = self._result, self._cfg.system, self._cfg.planning
+            days = plan(result.steps, system, preferences, battery.pct, now, list(state.away), list(state.notified))
+            advice = grid_advice(days, result.steps, system, preferences, list(state.away), now)
             vm = build(days, now, self._cfg, battery, result.age(now), result.stale, advice, _source(result, now))
             self._announce(result, candidate_windows(days, advice), state, now)
         self._vm = vm
-        update = ViewUpdate(vm, state, now.date(), self._cfg.away_rules, self._tz)
+        update = ViewUpdate(vm, state, now.date(), self._cfg.system.away_rules, self._tz)
         for watcher in self._watchers:
             watcher(update)
 
     def _announce(self, result: ForecastResult, windows: list[tuple[str, Window]], state: State, now: datetime) -> None:
         """Notify once per window, a few minutes ahead."""
-        for kind, window in due(windows, state.notified, now, self._cfg.notify.lead_minutes, result.age(now), result.stale):
+        for kind, window in due(windows, state.notified, now, self._cfg.planning.notify_lead_minutes, result.age(now), result.stale):
             title, body = message(kind, window, self._cfg, self._tz)
             self._notifier.send(title, body)
             self._store.save_state(with_notified(self._store.load_state(), window, now))

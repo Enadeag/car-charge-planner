@@ -14,8 +14,8 @@ FRI = date(2026, 7, 3)
 def advise(cfg, days, soc, now=None, away=None):
     fc = forecast_from(days)
     now = now or at(days[0][0], 7)
-    plans = plan(fc, cfg, soc, now, away)
-    return grid_advice(plans, fc, cfg, away, now), plans
+    plans = plan(fc, cfg.system, cfg.planning, soc, now, away)
+    return grid_advice(plans, fc, cfg.system, cfg.planning, away, now), plans
 
 
 def dull(n, start=FRI):
@@ -37,13 +37,13 @@ def test_dip_before_the_next_sunny_day_triggers_advice(cfg):
     advice, plans = advise(cfg, days, soc=55)  # ends today ~39%, tomorrow ~17%, then the sun comes
     assert advice is not None
     assert advice.day == FRI + timedelta(days=1)
-    assert plans[0].soc_end_of_day_pct > cfg.car.minimum_pct
+    assert plans[0].soc_end_of_day_pct > cfg.planning.minimum_pct
     assert advice.deficit_pct > 0
 
 
 def test_advice_energy_matches_the_deficit(cfg):
     advice, _ = advise(cfg, dull(3), soc=35)
-    expected = advice.deficit_pct / 100 * cfg.car.usable_battery_kwh / cfg.charger.efficiency
+    expected = advice.deficit_pct / 100 * cfg.system.car.usable_battery_kwh / cfg.system.charger.efficiency
     assert abs(advice.energy_kwh - expected) < 1e-9
     w = advice.window
     assert abs(w.solar_kwh + w.import_kwh - advice.energy_kwh) < 1e-6
@@ -51,14 +51,14 @@ def test_advice_energy_matches_the_deficit(cfg):
 
 def test_true_shortfall_is_kept_when_driving_exceeds_the_battery(cfg):
     advice, _ = advise(cfg, dull(1), soc=5, now=at(FRI, 0))
-    assert advice.soc_end_pct < 0 and advice.deficit_pct > cfg.car.minimum_pct
+    assert advice.soc_end_pct < 0 and advice.deficit_pct > cfg.planning.minimum_pct
 
 
 def test_no_solar_means_lowest_power_and_earliest_start(cfg):
     night_only = [(FRI, 0), (FRI + timedelta(days=1), 0)]
     advice, _ = advise(cfg, night_only, soc=35, now=at(FRI, 0))
     w = advice.window
-    assert w.amps == cfg.charger.min_amps
+    assert w.amps == cfg.system.charger.min_amps
     assert w.import_kwh > 0 and w.solar_kwh == 0
     assert w.start == at(advice.window.start.date(), 0) or w.start.hour == 0
 
@@ -121,8 +121,8 @@ def test_advice_window_across_the_spring_forward_switch_lasts_the_real_hours_nee
     fc = hourly(sat, {}) + hourly(sun, {})
     cfg = golden_config()
     now = at(sat, 0)
-    plans = plan(fc, cfg, 57, now)
-    advice = grid_advice(plans, fc, cfg, None, now)
+    plans = plan(fc, cfg.system, cfg.planning, 57, now)
+    advice = grid_advice(plans, fc, cfg.system, cfg.planning, None, now)
     # 57% - 18% - 18% = 21% on Sunday: 9% of 70 kWh / 0.9 = 7 kWh
     assert (advice.day, advice.soc_end_pct, advice.deficit_pct, advice.energy_kwh) == (sun, pytest.approx(21), pytest.approx(9), pytest.approx(7))
     w = advice.window
@@ -137,9 +137,9 @@ def test_golden_advice_tops_up_a_day_the_sun_cannot_fill():
     fc = hourly(FRI, {10: 4.4, 11: 4.4, 12: 1.6, 13: 1.6, 14: 1.6, 15: 1.6})
     cfg = golden_config()
     now = at(FRI, 0)
-    plans = plan(fc, cfg, 38, now)
+    plans = plan(fc, cfg.system, cfg.planning, 38, now)
     assert [(w.start, w.end, w.amps) for w in plans[0].windows] == [(at(FRI, 10), at(FRI, 12), 14)]
-    advice = grid_advice(plans, fc, cfg, None, now)
+    advice = grid_advice(plans, fc, cfg.system, cfg.planning, None, now)
     # 6.44 kWh * 0.9 / 70 kWh = 8.28%: 38 + 8.28 - 18 = 28.28%, 1.72% short: 1.204 kWh / 0.9
     assert (advice.day, advice.soc_end_pct, advice.deficit_pct) == (FRI, pytest.approx(28.28), pytest.approx(1.72))
     assert advice.energy_kwh == pytest.approx(1.204 / 0.9)
@@ -152,7 +152,7 @@ def test_golden_advice_tops_up_a_day_the_sun_cannot_fill():
 
 def test_advice_is_for_the_first_dip_only(cfg):
     advice, plans = advise(cfg, dull(4), soc=40)
-    first = next(d for d in plans if d.soc_after_charging_pct - d.driving_pct < cfg.car.minimum_pct - 1)
+    first = next(d for d in plans if d.soc_after_charging_pct - d.driving_pct < cfg.planning.minimum_pct - 1)
     assert advice.day == first.date
 
 
@@ -160,9 +160,9 @@ def test_a_tiny_shortfall_is_not_worth_a_warning(cfg):
     # land the first day's end level about 0.5 points under the minimum
     from car_charge_planner.planner.projection import daily_driving_pct
 
-    soc = cfg.car.minimum_pct - 0.5 + daily_driving_pct(cfg)
+    soc = cfg.planning.minimum_pct - 0.5 + daily_driving_pct(cfg.system)
     advice, plans = advise(cfg, dull(1), soc=soc, now=at(FRI, 0))
-    assert 0 < cfg.car.minimum_pct - plans[0].soc_end_of_day_pct < 1
+    assert 0 < cfg.planning.minimum_pct - plans[0].soc_end_of_day_pct < 1
     assert advice is None
 
 
@@ -182,7 +182,7 @@ def test_grid_advice_across_the_repeated_hour_ends_in_winter_time():
     # 3 h 25 min at 6 A (1.38 kW) from 00:00 summer time (22:00 UTC) ends at 02:25 winter time (01:25 UTC)
     soc = 30 + 18 - 1.38 * 41 / 12 * 0.9 / 70 * 100
     cfg = golden_config()
-    advice = grid_advice(plan(fc, cfg, soc, at(day, 0)), fc, cfg, None, at(day, 0))
+    advice = grid_advice(plan(fc, cfg.system, cfg.planning, soc, at(day, 0)), fc, cfg.system, cfg.planning, None, at(day, 0))
     assert advice is not None and advice.window is not None
     w = advice.window
     assert (w.start.astimezone(UTC), w.end.astimezone(UTC), w.amps) == (

@@ -43,7 +43,7 @@ DRIVER = textwrap.dedent(
 
     def fake_get(self, cfg, now, force=False):  # no network: three bell-shaped days
         from zoneinfo import ZoneInfo
-        tz = ZoneInfo(cfg.timezone)
+        tz = ZoneInfo(cfg.system.timezone)
         steps = []
         for i in range(3):
             for start, irradiance in bell_day((now + timedelta(days=i)).date(), 900, tz):

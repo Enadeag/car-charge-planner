@@ -171,7 +171,7 @@ class CarPage(Page):
         self.volts.valueChanged.connect(lambda v: self._charger("charger.volts", volts=v))
 
     def enter(self) -> None:
-        self.system = self.state.config.interface.units  # the units chosen on the first page, which may have changed
+        self.system = self.state.units  # the units chosen on the first page, which may have changed
         self._shape_unit_boxes()
         self._show()
         self.advanced_toggle.setChecked(False)
@@ -209,16 +209,16 @@ class CarPage(Page):
     def _show(self) -> None:
         cfg = self.state.config
         self._filling = True
-        self.battery.setValue(cfg.car.usable_battery_kwh)
-        self.consumption.setValue(units.to_display(units.CONSUMPTION, cfg.car.consumption_kwh_per_100km, self.system))
-        self.weekly.setValue(units.to_display(units.DISTANCE, daily_to_weekly(cfg.car.km_per_day), self.system))
-        self.minimum.setValue(round(cfg.car.minimum_pct))
-        self.target.setValue(round(cfg.car.target_pct))
-        self.one_phase.setChecked(cfg.charger.phases == 1)
-        self.three_phases.setChecked(cfg.charger.phases == 3)
-        self.max_amps.setValue(cfg.charger.max_amps)
-        self.min_amps.setValue(cfg.charger.min_amps)
-        self.volts.setValue(round(cfg.charger.volts))
+        self.battery.setValue(cfg.system.car.usable_battery_kwh)
+        self.consumption.setValue(units.to_display(units.CONSUMPTION, cfg.system.car.consumption_kwh_per_100km, self.system))
+        self.weekly.setValue(units.to_display(units.DISTANCE, daily_to_weekly(cfg.system.car.km_per_day), self.system))
+        self.minimum.setValue(round(cfg.planning.minimum_pct))
+        self.target.setValue(round(cfg.planning.target_pct))
+        self.one_phase.setChecked(cfg.system.charger.phases == 1)
+        self.three_phases.setChecked(cfg.system.charger.phases == 3)
+        self.max_amps.setValue(cfg.system.charger.max_amps)
+        self.min_amps.setValue(cfg.system.charger.min_amps)
+        self.volts.setValue(round(cfg.system.charger.volts))
         self._filling = False
         self._refresh()
 
@@ -236,7 +236,7 @@ class CarPage(Page):
         if self._filling:
             return
         cfg = self.state.config
-        self.state.config = replace(cfg, car=replace(cfg.car, **values))
+        self.state.config = cfg.with_system(car=replace(cfg.system.car, **values))
         self.state.give_value(key)
         self._refresh()
         self.changed.emit()
@@ -254,8 +254,7 @@ class CarPage(Page):
         """The charge levels are preferences: not typical values, so nothing to remember."""
         if self._filling:
             return
-        cfg = self.state.config
-        self.state.config = replace(cfg, car=replace(cfg.car, **values))
+        self.state.config = self.state.config.with_planning(**values)
         self._refresh()
         self.changed.emit()
 
@@ -263,7 +262,7 @@ class CarPage(Page):
         if self._filling:
             return
         cfg = self.state.config
-        self.state.config = replace(cfg, charger=replace(cfg.charger, **values))
+        self.state.config = cfg.with_system(charger=replace(cfg.system.charger, **values))
         self.state.give_value(key)
         self._refresh()
         self.changed.emit()

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from .model import AwayPeriod, Config, ForecastStep, Window, add_hours, ceil_to_five_minutes, elapsed_hours, utc
+from .model import AwayPeriod, ForecastStep, HomeSystem, PlanningPreferences, Window, add_hours, ceil_to_five_minutes, elapsed_hours, utc
 from .surplus import amps_for, charge_power_kw, usable_kw
 
 _EPS = 1e-9
@@ -27,7 +27,8 @@ class Segment:
 
 def build_runs(
     forecast: list[ForecastStep],
-    cfg: Config,
+    system: HomeSystem,
+    preferences: PlanningPreferences,
     away: list[AwayPeriod],
     now: datetime,
 ) -> list[list[Segment]]:
@@ -38,9 +39,9 @@ def build_runs(
         start = max(step.start, now, key=utc)
         if utc(step.end) <= utc(start):
             continue
-        seg = Segment(start, step.end, usable_kw(step, cfg))
+        seg = Segment(start, step.end, usable_kw(step, system, preferences))
         at_home = not any(utc(a.start) < utc(seg.end) and utc(seg.start) < utc(a.end) for a in away)
-        chargeable = amps_for(seg.usable_kw, cfg) >= cfg.charger.min_amps
+        chargeable = amps_for(seg.usable_kw, system) >= system.charger.min_amps
         if at_home and chargeable:
             if current and utc(current[-1].end) != utc(seg.start):
                 runs.append(current)
@@ -54,14 +55,14 @@ def build_runs(
     return runs
 
 
-def _best_candidate(run: list[Segment], remaining: float, cfg: Config):
+def _best_candidate(run: list[Segment], remaining: float, system: HomeSystem, preferences: PlanningPreferences):
     """Best (amps, first, last) sub-interval of a run, or None."""
     best_key = None
     best = None
-    min_window = timedelta(minutes=cfg.planning.min_window_minutes)
-    tolerance = cfg.planning.import_tolerance_kwh
-    for amps in range(cfg.charger.max_amps, cfg.charger.min_amps - 1, -1):
-        power = charge_power_kw(amps, cfg)
+    min_window = timedelta(minutes=preferences.min_window_minutes)
+    tolerance = preferences.import_tolerance_kwh
+    for amps in range(system.charger.max_amps, system.charger.min_amps - 1, -1):
+        power = charge_power_kw(amps, system)
         for i in range(len(run)):
             solar = imported = 0.0
             for j in range(i, len(run)):
@@ -83,9 +84,9 @@ def _best_candidate(run: list[Segment], remaining: float, cfg: Config):
     return best
 
 
-def _make_window(run: list[Segment], amps: int, i: int, j: int, remaining: float, cfg: Config) -> Window:
+def _make_window(run: list[Segment], amps: int, i: int, j: int, remaining: float, system: HomeSystem, preferences: PlanningPreferences) -> Window:
     """Trim the chosen interval to the energy needed, but keep the minimum length."""
-    power = charge_power_kw(amps, cfg)
+    power = charge_power_kw(amps, system)
     start = run[i].start
     end = run[j].end
     cumulative = 0.0
@@ -99,7 +100,7 @@ def _make_window(run: list[Segment], amps: int, i: int, j: int, remaining: float
             break
         cumulative += delivered
     trimmed_end = min(trimmed_end, end, key=utc)
-    minimum = timedelta(minutes=cfg.planning.min_window_minutes)
+    minimum = timedelta(minutes=preferences.min_window_minutes)
     end = min(max(trimmed_end, (utc(start) + minimum).astimezone(start.tzinfo), key=utc), end, key=utc)
 
     solar = imported = 0.0
@@ -113,7 +114,7 @@ def _make_window(run: list[Segment], amps: int, i: int, j: int, remaining: float
     return Window(start, end, amps, power, solar, imported)
 
 
-def select_windows(runs: list[list[Segment]], need_grid_kwh: float, cfg: Config) -> list[Window]:
+def select_windows(runs: list[list[Segment]], need_grid_kwh: float, system: HomeSystem, preferences: PlanningPreferences) -> list[Window]:
     """Pick the windows for one day that deliver the energy the car needs."""
     remaining = need_grid_kwh
     unused = list(runs)
@@ -121,10 +122,10 @@ def select_windows(runs: list[list[Segment]], need_grid_kwh: float, cfg: Config)
     while remaining > _EPS and unused:
         scored: list[tuple[float, float, list[Segment], Window]] = []
         for run in unused:
-            candidate = _best_candidate(run, remaining, cfg)
+            candidate = _best_candidate(run, remaining, system, preferences)
             if candidate is not None:
                 amps, i, j = candidate
-                window = _make_window(run, amps, i, j, remaining, cfg)
+                window = _make_window(run, amps, i, j, remaining, system, preferences)
                 scored.append((window.solar_kwh, -window.start.timestamp(), run, window))
         if not scored:
             break

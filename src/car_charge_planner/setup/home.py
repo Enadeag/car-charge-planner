@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from car_charge_planner.planner.model import Config, ConfigError, validate
+from car_charge_planner.config.model import Config, ConfigError, validate
 
 HOURS_PER_YEAR = 365 * 24
 DAYS_PER_YEAR = 365

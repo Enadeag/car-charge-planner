@@ -6,16 +6,11 @@ from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
-from car_charge_planner.forecast.provider import PanelArray, SystemDescription, add_up, check_steps, each_array
-from car_charge_planner.forecast.registry import ProviderRegistry
-from car_charge_planner.forecast.service import ForecastService, forecast_key
-from car_charge_planner.planner.config_io import dump_config, write_config
-from car_charge_planner.planner.model import (
+from car_charge_planner.config.io import dump_config, write_config
+from car_charge_planner.config.model import (
     TYPICAL_KEYS,
     ConfigError,
     Forecast,
-    ForecastStep,
-    Panels,
     Setup,
     base_key,
     load_config,
@@ -28,6 +23,10 @@ from car_charge_planner.planner.model import (
     with_setting,
     without_array,
 )
+from car_charge_planner.forecast.provider import PanelArray, SystemDescription, add_up, check_steps, each_array
+from car_charge_planner.forecast.registry import ProviderRegistry
+from car_charge_planner.forecast.service import ForecastService, forecast_key
+from car_charge_planner.planner.model import ForecastStep, Panels
 from conftest import TZ, at
 from fake_provider import FakeProvider
 
@@ -37,7 +36,7 @@ WEST = Panels(kwp=2.5, tilt_deg=30, azimuth_deg=90, system_losses=0.10, name="We
 
 
 def two_arrays(cfg):
-    return replace(cfg, panels=(EAST, WEST))
+    return cfg.with_system(panels=(EAST, WEST))
 
 
 def test_the_file_has_a_panels_table_for_each_array_and_reads_back(tmp_path, cfg):
@@ -58,10 +57,10 @@ def test_an_old_file_with_one_panels_table_is_one_array(tmp_path):
     path = tmp_path / "config.toml"
     path.write_text('latitude = 52.37\nlongitude = 4.9\n[panels]\nkwp = 4.2\ntilt_deg = 20\n[setup]\ntypical = ["panels.azimuth_deg"]\n', encoding="utf-8")
     cfg = load_config(path)
-    assert cfg.panels == (Panels(kwp=4.2, tilt_deg=20),)
+    assert cfg.system.panels == (Panels(kwp=4.2, tilt_deg=20),)
     assert cfg.setup.typical == ("panels.azimuth_deg",)
     write_config(cfg, path)
-    assert "schema = 2" in path.read_text(encoding="utf-8") and "[[panels]]" in path.read_text(encoding="utf-8")
+    assert "schema = 3" in path.read_text(encoding="utf-8") and "[[panels]]" in path.read_text(encoding="utf-8")
     assert load_config(path) == cfg
 
 
@@ -74,7 +73,7 @@ def test_the_migration_turns_the_table_into_a_list_of_one_and_leaves_the_rest():
 def test_a_file_without_panels_has_the_one_default_array(tmp_path):
     path = tmp_path / "config.toml"
     path.write_text("schema = 2\n", encoding="utf-8")
-    assert load_config(path).panels == (Panels(),)
+    assert load_config(path).system.panels == (Panels(),)
 
 
 @pytest.mark.parametrize(
@@ -96,16 +95,16 @@ def test_a_file_with_arrays_that_make_no_sense_is_refused(tmp_path, text, messag
 
 def test_one_array_keeps_the_messages_as_they_were(cfg):
     with pytest.raises(ConfigError, match=r"\[panels\] kwp must be above 0"):
-        validate(replace(cfg, panels=(Panels(kwp=0),)))
+        validate(cfg.with_system(panels=(Panels(kwp=0),)))
 
 
 def test_there_is_always_at_least_one_array(cfg):
     with pytest.raises(ConfigError, match="at least one panel array"):
-        validate(replace(cfg, panels=()))
+        validate(cfg.with_system(panels=()))
 
 
 def test_the_total_size_is_the_sum_of_the_arrays(cfg):
-    assert two_arrays(cfg).total_kwp == pytest.approx(5.5) and cfg.total_kwp == 4.8
+    assert two_arrays(cfg).system.total_kwp == pytest.approx(5.5) and cfg.system.total_kwp == 4.8
 
 
 def test_the_first_array_keeps_its_old_keys_and_the_others_are_numbered():
@@ -134,21 +133,21 @@ def test_a_typical_key_of_an_array_that_does_not_exist_is_refused(cfg):
 
 def test_settings_are_set_by_key_on_the_right_array(cfg):
     changed = with_setting(two_arrays(cfg), "panels.2.tilt_deg", 15)
-    assert changed.panels == (EAST, replace(WEST, tilt_deg=15))
-    assert with_setting(changed, "panels.kwp", 3.3).panels[0].kwp == 3.3
+    assert changed.system.panels == (EAST, replace(WEST, tilt_deg=15))
+    assert with_setting(changed, "panels.kwp", 3.3).system.panels[0].kwp == 3.3
 
 
 def test_an_added_array_is_typical_until_the_owner_says_otherwise(cfg):
     added = with_array(replace(cfg, setup=Setup(("car.km_per_day",))))
-    assert added.panels == (cfg.panels[0], Panels())
+    assert added.system.panels == (cfg.system.panels[0], Panels())
     assert added.setup.typical == ("panels.2.kwp", "panels.2.tilt_deg", "panels.2.azimuth_deg", "panels.2.system_losses", "car.km_per_day")
     validate(added)
 
 
 def test_removing_an_array_moves_the_typical_flags_of_the_later_ones_up(cfg):
-    three = replace(cfg, panels=(EAST, WEST, Panels()), setup=Setup(("panels.kwp", "panels.2.tilt_deg", "panels.3.kwp", "car.km_per_day")))
+    three = replace(cfg.with_system(panels=(EAST, WEST, Panels())), setup=Setup(("panels.kwp", "panels.2.tilt_deg", "panels.3.kwp", "car.km_per_day")))
     gone = without_array(three, 1)
-    assert gone.panels == (EAST, Panels()) and gone.setup.typical == ("panels.kwp", "panels.2.kwp", "car.km_per_day")
+    assert gone.system.panels == (EAST, Panels()) and gone.setup.typical == ("panels.kwp", "panels.2.kwp", "car.km_per_day")
     validate(gone)
     with pytest.raises(ValueError):
         without_array(cfg, 0)
@@ -232,7 +231,7 @@ def test_two_arrays_give_the_sum_of_the_two_single_array_forecasts(tmp_path, cfg
     now = at(DAY, 7)
 
     def forecast(panels):
-        return service_for(tmp_path / str(len(fake.calls)), fake).get(replace(cfg, panels=panels), now).steps
+        return service_for(tmp_path / str(len(fake.calls)), fake).get(cfg.with_system(panels=panels), now).steps
 
     east, west, both = forecast((EAST,)), forecast((WEST,)), forecast((EAST, WEST))
     assert east != west
@@ -254,7 +253,7 @@ def test_a_cache_written_for_one_array_in_the_old_shape_is_not_used_and_does_not
     cfg = replace(cfg, forecast=Forecast(primary="fake", fallback="", settings={}))
     fake = FakeProvider(per_array=bell_for)
     now = at(DAY, 7)
-    old_key = {"system": {"latitude": cfg.latitude, "longitude": cfg.longitude, "kwp": 4.8, "tilt_deg": 35, "azimuth_deg": -45, "system_losses": 0.14, "timezone": cfg.timezone}, "settings": {}}
+    old_key = {"system": {"latitude": cfg.system.latitude, "longitude": cfg.system.longitude, "kwp": 4.8, "tilt_deg": 35, "azimuth_deg": -45, "system_losses": 0.14, "timezone": cfg.system.timezone}, "settings": {}}
     cache = tmp_path / "cache"
     cache.mkdir()
     (cache / "forecast-fake.json").write_text(json.dumps({"key": old_key, "fetched_at": now.timestamp(), "steps": [[now.timestamp(), now.timestamp() + 3600, 9.9]]}), encoding="utf-8")
@@ -264,8 +263,8 @@ def test_a_cache_written_for_one_array_in_the_old_shape_is_not_used_and_does_not
 
 def test_adding_or_changing_an_array_changes_what_the_forecast_depends_on(cfg):
     assert forecast_key(two_arrays(cfg)) != forecast_key(cfg)
-    assert forecast_key(two_arrays(cfg)) != forecast_key(replace(cfg, panels=(EAST, replace(WEST, tilt_deg=10))))
-    assert forecast_key(replace(cfg, panels=(EAST, WEST))) == forecast_key(replace(cfg, panels=(EAST, replace(WEST, name="Garage"))))
+    assert forecast_key(two_arrays(cfg)) != forecast_key(cfg.with_system(panels=(EAST, replace(WEST, tilt_deg=10))))
+    assert forecast_key(cfg.with_system(panels=(EAST, WEST))) == forecast_key(cfg.with_system(panels=(EAST, replace(WEST, name="Garage"))))
 
 
 def test_the_finish_page_lists_the_total_and_each_array(cfg):
@@ -294,7 +293,7 @@ def test_the_plan_page_names_a_typical_setting_once_whichever_array_it_is_of():
 def test_the_demo_forecast_is_the_power_of_all_arrays(cfg):
     from car_charge_planner.planner.cli import demo_forecast
 
-    one = demo_forecast("summer", DAY, TZ, replace(cfg, panels=(EAST,)))
-    both = demo_forecast("summer", DAY, TZ, two_arrays(cfg))
-    other = demo_forecast("summer", DAY, TZ, replace(cfg, panels=(WEST,)))
+    one = demo_forecast("summer", DAY, TZ, cfg.with_system(panels=(EAST,)).system)
+    both = demo_forecast("summer", DAY, TZ, two_arrays(cfg).system)
+    other = demo_forecast("summer", DAY, TZ, cfg.with_system(panels=(WEST,)).system)
     assert [b.power_kw for b in both] == pytest.approx([o.power_kw + w.power_kw for o, w in zip(one, other, strict=True)])

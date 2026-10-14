@@ -78,7 +78,7 @@ class HousePage(Page):
         self._refresh()
 
     def _car_share(self) -> float:
-        car = self.state.config.car
+        car = self.state.config.system.car
         return car_kwh_per_year(car.km_per_day, car.consumption_kwh_per_100km) if self.includes_car.isChecked() else 0.0
 
     def _refresh(self) -> None:
@@ -96,9 +96,9 @@ class HousePage(Page):
             self.warning.setText("")
         typical = "house.baseload_kw" in cfg.setup.typical
         self.current.setText(
-            _("In use now: {kw} kW, a typical value (about {kwh} kWh a year).") .format(kw=number(cfg.house.baseload_kw, 2), kwh=number(yearly_from_baseload(cfg.house.baseload_kw), 0))
+            _("In use now: {kw} kW, a typical value (about {kwh} kWh a year).") .format(kw=number(cfg.system.house.baseload_kw, 2), kwh=number(yearly_from_baseload(cfg.system.house.baseload_kw), 0))
             if typical
-            else _("In use now: {kw} kW (about {kwh} kWh a year).").format(kw=number(cfg.house.baseload_kw, 2), kwh=number(yearly_from_baseload(cfg.house.baseload_kw), 0))
+            else _("In use now: {kw} kW (about {kwh} kWh a year).").format(kw=number(cfg.system.house.baseload_kw, 2), kwh=number(yearly_from_baseload(cfg.system.house.baseload_kw), 0))
         )
 
     def can_continue(self) -> bool:
@@ -110,7 +110,7 @@ class HousePage(Page):
             return
         kw = round(baseload_from_yearly(self.yearly.value(), self._car_share()), 4)
         cfg = self.state.config
-        self.state.config = replace(cfg, house=replace(cfg.house, baseload_kw=min(kw, MAX_BASELOAD_KW)))
+        self.state.config = cfg.with_system(house=replace(cfg.system.house, baseload_kw=min(kw, MAX_BASELOAD_KW)))
         self.state.give_value("house.baseload_kw")
         self.state.done.add("house")
         self._refresh()

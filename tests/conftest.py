@@ -15,9 +15,10 @@ from keyring.backend import KeyringBackend
 from keyring.backends.fail import Keyring as FailKeyring
 from keyring.errors import PasswordDeleteError
 
+from car_charge_planner.config.model import Config
 from car_charge_planner.forecast.providers.open_meteo import power_kw
 from car_charge_planner.planner.demo import bell_day
-from car_charge_planner.planner.model import AwayRule, Car, Charger, Config, ForecastStep, House, Panels
+from car_charge_planner.planner.model import AwayRule, Car, Charger, ForecastStep, HomeSystem, House, Panels, PlanningPreferences
 
 # the package lives in src/: tests that start the app as a program find it without an install
 os.environ["PYTHONPATH"] = str(Path(__file__).resolve().parent.parent / "src") + os.pathsep + os.environ.get("PYTHONPATH", "")
@@ -31,14 +32,17 @@ def example_config() -> Config:
     A 4.8 kWp roof facing south-east, a 70 kWh car, a 32 A charger and a weekly Thursday 06:00-19:00 away rule.
     """
     return Config(
-        panels=(Panels(kwp=4.8, tilt_deg=35, azimuth_deg=-45, system_losses=0.14),),
-        house=House(baseload_kw=0.6),
-        car=Car(usable_battery_kwh=70, consumption_kwh_per_100km=18, km_per_day=600 / 7, minimum_pct=30, target_pct=80),
-        charger=Charger(phases=1, min_amps=6, max_amps=32, volts=230, efficiency=0.90),
-        latitude=52.37,
-        longitude=4.90,
-        timezone="Europe/Amsterdam",
-        away_rules=(AwayRule(weekday=3, start=time(6, 0), end=time(19, 0)),),
+        system=HomeSystem(
+            panels=(Panels(kwp=4.8, tilt_deg=35, azimuth_deg=-45, system_losses=0.14),),
+            house=House(baseload_kw=0.6),
+            car=Car(usable_battery_kwh=70, consumption_kwh_per_100km=18, km_per_day=600 / 7),
+            charger=Charger(phases=1, min_amps=6, max_amps=32, volts=230, efficiency=0.90),
+            latitude=52.37,
+            longitude=4.90,
+            timezone="Europe/Amsterdam",
+            away_rules=(AwayRule(weekday=3, start=time(6, 0), end=time(19, 0)),),
+        ),
+        planning=PlanningPreferences(minimum_pct=30, target_pct=80),
     )
 
 
@@ -196,7 +200,7 @@ def no_network(monkeypatch):
 
 def forecast_from(days: list[tuple[date, float]]) -> list[ForecastStep]:
     """Bell-shaped days given by their peak irradiance (W/m2), turned into the power of the example system."""
-    panels = example_config().panels[0]
+    panels = example_config().system.panels[0]
     steps = []
     for day, peak in days:
         for start, gti in bell_day(day, peak, TZ):
@@ -207,7 +211,7 @@ def forecast_from(days: list[tuple[date, float]]) -> list[ForecastStep]:
 def golden_config() -> Config:
     """The example profile driving 70 km a day: 12.6 kWh, a round 18% of the 70 kWh battery."""
     cfg = example_config()
-    return replace(cfg, car=replace(cfg.car, km_per_day=70))
+    return cfg.with_system(car=replace(cfg.system.car, km_per_day=70))
 
 
 def hourly(day: date, power_kw: dict[int, float]) -> list[ForecastStep]:

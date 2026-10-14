@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QApplication
 
 import pseudo
 from car_charge_planner import i18n
+from car_charge_planner.app_settings import DesktopSettings
 from car_charge_planner.planner.advice import grid_advice
 from car_charge_planner.planner.projection import plan
 from car_charge_planner.popup import PLAN, UPDATE, Popup
@@ -26,7 +27,7 @@ NOW = at(DAY, 7)
 def first_run_config_for(cfg):
     from dataclasses import replace
 
-    from car_charge_planner.planner.model import TYPICAL_KEYS, Setup
+    from car_charge_planner.config.model import TYPICAL_KEYS, Setup
 
     return replace(cfg, setup=Setup(TYPICAL_KEYS))
 
@@ -53,8 +54,8 @@ def popup_with(cfg, days, soc=45, battery=None, stale=False, kind="plan", source
     if typical:
         cfg = first_run_config_for(cfg)
     forecast = forecast_from(list(days))
-    plans = plan(forecast, cfg, soc, NOW)
-    advice = grid_advice(plans, forecast, cfg, None, NOW)
+    plans = plan(forecast, cfg.system, cfg.planning, soc, NOW)
+    advice = grid_advice(plans, forecast, cfg.system, cfg.planning, None, NOW)
     battery = battery or BatteryReading(soc, NOW)
     if kind == "needs-setup":
         vm = needs_setup(battery, NOW)
@@ -63,7 +64,7 @@ def popup_with(cfg, days, soc=45, battery=None, stale=False, kind="plan", source
     else:
         vm = build(plans, NOW, cfg, battery, timedelta(minutes=5), stale, advice, source)
     popup = Popup(TZ)
-    popup.update_view(vm, State(battery), NOW.date(), cfg.away_rules)
+    popup.update_view(vm, State(battery), NOW.date(), cfg.system.away_rules)
     return popup
 
 
@@ -96,7 +97,7 @@ def test_the_popup_is_fully_translated_and_nothing_is_clipped(cfg, qapp, pseudo_
 
 
 def test_the_settings_window_is_fully_translated_and_nothing_is_clipped(cfg, qapp, pseudo_language, tmp_path):
-    window = SettingsWindow(engine_for(cfg, tmp_path / "config.toml"), on_setup=lambda: None)
+    window = SettingsWindow(engine_for(cfg, tmp_path / "config.toml"), DesktopSettings(), on_setup=lambda: None)
     settle(window)
     problems = []
     for index in range(window.tabs.count()):
@@ -138,12 +139,12 @@ def test_numbers_times_and_units_need_no_translation():
 def test_the_setup_wizard_pages_are_fully_translated_and_nothing_is_clipped(cfg, qapp, pseudo_language, tmp_path):
     from dataclasses import replace
 
+    from car_charge_planner.config.model import TYPICAL_KEYS, Setup
     from car_charge_planner.forecast.check import Attempt
-    from car_charge_planner.planner.model import TYPICAL_KEYS, Setup
     from car_charge_planner.setup.wizard import SetupWizard
 
     typical = replace(cfg, setup=Setup(TYPICAL_KEYS))
-    wizard = SetupWizard(engine_for(typical, tmp_path / "config.toml"), lambda c: None, check=answers(Attempt(True, 2, "OK")), environ={"LANG": "nl_NL"}, qt_locale_name="")
+    wizard = SetupWizard(engine_for(typical, tmp_path / "config.toml"), DesktopSettings(), lambda c: None, check=answers(Attempt(True, 2, "OK")), environ={"LANG": "nl_NL"}, qt_locale_name="")
     problems = []
     wizard.confirm_leave = lambda: True
     wizard.show()
@@ -163,7 +164,7 @@ def test_the_setup_wizard_failure_texts_are_translated_too(cfg, qapp, pseudo_lan
     from car_charge_planner.forecast.check import Attempt
     from car_charge_planner.setup.wizard import SetupWizard
 
-    wizard = SetupWizard(engine_for(cfg, tmp_path / "config.toml"), lambda c: None, check=answers(Attempt(False, message=i18n._("Could not get a forecast from {provider}: {reason}").format(provider="Open-Meteo", reason="x"))), environ={"LANG": "nl_NL"}, qt_locale_name="")
+    wizard = SetupWizard(engine_for(cfg, tmp_path / "config.toml"), DesktopSettings(), lambda c: None, check=answers(Attempt(False, message=i18n._("Could not get a forecast from {provider}: {reason}").format(provider="Open-Meteo", reason="x"))), environ={"LANG": "nl_NL"}, qt_locale_name="")
     wizard.confirm_leave = lambda: True
     wizard.show()
     wizard.next()
@@ -175,10 +176,10 @@ def test_the_setup_wizard_failure_texts_are_translated_too(cfg, qapp, pseudo_lan
 def test_the_location_page_is_fully_translated_in_each_of_its_states(cfg, qapp, pseudo_language, tmp_path):
     from dataclasses import replace
 
+    from car_charge_planner.config.model import Config, Forecast
     from car_charge_planner.forecast.check import Attempt
     from car_charge_planner.forecast.provider import Place, PlaceResults, Problem
     from car_charge_planner.forecast.registry import ProviderRegistry
-    from car_charge_planner.planner.model import Config, Forecast
     from car_charge_planner.setup.wizard import SetupWizard
     from fake_provider import FakeProvider
 
@@ -200,7 +201,7 @@ def test_the_location_page_is_fully_translated_in_each_of_its_states(cfg, qapp, 
             if primary == "plain" and name != "start":
                 continue
             config = replace(Config(), forecast=Forecast(primary, "", {}))
-            wizard = SetupWizard(engine_for(config, tmp_path / f"{name}-{primary}.toml", registry=registry), lambda c: None, check=answers(Attempt(True, 2, "OK")), environ={"LANG": "nl_NL"}, qt_locale_name="")
+            wizard = SetupWizard(engine_for(config, tmp_path / f"{name}-{primary}.toml", registry=registry), DesktopSettings(), lambda c: None, check=answers(Attempt(True, 2, "OK")), environ={"LANG": "nl_NL"}, qt_locale_name="")
             wizard.confirm_leave = lambda: True
             wizard.show()
             wizard.navigate("location")
@@ -225,7 +226,7 @@ def test_the_hub_and_the_pages_it_opens_are_fully_translated(cfg, qapp, pseudo_l
     from car_charge_planner.forecast.check import Attempt
     from car_charge_planner.setup.wizard import SetupWizard
 
-    wizard = SetupWizard(engine_for(cfg, tmp_path / "config.toml"), lambda c: None, check=answers(Attempt(True, 2, "OK")), environ={"LANG": "nl_NL"}, qt_locale_name="")
+    wizard = SetupWizard(engine_for(cfg, tmp_path / "config.toml"), DesktopSettings(), lambda c: None, check=answers(Attempt(True, 2, "OK")), environ={"LANG": "nl_NL"}, qt_locale_name="")
     wizard.confirm_leave = lambda: True
     wizard.show()
     problems = []

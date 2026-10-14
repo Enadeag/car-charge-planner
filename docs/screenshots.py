@@ -26,11 +26,11 @@ from PySide6.QtGui import QColor, QPalette  # noqa: E402
 from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
+from car_charge_planner.config.model import Config  # noqa: E402
 from car_charge_planner.forecast.check import Attempt  # noqa: E402
 from car_charge_planner.forecast.providers.open_meteo import OpenMeteo  # noqa: E402
 from car_charge_planner.forecast.registry import ProviderRegistry  # noqa: E402
 from car_charge_planner.forecast.transport import Reply  # noqa: E402
-from car_charge_planner.planner.model import Config  # noqa: E402
 from car_charge_planner.setup.wizard import SetupWizard  # noqa: E402
 
 OUT = ROOT / "docs" / "images"
@@ -113,16 +113,19 @@ NOW = datetime(2026, 7, 3, 7, 30, tzinfo=TZ)  # a summer morning, the plan is fo
 
 def example_config() -> Config:
     """The same neutral example as the wizard's: central Amsterdam, a 6.4 kWp roof facing south-west."""
-    from car_charge_planner.planner.model import Car, Charger, House, Panels
+    from car_charge_planner.planner.model import Car, Charger, HomeSystem, House, Panels, PlanningPreferences
 
     return Config(
-        panels=(Panels(kwp=6.4, tilt_deg=35, azimuth_deg=45, system_losses=0.14),),
-        house=House(baseload_kw=0.4),
-        car=Car(usable_battery_kwh=64, consumption_kwh_per_100km=17.5, km_per_day=300 / 7, minimum_pct=30, target_pct=80),
-        charger=Charger(phases=1, min_amps=6, max_amps=20, volts=230, efficiency=0.9),
-        latitude=52.37,
-        longitude=4.90,
-        timezone="Europe/Amsterdam",
+        system=HomeSystem(
+            panels=(Panels(kwp=6.4, tilt_deg=35, azimuth_deg=45, system_losses=0.14),),
+            house=House(baseload_kw=0.4),
+            car=Car(usable_battery_kwh=64, consumption_kwh_per_100km=17.5, km_per_day=300 / 7),
+            charger=Charger(phases=1, min_amps=6, max_amps=20, volts=230, efficiency=0.9),
+            latitude=52.37,
+            longitude=4.90,
+            timezone="Europe/Amsterdam",
+        ),
+        planning=PlanningPreferences(minimum_pct=30, target_pct=80),
     )
 
 
@@ -136,7 +139,7 @@ def example_forecast(cfg: Config) -> list:
         for hour in range(5, 21):
             start = datetime(day.year, day.month, day.day, hour, tzinfo=TZ)
             sun = max(0.0, math.sin(math.pi * (hour + 0.5 - 5) / 16)) ** 1.5
-            steps.append(ForecastStep(start, start + timedelta(hours=1), sum(p.kwp * (1 - p.system_losses) for p in cfg.panels) * strength * sun))
+            steps.append(ForecastStep(start, start + timedelta(hours=1), sum(p.kwp * (1 - p.system_losses) for p in cfg.system.panels) * strength * sun))
     return steps
 
 

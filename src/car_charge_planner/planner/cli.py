@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 
 from .advice import grid_advice
 from .demo import bell_day
-from .model import Config, ForecastStep, add_hours, load_config
+from .model import ForecastStep, HomeSystem, add_hours
 from .projection import plan
 
 DEMOS = {
@@ -28,12 +28,12 @@ DEMOS = {
 }
 
 
-def demo_forecast(name: str, first_day: date, tz: ZoneInfo, cfg: Config | None = None) -> list[ForecastStep]:
+def demo_forecast(name: str, first_day: date, tz: ZoneInfo, system: HomeSystem | None = None) -> list[ForecastStep]:
     """A synthetic forecast: bell-shaped irradiance turned into power for the configured (or default) panels. The
     sunlight is the same on every array (the demo has no sun position), so their power is added up."""
     from car_charge_planner.forecast.providers.open_meteo import power_kw
 
-    panels = (cfg or Config()).panels
+    panels = (system or HomeSystem()).panels
     steps: list[ForecastStep] = []
     for offset, peak in enumerate(DEMOS[name]):
         sunrise, sunset = (8, 16) if name == "winter" else (6, 18)
@@ -62,8 +62,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--now", help="ISO time, default: now")
     args = parser.parse_args(argv)
 
+    from car_charge_planner.config.model import load_config  # the whole config, for --live: the cli is not the planner
+
     cfg = load_config(args.config)
-    tz = ZoneInfo(cfg.timezone)
+    tz = ZoneInfo(cfg.system.timezone)
     now = datetime.fromisoformat(args.now).astimezone(tz) if args.now else datetime.now(tz)
     if args.live:
         from car_charge_planner.forecast.service import ForecastService, ForecastUnavailable
@@ -79,9 +81,9 @@ def main(argv: list[str] | None = None) -> None:
         source = f" from {result.provider_name} (the fallback)" if result.from_fallback else f" from {result.provider_name}"
         print(f"Forecast fetched {result.age(now).total_seconds() / 60:.0f} min ago{source}{note}. {result.attribution}.")
     else:
-        forecast = demo_forecast(args.demo, now.date(), tz, cfg) if args.demo else load_forecast(args.forecast)
+        forecast = demo_forecast(args.demo, now.date(), tz, cfg.system) if args.demo else load_forecast(args.forecast)
 
-    days = plan(forecast, cfg, args.battery, now)
+    days = plan(forecast, cfg.system, cfg.planning, args.battery, now)
     for day in days:
         print(f"{day.date:%a %d %b}  battery {day.soc_start_pct:.0f}% -> {day.soc_after_charging_pct:.0f}% (end of day {day.soc_end_of_day_pct:.0f}%)")
         if not day.windows:
@@ -92,9 +94,9 @@ def main(argv: list[str] | None = None) -> None:
                 f"{w.solar_kwh:.1f} kWh solar, {w.import_kwh:.1f} kWh grid, {w.solar_share:.0%} solar"
             )
 
-    advice = grid_advice(days, forecast, cfg, None, now)
+    advice = grid_advice(days, forecast, cfg.system, cfg.planning, None, now)
     if advice:
-        print(f"\nGRID CHARGE NEEDED by end of {advice.day:%d %b}: battery would end at {max(0, advice.soc_end_pct):.0f}% (minimum {cfg.car.minimum_pct:.0f}%), need {advice.energy_kwh:.1f} kWh")
+        print(f"\nGRID CHARGE NEEDED by end of {advice.day:%d %b}: battery would end at {max(0, advice.soc_end_pct):.0f}% (minimum {cfg.planning.minimum_pct:.0f}%), need {advice.energy_kwh:.1f} kWh")
         w = advice.window
         if w:
             print(f"    best: {w.start:%a %d %b %H:%M}-{w.end:%H:%M}  {w.power_kw:.1f} kW ({w.amps} A)  {w.solar_kwh:.1f} kWh solar, {w.import_kwh:.1f} kWh grid")

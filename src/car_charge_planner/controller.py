@@ -8,8 +8,9 @@ from typing import Any
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
+from car_charge_planner.app_settings import AppSettings, DesktopSettings
+from car_charge_planner.config.model import Config
 from car_charge_planner.forecast.registry import ProviderRegistry
-from car_charge_planner.planner.model import Config
 
 from .engine import Clock, Engine, Forecasts, Runner, Store, system_clock
 from .i18n import _
@@ -19,7 +20,8 @@ TICK_MS = 60_000  # the engine plans again every minute; the forecast itself ref
 
 
 class Controller(QObject):
-    """Shells change things through `engine` and draw what `view_changed` brings, on the Qt thread."""
+    """Shells change things through `engine` (and the app's own settings through `app_settings`) and draw what
+    `view_changed` brings, on the Qt thread."""
 
     view_changed = Signal(object)  # ViewUpdate
     _finished = Signal(object, object)  # a background job's `done` and its result, carried to the Qt thread
@@ -33,6 +35,7 @@ class Controller(QObject):
         clock: Clock = system_clock,
         run_in_background: Runner | None = None,
         registry: ProviderRegistry | None = None,
+        app_settings: DesktopSettings | None = None,
     ) -> None:
         super().__init__()
         self.notifier = notifier or make_notifier()
@@ -40,7 +43,8 @@ class Controller(QObject):
         runner = run_in_background or self._run_in_thread
         self.engine = Engine(cfg, self.notifier, forecasts, clock, runner, store, registry)
         self.engine.watch(self.view_changed.emit)
-        self.engine.watch_settings(self._settings_changed)
+        self.app_settings = app_settings or DesktopSettings()
+        self.app_settings.watch(self._app_settings_changed)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.engine.tick)
         self.timer.start(TICK_MS)
@@ -48,8 +52,8 @@ class Controller(QObject):
     def start(self) -> None:
         self.engine.refresh()
 
-    def _settings_changed(self, old: Config, new: Config) -> None:
-        if new.interface.mode != old.interface.mode or new.interface.language != old.interface.language:
+    def _app_settings_changed(self, old: AppSettings, new: AppSettings) -> None:
+        if new.mode != old.mode or new.language != old.language:
             # the shell and the language are chosen once at start: say so, since nothing visible happens now
             self.notifier.send(_("Interface changed"), _("The new interface applies the next time the app starts."))
 

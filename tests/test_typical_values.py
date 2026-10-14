@@ -10,8 +10,9 @@ from datetime import date, timedelta
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from car_charge_planner.planner.config_io import dump_config, write_config
-from car_charge_planner.planner.model import TYPICAL_KEYS, Config, ConfigError, Setup, first_run_config, load_config, validate
+from car_charge_planner.app_settings import DesktopSettings
+from car_charge_planner.config.io import dump_config, write_config
+from car_charge_planner.config.model import TYPICAL_KEYS, Config, ConfigError, Setup, first_run_config, load_config, validate
 from car_charge_planner.planner.projection import plan
 from car_charge_planner.popup import Popup
 from car_charge_planner.settings.fields import TABS
@@ -78,7 +79,7 @@ def tags(window, tab_key):
 
 def make(cfg, tmp_path):
     file = tmp_path / "config.toml"
-    return SettingsWindow(engine_for(cfg, file)), file
+    return SettingsWindow(engine_for(cfg, file), DesktopSettings()), file
 
 
 def test_tags_show_only_on_the_listed_keys(tmp_path, qapp, cfg):
@@ -121,7 +122,7 @@ def test_typing_the_same_value_back_is_not_giving_a_value_of_your_own(tmp_path, 
     box = window.field_tabs[0].inputs["panels.kwp"]
     box.setValue(6.0)
     assert not tags(window, "solar")["panels.kwp"]
-    box.setValue(cfg.panels[0].kwp)
+    box.setValue(cfg.system.panels[0].kwp)
     assert tags(window, "solar")["panels.kwp"] and window.current_config().setup.typical == ("panels.kwp",)
 
 
@@ -179,10 +180,10 @@ def test_the_link_goes_to_the_tab_of_the_first_value():
 
 def view(cfg, state=None):
     forecast = forecast_from([(DAY, 900), (DAY + timedelta(days=1), 900)])
-    plans = plan(forecast, cfg, 45, NOW)
+    plans = plan(forecast, cfg.system, cfg.planning, 45, NOW)
     vm = build(plans, NOW, cfg, BatteryReading(45, NOW), timedelta(minutes=5), False)
     popup = Popup()
-    popup.update_view(vm, State(BatteryReading(45, NOW)), NOW.date(), cfg.away_rules)
+    popup.update_view(vm, State(BatteryReading(45, NOW)), NOW.date(), cfg.system.away_rules)
     return popup, vm
 
 
@@ -205,7 +206,7 @@ def test_the_link_opens_settings_on_the_right_tab(qapp, cfg):
 def test_there_is_no_line_before_there_is_a_plan(qapp, cfg):
     popup = Popup()
     for vm in (needs_setup(BatteryReading(45, NOW), NOW), no_forecast("offline", BatteryReading(45, NOW), NOW)):
-        popup.update_view(vm, State(BatteryReading(45, NOW)), NOW.date(), cfg.away_rules)
+        popup.update_view(vm, State(BatteryReading(45, NOW)), NOW.date(), cfg.system.away_rules)
         assert vm.typical_line == "" and popup.typical.isHidden()
 
 

@@ -9,8 +9,8 @@ from dataclasses import replace
 import pytest
 
 from car_charge_planner import units
-from car_charge_planner.planner.config_io import dump_config, write_config
-from car_charge_planner.planner.model import Config, ConfigError, load_config, validate
+from car_charge_planner.app_settings import AppSettings, DesktopSettings, dump_app_settings, load_app_settings, problems, write_app_settings
+from car_charge_planner.config.model import Config, load_config
 from car_charge_planner.settings.window import SettingsWindow
 from conftest import engine_for
 
@@ -91,32 +91,27 @@ def test_a_dashed_or_scripted_name_still_has_its_region():
     assert isinstance(units.system_qt_locale_name(), str)
 
 
-def test_metric_is_the_default_and_the_choice_survives_a_round_trip(tmp_path, cfg):
-    assert Config().interface.units == "metric"
-    path = tmp_path / "config.toml"
-    write_config(replace(cfg, interface=replace(cfg.interface, units="imperial")), path)
-    assert 'units = "imperial"' in path.read_text(encoding="utf-8") and load_config(path).interface.units == "imperial"
-    assert 'units = "metric"' in dump_config(cfg)
+def test_metric_is_the_default_and_the_choice_survives_a_round_trip(tmp_path):
+    assert AppSettings().units == "metric"
+    path = tmp_path / "app.toml"
+    write_app_settings(AppSettings(units="imperial"), path)
+    assert 'units = "imperial"' in path.read_text(encoding="utf-8") and load_app_settings(path).units == "imperial"
+    assert 'units = "metric"' in dump_app_settings(AppSettings())
 
 
-def test_an_old_config_means_metric(tmp_path):
-    path = tmp_path / "config.toml"
+def test_a_file_without_units_means_metric(tmp_path):
+    path = tmp_path / "app.toml"
     path.write_text('[interface]\nmode = "window"\n', encoding="utf-8")
-    assert load_config(path).interface.units == "metric"
+    assert load_app_settings(path).units == "metric"
 
 
 @pytest.mark.parametrize("value", ["", "imperial ", "US", "miles", "METRIC"])
-def test_anything_else_is_refused(cfg, value):
-    with pytest.raises(ConfigError, match="units"):
-        validate(replace(cfg, interface=replace(cfg.interface, units=value)))
+def test_anything_else_is_refused(value):
+    assert ["units" in problem for problem in problems(AppSettings(units=value))] == [True]
 
 
 def car_tab(window):
     return next(t for t in window.field_tabs if t.key == "house_car")
-
-
-def with_units(cfg, system):
-    return replace(cfg, interface=replace(cfg.interface, units=system))
 
 
 def boxes(window):
@@ -124,8 +119,8 @@ def boxes(window):
     return tab.inputs["car.km_per_day"], tab.inputs["car.consumption_kwh_per_100km"]
 
 
-def make_window(cfg, tmp_path):
-    return SettingsWindow(engine_for(cfg, tmp_path / "config.toml"))
+def make_window(cfg, tmp_path, system="metric"):
+    return SettingsWindow(engine_for(cfg, tmp_path / "config.toml"), DesktopSettings(AppSettings(units=system)))
 
 
 def test_metric_shows_km_and_kwh_per_100_km(tmp_path, qapp, cfg):
@@ -135,7 +130,7 @@ def test_metric_shows_km_and_kwh_per_100_km(tmp_path, qapp, cfg):
 
 
 def test_imperial_shows_miles_and_miles_per_kwh_with_converted_limits(tmp_path, qapp, cfg):
-    distance, consumption = boxes(make_window(with_units(cfg, "imperial"), tmp_path))
+    distance, consumption = boxes(make_window(cfg, tmp_path, "imperial"))
     assert distance.suffix() == " mi" and consumption.suffix() == " mi/kWh"
     assert distance.value() == pytest.approx(53.3, abs=0.05) and consumption.value() == pytest.approx(3.45, abs=0.005)
     assert (distance.minimum(), distance.maximum()) == (0, 622)
@@ -143,35 +138,36 @@ def test_imperial_shows_miles_and_miles_per_kwh_with_converted_limits(tmp_path, 
 
 
 def test_an_untouched_field_keeps_its_exact_stored_value_in_both_systems(tmp_path, qapp, cfg):
-    exact = replace(cfg, car=replace(cfg.car, km_per_day=600 / 7, consumption_kwh_per_100km=17.77))
+    exact = cfg.with_system(car=replace(cfg.system.car, km_per_day=600 / 7, consumption_kwh_per_100km=17.77))
     for system in ("metric", "imperial"):
-        window = make_window(with_units(exact, system), tmp_path)
-        assert window.current_config().car == exact.car and not window.is_dirty()
+        window = make_window(exact, tmp_path, system)
+        assert window.current_config().system.car == exact.system.car and not window.is_dirty()
 
 
 def test_typing_miles_stores_kilometres(tmp_path, qapp, cfg):
     file = tmp_path / "config.toml"
-    window = SettingsWindow(engine_for(with_units(cfg, "imperial"), file))
+    app = DesktopSettings(AppSettings(units="imperial"))
+    window = SettingsWindow(engine_for(cfg, file), app)
     distance, consumption = boxes(window)
     distance.setValue(25)
     consumption.setValue(4.0)
     assert window.save()
     saved = load_config(file)
-    assert saved.car.km_per_day == pytest.approx(25 * 1.609344) and saved.car.consumption_kwh_per_100km == pytest.approx(100 / (4.0 * 1.609344), rel=1e-6)
-    assert saved.interface.units == "imperial"
+    assert saved.system.car.km_per_day == pytest.approx(25 * 1.609344) and saved.system.car.consumption_kwh_per_100km == pytest.approx(100 / (4.0 * 1.609344), rel=1e-6)
+    assert app.current.units == "imperial"
 
 
 def test_choosing_the_system_changes_the_boxes_at_once_and_keeps_the_stored_values(tmp_path, qapp, cfg):
     window = make_window(cfg, tmp_path)
     units_box = window.interface_tab.inputs["interface.units"]
     distance, consumption = boxes(window)
-    stored = window.current_config().car
+    stored = window.current_config().system.car
     units_box.setCurrentIndex(units_box.findData("imperial"))
     assert distance.suffix() == " mi" and consumption.suffix() == " mi/kWh"
     assert distance.value() == pytest.approx(53.3, abs=0.05)
-    assert window.current_config().car == stored
+    assert window.current_config().system.car == stored
     units_box.setCurrentIndex(units_box.findData("metric"))
-    assert distance.suffix() == " km" and window.current_config().car == stored and not window.is_dirty()
+    assert distance.suffix() == " km" and window.current_config().system.car == stored and not window.is_dirty()
 
 
 def test_an_edit_made_in_one_system_survives_switching_to_the_other(tmp_path, qapp, cfg):
@@ -181,20 +177,20 @@ def test_an_edit_made_in_one_system_survives_switching_to_the_other(tmp_path, qa
     units_box = window.interface_tab.inputs["interface.units"]
     units_box.setCurrentIndex(units_box.findData("imperial"))
     assert distance.value() == pytest.approx(62.1, abs=0.05)
-    assert window.current_config().car.km_per_day == pytest.approx(100, rel=1e-3)
+    assert window.current_config().system.car.km_per_day == pytest.approx(100, rel=1e-3)
     units_box.setCurrentIndex(units_box.findData("metric"))
-    assert distance.value() == 100 and window.current_config().car.km_per_day == 100  # exactly, not 99.9 from a rounded 62.1 mi
+    assert distance.value() == 100 and window.current_config().system.car.km_per_day == 100  # exactly, not 99.9 from a rounded 62.1 mi
 
 
 def test_reset_tab_shows_the_defaults_in_the_chosen_system(tmp_path, qapp, cfg):
-    window = make_window(with_units(cfg, "imperial"), tmp_path)
+    window = make_window(cfg, tmp_path, "imperial")
     window.tabs.setCurrentWidget(car_tab(window))
     distance, consumption = boxes(window)
     distance.setValue(10)
     window.reset_tab()
-    default = Config().car
+    default = Config().system.car
     assert distance.suffix() == " mi" and distance.value() == pytest.approx(units.km_to_miles(default.km_per_day), abs=0.05)
-    assert window.current_config().car.km_per_day == pytest.approx(default.km_per_day) or window.current_config().car.km_per_day == default.km_per_day
+    assert window.current_config().system.car.km_per_day == pytest.approx(default.km_per_day) or window.current_config().system.car.km_per_day == default.km_per_day
 
 
 def test_the_units_choice_is_on_the_interface_tab_with_its_hint(tmp_path, qapp, cfg):
@@ -208,5 +204,5 @@ def test_the_units_choice_is_on_the_interface_tab_with_its_hint(tmp_path, qapp, 
 
 def test_a_value_only_one_system_can_hold_is_not_lost(tmp_path, qapp, cfg):
     """A stored 0 km a day is a real value (a car that stays home)."""
-    window = make_window(with_units(replace(cfg, car=replace(cfg.car, km_per_day=0.0)), "imperial"), tmp_path)
-    assert boxes(window)[0].value() == 0 and window.current_config().car.km_per_day == 0.0
+    window = make_window(cfg.with_system(car=replace(cfg.system.car, km_per_day=0.0)), tmp_path, "imperial")
+    assert boxes(window)[0].value() == 0 and window.current_config().system.car.km_per_day == 0.0

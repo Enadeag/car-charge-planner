@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Protocol
 
-from car_charge_planner.planner.model import Config, ForecastStep, utc
+from car_charge_planner.planner.model import ForecastStep, HomeSystem, utc
 
 
 @dataclass(frozen=True)
@@ -40,12 +40,12 @@ class SystemDescription:
         return sum(a.kwp for a in self.arrays)
 
     @classmethod
-    def from_config(cls, cfg: Config) -> SystemDescription:
+    def of(cls, home: HomeSystem) -> SystemDescription:
         return cls(
-            latitude=cfg.latitude,
-            longitude=cfg.longitude,
-            arrays=tuple(PanelArray(p.kwp, p.tilt_deg, p.azimuth_deg, p.system_losses) for p in cfg.panels),
-            timezone=cfg.timezone,
+            latitude=home.latitude,
+            longitude=home.longitude,
+            arrays=tuple(PanelArray(p.kwp, p.tilt_deg, p.azimuth_deg, p.system_losses) for p in home.panels),
+            timezone=home.timezone,
         )
 
 

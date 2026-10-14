@@ -4,17 +4,17 @@ import os
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from dataclasses import replace
 from datetime import date, timedelta
 
 import pytest
 from PySide6.QtWidgets import QPushButton
 
+from car_charge_planner.app_settings import DesktopSettings
 from car_charge_planner.app_windows import AppWindows
+from car_charge_planner.config.model import first_run_config
 from car_charge_planner.controller import Controller
 from car_charge_planner.engine import FileStore
 from car_charge_planner.forecast.service import ForecastResult
-from car_charge_planner.planner.model import first_run_config
 from car_charge_planner.shells.tray import TrayShell
 from car_charge_planner.shells.window import WindowShell
 from car_charge_planner.storage.state import load_state
@@ -89,7 +89,7 @@ def test_a_hidden_start_at_login_never_opens_it_and_offers_it_in_a_notification_
 def test_a_location_entered_in_settings_counts_as_set_up(tmp_path, monkeypatch, qapp):
     controller, notifier = make(first_run_config(), tmp_path, monkeypatch)
     shell = WindowShell(controller)
-    controller.engine.apply_config(replace(controller.engine.cfg, latitude=52.37, longitude=4.9))  # what saving Settings does
+    controller.engine.apply_config(controller.engine.cfg.with_system(latitude=52.37, longitude=4.9))  # what saving Settings does
     settle_controller(controller)
     shell.windows.offer_setup(background=False)
     assert shell.windows.setup_wizard is None and controller.engine.vm.state != "needs-setup"
@@ -125,7 +125,7 @@ def test_closing_the_wizard_unfinished_leaves_the_app_not_set_up_with_the_button
 def test_settings_has_run_set_up_again_only_when_the_app_can_open_it(tmp_path, monkeypatch, qapp):
     from car_charge_planner.settings.window import SettingsWindow
 
-    assert SettingsWindow(engine_for(example_config(), tmp_path / "c.toml")).setup_button.isHidden()
+    assert SettingsWindow(engine_for(example_config(), tmp_path / "c.toml"), DesktopSettings()).setup_button.isHidden()
     windows, _ = make_windows(example_config(), tmp_path, monkeypatch)
     windows.open_settings()
     assert not windows.settings_window.setup_button.isHidden()

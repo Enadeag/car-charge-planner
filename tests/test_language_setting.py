@@ -10,10 +10,9 @@ import pytest
 from PySide6.QtWidgets import QComboBox
 
 from car_charge_planner import i18n
+from car_charge_planner.app_settings import AppSettings, AppSettingsFile, DesktopSettings, dump_app_settings, load_app_settings, problems
 from car_charge_planner.engine import FileStore
 from car_charge_planner.i18n import available_languages, init, language_name
-from car_charge_planner.planner.config_io import dump_config, write_config
-from car_charge_planner.planner.model import Config, ConfigError, Interface, load_config, validate
 from car_charge_planner.settings.window import SettingsWindow
 from conftest import engine_for
 from test_i18n import make_catalogue
@@ -39,35 +38,32 @@ def interface_tab(window):
     return next(t for t in window.field_tabs if t.key == "interface")
 
 
-def window_for(cfg, tmp_path):
-    return SettingsWindow(engine_for(cfg, tmp_path / "config.toml"))
+def window_for(cfg, tmp_path, app=None):
+    return SettingsWindow(engine_for(cfg, tmp_path / "config.toml"), DesktopSettings(app))
 
 
 def test_the_default_follows_the_system_and_survives_a_round_trip(tmp_path):
-    assert Config().interface.language == "auto"
-    cfg = replace(Config(), interface=Interface(language="pt_BR"))
-    path = tmp_path / "config.toml"
-    write_config(cfg, path)
-    assert load_config(path).interface.language == "pt_BR"
-    assert 'language = "pt_BR"' in dump_config(cfg)
+    assert AppSettings().language == "auto"
+    path = tmp_path / "app.toml"
+    AppSettingsFile(path).save(AppSettings(language="pt_BR"))
+    assert load_app_settings(path).language == "pt_BR"
+    assert 'language = "pt_BR"' in dump_app_settings(AppSettings(language="pt_BR"))
 
 
-def test_an_old_config_without_the_key_still_loads(tmp_path):
-    path = tmp_path / "config.toml"
+def test_a_file_without_the_key_still_loads(tmp_path):
+    path = tmp_path / "app.toml"
     path.write_text('[interface]\nmode = "window"\n', encoding="utf-8")
-    cfg = load_config(path)
-    assert cfg.interface.mode == "window" and cfg.interface.language == "auto"
+    assert load_app_settings(path) == AppSettings(mode="window", language="auto")
 
 
 @pytest.mark.parametrize("value", ["auto", "en", "nl", "pt_BR", "zh-Hant", "fil"])
 def test_language_codes_are_accepted(value):
-    validate(replace(Config(), interface=Interface(language=value)))
+    assert problems(AppSettings(language=value)) == []
 
 
 @pytest.mark.parametrize("value", ["", "Dutch", "n", "nl nl", "../etc", "nl/../x"])
 def test_anything_else_is_refused(value):
-    with pytest.raises(ConfigError, match="language"):
-        validate(replace(Config(), interface=Interface(language=value)))
+    assert len(problems(AppSettings(language=value))) == 1 and "language" in problems(AppSettings(language=value))[0]
 
 
 def test_installed_languages_are_the_directories_with_a_compiled_catalogue(tmp_path):
@@ -92,9 +88,8 @@ def test_with_only_english_there_is_no_picker(cfg, qapp, tmp_path, monkeypatch):
 
 def test_a_stored_language_is_kept_when_the_picker_is_absent(cfg, qapp, tmp_path, monkeypatch):
     monkeypatch.setattr(i18n, "LOCALE_DIR", tmp_path / "empty")
-    stored = replace(cfg, interface=Interface(language="nl"))
-    window = window_for(stored, tmp_path)
-    assert window.current_config().interface.language == "nl"
+    window = window_for(cfg, tmp_path, AppSettings(language="nl"))
+    assert window.current_app_settings().language == "nl"
 
 
 def test_with_a_second_language_the_picker_lists_the_choices(cfg, qapp, tmp_path, catalogues):
@@ -107,18 +102,17 @@ def test_with_a_second_language_the_picker_lists_the_choices(cfg, qapp, tmp_path
 
 
 def test_choosing_a_language_saves_it_and_it_applies_after_a_restart(cfg, qapp, tmp_path, catalogues):
-    saved = []
-    path = tmp_path / "config.toml"
-    window = SettingsWindow(engine_for(cfg, path, saved=saved))
+    path = tmp_path / "app.toml"
+    window = SettingsWindow(engine_for(cfg, tmp_path / "config.toml"), DesktopSettings(store=AppSettingsFile(path)))
     box = interface_tab(window).inputs["interface.language"]
     box.setCurrentIndex(box.findData("nl"))
     assert window.save()
-    assert saved[-1].interface.language == "nl" and load_config(path).interface.language == "nl"
+    assert load_app_settings(path).language == "nl" and "language" not in (tmp_path / "config.toml").read_text(encoding="utf-8")
     assert i18n.current_language() == ""  # nothing changes while the app runs
 
-    init([load_config(path).interface.language], catalogues)
+    init([load_app_settings(path).language], catalogues)
     assert i18n.current_language() == "nl" and i18n._("Language") == "Taal"
-    restarted = window_for(load_config(path), tmp_path)
+    restarted = window_for(cfg, tmp_path, load_app_settings(path))
     assert interface_tab(restarted).inputs["interface.language"].currentData() == "nl"
     assert restarted.tabs.tabText(restarted.tabs.count() - 1)
 
@@ -130,12 +124,11 @@ def test_english_can_be_chosen_on_a_system_that_speaks_another_language(catalogu
 
 def test_a_changed_language_is_announced_like_a_changed_interface(cfg, qapp, tmp_path, monkeypatch):
     from car_charge_planner.controller import Controller
-    from conftest import FakeNotifier, settle_controller
+    from conftest import FakeNotifier
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda *a, **k: None)
     notifier = FakeNotifier()
     controller = Controller(cfg, FileStore(tmp_path / "config.toml"), notifier)
-    controller.engine.apply_config(replace(cfg, interface=Interface(language="nl")))
+    assert controller.app_settings.save(replace(controller.app_settings.current, language="nl")) == []
     assert len(notifier.sent) == 1
-    settle_controller(controller)  # apply_config starts a fetch

@@ -269,13 +269,14 @@ Open **Settings...** from the tray icon's right-click menu. Settings are grouped
 - Pressing Enter in a field does what the Save button currently does.
 - Values tagged **Typical value** are ones the app filled in because you had none of your own (every value on a fresh install). The tag goes away as soon as you change the value, and the plan page says "Based on typical values for: ..." with a link back here until you have replaced them. A config file from an earlier version has no such list, so none of its values are tagged.
 
-The settings live in `config.toml` (see [Where things are stored](#where-things-are-stored)), a plain TOML file. The Settings window manages it: saving rewrites the whole file and does not keep comments. The app reads the file only at startup, so if you want to edit it by hand, do it while the app is closed. An invalid value makes the app show a dialog listing the problems and exit.
+The settings live in two plain TOML files (see [Where things are stored](#where-things-are-stored)): `config.toml` holds your system and planning preferences, which the planner works with, and `app.toml` the app's own settings from the Interface tab (how it shows itself, units and language). The Settings window manages both: saving rewrites the whole file and does not keep comments. The app reads them only at startup, so if you want to edit one by hand, do it while the app is closed. An invalid value makes the app show a dialog listing the problems and exit. A `config.toml` from version 0.2.0 or earlier is converted at the first start: the Interface settings move to `app.toml`, and the file is rewritten in the new format.
 
 ## Where things are stored
 
 | What | Linux | Windows |
 | --- | --- | --- |
-| Config | `~/.config/car-charge-planner/config.toml` | `%APPDATA%\car-charge-planner\config.toml` |
+| Config: your system and planning preferences | `~/.config/car-charge-planner/config.toml` | `%APPDATA%\car-charge-planner\config.toml` |
+| The app's own settings (Interface tab) | `~/.config/car-charge-planner/app.toml` | `%APPDATA%\car-charge-planner\app.toml` |
 | Battery level, away periods, announced windows | `~/.local/state/car-charge-planner/state.json` | `%LOCALAPPDATA%\car-charge-planner\state.json` |
 | Forecast cache | `~/.cache/car-charge-planner/forecast-<provider>.json`, one per provider | `%LOCALAPPDATA%\car-charge-planner\Cache\forecast-<provider>.json`, one per provider |
 | API keys | The system keychain; `~/.config/car-charge-planner/secrets.toml` (private) only where there is none | Credential Manager |
@@ -313,7 +314,8 @@ The code is one package, `src/car_charge_planner/`:
 
 | In `src/car_charge_planner/` | Contents |
 | --- | --- |
-| `planner/` | The planning logic, with no network or UI: surplus, windows, projection, grid advice, config reading and writing (`config_io.py`), CLI. |
+| `planner/` | The planning logic, with no network or UI: surplus, windows, projection, grid advice, CLI. It is given the user's system and planning preferences only. |
+| `config/` | The engine's settings (`Config`: the system, the planning preferences, the forecast providers and the typical values): checking, reading and writing `config.toml`, and its format versions. |
 | `forecast/` | The forecast providers (`providers/`), the service that chooses between them and caches their answers (`service.py`), and the key storage. See [docs/providers.md](docs/providers.md). |
 | `storage/` | Reading and writing `state.json`. |
 | `settings/` | The Settings window: field definitions, tabs, window. |

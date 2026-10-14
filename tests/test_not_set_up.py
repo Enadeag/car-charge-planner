@@ -6,7 +6,6 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import subprocess
 import sys
-from dataclasses import replace
 from datetime import date, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfoNotFoundError
@@ -15,11 +14,13 @@ import pytest
 from PySide6.QtWidgets import QPushButton
 
 from app_process import RunningApp
+from car_charge_planner.app_settings import DesktopSettings
+from car_charge_planner.config.model import Config, ConfigError, load_config, require_location
 from car_charge_planner.config_file import ensure_config
 from car_charge_planner.controller import Controller
 from car_charge_planner.engine import FileStore
 from car_charge_planner.forecast.service import ForecastResult
-from car_charge_planner.planner.model import Config, ConfigError, load_config, require_location, system_timezone
+from car_charge_planner.planner.model import system_timezone
 from car_charge_planner.settings.window import SettingsWindow
 from car_charge_planner.shells.icons import COLORS, make_icon
 from car_charge_planner.shells.tray import TrayShell
@@ -34,15 +35,15 @@ PROJECT = Path(__file__).resolve().parent.parent
 
 def test_a_new_config_assumes_nothing_about_the_user():
     cfg = Config()
-    assert (cfg.latitude, cfg.longitude) == (0.0, 0.0)
-    assert cfg.away_rules == ()  # no weekly rule: the car is home all week until told otherwise
-    assert cfg.timezone == system_timezone()
+    assert (cfg.system.latitude, cfg.system.longitude) == (0.0, 0.0)
+    assert cfg.system.away_rules == ()  # no weekly rule: the car is home all week until told otherwise
+    assert cfg.system.timezone == system_timezone()
     assert not cfg.is_set_up
 
 
 @pytest.mark.parametrize("lat, lon, expected", [(0, 0, False), (0.0, 0.0, False), (52.37, 4.9, True), (0, 4.9, True), (-33.9, 0, True)])
 def test_a_location_counts_when_either_part_is_not_zero(lat, lon, expected):
-    assert replace(Config(), latitude=lat, longitude=lon).is_set_up is expected
+    assert Config().with_system(latitude=lat, longitude=lon).is_set_up is expected
 
 
 def fake_tzlocal(monkeypatch, answer):
@@ -67,7 +68,7 @@ def fake_tzlocal(monkeypatch, answer):
 def test_the_time_zone_comes_from_tzlocal_and_falls_back_to_utc(monkeypatch, answer, expected):
     fake_tzlocal(monkeypatch, answer)
     assert system_timezone() == expected
-    assert Config().timezone == expected
+    assert Config().system.timezone == expected
 
 
 @pytest.fixture
@@ -106,13 +107,13 @@ def test_requiring_a_location_refuses_a_config_without_one():
 def test_the_first_config_file_loads_as_not_set_up(tmp_path):
     path = ensure_config(tmp_path / "config.toml")
     cfg = load_config(path)
-    assert not cfg.is_set_up and cfg.away_rules == () and cfg.timezone == system_timezone()
+    assert not cfg.is_set_up and cfg.system.away_rules == () and cfg.system.timezone == system_timezone()
 
 
 def test_a_config_without_an_away_section_has_no_rules(tmp_path):
     f = tmp_path / "c.toml"
     f.write_text("latitude = 1.0\nlongitude = 2.0\n", encoding="utf-8")
-    assert load_config(f).away_rules == ()
+    assert load_config(f).system.away_rules == ()
 
 
 def test_the_not_set_up_view_says_where_to_go():
@@ -181,7 +182,7 @@ def test_giving_a_location_starts_the_first_fetch(tmp_path, monkeypatch, qapp):
     assert fetch.calls == []
     controller.engine.apply_config(example_config())  # what saving Settings does
     settle(controller)
-    assert len(fetch.calls) == 1 and fetch.calls[0].latitude == 52.37
+    assert len(fetch.calls) == 1 and fetch.calls[0].system.latitude == 52.37
     assert controller.engine.vm.state != "needs-setup"
 
 
@@ -220,7 +221,7 @@ def test_the_plan_page_offers_the_set_up_wizard_only_while_not_set_up(tmp_path, 
 
 def settings_window(tmp_path, cfg):
     saved = []
-    window = SettingsWindow(engine_for(cfg, tmp_path / "config.toml", saved=saved))
+    window = SettingsWindow(engine_for(cfg, tmp_path / "config.toml", saved=saved), DesktopSettings())
     window.confirm_discard = lambda: True
     window.show()
     return window, saved
@@ -240,7 +241,7 @@ def test_saving_settings_with_a_location_works(tmp_path, qapp):
     window.field_tabs[0].inputs["longitude"].setValue(4.9)
     window.save_button.click()
     assert window.errors.isHidden() and len(saved) == 1 and saved[0].is_set_up
-    assert load_config(tmp_path / "config.toml").latitude == 52.37
+    assert load_config(tmp_path / "config.toml").system.latitude == 52.37
 
 
 def run_cli(*args, cwd=PROJECT):

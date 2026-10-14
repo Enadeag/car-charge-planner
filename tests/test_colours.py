@@ -8,7 +8,8 @@ from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QLabel
 
 from car_charge_planner import colours
-from car_charge_planner.planner.model import Config
+from car_charge_planner.app_settings import DesktopSettings
+from car_charge_planner.config.model import Config
 from car_charge_planner.popup import Popup
 from car_charge_planner.settings.window import SettingsWindow
 from conftest import TZ, engine_for
@@ -71,7 +72,7 @@ def test_light_theme_gets_the_dark_accent_shades(light):
 
 
 def test_settings_errors_use_the_theme_error_colour(dark, tmp_path):
-    w = SettingsWindow(engine_for(Config(), tmp_path / "c.toml"))
+    w = SettingsWindow(engine_for(Config(), tmp_path / "c.toml"), DesktopSettings())
     w.show_errors(["something is wrong"])
     assert colours.ERROR["dark"] in w.errors.styleSheet()
 
@@ -89,8 +90,8 @@ def test_popup_text_colours_follow_the_theme(dark):
     from car_charge_planner.planner.advice import grid_advice
 
     forecast = forecast_from([(date(2026, 7, 3 + i), 120) for i in range(3)])  # dull days: advice appears
-    days = plan(forecast, cfg, 35, now)
-    advice = grid_advice(days, forecast, cfg, None, now)
+    days = plan(forecast, cfg.system, cfg.planning, 35, now)
+    advice = grid_advice(days, forecast, cfg.system, cfg.planning, None, now)
     vm = build(days, now, cfg, BatteryReading(35, None), None, False, advice)
     assert vm.advice is not None
     popup = Popup(TZ)

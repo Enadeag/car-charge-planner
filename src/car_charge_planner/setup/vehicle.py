@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from car_charge_planner.planner.model import Config, ConfigError, validate
+from car_charge_planner.config.model import Config, ConfigError, validate
 
 DAYS_PER_WEEK = 7
 CAR_KEYS = ("car.usable_battery_kwh", "car.consumption_kwh_per_100km", "car.km_per_day")  # the car's numbers a person may not know
@@ -19,10 +19,11 @@ def daily_to_weekly(daily: float) -> float:
 
 
 def problems(config: Config) -> list[str]:
-    """What is wrong with the car and charger settings, in the words Settings uses (they come from the same check)."""
+    """What is wrong with the car and charger settings and the charge levels, in the words Settings uses (they come
+    from the same check). The page asks for no other planning preference."""
     try:
         validate(config)
     except ConfigError as err:
         lines = [line.removeprefix("- ").strip() for line in str(err).split("\n")[1:]]
-        return [line for line in lines if line.startswith(("[car]", "[charger]"))]
+        return [line for line in lines if line.startswith(("[car]", "[charger]", "[planning]"))]
     return []

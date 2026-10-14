@@ -89,12 +89,12 @@ class HubPage(Page):
         typical = "house.baseload_kw" in cfg.setup.typical
         self.house.show_done(
             "house" in done,
-            (_("{kw} kW, a typical value") if typical else _("{kw} kW")).format(kw=number(cfg.house.baseload_kw, 2)) if "house" in done else "",
+            (_("{kw} kW, a typical value") if typical else _("{kw} kW")).format(kw=number(cfg.system.house.baseload_kw, 2)) if "house" in done else "",
             colour,
         )
-        if cfg.away_rules:
+        if cfg.system.away_rules:
             times = pgettext("list separator", ", ").join(
-                _("{weekday} {start}-{end}").format(weekday=weekday_short(r.weekday), start=f"{r.start:%H:%M}", end=f"{r.end:%H:%M}") for r in cfg.away_rules
+                _("{weekday} {start}-{end}").format(weekday=weekday_short(r.weekday), start=f"{r.start:%H:%M}", end=f"{r.end:%H:%M}") for r in cfg.system.away_rules
             )
         else:
             times = _("usually home")

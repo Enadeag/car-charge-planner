@@ -4,6 +4,10 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Changed
+- The settings are split in two files. `config.toml` keeps your system (location, panels, house, car, charger, away times) and your planning preferences; the charge levels and the notification lead time now sit with the other preferences in its `[planning]` table (file format 3). The app's own settings from the Interface tab (how it shows itself, units, language) move to a new `app.toml` beside it.
+- An existing `config.toml` is converted at the first start of this version: its Interface settings are written to `app.toml`, then the file is rewritten in the new format. Nothing needs to be done by hand. A start that stops halfway is finished at the next one.
+
 ## [0.2.0] - 2026-10-14
 
 Windows support, with an installer. Released without announcement, like 0.1.0.
