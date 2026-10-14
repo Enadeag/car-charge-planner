@@ -6,8 +6,8 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Protocol
 
+from car_charge_planner.config.model import Config
 from car_charge_planner.forecast.service import ForecastResult
-from car_charge_planner.planner.model import Config
 
 Clock = Callable[[], datetime]  # an aware datetime, in any time zone
 

@@ -5,9 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from car_charge_planner import units
+from car_charge_planner.config.model import Config, panel_key
 from car_charge_planner.i18n import _, number, pgettext, translate
 from car_charge_planner.names import weekday_short
-from car_charge_planner.planner.model import Config, Panels, panel_key
+from car_charge_planner.planner.model import Panels
 
 from .panels import COMPASS
 from .state import SetupState
@@ -47,13 +48,11 @@ def _line(label: str, value: str, config: Config, *keys: str) -> RecapLine:
     return RecapLine(label, value, typical=any(key in config.setup.typical for key in keys))
 
 
-def _distance(config: Config, km: float) -> str:
-    system = config.interface.units
+def _distance(system: str, km: float) -> str:
     return f"{number(units.to_display(units.DISTANCE, km, system), 0)} {units.unit_label(units.DISTANCE, system)}"
 
 
-def _consumption(config: Config, kwh_per_100km: float) -> str:
-    system = config.interface.units
+def _consumption(system: str, kwh_per_100km: float) -> str:
     decimals = units.display_decimals(units.CONSUMPTION, 1, system)
     return f"{number(units.to_display(units.CONSUMPTION, kwh_per_100km, system), decimals)} {units.unit_label(units.CONSUMPTION, system)}"
 
@@ -64,7 +63,7 @@ def _losses(panels: Panels) -> str:
 
 def _panel_lines(cfg: Config) -> tuple[RecapLine, ...]:
     """One array: its size, direction, tilt and losses. Several: the total size, then a line for each array."""
-    arrays = cfg.panels
+    arrays = cfg.system.panels
     if len(arrays) == 1:
         p = arrays[0]
         return (
@@ -74,7 +73,7 @@ def _panel_lines(cfg: Config) -> tuple[RecapLine, ...]:
             _line(_("System losses"), _losses(p), cfg, "panels.system_losses"),
         )
     keys = range(len(arrays))
-    lines = [_line(_("Total size"), _("{kwp} kWp").format(kwp=number(cfg.total_kwp, 2)), cfg, *(panel_key(i, "kwp") for i in keys))]
+    lines = [_line(_("Total size"), _("{kwp} kWp").format(kwp=number(cfg.system.total_kwp, 2)), cfg, *(panel_key(i, "kwp") for i in keys))]
     for index, p in enumerate(arrays):
         value = _("{kwp} kWp, facing {direction}, tilt {tilt}°").format(
             kwp=number(p.kwp, 2), direction=compass_label(p.azimuth_deg), tilt=number(p.tilt_deg, 0)
@@ -88,26 +87,26 @@ def _panel_lines(cfg: Config) -> tuple[RecapLine, ...]:
 def build_recap(state: SetupState) -> list[RecapGroup]:
     cfg = state.config
     place = state.place_label or (
-        _("{latitude}, {longitude}").format(latitude=number(cfg.latitude, 4), longitude=number(cfg.longitude, 4)) if cfg.is_set_up else _("not chosen yet")
+        _("{latitude}, {longitude}").format(latitude=number(cfg.system.latitude, 4), longitude=number(cfg.system.longitude, 4)) if cfg.is_set_up else _("not chosen yet")
     )
-    car, ch = cfg.car, cfg.charger
-    if cfg.away_rules:
+    car, ch = cfg.system.car, cfg.system.charger
+    if cfg.system.away_rules:
         away = pgettext("list separator", ", ").join(
-            _("{weekday} {start}-{end}").format(weekday=weekday_short(r.weekday), start=f"{r.start:%H:%M}", end=f"{r.end:%H:%M}") for r in cfg.away_rules
+            _("{weekday} {start}-{end}").format(weekday=weekday_short(r.weekday), start=f"{r.start:%H:%M}", end=f"{r.end:%H:%M}") for r in cfg.system.away_rules
         )
     else:
         away = _("the car is treated as home all day")
     return [
         RecapGroup("place", _("Place"), "location", (
             RecapLine(_("Location"), place),
-            RecapLine(_("Time zone"), cfg.timezone),
+            RecapLine(_("Time zone"), cfg.system.timezone),
         )),
         RecapGroup("panels", _("Solar panels"), "solar", _panel_lines(cfg)),
         RecapGroup("car", _("Car"), "car", (
             _line(_("Usable battery"), _("{kwh} kWh").format(kwh=number(car.usable_battery_kwh, 0)), cfg, "car.usable_battery_kwh"),
-            _line(_("Consumption"), _consumption(cfg, car.consumption_kwh_per_100km), cfg, "car.consumption_kwh_per_100km"),
-            _line(_("Driving per day"), _distance(cfg, car.km_per_day), cfg, "car.km_per_day"),
-            RecapLine(_("Charge level"), _("keep above {minimum}%, charge up to {target}%").format(minimum=number(car.minimum_pct), target=number(car.target_pct))),
+            _line(_("Consumption"), _consumption(state.units, car.consumption_kwh_per_100km), cfg, "car.consumption_kwh_per_100km"),
+            _line(_("Driving per day"), _distance(state.units, car.km_per_day), cfg, "car.km_per_day"),
+            RecapLine(_("Charge level"), _("keep above {minimum}%, charge up to {target}%").format(minimum=number(cfg.planning.minimum_pct), target=number(cfg.planning.target_pct))),
         )),
         RecapGroup("charger", _("Charger"), "car", (
             _line(_("Phases"), number(ch.phases), cfg, "charger.phases"),
@@ -115,7 +114,7 @@ def build_recap(state: SetupState) -> list[RecapGroup]:
             _line(_("Lowest current"), _("{amps} A").format(amps=number(ch.min_amps)), cfg, "charger.min_amps"),
         )),
         RecapGroup("house", _("House"), "house", (
-            _line(_("Own use"), _("{kw} kW").format(kw=number(cfg.house.baseload_kw, 2)), cfg, "house.baseload_kw"),
+            _line(_("Own use"), _("{kw} kW").format(kw=number(cfg.system.house.baseload_kw, 2)), cfg, "house.baseload_kw"),
         )),
         RecapGroup("away", _("Car away"), "away", (RecapLine(_("Away times"), away),)),
     ]

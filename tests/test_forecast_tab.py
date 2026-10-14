@@ -15,13 +15,13 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QLabel
 
 from car_charge_planner import colours
+from car_charge_planner.config.model import Forecast, load_config
 from car_charge_planner.controller import Controller
 from car_charge_planner.engine import FileStore
 from car_charge_planner.forecast.provider import BadResponse, NotConfigured, RateLimited, SettingSpec, Unavailable
 from car_charge_planner.forecast.registry import ProviderRegistry
 from car_charge_planner.forecast.registry import registry as builtin
 from car_charge_planner.forecast.secret_store import dump_secrets, load_secrets
-from car_charge_planner.planner.model import Forecast, load_config
 from car_charge_planner.settings.window import SettingsWindow
 from conftest import FakeNotifier, NoForecast, example_config
 from fake_provider import FakeProvider, Held, steps_for
@@ -62,7 +62,7 @@ class Rig:
         # a controller for its runner: the Test button's fetch runs on a thread, as in the app
         self.controller = Controller(self.cfg, FileStore(self.file), FakeNotifier(), NoForecast(), registry=registry)
         self.controller.engine.watch_settings(lambda old, new: self.saved.append(new))
-        self.window = SettingsWindow(self.controller.engine)
+        self.window = SettingsWindow(self.controller.engine, self.controller.app_settings)
         self.window.confirm_discard = lambda: True
         self.window.show()
         self.tab = self.window.forecast_tab
@@ -303,7 +303,7 @@ def test_a_missing_required_setting_is_said_without_asking_the_provider(rig):
 
 
 def test_without_a_location_the_test_says_where_to_enter_it(tmp_path, qapp):
-    rig = Rig(tmp_path, cfg=replace(example_config(), latitude=0.0, longitude=0.0, forecast=Forecast("beta", "", {})))
+    rig = Rig(tmp_path, cfg=replace(example_config().with_system(latitude=0.0, longitude=0.0), forecast=Forecast("beta", "", {})))
     rig.tab.test_buttons["primary"].click()
     assert "Enter your location first" in rig.tab.results["primary"].text() and rig.beta.call_count == 0
 

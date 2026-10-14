@@ -8,8 +8,10 @@ from dataclasses import replace
 
 import pytest
 
+from car_charge_planner.app_settings import DesktopSettings
+from car_charge_planner.config.model import TYPICAL_KEYS, Config, Setup, load_config, validate
 from car_charge_planner.forecast.check import Attempt
-from car_charge_planner.planner.model import TYPICAL_KEYS, Config, Panels, Setup, load_config, validate
+from car_charge_planner.planner.model import HomeSystem, Panels
 from car_charge_planner.setup.panels import panels_to_kwp
 from car_charge_planner.setup.typical import TYPICAL_VALUES, with_values
 from car_charge_planner.setup.wizard import SetupWizard
@@ -25,7 +27,7 @@ def test_panels_times_watts_is_the_size_in_kwp(count, watts, kwp):
 
 def test_there_is_a_typical_value_for_every_setting_that_can_be_one_and_they_are_valid():
     assert set(TYPICAL_VALUES) == set(TYPICAL_KEYS)
-    validate(with_values(Config(latitude=1.0, longitude=1.0), TYPICAL_VALUES))
+    validate(with_values(Config(system=HomeSystem(latitude=1.0, longitude=1.0)), TYPICAL_VALUES))
 
 
 def test_the_built_in_defaults_are_the_typical_values_so_settings_reset_and_the_wizard_agree():
@@ -38,7 +40,7 @@ def test_the_built_in_defaults_are_the_typical_values_so_settings_reset_and_the_
 class Rig:
     def __init__(self, tmp_path, cfg=None):
         self.file = tmp_path / "config.toml"
-        self.wizard = SetupWizard(engine_for(cfg if cfg is not None else Config(), self.file), lambda c: None, check=answers(Attempt(True, 2, "OK")), environ=NL, qt_locale_name="")
+        self.wizard = SetupWizard(engine_for(cfg if cfg is not None else Config(), self.file), DesktopSettings(), lambda c: None, check=answers(Attempt(True, 2, "OK")), environ=NL, qt_locale_name="")
         self.wizard.confirm_leave = lambda: True
         self.wizard.show()
         self.wizard.navigate("solar")
@@ -46,7 +48,7 @@ class Rig:
 
     @property
     def panels(self):
-        return self.wizard.state.config.panels
+        return self.wizard.state.config.system.panels
 
     @property
     def typical(self):
@@ -199,7 +201,7 @@ def test_changing_one_value_after_i_dont_know_gives_only_that_one(rig):
 def test_i_dont_know_leaves_the_rest_of_the_answers_alone(tmp_path, qapp):
     rig = Rig(tmp_path, cfg=example_config())
     rig.page.dont_know.click()
-    assert rig.wizard.state.config.latitude == 52.37 and rig.wizard.state.config.car == example_config().car
+    assert rig.wizard.state.config.system.latitude == 52.37 and rig.wizard.state.config.system.car == example_config().system.car
 
 
 def test_the_answers_are_kept_when_leaving_and_coming_back(rig):
@@ -217,7 +219,7 @@ def test_finishing_writes_the_panels_and_what_is_still_typical(tmp_path, qapp):
     rig.wizard.navigate("finish")
     assert rig.wizard.finish()
     written = load_config(rig.file)
-    assert (written.panels[0].kwp, written.panels[0].azimuth_deg) == (6.0, 0)
+    assert (written.system.panels[0].kwp, written.system.panels[0].azimuth_deg) == (6.0, 0)
     assert "panels.kwp" not in written.setup.typical and "panels.azimuth_deg" not in written.setup.typical
     assert "panels.tilt_deg" in written.setup.typical and "car.km_per_day" in written.setup.typical
 
@@ -234,7 +236,7 @@ def test_another_array_starts_typical_gets_a_tab_and_is_the_one_asked_about(tmp_
     rig.page.name.setText("Garage")
     rig.page.name.textEdited.emit("Garage")
     assert rig.panels[1] == Panels(kwp=2.4, tilt_deg=35, azimuth_deg=90, system_losses=0.14, name="Garage")
-    assert rig.panels[0] == example_config().panels[0]
+    assert rig.panels[0] == example_config().system.panels[0]
     assert rig.page.array_tabs.tabText(1) == "Garage"
     assert rig.typical == ("panels.2.tilt_deg", "panels.2.system_losses")
 
@@ -269,5 +271,5 @@ def test_finishing_writes_every_array(tmp_path, qapp):
     rig.wizard.navigate("finish")
     assert rig.wizard.finish()
     written = load_config(rig.file)
-    assert written.panels == (example_config().panels[0], Panels(azimuth_deg=90))
+    assert written.system.panels == (example_config().system.panels[0], Panels(azimuth_deg=90))
     assert written.setup.typical == ("panels.2.kwp", "panels.2.tilt_deg", "panels.2.system_losses")

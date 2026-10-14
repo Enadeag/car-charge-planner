@@ -5,9 +5,10 @@ from datetime import date, timedelta
 
 import pytest
 
+from car_charge_planner.config.model import Config
 from car_charge_planner.engine import Engine, ViewUpdate, run_here
 from car_charge_planner.forecast.service import ForecastResult, ForecastUnavailable
-from car_charge_planner.planner.model import AwayPeriod, Config
+from car_charge_planner.planner.model import AwayPeriod
 from car_charge_planner.storage.state import load_state
 from conftest import TZ, FakeClock, FakeNotifier, FixedForecast, at, forecast_from
 
@@ -58,7 +59,7 @@ def test_a_refresh_plans_with_the_forecast_and_hands_the_view_to_the_watchers(cf
     r.engine.refresh()
     update = r.updates[-1]
     assert update.vm.state == "upcoming" and "09:00-15:00" in update.vm.headline
-    assert (update.today, update.rules, update.tz) == (DAY, cfg.away_rules, TZ)
+    assert (update.today, update.rules, update.tz) == (DAY, cfg.system.away_rules, TZ)
     assert r.forecasts.calls == [cfg]
 
 
@@ -97,7 +98,7 @@ def test_a_new_lead_time_changes_when_the_next_notification_is_due(cfg):
     r = rig(cfg, 8, 30)  # the window starts at 09:00
     r.engine.refresh()
     assert r.titles == []  # the lead time is 15 minutes
-    r.engine.apply_config(replace(cfg, notify=replace(cfg.notify, lead_minutes=30)))
+    r.engine.apply_config(cfg.with_planning(notify_lead_minutes=30))
     assert len(r.titles) == 1 and r.titles[0].startswith("Charge window 09:00")
 
 
@@ -160,7 +161,7 @@ def test_a_place_or_angle_change_drops_the_old_forecast_until_the_new_one_arrive
     r = rig(cfg, hour=7, runner=runner)
     r.engine.refresh()
     runner.finish_next()
-    tilted = replace(cfg, panels=(replace(cfg.panels[0], tilt_deg=20),))
+    tilted = cfg.with_system(panels=(replace(cfg.system.panels[0], tilt_deg=20),))
     r.engine.apply_config(tilted)
     assert r.updates[-1].vm.state == "no-forecast"
     runner.finish_next()
@@ -171,17 +172,17 @@ def test_a_fetch_started_before_a_change_does_not_overwrite_the_new_config(cfg):
     runner = HeldRunner()
     r = rig(cfg, hour=7, runner=runner)
     r.engine.refresh()  # in flight under the old config
-    tilted = replace(cfg, panels=(replace(cfg.panels[0], tilt_deg=20),))
+    tilted = cfg.with_system(panels=(replace(cfg.system.panels[0], tilt_deg=20),))
     r.engine.apply_config(tilted)
     runner.finish_next()  # the old fetch finishes after the change
     assert r.updates[-1].vm.state == "no-forecast" and len(runner.jobs) == 1  # asked again, for the new config
     runner.finish_next()
-    assert [c.panels[0].tilt_deg for c in r.forecasts.calls] == [35, 20] and r.updates[-1].vm.state == "upcoming"
+    assert [c.system.panels[0].tilt_deg for c in r.forecasts.calls] == [35, 20] and r.updates[-1].vm.state == "upcoming"
 
 
 def test_a_new_time_zone_reaches_the_watchers(cfg):
     r = rig(cfg, hour=7)
-    r.engine.apply_config(replace(cfg, timezone="Europe/London"))
+    r.engine.apply_config(cfg.with_system(timezone="Europe/London"))
     assert str(r.updates[-1].tz) == "Europe/London" and str(r.engine.tz) == "Europe/London"
 
 

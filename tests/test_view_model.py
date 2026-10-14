@@ -1,8 +1,8 @@
 from dataclasses import replace
 from datetime import date, timedelta
 
+from car_charge_planner.config.model import TYPICAL_KEYS, Config, load_config
 from car_charge_planner.config_file import ensure_config
-from car_charge_planner.planner.model import TYPICAL_KEYS, Config, load_config
 from car_charge_planner.planner.projection import plan
 from car_charge_planner.storage.state import BatteryReading, load_battery
 from car_charge_planner.view_model import ForecastSource, build, footer_text, footer_tooltip, needs_setup, no_forecast
@@ -14,7 +14,7 @@ BATTERY = BatteryReading(45, at(DAY, 7))
 
 def view(cfg, now, days=((DAY, 900),), battery=BATTERY, age=timedelta(minutes=5), stale=False):
     fc = forecast_from(list(days))
-    return build(plan(fc, cfg, battery.pct, now), now, cfg, battery, age, stale)
+    return build(plan(fc, cfg.system, cfg.planning, battery.pct, now), now, cfg, battery, age, stale)
 
 
 def test_upcoming_window_headline_and_tooltip(cfg):
@@ -165,7 +165,7 @@ def test_before_there_is_a_forecast_the_footer_is_empty(cfg):
 def horizon_view(cfg, peaks, now=None):
     now = now or at(DAY, 7)
     fc = forecast_from([(DAY + timedelta(days=i), peak) for i, peak in enumerate(peaks)])
-    return build(plan(fc, cfg, 60, now), now, cfg, BATTERY, timedelta(minutes=5), False, None, OPEN_METEO)
+    return build(plan(fc, cfg.system, cfg.planning, 60, now), now, cfg, BATTERY, timedelta(minutes=5), False, None, OPEN_METEO)
 
 
 def test_a_one_day_forecast_has_no_outlook_and_says_one_day(cfg):
@@ -220,9 +220,9 @@ def _advice_view(cfg, days, soc, now):
     from car_charge_planner.planner.advice import grid_advice
 
     fc = forecast_from(list(days))
-    plans = plan(fc, cfg, soc, now)
+    plans = plan(fc, cfg.system, cfg.planning, soc, now)
     battery = BatteryReading(soc, now)
-    return build(plans, now, cfg, battery, None, False, grid_advice(plans, fc, cfg, None, now))
+    return build(plans, now, cfg, battery, None, False, grid_advice(plans, fc, cfg.system, cfg.planning, None, now))
 
 
 def test_dull_days_and_low_battery_give_grid_state(cfg):

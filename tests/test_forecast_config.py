@@ -8,12 +8,12 @@ from datetime import timedelta
 
 import pytest
 
+from car_charge_planner.config.io import dump_config, write_config
+from car_charge_planner.config.model import Config, ConfigError, Forecast, load_config, validate
 from car_charge_planner.forecast.provider import SettingSpec
 from car_charge_planner.forecast.registry import ProviderRegistry, registry
 from car_charge_planner.forecast.secret_store import SecretsError, dump_secrets, load_secrets, save_secrets
 from car_charge_planner.forecast.selection import check_selection, provider_settings, split_settings
-from car_charge_planner.planner.config_io import dump_config, write_config
-from car_charge_planner.planner.model import Config, ConfigError, Forecast, load_config, validate
 
 SECRET = "SUPER-SECRET-VALUE-42"
 

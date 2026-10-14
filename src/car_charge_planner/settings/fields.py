@@ -1,10 +1,12 @@
-"""What the Settings window shows: one FieldSpec per config value. Data only, no Qt."""
+"""What the Settings window shows: one FieldSpec per value of the engine's config or the app's own settings. Data only, no Qt."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from typing import Any
 
-from car_charge_planner.planner.model import Config, panel_key, setting, with_setting
+from car_charge_planner.app_settings import AppSettings
+from car_charge_planner.config.model import Config, panel_key, setting, with_setting
 
 from ..i18n import N_
 
@@ -43,13 +45,20 @@ def _provider_key(key: str) -> tuple[str, str] | None:
     return (parts[1], parts[2]) if len(parts) == 3 and parts[0] == "forecast" else None
 
 
-def get_value(cfg: Config, key: str):
+APP_SECTION = "interface"  # the keys of the app's own settings: "interface.mode" is AppSettings.mode
+
+
+def get_value(cfg: Config | AppSettings, key: str) -> Any:
+    if isinstance(cfg, AppSettings):
+        return getattr(cfg, key.removeprefix(f"{APP_SECTION}."))
     if (provider := _provider_key(key)) is not None:
         return cfg.forecast.settings.get(provider[0], {}).get(provider[1], "")
     return setting(cfg, key)
 
 
-def set_value(cfg: Config, key: str, value) -> Config:
+def set_value[T: (Config, AppSettings)](cfg: T, key: str, value: Any) -> T:
+    if isinstance(cfg, AppSettings):
+        return replace(cfg, **{key.removeprefix(f"{APP_SECTION}."): value})
     if (provider := _provider_key(key)) is not None:
         provider_id, setting = provider
         settings = {pid: dict(values) for pid, values in cfg.forecast.settings.items()}
@@ -129,11 +138,11 @@ HOUSE_CAR = TabSpec(
             unit="km", minimum=0, maximum=1000, decimals=1, step=5, quantity="distance",
         ),
         FieldSpec(
-            "car.minimum_pct", N_("Minimum charge level"), N_("The battery should never drop below this level. Must be below the target."),
+            "planning.minimum_pct", N_("Minimum charge level"), N_("The battery should never drop below this level. Must be below the target."),
             unit="%", minimum=0, maximum=100, decimals=0, step=5,
         ),
         FieldSpec(
-            "car.target_pct", N_("Target charge level"), N_("Everyday maximum charge level. Must be above the minimum."),
+            "planning.target_pct", N_("Target charge level"), N_("Everyday maximum charge level. Must be above the minimum."),
             unit="%", minimum=1, maximum=100, decimals=0, step=5,
         ),
     ),
@@ -187,13 +196,14 @@ PLANNING = TabSpec(
             unit=N_("minutes"), kind="int", minimum=5, maximum=240, step=5,
         ),
         FieldSpec(
-            "notify.lead_minutes", N_("Notification lead time"), N_("How long before a window starts you are told."),
+            "planning.notify_lead_minutes", N_("Notification lead time"), N_("How long before a window starts you are told."),
             unit=N_("minutes"), kind="int", minimum=0, maximum=120, step=5,
         ),
     ),
 )
 
 # the Away rules tab is not a list of numbers: it has its own widget (tabs.py)
+# The Interface tab shows the desktop app's own settings, not the engine's: it fills an AppSettings.
 INTERFACE = TabSpec(
     "interface",
     N_("Interface"),

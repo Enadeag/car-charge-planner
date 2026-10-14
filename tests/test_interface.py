@@ -12,11 +12,19 @@ from dataclasses import replace
 import pytest
 
 from app_process import LAUNCHER, PROJECT, RunningApp, app_environment
+from car_charge_planner.app_settings import (
+    INTERFACE_MODES,
+    AppSettings,
+    AppSettingsError,
+    AppSettingsFile,
+    DesktopSettings,
+    dump_app_settings,
+    load_app_settings,
+    write_app_settings,
+)
 from car_charge_planner.controller import Controller
 from car_charge_planner.engine import FileStore
 from car_charge_planner.main import NO_TRAY_HINT, announce_tray_fallback, create_shell, wait_for_tray
-from car_charge_planner.planner.config_io import dump_config, write_config
-from car_charge_planner.planner.model import INTERFACE_MODES, Config, ConfigError, Interface, load_config
 from car_charge_planner.settings.window import SettingsWindow
 from car_charge_planner.shells import ShellChoice, choose_shell
 from car_charge_planner.shells.tray import TrayShell
@@ -26,40 +34,41 @@ from conftest import FakeNotifier, engine_for, example_config
 
 
 def with_mode(mode):
-    return replace(Config(), interface=Interface(mode))
+    return AppSettings(mode=mode)
 
 
 def test_the_default_is_automatic():
-    assert Config().interface.mode == "auto" and INTERFACE_MODES == ("auto", "tray", "window")
+    assert AppSettings().mode == "auto" and INTERFACE_MODES == ("auto", "tray", "window")
 
 
 def test_the_mode_is_read_written_and_round_trips(tmp_path):
     for mode in INTERFACE_MODES:
         f = tmp_path / f"{mode}.toml"
-        write_config(with_mode(mode), f)
-        assert load_config(f).interface.mode == mode
-    assert "[interface]" in dump_config(Config()) and 'mode = "auto"' in dump_config(Config())
+        write_app_settings(with_mode(mode), f)
+        assert load_app_settings(f).mode == mode
+    assert "[interface]" in dump_app_settings(AppSettings()) and 'mode = "auto"' in dump_app_settings(AppSettings())
 
 
 def test_a_file_without_the_section_means_automatic(tmp_path):
-    f = tmp_path / "c.toml"
-    f.write_text("[panels]\nkwp = 5\n", encoding="utf-8")  # no [interface] section
-    assert load_config(f).interface.mode == "auto"
+    f = tmp_path / "app.toml"
+    f.write_text("schema = 1\n", encoding="utf-8")  # no [interface] section
+    assert load_app_settings(f).mode == "auto"
+    assert load_app_settings(tmp_path / "missing.toml").mode == "auto"
 
 
 def test_an_unknown_mode_is_a_readable_error(tmp_path):
-    f = tmp_path / "c.toml"
+    f = tmp_path / "app.toml"
     f.write_text('[interface]\nmode = "popup"\n', encoding="utf-8")
-    with pytest.raises(ConfigError) as err:
-        load_config(f)
+    with pytest.raises(AppSettingsError) as err:
+        load_app_settings(f)
     assert "mode must be one of auto, tray, window" in str(err.value) and "popup" in str(err.value)
 
 
 def test_an_unknown_key_in_the_section_is_rejected(tmp_path):
-    f = tmp_path / "c.toml"
+    f = tmp_path / "app.toml"
     f.write_text('[interface]\nstyle = "dark"\n', encoding="utf-8")
-    with pytest.raises(ConfigError) as err:
-        load_config(f)
+    with pytest.raises(AppSettingsError) as err:
+        load_app_settings(f)
     assert "style" in str(err.value)
 
 
@@ -118,7 +127,7 @@ def test_background_starts_wait_longer_than_interactive_ones():
 
 def controller_with(mode, tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    return Controller(with_mode(mode), FileStore(tmp_path / "config.toml"), FakeNotifier())
+    return Controller(example_config(), FileStore(tmp_path / "config.toml"), FakeNotifier(), app_settings=DesktopSettings(with_mode(mode)))
 
 
 @pytest.mark.parametrize(
@@ -166,17 +175,19 @@ def test_changing_the_interface_says_it_applies_at_the_next_start(tmp_path, monk
     controller = controller_with("auto", tmp_path, monkeypatch)
     monkeypatch.setattr(controller.engine, "rebuild", lambda: None)
     monkeypatch.setattr(controller.engine, "refresh", lambda force=False: None)
-    controller.engine.apply_config(with_mode("window"))
+    controller.app_settings.save(with_mode("window"))
     assert len(controller.notifier.sent) == 1 and "next time" in controller.notifier.sent[0][1]
-    controller.engine.apply_config(with_mode("window"))
-    controller.engine.apply_config(replace(with_mode("window"), planning=replace(Config().planning, margin=0.5)))
+    controller.app_settings.save(with_mode("window"))
+    controller.app_settings.save(replace(with_mode("window"), units="imperial"))  # shown at once: nothing to announce
+    controller.engine.apply_config(example_config().with_planning(margin=0.5))  # the engine's settings are not the interface
     assert len(controller.notifier.sent) == 1
 
 
 class Harness:
-    def __init__(self, tmp_path, cfg=None):
+    def __init__(self, tmp_path, app=None):
         self.file = tmp_path / "config.toml"
-        self.window = SettingsWindow(engine_for(cfg or example_config(), self.file))
+        self.app_file = tmp_path / "app.toml"
+        self.window = SettingsWindow(engine_for(example_config(), self.file), DesktopSettings(app, AppSettingsFile(self.app_file)))
         self.window.confirm_discard = lambda: True
         self.window.show()
         self.tab = next(t for t in self.window.all_tabs if t.title == "Interface")
@@ -206,7 +217,7 @@ def test_the_hint_says_when_a_change_applies(h):
 def test_choosing_a_mode_and_saving_writes_it(h):
     h.box.setCurrentIndex(h.box.findData("window"))
     h.window.save_button.click()
-    assert load_config(h.file).interface.mode == "window"
+    assert load_app_settings(h.app_file).mode == "window" and "mode" not in h.file.read_text(encoding="utf-8")
 
 
 def test_the_tab_shows_the_stored_mode(tmp_path, qapp):
@@ -225,7 +236,7 @@ def test_reset_tab_goes_back_to_automatic_without_saving(tmp_path, qapp):
     h = Harness(tmp_path, with_mode("window"))
     h.window.tabs.setCurrentWidget(h.tab)
     h.window.reset_button.click()
-    assert h.box.currentData() == "auto" and not h.file.exists()
+    assert h.box.currentData() == "auto" and not h.file.exists() and not h.app_file.exists()
 
 
 def test_without_a_tray_the_app_starts_as_a_window_instead_of_exiting(tmp_path):

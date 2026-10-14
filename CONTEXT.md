@@ -50,6 +50,14 @@ _Avoid_: Plane (the forecast services' word), string (an electrical term), roof
 A setting the user did not give ("I don't know") and the app filled in with a common value. It is flagged as an estimate until the user saves a value of their own.
 _Avoid_: Default, assumed value, guess
 
+**Planning preferences**:
+The owner's choices about how the plan is made: the minimum and target charge level, the planning margin, the import tolerance, the minimum window length and the notification lead time. Kept by the engine beside the description of the system; never a typical value.
+_Avoid_: Planning settings, options
+
+**App settings**:
+The desktop app's own settings: whether it shows itself as a tray icon or a window, the units it shows and its language. Kept by the desktop app, not the engine, so they stay on the computer even when the engine runs elsewhere.
+_Avoid_: Preferences, interface config
+
 **Place search**:
 Finding a place's coordinates and time zone from a name or postcode the user types. A forecast provider may offer one; the typed text goes to the primary provider, and without one the user types coordinates.
 _Avoid_: Geocoding, location lookup, address search

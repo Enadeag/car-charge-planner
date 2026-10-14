@@ -11,9 +11,10 @@ import pytest
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QLabel
 
+from car_charge_planner.app_settings import AppSettings, DesktopSettings
+from car_charge_planner.config.model import Config, Setup, load_config
 from car_charge_planner.engine import FileStore
 from car_charge_planner.forecast.check import Attempt
-from car_charge_planner.planner.model import Config, Setup, load_config
 from car_charge_planner.setup.finish import FinishPage
 from car_charge_planner.setup.pages import Page
 from car_charge_planner.setup.welcome import WelcomePage
@@ -31,13 +32,15 @@ def sub(tmp_path, name):
 
 
 class Rig:
-    def __init__(self, tmp_path, cfg=None, environ=NL, check=None, registry=None, pages=None, file=None):
+    def __init__(self, tmp_path, cfg=None, environ=NL, check=None, registry=None, pages=None, file=None, app=None):
         self.file = file or tmp_path / "config.toml"
+        self.app = DesktopSettings(app)
         self.finished = []
         self.checked = []
         self.outcome = check or Attempt(True, 2, "OK: 2 days of forecast")
         self.wizard = SetupWizard(
             engine_for(cfg if cfg is not None else example_config(), self.file, registry=registry),
+            self.app,
             self.finished.append,
             check=self._check,
             page_classes=pages,
@@ -162,16 +165,16 @@ def test_the_units_are_preselected_from_the_region_on_a_new_install(tmp_path, qa
 
 
 def test_running_set_up_again_keeps_the_owners_units(tmp_path, qapp):
-    cfg = replace(example_config(), interface=replace(example_config().interface, units="metric"))
-    assert Rig(tmp_path, cfg=cfg, environ=US).wizard.pages["welcome"].units.currentData() == "metric"
+    rig = Rig(tmp_path, cfg=example_config(), environ=US, app=AppSettings(units="metric"))
+    assert rig.wizard.pages["welcome"].units.currentData() == "metric"
 
 
 def test_the_choice_of_units_is_kept_in_the_answers_when_the_page_is_left(rig):
     w = rig.wizard
     w.pages["welcome"].units.setCurrentIndex(w.pages["welcome"].units.findData("imperial"))
-    assert w.state.config.interface.units == "metric"  # not yet: the page keeps it until it is left
+    assert w.state.units == "metric"  # not yet: the page keeps it until it is left
     w.next()
-    assert w.state.config.interface.units == "imperial"
+    assert w.state.units == "imperial"
 
 
 def test_finish_shows_the_recap_with_typical_values_marked(tmp_path, qapp):
@@ -208,7 +211,7 @@ def test_a_change_link_returns_to_that_page_and_back_comes_back(tmp_path, qapp):
 
 def test_the_connection_check_runs_with_the_chosen_place_and_says_what_it_got(rig):
     page = rig.at_finish()
-    assert len(rig.checked) == 1 and rig.checked[0].latitude == 52.37
+    assert len(rig.checked) == 1 and rig.checked[0].system.latitude == 52.37
     assert page.check_status.text() == "Forecast received for 52.37, 4.90: 2 days."
     assert page.check_button.isEnabled() and rig.wizard.next_button.isEnabled()
 
@@ -251,10 +254,10 @@ def test_the_check_asks_the_chosen_provider_off_the_window_thread_with_the_saved
     import threading
     from datetime import datetime
 
+    from car_charge_planner.config.model import Forecast
     from car_charge_planner.controller import Controller
     from car_charge_planner.forecast.provider import SettingSpec
     from car_charge_planner.forecast.registry import ProviderRegistry
-    from car_charge_planner.planner.model import Forecast
     from conftest import TZ, FakeNotifier, NoForecast
     from fake_provider import FakeProvider, steps_for
 
@@ -267,7 +270,7 @@ def test_the_check_asks_the_chosen_provider_off_the_window_thread_with_the_saved
     store = FileStore(tmp_path / "config.toml")
     store.save_secrets({"keyed": {"api_key": "K-1"}})
     controller = Controller(replace(example_config(), forecast=Forecast("keyed", "", {})), store, FakeNotifier(), NoForecast(), registry=registry)
-    wizard = SetupWizard(controller.engine, lambda c: None, environ=NL, qt_locale_name="")
+    wizard = SetupWizard(controller.engine, controller.app_settings, lambda c: None, environ=NL, qt_locale_name="")
     wizard.navigate("finish")
     page = wizard.pages["finish"]
     deadline = time.monotonic() + 5
@@ -284,7 +287,7 @@ def test_finish_writes_the_config_once_hands_it_over_and_closes(rig):
     rig.wizard.next()
     assert rig.wizard.finished_ok and not rig.wizard.isVisible()
     written = load_config(rig.file)
-    assert written.interface.units == "imperial" and written.latitude == 52.37
+    assert written.system.latitude == 52.37 and rig.app.current.units == "imperial"
     assert rig.finished == [written] and rig.asked == []
 
 
@@ -299,7 +302,7 @@ def test_a_re_run_writes_back_what_it_was_given_untouched(tmp_path, qapp):
 def test_a_draft_that_does_not_pass_the_checks_writes_nothing_and_says_why(tmp_path, qapp):
     rig = Rig(tmp_path)
     rig.at_finish()
-    rig.wizard.state.config = replace(rig.wizard.state.config, charger=replace(rig.wizard.state.config.charger, phases=2))
+    rig.wizard.state.config = rig.wizard.state.config.with_system(charger=replace(rig.wizard.state.config.system.charger, phases=2))
     assert not rig.wizard.finish()
     assert rig.wizard.errors.isVisible() and "phases" in rig.wizard.errors.text()
     assert not rig.file.exists() and rig.finished == [] and rig.wizard.isVisible()
@@ -327,7 +330,7 @@ def test_closing_after_a_change_asks_and_staying_keeps_everything(rig):
 
 
 def test_leaving_discards_everything_and_writes_nothing(rig):
-    rig.wizard.state.config = replace(rig.wizard.state.config, latitude=10.0)
+    rig.wizard.state.config = rig.wizard.state.config.with_system(latitude=10.0)
     rig.at_finish()
     rig.wizard.reject()
     assert rig.asked == [1] and not rig.wizard.isVisible()
@@ -399,5 +402,5 @@ def test_finishing_applies_the_new_config_in_the_running_app(tmp_path, qapp, mon
     wizard.next()
     wizard.next()
     settle_controller(controller)  # applying the config starts a fetch
-    assert controller.engine.cfg.interface.units == "imperial" and load_config(tmp_path / "config.toml").interface.units == "imperial"
+    assert controller.app_settings.current.units == "imperial"
     assert shown == [1]

@@ -116,7 +116,7 @@ class FinishPage(Page):
         self.check_status.setStyleSheet(colours.MUTED_STYLE)
         self.check_status.setText(_("Asking {provider} for a forecast...").format(provider=name))
         cfg = self.state.config
-        place = self.state.place_label or f"{cfg.latitude:.2f}, {cfg.longitude:.2f}"
+        place = self.state.place_label or f"{cfg.system.latitude:.2f}, {cfg.system.longitude:.2f}"
 
         def done(attempt: Attempt) -> None:
             if not isValid(self):  # the wizard can be closed and deleted while the provider is asked

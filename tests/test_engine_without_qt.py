@@ -9,7 +9,7 @@ import sys
 sys.modules["PySide6"] = None
 sys.modules["shiboken6"] = None
 from car_charge_planner.engine import Engine
-from car_charge_planner.planner.model import Config
+from car_charge_planner.config.model import Config
 
 class Silent:
     def send(self, title, body, expire_ms=20_000):

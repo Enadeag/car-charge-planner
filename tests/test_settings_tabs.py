@@ -9,7 +9,9 @@ import pytest
 from PySide6.QtCore import QTime
 from PySide6.QtWidgets import QLabel
 
-from car_charge_planner.planner.model import AwayRule, Config, Setup, load_config
+from car_charge_planner.app_settings import DesktopSettings
+from car_charge_planner.config.model import Config, Setup, load_config
+from car_charge_planner.planner.model import AwayRule
 from car_charge_planner.settings.window import SettingsWindow
 from conftest import engine_for, example_config
 
@@ -19,7 +21,7 @@ class Harness:
         self.file = tmp_path / "config.toml"
         self.saved = []
         self.asked = []
-        self.window = SettingsWindow(engine_for(cfg or example_config(), self.file, saved=self.saved))
+        self.window = SettingsWindow(engine_for(cfg or example_config(), self.file, saved=self.saved), DesktopSettings())
         self.window.confirm_discard = lambda: (self.asked.append(1), True)[1]
         self.window.show()
 
@@ -61,7 +63,7 @@ def test_house_and_car_shows_values_with_units_and_typical_value_tags(tmp_path, 
     assert h.box(t, "car.usable_battery_kwh").value() == 70
     assert h.box(t, "car.consumption_kwh_per_100km").value() == 18
     assert h.box(t, "car.km_per_day").value() == 85.7
-    assert h.box(t, "car.minimum_pct").value() == 30 and h.box(t, "car.target_pct").value() == 80
+    assert h.box(t, "planning.minimum_pct").value() == 30 and h.box(t, "planning.target_pct").value() == 80
     assert h.box(t, "car.consumption_kwh_per_100km").suffix() == " kWh/100 km"
     tagged = texts(h.tab(t))
     assert sum("Typical value." in x for x in tagged) == 2
@@ -79,24 +81,24 @@ def test_charger_shows_values_with_units_and_a_typical_value_tag(tmp_path, qapp)
 
 def test_editing_house_car_and_charger_saves_everything(h):
     h.box("House and car", "house.baseload_kw").setValue(0.8)
-    h.box("House and car", "car.minimum_pct").setValue(25)
+    h.box("House and car", "planning.minimum_pct").setValue(25)
     h.box("Charger", "charger.max_amps").setValue(25)
     h.box("Charger", "charger.efficiency").setValue(88.5)
     h.window.save_button.click()
     saved = load_config(h.file)
-    assert saved.house.baseload_kw == 0.8 and saved.car.minimum_pct == 25
-    assert saved.charger.max_amps == 25 and isinstance(saved.charger.max_amps, int)
-    assert saved.charger.efficiency == 0.885
+    assert saved.system.house.baseload_kw == 0.8 and saved.planning.minimum_pct == 25
+    assert saved.system.charger.max_amps == 25 and isinstance(saved.system.charger.max_amps, int)
+    assert saved.system.charger.efficiency == 0.885
 
 
 def test_untouched_driving_per_day_keeps_its_exact_value(h):
     h.box("Charger", "charger.max_amps").setValue(20)
     h.window.save_button.click()
-    assert load_config(h.file).car.km_per_day == 600 / 7  # not the 85.7 shown
+    assert load_config(h.file).system.car.km_per_day == 600 / 7  # not the 85.7 shown
 
 
 def test_both_cross_field_problems_are_listed_together(h):
-    h.box("House and car", "car.minimum_pct").setValue(90)  # above the 80 target
+    h.box("House and car", "planning.minimum_pct").setValue(90)  # above the 80 target
     h.box("Charger", "charger.min_amps").setValue(40)  # above the 32 maximum
     h.window.save_button.click()
     message = h.window.errors.text()
@@ -107,19 +109,17 @@ def test_both_cross_field_problems_are_listed_together(h):
 
 
 def test_reset_tab_works_on_house_car_and_on_charger(tmp_path, qapp):
-    custom = replace(
-        example_config(),
-        car=replace(Config().car, usable_battery_kwh=75, target_pct=90),
-        charger=replace(Config().charger, volts=240, max_amps=25),
-    )
+    custom = example_config().with_system(
+        car=replace(Config().system.car, usable_battery_kwh=75), charger=replace(Config().system.charger, volts=240, max_amps=25)
+    ).with_planning(target_pct=90)
     h = Harness(tmp_path, custom)
     h.show("House and car")
     h.window.reset_button.click()
-    assert h.box("House and car", "car.usable_battery_kwh").value() == Config().car.usable_battery_kwh
+    assert h.box("House and car", "car.usable_battery_kwh").value() == Config().system.car.usable_battery_kwh
     assert h.box("Charger", "charger.volts").value() == 240
     h.show("Charger")
     h.window.reset_button.click()
-    assert h.box("Charger", "charger.volts").value() == 230 and h.box("Charger", "charger.max_amps").value() == Config().charger.max_amps
+    assert h.box("Charger", "charger.volts").value() == 230 and h.box("Charger", "charger.max_amps").value() == Config().system.charger.max_amps
     assert not h.file.exists()  # reset alone saves nothing
 
 
@@ -128,25 +128,25 @@ def test_planning_tab_shows_values_and_units(h):
     assert h.box(t, "planning.margin").value() == 85
     assert h.box(t, "planning.import_tolerance_kwh").value() == 0.2
     assert h.box(t, "planning.min_window_minutes").value() == 45
-    assert h.box(t, "notify.lead_minutes").value() == 15
-    assert h.box(t, "planning.margin").suffix() == " %" and h.box(t, "notify.lead_minutes").suffix() == " minutes"
+    assert h.box(t, "planning.notify_lead_minutes").value() == 15
+    assert h.box(t, "planning.margin").suffix() == " %" and h.box(t, "planning.notify_lead_minutes").suffix() == " minutes"
 
 
 def test_planning_edit_saves_as_stored_types(h):
     t = "Planning and notifications"
     h.box(t, "planning.margin").setValue(70)
-    h.box(t, "notify.lead_minutes").setValue(30)
+    h.box(t, "planning.notify_lead_minutes").setValue(30)
     h.window.save_button.click()
     saved = load_config(h.file)
-    assert saved.planning.margin == 0.7 and saved.notify.lead_minutes == 30
-    assert isinstance(saved.notify.lead_minutes, int)
+    assert saved.planning.margin == 0.7 and saved.planning.notify_lead_minutes == 30
+    assert isinstance(saved.planning.notify_lead_minutes, int)
 
 
 def test_planning_reset_tab(tmp_path, qapp):
-    h = Harness(tmp_path, replace(example_config(), notify=replace(Config().notify, lead_minutes=45)))
+    h = Harness(tmp_path, example_config().with_planning(notify_lead_minutes=45))
     h.show("Planning and notifications")
     h.window.reset_button.click()
-    assert h.box("Planning and notifications", "notify.lead_minutes").value() == 15
+    assert h.box("Planning and notifications", "planning.notify_lead_minutes").value() == 15
 
 
 def rows(h):
@@ -169,7 +169,7 @@ def test_add_edit_and_save_a_rule(h):
     new.start.setTime(QTime(7, 30))
     new.end.setTime(QTime(12, 45))
     h.window.save_button.click()
-    assert load_config(h.file).away_rules == (
+    assert load_config(h.file).system.away_rules == (
         AwayRule(3, time(6, 0), time(19, 0)),
         AwayRule(1, time(7, 30), time(12, 45)),
     )
@@ -180,7 +180,7 @@ def test_remove_a_rule_and_save(h):
     rows(h)[0].remove_button.click()
     assert len(rows(h)) == 1
     h.window.save_button.click()
-    saved = load_config(h.file).away_rules
+    saved = load_config(h.file).system.away_rules
     assert len(saved) == 1 and saved[0] != AwayRule(3, time(6, 0), time(19, 0))
 
 
@@ -188,7 +188,7 @@ def test_an_empty_list_round_trips_and_does_not_bring_back_the_default(h):
     rows(h)[0].remove_button.click()
     assert rows(h) == [] and not h.tab("Away rules").empty_note.isHidden()
     h.window.save_button.click()
-    assert load_config(h.file).away_rules == ()
+    assert load_config(h.file).system.away_rules == ()
     assert "recurring = []" in h.file.read_text(encoding="utf-8")
 
 
@@ -202,7 +202,7 @@ def test_a_rule_that_ends_before_it_starts_is_reported_and_nothing_is_written(h)
 
 
 def test_reset_empties_the_rules_because_there_is_no_default_rule(tmp_path, qapp):
-    cfg = replace(example_config(), away_rules=(AwayRule(0, time(8, 0), time(9, 0)), AwayRule(5, time(1, 0), time(2, 0))))
+    cfg = example_config().with_system(away_rules=(AwayRule(0, time(8, 0), time(9, 0)), AwayRule(5, time(1, 0), time(2, 0))))
     h = Harness(tmp_path, cfg)
     assert len(rows(h)) == 2
     h.show("Away rules")
@@ -220,9 +220,9 @@ def test_rules_count_as_changes_for_the_discard_question(h):
 
 
 def test_rule_order_is_kept(tmp_path, qapp):
-    cfg = replace(example_config(), away_rules=(AwayRule(4, time(8, 0), time(9, 0)), AwayRule(1, time(8, 0), time(9, 0))))
+    cfg = example_config().with_system(away_rules=(AwayRule(4, time(8, 0), time(9, 0)), AwayRule(1, time(8, 0), time(9, 0))))
     h = Harness(tmp_path, cfg)
     assert [r.weekday.currentText() for r in rows(h)] == ["Friday", "Tuesday"]
     rows(h)[0].end.setTime(QTime(10, 0))
     h.window.save_button.click()
-    assert [r.weekday for r in load_config(h.file).away_rules] == [4, 1]
+    assert [r.weekday for r in load_config(h.file).system.away_rules] == [4, 1]

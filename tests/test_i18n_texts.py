@@ -4,6 +4,7 @@ from datetime import date, datetime, time, timedelta
 
 import pytest
 
+from car_charge_planner.app_settings import DesktopSettings
 from car_charge_planner.away_input import away_summary, describe_rule
 from car_charge_planner.i18n import init, number
 from car_charge_planner.names import month_short, short_date, weekday_long
@@ -112,13 +113,13 @@ def test_away_texts_follow_the_language(tmp_path):
 def test_a_tab_is_found_by_its_key_in_any_language(tmp_path):
     from PySide6.QtWidgets import QApplication
 
-    from car_charge_planner.planner.model import Config
+    from car_charge_planner.config.model import Config
     from car_charge_planner.settings.window import SettingsWindow
 
     QApplication.instance() or QApplication([])
     make_catalogue(tmp_path, "xx", {"Away rules": "Afwezigheid", "Solar and location": "Zon en locatie"})
     init(["xx"], tmp_path)
-    window = SettingsWindow(engine_for(Config(), tmp_path / "config.toml"))
+    window = SettingsWindow(engine_for(Config(), tmp_path / "config.toml"), DesktopSettings())
     titles = [window.tabs.tabText(i) for i in range(window.tabs.count())]
     assert "Afwezigheid" in titles and "Zon en locatie" in titles
     window.show_tab("away")
@@ -128,12 +129,12 @@ def test_a_tab_is_found_by_its_key_in_any_language(tmp_path):
 
 
 def test_validation_messages_reach_the_user_in_their_language(tmp_path):
-    from dataclasses import replace
 
-    from car_charge_planner.planner.model import Config, ConfigError, Panels, validate
+    from car_charge_planner.config.model import Config, ConfigError, validate
+    from car_charge_planner.planner.model import Panels
 
     make_catalogue(tmp_path, "xx", {"Invalid config:": "Ongeldig:", "{panels} kwp must be above 0": "{panels} kwp moet boven 0 zijn"})
     init(["xx"], tmp_path)
     with pytest.raises(ConfigError) as err:
-        validate(replace(Config(), panels=(Panels(kwp=0),)))
+        validate(Config().with_system(panels=(Panels(kwp=0),)))
     assert str(err.value).startswith("Ongeldig:") and "kwp moet boven 0 zijn" in str(err.value)

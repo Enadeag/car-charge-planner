@@ -1,4 +1,5 @@
-"""The engine is the only writer of the stored data: no client module reads or writes a data file or the keychain.
+"""The engine is the only writer of the stored data, beside the desktop app writing its own settings (app.toml) from its
+wiring: no client module reads or writes a data file or the keychain.
 
 The check reads the clients' source rather than running them against a filesystem that refuses writes: it covers every
 branch, also those no test reaches (an error path, a one-time hint), and Qt's own files do not get in the way.
@@ -23,7 +24,7 @@ CLIENTS = sorted(
 FORBIDDEN_MODULES = {
     "car_charge_planner.config_file",
     "car_charge_planner.paths",
-    "car_charge_planner.planner.config_io",
+    "car_charge_planner.config.io",
     "car_charge_planner.engine.store",
     "json",
     "keyring",
@@ -40,8 +41,10 @@ ONLY_TYPES = {
     "car_charge_planner.forecast.secret_store": {"Secrets"},
 }
 FORBIDDEN_NAMES = {
-    "car_charge_planner.planner.model": {"load_config"},
+    "car_charge_planner.config.model": {"load_config", "read_toml", "stored_schema"},
     "car_charge_planner.engine": {"FileStore"},  # a client asks the engine; it does not open the store itself
+    # the app's own settings are stored by the desktop app's wiring (main.py); a client saves them through DesktopSettings
+    "car_charge_planner.app_settings": {"AppSettingsFile", "adopt_interface", "load_app_settings", "write_app_settings", "app_settings_path"},
 }
 FILE_METHODS = {"open", "read_text", "read_bytes", "write_text", "write_bytes", "touch", "mkdir", "unlink", "rmdir"}
 

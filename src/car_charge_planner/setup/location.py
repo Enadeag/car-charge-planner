@@ -8,7 +8,6 @@ result, or defaults to the computer's for coordinates, and can be changed under 
 from __future__ import annotations
 
 import threading
-from dataclasses import replace
 from zoneinfo import available_timezones
 
 from PySide6.QtCore import QObject, Qt, QTimer, Signal
@@ -151,9 +150,9 @@ class LocationPage(Page):
         self.credit.setText(credit)
         self.credit.setVisible(bool(credit))
         self._filling = True
-        self.latitude.setValue(cfg.latitude)
-        self.longitude.setValue(cfg.longitude)
-        self.timezone.setCurrentText(cfg.timezone)
+        self.latitude.setValue(cfg.system.latitude)
+        self.longitude.setValue(cfg.system.longitude)
+        self.timezone.setCurrentText(cfg.system.timezone)
         self._filling = False
         self._tz_edited = False
         self.zone_error.clear()
@@ -234,7 +233,7 @@ class LocationPage(Page):
         self.results.setCurrentItem(item)  # shown as the one picked
         self.state.place_label = item.text()
         cfg = self.state.config
-        self.state.config = replace(cfg, latitude=place.latitude, longitude=place.longitude, timezone=place.timezone)
+        self.state.config = cfg.with_system(latitude=place.latitude, longitude=place.longitude, timezone=place.timezone)
         self._filling = True
         self.latitude.setValue(place.latitude)
         self.longitude.setValue(place.longitude)
@@ -249,8 +248,8 @@ class LocationPage(Page):
             return
         cfg = self.state.config
         self.state.place_label = ""  # typed by hand: the recap shows the coordinates
-        zone = cfg.timezone if self._tz_edited else system_timezone()
-        self.state.config = replace(cfg, latitude=self.latitude.value(), longitude=self.longitude.value(), timezone=zone)
+        zone = cfg.system.timezone if self._tz_edited else system_timezone()
+        self.state.config = cfg.with_system(latitude=self.latitude.value(), longitude=self.longitude.value(), timezone=zone)
         if not self._tz_edited:
             self._filling = True
             self.timezone.setCurrentText(zone)
@@ -265,7 +264,7 @@ class LocationPage(Page):
         self._zone_ok()
         cfg = self.state.config
         if text in available_timezones():
-            self.state.config = replace(cfg, timezone=text)
+            self.state.config = cfg.with_system(timezone=text)
             self._refresh_chosen()
         self.changed.emit()
 
@@ -283,6 +282,6 @@ class LocationPage(Page):
             self.chosen.setText(_("No place chosen yet."))
             self.chosen.setStyleSheet(colours.MUTED_STYLE)
             return
-        where = self.state.place_label or _("{latitude}, {longitude}").format(latitude=f"{cfg.latitude:.4f}", longitude=f"{cfg.longitude:.4f}")
+        where = self.state.place_label or _("{latitude}, {longitude}").format(latitude=f"{cfg.system.latitude:.4f}", longitude=f"{cfg.system.longitude:.4f}")
         self.chosen.setStyleSheet("font-weight: bold;")
-        self.chosen.setText(_("Chosen: {place} ({zone})").format(place=where, zone=cfg.timezone))
+        self.chosen.setText(_("Chosen: {place} ({zone})").format(place=where, zone=cfg.system.timezone))

@@ -3,8 +3,8 @@ secrets.toml for the secret ones."""
 
 from __future__ import annotations
 
+from car_charge_planner.config.model import Config
 from car_charge_planner.i18n import _
-from car_charge_planner.planner.model import Config
 
 from .provider import ForecastProvider, PlaceSearch
 from .registry import ProviderRegistry

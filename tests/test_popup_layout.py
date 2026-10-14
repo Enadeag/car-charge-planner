@@ -24,12 +24,12 @@ NOW = at(DAY, 7)
 
 def view(cfg, days, soc=45, battery=None, state=None):
     forecast = forecast_from(list(days))
-    plans = plan(forecast, cfg, soc, NOW)
-    advice = grid_advice(plans, forecast, cfg, None, NOW)
+    plans = plan(forecast, cfg.system, cfg.planning, soc, NOW)
+    advice = grid_advice(plans, forecast, cfg.system, cfg.planning, None, NOW)
     battery = battery or BatteryReading(soc, NOW)
     vm = build(plans, NOW, cfg, battery, timedelta(minutes=5), False, advice, ForecastSource("Weather data: Open-Meteo.com (CC BY 4.0)"))
     popup = Popup(TZ)
-    popup.update_view(vm, state or State(battery), NOW.date(), cfg.away_rules)
+    popup.update_view(vm, state or State(battery), NOW.date(), cfg.system.away_rules)
     return popup, vm
 
 
@@ -77,8 +77,8 @@ def test_the_outlook_hides_when_there_is_nothing_to_list_and_lists_quiet_days(cf
 
 def test_refreshing_does_not_pile_up_outlook_rows(cfg, qapp):
     popup, vm = view(cfg, [(DAY + timedelta(days=i), 900) for i in range(3)])
-    popup.update_view(vm, State(BatteryReading(45, NOW)), NOW.date(), cfg.away_rules)
-    popup.update_view(vm, State(BatteryReading(45, NOW)), NOW.date(), cfg.away_rules)
+    popup.update_view(vm, State(BatteryReading(45, NOW)), NOW.date(), cfg.system.away_rules)
+    popup.update_view(vm, State(BatteryReading(45, NOW)), NOW.date(), cfg.system.away_rules)
     assert popup.outlook_grid.count() == 8
 
 
@@ -263,12 +263,12 @@ def test_the_footer_and_its_tooltip_follow_the_view(cfg, qapp):
     popup, vm = view(cfg, [(DAY, 900)])
     assert popup.footer.text() == vm.footer and popup.footer.toolTip() == vm.footer_tooltip
     forecast = forecast_from([(DAY, 900)])
-    plans = plan(forecast, cfg, 45, NOW)
+    plans = plan(forecast, cfg.system, cfg.planning, 45, NOW)
     source = ForecastSource("Solar forecast: Forecast.Solar", "Forecast.Solar", from_fallback=True, primary_name="Open-Meteo")
-    popup.update_view(build(plans, NOW, cfg, BatteryReading(45, NOW), timedelta(minutes=5), False, None, source), State(BatteryReading(45, NOW)), NOW.date(), cfg.away_rules)
+    popup.update_view(build(plans, NOW, cfg, BatteryReading(45, NOW), timedelta(minutes=5), False, None, source), State(BatteryReading(45, NOW)), NOW.date(), cfg.system.away_rules)
     assert "from Forecast.Solar, primary unavailable" in popup.footer.text()
     assert "Open-Meteo has no forecast" in popup.footer.toolTip()
-    popup.update_view(needs_setup_vm(), State(BatteryReading(45, NOW)), NOW.date(), cfg.away_rules)
+    popup.update_view(needs_setup_vm(), State(BatteryReading(45, NOW)), NOW.date(), cfg.system.away_rules)
     assert popup.footer.text() == "" and popup.footer.toolTip() == ""
 
 

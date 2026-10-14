@@ -5,12 +5,14 @@ from __future__ import annotations
 import sys
 import time
 from collections.abc import Callable
+from pathlib import Path
 
 from PySide6.QtCore import QThread, QTimer
 from PySide6.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
 from shiboken6 import delete
 
-from car_charge_planner.planner.model import ConfigError
+from car_charge_planner.app_settings import AppSettingsError, AppSettingsFile, DesktopSettings, adopt_interface
+from car_charge_planner.config.model import ConfigError
 
 from . import gcguard, i18n
 from .controller import Controller
@@ -66,7 +68,7 @@ def announce_tray_fallback(controller: Controller, choice: ShellChoice) -> bool:
 
 
 def create_shell(controller: Controller, tray_available: bool) -> tuple[Shell, ShellChoice]:
-    choice = choose_shell(controller.engine.cfg.interface.mode, tray_available)
+    choice = choose_shell(controller.app_settings.current.mode, tray_available)
     shell = TrayShell(controller) if choice.kind == "tray" else WindowShell(controller)
     return shell, choice
 
@@ -104,6 +106,13 @@ def delete_windows(app: QApplication) -> None:
         delete(windows[0])
 
 
+def startup_error(error: Exception, file: Path) -> int:
+    """Started from autostart there is no terminal: show the problem where the owner will see it. The exit code."""
+    QMessageBox.critical(None, _("Car charge planner"), _("{error}\n\nFix the file and start the app again:\n{file}").format(error=error, file=file))
+    print(error, file=sys.stderr)
+    return 2
+
+
 def main(argv: list[str] | None = None) -> int:
     if sys.platform == "win32" and getattr(sys, "frozen", False):
         # Only the installed build: its Start menu shortcut carries the same id, which gives notifications the app's name
@@ -133,22 +142,24 @@ def main(argv: list[str] | None = None) -> int:
             print(_("Could not set up the single-instance socket; a second copy could start."), file=sys.stderr)
 
     store = FileStore()
+    app_file = AppSettingsFile()
+    try:
+        adopt_interface(store.config_file, app_file.path)  # before the engine reads config.toml, which drops them
+    except (AppSettingsError, OSError) as err:
+        return startup_error(err, store.config_file if isinstance(err, AppSettingsError) else app_file.path)
+    try:
+        app_settings = app_file.load()
+    except AppSettingsError as err:
+        return startup_error(err, app_file.path)
     try:
         cfg = store.load_config()
     except ConfigError as err:
-        # started from autostart there is no terminal: show the problem where the owner will see it
-        QMessageBox.critical(
-            None,
-            _("Car charge planner"),
-            _("{error}\n\nFix the file and start the app again:\n{file}").format(error=err, file=store.config_file),
-        )
-        print(err, file=sys.stderr)
-        return 2
-    if cfg.interface.language != "auto":
-        i18n.setup(app, [cfg.interface.language])  # the owner's choice replaces the system language
+        return startup_error(err, store.config_file)
+    if app_settings.language != "auto":
+        i18n.setup(app, [app_settings.language])  # the owner's choice replaces the system language
     background = smoke_test or "--background" in sys.argv[1:]
-    controller = Controller(cfg, store)
-    wants_tray = cfg.interface.mode != "window"
+    controller = Controller(cfg, store, app_settings=DesktopSettings(app_settings, app_file))
+    wants_tray = app_settings.mode != "window"
     tray_available = wants_tray and wait_for_tray(TRAY_WAIT_BACKGROUND_S if background else TRAY_WAIT_INTERACTIVE_S)
     shell, choice = create_shell(controller, tray_available)
     if isinstance(controller.notifier, TrayNotifier):

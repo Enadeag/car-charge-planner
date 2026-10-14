@@ -18,8 +18,9 @@ from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 from car_charge_planner import paths
+from car_charge_planner.config.model import Config
 from car_charge_planner.i18n import _
-from car_charge_planner.planner.model import Config, ForecastStep
+from car_charge_planner.planner.model import ForecastStep
 
 from .provider import (
     BadResponse,
@@ -76,7 +77,7 @@ def forecast_key(cfg: Config) -> dict[str, Any]:
     return {
         "primary": cfg.forecast.primary,
         "fallback": cfg.forecast.fallback,
-        "system": asdict(SystemDescription.from_config(cfg)),
+        "system": asdict(SystemDescription.of(cfg.system)),
         "settings": cfg.forecast.settings,
     }
 
@@ -123,7 +124,7 @@ class ForecastService:
                 secrets, problem = self._secrets(), ""
             except SecretsError as err:  # the providers that need no key still work
                 secrets, problem = {}, str(err)
-            system = SystemDescription.from_config(cfg)
+            system = SystemDescription.of(cfg.system)
             order = [cfg.forecast.primary] + ([cfg.forecast.fallback] if cfg.forecast.fallback else [])
             reasons: list[str] = []
             primary_name = ""
@@ -155,7 +156,7 @@ class ForecastService:
         key = _cache_key(system, provider, cfg)
         path = self.cache_dir / f"forecast-{provider.id}.json"
         blob = _read_blob(path)
-        cached = _cached_forecast(blob, key, ZoneInfo(cfg.timezone))
+        cached = _cached_forecast(blob, key, ZoneInfo(cfg.system.timezone))
         cooldown_until = _cooldown(blob)
         cooling = cooldown_until is not None and now < cooldown_until
         usable = cached is not None and now - cached[1] <= provider.max_useful_age

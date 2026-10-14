@@ -22,8 +22,9 @@ from PySide6.QtWidgets import (
 )
 
 from car_charge_planner import colours
+from car_charge_planner.config.model import panel_key, with_array, without_array
 from car_charge_planner.i18n import _, number, pgettext, translate
-from car_charge_planner.planner.model import Panels, panel_key, with_array, without_array
+from car_charge_planner.planner.model import Panels
 
 from .pages import CHOICE_BUTTON_STYLE, Page
 from .panels import COMPASS, TILT_PRESETS, azimuth_for, compass_key_for, panels_to_kwp, tilt_preset_for
@@ -203,16 +204,16 @@ class SolarPage(Page):
 
     def enter(self) -> None:
         self._match_counts()
-        self.current = min(self.current, len(self.state.config.panels) - 1)
+        self.current = min(self.current, len(self.state.config.system.panels) - 1)
         self._show()
 
     @property
     def panels(self) -> Panels:
-        return self.state.config.panels[self.current]
+        return self.state.config.system.panels[self.current]
 
     def _match_counts(self) -> None:
         """One count and watts per array: a new array starts with the defaults."""
-        wanted = len(self.state.config.panels)
+        wanted = len(self.state.config.system.panels)
         del self.counts[wanted:]
         self.counts += [(DEFAULT_COUNT, DEFAULT_WATTS)] * (wanted - len(self.counts))
 
@@ -256,7 +257,7 @@ class SolarPage(Page):
 
     def _show_arrays(self) -> None:
         """Tabs, name and Remove for several arrays; nothing of that for one."""
-        arrays = self.state.config.panels
+        arrays = self.state.config.system.panels
         several = len(arrays) > 1
         self.array_tabs.blockSignals(True)
         while self.array_tabs.count() > len(arrays):
@@ -288,35 +289,35 @@ class SolarPage(Page):
     def _set_panels(self, field: str, value) -> None:
         """The person gave this value of the current array: it goes into the answers and is no longer a typical one."""
         cfg = self.state.config
-        arrays = list(cfg.panels)
+        arrays = list(cfg.system.panels)
         arrays[self.current] = replace(arrays[self.current], **{field: value})
-        self.state.config = replace(cfg, panels=tuple(arrays))
+        self.state.config = cfg.with_system(panels=tuple(arrays))
         self.state.give_value(panel_key(self.current, field))
         self._refresh_note()
         self.changed.emit()
 
     def _array_chosen(self, index: int) -> None:
-        if 0 <= index < len(self.state.config.panels):
+        if 0 <= index < len(self.state.config.system.panels):
             self.current = index
             self._show()
 
     def _name_edited(self, text: str) -> None:
         cfg = self.state.config
-        arrays = list(cfg.panels)
+        arrays = list(cfg.system.panels)
         arrays[self.current] = replace(arrays[self.current], name=text.strip())
-        self.state.config = replace(cfg, panels=tuple(arrays))
+        self.state.config = cfg.with_system(panels=tuple(arrays))
         self.array_tabs.setTabText(self.current, array_title(self.current, arrays[self.current]))
         self.changed.emit()
 
     def _add_array(self) -> None:
         """Another array, with typical values until the person enters their own; its tab is chosen."""
         self.state.config = with_array(self.state.config)
-        self.current = len(self.state.config.panels) - 1
+        self.current = len(self.state.config.system.panels) - 1
         self._show()
         self.changed.emit()
 
     def _remove_array(self) -> None:
-        if len(self.state.config.panels) <= 1:
+        if len(self.state.config.system.panels) <= 1:
             return
         self.state.config = without_array(self.state.config, self.current)
         del self.counts[self.current]

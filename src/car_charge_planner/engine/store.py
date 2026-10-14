@@ -6,11 +6,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Protocol
 
+from car_charge_planner.config.io import load_current, write_config
+from car_charge_planner.config.model import Config, load_config
 from car_charge_planner.config_file import config_path, ensure_config
 from car_charge_planner.forecast.secret_store import Secrets, load_secrets, save_secrets, storage_in_use
 from car_charge_planner.i18n import _
-from car_charge_planner.planner.config_io import write_config
-from car_charge_planner.planner.model import Config, load_config
 from car_charge_planner.storage.state import State, load_state, save_state
 
 
@@ -54,8 +54,16 @@ class FileStore:
         self.secrets_file = self.config_file.with_name("secrets.toml")
 
     def load_config(self) -> Config:
-        """Creates the first config file when there is none. Raises `ConfigError` when the file is wrong."""
-        return load_config(ensure_config(self.config_file))
+        """Creates the first config file when there is none, and writes one in an older format in the current one.
+        Raises `ConfigError` when the file is wrong.
+
+        A desktop app takes its own settings out of an older file first (app_settings.adopt_interface): the new
+        format has no place for them."""
+        path = ensure_config(self.config_file)
+        try:
+            return load_current(path)
+        except OSError:
+            return load_config(path)  # not written now: the next start tries again, and the old file still reads
 
     def save_config(self, cfg: Config) -> None:
         try:

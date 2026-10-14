@@ -19,13 +19,13 @@ NOW = at(DAY, 7)
 
 def vm_for(cfg):
     forecast = forecast_from([(DAY + timedelta(days=i), 900) for i in range(3)])
-    return build(plan(forecast, cfg, 45, NOW), NOW, cfg, BatteryReading(45, NOW), timedelta(minutes=5), False)
+    return build(plan(forecast, cfg.system, cfg.planning, 45, NOW), NOW, cfg, BatteryReading(45, NOW), timedelta(minutes=5), False)
 
 
 def test_the_view_works_on_its_own(cfg, qapp):
     view = PlanView(TZ)
     vm = vm_for(cfg)
-    view.update_view(vm, State(BatteryReading(45, NOW)), DAY, cfg.away_rules)
+    view.update_view(vm, State(BatteryReading(45, NOW)), DAY, cfg.system.away_rules)
     assert view.headline.text() == vm.headline and view.tabs.count() == 2
     assert view.tabs.currentIndex() == PLAN
     view.show_update()

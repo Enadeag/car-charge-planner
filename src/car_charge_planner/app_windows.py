@@ -26,7 +26,7 @@ class AppWindows:
     def open_settings(self, tab: str | None = None) -> None:
         """One Settings window at a time: opening it again brings the open one forward."""
         if self.settings_window is None or not self.settings_window.isVisible():
-            self.settings_window = SettingsWindow(self.controller.engine, on_setup=self.open_setup)
+            self.settings_window = SettingsWindow(self.controller.engine, self.controller.app_settings, on_setup=self.open_setup)
         if tab:
             self.settings_window.show_tab(tab)
         self.settings_window.show_centred()
@@ -41,7 +41,7 @@ class AppWindows:
     def open_setup(self) -> None:
         """One set-up wizard at a time, started from the current config."""
         if self.setup_wizard is None or not self.setup_wizard.isVisible():
-            self.setup_wizard = SetupWizard(self.controller.engine, lambda _saved: self.show_plan())
+            self.setup_wizard = SetupWizard(self.controller.engine, self.controller.app_settings, lambda _saved: self.show_plan())
         self.setup_wizard.show()
         self.setup_wizard.raise_()
         self.setup_wizard.activateWindow()

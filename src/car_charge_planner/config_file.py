@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from car_charge_planner import paths
-from car_charge_planner.planner.config_io import write_config
-from car_charge_planner.planner.model import first_run_config
+from car_charge_planner.config.io import write_config
+from car_charge_planner.config.model import first_run_config
 
 
 def config_path() -> Path:

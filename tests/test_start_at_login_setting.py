@@ -4,7 +4,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
-from car_charge_planner.planner.model import load_config
+from car_charge_planner.app_settings import DesktopSettings
+from car_charge_planner.config.model import load_config
 from car_charge_planner.settings.window import SettingsWindow
 from conftest import engine_for, example_config
 
@@ -37,7 +38,7 @@ def make(tmp_path, qapp, monkeypatch):
     monkeypatch.setattr("car_charge_planner.settings.window.launch_command", lambda: COMMAND)
 
     def make(login):
-        window = SettingsWindow(engine_for(example_config(), tmp_path / "config.toml"), login=login)
+        window = SettingsWindow(engine_for(example_config(), tmp_path / "config.toml"), DesktopSettings(), login=login)
         window.show()
         return window
 

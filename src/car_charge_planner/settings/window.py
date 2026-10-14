@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QActionGroup, QFontMetrics, QGuiApplication
@@ -20,14 +19,16 @@ from PySide6.QtWidgets import (
 )
 
 from car_charge_planner import colours
+from car_charge_planner.app_settings import AppSettings, DesktopSettings
+from car_charge_planner.app_settings import problems as app_problems
+from car_charge_planner.config.model import Config
 from car_charge_planner.engine import Engine
 from car_charge_planner.forecast.secret_store import Secrets
 from car_charge_planner.i18n import _
 from car_charge_planner.identity import launch_command
-from car_charge_planner.planner.model import Config
 from car_charge_planner.platform import StartAtLogin, start_at_login
 
-from .fields import SOLAR, START_AT_LOGIN, TABS
+from .fields import INTERFACE, SOLAR, START_AT_LOGIN, TABS
 from .forecast_tab import ForecastTab, storage_note
 from .tabs import AwayRulesTab, FieldTab, SolarTab
 
@@ -44,15 +45,20 @@ def ask_discard(parent) -> bool:
 
 
 class SettingsWindow(QDialog):
-    """Not modal: the tray and popup keep working while it is open. It saves through the engine."""
+    """Not modal: the tray and popup keep working while it is open. It saves the system and planning settings through
+    the engine, and the Interface tab through the desktop app's own settings."""
 
-    def __init__(self, engine: Engine, on_setup: Callable[[], None] | None = None, login: StartAtLogin | None = None) -> None:
+    def __init__(
+        self, engine: Engine, app_settings: DesktopSettings, on_setup: Callable[[], None] | None = None, login: StartAtLogin | None = None
+    ) -> None:
         super().__init__(None)
         self.setWindowTitle(_("Car charge planner: Settings"))
         self.setModal(False)
         self.setMinimumWidth(660)
         self.engine = engine
+        self.app_settings = app_settings
         cfg = self.stored = engine.cfg
+        self.stored_app: AppSettings = app_settings.current
         self.on_setup = on_setup
         self.confirm_discard: Callable[[], bool] = lambda: ask_discard(self)
         self.closes_after_save = False
@@ -62,11 +68,15 @@ class SettingsWindow(QDialog):
         self.tabs = QTabWidget()
         keys = engine.saved_keys()
         self.stored_secrets: Secrets = keys.values
-        self.field_tabs: list[FieldTab | SolarTab] = [SolarTab(spec, cfg) if spec is SOLAR else FieldTab(spec, cfg, switches={START_AT_LOGIN: self.stored_login}) for spec in TABS]
+        self.interface_tab = FieldTab(INTERFACE, self.stored_app, switches={START_AT_LOGIN: self.stored_login})
+        self.field_tabs: list[FieldTab | SolarTab] = [
+            self.interface_tab if spec is INTERFACE else SolarTab(spec, cfg) if spec is SOLAR else FieldTab(spec, cfg) for spec in TABS
+        ]
         self.forecast_tab = ForecastTab(engine, self.stored_secrets, lambda: self.current_config(), keys.problem, storage_note(engine.key_storage()))
         self.away_tab = AwayRulesTab(cfg)
         planning = next(i for i, t in enumerate(self.field_tabs) if t.key == "planning")
         self.all_tabs = [*self.field_tabs[: planning + 1], self.forecast_tab, *self.field_tabs[planning + 1 :], self.away_tab]
+        self.config_parts = [tab for tab in self.all_tabs if tab is not self.interface_tab]  # what fills the engine's Config
         for tab in self.all_tabs:
             self.tabs.addTab(tab, tab.title)
 
@@ -101,7 +111,6 @@ class SettingsWindow(QDialog):
         self.set_mode(self.save_action)  # every time the window opens: Save, window stays open
         for tab in self.all_tabs:
             tab.changed.connect(self.refresh_close_button)
-        self.interface_tab = cast(FieldTab, next(t for t in self.field_tabs if t.key == "interface"))
         self.interface_tab.changed.connect(self._sync_units)
         self._sync_units()  # the car fields show what the Units choice says
         self.setup_button = QPushButton(_("Run set-up again..."))
@@ -137,9 +146,12 @@ class SettingsWindow(QDialog):
 
     def current_config(self) -> Config:
         cfg = self.stored
-        for tab in self.all_tabs:
+        for tab in self.config_parts:
             cfg = tab.apply_to(cfg)
         return cfg
+
+    def current_app_settings(self) -> AppSettings:
+        return self.interface_tab.apply_to(self.stored_app)
 
     def current_secrets(self) -> Secrets:
         return self.forecast_tab.collect_secrets()
@@ -154,7 +166,12 @@ class SettingsWindow(QDialog):
         return self.interface_tab.collect_switches()[START_AT_LOGIN]
 
     def is_dirty(self) -> bool:
-        return self.current_config() != self.stored or self.current_secrets() != self.stored_secrets or self.current_login() != self.stored_login
+        return (
+            self.current_config() != self.stored
+            or self.current_app_settings() != self.stored_app
+            or self.current_secrets() != self.stored_secrets
+            or self.current_login() != self.stored_login
+        )
 
     def reset_tab(self) -> None:
         tab = self.all_tabs[self.tabs.currentIndex()]
@@ -198,10 +215,10 @@ class SettingsWindow(QDialog):
         super().keyPressEvent(event)
 
     def save(self) -> bool:
-        """Check, then have the engine store and apply it. True when saved; on any problem nothing is saved and False is
-        returned."""
-        cfg, secrets = self.current_config(), self.current_secrets()
-        problems = self.engine.check_settings(cfg, secrets)
+        """Check, then have the engine store and apply its part and the desktop app its own. True when saved; on a
+        problem found by the checks nothing is saved and False is returned."""
+        cfg, secrets, app = self.current_config(), self.current_secrets(), self.current_app_settings()
+        problems = self.engine.check_settings(cfg, secrets) + app_problems(app)
         if problems:
             self.show_errors(problems)
             return False
@@ -212,13 +229,22 @@ class SettingsWindow(QDialog):
             self.show_errors(problems)
             return False
         cfg = self.stored = self.engine.cfg
+        problems = self.app_settings.save(app)
+        if problems:  # the engine's part is saved: from here on only the Interface tab differs from what is stored
+            for tab in self.config_parts:
+                tab.load(cfg)
+            self.show_errors(problems)
+            self.refresh_close_button()
+            return False
+        self.stored_app = self.app_settings.current
         self.stored_secrets = secrets
         self.forecast_tab.remember_secrets(secrets)
         self.forecast_tab.show_storage(storage_note(self.engine.key_storage()))  # a keychain that failed just now means the file
         self.errors.setVisible(False)
         self.interface_tab.switches[START_AT_LOGIN] = self.stored_login
-        for tab in self.all_tabs:
+        for tab in self.config_parts:
             tab.load(cfg)  # the window stays usable: what is saved is now the baseline for "changed"
+        self.interface_tab.load(self.stored_app)
         self.refresh_close_button()
         return True
 

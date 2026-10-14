@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 from datetime import time
 
 from PySide6.QtWidgets import QButtonGroup, QHBoxLayout, QLabel, QPushButton, QRadioButton, QVBoxLayout, QWidget
@@ -69,7 +68,7 @@ class AwayPage(Page):
         return _("Done")
 
     def enter(self) -> None:
-        rules = self.state.config.away_rules
+        rules = self.state.config.system.away_rules
         self._rebuild(rules)
         if rules:
             self.some_days.setChecked(True)
@@ -99,7 +98,7 @@ class AwayPage(Page):
 
     def _commit(self) -> None:
         cfg = self.state.config
-        self.state.config = replace(cfg, away_rules=tuple(row.rule() for row in self.rows))
+        self.state.config = cfg.with_system(away_rules=tuple(row.rule() for row in self.rows))
         self._refresh()
         self.changed.emit()
 

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
-
 from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QVBoxLayout
 
 from car_charge_planner import colours
@@ -65,10 +63,8 @@ class WelcomePage(Page):
         self.units.currentIndexChanged.connect(lambda _i: self.changed.emit())
 
     def enter(self) -> None:
-        cfg = self.state.config
-        self.units.setCurrentIndex(max(self.units.findData(cfg.interface.units), 0))
+        self.units.setCurrentIndex(max(self.units.findData(self.state.units), 0))
         self.privacy.setText(privacy_text(self.wizard.primary_provider()))
 
     def leave(self) -> None:
-        cfg = self.state.config
-        self.state.config = replace(cfg, interface=replace(cfg.interface, units=self.units.currentData()))
+        self.state.units = self.units.currentData()

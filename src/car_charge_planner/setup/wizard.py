@@ -1,21 +1,24 @@
 """The set-up wizard window: pages, Back and Next, and one write at the end.
 
-Nothing is saved until Finish checks the answers (a `SetupState`), has the engine save them and calls `on_finish`. Closing earlier
-asks "Leave set-up?" and writes nothing. Opening it again starts from the current config.
+Nothing is saved until Finish checks the answers (a `SetupState`), has the engine save them (and the desktop app the
+chosen units) and calls `on_finish`. Closing earlier asks "Leave set-up?" and writes nothing. Opening it again starts
+from the current config.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from dataclasses import replace
 
 from PySide6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QPushButton, QStackedWidget, QVBoxLayout
 
 from car_charge_planner import colours
+from car_charge_planner.app_settings import DesktopSettings
+from car_charge_planner.config.model import Config, ConfigError
 from car_charge_planner.engine import Engine
 from car_charge_planner.forecast.check import Attempt
 from car_charge_planner.forecast.provider import ForecastProvider
 from car_charge_planner.i18n import _
-from car_charge_planner.planner.model import Config, ConfigError
 
 from .away import AwayPage
 from .car import CarPage
@@ -47,6 +50,7 @@ class SetupWizard(QDialog):
     def __init__(
         self,
         engine: Engine,
+        app_settings: DesktopSettings,
         on_finish: Callable[[Config], None],
         check: Callable[[Config, Callable[[Attempt], None]], None] | None = None,
         page_classes: list[type[Page]] | None = None,
@@ -59,11 +63,12 @@ class SetupWizard(QDialog):
         self.setMinimumWidth(560)
         self.setMinimumHeight(420)
         self.engine = engine
+        self.app_settings = app_settings
         self.on_finish = on_finish
         self.registry = engine.registry
         self.check = check or self._real_check
         self.confirm_leave: Callable[[], bool] = lambda: ask_leave(self)
-        self.state = SetupState.starting_from(engine.cfg, environ, qt_locale_name)
+        self.state = SetupState.starting_from(engine.cfg, environ, qt_locale_name, app_settings.current)
         self.finished_ok = False
         self.history: list[str] = []
 
@@ -171,7 +176,7 @@ class SetupWizard(QDialog):
         except ConfigError as err:
             self._show_errors(str(err).split("\n")[1:] or [str(err)])
             return False
-        problems = self.engine.save_settings(cfg)
+        problems = self.engine.save_settings(cfg) or self.app_settings.save(replace(self.app_settings.current, units=self.state.units))
         if problems:
             self._show_errors(problems)
             return False

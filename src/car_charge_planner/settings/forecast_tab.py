@@ -15,12 +15,12 @@ from PySide6.QtWidgets import QComboBox, QFrame, QHBoxLayout, QLabel, QPushButto
 from shiboken6 import isValid
 
 from car_charge_planner import colours
+from car_charge_planner.config.model import Config
 from car_charge_planner.engine import Engine, KeyStorage
 from car_charge_planner.forecast.check import Attempt, missing_settings
 from car_charge_planner.forecast.provider import ForecastProvider
 from car_charge_planner.forecast.secret_store import Secrets
 from car_charge_planner.i18n import _, ngettext
-from car_charge_planner.planner.model import Config
 
 from .fields import TabSpec
 from .providers import provider_fields

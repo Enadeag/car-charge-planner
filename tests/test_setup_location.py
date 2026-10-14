@@ -13,12 +13,13 @@ from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QLabel
 
+from car_charge_planner.app_settings import DesktopSettings
+from car_charge_planner.config.model import Config, Forecast, load_config
 from car_charge_planner.forecast.check import Attempt
 from car_charge_planner.forecast.provider import Place, PlaceResults, Problem
 from car_charge_planner.forecast.providers.open_meteo import OpenMeteo
 from car_charge_planner.forecast.registry import ProviderRegistry
 from car_charge_planner.forecast.transport import Reply
-from car_charge_planner.planner.model import Config, Forecast, load_config
 from car_charge_planner.setup.wizard import SetupWizard
 from conftest import answers, engine_for, example_config
 from fake_provider import FakeProvider
@@ -60,7 +61,7 @@ class Rig:
         base = cfg if cfg is not None else Config()
         base = replace(base, forecast=Forecast(provider_id, "", {}))
         self.file = tmp_path / "config.toml"
-        self.wizard = SetupWizard(engine_for(base, self.file, registry=registry), lambda c: None, check=answers(Attempt(True, 2, "OK")), environ={"LANG": "nl_NL"}, qt_locale_name="")
+        self.wizard = SetupWizard(engine_for(base, self.file, registry=registry), DesktopSettings(), lambda c: None, check=answers(Attempt(True, 2, "OK")), environ={"LANG": "nl_NL"}, qt_locale_name="")
         self.wizard.confirm_leave = lambda: True
         self.wizard.show()
         self.wizard.navigate("location")
@@ -227,7 +228,7 @@ def test_the_real_open_meteo_search_works_through_the_page(tmp_path, qapp):
     assert len(rig.labels()) == 8 and rig.labels()[0] == "Amsterdam, North Holland, The Netherlands"
     assert rig.labels().count("Amsterdam, Ohio, United States") == 0  # the two Ohio ones are told apart
     rig.pick(0)
-    assert rig.wizard.state.config.timezone == "Europe/Amsterdam" and rig.wizard.state.config.latitude == 52.37403
+    assert rig.wizard.state.config.system.timezone == "Europe/Amsterdam" and rig.wizard.state.config.system.latitude == 52.37403
 
 
 def test_nothing_is_chosen_at_first_and_next_waits(rig):
@@ -238,7 +239,7 @@ def test_picking_a_result_sets_the_place_the_coordinates_and_the_zone(rig):
     rig.type("Utrecht")
     rig.pick(1)
     cfg = rig.wizard.state.config
-    assert (cfg.latitude, cfg.longitude, cfg.timezone) == (48.85, 2.35, "Europe/Paris")
+    assert (cfg.system.latitude, cfg.system.longitude, cfg.system.timezone) == (48.85, 2.35, "Europe/Paris")
     assert rig.wizard.state.place_label == "Paris, Ile-de-France, France"
     assert rig.page.chosen.text() == "Chosen: Paris, Ile-de-France, France (Europe/Paris)"
     assert rig.page.latitude.value() == 48.85 and rig.page.timezone.currentText() == "Europe/Paris"
@@ -252,7 +253,7 @@ def test_the_place_picked_is_what_the_recap_and_the_written_config_say(rig):
     assert "Utrecht, The Netherlands" in texts(rig.wizard.pages["finish"])
     assert rig.wizard.finish()
     written = load_config(rig.file)
-    assert (written.latitude, written.longitude, written.timezone) == (52.09, 5.12, "Europe/Amsterdam")
+    assert (written.system.latitude, written.system.longitude, written.system.timezone) == (52.09, 5.12, "Europe/Amsterdam")
 
 
 def test_the_coordinates_are_behind_a_button_with_a_hint_on_reading_them(rig):
@@ -267,7 +268,7 @@ def test_typed_coordinates_make_a_location_with_the_computers_time_zone(rig, mon
     rig.page.latitude.setValue(38.72)
     rig.page.longitude.setValue(-9.14)
     cfg = rig.wizard.state.config
-    assert (cfg.latitude, cfg.longitude, cfg.timezone) == (38.72, -9.14, "Europe/Lisbon")
+    assert (cfg.system.latitude, cfg.system.longitude, cfg.system.timezone) == (38.72, -9.14, "Europe/Lisbon")
     assert rig.wizard.state.place_label == "" and rig.page.chosen.text() == "Chosen: 38.7200, -9.1400 (Europe/Lisbon)"
     assert rig.wizard.next_button.isEnabled()
 
@@ -301,7 +302,7 @@ def test_the_time_zone_is_under_advanced_and_can_be_changed(rig):
     rig.page.advanced_toggle.click()
     assert not rig.page.advanced_box.isHidden() and rig.page.timezone.currentText() == "Europe/Amsterdam"
     rig.page.timezone.setCurrentText("Europe/London")
-    assert rig.wizard.state.config.timezone == "Europe/London"
+    assert rig.wizard.state.config.system.timezone == "Europe/London"
     assert rig.page.chosen.text() == "Chosen: Utrecht, The Netherlands (Europe/London)"
 
 
@@ -319,7 +320,7 @@ def test_a_time_zone_chosen_by_hand_survives_typing_coordinates(rig, monkeypatch
     rig.page.timezone.setCurrentText("Asia/Tokyo")
     rig.page.latitude.setValue(35.68)
     rig.page.longitude.setValue(139.69)
-    assert rig.wizard.state.config.timezone == "Asia/Tokyo"
+    assert rig.wizard.state.config.system.timezone == "Asia/Tokyo"
 
 
 def test_running_set_up_again_shows_the_place_it_has_and_lets_you_go_on(tmp_path, qapp):

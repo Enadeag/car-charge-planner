@@ -5,8 +5,9 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+from car_charge_planner.config.model import Config
 from car_charge_planner.planner.advice import GridAdvice
-from car_charge_planner.planner.model import Config, DayPlan, Window
+from car_charge_planner.planner.model import DayPlan, Window
 
 from .i18n import _, number
 
@@ -50,7 +51,7 @@ def message(kind: str, window: Window, cfg: Config, tz: ZoneInfo) -> tuple[str, 
     span = f"{window.start.astimezone(tz):%H:%M}-{window.end.astimezone(tz):%H:%M}"
     template = (
         _("Set the current to {amps} A per phase ({power} kW) in your charger's app.")
-        if cfg.charger.phases == 3
+        if cfg.system.charger.phases == 3
         else _("Set the current to {amps} A ({power} kW) in your charger's app.")
     )
     setting = template.format(amps=window.amps, power=number(window.power_kw, 1))
@@ -58,7 +59,7 @@ def message(kind: str, window: Window, cfg: Config, tz: ZoneInfo) -> tuple[str, 
         return (
             _("Grid charge window {span}").format(span=span),
             _("{setting} About {energy} kWh, needed to stay above {minimum}%.").format(
-                setting=setting, energy=number(window.solar_kwh + window.import_kwh), minimum=number(cfg.car.minimum_pct)
+                setting=setting, energy=number(window.solar_kwh + window.import_kwh), minimum=number(cfg.planning.minimum_pct)
             ),
         )
     return (
