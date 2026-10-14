@@ -36,6 +36,8 @@ jobs:
             echo "::error::tag $GITHUB_REF_NAME does not match the package version $version (expected v$version)"
             exit 1
           fi
+      - name: Check that CHANGELOG.md has notes for this version
+        run: python3 tools/release_notes.py "${{ steps.version.outputs.version }}" > /dev/null
       - name: Stop early if release/X.Y.Z already points elsewhere
         if: github.event_name == 'push'
         run: |
@@ -105,10 +107,11 @@ jobs:
           fi
       - name: Create the draft release
         run: |
+          python3 tools/release_notes.py "$VERSION" > "$RUNNER_TEMP/notes.md"
           if [ "$DRY_RUN" = "true" ]; then
             gh release create "dry-run-$GITHUB_RUN_ID" release/* --draft --target "$GITHUB_SHA" \
               --title "dry run" --notes "Dry run of the release workflow (run $GITHUB_RUN_ID). Delete this draft."
           else
             gh release create "$GITHUB_REF_NAME" release/* --draft --verify-tag \
-              --title "Car charge planner $VERSION" --generate-notes
+              --title "Car charge planner $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
           fi
