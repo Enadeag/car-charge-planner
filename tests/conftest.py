@@ -229,14 +229,39 @@ def settle_controller(controller, seconds: float = 5.0) -> None:
     from PySide6.QtTest import QTest
 
     deadline = time.time() + seconds
-    while controller._loading and time.time() < deadline:
+    while controller.engine.fetching and time.time() < deadline:
         QTest.qWait(20)
     QTest.qWait(30)  # the queued result is handled on the next pass of the event loop
-    assert not controller._loading, "the fetch did not finish"
+    assert not controller.engine.fetching, "the fetch did not finish"
 
 
 def at(day: date, hour: int, minute: int = 0) -> datetime:
     return datetime(day.year, day.month, day.day, hour, minute, tzinfo=TZ)
+
+
+class FakeClock:
+    """A clock that stands still until a test moves it."""
+
+    def __init__(self, now: datetime):
+        self.now = now
+
+    def __call__(self) -> datetime:
+        return self.now
+
+
+class FixedForecast:
+    """A forecast service that answers every request with the same result, and keeps the config of each request."""
+
+    def __init__(self, result):
+        self.result = result
+        self.calls = []
+
+    def get(self, cfg, now, force=False):
+        self.calls.append(cfg)
+        return self.result
+
+    def forget_failures(self):
+        pass
 
 
 class FakeNotifier:
@@ -264,17 +289,20 @@ def cfg() -> Config:
 
 
 class TrayApp:
-    """The controller and the tray shell wired as main() wires them: logic on the controller, drawing on the shell."""
+    """The controller and the tray shell wired as main() wires them: logic in the engine, drawing on the shell.
 
-    def __init__(self, cfg, config_file, notifier=None):
+    The keyword arguments go to the controller (a forecast service, a clock, a runner).
+    """
+
+    def __init__(self, cfg, config_file, notifier=None, **controller_args):
         from car_charge_planner.controller import Controller
         from car_charge_planner.shells.tray import TrayShell
 
-        object.__setattr__(self, "controller", Controller(cfg, config_file, notifier))
+        object.__setattr__(self, "controller", Controller(cfg, config_file, notifier, **controller_args))
         object.__setattr__(self, "shell", TrayShell(self.controller))
 
     def _owner(self, name):
-        for part in (self.controller, self.shell, self.shell.windows):
+        for part in (self.controller, self.controller.engine, self.shell, self.shell.windows):
             if hasattr(part, name):
                 return part
         return None

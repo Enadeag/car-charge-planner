@@ -144,24 +144,20 @@ def test_the_tray_app_announces_through_the_notifier(cfg, tmp_path, monkeypatch)
 
     from PySide6.QtWidgets import QApplication
 
+    from car_charge_planner.engine import run_here
     from car_charge_planner.forecast.service import ForecastResult
-    from conftest import FakeNotifier, TrayApp, at, forecast_from
+    from conftest import FakeClock, FakeNotifier, FixedForecast, TrayApp, at, forecast_from
 
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     QApplication.instance() or QApplication([])
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     fake = FakeNotifier()
-    app = TrayApp(cfg, tmp_path / "config.toml", notifier=fake)
     day = date(2026, 7, 3)
-    app.result = ForecastResult(forecast_from([(day, 900)]), at(day, 6), True, False)
-
-    class Frozen:
-        @staticmethod
-        def now(tz=None):
-            return at(day, 8, 50)
-
-    monkeypatch.setattr("car_charge_planner.controller.datetime", Frozen)
-    app.rebuild()
+    forecast = FixedForecast(ForecastResult(forecast_from([(day, 900)]), at(day, 6), True, False))
+    app = TrayApp(
+        cfg, tmp_path / "config.toml", notifier=fake, forecasts=forecast, clock=FakeClock(at(day, 8, 50)), run_in_background=run_here
+    )
+    app.shell.start()
     assert len(fake.sent) == 1 and fake.sent[0][0].startswith("Charge window 09:00")
 
 

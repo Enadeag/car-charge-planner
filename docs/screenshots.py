@@ -142,17 +142,12 @@ def example_forecast(cfg: Config) -> list:
 
 def app_shots(app: QApplication, theme: str) -> None:
     """The plan, the update page, the Settings window and the window shell, for an example home at a fixed time."""
-    import car_charge_planner.controller as controller_module
     from car_charge_planner.controller import Controller
-    from car_charge_planner.forecast.service import ForecastResult, ForecastService
+    from car_charge_planner.engine import run_here
+    from car_charge_planner.forecast.service import ForecastResult
     from car_charge_planner.shells.tray import TrayShell
     from car_charge_planner.shells.window import WindowShell
     from car_charge_planner.storage.state import set_battery
-
-    class Frozen:
-        @staticmethod
-        def now(tz=None):
-            return NOW
 
     class Silent:
         def send(self, *args, **kwargs):
@@ -161,45 +156,49 @@ def app_shots(app: QApplication, theme: str) -> None:
         def owns(self, _id):
             return False
 
-    real_datetime, real_get = controller_module.datetime, ForecastService.get
+    class Example:
+        """The example forecast instead of a fetch."""
+
+        def __init__(self, cfg):
+            self.result = ForecastResult(example_forecast(cfg), NOW - timedelta(minutes=12), False, False, "open-meteo", "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)")
+
+        def get(self, cfg, now, force=False):
+            return self.result
+
+        def forget_failures(self):
+            pass
+
     with tempfile.TemporaryDirectory() as folder:
         os.environ["XDG_STATE_HOME"] = folder
-        controller_module.datetime = Frozen
-        ForecastService.get = lambda *a, **k: None  # nothing is fetched
-        try:
-            set_battery(45, NOW)
-            cfg = example_config()
-            controller = Controller(cfg, Path(folder) / "config.toml", Silent())
-            controller.result = ForecastResult(example_forecast(cfg), NOW - timedelta(minutes=12), False, False, "open-meteo", "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)")
-            tray = TrayShell(controller)
-            controller.rebuild()
-            QTest.qWait(80)
-            popup = tray.popup
-            popup.show()
-            popup.view.fit_to_page()
-            QTest.qWait(80)
-            popup.grab().save(str(OUT / f"app-plan-{theme}.png"))
-            popup.view.tabs.setCurrentIndex(1)
-            popup.view.fit_to_page()
-            QTest.qWait(80)
-            popup.grab().save(str(OUT / f"app-update-{theme}.png"))
-            popup.hide()
-            controller.open_settings()
-            settings = controller.settings_window
-            settings.resize(760, 600)
-            QTest.qWait(120)
-            settings.grab().save(str(OUT / f"app-settings-{theme}.png"))
-            settings.close()
-            window = WindowShell(controller)
-            controller.rebuild()  # a shell made later has not been told the plan yet
-            window.window.resize(window.window.sizeHint())
-            window.window.show()
-            QTest.qWait(120)
-            window.window.grab().save(str(OUT / f"app-window-{theme}.png"))
-            window.window.hide()
-        finally:
-            controller_module.datetime = real_datetime
-            ForecastService.get = real_get
+        set_battery(45, NOW)
+        cfg = example_config()
+        controller = Controller(cfg, Path(folder) / "config.toml", Silent(), Example(cfg), lambda: NOW, run_here)
+        tray = TrayShell(controller)
+        controller.start()
+        QTest.qWait(80)
+        popup = tray.popup
+        popup.show()
+        popup.view.fit_to_page()
+        QTest.qWait(80)
+        popup.grab().save(str(OUT / f"app-plan-{theme}.png"))
+        popup.view.tabs.setCurrentIndex(1)
+        popup.view.fit_to_page()
+        QTest.qWait(80)
+        popup.grab().save(str(OUT / f"app-update-{theme}.png"))
+        popup.hide()
+        tray.windows.open_settings()
+        settings = tray.windows.settings_window
+        settings.resize(760, 600)
+        QTest.qWait(120)
+        settings.grab().save(str(OUT / f"app-settings-{theme}.png"))
+        settings.close()
+        window = WindowShell(controller)
+        controller.engine.rebuild()  # a shell made later has not been told the plan yet
+        window.window.resize(window.window.sizeHint())
+        window.window.show()
+        QTest.qWait(120)
+        window.window.grab().save(str(OUT / f"app-window-{theme}.png"))
+        window.window.hide()
 
 
 def main() -> None:

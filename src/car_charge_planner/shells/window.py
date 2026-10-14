@@ -11,7 +11,8 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QMenu, QToolButton, QVB
 from car_charge_planner.storage.state import mark_seen
 
 from ..app_windows import AppWindows
-from ..controller import Controller, ViewUpdate
+from ..controller import Controller
+from ..engine import ViewUpdate
 from ..i18n import _
 from ..identity import APP_NAME
 from ..planview import PlanView
@@ -44,10 +45,10 @@ class WindowShell:
         self.window.setWindowIcon(make_icon("none"))
         self.window.setMinimumWidth(MIN_WIDTH)
 
-        self.view = PlanView(controller.tz)
-        self.view.battery_submitted.connect(controller.set_battery)
-        self.view.away_added.connect(controller.add_away_period)
-        self.view.away_removed.connect(controller.remove_away_period)
+        self.view = PlanView(controller.engine.tz)
+        self.view.battery_submitted.connect(controller.engine.set_battery)
+        self.view.away_added.connect(controller.engine.add_away_period)
+        self.view.away_removed.connect(controller.engine.remove_away_period)
         self.view.settings_requested.connect(self.windows.open_settings)
         self.view.setup_requested.connect(self.windows.open_setup)
         self.view.layout_changed.connect(self._fit)
@@ -65,7 +66,7 @@ class WindowShell:
         self.setup_action = self.menu.addAction(_("Set up..."))
         self.setup_action.triggered.connect(lambda: self.windows.open_setup())
         self.refresh_action = self.menu.addAction(_("Refresh forecast"))
-        self.refresh_action.triggered.connect(lambda: controller.refresh(force=True))
+        self.refresh_action.triggered.connect(lambda: controller.engine.refresh(force=True))
         self.about_action = self.menu.addAction(_("About..."))
         self.about_action.triggered.connect(lambda: self.windows.open_about())
         self.menu.addSeparator()
@@ -93,7 +94,7 @@ class WindowShell:
         self.controller.start()
 
     def show_plan(self) -> None:
-        self.controller.rebuild()
+        self.controller.engine.rebuild()
         if self.window.isMinimized():
             self.window.showNormal()
         self._centre_once()

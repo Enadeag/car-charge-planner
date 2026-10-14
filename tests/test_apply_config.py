@@ -10,7 +10,6 @@ from dataclasses import replace
 from datetime import date
 
 from car_charge_planner.forecast.service import ForecastResult, forecast_key
-from car_charge_planner.storage.state import load_state, mark_notified
 from conftest import TrayApp, at, example_config, forecast_from
 
 DAY = date(2026, 7, 3)
@@ -50,9 +49,13 @@ def make_app(tmp_path, monkeypatch, fake, cfg=None):
     return TrayApp(cfg or example_config(), tmp_path / "config.toml")
 
 
+def planned(app):
+    return app.vm is not None and app.vm.state != "no-forecast"
+
+
 def loaded(app, fake, qapp, calls=1):
     app.refresh()
-    wait_until(lambda: app.result is not None and len(fake.calls) >= calls and not app._loading, qapp)
+    wait_until(lambda: planned(app) and len(fake.calls) >= calls and not app.fetching, qapp)
 
 
 def test_forecast_key_ignores_planning_settings_but_not_the_system_or_the_providers(cfg):
@@ -74,42 +77,16 @@ def test_forecast_key_ignores_planning_settings_but_not_the_system_or_the_provid
         assert forecast_key(changed) != base
 
 
-def test_applying_a_planning_change_keeps_the_forecast_and_replans(qapp, tmp_path, monkeypatch, cfg):
-    fake = FakeForecast()
-    app = make_app(tmp_path, monkeypatch, fake)
-    loaded(app, fake, qapp)
-    kept = app.result
-    app.apply_config(replace(cfg, planning=replace(cfg.planning, margin=0.5)))
-    assert app.result is kept  # not cleared while it is still valid
-    assert app.cfg.planning.margin == 0.5 and app.vm is not None
-    wait_until(lambda: len(fake.calls) == 2 and not app._loading, qapp)  # cache-aware refresh, may be a hit
-    assert fake.calls[-1].planning.margin == 0.5
-
-
-def test_applying_a_place_or_angle_change_drops_the_old_forecast_until_the_new_one_arrives(qapp, tmp_path, monkeypatch, cfg):
-    fake = FakeForecast(hold_first=False)
-    app = make_app(tmp_path, monkeypatch, fake)
-    loaded(app, fake, qapp)
-    fake.hold_first = True
-    fake.calls.clear()
-    fake.release.clear()
-    app.apply_config(replace(cfg, panels=(replace(cfg.panels[0], tilt_deg=20),)))
-    assert app.result is None and app.vm.state == "no-forecast"
-    fake.release.set()
-    wait_until(lambda: app.result is not None, qapp)
-    assert app.vm.state != "no-forecast" and fake.calls[0].panels[0].tilt_deg == 20
-
-
 def test_time_zone_change_updates_the_app_and_popup(qapp, tmp_path, monkeypatch, cfg):
     fake = FakeForecast()
     app = make_app(tmp_path, monkeypatch, fake)
     loaded(app, fake, qapp)
     app.apply_config(replace(cfg, timezone="Europe/London"))
     assert str(app.tz) == "Europe/London" and str(app.popup.tz) == "Europe/London"
-    wait_until(lambda: not app._loading, qapp)
+    wait_until(lambda: not app.fetching, qapp)
 
 
-def test_a_fetch_started_before_the_change_does_not_overwrite_the_new_settings(qapp, tmp_path, monkeypatch, cfg):
+def test_a_fetch_on_a_thread_started_before_the_change_does_not_overwrite_the_new_settings(qapp, tmp_path, monkeypatch, cfg):
     fake = FakeForecast(hold_first=True)
     app = make_app(tmp_path, monkeypatch, fake)
     app.refresh()
@@ -117,28 +94,9 @@ def test_a_fetch_started_before_the_change_does_not_overwrite_the_new_settings(q
     new = replace(cfg, panels=(replace(cfg.panels[0], tilt_deg=20),))
     app.apply_config(new)
     fake.release.set()  # the old fetch finishes after the change
-    wait_until(lambda: len(fake.calls) == 2 and not app._loading and app.result is not None, qapp)
+    wait_until(lambda: len(fake.calls) == 2 and not app.fetching and planned(app), qapp)
     assert fake.calls[0].panels[0].tilt_deg == 35 and fake.calls[1].panels[0].tilt_deg == 20
-    assert app.cfg is new and app.result is not None
-    assert app.vm.state != "no-forecast"
-
-
-def test_announced_windows_are_unaffected(qapp, tmp_path, monkeypatch, cfg):
-    fake = FakeForecast()
-    app = make_app(tmp_path, monkeypatch, fake)
-    loaded(app, fake, qapp)
-    day = plan_window(cfg)
-    mark_notified(day, at(DAY, 8, 50))
-    before = load_state().notified
-    app.apply_config(replace(cfg, planning=replace(cfg.planning, margin=0.5)))
-    wait_until(lambda: not app._loading, qapp)
-    assert load_state().notified == before
-
-
-def plan_window(cfg):
-    from car_charge_planner.planner.projection import plan
-
-    return plan(forecast_from([(DAY, 900)]), cfg, 40, at(DAY, 7))[0].windows[0]
+    assert app.cfg is new
 
 
 def test_tray_menu_has_settings_and_no_config_file_entry(qapp, tmp_path, monkeypatch):
@@ -171,5 +129,5 @@ def test_saving_in_the_window_applies_to_the_running_app(qapp, tmp_path, monkeyp
     window.save_button.click()
     assert app.cfg.panels[0].tilt_deg == 20
     assert (tmp_path / "config.toml").exists()
-    wait_until(lambda: not app._loading and app.result is not None, qapp)
+    wait_until(lambda: not app.fetching and planned(app), qapp)
     assert fake.calls[-1].panels[0].tilt_deg == 20

@@ -1,154 +1,63 @@
-"""What the app does, apart from how it shows itself: after every change it emits `view_changed` for a shell to draw."""
+"""The desktop app's hold on the engine: Qt's timer and threads for it, and its updates as the `view_changed` signal."""
 
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass
-from datetime import date, datetime
+from collections.abc import Callable
 from pathlib import Path
-from zoneinfo import ZoneInfo
+from typing import Any
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
-from car_charge_planner.forecast.service import ForecastResult, ForecastService, ForecastUnavailable, forecast_key
-from car_charge_planner.planner.advice import grid_advice
-from car_charge_planner.planner.model import AwayPeriod, AwayRule, Config
-from car_charge_planner.planner.projection import plan
-from car_charge_planner.storage.state import State, add_away, load_state, mark_notified, remove_away, set_battery
+from car_charge_planner.planner.model import Config
 
+from .engine import Clock, Engine, Forecasts, Runner, system_clock
 from .i18n import _
-from .notifications import candidate_windows, due, message
 from .notifier import Notifying, make_notifier
-from .view_model import ForecastSource, ViewModel, build, needs_setup, no_forecast
 
-TICK_MS = 60_000  # recompute every minute; the forecast itself refreshes at most hourly
-
-
-@dataclass(frozen=True)
-class ViewUpdate:
-    vm: ViewModel
-    state: State
-    today: date
-    rules: tuple[AwayRule, ...]
-    tz: ZoneInfo
+TICK_MS = 60_000  # the engine plans again every minute; the forecast itself refreshes at most hourly
 
 
 class Controller(QObject):
-    forecast_loaded = Signal(object, object)  # the Config the fetch ran under, ForecastResult | Exception
-    view_changed = Signal(object)
+    """Shells change things through `engine` and draw what `view_changed` brings, on the Qt thread.
+
+    A new config goes through `apply_config` here instead: its interface settings are the desktop app's, not the engine's.
+    """
+
+    view_changed = Signal(object)  # ViewUpdate
+    _finished = Signal(object, object)  # a background job's `done` and its result, carried to the Qt thread
 
     def __init__(
-        self, cfg: Config, config_file: Path, notifier: Notifying | None = None, forecasts: ForecastService | None = None
+        self,
+        cfg: Config,
+        config_file: Path,
+        notifier: Notifying | None = None,
+        forecasts: Forecasts | None = None,
+        clock: Clock = system_clock,
+        run_in_background: Runner | None = None,
     ) -> None:
         super().__init__()
         self.notifier = notifier or make_notifier()
-        self.forecasts = forecasts or ForecastService()
-        self.cfg = cfg
         self.config_file = config_file
-        self.tz = ZoneInfo(cfg.timezone)
-        self.result: ForecastResult | None = None
-        self.error: str | None = None
-        self.vm: ViewModel | None = None
-        self._loading = False
-
-        self.forecast_loaded.connect(self._on_forecast)
+        self._finished.connect(self._deliver)
+        self.engine = Engine(cfg, self.notifier, forecasts, clock, run_in_background or self._run_in_thread)
+        self.engine.watch(self.view_changed.emit)
         self.timer = QTimer(self)
-        self.timer.timeout.connect(self.refresh)
+        self.timer.timeout.connect(self.engine.tick)
         self.timer.start(TICK_MS)
 
     def start(self) -> None:
-        self.refresh()
-
-    def refresh(self, force: bool = False) -> None:
-        """Fetch off the UI thread (cache-aware); the result comes back as a signal."""
-        if not self.cfg.is_set_up:
-            self.rebuild()  # no location yet: there is nothing to ask a forecast service, and nothing leaves the machine
-            return
-        if self._loading:
-            return
-        self._loading = True
-        cfg, tz = self.cfg, self.tz  # the worker keeps the config it started with
-
-        def work() -> None:
-            try:
-                outcome: object = self.forecasts.get(cfg, datetime.now(tz), force=force)
-            except ForecastUnavailable as err:
-                outcome = err
-            except Exception as err:  # never let a worker crash the app silently
-                outcome = err
-            self.forecast_loaded.emit(cfg, outcome)
-
-        threading.Thread(target=work, daemon=True).start()
-
-    def _on_forecast(self, cfg: Config, outcome: object) -> None:
-        self._loading = False
-        if cfg is not self.cfg:
-            self.refresh()  # started under an older config: its result must not replace the new one
-            return
-        if isinstance(outcome, ForecastResult):
-            self.result, self.error = outcome, None
-        else:
-            self.error = str(outcome)
-        self.rebuild()
+        self.engine.refresh()
 
     def apply_config(self, cfg: Config) -> None:
-        """Switch to a new config without a restart."""
-        self.forecasts.forget_failures()  # a corrected key or address deserves a try at once, not after the wait
-        if forecast_key(cfg) != forecast_key(self.cfg):
-            self.result, self.error = None, None  # a forecast for other panels or place would mislead
-        if cfg.interface.mode != self.cfg.interface.mode or cfg.interface.language != self.cfg.interface.language:
+        current = self.engine.cfg.interface
+        if cfg.interface.mode != current.mode or cfg.interface.language != current.language:
             # the shell and the language are chosen once at start: say so, since nothing visible happens now
             self.notifier.send(_("Interface changed"), _("The new interface applies the next time the app starts."))
-        self.cfg = cfg
-        self.tz = ZoneInfo(cfg.timezone)
-        self.rebuild()
-        self.refresh()  # reuses the cache when the forecast key is unchanged
+        self.engine.apply_config(cfg)
 
-    def rebuild(self) -> None:
-        now = datetime.now(self.tz)
-        state = load_state()
-        battery = state.battery
-        if not self.cfg.is_set_up:
-            vm = needs_setup(battery, now)
-        elif self.result is None:
-            vm = no_forecast(self.error or _("Loading forecast..."), battery, now)
-        else:
-            days = plan(self.result.steps, self.cfg, battery.pct, now, list(state.away), list(state.notified))
-            advice = grid_advice(days, self.result.steps, self.cfg, list(state.away), now)
-            vm = build(days, now, self.cfg, battery, self.result.age(now), self.result.stale, advice, self._source(now))
-            self._announce(candidate_windows(days, advice), state, now)
-        self.vm = vm
-        self.view_changed.emit(ViewUpdate(vm, state, now.date(), self.cfg.away_rules, self.tz))
+    def _run_in_thread(self, work: Callable[[], Any], done: Callable[[Any], None]) -> None:
+        threading.Thread(target=lambda: self._finished.emit(done, work()), daemon=True).start()
 
-    def _source(self, now: datetime) -> ForecastSource:
-        result = self.result
-        assert result is not None
-        return ForecastSource(
-            result.attribution,
-            result.provider_name,
-            result.from_fallback,
-            result.primary_name,
-            cooling_down=result.cooldown_until is not None and now < result.cooldown_until,
-        )
-
-    def _announce(self, windows, state: State, now: datetime) -> None:
-        """Notify once per window, a few minutes ahead."""
-        assert self.result is not None
-        for kind, window in due(
-            windows, state.notified, now, self.cfg.notify.lead_minutes, self.result.age(now), self.result.stale
-        ):
-            title, body = message(kind, window, self.cfg, self.tz)
-            self.notifier.send(title, body)
-            mark_notified(window, now)
-
-    def set_battery(self, pct: float) -> None:
-        set_battery(pct, datetime.now(self.tz))
-        self.rebuild()
-
-    def add_away_period(self, period: AwayPeriod) -> None:
-        add_away(period, datetime.now(self.tz))
-        self.rebuild()
-
-    def remove_away_period(self, period: AwayPeriod) -> None:
-        remove_away(period)
-        self.rebuild()
+    def _deliver(self, done: Callable[[Any], None], result: object) -> None:
+        done(result)

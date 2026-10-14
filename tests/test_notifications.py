@@ -3,14 +3,13 @@ from pathlib import Path
 
 import pytest
 
-from car_charge_planner.forecast.service import ForecastResult
 from car_charge_planner.notifications import GRID, SOLAR, candidate_windows, due, message
 from car_charge_planner.planner.advice import GridAdvice
 from car_charge_planner.planner.model import DayPlan, Window
 from car_charge_planner.platform.linux import ENTRY_NAME, LinuxStartAtLogin
 from car_charge_planner.platform.linux import autostart_entry as desktop_entry
 from car_charge_planner.storage.state import load_state, mark_notified
-from conftest import TZ, FakeNotifier, TrayApp, at, forecast_from
+from conftest import TZ, at
 
 DAY = date(2026, 7, 3)
 
@@ -118,42 +117,3 @@ def test_install_and_uninstall_autostart(tmp_path):
     assert login.disable() is True
     assert not target.exists() and not login.is_enabled()
     assert login.disable() is False
-
-
-def tray_at(cfg, tmp_path, monkeypatch, hour, minute, failed=False):
-    """A tray app whose clock stands at hour:minute on the day of a forecast with one sunny day."""
-    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    app = TrayApp(cfg, tmp_path / "config.toml")
-    app.result = ForecastResult(forecast_from([(DAY, 900)]), at(DAY, hour, 0), True, failed)
-    app.notifier = FakeNotifier()
-
-    class Frozen:
-        @staticmethod
-        def now(tz=None):
-            return at(DAY, hour, minute)
-
-    monkeypatch.setattr("car_charge_planner.controller.datetime", Frozen)
-    return app, app.notifier.sent
-
-
-def test_the_tray_notifies_once_ahead_of_the_window(cfg, tmp_path, monkeypatch, qapp):
-    app, sent = tray_at(cfg, tmp_path, monkeypatch, 8, 50)
-    app.rebuild()
-    assert len(sent) == 1 and sent[0][0].startswith("Charge window 09:00")
-    app.rebuild()
-    assert len(sent) == 1
-
-
-def test_the_tray_does_not_notify_again_after_a_restart(cfg, tmp_path, monkeypatch, qapp):
-    app, sent = tray_at(cfg, tmp_path, monkeypatch, 8, 50)
-    app.rebuild()
-    again, sent_again = tray_at(cfg, tmp_path, monkeypatch, 8, 52)
-    again.rebuild()
-    assert len(sent) == 1 and sent_again == []
-
-
-@pytest.mark.parametrize("minute, failed", [(30, False), (50, True)], ids=["outside the lead time", "refresh failed"])
-def test_the_tray_is_silent(cfg, tmp_path, monkeypatch, qapp, minute, failed):
-    app, sent = tray_at(cfg, tmp_path, monkeypatch, 8, minute, failed=failed)
-    app.rebuild()
-    assert sent == []

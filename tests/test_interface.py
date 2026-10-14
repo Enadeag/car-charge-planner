@@ -163,8 +163,8 @@ def test_nothing_is_announced_when_nothing_fell_back(tmp_path, monkeypatch, qapp
 
 def test_changing_the_interface_says_it_applies_at_the_next_start(tmp_path, monkeypatch, qapp):
     controller = controller_with("auto", tmp_path, monkeypatch)
-    monkeypatch.setattr(controller, "rebuild", lambda: None)
-    monkeypatch.setattr(controller, "refresh", lambda force=False: None)
+    monkeypatch.setattr(controller.engine, "rebuild", lambda: None)
+    monkeypatch.setattr(controller.engine, "refresh", lambda force=False: None)
     controller.apply_config(with_mode("window"))
     assert len(controller.notifier.sent) == 1 and "next time" in controller.notifier.sent[0][1]
     controller.apply_config(with_mode("window"))

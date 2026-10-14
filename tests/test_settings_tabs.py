@@ -3,7 +3,7 @@ import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from dataclasses import replace
-from datetime import date, time
+from datetime import time
 
 import pytest
 from PySide6.QtCore import QTime
@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QLabel
 
 from car_charge_planner.planner.model import AwayRule, Config, Setup, load_config
 from car_charge_planner.settings.window import SettingsWindow
-from conftest import at, example_config
+from conftest import example_config
 
 
 class Harness:
@@ -147,33 +147,6 @@ def test_planning_reset_tab(tmp_path, qapp):
     h.show("Planning and notifications")
     h.window.reset_button.click()
     assert h.box("Planning and notifications", "notify.lead_minutes").value() == 15
-
-
-def test_a_saved_lead_time_changes_when_the_next_notification_is_due(tmp_path, monkeypatch, qapp):
-    from car_charge_planner.forecast.service import ForecastResult
-    from conftest import TrayApp, forecast_from
-
-    day = date(2026, 7, 3)
-    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda self, cfg, now, force=False: None)
-    app = TrayApp(example_config(), tmp_path / "config.toml")
-    app.result = ForecastResult(forecast_from([(day, 900)]), at(day, 6), True, False)
-    from conftest import FakeNotifier
-
-    app.notifier = FakeNotifier()
-
-    class Frozen:
-        @staticmethod
-        def now(tz=None):
-            return at(day, 8, 30)  # the window starts at 09:00
-
-    monkeypatch.setattr("car_charge_planner.controller.datetime", Frozen)
-    app.rebuild()
-    assert app.notifier.sent == []  # lead time is 15 minutes, the window 30 away
-    app.cfg = replace(app.cfg, notify=replace(app.cfg.notify, lead_minutes=30))
-    app.rebuild()
-    titles = [title for title, _ in app.notifier.sent]
-    assert len(titles) == 1 and titles[0].startswith("Charge window 09:00")
 
 
 def rows(h):

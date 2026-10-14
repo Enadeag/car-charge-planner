@@ -359,7 +359,7 @@ def test_the_shell_opens_one_wizard_at_a_time(tmp_path, qapp, monkeypatch):
     windows = make_windows(controller)
     windows.open_setup()
     first = windows.setup_wizard
-    assert first.isVisible() and first.state.config == controller.cfg
+    assert first.isVisible() and first.state.config == controller.engine.cfg
     windows.open_setup()
     assert windows.setup_wizard is first
     first.reject()  # untouched: closes without asking
@@ -385,5 +385,5 @@ def test_finishing_applies_the_new_config_in_the_running_app(tmp_path, qapp, mon
         thread.join(5)
     wizard.next()
     settle_controller(controller)  # applying the config starts a fetch
-    assert controller.cfg.interface.units == "imperial" and load_config(tmp_path / "config.toml").interface.units == "imperial"
+    assert controller.engine.cfg.interface.units == "imperial" and load_config(tmp_path / "config.toml").interface.units == "imperial"
     assert shown == [1]
