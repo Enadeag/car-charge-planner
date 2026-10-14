@@ -1,0 +1,95 @@
+<title>Charge Planner Icons</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* PROTOTYPE for issue #77 — throwaway. App icon variants at real sizes, and the one-colour tray icons with their status dot.
+   Layout: one section per variant; each shows 256 / 32 / 16 px on a light and a dark ground. */
+:root {
+  --bg: #eef1f5; --panel: #ffffff; --fg: #17202b; --muted: #5b6878; --line: #dde3ea;
+  --sun: #d98a00; --car: #1f8f5c; --grid: #2f6fd0; --act: #c93a3a;
+  --font: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; --num: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0d1117; --panel: #161c24; --fg: #e8edf3; --muted: #9aa7b6; --line: #2a3441; color-scheme: dark } }
+:root[data-theme="dark"] { --bg: #0d1117; --panel: #161c24; --fg: #e8edf3; --muted: #9aa7b6; --line: #2a3441; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); }
+main { max-width: 900px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; display: flex; flex-direction: column; gap: 20px; }
+h1 { font-size: 20px; margin: 0; } p.lead { color: var(--muted); margin: 0; line-height: 1.5; max-width: 65ch; }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+h2 { font-size: 15px; margin: 0; } .desc { color: var(--muted); font-size: 13px; margin: 0; }
+.grounds { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.ground { border-radius: 12px; padding: 14px; display: flex; align-items: flex-end; gap: 22px; flex-wrap: wrap; }
+.ground.light { background: #f7f8fa; border: 1px solid #e3e7ec; } .ground.dark { background: #1b1f26; border: 1px solid #2b313b; }
+.sz { display: flex; flex-direction: column; align-items: center; gap: 6px; font-family: var(--num); font-size: 10px; }
+.ground.light .sz { color: #6b7686; } .ground.dark .sz { color: #8a95a5; }
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.taskbar { border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; gap: 16px; font-family: var(--num); font-size: 11px; }
+.taskbar.light { background: #e9ecf0; color: #1d232b; } .taskbar.dark { background: #20242c; color: #e7ebf0; }
+.tray { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.tray small { font-size: 9px; opacity: .7; }
+.big { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+.big .tray small { font-size: 11px; }
+.pick { font-family: var(--num); font-size: 12px; color: var(--muted); }
+</style>
+
+<main>
+  <h1>App and tray icons — pick one</h1>
+  <p class="lead">Prototype for #77, throwaway. Each app icon shows the idea of the app (charge when the sun shines) in amber and green, at the sizes a desktop really uses. Below, the tray icons: one colour that follows a light or dark panel, with a dot for the plan's state. Tell me the letter of the app icon, and whether the tray icon reads at 16 px.</p>
+  <div id="variants"></div>
+  <section>
+    <h2>Tray icons, one colour, with a status dot</h2>
+    <p class="desc">Drawn from the chosen app icon's shapes. Amber: charging on sun, now or soon. Blue: grid advice. Red: you need to act (set-up, no forecast). No dot: nothing to do. Shown at 16 px in a panel, and 4× larger to check the shapes.</p>
+    <div class="panels" id="panels"></div>
+    <div class="big" id="bigtray"></div>
+  </section>
+</main>
+
+<script>
+const SUN = "#e39a0b", CAR = "#1f8f5c";
+// Each variant draws into a 64-unit square.
+const VARIANTS = [
+  { key: "A", name: "Sun arc over a plug", desc: "A rising sun as half a disc with short rays; a plug below whose cable runs up into the horizon line.",
+    draw: (c, mono) => `
+      <path d="M12 34a20 20 0 0 1 40 0Z" fill="${mono || SUN}"/>
+      <g stroke="${mono || SUN}" stroke-width="4" stroke-linecap="round"><path d="M32 6v5M13 13l3.5 3.5M51 13l-3.5 3.5M4 32h4M56 32h4"/></g>
+      <path d="M6 38h52" stroke="${mono || c}" stroke-width="4" stroke-linecap="round"/>
+      <rect x="23" y="44" width="18" height="12" rx="4" fill="${mono || CAR}"/>
+      <path d="M27 44v-5M37 44v-5" stroke="${mono || CAR}" stroke-width="4" stroke-linecap="round"/>
+      <path d="M32 56v6" stroke="${mono || CAR}" stroke-width="4" stroke-linecap="round"/>` },
+  { key: "B", name: "Sun arc over a car", desc: "The same sun; a small car below, as if parked under the day.",
+    draw: (c, mono) => `
+      <path d="M14 30a18 18 0 0 1 36 0Z" fill="${mono || SUN}"/>
+      <g stroke="${mono || SUN}" stroke-width="4" stroke-linecap="round"><path d="M32 4v5M15 11l3.5 3.5M49 11l-3.5 3.5"/></g>
+      <path d="M8 50v-7l5-9h38l5 9v7Z" fill="${mono || CAR}"/>
+      <circle cx="19" cy="52" r="5" fill="${mono ? "currentColor" : "#0f5c3a"}" stroke="${mono ? "none" : "#fff"}" stroke-width="0"/>
+      <circle cx="45" cy="52" r="5" fill="${mono ? "currentColor" : "#0f5c3a"}"/>
+      <path d="M16 42h32" stroke="${mono ? "none" : "#ffffff"}" stroke-opacity=".55" stroke-width="3" stroke-linecap="round"/>` },
+  { key: "C", name: "App tile: the day curve with a charge window", desc: "A rounded tile (like an app on a phone) with the day's solar curve in amber and the charge window as a green bar below it. Echoes the dashboard.",
+    draw: (c, mono) => `
+      <rect x="4" y="4" width="56" height="56" rx="14" fill="${mono ? "none" : "#14324a"}" stroke="${mono || "none"}" stroke-width="${mono ? 4 : 0}"/>
+      <path d="M10 44C20 44 22 16 32 16s12 28 22 28Z" fill="${mono || SUN}" fill-opacity="${mono ? 1 : .95}"/>
+      <rect x="22" y="48" width="20" height="6" rx="3" fill="${mono || "#3fd48d"}"/>` },
+  { key: "D", name: "A bolt made of the sun", desc: "A charging bolt whose top half is the sun: the most compact, reads well small, closest to the old icon but with meaning.",
+    draw: (c, mono) => `
+      <circle cx="32" cy="22" r="16" fill="${mono || SUN}"/>
+      <path d="M36 14 22 36h10l-4 18 16-24H34l4-16Z" fill="${mono || CAR}" stroke="${mono ? "none" : "#ffffff"}" stroke-width="2.5" stroke-linejoin="round"/>` },
+];
+const svg = (v, size, { mono = null, dot = null, horizon = "#5b6878" } = {}) => {
+  const d = dot ? `<circle cx="52" cy="52" r="11" fill="${dot}" stroke="${mono === "#ffffff" ? "#20242c" : "#e9ecf0"}" stroke-width="4"/>` : "";
+  return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" role="img" aria-label="${v.name}${dot ? " with status dot" : ""}" style="color:${mono || "currentColor"}">${v.draw(horizon, mono)}${d}</svg>`;
+};
+document.getElementById("variants").innerHTML = VARIANTS.map(v => `
+  <section><h2>${v.key} · ${v.name}</h2><p class="desc">${v.desc}</p><div class="grounds">
+    ${["light", "dark"].map(g => `<div class="ground ${g}">${[256, 64, 32, 16].map(s => `<div class="sz">${svg(v, Math.min(s, 160), { horizon: g === "light" ? "#5b6878" : "#c5ced9" }).replace(`width="${Math.min(s,160)}"`, `width="${s === 256 ? 160 : s}"`)}<span>${s === 256 ? "256 (shown 160)" : s} px</span></div>`).join("")}</div>`).join("")}
+  </div></section>`).join("");
+
+// Tray: one-colour version of variant A by default; buttons switch the base shape.
+let trayVariant = 0;
+const STATES = [["sun", SUN, "charging on sun"], ["grid", "#2f6fd0", "grid advice"], ["act", "#d64545", "act needed"], ["none", null, "nothing to do"]];
+function drawTray() {
+  const v = VARIANTS[trayVariant];
+  document.getElementById("panels").innerHTML = [["light", "#1d232b"], ["dark", "#ffffff"]].map(([g, ink]) =>
+    `<div class="taskbar ${g}">${STATES.map(([k, col, label]) => `<div class="tray">${svg(v, 16, { mono: ink, dot: col })}<small>${label}</small></div>`).join("")}<span style="margin-left:auto">14:32</span></div>`).join("");
+  document.getElementById("bigtray").innerHTML = `<span class="pick">Base shape: ${VARIANTS.map((x, i) => `<button onclick="trayVariant=${i};drawTray()" style="font:inherit;margin-left:4px;padding:3px 8px;border-radius:6px;border:1px solid var(--line);background:${i === trayVariant ? "var(--fg)" : "var(--panel)"};color:${i === trayVariant ? "var(--panel)" : "var(--fg)"};cursor:pointer">${x.key}</button>`).join("")}</span>` +
+    STATES.map(([k, col, label]) => `<div class="tray" style="background:#20242c;color:#fff;padding:8px;border-radius:10px">${svg(v, 64, { mono: "#ffffff", dot: col })}<small>${label}</small></div>`).join("");
+}
+drawTray();
+</script>
