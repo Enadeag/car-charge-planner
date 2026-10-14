@@ -12,6 +12,7 @@ from PySide6.QtGui import QCursor, QGuiApplication
 from PySide6.QtWidgets import QSystemTrayIcon
 
 from car_charge_planner.controller import Controller
+from car_charge_planner.engine import FileStore
 from car_charge_planner.shells.tray import TrayShell
 from conftest import FakeNotifier
 
@@ -20,7 +21,7 @@ from conftest import FakeNotifier
 def shell(cfg, tmp_path, monkeypatch, qapp):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda *a, **k: None)
-    tray_shell = TrayShell(Controller(cfg, tmp_path / "config.toml", FakeNotifier()))
+    tray_shell = TrayShell(Controller(cfg, FileStore(tmp_path / "config.toml"), FakeNotifier()))
     monkeypatch.setattr(tray_shell.tray, "geometry", lambda: QRect())  # no icon geometry known
     yield tray_shell
     tray_shell.popup.hide()

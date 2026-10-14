@@ -156,7 +156,23 @@ msgid "The new interface applies the next time the app starts."
 msgstr ""
 
 #: car_charge_planner/engine/engine.py
+#, python-brace-format
+msgid "The forecast provider {id!r} is not known to this version of the app."
+msgstr ""
+
+#: car_charge_planner/engine/engine.py
 msgid "Loading forecast..."
+msgstr ""
+
+#: car_charge_planner/engine/engine.py
+#, python-brace-format
+msgid "A value has the wrong type: {error}"
+msgstr ""
+
+#: car_charge_planner/engine/store.py
+#: car_charge_planner/forecast/secret_store.py
+#, python-brace-format
+msgid "Could not write {file}: {error}"
 msgstr ""
 
 #: car_charge_planner/forecast/check.py
@@ -272,12 +288,6 @@ msgstr ""
 #: car_charge_planner/forecast/secret_store.py
 #, python-brace-format
 msgid "{file}: [{id}] must hold texts only"
-msgstr ""
-
-#: car_charge_planner/forecast/secret_store.py
-#: car_charge_planner/settings/window.py car_charge_planner/setup/wizard.py
-#, python-brace-format
-msgid "Could not write {file}: {error}"
 msgstr ""
 
 #: car_charge_planner/forecast/secret_store.py
@@ -1342,11 +1352,6 @@ msgstr ""
 
 #: car_charge_planner/settings/window.py
 #, python-brace-format
-msgid "A value has the wrong type: {error}"
-msgstr ""
-
-#: car_charge_planner/settings/window.py
-#, python-brace-format
 msgid "Could not change starting at login: {error}"
 msgstr ""
 
@@ -1996,11 +2001,6 @@ msgstr ""
 
 #: car_charge_planner/setup/wizard.py
 msgid "Next"
-msgstr ""
-
-#: car_charge_planner/setup/wizard.py
-#, python-brace-format
-msgid "The forecast provider {id!r} is not known to this version of the app."
 msgstr ""
 
 #: car_charge_planner/setup/wizard.py

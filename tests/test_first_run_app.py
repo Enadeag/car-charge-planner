@@ -51,7 +51,7 @@ DRIVER = textwrap.dedent(
         return ForecastResult(steps, now.astimezone(timezone.utc), False, False, "open-meteo", "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)")
 
     ForecastService.get = fake_get
-    wizard_module.SetupWizard._real_check = lambda self, cfg: Attempt(True, 2, "OK")
+    wizard_module.SetupWizard._real_check = lambda self, cfg, done: done(Attempt(True, 2, "OK"))
 
     controllers = []
     original = appmain.Controller
@@ -85,8 +85,6 @@ DRIVER = textwrap.dedent(
             page.latitude.setValue(52.37)
             page.longitude.setValue(4.9)
             wizard.navigate("finish")
-            for t in list(wizard.pages["finish"]._threads):
-                t.join(5)
             report["finished"] = wizard.finish()
             QTimer.singleShot(1500, done)
         else:

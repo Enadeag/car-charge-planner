@@ -4,19 +4,21 @@ import os
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+import time
 from dataclasses import replace
 
 import pytest
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QLabel
 
+from car_charge_planner.engine import FileStore
 from car_charge_planner.forecast.check import Attempt
 from car_charge_planner.planner.model import Config, Setup, load_config
 from car_charge_planner.setup.finish import FinishPage
 from car_charge_planner.setup.pages import Page
 from car_charge_planner.setup.welcome import WelcomePage
 from car_charge_planner.setup.wizard import PAGES, SetupWizard
-from conftest import example_config, settle_controller
+from conftest import answers, engine_for, example_config, settle_controller
 
 NL = {"LANG": "nl_NL.UTF-8"}
 US = {"LANG": "en_US.UTF-8"}
@@ -29,16 +31,14 @@ def sub(tmp_path, name):
 
 
 class Rig:
-    def __init__(self, tmp_path, cfg=None, environ=NL, check=None, registry=None, pages=None):
-        self.file = tmp_path / "config.toml"
+    def __init__(self, tmp_path, cfg=None, environ=NL, check=None, registry=None, pages=None, file=None):
+        self.file = file or tmp_path / "config.toml"
         self.finished = []
         self.checked = []
         self.outcome = check or Attempt(True, 2, "OK: 2 days of forecast")
         self.wizard = SetupWizard(
-            cfg if cfg is not None else example_config(),
-            self.file,
+            engine_for(cfg if cfg is not None else example_config(), self.file, registry=registry),
             self.finished.append,
-            registry=registry,
             check=self._check,
             page_classes=pages,
             environ=environ,
@@ -49,14 +49,11 @@ class Rig:
         self.wizard.confirm_leave = lambda: (self.asked.append(1), self.answer)[1]
         self.wizard.show()
 
-    def _check(self, cfg):
+    def _check(self, cfg, done):
         self.checked.append(cfg)
-        return self.outcome
+        done(self.outcome)
 
     def settle(self):
-        finish = self.wizard.pages["finish"]
-        for thread in list(finish._threads):
-            thread.join(5)
         QTest.qWait(40)
 
     def at_finish(self):
@@ -250,14 +247,34 @@ def test_nothing_is_asked_of_the_provider_before_a_place_is_chosen(tmp_path, qap
     assert not rig.wizard.next_button.isEnabled() and "not chosen yet" in texts(page)
 
 
-def test_the_check_runs_off_the_window_thread(tmp_path, qapp):
+def test_the_check_asks_the_chosen_provider_off_the_window_thread_with_the_saved_key(tmp_path, qapp):
     import threading
+    from datetime import datetime
 
-    seen = []
-    rig = Rig(tmp_path)
-    rig.wizard.check = lambda cfg: (seen.append(threading.current_thread()), Attempt(True, 2, "OK"))[1]
-    rig.at_finish()
-    assert seen and seen[0] is not threading.main_thread()
+    from car_charge_planner.controller import Controller
+    from car_charge_planner.forecast.provider import SettingSpec
+    from car_charge_planner.forecast.registry import ProviderRegistry
+    from car_charge_planner.planner.model import Forecast
+    from conftest import TZ, FakeNotifier, NoForecast
+    from fake_provider import FakeProvider, steps_for
+
+    threads = []
+    key = SettingSpec("api_key", "API key", "Your key.", optional=False, secret=True)
+    today = datetime.now(TZ).date()
+    provider = FakeProvider(id="keyed", settings=(key,), script=[lambda: (threads.append(threading.current_thread()), steps_for(today))[1]])
+    registry = ProviderRegistry()
+    registry.register(provider)
+    store = FileStore(tmp_path / "config.toml")
+    store.save_secrets({"keyed": {"api_key": "K-1"}})
+    controller = Controller(replace(example_config(), forecast=Forecast("keyed", "", {})), store, FakeNotifier(), NoForecast(), registry=registry)
+    wizard = SetupWizard(controller.engine, lambda c: None, environ=NL, qt_locale_name="")
+    wizard.navigate("finish")
+    page = wizard.pages["finish"]
+    deadline = time.monotonic() + 5
+    while not page.check_button.isEnabled() and time.monotonic() < deadline:
+        QTest.qWait(20)
+    assert "Forecast received" in page.check_status.text()
+    assert threads and threads[0] is not threading.main_thread() and provider.calls[0][1] == {"api_key": "K-1"}
 
 
 def test_finish_writes_the_config_once_hands_it_over_and_closes(rig):
@@ -291,8 +308,7 @@ def test_a_draft_that_does_not_pass_the_checks_writes_nothing_and_says_why(tmp_p
 def test_a_file_that_cannot_be_written_is_said_and_the_wizard_stays(tmp_path, qapp):
     blocker = tmp_path / "blocked"
     blocker.write_text("a file where the directory should be", encoding="utf-8")
-    rig = Rig(tmp_path)
-    rig.wizard.config_file = blocker / "config.toml"
+    rig = Rig(tmp_path, file=blocker / "config.toml")
     rig.at_finish()
     assert not rig.wizard.finish() and "Could not write" in rig.wizard.errors.text() and rig.finished == []
 
@@ -345,7 +361,7 @@ def make_controller(cfg, tmp_path, monkeypatch):
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda *a, **k: None)
-    return Controller(cfg, tmp_path / "config.toml", FakeNotifier())
+    return Controller(cfg, FileStore(tmp_path / "config.toml"), FakeNotifier())
 
 
 def make_windows(controller, shown=None):
@@ -374,15 +390,13 @@ def test_finishing_applies_the_new_config_in_the_running_app(tmp_path, qapp, mon
     windows = make_windows(controller, shown)
     windows.open_setup()
     wizard = windows.setup_wizard
-    wizard.check = lambda cfg: Attempt(True, 2, "OK: 2 days of forecast")
+    wizard.check = answers(Attempt(True, 2, "OK: 2 days of forecast"))
     wizard.pages["welcome"].units.setCurrentIndex(wizard.pages["welcome"].units.findData("imperial"))
     wizard.next()
     wizard.next()
     wizard.next()
     wizard.next()
     wizard.next()
-    for thread in list(wizard.pages["finish"]._threads):
-        thread.join(5)
     wizard.next()
     settle_controller(controller)  # applying the config starts a fetch
     assert controller.engine.cfg.interface.units == "imperial" and load_config(tmp_path / "config.toml").interface.units == "imperial"

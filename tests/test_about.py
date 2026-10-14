@@ -9,6 +9,7 @@ from importlib.metadata import version
 import pytest
 
 from car_charge_planner.controller import Controller
+from car_charge_planner.engine import FileStore
 from car_charge_planner.shells.tray import TrayShell
 from car_charge_planner.shells.window import WindowShell
 from conftest import FakeNotifier
@@ -18,7 +19,7 @@ from conftest import FakeNotifier
 def controller(cfg, tmp_path, monkeypatch, qapp):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda *a, **k: None)
-    return Controller(cfg, tmp_path / "config.toml", FakeNotifier())
+    return Controller(cfg, FileStore(tmp_path / "config.toml"), FakeNotifier())
 
 
 def shown_text(windows):

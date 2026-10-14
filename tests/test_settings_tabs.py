@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QLabel
 
 from car_charge_planner.planner.model import AwayRule, Config, Setup, load_config
 from car_charge_planner.settings.window import SettingsWindow
-from conftest import example_config
+from conftest import engine_for, example_config
 
 
 class Harness:
@@ -19,7 +19,7 @@ class Harness:
         self.file = tmp_path / "config.toml"
         self.saved = []
         self.asked = []
-        self.window = SettingsWindow(cfg or example_config(), self.file, self.saved.append)
+        self.window = SettingsWindow(engine_for(cfg or example_config(), self.file, saved=self.saved))
         self.window.confirm_discard = lambda: (self.asked.append(1), True)[1]
         self.window.show()
 

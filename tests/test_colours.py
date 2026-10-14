@@ -11,7 +11,7 @@ from car_charge_planner import colours
 from car_charge_planner.planner.model import Config
 from car_charge_planner.popup import Popup
 from car_charge_planner.settings.window import SettingsWindow
-from conftest import TZ
+from conftest import TZ, engine_for
 
 
 def luminance(hex_colour):
@@ -71,7 +71,7 @@ def test_light_theme_gets_the_dark_accent_shades(light):
 
 
 def test_settings_errors_use_the_theme_error_colour(dark, tmp_path):
-    w = SettingsWindow(Config(), tmp_path / "c.toml", lambda c: None)
+    w = SettingsWindow(engine_for(Config(), tmp_path / "c.toml"))
     w.show_errors(["something is wrong"])
     assert colours.ERROR["dark"] in w.errors.styleSheet()
 

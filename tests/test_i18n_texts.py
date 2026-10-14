@@ -10,7 +10,7 @@ from car_charge_planner.names import month_short, short_date, weekday_long
 from car_charge_planner.planner.model import AwayRule
 from car_charge_planner.storage.state import BatteryReading
 from car_charge_planner.view_model import ForecastSource, battery_status, day_label, footer_text
-from conftest import TZ, at
+from conftest import TZ, at, engine_for
 from test_i18n import make_catalogue
 
 DAY = date(2026, 7, 3)  # a Friday
@@ -118,7 +118,7 @@ def test_a_tab_is_found_by_its_key_in_any_language(tmp_path):
     QApplication.instance() or QApplication([])
     make_catalogue(tmp_path, "xx", {"Away rules": "Afwezigheid", "Solar and location": "Zon en locatie"})
     init(["xx"], tmp_path)
-    window = SettingsWindow(Config(), tmp_path / "config.toml", lambda cfg: None)
+    window = SettingsWindow(engine_for(Config(), tmp_path / "config.toml"))
     titles = [window.tabs.tabText(i) for i in range(window.tabs.count())]
     assert "Afwezigheid" in titles and "Zon en locatie" in titles
     window.show_tab("away")

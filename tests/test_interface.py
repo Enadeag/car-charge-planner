@@ -13,6 +13,7 @@ import pytest
 
 from app_process import LAUNCHER, PROJECT, RunningApp, app_environment
 from car_charge_planner.controller import Controller
+from car_charge_planner.engine import FileStore
 from car_charge_planner.main import NO_TRAY_HINT, announce_tray_fallback, create_shell, wait_for_tray
 from car_charge_planner.planner.config_io import dump_config, write_config
 from car_charge_planner.planner.model import INTERFACE_MODES, Config, ConfigError, Interface, load_config
@@ -21,7 +22,7 @@ from car_charge_planner.shells import ShellChoice, choose_shell
 from car_charge_planner.shells.tray import TrayShell
 from car_charge_planner.shells.window import WindowShell
 from car_charge_planner.storage.state import load_state
-from conftest import FakeNotifier, example_config
+from conftest import FakeNotifier, engine_for, example_config
 
 
 def with_mode(mode):
@@ -117,7 +118,7 @@ def test_background_starts_wait_longer_than_interactive_ones():
 
 def controller_with(mode, tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    return Controller(with_mode(mode), tmp_path / "config.toml", FakeNotifier())
+    return Controller(with_mode(mode), FileStore(tmp_path / "config.toml"), FakeNotifier())
 
 
 @pytest.mark.parametrize(
@@ -165,17 +166,17 @@ def test_changing_the_interface_says_it_applies_at_the_next_start(tmp_path, monk
     controller = controller_with("auto", tmp_path, monkeypatch)
     monkeypatch.setattr(controller.engine, "rebuild", lambda: None)
     monkeypatch.setattr(controller.engine, "refresh", lambda force=False: None)
-    controller.apply_config(with_mode("window"))
+    controller.engine.apply_config(with_mode("window"))
     assert len(controller.notifier.sent) == 1 and "next time" in controller.notifier.sent[0][1]
-    controller.apply_config(with_mode("window"))
-    controller.apply_config(replace(with_mode("window"), planning=replace(Config().planning, margin=0.5)))
+    controller.engine.apply_config(with_mode("window"))
+    controller.engine.apply_config(replace(with_mode("window"), planning=replace(Config().planning, margin=0.5)))
     assert len(controller.notifier.sent) == 1
 
 
 class Harness:
     def __init__(self, tmp_path, cfg=None):
         self.file = tmp_path / "config.toml"
-        self.window = SettingsWindow(cfg or example_config(), self.file, lambda c: None)
+        self.window = SettingsWindow(engine_for(cfg or example_config(), self.file))
         self.window.confirm_discard = lambda: True
         self.window.show()
         self.tab = next(t for t in self.window.all_tabs if t.title == "Interface")

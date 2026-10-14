@@ -12,7 +12,7 @@ from car_charge_planner.forecast.check import Attempt
 from car_charge_planner.planner.model import TYPICAL_KEYS, Config, Setup, load_config
 from car_charge_planner.setup.vehicle import CAR_KEYS, CHARGER_KEYS, problems
 from car_charge_planner.setup.wizard import SetupWizard
-from conftest import example_config
+from conftest import answers, engine_for, example_config
 
 NL = {"LANG": "nl_NL.UTF-8"}
 
@@ -36,7 +36,7 @@ class Rig:
         base = replace(base, interface=replace(base.interface, units=units))
         self.file = tmp_path / "config.toml"
         region = {"LANG": "en_US.UTF-8"} if units == "imperial" else NL
-        self.wizard = SetupWizard(base, self.file, lambda c: None, check=lambda c: Attempt(True, 2, "OK"), environ=region, qt_locale_name="")
+        self.wizard = SetupWizard(engine_for(base, self.file), lambda c: None, check=answers(Attempt(True, 2, "OK")), environ=region, qt_locale_name="")
         self.wizard.confirm_leave = lambda: True
         self.wizard.show()
         self.wizard.navigate("car")
@@ -208,8 +208,6 @@ def test_finishing_writes_what_was_answered_here(tmp_path, qapp):
     rig.page.three_phases.setChecked(True)
     rig.page.max_amps.setValue(16)
     rig.wizard.navigate("finish")
-    for thread in list(rig.wizard.pages["finish"]._threads):
-        thread.join(5)
     assert rig.wizard.finish()
     written = load_config(rig.file)
     assert (written.car.usable_battery_kwh, written.charger.phases) == (64, 3)

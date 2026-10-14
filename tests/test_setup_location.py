@@ -20,7 +20,7 @@ from car_charge_planner.forecast.registry import ProviderRegistry
 from car_charge_planner.forecast.transport import Reply
 from car_charge_planner.planner.model import Config, Forecast, load_config
 from car_charge_planner.setup.wizard import SetupWizard
-from conftest import example_config
+from conftest import answers, engine_for, example_config
 from fake_provider import FakeProvider
 from provider_kit import ReplayTransport
 
@@ -60,7 +60,7 @@ class Rig:
         base = cfg if cfg is not None else Config()
         base = replace(base, forecast=Forecast(provider_id, "", {}))
         self.file = tmp_path / "config.toml"
-        self.wizard = SetupWizard(base, self.file, lambda c: None, registry=registry, check=lambda c: Attempt(True, 2, "OK"), environ={"LANG": "nl_NL"}, qt_locale_name="")
+        self.wizard = SetupWizard(engine_for(base, self.file, registry=registry), lambda c: None, check=answers(Attempt(True, 2, "OK")), environ={"LANG": "nl_NL"}, qt_locale_name="")
         self.wizard.confirm_leave = lambda: True
         self.wizard.show()
         self.wizard.navigate("location")
@@ -250,8 +250,6 @@ def test_the_place_picked_is_what_the_recap_and_the_written_config_say(rig):
     rig.pick(0)
     rig.wizard.navigate("finish")
     assert "Utrecht, The Netherlands" in texts(rig.wizard.pages["finish"])
-    for thread in list(rig.wizard.pages["finish"]._threads):
-        thread.join(5)
     assert rig.wizard.finish()
     written = load_config(rig.file)
     assert (written.latitude, written.longitude, written.timezone) == (52.09, 5.12, "Europe/Amsterdam")

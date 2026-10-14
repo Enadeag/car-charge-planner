@@ -15,7 +15,7 @@ from car_charge_planner.planner.model import Charger, ConfigError, ForecastStep,
 from car_charge_planner.planner.projection import plan
 from car_charge_planner.planner.surplus import amps_for, charge_power_kw, usable_kw
 from car_charge_planner.settings.window import SettingsWindow
-from conftest import at, forecast_from
+from conftest import at, engine_for, forecast_from
 
 DAY = date(2026, 7, 3)
 NOW = at(DAY, 7)
@@ -115,7 +115,7 @@ def charger_tab(window):
 
 def test_choosing_three_phases_saves_the_number_three(tmp_path, qapp, cfg):
     file = tmp_path / "config.toml"
-    window = SettingsWindow(cfg, file, lambda c: None)
+    window = SettingsWindow(engine_for(cfg, file))
     box = charger_tab(window).inputs["charger.phases"]
     assert not window.is_dirty()
     box.setCurrentIndex(box.findData(3))
@@ -126,7 +126,7 @@ def test_choosing_three_phases_saves_the_number_three(tmp_path, qapp, cfg):
 
 
 def test_reset_tab_goes_back_to_one_phase(tmp_path, qapp, cfg):
-    window = SettingsWindow(with_phases(cfg, 3), tmp_path / "config.toml", lambda c: None)
+    window = SettingsWindow(engine_for(with_phases(cfg, 3), tmp_path / "config.toml"))
     window.tabs.setCurrentWidget(charger_tab(window))
     assert charger_tab(window).inputs["charger.phases"].currentData() == 3
     window.reset_tab()

@@ -15,13 +15,15 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QLabel
 
 from car_charge_planner import colours
+from car_charge_planner.controller import Controller
+from car_charge_planner.engine import FileStore
 from car_charge_planner.forecast.provider import BadResponse, NotConfigured, RateLimited, SettingSpec, Unavailable
 from car_charge_planner.forecast.registry import ProviderRegistry
 from car_charge_planner.forecast.registry import registry as builtin
 from car_charge_planner.forecast.secret_store import dump_secrets, load_secrets
 from car_charge_planner.planner.model import Forecast, load_config
 from car_charge_planner.settings.window import SettingsWindow
-from conftest import example_config
+from conftest import FakeNotifier, NoForecast, example_config
 from fake_provider import FakeProvider, Held, steps_for
 
 DAY = datetime.now(ZoneInfo("Europe/Amsterdam")).date()  # the Test button counts days from today
@@ -57,7 +59,10 @@ class Rig:
         base = cfg or example_config()
         self.cfg = replace(base, forecast=Forecast("beta", "", {})) if cfg is None else cfg
         self.saved = []
-        self.window = SettingsWindow(self.cfg, self.file, self.saved.append, registry)
+        # a controller for its runner: the Test button's fetch runs on a thread, as in the app
+        self.controller = Controller(self.cfg, FileStore(self.file), FakeNotifier(), NoForecast(), registry=registry)
+        self.controller.engine.watch_settings(lambda old, new: self.saved.append(new))
+        self.window = SettingsWindow(self.controller.engine)
         self.window.confirm_discard = lambda: True
         self.window.show()
         self.tab = self.window.forecast_tab
@@ -70,8 +75,8 @@ class Rig:
         return self.tab.cards[provider_id].fields.inputs[f"forecast.{provider_id}.{setting}"]
 
     def wait_for_test(self, role):
-        for thread in list(self.tab._threads):
-            thread.join(5)
+        for thread in [t for t in threading.enumerate() if t.daemon and t is not threading.main_thread()]:
+            thread.join(5)  # the controller's worker that asks the provider
         QTest.qWait(40)
         return self.tab.results[role].text()
 
@@ -219,7 +224,7 @@ def test_a_file_that_cannot_be_written_stops_everything_else(rig, monkeypatch):
 
         raise SecretsError("Could not write secrets.toml: Permission denied")
 
-    monkeypatch.setattr("car_charge_planner.settings.window.save_secrets", refuse)
+    monkeypatch.setattr("car_charge_planner.engine.store.save_secrets", refuse)
     assert not rig.window.save()
     assert "Permission denied" in rig.window.errors.text() and not rig.file.exists()
 

@@ -2,22 +2,18 @@
 
 from __future__ import annotations
 
-import threading
 from html import escape
 
-from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QVBoxLayout, QWidget
+from shiboken6 import isValid
 
 from car_charge_planner import colours
+from car_charge_planner.forecast.check import Attempt
 from car_charge_planner.i18n import _, ngettext
 from car_charge_planner.view_model import typical_line
 
 from .pages import Page
 from .recap import build_recap
-
-
-class _Done(QObject):
-    finished = Signal(bool, str)  # worked, message
 
 
 class FinishPage(Page):
@@ -29,9 +25,6 @@ class FinishPage(Page):
 
     def __init__(self, wizard) -> None:
         super().__init__(wizard)
-        self._done = _Done()
-        self._done.finished.connect(self._show_check)
-        self._threads: list[threading.Thread] = []
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
 
@@ -116,7 +109,7 @@ class FinishPage(Page):
         return _("Finish")
 
     def run_check(self) -> None:
-        """One test fetch of the forecast with the chosen place, on a worker thread. A failure only says so."""
+        """One test fetch of the forecast with the chosen place, in the background. A failure only says so."""
         provider = self.wizard.primary_provider()
         name = provider.name if provider else _("the forecast service")
         self.check_button.setEnabled(False)
@@ -125,17 +118,16 @@ class FinishPage(Page):
         cfg = self.state.config
         place = self.state.place_label or f"{cfg.latitude:.2f}, {cfg.longitude:.2f}"
 
-        def work() -> None:
-            attempt = self.wizard.check(cfg)
+        def done(attempt: Attempt) -> None:
+            if not isValid(self):  # the wizard can be closed and deleted while the provider is asked
+                return
             if attempt.worked:
                 text = ngettext("Forecast received for {place}: {n} day.", "Forecast received for {place}: {n} days.", attempt.days)
-                self._done.finished.emit(True, text.format(place=place, n=attempt.days))
+                self._show_check(True, text.format(place=place, n=attempt.days))
             else:
-                self._done.finished.emit(False, _("{reason} You can still finish; the app tries again by itself.").format(reason=attempt.message))
+                self._show_check(False, _("{reason} You can still finish; the app tries again by itself.").format(reason=attempt.message))
 
-        thread = threading.Thread(target=work, daemon=True)
-        self._threads.append(thread)
-        thread.start()
+        self.wizard.check(cfg, done)
 
     def _show_check(self, worked: bool, message: str) -> None:
         self.check_status.setStyleSheet(f"color: {colours.success(self) if worked else colours.warning(self)};")

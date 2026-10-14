@@ -1,26 +1,24 @@
 """The Forecast tab: the primary and fallback providers, their settings and a way to try them.
 
-Every provider has a card under the role it is chosen for. Plain settings go to config.toml; secret ones are saved by
-the window to the system keychain, or to secrets.toml when there is none.
+Every provider has a card under the role it is chosen for. The window has the engine save plain settings to config.toml
+and secret ones to the system keychain, or to secrets.toml when there is none.
 """
 
 from __future__ import annotations
 
 import os
-import threading
 from collections.abc import Callable
 from dataclasses import replace
-from pathlib import Path
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QComboBox, QFrame, QHBoxLayout, QLabel, QPushButton, QScrollArea, QVBoxLayout, QWidget
+from shiboken6 import isValid
 
 from car_charge_planner import colours
-from car_charge_planner.forecast.check import missing_settings, try_provider
+from car_charge_planner.engine import Engine, KeyStorage
+from car_charge_planner.forecast.check import Attempt, missing_settings
 from car_charge_planner.forecast.provider import ForecastProvider
-from car_charge_planner.forecast.registry import ProviderRegistry
-from car_charge_planner.forecast.registry import registry as builtin
-from car_charge_planner.forecast.secret_store import Secrets, storage_in_use
+from car_charge_planner.forecast.secret_store import Secrets
 from car_charge_planner.i18n import _, ngettext
 from car_charge_planner.planner.model import Config
 
@@ -29,12 +27,6 @@ from .providers import provider_fields
 from .tabs import FieldTab
 
 NONE = ""  # the fallback's "no provider"
-
-
-class _Outcome(QObject):
-    """Carries a test's result from its worker thread to the window."""
-
-    done = Signal(str, bool, str)  # role, worked, message
 
 
 class ProviderCard(QWidget):
@@ -72,13 +64,13 @@ class ProviderCard(QWidget):
         layout.addWidget(self.fields)
 
 
-def storage_note(secrets_file: Path) -> str:
+def storage_note(storage: KeyStorage) -> str:
     """What to tell about where the keys are kept: nothing while they are in the system keychain."""
-    if storage_in_use(secrets_file) == "keychain":
+    if storage.kind == "keychain":
         return ""
     if os.name == "posix":
-        return _("No system keychain is available, so API keys are kept in {file}, which only you can read.").format(file=secrets_file)
-    return _("No system keychain is available, so API keys are kept in the file {file}, which is not encrypted.").format(file=secrets_file)
+        return _("No system keychain is available, so API keys are kept in {file}, which only you can read.").format(file=storage.file)
+    return _("No system keychain is available, so API keys are kept in the file {file}, which is not encrypted.").format(file=storage.file)
 
 
 class ForecastTab(QWidget):
@@ -86,9 +78,8 @@ class ForecastTab(QWidget):
 
     def __init__(
         self,
-        cfg: Config,
+        engine: Engine,
         secrets: Secrets | None = None,
-        registry: ProviderRegistry | None = None,
         current_config: Callable[[], Config] | None = None,
         secrets_problem: str = "",
         storage: str = "",
@@ -96,13 +87,12 @@ class ForecastTab(QWidget):
         super().__init__()
         self.key = "forecast"
         self.title = _("Forecast")
-        self.registry = registry or builtin
+        self.engine = engine
+        cfg = engine.cfg
+        self.registry = engine.registry
         self.saved_secrets: Secrets = {k: dict(v) for k, v in (secrets or {}).items()}
         self.current_config = current_config or (lambda: self.stored)
         self.stored = cfg
-        self._outcome = _Outcome()
-        self._outcome.done.connect(self._show_result)
-        self._threads: list[threading.Thread] = []
 
         # Two providers with their settings are taller than the other tabs: the content scrolls instead of being squeezed.
         content = QWidget()
@@ -265,7 +255,7 @@ class ForecastTab(QWidget):
         return secrets
 
     def test(self, role: str) -> None:
-        """One fetch on a worker thread, with what is entered now (nothing is saved)."""
+        """One fetch by the engine, in the background, with what is entered now (nothing is saved)."""
         provider = self.registry.get(self._chosen(role)) if self._chosen(role) in self.registry else None
         if provider is None:
             return
@@ -281,14 +271,11 @@ class ForecastTab(QWidget):
         self.test_buttons[role].setEnabled(False)
         self.results[role].setStyleSheet(f"{colours.MUTED_STYLE}")
         self.results[role].setText(_("Asking {provider}...").format(provider=provider.name))
+        self.engine.check_provider(provider.id, cfg, secrets, lambda attempt: self._tested(role, attempt))
 
-        def work() -> None:
-            attempt = try_provider(provider, cfg, secrets)
-            self._outcome.done.emit(role, attempt.worked, attempt.message)
-
-        thread = threading.Thread(target=work, daemon=True)
-        self._threads.append(thread)
-        thread.start()
+    def _tested(self, role: str, attempt: Attempt) -> None:
+        if isValid(self):  # the window can be closed and deleted while the provider is asked
+            self._show_result(role, attempt.worked, attempt.message)
 
     def _show_result(self, role: str, worked: bool, message: str) -> None:
         colour = colours.success(self) if worked else colours.error(self)

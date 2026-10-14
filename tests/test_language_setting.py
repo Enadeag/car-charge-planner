@@ -10,10 +10,12 @@ import pytest
 from PySide6.QtWidgets import QComboBox
 
 from car_charge_planner import i18n
+from car_charge_planner.engine import FileStore
 from car_charge_planner.i18n import available_languages, init, language_name
 from car_charge_planner.planner.config_io import dump_config, write_config
 from car_charge_planner.planner.model import Config, ConfigError, Interface, load_config, validate
 from car_charge_planner.settings.window import SettingsWindow
+from conftest import engine_for
 from test_i18n import make_catalogue
 
 
@@ -38,7 +40,7 @@ def interface_tab(window):
 
 
 def window_for(cfg, tmp_path):
-    return SettingsWindow(cfg, tmp_path / "config.toml", lambda c: None)
+    return SettingsWindow(engine_for(cfg, tmp_path / "config.toml"))
 
 
 def test_the_default_follows_the_system_and_survives_a_round_trip(tmp_path):
@@ -107,7 +109,7 @@ def test_with_a_second_language_the_picker_lists_the_choices(cfg, qapp, tmp_path
 def test_choosing_a_language_saves_it_and_it_applies_after_a_restart(cfg, qapp, tmp_path, catalogues):
     saved = []
     path = tmp_path / "config.toml"
-    window = SettingsWindow(cfg, path, saved.append)
+    window = SettingsWindow(engine_for(cfg, path, saved=saved))
     box = interface_tab(window).inputs["interface.language"]
     box.setCurrentIndex(box.findData("nl"))
     assert window.save()
@@ -133,7 +135,7 @@ def test_a_changed_language_is_announced_like_a_changed_interface(cfg, qapp, tmp
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda *a, **k: None)
     notifier = FakeNotifier()
-    controller = Controller(cfg, tmp_path / "config.toml", notifier)
-    controller.apply_config(replace(cfg, interface=Interface(language="nl")))
+    controller = Controller(cfg, FileStore(tmp_path / "config.toml"), notifier)
+    controller.engine.apply_config(replace(cfg, interface=Interface(language="nl")))
     assert len(notifier.sent) == 1
     settle_controller(controller)  # apply_config starts a fetch

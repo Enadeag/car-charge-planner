@@ -13,7 +13,7 @@ from car_charge_planner.planner.model import TYPICAL_KEYS, Config, Panels, Setup
 from car_charge_planner.setup.panels import panels_to_kwp
 from car_charge_planner.setup.typical import TYPICAL_VALUES, with_values
 from car_charge_planner.setup.wizard import SetupWizard
-from conftest import example_config
+from conftest import answers, engine_for, example_config
 
 NL = {"LANG": "nl_NL.UTF-8"}
 
@@ -38,7 +38,7 @@ def test_the_built_in_defaults_are_the_typical_values_so_settings_reset_and_the_
 class Rig:
     def __init__(self, tmp_path, cfg=None):
         self.file = tmp_path / "config.toml"
-        self.wizard = SetupWizard(cfg if cfg is not None else Config(), self.file, lambda c: None, check=lambda c: Attempt(True, 2, "OK"), environ=NL, qt_locale_name="")
+        self.wizard = SetupWizard(engine_for(cfg if cfg is not None else Config(), self.file), lambda c: None, check=answers(Attempt(True, 2, "OK")), environ=NL, qt_locale_name="")
         self.wizard.confirm_leave = lambda: True
         self.wizard.show()
         self.wizard.navigate("solar")
@@ -215,8 +215,6 @@ def test_finishing_writes_the_panels_and_what_is_still_typical(tmp_path, qapp):
     rig.page.kwp.setValue(6.0)
     rig.page.compass_buttons["s"].click()
     rig.wizard.navigate("finish")
-    for thread in list(rig.wizard.pages["finish"]._threads):
-        thread.join(5)
     assert rig.wizard.finish()
     written = load_config(rig.file)
     assert (written.panels[0].kwp, written.panels[0].azimuth_deg) == (6.0, 0)
@@ -269,8 +267,6 @@ def test_finishing_writes_every_array(tmp_path, qapp):
     rig.page.add_button.click()
     rig.page.compass_buttons["w"].click()
     rig.wizard.navigate("finish")
-    for thread in list(rig.wizard.pages["finish"]._threads):
-        thread.join(5)
     assert rig.wizard.finish()
     written = load_config(rig.file)
     assert written.panels == (example_config().panels[0], Panels(azimuth_deg=90))

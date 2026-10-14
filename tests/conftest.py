@@ -264,6 +264,34 @@ class FixedForecast:
         pass
 
 
+class NoForecast:
+    """A forecast service that never has a forecast: for tests about settings, where nothing should be fetched."""
+
+    def get(self, cfg, now, force=False):
+        from car_charge_planner.forecast.service import ForecastUnavailable
+
+        raise ForecastUnavailable("no forecast in this test")
+
+    def forget_failures(self):
+        pass
+
+
+def engine_for(cfg, config_file, registry=None, saved=None):
+    """An engine that stores to `config_file` (and secrets.toml beside it) and fetches nothing. Each config it
+    switches to is added to `saved`."""
+    from car_charge_planner.engine import Engine, FileStore
+
+    engine = Engine(cfg, FakeNotifier(), NoForecast(), store=FileStore(config_file), registry=registry)
+    if saved is not None:
+        engine.watch_settings(lambda old, new: saved.append(new))
+    return engine
+
+
+def answers(attempt):
+    """A set-up wizard's connection check that gives `attempt` at once."""
+    return lambda cfg, done: done(attempt)
+
+
 class FakeNotifier:
     def __init__(self):
         self.sent = []
@@ -296,9 +324,10 @@ class TrayApp:
 
     def __init__(self, cfg, config_file, notifier=None, **controller_args):
         from car_charge_planner.controller import Controller
+        from car_charge_planner.engine import FileStore
         from car_charge_planner.shells.tray import TrayShell
 
-        object.__setattr__(self, "controller", Controller(cfg, config_file, notifier, **controller_args))
+        object.__setattr__(self, "controller", Controller(cfg, FileStore(config_file), notifier, **controller_args))
         object.__setattr__(self, "shell", TrayShell(self.controller))
 
     def _owner(self, name):

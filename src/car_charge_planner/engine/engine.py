@@ -7,17 +7,23 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
+from car_charge_planner.forecast.check import Attempt, try_provider
+from car_charge_planner.forecast.registry import ProviderRegistry
+from car_charge_planner.forecast.registry import registry as builtin
+from car_charge_planner.forecast.secret_store import Secrets, SecretsError
+from car_charge_planner.forecast.selection import check_selection
 from car_charge_planner.forecast.service import ForecastResult, ForecastService, forecast_key
 from car_charge_planner.planner.advice import grid_advice
-from car_charge_planner.planner.model import AwayPeriod, AwayRule, Config, Window
+from car_charge_planner.planner.model import AwayPeriod, AwayRule, Config, ConfigError, Window, require_location, validate
 from car_charge_planner.planner.projection import plan
-from car_charge_planner.storage.state import State, add_away, load_state, mark_notified, remove_away, set_battery
+from car_charge_planner.storage.state import State, with_away, with_battery, with_notified, with_seen, without_away
 
 from ..i18n import _
 from ..notifications import candidate_windows, due, message
 from ..notifier import Notifying
 from ..view_model import ForecastSource, ViewModel, build, needs_setup, no_forecast
 from .ports import Clock, Forecasts, Runner, run_here, system_clock
+from .store import FileStore, KeyStorage, Store, StoreError
 
 
 @dataclass(frozen=True)
@@ -29,7 +35,15 @@ class ViewUpdate:
     tz: ZoneInfo
 
 
+@dataclass(frozen=True)
+class SavedKeys:
+    values: Secrets
+    problem: str = ""  # why they could not be read, for the owner; `values` is empty then
+
+
 class Engine:
+    """Owns the stored data: clients change settings, state and keys only through these methods."""
+
     def __init__(
         self,
         cfg: Config,
@@ -37,11 +51,15 @@ class Engine:
         forecasts: Forecasts | None = None,
         clock: Clock = system_clock,
         run_in_background: Runner = run_here,
+        store: Store | None = None,
+        registry: ProviderRegistry | None = None,
     ) -> None:
         self._cfg = cfg
         self._tz = ZoneInfo(cfg.timezone)
         self._notifier = notifier
-        self._forecasts: Forecasts = forecasts or ForecastService()
+        self._store: Store = store or FileStore()
+        self.registry = registry or builtin
+        self._forecasts: Forecasts = forecasts or ForecastService(self.registry, secrets=self._store.load_secrets)
         self._clock = clock
         self._run = run_in_background
         self._result: ForecastResult | None = None
@@ -49,6 +67,7 @@ class Engine:
         self._vm: ViewModel | None = None
         self._fetching = False
         self._watchers: list[Callable[[ViewUpdate], None]] = []
+        self._settings_watchers: list[Callable[[Config, Config], None]] = []
 
     @property
     def cfg(self) -> Config:
@@ -69,6 +88,10 @@ class Engine:
 
     def watch(self, watcher: Callable[[ViewUpdate], None]) -> None:
         self._watchers.append(watcher)
+
+    def watch_settings(self, watcher: Callable[[Config, Config], None]) -> None:
+        """`watcher(old, new)` is called just before the engine switches to new settings."""
+        self._settings_watchers.append(watcher)
 
     def tick(self) -> None:
         """Time has passed (the desktop app calls this every minute): fetch if a fetch is due, and plan again."""
@@ -104,7 +127,9 @@ class Engine:
         self.rebuild()
 
     def apply_config(self, cfg: Config) -> None:
-        """Switch to a new config without a restart."""
+        """Switch to a new config without a restart (nothing is saved: `save_settings` saves and switches)."""
+        for watcher in self._settings_watchers:
+            watcher(self._cfg, cfg)
         self._forecasts.forget_failures()  # a corrected key or address deserves a try at once, not after the wait
         if forecast_key(cfg) != forecast_key(self._cfg):
             self._result, self._error = None, None  # a forecast for other panels or place would mislead
@@ -113,22 +138,79 @@ class Engine:
         self.rebuild()
         self.refresh()  # reuses the cache when the forecast key is unchanged
 
+    def check_settings(self, cfg: Config, secrets: Secrets) -> list[str]:
+        """What stops these settings and keys from being saved, in words for the owner. Empty when they can be."""
+        return _invalid(cfg) or check_selection(cfg, secrets, self.registry)
+
+    def save_settings(self, cfg: Config, secrets: Secrets | None = None) -> list[str]:
+        """Check, store and switch to the settings, and the keys when given (all of them: a key left out is forgotten).
+
+        Returns what went wrong, in words for the owner; then nothing was switched, and when the keys could not be
+        stored the settings were not either."""
+        if problems := _invalid(cfg):
+            return problems
+        try:
+            if secrets is not None:
+                self._store.save_secrets(secrets)
+            self._store.save_config(cfg)
+        except (SecretsError, StoreError, ConfigError) as err:
+            return [str(err)]
+        self.apply_config(cfg)
+        return []
+
+    def saved_keys(self) -> SavedKeys:
+        try:
+            return SavedKeys(self._store.load_secrets())
+        except SecretsError as err:
+            return SavedKeys({}, str(err))
+
+    def key_storage(self) -> KeyStorage:
+        return self._store.key_storage()
+
+    def check_provider(self, provider_id: str, cfg: Config, secrets: Secrets | None, done: Callable[[Attempt], None]) -> None:
+        """Ask a provider for one forecast with these settings (and these keys, or the saved ones), through the runner.
+        Nothing is cached or saved. The caller has checked that `cfg` has a location."""
+        provider = self.registry.get(provider_id) if provider_id in self.registry else None
+        if provider is None:
+            done(Attempt(False, message=_("The forecast provider {id!r} is not known to this version of the app.").format(id=provider_id)))
+            return
+        store = self._store
+
+        def work() -> Attempt:
+            keys = secrets
+            if keys is None:
+                try:
+                    keys = store.load_secrets()
+                except SecretsError:
+                    keys = {}  # a provider that needs one says it is missing
+            return try_provider(provider, cfg, keys)
+
+        self._run(work, done)
+
+    def mark_seen(self, hint: str) -> bool:
+        """Remember that a one-time hint was shown. True the first time only: the client shows the hint then."""
+        state = self._store.load_state()
+        if hint in state.seen:
+            return False
+        self._store.save_state(with_seen(state, hint))
+        return True
+
     def set_battery(self, pct: float) -> None:
-        set_battery(pct, self._now())
+        self._store.save_state(with_battery(self._store.load_state(), pct, self._now()))
         self.rebuild()
 
     def add_away_period(self, period: AwayPeriod) -> None:
-        add_away(period, self._now())
+        self._store.save_state(with_away(self._store.load_state(), period, self._now()))
         self.rebuild()
 
     def remove_away_period(self, period: AwayPeriod) -> None:
-        remove_away(period)
+        self._store.save_state(without_away(self._store.load_state(), period))
         self.rebuild()
 
     def rebuild(self) -> None:
         """Plan again for the current time, announce what is due and send the result to the watchers."""
         now = self._now()
-        state = load_state()
+        state = self._store.load_state()
         battery = state.battery
         if not self._cfg.is_set_up:
             vm = needs_setup(battery, now)
@@ -150,10 +232,20 @@ class Engine:
         for kind, window in due(windows, state.notified, now, self._cfg.notify.lead_minutes, result.age(now), result.stale):
             title, body = message(kind, window, self._cfg, self._tz)
             self._notifier.send(title, body)
-            mark_notified(window, now)
+            self._store.save_state(with_notified(self._store.load_state(), window, now))
 
     def _now(self) -> datetime:
         return self._clock().astimezone(self._tz)
+
+
+def _invalid(cfg: Config) -> list[str]:
+    try:
+        require_location(validate(cfg))
+    except ConfigError as err:
+        return str(err).split("\n")[1:] or [str(err)]  # the first line is a heading over the problems
+    except TypeError as err:
+        return [_("A value has the wrong type: {error}").format(error=err)]
+    return []
 
 
 def _source(result: ForecastResult, now: datetime) -> ForecastSource:

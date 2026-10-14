@@ -10,12 +10,11 @@ from PySide6.QtCore import QThread, QTimer
 from PySide6.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
 from shiboken6 import delete
 
-from car_charge_planner.planner.model import ConfigError, load_config
-from car_charge_planner.storage.state import mark_seen
+from car_charge_planner.planner.model import ConfigError
 
 from . import gcguard, i18n
-from .config_file import ensure_config
 from .controller import Controller
+from .engine import FileStore
 from .i18n import _
 from .identity import APP_NAME, APP_USER_MODEL_ID, DESKTOP_ENTRY
 from .instance import Outcome, claim_instance
@@ -54,7 +53,7 @@ def announce_tray_fallback(controller: Controller, choice: ShellChoice) -> bool:
 
     Only on Linux, where a desktop may have no tray (stock GNOME). Windows and macOS always have one.
     """
-    if sys.platform != "linux" or not choice.fell_back or not mark_seen(NO_TRAY_HINT):  # once: it would nag at every start otherwise
+    if sys.platform != "linux" or not choice.fell_back or not controller.engine.mark_seen(NO_TRAY_HINT):  # once: it would nag at every start otherwise
         return False
     controller.notifier.send(
         _("No system tray found"),
@@ -133,22 +132,22 @@ def main(argv: list[str] | None = None) -> int:
         if outcome is Outcome.UNAVAILABLE:
             print(_("Could not set up the single-instance socket; a second copy could start."), file=sys.stderr)
 
-    config_file = ensure_config()
+    store = FileStore()
     try:
-        cfg = load_config(config_file)
+        cfg = store.load_config()
     except ConfigError as err:
         # started from autostart there is no terminal: show the problem where the owner will see it
         QMessageBox.critical(
             None,
             _("Car charge planner"),
-            _("{error}\n\nFix the file and start the app again:\n{file}").format(error=err, file=config_file),
+            _("{error}\n\nFix the file and start the app again:\n{file}").format(error=err, file=store.config_file),
         )
         print(err, file=sys.stderr)
         return 2
     if cfg.interface.language != "auto":
         i18n.setup(app, [cfg.interface.language])  # the owner's choice replaces the system language
     background = smoke_test or "--background" in sys.argv[1:]
-    controller = Controller(cfg, config_file)
+    controller = Controller(cfg, store)
     wants_tray = cfg.interface.mode != "window"
     tray_available = wants_tray and wait_for_tray(TRAY_WAIT_BACKGROUND_S if background else TRAY_WAIT_INTERACTIVE_S)
     shell, choice = create_shell(controller, tray_available)
