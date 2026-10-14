@@ -8,7 +8,7 @@ import struct
 import sys
 from pathlib import Path
 
-from PySide6.QtGui import QImage
+from PySide6.QtGui import QColor, QImage
 
 from car_charge_planner.platform.windows import ICON
 
@@ -25,15 +25,20 @@ def images_in(ico: bytes) -> dict[int, bytes]:
     return found
 
 
-def test_the_icon_has_every_size_and_shows_the_disc_and_the_bolt(qapp):
+def close_to(color, expected: str, tolerance: int = 6) -> bool:
+    want = QColor(expected)
+    return all(abs(a - b) <= tolerance for a, b in zip(color.getRgb()[:3], want.getRgb()[:3], strict=True))
+
+
+def test_the_icon_has_every_size_and_shows_the_sun_over_the_plug(qapp):
     found = images_in(ICON.read_bytes())
     assert sorted(found) == [16, 20, 24, 32, 40, 48, 64, 256]
     for size, png in found.items():
         image = QImage.fromData(png)
         assert (image.width(), image.height()) == (size, size)
-        assert image.pixelColor(0, 0).alpha() == 0  # transparent outside the disc
-        assert image.pixelColor(int(size * 0.2), size // 2).name() == "#3b82c4"  # the disc, left of the bolt
-        assert image.pixelColor(size // 2 - size // 20, size // 2).name() == "#ffffff"  # the bolt
+        assert image.pixelColor(0, size - 1).alpha() == 0  # transparent in the corner
+        assert close_to(image.pixelColor(size // 2, int(size * 0.42)), "#e39a0b")  # the sun
+        assert close_to(image.pixelColor(size // 2, int(size * 0.78)), "#1f8f5c")  # the plug
 
 
 def test_the_committed_icon_is_the_current_svg(qapp):

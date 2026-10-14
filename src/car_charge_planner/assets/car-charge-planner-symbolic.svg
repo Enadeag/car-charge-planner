@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Car charge planner</title>
+  <path d="M12 34a20 20 0 0 1 40 0Z" fill="#000000"/>
+  <g stroke="#000000" stroke-width="5" stroke-linecap="round" fill="none">
+    <path d="M32 5v6M12 12l4 4M52 12l-4 4M6 38h52M27 44v-5M37 44v-5M32 56v6"/>
+  </g>
+  <rect x="22" y="43" width="20" height="13" rx="4" fill="#000000"/>
+</svg>
