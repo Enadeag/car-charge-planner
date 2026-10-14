@@ -4,13 +4,29 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
-### Changed
-- The licence is now the GNU General Public License, version 3 or later, with an additional term that asks modified versions to keep the author attribution. Version 0.1.0 stays under the MIT licence.
+## [0.2.0] - 2026-10-14
+
+Windows support, with an installer. Released without announcement, like 0.1.0.
 
 ### Added
-- A `car-charge-planner quit` command that asks the running app to quit. The Windows installer and uninstaller use it, so a running app no longer blocks an update or stays running after an uninstall.
-- Documentation for Windows and Linux: an install section for each, a table of supported systems, where the files live on each system, how to start at login, and how to run the tests and build the installer on Windows.
+- Windows 10 and later: an installer (`car-charge-planner-<version>-setup.exe`) that needs no administrator rights, adds a Start menu entry and can start the app at login. It is not code-signed yet; check the download against `SHA256SUMS`. Uninstalling keeps your settings and keys.
+- Notifications through the tray icon on Windows, with the app's name and icon.
+- "Start at login" in Settings (Interface tab), on every system.
+- API keys are kept in the system's keychain: Secret Service on Linux, Credential Manager on Windows. Without a keychain they stay in a file only you can read, and Settings says so. An existing key file is moved once.
+- A `car-charge-planner quit` command that asks the running app to quit. The installer and uninstaller use it, so a running app never blocks an update or stays running after an uninstall.
+- A second start that cannot reach the running app now says so, instead of exiting silently.
 - An About screen, in the tray menu and the window menu, with the version, the licence and where the source is.
+- Documentation for Windows and Linux: installing, the supported systems, where the files live, starting at login.
+
+### Changed
+- The licence is now the GNU General Public License, version 3 or later, with an additional term that asks modified versions to keep the author attribution. Version 0.1.0 stays under the MIT licence.
+- Settings, state and cache follow each system's usual folders. On Linux nothing moves.
+- The system time zone is read with tzlocal.
+
+### Fixed
+- On the day the clocks go back, the repeated hour is no longer lost from charge windows and grid advice, and a forecast in local time is no longer rejected for that day. On the 23-hour day a day's driving counts as a whole day.
+- Quitting could crash now and then while Python shut down.
+- Files are read and written as UTF-8 on every system.
 
 ## [0.1.0] - 2026-10-08
 
@@ -27,5 +43,6 @@ First version, for Linux.
 - Installation with `pipx` as the command `car-charge-planner`.
 - `config.toml` and `state.json` say which file format they are in, so later versions can upgrade them. A config file from a newer version of the app is refused with a clear message, and a newer state file is left alone. A config file written before this release, with a single `[panels]` table, is read as one panel array.
 
-[Unreleased]: https://github.com/Enadeag/car-charge-planner/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Enadeag/car-charge-planner/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Enadeag/car-charge-planner/releases/tag/v0.1.0

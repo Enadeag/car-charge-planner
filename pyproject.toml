@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "car-charge-planner"
-version = "0.1.0"
+version = "0.2.0"
 description = "Tells you when to charge your electric car so that as much of the power as possible comes from your own solar panels."
 readme = "README.md"
 requires-python = ">=3.12"
