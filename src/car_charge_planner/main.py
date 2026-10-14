@@ -158,6 +158,7 @@ def main(argv: list[str] | None = None) -> int:
     announce_tray_fallback(controller, choice)
     if instance is not None:
         instance.show_requested.connect(shell.show_plan)
+        instance.quit_requested.connect(app.quit)
     listener = click_listener(controller.notifier)
     listener.action_invoked.connect(action_handler(controller.notifier, lambda: controller.notification_clicked(shell.show_plan)))
     app.aboutToQuit.connect(listener.stop)

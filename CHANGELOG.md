@@ -8,6 +8,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - The licence is now the GNU General Public License, version 3 or later, with an additional term that asks modified versions to keep the author attribution. Version 0.1.0 stays under the MIT licence.
 
 ### Added
+- A `car-charge-planner quit` command that asks the running app to quit. The Windows installer and uninstaller use it, so a running app no longer blocks an update or stays running after an uninstall.
 - Documentation for Windows and Linux: an install section for each, a table of supported systems, where the files live on each system, how to start at login, and how to run the tests and build the installer on Windows.
 - An About screen, in the tray menu and the window menu, with the version, the licence and where the source is.
 

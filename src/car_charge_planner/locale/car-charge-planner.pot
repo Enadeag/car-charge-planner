@@ -18,6 +18,21 @@ msgstr ""
 
 #: car_charge_planner/__main__.py
 #, python-brace-format
+msgid "{app} was asked to quit and confirmed."
+msgstr ""
+
+#: car_charge_planner/__main__.py
+#, python-brace-format
+msgid "{app} is not running."
+msgstr ""
+
+#: car_charge_planner/__main__.py
+#, python-brace-format
+msgid "{app} is running, but it did not respond."
+msgstr ""
+
+#: car_charge_planner/__main__.py
+#, python-brace-format
 msgid "Autostart entry written to {path}"
 msgstr ""
 
@@ -1113,7 +1128,7 @@ msgid "The language of the app. Applies the next time the app starts."
 msgstr ""
 
 #: car_charge_planner/settings/fields.py
-msgid "Start when I log in"
+msgid "Start at login"
 msgstr ""
 
 #: car_charge_planner/settings/fields.py

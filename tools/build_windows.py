@@ -17,7 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
-from car_charge_planner.identity import APP_NAME, APP_USER_MODEL_ID, COMMAND, COMMENT  # noqa: E402
+from car_charge_planner.identity import APP_NAME, APP_USER_MODEL_ID, COMMAND, COMMENT, CONSOLE_SUFFIX  # noqa: E402
 
 PACKAGE = ROOT / "src" / "car_charge_planner"
 DIST = ROOT / "dist"
@@ -75,6 +75,7 @@ def main(argv: list[str] | None = None) -> int:
         "AppName": APP_NAME,
         "AppUserModelID": APP_USER_MODEL_ID,
         "ExeName": f"{COMMAND}.exe",
+        "CliExeName": f"{COMMAND}{CONSOLE_SUFFIX}.exe",
         "Comment": COMMENT,
         "Homepage": homepage,
         "BundleDir": bundle,

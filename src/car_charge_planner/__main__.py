@@ -4,7 +4,28 @@ import sys
 
 from .i18n import _, init
 
-COMMANDS = "run | test-notification | install-launcher | uninstall-launcher | install-autostart | uninstall-autostart"
+COMMANDS = "run | quit | test-notification | install-launcher | uninstall-launcher | install-autostart | uninstall-autostart"
+
+
+def _quit_running_app() -> int:
+    from PySide6.QtCore import QCoreApplication
+
+    from .identity import APP_NAME
+    from .instance import Reply, request_quit, socket_path
+
+    _app = QCoreApplication.instance() or QCoreApplication([])  # the socket needs one
+    try:
+        reply = request_quit(socket_path())
+    except OSError:
+        reply = Reply.NOBODY  # no private place for the socket, so no instance can have made one
+    if reply is Reply.ANSWERED:
+        print(_("{app} was asked to quit and confirmed.").format(app=APP_NAME))
+        return 0
+    if reply is Reply.NOBODY:
+        print(_("{app} is not running.").format(app=APP_NAME))
+        return 0
+    print(_("{app} is running, but it did not respond.").format(app=APP_NAME), file=sys.stderr)
+    return 1
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -44,6 +65,8 @@ def main(argv: list[str] | None = None) -> int:
         from .selftest import run
 
         return run()
+    elif command == "quit":
+        return _quit_running_app()
     elif command == "run":
         from .main import main as run_app
 
