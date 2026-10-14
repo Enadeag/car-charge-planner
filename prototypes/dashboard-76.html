@@ -1,0 +1,279 @@
+<title>Charge Planner Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* PROTOTYPE for issue #57/#76 — throwaway. Three dashboard layouts on one page, same example data, switch with the bar at the bottom.
+   Layout: a popup-sized frame (420 px) centred on a desk-like ground; full width on a phone. */
+:root {
+  --ground: #e9edf2; --panel: #ffffff; --raised: #f4f6f9; --line: #dde3ea;
+  --fg: #17202b; --muted: #5b6878; --faint: #8b97a6;
+  --sun: #d98a00; --sun-soft: #fbe7c2; --sun-area: rgba(232, 160, 20, .28);
+  --grid: #2f6fd0; --grid-soft: #dbe7fa;
+  --car: #1f8f5c; --car-soft: #d3f0e1;
+  --act: #c93a3a; --act-soft: #f9dcdc;
+  --house: #5b6878;
+  --font: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --num: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+  --radius: 14px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --ground: #0d1117; --panel: #161c24; --raised: #1d2530; --line: #2a3441;
+  --fg: #e8edf3; --muted: #9aa7b6; --faint: #6c7a8a;
+  --sun: #f2b33d; --sun-soft: #3a2c10; --sun-area: rgba(242, 179, 61, .26);
+  --grid: #6aa2f5; --grid-soft: #17283f;
+  --car: #4cc78c; --car-soft: #13301f;
+  --act: #f07575; --act-soft: #3a1717;
+  --house: #9aa7b6; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --ground: #0d1117; --panel: #161c24; --raised: #1d2530; --line: #2a3441;
+  --fg: #e8edf3; --muted: #9aa7b6; --faint: #6c7a8a;
+  --sun: #f2b33d; --sun-soft: #3a2c10; --sun-area: rgba(242, 179, 61, .26);
+  --grid: #6aa2f5; --grid-soft: #17283f;
+  --car: #4cc78c; --car-soft: #13301f;
+  --act: #f07575; --act-soft: #3a1717;
+  --house: #9aa7b6; color-scheme: dark }
+
+body { background: var(--ground); color: var(--fg); font-family: var(--font); font-size: 14px; }
+.stage { padding-inline: 16px; padding-block: 24px 110px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.intro { max-width: 420px; width: 100%; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.intro b { color: var(--fg); }
+.frame { width: 100%; max-width: 420px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
+  box-shadow: 0 18px 50px rgba(15, 25, 40, .18); overflow: hidden; }
+.num { font-family: var(--num); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.row { display: flex; align-items: center; gap: 10px; }
+.between { justify-content: space-between; }
+.head { padding: 14px 16px 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); }
+.head h1 { font-size: 13px; font-weight: 600; margin: 0; letter-spacing: .02em; }
+.head .when { font-size: 12px; color: var(--muted); }
+.body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+.card { background: var(--raised); border-radius: var(--radius); padding: 12px 14px; }
+.label { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; padding: 3px 8px; border-radius: 999px; }
+.chip.sun { background: var(--sun-soft); color: var(--sun); } .chip.grid { background: var(--grid-soft); color: var(--grid); }
+.chip.car { background: var(--car-soft); color: var(--car); } .chip.act { background: var(--act-soft); color: var(--act); }
+.chip.plain { background: var(--raised); color: var(--muted); border: 1px solid var(--line); }
+svg.ic { width: 14px; height: 14px; flex: none; }
+.hero-time { font-family: var(--num); font-size: 30px; font-weight: 600; letter-spacing: -.01em; line-height: 1.1; }
+.hero-sub { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
+.hero-sub b { color: var(--fg); font-family: var(--num); font-weight: 600; }
+.main-card { border-left: 4px solid var(--sun); background: linear-gradient(90deg, var(--sun-soft), var(--raised) 70%); }
+.advice { border-left: 4px solid var(--grid); background: var(--grid-soft); }
+.advice p { margin: 4px 0 0; font-size: 13px; line-height: 1.4; }
+.chart { width: 100%; height: auto; display: block; overflow: visible; }
+.chart text { fill: var(--faint); font-family: var(--num); font-size: 9px; }
+.tip { position: absolute; pointer-events: none; background: var(--fg); color: var(--panel); font-family: var(--num); font-size: 11px;
+  padding: 4px 7px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -110%); opacity: 0; transition: opacity .12s; }
+.chartwrap { position: relative; }
+.battery { display: flex; flex-direction: column; gap: 8px; }
+.bar { position: relative; height: 12px; background: var(--line); border-radius: 999px; overflow: visible; }
+.bar .now { position: absolute; inset: 0 auto 0 0; background: var(--car); border-radius: 999px; transition: width .6s ease; }
+.bar .after { position: absolute; inset: 0 auto 0 0; background: var(--car); opacity: .3; border-radius: 999px; transition: width .6s ease; }
+.bar .mark { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--fg); opacity: .55; }
+.bar .mark span { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--muted); white-space: nowrap; font-family: var(--num); }
+.days { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.day { background: var(--raised); border-radius: 12px; padding: 9px 9px 10px; display: flex; flex-direction: column; gap: 5px; min-width: 0; border-top: 3px solid var(--line); }
+.day.sun { border-top-color: var(--sun); } .day.grid { border-top-color: var(--grid); } .day.away { border-top-color: var(--faint); }
+.day .d { font-size: 12px; font-weight: 600; } .day .t { font-family: var(--num); font-size: 12px; } .day .s { font-size: 11px; color: var(--muted); line-height: 1.3; }
+.trip { font-size: 10.5px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 5px; display: flex; gap: 4px; align-items: flex-start; }
+.foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 16px 12px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); flex-wrap: wrap; }
+.foot .actions { display: flex; gap: 6px; }
+button.ghost { font: inherit; font-size: 12px; font-weight: 600; color: var(--fg); background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; cursor: pointer; }
+button.ghost:hover { border-color: var(--faint); }
+button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--grid); outline-offset: 2px; }
+/* variant B */
+.tl { display: flex; flex-direction: column; gap: 7px; }
+.tlrow { display: grid; grid-template-columns: 44px 1fr; gap: 8px; align-items: center; font-size: 12px; }
+.tltrack { position: relative; height: 18px; background: var(--raised); border-radius: 6px; overflow: hidden; }
+.tlsun { position: absolute; top: 0; bottom: 0; background: var(--sun-area); }
+.tlwin { position: absolute; top: 3px; bottom: 3px; border-radius: 4px; }
+.tlwin.sun { background: var(--sun); } .tlwin.grid { background: var(--grid); } .tlwin.away { background: repeating-linear-gradient(45deg, var(--faint) 0 4px, transparent 4px 8px); opacity: .6; }
+.tlnote { font-size: 10.5px; color: var(--muted); grid-column: 2; margin-top: -4px; }
+.ring { width: 64px; height: 64px; flex: none; }
+/* variant C */
+.tabs { display: flex; gap: 4px; padding: 10px 12px 0; overflow-x: auto; }
+.tab { flex: 1 0 auto; font: inherit; font-size: 12px; font-weight: 600; background: transparent; color: var(--muted); border: 0; border-bottom: 3px solid transparent; padding: 6px 8px 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: currentColor; }
+.tab .dot { width: 7px; height: 7px; border-radius: 50%; }
+.legend { display: flex; gap: 12px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+/* switcher */
+.switch { position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; align-items: center; gap: 4px;
+  background: #111; color: #fff; border-radius: 999px; padding: 6px; box-shadow: 0 8px 28px rgba(0,0,0,.35); font-size: 12.5px; z-index: 10; max-width: calc(100% - 24px); }
+.switch button { font: inherit; color: #fff; background: #2b2b2b; border: 0; border-radius: 999px; padding: 7px 12px; cursor: pointer; }
+.switch .lbl { padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+.fade { animation: rise .35s ease both; } @keyframes rise { from { opacity: .4; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+</style>
+
+<div class="stage">
+  <p class="intro"><b>Prototype for #76 — throwaway.</b> Three layouts of the same dashboard, with example data (a cloudy Friday that needs grid charging, a trip on Saturday). Flip with the bar at the bottom or the ← → keys; hover or tap the charts for values.</p>
+  <div class="frame" id="frame" aria-live="polite"></div>
+</div>
+<div class="switch" role="toolbar" aria-label="Prototype controls">
+  <button id="prev" aria-label="Previous layout">←</button>
+  <span class="lbl" id="lbl"></span>
+  <button id="next" aria-label="Next layout">→</button>
+  <button id="theme" aria-label="Switch light and dark">◐</button>
+</div>
+
+<script>
+// Example data (not real): Wednesday 15 October 2026, 08:40, Europe/Amsterdam.
+const NOW = 8 + 40 / 60;
+const ICON = {
+  sun: '<svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3" fill="currentColor"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6 13 13M3 13l1.4-1.4M11.6 4.4 13 3"/></svg>',
+  grid: '<svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 1 4 15M8 1l4 14M5 6h6M4.4 11h7.2M8 1v14" /></svg>',
+  car: '<svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 10.5V8l1.6-3.5h8.8L14 8v2.5H2Z" fill="currentColor" fill-opacity=".2"/><circle cx="5" cy="11.5" r="1.4" fill="currentColor"/><circle cx="11" cy="11.5" r="1.4" fill="currentColor"/></svg>',
+  cal: '<svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3"/></svg>',
+  hand: '<svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 13l2-2 6-6 2 2-6 6-2 2H3v-2Z"/></svg>',
+};
+// hourly expected solar production (kW) for each day, 06..19 h
+const curve = (peak, w = 1) => Array.from({ length: 25 }, (_, h) => {
+  const x = (h - 13) / (3.6 * w); return h < 7 || h > 19 ? 0 : Math.max(0, peak * Math.exp(-x * x));
+});
+const HOUSE = Array.from({ length: 25 }, (_, h) => h < 7 ? 0.35 : h < 9 ? 0.9 : h < 17 ? 0.5 : h < 22 ? 1.1 : 0.45);
+const DAYS = [
+  { key: "today", name: "Today", short: "Wed", kind: "sun", solar: curve(3.6), win: [11.5, 14.5], amps: 8, kw: 5.5, kwh: 14.2, share: 88,
+    note: "Plug in by 11:30", battery: { now: 46, after: 74 } },
+  { key: "thu", name: "Thursday", short: "Thu", kind: "sun", solar: curve(3.1), win: [11.75, 14.0], amps: 7, kw: 4.8, kwh: 10.6, share: 81, battery: { now: 56, after: 77 } },
+  { key: "fri", name: "Friday", short: "Fri", kind: "grid", solar: curve(0.9, .8), win: null, grid: [0, 3], amps: 6, kw: 4.1, kwh: 7.5,
+    reason: "Cloudy: too little sun to charge", battery: { now: 41, after: 56 } },
+  { key: "sat", name: "Saturday", short: "Sat", kind: "away", solar: curve(2.8), away: [8, 18.5],
+    trip: { to: "Utrecht", km: 180, leave: "08:00", back: "18:30", origin: "cal" }, battery: { now: 56, after: 56 } },
+  { key: "sun", name: "Sunday", short: "Sun", kind: "sun", solar: curve(3.3), win: [11.25, 14.25], amps: 8, kw: 5.5, kwh: 15.0, share: 90, battery: { now: 22, after: 61 } },
+];
+const MIN = 30, TARGET = 80;
+const hm = h => `${String(Math.floor(h)).padStart(2, "0")}:${String(Math.round((h % 1) * 60)).padStart(2, "0")}`;
+
+function chart(day, { height = 120, showNow = true, compact = false } = {}) {
+  const W = 388, H = height, pad = { l: 22, r: 6, t: 8, b: 16 };
+  const x = h => pad.l + (h - 6) / 15 * (W - pad.l - pad.r);
+  const max = 4;
+  const y = kw => H - pad.b - kw / max * (H - pad.t - pad.b);
+  const pts = day.solar.map((v, h) => [h, v]).filter(([h]) => h >= 6 && h <= 21);
+  const area = `M${x(6)},${y(0)} ` + pts.map(([h, v]) => `L${x(h)},${y(v)}`).join(" ") + ` L${x(21)},${y(0)} Z`;
+  const house = pts.map(([h], i) => `${i ? "L" : "M"}${x(h)},${y(HOUSE[h])}`).join(" ");
+  let win = "";
+  if (day.win) win = `<rect x="${x(day.win[0])}" y="${pad.t}" width="${x(day.win[1]) - x(day.win[0])}" height="${H - pad.t - pad.b}" fill="var(--sun)" opacity=".16" rx="4"/>
+     <line x1="${x(day.win[0])}" x2="${x(day.win[1])}" y1="${H - pad.b + 1}" y2="${H - pad.b + 1}" stroke="var(--sun)" stroke-width="4" stroke-linecap="round"/>`;
+  if (day.away) win = `<rect x="${x(day.away[0])}" y="${pad.t}" width="${x(day.away[1]) - x(day.away[0])}" height="${H - pad.t - pad.b}" fill="var(--faint)" opacity=".12" rx="4"/>`;
+  const grid = [0, 2, 4].map(k => `<line x1="${pad.l}" x2="${W - pad.r}" y1="${y(k)}" y2="${y(k)}" stroke="var(--line)"/><text x="2" y="${y(k) + 3}">${k}kW</text>`).join("");
+  const ticks = [6, 9, 12, 15, 18, 21].map(h => `<text x="${x(h) - 8}" y="${H - 3}">${String(h).padStart(2, "0")}</text>`).join("");
+  const now = showNow ? `<line x1="${x(NOW)}" x2="${x(NOW)}" y1="${pad.t}" y2="${H - pad.b}" stroke="var(--fg)" stroke-width="1.2" stroke-dasharray="3 3"/><text x="${x(NOW) + 3}" y="${pad.t + 8}" style="fill:var(--fg)">now</text>` : "";
+  const label = day.win ? `Charge window ${hm(day.win[0])} to ${hm(day.win[1])}` : day.away ? "Away" : "No charge window";
+  return `<div class="chartwrap"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Expected solar power for ${day.name}, peak ${Math.max(...day.solar).toFixed(1)} kW. ${label}." data-day="${day.key}">
+    ${grid}${win}<path d="${area}" fill="var(--sun-area)" stroke="var(--sun)" stroke-width="1.6"/>
+    <path d="${house}" fill="none" stroke="var(--house)" stroke-width="1.3" stroke-dasharray="${compact ? "0" : "4 2"}"/>${now}${ticks}
+    <rect class="hit" x="${pad.l}" y="0" width="${W - pad.l - pad.r}" height="${H}" fill="transparent"/></svg><div class="tip"></div></div>`;
+}
+function wireCharts(root) {
+  root.querySelectorAll(".chartwrap").forEach(wrap => {
+    const svg = wrap.querySelector("svg"), tip = wrap.querySelector(".tip"), day = DAYS.find(d => d.key === svg.dataset.day);
+    const show = ev => {
+      const r = svg.getBoundingClientRect(), p = (ev.touches ? ev.touches[0] : ev);
+      const fx = (p.clientX - r.left) / r.width * 388;
+      const h = Math.min(21, Math.max(6, 6 + (fx - 22) / (388 - 28) * 15));
+      const i = Math.round(h);
+      tip.textContent = `${hm(h)} · ${day.solar[i].toFixed(1)} kW sun · ${HOUSE[i].toFixed(1)} kW house`;
+      tip.style.left = `${(p.clientX - r.left)}px`; tip.style.top = `${(p.clientY - r.top)}px`; tip.style.opacity = 1;
+    };
+    svg.addEventListener("mousemove", show); svg.addEventListener("touchstart", show, { passive: true });
+    svg.addEventListener("mouseleave", () => tip.style.opacity = 0);
+  });
+}
+function batteryBar(b, { label = true } = {}) {
+  return `<div class="battery">${label ? `<div class="row between"><span class="label">Car battery</span><span class="num muted">${b.now}% → <b style="color:var(--car)">${b.after}%</b></span></div>` : ""}
+    <div class="bar" role="img" aria-label="Battery ${b.now} percent now, ${b.after} percent after charging; minimum ${MIN}, target ${TARGET}">
+      <div class="after" style="width:${b.after}%"></div><div class="now" style="width:${b.now}%"></div>
+      <div class="mark" style="left:${MIN}%"><span>min ${MIN}</span></div><div class="mark" style="left:${TARGET}%"><span>target ${TARGET}</span></div>
+    </div><div style="height:14px"></div></div>`;
+}
+function dayCard(d) {
+  const top = d.kind === "sun" ? `<span class="t">${hm(d.win[0])}–${hm(d.win[1])}</span><span class="s">${d.amps} A · ${d.share}% sun</span>`
+    : d.kind === "grid" ? `<span class="t" style="color:var(--grid)">night ${hm(d.grid[0])}–${hm(d.grid[1])}</span><span class="s">${d.reason}</span>`
+    : `<span class="t muted">Away</span><span class="s">no charging</span>`;
+  const trip = d.trip ? `<div class="trip">${d.trip.origin === "cal" ? ICON.cal : ICON.hand}<span>${d.trip.to}, ${d.trip.km} km<br>${d.trip.leave}–${d.trip.back}</span></div>` : "";
+  return `<div class="day ${d.kind}"><span class="d">${d.short}</span>${top}${trip}</div>`;
+}
+const footer = () => `<div class="foot"><span>Forecast: Open-Meteo · 08:12</span><div class="actions"><button class="ghost">Away…</button><button class="ghost">Settings</button></div></div>`;
+const head = () => `<div class="head"><h1>Car charge planner</h1><span class="when num">Wed 15 Oct · 08:40</span></div>`;
+const gridAdvice = () => { const f = DAYS[2]; return `<div class="card advice"><div class="row"><span class="chip grid">${ICON.grid} Grid advice</span></div>
+  <p>Friday is cloudy. Charge <b class="num">Thursday night ${hm(f.grid[0])}–${hm(f.grid[1])}</b> at <b class="num">${f.amps} A</b> (${f.kwh} kWh) to stay above ${MIN}%.</p></div>`; };
+
+const VARIANTS = [
+  { key: "A", name: "Stacked cards", render() {
+    const t = DAYS[0];
+    return `${head()}<div class="body fade">
+      <div class="card main-card"><div class="row between"><span class="label">Next charge window</span><span class="chip sun">${ICON.sun} ${t.share}% sun</span></div>
+        <div class="hero-time">${hm(t.win[0])}–${hm(t.win[1])}</div>
+        <div class="hero-sub"><span>Set <b>${t.amps} A</b> (${t.kw} kW)</span><span>about <b>${t.kwh} kWh</b></span><span>${t.note}</span></div></div>
+      ${gridAdvice()}
+      <div class="card"><div class="row between"><span class="label">Today's sun</span><span class="legend"><span><i style="background:var(--sun-area);border:1px solid var(--sun)"></i>solar</span><span><i style="background:var(--house)"></i>house</span></span></div>${chart(t)}</div>
+      <div class="card">${batteryBar(t.battery)}</div>
+      <div><div class="label" style="margin-bottom:8px">Coming days</div><div class="days">${DAYS.slice(1).map(dayCard).join("")}</div></div>
+    </div>${footer()}`;
+  } },
+  { key: "B", name: "The day as a timeline", render() {
+    const t = DAYS[0];
+    const ring = (pct, after) => { const c = 2 * Math.PI * 26, o = p => c * (1 - p / 100);
+      return `<svg class="ring" viewBox="0 0 64 64" role="img" aria-label="Battery ${pct} percent, ${after} after charging"><circle cx="32" cy="32" r="26" fill="none" stroke="var(--line)" stroke-width="7"/>
+      <circle cx="32" cy="32" r="26" fill="none" stroke="var(--car)" stroke-opacity=".35" stroke-width="7" stroke-dasharray="${c}" stroke-dashoffset="${o(after)}" transform="rotate(-90 32 32)" stroke-linecap="round"/>
+      <circle cx="32" cy="32" r="26" fill="none" stroke="var(--car)" stroke-width="7" stroke-dasharray="${c}" stroke-dashoffset="${o(pct)}" transform="rotate(-90 32 32)" stroke-linecap="round"/>
+      <text x="32" y="36" text-anchor="middle" style="fill:var(--fg);font-family:var(--num);font-size:13px;font-weight:600">${pct}%</text></svg>`; };
+    const x = h => (h - 6) / 15 * 100;
+    const rows = DAYS.map(d => {
+      const sun = `<div class="tlsun" style="left:${x(8)}%;width:${x(18) - x(8)}%;opacity:${Math.max(...d.solar) / 3.6}"></div>`;
+      const w = d.win ? `<div class="tlwin sun" style="left:${x(d.win[0])}%;width:${x(d.win[1]) - x(d.win[0])}%"></div>`
+        : d.away ? `<div class="tlwin away" style="left:${x(d.away[0])}%;width:${x(d.away[1]) - x(d.away[0])}%"></div>` : "";
+      const note = d.kind === "grid" ? `<span class="tlnote" style="color:var(--grid)">${ICON.grid} ${d.reason}; grid Thu night ${hm(d.grid[0])}–${hm(d.grid[1])}</span>`
+        : d.trip ? `<span class="tlnote">${d.trip.origin === "cal" ? ICON.cal : ICON.hand} ${d.trip.to}, ${d.trip.km} km, ${d.trip.leave}–${d.trip.back}</span>` : "";
+      return `<div class="tlrow"><span class="${d.key === "today" ? "" : "muted"}" style="font-weight:600">${d.short}</span><div class="tltrack">${sun}${w}</div>${note}</div>`;
+    }).join("");
+    return `${head()}<div class="body fade">
+      <div class="row between"><div><div class="label">Today · charge</div><div class="hero-time" style="color:var(--sun)">${hm(t.win[0])}–${hm(t.win[1])}</div>
+        <div class="hero-sub"><span><b>${t.amps} A</b> · ${t.kwh} kWh · ${t.share}% sun</span></div></div>${ring(t.battery.now, t.battery.after)}</div>
+      ${chart(t, { height: 150 })}
+      ${gridAdvice()}
+      <div><div class="row between" style="margin-bottom:8px"><span class="label">This week, 06–21 h</span><span class="legend"><span><i style="background:var(--sun)"></i>sun</span><span><i style="background:var(--grid)"></i>grid</span><span><i style="background:var(--faint)"></i>away</span></span></div><div class="tl">${rows}</div></div>
+    </div>${footer()}`;
+  } },
+  { key: "C", name: "Browse by day", sel: 0, render() {
+    const d = DAYS[this.sel];
+    const tabs = DAYS.map((x, i) => `<button class="tab" role="tab" aria-selected="${i === this.sel}" data-i="${i}"><span>${x.short}</span><span class="dot" style="background:var(--${x.kind === "away" ? "faint" : x.kind})"></span></button>`).join("");
+    const main = d.kind === "sun" ? `<div class="card main-card"><div class="row between"><span class="label">${d.name} · charge window</span><span class="chip sun">${ICON.sun} ${d.share}% sun</span></div>
+        <div class="hero-time">${hm(d.win[0])}–${hm(d.win[1])}</div><div class="hero-sub"><span>Set <b>${d.amps} A</b> (${d.kw} kW)</span><span>about <b>${d.kwh} kWh</b></span></div></div>`
+      : d.kind === "grid" ? `<div class="card advice"><span class="chip grid">${ICON.grid} No good window</span><p>${d.reason}. Charge <b class="num">Thursday night ${hm(d.grid[0])}–${hm(d.grid[1])}</b> at <b class="num">${d.amps} A</b> to stay above ${MIN}%.</p></div>`
+      : `<div class="card"><span class="chip plain">${ICON.car} Away</span><p style="margin:6px 0 0;font-size:13px">${d.trip.origin === "cal" ? ICON.cal + " From your calendar: " : ""}${d.trip.to}, <b class="num">${d.trip.km} km</b>, ${d.trip.leave}–${d.trip.back}. The plan keeps the battery above ${MIN}% for the trip.</p></div>`;
+    return `${head()}<div class="tabs" role="tablist" aria-label="Days">${tabs}</div><div class="body fade">
+      ${this.sel === 0 ? gridAdvice() : ""}${main}
+      <div class="card"><div class="label">Expected sun</div>${chart(d, { showNow: this.sel === 0 })}</div>
+      <div class="card">${batteryBar(d.battery)}</div>
+    </div>${footer()}`;
+  } },
+];
+
+let current = 0;
+try { const saved = Number(localStorage.getItem("ccp-proto-variant")); if (saved >= 0 && saved < VARIANTS.length) current = saved; } catch (e) {}
+const frame = document.getElementById("frame");
+function render() {
+  const v = VARIANTS[current];
+  frame.innerHTML = v.render();
+  document.getElementById("lbl").textContent = `${v.key} · ${v.name}`;
+  wireCharts(frame);
+  frame.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => { v.sel = Number(b.dataset.i); render(); }));
+  try { localStorage.setItem("ccp-proto-variant", String(current)); } catch (e) {}
+}
+const step = n => { current = (current + n + VARIANTS.length) % VARIANTS.length; render(); };
+document.getElementById("prev").onclick = () => step(-1);
+document.getElementById("next").onclick = () => step(1);
+document.getElementById("theme").onclick = () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+};
+document.addEventListener("keydown", e => {
+  if (e.target.closest("input,textarea,[contenteditable]")) return;
+  if (e.key === "ArrowLeft") step(-1); if (e.key === "ArrowRight") step(1);
+});
+render();
+</script>
