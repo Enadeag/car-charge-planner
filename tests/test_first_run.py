@@ -88,16 +88,16 @@ def test_a_hidden_start_at_login_never_opens_it_and_offers_it_in_a_notification_
 def test_a_location_entered_in_settings_counts_as_set_up(tmp_path, monkeypatch, qapp):
     controller, notifier = make(first_run_config(), tmp_path, monkeypatch)
     shell = WindowShell(controller)
-    controller.apply_config(replace(controller.cfg, latitude=52.37, longitude=4.9))  # what saving Settings does
+    controller.apply_config(replace(controller.engine.cfg, latitude=52.37, longitude=4.9))  # what saving Settings does
     settle_controller(controller)
     shell.windows.offer_setup(background=False)
-    assert shell.windows.setup_wizard is None and controller.vm.state != "needs-setup"
+    assert shell.windows.setup_wizard is None and controller.engine.vm.state != "needs-setup"
 
 
 def test_the_popup_of_the_tray_shell_has_a_set_up_button_that_opens_the_wizard(tmp_path, monkeypatch, qapp):
     controller, _ = make(first_run_config(), tmp_path, monkeypatch)
     shell = TrayShell(controller)
-    controller.rebuild()
+    controller.engine.rebuild()
     shell.popup.show()
     button = next(b for b in shell.popup.findChildren(QPushButton) if b.text() == "Set up")
     assert button.isVisible()
@@ -116,7 +116,7 @@ def test_closing_the_wizard_unfinished_leaves_the_app_not_set_up_with_the_button
     wizard.pages["welcome"].units.setCurrentIndex(1)
     wizard.next()
     wizard.reject()
-    assert not controller.cfg.is_set_up and not (tmp_path / "config.toml").exists()
+    assert not controller.engine.cfg.is_set_up and not (tmp_path / "config.toml").exists()
     assert any(b.text() == "Set up" and b.isVisible() for b in shell.view.findChildren(QPushButton))
     shell.window.hide()
 
@@ -138,7 +138,7 @@ def test_run_set_up_again_opens_the_wizard_filled_in_with_what_is_saved(tmp_path
     settings.setup_button.click()
     wizard = windows.setup_wizard
     assert not settings.isVisible() and wizard.isVisible()
-    assert wizard.state.config == windows.controller.cfg
+    assert wizard.state.config == windows.controller.engine.cfg
     assert wizard.pages["location"] is not None
     wizard.close()
 

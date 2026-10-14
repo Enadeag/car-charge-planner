@@ -10,7 +10,8 @@ from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 from ..app_windows import AppWindows
-from ..controller import Controller, ViewUpdate
+from ..controller import Controller
+from ..engine import ViewUpdate
 from ..i18n import _
 from ..popup import Popup
 from .icons import make_icon
@@ -21,16 +22,16 @@ class TrayShell:
     def __init__(self, controller: Controller) -> None:
         self.controller = controller
         self.windows = AppWindows(controller, self.show_plan)
-        self.popup = Popup(controller.tz)
-        self.popup.battery_submitted.connect(controller.set_battery)
-        self.popup.away_added.connect(controller.add_away_period)
-        self.popup.away_removed.connect(controller.remove_away_period)
+        self.popup = Popup(controller.engine.tz)
+        self.popup.battery_submitted.connect(controller.engine.set_battery)
+        self.popup.away_added.connect(controller.engine.add_away_period)
+        self.popup.away_removed.connect(controller.engine.remove_away_period)
         self.popup.settings_requested.connect(self._on_settings_requested)
         self.popup.setup_requested.connect(self._on_setup_requested)
 
         self.tray = QSystemTrayIcon(make_icon("none"))
         menu = QMenu()
-        menu.addAction(_("Refresh forecast"), lambda: controller.refresh(force=True))
+        menu.addAction(_("Refresh forecast"), lambda: controller.engine.refresh(force=True))
         menu.addAction(_("Settings..."), lambda: self.windows.open_settings())
         menu.addAction(_("Set up..."), lambda: self.windows.open_setup())
         menu.addAction(_("About..."), lambda: self.windows.open_about())
@@ -47,7 +48,7 @@ class TrayShell:
         self.controller.start()
 
     def show_plan(self) -> None:
-        self.controller.rebuild()
+        self.controller.engine.rebuild()
         self.popup.show_near(self.tray.geometry())
 
     def _click_anchor(self) -> QRect:
@@ -78,5 +79,5 @@ class TrayShell:
             elif time.monotonic() - self.popup.auto_closed_at < CLICK_CLOSE_GRACE_S:
                 pass  # this click is what just closed it (it took the focus): do not reopen
             else:
-                self.controller.rebuild()
+                self.controller.engine.rebuild()
                 self.popup.show_near(self._click_anchor())

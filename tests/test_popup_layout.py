@@ -212,12 +212,17 @@ def test_escape_and_the_x_still_close_it(cfg, qapp):
     assert not popup.isVisible()
 
 
-def _tray(cfg, tmp_path, monkeypatch):
-    from conftest import TrayApp
+def _tray(cfg, tmp_path, monkeypatch, days=((DAY, 900),)):
+    """A tray app at NOW, with a forecast for `days` (peak irradiance per day)."""
+    from car_charge_planner.engine import run_here
+    from car_charge_planner.forecast.service import ForecastResult
+    from conftest import FakeClock, FixedForecast, TrayApp
 
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda *a, **k: None)
-    return TrayApp(cfg, tmp_path / "config.toml")
+    forecast = FixedForecast(ForecastResult(forecast_from(list(days)), at(DAY, 6), True, False))
+    app = TrayApp(cfg, tmp_path / "config.toml", forecasts=forecast, clock=FakeClock(NOW), run_in_background=run_here)
+    app.refresh()
+    return app
 
 
 def test_the_click_that_closed_the_popup_does_not_reopen_it(cfg, tmp_path, monkeypatch, qapp):
@@ -362,11 +367,7 @@ def test_the_tray_opens_settings_on_the_away_rules_tab_and_hides_the_popup(cfg, 
 def test_a_rule_saved_in_settings_shows_up_in_the_popup(cfg, tmp_path, monkeypatch, qapp):
     from PySide6.QtCore import QTime
 
-    from car_charge_planner.forecast.service import ForecastResult
-
     app = _tray(cfg, tmp_path, monkeypatch)
-    app.result = ForecastResult(forecast_from([(DAY, 900)]), at(DAY, 6), True, False)
-    app.rebuild()
     assert any("Thursday" in t for t in labels(app.popup))
     app.shell.windows.open_settings("away")
     row = app.shell.windows.settings_window.away_tab.rows[0]
@@ -379,18 +380,9 @@ def test_a_rule_saved_in_settings_shows_up_in_the_popup(cfg, tmp_path, monkeypat
 
 
 def test_the_battery_and_absences_entered_in_the_tray_are_stored_and_replan(cfg, tmp_path, monkeypatch, qapp):
-    from car_charge_planner.forecast.service import ForecastResult
     from car_charge_planner.storage.state import load_state
 
-    app = _tray(cfg, tmp_path, monkeypatch)
-    app.result = ForecastResult(forecast_from([(DAY, 900), (DAY + timedelta(days=1), 900)]), at(DAY, 6), True, False)
-
-    class FrozenNow:
-        @staticmethod
-        def now(tz=None):
-            return NOW
-
-    monkeypatch.setattr("car_charge_planner.controller.datetime", FrozenNow)
+    app = _tray(cfg, tmp_path, monkeypatch, [(DAY, 900), (DAY + timedelta(days=1), 900)])
     app.set_battery(33)
     assert load_state().battery.pct == 33 and app.vm.projection.startswith("Battery 33%")
     app.add_away_period(make_away(DAY, True, time(), time(), TZ))

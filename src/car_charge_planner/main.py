@@ -67,7 +67,7 @@ def announce_tray_fallback(controller: Controller, choice: ShellChoice) -> bool:
 
 
 def create_shell(controller: Controller, tray_available: bool) -> tuple[Shell, ShellChoice]:
-    choice = choose_shell(controller.cfg.interface.mode, tray_available)
+    choice = choose_shell(controller.engine.cfg.interface.mode, tray_available)
     shell = TrayShell(controller) if choice.kind == "tray" else WindowShell(controller)
     return shell, choice
 

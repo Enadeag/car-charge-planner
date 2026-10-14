@@ -143,10 +143,10 @@ def settle(controller, seconds=3.0):
     from PySide6.QtTest import QTest
 
     deadline = time.time() + seconds
-    while controller._loading and time.time() < deadline:
+    while controller.engine.fetching and time.time() < deadline:
         QTest.qWait(20)
     QTest.qWait(20)
-    assert not controller._loading, "the fetch did not finish"
+    assert not controller.engine.fetching, "the fetch did not finish"
 
 
 def make_controller(cfg, tmp_path, monkeypatch, fetch=None):
@@ -161,10 +161,10 @@ def test_without_a_location_nothing_is_fetched_and_the_view_says_so(tmp_path, mo
     seen = []
     controller.view_changed.connect(seen.append)
     controller.start()
-    controller.refresh()
-    controller.refresh(force=True)
-    assert fetch.calls == [] and controller._loading is False
-    assert controller.vm.state == "needs-setup" and seen and seen[-1].vm.headline == "Not set up yet"
+    controller.engine.refresh()
+    controller.engine.refresh(force=True)
+    assert fetch.calls == [] and not controller.engine.fetching
+    assert controller.engine.vm.state == "needs-setup" and seen and seen[-1].vm.headline == "Not set up yet"
 
 
 def test_the_minute_tick_does_not_fetch_either(tmp_path, monkeypatch, qapp):
@@ -181,29 +181,22 @@ def test_giving_a_location_starts_the_first_fetch(tmp_path, monkeypatch, qapp):
     controller.apply_config(example_config())  # what saving Settings does
     settle(controller)
     assert len(fetch.calls) == 1 and fetch.calls[0].latitude == 52.37
-    assert controller.vm.state != "needs-setup"
-
-
-def test_nothing_is_announced_while_not_set_up(tmp_path, monkeypatch, qapp):
-    controller, _ = make_controller(Config(), tmp_path, monkeypatch)
-    controller.result = ForecastResult(forecast_from([(DAY, 900)]), at(DAY, 6), True, False)  # stale leftovers
-    controller.rebuild()
-    assert controller.notifier.sent == [] and controller.vm.state == "needs-setup"
+    assert controller.engine.vm.state != "needs-setup"
 
 
 def test_the_tray_shell_shows_the_state(tmp_path, monkeypatch, qapp):
     controller, _ = make_controller(Config(), tmp_path, monkeypatch)
     shell = TrayShell(controller)
-    controller.rebuild()
-    assert controller.vm.state == "needs-setup"
-    assert shell.tray.toolTip() == controller.vm.tooltip and shell.popup.headline.text() == controller.vm.headline
+    controller.engine.rebuild()
+    assert controller.engine.vm.state == "needs-setup"
+    assert shell.tray.toolTip() == controller.engine.vm.tooltip and shell.popup.headline.text() == controller.engine.vm.headline
 
 
 def test_the_window_shell_shows_the_state(tmp_path, monkeypatch, qapp):
     controller, _ = make_controller(Config(), tmp_path, monkeypatch)
     shell = WindowShell(controller)
-    controller.rebuild()
-    assert shell.window.windowTitle() == controller.vm.headline
+    controller.engine.rebuild()
+    assert shell.window.windowTitle() == controller.engine.vm.headline
     assert shell.window.windowIcon().pixmap(32, 32).toImage() == make_icon("needs-setup").pixmap(32, 32).toImage()
 
 

@@ -155,7 +155,7 @@ msgstr ""
 msgid "The new interface applies the next time the app starts."
 msgstr ""
 
-#: car_charge_planner/controller.py
+#: car_charge_planner/engine/engine.py
 msgid "Loading forecast..."
 msgstr ""
 

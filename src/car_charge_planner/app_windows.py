@@ -31,7 +31,7 @@ class AppWindows:
         controller = self.controller
         if self.settings_window is None or not self.settings_window.isVisible():
             self.settings_window = SettingsWindow(
-                controller.cfg, controller.config_file, controller.apply_config, on_setup=self.open_setup
+                controller.engine.cfg, controller.config_file, controller.apply_config, on_setup=self.open_setup
             )
         if tab:
             self.settings_window.show_tab(tab)
@@ -48,7 +48,7 @@ class AppWindows:
         """One set-up wizard at a time, started from the current config."""
         controller = self.controller
         if self.setup_wizard is None or not self.setup_wizard.isVisible():
-            self.setup_wizard = SetupWizard(controller.cfg, controller.config_file, self._setup_finished)
+            self.setup_wizard = SetupWizard(controller.engine.cfg, controller.config_file, self._setup_finished)
         self.setup_wizard.show()
         self.setup_wizard.raise_()
         self.setup_wizard.activateWindow()
@@ -59,7 +59,7 @@ class AppWindows:
 
     def offer_setup(self, background: bool) -> None:
         """At a start that is not set up: open the wizard, or, when started hidden (at login), only offer it."""
-        if self.controller.cfg.is_set_up:
+        if self.controller.engine.cfg.is_set_up:
             return
         if not background:
             self.open_setup()
@@ -70,7 +70,7 @@ class AppWindows:
 
     def notification_clicked(self) -> None:
         """A click on a notification opens the wizard while not set up (the offer asked for it), else the plan."""
-        if self.controller.cfg.is_set_up:
+        if self.controller.engine.cfg.is_set_up:
             self.show_plan()
         else:
             self.open_setup()

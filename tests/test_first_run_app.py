@@ -76,7 +76,7 @@ DRIVER = textwrap.dedent(
         c = controllers[0]
         wizard = shells[0].windows.setup_wizard
         report["wizard_open"] = bool(wizard is not None and wizard.isVisible())
-        report["state_at_start"] = c.vm.state if c.vm else None
+        report["state_at_start"] = c.engine.vm.state if c.engine.vm else None
         report["notifications"] = list(sent)
         if {act!r} and wizard is not None:
             wizard.confirm_leave = lambda: True
@@ -94,8 +94,8 @@ DRIVER = textwrap.dedent(
 
     def done():
         c = controllers[0]
-        report["set_up"] = c.cfg.is_set_up
-        report["state_at_end"] = c.vm.state if c.vm else None
+        report["set_up"] = c.engine.cfg.is_set_up
+        report["state_at_end"] = c.engine.vm.state if c.engine.vm else None
         report["window_visible"] = any(w.isVisible() and w.windowTitle() != "" and "Set-up" not in w.windowTitle() for w in QApplication.topLevelWidgets())
         report["config_written"] = open({config!r}, encoding="utf-8").read().count("[forecast]") == 1
         print("REPORT " + json.dumps(report), flush=True)
