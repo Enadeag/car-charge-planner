@@ -43,7 +43,7 @@ A test that only makes sense on one system carries the marker `linux`, `windows`
 PATH="$PWD/.venv/bin:$PATH" pyright    # or activate the venv first; pyright then finds PySide6
 ```
 
-The code is checked in basic mode, and `planner/` and `forecast/` (no Qt) in strict mode, so give new code there full type hints. The tests are not type-checked. Where the Qt stubs are wrong, a `# pyright: ignore[rule]` with a short reason is fine.
+The code is checked in basic mode, and the packages without Qt (`planner/`, `forecast/`, `engine/`, `config/`, `day_view.py`) in strict mode, so give new code there full type hints. The tests are not type-checked. Where the Qt stubs are wrong, a `# pyright: ignore[rule]` with a short reason is fine.
 
 A change comes with a test that fails without it. New or changed texts need a refreshed template (see below).
 
@@ -69,6 +69,17 @@ Write one only when it says something the name, signature and types cannot.
 - A test that starts the app or uses real timers waits for a condition, never a fixed `sleep`.
 - Don't test test helpers, fixtures or constants. In tests too, the test name is the documentation: comment only what is surprising.
 
+## QML
+
+The new interface is written in Qt Quick (ADR 0002, 0004) and replaces the Widgets screens step by step. Until then, `car-charge-planner qml-preview` (add `--dark` or `--light` to fix the theme) shows the QML dashboard with your own settings and forecast; it never writes your data.
+
+- **Data comes through the bridge.** QML reads `DashboardBridge`'s properties and its model of days, and calls its slots; it never reads files, storage or the network (`tests/test_clients_store_nothing.py` checks).
+- **Texts come from Python.** The template is extracted from Python only, so every text a QML file shows comes through the bridge, already translated: no text literals and no `qsTr` in `.qml` files (`tests/test_i18n_sources.py` checks).
+- **Tokens, not values.** Colours, type sizes, spacing and radii come from the `Theme` singleton. It follows the system's light or dark mode and font. Text uses `fg`, `muted` or a source's `…Text` colour (4.5:1); `sun`, `grid`, `car`, `act` and `faint` are for lines, dots and bars only (3:1). `tests/test_quick_theme.py` checks every pair; a new colour gets a place there. Colour is never the only sign: a source colour always comes with a label.
+- **Accessibility from the start.** Every control has an `Accessible.name` (and a role, which Qt Quick Controls set), every chart or graphic an `Accessible.name` that says what it shows. The keyboard order follows the layout; a control shows its focus with a `FocusRing` bound to `visualFocus`. Sizes are in device-independent pixels or relative to `Theme.fontSize`, never fixed to a text's size, so 150 and 200 % scaling and a larger system font work.
+- **Charts are drawn with Qt Quick Shapes** (`QtQuick.Shapes`, part of PySide6-Essentials), not QtGraphs or QtCharts: those are in PySide6-Addons, which would make the installer much larger.
+- **Tests** load the QML offscreen with a real engine behind the bridge and check what a screen reader and the keyboard get (`tests/test_quick_dashboard.py`). They run with `QT_QPA_PLATFORM=offscreen` like the rest; `tests/conftest.py` picks Qt Quick's software renderer (`QT_QUICK_BACKEND=software`), which needs no GPU.
+
 ## Building the Windows installer
 
 On Windows, in the environment of the app with [PyInstaller](https://pyinstaller.org) and Babel added, and with [Inno Setup](https://jrsoftware.org/isinfo.php) 6 installed:
@@ -91,6 +102,7 @@ Everything is in `src/car_charge_planner/`:
 | `controller.py` | Ties it together: fetches, plans, announces, opens the windows. |
 | `shells/` | The tray shell and the window shell (the two ways the app shows itself). |
 | `planview.py`, `popup.py`, `view_model.py` | The plan page and its Qt-free view model. |
+| `day_view.py`, `quick/` | The new QML dashboard: the Qt-free view of each day, the bridge to QML (`quick/bridge.py`) and the QML module `quick/CarChargePlanner/`. |
 | `settings/`, `setup/` | The Settings window and the first-run set-up wizard. |
 | `locale/` | Translations. |
 

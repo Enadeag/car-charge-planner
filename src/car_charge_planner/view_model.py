@@ -67,11 +67,11 @@ def _clock(moment: datetime, tz: ZoneInfo) -> str:
     return moment.astimezone(tz).strftime("%H:%M")
 
 
-def _span(w: Window, tz: ZoneInfo) -> str:
+def span_text(w: Window, tz: ZoneInfo) -> str:
     return f"{_clock(w.start, tz)}-{_clock(w.end, tz)}"
 
 
-def _power(w: Window, phases: int = 1) -> str:
+def power_text(w: Window, phases: int = 1) -> str:
     if phases == 3:  # the current is on each of the three phases: say so, or it reads as a third of the power
         return _("{power} kW ({amps} A per phase)").format(power=number(w.power_kw, 1), amps=w.amps)
     return _("{power} kW ({amps} A)").format(power=number(w.power_kw, 1), amps=w.amps)
@@ -192,10 +192,10 @@ def advice_view(advice: GridAdvice, now: datetime, cfg: Config, tz: ZoneInfo) ->
             reason,
         )
     w = advice.window
-    when = _("{day} {span}").format(day=day_label(w.start.astimezone(tz).date(), today), span=_span(w, tz))
+    when = _("{day} {span}").format(day=day_label(w.start.astimezone(tz).date(), today), span=span_text(w, tz))
     return AdviceView(
         _("Grid charge needed \u00b7 {when}").format(when=when),
-        _("{power} \u00b7 about {energy} kWh").format(power=_power(w, cfg.system.charger.phases), energy=number(advice.energy_kwh)),
+        _("{power} \u00b7 about {energy} kWh").format(power=power_text(w, cfg.system.charger.phases), energy=number(advice.energy_kwh)),
         reason,
     )
 
@@ -217,8 +217,8 @@ def _outlook(days: list[DayPlan], headline_window: Window | None, now: datetime,
             rows.append(
                 OutlookRow(
                     "" if shown_day else day_label(d.date, today),
-                    _span(w, tz),
-                    _power(w, phases),
+                    span_text(w, tz),
+                    power_text(w, phases),
                     _("{energy} kWh").format(energy=number(w.solar_kwh, 1)),
                 )
             )
@@ -269,7 +269,7 @@ def no_forecast(reason: str, battery: BatteryReading, now: datetime) -> ViewMode
 
 def _facts(window: Window, phases: int = 1) -> str:
     return _("{power} \u00b7 {energy} kWh \u00b7 {share}% solar").format(
-        power=_power(window, phases), energy=number(window.solar_kwh, 1), share=number(window.solar_share * 100)
+        power=power_text(window, phases), energy=number(window.solar_kwh, 1), share=number(window.solar_share * 100)
     )
 
 
@@ -327,7 +327,7 @@ def build(
             w = advice.window
             tip = _("Grid charge needed")
             if w:
-                when = _("{day} {span}").format(day=day_label(w.start.astimezone(tz).date(), today), span=_span(w, tz))
+                when = _("{day} {span}").format(day=day_label(w.start.astimezone(tz).date(), today), span=span_text(w, tz))
                 tip = _("Grid charge needed: {when}").format(when=when)
             return ViewModel(
                 state="grid", tooltip=tip, headline=_("Grid charge needed"), detail=no_sun, projection="", **common
@@ -356,7 +356,7 @@ def build(
             **common,
         )
     label = day_label(day_plan.date, today)
-    span = _span(window, tz)
+    span = span_text(window, tz)
     return ViewModel(
         state="upcoming",
         tooltip=(_("Next: {day} {span}, {amps} A per phase") if three else _("Next: {day} {span}, {amps} A")).format(

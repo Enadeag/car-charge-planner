@@ -1,0 +1,13 @@
+module CarChargePlanner
+singleton Theme 1.0 Theme.qml
+DashboardWindow 1.0 DashboardWindow.qml
+Dashboard 1.0 Dashboard.qml
+DayTabs 1.0 DayTabs.qml
+AdviceCard 1.0 AdviceCard.qml
+MainCard 1.0 MainCard.qml
+SolarCurve 1.0 SolarCurve.qml
+BatteryBar 1.0 BatteryBar.qml
+Card 1.0 Card.qml
+Chip 1.0 Chip.qml
+ActionButton 1.0 ActionButton.qml
+FocusRing 1.0 FocusRing.qml

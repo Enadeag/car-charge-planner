@@ -67,6 +67,10 @@ def main(argv: list[str] | None = None) -> int:
         return run()
     elif command == "quit":
         return _quit_running_app()
+    elif command == "qml-preview":  # for developers, not in COMMANDS: the QML dashboard until it replaces the Widgets screens
+        from .qml_preview import main as preview
+
+        return preview(arguments[1:])
     elif command == "run":
         from .main import main as run_app
 

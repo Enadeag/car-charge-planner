@@ -19,6 +19,7 @@ from car_charge_planner.planner.model import AwayPeriod, AwayRule, Window
 from car_charge_planner.planner.projection import plan
 from car_charge_planner.storage.state import State, with_away, with_battery, with_notified, with_seen, without_away
 
+from ..day_view import DayView, build_days
 from ..i18n import _
 from ..notifications import candidate_windows, due, message
 from ..notifier import Notifying
@@ -34,6 +35,7 @@ class ViewUpdate:
     today: date
     rules: tuple[AwayRule, ...]
     tz: ZoneInfo
+    days: tuple[DayView, ...] = ()  # one per planned day; empty without a plan
 
 
 @dataclass(frozen=True)
@@ -213,6 +215,7 @@ class Engine:
         now = self._now()
         state = self._store.load_state()
         battery = state.battery
+        day_views: tuple[DayView, ...] = ()
         if not self._cfg.is_set_up:
             vm = needs_setup(battery, now)
         elif self._result is None:
@@ -222,9 +225,10 @@ class Engine:
             days = plan(result.steps, system, preferences, battery.pct, now, list(state.away), list(state.notified))
             advice = grid_advice(days, result.steps, system, preferences, list(state.away), now)
             vm = build(days, now, self._cfg, battery, result.age(now), result.stale, advice, _source(result, now))
+            day_views = build_days(days, result.steps, advice, self._cfg, state.away, now)
             self._announce(result, candidate_windows(days, advice), state, now)
         self._vm = vm
-        update = ViewUpdate(vm, state, now.date(), self._cfg.system.away_rules, self._tz)
+        update = ViewUpdate(vm, state, now.date(), self._cfg.system.away_rules, self._tz, day_views)
         for watcher in self._watchers:
             watcher(update)
 

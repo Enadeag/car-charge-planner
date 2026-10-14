@@ -211,3 +211,17 @@ def test_the_next_fetch_follows_the_clock(cfg):
     r.clock.now += timedelta(minutes=1)
     r.engine.refresh(force=True)
     assert seen == [(at(DAY, 7), False), (at(DAY, 7, 1), True)]
+
+
+def test_the_update_carries_a_view_of_each_planned_day(cfg):
+    r = rig(cfg, hour=7)
+    r.engine.refresh()
+    days = r.updates[-1].days
+    assert [d.date for d in days] == [DAY]
+    assert [span.text for span in days[0].charges] == ["09:00-15:00"]
+
+
+def test_without_a_plan_the_update_has_no_days(cfg):
+    r = rig(cfg, hour=7)
+    r.engine.rebuild()  # before the first fetch
+    assert r.updates[-1].vm.state == "no-forecast" and r.updates[-1].days == ()

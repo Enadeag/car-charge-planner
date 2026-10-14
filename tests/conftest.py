@@ -23,6 +23,10 @@ from car_charge_planner.planner.model import AwayRule, Car, Charger, ForecastSte
 # the package lives in src/: tests that start the app as a program find it without an install
 os.environ["PYTHONPATH"] = str(Path(__file__).resolve().parent.parent / "src") + os.pathsep + os.environ.get("PYTHONPATH", "")
 
+# Qt Quick draws with its software renderer, here and in the programs tests start: the offscreen platform has no GPU on
+# Windows (it falls back to it anyway) and may lack OpenGL on a CI machine, and pixels then match on every system.
+os.environ.setdefault("QT_QUICK_BACKEND", "software")
+
 TZ = ZoneInfo("Europe/Amsterdam")  # the tests' time zone: it has the DST dates the tests use (2026-03-29, 2026-10-25)
 
 

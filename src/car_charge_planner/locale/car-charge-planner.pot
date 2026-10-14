@@ -170,9 +170,9 @@ msgstr ""
 msgid "No absences planned"
 msgstr ""
 
-#: car_charge_planner/away_input.py car_charge_planner/setup/hub.py
-#: car_charge_planner/setup/recap.py car_charge_planner/setup/solar.py
-#: car_charge_planner/view_model.py
+#: car_charge_planner/away_input.py car_charge_planner/day_view.py
+#: car_charge_planner/setup/hub.py car_charge_planner/setup/recap.py
+#: car_charge_planner/setup/solar.py car_charge_planner/view_model.py
 msgctxt "list separator"
 msgid ", "
 msgstr ""
@@ -370,6 +370,73 @@ msgstr ""
 msgid "The new interface applies the next time the app starts."
 msgstr ""
 
+#: car_charge_planner/day_view.py
+#, python-brace-format
+msgid "about {energy} kWh"
+msgstr ""
+
+#: car_charge_planner/day_view.py
+#, python-brace-format
+msgid "Charge window {span}."
+msgstr ""
+
+#: car_charge_planner/day_view.py
+#, python-brace-format
+msgid "No good window; grid charge {span}."
+msgstr ""
+
+#: car_charge_planner/day_view.py
+msgid "No good window."
+msgstr ""
+
+#: car_charge_planner/day_view.py
+#, python-brace-format
+msgid "The car is away {spans}."
+msgstr ""
+
+#: car_charge_planner/day_view.py
+#, python-brace-format
+msgid "{day}: expected solar power up to {peak} kW. {plan}"
+msgstr ""
+
+#: car_charge_planner/day_view.py
+msgid "Charge window"
+msgstr ""
+
+#: car_charge_planner/day_view.py
+#, python-brace-format, python-format
+msgid "{share}% sun"
+msgstr ""
+
+#: car_charge_planner/day_view.py
+msgid "Charge from the grid to stay above the minimum."
+msgstr ""
+
+#: car_charge_planner/day_view.py car_charge_planner/view_model.py
+msgid "No good window"
+msgstr ""
+
+#: car_charge_planner/day_view.py
+msgid "Away"
+msgstr ""
+
+#: car_charge_planner/day_view.py
+msgid "No charging while the car is away."
+msgstr ""
+
+#: car_charge_planner/day_view.py
+msgid "Not enough solar surplus on this day."
+msgstr ""
+
+#: car_charge_planner/day_view.py car_charge_planner/view_model.py
+msgid "Today"
+msgstr ""
+
+#: car_charge_planner/day_view.py
+#, python-brace-format
+msgid "{before}% → {after}%"
+msgstr ""
+
 #: car_charge_planner/engine/engine.py
 #, python-brace-format
 msgid "The forecast provider {id!r} is not known to this version of the app."
@@ -558,16 +625,16 @@ msgid "The interface is set to a tray icon, but this desktop has none, so the ap
 msgstr ""
 
 #: car_charge_planner/main.py
-msgid "Car charge planner"
-msgstr ""
-
-#: car_charge_planner/main.py
 #, python-brace-format
 msgid ""
 "{error}\n"
 "\n"
 "Fix the file and start the app again:\n"
 "{file}"
+msgstr ""
+
+#: car_charge_planner/main.py car_charge_planner/quick/bridge.py
+msgid "Car charge planner"
 msgstr ""
 
 #: car_charge_planner/main.py
@@ -857,6 +924,62 @@ msgstr ""
 
 #: car_charge_planner/popup.py car_charge_planner/settings/window.py
 msgid "Close"
+msgstr ""
+
+#: car_charge_planner/quick/bridge.py
+#, python-brace-format
+msgid "{power} kW"
+msgstr ""
+
+#: car_charge_planner/quick/bridge.py
+#, python-brace-format
+msgid "min {pct}%"
+msgstr ""
+
+#: car_charge_planner/quick/bridge.py
+#, python-brace-format
+msgid "target {pct}%"
+msgstr ""
+
+#: car_charge_planner/quick/bridge.py
+#, python-brace-format
+msgid "Battery {before}% now, {after}% after charging; minimum {minimum}%, target {target}%."
+msgstr ""
+
+#: car_charge_planner/quick/bridge.py
+msgid "Days"
+msgstr ""
+
+#: car_charge_planner/quick/bridge.py
+msgid "Grid advice"
+msgstr ""
+
+#: car_charge_planner/quick/bridge.py
+msgid "Expected sun"
+msgstr ""
+
+#: car_charge_planner/quick/bridge.py
+msgid "Car battery"
+msgstr ""
+
+#: car_charge_planner/quick/bridge.py
+msgid "now"
+msgstr ""
+
+#: car_charge_planner/quick/bridge.py
+msgid "Away…"
+msgstr ""
+
+#: car_charge_planner/quick/bridge.py car_charge_planner/settings/window.py
+msgid "Settings"
+msgstr ""
+
+#: car_charge_planner/quick/bridge.py
+msgid "Refresh"
+msgstr ""
+
+#: car_charge_planner/quick/bridge.py
+msgid "Fetch a new forecast and plan again"
 msgstr ""
 
 #: car_charge_planner/selftest.py
@@ -1312,10 +1435,6 @@ msgstr ""
 
 #: car_charge_planner/settings/tabs.py
 msgid "Add rule"
-msgstr ""
-
-#: car_charge_planner/settings/window.py
-msgid "Settings"
 msgstr ""
 
 #: car_charge_planner/settings/window.py
@@ -2072,10 +2191,6 @@ msgid "{power} kW ({amps} A)"
 msgstr ""
 
 #: car_charge_planner/view_model.py
-msgid "Today"
-msgstr ""
-
-#: car_charge_planner/view_model.py
 msgid "Tomorrow"
 msgstr ""
 
@@ -2237,10 +2352,6 @@ msgstr ""
 
 #: car_charge_planner/view_model.py
 msgid "No good window coming up"
-msgstr ""
-
-#: car_charge_planner/view_model.py
-msgid "No good window"
 msgstr ""
 
 #: car_charge_planner/view_model.py

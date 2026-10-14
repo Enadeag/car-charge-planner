@@ -42,7 +42,7 @@ def wheel(tmp_path_factory):
     return zipfile.ZipFile(built[0])
 
 
-def test_the_wheel_holds_the_package_its_translations_and_icon_and_no_tests(wheel):
+def test_the_wheel_holds_the_package_its_translations_icon_and_qml_and_no_tests(wheel):
     names = wheel.namelist()
     assert {name.split("/")[0] for name in names} == {"car_charge_planner", f"car_charge_planner-{VERSION}.dist-info"}
     for shipped in (
@@ -51,6 +51,9 @@ def test_the_wheel_holds_the_package_its_translations_and_icon_and_no_tests(whee
         "car_charge_planner/locale/car-charge-planner.pot",
         "car_charge_planner/assets/car-charge-planner.svg",
         "car_charge_planner/assets/car-charge-planner.ico",
+        "car_charge_planner/quick/CarChargePlanner/qmldir",  # without it QML finds neither the module nor its Theme
+        "car_charge_planner/quick/CarChargePlanner/Theme.qml",
+        "car_charge_planner/quick/CarChargePlanner/DashboardWindow.qml",
     ):
         assert shipped in names
     assert not [n for n in names if n.startswith(("tests/", ".scratch/", "docs/")) or "__pycache__" in n]

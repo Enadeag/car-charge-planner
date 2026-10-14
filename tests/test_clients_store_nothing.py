@@ -16,6 +16,7 @@ CLIENTS = sorted(
         *PACKAGE.glob("settings/*.py"),
         *PACKAGE.glob("setup/*.py"),
         *PACKAGE.glob("shells/*.py"),
+        *PACKAGE.glob("quick/*.py"),
         *(PACKAGE / name for name in ("popup.py", "planview.py", "app_windows.py", "controller.py")),
     ]
 )
@@ -92,10 +93,26 @@ def problems(path: Path) -> list[str]:
 
 def test_the_scan_covers_the_clients():
     names = {path.relative_to(PACKAGE).as_posix() for path in CLIENTS}
-    assert {"settings/window.py", "settings/forecast_tab.py", "setup/wizard.py", "shells/window.py", "controller.py"} <= names
+    assert {"settings/window.py", "settings/forecast_tab.py", "setup/wizard.py", "shells/window.py", "controller.py", "quick/bridge.py"} <= names
     assert all(path.exists() for path in CLIENTS)
 
 
 @pytest.mark.parametrize("path", CLIENTS, ids=lambda path: path.relative_to(PACKAGE).as_posix())
 def test_a_client_touches_no_stored_data(path):
     assert problems(path) == []
+
+
+QML_FILES = sorted(PACKAGE.glob("quick/**/*.qml"))
+# QML's own ways to reach files, storage or the network: the QML side shows what the bridge gives it, nothing more
+QML_FORBIDDEN = ("import QtCore", "import Qt.labs.settings", "import QtQuick.LocalStorage", "import Qt.labs.folderlistmodel",
+                 "import QtQuick.Dialogs", "XMLHttpRequest", "Qt.openUrlExternally", "LocalStorage.", "FileDialog", "FolderDialog")
+
+
+def test_the_scan_covers_the_qml_files():
+    assert {"Dashboard.qml", "Theme.qml"} <= {path.name for path in QML_FILES}
+
+
+@pytest.mark.parametrize("path", QML_FILES, ids=lambda path: path.name)
+def test_a_qml_file_touches_no_stored_data(path):
+    text = path.read_text(encoding="utf-8")
+    assert [word for word in QML_FORBIDDEN if word in text] == []

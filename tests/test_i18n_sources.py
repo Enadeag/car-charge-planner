@@ -72,3 +72,16 @@ def test_no_sentence_is_built_by_joining_translated_pieces():
                 if sum(isinstance(s, ast.Call) and _name(s) == "_" for s in sides) == 2:
                     bad.append(f"{path.relative_to(ROOT)}:{node.lineno}")
     assert not bad, bad
+
+
+def test_qml_files_show_only_texts_from_the_bridge():
+    """The extractor reads Python only, so a text written in a QML file (or wrapped in qsTr) would never be translated."""
+    import re
+
+    shown = re.compile(r"""\b(?:text|title|name|description)\s*:\s*(?:[^\n";]*?)"([^"]*)\"""")
+    bad = []
+    for path in sorted(PACKAGE.glob("quick/**/*.qml")):
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if "qsTr" in line or any(_has_letters(text) for text in shown.findall(line)):
+                bad.append(f"{path.relative_to(ROOT)}:{number}")
+    assert not bad, bad

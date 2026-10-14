@@ -81,4 +81,4 @@ explicit-preview-rules = true
 include = ["src"]  # tests are left out: they poke Qt widgets and private attributes, which is mostly stub noise
 pythonVersion = "3.12"
 typeCheckingMode = "basic"
-strict = ["src/car_charge_planner/planner", "src/car_charge_planner/config", "src/car_charge_planner/forecast", "src/car_charge_planner/engine", "src/car_charge_planner/app_settings.py"]  # the packages without Qt
+strict = ["src/car_charge_planner/planner", "src/car_charge_planner/config", "src/car_charge_planner/forecast", "src/car_charge_planner/engine", "src/car_charge_planner/app_settings.py", "src/car_charge_planner/day_view.py"]  # the packages without Qt
