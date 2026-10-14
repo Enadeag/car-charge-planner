@@ -122,7 +122,6 @@ def test_saving_in_the_window_applies_to_the_running_app(qapp, tmp_path, monkeyp
     fake = FakeForecast()
     app = make_app(tmp_path, monkeypatch, fake)
     loaded(app, fake, qapp)
-    app.config_file = tmp_path / "config.toml"
     app.shell.windows.open_settings()
     window = app.shell.windows.settings_window
     window.field_tabs[0].inputs["panels.tilt_deg"].setValue(20)

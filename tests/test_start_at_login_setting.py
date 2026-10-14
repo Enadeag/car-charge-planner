@@ -6,7 +6,7 @@ import pytest
 
 from car_charge_planner.planner.model import load_config
 from car_charge_planner.settings.window import SettingsWindow
-from conftest import example_config
+from conftest import engine_for, example_config
 
 COMMAND = ["/p/car-charge-planner"]
 
@@ -37,7 +37,7 @@ def make(tmp_path, qapp, monkeypatch):
     monkeypatch.setattr("car_charge_planner.settings.window.launch_command", lambda: COMMAND)
 
     def make(login):
-        window = SettingsWindow(example_config(), tmp_path / "config.toml", lambda c: None, login=login)
+        window = SettingsWindow(engine_for(example_config(), tmp_path / "config.toml"), login=login)
         window.show()
         return window
 

@@ -18,7 +18,7 @@ from car_charge_planner.settings.fields import TABS
 from car_charge_planner.settings.window import SettingsWindow
 from car_charge_planner.storage.state import BatteryReading, State
 from car_charge_planner.view_model import build, needs_setup, no_forecast, typical_line
-from conftest import at, forecast_from
+from conftest import at, engine_for, forecast_from
 
 DAY = date(2026, 7, 3)
 NOW = at(DAY, 7)
@@ -78,7 +78,7 @@ def tags(window, tab_key):
 
 def make(cfg, tmp_path):
     file = tmp_path / "config.toml"
-    return SettingsWindow(cfg, file, lambda c: None), file
+    return SettingsWindow(engine_for(cfg, file)), file
 
 
 def test_tags_show_only_on_the_listed_keys(tmp_path, qapp, cfg):

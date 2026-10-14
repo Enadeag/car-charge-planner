@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from pathlib import Path
 from typing import cast
 
 from PySide6.QtCore import Qt
@@ -21,14 +20,11 @@ from PySide6.QtWidgets import (
 )
 
 from car_charge_planner import colours
-from car_charge_planner.forecast.registry import ProviderRegistry
-from car_charge_planner.forecast.registry import registry as builtin
-from car_charge_planner.forecast.secret_store import Secrets, SecretsError, load_secrets, save_secrets
-from car_charge_planner.forecast.selection import check_selection
+from car_charge_planner.engine import Engine
+from car_charge_planner.forecast.secret_store import Secrets
 from car_charge_planner.i18n import _
 from car_charge_planner.identity import launch_command
-from car_charge_planner.planner.config_io import write_config
-from car_charge_planner.planner.model import Config, ConfigError, require_location, validate
+from car_charge_planner.planner.model import Config
 from car_charge_planner.platform import StartAtLogin, start_at_login
 
 from .fields import SOLAR, START_AT_LOGIN, TABS
@@ -48,24 +44,15 @@ def ask_discard(parent) -> bool:
 
 
 class SettingsWindow(QDialog):
-    """Not modal: the tray and popup keep working while it is open."""
+    """Not modal: the tray and popup keep working while it is open. It saves through the engine."""
 
-    def __init__(
-        self,
-        cfg: Config,
-        config_file: Path,
-        on_save: Callable[[Config], None],
-        registry: ProviderRegistry | None = None,
-        on_setup: Callable[[], None] | None = None,
-        login: StartAtLogin | None = None,
-    ) -> None:
+    def __init__(self, engine: Engine, on_setup: Callable[[], None] | None = None, login: StartAtLogin | None = None) -> None:
         super().__init__(None)
         self.setWindowTitle(_("Car charge planner: Settings"))
         self.setModal(False)
         self.setMinimumWidth(660)
-        self.stored = cfg
-        self.config_file = config_file
-        self.on_save = on_save
+        self.engine = engine
+        cfg = self.stored = engine.cfg
         self.on_setup = on_setup
         self.confirm_discard: Callable[[], bool] = lambda: ask_discard(self)
         self.closes_after_save = False
@@ -73,15 +60,10 @@ class SettingsWindow(QDialog):
         self.stored_login = self._login_state()  # the system knows; the config file does not
 
         self.tabs = QTabWidget()
-        self.registry = registry or builtin
-        self.secrets_file = config_file.with_name("secrets.toml")  # beside the config file
-        try:
-            self.stored_secrets: Secrets = load_secrets(self.secrets_file)
-            secrets_problem = ""
-        except SecretsError as err:
-            self.stored_secrets, secrets_problem = {}, str(err)
+        keys = engine.saved_keys()
+        self.stored_secrets: Secrets = keys.values
         self.field_tabs: list[FieldTab | SolarTab] = [SolarTab(spec, cfg) if spec is SOLAR else FieldTab(spec, cfg, switches={START_AT_LOGIN: self.stored_login}) for spec in TABS]
-        self.forecast_tab = ForecastTab(cfg, self.stored_secrets, self.registry, lambda: self.current_config(), secrets_problem, storage_note(self.secrets_file))
+        self.forecast_tab = ForecastTab(engine, self.stored_secrets, lambda: self.current_config(), keys.problem, storage_note(engine.key_storage()))
         self.away_tab = AwayRulesTab(cfg)
         planning = next(i for i, t in enumerate(self.field_tabs) if t.key == "planning")
         self.all_tabs = [*self.field_tabs[: planning + 1], self.forecast_tab, *self.field_tabs[planning + 1 :], self.away_tab]
@@ -216,41 +198,28 @@ class SettingsWindow(QDialog):
         super().keyPressEvent(event)
 
     def save(self) -> bool:
-        """Validate, write, apply. True when saved; on any problem nothing is written and False is returned."""
-        try:
-            cfg = require_location(validate(self.current_config()))
-        except ConfigError as err:
-            self.show_errors(str(err).split("\n")[1:] or [str(err)])
-            return False
-        except TypeError as err:
-            self.show_errors([_("A value has the wrong type: {error}").format(error=err)])
-            return False
-        secrets = self.current_secrets()
-        problems = check_selection(cfg, secrets, self.registry)
+        """Check, then have the engine store and apply it. True when saved; on any problem nothing is saved and False is
+        returned."""
+        cfg, secrets = self.current_config(), self.current_secrets()
+        problems = self.engine.check_settings(cfg, secrets)
         if problems:
             self.show_errors(problems)
             return False
         if not self._apply_login():
             return False
-        try:
-            if secrets != self.stored_secrets:  # keys first: if they cannot be written, nothing else is
-                save_secrets(secrets, self.secrets_file)
-            write_config(cfg, self.config_file)
-        except SecretsError as err:
-            self.show_errors([str(err)])
+        problems = self.engine.save_settings(cfg, secrets if secrets != self.stored_secrets else None)
+        if problems:
+            self.show_errors(problems)
             return False
-        except OSError as err:
-            self.show_errors([_("Could not write {file}: {error}").format(file=self.config_file, error=err)])
-            return False
-        self.stored, self.stored_secrets = cfg, secrets
+        cfg = self.stored = self.engine.cfg
+        self.stored_secrets = secrets
         self.forecast_tab.remember_secrets(secrets)
-        self.forecast_tab.show_storage(storage_note(self.secrets_file))  # a keychain that failed just now means the file
+        self.forecast_tab.show_storage(storage_note(self.engine.key_storage()))  # a keychain that failed just now means the file
         self.errors.setVisible(False)
         self.interface_tab.switches[START_AT_LOGIN] = self.stored_login
         for tab in self.all_tabs:
             tab.load(cfg)  # the window stays usable: what is saved is now the baseline for "changed"
         self.refresh_close_button()
-        self.on_save(cfg)
         return True
 
     def _apply_login(self) -> bool:

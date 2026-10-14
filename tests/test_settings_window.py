@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QDialog
 
 from car_charge_planner.planner.model import Config, Panels, Setup, first_run_config, load_config
 from car_charge_planner.settings.window import SettingsWindow
-from conftest import example_config
+from conftest import engine_for, example_config
 
 
 class Harness:
@@ -18,7 +18,7 @@ class Harness:
         self.saved = []
         self.asked = []
         self.answer = True
-        self.window = SettingsWindow(cfg or example_config(), self.file, self.saved.append)
+        self.window = SettingsWindow(engine_for(cfg or example_config(), self.file, saved=self.saved))
         self.window.confirm_discard = lambda: (self.asked.append(1), self.answer)[1]
         self.window.show()
 
@@ -93,7 +93,7 @@ def test_a_failed_write_is_reported_and_keeps_the_window_open(h, monkeypatch):
     def boom(cfg, path):
         raise OSError("disk full")
 
-    monkeypatch.setattr("car_charge_planner.settings.window.write_config", boom)
+    monkeypatch.setattr("car_charge_planner.engine.store.write_config", boom)
     h.box("panels.kwp").setValue(5.5)
     h.window.save_button.click()
     assert h.window.isVisible() and "disk full" in h.window.errors.text() and h.saved == []

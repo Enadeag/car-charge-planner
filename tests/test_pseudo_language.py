@@ -17,7 +17,7 @@ from car_charge_planner.popup import PLAN, UPDATE, Popup
 from car_charge_planner.settings.window import SettingsWindow
 from car_charge_planner.storage.state import BatteryReading, State
 from car_charge_planner.view_model import ForecastSource, build, needs_setup, no_forecast
-from conftest import TZ, at, forecast_from
+from conftest import TZ, answers, at, engine_for, forecast_from
 
 DAY = date(2026, 7, 3)
 NOW = at(DAY, 7)
@@ -96,7 +96,7 @@ def test_the_popup_is_fully_translated_and_nothing_is_clipped(cfg, qapp, pseudo_
 
 
 def test_the_settings_window_is_fully_translated_and_nothing_is_clipped(cfg, qapp, pseudo_language, tmp_path):
-    window = SettingsWindow(cfg, tmp_path / "config.toml", lambda c: None, on_setup=lambda: None)
+    window = SettingsWindow(engine_for(cfg, tmp_path / "config.toml"), on_setup=lambda: None)
     settle(window)
     problems = []
     for index in range(window.tabs.count()):
@@ -143,7 +143,7 @@ def test_the_setup_wizard_pages_are_fully_translated_and_nothing_is_clipped(cfg,
     from car_charge_planner.setup.wizard import SetupWizard
 
     typical = replace(cfg, setup=Setup(TYPICAL_KEYS))
-    wizard = SetupWizard(typical, tmp_path / "config.toml", lambda c: None, check=lambda c: Attempt(True, 2, "OK"), environ={"LANG": "nl_NL"}, qt_locale_name="")
+    wizard = SetupWizard(engine_for(typical, tmp_path / "config.toml"), lambda c: None, check=answers(Attempt(True, 2, "OK")), environ={"LANG": "nl_NL"}, qt_locale_name="")
     problems = []
     wizard.confirm_leave = lambda: True
     wizard.show()
@@ -163,12 +163,10 @@ def test_the_setup_wizard_failure_texts_are_translated_too(cfg, qapp, pseudo_lan
     from car_charge_planner.forecast.check import Attempt
     from car_charge_planner.setup.wizard import SetupWizard
 
-    wizard = SetupWizard(cfg, tmp_path / "config.toml", lambda c: None, check=lambda c: Attempt(False, message=i18n._("Could not get a forecast from {provider}: {reason}").format(provider="Open-Meteo", reason="x")), environ={"LANG": "nl_NL"}, qt_locale_name="")
+    wizard = SetupWizard(engine_for(cfg, tmp_path / "config.toml"), lambda c: None, check=answers(Attempt(False, message=i18n._("Could not get a forecast from {provider}: {reason}").format(provider="Open-Meteo", reason="x"))), environ={"LANG": "nl_NL"}, qt_locale_name="")
     wizard.confirm_leave = lambda: True
     wizard.show()
     wizard.next()
-    for thread in list(wizard.pages["finish"]._threads):
-        thread.join(5)
     settle(wizard)
     assert pseudo.untranslated(wizard) == [] and pseudo.clipped(wizard) == []
     wizard.close()
@@ -202,7 +200,7 @@ def test_the_location_page_is_fully_translated_in_each_of_its_states(cfg, qapp, 
             if primary == "plain" and name != "start":
                 continue
             config = replace(Config(), forecast=Forecast(primary, "", {}))
-            wizard = SetupWizard(config, tmp_path / f"{name}-{primary}.toml", lambda c: None, registry=registry, check=lambda c: Attempt(True, 2, "OK"), environ={"LANG": "nl_NL"}, qt_locale_name="")
+            wizard = SetupWizard(engine_for(config, tmp_path / f"{name}-{primary}.toml", registry=registry), lambda c: None, check=answers(Attempt(True, 2, "OK")), environ={"LANG": "nl_NL"}, qt_locale_name="")
             wizard.confirm_leave = lambda: True
             wizard.show()
             wizard.navigate("location")
@@ -227,7 +225,7 @@ def test_the_hub_and_the_pages_it_opens_are_fully_translated(cfg, qapp, pseudo_l
     from car_charge_planner.forecast.check import Attempt
     from car_charge_planner.setup.wizard import SetupWizard
 
-    wizard = SetupWizard(cfg, tmp_path / "config.toml", lambda c: None, check=lambda c: Attempt(True, 2, "OK"), environ={"LANG": "nl_NL"}, qt_locale_name="")
+    wizard = SetupWizard(engine_for(cfg, tmp_path / "config.toml"), lambda c: None, check=answers(Attempt(True, 2, "OK")), environ={"LANG": "nl_NL"}, qt_locale_name="")
     wizard.confirm_leave = lambda: True
     wizard.show()
     problems = []

@@ -4,9 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from car_charge_planner.planner.model import Config
-from car_charge_planner.storage.state import mark_seen
-
 from .about import AboutDialog
 from .controller import Controller
 from .i18n import _
@@ -28,11 +25,8 @@ class AppWindows:
 
     def open_settings(self, tab: str | None = None) -> None:
         """One Settings window at a time: opening it again brings the open one forward."""
-        controller = self.controller
         if self.settings_window is None or not self.settings_window.isVisible():
-            self.settings_window = SettingsWindow(
-                controller.engine.cfg, controller.config_file, controller.apply_config, on_setup=self.open_setup
-            )
+            self.settings_window = SettingsWindow(self.controller.engine, on_setup=self.open_setup)
         if tab:
             self.settings_window.show_tab(tab)
         self.settings_window.show_centred()
@@ -46,16 +40,11 @@ class AppWindows:
 
     def open_setup(self) -> None:
         """One set-up wizard at a time, started from the current config."""
-        controller = self.controller
         if self.setup_wizard is None or not self.setup_wizard.isVisible():
-            self.setup_wizard = SetupWizard(controller.engine.cfg, controller.config_file, self._setup_finished)
+            self.setup_wizard = SetupWizard(self.controller.engine, lambda _saved: self.show_plan())
         self.setup_wizard.show()
         self.setup_wizard.raise_()
         self.setup_wizard.activateWindow()
-
-    def _setup_finished(self, cfg: Config) -> None:
-        self.controller.apply_config(cfg)
-        self.show_plan()
 
     def offer_setup(self, background: bool) -> None:
         """At a start that is not set up: open the wizard, or, when started hidden (at login), only offer it."""
@@ -63,7 +52,7 @@ class AppWindows:
             return
         if not background:
             self.open_setup()
-        elif mark_seen(SETUP_OFFER):  # once: a notification at every login would nag
+        elif self.controller.engine.mark_seen(SETUP_OFFER):  # once: a notification at every login would nag
             self.controller.notifier.send(
                 _("Set-up needed"), _("Click here to describe your solar panels and car. It takes a few minutes.")
             )

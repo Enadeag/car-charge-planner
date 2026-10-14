@@ -12,6 +12,7 @@ from car_charge_planner import units
 from car_charge_planner.planner.config_io import dump_config, write_config
 from car_charge_planner.planner.model import Config, ConfigError, load_config, validate
 from car_charge_planner.settings.window import SettingsWindow
+from conftest import engine_for
 
 
 def test_a_mile_is_1609_metres():
@@ -124,7 +125,7 @@ def boxes(window):
 
 
 def make_window(cfg, tmp_path):
-    return SettingsWindow(cfg, tmp_path / "config.toml", lambda c: None)
+    return SettingsWindow(engine_for(cfg, tmp_path / "config.toml"))
 
 
 def test_metric_shows_km_and_kwh_per_100_km(tmp_path, qapp, cfg):
@@ -150,7 +151,7 @@ def test_an_untouched_field_keeps_its_exact_stored_value_in_both_systems(tmp_pat
 
 def test_typing_miles_stores_kilometres(tmp_path, qapp, cfg):
     file = tmp_path / "config.toml"
-    window = SettingsWindow(with_units(cfg, "imperial"), file, lambda c: None)
+    window = SettingsWindow(engine_for(with_units(cfg, "imperial"), file))
     distance, consumption = boxes(window)
     distance.setValue(25)
     consumption.setValue(4.0)

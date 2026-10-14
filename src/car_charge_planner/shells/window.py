@@ -8,8 +8,6 @@ from __future__ import annotations
 from PySide6.QtGui import QAction, QGuiApplication, QKeySequence
 from PySide6.QtWidgets import QApplication, QMainWindow, QMenu, QToolButton, QVBoxLayout, QWidget
 
-from car_charge_planner.storage.state import mark_seen
-
 from ..app_windows import AppWindows
 from ..controller import Controller
 from ..engine import ViewUpdate
@@ -127,7 +125,7 @@ class WindowShell:
 
     def _after_close(self) -> None:
         """The first time the window is closed, say that the app keeps running (once, ever)."""
-        if mark_seen(BACKGROUND_HINT):
+        if self.controller.engine.mark_seen(BACKGROUND_HINT):
             self.controller.notifier.send(
                 _("Still running in the background"),
                 _(

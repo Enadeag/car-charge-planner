@@ -17,6 +17,7 @@ from PySide6.QtWidgets import QPushButton
 from app_process import RunningApp
 from car_charge_planner.config_file import ensure_config
 from car_charge_planner.controller import Controller
+from car_charge_planner.engine import FileStore
 from car_charge_planner.forecast.service import ForecastResult
 from car_charge_planner.planner.model import Config, ConfigError, load_config, require_location, system_timezone
 from car_charge_planner.settings.window import SettingsWindow
@@ -25,7 +26,7 @@ from car_charge_planner.shells.tray import TrayShell
 from car_charge_planner.shells.window import WindowShell
 from car_charge_planner.storage.state import BatteryReading
 from car_charge_planner.view_model import needs_setup
-from conftest import FakeNotifier, at, example_config, forecast_from
+from conftest import FakeNotifier, at, engine_for, example_config, forecast_from
 
 DAY = date(2026, 7, 3)
 PROJECT = Path(__file__).resolve().parent.parent
@@ -153,7 +154,7 @@ def make_controller(cfg, tmp_path, monkeypatch, fetch=None):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     fetch = fetch or CountingFetch()
     monkeypatch.setattr("car_charge_planner.forecast.service.ForecastService.get", lambda self, cfg, now, force=False: fetch(cfg, now, force))
-    return Controller(cfg, tmp_path / "config.toml", FakeNotifier()), fetch
+    return Controller(cfg, FileStore(tmp_path / "config.toml"), FakeNotifier()), fetch
 
 
 def test_without_a_location_nothing_is_fetched_and_the_view_says_so(tmp_path, monkeypatch, qapp):
@@ -178,7 +179,7 @@ def test_giving_a_location_starts_the_first_fetch(tmp_path, monkeypatch, qapp):
     controller, fetch = make_controller(Config(), tmp_path, monkeypatch)
     controller.start()
     assert fetch.calls == []
-    controller.apply_config(example_config())  # what saving Settings does
+    controller.engine.apply_config(example_config())  # what saving Settings does
     settle(controller)
     assert len(fetch.calls) == 1 and fetch.calls[0].latitude == 52.37
     assert controller.engine.vm.state != "needs-setup"
@@ -211,7 +212,7 @@ def test_the_plan_page_offers_the_set_up_wizard_only_while_not_set_up(tmp_path, 
     assert wizard is not None and wizard.isVisible() and wizard.current == "welcome"
     wizard.confirm_leave = lambda: True
     wizard.close()
-    controller.apply_config(example_config())  # a location entered some other way: set up
+    controller.engine.apply_config(example_config())  # a location entered some other way: set up
     settle(controller)
     assert not button.isVisible()
     shell.window.hide()
@@ -219,7 +220,7 @@ def test_the_plan_page_offers_the_set_up_wizard_only_while_not_set_up(tmp_path, 
 
 def settings_window(tmp_path, cfg):
     saved = []
-    window = SettingsWindow(cfg, tmp_path / "config.toml", saved.append)
+    window = SettingsWindow(engine_for(cfg, tmp_path / "config.toml", saved=saved))
     window.confirm_discard = lambda: True
     window.show()
     return window, saved
@@ -273,7 +274,7 @@ def test_the_plan_page_hides_the_status_lines_while_not_set_up(tmp_path, monkeyp
     shell = WindowShell(controller)
     shell.show_plan()
     assert shell.view.status_box.isHidden() and shell.view.tabs.tabText(1) == "Update"  # no dot, no red prompt
-    controller.apply_config(example_config())
+    controller.engine.apply_config(example_config())
     settle(controller)
     assert not shell.view.status_box.isHidden()
     shell.window.hide()

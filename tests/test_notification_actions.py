@@ -14,7 +14,7 @@ from PySide6.QtCore import QPoint, QRect
 from PySide6.QtTest import QTest
 
 from car_charge_planner.controller import Controller
-from car_charge_planner.engine import run_here
+from car_charge_planner.engine import FileStore, run_here
 from car_charge_planner.forecast.service import ForecastResult
 from car_charge_planner.notification_actions import DEFAULT_ACTION, ActionListener, JeepneySource, action_handler
 from car_charge_planner.notifier import Notifier
@@ -72,7 +72,7 @@ def test_other_actions_are_ignored():
 def make_controller(cfg, tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     forecast = FixedForecast(ForecastResult(forecast_from([(DAY + timedelta(days=i), 900) for i in range(3)]), at(DAY, 6), True, False))
-    controller = Controller(cfg, tmp_path / "config.toml", FakeNotifier(), forecast, FakeClock(at(DAY, 7)), run_here)
+    controller = Controller(cfg, FileStore(tmp_path / "config.toml"), FakeNotifier(), forecast, FakeClock(at(DAY, 7)), run_here)
     controller.start()
     return controller
 

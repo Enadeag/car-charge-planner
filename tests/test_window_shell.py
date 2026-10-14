@@ -12,7 +12,7 @@ from PySide6.QtGui import QCloseEvent, QKeySequence
 from PySide6.QtWidgets import QApplication, QPushButton
 
 from car_charge_planner.controller import Controller
-from car_charge_planner.engine import run_here
+from car_charge_planner.engine import FileStore, run_here
 from car_charge_planner.forecast.service import ForecastResult
 from car_charge_planner.shells.icons import make_icon
 from car_charge_planner.shells.window import BACKGROUND_HINT, WindowShell
@@ -28,7 +28,7 @@ class Setup:
         self.notifier = FakeNotifier()
         self.now = FakeClock(at(DAY, hour, minute))
         forecast = FixedForecast(ForecastResult(forecast_from([(DAY + timedelta(days=i), 900) for i in range(3)]), at(DAY, 6), True, False))
-        self.controller = Controller(cfg, tmp_path / "config.toml", self.notifier, forecast, self.now, run_here)
+        self.controller = Controller(cfg, FileStore(tmp_path / "config.toml"), self.notifier, forecast, self.now, run_here)
         self.controller.engine.refresh()
         self.shell = WindowShell(self.controller)
         self.window = self.shell.window
@@ -67,7 +67,7 @@ def test_the_title_and_icon_follow_the_state(s):
 
 def test_with_no_forecast_the_title_says_so(cfg, tmp_path, monkeypatch, qapp):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    controller = Controller(cfg, tmp_path / "config.toml", FakeNotifier())
+    controller = Controller(cfg, FileStore(tmp_path / "config.toml"), FakeNotifier())
     shell = WindowShell(controller)
     controller.engine.rebuild()
     assert shell.window.windowTitle() == "No forecast available"

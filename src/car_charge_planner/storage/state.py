@@ -145,36 +145,53 @@ def load_battery(path: Path | None = None) -> BatteryReading:
     return load_state(path).battery
 
 
-def set_battery(pct: float, now: datetime, path: Path | None = None) -> State:
+def with_battery(state: State, pct: float, now: datetime) -> State:
     if not 0 <= pct <= 100:
         raise ValueError(f"battery must be between 0 and 100, got {pct}")
-    state = replace(load_state(path), battery=BatteryReading(float(pct), now))
+    return replace(state, battery=BatteryReading(float(pct), now))
+
+
+def with_away(state: State, period: AwayPeriod, now: datetime) -> State:
+    if period.end <= period.start:
+        raise ValueError("away period must end after it starts")
+    away = [a for a in state.away if a.end > now - KEEP_PAST_AWAY and a != period]
+    return replace(state, away=tuple(sorted([*away, period], key=lambda a: a.start)))
+
+
+def without_away(state: State, period: AwayPeriod) -> State:
+    return replace(state, away=tuple(a for a in state.away if a != period))
+
+
+def with_notified(state: State, window: Window, now: datetime) -> State:
+    """Remember that a window was announced: no repeat after a restart, and the app keeps to it."""
+    kept = [n for n in state.notified if n.end > now - KEEP_PAST_AWAY]
+    return replace(state, notified=tuple([*kept, window]))
+
+
+def with_seen(state: State, hint: str) -> State:
+    return state if hint in state.seen else replace(state, seen=(*state.seen, hint))
+
+
+def set_battery(pct: float, now: datetime, path: Path | None = None) -> State:
+    state = with_battery(load_state(path), pct, now)
     save_state(state, path)
     return state
 
 
 def add_away(period: AwayPeriod, now: datetime, path: Path | None = None) -> State:
-    if period.end <= period.start:
-        raise ValueError("away period must end after it starts")
-    state = load_state(path)
-    away = [a for a in state.away if a.end > now - KEEP_PAST_AWAY and a != period]
-    state = replace(state, away=tuple(sorted([*away, period], key=lambda a: a.start)))
+    state = with_away(load_state(path), period, now)
     save_state(state, path)
     return state
 
 
 def remove_away(period: AwayPeriod, path: Path | None = None) -> State:
-    state = load_state(path)
-    state = replace(state, away=tuple(a for a in state.away if a != period))
+    state = without_away(load_state(path), period)
     save_state(state, path)
     return state
 
 
 def mark_notified(window: Window, now: datetime, path: Path | None = None) -> State:
-    """Remember that a window was announced: no repeat after a restart, and the app keeps to it."""
-    state = load_state(path)
-    kept = [n for n in state.notified if n.end > now - KEEP_PAST_AWAY]
-    state = replace(state, notified=tuple([*kept, window]))
+    state = with_notified(load_state(path), window, now)
     save_state(state, path)
     return state
 
@@ -184,5 +201,5 @@ def mark_seen(hint: str, path: Path | None = None) -> bool:
     state = load_state(path)
     if hint in state.seen:
         return False
-    save_state(replace(state, seen=(*state.seen, hint)), path)
+    save_state(with_seen(state, hint), path)
     return True

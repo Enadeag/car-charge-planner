@@ -1,24 +1,20 @@
 """The set-up wizard window: pages, Back and Next, and one write at the end.
 
-Nothing is saved until Finish checks the answers (a `SetupState`) and hands the config to `on_finish`. Closing earlier
+Nothing is saved until Finish checks the answers (a `SetupState`), has the engine save them and calls `on_finish`. Closing earlier
 asks "Leave set-up?" and writes nothing. Opening it again starts from the current config.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from pathlib import Path
 
 from PySide6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QPushButton, QStackedWidget, QVBoxLayout
 
 from car_charge_planner import colours
-from car_charge_planner.forecast.check import Attempt, try_provider
+from car_charge_planner.engine import Engine
+from car_charge_planner.forecast.check import Attempt
 from car_charge_planner.forecast.provider import ForecastProvider
-from car_charge_planner.forecast.registry import ProviderRegistry
-from car_charge_planner.forecast.registry import registry as builtin
-from car_charge_planner.forecast.secret_store import SecretsError, load_secrets
 from car_charge_planner.i18n import _
-from car_charge_planner.planner.config_io import write_config
 from car_charge_planner.planner.model import Config, ConfigError
 
 from .away import AwayPage
@@ -50,11 +46,9 @@ def ask_leave(parent) -> bool:
 class SetupWizard(QDialog):
     def __init__(
         self,
-        cfg: Config,
-        config_file: Path,
+        engine: Engine,
         on_finish: Callable[[Config], None],
-        registry: ProviderRegistry | None = None,
-        check: Callable[[Config], Attempt] | None = None,
+        check: Callable[[Config, Callable[[Attempt], None]], None] | None = None,
         page_classes: list[type[Page]] | None = None,
         environ: Mapping[str, str] | None = None,
         qt_locale_name: str | None = None,
@@ -64,12 +58,12 @@ class SetupWizard(QDialog):
         self.setModal(False)
         self.setMinimumWidth(560)
         self.setMinimumHeight(420)
-        self.config_file = config_file
+        self.engine = engine
         self.on_finish = on_finish
-        self.registry = registry or builtin
+        self.registry = engine.registry
         self.check = check or self._real_check
         self.confirm_leave: Callable[[], bool] = lambda: ask_leave(self)
-        self.state = SetupState.starting_from(cfg, environ, qt_locale_name)
+        self.state = SetupState.starting_from(engine.cfg, environ, qt_locale_name)
         self.finished_ok = False
         self.history: list[str] = []
 
@@ -121,15 +115,8 @@ class SetupWizard(QDialog):
         primary = self.state.config.forecast.primary
         return self.registry.get(primary) if primary in self.registry else None
 
-    def _real_check(self, cfg: Config) -> Attempt:
-        provider = self.primary_provider()
-        if provider is None:
-            return Attempt(False, message=_("The forecast provider {id!r} is not known to this version of the app.").format(id=cfg.forecast.primary))
-        try:
-            secrets = load_secrets(self.config_file.with_name("secrets.toml"))
-        except SecretsError:
-            secrets = {}
-        return try_provider(provider, cfg, secrets)
+    def _real_check(self, cfg: Config, done: Callable[[Attempt], None]) -> None:
+        self.engine.check_provider(cfg.forecast.primary, cfg, None, done)  # with the saved keys
 
     def _show(self, page_id: str) -> None:
         if self.current:
@@ -177,17 +164,16 @@ class SetupWizard(QDialog):
         self.navigate(following)
 
     def finish(self) -> bool:
-        """Check everything together, write the config once, hand it over. False (and nothing written) on a problem."""
+        """Check everything together, have the engine save it once, hand it over. False (and nothing saved) on a problem."""
         self.pages[self.current].leave()
         try:
             cfg = self.state.result()
         except ConfigError as err:
             self._show_errors(str(err).split("\n")[1:] or [str(err)])
             return False
-        try:
-            write_config(cfg, self.config_file)
-        except OSError as err:
-            self._show_errors([_("Could not write {file}: {error}").format(file=self.config_file, error=err)])
+        problems = self.engine.save_settings(cfg)
+        if problems:
+            self._show_errors(problems)
             return False
         self.finished_ok = True
         self.on_finish(cfg)

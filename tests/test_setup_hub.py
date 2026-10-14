@@ -22,7 +22,7 @@ from car_charge_planner.setup.home import (
 )
 from car_charge_planner.setup.recap import build_recap
 from car_charge_planner.setup.wizard import SetupWizard
-from conftest import example_config
+from conftest import answers, engine_for, example_config
 
 NL = {"LANG": "nl_NL.UTF-8"}
 
@@ -53,7 +53,7 @@ def test_the_away_rules_are_checked_in_settings_words(cfg):
 class Rig:
     def __init__(self, tmp_path, cfg=None):
         self.file = tmp_path / "config.toml"
-        self.wizard = SetupWizard(cfg if cfg is not None else Config(), self.file, lambda c: None, check=lambda c: Attempt(True, 2, "OK"), environ=NL, qt_locale_name="")
+        self.wizard = SetupWizard(engine_for(cfg if cfg is not None else Config(), self.file), lambda c: None, check=answers(Attempt(True, 2, "OK")), environ=NL, qt_locale_name="")
         self.wizard.confirm_leave = lambda: True
         self.wizard.show()
         self.wizard.navigate("next")
@@ -269,8 +269,6 @@ def test_finishing_writes_what_was_answered_on_all_three_pages(tmp_path, qapp):
     page.rows[0].weekday.setCurrentIndex(3)
     rig.wizard.next()
     rig.wizard.navigate("finish")
-    for thread in list(rig.wizard.pages["finish"]._threads):
-        thread.join(5)
     assert rig.wizard.finish()
     written = load_config(rig.file)
     assert written.house.baseload_kw == pytest.approx(0.5) and written.away_rules == (AwayRule(3, time(8, 0), time(17, 0)),)
