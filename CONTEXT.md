@@ -87,6 +87,10 @@ A system is supported when a person has checked every release on it; it is beta 
 _Avoid_: Experimental, unofficial
 
 
+**Dashboard**:
+The one screen that shows the plan: the next charge window, grid advice, today's solar curve, the battery and the coming days. It opens from the tray as a popup, or as a window in window mode.
+_Avoid_: Popup (only one of the places it appears), plan window, main screen
+
 **Engine**:
 The part of the app that plans, fetches forecasts, talks to devices and owns all stored data, without any user interface. It runs inside the desktop app, and later can also run on its own on an always-on machine.
 _Avoid_: Backend, server, daemon, core
