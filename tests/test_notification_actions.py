@@ -20,7 +20,7 @@ from car_charge_planner.notifier import Notifier
 from car_charge_planner.popup import Popup
 from car_charge_planner.shells.tray import TrayShell
 from car_charge_planner.shells.window import WindowShell
-from conftest import TZ, FakeNotifier, at, forecast_from
+from conftest import REAL_SESSION_BUS, TZ, FakeNotifier, at, forecast_from
 
 DAY = date(2026, 7, 3)
 
@@ -142,10 +142,11 @@ def test_a_listener_that_cannot_work_is_logged_and_the_app_carries_on(qapp, capl
     listener.stop()  # a second stop is safe
 
 
-@pytest.mark.skipif(not os.environ.get("DBUS_SESSION_BUS_ADDRESS"), reason="needs a session bus")
+@pytest.mark.skipif(not REAL_SESSION_BUS, reason="needs a session bus")
 @pytest.mark.linux
-def test_a_real_action_signal_on_the_session_bus_is_heard(qapp):
+def test_a_real_action_signal_on_the_session_bus_is_heard(qapp, monkeypatch):
     """Emits a fake ActionInvoked for an id nobody owns, so no notification is involved."""
+    monkeypatch.setenv("DBUS_SESSION_BUS_ADDRESS", REAL_SESSION_BUS)
     from jeepney import DBusAddress, new_signal
     from jeepney.io.blocking import open_dbus_connection
 
