@@ -87,6 +87,16 @@ class MemoryKeyring(KeyringBackend):
         del self.entries[(service, username)]
 
 
+REAL_SESSION_BUS = os.environ.get("DBUS_SESSION_BUS_ADDRESS", "")
+
+
+@pytest.fixture(autouse=True)
+def no_desktop_notifications(monkeypatch):
+    """Point the session bus nowhere, for the test and every app it starts: otherwise each start of the whole app sends
+    a real "set-up needed" notification to the developer's desktop."""
+    monkeypatch.setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/nonexistent/car-charge-planner-tests")
+
+
 @pytest.fixture(autouse=True)
 def keychain(monkeypatch):
     """An empty in-memory keychain instead of the user's real one, here and in any program a test starts."""
