@@ -169,15 +169,15 @@ def test_refresh_forces_a_new_forecast(s, monkeypatch):
 
 def test_settings_from_the_menu_opens_the_settings_window(s):
     s.shell.settings_action.trigger()
-    assert s.controller.settings_window is not None and s.controller.settings_window.isVisible()
-    s.controller.settings_window.confirm_discard = lambda: True
-    s.controller.settings_window.close()
+    assert s.shell.windows.settings_window is not None and s.shell.windows.settings_window.isVisible()
+    s.shell.windows.settings_window.confirm_discard = lambda: True
+    s.shell.windows.settings_window.close()
 
 
 def test_the_edit_weekly_rules_button_opens_settings_on_the_away_rules_tab(s):
     s.shell.show_plan()
     next(b for b in s.shell.view.findChildren(QPushButton) if b.text() == "Edit weekly rules in Settings...").click()
-    window = s.controller.settings_window
+    window = s.shell.windows.settings_window
     assert window.isVisible() and window.tabs.tabText(window.tabs.currentIndex()) == "Away rules"
     window.confirm_discard = lambda: True
     window.close()

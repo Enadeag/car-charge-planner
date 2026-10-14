@@ -149,15 +149,15 @@ def test_tray_menu_has_settings_and_no_config_file_entry(qapp, tmp_path, monkeyp
 
 def test_opening_settings_twice_gives_one_window(qapp, tmp_path, monkeypatch):
     app = make_app(tmp_path, monkeypatch, FakeForecast())
-    app.open_settings()
-    first = app.settings_window
-    app.open_settings()
-    assert app.settings_window is first and first.isVisible()
+    app.shell.windows.open_settings()
+    first = app.shell.windows.settings_window
+    app.shell.windows.open_settings()
+    assert app.shell.windows.settings_window is first and first.isVisible()
     first.confirm_discard = lambda: True
     first.close()
-    app.open_settings()
-    assert app.settings_window is not first and app.settings_window.isVisible()
-    app.settings_window.close()
+    app.shell.windows.open_settings()
+    assert app.shell.windows.settings_window is not first and app.shell.windows.settings_window.isVisible()
+    app.shell.windows.settings_window.close()
 
 
 def test_saving_in_the_window_applies_to_the_running_app(qapp, tmp_path, monkeypatch):
@@ -165,8 +165,8 @@ def test_saving_in_the_window_applies_to_the_running_app(qapp, tmp_path, monkeyp
     app = make_app(tmp_path, monkeypatch, fake)
     loaded(app, fake, qapp)
     app.config_file = tmp_path / "config.toml"
-    app.open_settings()
-    window = app.settings_window
+    app.shell.windows.open_settings()
+    window = app.shell.windows.settings_window
     window.field_tabs[0].inputs["panels.tilt_deg"].setValue(20)
     window.save_button.click()
     assert app.cfg.panels[0].tilt_deg == 20

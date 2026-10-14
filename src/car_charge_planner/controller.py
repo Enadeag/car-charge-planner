@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import threading
-from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -15,17 +14,13 @@ from car_charge_planner.forecast.service import ForecastResult, ForecastService,
 from car_charge_planner.planner.advice import grid_advice
 from car_charge_planner.planner.model import AwayPeriod, AwayRule, Config
 from car_charge_planner.planner.projection import plan
-from car_charge_planner.storage.state import State, add_away, load_state, mark_notified, mark_seen, remove_away, set_battery
+from car_charge_planner.storage.state import State, add_away, load_state, mark_notified, remove_away, set_battery
 
-from .about import AboutDialog
 from .i18n import _
 from .notifications import candidate_windows, due, message
 from .notifier import Notifying, make_notifier
-from .settings.window import SettingsWindow
-from .setup.wizard import SetupWizard
 from .view_model import ForecastSource, ViewModel, build, needs_setup, no_forecast
 
-SETUP_OFFER = "set-up-offered"  # the one-time notification offering set-up to a hidden start
 TICK_MS = 60_000  # recompute every minute; the forecast itself refreshes at most hourly
 
 
@@ -39,7 +34,6 @@ class ViewUpdate:
 
 
 class Controller(QObject):
-    setup_completed = Signal()
     forecast_loaded = Signal(object, object)  # the Config the fetch ran under, ForecastResult | Exception
     view_changed = Signal(object)
 
@@ -56,9 +50,6 @@ class Controller(QObject):
         self.error: str | None = None
         self.vm: ViewModel | None = None
         self._loading = False
-        self.settings_window: SettingsWindow | None = None
-        self.setup_wizard: SetupWizard | None = None
-        self.about_dialog: AboutDialog | None = None
 
         self.forecast_loaded.connect(self._on_forecast)
         self.timer = QTimer(self)
@@ -99,49 +90,6 @@ class Controller(QObject):
         else:
             self.error = str(outcome)
         self.rebuild()
-
-    def open_settings(self, tab: str | None = None) -> None:
-        """One Settings window at a time: opening it again brings the open one forward."""
-        if self.settings_window is None or not self.settings_window.isVisible():
-            self.settings_window = SettingsWindow(self.cfg, self.config_file, self.apply_config, on_setup=self.open_setup)
-        if tab:
-            self.settings_window.show_tab(tab)
-        self.settings_window.show_centred()
-
-    def open_about(self) -> None:
-        if self.about_dialog is None:
-            self.about_dialog = AboutDialog()
-        self.about_dialog.show()
-        self.about_dialog.raise_()
-        self.about_dialog.activateWindow()
-
-    def open_setup(self) -> None:
-        """One set-up wizard at a time, started from the current config."""
-        if self.setup_wizard is None or not self.setup_wizard.isVisible():
-            self.setup_wizard = SetupWizard(self.cfg, self.config_file, self._setup_finished)
-        self.setup_wizard.show()
-        self.setup_wizard.raise_()
-        self.setup_wizard.activateWindow()
-
-    def _setup_finished(self, cfg: Config) -> None:
-        self.apply_config(cfg)
-        self.setup_completed.emit()
-
-    def offer_setup(self, background: bool) -> None:
-        """At a start that is not set up: open the wizard, or, when started hidden (at login), only offer it."""
-        if self.cfg.is_set_up:
-            return
-        if not background:
-            self.open_setup()
-        elif mark_seen(SETUP_OFFER):  # once: a notification at every login would nag
-            self.notifier.send(_("Set-up needed"), _("Click here to describe your solar panels and car. It takes a few minutes."))
-
-    def notification_clicked(self, show_plan: Callable[[], None]) -> None:
-        """A click on a notification opens the wizard while not set up (the offer asked for it), else the plan."""
-        if self.cfg.is_set_up:
-            show_plan()
-        else:
-            self.open_setup()
 
     def apply_config(self, cfg: Config) -> None:
         """Switch to a new config without a restart."""

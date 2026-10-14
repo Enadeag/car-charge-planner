@@ -21,8 +21,8 @@ def controller(cfg, tmp_path, monkeypatch, qapp):
     return Controller(cfg, tmp_path / "config.toml", FakeNotifier())
 
 
-def shown_text(controller):
-    dialog = controller.about_dialog
+def shown_text(windows):
+    dialog = windows.about_dialog
     assert dialog is not None and dialog.isVisible()
     text = dialog.text.text()
     dialog.close()
@@ -41,18 +41,19 @@ def assert_about_content(text):
 def test_the_window_menu_opens_the_about_dialog(controller):
     shell = WindowShell(controller)
     shell.about_action.trigger()
-    assert_about_content(shown_text(controller))
+    assert_about_content(shown_text(shell.windows))
 
 
 def test_the_tray_menu_opens_the_about_dialog(controller):
     shell = TrayShell(controller)
     next(a for a in shell.menu.actions() if a.text().startswith("About")).trigger()
-    assert_about_content(shown_text(controller))
+    assert_about_content(shown_text(shell.windows))
 
 
 def test_opening_it_again_shows_the_same_dialog(controller):
-    controller.open_about()
-    first = controller.about_dialog
-    controller.open_about()
-    assert controller.about_dialog is first
+    windows = WindowShell(controller).windows
+    windows.open_about()
+    first = windows.about_dialog
+    windows.open_about()
+    assert windows.about_dialog is first
     first.close()
