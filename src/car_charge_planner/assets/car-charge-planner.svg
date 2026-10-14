@@ -1,5 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
   <title>Car charge planner</title>
-  <circle cx="32" cy="32" r="28" fill="#3b82c4"/>
-  <polygon points="36,10 18,36 30,36 26,54 46,26 34,26" fill="#ffffff"/>
+  <path d="M12 34a20 20 0 0 1 40 0Z" fill="#e39a0b"/>
+  <g stroke="#e39a0b" stroke-width="4" stroke-linecap="round" fill="none">
+    <path d="M32 6v5M13 13l3.5 3.5M51 13l-3.5 3.5M4 32h4M56 32h4"/>
+  </g>
+  <g stroke="#1f8f5c" stroke-width="4" stroke-linecap="round" fill="none">
+    <path d="M6 38h52M27 44v-5M37 44v-5M32 56v6"/>
+  </g>
+  <rect x="23" y="44" width="18" height="12" rx="4" fill="#1f8f5c"/>
 </svg>
