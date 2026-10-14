@@ -348,23 +348,32 @@ def make_controller(cfg, tmp_path, monkeypatch):
     return Controller(cfg, tmp_path / "config.toml", FakeNotifier())
 
 
-def test_the_controller_opens_one_wizard_at_a_time(tmp_path, qapp, monkeypatch):
+def make_windows(controller, shown=None):
+    from car_charge_planner.app_windows import AppWindows
+
+    return AppWindows(controller, (lambda: shown.append(1)) if shown is not None else (lambda: None))
+
+
+def test_the_shell_opens_one_wizard_at_a_time(tmp_path, qapp, monkeypatch):
     controller = make_controller(example_config(), tmp_path, monkeypatch)
-    controller.open_setup()
-    first = controller.setup_wizard
+    windows = make_windows(controller)
+    windows.open_setup()
+    first = windows.setup_wizard
     assert first.isVisible() and first.state.config == controller.cfg
-    controller.open_setup()
-    assert controller.setup_wizard is first
+    windows.open_setup()
+    assert windows.setup_wizard is first
     first.reject()  # untouched: closes without asking
-    controller.open_setup()
-    assert controller.setup_wizard is not first and controller.setup_wizard.isVisible()
-    controller.setup_wizard.close()
+    windows.open_setup()
+    assert windows.setup_wizard is not first and windows.setup_wizard.isVisible()
+    windows.setup_wizard.close()
 
 
 def test_finishing_applies_the_new_config_in_the_running_app(tmp_path, qapp, monkeypatch):
     controller = make_controller(example_config(), tmp_path, monkeypatch)
-    controller.open_setup()
-    wizard = controller.setup_wizard
+    shown = []
+    windows = make_windows(controller, shown)
+    windows.open_setup()
+    wizard = windows.setup_wizard
     wizard.check = lambda cfg: Attempt(True, 2, "OK: 2 days of forecast")
     wizard.pages["welcome"].units.setCurrentIndex(wizard.pages["welcome"].units.findData("imperial"))
     wizard.next()
@@ -377,3 +386,4 @@ def test_finishing_applies_the_new_config_in_the_running_app(tmp_path, qapp, mon
     wizard.next()
     settle_controller(controller)  # applying the config starts a fetch
     assert controller.cfg.interface.units == "imperial" and load_config(tmp_path / "config.toml").interface.units == "imperial"
+    assert shown == [1]

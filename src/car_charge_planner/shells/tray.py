@@ -9,6 +9,7 @@ from PySide6.QtCore import QRect, QSize
 from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
+from ..app_windows import AppWindows
 from ..controller import Controller, ViewUpdate
 from ..i18n import _
 from ..popup import Popup
@@ -19,6 +20,7 @@ __all__ = ["CLICK_CLOSE_GRACE_S", "TrayShell", "make_icon"]
 class TrayShell:
     def __init__(self, controller: Controller) -> None:
         self.controller = controller
+        self.windows = AppWindows(controller, self.show_plan)
         self.popup = Popup(controller.tz)
         self.popup.battery_submitted.connect(controller.set_battery)
         self.popup.away_added.connect(controller.add_away_period)
@@ -29,9 +31,9 @@ class TrayShell:
         self.tray = QSystemTrayIcon(make_icon("none"))
         menu = QMenu()
         menu.addAction(_("Refresh forecast"), lambda: controller.refresh(force=True))
-        menu.addAction(_("Settings..."), lambda: controller.open_settings())
-        menu.addAction(_("Set up..."), lambda: controller.open_setup())
-        menu.addAction(_("About..."), lambda: controller.open_about())
+        menu.addAction(_("Settings..."), lambda: self.windows.open_settings())
+        menu.addAction(_("Set up..."), lambda: self.windows.open_setup())
+        menu.addAction(_("About..."), lambda: self.windows.open_about())
         menu.addSeparator()
         menu.addAction(_("Quit"), QApplication.quit)
         self.menu = menu
@@ -63,11 +65,11 @@ class TrayShell:
 
     def _on_setup_requested(self) -> None:
         self.popup.hide()
-        self.controller.open_setup()
+        self.windows.open_setup()
 
     def _on_settings_requested(self, tab: str) -> None:
         self.popup.hide()
-        self.controller.open_settings(tab)
+        self.windows.open_settings(tab)
 
     def _on_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
         if reason in (QSystemTrayIcon.ActivationReason.Trigger, QSystemTrayIcon.ActivationReason.MiddleClick):

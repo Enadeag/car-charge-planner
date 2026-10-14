@@ -62,11 +62,19 @@ DRIVER = textwrap.dedent(
             QTimer.singleShot(1500, look)  # the application exists now: act a moment after the app has started
     appmain.Controller = Spy
 
+    shells = []
+    original_create_shell = appmain.create_shell
+    def spy_create_shell(*a, **k):
+        shell, choice = original_create_shell(*a, **k)
+        shells.append(shell)
+        return shell, choice
+    appmain.create_shell = spy_create_shell
+
     report = {{}}
 
     def look():
         c = controllers[0]
-        wizard = c.setup_wizard
+        wizard = shells[0].windows.setup_wizard
         report["wizard_open"] = bool(wizard is not None and wizard.isVisible())
         report["state_at_start"] = c.vm.state if c.vm else None
         report["notifications"] = list(sent)

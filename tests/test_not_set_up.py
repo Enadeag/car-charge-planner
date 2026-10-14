@@ -214,7 +214,7 @@ def test_the_plan_page_offers_the_set_up_wizard_only_while_not_set_up(tmp_path, 
     button = next(b for b in shell.view.findChildren(QPushButton) if b.text() == "Set up")
     assert button.isVisible()
     button.click()
-    wizard = controller.setup_wizard
+    wizard = shell.windows.setup_wizard
     assert wizard is not None and wizard.isVisible() and wizard.current == "welcome"
     wizard.confirm_leave = lambda: True
     wizard.close()

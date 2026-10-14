@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QMenu, QToolButton, QVB
 
 from car_charge_planner.storage.state import mark_seen
 
+from ..app_windows import AppWindows
 from ..controller import Controller, ViewUpdate
 from ..i18n import _
 from ..identity import APP_NAME
@@ -36,6 +37,7 @@ class PlanWindow(QMainWindow):
 class WindowShell:
     def __init__(self, controller: Controller) -> None:
         self.controller = controller
+        self.windows = AppWindows(controller, self.show_plan)
         self._placed = False  # centre the window the first time it is shown, then leave it where the owner puts it
         self.window = PlanWindow(self._after_close)
         self.window.setWindowTitle(APP_NAME)
@@ -46,8 +48,8 @@ class WindowShell:
         self.view.battery_submitted.connect(controller.set_battery)
         self.view.away_added.connect(controller.add_away_period)
         self.view.away_removed.connect(controller.remove_away_period)
-        self.view.settings_requested.connect(controller.open_settings)
-        self.view.setup_requested.connect(controller.open_setup)
+        self.view.settings_requested.connect(self.windows.open_settings)
+        self.view.setup_requested.connect(self.windows.open_setup)
         self.view.layout_changed.connect(self._fit)
 
         central = QWidget()
@@ -59,13 +61,13 @@ class WindowShell:
         # what the tray's context menu is on the tray shell
         self.menu = QMenu(self.window)
         self.settings_action = self.menu.addAction(_("Settings..."))
-        self.settings_action.triggered.connect(lambda: controller.open_settings())
+        self.settings_action.triggered.connect(lambda: self.windows.open_settings())
         self.setup_action = self.menu.addAction(_("Set up..."))
-        self.setup_action.triggered.connect(lambda: controller.open_setup())
+        self.setup_action.triggered.connect(lambda: self.windows.open_setup())
         self.refresh_action = self.menu.addAction(_("Refresh forecast"))
         self.refresh_action.triggered.connect(lambda: controller.refresh(force=True))
         self.about_action = self.menu.addAction(_("About..."))
-        self.about_action.triggered.connect(lambda: controller.open_about())
+        self.about_action.triggered.connect(lambda: self.windows.open_about())
         self.menu.addSeparator()
         self.quit_action = QAction(_("Quit"), self.window)
         self.quit_action.setShortcut(QKeySequence.StandardKey.Quit)

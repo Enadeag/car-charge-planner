@@ -354,7 +354,7 @@ def test_the_tray_opens_settings_on_the_away_rules_tab_and_hides_the_popup(cfg, 
     app = _tray(cfg, tmp_path, monkeypatch)
     app.popup.show()
     app.popup.settings_requested.emit("away")
-    window = app.settings_window
+    window = app.shell.windows.settings_window
     assert window.isVisible() and window.tabs.currentWidget() is window.away_tab
     assert not app.popup.isVisible()
 
@@ -368,12 +368,12 @@ def test_a_rule_saved_in_settings_shows_up_in_the_popup(cfg, tmp_path, monkeypat
     app.result = ForecastResult(forecast_from([(DAY, 900)]), at(DAY, 6), True, False)
     app.rebuild()
     assert any("Thursday" in t for t in labels(app.popup))
-    app.open_settings("away")
-    row = app.settings_window.away_tab.rows[0]
+    app.shell.windows.open_settings("away")
+    row = app.shell.windows.settings_window.away_tab.rows[0]
     row.weekday.setCurrentIndex(0)
     row.start.setTime(QTime(7, 0))
     row.end.setTime(QTime(12, 30))
-    app.settings_window.save_button.click()
+    app.shell.windows.settings_window.save_button.click()
     texts = labels(app.popup)
     assert any("Monday" in t and "07:00-12:30" in t for t in texts) and not any("Thursday" in t for t in texts)
 

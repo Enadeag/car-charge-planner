@@ -89,6 +89,14 @@ msgstr ""
 msgid "<a href=\"{url}\">Source code</a>"
 msgstr ""
 
+#: car_charge_planner/app_windows.py
+msgid "Set-up needed"
+msgstr ""
+
+#: car_charge_planner/app_windows.py
+msgid "Click here to describe your solar panels and car. It takes a few minutes."
+msgstr ""
+
 #: car_charge_planner/away_input.py
 msgid "The end time must be after the start time"
 msgstr ""
@@ -137,14 +145,6 @@ msgstr ""
 #: car_charge_planner/away_input.py
 #, python-brace-format
 msgid "Away: {items}"
-msgstr ""
-
-#: car_charge_planner/controller.py
-msgid "Set-up needed"
-msgstr ""
-
-#: car_charge_planner/controller.py
-msgid "Click here to describe your solar panels and car. It takes a few minutes."
 msgstr ""
 
 #: car_charge_planner/controller.py

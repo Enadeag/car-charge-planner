@@ -8,8 +8,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
+from ..app_windows import AppWindows
+
 
 class Shell(Protocol):
+    windows: AppWindows
+
     def start(self, background: bool = False) -> None: ...
 
     def show_plan(self) -> None: ...

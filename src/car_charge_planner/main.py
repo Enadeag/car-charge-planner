@@ -160,10 +160,9 @@ def main(argv: list[str] | None = None) -> int:
         instance.show_requested.connect(shell.show_plan)
         instance.quit_requested.connect(app.quit)
     listener = click_listener(controller.notifier)
-    listener.action_invoked.connect(action_handler(controller.notifier, lambda: controller.notification_clicked(shell.show_plan)))
+    listener.action_invoked.connect(action_handler(controller.notifier, shell.windows.notification_clicked))
     app.aboutToQuit.connect(listener.stop)
     listener.start()
-    controller.setup_completed.connect(shell.show_plan)
     shell.start(background=background)
     if smoke_test:
         if problem := missing_from_build():
@@ -171,7 +170,7 @@ def main(argv: list[str] | None = None) -> int:
             return 3
         QTimer.singleShot(0, app.quit)
     else:
-        controller.offer_setup(background)
+        shell.windows.offer_setup(background)
     exit_code = app.exec()
     delete_windows(app)
     return exit_code

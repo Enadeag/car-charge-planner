@@ -264,7 +264,7 @@ class TrayApp:
         object.__setattr__(self, "shell", TrayShell(self.controller))
 
     def _owner(self, name):
-        for part in (self.controller, self.shell):
+        for part in (self.controller, self.shell, self.shell.windows):
             if hasattr(part, name):
                 return part
         return None
