@@ -65,7 +65,7 @@ public final class SingleInstance implements AutoCloseable {
             }
             return claim;
         } catch (IOException e) {
-            LOG.log(Level.WARNING, "no private instance socket, so a second copy of the app could start", e);
+            LOG.log(Level.WARNING, "no private instance socket, so a second copy of the app could start: " + e);
             return Claim.UNAVAILABLE;
         }
     }
