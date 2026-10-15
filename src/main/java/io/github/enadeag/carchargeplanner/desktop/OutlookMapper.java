@@ -2,6 +2,8 @@ package io.github.enadeag.carchargeplanner.desktop;
 
 import io.github.enadeag.carchargeplanner.engine.Outlook;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastSource;
+import io.github.enadeag.carchargeplanner.engine.forecast.Freshness;
+import io.github.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -53,11 +55,11 @@ final class OutlookMapper {
     private static String footer(Outlook.Planned planned) {
         var source = planned.forecast();
         var parts = new ArrayList<>(List.of(source.attribution()));
-        if (source.fromFallback()) {
+        if (source.providerRole() == ProviderRole.FALLBACK) {
             parts.add((source.primaryName().isEmpty() ? "the chosen provider" : source.primaryName()) + " unavailable");
         }
         var fetched = Format.time(source.fetchedAt(), planned.zone());
-        parts.add(source.stale() ? "not refreshed since " + fetched : "updated " + fetched);
+        parts.add(source.freshness() == Freshness.STALE ? "not refreshed since " + fetched : "updated " + fetched);
         busyUntil(source, planned).ifPresent(parts::add);
         return String.join(" · ", parts);
     }

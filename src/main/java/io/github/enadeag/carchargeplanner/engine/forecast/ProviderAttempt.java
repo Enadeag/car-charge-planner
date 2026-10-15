@@ -67,11 +67,11 @@ final class ProviderAttempt {
         var cooldown = cache.cooldownUntil(info.id()).filter(now::isBefore);
         var usable = cached.filter(forecast -> forecast.age(now).compareTo(info.maxUsefulAge()) <= 0);
         if (cached.isPresent() && !force && cached.get().age(now).compareTo(info.minRefresh()) < 0) {
-            return fromCache(cached.get(), false, cooldown);
+            return fromCache(cached.get(), Freshness.CACHED, cooldown);
         }
         var waitUntil = cooldown.or(this::waitingAfterFailure);
         if (waitUntil.isPresent()) {
-            return usable.map(forecast -> fromCache(forecast, true, cooldown))
+            return usable.map(forecast -> fromCache(forecast, Freshness.STALE, cooldown))
                     .orElseGet(() -> failure("not asked again until " + clock(waitUntil.get(), system.timezone())));
         }
         return fetch(system, settings, key, usable);
@@ -87,7 +87,7 @@ final class ProviderAttempt {
             var steps = Steps.requireValid(provider.fetch(system, settings, now));
             retryAt.remove(info.id());
             cache.saveForecast(info.id(), key, now, steps);
-            return new Outcome.Usable(steps, now, false, false, Optional.empty());
+            return new Outcome.Usable(steps, now, Freshness.FRESH, Optional.empty());
         } catch (ProviderError.RateLimited e) {
             var until = now.plus(e.retryAfter().orElse(info.minRefresh()));
             cache.saveCooldown(info.id(), until);
@@ -108,11 +108,11 @@ final class ProviderAttempt {
     }
 
     private Outcome afterFailure(String reason, Optional<ForecastCache.Cached> usable, Optional<Instant> cooldown) {
-        return usable.map(forecast -> fromCache(forecast, true, cooldown)).orElseGet(() -> failure(reason));
+        return usable.map(forecast -> fromCache(forecast, Freshness.STALE, cooldown)).orElseGet(() -> failure(reason));
     }
 
-    private static Outcome fromCache(ForecastCache.Cached forecast, boolean stale, Optional<Instant> cooldown) {
-        return new Outcome.Usable(List.copyOf(forecast.steps()), forecast.fetchedAt(), true, stale, cooldown);
+    private static Outcome fromCache(ForecastCache.Cached forecast, Freshness freshness, Optional<Instant> cooldown) {
+        return new Outcome.Usable(List.copyOf(forecast.steps()), forecast.fetchedAt(), freshness, cooldown);
     }
 
     private Outcome failure(String reason) {

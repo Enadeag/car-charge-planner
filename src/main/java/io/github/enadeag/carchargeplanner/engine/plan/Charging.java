@@ -36,7 +36,7 @@ final class Charging {
      * @return the charge power in kW, measured at the wall
      */
     static double powerKw(int amps, Charger charger) {
-        return amps * charger.volts() * charger.phases() / 1000;
+        return amps * charger.volts() * charger.phases().count() / 1000;
     }
 
     /**
@@ -47,7 +47,7 @@ final class Charging {
      * @return the current per phase in A; below the charger's minimum when the power is too low to charge
      */
     static int ampsFor(double powerKw, Charger charger) {
-        return Math.min(charger.maxAmps(), (int) (powerKw * 1000 / (charger.volts() * charger.phases())));
+        return Math.min(charger.maxAmps(), (int) (powerKw * 1000 / (charger.volts() * charger.phases().count())));
     }
 
     /**

@@ -13,6 +13,8 @@ import io.github.enadeag.carchargeplanner.engine.forecast.ForecastCache;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastService;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastSource;
+import io.github.enadeag.carchargeplanner.engine.forecast.Freshness;
+import io.github.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet.Reply;
 import io.github.enadeag.carchargeplanner.engine.forecast.PlaceResults;
@@ -138,7 +140,7 @@ class EngineTest {
         var source = source(engine(clockAt(7)));
 
         assertThat(source.attribution()).isEqualTo("Forecast by Main");
-        assertThat(source.fromFallback()).isFalse();
+        assertThat(source.providerRole()).isEqualTo(ProviderRole.PRIMARY);
         assertThat(main.callCount()).isEqualTo(1);
     }
 
@@ -147,8 +149,8 @@ class EngineTest {
         main.script(error(new ProviderError.Unavailable("down")));
         var source = source(engine(clockAt(7)));
 
-        assertThat(source).extracting(ForecastSource::attribution, ForecastSource::fromFallback, ForecastSource::primaryName)
-                .containsExactly("Forecast by Backup", true, "Main");
+        assertThat(source).extracting(ForecastSource::attribution, ForecastSource::providerRole, ForecastSource::primaryName)
+                .containsExactly("Forecast by Backup", ProviderRole.FALLBACK, "Main");
     }
 
     @Test
@@ -202,7 +204,7 @@ class EngineTest {
         engine.plan();
         Files.writeString(config, Files.readString(config).replace("\"margin\": 0.85", "\"margin\": 0.5"));
 
-        assertThat(source(engine).fromCache()).isTrue();
+        assertThat(source(engine).freshness()).isEqualTo(Freshness.CACHED);
         assertThat(main.callCount()).isEqualTo(1);
     }
 
@@ -213,7 +215,7 @@ class EngineTest {
         engine(clockAt(7)).plan();
 
         var busy = source(engine(clockAt(9))); // due again; the provider says wait
-        assertThat(busy.stale()).isTrue();
+        assertThat(busy.freshness()).isEqualTo(Freshness.STALE);
         assertThat(busy.cooldownUntil()).contains(DAY.atTime(10, 0).atZone(BRUSSELS).toInstant());
 
         var after = source(engine(clockAt(11)));
@@ -224,7 +226,8 @@ class EngineTest {
     @Test
     void aPlanWithoutWindowsHasNoNextWindow() {
         var madeAt = Instant.parse("2026-07-03T05:00:00Z");
-        var source = new ForecastSource("main", "Main", "Forecast by Main", madeAt, false, false, false, "", Optional.empty());
+        var source = new ForecastSource("main", "Main", "Forecast by Main", madeAt, Freshness.FRESH, ProviderRole.PRIMARY,
+                "", Optional.empty());
         var planned = new Outlook.Planned(madeAt, BRUSSELS, List.of(), 50, true, Optional.empty(), source);
         assertThat(planned.nextWindow()).isEmpty();
     }
@@ -284,11 +287,11 @@ class EngineTest {
     void savingKeysLetsAProviderThatFailedBeAskedAgainAtOnce() throws SecretsProblem {
         main.script(error(new ProviderError.Unavailable("down")), steps(days(2, 4.0)));
         var engine = engine(clockAt(7));
-        assertThat(source(engine).fromFallback()).isTrue();
+        assertThat(source(engine).providerRole()).isEqualTo(ProviderRole.FALLBACK);
 
         engine.saveApiKeys(Secrets.NONE);
 
-        assertThat(source(engine).fromFallback()).isFalse();
+        assertThat(source(engine).providerRole()).isEqualTo(ProviderRole.PRIMARY);
         assertThat(main.callCount()).isEqualTo(2);
     }
 

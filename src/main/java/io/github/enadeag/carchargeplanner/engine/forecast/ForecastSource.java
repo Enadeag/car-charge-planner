@@ -10,9 +10,8 @@ import java.util.Optional;
  * @param providerName its name
  * @param attribution the credit its terms ask for
  * @param fetchedAt when it was fetched
- * @param fromCache the network was not used for it
- * @param stale a refresh was due but could not be done
- * @param fromFallback the primary provider had nothing usable
+ * @param freshness whether it was fetched just now or comes from the cache, and then whether a refresh was due
+ * @param providerRole whether the provider that made it is the primary or the fallback
  * @param primaryName the name of the provider that was asked first; empty when it was the primary
  * @param cooldownUntil the provider that made it refuses requests until then
  */
@@ -21,9 +20,8 @@ public record ForecastSource(
         String providerName,
         String attribution,
         Instant fetchedAt,
-        boolean fromCache,
-        boolean stale,
-        boolean fromFallback,
+        Freshness freshness,
+        ProviderRole providerRole,
         String primaryName,
         Optional<Instant> cooldownUntil) {
 }

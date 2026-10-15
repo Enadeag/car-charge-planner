@@ -59,7 +59,8 @@ public final class ForecastService {
             var outcome = ask(order.get(index), system, selection, stored.secrets(), now, force);
             if (outcome instanceof Outcome.Usable usable) {
                 var info = providers.find(order.get(index)).orElseThrow().info();
-                return result(usable, info, index > 0, index > 0 ? primaryName(selection) : "");
+                var role = index == 0 ? ProviderRole.PRIMARY : ProviderRole.FALLBACK;
+                return result(usable, info, role, role == ProviderRole.FALLBACK ? primaryName(selection) : "");
             }
             reasons.add(((Outcome.Failure) outcome).reason());
         }
@@ -101,10 +102,10 @@ public final class ForecastService {
         return providers.find(selection.primary()).map(provider -> provider.info().name()).orElse("");
     }
 
-    private static ForecastResult result(Outcome.Usable usable, ProviderInfo info, boolean fromFallback,
+    private static ForecastResult result(Outcome.Usable usable, ProviderInfo info, ProviderRole role,
             String primaryName) {
-        var source = new ForecastSource(info.id(), info.name(), info.attribution(), usable.fetchedAt(), usable.fromCache(),
-                usable.stale(), fromFallback, primaryName, usable.cooldownUntil());
+        var source = new ForecastSource(info.id(), info.name(), info.attribution(), usable.fetchedAt(),
+                usable.freshness(), role, primaryName, usable.cooldownUntil());
         return new ForecastResult(usable.steps(), source);
     }
 }

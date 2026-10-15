@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.within;
 
 import io.github.enadeag.carchargeplanner.engine.config.HomeSystem;
+import io.github.enadeag.carchargeplanner.engine.config.Phases;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -21,7 +22,7 @@ import java.util.Map;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
 class GridAdvisorTest {
 
@@ -236,8 +237,8 @@ class GridAdvisorTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {1, 3})
-    void theGridChargeUsesThePowerOfTheChargersPhases(int phases) {
+    @EnumSource(Phases.class)
+    void theGridChargeUsesThePowerOfTheChargersPhases(Phases phases) {
         var system = Forecasts.exampleOnPhases(phases);
         var charger = system.charger();
         var window = advise(system, dull(3), 35, fridayAt(7)).window();

@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 import io.github.enadeag.carchargeplanner.engine.config.HomeSystem;
+import io.github.enadeag.carchargeplanner.engine.config.Phases;
 import io.github.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import java.time.Duration;
@@ -275,13 +276,13 @@ class PlannerTest {
     void aSurplusThatOnePhaseCanUseIsTooSmallForThree() {
         // about 3 kW of surplus: 13 A on one phase, but under the 4.1 kW that 6 A on three phases already takes
         var forecast = bellDay(SUMMER_FRI, 1000);
-        assertThat(plan(forecast, Forecasts.exampleOnPhases(1), 40, at(SUMMER_FRI, 0)).getFirst().windows()).isNotEmpty();
-        assertThat(plan(forecast, Forecasts.exampleOnPhases(3), 40, at(SUMMER_FRI, 0)).getFirst().windows()).isEmpty();
+        assertThat(plan(forecast, Forecasts.exampleOnPhases(Phases.ONE), 40, at(SUMMER_FRI, 0)).getFirst().windows()).isNotEmpty();
+        assertThat(plan(forecast, Forecasts.exampleOnPhases(Phases.THREE), 40, at(SUMMER_FRI, 0)).getFirst().windows()).isEmpty();
     }
 
     @Test
     void aThreePhasePlanNeverGoesBelowTheThreePhaseMinimum() {
-        var system = Forecasts.exampleOnPhases(3);
+        var system = Forecasts.exampleOnPhases(Phases.THREE);
         var charger = system.charger();
         // 2500 W/m2 at the peak is an artificial sky: about 10 kW, enough for three phases
         var windows = plan(bellDay(SUMMER_FRI, 2500), system, 40, at(SUMMER_FRI, 0)).getFirst().windows();
