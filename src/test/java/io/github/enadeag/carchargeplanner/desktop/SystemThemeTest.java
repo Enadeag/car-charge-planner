@@ -16,7 +16,7 @@ class SystemThemeTest {
     void switchingTheSystemToDarkWhileTheAppRunsRestylesTheDashboard() throws Exception {
         var scheme = new SimpleObjectProperty<>(ColorScheme.LIGHT);
         var dashboard = Fx.call(() -> {
-            var view = new DashboardView(() -> { }, () -> { }, new Messages(Language.ENGLISH));
+            var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, new Messages(Language.ENGLISH));
             view.show(Models.plan(Optional.empty()));
             new SystemTheme(scheme).style(new Scene(new StackPane(view)));
             return view;

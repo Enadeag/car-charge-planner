@@ -1,7 +1,9 @@
 package io.github.enadeag.carchargeplanner.desktop;
 
 import io.github.enadeag.carchargeplanner.engine.Outlook;
+import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import java.time.InstantSource;
+import java.util.function.Consumer;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
@@ -26,15 +28,18 @@ public final class Dashboard {
      * @param icon the app icon, for the window's title bar and the taskbar
      * @param colorScheme the system's light or dark, followed while the app runs
      *     ({@code Platform.getPreferences().colorSchemeProperty()}); never null
+     * @param reducedMotion true while the system asks for reduced motion
+     *     ({@code Platform.getPreferences().reducedMotionProperty()}); the charts then change without moving; never
+     *     null
      * @param clock tells when the popup closed, so the click on the tray icon that closed it does not open it again
      * @param taskbarHiding how this system keeps the popup out of its taskbar
      * @param messages the texts, in the owner's language
      */
-    public Dashboard(AppIcon icon, ObservableValue<ColorScheme> colorScheme, InstantSource clock,
-            TaskbarHiding taskbarHiding, Messages messages) {
+    public Dashboard(AppIcon icon, ObservableValue<ColorScheme> colorScheme, ObservableValue<Boolean> reducedMotion,
+            InstantSource clock, TaskbarHiding taskbarHiding, Messages messages) {
         var theme = new SystemTheme(colorScheme);
         this.mapper = new OutlookMapper(messages);
-        this.view = new DashboardView(this::detach, this::fitToContent, messages);
+        this.view = new DashboardView(this::detach, this::fitToContent, reducedMotion, messages);
         this.popup = new DashboardPopup(theme, icon, clock, taskbarHiding);
         this.window = new DashboardWindow(theme, icon);
         view.show(mapper.loading());
@@ -70,6 +75,15 @@ public final class Dashboard {
     public void show(Outlook outlook) {
         var model = mapper.map(outlook);
         Platform.runLater(() -> view.show(model));
+    }
+
+    /**
+     * Lets the owner enter the battery level the car shows, on today's battery card.
+     *
+     * @param entered gets the level the owner saved; called on the JavaFX thread, so it should hand the work on
+     */
+    public void onBatteryEntered(Consumer<Percent> entered) {
+        Platform.runLater(() -> view.onBatteryEntered(pct -> entered.accept(new Percent(pct))));
     }
 
     /**

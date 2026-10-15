@@ -56,7 +56,7 @@ class AnnouncerTest {
     }
 
     private static DayPlan day(LocalDate date, Window... windows) {
-        return new DayPlan(date, new Percent(40), List.of(windows), new Percent(55), new Percent(40), 12);
+        return new DayPlan(date, new Percent(40), List.of(windows), new Percent(55), new Percent(40), 12, List.of());
     }
 
     /** The example system, which charges on one phase and keeps a minimum of 30 %, with this lead time. */

@@ -2,6 +2,7 @@ package io.github.enadeag.carchargeplanner.desktop;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -24,7 +25,7 @@ class DashboardViewTest {
 
     private DashboardView shown(DashboardModel model) throws Exception {
         return Fx.call(() -> {
-            var view = new DashboardView(detached::incrementAndGet, () -> { }, new Messages(Language.ENGLISH));
+            var view = new DashboardView(detached::incrementAndGet, () -> { }, Fx.REDUCED_MOTION, new Messages(Language.ENGLISH));
             view.show(model);
             stage = Scenes.show(view, ColorScheme.LIGHT);
             return view;
@@ -65,15 +66,46 @@ class DashboardViewTest {
     }
 
     @Test
-    void gridAdviceComesRightBelowTodaysMainCard() throws Exception {
+    void gridAdviceComesRightBelowTodaysMainCardAndTheChartsFollow() throws Exception {
         var view = shown(Models.plan(Optional.of(Models.ADVICE)));
 
         var cards = Fx.call(() -> Scenes.all(selectedPage(view)).stream()
                 .filter(node -> node.getStyleClass().contains("card"))
-                .map(node -> node.getStyleClass().contains("advice-card") ? "advice" : "main")
+                .map(node -> node.getStyleClass().stream()
+                        .filter(style -> style.endsWith("-card")).findFirst().orElseThrow())
                 .toList());
 
-        assertThat(cards).containsExactly("main", "advice");
+        assertThat(cards).containsExactly("main-card", "advice-card", "solar-card", "battery-card");
+    }
+
+    @Test
+    void theChartsFollowTheSelectedDay() throws Exception {
+        var view = shown(Models.plan(Optional.empty()));
+
+        Fx.run(() -> tabs(view).getSelectionModel().select(1));
+
+        assertThat(Fx.call(() -> selectedPage(view).lookup(".solar-chart").queryAccessibleAttribute(AccessibleAttribute.TEXT)))
+                .isEqualTo(Models.CLOUDY_TOMORROW.curve().spoken());
+        assertThat(Fx.call(() -> selectedPage(view).lookup(".battery-bar").queryAccessibleAttribute(AccessibleAttribute.TEXT)))
+                .isEqualTo(Models.CLOUDY_TOMORROW.battery().spoken());
+    }
+
+    @Test
+    void theBatteryLevelEnteredOnTodaysCardReachesTheDashboardsHandler() throws Exception {
+        var view = shown(Models.plan(Optional.empty()));
+        var levels = new ArrayList<Integer>();
+        Fx.run(() -> view.onBatteryEntered(levels::add));
+        var update = Fx.call(() -> (Button) selectedPage(view).lookupAll(".button").stream()
+                .filter(node -> "Update".equals(((Button) node).getText())).findFirst().orElseThrow());
+
+        Fx.run(() -> {
+            update.fire();
+            var editor = (BatteryEditor) selectedPage(view).lookup(".battery-editor");
+            editor.field().getEditor().setText("81");
+            editor.save();
+        });
+
+        assertThat(levels).containsExactly(81);
     }
 
     @Test
@@ -136,10 +168,11 @@ class DashboardViewTest {
     @Test
     void aDayTallerThanTheSpaceScrollsBelowHeaderAndTabsThatStayInView() throws Exception {
         var busy = new DayModel("Sat", "Tomorrow", DayKind.SUN, "Charge window", "06:00 – 06:10",
-                Models.SUNNY_TODAY.facts(), Models.SUNNY_TODAY.chips(), "Also 06:15 – 06:25 at 6 A. ".repeat(80), "");
+                Models.SUNNY_TODAY.facts(), Models.SUNNY_TODAY.chips(), "Also 06:15 – 06:25 at 6 A. ".repeat(80), "",
+                Models.SUNNY_TODAY.curve(), Models.CLOUDY_TOMORROW.battery());
         var plan = new DashboardModel.Plan(List.of(Models.CLOUDY_TOMORROW, busy), Optional.empty(), Models.FOOTER);
         var view = Fx.call(() -> {
-            var it = new DashboardView(() -> { }, () -> { }, new Messages(Language.ENGLISH));
+            var it = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, new Messages(Language.ENGLISH));
             it.show(plan);
             stage = Scenes.show(it, ColorScheme.LIGHT);
             stage.getScene().getRoot().resize(420, 600);

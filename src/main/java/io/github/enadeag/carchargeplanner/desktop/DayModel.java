@@ -14,6 +14,8 @@ import java.util.List;
  * @param chips the day's figures by source; may be empty
  * @param note a sentence about the day; may be empty
  * @param spoken the day's charge in one sentence: "Today: charge window 11:15 to 14:30, 10 A, 92 % sun."
+ * @param curve the day's expected sun, house use and charge windows, as the solar chart draws them
+ * @param battery the day's battery levels, as the battery bar draws them
  */
 record DayModel(
         String tab,
@@ -24,7 +26,9 @@ record DayModel(
         List<String> facts,
         List<Chip> chips,
         String note,
-        String spoken) {
+        String spoken,
+        SolarCurveModel curve,
+        BatteryModel battery) {
 
     /**
      * Keeps copies of the lists, so the day cannot change afterwards.
@@ -38,6 +42,8 @@ record DayModel(
      * @param chips the day's figures by source; may be empty
      * @param note a sentence about the day; may be empty
      * @param spoken the day's charge in one sentence
+     * @param curve the day's expected sun, house use and charge windows
+     * @param battery the day's battery levels
      */
     DayModel {
         facts = List.copyOf(facts);

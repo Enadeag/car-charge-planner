@@ -10,6 +10,8 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /** Plans the charge windows for each day of the forecast, outside the times the car is away. */
 public final class Planner {
@@ -59,10 +61,12 @@ public final class Planner {
                 .map(window -> window.remainingAfter(now))
                 .toList();
         var runsByDay = WindowFinder.byDay(runsBeside(forecast, now, running), zone);
+        var stepsByDay = stepsByDay(forecast);
         var days = new ArrayList<DayPlan>();
         var soc = socPct;
         for (var date = today(now); !date.isAfter(lastDay(forecast)); date = date.plusDays(1)) {
-            var day = planDay(date, soc, runsByDay.getOrDefault(date, List.of()), running, now);
+            var day = planDay(date, soc, runsByDay.getOrDefault(date, List.of()), running, now,
+                    stepsByDay.getOrDefault(date, List.of()));
             days.add(day);
             soc = day.socEndOfDayPct();
         }
@@ -85,7 +89,14 @@ public final class Planner {
         return run.start().equals(window.end()) || run.end().equals(window.start());
     }
 
-    private DayPlan planDay(LocalDate date, Percent socPct, List<Run> runs, List<Window> running, Instant now) {
+    private Map<LocalDate, List<ForecastStep>> stepsByDay(List<ForecastStep> forecast) {
+        return forecast.stream()
+                .sorted(Comparator.comparing(ForecastStep::start))
+                .collect(Collectors.groupingBy(step -> step.start().atZone(zone).toLocalDate(), Collectors.toList()));
+    }
+
+    private DayPlan planDay(LocalDate date, Percent socPct, List<Run> runs, List<Window> running, Instant now,
+            List<ForecastStep> steps) {
         var kept = running.stream().filter(window -> window.start().atZone(zone).toLocalDate().equals(date)).toList();
         double neededKwh = Math.max(0, energyNeededKwh(socPct) - solarKwh(kept));
         var windows = new ArrayList<>(kept);
@@ -96,7 +107,7 @@ public final class Planner {
         double after = Math.max(socPct.value(), Math.min(preferences.targetPct().value(), socPct.value() + gainedPct));
         double driving = dailyDrivingPct() * (date.equals(today(now)) ? shareOfDayLeft(now) : 1);
         var end = new Percent(Math.max(0, after - driving));
-        return new DayPlan(date, socPct, windows, new Percent(after), end, driving);
+        return new DayPlan(date, socPct, windows, new Percent(after), end, driving, steps);
     }
 
     /**

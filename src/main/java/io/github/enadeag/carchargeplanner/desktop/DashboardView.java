@@ -2,6 +2,8 @@ package io.github.enadeag.carchargeplanner.desktop;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.IntConsumer;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.AccessibleRole;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -23,6 +25,8 @@ final class DashboardView extends VBox {
     private final DashboardFooter footer;
     private final Button detach = new Button();
     private final Runnable contentChanged;
+    private final SolarCard solar;
+    private final BatteryCard battery;
     private List<DayModel> days = List.of();
     private Optional<GridAdviceModel> advice = Optional.empty();
 
@@ -31,13 +35,18 @@ final class DashboardView extends VBox {
      *
      * @param detachAction what the header's button does: open the popup as a window
      * @param contentChanged called when another day or a new plan shows, so the popup or window can fit it
+     * @param reducedMotion true while the system asks for reduced motion
+     *     ({@code Platform.getPreferences().reducedMotionProperty()}); the charts then change without moving
      * @param messages the texts, in the owner's language
      */
-    DashboardView(Runnable detachAction, Runnable contentChanged, Messages messages) {
+    DashboardView(Runnable detachAction, Runnable contentChanged, ObservableValue<Boolean> reducedMotion,
+            Messages messages) {
         this.messages = messages;
         this.tabs = new DayTabs(this::showDay, messages);
         this.footer = new DashboardFooter(messages);
         this.contentChanged = contentChanged;
+        this.solar = new SolarCard(reducedMotion, messages);
+        this.battery = new BatteryCard(reducedMotion, messages);
         var title = new Label("Car charge planner"); // the app's name, the same in every language
         title.getStyleClass().add("app-title");
         title.setAccessibleRole(AccessibleRole.TEXT);
@@ -94,7 +103,16 @@ final class DashboardView extends VBox {
         detach.setManaged(detachable);
     }
 
-    /** Grid advice goes on today's tab, below its main card. */
+    /**
+     * Lets the owner enter today's battery level on the battery card.
+     *
+     * @param handler gets the level the owner saved, in percent from 0 to 100, on the JavaFX thread
+     */
+    void onBatteryEntered(IntConsumer handler) {
+        battery.onEntered(handler);
+    }
+
+    /** Grid advice goes on today's tab, below its main card; the charts follow. */
     private void showDay(int index) {
         if (days.isEmpty()) {
             body.show(null);
@@ -106,7 +124,9 @@ final class DashboardView extends VBox {
         if (day == days.getFirst()) {
             advice.ifPresent(it -> page.getChildren().add(new AdviceCard(it)));
         }
-        page.getChildren().add(new ChartSlot(messages));
+        solar.show(day.curve());
+        battery.show(day.battery());
+        page.getChildren().addAll(solar, battery);
         body.show(page);
         contentChanged.run();
     }

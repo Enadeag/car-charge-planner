@@ -20,6 +20,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
@@ -67,6 +69,29 @@ class PlannerTest {
 
     private static DayPlan friday(double peakWm2, double soc) {
         return friday(peakWm2, soc, 0);
+    }
+
+    @Test
+    void eachDayHoldsTheForecastStepsThatStartOnItInTimeOrder() {
+        var forecast = new ArrayList<>(bellDays(Map.of(SUMMER_FRI, 800.0, SUMMER_FRI.plusDays(1), 600.0)));
+        Collections.reverse(forecast);
+
+        var days = plan(forecast, Forecasts.example(), 50, at(SUMMER_FRI, 9));
+
+        assertThat(days).hasSize(2);
+        for (var day : days) {
+            assertThat(day.forecast()).hasSize(24).isSortedAccordingTo(Comparator.comparing(ForecastStep::start))
+                    .allSatisfy(step -> assertThat(step.start().atZone(Forecasts.TZ).toLocalDate()).isEqualTo(day.date()));
+        }
+        // the step from 23:00 to midnight is the day's last, not the next day's first
+        assertThat(days.getFirst().forecast().getLast().end()).isEqualTo(SUMMER_FRI.plusDays(1).atStartOfDay(Forecasts.TZ).toInstant());
+    }
+
+    @Test
+    void aClockChangeDayHoldsItsOwnNumberOfHours() {
+        var days = plan(bellDay(FALL_BACK, 500), Forecasts.example(), 50, at(FALL_BACK, 0));
+
+        assertThat(days.getFirst().forecast()).hasSize(25);
     }
 
     @Test

@@ -24,6 +24,12 @@
     -car-text: #17734a;
     -car-soft: #d3f0e1;
 
+    /* the charts: the solar area and the charge windows' band are see-through fills; their edges are the marks */
+    -sun-area: rgba(184, 115, 0, 0.22);
+    -car-area: rgba(31, 143, 92, 0.14);
+    -car-after: #8fd1b2;
+    -house: -muted;
+
     -focus: -grid;
 }
 
@@ -46,6 +52,11 @@
     -car: #4cc78c;
     -car-text: #4cc78c;
     -car-soft: #13301f;
+
+    -sun-area: rgba(242, 179, 61, 0.26);
+    -car-area: rgba(76, 199, 140, 0.16);
+    -car-after: #2a6b4c;
+    -house: -muted;
 }
 
 /* the popup's window is transparent, so the dashboard can have rounded corners and a border */
@@ -180,18 +191,134 @@
     -fx-vgap: 0.4em;
 }
 
-/* the reserved place for the solar curve and the battery */
-.chart-slot {
-    -fx-border-color: -line;
-    -fx-border-style: segments(6, 4);
-    -fx-border-radius: 14;
-    -fx-padding: 1em;
-    -fx-alignment: center;
+/* the charts: the solar curve and the battery */
+.chart-header {
+    -fx-alignment: center-left;
+    -fx-spacing: 0.6em;
 }
 
-.chart-slot .label {
-    -fx-font-size: 0.9em;
+.legend-entry {
+    -fx-alignment: center-left;
+    -fx-spacing: 0.3em;
+}
+
+.legend-text,
+.chart-axis {
+    -fx-font-size: 0.8em;
     -fx-text-fill: -muted;
+}
+
+.solar-chart {
+    -fx-pref-height: 9.5em;
+    -fx-min-height: 9.5em;
+}
+
+.solar-chart:focus-visible,
+.battery-bar:focus-visible {
+    -fx-border-color: -focus;
+    -fx-border-width: 2;
+    -fx-border-radius: 6;
+    -fx-border-insets: -3;
+}
+
+.chart-grid {
+    -fx-stroke: -line;
+    -fx-stroke-width: 1;
+}
+
+.solar-area {
+    -fx-fill: -sun-area;
+    -fx-stroke: -sun;
+    -fx-stroke-width: 1.6;
+    -fx-stroke-line-join: round;
+}
+
+.legend-sun {
+    -fx-fill: -sun;
+}
+
+.house-line {
+    -fx-stroke: -house;
+    -fx-stroke-width: 1.4;
+    -fx-stroke-dash-array: 4 2;
+}
+
+.window-band {
+    -fx-fill: -car-area;
+    -fx-arc-width: 6;
+    -fx-arc-height: 6;
+}
+
+.window-mark {
+    -fx-stroke: -car;
+    -fx-stroke-width: 4;
+    -fx-stroke-line-cap: round;
+}
+
+.legend-window {
+    -fx-fill: -car;
+}
+
+.now-line {
+    -fx-stroke: -fg;
+    -fx-stroke-width: 1.2;
+    -fx-stroke-dash-array: 3 3;
+}
+
+.chart-now {
+    -fx-font-size: 0.8em;
+    -fx-text-fill: -fg;
+}
+
+.pointer-line {
+    -fx-stroke: -muted;
+    -fx-stroke-width: 1;
+}
+
+.chart-readout {
+    -fx-background-color: -fg;
+    -fx-background-radius: 6;
+    -fx-padding: 0.25em 0.5em 0.25em 0.5em;
+}
+
+.chart-readout-text {
+    -fx-font-size: 0.85em;
+    -fx-text-fill: -panel;
+}
+
+.battery-levels {
+    -fx-font-size: 0.9em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -car-text;
+}
+
+.battery-track {
+    -fx-fill: -line;
+}
+
+.battery-after {
+    -fx-fill: -car-after;
+    -fx-stroke: -car;
+    -fx-stroke-width: 1.5;
+    -fx-stroke-type: inside;
+}
+
+.battery-level {
+    -fx-fill: -car;
+}
+
+.battery-mark {
+    -fx-stroke: -fg;
+    -fx-stroke-width: 2;
+}
+
+.battery-editor {
+    -fx-alignment: center-left;
+    -fx-spacing: 0.5em;
+}
+
+.battery-level-field {
+    -fx-pref-width: 6em;
 }
 
 /* chips: a figure with its source's glyph on its source's soft background */
