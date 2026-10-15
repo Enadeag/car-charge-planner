@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.engine.secrets;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -16,9 +17,10 @@ import tools.jackson.databind.json.JsonMapper;
 
 class ApiKeysTest {
 
+    private static final ProviderId OPEN_METEO = new ProviderId("open-meteo");
     private static final Secrets KEYS = new Secrets(Map.of(
-            "open-meteo", Map.of("api_key", "OM-SECRET-1"),
-            "forecast-solar", Map.of("api_key", "FS-SECRET-2")));
+            OPEN_METEO, Map.of("api_key", "OM-SECRET-1"),
+            new ProviderId("forecast-solar"), Map.of("api_key", "FS-SECRET-2")));
 
     @TempDir
     Path folder;
@@ -74,9 +76,9 @@ class ApiKeysTest {
         keys.save(KEYS);
         assertThat(keys.load()).isEqualTo(KEYS);
 
-        keys.save(new Secrets(Map.of("open-meteo", Map.of("api_key", "OM-NEW", "empty", ""))));
+        keys.save(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW", "empty", ""))));
 
-        assertThat(keys.load()).isEqualTo(new Secrets(Map.of("open-meteo", Map.of("api_key", "OM-NEW"))));
+        assertThat(keys.load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"))));
         assertThat(keychain.entries).containsOnlyKeys("index", "forecast/open-meteo/api_key");
     }
 
@@ -151,8 +153,17 @@ class ApiKeysTest {
     }
 
     @Test
+    void anIndexNameWithoutAProviderIdIsADamagedIndex() {
+        keychain.entries.put("index", "[\"forecast/Open Meteo/api_key\"]");
+        keychain.entries.put("forecast/Open Meteo/api_key", "OM-SECRET-1");
+
+        assertThatThrownBy(keys(keychain)::load).isInstanceOf(SecretsProblem.class)
+                .hasMessageContaining("could not be read").hasMessageNotContaining("OM-SECRET-1");
+    }
+
+    @Test
     void namesThatCouldNotBeSplitUpAgainAreRefused() {
-        var odd = new Secrets(Map.of("open/meteo", Map.of("api_key", "x")));
+        var odd = new Secrets(Map.of(OPEN_METEO, Map.of("api/key", "x")));
         assertThatThrownBy(() -> keys(keychain).save(odd)).isInstanceOf(SecretsProblem.class);
         assertThat(keychain.entries).isEmpty();
     }

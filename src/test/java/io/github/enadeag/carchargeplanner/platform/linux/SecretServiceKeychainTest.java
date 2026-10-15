@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeychainException;
@@ -168,7 +169,7 @@ class SecretServiceKeychainTest {
     void theKeysAreKeptInTheKeyring() throws Exception {
         startAThrowawayKeyring();
         var keys = new ApiKeys(keychain("car-charge-planner"), new SecretsFile(folder.resolve("secrets.json")));
-        var secrets = new Secrets(Map.of("open-meteo", Map.of("api_key", "OM-SECRET-1")));
+        var secrets = new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1")));
 
         keys.save(secrets);
 
@@ -189,7 +190,7 @@ class SecretServiceKeychainTest {
 
         assertThatThrownBy(() -> keychain.read("index")).isInstanceOf(KeychainException.class).hasMessageContaining("locked");
         var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
-        keys.save(new Secrets(Map.of("open-meteo", Map.of("api_key", "OM-SECRET-1"))));
+        keys.save(new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1"))));
         assertThat(keys.storage()).isEqualTo(KeyStorage.FILE);
         assertThat(folder.resolve("secrets.json")).exists();
     }

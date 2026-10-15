@@ -3,13 +3,12 @@ package io.github.enadeag.carchargeplanner.engine.forecast;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 class ProvidersTest {
 
@@ -18,7 +17,7 @@ class ProvidersTest {
     private static final SettingSpec NOTE = new SettingSpec("note", "Note", "Anything.", true, false);
 
     private static ProviderInfo info(String id, List<SettingSpec> settings) {
-        return new ProviderInfo(id, "Tiny", "", "", "", "", Duration.ofHours(1), Duration.ofDays(2), Duration.ofHours(6),
+        return new ProviderInfo(new ProviderId(id), "Tiny", "", "", "", "", Duration.ofHours(1), Duration.ofDays(2), Duration.ofHours(6),
                 settings);
     }
 
@@ -41,25 +40,19 @@ class ProvidersTest {
         var tiny = tiny("tiny");
         var providers = new Providers(List.of(tiny));
 
-        assertThat(providers.find("tiny")).containsSame(tiny);
-        assertThat(providers.ids()).containsExactly("tiny");
+        assertThat(providers.find(new ProviderId("tiny"))).containsSame(tiny);
+        assertThat(providers.ids()).containsExactly(new ProviderId("tiny"));
     }
 
     @Test
     void anUnknownIdIsNotFound() {
-        assertThat(new Providers(List.of()).find("nope")).isEmpty();
+        assertThat(new Providers(List.of()).find(new ProviderId("nope"))).isEmpty();
     }
 
     @Test
     void twoProvidersWithTheSameIdAreRefused() {
         assertThatThrownBy(() -> new Providers(List.of(tiny("tiny"), tiny("tiny"))))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("two providers");
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"", "Open Meteo", "UPPER", " x", "a.b"})
-    void idsAreShortLowerCaseWords(String id) {
-        assertThatThrownBy(() -> new Providers(List.of(tiny(id)))).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

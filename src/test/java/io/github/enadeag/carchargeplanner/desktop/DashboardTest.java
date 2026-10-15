@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sun.javafx.stage.WindowHelper;
 import io.github.enadeag.carchargeplanner.engine.Outlook;
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import io.github.enadeag.carchargeplanner.engine.forecast.Freshness;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderRole;
@@ -283,7 +284,7 @@ class DashboardTest {
 
     private static ForecastSource source(LocalDate today, ZoneId zone) {
         var fetched = today.atTime(7, 45).atZone(zone).toInstant();
-        return new ForecastSource("open-meteo", "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)", fetched,
+        return new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)", fetched,
                 Freshness.FRESH, ProviderRole.PRIMARY, "", Optional.empty());
     }
 

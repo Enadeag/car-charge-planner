@@ -1,12 +1,13 @@
 package io.github.enadeag.carchargeplanner.engine.forecast;
 
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import java.time.Instant;
 import java.util.Optional;
 
 /**
  * Where a forecast came from: who made it, the credit their terms ask for, and how fresh it is.
  *
- * @param providerId the id of the provider that made it
+ * @param providerId the provider that made it
  * @param providerName its name
  * @param attribution the credit its terms ask for
  * @param fetchedAt when it was fetched
@@ -16,7 +17,7 @@ import java.util.Optional;
  * @param cooldownUntil the provider that made it refuses requests until then
  */
 public record ForecastSource(
-        String providerId,
+        ProviderId providerId,
         String providerName,
         String attribution,
         Instant fetchedAt,

@@ -35,7 +35,6 @@ public abstract class ProviderConformance {
     @Test
     void declaresCompleteMetadata() {
         var info = providerCase().provider(providerCase().ok()).provider().info();
-        assertThat(info.id()).matches("[a-z0-9][a-z0-9-]*");
         assertThat(List.of(info.name(), info.description(), info.attribution(), info.sends())).allMatch(t -> !t.isBlank());
         assertThat(info.termsUrl()).startsWith("https://");
         assertThat(info.minRefresh()).isPositive();

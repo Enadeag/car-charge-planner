@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.engine.forecast.providers;
 
 import io.github.enadeag.carchargeplanner.engine.config.PanelArray;
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet;
@@ -25,7 +26,7 @@ public final class ForecastSolar implements ForecastProvider {
 
     /** What Forecast.Solar tells about itself. */
     static final ProviderInfo INFO = new ProviderInfo(
-            "forecast-solar",
+            new ProviderId("forecast-solar"),
             "Forecast.Solar",
             "A solar forecast service (Forecast.Solar) that estimates the output of your system itself, with its own "
                     + "allowance for losses, so the system losses setting is not used. The free public plan gives "

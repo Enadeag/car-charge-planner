@@ -4,6 +4,7 @@ import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import io.github.enadeag.carchargeplanner.engine.config.HomeSystem;
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.forecast.ConnectionCheck;
 import io.github.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
@@ -95,7 +96,7 @@ public final class Engine {
      * @param settings as the owner entered them, secret ones included; a secret one left out comes from the keychain
      * @return whether it worked, the days of forecast, and a message for the owner
      */
-    public ConnectionResult checkConnection(String providerId, HomeSystem system, Map<String, String> settings) {
+    public ConnectionResult checkConnection(ProviderId providerId, HomeSystem system, Map<String, String> settings) {
         var found = providers.find(providerId);
         if (found.isEmpty()) {
             return new ConnectionResult(false, 0,
@@ -116,7 +117,7 @@ public final class Engine {
      * @param language the language the names should come in, such as "nl"; empty means English
      * @return the results, or empty when the provider is unknown or has no place search
      */
-    public Optional<PlaceResults> searchPlaces(String providerId, String text, String language) {
+    public Optional<PlaceResults> searchPlaces(ProviderId providerId, String text, String language) {
         return providers.find(providerId).flatMap(ForecastProvider::placeSearch)
                 .map(search -> search.search(text, language));
     }

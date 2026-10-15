@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine.forecast;
 
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -8,7 +9,7 @@ import java.util.Map;
 /**
  * What a forecast provider tells about itself.
  *
- * @param id a short stable identifier: lower case letters, digits and hyphens
+ * @param id the provider's short, stable name
  * @param name the provider's name
  * @param description a few sentences about the service
  * @param termsUrl the https address of the service's terms
@@ -20,7 +21,7 @@ import java.util.Map;
  * @param settings the settings it asks for, in order
  */
 public record ProviderInfo(
-        String id,
+        ProviderId id,
         String name,
         String description,
         String termsUrl,

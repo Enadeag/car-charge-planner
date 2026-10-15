@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine.secrets;
 
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -59,7 +60,8 @@ public final class SecretsFile {
      * Reads the file, first making it private when others could read it.
      *
      * @return the secrets in it
-     * @throws SecretsProblem when it cannot be read or made private, is not JSON, or does not hold texts per provider
+     * @throws SecretsProblem when it cannot be read or made private, is not JSON, or does not hold texts per provider;
+     *     a provider's name in it must be a provider id
      */
     Secrets read() throws SecretsProblem {
         makePrivate();
@@ -81,10 +83,13 @@ public final class SecretsFile {
         if (!root.isObject()) {
             throw new SecretsProblem(path + " must hold the keys per provider");
         }
-        var byProvider = new HashMap<String, Map<String, String>>();
+        var byProvider = new HashMap<ProviderId, Map<String, String>>();
         for (var provider : root.properties()) {
             if (!provider.getValue().isObject()) {
                 throw new SecretsProblem(path + ": \"" + provider.getKey() + "\" must hold texts only");
+            }
+            if (!ProviderId.isValid(provider.getKey())) {
+                throw new SecretsProblem(path + ": \"" + provider.getKey() + "\" is not a provider id");
             }
             var values = new HashMap<String, String>();
             for (var setting : provider.getValue().properties()) {
@@ -93,7 +98,7 @@ public final class SecretsFile {
                 }
                 values.put(setting.getKey(), setting.getValue().stringValue());
             }
-            byProvider.put(provider.getKey(), values);
+            byProvider.put(new ProviderId(provider.getKey()), values);
         }
         return new Secrets(byProvider);
     }
@@ -108,7 +113,7 @@ public final class SecretsFile {
     void write(Secrets secrets) throws SecretsProblem {
         secrets.checkNames();
         var sorted = new TreeMap<String, Map<String, String>>();
-        secrets.byProvider().forEach((id, values) -> sorted.put(id, new TreeMap<>(values)));
+        secrets.byProvider().forEach((id, values) -> sorted.put(id.value(), new TreeMap<>(values)));
         var temporary = path.resolveSibling(path.getFileName() + ".tmp");
         try {
             Files.createDirectories(path.toAbsolutePath().getParent());

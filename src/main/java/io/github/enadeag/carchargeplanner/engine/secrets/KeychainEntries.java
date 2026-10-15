@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine.secrets;
 
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -54,11 +55,11 @@ final class KeychainEntries {
      * @throws KeychainException when the keychain fails or the index is damaged
      */
     Secrets read() throws KeychainException {
-        var byProvider = new HashMap<String, Map<String, String>>();
+        var byProvider = new HashMap<ProviderId, Map<String, String>>();
         for (var name : index()) {
             var parts = name.substring(PREFIX.length()).split("/", 2);
             keychain.read(name).ifPresent(value ->
-                    byProvider.computeIfAbsent(parts[0], id -> new HashMap<>()).put(parts[1], value));
+                    byProvider.computeIfAbsent(new ProviderId(parts[0]), id -> new HashMap<>()).put(parts[1], value));
         }
         return new Secrets(byProvider);
     }
@@ -72,7 +73,8 @@ final class KeychainEntries {
      */
     void write(Secrets secrets) throws KeychainException {
         var wanted = new TreeMap<String, String>();
-        secrets.byProvider().forEach((id, values) -> values.forEach((key, value) -> wanted.put(PREFIX + id + "/" + key, value)));
+        secrets.byProvider().forEach((id, values) ->
+                values.forEach((key, value) -> wanted.put(PREFIX + id.value() + "/" + key, value)));
         List<String> old;
         try {
             old = index();
@@ -115,6 +117,10 @@ final class KeychainEntries {
     }
 
     private static boolean isEntryName(String name) {
-        return name != null && name.startsWith(PREFIX) && name.indexOf('/', PREFIX.length()) > PREFIX.length();
+        if (name == null || !name.startsWith(PREFIX)) {
+            return false;
+        }
+        var end = name.indexOf('/', PREFIX.length());
+        return end > 0 && ProviderId.isValid(name.substring(PREFIX.length(), end));
     }
 }

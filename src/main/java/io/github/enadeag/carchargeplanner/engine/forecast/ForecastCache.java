@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine.forecast;
 
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -86,7 +87,7 @@ public final class ForecastCache {
      * @param now the current moment
      * @return the forecast, or empty when there is none, it is for another key, it is damaged or stamped after now
      */
-    Optional<Cached> forecast(String providerId, JsonNode key, Instant now) {
+    Optional<Cached> forecast(ProviderId providerId, JsonNode key, Instant now) {
         var blob = read(providerId);
         if (!key.equals(blob.path("key"))) {
             return Optional.empty();
@@ -105,7 +106,7 @@ public final class ForecastCache {
      * @param providerId the provider whose cache to read
      * @return the end, or empty when there is none or the file cannot be read
      */
-    Optional<Instant> cooldownUntil(String providerId) {
+    Optional<Instant> cooldownUntil(ProviderId providerId) {
         return instant(read(providerId).path("cooldownUntil"));
     }
 
@@ -117,7 +118,7 @@ public final class ForecastCache {
      * @param fetchedAt when it was fetched
      * @param steps its steps, keeping the providers' contract
      */
-    void saveForecast(String providerId, JsonNode key, Instant fetchedAt, List<ForecastStep> steps) {
+    void saveForecast(ProviderId providerId, JsonNode key, Instant fetchedAt, List<ForecastStep> steps) {
         var blob = json.createObjectNode();
         blob.set("key", key);
         blob.put("fetchedAt", fetchedAt.toString());
@@ -133,17 +134,17 @@ public final class ForecastCache {
      * @param providerId the provider that refused
      * @param until when it may be asked again
      */
-    void saveCooldown(String providerId, Instant until) {
+    void saveCooldown(ProviderId providerId, Instant until) {
         var blob = read(providerId);
         blob.put("cooldownUntil", until.toString());
         write(providerId, blob);
     }
 
-    private Path file(String providerId) {
-        return folder.resolve("forecast-" + providerId + ".json");
+    private Path file(ProviderId providerId) {
+        return folder.resolve("forecast-" + providerId.value() + ".json");
     }
 
-    private ObjectNode read(String providerId) {
+    private ObjectNode read(ProviderId providerId) {
         try {
             return json.readTree(Files.readString(file(providerId))) instanceof ObjectNode blob ? blob : json.createObjectNode();
         } catch (IOException | JacksonException e) {
@@ -151,7 +152,7 @@ public final class ForecastCache {
         }
     }
 
-    private void write(String providerId, ObjectNode blob) {
+    private void write(ProviderId providerId, ObjectNode blob) {
         var target = file(providerId);
         var temporary = target.resolveSibling(target.getFileName() + ".tmp");
         try {

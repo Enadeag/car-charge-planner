@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.ZoneId;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -76,16 +78,27 @@ class ConfigFileTest {
     void theForecastSectionNamesTheProvidersAndTheirPlainSettings() throws ConfigProblem {
         var forecast = new ConfigFile(EXAMPLE).read().forecast();
 
-        assertThat(forecast).isEqualTo(new ForecastSelection("open-meteo", "forecast-solar",
-                java.util.Map.of("open-meteo", java.util.Map.of("base_url", ""))));
-        assertThat(forecast.settingsOf("forecast-solar")).isEmpty();
+        var openMeteo = new ProviderId("open-meteo");
+        var forecastSolar = new ProviderId("forecast-solar");
+        assertThat(forecast).isEqualTo(new ForecastSelection(openMeteo, Optional.of(forecastSolar),
+                Map.of(openMeteo, Map.of("base_url", ""))));
+        assertThat(forecast.settingsOf(forecastSolar)).isEmpty();
+    }
+
+    @Test
+    void anEmptyFallbackMeansThereIsNone() throws IOException, ConfigProblem {
+        var file = write(Files.readString(EXAMPLE).replace("\"fallback\": \"forecast-solar\"", "\"fallback\": \"\""));
+        var forecast = new ConfigFile(file).read().forecast();
+
+        assertThat(forecast.fallback()).isEmpty();
+        assertThat(forecast.order()).containsExactly(new ProviderId("open-meteo"));
     }
 
     /** It may come from a newer version: the forecast service says the provider is not known when it is asked. */
     @Test
     void anUnknownProviderIdIsNotAConfigProblem() throws IOException, ConfigProblem {
         var file = write(Files.readString(EXAMPLE).replace("\"primary\": \"open-meteo\"", "\"primary\": \"solcast\""));
-        assertThat(new ConfigFile(file).read().forecast().primary()).isEqualTo("solcast");
+        assertThat(new ConfigFile(file).read().forecast().primary()).isEqualTo(new ProviderId("solcast"));
     }
 
     @Test

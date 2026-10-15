@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.engine.forecast;
 
 import io.github.enadeag.carchargeplanner.engine.config.ForecastSelection;
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsSource;
@@ -21,7 +22,7 @@ public final class ForecastService {
     private final Providers providers;
     private final ForecastCache cache;
     private final SecretsSource secrets;
-    private final Map<String, Instant> retryAt = new HashMap<>();
+    private final Map<ProviderId, Instant> retryAt = new HashMap<>();
 
     /**
      * Makes the service.
@@ -84,7 +85,7 @@ public final class ForecastService {
         }
     }
 
-    private Outcome ask(String providerId, SystemDescription system, ForecastSelection selection, Secrets stored,
+    private Outcome ask(ProviderId providerId, SystemDescription system, ForecastSelection selection, Secrets stored,
             Instant now, boolean force) {
         var found = providers.find(providerId);
         if (found.isEmpty()) {
