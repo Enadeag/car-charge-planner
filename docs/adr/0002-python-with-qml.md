@@ -1,3 +1,7 @@
+---
+status: superseded by ADR-0005
+---
+
 # Python for the engine and the desktop app, with QML for the interface
 
 The engine and the desktop app stay in Python, and the new interface is written in Qt Quick (QML) instead of Qt Widgets, so the engine and the desktop app share one language while the interface can look modern. A web or phone client, if one comes, talks to the engine through its interface and may use another technology.
