@@ -213,7 +213,7 @@ public final class Main {
         Platform.runLater(() -> settingsMade.complete(new SettingsWindow(stores, facts, Main::openLink,
                 () -> replanning.execute(replan), colorSchemeFound.join(), icon, messages)));
         var settings = settingsMade.get();
-        dashboard.onSettings(() -> settings.open(Category.PLANNING));
+        dashboard.onSettings(() -> settings.open(Category.SOLAR));
 
         Runnable quit = () -> {
             notifications.close();
@@ -229,7 +229,7 @@ public final class Main {
             }
         });
         var actions = new Tray.TrayActions(dashboard::popUp, dashboard::openWindow,
-                () -> settings.open(Category.PLANNING), () -> settings.open(Category.ABOUT), quit);
+                () -> settings.open(Category.SOLAR), () -> settings.open(Category.ABOUT), quit);
         boolean windowMode = mode == DisplayMode.WINDOW;
         // Windows shows notifications through the tray icon, so in window mode it is there for them
         boolean inTray = (!windowMode || tray instanceof AwtTray)

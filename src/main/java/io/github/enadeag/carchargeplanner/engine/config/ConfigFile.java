@@ -19,9 +19,9 @@ import tools.jackson.databind.node.ObjectNode;
 import tools.jackson.databind.type.LogicalType;
 
 /**
- * The engine's own config file, in JSON, read and written whole. Every value must be given, as there are no typical
- * values yet, except the {@code away} section: a file without it, such as one written before away periods existed, has
- * none.
+ * The engine's own config file, in JSON, read and written whole. Every value must be given, except the {@code away}
+ * and {@code typical} sections: a file without them, such as one written before they existed, has no away periods and
+ * no typical values.
  */
 public final class ConfigFile {
 
@@ -83,6 +83,11 @@ public final class ConfigFile {
             if (!file.has("away")) {
                 file.putObject("away").putArray("recurring");
             }
+            if (!file.has("typical")) {
+                var typical = file.putObject("typical");
+                typical.putArray("system");
+                typical.putArray("panels");
+            }
             return json.treeToValue(file, EngineConfig.class);
         } catch (ValueInstantiationException e) {
             // a check in one of the records failed: its own message names the setting
@@ -125,6 +130,14 @@ public final class ConfigFile {
                 .put("weekday", period.weekday().name())
                 .put("start", TIME.format(period.start()))
                 .put("end", TIME.format(period.end())));
+        var typical = file.putObject("typical");
+        var system = typical.putArray("system");
+        config.typical().system().stream().sorted().forEach(setting -> system.add(setting.name()));
+        var panels = typical.putArray("panels");
+        config.typical().panels().forEach(array -> {
+            var settings = panels.addArray();
+            array.stream().sorted().forEach(setting -> settings.add(setting.name()));
+        });
         return file;
     }
 

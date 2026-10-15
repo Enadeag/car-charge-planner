@@ -36,6 +36,49 @@ public record HomeSystem(
     }
 
     /**
+     * The system with other panel arrays.
+     *
+     * @param newPanels the panel arrays, at least one
+     * @return a system with everything else the same
+     * @throws IllegalArgumentException when there is no panel array
+     */
+    public HomeSystem withPanels(List<PanelArray> newPanels) {
+        return new HomeSystem(location, timezone, newPanels, house, car, charger);
+    }
+
+    /**
+     * The system at another place.
+     *
+     * @param newLocation the coordinates of the home
+     * @param newTimezone the time zone of the home
+     * @return a system with everything else the same
+     */
+    public HomeSystem withLocation(Coordinates newLocation, ZoneId newTimezone) {
+        return new HomeSystem(newLocation, newTimezone, panels, house, car, charger);
+    }
+
+    /**
+     * The system with another house and car.
+     *
+     * @param newHouse the home's own use of power
+     * @param newCar the car
+     * @return a system with everything else the same
+     */
+    public HomeSystem withHouseAndCar(House newHouse, Car newCar) {
+        return new HomeSystem(location, timezone, panels, newHouse, newCar, charger);
+    }
+
+    /**
+     * The system with another charger.
+     *
+     * @param newCharger the charger
+     * @return a system with everything else the same
+     */
+    public HomeSystem withCharger(Charger newCharger) {
+        return new HomeSystem(location, timezone, panels, house, car, newCharger);
+    }
+
+    /**
      * The system as the config file gives it, with the latitude and the longitude side by side.
      *
      * @param latitude the latitude of the home in degrees, from -90 to 90, north positive

@@ -47,6 +47,8 @@ final class NumberField implements Input {
     private final Spinner<Double> spinner = new Spinner<>();
     private final SpinnerValueFactory.DoubleSpinnerValueFactory values;
     private final HBox view;
+    private final Label unit = new Label();
+    private Range range;
     private double loaded;
 
     /**
@@ -57,12 +59,13 @@ final class NumberField implements Input {
      * @param messages writes and reads the numbers in the owner's language
      */
     NumberField(Range range, String unit, Messages messages) {
+        this.range = range;
         this.values = new SpinnerValueFactory.DoubleSpinnerValueFactory(range.min(), range.max(), range.min(),
                 range.step());
         values.setConverter(new StringConverter<>() {
             @Override
             public String toString(Double value) {
-                return value == null ? "" : messages.number(value, range.decimals());
+                return value == null ? "" : messages.number(value, NumberField.this.range.decimals());
             }
 
             @Override
@@ -77,9 +80,9 @@ final class NumberField implements Input {
         spinner.setValueFactory(values);
         spinner.setEditable(true);
         spinner.getStyleClass().addAll(Spinner.STYLE_CLASS_SPLIT_ARROWS_HORIZONTAL, "number-field");
-        var unitLabel = new Label(unit);
-        unitLabel.getStyleClass().add("field-unit");
-        view = new HBox(spinner, unitLabel);
+        this.unit.setText(unit);
+        this.unit.getStyleClass().add("field-unit");
+        view = new HBox(spinner, this.unit);
         view.getStyleClass().add("number-input");
         loaded = range.min();
     }
@@ -93,6 +96,29 @@ final class NumberField implements Input {
         loaded = value;
         values.setValue(value);
         spinner.getEditor().setText(values.getConverter().toString(values.getValue()));
+    }
+
+    /**
+     * Shows a value as if the owner entered it, so it counts as changed when it differs from the loaded one.
+     *
+     * @param value the value to show; one outside the range is shown at its nearest end
+     */
+    void set(double value) {
+        values.setValue(value);
+        spinner.getEditor().setText(values.getConverter().toString(values.getValue()));
+    }
+
+    /**
+     * Changes what the field allows and shows, such as for other units. The value shown is not changed, except to
+     * bring it into the new range.
+     *
+     * @param range the new range, step and decimals
+     */
+    void setRange(Range range) {
+        this.range = range;
+        values.setMin(range.min());
+        values.setMax(range.max());
+        values.setAmountToStepBy(range.step());
     }
 
     /**
@@ -114,6 +140,15 @@ final class NumberField implements Input {
         return (int) Math.round(value());
     }
 
+    /**
+     * Changes the unit shown after the field.
+     *
+     * @param text the unit, such as "mi"; empty for none
+     */
+    void setUnit(String text) {
+        unit.setText(text);
+    }
+
     @Override
     public Node view() {
         return view;
@@ -126,9 +161,18 @@ final class NumberField implements Input {
 
     @Override
     public boolean isChanged() {
-        // what is typed counts, without committing it: that would rewrite the text while the owner types
+        return Double.compare(typed(), loaded) != 0;
+    }
+
+    /**
+     * The value now, with what the owner typed, without confirming it: that would rewrite the text while the owner
+     * types.
+     *
+     * @return the value in the range; the value shown before while the text is not a number
+     */
+    double typed() {
         var typed = values.getConverter().fromString(spinner.getEditor().getText());
-        return Double.compare(Math.clamp(typed, values.getMin(), values.getMax()), loaded) != 0;
+        return Math.clamp(typed, values.getMin(), values.getMax());
     }
 
     @Override

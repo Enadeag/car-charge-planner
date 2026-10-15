@@ -13,6 +13,7 @@ import io.github.enadeag.carchargeplanner.engine.away.AwayFile;
 import io.github.enadeag.carchargeplanner.engine.battery.BatteryFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastCache;
+import io.github.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastService;
 import io.github.enadeag.carchargeplanner.engine.forecast.Providers;
 import io.github.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
@@ -32,6 +33,7 @@ import javafx.application.ColorScheme;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Spinner;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
@@ -55,12 +57,17 @@ final class SettingsFixture {
     private Stage stage;
 
     SettingsFixture(Path folder, Language language) throws IOException {
+        this(folder, language, List.of());
+    }
+
+    /** With these forecast providers, such as one with a place search. */
+    SettingsFixture(Path folder, Language language, List<ForecastProvider> known) throws IOException {
         this.folder = folder;
         this.messages = new Messages(language);
         configPath = folder.resolve("engine.json");
         Files.copy(EXAMPLE, configPath);
         appSettings = new AppSettingsFile(folder.resolve("app.json"), Units.METRIC);
-        var providers = new Providers(List.of());
+        var providers = new Providers(known);
         var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json")));
         engine = new Engine(new ConfigFile(configPath),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
@@ -102,7 +109,9 @@ final class SettingsFixture {
      * category's page.
      */
     static Node field(SettingsView view, String name) {
+        // a page not shown yet has no skins, so a spinner's text field is found through the spinner
         return view.pages().stream().flatMap(page -> Scenes.all(page.view()).stream())
+                .map(node -> node instanceof Spinner<?> spinner ? spinner.getEditor() : node)
                 .filter(node -> name.equals(node.getAccessibleText()))
                 .findFirst().orElseThrow(() -> new AssertionError("no field " + name));
     }
@@ -127,6 +136,17 @@ final class SettingsFixture {
                 .map(Button.class::cast)
                 .filter(Scenes::reallyVisible)
                 .findFirst().orElseThrow(() -> new AssertionError("no button " + text));
+    }
+
+    /** Waits until the JavaFX thread finds the condition true, such as after a search on another thread. */
+    static void waitFor(java.util.concurrent.Callable<Boolean> condition) throws Exception {
+        long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(10);
+        while (!Fx.call(condition)) {
+            if (System.nanoTime() > deadline) {
+                throw new AssertionError("waited in vain");
+            }
+            Thread.onSpinWait();
+        }
     }
 
     /** A start at login that only remembers, and can be told to fail. */

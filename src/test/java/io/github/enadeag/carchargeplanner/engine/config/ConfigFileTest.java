@@ -10,8 +10,10 @@ import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -196,7 +198,8 @@ class ConfigFileTest {
         var file = new ConfigFile(write(Files.readString(EXAMPLE)));
         var fewer = new EngineConfig(example.system(),
                 new PlanningPreferences(new Percent(20), new Percent(90), 0.7, 0.1, 30, 0),
-                new ForecastSelection(new ProviderId("forecast-solar"), Optional.empty(), Map.of()), AwaySchedule.NONE);
+                new ForecastSelection(new ProviderId("forecast-solar"), Optional.empty(), Map.of()), AwaySchedule.NONE,
+                TypicalValues.NONE);
 
         file.write(fewer);
 
@@ -212,5 +215,37 @@ class ConfigFileTest {
         assertThatThrownBy(() -> new ConfigFile(path).write(new ConfigFile(EXAMPLE).read()))
                 .isInstanceOf(IOException.class);
         assertThat(path).hasContent(original);
+    }
+
+    @Test
+    void typicalValuesAreWrittenAndReadBack() throws IOException, ConfigProblem {
+        var example = new ConfigFile(EXAMPLE).read();
+        var typical = new TypicalValues(Set.of(Setting.CAR_BATTERY, Setting.CHARGER_PHASES),
+                List.of(Set.of(Setting.PANEL_SIZE, Setting.PANEL_TILT)));
+        var file = new ConfigFile(folder.resolve("engine.json"));
+
+        file.write(example.withSystem(example.system(), typical));
+
+        assertThat(file.read().typical()).isEqualTo(typical);
+    }
+
+    @Test
+    void aFileWithoutTypicalValuesHasNone() throws ConfigProblem {
+        assertThat(new ConfigFile(EXAMPLE).read().typical()).isEqualTo(TypicalValues.NONE);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "{\"system\": [\"MINIMUM_CHARGE\"], \"panels\": []}     | typical.system",
+        "{\"system\": [], \"panels\": [[\"CAR_BATTERY\"]]}       | typical.panels",
+        "{\"system\": [], \"panels\": [[], []]}                   | more panel arrays",
+        "{\"system\": [\"BATTERY\"], \"panels\": []}            | BATTERY",
+    })
+    void typicalValuesThatCannotBeAreRejected(String typical, String named) throws IOException {
+        var example = Files.readString(EXAMPLE);
+        var file = write(example.substring(0, example.lastIndexOf('}')) + ", \"typical\": " + typical + "}");
+
+        assertThatThrownBy(() -> new ConfigFile(file).read()).isInstanceOf(ConfigProblem.class)
+                .hasMessageContaining(named);
     }
 }

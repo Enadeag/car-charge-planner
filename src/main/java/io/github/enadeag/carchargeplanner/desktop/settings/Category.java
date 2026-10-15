@@ -4,6 +4,14 @@ import io.github.enadeag.carchargeplanner.desktop.TextKey;
 
 /** A group of settings with a page of its own, in the order of Settings' sidebar. */
 public enum Category {
+    /** The panel arrays. */
+    SOLAR(TextKey.CATEGORY_SOLAR),
+    /** Where the home is, and its time zone. */
+    LOCATION(TextKey.CATEGORY_LOCATION),
+    /** The car, and the house's own use of power. */
+    CAR_HOUSE(TextKey.CATEGORY_CAR_HOUSE),
+    /** The wall charger. */
+    CHARGER(TextKey.CATEGORY_CHARGER),
     /** The planning preferences: charge levels, how cautious the plan is, and notifications. */
     PLANNING(TextKey.CATEGORY_PLANNING),
     /** The desktop app's own settings: how it shows itself, its language, the units, and start at login. */

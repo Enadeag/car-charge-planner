@@ -1,5 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
+import io.github.enadeag.carchargeplanner.desktop.Messages;
+import io.github.enadeag.carchargeplanner.desktop.TextKey;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -15,6 +17,7 @@ final class FieldRow extends VBox {
     private final Input input;
     private final Label hint = paragraph("", "note");
     private final Label problem = paragraph("", "field-problem");
+    private final Label typical = new Label();
 
     /**
      * Makes the row.
@@ -36,7 +39,11 @@ final class FieldRow extends VBox {
             line.getChildren().add(label);
             input.focusable().setAccessibleText(name);
         }
-        line.getChildren().add(input.view());
+        typical.getStyleClass().add("typical-tag");
+        typical.setMinWidth(USE_PREF_SIZE);
+        typical.setVisible(false);
+        typical.setManaged(false);
+        line.getChildren().addAll(typical, input.view());
         problem.setVisible(false);
         problem.setManaged(false);
         getChildren().addAll(line, this.hint, problem);
@@ -77,6 +84,19 @@ final class FieldRow extends VBox {
     }
 
     /**
+     * Tags the value as a typical value, or takes the tag away. The tag stands before the control, and a screen reader
+     * reads it with the explanation.
+     *
+     * @param text the tag, such as "Typical value" in the owner's language; empty to take it away
+     */
+    void showTypical(String text) {
+        typical.setText(text);
+        typical.setVisible(!text.isEmpty());
+        typical.setManaged(!text.isEmpty());
+        input.focusable().setAccessibleHelp(help());
+    }
+
+    /**
      * Whether a problem shows.
      *
      * @return true while the row shows a problem
@@ -87,7 +107,20 @@ final class FieldRow extends VBox {
 
     /** The problem first, as it is what the owner has to act on. */
     private String help() {
-        return (problem.getText() + " " + hint.getText()).strip();
+        return (problem.getText() + " " + typical.getText() + " " + hint.getText()).strip().replaceAll(" +", " ");
+    }
+
+    /**
+     * A row with its texts from the bundles.
+     *
+     * @param messages the texts, in the owner's language
+     * @param name the key of the setting's name
+     * @param hint the key of the sentence that explains it
+     * @param input the control the setting is entered in
+     * @return a new row
+     */
+    static FieldRow of(Messages messages, TextKey name, TextKey hint, Input input) {
+        return new FieldRow(messages.text(name), messages.text(hint), input);
     }
 
     /**

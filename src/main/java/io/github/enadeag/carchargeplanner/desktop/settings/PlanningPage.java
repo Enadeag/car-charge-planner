@@ -105,7 +105,7 @@ final class PlanningPage implements ConfigPage {
         try {
             var planning = new PlanningPreferences(new Percent(minimum.value()), new Percent(target.value()),
                     margin.value() / 100, importTolerance.value(), minWindow.wholeValue(), notifyLead.wholeValue());
-            return Optional.of(new EngineConfig(config.system(), planning, config.forecast(), config.away()));
+            return Optional.of(config.withPlanning(planning));
         } catch (InvalidSetting e) {
             rows.get(e.setting()).showProblem(ProblemTexts.of(e.rule(), messages));
             return Optional.empty();

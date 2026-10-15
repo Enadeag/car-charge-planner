@@ -52,6 +52,15 @@ final class ChoiceField<T> implements Input {
     }
 
     /**
+     * Shows a choice as if the owner made it, so it counts as changed when it differs from the loaded one.
+     *
+     * @param choice one of the choices the field was made with
+     */
+    void set(T choice) {
+        box.setValue(choice);
+    }
+
+    /**
      * The choice now.
      *
      * @return the chosen one of the choices

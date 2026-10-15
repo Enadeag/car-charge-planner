@@ -12,7 +12,9 @@ public class InvalidSetting extends IllegalArgumentException {
         /** The value lies outside the range the setting allows. */
         OUT_OF_RANGE,
         /** The minimum charge level is not below the target charge level. */
-        NOT_BELOW_TARGET
+        NOT_BELOW_TARGET,
+        /** The highest current is below the lowest current. */
+        BELOW_MINIMUM_CURRENT
     }
 
     private final Setting setting;

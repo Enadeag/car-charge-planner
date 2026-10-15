@@ -11,14 +11,16 @@ public record Coordinates(double latitude, double longitude) {
     /**
      * Checks the ranges.
      *
-     * @throws IllegalArgumentException when the latitude or the longitude is out of its range or not a number
+     * @throws InvalidSetting when the latitude or the longitude is out of its range or not a number
      */
     public Coordinates {
         if (!isLatitude(latitude)) {
-            throw new IllegalArgumentException("latitude must be between -90 and 90");
+            throw new InvalidSetting(Setting.LATITUDE, InvalidSetting.Rule.OUT_OF_RANGE,
+                    "latitude must be between -90 and 90");
         }
         if (!isLongitude(longitude)) {
-            throw new IllegalArgumentException("longitude must be between -180 and 180");
+            throw new InvalidSetting(Setting.LONGITUDE, InvalidSetting.Rule.OUT_OF_RANGE,
+                    "longitude must be between -180 and 180");
         }
     }
 
