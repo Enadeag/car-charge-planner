@@ -6,15 +6,17 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 
-/** The forecast's source and freshness, and the way to Away and Settings, which are not built yet. */
+/** The forecast's source and freshness, and the way to Away, which is not built yet, and to Settings. */
 final class DashboardFooter extends HBox {
 
     private final Label forecast = Texts.paragraph("", "footer-text");
 
     private final Messages messages;
+    private final Button settings = new Button();
 
     /**
-     * Makes the footer, with an empty forecast text and the Away and Settings buttons switched off.
+     * Makes the footer, with an empty forecast text, the Away button switched off, and a Settings button that does
+     * nothing until {@link #onSettings(Runnable)}.
      *
      * @param messages the texts, in the owner's language
      */
@@ -22,7 +24,10 @@ final class DashboardFooter extends HBox {
         this.messages = messages;
         HBox.setHgrow(forecast, Priority.ALWAYS);
         forecast.setMaxWidth(Double.MAX_VALUE);
-        getChildren().setAll(forecast, notYet(TextKey.FOOTER_AWAY), notYet(TextKey.FOOTER_SETTINGS));
+        settings.setText(messages.text(TextKey.FOOTER_SETTINGS));
+        settings.getStyleClass().add(Styles.SMALL);
+        settings.setMinWidth(USE_PREF_SIZE);
+        getChildren().setAll(forecast, notYet(TextKey.FOOTER_AWAY), settings);
         getStyleClass().add("dashboard-footer");
     }
 
@@ -33,6 +38,15 @@ final class DashboardFooter extends HBox {
      */
     void show(String text) {
         forecast.setText(text);
+    }
+
+    /**
+     * Lets the Settings button open Settings.
+     *
+     * @param action what the button does; called on the JavaFX thread
+     */
+    void onSettings(Runnable action) {
+        settings.setOnAction(event -> action.run());
     }
 
     private Button notYet(TextKey nameKey) {

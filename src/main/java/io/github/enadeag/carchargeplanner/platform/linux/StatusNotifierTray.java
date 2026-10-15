@@ -73,6 +73,8 @@ public final class StatusNotifierTray implements Tray {
         update();
         var menu = new TrayMenu(List.of(
                 new TrayMenu.Entry(labels.open(), () -> apart(actions.open())),
+                new TrayMenu.Entry(labels.settings(), () -> apart(actions.settings())),
+                new TrayMenu.Entry(labels.about(), () -> apart(actions.about())),
                 new TrayMenu.Entry(labels.quit(), () -> apart(actions.quit()))));
         try {
             bus = connector.connect();

@@ -177,4 +177,40 @@ class ConfigFileTest {
                 .isInstanceOf(ConfigProblem.class)
                 .hasMessageContaining(missing.toString());
     }
+
+    @Test
+    void aWrittenConfigIsReadBackTheSame() throws IOException, ConfigProblem {
+        var example = new ConfigFile(EXAMPLE).read();
+        var file = new ConfigFile(folder.resolve("new", "engine.json"));
+
+        file.write(example);
+
+        assertThat(file.read()).isEqualTo(example);
+        assertThat(folder.resolve("new")).isDirectoryContaining(path -> path.getFileName().toString().equals("engine.json"))
+                .isDirectoryNotContaining(path -> path.getFileName().toString().endsWith(".tmp"));
+    }
+
+    @Test
+    void writingReplacesTheWholeFile() throws IOException, ConfigProblem {
+        var example = new ConfigFile(EXAMPLE).read();
+        var file = new ConfigFile(write(Files.readString(EXAMPLE)));
+        var fewer = new EngineConfig(example.system(),
+                new PlanningPreferences(new Percent(20), new Percent(90), 0.7, 0.1, 30, 0),
+                new ForecastSelection(new ProviderId("forecast-solar"), Optional.empty(), Map.of()), AwaySchedule.NONE);
+
+        file.write(fewer);
+
+        assertThat(file.read()).isEqualTo(fewer);
+    }
+
+    @Test
+    void aFileThatCannotBeWrittenIsLeftAsItWas() throws IOException {
+        var original = Files.readString(EXAMPLE);
+        var path = write(original);
+        Files.createDirectory(folder.resolve("engine.json.tmp"));
+
+        assertThatThrownBy(() -> new ConfigFile(path).write(new ConfigFile(EXAMPLE).read()))
+                .isInstanceOf(IOException.class);
+        assertThat(path).hasContent(original);
+    }
 }

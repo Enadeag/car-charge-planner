@@ -1,0 +1,148 @@
+package io.github.enadeag.carchargeplanner.desktop.settings;
+
+import io.github.enadeag.carchargeplanner.desktop.Messages;
+import javafx.scene.Node;
+import javafx.scene.control.Label;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.SpinnerValueFactory;
+import javafx.scene.layout.HBox;
+import javafx.util.StringConverter;
+
+/**
+ * A number the owner types or steps through, with its unit, written the way the owner's language writes numbers. A
+ * value outside the range is brought back into it; a text that is not a number keeps the value shown before. A value
+ * that was not edited is given back exactly, not as rounded for showing.
+ */
+final class NumberField implements Input {
+
+    /**
+     * What the field allows and how it shows a value.
+     *
+     * @param min the lowest value
+     * @param max the highest value, at least {@code min}
+     * @param step how much the arrow keys and buttons change the value, more than 0
+     * @param decimals the decimals shown, 0 or more
+     */
+    record Range(double min, double max, double step, int decimals) {
+
+        /**
+         * Checks the values.
+         *
+         * @throws IllegalArgumentException when the maximum is below the minimum, the step is not more than 0 or the
+         *     decimals are negative
+         */
+        Range {
+            if (max < min) {
+                throw new IllegalArgumentException("max must be at least min");
+            }
+            if (step <= 0) {
+                throw new IllegalArgumentException("step must be more than 0");
+            }
+            if (decimals < 0) {
+                throw new IllegalArgumentException("decimals must not be negative");
+            }
+        }
+    }
+
+    private final Spinner<Double> spinner = new Spinner<>();
+    private final SpinnerValueFactory.DoubleSpinnerValueFactory values;
+    private final HBox view;
+    private double loaded;
+
+    /**
+     * Makes the field, showing the range's minimum until {@link #load(double)}.
+     *
+     * @param range what the field allows and how many decimals it shows
+     * @param unit the unit after the field, such as "kWh"; empty for none
+     * @param messages writes and reads the numbers in the owner's language
+     */
+    NumberField(Range range, String unit, Messages messages) {
+        this.values = new SpinnerValueFactory.DoubleSpinnerValueFactory(range.min(), range.max(), range.min(),
+                range.step());
+        values.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(Double value) {
+                return value == null ? "" : messages.number(value, range.decimals());
+            }
+
+            @Override
+            public Double fromString(String text) {
+                var current = values.getValue();
+                if (text.equals(toString(current))) {
+                    return current; // untouched: keep the exact value, not the rounded one shown
+                }
+                return messages.parse(text).stream().boxed().findFirst().orElse(current);
+            }
+        });
+        spinner.setValueFactory(values);
+        spinner.setEditable(true);
+        spinner.getStyleClass().addAll(Spinner.STYLE_CLASS_SPLIT_ARROWS_HORIZONTAL, "number-field");
+        var unitLabel = new Label(unit);
+        unitLabel.getStyleClass().add("field-unit");
+        view = new HBox(spinner, unitLabel);
+        view.getStyleClass().add("number-input");
+        loaded = range.min();
+    }
+
+    /**
+     * Shows a value and remembers it as the one not edited.
+     *
+     * @param value the value to show; one outside the range is shown at its nearest end, and counts as changed
+     */
+    void load(double value) {
+        loaded = value;
+        values.setValue(value);
+        spinner.getEditor().setText(values.getConverter().toString(values.getValue()));
+    }
+
+    /**
+     * The value now, with what the owner typed but did not confirm yet.
+     *
+     * @return the value in the range; exactly the loaded one when the owner did not change it
+     */
+    double value() {
+        commitTyped();
+        return values.getValue();
+    }
+
+    /**
+     * The value now, as a whole number.
+     *
+     * @return {@link #value()} rounded to the nearest whole number
+     */
+    int wholeValue() {
+        return (int) Math.round(value());
+    }
+
+    @Override
+    public Node view() {
+        return view;
+    }
+
+    @Override
+    public Node focusable() {
+        return spinner.getEditor();
+    }
+
+    @Override
+    public boolean isChanged() {
+        // what is typed counts, without committing it: that would rewrite the text while the owner types
+        var typed = values.getConverter().fromString(spinner.getEditor().getText());
+        return Double.compare(Math.clamp(typed, values.getMin(), values.getMax()), loaded) != 0;
+    }
+
+    @Override
+    public void onChange(Runnable action) {
+        spinner.valueProperty().addListener((property, before, now) -> action.run());
+        spinner.getEditor().textProperty().addListener((property, before, now) -> action.run());
+    }
+
+    private void commitTyped() {
+        var typed = spinner.getEditor().getText();
+        var shown = values.getConverter().toString(values.getValue());
+        if (!typed.equals(shown)) {
+            values.setValue(values.getConverter().fromString(typed));
+            spinner.getEditor().setText(values.getConverter().toString(values.getValue()));
+        }
+    }
+}

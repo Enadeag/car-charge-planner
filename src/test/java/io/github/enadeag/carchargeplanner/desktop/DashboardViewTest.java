@@ -217,10 +217,21 @@ class DashboardViewTest {
                 .filter(Button.class::isInstance).map(Button.class::cast).toList());
 
         assertThat(Fx.call(() -> Scenes.visibleTexts(view.lookup(".dashboard-footer")))).contains(Models.FOOTER);
-        assertThat(buttons).hasSize(2).allSatisfy(button -> {
-            assertThat(button.isDisabled()).isTrue();
-            assertThat(button.getAccessibleText()).endsWith("not available yet");
-        });
+        assertThat(buttons).hasSize(2);
+        assertThat(buttons.getFirst().isDisabled()).isTrue();
+        assertThat(buttons.getFirst().getAccessibleText()).endsWith("not available yet");
+    }
+
+    @Test
+    void theFootersSettingsButtonOpensSettings() throws Exception {
+        var view = shown(Models.plan(Optional.empty()));
+        var opened = new java.util.concurrent.atomic.AtomicInteger();
+        Fx.run(() -> view.onSettings(opened::incrementAndGet));
+
+        Fx.run(() -> Scenes.all(view.lookup(".dashboard-footer")).stream()
+                .filter(Button.class::isInstance).map(Button.class::cast).toList().getLast().fire());
+
+        assertThat(opened).hasValue(1);
     }
 
     @Test

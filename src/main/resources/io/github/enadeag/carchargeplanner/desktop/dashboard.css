@@ -30,6 +30,8 @@
     -car-after: #8fd1b2;
     -house: -muted;
 
+    -danger-text: #b42318;
+
     -focus: -grid;
 }
 
@@ -57,6 +59,8 @@
     -car-area: rgba(76, 199, 140, 0.16);
     -car-after: #2a6b4c;
     -house: -muted;
+
+    -danger-text: #ff9b8f;
 }
 
 /* the popup's window is transparent, so the dashboard can have rounded corners and a border */
@@ -362,5 +366,147 @@
 
 .footer-text {
     -fx-font-size: 0.85em;
+    -fx-text-fill: -muted;
+}
+
+/* Settings: categories in a sidebar, the chosen one's cards beside them, Save and Cancel below */
+.settings {
+    -fx-background-color: -panel;
+}
+
+.settings-sidebar {
+    -fx-background-color: -ground;
+    -fx-padding: 1em 0.6em 1em 0.6em;
+    -fx-spacing: 0.6em;
+    -fx-pref-width: 13em;
+    -fx-min-width: 11em;
+}
+
+.sidebar-title {
+    -fx-font-size: 1.2em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fg;
+    -fx-padding: 0 0.4em 0 0.4em;
+}
+
+.settings-categories,
+.settings-categories > .virtual-flow > .clipped-container > .sheet {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+}
+
+.settings-categories .list-cell {
+    -fx-background-color: transparent;
+    -fx-background-radius: 8;
+    -fx-text-fill: -fg;
+    -fx-padding: 0.45em 0.7em 0.45em 0.7em;
+    -fx-graphic-text-gap: 0.5em;
+    -fx-content-display: right;
+}
+
+.settings-categories .list-cell:selected {
+    -fx-background-color: -grid-soft;
+    -fx-text-fill: -fg;
+    -fx-font-weight: bold;
+}
+
+.settings-categories:focused .list-cell:focused {
+    -fx-border-color: -focus;
+    -fx-border-width: 2;
+    -fx-border-radius: 8;
+}
+
+.problem-dot {
+    -fx-background-color: -danger-text;
+    -fx-background-radius: 999;
+    -fx-min-width: 0.6em;
+    -fx-min-height: 0.6em;
+    -fx-max-width: 0.6em;
+    -fx-max-height: 0.6em;
+}
+
+.settings-body,
+.settings-body > .viewport {
+    -fx-background-color: -panel;
+    -fx-border-width: 0;
+}
+
+.settings-page {
+    -fx-padding: 1.2em 1.4em 1.4em 1.4em;
+    -fx-spacing: 0.9em;
+}
+
+.page-title {
+    -fx-font-size: 1.4em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fg;
+}
+
+.settings-card {
+    -fx-spacing: 0.7em;
+}
+
+.card-title {
+    -fx-font-weight: bold;
+    -fx-text-fill: -fg;
+}
+
+.field-row {
+    -fx-spacing: 0.2em;
+    -fx-padding: 0.3em 0 0 0;
+}
+
+.field-line,
+.number-input {
+    -fx-alignment: center-left;
+    -fx-spacing: 0.75em;
+}
+
+.number-input {
+    -fx-spacing: 0.4em;
+}
+
+.field-label {
+    -fx-text-fill: -fg;
+}
+
+.field-unit {
+    -fx-text-fill: -muted;
+    -fx-min-width: 3em;
+}
+
+.number-field {
+    -fx-pref-width: 8.5em;
+}
+
+.choice-field {
+    -fx-max-width: 26em;
+}
+
+.field-problem,
+.status-text.problem {
+    -fx-text-fill: -danger-text;
+}
+
+.field-problem {
+    -fx-font-weight: bold;
+}
+
+.path-field {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+    -fx-text-fill: -muted;
+}
+
+.settings-actions {
+    -fx-background-color: -panel;
+    -fx-alignment: center-right;
+    -fx-spacing: 0.6em;
+    -fx-padding: 0.75em 1.4em 0.85em 1.4em;
+    -fx-border-color: -line transparent transparent transparent;
+}
+
+.status-text {
     -fx-text-fill: -muted;
 }

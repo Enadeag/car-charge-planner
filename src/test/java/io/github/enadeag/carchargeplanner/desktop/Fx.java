@@ -13,10 +13,10 @@ import javafx.beans.value.ObservableValue;
  * Runs test code on the JavaFX thread of JavaFX's headless platform, which draws in memory: no window reaches the
  * developer's desktop, and the tests run without one.
  */
-final class Fx {
+public final class Fx {
 
     /** The system's wish for reduced motion in the tests: on, so charts show their new values at once. */
-    static final ObservableValue<Boolean> REDUCED_MOTION = new SimpleBooleanProperty(true);
+    public static final ObservableValue<Boolean> REDUCED_MOTION = new SimpleBooleanProperty(true);
 
     private static final AtomicBoolean STARTED = new AtomicBoolean();
     private static final long TIMEOUT_S = 10;
@@ -24,14 +24,14 @@ final class Fx {
     private Fx() {
     }
 
-    static <T> T call(Callable<T> code) throws Exception {
+    public static <T> T call(Callable<T> code) throws Exception {
         start();
         var task = new FutureTask<>(code);
         Platform.runLater(task);
         return task.get(TIMEOUT_S, TimeUnit.SECONDS);
     }
 
-    static void run(Runnable code) throws Exception {
+    public static void run(Runnable code) throws Exception {
         call(() -> {
             code.run();
             return null;
@@ -39,7 +39,7 @@ final class Fx {
     }
 
     /** Waits until the JavaFX thread has handled everything queued so far, such as the dashboard's own runLater. */
-    static void settle() throws Exception {
+    public static void settle() throws Exception {
         run(() -> { });
     }
 

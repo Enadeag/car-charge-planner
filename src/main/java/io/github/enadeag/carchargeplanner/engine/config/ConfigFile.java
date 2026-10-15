@@ -4,20 +4,28 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
+import java.util.Map;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.cfg.CoercionAction;
 import tools.jackson.databind.cfg.CoercionInputShape;
 import tools.jackson.databind.exc.ValueInstantiationException;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 import tools.jackson.databind.type.LogicalType;
 
 /**
- * The engine's own config file, in JSON. Every value must be given, as there are no typical values yet, except the
- * {@code away} section: a file without it, such as one written before away periods existed, has none.
+ * The engine's own config file, in JSON, read and written whole. Every value must be given, as there are no typical
+ * values yet, except the {@code away} section: a file without it, such as one written before away periods existed, has
+ * none.
  */
 public final class ConfigFile {
+
+    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm");
 
     private final Path path;
     private final JsonMapper json = JsonMapper.builder()
@@ -34,7 +42,7 @@ public final class ConfigFile {
             .build();
 
     /**
-     * Makes the reader for one config file; nothing is read yet.
+     * Makes the reader and writer for one config file; nothing is read yet.
      *
      * @param path where the file is, or should be; it need not exist, a missing file is reported when it is read
      */
@@ -82,6 +90,81 @@ public final class ConfigFile {
         } catch (JacksonException e) {
             throw new ConfigProblem(ConfigProblem.Kind.INVALID, path, where(e) + e.getOriginalMessage());
         }
+    }
+
+    /**
+     * Replaces the file by this config, in the form {@link #read()} reads. The new file is written beside the old one
+     * and then moved over it, so a reader sees the old file or the new one, never half of one.
+     *
+     * @param config the whole config to keep; its records have checked their values already
+     * @throws IOException when the file or its folder could not be written; the file is then left as it was
+     */
+    public void write(EngineConfig config) throws IOException {
+        var temporary = path.resolveSibling(path.getFileName() + ".tmp");
+        if (path.getParent() != null) {
+            Files.createDirectories(path.getParent());
+        }
+        Files.writeString(temporary, json.writerWithDefaultPrettyPrinter().writeValueAsString(tree(config)));
+        Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    private static ObjectNode tree(EngineConfig config) {
+        var file = JsonNodeFactory.instance.objectNode();
+        system(file.putObject("system"), config.system());
+        var planning = config.planning();
+        file.putObject("planning")
+                .put("minimumPct", planning.minimumPct().value())
+                .put("targetPct", planning.targetPct().value())
+                .put("margin", planning.margin())
+                .put("importToleranceKwh", planning.importToleranceKwh())
+                .put("minWindowMinutes", planning.minWindowMinutes())
+                .put("notifyLeadMinutes", planning.notifyLeadMinutes());
+        forecast(file.putObject("forecast"), config.forecast());
+        var recurring = file.putObject("away").putArray("recurring");
+        config.away().recurring().forEach(period -> recurring.addObject()
+                .put("weekday", period.weekday().name())
+                .put("start", TIME.format(period.start()))
+                .put("end", TIME.format(period.end())));
+        return file;
+    }
+
+    private static void system(ObjectNode node, HomeSystem system) {
+        node.put("latitude", system.location().latitude())
+                .put("longitude", system.location().longitude())
+                .put("timezone", system.timezone().getId());
+        var panels = node.putArray("panels");
+        system.panels().forEach(array -> panels.addObject()
+                .put("name", array.name())
+                .put("kwp", array.kwp())
+                .put("tiltDeg", array.tiltDeg())
+                .put("azimuthDeg", array.azimuthDeg())
+                .put("systemLosses", array.systemLosses()));
+        node.putObject("house").put("baseloadKw", system.house().baseloadKw());
+        var car = system.car();
+        node.putObject("car")
+                .put("usableBatteryKwh", car.usableBatteryKwh())
+                .put("consumptionKwhPer100km", car.consumptionKwhPer100km())
+                .put("kmPerDay", car.kmPerDay());
+        var charger = system.charger();
+        node.putObject("charger")
+                .put("phases", charger.phases().count())
+                .put("minAmps", charger.minAmps())
+                .put("maxAmps", charger.maxAmps())
+                .put("volts", charger.volts())
+                .put("efficiency", charger.efficiency());
+    }
+
+    private static void forecast(ObjectNode node, ForecastSelection forecast) {
+        node.put("primary", forecast.primary().value())
+                .put("fallback", forecast.fallback().map(ProviderId::value).orElse(""));
+        var settings = node.putObject("settings");
+        forecast.settings().entrySet().stream()
+                .sorted(Comparator.comparing(entry -> entry.getKey().value()))
+                .forEach(entry -> {
+                    var values = settings.putObject(entry.getKey().value());
+                    entry.getValue().entrySet().stream().sorted(Map.Entry.comparingByKey())
+                            .forEach(value -> values.put(value.getKey(), value.getValue()));
+                });
     }
 
     /** The place in the file, such as "system.panels[0]: ", or nothing when the problem is not in one setting. */

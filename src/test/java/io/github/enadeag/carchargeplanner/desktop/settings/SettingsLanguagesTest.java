@@ -1,0 +1,72 @@
+package io.github.enadeag.carchargeplanner.desktop.settings;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import io.github.enadeag.carchargeplanner.desktop.Fx;
+import io.github.enadeag.carchargeplanner.desktop.Language;
+import io.github.enadeag.carchargeplanner.desktop.Scenes;
+import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+
+/**
+ * In every language Settings shows each text whole, at the size it opens with: on every category, with a problem
+ * next to a field, with the question before discarding, and without a config file.
+ */
+class SettingsLanguagesTest {
+
+    @TempDir
+    Path folder;
+
+    private SettingsFixture settings;
+
+    @AfterEach
+    void close() throws Exception {
+        settings.close();
+    }
+
+    private static List<String> everyCategory(SettingsView view) {
+        var found = new ArrayList<String>();
+        for (var category : Category.values()) {
+            view.show(category);
+            view.applyCss();
+            view.layout();
+            found.addAll(Scenes.cutOff(view));
+        }
+        return found;
+    }
+
+    @ParameterizedTest
+    @EnumSource(Language.class)
+    void noTextIsCutOff(Language language) throws Exception {
+        settings = new SettingsFixture(folder, language);
+        var view = settings.open(false);
+
+        var problems = Fx.call(() -> {
+            var found = everyCategory(view);
+            settings.type(view, TextKey.FIELD_MINIMUM_CHARGE, "95");
+            view.save();
+            view.cancel();
+            found.addAll(everyCategory(view));
+            return found;
+        });
+
+        assertThat(problems).isEmpty();
+    }
+
+    @ParameterizedTest
+    @EnumSource(Language.class)
+    void noTextIsCutOffWithoutAConfigFile(Language language) throws Exception {
+        settings = new SettingsFixture(folder, language);
+        Files.delete(settings.configPath);
+        var view = settings.open();
+
+        assertThat(Fx.call(() -> everyCategory(view))).isEmpty();
+    }
+}

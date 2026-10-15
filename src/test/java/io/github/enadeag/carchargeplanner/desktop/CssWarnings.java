@@ -7,16 +7,16 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
 /** Collects what JavaFX's CSS engine warns about, such as a colour token it cannot resolve, while it is open. */
-final class CssWarnings extends Handler implements AutoCloseable {
+public final class CssWarnings extends Handler implements AutoCloseable {
 
     private final Logger log = Logger.getLogger("javafx.css");
     private final List<String> warnings = new CopyOnWriteArrayList<>();
 
-    CssWarnings() {
+    public CssWarnings() {
         log.addHandler(this);
     }
 
-    List<String> warnings() {
+    public List<String> warnings() {
         return List.copyOf(warnings);
     }
 

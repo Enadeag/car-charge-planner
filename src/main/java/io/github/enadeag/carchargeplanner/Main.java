@@ -4,6 +4,7 @@ import io.github.enadeag.carchargeplanner.desktop.AnnouncementTexts;
 import io.github.enadeag.carchargeplanner.desktop.AppIcon;
 import io.github.enadeag.carchargeplanner.desktop.AppSettingsFile;
 import io.github.enadeag.carchargeplanner.desktop.Dashboard;
+import io.github.enadeag.carchargeplanner.desktop.DisplayMode;
 import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.Notifications;
@@ -13,6 +14,11 @@ import io.github.enadeag.carchargeplanner.desktop.TaskbarHiding;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
 import io.github.enadeag.carchargeplanner.desktop.Tray;
 import io.github.enadeag.carchargeplanner.desktop.TrayStatusMapper;
+import io.github.enadeag.carchargeplanner.desktop.Units;
+import io.github.enadeag.carchargeplanner.desktop.settings.AboutFacts;
+import io.github.enadeag.carchargeplanner.desktop.settings.Category;
+import io.github.enadeag.carchargeplanner.desktop.settings.SettingsStores;
+import io.github.enadeag.carchargeplanner.desktop.settings.SettingsWindow;
 import io.github.enadeag.carchargeplanner.engine.Engine;
 import io.github.enadeag.carchargeplanner.engine.away.AwayFile;
 import io.github.enadeag.carchargeplanner.engine.battery.BatteryFile;
@@ -43,9 +49,11 @@ import io.github.enadeag.carchargeplanner.platform.windows.CredentialManagerKeyc
 import io.github.enadeag.carchargeplanner.platform.windows.RegistryRunKey;
 import io.github.enadeag.carchargeplanner.platform.windows.TaskbarShade;
 import io.github.enadeag.carchargeplanner.platform.windows.WindowsStartAtLogin;
+import java.awt.Desktop;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.System.Logger.Level;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -56,6 +64,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -113,27 +122,26 @@ public final class Main {
             System.exit(2);
             return;
         }
-        var messages = new Messages(language());
+        var appSettingsFile = new AppSettingsFile(defaultConfigPath().resolveSibling(APP_SETTINGS_FILE),
+                Units.ofCountry(Locale.getDefault(Locale.Category.FORMAT).getCountry()));
+        // read once, as the app starts: a changed language or mode applies at the next start
+        var appSettings = appSettingsFile.read();
+        var messages = new Messages(appSettings.language().orElseGet(() ->
+                Language.ofSystem(System.getenv(), Locale.getDefault(Locale.Category.DISPLAY))));
         switch (commandLine.command()) {
-            case RUN -> run(commandLine, messages);
+            case RUN -> run(commandLine, appSettingsFile, appSettings.mode(), messages);
             case QUIT -> System.exit(quitRunningApp(messages));
             case START_AT_LOGIN_ON -> System.exit(switchStartAtLogin(true, messages));
             case START_AT_LOGIN_OFF -> System.exit(switchStartAtLogin(false, messages));
         }
     }
 
-    /** The language the app settings choose, or else the system's: read once, as the app starts. */
-    private static Language language() {
-        var settings = new AppSettingsFile(defaultConfigPath().resolveSibling(APP_SETTINGS_FILE)).read();
-        return settings.language().orElseGet(() ->
-                Language.ofSystem(System.getenv(), Locale.getDefault(Locale.Category.DISPLAY)));
-    }
-
     /**
      * Starts the app: the dashboard, the tray icon (or a window without a tray), the notifications, the engine, and
      * planning every minute. When a copy runs already, it is asked to show its dashboard instead, and this one exits.
      */
-    private static void run(CommandLine commandLine, Messages messages) throws Exception {
+    private static void run(CommandLine commandLine, AppSettingsFile appSettingsFile, DisplayMode mode,
+            Messages messages) throws Exception {
         var commands = new CompletableFuture<Consumer<InstanceCommand>>();
         var instance = singleInstance();
         // commands that come in while the app is still starting wait until it can carry them out
@@ -170,7 +178,7 @@ public final class Main {
         });
         var dashboard = dashboardMade.get();
         var tray = tray(colorSchemeFound.get(), new Tray.MenuLabels(messages.text(TextKey.OPEN_DASHBOARD),
-                messages.text(TextKey.QUIT)));
+                messages.text(TextKey.MENU_SETTINGS), messages.text(TextKey.MENU_ABOUT), messages.text(TextKey.QUIT)));
         var trayStatus = new TrayStatusMapper(messages);
         tray.showStatus(trayStatus.loading());
         // a click on a notification does not say where the tray icon is, and the popup would close again as soon as
@@ -178,12 +186,34 @@ public final class Main {
         var notifications = notifications(tray, icon, messages.text(TextKey.OPEN_DASHBOARD));
         notifications.listen(dashboard::openWindow);
         var texts = new AnnouncementTexts(messages);
-        var engine = engine(configFile, secretsFile, clock,
+        var dataFolder = DataLocation.defaultFolder(System.getProperty("os.name"), System.getenv(),
+                Path.of(System.getProperty("user.home")));
+        var engine = engine(configFile, secretsFile, dataFolder, clock,
                 announcement -> notifications.show(texts.notification(announcement)));
         if (engine.keyStorage() == KeyStorage.FILE) {
             LOG.log(Level.WARNING, "No usable system keychain: API keys are kept in " + secretsFile.path()
                     + ", readable only by you");
         }
+
+        ScheduledExecutorService replanning = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform()
+                .name("planner").daemon().factory());
+        Runnable replan = () -> {
+            try {
+                var outlook = engine.plan();
+                dashboard.show(outlook);
+                tray.showStatus(trayStatus.map(outlook));
+            } catch (RuntimeException e) {
+                // an uncaught exception would stop the schedule for good
+                LOG.log(Level.ERROR, "planning failed", e);
+            }
+        };
+        var settingsMade = new CompletableFuture<SettingsWindow>();
+        var facts = new AboutFacts(version(), configPath, appSettingsFile.path(), dataFolder, secretsFile.path());
+        var stores = new SettingsStores(engine, appSettingsFile, startAtLogin());
+        Platform.runLater(() -> settingsMade.complete(new SettingsWindow(stores, facts, Main::openLink,
+                () -> replanning.execute(replan), colorSchemeFound.join(), icon, messages)));
+        var settings = settingsMade.get();
+        dashboard.onSettings(() -> settings.open(Category.PLANNING));
 
         Runnable quit = () -> {
             notifications.close();
@@ -198,28 +228,19 @@ public final class Main {
                 case QUIT -> quit.run();
             }
         });
-        try {
-            showTray(tray, new Tray.TrayActions(dashboard::popUp, dashboard::openWindow, quit), commandLine.background());
-        } catch (Tray.TrayUnavailable e) {
-            LOG.log(Level.WARNING, e.getMessage() + "; showing the dashboard as a window instead", e.getCause());
+        var actions = new Tray.TrayActions(dashboard::popUp, dashboard::openWindow,
+                () -> settings.open(Category.PLANNING), () -> settings.open(Category.ABOUT), quit);
+        boolean windowMode = mode == DisplayMode.WINDOW;
+        // Windows shows notifications through the tray icon, so in window mode it is there for them
+        boolean inTray = (!windowMode || tray instanceof AwtTray)
+                && showTray(tray, actions, commandLine.background() || mode == DisplayMode.TRAY);
+        if (windowMode || !inTray) {
             dashboard.quitWhenClosed(quit);
             if (!commandLine.background()) { // started hidden, it shows itself when the app is started again
                 dashboard.openWindow();
             }
         }
         // only now: on Windows the first announcement needs the tray icon to show it
-        ScheduledExecutorService replanning = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform()
-                .name("planner").daemon().factory());
-        Runnable replan = () -> {
-            try {
-                var outlook = engine.plan();
-                dashboard.show(outlook);
-                tray.showStatus(trayStatus.map(outlook));
-            } catch (RuntimeException e) {
-                // an uncaught exception would stop the schedule for good
-                LOG.log(Level.ERROR, "planning failed", e);
-            }
-        };
         dashboard.onBatteryEntered(level -> replanning.execute(() -> {
             try {
                 engine.setBatteryLevel(level);
@@ -232,21 +253,54 @@ public final class Main {
         LOG.log(Level.INFO, "planning with " + configFile.path());
     }
 
-    /** At login the tray may not be there yet, so it is tried for a while before the app falls back to a window. */
-    private static void showTray(Tray tray, Tray.TrayActions actions, boolean atLogin)
-            throws Tray.TrayUnavailable, InterruptedException {
-        var deadline = Instant.now().plus(atLogin ? TRAY_WAIT_AT_LOGIN : Duration.ZERO);
+    /**
+     * At login, or when the owner asked for a tray, the tray may not be there yet, so it is tried for a while; false
+     * when it did not come, and the app shows a window instead.
+     */
+    private static boolean showTray(Tray tray, Tray.TrayActions actions, boolean wait) throws InterruptedException {
+        var deadline = Instant.now().plus(wait ? TRAY_WAIT_AT_LOGIN : Duration.ZERO);
         while (true) {
             try {
                 tray.show(actions);
-                return;
+                return true;
             } catch (Tray.TrayUnavailable e) {
                 if (!Instant.now().isBefore(deadline)) {
-                    throw e;
+                    LOG.log(Level.WARNING, e.getMessage() + "; showing the dashboard as a window instead",
+                            e.getCause());
+                    return false;
                 }
                 Thread.sleep(TRAY_RETRY);
             }
         }
+    }
+
+    /** The version Maven wrote into the build; "development" when the resource is missing, as in an IDE's build. */
+    private static String version() {
+        try (var in = Main.class.getResourceAsStream("version.properties")) {
+            if (in == null) {
+                return "development";
+            }
+            var properties = new Properties();
+            properties.load(in);
+            return properties.getProperty("version", "development");
+        } catch (IOException e) {
+            return "development";
+        }
+    }
+
+    /** In the owner's browser, away from the JavaFX thread: the browser may take a moment to answer. */
+    private static void openLink(URI link) {
+        Thread.ofVirtual().start(() -> {
+            try {
+                if (System.getProperty("os.name").startsWith("Windows")) {
+                    Desktop.getDesktop().browse(link);
+                } else {
+                    new ProcessBuilder("xdg-open", link.toString()).inheritIO().start();
+                }
+            } catch (IOException | UnsupportedOperationException e) {
+                LOG.log(Level.WARNING, "could not open " + link + ": " + e.getMessage());
+            }
+        });
     }
 
     private static int quitRunningApp(Messages messages) {
@@ -320,12 +374,11 @@ public final class Main {
             throw new IllegalStateException("cannot tell which user this app runs as", e);
         }
     }
-    private static Engine engine(ConfigFile configFile, SecretsFile secretsFile, Clock clock, Notifier notifier) {
+    private static Engine engine(ConfigFile configFile, SecretsFile secretsFile, Path dataFolder, Clock clock,
+            Notifier notifier) {
         var http = new JdkHttpGet(HttpClient.newHttpClient());
         var providers = new Providers(List.of(new OpenMeteo(http), new ForecastSolar(http)));
         var apiKeys = new ApiKeys(keychain(), secretsFile);
-        var dataFolder = DataLocation.defaultFolder(System.getProperty("os.name"), System.getenv(),
-                Path.of(System.getProperty("user.home")));
         var cache = new ForecastCache(dataFolder.resolve("forecasts"));
         var announcer = new Announcer(new AnnouncedWindows(dataFolder.resolve("announced.json")), notifier);
         return new Engine(configFile, new ForecastService(providers, cache, apiKeys), providers, apiKeys,

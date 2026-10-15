@@ -51,6 +51,8 @@ class StatusNotifierTrayTest {
     private StatusNotifierTray tray;
     private final CountDownLatch opened = new CountDownLatch(1);
     private final CountDownLatch quit = new CountDownLatch(1);
+    private final CountDownLatch settings = new CountDownLatch(1);
+    private final CountDownLatch about = new CountDownLatch(1);
     private final BlockingQueue<Point2D> clicks = new LinkedBlockingQueue<>();
 
     /** The panel's side of the protocol: it only notes which items register. */
@@ -75,7 +77,7 @@ class StatusNotifierTrayTest {
         panel = DBusConnectionBuilder.forAddress(address).withShared(false).build();
         tray = new StatusNotifierTray(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),
                 new StatusIcon(), folder.resolve("tray"), "Car charge planner",
-                new Tray.MenuLabels("Open dashboard", "Quit"));
+                new Tray.MenuLabels("Open dashboard", "Settings…", "About…", "Quit"));
     }
 
     @AfterEach
@@ -89,7 +91,7 @@ class StatusNotifierTrayTest {
         var watcher = new Watcher();
         panel.exportObject(watcher);
         panel.requestBusName(StatusNotifierWatcher.BUS_NAME);
-        tray.show(new Tray.TrayActions(clicks::add, opened::countDown, quit::countDown));
+        tray.show(new Tray.TrayActions(clicks::add, opened::countDown, settings::countDown, about::countDown, quit::countDown));
         var name = watcher.registered.poll(TIMEOUT_S, TimeUnit.SECONDS);
         assertThat(name).as("the item registered with the watcher").isNotNull();
         return name;
@@ -178,16 +180,20 @@ class StatusNotifierTrayTest {
     }
 
     @Test
-    void theMenuOffersOpenAndQuit() throws Exception {
+    void theMenuOffersOpenSettingsAboutAndQuit() throws Exception {
         var name = showWithAWatcher();
         var menu = panel.getRemoteObject(name, TrayMenu.OBJECT_PATH, DbusMenu.class);
 
-        var entries = menu.GetGroupProperties(List.of(1, 2), List.of());
+        var entries = menu.GetGroupProperties(List.of(1, 2, 3, 4), List.of());
         assertThat(entries).extracting(entry -> (Object) entry.properties.get("label").getValue())
-                .containsExactly("Open dashboard", "Quit");
+                .containsExactly("Open dashboard", "Settings…", "About…", "Quit");
 
-        menu.Event(2, "clicked", new Variant<>(0), new UInt32(0));
+        menu.Event(4, "clicked", new Variant<>(0), new UInt32(0));
         assertThat(quit.await(TIMEOUT_S, TimeUnit.SECONDS)).isTrue();
+        menu.Event(3, "clicked", new Variant<>(0), new UInt32(0));
+        assertThat(about.await(TIMEOUT_S, TimeUnit.SECONDS)).isTrue();
+        menu.Event(2, "clicked", new Variant<>(0), new UInt32(0));
+        assertThat(settings.await(TIMEOUT_S, TimeUnit.SECONDS)).isTrue();
         menu.Event(1, "clicked", new Variant<>(0), new UInt32(0));
         assertThat(opened.await(TIMEOUT_S, TimeUnit.SECONDS)).isTrue();
     }
@@ -198,7 +204,7 @@ class StatusNotifierTrayTest {
         panel.exportObject(watcher);
         panel.requestBusName(StatusNotifierWatcher.BUS_NAME);
         var removed = new CountDownLatch(1);
-        tray.show(new Tray.TrayActions(clicks::add, opened::countDown, () -> {
+        tray.show(new Tray.TrayActions(clicks::add, opened::countDown, settings::countDown, about::countDown, () -> {
             tray.remove();
             removed.countDown();
         }));
@@ -206,7 +212,7 @@ class StatusNotifierTrayTest {
         var bus = panel.getRemoteObject("org.freedesktop.DBus", "/org/freedesktop/DBus", DBus.class);
         assertThat(bus.NameHasOwner(name)).isTrue();
 
-        panel.getRemoteObject(name, TrayMenu.OBJECT_PATH, DbusMenu.class).Event(2, "clicked", new Variant<>(0), new UInt32(0));
+        panel.getRemoteObject(name, TrayMenu.OBJECT_PATH, DbusMenu.class).Event(4, "clicked", new Variant<>(0), new UInt32(0));
 
         assertThat(removed.await(TIMEOUT_S, TimeUnit.SECONDS)).as("the tray was removed").isTrue();
 
@@ -219,7 +225,7 @@ class StatusNotifierTrayTest {
 
     @Test
     void withoutAWatcherThereIsNoTray() {
-        assertThatThrownBy(() -> tray.show(new Tray.TrayActions(clicks::add, opened::countDown, quit::countDown)))
+        assertThatThrownBy(() -> tray.show(new Tray.TrayActions(clicks::add, opened::countDown, settings::countDown, about::countDown, quit::countDown)))
                 .isInstanceOf(Tray.TrayUnavailable.class);
     }
 }

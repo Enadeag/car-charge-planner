@@ -32,18 +32,22 @@ public interface Tray {
      * @param clicked the action run on a click on the icon; it is given where the icon is on the screen, in JavaFX's
      *     coordinates
      * @param open the action for the menu's "Open dashboard"
+     * @param settings the action for the menu's "Settings…"
+     * @param about the action for the menu's "About…"
      * @param quit the action for the menu's "Quit"
      */
-    record TrayActions(Consumer<Point2D> clicked, Runnable open, Runnable quit) {
+    record TrayActions(Consumer<Point2D> clicked, Runnable open, Runnable settings, Runnable about, Runnable quit) {
     }
 
     /**
      * What the entries of the icon's menu say, in the owner's language.
      *
      * @param open the entry that opens the dashboard, such as "Open dashboard"; not empty
+     * @param settings the entry that opens Settings, such as "Settings…"; not empty
+     * @param about the entry that opens Settings on About, such as "About…"; not empty
      * @param quit the entry that quits the app, such as "Quit"; not empty
      */
-    record MenuLabels(String open, String quit) {
+    record MenuLabels(String open, String settings, String about, String quit) {
     }
 
     /** The system has no tray this app can use, such as GNOME without the AppIndicator extension. */

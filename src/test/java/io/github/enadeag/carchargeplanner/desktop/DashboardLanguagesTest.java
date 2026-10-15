@@ -20,11 +20,8 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 import javafx.application.ColorScheme;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.Labeled;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.control.TabPane;
@@ -76,29 +73,6 @@ class DashboardLanguagesTest {
                 new Percent(30), new Percent(80));
     }
 
-    /** Texts shortened with an ellipsis, or wider than a clip above them, as a tab clips its label. */
-    private static List<String> cutOff(Node root) {
-        return Scenes.all(root).stream()
-                .filter(Scenes::reallyVisible)
-                .flatMap(node -> node instanceof Labeled labeled && (labeled.isTextTruncated() || clipped(labeled))
-                        ? Stream.of(labeled.getText()) : Stream.empty())
-                .toList();
-    }
-
-    /** Only sideways: a day taller than the screen scrolls, which clips it from below on purpose. */
-    private static boolean clipped(Labeled labeled) {
-        var bounds = labeled.localToScene(labeled.getLayoutBounds());
-        for (var at = labeled.getParent(); at != null; at = at.getParent()) {
-            if (at.getClip() != null) {
-                var clip = at.localToScene(at.getClip().getBoundsInParent());
-                if (bounds.getMinX() < clip.getMinX() - 0.5 || bounds.getMaxX() > clip.getMaxX() + 0.5) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
     @ParameterizedTest
     @EnumSource(Language.class)
     void noTextIsCutOffOnAnyDayOrMessage(Language language) throws Exception {
@@ -116,7 +90,7 @@ class DashboardLanguagesTest {
                 ((TabPane) view.lookup(".day-tabs")).getSelectionModel().select(day);
                 view.applyCss();
                 view.layout();
-                found.addAll(cutOff(view));
+                found.addAll(Scenes.cutOff(view));
             }
             // today's readout and battery entry open, with their longest texts
             ((TabPane) view.lookup(".day-tabs")).getSelectionModel().select(0);
@@ -125,12 +99,12 @@ class DashboardLanguagesTest {
                     .filter(button -> button.getText().equals(messages.text(TextKey.BATTERY_UPDATE))).findFirst().orElseThrow().fire();
             view.applyCss();
             view.layout();
-            found.addAll(cutOff(view));
+            found.addAll(Scenes.cutOff(view));
             view.show(mapper.map(new Outlook.NotSetUp(ConfigProblem.Kind.MISSING,
                     Path.of("/home/owner/.config/car-charge-planner/engine.json"), "")));
             view.applyCss();
             view.layout();
-            found.addAll(cutOff(view));
+            found.addAll(Scenes.cutOff(view));
             return found;
         });
 

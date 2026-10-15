@@ -87,6 +87,15 @@ public final class Dashboard {
     }
 
     /**
+     * Lets the footer's Settings button open Settings.
+     *
+     * @param action what the button does; called on the JavaFX thread
+     */
+    public void onSettings(Runnable action) {
+        Platform.runLater(() -> view.onSettings(action));
+    }
+
+    /**
      * Makes closing the window quit the app instead of hiding it: without a tray it is the only way to quit.
      *
      * @param quit what closing the window does; called on the JavaFX thread
