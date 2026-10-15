@@ -40,6 +40,7 @@ public final class AwtTray implements Tray, Notifications {
     private final TaskbarShade taskbar;
     private final ObservableValue<ColorScheme> colorScheme;
     private final String title;
+    private final MenuLabels labels;
     private TrayStatus status = new TrayStatus(StatusDot.NONE, "");
     private TrayIcon trayIcon;
     private final TrayMessages messages = new TrayMessages();
@@ -52,12 +53,15 @@ public final class AwtTray implements Tray, Notifications {
      * @param colorScheme the system's light or dark ({@code Platform.getPreferences().colorSchemeProperty()}); when it
      *     changes the icon is drawn again, because Windows' own light and dark setting switches the taskbar too
      * @param title the first line of the icon's tooltip
+     * @param labels what the entries of the icon's menu say
      */
-    public AwtTray(StatusIcon icon, TaskbarShade taskbar, ObservableValue<ColorScheme> colorScheme, String title) {
+    public AwtTray(StatusIcon icon, TaskbarShade taskbar, ObservableValue<ColorScheme> colorScheme, String title,
+            MenuLabels labels) {
         this.icon = icon;
         this.taskbar = taskbar;
         this.colorScheme = colorScheme;
         this.title = title;
+        this.labels = labels;
     }
 
     @Override
@@ -67,9 +71,9 @@ public final class AwtTray implements Tray, Notifications {
             throw new TrayUnavailable("Windows has no notification area for this app", null);
         }
         var menu = new PopupMenu();
-        menu.add(menuItem("Open dashboard", actions.open()));
+        menu.add(menuItem(labels.open(), actions.open()));
         menu.addSeparator();
-        menu.add(menuItem("Quit", actions.quit()));
+        menu.add(menuItem(labels.quit(), actions.quit()));
         trayIcon = new TrayIcon(image(), tooltip(), menu);
         trayIcon.setImageAutoSize(true);
         trayIcon.addMouseListener(new MouseAdapter() {

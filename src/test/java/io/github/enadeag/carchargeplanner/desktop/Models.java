@@ -22,7 +22,7 @@ final class Models {
             List.of("Set 16 A (3.7 kW)"), List.of(new Chip(Source.GRID, "11.0 kWh from the grid")),
             "Charge from the grid to stay above the minimum.", "Sunday: grid charge 01:00 to 04:00, 16 A.");
 
-    static final GridAdviceModel ADVICE = new GridAdviceModel("Charge from the grid on Saturday night.",
+    static final GridAdviceModel ADVICE = new GridAdviceModel("Grid advice", "Charge from the grid on Saturday night.",
             "Sunday is cloudy: charge 01:00 – 04:00 at 16 A to stay above 30 %.");
 
     static final String FOOTER = "Forecast: Open-Meteo · 08:12";

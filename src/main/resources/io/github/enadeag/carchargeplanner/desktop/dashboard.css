@@ -91,8 +91,9 @@
     -fx-font-weight: bold;
 }
 
-.day-tabs .tab {
-    -fx-pref-width: 4.5em;
+/* a minimum, not a fixed width: a longer day name, such as Dutch "Vandaag", widens its tab instead of being cut off */
+.day-tabs {
+    -fx-tab-min-width: 3.5em;
 }
 
 /* the selected day scrolls below the fixed header and tabs when the screen is too short */

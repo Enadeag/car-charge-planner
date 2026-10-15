@@ -1,10 +1,12 @@
 package io.github.enadeag.carchargeplanner.engine;
 
+import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import io.github.enadeag.carchargeplanner.engine.plan.DayPlan;
 import io.github.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import io.github.enadeag.carchargeplanner.engine.plan.Window;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
@@ -54,15 +56,17 @@ public sealed interface Outlook {
     /**
      * The config file is missing or wrong.
      *
-     * @param reason what to fix, naming the file and the setting
+     * @param kind what is wrong with the file
+     * @param file the config file's path
+     * @param detail in English: the system's error, or the setting and what is wrong with it; empty for a missing file
      */
-    record NotSetUp(String reason) implements Outlook {
+    record NotSetUp(ConfigProblem.Kind kind, Path file, String detail) implements Outlook {
     }
 
     /**
      * No forecast provider had a usable forecast.
      *
-     * @param reason the reason of each provider asked
+     * @param reason in English: the reason of each provider asked, which may quote the provider's own reply
      */
     record NoForecast(String reason) implements Outlook {
     }

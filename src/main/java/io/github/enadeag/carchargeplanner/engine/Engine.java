@@ -86,7 +86,7 @@ public final class Engine {
         try {
             config = configFile.read();
         } catch (ConfigProblem e) {
-            return new Outlook.NotSetUp(e.getMessage());
+            return new Outlook.NotSetUp(e.kind(), e.file(), e.detail());
         }
         var now = clock.instant();
         var system = config.system();

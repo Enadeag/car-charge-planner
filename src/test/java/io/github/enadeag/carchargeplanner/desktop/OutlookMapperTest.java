@@ -25,7 +25,8 @@ class OutlookMapperTest {
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");
     /** A Friday. */
     private static final LocalDate TODAY = LocalDate.of(2026, 7, 3);
-    private static final OutlookMapper MAPPER = new OutlookMapper();
+    private static final OutlookMapper MAPPER = new OutlookMapper(new Messages(Language.ENGLISH));
+    private static final OutlookMapper DUTCH = new OutlookMapper(new Messages(Language.DUTCH));
     private static final String CREDIT = "Weather data: Open-Meteo.com (CC BY 4.0)";
 
     private static Instant at(LocalDate day, int hour, int minute) {
@@ -159,7 +160,7 @@ class OutlookMapperTest {
     }
 
     @Test
-    void numbersUseADecimalPointWhateverTheSystemLanguage() {
+    void numbersFollowTheChosenLanguageNotTheSystems() {
         var before = Locale.getDefault();
         Locale.setDefault(Locale.GERMANY);
         try {
@@ -168,6 +169,29 @@ class OutlookMapperTest {
         } finally {
             Locale.setDefault(before);
         }
+    }
+
+    @Test
+    void inDutchADayHasADecimalCommaA24HourClockAndDutchDayNames() {
+        var days = ((DashboardModel.Plan) DUTCH.map(planned(false, day(TODAY, window(TODAY, 13, 14, 0.6)),
+                day(TODAY.plusDays(1)), day(TODAY.plusDays(2))))).days();
+
+        assertThat(days).extracting(DayModel::tab).containsExactly("Vandaag", "Za", "Zo");
+        assertThat(days).extracting(DayModel::title).containsExactly("Vandaag", "Morgen", "Zondag");
+        assertThat(days.getFirst().hero()).isEqualTo("13:15 – 14:30");
+        assertThat(days.getFirst().facts()).containsExactly("Stel 10 A in (2,3 kW)", "ongeveer 7,9 kWh");
+    }
+
+    @Test
+    void inDutchGridAdviceNamesTheDayInLowerCaseInsideTheSentence() {
+        var sunday = TODAY.plusDays(2);
+        var advice = new GridAdvice(sunday, 22, 8, 11.0, Optional.empty());
+        var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(day(TODAY), day(sunday)), new Percent(50),
+                false, Optional.of(advice), fresh());
+
+        var model = ((DashboardModel.Plan) DUTCH.map(planned)).advice().orElseThrow();
+
+        assertThat(model.title()).isEqualTo("Laad 11,0 kWh van het net vóór zondag.");
     }
 
     @Test
@@ -212,7 +236,7 @@ class OutlookMapperTest {
         var message = (DashboardModel.Message) MAPPER.map(new Outlook.NoForecast("Could not reach Open-Meteo"));
 
         assertThat(message.headline()).isEqualTo("No forecast");
-        assertThat(message.detail()).isEqualTo("Could not reach Open-Meteo");
+        assertThat(message.detail()).endsWith("Could not reach Open-Meteo");
         assertThat(message.footer()).isEmpty(); // there is no forecast to credit
     }
 

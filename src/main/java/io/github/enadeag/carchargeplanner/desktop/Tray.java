@@ -37,6 +37,15 @@ public interface Tray {
     record TrayActions(Consumer<Point2D> clicked, Runnable open, Runnable quit) {
     }
 
+    /**
+     * What the entries of the icon's menu say, in the owner's language.
+     *
+     * @param open the entry that opens the dashboard, such as "Open dashboard"; not empty
+     * @param quit the entry that quits the app, such as "Quit"; not empty
+     */
+    record MenuLabels(String open, String quit) {
+    }
+
     /** The system has no tray this app can use, such as GNOME without the AppIndicator extension. */
     class TrayUnavailable extends Exception {
 
