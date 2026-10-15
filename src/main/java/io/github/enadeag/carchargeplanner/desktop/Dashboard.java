@@ -27,7 +27,7 @@ public final class Dashboard {
     public Dashboard(AppIcon icon, ObservableValue<ColorScheme> colorScheme, String forecastSource, InstantSource clock) {
         var theme = new SystemTheme(colorScheme);
         this.mapper = new OutlookMapper(forecastSource);
-        this.view = new DashboardView(this::detach);
+        this.view = new DashboardView(this::detach, this::fitToContent);
         this.popup = new DashboardPopup(theme, icon, clock);
         this.window = new DashboardWindow(theme, icon);
         view.show(mapper.loading());
@@ -50,16 +50,18 @@ public final class Dashboard {
 
     public void show(Outlook outlook) {
         var model = mapper.map(outlook);
-        Platform.runLater(() -> {
-            view.show(model);
-            popup.fit();
-            window.fit();
-        });
+        Platform.runLater(() -> view.show(model));
     }
 
     /** Without a tray, closing the window is the only way to quit. */
     public void quitWhenClosed(Runnable quit) {
         Platform.runLater(() -> window.onClose(quit));
+    }
+
+    /** Another day or a new plan: the popup or window takes the height it needs. */
+    private void fitToContent() {
+        popup.fit();
+        window.fit();
     }
 
     private void detach() {

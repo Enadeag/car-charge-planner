@@ -84,13 +84,14 @@ final class DashboardPopup {
         iconPosition = PopupPlacement.onAScreen(reported, screens, Screen.getPrimary().getVisualBounds());
         view.setDetachable(true);
         content.getChildren().setAll(view);
-        place();
-        owner.setX(stage.getX());
-        owner.setY(stage.getY());
+        owner.setX(iconPosition.getX());
+        owner.setY(iconPosition.getY());
         owner.show();
-        stage.sizeToScene();
+        // its size is only known once it shows: until it has its place beside the icon, it is see-through
+        stage.setOpacity(0);
         stage.show();
-        placeAt(new Dimension2D(stage.getWidth(), stage.getHeight()));
+        fitToScreen();
+        stage.setOpacity(1);
         stage.toFront();
         stage.requestFocus();
     }
@@ -116,23 +117,20 @@ final class DashboardPopup {
     /** Fits the popup to new content, still beside the icon. */
     void fit() {
         if (stage.isShowing()) {
-            stage.sizeToScene();
-            placeAt(new Dimension2D(stage.getWidth(), stage.getHeight()));
+            fitToScreen();
         }
     }
 
     /**
-     * Places the popup by the size its content asks for. Content that changed while the popup was closed may not
-     * be measured right until the popup shows, so {@link #toggle} places it again by its real size once it does.
+     * Sizes the popup to its content, at most as tall as the screen's free area (the day scrolls inside), and places
+     * it beside the icon. Only while it shows: a hidden window's styles are not resolved, so it would measure wrong.
      */
-    private void place() {
-        content.applyCss();
-        double width = content.prefWidth(-1);
-        placeAt(new Dimension2D(width, content.prefHeight(width)));
-    }
-
-    private void placeAt(Dimension2D size) {
-        var position = PopupPlacement.position(iconPosition, size, screenOf(iconPosition).getVisualBounds());
+    private void fitToScreen() {
+        var area = screenOf(iconPosition).getVisualBounds();
+        stage.sizeToScene();
+        stage.setHeight(Math.min(stage.getHeight(), area.getHeight() - 2 * PopupPlacement.MARGIN));
+        var size = new Dimension2D(stage.getWidth(), stage.getHeight());
+        var position = PopupPlacement.position(iconPosition, size, area);
         stage.setX(position.getX());
         stage.setY(position.getY());
     }

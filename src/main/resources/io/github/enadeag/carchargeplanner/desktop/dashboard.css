@@ -95,6 +95,15 @@
     -fx-pref-width: 4.5em;
 }
 
+/* the selected day scrolls below the fixed header and tabs when the screen is too short */
+.day-scroll,
+.day-scroll > .viewport {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+}
+
 /* cards */
 .card {
     -fx-background-color: -raised;

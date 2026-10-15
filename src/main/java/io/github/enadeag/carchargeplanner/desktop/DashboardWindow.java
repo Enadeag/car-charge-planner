@@ -2,6 +2,7 @@ package io.github.enadeag.carchargeplanner.desktop;
 
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 /** The dashboard in a window of its own: in window mode, or the popup detached. Closing it hides it. */
@@ -26,7 +27,7 @@ final class DashboardWindow {
         view.setDetachable(false);
         content.getChildren().setAll(view);
         stage.show();
-        stage.sizeToScene();
+        fit();
         stage.setIconified(false);
         stage.toFront();
         stage.requestFocus();
@@ -36,10 +37,23 @@ final class DashboardWindow {
         return stage.isShowing();
     }
 
-    /** Fits the window to new content, such as the first plan after "Fetching the forecast". */
+    /**
+     * Fits the window to new content, such as another day or the first plan after "Fetching the forecast", at most
+     * as tall as the screen's free area (the day scrolls inside).
+     */
     void fit() {
-        if (stage.isShowing()) {
-            stage.sizeToScene();
+        if (!stage.isShowing()) {
+            return;
+        }
+        stage.sizeToScene();
+        var area = Screen.getScreensForRectangle(stage.getX(), stage.getY(), stage.getWidth(), 1).stream()
+                .findFirst().orElse(Screen.getPrimary()).getVisualBounds();
+        // under XWayland JavaFX can leave out the title bar when it sizes to the scene; add it as it is now
+        double decorations = stage.getHeight() - stage.getScene().getHeight();
+        double needed = content.prefHeight(stage.getScene().getWidth()) + decorations;
+        stage.setHeight(Math.min(needed, area.getHeight()));
+        if (stage.getY() + stage.getHeight() > area.getMaxY()) {
+            stage.setY(Math.max(area.getMinY(), area.getMaxY() - stage.getHeight()));
         }
     }
 

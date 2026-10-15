@@ -18,14 +18,19 @@ import javafx.scene.layout.VBox;
 final class DashboardView extends VBox {
 
     private final DayTabs tabs = new DayTabs(this::showDay);
-    private final VBox body = new VBox();
+    private final DayScroll body = new DayScroll();
     private final DashboardFooter footer = new DashboardFooter();
     private final Button detach = new Button();
+    private final Runnable contentChanged;
     private List<DayModel> days = List.of();
     private Optional<GridAdviceModel> advice = Optional.empty();
 
-    /** @param detachAction what the header's button does: open the popup as a window */
-    DashboardView(Runnable detachAction) {
+    /**
+     * @param detachAction what the header's button does: open the popup as a window
+     * @param contentChanged called when another day or a new plan shows, so the popup or window can fit it
+     */
+    DashboardView(Runnable detachAction, Runnable contentChanged) {
+        this.contentChanged = contentChanged;
         var title = new Label("Car charge planner");
         title.getStyleClass().add("app-title");
         title.setAccessibleRole(AccessibleRole.TEXT);
@@ -40,8 +45,12 @@ final class DashboardView extends VBox {
 
         var header = new HBox(title, spacer, detach);
         header.getStyleClass().add("dashboard-header");
+        // header, tabs and footer keep their height; only the day below the tabs gives way, by scrolling
+        for (Region fixed : List.of(header, tabs, footer)) {
+            fixed.setMinHeight(USE_PREF_SIZE);
+        }
         VBox.setVgrow(body, Priority.ALWAYS);
-        getChildren().setAll(header, body, footer);
+        getChildren().setAll(header, tabs, body, footer);
         getStyleClass().add("dashboard");
     }
 
@@ -53,7 +62,12 @@ final class DashboardView extends VBox {
                 tabs.show(days);
                 showDay(tabs.getSelectionModel().getSelectedIndex());
             }
-            case DashboardModel.Message message -> body.getChildren().setAll(page(new MessageCard(message)));
+            case DashboardModel.Message message -> {
+                days = List.of();
+                tabs.show(days);
+                body.show(page(new MessageCard(message)));
+                contentChanged.run();
+            }
         }
         footer.show(model.footer());
     }
@@ -67,7 +81,8 @@ final class DashboardView extends VBox {
     /** Grid advice goes on today's tab, below its main card. */
     private void showDay(int index) {
         if (days.isEmpty()) {
-            body.getChildren().setAll(tabs);
+            body.show(null);
+            contentChanged.run();
             return;
         }
         var day = days.get(Math.clamp(index, 0, days.size() - 1));
@@ -76,7 +91,8 @@ final class DashboardView extends VBox {
             advice.ifPresent(it -> page.getChildren().add(new AdviceCard(it)));
         }
         page.getChildren().add(new ChartSlot());
-        body.getChildren().setAll(tabs, page);
+        body.show(page);
+        contentChanged.run();
     }
 
     private static VBox page(Region card) {

@@ -35,7 +35,7 @@ class DashboardContrastTest {
     /** Every day of the example plan, and the message shown without a plan. */
     private List<String> problems(ColorScheme scheme) throws Exception {
         return Fx.call(() -> {
-            var view = new DashboardView(() -> { });
+            var view = new DashboardView(() -> { }, () -> { });
             stage = Scenes.show(view, scheme);
             var problems = new ArrayList<String>();
             var plan = Models.plan(Optional.of(Models.ADVICE));

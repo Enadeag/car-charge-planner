@@ -23,9 +23,11 @@ final class DayTabs extends TabPane {
         });
     }
 
-    /** Shows these days, keeping the selected tab where it was. */
+    /** Shows these days, keeping the selected tab where it was; without days the strip is hidden. */
     void show(List<DayModel> days) {
         int selected = Math.max(0, getSelectionModel().getSelectedIndex());
+        setVisible(!days.isEmpty());
+        setManaged(!days.isEmpty());
         getTabs().setAll(days.stream().map(DayTabs::tab).toList());
         if (!days.isEmpty()) {
             getSelectionModel().select(Math.min(selected, days.size() - 1));
