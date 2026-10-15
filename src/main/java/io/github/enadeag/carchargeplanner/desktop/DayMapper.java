@@ -37,7 +37,7 @@ final class DayMapper {
         this.zone = planned.zone();
         this.today = planned.madeAt().atZone(zone).toLocalDate();
         this.todaysNote = planned.batteryAssumed()
-                ? text("The plan assumes the battery is at %.0f %%.", planned.batteryPct()) : "";
+                ? text("The plan assumes the battery is at %.0f %%.", planned.batteryPct().value()) : "";
         this.gridDay = planned.gridAdvice().map(GridAdvice::day);
     }
 
@@ -92,7 +92,8 @@ final class DayMapper {
     }
 
     private static Chip battery(DayPlan day) {
-        return new Chip(Source.CAR, text("Battery %.0f → %.0f %%", day.socStartPct(), day.socAfterChargingPct()));
+        return new Chip(Source.CAR, text("Battery %.0f → %.0f %%", day.socStartPct().value(),
+                day.socAfterChargingPct().value()));
     }
 
     private String laterWindows(DayPlan day) {

@@ -2,6 +2,7 @@ package io.github.enadeag.carchargeplanner.engine.forecast.providers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.github.enadeag.carchargeplanner.engine.config.Coordinates;
 import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet.Reply;
 import io.github.enadeag.carchargeplanner.engine.forecast.Place;
 import io.github.enadeag.carchargeplanner.engine.forecast.PlaceResults;
@@ -52,8 +53,8 @@ class OpenMeteoPlacesTest {
 
         assertThat(places).hasSize(8);
         assertThat(places.getFirst().label()).isEqualTo("Amsterdam, North Holland, The Netherlands");
-        assertThat(places.getFirst()).extracting(Place::latitude, Place::longitude, Place::timezone)
-                .containsExactly(52.37403, 4.88969, ZoneId.of("Europe/Amsterdam"));
+        assertThat(places.getFirst()).extracting(Place::location, Place::timezone)
+                .containsExactly(new Coordinates(52.37403, 4.88969), ZoneId.of("Europe/Amsterdam"));
         assertThat(places.get(4).label()).isEqualTo("eMvelo, Mpumalanga, South Africa");
         assertThat(http.requests).allMatch(r -> r.timeout().compareTo(Duration.ofSeconds(10)) <= 0);
     }
@@ -164,7 +165,7 @@ class OpenMeteoPlacesTest {
     })
     void theLabelIsNameRegionCountryWithoutRepeatingTheName(String name, String region, String country, String area,
             String label, String detailed) {
-        var place = new Place(name, 0, 0, ZoneId.of("UTC"), region, country, area);
+        var place = new Place(name, new Coordinates(0, 0), ZoneId.of("UTC"), region, country, area);
         assertThat(place.label()).isEqualTo(label);
         assertThat(place.detailedLabel()).isEqualTo(detailed);
     }

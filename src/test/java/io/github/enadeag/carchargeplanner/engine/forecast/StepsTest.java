@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 
+import io.github.enadeag.carchargeplanner.engine.config.Coordinates;
 import io.github.enadeag.carchargeplanner.engine.config.PanelArray;
 import java.time.Duration;
 import java.time.Instant;
@@ -127,7 +128,7 @@ class StepsTest {
     void eachArrayIsAskedOnItsOwnAndInOrder() throws ProviderError {
         var east = new PanelArray("East", 3.0, 30, -90, 0.14);
         var west = new PanelArray("West", 2.5, 30, 90, 0.1);
-        var system = new SystemDescription(52.37, 4.9, AMSTERDAM, List.of(east, west));
+        var system = new SystemDescription(new Coordinates(52.37, 4.9), AMSTERDAM, List.of(east, west));
         var asked = new ArrayList<PanelArray>();
 
         var total = Steps.eachArray(system, array -> {

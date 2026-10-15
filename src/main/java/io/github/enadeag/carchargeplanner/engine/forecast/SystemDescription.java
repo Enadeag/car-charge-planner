@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine.forecast;
 
+import io.github.enadeag.carchargeplanner.engine.config.Coordinates;
 import io.github.enadeag.carchargeplanner.engine.config.HomeSystem;
 import io.github.enadeag.carchargeplanner.engine.config.PanelArray;
 import java.time.ZoneId;
@@ -8,12 +9,11 @@ import java.util.List;
 /**
  * A solar system: where the panels are and their panel arrays.
  *
- * @param latitude the latitude in degrees, north positive
- * @param longitude the longitude in degrees, east positive
+ * @param location the coordinates of the place
  * @param timezone the time zone of the place
  * @param arrays the panel arrays, at least one
  */
-public record SystemDescription(double latitude, double longitude, ZoneId timezone, List<PanelArray> arrays) {
+public record SystemDescription(Coordinates location, ZoneId timezone, List<PanelArray> arrays) {
 
     /** Copies the arrays. */
     public SystemDescription {
@@ -27,7 +27,7 @@ public record SystemDescription(double latitude, double longitude, ZoneId timezo
      * @return its place, time zone and panel arrays
      */
     public static SystemDescription of(HomeSystem system) {
-        return new SystemDescription(system.latitude(), system.longitude(), system.timezone(), system.panels());
+        return new SystemDescription(system.location(), system.timezone(), system.panels());
     }
 
     /**
@@ -37,6 +37,6 @@ public record SystemDescription(double latitude, double longitude, ZoneId timezo
      * @return a description of the same place with those arrays
      */
     public SystemDescription withArrays(List<PanelArray> otherArrays) {
-        return new SystemDescription(latitude, longitude, timezone, otherArrays);
+        return new SystemDescription(location, timezone, otherArrays);
     }
 }

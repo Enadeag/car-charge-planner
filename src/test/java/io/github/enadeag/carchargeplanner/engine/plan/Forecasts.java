@@ -2,9 +2,11 @@ package io.github.enadeag.carchargeplanner.engine.plan;
 
 import io.github.enadeag.carchargeplanner.engine.config.Car;
 import io.github.enadeag.carchargeplanner.engine.config.Charger;
+import io.github.enadeag.carchargeplanner.engine.config.Coordinates;
 import io.github.enadeag.carchargeplanner.engine.config.HomeSystem;
 import io.github.enadeag.carchargeplanner.engine.config.House;
 import io.github.enadeag.carchargeplanner.engine.config.PanelArray;
+import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.config.Phases;
 import io.github.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
@@ -23,7 +25,7 @@ final class Forecasts {
     static final ZoneId TZ = ZoneId.of("Europe/Amsterdam");
 
     static final PanelArray PANELS = new PanelArray("", 4.8, 35, -45, 0.14);
-    static final PlanningPreferences PREFERENCES = new PlanningPreferences(30, 80, 0.85, 0.2, 45, 15);
+    static final PlanningPreferences PREFERENCES = new PlanningPreferences(new Percent(30), new Percent(80), 0.85, 0.2, 45, 15);
 
     private Forecasts() {
     }
@@ -47,7 +49,7 @@ final class Forecasts {
     }
 
     private static HomeSystem system(double kmPerDay, Phases phases) {
-        return new HomeSystem(51.0, 5.0, TZ, List.of(PANELS), new House(0.6),
+        return new HomeSystem(new Coordinates(51.0, 5.0), TZ, List.of(PANELS), new House(0.6),
                 new Car(70, 18, kmPerDay), new Charger(phases, 6, 32, 230, 0.90));
     }
 

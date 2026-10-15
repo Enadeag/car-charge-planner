@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine;
 
+import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import io.github.enadeag.carchargeplanner.engine.plan.DayPlan;
 import io.github.enadeag.carchargeplanner.engine.plan.GridAdvice;
@@ -18,7 +19,7 @@ public sealed interface Outlook {
      * @param madeAt when the plan was made
      * @param zone the time zone of the owner's home, in which the days and times are meant
      * @param days the plan of each day, today first
-     * @param batteryPct the battery level the plan starts from, in percent
+     * @param batteryPct the battery level the plan starts from
      * @param batteryAssumed true while the battery level is a placeholder, not a reading
      * @param gridAdvice present when the battery would end a day below the minimum charge level
      * @param forecast where the forecast came from
@@ -27,7 +28,7 @@ public sealed interface Outlook {
             Instant madeAt,
             ZoneId zone,
             List<DayPlan> days,
-            double batteryPct,
+            Percent batteryPct,
             boolean batteryAssumed,
             Optional<GridAdvice> gridAdvice,
             ForecastSource forecast) implements Outlook {

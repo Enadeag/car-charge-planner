@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine.forecast;
 
+import io.github.enadeag.carchargeplanner.engine.config.Coordinates;
 import java.time.ZoneId;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -9,15 +10,13 @@ import java.util.stream.Stream;
  * A place with its coordinates and time zone.
  *
  * @param name the place's name
- * @param latitude the latitude in degrees, north positive
- * @param longitude the longitude in degrees, east positive
+ * @param location the place's coordinates
  * @param timezone the place's time zone
  * @param region the first administrative area: a state, a province; may be empty
  * @param country the country's name, or its code; may be empty
  * @param area a finer one (county, municipality) that tells apart two places with the same name; may be empty
  */
-public record Place(String name, double latitude, double longitude, ZoneId timezone, String region, String country,
-        String area) {
+public record Place(String name, Coordinates location, ZoneId timezone, String region, String country, String area) {
 
     /**
      * What a list of results shows.

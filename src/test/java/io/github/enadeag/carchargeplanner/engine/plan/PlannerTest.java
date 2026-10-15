@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 import io.github.enadeag.carchargeplanner.engine.config.HomeSystem;
+import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.config.Phases;
 import io.github.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
@@ -47,7 +48,7 @@ class PlannerTest {
     }
 
     private static List<DayPlan> plan(List<ForecastStep> forecast, HomeSystem system, double soc, Instant now) {
-        return new Planner(system, PREFERENCES).plan(forecast, soc, now, List.of());
+        return new Planner(system, PREFERENCES).plan(forecast, new Percent(soc), now, List.of());
     }
 
     /** A bell-shaped Friday for the example system, planned from midnight or the given hour. */
@@ -82,9 +83,9 @@ class PlannerTest {
         assertThat(window.importKwh()).isZero();
         assertThat(window.solarKwh()).isCloseTo(3.22 * 53 / 12, CLOSE);
         // 14.22 kWh * 0.9 would reach 80.3 %: capped at the 80 % target
-        assertThat(day.socAfterChargingPct()).isCloseTo(80, CLOSE);
+        assertThat(day.socAfterChargingPct().value()).isCloseTo(80, CLOSE);
         assertThat(day.drivingPct()).isCloseTo(18, CLOSE);
-        assertThat(day.socEndOfDayPct()).isCloseTo(62, CLOSE);
+        assertThat(day.socEndOfDayPct().value()).isCloseTo(62, CLOSE);
     }
 
     @Test
@@ -105,7 +106,7 @@ class PlannerTest {
         assertThat(days.get(1).windows().getFirst().solarKwh()).isCloseTo(16.1, CLOSE);
         // 16.1 kWh * 0.9 / 70 kWh = 20.7 %
         var levels = days.stream()
-                .flatMap(d -> java.util.stream.Stream.of(d.socStartPct(), d.socAfterChargingPct(), d.socEndOfDayPct()))
+                .flatMap(d -> java.util.stream.Stream.of(d.socStartPct().value(), d.socAfterChargingPct().value(), d.socEndOfDayPct().value()))
                 .toList();
         var expected = List.of(62.0, 62.0, 44.0, 44.0, 64.7, 46.7, 46.7, 46.7, 28.7);
         IntStream.range(0, expected.size())
@@ -124,14 +125,14 @@ class PlannerTest {
         assertThat(window.powerKw()).isEqualTo(6.21);
         assertThat(window.importKwh()).isZero();
         assertThat(window.solarKwh()).isCloseTo(6.21 * 7 / 3, CLOSE);
-        assertThat(day.socAfterChargingPct()).isCloseTo(80, CLOSE);
+        assertThat(day.socAfterChargingPct().value()).isCloseTo(80, CLOSE);
     }
 
     @Test
     void overcastDayHasNoWindow() {
         var day = friday(150, 40);
         assertThat(day.windows()).isEmpty();
-        assertThat(day.socAfterChargingPct()).isEqualTo(40);
+        assertThat(day.socAfterChargingPct().value()).isEqualTo(40);
     }
 
     @Test
@@ -153,7 +154,7 @@ class PlannerTest {
     @Test
     void windowIsTrimmedToTheEnergyNeeded() {
         var day = friday(900, 75);
-        double need = new Planner(Forecasts.example(), PREFERENCES).energyNeededKwh(75);
+        double need = new Planner(Forecasts.example(), PREFERENCES).energyNeededKwh(new Percent(75));
         double delivered = day.windows().stream().mapToDouble(Window::solarKwh).sum();
         assertThat(delivered).isGreaterThanOrEqualTo(need).isLessThan(need + 1.5);
         var full = friday(900, 40).windows().getFirst();
@@ -172,14 +173,14 @@ class PlannerTest {
     void noWindowWhenTheBatteryIsAtOrAboveTheTarget() {
         var day = friday(900, 85);
         assertThat(day.windows()).isEmpty();
-        assertThat(day.socAfterChargingPct()).isEqualTo(85);
+        assertThat(day.socAfterChargingPct().value()).isEqualTo(85);
     }
 
     @Test
     void aHigherMarginGivesMorePower() {
         var cautious = friday(900, 40).windows().getFirst();
-        var bold = new Planner(Forecasts.example(), new PlanningPreferences(30, 80, 1.0, 0.2, 45, 15))
-                .plan(bellDay(SUMMER_FRI, 900), 40, at(SUMMER_FRI, 0), List.of()).getFirst().windows().getFirst();
+        var bold = new Planner(Forecasts.example(), new PlanningPreferences(new Percent(30), new Percent(80), 1.0, 0.2, 45, 15))
+                .plan(bellDay(SUMMER_FRI, 900), new Percent(40), at(SUMMER_FRI, 0), List.of()).getFirst().windows().getFirst();
         assertThat(bold.powerKw()).isGreaterThan(cautious.powerKw());
     }
 
@@ -199,14 +200,14 @@ class PlannerTest {
         assertThat(spans(day)).containsExactly(new Span(at(SPRING_FORWARD, 1), at(SPRING_FORWARD, 4, 30), 14));
         assertThat(day.windows().getFirst().importKwh()).isZero();
         assertThat(day.windows().getFirst().solarKwh()).isCloseTo(8.05, CLOSE);
-        assertThat(day.socAfterChargingPct()).isCloseTo(80, CLOSE);
+        assertThat(day.socAfterChargingPct().value()).isCloseTo(80, CLOSE);
     }
 
     @Test
     void springForwardDayPlannedFromMidnightTakesAWholeDaysDriving() {
         var day = plan(hourly(SPRING_FORWARD, Map.of()), Forecasts.golden(), 60, at(SPRING_FORWARD, 0)).getFirst();
         assertThat(day.drivingPct()).isCloseTo(18, CLOSE);
-        assertThat(day.socEndOfDayPct()).isCloseTo(42, CLOSE);
+        assertThat(day.socEndOfDayPct().value()).isCloseTo(42, CLOSE);
     }
 
     @Test
@@ -216,9 +217,9 @@ class PlannerTest {
         var day = plan(forecast, Forecasts.golden(), 62, at(FALL_BACK, 0)).getFirst();
         assertThat(spans(day)).containsExactly(new Span(at(FALL_BACK, 10), at(FALL_BACK, 14, 25), 14));
         assertThat(day.windows().getFirst().solarKwh()).isCloseTo(3.22 * 53 / 12, CLOSE);
-        assertThat(day.socAfterChargingPct()).isCloseTo(80, CLOSE);
+        assertThat(day.socAfterChargingPct().value()).isCloseTo(80, CLOSE);
         assertThat(day.drivingPct()).isCloseTo(18, CLOSE);
-        assertThat(day.socEndOfDayPct()).isCloseTo(62, CLOSE);
+        assertThat(day.socEndOfDayPct().value()).isCloseTo(62, CLOSE);
     }
 
     @Test
@@ -230,7 +231,7 @@ class PlannerTest {
         assertThat(spans(day)).containsExactly(
                 new Span(Instant.parse("2026-10-24T23:00:00Z"), Instant.parse("2026-10-25T01:30:00Z"), 14));
         assertThat(day.windows().getFirst().solarKwh()).isCloseTo(8.05, CLOSE);
-        assertThat(day.socAfterChargingPct()).isCloseTo(80, CLOSE);
+        assertThat(day.socAfterChargingPct().value()).isCloseTo(80, CLOSE);
     }
 
     @Test
@@ -259,8 +260,8 @@ class PlannerTest {
         var saturday = SUMMER_FRI.plusDays(1);
         var days = plan(bellDays(Map.of(friday, 150.0, saturday, 150.0)), Forecasts.example(), 60, at(friday, 0));
         double driving = 600.0 / 7 * 18 / 100 / 70 * 100;
-        assertThat(days.get(0).socEndOfDayPct()).isCloseTo(60 - driving, CLOSE);
-        assertThat(days.get(1).socStartPct()).isCloseTo(days.get(0).socEndOfDayPct(), within(1e-9));
+        assertThat(days.get(0).socEndOfDayPct().value()).isCloseTo(60 - driving, CLOSE);
+        assertThat(days.get(1).socStartPct().value()).isCloseTo(days.get(0).socEndOfDayPct().value(), within(1e-9));
     }
 
     @Test
@@ -269,7 +270,7 @@ class PlannerTest {
         var days = plan(bellDays(Map.of(SUMMER_FRI, 150.0, saturday, 900.0)), Forecasts.example(), 60, at(SUMMER_FRI, 0));
         assertThat(days.get(0).windows()).isEmpty();
         assertThat(days.get(1).windows()).isNotEmpty();
-        assertThat(days.get(1).socStartPct()).isLessThan(60);
+        assertThat(days.get(1).socStartPct().value()).isLessThan(60);
     }
 
     @Test
@@ -303,7 +304,7 @@ class PlannerTest {
     /** The Friday from 40 %, planned at the hour, with these windows announced. */
     private static DayPlan fridayWithAnnounced(int nowHour, double soc, List<Window> announced) {
         return new Planner(Forecasts.example(), PREFERENCES)
-                .plan(bellDay(SUMMER_FRI, 900), soc, at(SUMMER_FRI, nowHour), announced).getFirst();
+                .plan(bellDay(SUMMER_FRI, 900), new Percent(soc), at(SUMMER_FRI, nowHour), announced).getFirst();
     }
 
     /** The window the owner was told about at 07:00. */
@@ -333,7 +334,7 @@ class PlannerTest {
         var day = fridayWithAnnounced(12, 40, List.of(announced));
         double share = Hours.between(at(SUMMER_FRI, 12), announced.end()) / Hours.between(announced.start(), announced.end());
         assertThat(day.windows().getFirst().solarKwh()).isCloseTo(announced.solarKwh() * share, within(1e-9));
-        assertThat(day.socAfterChargingPct()).isGreaterThan(40);
+        assertThat(day.socAfterChargingPct().value()).isGreaterThan(40);
     }
 
     @Test

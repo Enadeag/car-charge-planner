@@ -101,8 +101,8 @@ public final class OpenMeteo implements ForecastProvider {
             throws ProviderError.NotConfigured {
         var server = server(settings);
         Map<String, String> query = new LinkedHashMap<>();
-        query.put("latitude", Decimals.plain(system.latitude()));
-        query.put("longitude", Decimals.plain(system.longitude()));
+        query.put("latitude", Decimals.plain(system.location().latitude()));
+        query.put("longitude", Decimals.plain(system.location().longitude()));
         query.put("hourly", "global_tilted_irradiance");
         query.put("tilt", Decimals.plain(array.tiltDeg()));
         query.put("azimuth", Decimals.plain(array.azimuthDeg()));

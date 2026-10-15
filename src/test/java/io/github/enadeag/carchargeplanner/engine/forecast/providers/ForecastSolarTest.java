@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.assertj.core.api.Assertions.within;
 
+import io.github.enadeag.carchargeplanner.engine.config.Coordinates;
 import io.github.enadeag.carchargeplanner.engine.config.PanelArray;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet;
@@ -189,7 +190,7 @@ class ForecastSolarTest extends ProviderConformance {
     })
     void numbersAreWholeDegreesAndShortDecimals(double lat, double lon, double kwp, double tilt, double azimuth,
             String end) {
-        var system = new SystemDescription(lat, lon, AMSTERDAM, List.of(new PanelArray("", kwp, tilt, azimuth, 0.14)));
+        var system = new SystemDescription(new Coordinates(lat, lon), AMSTERDAM, List.of(new PanelArray("", kwp, tilt, azimuth, 0.14)));
         assertThat(ForecastSolar.requestUri(system, system.arrays().getFirst(), Map.of()).toString()).endsWith(end);
     }
 
