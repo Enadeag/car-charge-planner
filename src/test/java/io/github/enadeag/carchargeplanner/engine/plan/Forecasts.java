@@ -32,6 +32,10 @@ final class Forecasts {
         return system(600.0 / 7, 1);
     }
 
+    static HomeSystem exampleOnPhases(int phases) {
+        return system(600.0 / 7, phases);
+    }
+
     /** The example driving 70 km a day: 12.6 kWh, a round 18 % of the battery. */
     static HomeSystem golden() {
         return system(70, 1);

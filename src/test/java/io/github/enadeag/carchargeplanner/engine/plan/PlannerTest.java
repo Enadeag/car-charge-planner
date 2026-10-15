@@ -272,6 +272,27 @@ class PlannerTest {
     }
 
     @Test
+    void aSurplusThatOnePhaseCanUseIsTooSmallForThree() {
+        // about 3 kW of surplus: 13 A on one phase, but under the 4.1 kW that 6 A on three phases already takes
+        var forecast = bellDay(SUMMER_FRI, 1000);
+        assertThat(plan(forecast, Forecasts.exampleOnPhases(1), 40, at(SUMMER_FRI, 0)).getFirst().windows()).isNotEmpty();
+        assertThat(plan(forecast, Forecasts.exampleOnPhases(3), 40, at(SUMMER_FRI, 0)).getFirst().windows()).isEmpty();
+    }
+
+    @Test
+    void aThreePhasePlanNeverGoesBelowTheThreePhaseMinimum() {
+        var system = Forecasts.exampleOnPhases(3);
+        var charger = system.charger();
+        // 2500 W/m2 at the peak is an artificial sky: about 10 kW, enough for three phases
+        var windows = plan(bellDay(SUMMER_FRI, 2500), system, 40, at(SUMMER_FRI, 0)).getFirst().windows();
+        assertThat(windows).isNotEmpty().allSatisfy(window -> {
+            assertThat(window.powerKw()).isGreaterThanOrEqualTo(Charging.powerKw(charger.minAmps(), charger) - 1e-9);
+            assertThat(window.powerKw()).isCloseTo(Charging.powerKw(window.amps(), charger), CLOSE);
+            assertThat(window.amps()).isBetween(charger.minAmps(), charger.maxAmps());
+        });
+    }
+
+    @Test
     void thePlanHasOneDayForEachForecastDay() {
         var saturday = SUMMER_FRI.plusDays(1);
         var days = plan(bellDays(Map.of(SUMMER_FRI, 900.0, saturday, 900.0)), Forecasts.example(), 40, at(SUMMER_FRI, 0));
