@@ -5,8 +5,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
+/** Linux paths, some with characters Windows does not allow in a path. */
+@EnabledOnOs(OS.LINUX)
 class LinuxStartAtLoginTest {
 
     @TempDir
