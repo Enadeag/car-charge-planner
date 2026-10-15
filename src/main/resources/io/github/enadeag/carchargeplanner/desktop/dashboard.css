@@ -1,0 +1,89 @@
+/* Colour means source: sun amber, grid blue, car and battery green. AtlantaFX supplies the -color-* tokens. */
+.root {
+    -sun: #b45309;
+    -sun-soft: rgba(245, 158, 11, 0.16);
+    -grid: #1d4ed8;
+    -grid-soft: rgba(37, 99, 235, 0.12);
+    -car: #15803d;
+    -car-soft: rgba(22, 163, 74, 0.14);
+    -fx-font-size: 14px;
+}
+
+.root.dark {
+    -sun: #fbbf24;
+    -sun-soft: rgba(251, 191, 36, 0.16);
+    -grid: #60a5fa;
+    -grid-soft: rgba(96, 165, 250, 0.16);
+    -car: #4ade80;
+    -car-soft: rgba(74, 222, 128, 0.16);
+}
+
+.page {
+    -fx-background-color: -color-bg-subtle;
+    -fx-padding: 20;
+    -fx-spacing: 14;
+}
+
+.app-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-muted;
+}
+
+.card {
+    -fx-background-color: -color-bg-default;
+    -fx-background-radius: 18;
+    -fx-border-color: -color-border-muted;
+    -fx-border-radius: 18;
+    -fx-padding: 18 20 18 20;
+    -fx-spacing: 10;
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.06), 18, 0, 0, 4);
+}
+
+.root.dark .card {
+    -fx-effect: none;
+}
+
+.overline {
+    -fx-font-size: 11.5px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-muted;
+}
+
+.headline {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-default;
+}
+
+.muted {
+    -fx-font-size: 13px;
+    -fx-text-fill: -color-fg-muted;
+}
+
+.pill {
+    -fx-background-radius: 999;
+    -fx-padding: 5 11 5 9;
+    -fx-spacing: 6;
+    -fx-alignment: center-left;
+}
+
+.pill .label {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.pill.sun { -fx-background-color: -sun-soft; }
+.pill.sun .label { -fx-text-fill: -sun; }
+.pill.sun .glyph-fill { -fx-fill: -sun; }
+.pill.sun .glyph-stroke { -fx-stroke: -sun; }
+
+.pill.car { -fx-background-color: -car-soft; }
+.pill.car .label { -fx-text-fill: -car; }
+.pill.car .glyph-fill { -fx-fill: -car; }
+.pill.car .glyph-stroke { -fx-stroke: -car; }
+
+.pill.grid { -fx-background-color: -grid-soft; }
+.pill.grid .label { -fx-text-fill: -grid; }
+.pill.grid .glyph-fill { -fx-fill: -grid; }
+.pill.grid .glyph-stroke { -fx-stroke: -grid; }

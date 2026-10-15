@@ -96,6 +96,37 @@ Everything is in `src/car_charge_planner/`:
 
 `CONTEXT.md` explains the words the project uses (window, charge power, away and so on).
 
+## The Java version (in progress)
+
+The app is being rewritten in Java with JavaFX (ADR 0005). The Java code lives beside the Python code: `pom.xml`
+and the Maven wrapper in the root, the code in `src/main/java/io/github/enadeag/carchargeplanner/`, the tests in
+`src/test/java/`. You need a JDK 25 or newer; Maven comes through the wrapper (`mvnw.cmd` on Windows).
+
+| Package | What it holds |
+| --- | --- |
+| `engine` | Plans, fetches forecasts and owns the stored data, without user interface; clients get plain records. `engine.config` the config file, `engine.forecast` the forecast providers, `engine.plan` the planner. |
+| `desktop` | The JavaFX dashboard and what a tray icon must do. |
+| `platform.linux`, `platform.windows` | The tray icon on each system: our own StatusNotifierItem over D-Bus, AWT's `SystemTray`. |
+| `Main` | The composition root: the one place where the parts are made and handed to each other. |
+
+```bash
+./mvnw verify                                                           # build and test; nothing touches the network or your desktop
+./mvnw compile exec:exec -Dapp.args="--config=docs/example-engine.json"  # run it with the example system
+```
+
+There are no set-up screens yet: the engine reads the system from `engine.json` in `~/.config/car-charge-planner/`
+(Windows: `%APPDATA%\car-charge-planner\`), or from the file `--config=` names. `docs/example-engine.json` shows
+every setting, for a made-up place.
+
+Packages, with a runtime made by jlink (unsigned, as the Python version's):
+
+- Linux: `tools/package-linux.sh` makes `target/dist/car-charge-planner/` (start `bin/car-charge-planner`) and a
+  `.tar.gz` of it.
+- Windows: `powershell -ExecutionPolicy Bypass -File tools\package-windows.ps1` makes a per-user installer in
+  `target\dist\` (`-Type app-image` makes the folder only). The installer needs WiX 5: install the .NET SDK 8, then
+  `dotnet tool install --global wix --version 5.0.2`, `wix extension add -g WixToolset.Util.wixext/5.0.2` and
+  `wix extension add -g WixToolset.UI.wixext/5.0.2`. WiX 7 asks to accept a maintenance fee agreement first.
+
 ## Reporting how it runs on your desktop
 
 The app is developed on KDE Plasma under Wayland and checked on Windows. If you try it on another Linux desktop, please open a **Does it work on my desktop?** issue: it takes five minutes and tells us what works where.
