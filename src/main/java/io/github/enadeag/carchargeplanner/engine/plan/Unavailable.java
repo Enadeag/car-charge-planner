@@ -3,7 +3,7 @@ package io.github.enadeag.carchargeplanner.engine.plan;
 import java.time.Instant;
 
 /**
- * A time in which no new charge window may be planned, such as an announced window that is running.
+ * A stretch of time.
  *
  * @param start the first moment of the time
  * @param end the end of the time

@@ -8,16 +8,16 @@ import java.util.Map;
 /**
  * What a forecast provider tells about itself.
  *
- * @param id short and stable: used in the config file and the cache file's name
- * @param name the provider's name, for the owner
- * @param description a few sentences about the service, for the owner choosing one
+ * @param id a short stable identifier: lower case letters, digits and hyphens
+ * @param name the provider's name
+ * @param description a few sentences about the service
  * @param termsUrl the https address of the service's terms
- * @param attribution the credit the provider's terms ask for, shown with the forecast
- * @param sends in plain words, what leaves the computer
- * @param minRefresh it is never asked more often than this
+ * @param attribution the credit the provider's terms ask for
+ * @param sends in plain words, what is sent to the service
+ * @param minRefresh the shortest time the provider allows between two requests
  * @param horizon how far ahead it forecasts
- * @param maxUsefulAge a forecast older than this is not worth keeping when it cannot be refreshed
- * @param settings the settings it asks for, in the order they are shown
+ * @param maxUsefulAge the age after which a forecast of the provider is no longer useful
+ * @param settings the settings it asks for, in order
  */
 public record ProviderInfo(
         String id,

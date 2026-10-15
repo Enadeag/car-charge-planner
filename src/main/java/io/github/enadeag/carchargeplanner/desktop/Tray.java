@@ -21,7 +21,7 @@ public interface Tray {
     /**
      * What the tray icon and its menu do.
      *
-     * @param clicked the action for a click on the icon, given where the icon is on the screen, in JavaFX's
+     * @param clicked the action run on a click on the icon; it is given where the icon is on the screen, in JavaFX's
      *     coordinates
      * @param open the action for the menu's "Open dashboard"
      * @param quit the action for the menu's "Quit"

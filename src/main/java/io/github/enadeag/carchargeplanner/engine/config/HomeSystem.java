@@ -4,7 +4,7 @@ import java.time.ZoneId;
 import java.util.List;
 
 /**
- * Facts about the owner's home and equipment: what the plan is made for.
+ * Facts about the owner's home and equipment.
  *
  * @param latitude the latitude of the home in degrees, from -90 to 90, north positive
  * @param longitude the longitude of the home in degrees, from -180 to 180, east positive

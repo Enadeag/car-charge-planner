@@ -1,7 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop;
 
 /**
- * A short figure in the colour of its source, with the source's glyph beside it: "92 % sun".
+ * A short figure about one source of energy: "92 % sun".
  *
  * @param source where the energy in the figure comes from or goes to
  * @param text the figure in words, such as "92 % sun" or "Battery 50 → 74 %"

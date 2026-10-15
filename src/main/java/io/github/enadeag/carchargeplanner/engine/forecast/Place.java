@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * A place a person can pick as the location of their panels.
+ * A place with its coordinates and time zone.
  *
  * @param name the place's name
  * @param latitude the latitude in degrees, north positive
