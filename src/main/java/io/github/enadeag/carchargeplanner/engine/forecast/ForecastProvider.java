@@ -14,17 +14,29 @@ import java.util.Optional;
  */
 public interface ForecastProvider {
 
+    /**
+     * What the provider tells about itself.
+     *
+     * @return the same information on every call
+     */
     ProviderInfo info();
 
     /**
-     * Blocks while the forecast is fetched.
+     * Fetches a forecast; blocks while the service is asked.
      *
-     * @param settings the provider's declared settings that have a value, secret ones included
+     * @param system where the panels are and their arrays; the forecast is for all arrays together
+     * @param settings the provider's declared settings that have a value, secret ones included; not changed
+     * @param now the moment of the request, for answers that are relative to it
      * @return the power of all panel arrays together, in steps that satisfy {@link Steps#problems}
+     * @throws ProviderError when there is no forecast; the kind says why
      */
     List<ForecastStep> fetch(SystemDescription system, Map<String, String> settings, Instant now) throws ProviderError;
 
-    /** The provider's place search, when it has one. */
+    /**
+     * The provider's place search, when it has one.
+     *
+     * @return its place search, or empty when the owner has to type coordinates
+     */
     default Optional<PlaceSearch> placeSearch() {
         return Optional.empty();
     }

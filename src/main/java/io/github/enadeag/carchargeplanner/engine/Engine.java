@@ -42,6 +42,15 @@ public final class Engine {
     private final ApiKeys apiKeys;
     private final Clock clock;
 
+    /**
+     * Makes the engine; nothing is read or fetched yet.
+     *
+     * @param configFile the owner's config file, read again for every plan
+     * @param forecasts gives the forecasts, from its cache or the providers
+     * @param providers the providers known to this version, for the connection check and place search
+     * @param apiKeys where the providers' secret settings are kept
+     * @param clock the time plans are made at
+     */
     public Engine(ConfigFile configFile, ForecastService forecasts, Providers providers, ApiKeys apiKeys, Clock clock) {
         this.configFile = configFile;
         this.forecasts = forecasts;
@@ -50,7 +59,12 @@ public final class Engine {
         this.clock = clock;
     }
 
-    /** Blocks while the forecast is fetched: call it away from the user interface's thread. */
+    /**
+     * Makes a plan from the config file and a forecast. Blocks while the forecast is fetched: call it away from the
+     * user interface's thread.
+     *
+     * @return the plan, or why there is none: the config file is not usable, or no forecast is
+     */
     public Outlook plan() {
         EngineConfig config;
         try {
@@ -77,7 +91,10 @@ public final class Engine {
      * Asks a provider for one forecast with these settings, for set-up's and Settings' connection check. Nothing is
      * cached or saved. Blocks while the provider is asked.
      *
+     * @param providerId the provider to try; one this version does not know gives a failed result
+     * @param system the system as the owner entered it, which need not be saved yet
      * @param settings as the owner entered them, secret ones included; a secret one left out comes from the keychain
+     * @return whether it worked, the days of forecast, and a message for the owner
      */
     public ConnectionResult checkConnection(String providerId, HomeSystem system, Map<String, String> settings) {
         var found = providers.find(providerId);
@@ -94,18 +111,34 @@ public final class Engine {
     /**
      * Places for what the owner typed, from the provider's place search; empty when the provider has none, and then
      * the owner types coordinates. Blocks while the service is asked.
+     *
+     * @param providerId the provider whose search to use, normally the primary
+     * @param text what the owner typed: a name or a postcode
+     * @param language the language the names should come in, such as "nl"; empty means English
+     * @return the results, or empty when the provider is unknown or has no place search
      */
     public Optional<PlaceResults> searchPlaces(String providerId, String text, String language) {
         return providers.find(providerId).flatMap(ForecastProvider::placeSearch)
                 .map(search -> search.search(text, language));
     }
 
-    /** Where the API keys are kept, so a client can tell the owner when it is a file rather than the keychain. */
+    /**
+     * Where the API keys are kept, so a client can tell the owner when it is a file rather than the keychain. Asks the
+     * keychain whether it can be used.
+     *
+     * @return the keychain, or the private file
+     */
     public KeyStorage keyStorage() {
         return apiKeys.storage();
     }
 
-    /** Stores the providers' secret settings, replacing all of them; a provider that failed before is asked again. */
+    /**
+     * Stores the providers' secret settings, replacing all of them; a provider that failed before is asked again at
+     * the next plan instead of after its wait.
+     *
+     * @param secrets every provider's secret settings; what is left out is forgotten
+     * @throws SecretsProblem when neither the keychain nor the private file could store them
+     */
     public void saveApiKeys(Secrets secrets) throws SecretsProblem {
         apiKeys.save(secrets);
         forecasts.forgetFailures();

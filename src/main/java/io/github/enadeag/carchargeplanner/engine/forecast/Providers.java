@@ -11,6 +11,12 @@ public final class Providers {
 
     private final Map<String, ForecastProvider> byId = new LinkedHashMap<>();
 
+    /**
+     * Collects the providers.
+     *
+     * @param providers every provider this version knows, in the order they are offered
+     * @throws IllegalArgumentException when an id does not have the allowed form or two providers share one
+     */
     public Providers(List<ForecastProvider> providers) {
         for (var provider : providers) {
             var id = provider.info().id();
@@ -23,10 +29,21 @@ public final class Providers {
         }
     }
 
+    /**
+     * Finds a provider.
+     *
+     * @param id the provider's id, as the config file names it
+     * @return the provider, or empty when this version does not know it
+     */
     public Optional<ForecastProvider> find(String id) {
         return Optional.ofNullable(byId.get(id));
     }
 
+    /**
+     * The known providers.
+     *
+     * @return their ids, in the order they were given
+     */
     public List<String> ids() {
         return List.copyOf(byId.keySet());
     }

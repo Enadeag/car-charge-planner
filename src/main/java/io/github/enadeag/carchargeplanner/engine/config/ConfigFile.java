@@ -29,14 +29,31 @@ public final class ConfigFile {
                     .setCoercion(CoercionInputShape.Boolean, CoercionAction.Fail))
             .build();
 
+    /**
+     * Makes the reader for one config file; nothing is read yet.
+     *
+     * @param path where the file is, or should be; it need not exist, a missing file is reported when it is read
+     */
     public ConfigFile(Path path) {
         this.path = path;
     }
 
+    /**
+     * Where the file is, for messages to the owner.
+     *
+     * @return the path this reader was made with
+     */
     public Path path() {
         return path;
     }
 
+    /**
+     * Reads and checks the file again; nothing is kept between reads.
+     *
+     * @return the whole config, every value present and valid
+     * @throws ConfigProblem when the file is missing, unreadable, not JSON, or a value is missing or wrong; the message
+     *     names the file and the setting
+     */
     public EngineConfig read() throws ConfigProblem {
         String text;
         try {

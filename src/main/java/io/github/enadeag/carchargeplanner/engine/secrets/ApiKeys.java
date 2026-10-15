@@ -12,6 +12,12 @@ public final class ApiKeys implements SecretsSource {
     private final KeychainEntries keychain;
     private final SecretsFile file;
 
+    /**
+     * Makes the store; nothing is read or written yet.
+     *
+     * @param keychain the system's keychain, or {@link NoKeychain} where there is none
+     * @param file where the keys go when the keychain cannot be used
+     */
     public ApiKeys(Keychain keychain, SecretsFile file) {
         this.keychain = new KeychainEntries(keychain);
         this.file = file;
@@ -35,7 +41,12 @@ public final class ApiKeys implements SecretsSource {
         }
     }
 
-    /** Stores them all; what is not in {@code secrets} is forgotten. */
+    /**
+     * Stores them all, in the keychain when it works and else in the file.
+     *
+     * @param secrets every provider's secret settings; what is left out is forgotten
+     * @throws SecretsProblem when a name has characters that are not allowed, or the file could not be written
+     */
     public void save(Secrets secrets) throws SecretsProblem {
         secrets.checkNames();
         if (keychain.usable()) {
@@ -50,10 +61,20 @@ public final class ApiKeys implements SecretsSource {
         file.write(secrets);
     }
 
+    /**
+     * Where the keys are kept now; asks the keychain whether it can be used.
+     *
+     * @return the keychain, or the file when the keychain cannot be used or the file could not be moved into it
+     */
     public KeyStorage storage() {
         return keychain.usable() && !file.exists() ? KeyStorage.KEYCHAIN : KeyStorage.FILE;
     }
 
+    /**
+     * The file the keys go to without a keychain.
+     *
+     * @return the file this was made with
+     */
     public SecretsFile file() {
         return file;
     }

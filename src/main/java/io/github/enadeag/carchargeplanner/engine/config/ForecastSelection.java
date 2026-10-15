@@ -9,14 +9,23 @@ import java.util.regex.Pattern;
  * Which forecast providers the owner chose, and their settings that are not secret (secret ones are in the keychain).
  * A provider this version does not know is not refused here: the forecast service says so when it is asked.
  *
- * @param fallback the fallback provider, or empty for none
- * @param settings per provider id, setting key to value
+ * @param primary the id of the forecast provider asked first
+ * @param fallback the id of the fallback provider, or empty for none
+ * @param settings per provider id, setting key to value; secret settings are not here
  */
 public record ForecastSelection(String primary, String fallback, Map<String, Map<String, String>> settings) {
 
+    /** What a provider id looks like: lower case letters, digits and hyphens. */
     public static final Pattern PROVIDER_ID = Pattern.compile("[a-z0-9][a-z0-9-]*");
+    /** What a setting key looks like: lower case letters, digits, hyphens and underscores. */
     public static final Pattern SETTING_KEY = Pattern.compile("[a-z0-9][a-z0-9_-]*");
 
+    /**
+     * Checks the ids and setting names, and copies the settings.
+     *
+     * @throws IllegalArgumentException when an id or setting name does not have the allowed form, or the fallback is
+     *     the primary
+     */
     public ForecastSelection {
         Checks.require(PROVIDER_ID.matcher(primary).matches(), "primary must be a provider id such as open-meteo");
         Checks.require(fallback.isEmpty() || PROVIDER_ID.matcher(fallback).matches(),
@@ -36,11 +45,21 @@ public record ForecastSelection(String primary, String fallback, Map<String, Map
         return Map.copyOf(copy);
     }
 
-    /** The providers to ask, in order: the primary, then the fallback when there is one. */
+    /**
+     * The providers to ask, in order.
+     *
+     * @return the primary's id, then the fallback's when there is one
+     */
     public List<String> order() {
         return fallback.isEmpty() ? List.of(primary) : List.of(primary, fallback);
     }
 
+    /**
+     * One provider's settings from the config file.
+     *
+     * @param providerId the provider whose settings are wanted; it need not be chosen or known
+     * @return its settings, empty when the file has none for it
+     */
     public Map<String, String> settingsOf(String providerId) {
         return settings.getOrDefault(providerId, Map.of());
     }

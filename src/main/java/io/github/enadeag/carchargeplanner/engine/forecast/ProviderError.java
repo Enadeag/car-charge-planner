@@ -15,6 +15,11 @@ public abstract sealed class ProviderError extends Exception {
 
     /** No network, a timeout, or a server error: try again later. */
     public static final class Unavailable extends ProviderError {
+        /**
+         * Makes the error.
+         *
+         * @param message why, in words for the owner; never a secret setting
+         */
         public Unavailable(String message) {
             super(message);
         }
@@ -24,12 +29,22 @@ public abstract sealed class ProviderError extends Exception {
     public static final class RateLimited extends ProviderError {
         private final Duration retryAfter;
 
-        /** @param retryAfter what the provider said about when to ask again, or null when it said nothing */
+        /**
+         * Makes the error.
+         *
+         * @param message why, in words for the owner; never a secret setting
+         * @param retryAfter what the provider said about when to ask again, or null when it said nothing
+         */
         public RateLimited(String message, Duration retryAfter) {
             super(message);
             this.retryAfter = retryAfter;
         }
 
+        /**
+         * When the provider may be asked again.
+         *
+         * @return what the provider said, measured from the moment it said it; empty when it said nothing
+         */
         public Optional<Duration> retryAfter() {
             return Optional.ofNullable(retryAfter);
         }
@@ -37,6 +52,11 @@ public abstract sealed class ProviderError extends Exception {
 
     /** An answer that is not what the provider documents, including steps that break the contract. */
     public static final class BadResponse extends ProviderError {
+        /**
+         * Makes the error.
+         *
+         * @param message why, in words for the owner; never a secret setting
+         */
         public BadResponse(String message) {
             super(message);
         }
@@ -44,6 +64,11 @@ public abstract sealed class ProviderError extends Exception {
 
     /** A setting is missing or wrong; nothing was sent. */
     public static final class NotConfigured extends ProviderError {
+        /**
+         * Makes the error.
+         *
+         * @param message why, in words for the owner; never a secret setting
+         */
         public NotConfigured(String message) {
             super(message);
         }

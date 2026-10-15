@@ -30,6 +30,13 @@ public final class SecretServiceKeychain implements Keychain {
 
     /** Opens a connection of its own; tests use a private bus. */
     public interface BusConnector {
+
+        /**
+         * Opens a new connection, which the caller closes.
+         *
+         * @return the connection to the session bus
+         * @throws DBusException when there is no bus to connect to
+         */
         DBusConnection connect() throws DBusException;
     }
 
@@ -41,7 +48,12 @@ public final class SecretServiceKeychain implements Keychain {
     private final BusConnector connector;
     private final String application;
 
-    /** @param application the attribute that tells this app's items from others', such as "car-charge-planner" */
+    /**
+     * Makes the keychain; nothing is connected yet.
+     *
+     * @param connector opens a connection for each call
+     * @param application the attribute that tells this app's items from others', such as "car-charge-planner"
+     */
     public SecretServiceKeychain(BusConnector connector, String application) {
         this.connector = connector;
         this.application = application;

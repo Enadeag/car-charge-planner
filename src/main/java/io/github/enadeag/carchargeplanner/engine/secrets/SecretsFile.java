@@ -28,10 +28,20 @@ public final class SecretsFile {
     private final Path path;
     private final JsonMapper json = new JsonMapper();
 
+    /**
+     * Makes the file's reader and writer; nothing is read or written yet.
+     *
+     * @param path where the file is, or will be made; its folder is made when needed
+     */
     public SecretsFile(Path path) {
         this.path = path;
     }
 
+    /**
+     * Where the file is, to tell the owner.
+     *
+     * @return the path this was made with
+     */
     public Path path() {
         return path;
     }

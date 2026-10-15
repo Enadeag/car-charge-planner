@@ -23,6 +23,13 @@ public final class ForecastService {
     private final SecretsSource secrets;
     private final Map<String, Instant> retryAt = new HashMap<>();
 
+    /**
+     * Makes the service.
+     *
+     * @param providers the providers it may ask, found by the ids the selection names
+     * @param cache where each provider's last good forecast and rate limit are kept
+     * @param secrets where the providers' secret settings come from; read on every request
+     */
     public ForecastService(Providers providers, ForecastCache cache, SecretsSource secrets) {
         this.providers = providers;
         this.cache = cache;
@@ -34,8 +41,14 @@ public final class ForecastService {
     }
 
     /**
+     * A forecast for the system, from the cache or a provider.
+     *
+     * @param system the system to forecast; the cache is used only when it was made for the same one
+     * @param selection the providers to ask and their settings that are not secret
+     * @param now the current moment, by which the cache's age, waits and rate limits are measured
      * @param force the owner asked for a refresh: skips the minimum refresh interval, never a provider's rate limit
-     * @throws ForecastUnavailable with the reason of each provider asked
+     * @return the forecast and where it came from
+     * @throws ForecastUnavailable with the reason of each provider asked, when none has a usable forecast
      */
     public synchronized ForecastResult get(SystemDescription system, ForecastSelection selection, Instant now,
             boolean force) throws ForecastUnavailable {

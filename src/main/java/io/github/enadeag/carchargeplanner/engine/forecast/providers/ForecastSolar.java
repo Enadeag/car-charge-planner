@@ -45,6 +45,11 @@ public final class ForecastSolar implements ForecastProvider {
 
     private final HttpGet http;
 
+    /**
+     * Makes the provider.
+     *
+     * @param http the only way it reaches the network; tests pass recorded answers
+     */
     public ForecastSolar(HttpGet http) {
         this.http = http;
     }

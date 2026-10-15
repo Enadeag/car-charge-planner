@@ -24,8 +24,20 @@ import tools.jackson.databind.node.ObjectNode;
  */
 public final class ForecastCache {
 
+    /**
+     * A cached forecast.
+     *
+     * @param fetchedAt when it was fetched
+     * @param steps its steps
+     */
     public record Cached(Instant fetchedAt, List<ForecastStep> steps) {
 
+        /**
+         * How old the forecast is.
+         *
+         * @param now the moment to measure to; not before {@code fetchedAt}
+         * @return the time since it was fetched
+         */
         public Duration age(Instant now) {
             return Duration.between(fetchedAt, now);
         }
@@ -34,6 +46,11 @@ public final class ForecastCache {
     private final Path folder;
     private final JsonMapper json = new JsonMapper();
 
+    /**
+     * Makes the cache; nothing is read or written yet.
+     *
+     * @param folder where the files go; made when the first one is written
+     */
     public ForecastCache(Path folder) {
         this.folder = folder;
     }

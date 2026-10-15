@@ -14,6 +14,14 @@ public final class Steps {
     /** Asks for the forecast of one panel array. */
     @FunctionalInterface
     public interface ArrayFetch {
+
+        /**
+         * Asks for one array's forecast.
+         *
+         * @param array the array to ask for
+         * @return its steps, keeping the contract
+         * @throws ProviderError when there is no forecast for it
+         */
         List<ForecastStep> fetch(PanelArray array) throws ProviderError;
     }
 
@@ -24,6 +32,9 @@ public final class Steps {
      * What is wrong with a provider's answer, in words; empty when it keeps the contract. Each step ends after it
      * starts, the steps follow each other in order without overlap, and each power is a finite number that is not
      * negative. Gaps (the night) are allowed.
+     *
+     * @param steps a provider's answer, possibly empty
+     * @return one text per problem, such as "step 3: power cannot be negative"; empty when there is none
      */
     public static List<String> problems(List<ForecastStep> steps) {
         var problems = new ArrayList<String>();
@@ -52,7 +63,13 @@ public final class Steps {
         return problems;
     }
 
-    /** The steps themselves when they keep the contract; otherwise a bad response naming the first problems. */
+    /**
+     * Refuses steps that break the contract.
+     *
+     * @param steps a provider's answer
+     * @return the same steps, when they keep the contract
+     * @throws ProviderError.BadResponse naming the first three problems, when they do not
+     */
     public static List<ForecastStep> requireValid(List<ForecastStep> steps) throws ProviderError.BadResponse {
         var problems = problems(steps);
         if (!problems.isEmpty()) {
@@ -64,6 +81,11 @@ public final class Steps {
     /**
      * For a service that forecasts one panel array per request: asks for each array and adds the answers up. A
      * failure for any array fails the whole forecast, because a total without one of the arrays would be wrong.
+     *
+     * @param system the system whose arrays are asked for, in their order
+     * @param fetchOne asks for one array's forecast
+     * @return the arrays' forecasts added up, as {@link #addUp} does
+     * @throws ProviderError the first array's error, when one of them has no forecast
      */
     public static List<ForecastStep> eachArray(SystemDescription system, ArrayFetch fetchOne) throws ProviderError {
         var forecasts = new ArrayList<List<ForecastStep>>();
@@ -78,6 +100,9 @@ public final class Steps {
      * each piece gets the sum of the powers that cover it, so no energy is lost or counted twice when the arrays'
      * steps do not line up. A time no array covers stays a gap. The result covers only the time every array's
      * forecast spans, so a shorter answer for one array never shows as a drop at the end.
+     *
+     * @param forecasts one forecast per array, each keeping the contract
+     * @return the total; the forecast itself when there is one; empty when there is none or one is empty
      */
     public static List<ForecastStep> addUp(List<List<ForecastStep>> forecasts) {
         if (forecasts.size() == 1) {

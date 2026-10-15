@@ -6,12 +6,18 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.HashMap;
 
+/** Fetches web addresses with Java's own HTTP client, naming the app and its home page in the User-Agent. */
 public final class JdkHttpGet implements HttpGet {
 
     private static final String USER_AGENT = "car-charge-planner (+https://github.com/Enadeag/car-charge-planner)";
 
     private final HttpClient client;
 
+    /**
+     * Makes the fetcher.
+     *
+     * @param client the client to send with; it is shared by every request and not closed here
+     */
     public JdkHttpGet(HttpClient client) {
         this.client = client;
     }

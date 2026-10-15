@@ -15,7 +15,15 @@ public final class ConnectionCheck {
     private ConnectionCheck() {
     }
 
-    /** Blocks while the provider is asked; never throws. */
+    /**
+     * Asks the provider for one forecast; blocks while it is asked and never throws.
+     *
+     * @param provider the provider to try
+     * @param system the system to ask a forecast for
+     * @param settings the settings to try, secret ones included, as the provider's fetch would get them
+     * @param now the current moment; the days are counted from its date in the system's time zone
+     * @return whether it worked, the days of forecast, and a message for the owner
+     */
     public static ConnectionResult attempt(ForecastProvider provider, SystemDescription system,
             Map<String, String> settings, Instant now) {
         var info = provider.info();

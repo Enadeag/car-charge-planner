@@ -33,6 +33,11 @@ public final class OpenMeteoPlaces implements PlaceSearch {
 
     private final HttpGet http;
 
+    /**
+     * Makes the place search.
+     *
+     * @param http the only way it reaches the network; tests pass recorded answers
+     */
     public OpenMeteoPlaces(HttpGet http) {
         this.http = http;
     }

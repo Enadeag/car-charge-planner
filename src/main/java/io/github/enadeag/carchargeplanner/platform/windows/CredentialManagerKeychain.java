@@ -62,7 +62,12 @@ public final class CredentialManagerKeychain implements Keychain {
     private final MethodHandle credDelete;
     private final MethodHandle credFree;
 
-    /** @param application the start of each credential's name, such as "car-charge-planner" */
+    /**
+     * Finds the Credential Manager's functions; nothing is read or written yet. Only for Windows.
+     *
+     * @param application the start of each credential's name, such as "car-charge-planner", so the app's entries
+     *     are told apart from others'
+     */
     public CredentialManagerKeychain(String application) {
         this.prefix = application + ":";
         var linker = Linker.nativeLinker();

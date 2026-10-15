@@ -51,6 +51,11 @@ public final class OpenMeteo implements ForecastProvider {
     private final HttpGet http;
     private final OpenMeteoPlaces places;
 
+    /**
+     * Makes the provider, with its place search.
+     *
+     * @param http the only way it reaches the network; tests pass recorded answers
+     */
     public OpenMeteo(HttpGet http) {
         this.http = http;
         this.places = new OpenMeteoPlaces(http);

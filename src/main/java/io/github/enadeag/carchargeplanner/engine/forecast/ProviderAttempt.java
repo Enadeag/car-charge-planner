@@ -31,9 +31,14 @@ final class ProviderAttempt {
     private final boolean force;
 
     /**
+     * Prepares one attempt; nothing is read or asked yet.
+     *
+     * @param provider the provider to ask
+     * @param cache where its last good forecast and rate limit are kept; written after an answer
      * @param retryAt per provider id, when it may be asked again after a failure; updated here
      * @param force the owner asked for a refresh: skip the minimum refresh interval and the wait after a failure,
      *     never a rate limit
+     * @param now the current moment, by which ages, waits and rate limits are measured
      */
     ProviderAttempt(ForecastProvider provider, ForecastCache cache, Map<String, Instant> retryAt, Instant now,
             boolean force) {
