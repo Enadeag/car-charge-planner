@@ -4,18 +4,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import io.github.enadeag.carchargeplanner.desktop.AppIcon;
+import io.github.enadeag.carchargeplanner.desktop.PanelShade;
+import io.github.enadeag.carchargeplanner.desktop.StatusDot;
+import io.github.enadeag.carchargeplanner.desktop.StatusIcon;
 import io.github.enadeag.carchargeplanner.desktop.Tray;
+import io.github.enadeag.carchargeplanner.desktop.TrayStatus;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import javafx.geometry.Point2D;
+import org.freedesktop.dbus.DBusMatchRule;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
 import org.freedesktop.dbus.connections.impl.DBusConnectionBuilder;
 import org.freedesktop.dbus.exceptions.DBusException;
@@ -77,8 +83,8 @@ class StatusNotifierTrayTest {
         // it prints the address once it accepts connections
         address = new BufferedReader(new InputStreamReader(busDaemon.getInputStream())).readLine().strip();
         panel = DBusConnectionBuilder.forAddress(address).withShared(false).build();
-        tray = new StatusNotifierTray(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(), new AppIcon(),
-                "Car charge planner");
+        tray = new StatusNotifierTray(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),
+                new StatusIcon(), folder.resolve("tray"), "Car charge planner");
     }
 
     @AfterEach
@@ -119,6 +125,65 @@ class StatusNotifierTrayTest {
         assertThat(properties.get("Title").getValue()).isEqualTo("Car charge planner");
         assertThat(properties.get("IconPixmap").getSig()).isEqualTo("a(iiay)");
         assertThat((List<?>) properties.get("IconPixmap").getValue()).hasSize(6);
+    }
+
+    private Map<String, Variant<?>> properties(String name) throws DBusException {
+        return panel.getRemoteObject(name, TrayItem.OBJECT_PATH, Properties.class).GetAll("org.kde.StatusNotifierItem");
+    }
+
+    /** The SVG the panel finds for the item's icon name in the item's icon theme folder. */
+    private static String themeIcon(Map<String, Variant<?>> properties) throws IOException {
+        var theme = Path.of((String) properties.get("IconThemePath").getValue());
+        return Files.readString(theme.resolve("hicolor/scalable/apps/" + properties.get("IconName").getValue() + ".svg"));
+    }
+
+    private static String toolTipText(Map<String, Variant<?>> properties) {
+        // a struct arrives as its fields: icon name, icon, title, text
+        return (String) ((Object[]) properties.get("ToolTip").getValue())[3];
+    }
+
+    @Test
+    void theIconShowsTheStatusGivenBeforeItAppearedByNameAndInTheTooltip() throws Exception {
+        tray.showStatus(new TrayStatus(StatusDot.SUN, "Charge on sun now, until 14:30, at 10 A."));
+        var properties = properties(showWithAWatcher());
+
+        assertThat(themeIcon(properties)).isEqualTo(new StatusIcon().svg(StatusDot.SUN, PanelShade.DARK));
+        // icon themes shorten an unknown name at its dashes: Plasma showed the system's "car" icon instead of ours
+        assertThat((String) properties.get("IconName").getValue()).doesNotContain("-");
+        // Plasma looks in IconThemePath only when its last folder is called "icons"
+        assertThat(Path.of((String) properties.get("IconThemePath").getValue()).getFileName()).hasToString("icons");
+        assertThat(toolTipText(properties)).isEqualTo("Charge on sun now, until 14:30, at 10 A.");
+    }
+
+    @Test
+    void aNewStatusChangesTheIconAndTooltipAndTellsThePanel() throws Exception {
+        var name = showWithAWatcher();
+        var before = properties(name);
+        var newIcon = new CountDownLatch(1);
+        var newToolTip = new CountDownLatch(1);
+        // generic handlers: dbus-java would look for the signals' classes in StatusNotifierItem, by the interface's name
+        panel.addGenericSigHandler(new DBusMatchRule("signal", "org.kde.StatusNotifierItem", "NewIcon"),
+                signal -> newIcon.countDown());
+        panel.addGenericSigHandler(new DBusMatchRule("signal", "org.kde.StatusNotifierItem", "NewToolTip"),
+                signal -> newToolTip.countDown());
+
+        tray.showStatus(new TrayStatus(StatusDot.GRID, "Charge 8.4 kWh from the grid: Sunday 09:00 – 15:10."));
+
+        assertThat(newIcon.await(TIMEOUT_S, TimeUnit.SECONDS)).as("NewIcon").isTrue();
+        assertThat(newToolTip.await(TIMEOUT_S, TimeUnit.SECONDS)).as("NewToolTip").isTrue();
+        var after = properties(name);
+        assertThat(themeIcon(after)).isEqualTo(new StatusIcon().svg(StatusDot.GRID, PanelShade.DARK));
+        assertThat(after.get("IconPixmap").getValue()).isNotEqualTo(before.get("IconPixmap").getValue());
+        assertThat(toolTipText(after)).isEqualTo("Charge 8.4 kWh from the grid: Sunday 09:00 – 15:10.");
+    }
+
+    @Test
+    void removingTheTrayRemovesItsIcons() throws Exception {
+        showWithAWatcher();
+
+        tray.remove();
+
+        assertThat(folder.resolve("tray")).doesNotExist();
     }
 
     @Test

@@ -2,8 +2,10 @@ package io.github.enadeag.carchargeplanner;
 
 import io.github.enadeag.carchargeplanner.desktop.AppIcon;
 import io.github.enadeag.carchargeplanner.desktop.Dashboard;
+import io.github.enadeag.carchargeplanner.desktop.StatusIcon;
 import io.github.enadeag.carchargeplanner.desktop.TaskbarHiding;
 import io.github.enadeag.carchargeplanner.desktop.Tray;
+import io.github.enadeag.carchargeplanner.desktop.TrayStatusMapper;
 import io.github.enadeag.carchargeplanner.engine.Engine;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastCache;
@@ -21,6 +23,7 @@ import io.github.enadeag.carchargeplanner.platform.linux.SecretServiceKeychain;
 import io.github.enadeag.carchargeplanner.platform.linux.StatusNotifierTray;
 import io.github.enadeag.carchargeplanner.platform.windows.AwtTray;
 import io.github.enadeag.carchargeplanner.platform.windows.CredentialManagerKeychain;
+import io.github.enadeag.carchargeplanner.platform.windows.TaskbarShade;
 import java.lang.System.Logger.Level;
 import java.net.http.HttpClient;
 import java.nio.file.Path;
@@ -30,7 +33,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import javafx.application.ColorScheme;
 import javafx.application.Platform;
+import javafx.beans.value.ObservableValue;
 import org.freedesktop.dbus.connections.impl.DBusConnectionBuilder;
 
 /**
@@ -76,23 +81,32 @@ public final class Main {
         var icon = new AppIcon();
 
         Platform.setImplicitExit(false);
+        var colorSchemeFound = new CompletableFuture<ObservableValue<ColorScheme>>();
         var dashboardMade = new CompletableFuture<Dashboard>();
-        Platform.startup(() -> dashboardMade.complete(
-                new Dashboard(icon, Platform.getPreferences().colorSchemeProperty(), clock, taskbarHiding())));
+        Platform.startup(() -> {
+            // JavaFX hands out its preferences on its own thread only
+            var colorScheme = Platform.getPreferences().colorSchemeProperty();
+            colorSchemeFound.complete(colorScheme);
+            dashboardMade.complete(new Dashboard(icon, colorScheme, clock, taskbarHiding()));
+        });
         var dashboard = dashboardMade.get();
+        var tray = tray(colorSchemeFound.get());
+        var trayStatus = new TrayStatusMapper();
+        tray.showStatus(trayStatus.loading());
 
         ScheduledExecutorService replanning = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform()
                 .name("planner").daemon().factory());
         replanning.scheduleWithFixedDelay(() -> {
             try {
-                dashboard.show(engine.plan());
+                var outlook = engine.plan();
+                dashboard.show(outlook);
+                tray.showStatus(trayStatus.map(outlook));
             } catch (RuntimeException e) {
                 // an uncaught exception would stop the schedule for good
                 LOG.log(Level.ERROR, "planning failed", e);
             }
         }, 0, REPLAN_MINUTES, TimeUnit.MINUTES);
 
-        var tray = tray(icon);
         Runnable quit = () -> {
             tray.remove();
             Platform.exit();
@@ -142,10 +156,18 @@ public final class Main {
         return System.getProperty("os.name").startsWith("Windows") ? TaskbarHiding.OWNER_WINDOW : TaskbarHiding.NONE;
     }
 
-    private static Tray tray(AppIcon icon) {
+    private static Tray tray(ObservableValue<ColorScheme> colorScheme) {
         if (System.getProperty("os.name").startsWith("Windows")) {
-            return new AwtTray(icon, TITLE);
+            return new AwtTray(new StatusIcon(), new TaskbarShade(), colorScheme, TITLE);
         }
-        return new StatusNotifierTray(() -> DBusConnectionBuilder.forSessionBus().withShared(false).build(), icon, TITLE);
+        return new StatusNotifierTray(() -> DBusConnectionBuilder.forSessionBus().withShared(false).build(),
+                new StatusIcon(), trayIconFolder(), TITLE);
+    }
+
+    /** In the session's own folder for running programs, which is emptied at logout, so a crash leaves nothing behind. */
+    private static Path trayIconFolder() {
+        var runtime = System.getenv("XDG_RUNTIME_DIR");
+        var parent = runtime == null ? Path.of(System.getProperty("java.io.tmpdir")) : Path.of(runtime);
+        return parent.resolve(APP_ID + "-tray-" + ProcessHandle.current().pid());
     }
 }
