@@ -68,6 +68,41 @@ The app icon's drawings are in `src/packaging/icons/`: `car-charge-planner.svg` 
 `src/main/resources/.../desktop/icons/` and `src/packaging/windows/car-charge-planner.ico` show, and
 `car-charge-planner-symbolic.svg` has the shapes the tray icon draws (`StatusIcon`).
 
+## Continuous integration
+
+The workflows are in `.github/workflows/`:
+
+- `ci.yml` runs `./mvnw -B clean verify` for every pull request and every push to `main`, on Linux (with
+  `dbus-daemon` and GNOME Keyring, so the private-bus tests run) and on Windows. A change to documentation only
+  (`*.md`, `docs/` except `docs/example-engine.json`, which the tests read) skips both, and GitHub counts a skipped job
+  as passed. macOS runs only when the workflow is started by hand, and its result is informational.
+- `windows-installer.yml` builds the installer with `tools\package-windows.ps1`, installs it silently, runs the
+  installed `car-charge-planner.exe quit`, uninstalls it and keeps the installer as an artifact for 14 days. It runs
+  when the packaging changes on `main`, by hand, and for a release.
+- `release.yml` makes a release; see below.
+
+The actions are pinned to a full commit SHA, with the version in a comment beside it: update both together.
+
+## Releasing
+
+Between releases the version in `pom.xml` is the next one with `-SNAPSHOT`, such as `0.3.0-SNAPSHOT`. The tagged
+commit carries the exact version, because the app shows it in About and the download names carry it. To release
+X.Y.Z:
+
+1. In a pull request, set `<version>X.Y.Z</version>` in `pom.xml` and turn `## [Unreleased]` in `CHANGELOG.md` into
+   `## [X.Y.Z] - YYYY-MM-DD`.
+2. After the merge, tag that commit `vX.Y.Z` and push the tag. The release workflow stops when the tag is not `v`
+   plus the version in `pom.xml`, when that version still ends in `-SNAPSHOT`, when `CHANGELOG.md` has no section for
+   it, or when `release/X.Y.Z` exists at another commit. Otherwise it builds and tests, packages the Linux tar.gz and
+   the Windows installer and smoke-tests both, writes `SHA256SUMS` over them, creates the branch `release/X.Y.Z` at
+   the tag, and makes a draft release with the changelog section and install notes
+   (`java tools/ReleaseNotes.java X.Y.Z CHANGELOG.md`).
+3. Read the draft and publish it by hand.
+4. In a pull request, set the version to the next `-SNAPSHOT` and add an empty `## [Unreleased]`.
+
+To try the workflow without releasing, start it by hand on `main`: it builds everything and makes a draft called
+"dry run" (delete it afterwards), without the tag check or the release branch.
+
 ## Code layout
 
 Everything is in the package `io.github.enadeag.carchargeplanner`, under `src/main/java/`; the tests are in

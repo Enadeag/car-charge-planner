@@ -9,18 +9,24 @@ on:
 permissions:
   contents: read
 
+# A new push to a pull request cancels the run it supersedes; runs on main all finish.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  # Documentation alone needs no build: then the jobs below are skipped (GitHub counts a skipped job as passed, so a
-  # ruleset that requires them does not block the pull request) and only the tests that guard the documents run.
+  # Documentation alone needs no build: then linux and windows are skipped, and GitHub counts a skipped job as passed,
+  # so a ruleset that requires them does not block the pull request.
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       code: ${{ steps.diff.outputs.code }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Did anything but documentation change?
         id: diff
         env:
@@ -35,117 +41,83 @@ jobs:
           while IFS= read -r file; do
             [ -z "$file" ] && continue
             case "$file" in
-              docs/*.py) code=true ;;
+              docs/example-engine.json) code=true ;;  # the tests read it
               docs/*|*.md|LICENSE|NOTICE|.github/ISSUE_TEMPLATE/*) ;;
               *) code=true ;;
             esac
           done <<< "$files"
           echo "code=$code" >> "$GITHUB_OUTPUT"
 
-  docs:
-    needs: changes
-    if: needs.changes.outputs.code == 'false'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      QT_QPA_PLATFORM: offscreen
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      - name: System libraries Qt needs
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libegl1 libgl1 libxkbcommon0 libdbus-1-3 libfontconfig1 libglib2.0-0
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
-      - name: Tests that guard the documents
-        run: pytest -q tests/test_docs_neutral.py tests/test_readme_privacy.py tests/test_provider_guide.py
-
-  test:
+  linux:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.12", "3.13", "3.14"]
-    env:
-      QT_QPA_PLATFORM: offscreen
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          python-version: ${{ matrix.python-version }}
-          allow-prereleases: true
-      - name: System libraries Qt needs
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - name: D-Bus and GNOME Keyring, for the tests on a private bus
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libegl1 libgl1 libxkbcommon0 libdbus-1-3 libfontconfig1 libglib2.0-0
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]" ruff
-      - name: Lint
-        run: ruff check .
-      - name: Type check
-        run: pyright
-      - name: Compile the translations
-        # Fails on a broken catalogue. There are no catalogues yet (only the template), and compile then errors: skip until the first one.
-        run: |
-          if [ -n "$(find src/car_charge_planner/locale -name '*.po')" ]; then
-            python -m car_charge_planner.i18n_tools compile
-          else
-            echo "No translation catalogues yet: nothing to compile."
-          fi
-      - name: Test
-        run: pytest -q
+          sudo apt-get install -y --no-install-recommends dbus-daemon gnome-keyring
+      - name: Build and test
+        run: ./mvnw -B clean verify
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: surefire-reports-linux
+          path: target/surefire-reports/
+          retention-days: 14
 
   windows:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: windows-latest
-    timeout-minutes: 20
-    env:
-      QT_QPA_PLATFORM: offscreen
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          python-version: "3.13"
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
-      - name: Test (each file in its own process, so a crash hides only that file)
-        run: |
-          $failed = @()
-          foreach ($file in Get-ChildItem tests -Filter 'test_*.py' | Sort-Object Name) {
-            pytest -q -rfE -p no:cacheprovider $file.FullName
-            if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 5) { $failed += "$($file.Name) (exit code $LASTEXITCODE)" }
-          }
-          if ($failed) { "Failed or crashed:"; $failed; exit 1 }
-          exit 0
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - name: Build and test
+        run: .\mvnw.cmd -B clean verify
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: surefire-reports-windows
+          path: target/surefire-reports/
+          retention-days: 14
 
   macos:
     # Remove this condition at the public launch (#31): macOS minutes cost 10x while the repository is private.
     if: github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     continue-on-error: true  # informational until a person has checked a release on a Mac (#29)
-    timeout-minutes: 20
-    env:
-      QT_QPA_PLATFORM: offscreen
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          python-version: "3.13"
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
-      - name: Test
-        run: pytest -q
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - name: Build and test
+        run: ./mvnw -B clean verify
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: surefire-reports-macos
+          path: target/surefire-reports/
+          retention-days: 14
