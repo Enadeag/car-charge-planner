@@ -105,14 +105,18 @@ and the Maven wrapper in the root, the code in `src/main/java/io/github/enadeag/
 | Package | What it holds |
 | --- | --- |
 | `engine` | Plans, fetches forecasts and owns the stored data, without user interface; clients get plain records. `engine.config` the config file, `engine.forecast` the provider contract and the forecast service (fallback, cache, rate limits), `engine.forecast.providers` Open-Meteo and Forecast.Solar, `engine.secrets` the API keys, `engine.plan` the planner. |
-| `desktop` | The JavaFX dashboard and what a tray icon must do. |
-| `platform.linux`, `platform.windows` | The tray icon and the keychain on each system: our own StatusNotifierItem and Secret Service client over D-Bus; AWT's `SystemTray` and the Credential Manager. |
+| `desktop` | The JavaFX dashboard, and what a tray icon and start at login must do. |
+| `instance` | One running copy per user: a second start asks the first, over a private Unix domain socket, to show its dashboard. |
+| `platform.linux`, `platform.windows` | The tray icon, the keychain and start at login on each system: our own StatusNotifierItem and Secret Service client over D-Bus, and a desktop entry in the autostart folder; AWT's `SystemTray`, the Credential Manager and the Run key. |
 | `Main` | The composition root: the one place where the parts are made and handed to each other. |
 
 ```bash
 ./mvnw verify                                                           # build and test; nothing touches the network or your desktop
 ./mvnw compile exec:exec -Dapp.args="--config=docs/example-engine.json"  # run it with the example system
 ```
+
+The app also takes the commands `quit` (asks the running app to quit), `start-at-login on` and `start-at-login off`;
+start at login needs the packaged app, whose launcher is what starts at login.
 
 There are no set-up screens yet: the engine reads the system from `engine.json` in `~/.config/car-charge-planner/`
 (Windows: `%APPDATA%\car-charge-planner\`), or from the file `--config=` names. `docs/example-engine.json` shows
