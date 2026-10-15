@@ -6,7 +6,7 @@ import io.github.enadeag.carchargeplanner.desktop.Tray;
 import io.github.enadeag.carchargeplanner.engine.Engine;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.forecast.JdkHttpGet;
-import io.github.enadeag.carchargeplanner.engine.forecast.OpenMeteo;
+import io.github.enadeag.carchargeplanner.engine.forecast.providers.OpenMeteo;
 import io.github.enadeag.carchargeplanner.platform.linux.StatusNotifierTray;
 import io.github.enadeag.carchargeplanner.platform.windows.AwtTray;
 import java.lang.System.Logger.Level;

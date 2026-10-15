@@ -6,7 +6,8 @@ import static org.assertj.core.api.Assertions.within;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
-import io.github.enadeag.carchargeplanner.engine.forecast.ForecastUnavailable;
+import io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider;
+import io.github.enadeag.carchargeplanner.engine.forecast.ProviderError;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -27,10 +28,10 @@ class EngineTest {
     private static final LocalDate DAY = LocalDate.of(2026, 7, 3);
 
     /** Two sunny days: 4 kW from 10:00 to 16:00 local time, nothing the rest of the day. */
-    private static final ForecastProvider SUNNY = system -> days(2, 4.0);
+    private static final ForecastProvider SUNNY = new FakeProvider("sunny", "Sunny", FakeProvider.steps(days(2, 4.0)));
 
     /** Three days without any sun. */
-    private static final ForecastProvider DARK = system -> days(3, 0);
+    private static final ForecastProvider DARK = new FakeProvider("dark", "Dark", FakeProvider.steps(days(3, 0)));
 
     private static List<ForecastStep> days(int count, double powerFrom10To16Kw) {
         var steps = new ArrayList<ForecastStep>();
@@ -95,9 +96,8 @@ class EngineTest {
 
     @Test
     void withoutAForecastThereIsNoPlanButTheProvidersReason() {
-        ForecastProvider down = system -> {
-            throw new ForecastUnavailable("Open-Meteo did not answer the request (status 503)");
-        };
+        ForecastProvider down = new FakeProvider("down", "Down",
+                FakeProvider.error(new ProviderError.Unavailable("Open-Meteo did not answer the request (status 503)")));
         var outlook = new Engine(EXAMPLE, down, clockAt(7)).plan();
 
         assertThat(outlook).isEqualTo(new Outlook.NoForecast("Open-Meteo did not answer the request (status 503)"));

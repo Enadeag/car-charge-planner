@@ -5,11 +5,13 @@ import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
-import io.github.enadeag.carchargeplanner.engine.forecast.ForecastUnavailable;
+import io.github.enadeag.carchargeplanner.engine.forecast.ProviderError;
+import io.github.enadeag.carchargeplanner.engine.forecast.SystemDescription;
 import io.github.enadeag.carchargeplanner.engine.plan.GridAdvisor;
 import io.github.enadeag.carchargeplanner.engine.plan.Planner;
 import java.time.Clock;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Plans, fetches forecasts and owns the stored data, without any user interface. Clients get plain records back.
@@ -41,8 +43,8 @@ public final class Engine {
         }
         List<ForecastStep> forecast;
         try {
-            forecast = forecasts.forecast(config.system());
-        } catch (ForecastUnavailable e) {
+            forecast = forecasts.fetch(SystemDescription.of(config.system()), Map.of(), clock.instant());
+        } catch (ProviderError e) {
             return new Outlook.NoForecast(e.getMessage());
         }
         var now = clock.instant();
