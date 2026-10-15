@@ -81,6 +81,25 @@ class DashboardTest {
     }
 
     @Test
+    void aPlanThatCameWhileThePopupWasClosedFitsWhenItOpensAgain() throws Exception {
+        clickTheIcon();
+        clickTheIcon();
+        dashboard.show(planWithTwoDays());
+        later(Duration.ofSeconds(2));
+
+        clickTheIcon();
+
+        var popup = popup().orElseThrow();
+        double needed = Fx.call(() -> {
+            var root = popup.getScene().getRoot();
+            root.applyCss();
+            root.layout();
+            return root.prefHeight(popup.getWidth());
+        });
+        assertThat(popup.getHeight()).isEqualTo(needed);
+    }
+
+    @Test
     void escapeClosesThePopup() throws Exception {
         clickTheIcon();
 

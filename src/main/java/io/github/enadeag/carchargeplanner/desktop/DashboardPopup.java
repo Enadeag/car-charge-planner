@@ -28,7 +28,7 @@ final class DashboardPopup {
     private final Stage owner = new Stage(StageStyle.UTILITY);
     private final StackPane content = new StackPane();
     private final InstantSource clock;
-    private Instant closedAt = Instant.MIN;
+    private Instant closedAt = Instant.EPOCH;
     private Point2D iconPosition = Point2D.ZERO;
 
     DashboardPopup(SystemTheme theme, AppIcon icon, InstantSource clock) {
@@ -88,7 +88,9 @@ final class DashboardPopup {
         owner.setX(stage.getX());
         owner.setY(stage.getY());
         owner.show();
+        stage.sizeToScene();
         stage.show();
+        placeAt(new Dimension2D(stage.getWidth(), stage.getHeight()));
         stage.toFront();
         stage.requestFocus();
     }
@@ -114,19 +116,25 @@ final class DashboardPopup {
     /** Fits the popup to new content, still beside the icon. */
     void fit() {
         if (stage.isShowing()) {
-            place();
+            stage.sizeToScene();
+            placeAt(new Dimension2D(stage.getWidth(), stage.getHeight()));
         }
     }
 
+    /**
+     * Places the popup by the size its content asks for. Content that changed while the popup was closed may not
+     * be measured right until the popup shows, so {@link #toggle} places it again by its real size once it does.
+     */
     private void place() {
         content.applyCss();
         double width = content.prefWidth(-1);
-        var size = new Dimension2D(width, content.prefHeight(width));
+        placeAt(new Dimension2D(width, content.prefHeight(width)));
+    }
+
+    private void placeAt(Dimension2D size) {
         var position = PopupPlacement.position(iconPosition, size, screenOf(iconPosition).getVisualBounds());
         stage.setX(position.getX());
         stage.setY(position.getY());
-        stage.setWidth(size.getWidth());
-        stage.setHeight(size.getHeight());
     }
 
     private static Screen screenOf(Point2D point) {
