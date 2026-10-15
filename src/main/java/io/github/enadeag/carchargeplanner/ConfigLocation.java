@@ -26,14 +26,26 @@ final class ConfigLocation {
      * @throws NullPointerException on Windows when {@code APPDATA} is missing from the environment
      */
     static Path defaultPath(String osName, Map<String, String> environment, Path home) {
-        Path folder;
+        return systemFolder(osName, environment, home).resolve(APP_FOLDER).resolve(FILE_NAME);
+    }
+
+    /**
+     * The folder the user's settings of all programs go in, such as {@code ~/.config}.
+     *
+     * @param osName the operating system's name as in the {@code os.name} property; a name starting with "Windows"
+     *     selects the Windows folder
+     * @param environment the environment variables; {@code APPDATA} must be present on Windows, {@code XDG_CONFIG_HOME}
+     *     is optional elsewhere and ignored when empty or relative
+     * @param home the user's home folder, used where no config folder is set
+     * @return the folder; it need not exist
+     * @throws NullPointerException on Windows when {@code APPDATA} is missing from the environment
+     */
+    static Path systemFolder(String osName, Map<String, String> environment, Path home) {
         if (osName.startsWith("Windows")) {
-            folder = Path.of(environment.get("APPDATA"));
-        } else {
-            var xdg = environment.getOrDefault("XDG_CONFIG_HOME", "");
-            // the XDG specification says to ignore a relative path
-            folder = xdg.isEmpty() || !Path.of(xdg).isAbsolute() ? home.resolve(".config") : Path.of(xdg);
+            return Path.of(environment.get("APPDATA"));
         }
-        return folder.resolve(APP_FOLDER).resolve(FILE_NAME);
+        var xdg = environment.getOrDefault("XDG_CONFIG_HOME", "");
+        // the XDG specification says to ignore a relative path
+        return xdg.isEmpty() || !Path.of(xdg).isAbsolute() ? home.resolve(".config") : Path.of(xdg);
     }
 }
