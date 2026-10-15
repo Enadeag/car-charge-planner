@@ -159,10 +159,7 @@ final class AppPage implements Page {
 
     /** A language by its own name, such as "Nederlands", so that the owner finds it whatever the app speaks now. */
     private String languageName(Optional<Language> choice) {
-        return choice.map(chosen -> {
-            var name = chosen.locale().getDisplayLanguage(chosen.locale());
-            return name.substring(0, 1).toUpperCase(chosen.locale()) + name.substring(1);
-        }).orElseGet(() -> messages.text(TextKey.LANGUAGE_SYSTEM));
+        return choice.map(Language::autonym).orElseGet(() -> messages.text(TextKey.LANGUAGE_SYSTEM));
     }
 
     private String modeName(DisplayMode choice) {

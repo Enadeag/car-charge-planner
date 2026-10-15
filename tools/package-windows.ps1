@@ -18,9 +18,11 @@ Move-Item target\lib\javafx-*-win.jar target\javafx\
 Remove-Item target\lib\javafx-*.jar
 Copy-Item target\lib\*.jar, target\car-charge-planner.jar target\input\
 
-# The modules the app needs (jdeps --print-module-deps), plus java.logging for its log and JavaFX.
+# The modules the app needs (jdeps --print-module-deps), plus java.logging for its log and JavaFX, and the locale
+# data of the app's languages (Language.java): without it, Dutch day names, numbers and times come out in English.
 jlink --module-path target\javafx `
-  --add-modules java.base,java.desktop,java.logging,java.net.http,java.sql,jdk.jfr,jdk.net,jdk.security.auth,javafx.controls `
+  --add-modules java.base,java.desktop,java.logging,java.net.http,java.sql,jdk.jfr,jdk.net,jdk.security.auth,javafx.controls,jdk.localedata `
+  --include-locales=en,nl `
   --strip-debug --no-header-files --no-man-pages --compress zip-6 `
   --output target\runtime
 if ($LASTEXITCODE) { exit 1 }

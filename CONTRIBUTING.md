@@ -175,8 +175,10 @@ DAY_SET = Set {0} A ({1} kW)
 ```
 
 1. **Add the language to the app.** In `desktop/Language.java`, add a constant with the language's ISO 639 code and
-   the locale whose numbers, times and day names it uses, such as `GERMAN("de", Locale.GERMANY)`. Language codes are
-   two letters: `de`, `fr`, `pt`.
+   the locale whose numbers, times and day names it uses, such as `GERMAN("de", Locale.GERMANY, "Deutsch")`. Language codes are
+   two letters: `de`, `fr`, `pt`. The last part is its name in itself, which the language list shows. Add its code to
+   `--include-locales` in `tools/package-linux.sh` and `tools/package-windows.ps1`, so the packaged app has its day
+   names and numbers.
 
 2. **Start the file.** Copy `messages_en.properties` to `messages_<code>.properties` and translate every text after
    the `=`. Things to know:

@@ -9,16 +9,28 @@ import java.util.stream.Stream;
 /** A language the app's texts are written in; each has a complete resource bundle of its own. */
 public enum Language {
     /** English, written the British way: a decimal point and a 24-hour clock. */
-    ENGLISH("en", Locale.UK),
+    ENGLISH("en", Locale.UK, "English"),
     /** Dutch: a decimal comma and a 24-hour clock. */
-    DUTCH("nl", Locale.of("nl", "NL"));
+    DUTCH("nl", Locale.of("nl", "NL"), "Nederlands");
 
     private final String code;
     private final Locale locale;
+    private final String autonym;
 
-    Language(String code, Locale locale) {
+    Language(String code, Locale locale, String autonym) {
         this.code = code;
         this.locale = locale;
+        this.autonym = autonym;
+    }
+
+    /**
+     * The language's name in itself, the same whatever language the app speaks, so the owner finds it in a list.
+     * Written here rather than asked of Java: a runtime without all its locale data would name it in English.
+     *
+     * @return such as "Nederlands"
+     */
+    public String autonym() {
+        return autonym;
     }
 
     /**
