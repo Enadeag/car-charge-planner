@@ -41,6 +41,7 @@ class ConfigFileTest {
         "\"phases\": 1,         | \"phases\": 0,         | phases must be 1 or 3",
         "\"phases\": 1,         | \"phases\": 4,         | phases must be 1 or 3",
         "\"phases\": 1,         | \"phases\": -1,        | phases must be 1 or 3",
+        "\"phases\": 1,         | \"phases\": 1.5,       | phases",
         "\"phases\": 1,         | \"phases\": true,      | phases",
         "\"margin\": 0.85,      | \"margin\": 1.5,       | margin",
         "\"timezone\": \"Europe/Brussels\" | \"timezone\": \"Mars/Base\" | Mars/Base",
