@@ -20,6 +20,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import javafx.application.ColorScheme;
 import javafx.beans.property.SimpleObjectProperty;
@@ -445,11 +446,42 @@ class DashboardTest {
     void theDashboardShowsTheLatestOutlook() throws Exception {
         clickTheIcon();
 
-        dashboard.show(new Outlook.NotSetUp(ConfigProblem.Kind.MISSING, Path.of("/home/owner/engine.json"), ""));
+        dashboard.show(new Outlook.NotSetUp(ConfigProblem.Kind.INVALID, Path.of("/home/owner/engine.json"),
+                "system.car: is required"));
         Fx.settle();
 
         var popup = popup().orElseThrow();
         var texts = Fx.call(() -> Scenes.visibleTexts(popup.getScene().getRoot()));
-        assertThat(texts).contains("Not set up", "There is no config file at " + Path.of("/home/owner/engine.json") + ".");
+        assertThat(texts).contains("Not set up", "Fix engine.json: system.car: is required");
+    }
+
+    @Test
+    void beforeTheFirstSetUpTheMessageOpensSetUp() throws Exception {
+        var opened = new AtomicInteger();
+        dashboard.onSetUp(opened::incrementAndGet);
+        clickTheIcon();
+
+        dashboard.show(new Outlook.NotSetUp(ConfigProblem.Kind.MISSING, Path.of("/home/owner/engine.json"), ""));
+        Fx.settle();
+        var root = popup().orElseThrow().getScene().getRoot();
+        Fx.run(() -> Scenes.all(root).stream()
+                .filter(node -> node instanceof Button button && Scenes.reallyVisible(button)
+                        && language.messages().text(TextKey.START_SETUP).equals(button.getText()))
+                .map(Button.class::cast).findFirst().orElseThrow().fire());
+
+        assertThat(opened).hasValue(1);
+    }
+
+    @Test
+    void aConfigThatCannotBeReadOffersNoSetUpThatWouldWriteOverIt() throws Exception {
+        dashboard.onSetUp(() -> { });
+        clickTheIcon();
+
+        dashboard.show(new Outlook.NotSetUp(ConfigProblem.Kind.UNREADABLE, Path.of("/home/owner/engine.json"),
+                "access denied"));
+        Fx.settle();
+
+        var root = popup().orElseThrow().getScene().getRoot();
+        assertThat(Fx.call(() -> Scenes.visibleTexts(root))).doesNotContain(language.messages().text(TextKey.START_SETUP));
     }
 }
