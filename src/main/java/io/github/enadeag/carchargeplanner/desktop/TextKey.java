@@ -185,6 +185,20 @@ public enum TextKey {
     CLI_START_AT_LOGIN_OFF,
     /** Start at login could not be changed: {0} the system's error. */
     CLI_START_AT_LOGIN_FAILED,
+    /** The menu entry was asked for outside the installed app. */
+    CLI_LAUNCHER_NEEDS_INSTALL,
+    /** The menu entry is for Linux only: {0} the app's name. */
+    CLI_LAUNCHER_LINUX_ONLY,
+    /** The menu entry was written: {0} the app's name, {1} the files written, one per line. */
+    CLI_LAUNCHER_INSTALLED,
+    /** The menu entry could not be written: {0} the system's error. */
+    CLI_LAUNCHER_INSTALL_FAILED,
+    /** The menu entry was removed: {0} the app's name, {1} the files removed, one per line. */
+    CLI_LAUNCHER_REMOVED,
+    /** There was no menu entry to remove: {0} the app's name. */
+    CLI_LAUNCHER_NOT_FOUND,
+    /** The menu entry could not be removed: {0} the system's error. */
+    CLI_LAUNCHER_REMOVE_FAILED,
     /** The tray menu's entry that opens Settings. */
     MENU_SETTINGS,
     /** The tray menu's entry that opens Settings on About. */

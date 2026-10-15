@@ -19,14 +19,24 @@ final class DataLocation {
      * @return the app's own folder inside the user's data folder; it need not exist yet
      */
     static Path defaultFolder(String osName, Map<String, String> environment, Path home) {
-        Path folder;
+        return systemFolder(osName, environment, home).resolve(ConfigLocation.APP_FOLDER);
+    }
+
+    /**
+     * The folder the user's data of all programs goes in, such as {@code ~/.local/share}.
+     *
+     * @param osName the system's name, as the {@code os.name} property gives it
+     * @param environment the environment variables; Windows needs {@code LOCALAPPDATA}, Linux may give
+     *     {@code XDG_DATA_HOME}, which is ignored when empty or relative
+     * @param home the user's home folder, for when Linux gives no usable {@code XDG_DATA_HOME}
+     * @return the folder; it need not exist yet
+     */
+    static Path systemFolder(String osName, Map<String, String> environment, Path home) {
         if (osName.startsWith("Windows")) {
-            folder = Path.of(environment.get("LOCALAPPDATA")); // stays on this computer, unlike the roaming folder
-        } else {
-            var xdg = environment.getOrDefault("XDG_DATA_HOME", "");
-            // the XDG specification says to ignore a relative path
-            folder = xdg.isEmpty() || !Path.of(xdg).isAbsolute() ? home.resolve(".local/share") : Path.of(xdg);
+            return Path.of(environment.get("LOCALAPPDATA")); // stays on this computer, unlike the roaming folder
         }
-        return folder.resolve(ConfigLocation.APP_FOLDER);
+        var xdg = environment.getOrDefault("XDG_DATA_HOME", "");
+        // the XDG specification says to ignore a relative path
+        return xdg.isEmpty() || !Path.of(xdg).isAbsolute() ? home.resolve(".local/share") : Path.of(xdg);
     }
 }

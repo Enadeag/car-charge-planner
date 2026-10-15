@@ -46,6 +46,7 @@ import io.github.enadeag.carchargeplanner.instance.InstanceCommand;
 import io.github.enadeag.carchargeplanner.instance.Reply;
 import io.github.enadeag.carchargeplanner.instance.SingleInstance;
 import io.github.enadeag.carchargeplanner.platform.linux.FreedesktopNotifications;
+import io.github.enadeag.carchargeplanner.platform.linux.LinuxMenuEntry;
 import io.github.enadeag.carchargeplanner.platform.linux.LinuxStartAtLogin;
 import io.github.enadeag.carchargeplanner.platform.linux.SecretServiceKeychain;
 import io.github.enadeag.carchargeplanner.platform.linux.StatusNotifierTray;
@@ -76,6 +77,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
@@ -85,8 +87,8 @@ import org.freedesktop.dbus.connections.impl.DBusConnectionBuilder;
 /**
  * Starts the desktop app: the composition root, where every part is made and handed what it needs.
  *
- * <p>Usage: {@code car-charge-planner [run | quit | start-at-login on | start-at-login off]
- * [--config=path/to/engine.json] [--background]}.
+ * <p>Usage: {@code car-charge-planner [run | quit | start-at-login on | start-at-login off | install-launcher
+ * | uninstall-launcher] [--config=path/to/engine.json] [--background]}.
  */
 public final class Main {
 
@@ -141,6 +143,8 @@ public final class Main {
             case QUIT -> System.exit(quitRunningApp(messages));
             case START_AT_LOGIN_ON -> System.exit(switchStartAtLogin(true, messages));
             case START_AT_LOGIN_OFF -> System.exit(switchStartAtLogin(false, messages));
+            case INSTALL_LAUNCHER -> System.exit(switchLauncher(true, messages));
+            case UNINSTALL_LAUNCHER -> System.exit(switchLauncher(false, messages));
         }
     }
 
@@ -380,6 +384,40 @@ public final class Main {
             System.err.println(messages.text(TextKey.CLI_START_AT_LOGIN_FAILED, String.valueOf(e.getMessage())));
             return 1;
         }
+    }
+
+    private static int switchLauncher(boolean install, Messages messages) {
+        if (!System.getProperty("os.name").startsWith("Linux")) {
+            System.err.println(messages.text(TextKey.CLI_LAUNCHER_LINUX_ONLY, TITLE));
+            return 1;
+        }
+        var launcher = System.getProperty("jpackage.app-path");
+        if (launcher == null) {
+            System.err.println(messages.text(TextKey.CLI_LAUNCHER_NEEDS_INSTALL));
+            return 1;
+        }
+        var dataHome = DataLocation.systemFolder(System.getProperty("os.name"), System.getenv(),
+                Path.of(System.getProperty("user.home")));
+        var menuEntry = new LinuxMenuEntry(dataHome, Path.of(launcher).toAbsolutePath(), TITLE,
+                LinuxMenuEntry::refreshCaches);
+        try {
+            if (install) {
+                System.out.println(messages.text(TextKey.CLI_LAUNCHER_INSTALLED, TITLE, lines(menuEntry.install())));
+                return 0;
+            }
+            var removed = menuEntry.uninstall();
+            System.out.println(removed.isEmpty() ? messages.text(TextKey.CLI_LAUNCHER_NOT_FOUND, TITLE)
+                    : messages.text(TextKey.CLI_LAUNCHER_REMOVED, TITLE, lines(removed)));
+            return 0;
+        } catch (IOException e) {
+            System.err.println(messages.text(install ? TextKey.CLI_LAUNCHER_INSTALL_FAILED
+                    : TextKey.CLI_LAUNCHER_REMOVE_FAILED, String.valueOf(e.getMessage())));
+            return 1;
+        }
+    }
+
+    private static String lines(List<Path> files) {
+        return files.stream().map(file -> "  " + file).collect(Collectors.joining("\n"));
     }
 
     /** Empty when the app does not run from jpackage's launcher, such as from Maven: there is nothing to start then. */

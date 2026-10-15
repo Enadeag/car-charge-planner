@@ -81,9 +81,11 @@ tar -xzf car-charge-planner-<version>-linux.tar.gz -C ~/.local/opt    # or any f
 
 The first start opens set-up. The archive is not signed yet either.
 
-**Update:** quit the app, replace the folder with the new one, and start it again. If it starts at login, switch that off and on again when the folder moved.
+**Add it to the menu.** Run `~/.local/opt/car-charge-planner/bin/car-charge-planner install-launcher` once. It puts the app in your application menu (KDE, GNOME and others) by writing a desktop entry to `$XDG_DATA_HOME/applications` and the icons to `$XDG_DATA_HOME/icons/hicolor` (by default under `~/.local/share`), without administrator rights. GNOME ties the app's notifications to this entry. It names the launcher it was run from, so run it again after you move the folder.
 
-**Uninstall:** switch off start at login (Settings, App), quit the app and delete the folder. Your settings and data stay where they are, listed under [Where things are kept](#where-things-are-kept); delete them if you want them gone.
+**Update:** quit the app, replace the folder with the new one, and start it again. If it starts at login, switch that off and on again when the folder moved, and run `install-launcher` again if you added the app to the menu.
+
+**Uninstall:** switch off start at login (Settings, App), run `car-charge-planner uninstall-launcher` if you added the app to the menu (it removes exactly the files `install-launcher` wrote), quit the app and delete the folder. Your settings and data stay where they are, listed under [Where things are kept](#where-things-are-kept); delete them if you want them gone.
 
 ## Run
 
@@ -96,6 +98,8 @@ The program also takes a few commands:
 | `car-charge-planner quit` | Asks the running app to quit. |
 | `car-charge-planner start-at-login on` | Starts the app at login, hidden in the tray. The same as the switch in Settings, App. |
 | `car-charge-planner start-at-login off` | Stops starting it at login. |
+| `car-charge-planner install-launcher` | Linux only: adds the app to the application menu, with its icons. Run it again after moving the folder. |
+| `car-charge-planner uninstall-launcher` | Linux only: removes what `install-launcher` wrote. |
 | `--config=path/to/engine.json` | Plans with another config file, such as `docs/example-engine.json`. |
 
 ### First run

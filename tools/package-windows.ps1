@@ -32,7 +32,8 @@ if ($Type -eq "exe") {
   # The upgrade code stays the same for every version, so a new installer replaces the old version.
   # The folder is under %LOCALAPPDATA%\Programs: jpackage's default, %LOCALAPPDATA%\car-charge-planner, is where
   # the app keeps its data.
-  $installer = @("--win-per-user-install", "--win-menu", "--win-shortcut",
+  $installer = @("--win-per-user-install", "--win-menu", "--win-menu-group", "Car charge planner",
+                 "--win-shortcut",
                  "--win-upgrade-uuid", "93c62923-67a1-4866-af93-ac179a22a9f0",
                  "--install-dir", "Programs\car-charge-planner")
 }
