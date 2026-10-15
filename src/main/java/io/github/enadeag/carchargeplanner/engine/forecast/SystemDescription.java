@@ -6,7 +6,7 @@ import java.time.ZoneId;
 import java.util.List;
 
 /**
- * What a forecast provider needs to know: where the panels are and their panel arrays.
+ * A solar system: where the panels are and their panel arrays.
  *
  * @param latitude the latitude in degrees, north positive
  * @param longitude the longitude in degrees, east positive

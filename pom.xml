@@ -118,6 +118,21 @@
             <arg>-Xlint:all,-serial</arg>
           </compilerArgs>
         </configuration>
+        <executions>
+          <!-- main code only: any lint or doclint finding fails the build, so each public, protected and package-private
+               element needs full Javadoc (CONTRIBUTING.md); the tests keep the plain lint above. "restricted" is
+               off because the Credential Manager is reached on purpose through the foreign function API. -->
+          <execution>
+            <id>default-compile</id>
+            <configuration>
+              <compilerArgs>
+                <arg>-Xlint:all,-serial,-restricted</arg>
+                <arg>-Xdoclint:all/package</arg>
+                <arg>-Werror</arg>
+              </compilerArgs>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

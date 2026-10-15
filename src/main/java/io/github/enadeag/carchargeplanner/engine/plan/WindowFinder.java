@@ -22,13 +22,26 @@ final class WindowFinder {
     private final PlanningPreferences preferences;
     private final Duration minWindow;
 
+    /**
+     * Makes a finder for one home and one set of preferences.
+     *
+     * @param system the home and equipment
+     * @param preferences the planning preferences, for the minimum window length and the import tolerance
+     */
     WindowFinder(HomeSystem system, PlanningPreferences preferences) {
         this.system = system;
         this.preferences = preferences;
         this.minWindow = Duration.ofMinutes(preferences.minWindowMinutes());
     }
 
-    /** The runs from now on in which the surplus reaches the charger's minimum current and the charger is free. */
+    /**
+     * The runs from now on in which the surplus reaches the charger's minimum current and the charger is free.
+     *
+     * @param forecast the forecast, in any order
+     * @param now the current moment; earlier time is cut off
+     * @param unavailable the times in which the charger is not free
+     * @return the runs in time order
+     */
     List<Run> runs(List<ForecastStep> forecast, Instant now, List<Unavailable> unavailable) {
         var runs = new ArrayList<Run>();
         var current = new ArrayList<Segment>();
@@ -60,7 +73,13 @@ final class WindowFinder {
         return free && Charging.ampsFor(segment.usableKw(), system.charger()) >= system.charger().minAmps();
     }
 
-    /** A run belongs to the local date it starts on, even when it goes on past midnight. */
+    /**
+     * Groups runs by day: a run belongs to the local date it starts on, even when it goes on past midnight.
+     *
+     * @param runs the runs
+     * @param zone the time zone that decides the dates
+     * @return the runs of each date that has one, in the order they were given
+     */
     static Map<LocalDate, List<Run>> byDay(List<Run> runs, ZoneId zone) {
         var days = new LinkedHashMap<LocalDate, List<Run>>();
         for (var run : runs) {
@@ -69,7 +88,13 @@ final class WindowFinder {
         return days;
     }
 
-    /** The windows, one per run at most, that deliver the energy needed (grid side, kWh), in time order. */
+    /**
+     * Picks the windows, one per run at most, that deliver the energy needed.
+     *
+     * @param runs the runs of one day
+     * @param neededKwh the grid-side energy to deliver in kWh
+     * @return the chosen windows in time order; they may fall short when the runs hold too little sun
+     */
     List<Window> windows(List<Run> runs, double neededKwh) {
         double remaining = neededKwh;
         var unused = new ArrayList<>(runs);

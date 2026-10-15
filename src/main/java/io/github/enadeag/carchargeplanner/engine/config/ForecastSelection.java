@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
  * Which forecast providers the owner chose, and their settings that are not secret (secret ones are in the keychain).
  * A provider this version does not know is not refused here: the forecast service says so when it is asked.
  *
- * @param primary the id of the forecast provider asked first
+ * @param primary the id of the primary forecast provider
  * @param fallback the id of the fallback provider, or empty for none
  * @param settings per provider id, setting key to value; secret settings are not here
  */

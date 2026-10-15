@@ -11,8 +11,15 @@ import org.freedesktop.dbus.types.Variant;
 /** The tray item's menu, served over the dbusmenu protocol so the panel draws it natively. Entry 0 is the root. */
 final class TrayMenu implements DbusMenu, Properties {
 
+    /** The object path the menu is served on. */
     static final String OBJECT_PATH = "/MenuBar";
 
+    /**
+     * One clickable entry of the menu.
+     *
+     * @param label the text of the entry
+     * @param action what a click does
+     */
     record Entry(String label, Runnable action) {
     }
 
@@ -21,6 +28,11 @@ final class TrayMenu implements DbusMenu, Properties {
 
     private final List<Entry> entries;
 
+    /**
+     * Makes the menu.
+     *
+     * @param entries the entries below the root, in the order shown; they are copied
+     */
     TrayMenu(List<Entry> entries) {
         this.entries = List.copyOf(entries);
     }

@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * The providers' secret settings, such as API keys. Empty values are left out, so storing them forgets a key.
+ * The providers' secret settings, such as API keys. Empty values are left out.
  *
  * @param byProvider per provider id, setting key to value
  */

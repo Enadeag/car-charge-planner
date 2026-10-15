@@ -23,6 +23,12 @@ public final class GridAdvisor {
     private final PlanningPreferences preferences;
     private final ZoneId zone;
 
+    /**
+     * Makes an advisor for one home and one set of preferences.
+     *
+     * @param system the home and equipment
+     * @param preferences the planning preferences, for the minimum charge level and the margin
+     */
     public GridAdvisor(HomeSystem system, PlanningPreferences preferences) {
         this.system = system;
         this.preferences = preferences;
@@ -34,6 +40,9 @@ public final class GridAdvisor {
      * the sun fixes in time gives no warning.
      *
      * @param days the plan the {@link Planner} made from this forecast
+     * @param forecast the forecast the plan was made from, in time order
+     * @param now the current moment; no window is placed before it
+     * @return the advice, or empty when no day ends below the minimum or the forecast is empty
      */
     public Optional<GridAdvice> advise(List<DayPlan> days, List<ForecastStep> forecast, Instant now) {
         var dip = days.stream().filter(this::endsBelowMinimum).findFirst();

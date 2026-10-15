@@ -6,7 +6,13 @@ import java.util.List;
 /**
  * One day of the plan, assuming the owner follows it.
  *
- * @param drivingPct the driving taken off this day; the end of the day stops at 0 %, this keeps the true shortfall
+ * @param date the local date
+ * @param socStartPct the battery level at the start of the day in percent
+ * @param windows the charge windows of the day in time order, possibly none
+ * @param socAfterChargingPct the battery level in percent once the windows are done
+ * @param socEndOfDayPct the battery level at the end of the day in percent, 0 or more
+ * @param drivingPct the part of the battery driving takes off the day in percent; unlike the end level it is not
+ *     stopped at 0
  */
 public record DayPlan(
         LocalDate date,
@@ -16,6 +22,11 @@ public record DayPlan(
         double socEndOfDayPct,
         double drivingPct) {
 
+    /**
+     * Copies the list of windows.
+     *
+     * @throws NullPointerException when the windows are null or hold null
+     */
     public DayPlan {
         windows = List.copyOf(windows);
     }
