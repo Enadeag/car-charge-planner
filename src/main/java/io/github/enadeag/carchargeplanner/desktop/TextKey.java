@@ -27,8 +27,54 @@ public enum TextKey {
     FOOTER_STALE,
     /** The footer's rate limit: {0} is the time the provider may be asked again. */
     FOOTER_BUSY,
-    /** The place of the charts, until they are built. */
-    CHART_NOT_YET,
+    /** The solar chart's heading. */
+    CHART_SOLAR,
+    /** The legend's name for the expected solar power. */
+    CHART_SOLAR_LEGEND,
+    /** The legend's name for the house's own use. */
+    CHART_HOUSE_LEGEND,
+    /** The legend's name for the charge windows. */
+    CHART_WINDOW_LEGEND,
+    /** The label on the line that marks the current time. */
+    CHART_NOW,
+    /** The top of the power axis: {0} the power in kW. */
+    CHART_SCALE,
+    /** One step's values on hover: {0} its start time, {1} the solar power in kW, {2} the house's use in kW. */
+    CHART_READOUT,
+    /** The solar chart in words: {0} the day, {1} the peak power in kW, {2} the peak's time, {3} the house's use in kW. */
+    CHART_SPOKEN,
+    /** The solar chart in words on a day without sun: {0} the day. */
+    CHART_SPOKEN_NO_SUN,
+    /** The charge windows in words, after the chart's: {0} the windows, joined. */
+    CHART_SPOKEN_WINDOWS,
+    /** One window in words: {0} its start, {1} its end. */
+    CHART_SPOKEN_SPAN,
+    /** The current time in words, after the chart's: {0} the time. */
+    CHART_SPOKEN_NOW,
+    /** The battery's heading. */
+    BATTERY_HEADING,
+    /** The battery's levels: {0} at the start, {1} after charging, in %. */
+    BATTERY_LEVELS,
+    /** The label of the minimum charge level's mark: {0} the minimum in %. */
+    BATTERY_MINIMUM,
+    /** The label of the target charge level's mark: {0} the target in %. */
+    BATTERY_TARGET,
+    /** Today's battery in words: {0} now, {1} after charging, {2} the minimum, {3} the target, all in %. */
+    BATTERY_SPOKEN_TODAY,
+    /** Another day's battery in words: {0} at its start, {1} the day, {2} after charging, {3} the minimum, {4} the target. */
+    BATTERY_SPOKEN_DAY,
+    /** Added to today's battery in words while its level is assumed. */
+    BATTERY_ASSUMED,
+    /** The button that opens the battery level's entry. */
+    BATTERY_UPDATE,
+    /** What the update button does. */
+    BATTERY_UPDATE_HINT,
+    /** The name of the field the battery level is entered in. */
+    BATTERY_LEVEL_FIELD,
+    /** The button that saves the entered battery level. */
+    BATTERY_SAVE,
+    /** The button that closes the battery level's entry without saving. */
+    BATTERY_CANCEL,
     /** The chip above the grid advice. */
     ADVICE_LABEL,
     /** The grid advice's title with a window: {0} kWh, {1} the day in a sentence, {2} the window's times. */

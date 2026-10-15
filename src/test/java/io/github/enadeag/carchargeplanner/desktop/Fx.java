@@ -6,12 +6,17 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.value.ObservableValue;
 
 /**
  * Runs test code on the JavaFX thread of JavaFX's headless platform, which draws in memory: no window reaches the
  * developer's desktop, and the tests run without one.
  */
 final class Fx {
+
+    /** The system's wish for reduced motion in the tests: on, so charts show their new values at once. */
+    static final ObservableValue<Boolean> REDUCED_MOTION = new SimpleBooleanProperty(true);
 
     private static final AtomicBoolean STARTED = new AtomicBoolean();
     private static final long TIMEOUT_S = 10;

@@ -25,11 +25,13 @@ final class DayMapper {
     private final String todaysNote;
     /** The day that would end below the minimum charge level without a grid charge. */
     private final Optional<LocalDate> gridDay;
+    private final ChartMapper charts;
 
     /**
      * Makes the mapper for one plan.
      *
-     * @param planned the plan whose time zone, day of making, battery assumption and grid advice the days are told in
+     * @param planned the plan whose time zone, day of making, battery assumption, grid advice, house use and charge
+     *     levels the days are told and drawn in
      * @param messages the texts, in the owner's language
      */
     DayMapper(Outlook.Planned planned, Messages messages) {
@@ -39,6 +41,7 @@ final class DayMapper {
         this.todaysNote = planned.batteryAssumed()
                 ? messages.text(TextKey.DAY_BATTERY_ASSUMED, messages.whole(planned.batteryPct().value())) : "";
         this.gridDay = planned.gridAdvice().map(GridAdvice::day);
+        this.charts = new ChartMapper(planned, messages);
     }
 
     /**
@@ -72,7 +75,7 @@ final class DayMapper {
                 messages.time(window.end(), zone), window.amps(), sunPct);
         var note = sentences(laterWindows(day), noteFor(day));
         return new DayModel(messages.tab(day.date(), today), title, DayKind.SUN, messages.text(TextKey.DAY_WINDOW),
-                span(window), facts, chips, note, spoken);
+                span(window), facts, chips, note, spoken, charts.curve(day), charts.battery(day));
     }
 
     private DayModel withoutWindow(DayPlan day) {
@@ -86,7 +89,7 @@ final class DayMapper {
         var title = messages.title(day.date(), today);
         var spoken = title + ": " + heading.toLowerCase(messages.locale()) + ". " + why;
         return new DayModel(messages.tab(day.date(), today), title, kind, heading, "", List.of(), List.of(battery(day)),
-                sentences(why, noteFor(day)), spoken);
+                sentences(why, noteFor(day)), spoken, charts.curve(day), charts.battery(day));
     }
 
     private Chip battery(DayPlan day) {

@@ -165,7 +165,8 @@ public final class Main {
             // JavaFX hands out its preferences on its own thread only
             var colorScheme = Platform.getPreferences().colorSchemeProperty();
             colorSchemeFound.complete(colorScheme);
-            dashboardMade.complete(new Dashboard(icon, colorScheme, clock, taskbarHiding(), messages));
+            dashboardMade.complete(new Dashboard(icon, colorScheme, Platform.getPreferences().reducedMotionProperty(),
+                    clock, taskbarHiding(), messages));
         });
         var dashboard = dashboardMade.get();
         var tray = tray(colorSchemeFound.get(), new Tray.MenuLabels(messages.text(TextKey.OPEN_DASHBOARD),
@@ -209,7 +210,7 @@ public final class Main {
         // only now: on Windows the first announcement needs the tray icon to show it
         ScheduledExecutorService replanning = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform()
                 .name("planner").daemon().factory());
-        replanning.scheduleWithFixedDelay(() -> {
+        Runnable replan = () -> {
             try {
                 var outlook = engine.plan();
                 dashboard.show(outlook);
@@ -218,7 +219,16 @@ public final class Main {
                 // an uncaught exception would stop the schedule for good
                 LOG.log(Level.ERROR, "planning failed", e);
             }
-        }, 0, REPLAN_MINUTES, TimeUnit.MINUTES);
+        };
+        dashboard.onBatteryEntered(level -> replanning.execute(() -> {
+            try {
+                engine.setBatteryLevel(level);
+            } catch (IOException e) {
+                LOG.log(Level.WARNING, "could not save the battery level", e);
+            }
+            replan.run();
+        }));
+        replanning.scheduleWithFixedDelay(replan, 0, REPLAN_MINUTES, TimeUnit.MINUTES);
         LOG.log(Level.INFO, "planning with " + configFile.path());
     }
 

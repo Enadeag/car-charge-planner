@@ -8,6 +8,8 @@ import java.util.Optional;
 import javafx.application.ColorScheme;
 import javafx.scene.Node;
 import javafx.scene.control.Labeled;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Shape;
@@ -18,7 +20,9 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 /**
  * WCAG AA on the rendered dashboard, in light and in dark: every text reaches 4.5:1 against what it sits on, every
- * glyph 3:1. Controls that are switched off are exempt, as WCAG allows.
+ * glyph and every mark of the charts (the curve's edge, the house line, the windows, "now", the battery and its marks)
+ * 3:1. The charts' readout is open, so its text is checked too. Controls that are switched off are exempt, as WCAG
+ * allows.
  */
 class DashboardContrastTest {
 
@@ -35,7 +39,7 @@ class DashboardContrastTest {
     /** Every day of the example plan, and the message shown without a plan. */
     private List<String> problems(ColorScheme scheme) throws Exception {
         return Fx.call(() -> {
-            var view = new DashboardView(() -> { }, () -> { }, new Messages(Language.ENGLISH));
+            var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, new Messages(Language.ENGLISH));
             stage = Scenes.show(view, scheme);
             var problems = new ArrayList<String>();
             var plan = Models.plan(Optional.of(Models.ADVICE));
@@ -43,6 +47,7 @@ class DashboardContrastTest {
                 view.show(plan);
                 ((javafx.scene.control.TabPane) view.lookup(".day-tabs")).getSelectionModel().select(day);
                 view.applyCss();
+                openReadout(view);
                 problems.addAll(problemsIn(view));
             }
             view.show(new DashboardModel.Message("No forecast", "Could not reach Open-Meteo", "Forecast: Open-Meteo"));
@@ -50,6 +55,14 @@ class DashboardContrastTest {
             problems.addAll(problemsIn(view));
             return problems;
         });
+    }
+
+    /** The first step's values, as the right arrow key on the chart opens them. */
+    private static void openReadout(DashboardView view) {
+        var chart = view.lookup(".solar-chart");
+        chart.fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.RIGHT, false, false, false, false));
+        view.applyCss();
+        view.layout();
     }
 
     private static List<String> problemsIn(Node root) {
@@ -65,6 +78,10 @@ class DashboardContrastTest {
                         check(problems, "glyph in " + owner(node), shape.getFill(), background(node), MARK);
                 case Shape shape when shape.getStyleClass().contains("glyph-stroke") ->
                         check(problems, "glyph in " + owner(node), shape.getStroke(), background(node), MARK);
+                case Shape shape when shape.getStyleClass().contains("chart-fill") ->
+                        check(problems, shape.getStyleClass() + " in " + owner(node), shape.getFill(), background(node), MARK);
+                case Shape shape when shape.getStyleClass().contains("chart-stroke") ->
+                        check(problems, shape.getStyleClass() + " in " + owner(node), shape.getStroke(), background(node), MARK);
                 default -> { }
             }
         }
