@@ -17,12 +17,21 @@ final class SystemTheme {
     private final ObservableValue<ColorScheme> scheme;
     private final List<Scene> scenes = new ArrayList<>();
 
-    /** @param scheme the system's colour scheme ({@code Platform.getPreferences().colorSchemeProperty()}) */
+    /**
+     * Makes the theme, following the scheme from now on.
+     *
+     * @param scheme the system's colour scheme ({@code Platform.getPreferences().colorSchemeProperty()}); never null
+     */
     SystemTheme(ObservableValue<ColorScheme> scheme) {
         this.scheme = scheme;
         scheme.subscribe(now -> scenes.forEach(scene -> apply(scene, now)));
     }
 
+    /**
+     * Gives a scene the dashboard's stylesheet, light or dark as the scheme is, now and whenever it changes.
+     *
+     * @param scene a scene whose root stays the same; the theme keeps it for as long as the app runs
+     */
     void style(Scene scene) {
         scene.getStylesheets().add(STYLESHEET);
         scenes.add(scene);

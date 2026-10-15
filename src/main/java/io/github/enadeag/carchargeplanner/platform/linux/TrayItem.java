@@ -13,6 +13,7 @@ import org.freedesktop.dbus.types.Variant;
 /** Our StatusNotifierItem as the panel sees it: its properties and what a click does. */
 final class TrayItem implements StatusNotifierItem, Properties {
 
+    /** Where on our bus connection the item is served. */
     static final String OBJECT_PATH = "/StatusNotifierItem";
 
     private final String id;
@@ -20,6 +21,14 @@ final class TrayItem implements StatusNotifierItem, Properties {
     private final List<Pixmap> pixmaps;
     private final Consumer<Point2D> onActivate;
 
+    /**
+     * Makes the item.
+     *
+     * @param id the app's name for the panel, the same in every run, such as "car-charge-planner"
+     * @param title the name the panel shows, such as in the tooltip
+     * @param icons the icon in every size the panel may pick from
+     * @param onActivate called with the click position the panel reports, on the D-Bus connection's thread
+     */
     TrayItem(String id, String title, List<BufferedImage> icons, Consumer<Point2D> onActivate) {
         this.id = id;
         this.title = title;

@@ -31,6 +31,13 @@ final class DashboardPopup {
     private Instant closedAt = Instant.EPOCH;
     private Point2D iconPosition = Point2D.ZERO;
 
+    /**
+     * Makes the popup, hidden.
+     *
+     * @param theme makes the popup light or dark as the system is
+     * @param icon the app icon, for a taskbar that lists the popup
+     * @param clock tells when the popup closed, so the click on the tray icon that closed it does not open it again
+     */
     DashboardPopup(SystemTheme theme, AppIcon icon, InstantSource clock) {
         this.clock = clock;
         content.getStyleClass().add("popup");
@@ -69,8 +76,9 @@ final class DashboardPopup {
     /**
      * Opens the popup beside the tray icon; a click on the icon while it is open closes it.
      *
-     * @param reported where the tray says the icon is; another process (the panel) says so, so it is used only when
-     *     it lies on a screen
+     * @param view the dashboard to show; taken out of the window if it is there
+     * @param reported where the tray says the icon is, in JavaFX's screen coordinates; another process (the panel)
+     *     says so, so it is used only when it lies on a screen
      */
     void toggle(DashboardView view, Point2D reported) {
         if (stage.isShowing()) {
@@ -96,6 +104,11 @@ final class DashboardPopup {
         stage.requestFocus();
     }
 
+    /**
+     * Whether the popup is open.
+     *
+     * @return true while it shows
+     */
     boolean isShowing() {
         return stage.isShowing();
     }
@@ -106,6 +119,7 @@ final class DashboardPopup {
         }
     }
 
+    /** Closes the popup; does nothing when it is closed. */
     void close() {
         if (stage.isShowing()) {
             stage.hide();

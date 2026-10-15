@@ -10,6 +10,11 @@ import javafx.scene.layout.VBox;
 /** A day's main card: its charge window and what to set, or why there is none. A screen reader reads it as one sentence. */
 final class MainCard extends VBox {
 
+    /**
+     * Makes the card for one day.
+     *
+     * @param day the day to show; its empty texts and lists are left out of the card
+     */
     MainCard(DayModel day) {
         getChildren().add(label(day.title() + " · " + day.heading(), "card-label"));
         if (!day.hero().isEmpty()) {

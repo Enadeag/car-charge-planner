@@ -26,6 +26,8 @@ final class DashboardView extends VBox {
     private Optional<GridAdviceModel> advice = Optional.empty();
 
     /**
+     * Makes the dashboard, empty until {@link #show(DashboardModel)}.
+     *
      * @param detachAction what the header's button does: open the popup as a window
      * @param contentChanged called when another day or a new plan shows, so the popup or window can fit it
      */
@@ -54,6 +56,11 @@ final class DashboardView extends VBox {
         getStyleClass().add("dashboard");
     }
 
+    /**
+     * Shows a plan, keeping the selected day, or why there is none.
+     *
+     * @param model what to show; never null
+     */
     void show(DashboardModel model) {
         switch (model) {
             case DashboardModel.Plan plan -> {
@@ -72,7 +79,11 @@ final class DashboardView extends VBox {
         footer.show(model.footer());
     }
 
-    /** The detach button only makes sense in the popup. */
+    /**
+     * Shows or hides the header's detach button, which only makes sense in the popup.
+     *
+     * @param detachable true in the popup, false in the window
+     */
     void setDetachable(boolean detachable) {
         detach.setVisible(detachable);
         detach.setManaged(detachable);

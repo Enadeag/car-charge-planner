@@ -11,6 +11,12 @@ final class DashboardWindow {
     private final Stage stage = new Stage();
     private final StackPane content = new StackPane();
 
+    /**
+     * Makes the window, hidden.
+     *
+     * @param theme makes the window light or dark as the system is
+     * @param icon the app icon, for the title bar and the taskbar
+     */
     DashboardWindow(SystemTheme theme, AppIcon icon) {
         var scene = new Scene(content);
         theme.style(scene);
@@ -23,6 +29,11 @@ final class DashboardWindow {
         });
     }
 
+    /**
+     * Shows the dashboard in the window, in front, sized to its content.
+     *
+     * @param view the dashboard to show; taken out of the popup if it is there
+     */
     void show(DashboardView view) {
         view.setDetachable(false);
         content.getChildren().setAll(view);
@@ -33,6 +44,11 @@ final class DashboardWindow {
         stage.requestFocus();
     }
 
+    /**
+     * Whether the window is open.
+     *
+     * @return true while it shows
+     */
     boolean isShowing() {
         return stage.isShowing();
     }
@@ -57,6 +73,11 @@ final class DashboardWindow {
         }
     }
 
+    /**
+     * Replaces hiding the window on close by another action.
+     *
+     * @param action what closing the window does, such as quitting the app; called on the JavaFX thread
+     */
     void onClose(Runnable action) {
         stage.setOnCloseRequest(event -> action.run());
     }

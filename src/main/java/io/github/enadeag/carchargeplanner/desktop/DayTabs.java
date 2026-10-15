@@ -12,6 +12,11 @@ import javafx.scene.control.TabPane;
  */
 final class DayTabs extends TabPane {
 
+    /**
+     * Makes the strip, empty.
+     *
+     * @param selected called with the index of the day tab that gets selected, from 0 for today
+     */
     DayTabs(IntConsumer selected) {
         setTabClosingPolicy(TabClosingPolicy.UNAVAILABLE);
         getStyleClass().add("day-tabs");
@@ -23,7 +28,11 @@ final class DayTabs extends TabPane {
         });
     }
 
-    /** Shows these days, keeping the selected tab where it was; without days the strip is hidden. */
+    /**
+     * Shows these days, keeping the selected tab where it was; without days the strip is hidden.
+     *
+     * @param days the days to show a tab for, today first; may be empty
+     */
     void show(List<DayModel> days) {
         int selected = Math.max(0, getSelectionModel().getSelectedIndex());
         setVisible(!days.isEmpty());

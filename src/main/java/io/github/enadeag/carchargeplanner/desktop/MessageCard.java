@@ -8,6 +8,11 @@ import javafx.scene.layout.VBox;
 /** Why there is no plan to show: still fetching, not set up, or no forecast. */
 final class MessageCard extends VBox {
 
+    /**
+     * Makes the card.
+     *
+     * @param message what to say; an empty detail is left out
+     */
     MessageCard(DashboardModel.Message message) {
         getChildren().add(paragraph(message.headline(), "message-headline"));
         if (!message.detail().isEmpty()) {

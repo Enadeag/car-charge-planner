@@ -19,6 +19,12 @@ final class Glyphs {
     private Glyphs() {
     }
 
+    /**
+     * The glyph of a source: a sun, a bolt for the grid, a battery for the car.
+     *
+     * @param source the source to draw
+     * @return a new 16 px glyph, coloured by dashboard.css
+     */
     static Node of(Source source) {
         return switch (source) {
             case SUN -> glyph("sun", sun());
@@ -27,6 +33,12 @@ final class Glyphs {
         };
     }
 
+    /**
+     * The glyph on a day's tab: its source's, or a hollow circle for a day without a charge window.
+     *
+     * @param kind where the day's charge comes from
+     * @return a new 16 px glyph, coloured by dashboard.css
+     */
     static Node of(DayKind kind) {
         return switch (kind) {
             case SUN -> of(Source.SUN);
@@ -35,7 +47,11 @@ final class Glyphs {
         };
     }
 
-    /** A box with an arrow out of it: open the popup as a window of its own. */
+    /**
+     * A box with an arrow out of it, for the button that opens the popup as a window of its own.
+     *
+     * @return a new 16 px glyph, in the muted text colour
+     */
     static Node detach() {
         var box = outlined(new Rectangle(1.5, 3.5, 11, 11));
         box.setArcWidth(3);
@@ -43,7 +59,12 @@ final class Glyphs {
         return glyph("neutral", box, stroke(7, 9, 14.5, 1.5), stroke(9.5, 1.5, 14.5, 1.5), stroke(14.5, 1.5, 14.5, 6.5));
     }
 
-    /** The CSS class of a source or a kind of day: "sun", "grid", "car", "none". */
+    /**
+     * The CSS class of a source or a kind of day.
+     *
+     * @param kind a {@link Source} or a {@link DayKind}
+     * @return its name in lower case: "sun", "grid", "car", "none"
+     */
     static String styleClass(Enum<?> kind) {
         return kind.name().toLowerCase(Locale.ROOT);
     }

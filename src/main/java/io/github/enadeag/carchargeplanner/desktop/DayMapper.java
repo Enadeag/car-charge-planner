@@ -28,6 +28,11 @@ final class DayMapper {
     /** The day that would end below the minimum charge level without a grid charge. */
     private final Optional<LocalDate> gridDay;
 
+    /**
+     * Makes the mapper for one plan.
+     *
+     * @param planned the plan whose time zone, day of making, battery assumption and grid advice the days are told in
+     */
     DayMapper(Outlook.Planned planned) {
         this.zone = planned.zone();
         this.today = planned.madeAt().atZone(zone).toLocalDate();
@@ -36,6 +41,12 @@ final class DayMapper {
         this.gridDay = planned.gridAdvice().map(GridAdvice::day);
     }
 
+    /**
+     * The days in words.
+     *
+     * @param days the plan's days, today first; may be empty
+     * @return one day model per day, in the same order
+     */
     List<DayModel> map(List<DayPlan> days) {
         return days.stream().map(this::map).toList();
     }

@@ -14,11 +14,22 @@ final class GridAdviceMapper {
     private final ZoneId zone;
     private final LocalDate today;
 
+    /**
+     * Makes the mapper for one plan.
+     *
+     * @param planned the plan whose time zone and day of making the advice is told in
+     */
     GridAdviceMapper(Outlook.Planned planned) {
         this.zone = planned.zone();
         this.today = planned.madeAt().atZone(zone).toLocalDate();
     }
 
+    /**
+     * The advice in words: how much, when, at what current, and why.
+     *
+     * @param advice the engine's advice; its window may be empty when no day has room for the charge
+     * @return the advice's title and detail
+     */
     GridAdviceModel map(GridAdvice advice) {
         var title = advice.window()
                 .map(window -> text("Charge %.1f kWh from the grid: %s %s.", advice.energyKwh(), day(window), span(window)))

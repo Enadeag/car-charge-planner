@@ -7,15 +7,30 @@ final class OutlookMapper {
 
     private final String forecastSource;
 
-    /** @param forecastSource the forecast provider's name, for the footer */
+    /**
+     * Makes the mapper.
+     *
+     * @param forecastSource the forecast provider's name, shown in the footer, such as "Open-Meteo"
+     */
     OutlookMapper(String forecastSource) {
         this.forecastSource = forecastSource;
     }
 
+    /**
+     * What the dashboard shows before the first plan.
+     *
+     * @return a message that the forecast is being fetched
+     */
     DashboardModel loading() {
         return new DashboardModel.Message("Fetching the forecast…", "", footer());
     }
 
+    /**
+     * The outlook in words.
+     *
+     * @param outlook the engine's plan, or why there is none; never null
+     * @return a plan with its days, or a message when there is no plan or it has no days
+     */
     DashboardModel map(Outlook outlook) {
         return switch (outlook) {
             case Outlook.Planned planned when planned.days().isEmpty() ->

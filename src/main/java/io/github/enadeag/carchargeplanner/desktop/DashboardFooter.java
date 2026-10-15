@@ -11,6 +11,7 @@ final class DashboardFooter extends HBox {
 
     private final Label forecast = Texts.paragraph("", "footer-text");
 
+    /** Makes the footer, with an empty forecast text and the Away and Settings buttons switched off. */
     DashboardFooter() {
         HBox.setHgrow(forecast, Priority.ALWAYS);
         forecast.setMaxWidth(Double.MAX_VALUE);
@@ -18,6 +19,11 @@ final class DashboardFooter extends HBox {
         getStyleClass().add("dashboard-footer");
     }
 
+    /**
+     * Shows the forecast's source and freshness.
+     *
+     * @param text such as "Forecast: Open-Meteo · 10:51"; never null
+     */
     void show(String text) {
         forecast.setText(text);
     }
