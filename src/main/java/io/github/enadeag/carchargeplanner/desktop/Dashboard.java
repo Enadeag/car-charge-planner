@@ -3,7 +3,9 @@ package io.github.enadeag.carchargeplanner.desktop;
 import io.github.enadeag.carchargeplanner.engine.Outlook;
 import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import java.time.InstantSource;
+import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
@@ -13,36 +15,46 @@ import javafx.geometry.Point2D;
  * The one screen that shows the plan: a popup beside the tray icon, or a window. Both show the same
  * {@link DashboardView}; it moves to the window when the popup is detached.
  *
+ * <p>When the owner chooses another language, the dashboard is made again in it and shows the same outlook, on the
+ * same day, in the popup or window that shows it now.
+ *
  * <p>Make it on the JavaFX thread; its public methods may be called from any thread.
  */
 public final class Dashboard {
 
-    private final OutlookMapper mapper;
-    private final DashboardView view;
+    private final ObservableValue<Boolean> reducedMotion;
     private final DashboardPopup popup;
     private final DashboardWindow window;
+    // the fields below belong to the JavaFX thread
+    private Messages messages;
+    private DashboardView view;
+    private Optional<Outlook> outlook = Optional.empty();
+    private Optional<IntConsumer> batteryEntered = Optional.empty();
+    private Optional<Runnable> away = Optional.empty();
+    private Optional<Runnable> settings = Optional.empty();
 
     /**
      * Makes the dashboard, hidden, showing that the forecast is being fetched until {@link #show(Outlook)} is called.
      *
      * @param icon the app icon, for the window's title bar and the taskbar
-     * @param colorScheme the system's light or dark, followed while the app runs
-     *     ({@code Platform.getPreferences().colorSchemeProperty()}); never null
+     * @param colorScheme light or dark for the windows, followed while the app runs: the owner's appearance over the
+     *     system's ({@link Appearance#scheme}); never null
      * @param reducedMotion true while the system asks for reduced motion
      *     ({@code Platform.getPreferences().reducedMotionProperty()}); the charts then change without moving; never
      *     null
      * @param clock tells when the popup closed, so the click on the tray icon that closed it does not open it again
      * @param taskbarHiding how this system keeps the popup out of its taskbar
-     * @param messages the texts, in the owner's language
+     * @param language the language the texts are in, followed while the app runs; never null
      */
     public Dashboard(AppIcon icon, ObservableValue<ColorScheme> colorScheme, ObservableValue<Boolean> reducedMotion,
-            InstantSource clock, TaskbarHiding taskbarHiding, Messages messages) {
+            InstantSource clock, TaskbarHiding taskbarHiding, LanguageChoice language) {
         var theme = new SystemTheme(colorScheme);
-        this.mapper = new OutlookMapper(messages);
-        this.view = new DashboardView(this::detach, this::fitToContent, reducedMotion, messages);
+        this.reducedMotion = reducedMotion;
         this.popup = new DashboardPopup(theme, icon, clock, taskbarHiding);
         this.window = new DashboardWindow(theme, icon);
-        view.show(mapper.loading());
+        this.messages = language.messages();
+        this.view = newView();
+        language.onChange(chosen -> Platform.runLater(() -> speak(chosen)));
     }
 
     /**
@@ -73,8 +85,10 @@ public final class Dashboard {
      * @param outlook the engine's latest plan, or why there is none; never null
      */
     public void show(Outlook outlook) {
-        var model = mapper.map(outlook);
-        Platform.runLater(() -> view.show(model));
+        Platform.runLater(() -> {
+            this.outlook = Optional.of(outlook);
+            view.show(new OutlookMapper(messages).map(outlook));
+        });
     }
 
     /**
@@ -83,7 +97,10 @@ public final class Dashboard {
      * @param entered gets the level the owner saved; called on the JavaFX thread, so it should hand the work on
      */
     public void onBatteryEntered(Consumer<Percent> entered) {
-        Platform.runLater(() -> view.onBatteryEntered(pct -> entered.accept(new Percent(pct))));
+        Platform.runLater(() -> {
+            batteryEntered = Optional.of(pct -> entered.accept(new Percent(pct)));
+            view.onBatteryEntered(batteryEntered.get());
+        });
     }
 
     /**
@@ -92,7 +109,10 @@ public final class Dashboard {
      * @param action what the button does; called on the JavaFX thread
      */
     public void onAway(Runnable action) {
-        Platform.runLater(() -> view.onAway(action));
+        Platform.runLater(() -> {
+            away = Optional.of(action);
+            view.onAway(action);
+        });
     }
 
     /**
@@ -101,7 +121,10 @@ public final class Dashboard {
      * @param action what the button does; called on the JavaFX thread
      */
     public void onSettings(Runnable action) {
-        Platform.runLater(() -> view.onSettings(action));
+        Platform.runLater(() -> {
+            settings = Optional.of(action);
+            view.onSettings(action);
+        });
     }
 
     /**
@@ -111,6 +134,30 @@ public final class Dashboard {
      */
     public void quitWhenClosed(Runnable quit) {
         Platform.runLater(() -> window.onClose(quit));
+    }
+
+    /**
+     * The same outlook in another language: a new view, made as the first one was, takes the place of the one shown,
+     * on the day that was selected.
+     */
+    private void speak(Messages chosen) {
+        messages = chosen;
+        var before = view;
+        view = newView();
+        view.selectDay(before.selectedDay());
+        popup.replace(before, view);
+        window.replace(before, view);
+    }
+
+    /** A view in the language spoken now, with the actions given so far, showing the latest outlook. */
+    private DashboardView newView() {
+        var made = new DashboardView(this::detach, this::fitToContent, reducedMotion, messages);
+        batteryEntered.ifPresent(made::onBatteryEntered);
+        away.ifPresent(made::onAway);
+        settings.ifPresent(made::onSettings);
+        var mapper = new OutlookMapper(messages);
+        made.show(outlook.map(mapper::map).orElseGet(mapper::loading));
+        return made;
     }
 
     /** Another day or a new plan: the popup or window takes the height it needs. */

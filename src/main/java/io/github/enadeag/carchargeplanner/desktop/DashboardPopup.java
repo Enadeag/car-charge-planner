@@ -111,6 +111,21 @@ final class DashboardPopup {
     }
 
     /**
+     * Puts another view where one is shown, such as the same dashboard in another language. The popup stays open or
+     * closed, and fits the new view.
+     *
+     * @param before the view that may be in the popup now
+     * @param after the view to show in its place; nothing changes when the popup does not hold {@code before}
+     */
+    void replace(DashboardView before, DashboardView after) {
+        if (content.getChildren().contains(before)) {
+            after.setDetachable(true);
+            content.getChildren().setAll(after);
+            fit();
+        }
+    }
+
+    /**
      * Whether the popup is open.
      *
      * @return true while it shows

@@ -14,6 +14,7 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import javax.imageio.ImageIO;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
 import org.freedesktop.dbus.exceptions.DBusException;
@@ -58,7 +59,7 @@ public final class FreedesktopNotifications implements Notifications {
     private final String desktopEntry;
     private final AppIcon icon;
     private final Path iconFolder;
-    private final String openLabel;
+    private final Supplier<String> openLabel;
     private final Deque<Long> sent = new ArrayDeque<>();
     private Runnable clicked = () -> { };
     private DBusConnection bus;
@@ -75,11 +76,11 @@ public final class FreedesktopNotifications implements Notifications {
      * @param icon the app icon, shown on each notification
      * @param iconFolder an existing folder of the notifications' own that only this user may use, where the icon is
      *     written for the server to read; {@link #close()} removes it again
-     * @param openLabel what the notifications' button that opens the dashboard says, in the owner's language, such as
-     *     "Open dashboard"; not empty
+     * @param openLabel what the notifications' button that opens the dashboard says, in the language spoken now, such
+     *     as "Open dashboard"; asked anew for each notification, never empty
      */
     public FreedesktopNotifications(BusConnector connector, String appName, String desktopEntry, AppIcon icon,
-            Path iconFolder, String openLabel) {
+            Path iconFolder, Supplier<String> openLabel) {
         this.connector = connector;
         this.appName = appName;
         this.desktopEntry = desktopEntry;
@@ -103,8 +104,9 @@ public final class FreedesktopNotifications implements Notifications {
         try {
             var server = connection.getRemoteObject(NotificationServer.BUS_NAME, NotificationServer.OBJECT_PATH,
                     NotificationServer.class);
+            var open = openLabel.get();
             var id = server.Notify(appName, new UInt32(0), iconUri(), text.title(), text.body(),
-                    List.of(DEFAULT_ACTION, openLabel, OPEN_ACTION, openLabel),
+                    List.of(DEFAULT_ACTION, open, OPEN_ACTION, open),
                     Map.of("desktop-entry", new Variant<>(desktopEntry)), EXPIRE_MS);
             sent.addLast(id.longValue());
             if (sent.size() > REMEMBER) {

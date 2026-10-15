@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.enadeag.carchargeplanner.desktop.AppSettings;
+import io.github.enadeag.carchargeplanner.desktop.Appearance;
 import io.github.enadeag.carchargeplanner.desktop.DisplayMode;
 import io.github.enadeag.carchargeplanner.desktop.Fx;
 import io.github.enadeag.carchargeplanner.desktop.Language;
@@ -137,12 +138,14 @@ class SettingsViewTest {
         Fx.call(() -> {
             settings.choose(view, TextKey.FIELD_UNITS, Units.IMPERIAL);
             settings.choose(view, TextKey.FIELD_MODE, DisplayMode.WINDOW);
+            settings.choose(view, TextKey.FIELD_APPEARANCE, Appearance.DARK);
             settings.choose(view, TextKey.FIELD_LANGUAGE, Optional.of(Language.DUTCH));
             return view.save();
         });
 
         assertThat(settings.appSettings.read())
-                .isEqualTo(new AppSettings(Optional.of(Language.DUTCH), Units.IMPERIAL, DisplayMode.WINDOW));
+                .isEqualTo(new AppSettings(Optional.of(Language.DUTCH), Units.IMPERIAL, DisplayMode.WINDOW,
+                        Appearance.DARK));
         assertThat(settings.configPath).hasContent(original);
     }
 

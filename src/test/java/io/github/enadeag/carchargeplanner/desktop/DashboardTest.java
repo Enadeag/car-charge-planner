@@ -44,6 +44,7 @@ class DashboardTest {
 
     private final AtomicReference<Instant> now = new AtomicReference<>(Instant.parse("2026-10-15T08:00:00Z"));
     private final InstantSource clock = now::get;
+    private final LanguageChoice language = new LanguageChoice(Language.ENGLISH);
     private Dashboard dashboard;
 
     @BeforeEach
@@ -54,7 +55,7 @@ class DashboardTest {
     private Dashboard dashboard(TaskbarHiding taskbarHiding) throws Exception {
         return Fx.call(() -> new Dashboard(new AppIcon(), new SimpleObjectProperty<>(ColorScheme.LIGHT),
                 new SimpleObjectProperty<>(true), clock,
-                taskbarHiding, new Messages(Language.ENGLISH)));
+                taskbarHiding, language));
     }
 
     private static List<Window> showingWindows() throws Exception {
@@ -383,6 +384,61 @@ class DashboardTest {
         Fx.settle();
 
         assertThat(window()).isPresent();
+    }
+
+    @Test
+    void anotherLanguageRendersTheOpenPopupAgainOnTheSameDayWithItsChartsAndAccessibleTexts() throws Exception {
+        var footerSettings = new AtomicReference<Integer>(0);
+        dashboard.onSettings(() -> footerSettings.updateAndGet(count -> count + 1));
+        clickTheIcon();
+        dashboard.show(planWithTwoDays());
+        Fx.settle();
+        selectDay(popup().orElseThrow(), 1);
+
+        language.choose(Optional.of(Language.DUTCH));
+        Fx.settle();
+
+        var popup = popup().orElseThrow();
+        var root = popup.getScene().getRoot();
+        var tabs = Fx.call(() -> (TabPane) root.lookup(".day-tabs"));
+        assertThat(Fx.call(() -> tabs.getSelectionModel().getSelectedIndex())).isEqualTo(1);
+        assertThat(Fx.call(() -> tabs.getTabs().getFirst().getText())).isEqualTo("Vandaag");
+        assertThat(Fx.call(tabs::getAccessibleText)).isEqualTo("Dagen");
+        assertThat(Fx.call(() -> Scenes.visibleTexts(root))).contains("Morgen · Geen laadvenster", "Verwachte zon", "Accu van de auto",
+                "Afwezig", "Instellingen");
+        assertThat(Fx.call(() -> root.lookup(".detach").getAccessibleText())).isEqualTo("In een venster openen");
+        assertThat(Fx.call(() -> root.lookup(".solar-chart").getAccessibleText())).startsWith("Morgen, verwachte zon");
+        var settings = Fx.call(() -> Scenes.all(root).stream()
+                .filter(node -> node instanceof Button button && "Instellingen".equals(button.getText()))
+                .map(Button.class::cast).findFirst().orElseThrow());
+        Fx.run(settings::fire);
+        assertThat(footerSettings.get()).as("the footer's actions still work").isEqualTo(1);
+    }
+
+    @Test
+    void anotherLanguageReachesTheWindowAndALaterOutlook() throws Exception {
+        var window = detachedWith(planWithTwoDays());
+
+        language.choose(Optional.of(Language.DUTCH));
+        Fx.settle();
+        dashboard.show(new Outlook.NoForecast("Open-Meteo: no connection."));
+        Fx.settle();
+
+        assertThat(window()).containsSame(window);
+        assertThat(Fx.call(() -> window.getScene().lookup(".detach").isVisible())).isFalse();
+        assertThat(Fx.call(() -> Scenes.visibleTexts(window.getScene().getRoot()))).contains("Geen voorspelling");
+    }
+
+    @Test
+    void beforeTheFirstOutlookAnotherLanguageSaysTheForecastIsBeingFetchedInIt() throws Exception {
+        clickTheIcon();
+
+        language.choose(Optional.of(Language.DUTCH));
+        Fx.settle();
+
+        var popup = popup().orElseThrow();
+        assertThat(Fx.call(() -> Scenes.visibleTexts(popup.getScene().getRoot())))
+                .contains("De voorspelling wordt opgehaald…");
     }
 
     @Test

@@ -105,7 +105,7 @@ and the Maven wrapper in the root, the code in `src/main/java/io/github/enadeag/
 | Package | What it holds |
 | --- | --- |
 | `engine` | Plans, fetches forecasts and owns the stored data, without user interface; clients get plain records. `engine.config` the config file, `engine.away` the away periods (weekly, and the ones entered by hand and kept in `away.json`), `engine.battery` the battery level the owner entered last (kept in `battery.json`), `engine.forecast` the provider contract and the forecast service (fallback, cache, rate limits), `engine.forecast.providers` Open-Meteo and Forecast.Solar, `engine.secrets` the API keys, `engine.plan` the planner, `engine.notify` when the owner is told about a window (the notifier port, and the announced windows kept in `announced.json`). |
-| `desktop` | The JavaFX dashboard, the notifications' texts, every text in each language (`Messages`, with the bundles in `src/main/resources`), the app settings (`app.json`: language, units and display mode), and what a tray icon, notifications and start at login must do. `desktop.settings` is the Settings window: a page per category, cards of fields, saved through the engine and `app.json`. |
+| `desktop` | The JavaFX dashboard, the notifications' texts, every text in each language (`Messages`, with the bundles in `src/main/resources`), the app settings (`app.json`: language, appearance, units and display mode), and what a tray icon, notifications and start at login must do. `desktop.settings` is the Settings window: a page per category, cards of fields, saved through the engine and `app.json`. |
 | `instance` | One running copy per user: a second start asks the first, over a private Unix domain socket, to show its dashboard. |
 | `platform.linux`, `platform.windows` | The tray icon, notifications, the keychain and start at login on each system: our own StatusNotifierItem, notification and Secret Service clients over D-Bus, and a desktop entry in the autostart folder; AWT's `SystemTray` and its icon's messages, the Credential Manager and the Run key. |
 | `Main` | The composition root: the one place where the parts are made and handed to each other. |
@@ -174,9 +174,11 @@ The texts are in `src/main/resources/io/github/enadeag/carchargeplanner/desktop/
 DAY_SET = Set {0} A ({1} kW)
 ```
 
-1. **Add the language to the app.** In `desktop/Language.java`, add a constant with the language's ISO 639 code and
-   the locale whose numbers, times and day names it uses, such as `GERMAN("de", Locale.GERMANY)`. Language codes are
-   two letters: `de`, `fr`, `pt`.
+1. **Add the language to the app.** In `desktop/Language.java`, add a constant with the language's ISO 639 code,
+   the locale whose numbers, times and day names it uses, and its name in itself, which the language list shows,
+   such as `GERMAN("de", Locale.GERMANY, "Deutsch")`. Language codes are two letters: `de`, `fr`, `pt`. Add the code
+   to `--include-locales` in `tools/package-linux.sh` and `tools/package-windows.ps1` too, so the packaged app has
+   the language's day names and numbers.
 
 2. **Start the file.** Copy `messages_en.properties` to `messages_<code>.properties` and translate every text after
    the `=`. Things to know:
@@ -201,7 +203,8 @@ DAY_SET = Set {0} A ({1} kW)
 4. **Try it.** The app follows the system's language: on Linux `LANGUAGE`, then `LC_ALL`, `LC_MESSAGES` and `LANG`
    (the plain `C` locale means English); on Windows the language of the user's display. To choose one, write
    `{"language": "de"}` to `app.json` beside `engine.json` (`~/.config/car-charge-planner/`, Windows
-   `%APPDATA%\car-charge-planner\`); `"system"` follows the system again. The language is read when the app starts.
+   `%APPDATA%\car-charge-planner\`); `"system"` follows the system again. The file is read when the app starts;
+   choosing a language in Settings (App) and saving switches the running app at once.
 
    ```bash
    LANGUAGE=nl ./mvnw compile exec:exec -Dapp.args="--config=docs/example-engine.json"

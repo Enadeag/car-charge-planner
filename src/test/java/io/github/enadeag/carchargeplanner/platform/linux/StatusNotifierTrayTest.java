@@ -76,8 +76,8 @@ class StatusNotifierTrayTest {
         address = bus.address();
         panel = DBusConnectionBuilder.forAddress(address).withShared(false).build();
         tray = new StatusNotifierTray(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),
-                new StatusIcon(), folder.resolve("tray"), "Car charge planner",
-                new Tray.MenuLabels("Open dashboard", "Settings…", "About…", "Quit"));
+                new StatusIcon(), folder.resolve("tray"), "Car charge planner");
+        tray.showLabels(new Tray.MenuLabels("Open dashboard", "Settings…", "About…", "Quit"));
     }
 
     @AfterEach
@@ -196,6 +196,36 @@ class StatusNotifierTrayTest {
         assertThat(settings.await(TIMEOUT_S, TimeUnit.SECONDS)).isTrue();
         menu.Event(1, "clicked", new Variant<>(0), new UInt32(0));
         assertThat(opened.await(TIMEOUT_S, TimeUnit.SECONDS)).isTrue();
+    }
+
+    @Test
+    void newLabelsReachTheShownMenuWithANewRevisionAndTheClicksStillWork() throws Exception {
+        var name = showWithAWatcher();
+        var menu = panel.getRemoteObject(name, TrayMenu.OBJECT_PATH, DbusMenu.class);
+        var revisionBefore = menu.GetLayout(0, -1, List.of()).first;
+        var updated = new LinkedBlockingQueue<Object[]>();
+        panel.addGenericSigHandler(new DBusMatchRule("signal", "com.canonical.dbusmenu", "LayoutUpdated"),
+                signal -> {
+                    try {
+                        updated.add(signal.getParameters());
+                    } catch (DBusException e) {
+                        throw new IllegalStateException(e);
+                    }
+                });
+
+        tray.showLabels(new Tray.MenuLabels("Dashboard openen", "Instellingen…", "Over…", "Afsluiten"));
+
+        var signal = updated.poll(TIMEOUT_S, TimeUnit.SECONDS);
+        assertThat(signal).as("LayoutUpdated").isNotNull();
+        var layout = menu.GetLayout(0, -1, List.of());
+        assertThat(layout.first.longValue()).isGreaterThan(revisionBefore.longValue());
+        assertThat(signal[0]).isEqualTo(layout.first);
+        assertThat(signal[1]).isEqualTo(0);
+        assertThat(menu.GetGroupProperties(List.of(1, 2, 3, 4), List.of()))
+                .extracting(entry -> (Object) entry.properties.get("label").getValue())
+                .containsExactly("Dashboard openen", "Instellingen…", "Over…", "Afsluiten");
+        menu.Event(4, "clicked", new Variant<>(0), new UInt32(0));
+        assertThat(quit.await(TIMEOUT_S, TimeUnit.SECONDS)).isTrue();
     }
 
     @Test
