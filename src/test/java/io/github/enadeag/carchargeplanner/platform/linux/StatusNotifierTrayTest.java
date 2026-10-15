@@ -84,7 +84,7 @@ class StatusNotifierTrayTest {
         address = new BufferedReader(new InputStreamReader(busDaemon.getInputStream())).readLine().strip();
         panel = DBusConnectionBuilder.forAddress(address).withShared(false).build();
         tray = new StatusNotifierTray(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),
-                new StatusIcon(), folder.resolve("icons"), "Car charge planner");
+                new StatusIcon(), folder.resolve("tray"), "Car charge planner");
     }
 
     @AfterEach
@@ -148,6 +148,8 @@ class StatusNotifierTrayTest {
         var properties = properties(showWithAWatcher());
 
         assertThat(themeIcon(properties)).isEqualTo(new StatusIcon().svg(StatusDot.SUN, PanelShade.DARK));
+        // Plasma looks in IconThemePath only when its last folder is called "icons"
+        assertThat(Path.of((String) properties.get("IconThemePath").getValue()).getFileName()).hasToString("icons");
         assertThat(toolTipText(properties)).isEqualTo("Charge on sun now, until 14:30, at 10 A.");
     }
 
@@ -179,7 +181,7 @@ class StatusNotifierTrayTest {
 
         tray.remove();
 
-        assertThat(folder.resolve("icons")).doesNotExist();
+        assertThat(folder.resolve("tray")).doesNotExist();
     }
 
     @Test

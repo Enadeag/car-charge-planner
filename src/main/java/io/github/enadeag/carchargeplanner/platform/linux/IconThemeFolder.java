@@ -20,6 +20,8 @@ final class IconThemeFolder {
     private static final System.Logger LOG = System.getLogger(IconThemeFolder.class.getName());
 
     private final Path root;
+    /** KDE Plasma finds the icons only in a folder named "icons": it takes the name of the folder above for the app's. */
+    private final Path icons;
     private boolean written;
 
     /**
@@ -30,6 +32,7 @@ final class IconThemeFolder {
      */
     IconThemeFolder(Path root) {
         this.root = root;
+        this.icons = root.resolve("icons");
     }
 
     /**
@@ -39,7 +42,7 @@ final class IconThemeFolder {
      * @param icon draws the icons
      */
     void write(StatusIcon icon) {
-        var apps = root.resolve("hicolor/scalable/apps");
+        var apps = icons.resolve("hicolor/scalable/apps");
         try {
             Files.createDirectories(apps);
             for (var dot : StatusDot.values()) {
@@ -54,10 +57,10 @@ final class IconThemeFolder {
     /**
      * Where the panel finds the icons, for the item's {@code IconThemePath}.
      *
-     * @return the folder's absolute path
+     * @return the absolute path of the folder "icons" in the theme's own folder
      */
     String path() {
-        return root.toAbsolutePath().toString();
+        return icons.toAbsolutePath().toString();
     }
 
     /**
