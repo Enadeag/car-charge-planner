@@ -15,6 +15,7 @@ import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import io.github.enadeag.carchargeplanner.engine.secrets.Keychain;
 import io.github.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import io.github.enadeag.carchargeplanner.platform.linux.SecretServiceKeychain;
 import io.github.enadeag.carchargeplanner.platform.linux.StatusNotifierTray;
 import io.github.enadeag.carchargeplanner.platform.windows.AwtTray;
 import java.lang.System.Logger.Level;
@@ -41,6 +42,8 @@ public final class Main {
     private static final java.util.logging.Logger DBUS_LOG = java.util.logging.Logger.getLogger("org.freedesktop.dbus");
     private static final String TITLE = "Car charge planner";
     private static final String FORECAST_SOURCE = "Open-Meteo";
+    /** The app's name where other programs see it, such as on the keychain's entries. */
+    private static final String APP_ID = "car-charge-planner";
     /**
      * The forecast cache answers in between, so this is how soon a provider that could not be reached is tried again,
      * not how often it is asked.
@@ -108,7 +111,10 @@ public final class Main {
     }
 
     private static Keychain keychain() {
-        return new NoKeychain();
+        if (System.getProperty("os.name").startsWith("Windows")) {
+            return new NoKeychain();
+        }
+        return new SecretServiceKeychain(() -> DBusConnectionBuilder.forSessionBus().withShared(false).build(), APP_ID);
     }
 
     private static Path configPath(String[] args) {
