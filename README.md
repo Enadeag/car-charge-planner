@@ -51,6 +51,7 @@ Limits to know about:
 - **You enter the battery level by hand**, and the times the car is away: weekly in Settings, or for a single day on the dashboard. There is no calendar sync and no connection to the car.
 - **You set the charge current yourself**, in your charger's own app. The app only recommends it.
 - **Settings of the Python version (0.2.0 and earlier) are not read.** Run set-up once; the old files are left alone.
+- **Screen readers on Linux (Orca) cannot read the app**, because JavaFX has no AT-SPI support. Keyboard use, contrast and scaling work on every system; see [Accessibility](#accessibility).
 
 ## Install
 
@@ -161,6 +162,22 @@ On Linux `XDG_CONFIG_HOME` and `XDG_DATA_HOME` move the config and data folders,
 5. A window you have been notified about is kept as announced while it runs, so the power on screen matches what you set.
 
 The words used here (surplus, charge window, away period and so on) are defined in [CONTEXT.md](CONTEXT.md).
+
+## Accessibility
+
+The dashboard, Settings and set-up are made to be used with a keyboard only, with a screen reader, in light and dark, and at 150 and 200 % scaling.
+
+- **Keyboard.** Tab and Shift+Tab reach every control in reading order, and the control with the focus has a ring around it. Enter saves or goes on (Save, Next, an entry's Save), Escape cancels or closes (Close, Cancel, an entry's Cancel, the popup); while Settings or set-up asks whether to throw away your changes, Escape keeps them. The arrow keys move between the day tabs, the categories of Settings, and along the solar chart, which reads out each hour's values. On Windows, Win+B and the arrow keys reach the tray icon: Enter opens the dashboard, and the menu key opens its menu.
+- **Screen readers.** On Windows, Narrator and NVDA read every control by a name of its own (a button such as Remove says what it removes), each day's main card and chart as one sentence, and what a Save or a refused value says. On Linux, **Orca cannot read the app**: JavaFX, the toolkit the app is built with, has no AT-SPI support. [#132](https://github.com/Enadeag/car-charge-planner/issues/132) follows OpenJFX for it. macOS is not built yet.
+- **Contrast.** Every text reaches WCAG AA (4.5:1), and every glyph, chart line and focus ring 3:1, in light and in dark. Colour never carries a meaning alone: the source colours always come with a glyph or a word.
+- **Scaling.** The app follows the system's display scaling on Linux and Windows. At 150 and 200 % nothing is cut off; Settings and set-up are never larger than the screen, and their pages scroll. Windows' separate **Text size** setting is not followed yet: use **Scale** (Settings, System, Display) instead.
+
+<p>
+<img alt="The dashboard at 200 % in dark, with the focus ring on the battery's Update button." src="docs/screenshots/java/dashboard-200-dark.png" width="300">
+<img alt="Settings at 200 % in light, on the Charger page, with the focus ring on the Phases field." src="docs/screenshots/java/settings-200-light.png" width="500">
+</p>
+
+If you use a keyboard only or a screen reader every day, please tell us what does not work: open an issue with your system and screen reader.
 
 ## Contributing
 

@@ -18,3 +18,7 @@ The app is mostly used at a glance from the tray, and the old Qt Widgets screens
 - **A calm, minimal look** with one accent colour: fits a glance best, but the maintainer wants the information density of an energy dashboard.
 - **A compact popup with the full dashboard in a separate window**: two screens to design and keep in step; the popup itself became the dashboard.
 - **A native look per system** (Fluent, libadwaita, Breeze, Aqua): four designs to build and test for a dashboard that is a custom design anyway.
+
+## Note, 2026-10-15: the accessibility check of the Java version
+
+Checked for #98 and #41 on the dashboard, Settings and set-up. Keyboard use, WCAG AA contrast (also the focus ring) and 150 and 200 % scaling work on Linux and Windows, and tests keep them: every screen is walked with Tab for reading order, a visible focus ring and a name per control as Windows' UI Automation reads it. Screen readers work through UI Automation on Windows (Narrator, NVDA). On Linux, Orca cannot read the app: JavaFX has no AT-SPI support. The maintainer accepts that limit for now; #132 follows OpenJFX.
