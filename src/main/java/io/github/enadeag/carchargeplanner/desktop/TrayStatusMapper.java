@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop;
 
 import io.github.enadeag.carchargeplanner.engine.Outlook;
+import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.plan.Window;
 import java.time.LocalDate;
 import java.util.Optional;
@@ -39,6 +40,8 @@ public final class TrayStatusMapper {
      */
     public TrayStatus map(Outlook outlook) {
         return switch (outlook) {
+            case Outlook.NotSetUp notSetUp when notSetUp.kind() == ConfigProblem.Kind.MISSING ->
+                    new TrayStatus(StatusDot.ACTION, messages.text(TextKey.TRAY_NOT_SET_UP_FIRST));
             case Outlook.NotSetUp notSetUp -> new TrayStatus(StatusDot.ACTION,
                     messages.text(TextKey.TRAY_NOT_SET_UP, OutlookMapper.whatToFix(notSetUp, messages)));
             case Outlook.NoForecast none ->

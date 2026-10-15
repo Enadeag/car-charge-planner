@@ -32,6 +32,7 @@ public final class Dashboard {
     private Optional<IntConsumer> batteryEntered = Optional.empty();
     private Optional<Runnable> away = Optional.empty();
     private Optional<Runnable> settings = Optional.empty();
+    private Optional<Runnable> setUp = Optional.empty();
 
     /**
      * Makes the dashboard, hidden, showing that the forecast is being fetched until {@link #show(Outlook)} is called.
@@ -128,6 +129,19 @@ public final class Dashboard {
     }
 
     /**
+     * Lets the message before the first set-up offer a button that opens set-up.
+     *
+     * @param action what the button does; called on the JavaFX thread
+     */
+    public void onSetUp(Runnable action) {
+        Platform.runLater(() -> {
+            setUp = Optional.of(action);
+            view.onSetUp(action);
+            outlook.ifPresent(shown -> view.show(new OutlookMapper(messages).map(shown)));
+        });
+    }
+
+    /**
      * Makes closing the window quit the app instead of hiding it: without a tray it is the only way to quit.
      *
      * @param quit what closing the window does; called on the JavaFX thread
@@ -155,6 +169,7 @@ public final class Dashboard {
         batteryEntered.ifPresent(made::onBatteryEntered);
         away.ifPresent(made::onAway);
         settings.ifPresent(made::onSettings);
+        setUp.ifPresent(made::onSetUp);
         var mapper = new OutlookMapper(messages);
         made.show(outlook.map(mapper::map).orElseGet(mapper::loading));
         return made;

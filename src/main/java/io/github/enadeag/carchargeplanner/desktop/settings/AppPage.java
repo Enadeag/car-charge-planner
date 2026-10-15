@@ -33,11 +33,22 @@ final class AppPage implements Page {
     private final Card[] cards;
 
     /**
-     * Makes the page, showing the first choices until {@link #load(AppSettings, Optional)}.
+     * Makes the page as Settings shows it, showing the first choices until {@link #load(AppSettings, Optional)}.
      *
      * @param messages the texts, in the owner's language
      */
     AppPage(Messages messages) {
+        this(messages, TextKey.CARD_DISPLAY_HINT);
+    }
+
+    /**
+     * Makes the page, showing the first choices until {@link #load(AppSettings, Optional)}.
+     *
+     * @param messages the texts, in the owner's language
+     * @param displayHint what the display card says about when a choice takes effect, which differs between
+     *     Settings and set-up
+     */
+    AppPage(Messages messages, TextKey displayHint) {
         this.messages = messages;
         this.view = new PageView(messages.text(Category.APP.title()));
         mode = new ChoiceField<>(List.of(DisplayMode.values()), this::modeName);
@@ -47,7 +58,7 @@ final class AppPage implements Page {
         startAtLogin = new SwitchField(messages.text(TextKey.FIELD_START_AT_LOGIN));
         startAtLoginRow = new FieldRow("", "", startAtLogin);
         cards = new Card[] {
-                new Card(messages.text(TextKey.CARD_DISPLAY), messages.text(TextKey.CARD_DISPLAY_HINT),
+                new Card(messages.text(TextKey.CARD_DISPLAY), messages.text(displayHint),
                         new FieldRow(messages.text(TextKey.FIELD_MODE), messages.text(TextKey.FIELD_MODE_HINT), mode),
                         new FieldRow(messages.text(TextKey.FIELD_LANGUAGE), messages.text(TextKey.FIELD_LANGUAGE_HINT),
                                 language),
@@ -106,6 +117,26 @@ final class AppPage implements Page {
      */
     void onUnitsChanged(Consumer<Units> action) {
         units.onChange(() -> action.accept(units.value()));
+    }
+
+    /**
+     * Calls an action whenever the chosen language changes, by the owner or by loading, so set-up can speak it at
+     * once.
+     *
+     * @param action gets the language chosen now, empty for the system's, on the JavaFX thread
+     */
+    void onLanguageChanged(Consumer<Optional<Language>> action) {
+        language.onChange(() -> action.accept(language.value()));
+    }
+
+    /**
+     * Calls an action whenever the chosen appearance changes, by the owner or by loading, so set-up can show it at
+     * once.
+     *
+     * @param action gets the appearance chosen now, on the JavaFX thread
+     */
+    void onAppearanceChanged(Consumer<Appearance> action) {
+        appearance.onChange(() -> action.accept(appearance.value()));
     }
 
     /**

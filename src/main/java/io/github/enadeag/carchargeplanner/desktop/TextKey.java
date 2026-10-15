@@ -584,5 +584,77 @@ public enum TextKey {
     /** What running set-up again does. */
     CARD_SETUP_HINT,
     /** The button that runs set-up again. */
-    RUN_SETUP
+    RUN_SETUP,
+    /** Said at the latitude while set-up has no place for the home yet. */
+    PROBLEM_NO_PLACE,
+    /** The dashboard's message before the first set-up. */
+    NOT_SET_UP_FIRST,
+    /** The button on that message that opens set-up. */
+    START_SETUP,
+    /** The tray menu's entry that opens set-up, in place of Settings before the first set-up. */
+    MENU_SET_UP,
+    /** The tray's tooltip before the first set-up. */
+    TRAY_NOT_SET_UP_FIRST,
+    /** The set-up window's title. */
+    SETUP_TITLE,
+    /** Above set-up's page: {0} the step's number, {1} how many steps there are. */
+    SETUP_STEP,
+    /** What a screen reader says of set-up's progress bar: {0} the step's number, {1} how many steps there are, {2} the step's name. */
+    SETUP_PROGRESS,
+    /** Set-up's button to the step before. */
+    SETUP_BACK,
+    /** Set-up's button to the step after. */
+    SETUP_NEXT,
+    /** Set-up's button on its last step, which saves everything. */
+    SETUP_FINISH,
+    /** Set-up's button that leaves it without saving. */
+    SETUP_CANCEL,
+    /** Asked before set-up is left after the owner started. */
+    SETUP_LEAVE_QUESTION,
+    /** The answer that stays in set-up. */
+    SETUP_KEEP_GOING,
+    /** The answer that leaves set-up without saving. */
+    SETUP_LEAVE,
+    /** Said when a step's values are refused: they show their problem at their field. */
+    SETUP_REFUSED,
+    /** The first step's name. */
+    SETUP_WELCOME,
+    /** What the app does, on the first step. */
+    SETUP_WELCOME_INTRO,
+    /** The title of the card about what leaves the computer. */
+    SETUP_PRIVACY_TITLE,
+    /** What leaves the computer: {0} the forecast provider's name, {1} what it is sent. */
+    SETUP_PRIVACY,
+    /** Added when the provider has a place search: {0} its name. */
+    SETUP_PRIVACY_PLACE,
+    /** The title of the card about values the owner does not know. */
+    SETUP_TYPICAL_TITLE,
+    /** What to do with a value the owner does not know. */
+    SETUP_TYPICAL,
+    /** The car step's name. */
+    SETUP_CAR,
+    /** The name of the step with the house and the away periods. */
+    SETUP_MORE,
+    /** What that step is for. */
+    SETUP_MORE_HINT,
+    /** The name of the step that asks for one forecast. */
+    SETUP_CHECK,
+    /** The title of the card with the check. */
+    SETUP_CHECK_CARD,
+    /** What the check does. */
+    SETUP_CHECK_HINT,
+    /** Said while the provider is asked: {0} its name. */
+    SETUP_CHECK_ASKING,
+    /** Said when it answered: {0} its name, {1} the days of forecast. */
+    SETUP_CHECK_WORKS,
+    /** Said when it did not: {0} why, in the engine's words, without a full stop at the end. */
+    SETUP_CHECK_FAILED,
+    /** The button that asks again. */
+    SETUP_CHECK_AGAIN,
+    /** The last step's name. */
+    SETUP_PREVIEW,
+    /** What the last step shows. */
+    SETUP_PREVIEW_HINT,
+    /** What the display card says in set-up, where the language and the appearance show at once. */
+    SETUP_DISPLAY_HINT
 }

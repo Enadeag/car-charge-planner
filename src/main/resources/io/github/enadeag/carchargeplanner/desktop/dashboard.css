@@ -560,3 +560,34 @@
     -fx-pref-width: 4.5em;
     -fx-min-width: 4.5em;
 }
+
+/* Set-up: the step and its progress above, the step's page (Settings' cards) in the middle, Back and Next below */
+.setup-header {
+    -fx-background-color: -ground;
+    -fx-padding: 0.9em 1.4em 0.9em 1.4em;
+    -fx-spacing: 0.45em;
+}
+
+.setup-step {
+    -fx-text-fill: -muted;
+    -fx-font-weight: bold;
+}
+
+.setup-progress > .bar {
+    -fx-background-color: -grid;
+}
+
+.preview-frame {
+    -fx-alignment: top-center;
+}
+
+.preview-frame > .dashboard {
+    -fx-border-color: -line;
+    -fx-border-radius: 14;
+    -fx-background-radius: 14;
+    -fx-max-width: 30em;
+}
+
+.message-actions {
+    -fx-padding: 0.6em 0 0 0;
+}

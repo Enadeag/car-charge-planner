@@ -1,0 +1,41 @@
+package io.github.enadeag.carchargeplanner.desktop.settings;
+
+import io.github.enadeag.carchargeplanner.desktop.AppSettings;
+import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
+import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
+import java.util.Optional;
+
+/**
+ * What is stored as set-up opens: Finish writes only what differs from it, and always a config when there was none.
+ *
+ * @param config the engine's config; empty when there is none that can be used, as before the first set-up
+ * @param keys every provider's secret settings; none when they could not be read
+ * @param keysProblem why the keys could not be read, in words for the owner; empty when they could
+ * @param app the app's own settings
+ * @param startsAtLogin whether the system starts the app at login; empty when this copy of the app cannot
+ */
+record SetUpStart(Optional<EngineConfig> config, Secrets keys, Optional<String> keysProblem, AppSettings app,
+        Optional<Boolean> startsAtLogin) {
+
+    /**
+     * Reads what is stored now.
+     *
+     * @param storage the stores to read
+     * @return what they hold
+     */
+    static SetUpStart read(SettingsStorage storage) {
+        var keys = storage.readKeys();
+        return new SetUpStart(storage.readConfig(), keys.keys(), keys.problem(), storage.readApp(),
+                storage.startsAtLogin());
+    }
+
+    /**
+     * What set-up shows first: what is stored, or a first-run draft in place of a config there is not.
+     *
+     * @param firstRun the config to start from when there is none stored
+     * @return the draft
+     */
+    SetUpDraft draft(EngineConfig firstRun) {
+        return new SetUpDraft(config.orElse(firstRun), keys, app, startsAtLogin.orElse(false));
+    }
+}

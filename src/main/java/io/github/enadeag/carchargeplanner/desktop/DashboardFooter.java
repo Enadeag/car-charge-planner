@@ -52,6 +52,11 @@ final class DashboardFooter extends HBox {
         settings.setOnAction(event -> action.run());
     }
 
+    /** Takes the Away and Settings buttons away, leaving the forecast's text. */
+    void hideButtons() {
+        getChildren().setAll(forecast);
+    }
+
     /**
      * Lets the Away button open the away periods.
      *
