@@ -22,3 +22,6 @@ dist/
 
 # compiled translations: built from the .po files (python -m car_charge_planner.i18n_tools compile)
 *.mo
+
+# Java (Maven)
+target/
