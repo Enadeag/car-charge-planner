@@ -99,8 +99,8 @@ jobs:
           retention-days: 14
 
   macos:
-    # Remove this condition at the public launch (#31): macOS minutes cost 10x while the repository is private.
-    if: github.event_name == 'workflow_dispatch'
+    # Switched off until the maintainer turns it on again: the JavaFX tests cannot start on the macOS runner yet (#134).
+    if: false
     runs-on: macos-latest
     continue-on-error: true  # informational until a person has checked a release on a Mac (#29)
     timeout-minutes: 30

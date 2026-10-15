@@ -77,7 +77,7 @@ The workflows are in `.github/workflows/`:
 - `ci.yml` runs `./mvnw -B clean verify` for every pull request and every push to `main`, on Linux (with
   `dbus-daemon` and GNOME Keyring, so the private-bus tests run) and on Windows. A change to documentation only
   (`*.md`, `docs/` except `docs/example-engine.json`, which the tests read) skips both, and GitHub counts a skipped job
-  as passed. macOS runs only when the workflow is started by hand, and its result is informational.
+  as passed. The macOS job is switched off until the JavaFX tests run on the macOS runner (#134); the maintainer decides when it comes back.
 - `windows-installer.yml` builds the installer with `tools\package-windows.ps1`, installs it silently, runs the
   installed `car-charge-planner.exe quit`, uninstalls it and keeps the installer as an artifact for 14 days. It runs
   when the packaging changes on `main`, by hand, and for a release.
