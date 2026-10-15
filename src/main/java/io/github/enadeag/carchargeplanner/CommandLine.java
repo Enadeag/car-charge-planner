@@ -17,7 +17,8 @@ import java.util.Optional;
 record CommandLine(Command command, Optional<Path> config, boolean background) {
 
     /** How to start the app, for the message about arguments it does not know. */
-    static final String USAGE = "Usage: car-charge-planner [run | quit | start-at-login on | start-at-login off]"
+    static final String USAGE = "Usage: car-charge-planner [run | quit | start-at-login on | start-at-login off"
+            + " | install-launcher | uninstall-launcher]"
             + " [--config=path/to/engine.json] [" + StartAtLogin.BACKGROUND + "]";
 
     /** What the app can be started to do, named by the words before or between the options. */
@@ -29,7 +30,11 @@ record CommandLine(Command command, Optional<Path> config, boolean background) {
         /** Make the app start at login: "start-at-login on". */
         START_AT_LOGIN_ON,
         /** Stop the app from starting at login: "start-at-login off". */
-        START_AT_LOGIN_OFF;
+        START_AT_LOGIN_OFF,
+        /** Add the app to the Linux application menu: "install-launcher". */
+        INSTALL_LAUNCHER,
+        /** Remove the app from the Linux application menu: "uninstall-launcher". */
+        UNINSTALL_LAUNCHER;
 
         private static Optional<Command> of(List<String> words) {
             return switch (String.join(" ", words)) {
@@ -37,6 +42,8 @@ record CommandLine(Command command, Optional<Path> config, boolean background) {
                 case "quit" -> Optional.of(QUIT);
                 case "start-at-login on" -> Optional.of(START_AT_LOGIN_ON);
                 case "start-at-login off" -> Optional.of(START_AT_LOGIN_OFF);
+                case "install-launcher" -> Optional.of(INSTALL_LAUNCHER);
+                case "uninstall-launcher" -> Optional.of(UNINSTALL_LAUNCHER);
                 default -> Optional.empty();
             };
         }

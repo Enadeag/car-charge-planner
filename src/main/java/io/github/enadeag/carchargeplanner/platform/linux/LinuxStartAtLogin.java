@@ -59,10 +59,15 @@ public final class LinuxStartAtLogin implements StartAtLogin {
     }
 
     /**
-     * Quoted as the Desktop Entry specification asks: in double quotes, with {@code " ` $ \} escaped by a backslash and
-     * each backslash then doubled once more for the string value, and {@code %} doubled so it is no field code.
+     * Quotes a program's path for an {@code Exec} line as the Desktop Entry specification asks: in double quotes, with
+     * {@code " ` $ \} escaped by a backslash and each backslash then doubled once more for the string value, and
+     * {@code %} doubled so it is no field code.
+     *
+     * @param argument the path, which may hold spaces
+     * @return the path in quotes, ready to follow {@code Exec=}
+     * @throws IllegalArgumentException when the path holds a control character, such as a line break
      */
-    private static String quoted(String argument) {
+    static String quoted(String argument) {
         if (argument.chars().anyMatch(Character::isISOControl)) {
             throw new IllegalArgumentException("the program's path holds a control character: " + argument);
         }

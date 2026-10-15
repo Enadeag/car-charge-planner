@@ -163,6 +163,14 @@
         <directory>src/main/resources-filtered</directory>
         <filtering>true</filtering>
       </resource>
+      <!-- the app icon's drawing, which the menu entry installs as the scalable icon -->
+      <resource>
+        <directory>src/packaging/icons</directory>
+        <includes>
+          <include>car-charge-planner.svg</include>
+        </includes>
+        <targetPath>io/github/enadeag/carchargeplanner/desktop/icons</targetPath>
+      </resource>
     </resources>
     <plugins>
       <!-- jpackage makes the Windows launcher read-only; without force, clean cannot remove it -->

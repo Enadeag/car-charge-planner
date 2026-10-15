@@ -22,7 +22,9 @@ forecast provider and the fallback provider, and an optional `typical` section l
 values, such as `"system": ["CAR_BATTERY"]`.
 
 The app also takes the commands `quit` (asks the running app to quit), `start-at-login on` and `start-at-login off`,
-for example `-Dapp.args="quit"`. Start at login needs the packaged app, whose launcher is what starts at login.
+and, on Linux, `install-launcher` and `uninstall-launcher` (the menu entry and icons), for example
+`-Dapp.args="quit"`. Start at login and the menu entry need the packaged app, whose launcher is what they start. Try
+`install-launcher` with `XDG_DATA_HOME` pointing at a scratch folder, not your real one.
 
 ## Tests
 
