@@ -17,17 +17,27 @@ import tools.jackson.databind.json.JsonMapper;
  */
 final class KeychainEntries {
 
+    /** The name of the entry that lists the others. */
     static final String INDEX = "index";
     private static final String PREFIX = "forecast/";
 
     private final Keychain keychain;
     private final JsonMapper json = new JsonMapper();
 
+    /**
+     * Makes the entries' reader and writer; nothing is read yet.
+     *
+     * @param keychain the keychain the entries are kept in
+     */
     KeychainEntries(Keychain keychain) {
         this.keychain = keychain;
     }
 
-    /** False when there is no keychain, or it cannot be read (locked, or no logon session on Windows). */
+    /**
+     * Whether the keychain can be used now, tried by reading the index.
+     *
+     * @return false when there is no keychain, or it cannot be read (locked, or no logon session on Windows)
+     */
     boolean usable() {
         try {
             keychain.read(INDEX);
@@ -37,6 +47,12 @@ final class KeychainEntries {
         }
     }
 
+    /**
+     * Reads every entry the index lists.
+     *
+     * @return the secrets; none when there is no index
+     * @throws KeychainException when the keychain fails or the index is damaged
+     */
     Secrets read() throws KeychainException {
         var byProvider = new HashMap<String, Map<String, String>>();
         for (var name : index()) {
@@ -47,7 +63,13 @@ final class KeychainEntries {
         return new Secrets(byProvider);
     }
 
-    /** Replaces everything with {@code secrets}. Each value is read back; the index is written last. */
+    /**
+     * Replaces everything with {@code secrets}. Each value is read back; the index is written last, and entries it no
+     * longer lists are removed.
+     *
+     * @param secrets the secrets to keep, with names that can be split up again
+     * @throws KeychainException when the keychain fails or does not keep a value
+     */
     void write(Secrets secrets) throws KeychainException {
         var wanted = new TreeMap<String, String>();
         secrets.byProvider().forEach((id, values) -> values.forEach((key, value) -> wanted.put(PREFIX + id + "/" + key, value)));

@@ -50,6 +50,14 @@ final class ProviderAttempt {
         this.force = force;
     }
 
+    /**
+     * Gets a forecast from the cache or the provider, whichever the rules allow; never throws.
+     *
+     * @param system the system to forecast
+     * @param settings the provider's settings with values, secret ones included
+     * @param key what the forecast depends on, as {@link ForecastCache#key} makes it
+     * @return a forecast to use, or the reason there is none
+     */
     Outcome run(SystemDescription system, Map<String, String> settings, JsonNode key) {
         var missing = info.missingRequired(settings);
         if (!missing.isEmpty()) { // nothing is sent without what the provider requires

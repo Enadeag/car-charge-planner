@@ -23,6 +23,7 @@ import java.util.Map;
  */
 public final class ForecastSolar implements ForecastProvider {
 
+    /** What Forecast.Solar tells about itself. */
     static final ProviderInfo INFO = new ProviderInfo(
             "forecast-solar",
             "Forecast.Solar",
@@ -62,6 +63,11 @@ public final class ForecastSolar implements ForecastProvider {
     /**
      * The request for one panel array, with the key, when there is one, in front of the route. Tilt and direction are
      * whole degrees in this API, and its azimuth is ours: 0 south, -90 east, 90 west.
+     *
+     * @param system the place of the panels
+     * @param array the panel array to ask for
+     * @param settings the provider's settings; a blank "api_key" means the public plan
+     * @return the request's address
      */
     static URI requestUri(SystemDescription system, PanelArray array, Map<String, String> settings) {
         var parts = new ArrayList<String>();

@@ -46,10 +46,21 @@ public final class SecretsFile {
         return path;
     }
 
+    /**
+     * Whether there is a file.
+     *
+     * @return true when the file exists
+     */
     boolean exists() {
         return Files.exists(path);
     }
 
+    /**
+     * Reads the file, first making it private when others could read it.
+     *
+     * @return the secrets in it
+     * @throws SecretsProblem when it cannot be read or made private, is not JSON, or does not hold texts per provider
+     */
     Secrets read() throws SecretsProblem {
         makePrivate();
         String text;
@@ -87,7 +98,13 @@ public final class SecretsFile {
         return new Secrets(byProvider);
     }
 
-    /** Written atomically, and created private: there is no moment when others can read it. */
+    /**
+     * Writes the file atomically, and created private: there is no moment when others can read it.
+     *
+     * @param secrets the secrets to keep; what is left out is forgotten
+     * @throws SecretsProblem when a name has characters that are not allowed or the file could not be written; the
+     *     old file then stays as it was
+     */
     void write(Secrets secrets) throws SecretsProblem {
         secrets.checkNames();
         var sorted = new TreeMap<String, Map<String, String>>();
@@ -110,7 +127,12 @@ public final class SecretsFile {
         deleteQuietly(path);
     }
 
-    /** Corrects a file that others can read. True when its mode had to be corrected. */
+    /**
+     * Corrects a file that others can read, where files have modes.
+     *
+     * @return true when its mode had to be corrected
+     * @throws SecretsProblem when others can read it and its mode cannot be changed
+     */
     boolean makePrivate() throws SecretsProblem {
         if (!hasFileModes()) {
             return false;

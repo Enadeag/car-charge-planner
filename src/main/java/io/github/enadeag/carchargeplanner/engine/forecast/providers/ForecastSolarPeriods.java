@@ -33,6 +33,15 @@ final class ForecastSolarPeriods {
     private ForecastSolarPeriods() {
     }
 
+    /**
+     * Turns the answer into steps.
+     *
+     * @param body the answer's body
+     * @param systemZone the time zone to read the keys in when the answer names none
+     * @return a step for each period after a day's first key; they may break the contract (negative energy)
+     * @throws ProviderError.BadResponse when the answer is not JSON, reports a problem, is empty, or is not what
+     *     the service documents
+     */
     static List<ForecastStep> steps(String body, ZoneId systemZone) throws ProviderError.BadResponse {
         var root = Exchange.json(body);
         if (root.isMissingNode()) {
@@ -102,7 +111,13 @@ final class ForecastSolarPeriods {
         return steps;
     }
 
-    /** When it may be asked again: the header, else the body; nothing when neither says it with a time zone. */
+    /**
+     * When it may be asked again after a rate limit: the header, else the body.
+     *
+     * @param reply the refusal
+     * @param now the moment of the refusal
+     * @return the wait from now, zero when the time has passed; empty when neither says a time with a time zone
+     */
     static Optional<Duration> retryAfter(HttpGet.Reply reply, Instant now) {
         var stamp = reply.header("X-Ratelimit-Retry-At")
                 .or(() -> text(Exchange.json(reply.body()).path("message").path("ratelimit"), "retry-at"));
@@ -114,7 +129,12 @@ final class ForecastSolarPeriods {
         }
     }
 
-    /** The reason the server gives in its answer's message. */
+    /**
+     * The reason the server gives in its answer's message.
+     *
+     * @param body the answer's body, which may be anything
+     * @return the message's text, or empty when there is none
+     */
     static Optional<String> messageText(String body) {
         return text(Exchange.json(body).path("message"), "text");
     }

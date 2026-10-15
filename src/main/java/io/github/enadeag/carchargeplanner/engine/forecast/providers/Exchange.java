@@ -16,7 +16,16 @@ final class Exchange {
     private Exchange() {
     }
 
-    /** The reply, or unavailable when the service could not be reached; the message never holds the address. */
+    /**
+     * Sends a request for a provider.
+     *
+     * @param http how to reach the network
+     * @param request the request to send; its address may hold an API key
+     * @param service the service's name, for the message
+     * @return the service's reply, whatever its status
+     * @throws ProviderError.Unavailable when the service could not be reached or the thread was interrupted; the
+     *     message never holds the address
+     */
     static HttpGet.Reply send(HttpGet http, HttpGet.Request request, String service) throws ProviderError.Unavailable {
         try {
             return http.get(request);
@@ -29,7 +38,12 @@ final class Exchange {
         }
     }
 
-    /** The parsed body, or a missing node when it is not JSON. */
+    /**
+     * Parses an answer's body.
+     *
+     * @param body the body, which may be anything
+     * @return the parsed JSON, or a missing node when it is not JSON
+     */
     static JsonNode json(String body) {
         try {
             return JSON.readTree(body);

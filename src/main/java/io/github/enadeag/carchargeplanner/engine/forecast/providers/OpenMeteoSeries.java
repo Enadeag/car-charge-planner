@@ -16,12 +16,22 @@ import tools.jackson.databind.JsonNode;
  */
 final class OpenMeteoSeries {
 
+    /** How many days are asked for. */
     static final int FORECAST_DAYS = 4;
     private static final Duration HOUR = Duration.ofHours(1);
 
     private OpenMeteoSeries() {
     }
 
+    /**
+     * Turns one array's answer into steps.
+     *
+     * @param body the answer's body
+     * @param array the panel array asked for, whose size and losses turn sunlight into power
+     * @return an hourly step per value; they may break the contract (negative or out of order)
+     * @throws ProviderError.BadResponse when the answer is not JSON, reports an error, or is not what the service
+     *     documents
+     */
     static List<ForecastStep> steps(String body, PanelArray array) throws ProviderError.BadResponse {
         var root = Exchange.json(body);
         if (root.isMissingNode()) {
@@ -48,7 +58,12 @@ final class OpenMeteoSeries {
         return steps;
     }
 
-    /** The reason Open-Meteo gives in an error answer. */
+    /**
+     * The reason Open-Meteo gives in an error answer.
+     *
+     * @param body the answer's body, which may be anything
+     * @return the reason, or empty when there is none
+     */
     static Optional<String> reason(String body) {
         var reason = Exchange.json(body).path("reason");
         return reason.isString() && !reason.stringValue().isEmpty() ? Optional.of(reason.stringValue()) : Optional.empty();

@@ -55,7 +55,13 @@ public final class ForecastCache {
         this.folder = folder;
     }
 
-    /** What a provider's forecast depends on: the system, and the provider's settings that are not secret. */
+    /**
+     * What a provider's forecast depends on, to tell whether a cached one still applies.
+     *
+     * @param system the system forecast for; the arrays' names are left out
+     * @param plainSettings the provider's declared settings that are not secret; a changed key does not count
+     * @return a JSON object that equals the one stored with a forecast for the same system and settings
+     */
     JsonNode key(SystemDescription system, Map<String, String> plainSettings) {
         var key = json.createObjectNode();
         key.put("latitude", system.latitude());
@@ -74,6 +80,11 @@ public final class ForecastCache {
     /**
      * The cached forecast for this key, if it is intact. A forecast stamped after {@code now} is not used: the clock
      * was set back since, so its age is unknown and it could otherwise pass for fresh far too long.
+     *
+     * @param providerId the provider whose cache to read
+     * @param key what the forecast must have been made for, as {@link #key} makes it
+     * @param now the current moment
+     * @return the forecast, or empty when there is none, it is for another key, it is damaged or stamped after now
      */
     Optional<Cached> forecast(String providerId, JsonNode key, Instant now) {
         var blob = read(providerId);
@@ -88,11 +99,24 @@ public final class ForecastCache {
         return Optional.of(new Cached(fetchedAt.get(), steps.get()));
     }
 
+    /**
+     * When the provider's last rate limit ends, which may have passed already.
+     *
+     * @param providerId the provider whose cache to read
+     * @return the end, or empty when there is none or the file cannot be read
+     */
     Optional<Instant> cooldownUntil(String providerId) {
         return instant(read(providerId).path("cooldownUntil"));
     }
 
-    /** Also ends a rate limit: the provider answered. */
+    /**
+     * Keeps a new forecast, replacing the provider's last one. Also ends a rate limit: the provider answered.
+     *
+     * @param providerId the provider that made it
+     * @param key what it was made for, as {@link #key} makes it
+     * @param fetchedAt when it was fetched
+     * @param steps its steps, keeping the providers' contract
+     */
     void saveForecast(String providerId, JsonNode key, Instant fetchedAt, List<ForecastStep> steps) {
         var blob = json.createObjectNode();
         blob.set("key", key);
@@ -103,7 +127,12 @@ public final class ForecastCache {
         write(providerId, blob);
     }
 
-    /** Keeps the cached forecast: it stays usable while the provider refuses. */
+    /**
+     * Notes a rate limit, keeping the cached forecast: it stays usable while the provider refuses.
+     *
+     * @param providerId the provider that refused
+     * @param until when it may be asked again
+     */
     void saveCooldown(String providerId, Instant until) {
         var blob = read(providerId);
         blob.put("cooldownUntil", until.toString());

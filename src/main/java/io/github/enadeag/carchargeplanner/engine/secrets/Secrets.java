@@ -40,6 +40,11 @@ public record Secrets(Map<String, Map<String, String>> byProvider) {
         return byProvider.getOrDefault(providerId, Map.of());
     }
 
+    /**
+     * Refuses names that could not be split up again from an entry's name or written safely.
+     *
+     * @throws SecretsProblem when a provider id or setting name has characters that are not allowed
+     */
     void checkNames() throws SecretsProblem {
         for (var entry : byProvider.entrySet()) {
             boolean named = NAME.matcher(entry.getKey()).matches()
