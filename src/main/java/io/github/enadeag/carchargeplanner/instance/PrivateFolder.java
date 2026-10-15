@@ -14,12 +14,13 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * The folder of the instance socket, which only its user may use. Where files have an owner and a mode (Linux) it must
+ * A folder only its user may use: the instance socket's, and the composition root's folders for the icons the tray and
+ * the notifications hand to other programs. Where files have an owner and a mode (Linux) it must
  * be owned by the user and have mode 0700; on Windows it lies in the user's own application data folder, which only
  * the user, the system and administrators may open. Everywhere it must be a real folder, not a link or junction that
  * could lead elsewhere.
  */
-final class PrivateFolder {
+public final class PrivateFolder {
 
     private static final Set<PosixFilePermission> OWNER_ONLY = PosixFilePermissions.fromString("rwx------");
 
@@ -33,7 +34,7 @@ final class PrivateFolder {
      * @param user the user this app runs as, who must own the folder, where files have an owner and a mode; empty on
      *     Windows, where a folder made by an administrator's process is owned by the administrators instead
      */
-    PrivateFolder(Path path, Optional<UserPrincipal> user) {
+    public PrivateFolder(Path path, Optional<UserPrincipal> user) {
         this.path = path;
         this.user = user;
     }
@@ -44,7 +45,7 @@ final class PrivateFolder {
      * @return the folder
      * @throws IOException when it cannot be made, or another user or the whole world could use it
      */
-    Path make() throws IOException {
+    public Path make() throws IOException {
         try {
             if (user.isPresent()) {
                 Files.createDirectory(path, PosixFilePermissions.asFileAttribute(OWNER_ONLY));

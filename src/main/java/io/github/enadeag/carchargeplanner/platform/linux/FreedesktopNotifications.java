@@ -6,7 +6,9 @@ import io.github.enadeag.carchargeplanner.desktop.Notifications;
 import java.io.IOException;
 import java.lang.System.Logger.Level;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
@@ -70,8 +72,8 @@ public final class FreedesktopNotifications implements Notifications {
      * @param desktopEntry the name of the app's launcher entry without ".desktop", which ties the notifications to the
      *     app in the desktop's settings; it need not be installed
      * @param icon the app icon, shown on each notification
-     * @param iconFolder a folder of the notifications' own, which may not exist yet, where the icon is written for the
-     *     server to read; {@link #close()} removes it again
+     * @param iconFolder an existing folder of the notifications' own that only this user may use, where the icon is
+     *     written for the server to read; {@link #close()} removes it again
      */
     public FreedesktopNotifications(BusConnector connector, String appName, String desktopEntry, AppIcon icon,
             Path iconFolder) {
@@ -157,8 +159,11 @@ public final class FreedesktopNotifications implements Notifications {
         if (iconUri == null) {
             var file = iconFolder.resolve(ICON_FILE);
             try {
-                Files.createDirectories(iconFolder);
-                ImageIO.write(icon.image(ICON_SIZE), "png", file.toFile());
+                // never through a link another user may have put there
+                try (var out = Files.newOutputStream(file, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING,
+                        StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS)) {
+                    ImageIO.write(icon.image(ICON_SIZE), "png", out);
+                }
                 iconUri = file.toAbsolutePath().toUri().toString();
             } catch (IOException e) {
                 LOG.log(Level.WARNING, "cannot write the notification icon to " + file + "; using a stock icon", e);

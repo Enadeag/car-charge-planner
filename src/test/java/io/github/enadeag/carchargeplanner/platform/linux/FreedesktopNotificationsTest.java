@@ -104,7 +104,7 @@ class FreedesktopNotificationsTest {
         address = new BufferedReader(new InputStreamReader(busDaemon.getInputStream())).readLine().strip();
         desktop = DBusConnectionBuilder.forAddress(address).withShared(false).build();
         notifications = new FreedesktopNotifications(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),
-                "Car charge planner", "car-charge-planner", new AppIcon(), folder.resolve("notify"));
+                "Car charge planner", "car-charge-planner", new AppIcon(), Files.createDirectory(folder.resolve("notify")));
     }
 
     @AfterEach
@@ -215,10 +215,10 @@ class FreedesktopNotificationsTest {
     }
 
     @Test
-    void withoutASessionBusTheAppGoesOnAndTheLogSaysSoOnce() {
+    void withoutASessionBusTheAppGoesOnAndTheLogSaysSoOnce() throws IOException {
         var offline = new FreedesktopNotifications(() -> {
             throw new DBusException("no session bus");
-        }, "Car charge planner", "car-charge-planner", new AppIcon(), folder.resolve("offline"));
+        }, "Car charge planner", "car-charge-planner", new AppIcon(), Files.createDirectory(folder.resolve("offline")));
 
         var warnings = warningsWhile(() -> {
             offline.listen(opened::release);
@@ -228,6 +228,20 @@ class FreedesktopNotificationsTest {
         offline.close();
 
         assertThat(warnings).hasSize(1);
+    }
+
+    @Test
+    void theIconIsNotWrittenThroughALinkInItsFolder() throws Exception {
+        var target = Files.writeString(folder.resolve("someone-elses.txt"), "keep");
+        Files.createSymbolicLink(folder.resolve("notify").resolve("car-charge-planner.png"), target);
+        serve();
+
+        notifications.show(new NotificationText("a", "b"));
+
+        var call = server.calls.poll(TIMEOUT_S, TimeUnit.SECONDS);
+        assertThat(call).isNotNull();
+        assertThat(call.appIcon()).isEqualTo(FreedesktopNotifications.FALLBACK_ICON);
+        assertThat(Files.readString(target)).isEqualTo("keep");
     }
 
     @Test

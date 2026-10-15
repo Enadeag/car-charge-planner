@@ -39,6 +39,7 @@ import io.github.enadeag.carchargeplanner.platform.windows.RegistryRunKey;
 import io.github.enadeag.carchargeplanner.platform.windows.TaskbarShade;
 import io.github.enadeag.carchargeplanner.platform.windows.WindowsStartAtLogin;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.lang.System.Logger.Level;
 import java.net.http.HttpClient;
 import java.nio.file.Files;
@@ -159,24 +160,12 @@ public final class Main {
         var notifications = notifications(tray, icon);
         notifications.listen(dashboard::openWindow);
         var texts = new AnnouncementTexts();
-        var engine = engine(configFile, secretsFile, clock, announcement -> notifications.show(texts.notification(announcement)));
+        var engine = engine(configFile, secretsFile, clock,
+                announcement -> notifications.show(texts.notification(announcement)));
         if (engine.keyStorage() == KeyStorage.FILE) {
             LOG.log(Level.WARNING, "No usable system keychain: API keys are kept in " + secretsFile.path()
                     + ", readable only by you");
         }
-
-        ScheduledExecutorService replanning = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform()
-                .name("planner").daemon().factory());
-        replanning.scheduleWithFixedDelay(() -> {
-            try {
-                var outlook = engine.plan();
-                dashboard.show(outlook);
-                tray.showStatus(trayStatus.map(outlook));
-            } catch (RuntimeException e) {
-                // an uncaught exception would stop the schedule for good
-                LOG.log(Level.ERROR, "planning failed", e);
-            }
-        }, 0, REPLAN_MINUTES, TimeUnit.MINUTES);
 
         Runnable quit = () -> {
             notifications.close();
@@ -200,6 +189,19 @@ public final class Main {
                 dashboard.openWindow();
             }
         }
+        // only now: on Windows the first announcement needs the tray icon to show it
+        ScheduledExecutorService replanning = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform()
+                .name("planner").daemon().factory());
+        replanning.scheduleWithFixedDelay(() -> {
+            try {
+                var outlook = engine.plan();
+                dashboard.show(outlook);
+                tray.showStatus(trayStatus.map(outlook));
+            } catch (RuntimeException e) {
+                // an uncaught exception would stop the schedule for good
+                LOG.log(Level.ERROR, "planning failed", e);
+            }
+        }, 0, REPLAN_MINUTES, TimeUnit.MINUTES);
         LOG.log(Level.INFO, "planning with " + configFile.path());
     }
 
@@ -340,13 +342,13 @@ public final class Main {
                 TITLE, APP_ID, icon, runtimeFolder("notify"));
     }
 
-    /**
-     * A folder of this process's own in the session's folder for running programs, which is emptied at logout, so a
-     * crash leaves nothing behind.
-     */
+    /** Linux only: a private folder of this process's own; see {@link RuntimeFolder}. */
     private static Path runtimeFolder(String purpose) {
-        var runtime = System.getenv("XDG_RUNTIME_DIR");
-        var parent = runtime == null ? Path.of(System.getProperty("java.io.tmpdir")) : Path.of(runtime);
-        return parent.resolve(APP_ID + "-" + purpose + "-" + ProcessHandle.current().pid());
+        try {
+            return RuntimeFolder.make(purpose, System.getenv(), Path.of(System.getProperty("java.io.tmpdir")),
+                    user().orElseThrow());
+        } catch (IOException e) {
+            throw new UncheckedIOException("cannot make a private folder for the " + purpose + " icons", e);
+        }
     }
 }

@@ -52,8 +52,8 @@ public final class StatusNotifierTray implements Tray {
      *
      * @param connector opens the session bus connection the icon is served on
      * @param icon draws the icon with its status dot, in every size the panel may need
-     * @param iconFolder a folder of the tray's own, which may not exist yet, where it writes its icons for the panel;
-     *     {@link #remove()} removes it again
+     * @param iconFolder a folder of the tray's own that only this user may use, where it writes its icons for the
+     *     panel; {@link #remove()} removes it again
      * @param title the name the panel shows for the icon, such as in its tooltip
      */
     public StatusNotifierTray(BusConnector connector, StatusIcon icon, Path iconFolder, String title) {
