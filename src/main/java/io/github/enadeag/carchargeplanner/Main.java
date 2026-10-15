@@ -81,11 +81,16 @@ public final class Main {
         var icon = new AppIcon();
 
         Platform.setImplicitExit(false);
+        var colorSchemeFound = new CompletableFuture<ObservableValue<ColorScheme>>();
         var dashboardMade = new CompletableFuture<Dashboard>();
-        Platform.startup(() -> dashboardMade.complete(
-                new Dashboard(icon, Platform.getPreferences().colorSchemeProperty(), clock, taskbarHiding())));
+        Platform.startup(() -> {
+            // JavaFX hands out its preferences on its own thread only
+            var colorScheme = Platform.getPreferences().colorSchemeProperty();
+            colorSchemeFound.complete(colorScheme);
+            dashboardMade.complete(new Dashboard(icon, colorScheme, clock, taskbarHiding()));
+        });
         var dashboard = dashboardMade.get();
-        var tray = tray(Platform.getPreferences().colorSchemeProperty());
+        var tray = tray(colorSchemeFound.get());
         var trayStatus = new TrayStatusMapper();
         tray.showStatus(trayStatus.loading());
 
