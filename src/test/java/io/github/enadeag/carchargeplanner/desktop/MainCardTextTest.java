@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class MainCardTextTest {
@@ -25,7 +26,7 @@ class MainCardTextTest {
         var window = new Window(at(windowDay, 10, 0), at(windowDay, 14, 25), 14, 3.22, 14.2, importKwh);
         var today = new DayPlan(TODAY, 50, TODAY.equals(windowDay) ? List.of(window) : List.of(), 50, 32, 18);
         var tomorrow = new DayPlan(TODAY.plusDays(1), 32, TODAY.equals(windowDay) ? List.of() : List.of(window), 50, 32, 18);
-        return new Outlook.Planned(at(TODAY, 8, 0), BRUSSELS, List.of(today, tomorrow), 50, true);
+        return new Outlook.Planned(at(TODAY, 8, 0), BRUSSELS, List.of(today, tomorrow), 50, true, Optional.empty());
     }
 
     @Test

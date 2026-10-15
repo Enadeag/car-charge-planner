@@ -6,6 +6,7 @@ import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastUnavailable;
+import io.github.enadeag.carchargeplanner.engine.plan.GridAdvisor;
 import io.github.enadeag.carchargeplanner.engine.plan.Planner;
 import java.time.Clock;
 import java.util.List;
@@ -45,7 +46,10 @@ public final class Engine {
             return new Outlook.NoForecast(e.getMessage());
         }
         var now = clock.instant();
-        var days = new Planner(config.system(), config.planning()).plan(forecast, ASSUMED_BATTERY_PCT, now);
-        return new Outlook.Planned(now, config.system().timezone(), days, ASSUMED_BATTERY_PCT, true);
+        var system = config.system();
+        // nothing is announced until there are notifications, so there is no announced window to keep
+        var days = new Planner(system, config.planning()).plan(forecast, ASSUMED_BATTERY_PCT, now, List.of());
+        var advice = new GridAdvisor(system, config.planning()).advise(days, forecast, now);
+        return new Outlook.Planned(now, system.timezone(), days, ASSUMED_BATTERY_PCT, true, advice);
     }
 }

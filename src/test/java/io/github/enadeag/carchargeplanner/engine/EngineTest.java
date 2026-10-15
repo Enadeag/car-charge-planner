@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.engine;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
@@ -15,6 +16,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -25,16 +27,22 @@ class EngineTest {
     private static final LocalDate DAY = LocalDate.of(2026, 7, 3);
 
     /** Two sunny days: 4 kW from 10:00 to 16:00 local time, nothing the rest of the day. */
-    private static final ForecastProvider SUNNY = system -> {
+    private static final ForecastProvider SUNNY = system -> days(2, 4.0);
+
+    /** Three days without any sun. */
+    private static final ForecastProvider DARK = system -> days(3, 0);
+
+    private static List<ForecastStep> days(int count, double powerFrom10To16Kw) {
         var steps = new ArrayList<ForecastStep>();
-        for (var day : List.of(DAY, DAY.plusDays(1))) {
+        for (int day = 0; day < count; day++) {
             for (int hour = 0; hour < 24; hour++) {
-                var start = day.atTime(hour, 0).atZone(BRUSSELS).toInstant();
-                steps.add(new ForecastStep(start, start.plus(Duration.ofHours(1)), hour >= 10 && hour < 16 ? 4.0 : 0));
+                var start = DAY.plusDays(day).atTime(hour, 0).atZone(BRUSSELS).toInstant();
+                double powerKw = hour >= 10 && hour < 16 ? powerFrom10To16Kw : 0;
+                steps.add(new ForecastStep(start, start.plus(Duration.ofHours(1)), powerKw));
             }
         }
         return steps;
-    };
+    }
 
     private static Clock clockAt(int hour) {
         return Clock.fixed(DAY.atTime(hour, 0).atZone(BRUSSELS).toInstant(), ZoneOffset.UTC);
@@ -53,6 +61,19 @@ class EngineTest {
         var window = planned.nextWindow().orElseThrow();
         assertThat(window.start()).isEqualTo(DAY.atTime(10, 0).atZone(BRUSSELS).toInstant());
         assertThat(window.amps()).isEqualTo(13);
+        assertThat(planned.gridAdvice()).isEmpty();
+    }
+
+    @Test
+    void theOutlookAdvisesAGridChargeWhenTheBatteryWouldEndADayBelowTheMinimum() {
+        var planned = (Outlook.Planned) new Engine(EXAMPLE, DARK, clockAt(7)).plan();
+
+        // without sun the example's 12 % a day of driving takes the battery from 50 % to 17.5 % on the third day,
+        // below the minimum of 30 %
+        var advice = planned.gridAdvice().orElseThrow();
+        assertThat(advice.day()).isEqualTo(DAY.plusDays(2));
+        assertThat(advice.socEndPct()).isCloseTo(17.5, within(1e-9));
+        assertThat(advice.window()).isPresent();
     }
 
     @Test
@@ -84,7 +105,7 @@ class EngineTest {
 
     @Test
     void aPlanWithoutWindowsHasNoNextWindow() {
-        var planned = new Outlook.Planned(Instant.parse("2026-07-03T05:00:00Z"), BRUSSELS, List.of(), 50, true);
+        var planned = new Outlook.Planned(Instant.parse("2026-07-03T05:00:00Z"), BRUSSELS, List.of(), 50, true, Optional.empty());
         assertThat(planned.nextWindow()).isEmpty();
     }
 }

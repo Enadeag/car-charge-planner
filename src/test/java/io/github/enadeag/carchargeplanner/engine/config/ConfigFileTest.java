@@ -30,7 +30,7 @@ class ConfigFileTest {
         assertThat(config.system().timezone()).isEqualTo(ZoneId.of("Europe/Brussels"));
         assertThat(config.system().panels()).containsExactly(new PanelArray("South roof", 5.0, 35, 0, 0.14));
         assertThat(config.system().charger()).isEqualTo(new Charger(1, 6, 16, 230, 0.9));
-        assertThat(config.planning()).isEqualTo(new PlanningPreferences(80, 0.85, 0.2, 45));
+        assertThat(config.planning()).isEqualTo(new PlanningPreferences(30, 80, 0.85, 0.2, 45, 15));
     }
 
     @ParameterizedTest
@@ -38,10 +38,18 @@ class ConfigFileTest {
         "\"kwp\": 5.0           | \"kwhp\": 5.0          | kwp",
         "\"phases\": 1,         | \"phases\": 1, \"phasse\": 3, | phasse",
         "\"phases\": 1,         | \"phases\": 2,         | phases must be 1 or 3",
+        "\"phases\": 1,         | \"phases\": 0,         | phases must be 1 or 3",
+        "\"phases\": 1,         | \"phases\": 4,         | phases must be 1 or 3",
+        "\"phases\": 1,         | \"phases\": -1,        | phases must be 1 or 3",
+        "\"phases\": 1,         | \"phases\": 1.5,       | phases",
+        "\"phases\": 1,         | \"phases\": true,      | phases",
         "\"margin\": 0.85,      | \"margin\": 1.5,       | margin",
         "\"timezone\": \"Europe/Brussels\" | \"timezone\": \"Mars/Base\" | Mars/Base",
         "\"latitude\": 51.0,    | \"latitude\": 120,     | latitude",
         "\"targetPct\": 80,     | ''                     | targetPct",
+        "\"minimumPct\": 30,    | \"minimumPct\": 90,    | minimumPct",
+        "\"minimumPct\": 30,    | \"minimumPct\": -1,    | minimumPct",
+        "\"notifyLeadMinutes\": 15 | \"notifyLeadMinutes\": -5 | notifyLeadMinutes",
         "\"volts\": 230,        | \"volts\": null,       | volts",
     })
     void aWrongOrMissingValueIsRejectedWithAMessageThatNamesIt(String original, String replacement, String named)

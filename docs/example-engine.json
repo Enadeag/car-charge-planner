@@ -11,9 +11,11 @@
     "charger": { "phases": 1, "minAmps": 6, "maxAmps": 16, "volts": 230, "efficiency": 0.9 }
   },
   "planning": {
+    "minimumPct": 30,
     "targetPct": 80,
     "margin": 0.85,
     "importToleranceKwh": 0.2,
-    "minWindowMinutes": 45
+    "minWindowMinutes": 45,
+    "notifyLeadMinutes": 15
   }
 }

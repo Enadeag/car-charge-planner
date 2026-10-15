@@ -22,7 +22,7 @@ final class Forecasts {
     static final ZoneId TZ = ZoneId.of("Europe/Amsterdam");
 
     static final PanelArray PANELS = new PanelArray("", 4.8, 35, -45, 0.14);
-    static final PlanningPreferences PREFERENCES = new PlanningPreferences(80, 0.85, 0.2, 45);
+    static final PlanningPreferences PREFERENCES = new PlanningPreferences(30, 80, 0.85, 0.2, 45, 15);
 
     private Forecasts() {
     }
@@ -30,6 +30,10 @@ final class Forecasts {
     /** A 4.8 kWp roof facing south-east, a 70 kWh car driving 600 km a week, a 32 A charger on one phase. */
     static HomeSystem example() {
         return system(600.0 / 7, 1);
+    }
+
+    static HomeSystem exampleOnPhases(int phases) {
+        return system(600.0 / 7, phases);
     }
 
     /** The example driving 70 km a day: 12.6 kWh, a round 18 % of the battery. */
