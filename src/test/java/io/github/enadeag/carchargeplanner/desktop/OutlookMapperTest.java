@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.enadeag.carchargeplanner.desktop.Chip.Source;
 import io.github.enadeag.carchargeplanner.engine.Outlook;
+import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import io.github.enadeag.carchargeplanner.engine.forecast.Freshness;
@@ -36,7 +37,7 @@ class OutlookMapperTest {
     }
 
     private static DayPlan day(LocalDate date, Window... windows) {
-        return new DayPlan(date, 50, List.of(windows), 74, 62, 12);
+        return new DayPlan(date, new Percent(50), List.of(windows), new Percent(74), new Percent(62), 12);
     }
 
     /** Fetched at 07:45 from the primary provider, Open-Meteo. */
@@ -46,15 +47,15 @@ class OutlookMapperTest {
     }
 
     private static Outlook.Planned planned(boolean batteryAssumed, DayPlan... days) {
-        return new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(days), 50, batteryAssumed, Optional.empty(), fresh());
+        return new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(days), new Percent(50), batteryAssumed, Optional.empty(), fresh());
     }
 
     private static Outlook.Planned planned(ForecastSource source) {
-        return new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(day(TODAY)), 50, false, Optional.empty(), source);
+        return new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(day(TODAY)), new Percent(50), false, Optional.empty(), source);
     }
 
     private static DashboardModel.Plan advised(GridAdvice advice, DayPlan... days) {
-        var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(days), 50, false, Optional.of(advice), fresh());
+        var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(days), new Percent(50), false, Optional.of(advice), fresh());
         return (DashboardModel.Plan) MAPPER.map(planned);
     }
 

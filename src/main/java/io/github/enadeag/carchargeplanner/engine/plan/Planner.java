@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.engine.plan;
 
 import io.github.enadeag.carchargeplanner.engine.config.HomeSystem;
+import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import java.time.Instant;
@@ -41,12 +42,12 @@ public final class Planner {
      * advice does not change while the owner charges at the power they set. Only its remaining energy counts.
      *
      * @param forecast the forecast to plan on, in any order; empty gives an empty plan
-     * @param socPct the battery level now in percent
+     * @param socPct the battery level now
      * @param now the current moment; nothing is planned before it
      * @param announced the windows the owner has been told about, possibly none
      * @return one plan for each day from today to the last day of the forecast, in date order
      */
-    public List<DayPlan> plan(List<ForecastStep> forecast, double socPct, Instant now, List<Window> announced) {
+    public List<DayPlan> plan(List<ForecastStep> forecast, Percent socPct, Instant now, List<Window> announced) {
         if (forecast.isEmpty()) {
             return List.of();
         }
@@ -56,7 +57,7 @@ public final class Planner {
                 .toList();
         var runsByDay = WindowFinder.byDay(runsBeside(forecast, now, running), zone);
         var days = new ArrayList<DayPlan>();
-        double soc = socPct;
+        var soc = socPct;
         for (var date = today(now); !date.isAfter(lastDay(forecast)); date = date.plusDays(1)) {
             var day = planDay(date, soc, runsByDay.getOrDefault(date, List.of()), running, now);
             days.add(day);
@@ -77,7 +78,7 @@ public final class Planner {
         return run.start().equals(window.end()) || run.end().equals(window.start());
     }
 
-    private DayPlan planDay(LocalDate date, double socPct, List<Run> runs, List<Window> running, Instant now) {
+    private DayPlan planDay(LocalDate date, Percent socPct, List<Run> runs, List<Window> running, Instant now) {
         var kept = running.stream().filter(window -> window.start().atZone(zone).toLocalDate().equals(date)).toList();
         double neededKwh = Math.max(0, energyNeededKwh(socPct) - solarKwh(kept));
         var windows = new ArrayList<>(kept);
@@ -85,19 +86,21 @@ public final class Planner {
         windows.sort(Comparator.comparing(Window::start));
 
         double gainedPct = solarKwh(windows) * system.charger().efficiency() / system.car().usableBatteryKwh() * 100;
-        double after = Math.max(socPct, Math.min(preferences.targetPct(), socPct + gainedPct));
+        double after = Math.max(socPct.value(), Math.min(preferences.targetPct().value(), socPct.value() + gainedPct));
         double driving = dailyDrivingPct() * (date.equals(today(now)) ? shareOfDayLeft(now) : 1);
-        return new DayPlan(date, socPct, windows, after, Math.max(0, after - driving), driving);
+        var end = new Percent(Math.max(0, after - driving));
+        return new DayPlan(date, socPct, windows, new Percent(after), end, driving);
     }
 
     /**
      * The energy to bring the battery from a level to the target charge level.
      *
-     * @param socPct the battery level in percent
+     * @param socPct the battery level to start from
      * @return the grid-side energy in kWh, 0 when the level is at or above the target
      */
-    double energyNeededKwh(double socPct) {
-        double batteryKwh = Math.max(0, preferences.targetPct() - socPct) / 100 * system.car().usableBatteryKwh();
+    double energyNeededKwh(Percent socPct) {
+        double missingPct = Math.max(0, preferences.targetPct().value() - socPct.value());
+        double batteryKwh = missingPct / 100 * system.car().usableBatteryKwh();
         return batteryKwh / system.charger().efficiency();
     }
 

@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine.forecast;
 
+import io.github.enadeag.carchargeplanner.engine.config.Coordinates;
 import io.github.enadeag.carchargeplanner.engine.config.PanelArray;
 import io.github.enadeag.carchargeplanner.engine.forecast.ReplayHttp.Route;
 import java.time.Duration;
@@ -31,7 +32,7 @@ public record ProviderCase(
         Map<String, String> secrets,
         Instant now) {
 
-    public static final SystemDescription EXAMPLE_SYSTEM = new SystemDescription(52.37, 4.90,
+    public static final SystemDescription EXAMPLE_SYSTEM = new SystemDescription(new Coordinates(52.37, 4.90),
             ZoneId.of("Europe/Amsterdam"), List.of(new PanelArray("", 4.8, 35, -45, 0.14)));
 
     /** Added to the example's array for the check on several arrays. */

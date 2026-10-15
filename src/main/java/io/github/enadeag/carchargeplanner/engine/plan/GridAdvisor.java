@@ -53,16 +53,16 @@ public final class GridAdvisor {
     }
 
     private boolean endsBelowMinimum(DayPlan day) {
-        return endPct(day) < preferences.minimumPct() - MIN_DEFICIT_PCT;
+        return endPct(day) < preferences.minimumPct().value() - MIN_DEFICIT_PCT;
     }
 
     /** The true level at the end of the day: the plan's own end level stops at 0 %. */
     private static double endPct(DayPlan day) {
-        return day.socAfterChargingPct() - day.drivingPct();
+        return day.socAfterChargingPct().value() - day.drivingPct();
     }
 
     private GridAdvice advice(List<DayPlan> days, DayPlan dip, List<ForecastStep> forecast, Instant now) {
-        double deficitPct = preferences.minimumPct() - endPct(dip);
+        double deficitPct = preferences.minimumPct().value() - endPct(dip);
         double energyKwh = deficitPct / 100 * system.car().usableBatteryKwh() / system.charger().efficiency();
         var daysUpToDip = days.subList(0, days.indexOf(dip) + 1);
         return new GridAdvice(dip.date(), endPct(dip), deficitPct, energyKwh,

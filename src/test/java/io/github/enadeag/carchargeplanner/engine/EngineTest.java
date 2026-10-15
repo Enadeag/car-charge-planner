@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.within;
 
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
+import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
 import io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider;
@@ -229,7 +230,7 @@ class EngineTest {
         var madeAt = Instant.parse("2026-07-03T05:00:00Z");
         var source = new ForecastSource(new ProviderId("main"), "Main", "Forecast by Main", madeAt, Freshness.FRESH, ProviderRole.PRIMARY,
                 "", Optional.empty());
-        var planned = new Outlook.Planned(madeAt, BRUSSELS, List.of(), 50, true, Optional.empty(), source);
+        var planned = new Outlook.Planned(madeAt, BRUSSELS, List.of(), new Percent(50), true, Optional.empty(), source);
         assertThat(planned.nextWindow()).isEmpty();
     }
 

@@ -4,6 +4,7 @@ import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import io.github.enadeag.carchargeplanner.engine.config.HomeSystem;
+import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.forecast.ConnectionCheck;
 import io.github.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
@@ -35,7 +36,7 @@ import java.util.Optional;
 public final class Engine {
 
     /** Until the owner can enter the battery level, the plan starts from this one. */
-    static final double ASSUMED_BATTERY_PCT = 50;
+    static final Percent ASSUMED_BATTERY_PCT = new Percent(50);
 
     private final ConfigFile configFile;
     private final ForecastService forecasts;

@@ -29,10 +29,11 @@ class ConfigFileTest {
     void theExampleConfigDescribesAWholeSystem() throws ConfigProblem {
         var config = new ConfigFile(EXAMPLE).read();
 
+        assertThat(config.system().location()).isEqualTo(new Coordinates(51.0, 5.0));
         assertThat(config.system().timezone()).isEqualTo(ZoneId.of("Europe/Brussels"));
         assertThat(config.system().panels()).containsExactly(new PanelArray("South roof", 5.0, 35, 0, 0.14));
         assertThat(config.system().charger()).isEqualTo(new Charger(Phases.ONE, 6, 16, 230, 0.9));
-        assertThat(config.planning()).isEqualTo(new PlanningPreferences(30, 80, 0.85, 0.2, 45, 15));
+        assertThat(config.planning()).isEqualTo(new PlanningPreferences(new Percent(30), new Percent(80), 0.85, 0.2, 45, 15));
     }
 
     @ParameterizedTest
@@ -47,10 +48,18 @@ class ConfigFileTest {
         "\"phases\": 1,         | \"phases\": true,      | phases",
         "\"margin\": 0.85,      | \"margin\": 1.5,       | margin",
         "\"timezone\": \"Europe/Brussels\" | \"timezone\": \"Mars/Base\" | Mars/Base",
-        "\"latitude\": 51.0,    | \"latitude\": 120,     | latitude",
+        "\"latitude\": 51.0,    | \"latitude\": 120,     | latitude must be between -90 and 90",
+        "\"latitude\": 51.0,    | \"latitude\": null,    | latitude",
+        "\"latitude\": 51.0,    | ''                     | latitude",
+        "\"longitude\": 5.0,    | \"longitude\": -181,   | longitude must be between -180 and 180",
+        "\"longitude\": 5.0,    | \"longitude\": \"east\", | longitude",
+        "\"longitude\": 5.0,    | \"longitude\": 5.0, \"location\": {\"latitude\": 1, \"longitude\": 2}, | location",
         "\"targetPct\": 80,     | ''                     | targetPct",
         "\"minimumPct\": 30,    | \"minimumPct\": 90,    | minimumPct",
         "\"minimumPct\": 30,    | \"minimumPct\": -1,    | minimumPct",
+        "\"minimumPct\": 30,    | \"minimumPct\": null,  | minimumPct",
+        "\"minimumPct\": 30,    | \"minimumPct\": \"thirty\", | minimumPct",
+        "\"targetPct\": 80,     | \"targetPct\": 100.5,  | targetPct",
         "\"notifyLeadMinutes\": 15 | \"notifyLeadMinutes\": -5 | notifyLeadMinutes",
         "\"volts\": 230,        | \"volts\": null,       | volts",
         "\"primary\": \"open-meteo\" | \"primary\": \"\"  | primary",

@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine.forecast.providers;
 
+import io.github.enadeag.carchargeplanner.engine.config.Coordinates;
 import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import io.github.enadeag.carchargeplanner.engine.forecast.Place;
 import io.github.enadeag.carchargeplanner.engine.forecast.PlaceResults;
@@ -90,12 +91,13 @@ public final class OpenMeteoPlaces implements PlaceSearch {
         var longitude = row.path("longitude");
         var name = text(row, "name");
         boolean complete = latitude.isNumber() && longitude.isNumber() && !name.isEmpty()
-                && Math.abs(latitude.doubleValue()) <= 90 && Math.abs(longitude.doubleValue()) <= 180;
+                && Coordinates.areValid(latitude.doubleValue(), longitude.doubleValue());
         if (!complete) {
             return Optional.empty();
         }
-        return zone(text(row, "timezone")).map(zone -> new Place(name, latitude.doubleValue(), longitude.doubleValue(),
-                zone, text(row, "admin1"), country(row), text(row, "admin2")));
+        var location = new Coordinates(latitude.doubleValue(), longitude.doubleValue());
+        return zone(text(row, "timezone")).map(zone -> new Place(name, location, zone, text(row, "admin1"),
+                country(row), text(row, "admin2")));
     }
 
     /** The country code stands in for a missing country name. */

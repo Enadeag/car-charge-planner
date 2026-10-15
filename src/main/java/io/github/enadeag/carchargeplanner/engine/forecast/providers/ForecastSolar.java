@@ -78,8 +78,8 @@ public final class ForecastSolar implements ForecastProvider {
             parts.add(key);
         }
         parts.add(ROUTE);
-        parts.add(Decimals.rounded(system.latitude(), 4));
-        parts.add(Decimals.rounded(system.longitude(), 4));
+        parts.add(Decimals.rounded(system.location().latitude(), 4));
+        parts.add(Decimals.rounded(system.location().longitude(), 4));
         parts.add(wholeDegrees(array.tiltDeg(), 0, 90));
         parts.add(wholeDegrees(array.azimuthDeg(), -180, 180));
         parts.add(Decimals.rounded(array.kwp(), 3));

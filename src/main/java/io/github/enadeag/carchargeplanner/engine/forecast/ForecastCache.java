@@ -65,8 +65,8 @@ public final class ForecastCache {
      */
     JsonNode key(SystemDescription system, Map<String, String> plainSettings) {
         var key = json.createObjectNode();
-        key.put("latitude", system.latitude());
-        key.put("longitude", system.longitude());
+        key.put("latitude", system.location().latitude());
+        key.put("longitude", system.location().longitude());
         key.put("timezone", system.timezone().getId());
         var arrays = key.putArray("arrays"); // the arrays' names are left out: a forecast does not depend on them
         system.arrays().forEach(array -> arrays.addObject()

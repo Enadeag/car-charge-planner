@@ -6,6 +6,7 @@ import static io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider.st
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.github.enadeag.carchargeplanner.engine.config.Coordinates;
 import io.github.enadeag.carchargeplanner.engine.config.ForecastSelection;
 import io.github.enadeag.carchargeplanner.engine.config.PanelArray;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
@@ -360,7 +361,7 @@ class ForecastServiceTest {
         get(T0);
         var bigger = SYSTEM.withArrays(List.of(new PanelArray("", 9.0, 35, -45, 0.14)));
         assertThat(service.get(bigger, selection, later(5), false).source().freshness()).isEqualTo(Freshness.FRESH);
-        var moved = new SystemDescription(51.0, SYSTEM.longitude(), SYSTEM.timezone(), SYSTEM.arrays());
+        var moved = new SystemDescription(new Coordinates(51.0, SYSTEM.location().longitude()), SYSTEM.timezone(), SYSTEM.arrays());
         assertThat(service.get(moved, selection, later(6), false).source().freshness()).isEqualTo(Freshness.FRESH);
         assertThat(main.callCount()).isEqualTo(3);
         assertThat(service.get(moved, selection, later(7), false).source().freshness()).isEqualTo(Freshness.CACHED); // cached in turn

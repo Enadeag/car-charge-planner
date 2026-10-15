@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.within;
 
 import io.github.enadeag.carchargeplanner.engine.config.HomeSystem;
+import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.config.Phases;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import java.time.Instant;
@@ -40,7 +41,7 @@ class GridAdvisorTest {
     }
 
     private static Advised advise(HomeSystem system, List<ForecastStep> forecast, double soc, Instant now) {
-        var days = new Planner(system, PREFERENCES).plan(forecast, soc, now, List.of());
+        var days = new Planner(system, PREFERENCES).plan(forecast, new Percent(soc), now, List.of());
         var advice = new GridAdvisor(system, PREFERENCES).advise(days, forecast, now).orElse(null);
         return new Advised(days, advice);
     }
@@ -83,7 +84,7 @@ class GridAdvisorTest {
     void aDipBeforeTheNextSunnyDayGivesAdvice() {
         var advised = advise(days(120, 120, 900), 55, fridayAt(7)); // ends today about 39 %, tomorrow about 17 %
         assertThat(advised.advice().day()).isEqualTo(SAT);
-        assertThat(advised.days().getFirst().socEndOfDayPct()).isGreaterThan(PREFERENCES.minimumPct());
+        assertThat(advised.days().getFirst().socEndOfDayPct().value()).isGreaterThan(PREFERENCES.minimumPct().value());
         assertThat(advised.advice().deficitPct()).isPositive();
     }
 
@@ -99,7 +100,7 @@ class GridAdvisorTest {
     void theTrueShortfallIsKeptWhenTheDrivingNeedsMoreThanTheBattery() {
         var advice = advise(dull(1), 5, fridayAt(0)).advice();
         assertThat(advice.socEndPct()).isNegative();
-        assertThat(advice.deficitPct()).isGreaterThan(PREFERENCES.minimumPct());
+        assertThat(advice.deficitPct()).isGreaterThan(PREFERENCES.minimumPct().value());
     }
 
     @Test
@@ -201,7 +202,7 @@ class GridAdvisorTest {
     void theAdviceIsForTheFirstDipOnly() {
         var advised = advise(dull(4), 40, fridayAt(7));
         var firstDip = advised.days().stream()
-                .filter(day -> day.socAfterChargingPct() - day.drivingPct() < PREFERENCES.minimumPct() - 1)
+                .filter(day -> day.socAfterChargingPct().value() - day.drivingPct() < PREFERENCES.minimumPct().value() - 1)
                 .findFirst().orElseThrow();
         assertThat(advised.advice().day()).isEqualTo(firstDip.date());
     }
@@ -209,9 +210,9 @@ class GridAdvisorTest {
     @Test
     void aTinyShortfallIsNotWorthAWarning() {
         // the first day ends about 0.5 points under the minimum
-        double soc = PREFERENCES.minimumPct() - 0.5 + DAILY_DRIVING_PCT;
+        double soc = PREFERENCES.minimumPct().value() - 0.5 + DAILY_DRIVING_PCT;
         var advised = advise(dull(1), soc, fridayAt(0));
-        assertThat(PREFERENCES.minimumPct() - advised.days().getFirst().socEndOfDayPct()).isBetween(0.0, 1.0);
+        assertThat(PREFERENCES.minimumPct().value() - advised.days().getFirst().socEndOfDayPct().value()).isBetween(0.0, 1.0);
         assertThat(advised.advice()).isNull();
     }
 
