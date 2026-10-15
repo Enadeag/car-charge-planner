@@ -2,10 +2,13 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
+import io.github.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import javafx.scene.control.Button;
@@ -38,6 +41,7 @@ final class SettingsView extends BorderPane {
     private final HBox actions;
     private final HBox confirm;
     private final Set<Category> refused = EnumSet.noneOf(Category.class);
+    private Runnable afterClose = () -> { };
 
     /**
      * Makes the view, showing the first category. The pages are not loaded here: see {@link #reload()}.
@@ -90,6 +94,7 @@ final class SettingsView extends BorderPane {
         discard.setOnAction(event -> {
             showActions();
             close.run();
+            afterClose.run();
         });
         confirm = bar(FieldRow.paragraph(messages.text(TextKey.SETTINGS_DISCARD_QUESTION), "field-label"),
                 keepEditing, discard);
@@ -110,26 +115,40 @@ final class SettingsView extends BorderPane {
      * @param openLink opens a web page in the owner's browser; called on the JavaFX thread, so it should not block
      * @param close hides Settings; called after Cancel, or after Save and close
      * @param saved called after something was saved, so the plan can be made again with it
+     * @param runSetUp opens set-up, after Settings closed; empty while the app has no set-up, and then App does not
+     *     offer it
      * @param messages the texts, in the owner's language
      * @return the view, showing the first category
      */
     static SettingsView of(SettingsStores stores, AboutFacts facts, Consumer<URI> openLink, Runnable close,
-            Runnable saved, Messages messages) {
+            Runnable saved, Optional<Runnable> runSetUp, Messages messages) {
         var solar = new SolarPage(messages);
         var location = new LocationPage(
                 (provider, text) -> stores.engine().searchPlaces(provider, text, messages.language().code()), messages);
         var carHouse = new CarHousePage(messages);
         var charger = new ChargerPage(messages);
+        var engine = stores.engine();
+        ConnectionTest tester = (provider, settings) -> {
+            try {
+                return engine.checkConnection(provider, engine.config().system(), settings);
+            } catch (ConfigProblem e) {
+                return new ConnectionResult(false, 0, e.getMessage());
+            }
+        };
+        var forecast = new ForecastPage(engine.providers(), tester, openLink, facts.keysFile(), messages);
+        var away = new AwayPage(messages);
         var planning = new PlanningPage(messages);
         var app = new AppPage(messages);
         app.onUnitsChanged(carHouse::showIn);
         var about = new AboutPage(facts, openLink, messages);
-        List<ConfigPage> configPages = List.of(solar, location, carHouse, charger, planning);
-        var form = new SettingsForm(stores, configPages, app, about);
+        List<ConfigPage> configPages = List.of(solar, location, carHouse, charger, forecast, away, planning);
+        var form = new SettingsForm(stores, configPages, forecast, app, about);
         var pages = new ArrayList<Page>(configPages);
         pages.add(app);
         pages.add(about);
-        return new SettingsView(form, pages, close, saved, messages);
+        var view = new SettingsView(form, pages, close, saved, messages);
+        runSetUp.ifPresent(setUp -> app.offerSetUp(() -> view.closeThen(setUp)));
+        return view;
     }
 
     /**
@@ -187,12 +206,24 @@ final class SettingsView extends BorderPane {
 
     /** Closes Settings, after asking when that would throw edits away. */
     void cancel() {
+        closeThen(() -> { });
+    }
+
+    /**
+     * Closes Settings and then runs an action, after asking when closing would throw edits away; the owner may keep
+     * editing instead.
+     *
+     * @param next what to run once Settings closed, such as set-up
+     */
+    void closeThen(Runnable next) {
+        afterClose = next;
         if (form.isChanged()) {
             actions.setVisible(false);
             confirm.setVisible(true);
             confirm.getChildren().get(1).requestFocus();
         } else {
             close.run();
+            next.run();
         }
     }
 

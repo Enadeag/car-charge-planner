@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine.config;
 
+import io.github.enadeag.carchargeplanner.engine.setting.Setting;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;

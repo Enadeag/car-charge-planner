@@ -113,6 +113,15 @@ final class DashboardView extends VBox {
     }
 
     /**
+     * Lets the footer's Away button open the away periods.
+     *
+     * @param action what the button does; called on the JavaFX thread
+     */
+    void onAway(Runnable action) {
+        footer.onAway(action);
+    }
+
+    /**
      * Lets the footer's Settings button open Settings.
      *
      * @param action what the button does; called on the JavaFX thread

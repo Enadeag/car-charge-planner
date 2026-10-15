@@ -36,7 +36,7 @@ class SettingsContrastTest {
     @ParameterizedTest
     @EnumSource(ColorScheme.class)
     void everyTextStandsOutEnough(ColorScheme scheme) throws Exception {
-        settings = new SettingsFixture(folder, Language.ENGLISH);
+        settings = new SettingsFixture(folder, Language.ENGLISH, SettingsFixture.realProviders());
         var file = new ConfigFile(settings.configPath);
         var example = file.read();
         file.write(example.withSystem(example.system(),

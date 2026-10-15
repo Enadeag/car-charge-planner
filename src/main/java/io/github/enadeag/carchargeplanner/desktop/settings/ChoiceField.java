@@ -20,7 +20,8 @@ final class ChoiceField<T> implements Input {
     /**
      * Makes the field, showing the first choice until {@link #load(Object)}.
      *
-     * @param choices the choices in the order they are offered; at least one, none null
+     * @param choices the choices in the order they are offered, none null; when there are none, the field shows only
+     *     what it is loaded with
      * @param name what the owner reads for a choice, in their language
      */
     ChoiceField(List<T> choices, Function<T, String> name) {
@@ -37,7 +38,7 @@ final class ChoiceField<T> implements Input {
             }
         });
         box.getStyleClass().add("choice-field");
-        loaded = choices.getFirst();
+        loaded = choices.isEmpty() ? null : choices.getFirst();
         box.setValue(loaded);
     }
 

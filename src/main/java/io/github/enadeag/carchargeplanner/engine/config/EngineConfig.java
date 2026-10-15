@@ -45,4 +45,24 @@ public record EngineConfig(HomeSystem system, PlanningPreferences planning, Fore
     public EngineConfig withPlanning(PlanningPreferences newPlanning) {
         return new EngineConfig(system, newPlanning, forecast, away, typical);
     }
+
+    /**
+     * The config with another choice of forecast providers.
+     *
+     * @param newForecast the providers and their settings that are not secret
+     * @return a config with everything else the same
+     */
+    public EngineConfig withForecast(ForecastSelection newForecast) {
+        return new EngineConfig(system, planning, newForecast, away, typical);
+    }
+
+    /**
+     * The config with other weekly away periods.
+     *
+     * @param newAway the away periods that come back every week
+     * @return a config with everything else the same
+     */
+    public EngineConfig withAway(AwaySchedule newAway) {
+        return new EngineConfig(system, planning, forecast, newAway, typical);
+    }
 }

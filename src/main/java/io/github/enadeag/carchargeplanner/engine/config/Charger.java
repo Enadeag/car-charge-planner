@@ -1,5 +1,8 @@
 package io.github.enadeag.carchargeplanner.engine.config;
 
+import io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting;
+import io.github.enadeag.carchargeplanner.engine.setting.Setting;
+
 /**
  * The wall charger, as far as it limits the charge power.
  *

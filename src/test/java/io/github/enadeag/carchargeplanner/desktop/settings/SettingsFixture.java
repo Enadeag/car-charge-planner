@@ -15,7 +15,10 @@ import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastCache;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastService;
+import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import io.github.enadeag.carchargeplanner.engine.forecast.Providers;
+import io.github.enadeag.carchargeplanner.engine.forecast.providers.ForecastSolar;
+import io.github.enadeag.carchargeplanner.engine.forecast.providers.OpenMeteo;
 import io.github.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
 import io.github.enadeag.carchargeplanner.engine.notify.Announcer;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
@@ -75,17 +78,36 @@ final class SettingsFixture {
                 Clock.systemUTC(), new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), told -> { }));
     }
 
+    /**
+     * The app's own providers, with their real texts and settings, which never reach the network here: any request
+     * fails.
+     */
+    static List<ForecastProvider> realProviders() {
+        HttpGet offline = request -> {
+            throw new IOException("no network in the tests");
+        };
+        return List.of(new OpenMeteo(offline), new ForecastSolar(offline));
+    }
+
     /** The view as Settings opens it, shown light, with start at login available unless {@code installed} is false. */
     SettingsView open(boolean installed) throws Exception {
         return open(installed, ColorScheme.LIGHT);
     }
 
+    SettingsView open(boolean installed, Optional<Runnable> runSetUp) throws Exception {
+        return open(installed, ColorScheme.LIGHT, runSetUp);
+    }
+
     SettingsView open(boolean installed, ColorScheme scheme) throws Exception {
+        return open(installed, scheme, Optional.empty());
+    }
+
+    SettingsView open(boolean installed, ColorScheme scheme, Optional<Runnable> runSetUp) throws Exception {
         return Fx.call(() -> {
             var stores = new SettingsStores(engine, appSettings, installed ? Optional.of(login) : Optional.empty());
             var facts = new AboutFacts("1.2.3", configPath, appSettings.path(), folder.resolve("data"),
                     folder.resolve("secrets.json"));
-            var view = SettingsView.of(stores, facts, opened::add, () -> closed++, () -> saved++, messages);
+            var view = SettingsView.of(stores, facts, opened::add, () -> closed++, () -> saved++, runSetUp, messages);
             view.reload();
             stage = Scenes.show(view, scheme);
             stage.setWidth(56 * 13);

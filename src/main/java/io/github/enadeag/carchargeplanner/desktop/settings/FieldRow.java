@@ -17,7 +17,7 @@ final class FieldRow extends VBox {
     private final Input input;
     private final Label hint = paragraph("", "note");
     private final Label problem = paragraph("", "field-problem");
-    private final Label typical = new Label();
+    private final Label tag = new Label();
 
     /**
      * Makes the row.
@@ -39,11 +39,11 @@ final class FieldRow extends VBox {
             line.getChildren().add(label);
             input.focusable().setAccessibleText(name);
         }
-        typical.getStyleClass().add("typical-tag");
-        typical.setMinWidth(USE_PREF_SIZE);
-        typical.setVisible(false);
-        typical.setManaged(false);
-        line.getChildren().addAll(typical, input.view());
+        tag.getStyleClass().add("field-tag");
+        tag.setMinWidth(USE_PREF_SIZE);
+        tag.setVisible(false);
+        tag.setManaged(false);
+        line.getChildren().addAll(tag, input.view());
         problem.setVisible(false);
         problem.setManaged(false);
         getChildren().addAll(line, this.hint, problem);
@@ -84,15 +84,15 @@ final class FieldRow extends VBox {
     }
 
     /**
-     * Tags the value as a typical value, or takes the tag away. The tag stands before the control, and a screen reader
-     * reads it with the explanation.
+     * Tags the value, such as a typical value or a required setting, or takes the tag away. The tag stands before the
+     * control, and a screen reader reads it with the explanation.
      *
      * @param text the tag, such as "Typical value" in the owner's language; empty to take it away
      */
-    void showTypical(String text) {
-        typical.setText(text);
-        typical.setVisible(!text.isEmpty());
-        typical.setManaged(!text.isEmpty());
+    void showTag(String text) {
+        tag.setText(text);
+        tag.setVisible(!text.isEmpty());
+        tag.setManaged(!text.isEmpty());
         input.focusable().setAccessibleHelp(help());
     }
 
@@ -107,7 +107,7 @@ final class FieldRow extends VBox {
 
     /** The problem first, as it is what the owner has to act on. */
     private String help() {
-        return (problem.getText() + " " + typical.getText() + " " + hint.getText()).strip().replaceAll(" +", " ");
+        return (problem.getText() + " " + tag.getText() + " " + hint.getText()).strip().replaceAll(" +", " ");
     }
 
     /**

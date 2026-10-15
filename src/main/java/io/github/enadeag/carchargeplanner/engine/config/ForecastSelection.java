@@ -2,6 +2,8 @@ package io.github.enadeag.carchargeplanner.engine.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting;
+import io.github.enadeag.carchargeplanner.engine.setting.Setting;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +33,8 @@ public record ForecastSelection(
      */
     public ForecastSelection {
         if (fallback.equals(Optional.of(primary))) {
-            throw new IllegalArgumentException("fallback must be different from primary");
+            throw new InvalidSetting(Setting.FALLBACK_PROVIDER, InvalidSetting.Rule.SAME_AS_PRIMARY,
+                    "fallback must be different from primary");
         }
         settings = checkedCopy(settings);
     }

@@ -210,28 +210,28 @@ class DashboardViewTest {
     }
 
     @Test
-    void theFooterNamesTheForecastAndOffersNothingThatIsNotThereYet() throws Exception {
+    void theFooterNamesTheForecast() throws Exception {
         var view = shown(Models.plan(Optional.empty()));
 
-        var buttons = Fx.call(() -> Scenes.all(view.lookup(".dashboard-footer")).stream()
-                .filter(Button.class::isInstance).map(Button.class::cast).toList());
-
         assertThat(Fx.call(() -> Scenes.visibleTexts(view.lookup(".dashboard-footer")))).contains(Models.FOOTER);
-        assertThat(buttons).hasSize(2);
-        assertThat(buttons.getFirst().isDisabled()).isTrue();
-        assertThat(buttons.getFirst().getAccessibleText()).endsWith("not available yet");
     }
 
     @Test
-    void theFootersSettingsButtonOpensSettings() throws Exception {
+    void theFootersButtonsOpenTheAwayPeriodsAndSettings() throws Exception {
         var view = shown(Models.plan(Optional.empty()));
-        var opened = new java.util.concurrent.atomic.AtomicInteger();
-        Fx.run(() -> view.onSettings(opened::incrementAndGet));
+        var away = new java.util.concurrent.atomic.AtomicInteger();
+        var settings = new java.util.concurrent.atomic.AtomicInteger();
+        Fx.run(() -> {
+            view.onAway(away::incrementAndGet);
+            view.onSettings(settings::incrementAndGet);
+        });
 
-        Fx.run(() -> Scenes.all(view.lookup(".dashboard-footer")).stream()
-                .filter(Button.class::isInstance).map(Button.class::cast).toList().getLast().fire());
-
-        assertThat(opened).hasValue(1);
+        var buttons = Fx.call(() -> Scenes.all(view.lookup(".dashboard-footer")).stream()
+                .filter(Button.class::isInstance).map(Button.class::cast).toList());
+        Fx.run(() -> buttons.getFirst().fire());
+        assertThat(away).hasValue(1);
+        Fx.run(() -> buttons.getLast().fire());
+        assertThat(settings).hasValue(1);
     }
 
     @Test
