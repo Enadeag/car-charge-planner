@@ -46,7 +46,7 @@ class PlannerTest {
     }
 
     private static List<DayPlan> plan(List<ForecastStep> forecast, HomeSystem system, double soc, Instant now) {
-        return new Planner(system, PREFERENCES).plan(forecast, soc, now);
+        return new Planner(system, PREFERENCES).plan(forecast, soc, now, List.of());
     }
 
     /** A bell-shaped Friday for the example system, planned from midnight or the given hour. */
@@ -178,7 +178,7 @@ class PlannerTest {
     void aHigherMarginGivesMorePower() {
         var cautious = friday(900, 40).windows().getFirst();
         var bold = new Planner(Forecasts.example(), new PlanningPreferences(30, 80, 1.0, 0.2, 45, 15))
-                .plan(bellDay(SUMMER_FRI, 900), 40, at(SUMMER_FRI, 0)).getFirst().windows().getFirst();
+                .plan(bellDay(SUMMER_FRI, 900), 40, at(SUMMER_FRI, 0), List.of()).getFirst().windows().getFirst();
         assertThat(bold.powerKw()).isGreaterThan(cautious.powerKw());
     }
 
@@ -239,7 +239,7 @@ class PlannerTest {
                 .mapToObj(h -> new ForecastStep(start.plus(Duration.ofHours(h)), start.plus(Duration.ofHours(h + 1)), 3.3))
                 .toList();
         var finder = new WindowFinder(Forecasts.example(), PREFERENCES);
-        var runs = finder.runs(forecast, start);
+        var runs = finder.runs(forecast, start, List.of());
         assertThat(runs).hasSize(1);
         assertThat(WindowFinder.byDay(runs, Forecasts.TZ)).containsOnlyKeys(SUMMER_FRI);
         var window = finder.windows(runs, 100).getFirst();
@@ -297,5 +297,57 @@ class PlannerTest {
         var saturday = SUMMER_FRI.plusDays(1);
         var days = plan(bellDays(Map.of(SUMMER_FRI, 900.0, saturday, 900.0)), Forecasts.example(), 40, at(SUMMER_FRI, 0));
         assertThat(days).extracting(DayPlan::date).containsExactly(SUMMER_FRI, saturday);
+    }
+
+    /** The Friday from 40 %, planned at the hour, with these windows announced. */
+    private static DayPlan fridayWithAnnounced(int nowHour, double soc, List<Window> announced) {
+        return new Planner(Forecasts.example(), PREFERENCES)
+                .plan(bellDay(SUMMER_FRI, 900), soc, at(SUMMER_FRI, nowHour), announced).getFirst();
+    }
+
+    /** The window the owner was told about at 07:00. */
+    private static Window announced() {
+        return friday(900, 40, 7).windows().getFirst();
+    }
+
+    @Test
+    void withoutAnnouncingTheRunningWindowWouldDrift() {
+        // why announced windows are kept: planning again at 12:00 gives another power and end
+        var announced = announced();
+        var later = friday(900, 40, 12).windows().getFirst();
+        assertThat(List.of(later.end(), later.amps())).isNotEqualTo(List.of(announced.end(), announced.amps()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {9, 10, 12, 14})
+    void anAnnouncedWindowKeepsItsPowerAndEndWhileItRuns(int nowHour) {
+        var announced = announced();
+        var day = fridayWithAnnounced(nowHour, 40, List.of(announced));
+        assertThat(spans(day)).containsExactly(new Span(announced.start(), announced.end(), announced.amps()));
+    }
+
+    @Test
+    void anAnnouncedWindowCountsOnlyItsRemainingEnergy() {
+        var announced = announced();
+        var day = fridayWithAnnounced(12, 40, List.of(announced));
+        double share = Hours.between(at(SUMMER_FRI, 12), announced.end()) / Hours.between(announced.start(), announced.end());
+        assertThat(day.windows().getFirst().solarKwh()).isCloseTo(announced.solarKwh() * share, within(1e-9));
+        assertThat(day.socAfterChargingPct()).isGreaterThan(40);
+    }
+
+    @Test
+    void noSecondWindowIsPlannedOnTopOfAnAnnouncedOne() {
+        var announced = announced();
+        var day = fridayWithAnnounced(11, 10, List.of(announced));
+        // the battery is far from the target, but the sun after the window touches it and so belongs to it
+        assertThat(spans(day)).containsExactly(new Span(announced.start(), announced.end(), announced.amps()));
+    }
+
+    @Test
+    void anAnnouncedWindowThatIsOverOrHasNotStartedIsIgnored() {
+        var announced = announced();
+        assertThat(fridayWithAnnounced(7, 40, List.of(announced)).windows())
+                .isEqualTo(fridayWithAnnounced(7, 40, List.of()).windows());
+        assertThat(fridayWithAnnounced(16, 40, List.of(announced)).windows()).doesNotContain(announced);
     }
 }

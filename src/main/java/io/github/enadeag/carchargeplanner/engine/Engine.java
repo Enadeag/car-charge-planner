@@ -45,7 +45,8 @@ public final class Engine {
             return new Outlook.NoForecast(e.getMessage());
         }
         var now = clock.instant();
-        var days = new Planner(config.system(), config.planning()).plan(forecast, ASSUMED_BATTERY_PCT, now);
+        // nothing is announced until there are notifications, so there is no announced window to keep
+        var days = new Planner(config.system(), config.planning()).plan(forecast, ASSUMED_BATTERY_PCT, now, List.of());
         return new Outlook.Planned(now, config.system().timezone(), days, ASSUMED_BATTERY_PCT, true);
     }
 }

@@ -14,6 +14,10 @@ record Run(List<Segment> segments) {
         return segments.getFirst().start();
     }
 
+    Instant end() {
+        return segments.getLast().end();
+    }
+
     Segment get(int index) {
         return segments.get(index);
     }

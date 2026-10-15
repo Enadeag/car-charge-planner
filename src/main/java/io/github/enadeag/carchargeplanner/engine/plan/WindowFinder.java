@@ -30,8 +30,8 @@ final class WindowFinder {
         this.minWindow = Duration.ofMinutes(preferences.minWindowMinutes());
     }
 
-    /** The runs from now on in which the surplus reaches the charger's minimum current. */
-    List<Run> runs(List<ForecastStep> forecast, Instant now) {
+    /** The runs from now on in which the surplus reaches the charger's minimum current and the charger is free. */
+    List<Run> runs(List<ForecastStep> forecast, Instant now, List<Unavailable> unavailable) {
         var runs = new ArrayList<Run>();
         var current = new ArrayList<Segment>();
         for (var step : forecast.stream().sorted(Comparator.comparing(ForecastStep::start)).toList()) {
@@ -40,8 +40,7 @@ final class WindowFinder {
                 continue;
             }
             var segment = new Segment(start, step.end(), Charging.usableKw(step, system, preferences));
-            boolean chargeable = Charging.ampsFor(segment.usableKw(), system.charger()) >= system.charger().minAmps();
-            if (chargeable) {
+            if (canCharge(segment, unavailable)) {
                 if (!current.isEmpty() && !current.getLast().end().equals(segment.start())) {
                     runs.add(new Run(current));
                     current.clear();
@@ -56,6 +55,11 @@ final class WindowFinder {
             runs.add(new Run(current));
         }
         return runs;
+    }
+
+    private boolean canCharge(Segment segment, List<Unavailable> unavailable) {
+        boolean free = unavailable.stream().noneMatch(time -> time.overlaps(segment.start(), segment.end()));
+        return free && Charging.ampsFor(segment.usableKw(), system.charger()) >= system.charger().minAmps();
     }
 
     /** A run belongs to the local date it starts on, even when it goes on past midnight. */
