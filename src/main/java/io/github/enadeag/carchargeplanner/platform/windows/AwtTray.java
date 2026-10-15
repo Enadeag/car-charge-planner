@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.platform.windows;
 import io.github.enadeag.carchargeplanner.desktop.AppIcon;
 import io.github.enadeag.carchargeplanner.desktop.Tray;
 import java.awt.AWTException;
+import java.awt.GraphicsEnvironment;
 import java.awt.MenuItem;
 import java.awt.PopupMenu;
 import java.awt.SystemTray;
@@ -24,6 +25,10 @@ public final class AwtTray implements Tray {
 
     @Override
     public void show(TrayActions actions) throws TrayUnavailable {
+        // without a desktop (a service, or an ssh session) even making the menu fails
+        if (GraphicsEnvironment.isHeadless() || !SystemTray.isSupported()) {
+            throw new TrayUnavailable("Windows has no notification area for this app", null);
+        }
         var menu = new PopupMenu();
         menu.add(menuItem("Open dashboard", actions.open()));
         menu.addSeparator();
@@ -41,7 +46,7 @@ public final class AwtTray implements Tray {
         });
         try {
             SystemTray.getSystemTray().add(trayIcon);
-        } catch (AWTException | UnsupportedOperationException e) {
+        } catch (AWTException e) {
             throw new TrayUnavailable("Windows has no notification area for this app", e);
         }
     }

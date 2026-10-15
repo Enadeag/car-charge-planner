@@ -125,6 +125,8 @@
         <version>3.6.0</version>
         <configuration>
           <systemPropertyVariables>
+            <!-- no test may put an AWT window or tray icon on the developer's desktop -->
+            <java.awt.headless>true</java.awt.headless>
             <java.util.logging.config.file>${project.basedir}/src/test/resources/logging.properties</java.util.logging.config.file>
           </systemPropertyVariables>
         </configuration>
