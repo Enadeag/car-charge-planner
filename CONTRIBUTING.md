@@ -104,10 +104,10 @@ and the Maven wrapper in the root, the code in `src/main/java/io/github/enadeag/
 
 | Package | What it holds |
 | --- | --- |
-| `engine` | Plans, fetches forecasts and owns the stored data, without user interface; clients get plain records. `engine.config` the config file, `engine.away` the away periods (weekly, and the ones entered by hand and kept in `away.json`), `engine.forecast` the provider contract and the forecast service (fallback, cache, rate limits), `engine.forecast.providers` Open-Meteo and Forecast.Solar, `engine.secrets` the API keys, `engine.plan` the planner. |
-| `desktop` | The JavaFX dashboard, and what a tray icon and start at login must do. |
+| `engine` | Plans, fetches forecasts and owns the stored data, without user interface; clients get plain records. `engine.config` the config file, `engine.away` the away periods (weekly, and the ones entered by hand and kept in `away.json`), `engine.forecast` the provider contract and the forecast service (fallback, cache, rate limits), `engine.forecast.providers` Open-Meteo and Forecast.Solar, `engine.secrets` the API keys, `engine.plan` the planner, `engine.notify` when the owner is told about a window (the notifier port, and the announced windows kept in `announced.json`). |
+| `desktop` | The JavaFX dashboard, the notifications' texts, and what a tray icon, notifications and start at login must do. |
 | `instance` | One running copy per user: a second start asks the first, over a private Unix domain socket, to show its dashboard. |
-| `platform.linux`, `platform.windows` | The tray icon, the keychain and start at login on each system: our own StatusNotifierItem and Secret Service client over D-Bus, and a desktop entry in the autostart folder; AWT's `SystemTray`, the Credential Manager and the Run key. |
+| `platform.linux`, `platform.windows` | The tray icon, notifications, the keychain and start at login on each system: our own StatusNotifierItem, notification and Secret Service clients over D-Bus, and a desktop entry in the autostart folder; AWT's `SystemTray` and its icon's messages, the Credential Manager and the Run key. |
 | `Main` | The composition root: the one place where the parts are made and handed to each other. |
 
 ```bash
@@ -126,9 +126,10 @@ you. Weekly away periods are in the optional `away` section of `engine.json`; th
 are kept by the engine in `away.json` beside the forecast cache. The forecast cache is in
 `~/.local/share/car-charge-planner/forecasts/` (Windows: `%LOCALAPPDATA%\car-charge-planner\forecasts\`).
 
-The tests never touch the network or your keychain: the providers replay recorded answers, the Linux keychain test
-runs a throwaway GNOME Keyring on a private D-Bus (it is skipped without `dbus-daemon` and `gnome-keyring-daemon`),
-and the Windows one uses an entry of its own that it removes again (it is skipped over ssh, where Windows has no
+The tests never touch the network, your keychain or your desktop: the providers replay recorded answers, the Linux
+keychain test runs a throwaway GNOME Keyring on a private D-Bus (it is skipped without `dbus-daemon` and
+`gnome-keyring-daemon`), the notification tests a fake notification server on a private D-Bus that cannot start a
+real one, and the Windows keychain test uses an entry of its own that it removes again (it is skipped over ssh, where Windows has no
 logon session for the Credential Manager).
 
 Packages, with a runtime made by jlink (unsigned, as the Python version's):

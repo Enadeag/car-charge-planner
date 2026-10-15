@@ -17,6 +17,7 @@ import io.github.enadeag.carchargeplanner.engine.forecast.ForecastUnavailable;
 import io.github.enadeag.carchargeplanner.engine.forecast.PlaceResults;
 import io.github.enadeag.carchargeplanner.engine.forecast.Providers;
 import io.github.enadeag.carchargeplanner.engine.forecast.SystemDescription;
+import io.github.enadeag.carchargeplanner.engine.notify.Announcer;
 import io.github.enadeag.carchargeplanner.engine.plan.AwayTimes;
 import io.github.enadeag.carchargeplanner.engine.plan.GridAdvisor;
 import io.github.enadeag.carchargeplanner.engine.plan.Planner;
@@ -48,6 +49,7 @@ public final class Engine {
     private final ApiKeys apiKeys;
     private final AwayFile awayFile;
     private final Clock clock;
+    private final Announcer announcer;
 
     /**
      * Makes the engine; nothing is read or fetched yet.
@@ -58,20 +60,24 @@ public final class Engine {
      * @param apiKeys where the providers' secret settings are kept
      * @param awayFile where the away periods the owner enters by hand are kept, read again for every plan
      * @param clock the time plans are made at, and that decides which away periods are old
+     * @param announcer tells the owner about the plan's windows shortly before they start, and keeps the ones it told
+     *     about as they were told
      */
     public Engine(ConfigFile configFile, ForecastService forecasts, Providers providers, ApiKeys apiKeys,
-            AwayFile awayFile, Clock clock) {
+            AwayFile awayFile, Clock clock, Announcer announcer) {
         this.configFile = configFile;
         this.forecasts = forecasts;
         this.providers = providers;
         this.apiKeys = apiKeys;
         this.awayFile = awayFile;
         this.clock = clock;
+        this.announcer = announcer;
     }
 
     /**
-     * Makes a plan from the config file and a forecast. Blocks while the forecast is fetched: call it away from the
-     * user interface's thread.
+     * Makes a plan from the config file and a forecast, and tells the owner about a window that starts within the
+     * notification lead time. Blocks while the forecast is fetched: call it away from the user interface's thread,
+     * and often enough for the lead time, such as every minute.
      *
      * @return the plan, or why there is none: the config file is not usable, or no forecast is
      */
@@ -91,10 +97,10 @@ public final class Engine {
             return new Outlook.NoForecast(e.getMessage());
         }
         var away = new AwayTimes(config.away().recurring(), awayFile.periods());
-        // nothing is announced until there are notifications, so there is no announced window to keep
         var days = new Planner(system, config.planning(), away)
-                .plan(forecast.steps(), ASSUMED_BATTERY_PCT, now, List.of());
+                .plan(forecast.steps(), ASSUMED_BATTERY_PCT, now, announcer.announced());
         var advice = new GridAdvisor(system, config.planning(), away).advise(days, forecast.steps(), now);
+        announcer.announceDue(days, advice, forecast.source(), now, config);
         return new Outlook.Planned(now, system.timezone(), days, ASSUMED_BATTERY_PCT, true, advice, forecast.source());
     }
 
