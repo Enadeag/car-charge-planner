@@ -2,348 +2,164 @@
 
 [![CI](https://github.com/Enadeag/car-charge-planner/actions/workflows/ci.yml/badge.svg)](https://github.com/Enadeag/car-charge-planner/actions/workflows/ci.yml)
 [![Licence: GPL-3.0-or-later](https://img.shields.io/badge/licence-GPL--3.0--or--later-blue.svg)](LICENSE)
-![Python 3.12 | 3.13 | 3.14](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue.svg)
+![Java 25](https://img.shields.io/badge/java-25-blue.svg)
 
 A tray app for Linux and Windows desktops that tells you when to charge your electric car so that as much of your own solar energy as possible is used and as little as possible is fed back to the grid.
 
 It is advisory only: it recommends a **charge window** and a **charge power**, and you set the current in your charger's app yourself.
 
-It plans from a description of your set-up: your solar panels (size, tilt, direction), your location, your home charger's current limits and your car's battery. You enter all of it in the Settings window. The values it starts with are **examples, not measurements**: replace them with yours, or the plan will not fit your home.
+It plans from a description of your set-up: your solar panels (size, tilt, direction), your location, your home charger's current limits and your car's battery. You enter it in set-up the first time and change it in Settings later. Where you do not know a value, the app uses a **typical value** and says so: replace it with yours, or the plan will not fit your home.
 
 It suits a fixed-price energy contract, where the goal is simply to use your own solar power instead of feeding it back. It does not look at hourly energy prices.
 
-<p>
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/app-plan-dark.png"><img alt="The Plan page: the next charge window, the power to set, the expected battery level, the next days." src="docs/images/app-plan-light.png" width="300"></picture>
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/app-update-dark.png"><img alt="The Update page: the battery level and the days the car is away." src="docs/images/app-update-light.png" width="300"></picture>
-</p>
-<p>
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/app-window-dark.png"><img alt="The same plan in a window, for desktops without a tray." src="docs/images/app-window-light.png" width="300"></picture>
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/app-settings-dark.png"><img alt="The Settings window, on the Solar and location tab." src="docs/images/app-settings-light.png" width="420"></picture>
-</p>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/java/charts-dark.png"><img alt="The dashboard three times: today with grid advice, a day with a charge window and the expected sun, and the battery level being entered." src="docs/screenshots/java/charts-light.png"></picture>
 
-The pictures are made by `docs/screenshots.py` (offscreen, a neutral example home); a real desktop theme looks a little different.
+The pictures are of an example home; a real desktop theme looks a little different.
 
 ## Supported systems
 
 | System | Status |
 | --- | --- |
-| **Linux, KDE Plasma** (glibc 2.34 or newer) | Supported. KDE Plasma under Wayland is where the app is developed and used. |
-| Linux, GNOME 48 to 51 | Beta: built and tested automatically under Wayland, as a window or, with the AppIndicator extension, a tray icon; not yet checked by a person on a real GNOME desktop. |
-| Other Linux desktops (XFCE, Cinnamon, Sway, X11 sessions and so on) | Untested. A tray icon needs a desktop with a system tray; without one the app shows a window. |
-| **Windows 10 or later** (x64; Windows on Arm through emulation) | Supported, with an installer. |
-| macOS 13 or later | Planned, as a beta. |
+| **Linux, KDE Plasma** (x64) | Supported. KDE Plasma under Wayland is where the app is developed and used. |
+| Linux, GNOME | Untested. GNOME has no tray of its own: the app shows a window, or a tray icon with the AppIndicator extension. |
+| Other Linux desktops (XFCE, Cinnamon, Sway, X11 sessions and so on) | Untested. A tray icon needs a desktop with a system tray (StatusNotifierItem); without one the app shows a window. |
+| **Windows 10 or later** (x64) | Supported, with an installer. |
+| macOS | Not built. |
 
-"Supported" means a person has checked every release on that system; "beta" means releases are only tested automatically.
+"Supported" means a person has checked every release on that system.
 
 Tried it on your desktop? Please tell us, whether it works or not, with the **Does it work on my desktop?** issue form.
 
 ## What it does
 
 - Fetches a solar forecast from a forecast provider ([Open-Meteo](https://open-meteo.com) by default, or [Forecast.Solar](https://forecast.solar); both free, no account) and turns it into expected surplus: panel output minus the house's own use. A second provider can be set as a fallback.
-- Recommends charge windows within the hours the car is at home, with one constant power per window (in kW and amps), aiming for almost no grid draw.
-- Tray icon: green while a window is active, blue when one is coming, grey when there is none, orange when a grid charge is needed, red when there is no forecast.
-- Click the icon for a popup with two pages. **Plan** answers "when do I charge?": the next window, the battery level you expect after it, grid-charge advice when needed, a short table of the next days, and a battery and away status line. **Update** holds the daily inputs.
-- Right-click the icon for **Settings...**, a window with all configuration grouped over tabs, and **Set up...**, which opens the set-up wizard again.
-- Sends a desktop notification a few minutes before each window (the lead time is a setting), once per window. Clicking the notification shows the plan. Notifications go straight to the desktop's notification service (D-Bus), so they work with or without a tray.
-- **Grid-charge advice:** if the battery would end a day below your minimum charge level, it says how much to charge from the grid and picks the time that uses the most leftover sun.
-
-### Inputs (the popup's Update page)
-
-| Input | Notes |
-| --- | --- |
-| Battery level | You enter it by hand ("Set battery"). Flagged red when never entered or a day old. |
-| Car away | Add a one-off day (all day or a time range) and remove it again. The weekly rules are listed there too, read-only; the **Edit weekly rules in Settings...** button opens Settings on the Away rules tab. |
-
-Where things are edited: **settings** (panel size, charger, weekly away rules and so on) only in the Settings window; **daily inputs** (battery level, one-off away days) in the popup. Nothing is editable in both places. Everything you enter in the popup saves immediately and replans at once. Close the popup with the × in its corner, Escape, a click on the tray icon, or a click outside it.
+- Recommends charge windows within the hours the car is at home, with one constant power per window (in amps and kW), aiming for almost no grid draw.
+- **Grid advice:** if the battery would end a day below your minimum charge level, it says how much to charge from the grid and when.
+- A tray icon whose dot shows the state of the plan, with the plan in its tooltip. Click it for the **dashboard**: a tab per day with that day's charge window, grid advice, the expected sun against the house's use, and the car battery. The dashboard also opens in a window of its own.
+- **Update** on the battery card is where you enter the level the car shows. Until you do, the plan assumes 50 % and says so.
+- Right-click the icon for **Open dashboard**, **Settings…** (**Set up…** until the app is set up), **About…** and **Quit**.
+- Sends a desktop notification a few minutes before each window (the lead time is a setting), once per window. Clicking it opens the dashboard. On Linux notifications go straight to the desktop's notification service over D-Bus, so they work with or without a tray; on Windows they come from the tray icon.
 
 ## Current state
 
-The planner, the tray app, the Settings window and the set-up wizard work. The reasoning behind them, with the reviews, is in [docs/design](docs/design/README.md).
+The planner, the dashboard, the tray icon, the notifications, set-up and Settings work. The app was first written in Python with Qt and has been rewritten in Java with JavaFX ([ADR 0005](docs/adr/0005-java-with-javafx.md)); the reasoning behind the original design is in [docs/design](docs/design/README.md).
 
 Limits to know about:
 
-- **The plan is forecast-only.** It uses a weather forecast and the values you enter, not measured data: no smart-meter, inverter or car readings. The more accurate your panel, battery and consumption values, the better the plan. Values tagged **Assumed** or **Estimate** in Settings are the ones most worth checking.
-- **You enter the battery level by hand**, and away times by hand or as weekly rules. There is no calendar sync and no connection to the car.
+- **The plan is forecast-only.** It uses a weather forecast and the values you enter, not measured data: no smart-meter, inverter or car readings. The more accurate your panel, battery and consumption values, the better the plan.
+- **You enter the battery level by hand**, and the times the car is away as weekly times in Settings. There is no calendar sync and no connection to the car.
 - **You set the charge current yourself**, in your charger's own app. The app only recommends it.
-- **Developed on KDE Plasma under Wayland, and on Windows.** GNOME support is built and tested automatically but not yet tried on a real GNOME desktop (see Supported systems and Running on GNOME).
-
-## Requirements
-
-- Linux with glibc 2.34 or newer, or Windows 10 or later (see Supported systems). On Linux the tray icon needs a desktop with a system tray (KDE Plasma; GNOME only with an extension). Without one the app shows a window instead; see Running on GNOME.
-- Python 3.12 or newer (developed on 3.14), for the Linux install and a clone. The Windows installer brings its own.
-- Internet access for the forecast. Without it the app uses its cached forecast and says so.
+- **Settings of the Python version (0.2.0 and earlier) are not read.** Run set-up once; the old files are left alone.
 
 ## Install
 
+The downloads are on the [release page](https://github.com/Enadeag/car-charge-planner/releases). Each brings its own Java runtime: nothing else needs to be installed. Internet access is needed for the forecast; without it the app uses its cached forecast and says so.
+
 ### Windows
 
-Download `car-charge-planner-<version>-setup.exe` and `SHA256SUMS` from the [release page](https://github.com/Enadeag/car-charge-planner/releases). The installer needs no administrator rights. It installs for you only, in `%LOCALAPPDATA%\Programs\Car charge planner`, adds a Start menu entry, and can start the app at login (ticked by default). The first start opens the set-up wizard.
+Download `car-charge-planner-<version>.exe`. The installer needs no administrator rights. It installs for you only, in `%LOCALAPPDATA%\Programs\car-charge-planner`, and adds a Start menu entry and a desktop shortcut. The first start opens set-up.
 
-**Check the download.** In PowerShell, in the download folder, run `(Get-FileHash .\car-charge-planner-<version>-setup.exe -Algorithm SHA256).Hash` and compare it with the line for the installer in `SHA256SUMS` (`Get-Content .\SHA256SUMS`). Capitals don't matter. If they differ, delete the file and download it again.
+**Check the download.** In PowerShell, in the download folder, run `(Get-FileHash .\car-charge-planner-<version>.exe -Algorithm SHA256).Hash` and compare it with the line for the installer in `SHA256SUMS` from the same release (`Get-Content .\SHA256SUMS`). Capitals don't matter. If they differ, delete the file and download it again.
 
-**"Windows protected your PC".** The installer is not code-signed yet, so Microsoft Defender SmartScreen warns about a new download from an unknown publisher. Once the checksum matches, click **More info**, then **Run anyway**.
+**"Windows protected your PC".** The installer is not code-signed yet (that waits for SignPath), so Microsoft Defender SmartScreen warns about a new download from an unknown publisher. Once the checksum matches, click **More info**, then **Run anyway**.
 
-Commands that print (`test-notification`, `quit` and so on) are run with `car-charge-planner-cli.exe` in the install folder. Notifications come through the tray icon.
+**Update:** quit the app (tray icon, **Quit**), then run the new installer. It replaces the old version and keeps your settings.
 
-**Update:** run the new installer; it asks a running app to quit, replaces the old version and keeps your settings.
+**Uninstall:** in Settings, Apps, Installed apps. This removes the program and its shortcuts. It keeps your settings, data and API keys: the folders are listed under [Where things are kept](#where-things-are-kept), and the keys are in Credential Manager. Delete them if you want them gone.
 
-**Uninstall:** in Settings, Apps, Installed apps. A running app is asked to quit first. This removes the program, the Start menu entry and the login entry. It keeps your settings, state and API keys: the folders are listed under [Where things are stored](#where-things-are-stored), and the keys are in Credential Manager, under `car-charge-planner`. Delete them if you want them gone.
+**Coming from 0.2.0?** That version was a different program, in `%LOCALAPPDATA%\Programs\Car charge planner`. The new installer does not remove it: uninstall it in Settings, Apps.
 
 ### Linux
 
-With [pipx](https://pipx.pypa.io), which keeps the app and its libraries apart from everything else on your system:
+Download `car-charge-planner-<version>-linux.tar.gz` and `SHA256SUMS`, check the download and unpack it where you keep programs:
 
 ```bash
-pipx install git+https://github.com/Enadeag/car-charge-planner
+sha256sum --ignore-missing -c SHA256SUMS
+tar -xzf car-charge-planner-<version>-linux.tar.gz -C ~/.local/opt    # or any folder you like
+~/.local/opt/car-charge-planner/bin/car-charge-planner
 ```
 
-This puts a `car-charge-planner` command on your path. Then run `car-charge-planner` (see Run below); the first start opens the set-up wizard.
+The first start opens set-up. The archive is not signed yet either.
 
-**Update:** `pipx upgrade car-charge-planner`; if you set up autostart or the menu entry, run `car-charge-planner install-autostart` and `install-launcher` again.
+**Update:** quit the app, replace the folder with the new one, and start it again. If it starts at login, switch that off and on again when the folder moved.
 
-**Uninstall:** first `car-charge-planner uninstall-launcher` and `car-charge-planner uninstall-autostart` (only if you used them), then `pipx uninstall car-charge-planner`. Your settings and data stay where they are, listed under [Where things are stored](#where-things-are-stored); delete them if you want them gone.
-
-### From a clone
-
-To run it from a clone, or to work on it:
-
-```bash
-# in the folder you cloned this repository into
-python3 -m venv .venv
-.venv/bin/pip install -e ".[dev]"
-```
-
-The command is then `.venv/bin/car-charge-planner` (or `.venv/bin/python -m car_charge_planner`). The editable install also builds the translations; see Translations. The commands in the rest of this document are written as `car-charge-planner`: from a clone, use the one in `.venv/bin/` (on Windows, `.venv\Scripts\`).
+**Uninstall:** switch off start at login (Settings, App), quit the app and delete the folder. Your settings and data stay where they are, listed under [Where things are kept](#where-things-are-kept); delete them if you want them gone.
 
 ## Run
 
-Start the tray app:
+Start the app from the Start menu (Windows) or with `bin/car-charge-planner` in the unpacked folder (Linux). It runs until you choose **Quit** in the tray icon's menu, or closes with its window when it shows a window instead of a tray icon. Starting it again while it runs does not start a second copy: the running one shows its dashboard.
 
-```bash
-car-charge-planner
-```
+The program also takes a few commands:
 
-It runs until you choose **Quit** in the tray icon's right-click menu. Starting it again while it runs does not start a second copy: it asks the running one to show its popup and exits. The first start creates the config file.
-
-Stop a running instance from a terminal:
-
-```bash
-pkill -f "car-charge-planner$"
-```
+| Command | What it does |
+| --- | --- |
+| `car-charge-planner quit` | Asks the running app to quit. |
+| `car-charge-planner start-at-login on` | Starts the app at login, hidden in the tray. The same as the switch in Settings, App. |
+| `car-charge-planner start-at-login off` | Stops starting it at login. |
+| `--config=path/to/engine.json` | Plans with another config file, such as `docs/example-engine.json`. |
 
 ### First run
 
-The first start creates the config file and opens the **set-up wizard**. Until you have said where your panels are, the app knows nothing about you: it **fetches nothing** (no request leaves your machine) and there is no plan; the popup and the window say **Not set up yet** and have a **Set up** button.
+Until you have said where your panels are, the app knows nothing about you: it **fetches nothing** (no request leaves your computer) and there is no plan. Set-up opens by itself the first time, and the dashboard and the tray menu lead back to it until it is done.
 
-The wizard takes a few minutes and has six steps: a welcome (with what leaves your computer, and your units: km or miles), the **place** of your panels (searched by name, or typed as coordinates), the panels' **size, direction and tilt** (with **Add another array** for panels on another roof face), your **car and charger**, then **What next?** (two optional extras: the house's electricity use, and when the car is away, which matters if you drive to work) and a final review. Every question says where to find the answer, and **"I don't know"** uses a typical value. Typical values are marked as such in Settings and on the plan page until you give your own.
+Set-up takes a few minutes. It starts with what leaves your computer, then asks for your language and units, the **place** of your panels (searched by name, or typed as coordinates), the panels' **size, direction and tilt** (more than one array if your panels face different ways), your **car** and **charger**, the forecast provider, and optionally more, such as the house's own use and when the car is away. Every question says where to find the answer, and a typical value is used where you don't know one. Before Finish it checks the forecast and shows a preview of the dashboard. **Nothing is saved until Finish**: cancelled, the app stays not set up.
 
 <p>
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/setup-welcome-dark.png"><img alt="Welcome: what the app does, what leaves your computer, and your units." src="docs/images/setup-welcome-light.png" width="300"></picture>
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/setup-location-dark.png"><img alt="Location: search by name, or type the coordinates." src="docs/images/setup-location-light.png" width="300"></picture>
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/setup-solar-dark.png"><img alt="Solar panels: size, direction and tilt, with where to find each." src="docs/images/setup-solar-light.png" width="300"></picture>
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/setup-car-dark.png"><img alt="Car and charger: battery, consumption, distance in a week, charge levels, phases and current." src="docs/images/setup-car-light.png" width="300"></picture>
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/setup-next-dark.png"><img alt="What next?: two optional extras, ticked when done." src="docs/images/setup-next-light.png" width="300"></picture>
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/setup-house-dark.png"><img alt="House electricity: from the year's bill." src="docs/images/setup-house-light.png" width="300"></picture>
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/setup-away-dark.png"><img alt="When the car is away: weekly times, if you drive to work." src="docs/images/setup-away-light.png" width="300"></picture>
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/setup-finish-dark.png"><img alt="Finish: a recap with Change links, typical values marked, and a test of the forecast." src="docs/images/setup-finish-light.png" width="300"></picture>
+<img alt="Set-up's welcome step: language, units and what leaves your computer." src="docs/screenshots/java/setup-welcome-english-light.png" width="300">
+<img alt="Set-up's location step: search by name, or type the coordinates." src="docs/screenshots/java/setup-location-english-light.png" width="300">
+<img alt="Set-up's preview of the dashboard, before Finish." src="docs/screenshots/java/setup-preview-english-light.png" width="300">
 </p>
 
-The pictures are made by `docs/screenshots.py` (offscreen, neutral example answers); a real desktop theme looks a little different.
+When the app is started hidden at login, set-up does not open by itself; one notification offers it.
 
-- **Nothing is saved until Finish.** Closing the wizard earlier asks "Leave set-up?" and discards what you entered; the app stays not set up, and the **Set up** button is still there.
-- Finish writes the settings, fetches the first forecast (the last page does a test fetch and says what it got, but a failure never stops you finishing) and shows the plan.
-- When the app is started hidden at login (the autostart entry), the wizard does **not** open by itself; one notification offers it, once.
-- **Settings has "Run set-up again..."**, which opens the wizard filled in with what is saved. A location entered directly in Settings also counts as set up.
+## Settings
 
-Your time zone comes with the place you pick (or from the system for typed coordinates), and you can change it in the wizard under Advanced or in Settings.
+Open **Settings…** from the tray menu or the dashboard. Settings is a window with a page per category: Solar panels, Location, Car and house, Charger, Forecast, Away, Planning, App and About.
 
-### Check that clicking a notification works on your desktop
-
-```bash
-car-charge-planner test-notification
-```
-
-This sends a labelled test notification and waits up to a minute for you to click it. It says whether the click reached the app. If it does not, the notification itself still works; only the click-to-open step does not.
-
-### Without the tray: print the plan in a terminal
-
-```bash
-python -m car_charge_planner.planner.cli --live --battery 45
-```
-
-| Option | Meaning |
+| Page | What it holds |
 | --- | --- |
-| `--live` | The forecast from the providers in the config (Open-Meteo by default), cached. `--refresh` ignores the cache interval. Needs a location in the config (`--config`). |
-| `--demo summer\|overcast\|mixed\|winter` | Invented forecast, no network. |
-| `--forecast file.json` | Your own forecast: a list of `{"start", "end", "power_kw"}` (ISO times with a time zone, expected solar power in kW). Files in the earlier `gti` (W/m2) format are refused with a message saying so. |
-| `--battery N` | Current battery percentage (required). |
-| `--now ISO` | Pretend it is another time. |
-| `--config path` | Use another config file. |
+| Solar panels | The panel arrays: size, tilt, direction and losses of each. The forecast is the sum of the arrays. |
+| Location | Latitude, longitude and time zone, or a place search. |
+| Car and house | The car's usable battery, consumption and driving per day; the house's own use. |
+| Charger | One or three phases, minimum and maximum current, voltage, charging efficiency. |
+| Forecast | Which forecast provider to use, an optional fallback, and each one's settings (a server address or an API key, if it takes any), with a **Test** button. API keys are kept in the system keychain. |
+| Away | The weekly times the car is not at home. |
+| Planning | Minimum and target charge level, the planning margin, the import tolerance, the shortest window, the notification lead time. |
+| App | Language, light or dark, units (metric or imperial), whether the app shows a tray icon or a window, and start at login. Set-up can be run again from here. |
+| About | The version, the licence, the source, and where your files are kept. |
 
-## Start automatically at login
+**Save** checks everything together. If something is wrong, it says what and writes nothing; otherwise the change applies at once. How the app shows itself (tray icon or window) applies the next time it starts.
 
-On every system, tick **Start at login** in Settings, on the Interface tab. On Windows the installer offers the same choice. On Linux you can also use the commands below.
-
-```bash
-car-charge-planner install-autostart
-```
-
-This writes `~/.config/autostart/car-charge-planner.desktop`, which starts the app at your next login. It stores the full path of the installed command, so run it again if you reinstall the app somewhere else.
-
-## Remove the autostart entry (Linux)
-
-```bash
-car-charge-planner uninstall-autostart
-```
-
-This deletes only that `.desktop` file. A running instance keeps running until you quit it.
-
-## Application menu entry and icon (Linux)
-
-```bash
-car-charge-planner install-launcher
-```
-
-This adds the app to your application menu with its own icon (the bolt on a blue disc) and writes the launcher to `~/.local/share/applications/car-charge-planner.desktop` and the icon to `~/.local/share/icons/hicolor/scalable/apps/`. The desktop uses the same entry to tie the app's notifications and windows to it, so they show its name and icon. Like the autostart entry, it stores absolute paths, so run it again if you move the project.
-
-To remove both files:
-
-```bash
-car-charge-planner uninstall-launcher
-```
-
-## Running on GNOME
-
-**Status:** the GNOME support is built and covered by automated tests, but it has not yet been tried on a real GNOME desktop. The check list for that is in [docs/design/gnome-support/issues/10-verify-on-gnome.md](docs/design/gnome-support/issues/10-verify-on-gnome.md); reports are welcome (see Supported systems).
-
-**Target:** GNOME 48 to 51 (the current release and the three before it, as of October 2026), in a Wayland session. GNOME 50 and later have no X11 session at all.
-
-GNOME has no system tray of its own, so the app shows a window there instead of a tray icon and popup. The window has the same two pages (Plan and Update), a menu button (Settings, Set up, Refresh forecast, Quit) and the same notifications.
-
-| What | Needed? | Notes |
-| --- | --- | --- |
-| A Wayland session | Required | The Qt libraries in the PySide6 package include the Wayland plugin; no extra Qt package is needed. |
-| Python 3.12+, `PySide6-Essentials`, `jeepney` | Required | As under Setup. |
-| The notification service | Required | GNOME Shell provides it. |
-| A launcher entry | Recommended | Run `car-charge-planner install-launcher`. GNOME ties the app's windows and notifications to it, so they show its name and icon. |
-| The **AppIndicator and KStatusNotifierItem Support** extension | **Optional** | Only needed if you want the tray icon and popup instead of a window. |
-
-**The optional tray extension.** With it, the app shows its tray icon with a popup, as on KDE. Ubuntu ships it enabled. Elsewhere, install it and turn it on in the Extensions app, then log out and in:
-
-| Distribution | Install |
-| --- | --- |
-| Fedora | `sudo dnf install gnome-shell-extension-appindicator` |
-| Debian | `sudo apt install gnome-shell-extension-appindicator` |
-| Arch | `sudo pacman -S gnome-shell-extension-appindicator` |
-| Others | [extensions.gnome.org](https://extensions.gnome.org/extension/615/appindicator-support/) |
-
-Its current version lists GNOME Shell 45 to 51. A new GNOME release can outrun an extension for a while; the window mode is the fallback for exactly that.
-
-**How it behaves**
-
-- **Start it** from the application menu (after `install-launcher`) or with `car-charge-planner`. Starting it again shows the window that is already running instead of starting a second copy.
-- **Closing the window hides it.** The app keeps running in the background so you still get notifications; the first time you close it, it tells you so. Quit from the window's menu or with Ctrl+Q.
-- **At login:** `car-charge-planner install-autostart` starts it hidden in the background. If you set up autostart before this version, run the command again to update it.
-- **Choose how it shows itself** under Settings, on the Interface tab: Automatic (a tray icon if the desktop has one, otherwise a window), Tray icon, or Window. Automatic waits a few seconds for a tray at login, since the tray can appear a moment after the app starts. The change applies the next time the app starts.
-- **Clicking a notification** shows the plan. Check that it works on your desktop with `car-charge-planner test-notification`.
-- **Look and feel:** it is a Qt application, so without an Adwaita Qt theme it can look less native on GNOME. Light and dark follow the system.
-
-## Configuration
-
-Open **Settings...** from the tray icon's right-click menu. Settings are grouped over seven tabs:
-
-| Tab | What it holds |
-| --- | --- |
-| Solar and location | Panel size, tilt, direction, system losses, latitude, longitude, time zone. Panels on more than one roof face (east and west, a garage) are separate **arrays**: **Add another array** adds one, with an optional name and its own size, tilt, direction and losses; the forecast is the sum of the arrays. |
-| House and car | House baseload, usable battery, consumption, driving per day, minimum and target charge level |
-| Charger | One or three phases, minimum and maximum current (per phase), voltage, charging efficiency |
-| Planning and notifications | Planning margin, import tolerance, minimum window length, notification lead time |
-| Forecast | Which forecast provider to use, an optional fallback provider, and each one's settings (a server address or an API key, if it takes any). Each provider is described with what it sends, its limits and its terms, and a **Test** button asks it for a forecast right now without saving anything. API keys are kept apart from the config file, in the system keychain (see [What is kept, and where](#what-is-kept-and-where)). |
-| Interface | Whether the app shows itself as a tray icon with a popup, as a window, or automatically (a tray if the desktop has one, otherwise a window); the language (once a translation is installed); and the **units**: metric (km, kWh/100 km) or imperial (miles, miles per kWh) for the distance and consumption fields, which change at once. Stored values stay metric. The mode and language apply the next time the app starts. |
-| Away rules | Weekly times the car is not at home, one row per rule |
-
-- **Save** checks all values together. If something is wrong it lists every problem and writes nothing. Otherwise it writes the file and applies the change straight away (no restart). Changing panel size, tilt, direction, location, time zone or the forecast providers fetches a fresh forecast.
-- The Save button is a split button. Its main part saves and **keeps the window open**. The arrow beside it opens a menu with **Save** and **Save and close**; picking one changes what the button does (the label follows) but does not save yet. The window opens in Save mode every time.
-- The button next to Save reads **Close** while nothing is unsaved and **Cancel** while there are edits. Cancel, the window's close button and Escape ask "Discard your changes?" only if something changed since the last save.
-- **Reset tab** puts the current tab back to the built-in defaults. Nothing is saved until you press Save.
-- Pressing Enter in a field does what the Save button currently does.
-- Values tagged **Typical value** are ones the app filled in because you had none of your own (every value on a fresh install). The tag goes away as soon as you change the value, and the plan page says "Based on typical values for: ..." with a link back here until you have replaced them. A config file from an earlier version has no such list, so none of its values are tagged.
-
-The settings live in two plain TOML files (see [Where things are stored](#where-things-are-stored)): `config.toml` holds your system and planning preferences, which the planner works with, and `app.toml` the app's own settings from the Interface tab (how it shows itself, units and language). The Settings window manages both: saving rewrites the whole file and does not keep comments. The app reads them only at startup, so if you want to edit one by hand, do it while the app is closed. An invalid value makes the app show a dialog listing the problems and exit. A `config.toml` from version 0.2.0 or earlier is converted at the first start: the Interface settings move to `app.toml`, and the file is rewritten in the new format.
-
-## Where things are stored
+## Where things are kept
 
 | What | Linux | Windows |
 | --- | --- | --- |
-| Config: your system and planning preferences | `~/.config/car-charge-planner/config.toml` | `%APPDATA%\car-charge-planner\config.toml` |
-| The app's own settings (Interface tab) | `~/.config/car-charge-planner/app.toml` | `%APPDATA%\car-charge-planner\app.toml` |
-| Battery level, away periods, announced windows | `~/.local/state/car-charge-planner/state.json` | `%LOCALAPPDATA%\car-charge-planner\state.json` |
-| Forecast cache | `~/.cache/car-charge-planner/forecast-<provider>.json`, one per provider | `%LOCALAPPDATA%\car-charge-planner\Cache\forecast-<provider>.json`, one per provider |
-| API keys | The system keychain; `~/.config/car-charge-planner/secrets.toml` (private) only where there is none | Credential Manager |
-| Single-instance socket | `$XDG_RUNTIME_DIR/car-charge-planner.sock` (a private directory under the temp directory if there is no runtime directory) | A named pipe, one per user |
+| Config: your system, planning preferences, forecast providers and weekly away times | `~/.config/car-charge-planner/engine.json` | `%APPDATA%\car-charge-planner\engine.json` |
+| The app's own settings (language, appearance, units, tray or window) | `~/.config/car-charge-planner/app.json` | `%APPDATA%\car-charge-planner\app.json` |
+| The battery level you entered last | `~/.local/share/car-charge-planner/battery.json` | `%LOCALAPPDATA%\car-charge-planner\battery.json` |
+| Away periods for a specific day | `~/.local/share/car-charge-planner/away.json` | `%LOCALAPPDATA%\car-charge-planner\away.json` |
+| The windows you were notified about | `~/.local/share/car-charge-planner/announced.json` | `%LOCALAPPDATA%\car-charge-planner\announced.json` |
+| Forecast cache, one file per provider | `~/.local/share/car-charge-planner/forecasts/` | `%LOCALAPPDATA%\car-charge-planner\forecasts\` |
+| API keys | The system keychain; `~/.config/car-charge-planner/secrets.json` (readable only by you) only where there is none | Credential Manager |
+| Start at login | `~/.config/autostart/car-charge-planner.desktop` | The `Run` key of your user in the registry |
 
-API keys are only stored if you use a paid plan. See [What is kept, and where](#what-is-kept-and-where). On Windows, `%APPDATA%` is usually `C:\Users\<you>\AppData\Roaming` and `%LOCALAPPDATA%` is `C:\Users\<you>\AppData\Local`.
+On Linux `XDG_CONFIG_HOME` and `XDG_DATA_HOME` move the config and data folders, as usual. On Windows, `%APPDATA%` is usually `C:\Users\<you>\AppData\Roaming` and `%LOCALAPPDATA%` is `C:\Users\<you>\AppData\Local`. Settings, About lists the folders of your computer.
 
-Delete the state file to reset your entries. The other files are recreated as needed.
-
-## Tests
-
-```bash
-.venv/bin/pytest -q
-.venv/bin/ruff check .
-```
-
-No network or display is needed: the forecast client runs against a recorded response, and the Qt tests run offscreen.
-
-## Translations
-
-All texts the app shows are translatable (gettext). English is the source language and the only one provided so far; a language is one `.po` file. For developers, with Babel installed (`pip install babel`):
-
-```bash
-.venv/bin/python -m car_charge_planner.i18n_tools extract     # collect the marked texts into src/car_charge_planner/locale/car-charge-planner.pot
-.venv/bin/python -m car_charge_planner.i18n_tools init nl     # start a new language
-.venv/bin/python -m car_charge_planner.i18n_tools update      # bring every language up to date with the template
-.venv/bin/python -m car_charge_planner.i18n_tools compile     # .po -> .mo, which is what the app loads
-```
-
-The language follows your system (`LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`, then the desktop's setting); with no matching catalogue the app stays in English. Compiled catalogues (`.mo`) are not in the repository: run `compile` once before trying a language from a clone. Try one with `LANGUAGE=nl car-charge-planner`. Once a translation is installed, Settings > Interface offers a Language choice (applied at the next start). To add a language, see [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Project layout
-
-The code is one package, `src/car_charge_planner/`:
-
-| In `src/car_charge_planner/` | Contents |
-| --- | --- |
-| `planner/` | The planning logic, with no network or UI: surplus, windows, projection, grid advice, CLI. It is given the user's system and planning preferences only. |
-| `config/` | The engine's settings (`Config`: the system, the planning preferences, the forecast providers and the typical values): checking, reading and writing `config.toml`, and its format versions. |
-| `forecast/` | The forecast providers (`providers/`), the service that chooses between them and caches their answers (`service.py`), and the key storage. See [docs/providers.md](docs/providers.md). |
-| `storage/` | Reading and writing `state.json`. |
-| `settings/` | The Settings window: field definitions, tabs, window. |
-| `setup/` | The set-up wizard: one module per page (welcome, location, solar, car, hub, house, away, finish), the answers (`state.py`), the typical values (`typical.py`) and the helpers each page uses. |
-| (the package itself) | `controller.py` (what the app does: refresh, plan, announce, the user's edits) and `shells/` (how it shows itself: the tray icon with its popup). The popup (`popup.py`) is a window around the reusable `planview.py`. Also notifications over D-Bus (`notifier.py`), the launcher and autostart entries, theme-aware colours, the translations (`locale/`) and the icon (`assets/`). |
-
-Beside it:
-
-| Folder | Contents |
-| --- | --- |
-| `docs/` | `providers.md` (writing a forecast provider), `design/` (the specs, reviews and tickets the code was built from), `screenshots.py` and `images/` (the pictures in this README). |
-| `tests/` | Test suite and the recorded forecast. |
-| `CONTEXT.md` | Glossary of the domain terms used throughout (feed-in, surplus, charge window, ...). |
-| `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`, `LICENSE`, `NOTICE`, `ADDITIONAL-TERMS.md` | How to contribute, behave and report a problem; what changed in each release; the licence. |
+`docs/example-engine.json` shows every setting of `engine.json`, for a made-up place. The app reads the files when it starts and writes them whole when you save; edit one by hand only while the app is closed. Delete the data folder to reset your entries and the cache.
 
 ## How it plans, briefly
 
-1. Surplus per hour = the forecast provider's expected solar power (for Open-Meteo: panel size x forecast irradiance x losses) minus the house baseload, scaled by a planning margin (85% by default) so it errs towards too little power rather than grid draw.
-2. A step counts only if the surplus covers at least your charger's minimum current (6 A by default: about 1.4 kW on a single-phase 230 V charger, about 4.1 kW on a three-phase one; set the phases on the Charger tab).
+1. Surplus per step = the forecast provider's expected solar power minus the house's own use, scaled by a planning margin (85% by default) so it errs towards too little power rather than grid draw.
+2. A step counts only if the surplus covers at least your charger's minimum current (6 A by default: about 1.4 kW on a single-phase 230 V charger, about 4.1 kW on a three-phase one).
 3. Within the hours the car is home, it picks the window and power that bring in the most solar for the energy the car needs, up to your target charge level (80% by default).
-4. It projects the battery day by day, subtracting your average driving per day (a setting). If a day would end more than one point under your minimum charge level, it adds the grid-charge advice.
+4. It projects the battery day by day, subtracting your driving per day. If a day would end under your minimum charge level, it adds grid advice.
 5. A window you have been notified about is kept as announced while it runs, so the power on screen matches what you set.
 
-The full design is in [docs/design/planner/spec.md](docs/design/planner/spec.md).
+The words used here (surplus, charge window, away period and so on) are defined in [CONTEXT.md](CONTEXT.md).
 
 ## Contributing
 
-Bug reports, desktop reports, translations and pull requests are welcome: start with [CONTRIBUTING.md](CONTRIBUTING.md). Please follow the [Code of Conduct](CODE_OF_CONDUCT.md); report security problems as described in [SECURITY.md](SECURITY.md). What changed in each release is in the [changelog](CHANGELOG.md), the reasoning behind the code is in the [design documents](docs/design/README.md), and the licence is below.
+Bug reports, desktop reports, translations and pull requests are welcome: start with [CONTRIBUTING.md](CONTRIBUTING.md), which also says how to build and run the app from a clone. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md); report security problems as described in [SECURITY.md](SECURITY.md). What changed in each release is in the [changelog](CHANGELOG.md).
 
 ## Licence
 
@@ -356,15 +172,10 @@ leaves it, and everything it keeps.
 
 ### What is sent, and to whom
 
-The first page of the set-up wizard says it in these words (for the default provider; the name and the list follow the provider you pick):
-
-> Nothing leaves your computer except what is needed for the forecast. Open-Meteo is sent: Your location (latitude and longitude), your time zone and the tilt and direction of your panels. With an API key, the key too. There is no account and no tracking. The place you type in the next step is sent to Open-Meteo to find it.
-
-
 Only the **forecast provider** you chose (and the fallback, if you set one) is contacted, and only to ask for a
-forecast. Whatever you ask it, it also sees your internet address, as any website does. What each one is sent,
-in its own words (these texts come from the providers' descriptions in the app, and a test keeps this section in
-step with them), and the terms that go with using it (read on 2026-10-07; the providers can change them):
+forecast. Whatever you ask it, it also sees your internet address, as any website does. Set-up's first step says
+what the chosen provider is sent. What each one is sent, and the terms that go with using it (read on 2026-10-07;
+the providers can change them):
 
 | Provider | What is sent | Free plan | Credit shown in the app | Terms |
 | --- | --- | --- | --- | --- |
@@ -373,60 +184,56 @@ step with them), and the terms that go with using it (read on 2026-10-07; the pr
 
 - **Commercial use.** The free plans are for personal use. If you use the app for a business, take the provider's
   own commercial plan or run your own server (Open-Meteo can be self-hosted or taken as a paid plan, with its own
-  server address and key: both go in Settings, on the Forecast tab). Forecast.Solar's pages do not say whether the
+  server address and key: both go in Settings, on the Forecast page). Forecast.Solar's pages do not say whether the
   public plan may be used commercially; ask them.
-- **Credit.** The credit above is shown in the app next to the age of the forecast, because both providers ask for
-  it (Open-Meteo's data is CC BY 4.0). It is shown for whichever provider made the forecast on screen.
-- **While you set the app up**, the place you type in the search box on the Location page is sent to the place search of the forecast provider you have chosen (Open-Meteo by default), which answers with matching places and their coordinates. The page names that provider and says so. A provider without a place search is never sent it: the page asks for coordinates instead. The place names come from [GeoNames](https://www.geonames.org) (CC BY 4.0), via Open-Meteo.
+- **Credit.** The credit above is shown on the dashboard next to the age of the forecast, because both providers ask
+  for it (Open-Meteo's data is CC BY 4.0). It is shown for whichever provider made the forecast on screen.
+- **Place search.** The place you type in the search box of set-up's or Settings' Location page is sent to the place
+  search of the forecast provider you have chosen (Open-Meteo by default), which answers with matching places and
+  their coordinates. The page says so. A provider without a place search is never sent it: you type coordinates
+  instead. The place names come from [GeoNames](https://www.geonames.org) (CC BY 4.0), via Open-Meteo.
 - **Nothing else.** The battery level, your away times, your panels' size (except to Forecast.Solar, which needs
-  it), the house and car settings and the plan itself never leave the computer. The place you type is only ever
-  sent as coordinates.
-- **Local only.** The notifications go through your desktop's own notification service on your computer. The second-start check
-  (clicking the launcher again shows the running window) uses a local socket in a private folder. Nothing listens
-  on the network.
+  it), the house and car settings and the plan itself never leave the computer.
+- **Local only.** Notifications go through your desktop's own notification service. A second start finds the
+  running app through a socket in a folder only you can open. Nothing listens on the network.
 
 ### What is kept, and where
 
-See [Where things are stored](#where-things-are-stored). In short: your settings and, if you use a paid plan, your
-API keys (in the system keychain, and never in the settings file); your battery level and away
-times; a cache of the last forecast of each provider. Delete any of them to start over. Uninstalling the launcher
-or autostart entry removes only those entries.
+See [Where things are kept](#where-things-are-kept). In short: your settings and, if you use a paid plan, your API
+keys (in the system keychain, never in the settings file); your battery level and away times; the windows you were
+notified about; a cache of the last forecast of each provider. Delete any of them to start over.
 
 API keys are kept by the system, not in a file:
 
 | System | Where the keys are kept |
 | --- | --- |
-| Linux | The Secret Service: GNOME Keyring, KWallet or another that offers it. Look for entries of `car-charge-planner` in Passwords and Keys or KWalletManager |
-| Windows | Credential Manager (Windows Credentials), as generic credentials named `car-charge-planner` |
-| macOS | The login Keychain, as items of the service `car-charge-planner` |
+| Linux | The Secret Service: GNOME Keyring, KWallet or another that offers it, as items with the attribute `application` set to `car-charge-planner` |
+| Windows | Credential Manager (Windows Credentials), as generic credentials whose names start with `car-charge-planner:` |
 
 The entries are named `forecast/<provider>/<key>`, and one more entry, `index`, lists the names (no values) because a
-keychain cannot be asked what it holds. Without a usable keychain (a Linux machine with no Secret Service, for one) the
-keys are kept in `secrets.toml` beside the settings file, readable only by you on Linux and macOS (mode 0600), and the
-Forecast tab in Settings says so. Whenever a keychain is available, a `secrets.toml` from an earlier version is moved
-into it at the next start, and the file is removed once every value has been written and read back; if anything goes
-wrong the file stays and keeps being used.
+keychain cannot be asked what it holds. Without a usable keychain (a Linux machine with no Secret Service, for one)
+the keys are kept in `secrets.json` beside `engine.json`, readable only by you, and the app says so.
 
 ### Third-party software
 
-| Package | Used for | Licence |
-| --- | --- | --- |
-| [PySide6](https://doc.qt.io/qtforpython-6/) (Qt for Python; also Shiboken) | The windows, the tray icon and the popup | LGPL-3.0-only, or GPL-2.0-only / GPL-3.0-only |
-| [platformdirs](https://github.com/tox-dev/platformdirs) | Where each system keeps the app's files | MIT |
-| [tzlocal](https://github.com/regebro/tzlocal) | The computer's time zone | MIT |
-| [tzdata](https://github.com/python/tzdata) | Time-zone data, so the app does not depend on the system providing it | Apache-2.0 |
-| [keyring](https://github.com/jaraco/keyring) | Keeping API keys in the system keychain | MIT |
-| [jeepney](https://gitlab.com/takluyver/jeepney) (Linux only) | Notifications and the keychain over D-Bus | MIT |
-| [SecretStorage](https://github.com/mitya57/secretstorage), [cryptography](https://github.com/pyca/cryptography), [cffi](https://github.com/python-cffi/cffi), [pycparser](https://github.com/eliben/pycparser) (Linux only) | Keyring's access to the Secret Service | BSD-3-Clause; cryptography Apache-2.0 or BSD-3-Clause; cffi MIT-0 |
-| [pywin32-ctypes](https://github.com/enthought/pywin32-ctypes) (Windows only) | Keyring's access to Credential Manager | BSD-3-Clause |
-| [jaraco.classes](https://github.com/jaraco/jaraco.classes), [jaraco.functools](https://github.com/jaraco/jaraco.functools), [jaraco.context](https://github.com/jaraco/jaraco.context), [more-itertools](https://github.com/more-itertools/more-itertools) | Helpers of keyring | MIT |
-| [Babel](https://babel.pocoo.org) (development only) | Collecting and compiling the translations | BSD-3-Clause |
-| [pytest](https://pytest.org) (development only) | The tests | MIT |
+The downloads bring these with them:
 
-The Windows installer lists every bundled package with its licence in `THIRD-PARTY-NOTICES.txt`.
+| Software | Used for | Licence |
+| --- | --- | --- |
+| The Java runtime ([OpenJDK](https://openjdk.org), cut down with jlink) | Running the app | GPL-2.0-only with the Classpath Exception |
+| [JavaFX](https://openjfx.io) | The dashboard, set-up and Settings | GPL-2.0-only with the Classpath Exception |
+| [AtlantaFX](https://github.com/mkpaz/atlantafx) | The look of the windows, light and dark | MIT |
+| [dbus-java](https://github.com/hypfvieh/dbus-java) | The tray icon, notifications and the keychain on Linux | MIT |
+| [Jackson](https://github.com/FasterXML/jackson) | Reading and writing the JSON files and the providers' answers | Apache-2.0 |
+| [SLF4J](https://www.slf4j.org) | dbus-java's log, passed on to the app's | MIT |
+
+The runtime's own notices are in `lib/runtime/legal` of the Linux folder (`runtime\legal` in the Windows install
+folder). For development only: [JUnit](https://junit.org) (EPL-2.0), [AssertJ](https://assertj.github.io/doc/)
+and [ArchUnit](https://www.archunit.org) (both Apache-2.0).
 
 The weather and solar data come from the providers above under their own terms. The recorded answers the tests
-use are credited in `tests/fixtures/NOTICE.md`.
+use are credited in
+[`src/test/resources/.../forecast/providers/NOTICE.md`](src/test/resources/io/github/enadeag/carchargeplanner/engine/forecast/providers/NOTICE.md).
 
 ## Attribution
 
