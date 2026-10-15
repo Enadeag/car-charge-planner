@@ -21,8 +21,8 @@ import javafx.stage.Stage;
  */
 public final class SettingsWindow {
 
-    private static final double WIDTH_EM = 56;
-    private static final double HEIGHT_EM = 40;
+    private static final double WIDTH_EM = 60;
+    private static final double HEIGHT_EM = 46;
 
     private final Stage stage = new Stage();
     private final SettingsView view;
