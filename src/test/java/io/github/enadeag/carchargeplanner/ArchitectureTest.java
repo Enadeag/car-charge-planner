@@ -31,6 +31,12 @@ class ArchitectureTest {
             .because("the composition root picks the platform's parts");
 
     @ArchTest
+    static final ArchRule singleInstanceKnowsOnlyTheJdk = noClasses()
+            .that().resideInAPackage("..instance..")
+            .should().dependOnClassesThat().resideOutsideOfPackages("java..", "jdk.net..", "..instance..")
+            .because("the composition root wires the single-instance guard to the app; it runs before anything else");
+
+    @ArchTest
     static final ArchRule noStaticMutableState = fields()
             .that().areStatic()
             .and().areDeclaredInClassesThat().doNotHaveFullyQualifiedName(Main.class.getName())

@@ -20,7 +20,7 @@ Copy-Item target\lib\*.jar, target\car-charge-planner.jar target\input\
 
 # The modules the app needs (jdeps --print-module-deps), plus java.logging for its log and JavaFX.
 jlink --module-path target\javafx `
-  --add-modules java.base,java.desktop,java.logging,java.net.http,java.sql,jdk.jfr,jdk.security.auth,javafx.controls `
+  --add-modules java.base,java.desktop,java.logging,java.net.http,java.sql,jdk.jfr,jdk.net,jdk.security.auth,javafx.controls `
   --strip-debug --no-header-files --no-man-pages --compress zip-6 `
   --output target\runtime
 if ($LASTEXITCODE) { exit 1 }
