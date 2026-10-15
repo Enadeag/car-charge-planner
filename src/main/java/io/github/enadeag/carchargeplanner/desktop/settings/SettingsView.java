@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.Messages;
+import io.github.enadeag.carchargeplanner.desktop.ScreenReader;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
@@ -16,6 +17,9 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -25,7 +29,9 @@ import javafx.scene.layout.VBox;
 
 /**
  * Settings itself: the categories in a sidebar, the chosen one's page beside them, and Save and Cancel below. Closing
- * with unsaved changes asks first, in the bar where the buttons are.
+ * with unsaved changes asks first, in the bar where the buttons are. Enter saves and Escape closes; while the question
+ * shows, Escape keeps editing. After a Save the focus goes to what it says, so a screen reader reads it: the status
+ * line, or the category with a refused value.
  */
 final class SettingsView extends BorderPane {
 
@@ -66,6 +72,16 @@ final class SettingsView extends BorderPane {
         categories.setAccessibleText(messages.text(TextKey.SETTINGS_CATEGORIES));
         categories.getStyleClass().add("settings-categories");
         categories.getSelectionModel().selectedItemProperty().subscribe(this::showPage);
+        // a list takes Enter and Escape for editing a row, even one that cannot be edited: here they save and close
+        categories.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if ((event.getCode() == KeyCode.ENTER || event.getCode() == KeyCode.ESCAPE) && getScene() != null) {
+                var button = getScene().getAccelerators().get(new KeyCodeCombination(event.getCode()));
+                if (button != null) {
+                    button.run();
+                    event.consume();
+                }
+            }
+        });
         var heading = new Label(messages.text(TextKey.SETTINGS_HEADING));
         heading.getStyleClass().add("sidebar-title");
         var sidebar = new VBox(heading, categories);
@@ -75,7 +91,6 @@ final class SettingsView extends BorderPane {
         body.setFitToWidth(true);
         body.getStyleClass().add("settings-body");
 
-        cancel.setCancelButton(true);
         cancel.setOnAction(event -> cancel());
         var save = new Button(messages.text(TextKey.SETTINGS_SAVE));
         save.setDefaultButton(true);
@@ -99,6 +114,10 @@ final class SettingsView extends BorderPane {
         });
         confirm = bar(FieldRow.paragraph(messages.text(TextKey.SETTINGS_DISCARD_QUESTION), "field-label"),
                 keepEditing, discard);
+        // a scene has one Escape: the bar that shows has it, and the other lets go of it first
+        cancel.cancelButtonProperty().bind(actions.visibleProperty());
+        keepEditing.cancelButtonProperty().bind(confirm.visibleProperty());
+        status.focusTraversableProperty().bind(status.textProperty().isNotEmpty());
 
         setLeft(sidebar);
         setCenter(body);
@@ -206,14 +225,15 @@ final class SettingsView extends BorderPane {
         showActions();
         var result = form.save();
         showOutcome(result);
+        categories.refresh(); // before the focus moves there: the marked category says it has a problem
         switch (result) {
-            case SaveOutcome.Saved ignored -> saved.run();
-            case SaveOutcome.Refused problems -> show(problems.categories().getFirst());
-            case SaveOutcome.Failed ignored -> {
-                // the status says it
+            case SaveOutcome.Saved ignored -> {
+                saved.run();
+                ScreenReader.focus(status);
             }
+            case SaveOutcome.Refused problems -> show(problems.categories().getFirst());
+            case SaveOutcome.Failed ignored -> ScreenReader.focus(status);
         }
-        categories.refresh();
         edited();
         return result instanceof SaveOutcome.Saved;
     }

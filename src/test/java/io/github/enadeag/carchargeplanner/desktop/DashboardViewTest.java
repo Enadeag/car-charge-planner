@@ -58,6 +58,27 @@ class DashboardViewTest {
     }
 
     @Test
+    void aScreenReaderReadsEachDayTabWithWhatItsGlyphShows() throws Exception {
+        var view = shown(Models.plan(Optional.empty()));
+
+        // the tab pane's focused item is the selected tab, as Windows asks for it; select each in turn
+        var read = new ArrayList<String>();
+        for (int day = 0; day < 3; day++) {
+            int index = day;
+            read.add(Fx.call(() -> {
+                tabs(view).getSelectionModel().select(index);
+                view.applyCss();
+                view.layout();
+                var tab = AccessibleNames.focusTarget(tabs(view));
+                return AccessibleNames.of(tab) + ": " + AccessibleNames.help(tab);
+            }));
+        }
+
+        assertThat(read).containsExactly("Today: " + Models.SUNNY_TODAY.heading(),
+                "Sat: " + Models.CLOUDY_TOMORROW.heading(), "Sun: " + Models.GRID_SUNDAY.heading());
+    }
+
+    @Test
     void theMainCardReadsAsOneSentence() throws Exception {
         var view = shown(Models.plan(Optional.empty()));
 

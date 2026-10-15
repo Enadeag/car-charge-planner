@@ -17,13 +17,15 @@ import javafx.scene.control.RadioButton;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 /**
  * Where the owner enters an away period on one day: the whole day, or part of it from a time to a time, with Save and
- * Cancel. A period that is not valid is not saved: the entry says why and stays open.
+ * Cancel; Enter saves and Escape cancels. A period that is not valid is not saved: the entry says why, stays open and
+ * puts the focus where the owner can fix it, where a screen reader reads the reason.
  */
 final class AwayEditor extends VBox {
 
@@ -70,12 +72,11 @@ final class AwayEditor extends VBox {
         var kinds = new FlowPane(wholeDay, partOfDay);
         kinds.getStyleClass().add("away-kinds");
 
-        from.setAccessibleText(messages.text(TextKey.AWAY_FROM_FIELD));
-        to.setAccessibleText(messages.text(TextKey.AWAY_TO_FIELD));
+        ScreenReader.name(from, messages.text(TextKey.AWAY_FROM_FIELD));
+        ScreenReader.name(to, messages.text(TextKey.AWAY_TO_FIELD));
         for (var field : List.of(from, to)) {
             field.getStyleClass().add("away-time");
             field.setPrefColumnCount(4);
-            field.setOnAction(event -> save());
         }
         times = new HBox(Texts.label(messages.text(TextKey.AWAY_FROM), "fact"), from,
                 Texts.label(messages.text(TextKey.AWAY_TO), "fact"), to);
@@ -87,6 +88,10 @@ final class AwayEditor extends VBox {
         var cancel = new Button(messages.text(TextKey.ONE_OFF_CANCEL));
         cancel.getStyleClass().add("flat");
         cancel.setOnAction(event -> closed.run());
+        // the battery's entry above can be open as well, with its own Save and Cancel
+        var heading = messages.text(TextKey.ONE_OFF_HEADING);
+        save.setAccessibleText(messages.text(TextKey.IN_GROUP, save.getText(), heading));
+        cancel.setAccessibleText(messages.text(TextKey.IN_GROUP, cancel.getText(), heading));
         var buttons = new HBox(save, cancel);
         buttons.getStyleClass().add("away-buttons");
         var actions = new FlowPane(times, buttons);
@@ -95,6 +100,14 @@ final class AwayEditor extends VBox {
         setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 closed.run();
+                event.consume();
+            }
+        });
+        // Enter saves from the times and from the choice of whole or part of the day, before a radio button takes it
+        // to choose itself; Save and Cancel take Enter themselves
+        addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.ENTER && !(event.getTarget() instanceof Button)) {
+                save();
                 event.consume();
             }
         });
@@ -178,6 +191,7 @@ final class AwayEditor extends VBox {
 
     private Optional<AwayPeriod> refuse(TextKey why) {
         showProblem(messages.text(why));
+        ScreenReader.focus(partOfDay.isSelected() ? from : wholeDay);
         return Optional.empty();
     }
 

@@ -20,6 +20,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Scene;
 import javafx.scene.text.Font;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 /**
@@ -78,9 +79,10 @@ public final class SetUpWindow {
         stage.setScene(scene);
         stage.setTitle(spoken.text(TextKey.SETUP_TITLE));
         stage.getIcons().setAll(icon.fxImages());
-        double em = Font.getDefault().getSize();
-        stage.setWidth(WIDTH_EM * em);
-        stage.setHeight(HEIGHT_EM * em);
+        var size = WindowSize.on(WIDTH_EM, HEIGHT_EM, Font.getDefault().getSize(),
+                Screen.getPrimary().getVisualBounds());
+        stage.setWidth(size.getWidth());
+        stage.setHeight(size.getHeight());
         stage.setOnCloseRequest(event -> {
             event.consume();
             view.cancel();

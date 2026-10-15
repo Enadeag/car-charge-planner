@@ -88,6 +88,27 @@ class BatteryCardTest {
     }
 
     @Test
+    void onTodayTheBarTellsAScreenReaderThatEnterOpensTheEntryAndOtherDaysDoNot() throws Exception {
+        show(TODAY, true);
+        var hint = new Messages(Language.ENGLISH).text(TextKey.BATTERY_UPDATE_HINT);
+        assertThat(Fx.call(() -> AccessibleNames.help(card.bar()))).isEqualTo(hint);
+
+        Fx.run(() -> card.show(TOMORROW));
+
+        assertThat(Fx.call(() -> AccessibleNames.help(card.bar()))).isEmpty();
+    }
+
+    @Test
+    void afterTheEntryClosesTheFocusIsBackOnUpdate() throws Exception {
+        show(TODAY, true);
+        Fx.run(update()::fire);
+
+        Keyboard.press(stage.getScene(), KeyCode.ESCAPE);
+
+        assertThat(Fx.call(() -> stage.getScene().getFocusOwner())).isSameAs(update());
+    }
+
+    @Test
     void todaysLevelIsEnteredWithUpdateAndSave() throws Exception {
         show(TODAY, true);
         assertThat(editing()).isFalse();

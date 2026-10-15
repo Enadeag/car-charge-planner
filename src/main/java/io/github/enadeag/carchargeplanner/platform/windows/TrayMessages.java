@@ -75,16 +75,21 @@ final class TrayMessages {
         waiting = true;
     }
 
-    /** Windows reported a click on the icon's message: runs the action when a message was waiting for one. */
-    void click() {
+    /**
+     * Windows reported a click on the icon's message: runs the action when a message was waiting for one.
+     *
+     * @return true when the click was a message's, false when none was waiting, such as for a double click
+     */
+    boolean click() {
         Runnable action;
         synchronized (this) {
             if (!waiting) {
-                return;
+                return false;
             }
             waiting = false;
             action = clicked;
         }
         action.run();
+        return true;
     }
 }

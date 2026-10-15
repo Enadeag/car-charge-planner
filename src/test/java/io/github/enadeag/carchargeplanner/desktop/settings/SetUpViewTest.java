@@ -118,7 +118,7 @@ class SetUpViewTest {
         next(view, 1);
 
         assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.LOCATION);
-        assertThat(Fx.call(() -> setUp.field(view, TextKey.FIELD_LATITUDE).getAccessibleHelp()))
+        assertThat(Fx.call(() -> setUp.control(view, TextKey.FIELD_LATITUDE).getAccessibleHelp()))
                 .startsWith(setUp.messages.text(TextKey.PROBLEM_NO_PLACE));
         assertThat(setUp.configPath).doesNotExist();
     }
@@ -149,7 +149,7 @@ class SetUpViewTest {
         next(view, 1);
 
         assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.CHARGER);
-        assertThat(Fx.call(() -> setUp.field(view, TextKey.FIELD_MAX_CURRENT).getAccessibleHelp()))
+        assertThat(Fx.call(() -> setUp.control(view, TextKey.FIELD_MAX_CURRENT).getAccessibleHelp()))
                 .startsWith(setUp.messages.text(TextKey.PROBLEM_BELOW_MINIMUM_CURRENT));
         assertThat(Fx.call(() -> SetUpFixture.texts(view))).contains(setUp.messages.text(TextKey.SETUP_REFUSED));
     }
@@ -159,14 +159,14 @@ class SetUpViewTest {
         var view = atSolar();
         next(view, 1);
         Fx.run(() -> setUp.type(view, TextKey.FIELD_CAR_BATTERY, "75"));
-        assertThat(Fx.call(() -> setUp.field(view, TextKey.FIELD_CAR_BATTERY).getAccessibleHelp()))
+        assertThat(Fx.call(() -> setUp.control(view, TextKey.FIELD_CAR_BATTERY).getAccessibleHelp()))
                 .doesNotContain(setUp.messages.text(TextKey.TYPICAL_TAG));
 
         Fx.run(() -> setUp.button(view, TextKey.USE_TYPICAL).fire());
 
         assertThat(Fx.call(() -> ((TextField) setUp.field(view, TextKey.FIELD_CAR_BATTERY)).getText()))
                 .isEqualTo(setUp.messages.number(Car.TYPICAL.usableBatteryKwh(), 1));
-        assertThat(Fx.call(() -> setUp.field(view, TextKey.FIELD_CAR_BATTERY).getAccessibleHelp()))
+        assertThat(Fx.call(() -> setUp.control(view, TextKey.FIELD_CAR_BATTERY).getAccessibleHelp()))
                 .contains(setUp.messages.text(TextKey.TYPICAL_TAG));
     }
 
@@ -245,7 +245,7 @@ class SetUpViewTest {
         Fx.run(() -> view.show(SetUpStep.FORECAST));
         Fx.run(() -> {
             var key = Scenes.all(view).stream().filter(node -> node instanceof TextField field
-                    && field.isVisible() && setUp.messages.text(TextKey.PROVIDER_API_KEY).equals(field.getAccessibleText()))
+                    && field.isVisible() && SettingsFixture.named(field, setUp.messages.text(TextKey.PROVIDER_API_KEY)))
                     .map(TextField.class::cast).findFirst().orElseThrow();
             key.setText("TYPED-KEY");
         });

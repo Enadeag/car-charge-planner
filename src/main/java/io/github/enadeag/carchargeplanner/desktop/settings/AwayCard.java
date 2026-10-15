@@ -97,6 +97,12 @@ final class AwayCard implements ConfigPart {
         showEmpty();
     }
 
+    private void numberRows() {
+        for (int i = 0; i < shown.size(); i++) {
+            shown.get(i).number(i, shown.size());
+        }
+    }
+
     private void remove(AwayRow row) {
         shown.remove(row);
         rows.getChildren().remove(row);
@@ -105,6 +111,7 @@ final class AwayCard implements ConfigPart {
     }
 
     private void showEmpty() {
+        numberRows();
         empty.setVisible(shown.isEmpty());
         empty.setManaged(shown.isEmpty());
     }

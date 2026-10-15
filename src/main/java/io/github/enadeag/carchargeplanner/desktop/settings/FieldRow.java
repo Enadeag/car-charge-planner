@@ -2,6 +2,7 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import java.util.Optional;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -15,6 +16,8 @@ import javafx.scene.layout.VBox;
 final class FieldRow extends VBox {
 
     private final Input input;
+    private final String name;
+    private final Optional<Label> label;
     private final Label hint = paragraph("", "note");
     private final Label problem = paragraph("", "field-problem");
     private final Label tag = new Label();
@@ -29,15 +32,19 @@ final class FieldRow extends VBox {
      */
     FieldRow(String name, String hint, Input input) {
         this.input = input;
+        this.name = name;
         var line = new HBox();
         line.getStyleClass().add("field-line");
-        if (!name.isEmpty()) {
-            var label = paragraph(name, "field-label");
-            label.setLabelFor(input.focusable());
-            label.setMaxWidth(Double.MAX_VALUE);
-            HBox.setHgrow(label, Priority.ALWAYS);
-            line.getChildren().add(label);
+        if (name.isEmpty()) {
+            label = Optional.empty();
+        } else {
+            var shown = paragraph(name, "field-label");
+            shown.setLabelFor(input.focusable());
+            shown.setMaxWidth(Double.MAX_VALUE);
+            HBox.setHgrow(shown, Priority.ALWAYS);
+            line.getChildren().add(shown);
             input.focusable().setAccessibleText(name);
+            label = Optional.of(shown);
         }
         tag.getStyleClass().add("field-tag");
         tag.setMinWidth(USE_PREF_SIZE);
@@ -94,6 +101,27 @@ final class FieldRow extends VBox {
         tag.setVisible(!text.isEmpty());
         tag.setManaged(!text.isEmpty());
         input.focusable().setAccessibleHelp(help());
+    }
+
+    /**
+     * Gives the field a longer name for a screen reader, where a card with the same fields shows more than once, such
+     * as a second panel array. The label on screen keeps the field's own name.
+     *
+     * @param spoken the name to read, such as "Size (Panel array 2)"; the field's own name to undo it
+     */
+    void setSpokenName(String spoken) {
+        // a text field or combo box is named after its label, a spinner or check box after its own text
+        label.ifPresent(shown -> shown.setAccessibleText(spoken.equals(name) ? null : spoken));
+        input.focusable().setAccessibleText(spoken);
+    }
+
+    /**
+     * The field's own name, as its label shows it.
+     *
+     * @return the name; empty when the control says it itself, as a check box does
+     */
+    String name() {
+        return name;
     }
 
     /**

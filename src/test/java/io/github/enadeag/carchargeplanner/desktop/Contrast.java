@@ -41,7 +41,8 @@ public final class Contrast {
     }
     /**
      * WCAG AA below a node as it is rendered: every visible text 4.5:1 against what it sits on, every glyph and chart
-     * mark 3:1. Controls that are switched off are exempt, as WCAG allows.
+     * mark 3:1. Controls that are switched off are exempt, as WCAG allows. A text drawn on a chart, such as "now",
+     * counts the chart's see-through fills it lies on, the solar area and the charge windows, as what it sits on.
      */
     public static List<String> problemsIn(Node root) {
         var problems = new ArrayList<String>();
@@ -94,6 +95,23 @@ public final class Contrast {
                 if (fill.getFill() instanceof Color paint) {
                     colour = Contrast.over(paint, colour);
                 }
+            }
+        }
+        return node instanceof Labeled ? overFillsBelow(node, colour) : colour;
+    }
+
+    /** The fills of the shapes drawn before a text, under it, such as a chart's area under its "now". */
+    private static Color overFillsBelow(Node node, Color background) {
+        var colour = background;
+        var parent = node.getParent();
+        var bounds = node.getBoundsInParent();
+        for (var sibling : parent.getChildrenUnmodifiable()) {
+            if (sibling == node) {
+                break;
+            }
+            if (sibling instanceof Shape shape && shape.isVisible() && shape.getFill() instanceof Color paint
+                    && paint.getOpacity() > 0 && shape.getBoundsInParent().intersects(bounds)) {
+                colour = Contrast.over(paint, colour);
             }
         }
         return colour;

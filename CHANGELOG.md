@@ -13,6 +13,7 @@ The app is rewritten in Java with JavaFX, and the Python version is removed. Wha
 - A choice between light, dark and the system's appearance, in Settings, App.
 - Set-up checks the forecast and shows a preview of the dashboard before Finish.
 - `car-charge-planner start-at-login on` and `off`, the same as the switch in Settings.
+- Keyboard and screen reader use: Tab reaches every control in reading order with a visible focus ring, Enter and Escape save and cancel in every window and entry, and on Windows Enter on the tray icon (after Win+B) opens the dashboard. Narrator and NVDA read a name for every control, the solar chart hour by hour, and what a Save or a refused value says. Orca on Linux cannot read the app yet (JavaFX has no AT-SPI support). See Accessibility in the README.
 
 ### Changed
 - Linux: a download with its own Java runtime, `car-charge-planner-<version>-linux.tar.gz`, replaces installing with pipx. Unpack it and start `bin/car-charge-planner`.

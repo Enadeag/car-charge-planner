@@ -98,7 +98,7 @@ class ForecastAwayPagesTest {
 
         assertThat(saved).isFalse();
         assertThat(Fx.call(view::shown)).isEqualTo(Category.FORECAST);
-        assertThat(Fx.call(() -> settings.field(view, TextKey.FIELD_FALLBACK).getAccessibleHelp()))
+        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_FALLBACK).getAccessibleHelp()))
                 .startsWith(settings.messages.text(TextKey.PROBLEM_SAME_AS_PRIMARY));
         assertThat(stored().forecast().primary()).isEqualTo(OPEN_METEO);
     }
@@ -136,7 +136,7 @@ class ForecastAwayPagesTest {
         Fx.call(() -> {
             button(view, TextKey.AWAY_ADD).fire();
             var weekdays = all(view, ComboBox.class).stream()
-                    .filter(box -> settings.messages.text(TextKey.AWAY_WEEKDAY).equals(box.getAccessibleText()))
+                    .filter(box -> SettingsFixture.named(box, settings.messages.text(TextKey.AWAY_WEEKDAY)))
                     .toList();
             @SuppressWarnings("unchecked")
             var added = (ComboBox<DayOfWeek>) weekdays.getLast();
@@ -213,6 +213,6 @@ class ForecastAwayPagesTest {
 
     private List<TextField> times(SettingsView view, TextKey name) {
         return all(view, TextField.class).stream()
-                .filter(field -> settings.messages.text(name).equals(field.getAccessibleText())).toList();
+                .filter(field -> SettingsFixture.named(field, settings.messages.text(name))).toList();
     }
 }

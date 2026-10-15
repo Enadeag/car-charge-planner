@@ -53,7 +53,7 @@ final class ChargerPage implements ConfigPage {
                 row(Setting.CHARGER_MAX_CURRENT, TextKey.FIELD_MAX_CURRENT, TextKey.FIELD_MAX_CURRENT_HINT, maxAmps),
                 row(Setting.CHARGER_VOLTAGE, TextKey.FIELD_VOLTAGE, TextKey.FIELD_VOLTAGE_HINT, volts),
                 row(Setting.CHARGER_EFFICIENCY, TextKey.FIELD_EFFICIENCY, TextKey.FIELD_EFFICIENCY_HINT, efficiency),
-                TypicalButton.line(this::useTypical, messages));
+                TypicalButton.line(this::useTypical, messages.text(TextKey.CARD_CHARGER), messages));
     }
 
     @Override

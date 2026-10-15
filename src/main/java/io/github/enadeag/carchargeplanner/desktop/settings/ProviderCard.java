@@ -45,6 +45,8 @@ final class ProviderCard {
         var texts = new ProviderTexts(messages);
         var terms = new Hyperlink(messages.text(TextKey.PROVIDER_TERMS));
         terms.setOnAction(event -> openLink.accept(URI.create(info.termsUrl())));
+        // the fallback provider's card can show below the first one's: a screen reader names whose each control is
+        terms.setAccessibleText(messages.text(TextKey.IN_GROUP, terms.getText(), info.name()));
         var content = new ArrayList<Node>(List.of(
                 FieldRow.paragraph(messages.text(TextKey.PROVIDER_SENDS, texts.sends(info)), "note"),
                 FieldRow.paragraph(messages.text(TextKey.PROVIDER_LIMITS, info.minRefresh().toMinutes(),
@@ -53,6 +55,7 @@ final class ProviderCard {
         for (var setting : info.settings()) {
             Input input = setting.secret() ? new SecretInput(messages) : new TextInput();
             var row = new FieldRow(texts.label(setting), texts.hint(info, setting), input);
+            row.setSpokenName(messages.text(TextKey.IN_GROUP, row.name(), info.name()));
             if (!setting.optional()) {
                 row.showTag(messages.text(TextKey.PROVIDER_REQUIRED));
             }
@@ -62,6 +65,7 @@ final class ProviderCard {
         }
         test = new Button(messages.text(TextKey.PROVIDER_TEST));
         test.setOnAction(event -> test(tester));
+        test.setAccessibleText(messages.text(TextKey.IN_GROUP, test.getText(), info.name()));
         var line = new HBox(test, result);
         line.getStyleClass().add("field-line");
         content.add(line);

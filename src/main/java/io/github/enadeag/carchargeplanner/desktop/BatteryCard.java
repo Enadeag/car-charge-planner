@@ -36,7 +36,8 @@ final class BatteryCard extends VBox {
     BatteryCard(ObservableValue<Boolean> reducedMotion, Messages messages) {
         bar = new BatteryBar(reducedMotion);
         update = new Button(messages.text(TextKey.BATTERY_UPDATE));
-        editor = new BatteryEditor(pct -> entered.ifPresent(handler -> handler.accept(pct)), () -> edit(false), messages);
+        editor = new BatteryEditor(pct -> entered.ifPresent(handler -> handler.accept(pct)), this::closeEntry,
+                messages);
         update.getStyleClass().addAll("flat", "small");
         var hint = messages.text(TextKey.BATTERY_UPDATE_HINT);
         update.setTooltip(new Tooltip(hint));
@@ -109,6 +110,13 @@ final class BatteryCard extends VBox {
         boolean can = canEdit();
         update.setVisible(can && !editor.isVisible());
         update.setManaged(update.isVisible());
+        bar.setAccessibleHelp(can ? update.getAccessibleHelp() : null);
+    }
+
+    /** After a save or a cancel the focus goes back to Update, where the keyboard was before the entry opened. */
+    private void closeEntry() {
+        edit(false);
+        update.requestFocus();
     }
 
     private void edit(boolean open) {

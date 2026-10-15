@@ -179,8 +179,28 @@ class SolarChartTest {
         key(KeyCode.RIGHT);
         key(KeyCode.LEFT);
         assertThat(Fx.call(() -> chart.selected().orElseThrow().startHour())).isEqualTo(8);
-        assertThat(Fx.call(() -> chart.queryAccessibleAttribute(AccessibleAttribute.HELP)))
-                .isEqualTo(TODAY.steps().get(1).readout());
+    }
+
+    @Test
+    void aScreenReaderReadsTheStepTheArrowKeysChoseAndHowToMove() throws Exception {
+        show(TODAY);
+
+        key(KeyCode.RIGHT);
+        key(KeyCode.RIGHT);
+
+        assertThat(Fx.call(() -> AccessibleNames.of(chart))).isEqualTo(TODAY.steps().get(1).readout());
+        assertThat(Fx.call(() -> AccessibleNames.help(chart)))
+                .isEqualTo(new Messages(Language.ENGLISH).text(TextKey.CHART_KEYS));
+    }
+
+    @Test
+    void anotherDayIsReadInWordsAgain() throws Exception {
+        show(TODAY);
+        key(KeyCode.RIGHT);
+
+        Fx.run(() -> chart.show(TOMORROW));
+
+        assertThat(Fx.call(() -> AccessibleNames.of(chart))).isEqualTo(TOMORROW.spoken());
     }
 
     @Test

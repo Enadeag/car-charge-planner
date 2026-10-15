@@ -26,6 +26,9 @@ import javafx.scene.shape.Rectangle;
  * A day's expected solar power as an amber area, the house's use as a dashed line, the charge windows in green and a
  * line at "now". Pointing at the chart, tapping it or moving along it with the arrow keys reads out one step's values.
  * A new day or plan morphs the curve into its new shape. Colours come from dashboard.css.
+ *
+ * <p>A screen reader reads the day in words; while the arrow keys read out a step, it reads that step's values
+ * instead, each time they move.
  */
 final class SolarChart extends Region {
 
@@ -63,8 +66,9 @@ final class SolarChart extends Region {
      *
      * @param reducedMotion true while the system asks for reduced motion; the curve then changes without moving
      * @param now the label on the line at the current time, such as "now"
+     * @param keys what the arrow keys do, for a screen reader to read after the chart's text
      */
-    SolarChart(ObservableValue<Boolean> reducedMotion, String now) {
+    SolarChart(ObservableValue<Boolean> reducedMotion, String now, String keys) {
         this.nowLabel = Texts.label(now, "chart-now");
         this.tween = new Tween(reducedMotion, this::frame);
         readout.getStyleClass().add("chart-readout");
@@ -74,6 +78,7 @@ final class SolarChart extends Region {
         pointer.setVisible(false);
         getStyleClass().add("solar-chart");
         setAccessibleRole(AccessibleRole.TEXT);
+        setAccessibleHelp(keys);
         setFocusTraversable(true);
         setOnMouseMoved(this::point);
         setOnMousePressed(this::point);
@@ -98,7 +103,6 @@ final class SolarChart extends Region {
      */
     void show(SolarCurveModel day) {
         this.model = day;
-        setAccessibleText(day.spoken());
         scale.setText(day.scaleText());
         nowLabel.setVisible(day.nowHour().isPresent());
         now.setVisible(day.nowHour().isPresent());
@@ -278,7 +282,12 @@ final class SolarChart extends Region {
         selected = step;
         pointed = byPointer;
         step.ifPresent(it -> readoutText.setText(it.readout()));
-        setAccessibleHelp(step.map(Step::readout).orElse(null));
+        if (model != null) {
+            setAccessibleText(step.filter(it -> !byPointer).map(Step::readout).orElse(model.spoken()));
+        }
+        if (!byPointer && step.isPresent()) {
+            ScreenReader.readAgain(this);
+        }
         requestLayout();
     }
 

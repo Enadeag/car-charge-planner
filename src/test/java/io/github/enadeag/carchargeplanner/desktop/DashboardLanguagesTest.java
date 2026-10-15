@@ -22,6 +22,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 import javafx.application.ColorScheme;
 import javafx.scene.control.Button;
 import javafx.scene.input.KeyCode;
@@ -30,9 +31,14 @@ import javafx.scene.control.TabPane;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
-/** In every language the dashboard shows each text whole: a longer word widens or wraps its place, never cuts it off. */
+/**
+ * In every language, and with the system's text at 150 and 200 %, the dashboard shows each text whole and on its own:
+ * a longer word widens or wraps its place, never cuts it off or runs into another text.
+ */
 class DashboardLanguagesTest {
 
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");
@@ -82,51 +88,67 @@ class DashboardLanguagesTest {
                 new AwayPeriod(at(TODAY.plusDays(4), 18), at(TODAY.plusDays(6), 12)));
     }
 
-    @ParameterizedTest
-    @EnumSource(Language.class)
-    void noTextIsCutOffOnAnyDayOrMessage(Language language) throws Exception {
-        var problems = Fx.call(() -> {
+    /** Every day, the readout and both entries open, a refused away period and the message without a config. */
+    private List<String> problems(Language language, Optional<TextScale> scale) throws Exception {
+        return Fx.call(() -> {
             var messages = new Messages(language);
             var mapper = new OutlookMapper(messages);
             var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, messages);
             view.onBatteryEntered(level -> { });
             view.onAwayChange(period -> { }, period -> { });
             view.lookup(".day-tabs").setStyle("-fx-open-tab-animation: none;"); // a growing tab is narrow on purpose
-            stage = Scenes.show(view, ColorScheme.LIGHT);
+            stage = scale.map(larger -> Scenes.show(view, ColorScheme.LIGHT, larger))
+                    .orElseGet(() -> Scenes.show(view, ColorScheme.LIGHT));
             var found = new ArrayList<String>();
             var plan = mapper.map(planned(), awayPeriods());
             for (int day = 0; day < 3; day++) {
                 view.show(plan);
                 ((TabPane) view.lookup(".day-tabs")).getSelectionModel().select(day);
-                view.applyCss();
-                view.layout();
-                found.addAll(Scenes.cutOff(view));
+                found.addAll(check(view));
             }
             // today's readout and battery entry open, with their longest texts
             ((TabPane) view.lookup(".day-tabs")).getSelectionModel().select(0);
             view.lookup(".solar-chart").fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.RIGHT, false, false, false, false));
             view.lookupAll(".button").stream().map(Button.class::cast)
                     .filter(button -> button.getText().equals(messages.text(TextKey.BATTERY_UPDATE))).findFirst().orElseThrow().fire();
-            view.applyCss();
-            view.layout();
-            found.addAll(Scenes.cutOff(view));
+            found.addAll(check(view));
             // the away entry open at part of the day, refusing an end before the start
             view.lookupAll(".button").stream().map(Button.class::cast)
                     .filter(button -> button.getText().equals(messages.text(TextKey.ONE_OFF_ADD))).findFirst().orElseThrow().fire();
             var entry = ((AwayCard) view.lookup(".away-card")).editor();
             entry.enterTimes("16:00", "10:00");
             entry.save();
-            view.applyCss();
-            view.layout();
-            found.addAll(Scenes.cutOff(view));
+            found.addAll(check(view));
             view.show(mapper.map(new Outlook.NotSetUp(ConfigProblem.Kind.MISSING,
                     Path.of("/home/owner/.config/car-charge-planner/engine.json"), "")));
-            view.applyCss();
-            view.layout();
-            found.addAll(Scenes.cutOff(view));
+            found.addAll(check(view));
             return found;
         });
+    }
 
-        assertThat(problems).isEmpty();
+    private static List<String> check(DashboardView view) {
+        view.applyCss();
+        view.layout();
+        var found = new ArrayList<>(Scenes.cutOff(view));
+        found.addAll(Scenes.overlapping(view));
+        return found;
+    }
+
+    @ParameterizedTest
+    @EnumSource(Language.class)
+    void noTextIsCutOffOrOverlapsOnAnyDayOrMessage(Language language) throws Exception {
+        assertThat(problems(language, Optional.empty())).isEmpty();
+    }
+
+    static Stream<Arguments> languagesAndScales() {
+        return Stream.of(Language.values()).flatMap(language -> Stream.of(TextScale.values())
+                .map(scale -> Arguments.of(language, scale)));
+    }
+
+    /** As the owner's system makes the text larger, at 150 and 200 %: a day scrolls, nothing is cut off. */
+    @ParameterizedTest
+    @MethodSource("languagesAndScales")
+    void withLargerTextNoTextIsCutOffOrOverlapsEither(Language language, TextScale scale) throws Exception {
+        assertThat(problems(language, Optional.of(scale))).isEmpty();
     }
 }

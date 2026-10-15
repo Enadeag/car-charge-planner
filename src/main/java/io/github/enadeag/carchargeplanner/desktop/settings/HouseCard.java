@@ -31,7 +31,7 @@ final class HouseCard implements ConfigPart {
                 FieldRow.of(messages, TextKey.FIELD_BASELOAD, TextKey.FIELD_BASELOAD_HINT, baseload));
         typical.follow(Setting.HOUSE_BASELOAD, row, baseload);
         card = new Card(messages.text(TextKey.CARD_HOUSE), messages.text(TextKey.CARD_HOUSE_HINT), row,
-                TypicalButton.line(this::useTypical, messages));
+                TypicalButton.line(this::useTypical, messages.text(TextKey.CARD_HOUSE), messages));
     }
 
     /**

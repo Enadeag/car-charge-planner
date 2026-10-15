@@ -3,10 +3,12 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 import io.github.enadeag.carchargeplanner.desktop.Appearance;
 import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
+import io.github.enadeag.carchargeplanner.desktop.ScreenReader;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
 import io.github.enadeag.carchargeplanner.engine.config.HomeSystem;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
@@ -18,6 +20,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollPane;
@@ -31,7 +34,9 @@ import javafx.scene.layout.VBox;
 /**
  * Set-up itself: the step and a progress bar above, the step's page in the middle, and Cancel, Back and Next (Finish
  * on the last step) below. Next goes on only when the engine's records accept the step's values; Finish saves
- * everything at once. Leaving after the owner started asks first, in the bar where the buttons are.
+ * everything at once. Leaving after the owner started asks first, in the bar where the buttons are. Enter is Next and
+ * Escape is Cancel; while the question shows, Escape keeps going. A refused value takes the focus to its field, whose
+ * help a screen reader reads with the problem first.
  */
 final class SetUpView extends BorderPane {
 
@@ -80,7 +85,6 @@ final class SetUpView extends BorderPane {
         body.getStyleClass().add("settings-body");
 
         var cancel = new Button(messages.text(TextKey.SETUP_CANCEL));
-        cancel.setCancelButton(true);
         cancel.setOnAction(event -> cancel());
         back = new Button(messages.text(TextKey.SETUP_BACK));
         back.setOnAction(event -> show(step.previous()));
@@ -99,6 +103,10 @@ final class SetUpView extends BorderPane {
         });
         confirm = bar(FieldRow.paragraph(messages.text(TextKey.SETUP_LEAVE_QUESTION), "field-label"), keepGoing,
                 leave);
+        // a scene has one Escape: the bar that shows has it, and the other lets go of it first
+        cancel.cancelButtonProperty().bind(actions.visibleProperty());
+        keepGoing.cancelButtonProperty().bind(confirm.visibleProperty());
+        status.focusTraversableProperty().bind(status.textProperty().isNotEmpty());
 
         setTop(header);
         setCenter(body);
@@ -244,7 +252,7 @@ final class SetUpView extends BorderPane {
     void next() {
         showActions();
         if (!form.check(step)) {
-            showProblem(messages.text(TextKey.SETUP_REFUSED));
+            showRefused();
             return;
         }
         status.setText("");
@@ -279,7 +287,7 @@ final class SetUpView extends BorderPane {
         var refused = form.firstRefused();
         if (refused.isPresent()) {
             show(refused.get());
-            showProblem(messages.text(TextKey.SETUP_REFUSED));
+            showRefused();
             return;
         }
         switch (form.save(form.config())) {
@@ -289,11 +297,19 @@ final class SetUpView extends BorderPane {
             }
             case SaveOutcome.Refused ignored -> {
                 show(SetUpStep.APP);
-                showProblem(messages.text(TextKey.SETUP_REFUSED));
+                showRefused();
             }
-            case SaveOutcome.Failed failure -> showProblem(messages.text(TextKey.SETTINGS_SAVE_FAILED,
-                    failure.detail()));
+            case SaveOutcome.Failed failure -> {
+                showProblem(messages.text(TextKey.SETTINGS_SAVE_FAILED, failure.detail()));
+                ScreenReader.focus(status);
+            }
         }
+    }
+
+    /** The step's values were refused: the status says so, and the focus goes to the first field with a problem. */
+    private void showRefused() {
+        showProblem(messages.text(TextKey.SETUP_REFUSED));
+        ScreenReader.focus(firstProblem(pages.get(step).view()).orElse(status));
     }
 
     private void showProblem(String text) {
@@ -307,6 +323,36 @@ final class SetUpView extends BorderPane {
         status.getStyleClass().remove("problem");
         confirm.setVisible(false);
         actions.setVisible(true);
+    }
+
+    /**
+     * The control whose value has a problem, first on the page: the last control before the first problem shown, as
+     * a field's problem stands below it.
+     */
+    private static Optional<Node> firstProblem(Node page) {
+        Node before = null;
+        for (var node : inOrder(page)) {
+            if (node.getStyleClass().contains("field-problem")) {
+                return Optional.ofNullable(before);
+            }
+            if (node.isFocusTraversable() && !node.isDisabled()) {
+                before = node;
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** The shown nodes below a node, in the order they are drawn; a control's insides are its own. */
+    private static List<Node> inOrder(Node node) {
+        var nodes = new ArrayList<Node>();
+        if (!node.isVisible()) {
+            return nodes;
+        }
+        nodes.add(node);
+        if (node instanceof Parent parent && !(node instanceof Control)) {
+            parent.getChildrenUnmodifiable().forEach(child -> nodes.addAll(inOrder(child)));
+        }
+        return nodes;
     }
 
     /** The first control on a page the owner can type or choose in, for the focus as a step shows. */
