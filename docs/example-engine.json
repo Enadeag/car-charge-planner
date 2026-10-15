@@ -1,0 +1,19 @@
+{
+  "system": {
+    "latitude": 51.0,
+    "longitude": 5.0,
+    "timezone": "Europe/Brussels",
+    "panels": [
+      { "name": "South roof", "kwp": 5.0, "tiltDeg": 35, "azimuthDeg": 0, "systemLosses": 0.14 }
+    ],
+    "house": { "baseloadKw": 0.5 },
+    "car": { "usableBatteryKwh": 60, "consumptionKwhPer100km": 18, "kmPerDay": 40 },
+    "charger": { "phases": 1, "minAmps": 6, "maxAmps": 16, "volts": 230, "efficiency": 0.9 }
+  },
+  "planning": {
+    "targetPct": 80,
+    "margin": 0.85,
+    "importToleranceKwh": 0.2,
+    "minWindowMinutes": 45
+  }
+}
