@@ -2,6 +2,7 @@ package io.github.enadeag.carchargeplanner.desktop;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import javafx.application.ColorScheme;
@@ -118,6 +119,17 @@ class DashboardViewTest {
         });
 
         assertThat(Fx.call(() -> tabs(view).getSelectionModel().getSelectedIndex())).isEqualTo(2);
+    }
+
+    @Test
+    void aPlanWithoutDaysShowsNoTabsAndDoesNotFail() throws Exception {
+        var view = shown(Models.plan(Optional.empty()));
+
+        Fx.run(() -> view.show(new DashboardModel.Plan(List.of(), Optional.empty(), Models.FOOTER)));
+
+        assertThat(Fx.call(() -> tabs(view).getTabs())).isEmpty();
+        assertThat(Fx.call(() -> view.lookup(".main-card"))).isNull();
+        assertThat(Fx.call(() -> Scenes.visibleTexts(view))).contains(Models.FOOTER);
     }
 
     @Test

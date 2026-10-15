@@ -66,9 +66,13 @@ final class DashboardView extends VBox {
 
     /** Grid advice goes on today's tab, below its main card. */
     private void showDay(int index) {
-        var day = days.get(index);
+        if (days.isEmpty()) {
+            body.getChildren().setAll(tabs);
+            return;
+        }
+        var day = days.get(Math.clamp(index, 0, days.size() - 1));
         var page = page(new MainCard(day));
-        if (index == 0) {
+        if (day == days.getFirst()) {
             advice.ifPresent(it -> page.getChildren().add(new AdviceCard(it)));
         }
         page.getChildren().add(new ChartSlot());

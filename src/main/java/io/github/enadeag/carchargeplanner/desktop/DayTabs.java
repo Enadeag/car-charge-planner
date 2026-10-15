@@ -27,7 +27,9 @@ final class DayTabs extends TabPane {
     void show(List<DayModel> days) {
         int selected = Math.max(0, getSelectionModel().getSelectedIndex());
         getTabs().setAll(days.stream().map(DayTabs::tab).toList());
-        getSelectionModel().select(Math.min(selected, days.size() - 1));
+        if (!days.isEmpty()) {
+            getSelectionModel().select(Math.min(selected, days.size() - 1));
+        }
     }
 
     private static Tab tab(DayModel day) {
