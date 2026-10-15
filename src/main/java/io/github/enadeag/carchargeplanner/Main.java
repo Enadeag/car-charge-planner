@@ -2,6 +2,7 @@ package io.github.enadeag.carchargeplanner;
 
 import io.github.enadeag.carchargeplanner.desktop.AppIcon;
 import io.github.enadeag.carchargeplanner.desktop.Dashboard;
+import io.github.enadeag.carchargeplanner.desktop.TaskbarHiding;
 import io.github.enadeag.carchargeplanner.desktop.Tray;
 import io.github.enadeag.carchargeplanner.engine.Engine;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
@@ -77,7 +78,7 @@ public final class Main {
         Platform.setImplicitExit(false);
         var dashboardMade = new CompletableFuture<Dashboard>();
         Platform.startup(() -> dashboardMade.complete(
-                new Dashboard(icon, Platform.getPreferences().colorSchemeProperty(), clock)));
+                new Dashboard(icon, Platform.getPreferences().colorSchemeProperty(), clock, taskbarHiding())));
         var dashboard = dashboardMade.get();
 
         ScheduledExecutorService replanning = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform()
@@ -135,6 +136,10 @@ public final class Main {
         }
         return ConfigLocation.defaultPath(System.getProperty("os.name"), System.getenv(),
                 Path.of(System.getProperty("user.home")));
+    }
+
+    private static TaskbarHiding taskbarHiding() {
+        return System.getProperty("os.name").startsWith("Windows") ? TaskbarHiding.OWNER_WINDOW : TaskbarHiding.NONE;
     }
 
     private static Tray tray(AppIcon icon) {

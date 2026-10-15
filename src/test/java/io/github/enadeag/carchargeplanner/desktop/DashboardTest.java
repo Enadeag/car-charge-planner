@@ -42,7 +42,16 @@ class DashboardTest {
 
     @BeforeEach
     void make() throws Exception {
-        dashboard = Fx.call(() -> new Dashboard(new AppIcon(), new SimpleObjectProperty<>(ColorScheme.LIGHT), clock));
+        dashboard = dashboard(TaskbarHiding.OWNER_WINDOW);
+    }
+
+    private Dashboard dashboard(TaskbarHiding taskbarHiding) throws Exception {
+        return Fx.call(() -> new Dashboard(new AppIcon(), new SimpleObjectProperty<>(ColorScheme.LIGHT), clock,
+                taskbarHiding));
+    }
+
+    private static List<Window> showingWindows() throws Exception {
+        return Fx.call(() -> Window.getWindows().stream().filter(Window::isShowing).toList());
     }
 
     @AfterEach
@@ -204,10 +213,53 @@ class DashboardTest {
     private static void focusElsewhere() throws Exception {
         var popup = popup().orElseThrow();
         Fx.run(() -> {
-            WindowHelper.setFocused(popup.getOwner(), false);
+            if (popup.getOwner() != null) {
+                WindowHelper.setFocused(popup.getOwner(), false);
+            }
             WindowHelper.setFocused(popup, false);
         });
         Fx.settle();
+    }
+
+    @Test
+    void withoutAnOwnerWindowOnlyThePopupShows() throws Exception {
+        dashboard = dashboard(TaskbarHiding.NONE);
+
+        clickTheIcon();
+
+        assertThat(showingWindows()).containsExactly(popup().orElseThrow());
+    }
+
+    @Test
+    void withoutAnOwnerWindowAClickElsewhereStillClosesThePopup() throws Exception {
+        dashboard = dashboard(TaskbarHiding.NONE);
+        clickTheIcon();
+
+        focusElsewhere();
+
+        assertThat(popup()).isEmpty();
+    }
+
+    @Test
+    void theOwnerWindowIsSeeThroughAndOnePixelLarge() throws Exception {
+        clickTheIcon();
+
+        var owner = (Stage) popup().orElseThrow().getOwner();
+
+        assertThat(owner.isShowing()).isTrue();
+        assertThat(owner.getOpacity()).isZero();
+        assertThat(owner.getWidth()).isLessThanOrEqualTo(1);
+        assertThat(owner.getHeight()).isLessThanOrEqualTo(1);
+    }
+
+    @Test
+    void theOwnerWindowGoesAwayWithThePopup() throws Exception {
+        clickTheIcon();
+        var owner = popup().orElseThrow().getOwner();
+
+        clickTheIcon();
+
+        assertThat(Fx.call(owner::isShowing)).isFalse();
     }
 
     @Test
