@@ -1,5 +1,7 @@
 package io.github.enadeag.carchargeplanner.engine.config;
 
+import io.github.enadeag.carchargeplanner.engine.setting.Setting;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

@@ -17,6 +17,7 @@ import io.github.enadeag.carchargeplanner.engine.forecast.ForecastResult;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastService;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastUnavailable;
 import io.github.enadeag.carchargeplanner.engine.forecast.PlaceResults;
+import io.github.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import io.github.enadeag.carchargeplanner.engine.forecast.Providers;
 import io.github.enadeag.carchargeplanner.engine.forecast.SystemDescription;
 import io.github.enadeag.carchargeplanner.engine.notify.Announcer;
@@ -128,7 +129,7 @@ public final class Engine {
      * Replaces the config file by this config, at once and whole, so the next plan uses it; a provider that failed
      * before is asked again at the next plan instead of after its wait, as a corrected setting deserves a try. A value
      * the owner entered is checked as the config's records are made, which refuse it with an {@link
-     * io.github.enadeag.carchargeplanner.engine.config.InvalidSetting} that names the setting.
+     * io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting} that names the setting.
      *
      * @param config the whole config to keep
      * @throws IOException when the file could not be written; it is then left as it was
@@ -224,6 +225,27 @@ public final class Engine {
      */
     public KeyStorage keyStorage() {
         return apiKeys.storage();
+    }
+
+    /**
+     * What the known forecast providers tell about themselves, for a client that lets the owner choose.
+     *
+     * @return their information, in the order they are offered
+     */
+    public List<ProviderInfo> providers() {
+        return providers.ids().stream().flatMap(id -> providers.find(id).stream()).map(ForecastProvider::info)
+                .toList();
+    }
+
+    /**
+     * The providers' secret settings as they are stored, for a client that shows them to be changed.
+     *
+     * @return every provider's secret settings, possibly none
+     * @throws SecretsProblem when the keychain or the private file could not be read; the message says so in words
+     *     for the owner
+     */
+    public Secrets apiKeys() throws SecretsProblem {
+        return apiKeys.load();
     }
 
     /**

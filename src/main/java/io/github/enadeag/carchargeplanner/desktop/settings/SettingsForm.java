@@ -3,6 +3,8 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 import io.github.enadeag.carchargeplanner.desktop.AppSettings;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
+import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
+import io.github.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +19,7 @@ final class SettingsForm {
 
     private final SettingsStores stores;
     private final List<ConfigPage> configPages;
+    private final ForecastPage forecast;
     private final AppPage app;
     private final AboutPage about;
     private Optional<EngineConfig> storedConfig = Optional.empty();
@@ -27,18 +30,27 @@ final class SettingsForm {
      *
      * @param stores where the settings are kept
      * @param configPages the pages whose settings the engine keeps, in the sidebar's order
+     * @param forecast the forecast page, one of the config pages, which also holds the API keys
      * @param app the page of the app's own settings
      * @param about the About page, which shows where the API keys are kept
      */
-    SettingsForm(SettingsStores stores, List<ConfigPage> configPages, AppPage app, AboutPage about) {
+    SettingsForm(SettingsStores stores, List<ConfigPage> configPages, ForecastPage forecast, AppPage app,
+            AboutPage about) {
         this.stores = stores;
         this.configPages = List.copyOf(configPages);
+        this.forecast = forecast;
         this.app = app;
         this.about = about;
     }
 
     /** Reads every store again and shows what it holds on the pages, as the values not edited. */
     void load() {
+        var storage = stores.engine().keyStorage();
+        try {
+            forecast.loadKeys(stores.engine().apiKeys(), storage, Optional.empty());
+        } catch (SecretsProblem e) {
+            forecast.loadKeys(Secrets.NONE, storage, Optional.of(e.getMessage()));
+        }
         try {
             var config = stores.engine().config();
             storedConfig = Optional.of(config);
@@ -49,7 +61,7 @@ final class SettingsForm {
         }
         storedApp = stores.appSettings().read();
         app.load(storedApp, startsAtLogin());
-        about.load(stores.engine().keyStorage());
+        about.load(storage);
     }
 
     /**
@@ -63,8 +75,8 @@ final class SettingsForm {
 
     /**
      * Checks and stores what the pages show, then loads them again from the stores. Nothing is stored while a value is
-     * refused. Start at login comes first, as the system may refuse it; then the engine's config, then the app's
-     * settings.
+     * refused. Start at login comes first, as the system may refuse it; then the API keys, the engine's config and
+     * the app's settings.
      *
      * @return saved, refused with the categories to look at, or failed with the system's error
      */
@@ -88,6 +100,9 @@ final class SettingsForm {
             return new SaveOutcome.Refused(List.of(Category.APP));
         }
         try {
+            if (storedConfig.isPresent() && forecast.keysChanged()) {
+                stores.engine().saveApiKeys(forecast.keys());
+            }
             if (!config.equals(storedConfig)) {
                 stores.engine().saveConfig(config.orElseThrow());
                 storedConfig = config;
@@ -95,7 +110,7 @@ final class SettingsForm {
             if (!app.settings().equals(storedApp)) {
                 stores.appSettings().write(app.settings());
             }
-        } catch (IOException e) {
+        } catch (IOException | SecretsProblem e) {
             return new SaveOutcome.Failed(String.valueOf(e.getMessage()));
         }
         load();

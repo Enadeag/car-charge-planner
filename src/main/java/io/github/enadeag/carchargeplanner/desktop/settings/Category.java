@@ -12,6 +12,10 @@ public enum Category {
     CAR_HOUSE(TextKey.CATEGORY_CAR_HOUSE),
     /** The wall charger. */
     CHARGER(TextKey.CATEGORY_CHARGER),
+    /** The forecast providers and their API keys. */
+    FORECAST(TextKey.CATEGORY_FORECAST),
+    /** The weekly away periods. */
+    AWAY(TextKey.CATEGORY_AWAY),
     /** The planning preferences: charge levels, how cautious the plan is, and notifications. */
     PLANNING(TextKey.CATEGORY_PLANNING),
     /** The desktop app's own settings: how it shows itself, its language, the units, and start at login. */

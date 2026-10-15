@@ -2,6 +2,8 @@ package io.github.enadeag.carchargeplanner.engine.away;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting;
+import io.github.enadeag.carchargeplanner.engine.setting.Setting;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -31,11 +33,11 @@ public record RecurringAwayPeriod(DayOfWeek weekday, LocalTime start, LocalTime 
     /**
      * Checks that the period stays within its day.
      *
-     * @throws IllegalArgumentException when the end is not after the start
+     * @throws InvalidSetting when the end is not after the start
      */
     public RecurringAwayPeriod {
         if (!start.isBefore(end)) {
-            throw new IllegalArgumentException(
+            throw new InvalidSetting(Setting.AWAY_PERIOD, InvalidSetting.Rule.NOT_AFTER_START,
                     "a recurring away period must end after it starts on the same day (no periods over midnight)");
         }
     }

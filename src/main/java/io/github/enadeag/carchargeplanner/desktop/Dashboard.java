@@ -87,6 +87,15 @@ public final class Dashboard {
     }
 
     /**
+     * Lets the footer's Away button open the away periods.
+     *
+     * @param action what the button does; called on the JavaFX thread
+     */
+    public void onAway(Runnable action) {
+        Platform.runLater(() -> view.onAway(action));
+    }
+
+    /**
      * Lets the footer's Settings button open Settings.
      *
      * @param action what the button does; called on the JavaFX thread

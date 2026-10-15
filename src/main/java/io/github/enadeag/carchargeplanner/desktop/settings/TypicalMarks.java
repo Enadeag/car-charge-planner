@@ -1,6 +1,6 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.engine.config.Setting;
+import io.github.enadeag.carchargeplanner.engine.setting.Setting;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
@@ -38,7 +38,7 @@ final class TypicalMarks {
         rows.put(setting, row);
         input.onChange(() -> {
             if (!filling && marked.remove(setting)) {
-                row.showTypical("");
+                row.showTag("");
             }
         });
     }
@@ -91,6 +91,6 @@ final class TypicalMarks {
         }
         marked.clear();
         typical.stream().filter(rows::containsKey).forEach(marked::add);
-        rows.forEach((setting, row) -> row.showTypical(marked.contains(setting) ? tag : ""));
+        rows.forEach((setting, row) -> row.showTag(marked.contains(setting) ? tag : ""));
     }
 }

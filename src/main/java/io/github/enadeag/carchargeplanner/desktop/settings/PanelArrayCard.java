@@ -2,9 +2,9 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
-import io.github.enadeag.carchargeplanner.engine.config.InvalidSetting;
 import io.github.enadeag.carchargeplanner.engine.config.PanelArray;
-import io.github.enadeag.carchargeplanner.engine.config.Setting;
+import io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting;
+import io.github.enadeag.carchargeplanner.engine.setting.Setting;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;

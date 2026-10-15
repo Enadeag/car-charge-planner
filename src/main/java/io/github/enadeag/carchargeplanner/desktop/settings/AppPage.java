@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.layout.Region;
 
 /**
@@ -26,6 +28,7 @@ final class AppPage implements Page {
     private final ChoiceField<Units> units;
     private final SwitchField startAtLogin;
     private final FieldRow startAtLoginRow;
+    private final Card[] cards;
 
     /**
      * Makes the page, showing the first choices until {@link #load(AppSettings, Optional)}.
@@ -40,7 +43,7 @@ final class AppPage implements Page {
         units = new ChoiceField<>(List.of(Units.values()), this::unitsName);
         startAtLogin = new SwitchField(messages.text(TextKey.FIELD_START_AT_LOGIN));
         startAtLoginRow = new FieldRow("", "", startAtLogin);
-        view.show(
+        cards = new Card[] {
                 new Card(messages.text(TextKey.CARD_DISPLAY), messages.text(TextKey.CARD_DISPLAY_HINT),
                         new FieldRow(messages.text(TextKey.FIELD_MODE), messages.text(TextKey.FIELD_MODE_HINT), mode),
                         new FieldRow(messages.text(TextKey.FIELD_LANGUAGE), messages.text(TextKey.FIELD_LANGUAGE_HINT),
@@ -48,7 +51,8 @@ final class AppPage implements Page {
                 new Card(messages.text(TextKey.CARD_UNITS), messages.text(TextKey.CARD_UNITS_HINT),
                         new FieldRow(messages.text(TextKey.FIELD_UNITS), "", units)),
                 new Card(messages.text(TextKey.CARD_START_AT_LOGIN), messages.text(TextKey.CARD_START_AT_LOGIN_HINT),
-                        startAtLoginRow));
+                        startAtLoginRow)};
+        view.show(cards);
     }
 
     /**
@@ -75,6 +79,19 @@ final class AppPage implements Page {
      */
     AppSettings settings() {
         return new AppSettings(language.value(), units.value(), mode.value());
+    }
+
+    /**
+     * Offers to run set-up again, on a card of its own below the others.
+     *
+     * @param runSetUp closes Settings, asking first when there are unsaved changes, and opens set-up
+     */
+    void offerSetUp(Runnable runSetUp) {
+        var button = new Button(messages.text(TextKey.RUN_SETUP));
+        button.setOnAction(event -> runSetUp.run());
+        var all = new ArrayList<Node>(List.of(cards));
+        all.add(new Card(messages.text(TextKey.CARD_SETUP), messages.text(TextKey.CARD_SETUP_HINT), button));
+        view.show(all.toArray(Node[]::new));
     }
 
     /**

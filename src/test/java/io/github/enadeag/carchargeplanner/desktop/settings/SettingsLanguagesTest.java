@@ -49,7 +49,7 @@ class SettingsLanguagesTest {
     @ParameterizedTest
     @EnumSource(Language.class)
     void noTextIsCutOff(Language language) throws Exception {
-        settings = new SettingsFixture(folder, language);
+        settings = new SettingsFixture(folder, language, SettingsFixture.realProviders());
         var file = new ConfigFile(settings.configPath);
         var example = file.read();
         file.write(example.withSystem(example.system().withPanels(List.of(PanelArray.TYPICAL, PanelArray.TYPICAL)),

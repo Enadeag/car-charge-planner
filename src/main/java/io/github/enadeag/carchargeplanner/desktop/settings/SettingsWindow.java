@@ -5,6 +5,7 @@ import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.SystemTheme;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
 import java.net.URI;
+import java.util.Optional;
 import java.util.function.Consumer;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
@@ -35,14 +36,15 @@ public final class SettingsWindow {
      * @param openLink opens a web page in the owner's browser; called on the JavaFX thread, so it should not block
      * @param saved called on the JavaFX thread after something was saved, so the plan is made again with it; it
      *     should hand the work on
+     * @param runSetUp opens set-up once Settings closed; empty while the app has no set-up
      * @param colorScheme the system's light or dark, followed while the app runs
      *     ({@code Platform.getPreferences().colorSchemeProperty()}); never null
      * @param icon the app icon, for the title bar and the taskbar
      * @param messages the texts, in the owner's language
      */
     public SettingsWindow(SettingsStores stores, AboutFacts facts, Consumer<URI> openLink, Runnable saved,
-            ObservableValue<ColorScheme> colorScheme, AppIcon icon, Messages messages) {
-        view = SettingsView.of(stores, facts, openLink, stage::hide, saved, messages);
+            Optional<Runnable> runSetUp, ObservableValue<ColorScheme> colorScheme, AppIcon icon, Messages messages) {
+        view = SettingsView.of(stores, facts, openLink, stage::hide, saved, runSetUp, messages);
         var scene = new Scene(view);
         new SystemTheme(colorScheme).style(scene);
         stage.setScene(scene);

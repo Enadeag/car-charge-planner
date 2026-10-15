@@ -13,10 +13,6 @@ public enum TextKey {
     FOOTER_AWAY,
     /** The footer's button for the settings. */
     FOOTER_SETTINGS,
-    /** A footer button that does nothing yet: {0} is the button's name. */
-    FOOTER_SOON,
-    /** What a screen reader says for a footer button that does nothing yet: {0} is the button's name. */
-    FOOTER_NOT_YET,
     /** The footer's forecast part when the fallback provider stands in: {0} is the primary provider's name. */
     FOOTER_FALLBACK,
     /** The same when the primary provider is not known to the app. */
@@ -480,5 +476,105 @@ public enum TextKey {
     /** The charging efficiency. */
     FIELD_EFFICIENCY,
     /** What the efficiency is. */
-    FIELD_EFFICIENCY_HINT
+    FIELD_EFFICIENCY_HINT,
+    /** The category of the forecast providers. */
+    CATEGORY_FORECAST,
+    /** The category of the weekly away periods. */
+    CATEGORY_AWAY,
+    /** A fallback provider that is the primary one. */
+    PROBLEM_SAME_AS_PRIMARY,
+    /** An away period that does not end after it starts. */
+    PROBLEM_NOT_AFTER_START,
+    /** A time that is not a time. */
+    PROBLEM_NOT_A_TIME,
+    /** A required provider setting that is empty. */
+    PROBLEM_REQUIRED,
+    /** The title of the card that chooses the providers. */
+    CARD_PROVIDERS,
+    /** What the providers are. */
+    CARD_PROVIDERS_HINT,
+    /** The primary provider. */
+    FIELD_PRIMARY,
+    /** What the primary provider is. */
+    FIELD_PRIMARY_HINT,
+    /** The fallback provider. */
+    FIELD_FALLBACK,
+    /** What the fallback provider is. */
+    FIELD_FALLBACK_HINT,
+    /** No fallback provider. */
+    FALLBACK_NONE,
+    /** A provider this version does not know: {0} its id. */
+    PROVIDER_UNKNOWN,
+    /** What is sent to a provider: {0} in words. */
+    PROVIDER_SENDS,
+    /** A provider's limits: {0} minutes between requests, {1} days ahead. */
+    PROVIDER_LIMITS,
+    /** The link to a provider's terms. */
+    PROVIDER_TERMS,
+    /** The tag on a required provider setting. */
+    PROVIDER_REQUIRED,
+    /** The button that tries a provider. */
+    PROVIDER_TEST,
+    /** Said while a provider is tried: {0} its name. */
+    PROVIDER_TESTING,
+    /** A provider answered: {0} days of forecast. */
+    PROVIDER_WORKS,
+    /** A provider did not answer: {0} the engine's words, in English. */
+    PROVIDER_FAILED,
+    /** Open-Meteo's description. */
+    PROVIDER_OPEN_METEO,
+    /** What is sent to Open-Meteo. */
+    PROVIDER_OPEN_METEO_SENDS,
+    /** Forecast.Solar's description. */
+    PROVIDER_FORECAST_SOLAR,
+    /** What is sent to Forecast.Solar. */
+    PROVIDER_FORECAST_SOLAR_SENDS,
+    /** The name of a provider's API key. */
+    PROVIDER_API_KEY,
+    /** The name of a provider's server address. */
+    PROVIDER_BASE_URL,
+    /** What Open-Meteo's key is for. */
+    PROVIDER_OPEN_METEO_API_KEY_HINT,
+    /** What Open-Meteo's server address is for. */
+    PROVIDER_OPEN_METEO_BASE_URL_HINT,
+    /** What Forecast.Solar's key is for. */
+    PROVIDER_FORECAST_SOLAR_API_KEY_HINT,
+    /** The button that shows a hidden key. */
+    SECRET_SHOW,
+    /** The button that hides a key again. */
+    SECRET_HIDE,
+    /** The title of the card about where the keys are kept. */
+    CARD_KEYS,
+    /** The keys are in the keychain. */
+    KEYS_IN_KEYCHAIN,
+    /** The keys are in a file: {0} the file. */
+    KEYS_IN_FILE,
+    /** The stored keys could not be read: {0} why, in words for the owner. */
+    KEYS_PROBLEM,
+    /** The title of the weekly away periods' card. */
+    CARD_AWAY,
+    /** What weekly away periods are. */
+    CARD_AWAY_HINT,
+    /** Said when there are no weekly away periods. */
+    AWAY_NONE,
+    /** The button that adds a weekly away period. */
+    AWAY_ADD,
+    /** The button that removes one. */
+    AWAY_REMOVE,
+    /** The word between the weekday and the start. */
+    AWAY_FROM,
+    /** The word between the start and the end. */
+    AWAY_TO,
+    /** What a screen reader calls the weekday. */
+    AWAY_WEEKDAY,
+    /** What a screen reader calls the start. */
+    AWAY_FROM_FIELD,
+    /** What a screen reader calls the end. */
+    AWAY_TO_FIELD,
+    /** The title of the set-up card. */
+    CARD_SETUP,
+    /** What running set-up again does. */
+    CARD_SETUP_HINT,
+    /** The button that runs set-up again. */
+    RUN_SETUP
 }

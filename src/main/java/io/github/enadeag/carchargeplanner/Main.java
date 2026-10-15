@@ -211,9 +211,10 @@ public final class Main {
         var facts = new AboutFacts(version(), configPath, appSettingsFile.path(), dataFolder, secretsFile.path());
         var stores = new SettingsStores(engine, appSettingsFile, startAtLogin());
         Platform.runLater(() -> settingsMade.complete(new SettingsWindow(stores, facts, Main::openLink,
-                () -> replanning.execute(replan), colorSchemeFound.join(), icon, messages)));
+                () -> replanning.execute(replan), Optional.empty(), colorSchemeFound.join(), icon, messages)));
         var settings = settingsMade.get();
         dashboard.onSettings(() -> settings.open(Category.SOLAR));
+        dashboard.onAway(() -> settings.open(Category.AWAY));
 
         Runnable quit = () -> {
             notifications.close();

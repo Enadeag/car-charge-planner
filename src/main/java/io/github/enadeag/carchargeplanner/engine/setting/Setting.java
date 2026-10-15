@@ -1,4 +1,4 @@
-package io.github.enadeag.carchargeplanner.engine.config;
+package io.github.enadeag.carchargeplanner.engine.setting;
 
 /**
  * A value in the config file that the owner sets, so that a client can show a problem with it next to the place where
@@ -35,6 +35,12 @@ public enum Setting {
     CHARGER_VOLTAGE,
     /** The share of the energy from the wall that ends up in the battery. */
     CHARGER_EFFICIENCY,
+    /** The primary forecast provider. */
+    PRIMARY_PROVIDER,
+    /** The fallback forecast provider. */
+    FALLBACK_PROVIDER,
+    /** A weekly away period. */
+    AWAY_PERIOD,
     /** The minimum charge level of the battery. */
     MINIMUM_CHARGE,
     /** The target charge level of the battery. */

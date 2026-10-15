@@ -1,4 +1,4 @@
-package io.github.enadeag.carchargeplanner.engine.config;
+package io.github.enadeag.carchargeplanner.engine.setting;
 
 /**
  * A value the config refuses, with the setting it belongs to and the rule it breaks, so that a client can say what is
@@ -14,7 +14,11 @@ public class InvalidSetting extends IllegalArgumentException {
         /** The minimum charge level is not below the target charge level. */
         NOT_BELOW_TARGET,
         /** The highest current is below the lowest current. */
-        BELOW_MINIMUM_CURRENT
+        BELOW_MINIMUM_CURRENT,
+        /** The fallback provider is the primary provider. */
+        SAME_AS_PRIMARY,
+        /** An away period does not end after it starts on the same day. */
+        NOT_AFTER_START
     }
 
     private final Setting setting;
