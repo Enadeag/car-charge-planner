@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.desktop;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
+import javafx.application.Platform;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.Point2D;
 import javafx.scene.Scene;
@@ -28,9 +29,9 @@ final class DashboardPopup {
     private final StackPane content = new StackPane();
     private final InstantSource clock;
     private Instant closedAt = Instant.MIN;
-    private Point2D icon = Point2D.ZERO;
+    private Point2D iconPosition = Point2D.ZERO;
 
-    DashboardPopup(SystemTheme theme, InstantSource clock) {
+    DashboardPopup(SystemTheme theme, AppIcon icon, InstantSource clock) {
         this.clock = clock;
         content.getStyleClass().add("popup");
         var scene = new Scene(content, Color.TRANSPARENT);
@@ -42,22 +43,36 @@ final class DashboardPopup {
         });
         stage.setScene(scene);
         stage.setTitle("Car charge planner");
-        // JavaFX cannot keep a window out of the taskbar, but the taskbar leaves out windows that a utility window
-        // owns; the owner is shown, invisible and one pixel large, beneath the popup
+        // where a taskbar still lists the popup (Plasma does), it shows the app's icon
+        stage.getIcons().setAll(icon.fxImages());
+        // JavaFX cannot keep a window out of the taskbar, but the Windows taskbar leaves out windows that a utility
+        // window owns; the owner is shown, invisible and one pixel large, beneath the popup
         owner.setOpacity(0);
         owner.setWidth(1);
         owner.setHeight(1);
         stage.initOwner(owner);
         stage.setAlwaysOnTop(true);
+        // the owner can take the focus as it appears; it hands it back instead of the popup closing
+        owner.focusedProperty().subscribe(focused -> {
+            if (focused && stage.isShowing()) {
+                stage.requestFocus();
+            }
+        });
+        // decided once the focus has settled, so a move to the owner does not count as a click elsewhere
         stage.focusedProperty().subscribe(focused -> {
             if (!focused) {
-                close();
+                Platform.runLater(this::closeUnlessFocused);
             }
         });
     }
 
-    /** Opens the popup beside the tray icon at {@code icon}; a click on the icon while it is open closes it. */
-    void toggle(DashboardView view, Point2D icon) {
+    /**
+     * Opens the popup beside the tray icon; a click on the icon while it is open closes it.
+     *
+     * @param reported where the tray says the icon is; another process (the panel) says so, so it is used only when
+     *     it lies on a screen
+     */
+    void toggle(DashboardView view, Point2D reported) {
         if (stage.isShowing()) {
             close();
             return;
@@ -65,7 +80,8 @@ final class DashboardPopup {
         if (Duration.between(closedAt, clock.instant()).compareTo(SAME_CLICK) < 0) {
             return;
         }
-        this.icon = icon;
+        var screens = Screen.getScreens().stream().map(Screen::getBounds).toList();
+        iconPosition = PopupPlacement.onAScreen(reported, screens, Screen.getPrimary().getVisualBounds());
         view.setDetachable(true);
         content.getChildren().setAll(view);
         place();
@@ -79,6 +95,12 @@ final class DashboardPopup {
 
     boolean isShowing() {
         return stage.isShowing();
+    }
+
+    private void closeUnlessFocused() {
+        if (!stage.isFocused() && !owner.isFocused()) {
+            close();
+        }
     }
 
     void close() {
@@ -100,7 +122,7 @@ final class DashboardPopup {
         content.applyCss();
         double width = content.prefWidth(-1);
         var size = new Dimension2D(width, content.prefHeight(width));
-        var position = PopupPlacement.position(icon, size, screenOf(icon).getVisualBounds());
+        var position = PopupPlacement.position(iconPosition, size, screenOf(iconPosition).getVisualBounds());
         stage.setX(position.getX());
         stage.setY(position.getY());
         stage.setWidth(size.getWidth());

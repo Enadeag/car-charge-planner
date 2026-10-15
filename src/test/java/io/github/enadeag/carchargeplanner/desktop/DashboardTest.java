@@ -4,9 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sun.javafx.stage.WindowHelper;
 import io.github.enadeag.carchargeplanner.engine.Outlook;
+import io.github.enadeag.carchargeplanner.engine.plan.DayPlan;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -14,6 +17,7 @@ import javafx.application.ColorScheme;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Point2D;
 import javafx.scene.control.Button;
+import javafx.scene.control.TabPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
@@ -95,7 +99,46 @@ class DashboardTest {
      */
     private static void focusElsewhere() throws Exception {
         var popup = popup().orElseThrow();
-        Fx.run(() -> WindowHelper.setFocused(popup, false));
+        Fx.run(() -> {
+            WindowHelper.setFocused(popup.getOwner(), false);
+            WindowHelper.setFocused(popup, false);
+        });
+        Fx.settle();
+    }
+
+    @Test
+    void theKeyboardReachesThePopup() throws Exception {
+        clickTheIcon();
+        dashboard.show(planWithTwoDays());
+        Fx.settle();
+        var tabs = (TabPane) popup().orElseThrow().getScene().lookup(".day-tabs");
+
+        Fx.run(() -> {
+            tabs.requestFocus();
+            var robot = new Robot();
+            robot.keyPress(KeyCode.RIGHT);
+            robot.keyRelease(KeyCode.RIGHT);
+        });
+
+        assertThat(Fx.call(() -> tabs.getSelectionModel().getSelectedIndex())).isEqualTo(1);
+    }
+
+    private static Outlook planWithTwoDays() {
+        var zone = ZoneId.of("Europe/Brussels");
+        var today = LocalDate.of(2026, 10, 15);
+        var days = List.of(new DayPlan(today, 50, List.of(), 50, 40, 10),
+                new DayPlan(today.plusDays(1), 40, List.of(), 40, 30, 10));
+        return new Outlook.Planned(today.atTime(8, 0).atZone(zone).toInstant(), zone, days, 50, false, Optional.empty());
+    }
+
+    @Test
+    void aReportedIconPositionOffEveryScreenFallsBackToTheCornerOfThePrimaryScreen() throws Exception {
+        dashboard.popUp(new Point2D(-40_000, 90_000));
+        Fx.settle();
+
+        var popup = popup().orElseThrow();
+        assertThat(popup.getX() + popup.getWidth()).isEqualTo(1000 - PopupPlacement.MARGIN);
+        assertThat(popup.getY() + popup.getHeight()).isEqualTo(1000 - PopupPlacement.MARGIN);
     }
 
     @Test

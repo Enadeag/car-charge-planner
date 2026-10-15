@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.desktop;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.enadeag.carchargeplanner.desktop.PopupPlacement.Edge;
+import java.util.List;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
@@ -57,6 +58,19 @@ class PopupPlacementTest {
         var position = PopupPlacement.position(new Point2D(1800, 1180), POPUP, area(0, 0, 1920, 1200));
 
         assertThat(position.getY() + POPUP.getHeight()).isEqualTo(1180 - M);
+    }
+
+    @Test
+    void aReportedIconPositionIsUsedOnlyWhenItLiesOnAScreen() {
+        var screens = List.of(area(0, 0, 1920, 1200), area(1920, 0, 3840, 1080));
+        var primaryFree = area(0, 0, 1920, 1168);
+
+        assertThat(PopupPlacement.onAScreen(new Point2D(2500, 1060), screens, primaryFree))
+                .isEqualTo(new Point2D(2500, 1060));
+        assertThat(PopupPlacement.onAScreen(new Point2D(2500, 1150), screens, primaryFree))
+                .isEqualTo(new Point2D(1920, 1168));
+        assertThat(PopupPlacement.onAScreen(new Point2D(-2_147_483_648, 0), screens, primaryFree))
+                .isEqualTo(new Point2D(1920, 1168));
     }
 
     @Test

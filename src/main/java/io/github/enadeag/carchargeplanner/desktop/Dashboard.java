@@ -28,7 +28,7 @@ public final class Dashboard {
         var theme = new SystemTheme(colorScheme);
         this.mapper = new OutlookMapper(forecastSource);
         this.view = new DashboardView(this::detach);
-        this.popup = new DashboardPopup(theme, clock);
+        this.popup = new DashboardPopup(theme, icon, clock);
         this.window = new DashboardWindow(theme, icon);
         view.show(mapper.loading());
     }

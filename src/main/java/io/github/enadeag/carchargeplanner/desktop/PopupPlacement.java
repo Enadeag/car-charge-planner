@@ -2,6 +2,7 @@ package io.github.enadeag.carchargeplanner.desktop;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
@@ -55,6 +56,15 @@ final class PopupPlacement {
             case RIGHT -> x = Math.min(available.getMaxX(), icon.getX()) - size.getWidth() - MARGIN;
         }
         return keepInside(x, y, size, available);
+    }
+
+    /**
+     * The reported icon position when it lies on one of the screens; otherwise the bottom right of {@code fallback}
+     * (the primary screen's free area), where trays usually are. The position comes from another process.
+     */
+    static Point2D onAScreen(Point2D reported, List<Rectangle2D> screens, Rectangle2D fallback) {
+        boolean onAScreen = screens.stream().anyMatch(screen -> screen.contains(reported));
+        return onAScreen ? reported : new Point2D(fallback.getMaxX(), fallback.getMaxY());
     }
 
     /** Moved the least needed to lie inside the area, a margin from its edges; the top left wins if it cannot fit. */
