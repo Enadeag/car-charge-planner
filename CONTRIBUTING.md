@@ -174,11 +174,11 @@ The texts are in `src/main/resources/io/github/enadeag/carchargeplanner/desktop/
 DAY_SET = Set {0} A ({1} kW)
 ```
 
-1. **Add the language to the app.** In `desktop/Language.java`, add a constant with the language's ISO 639 code and
-   the locale whose numbers, times and day names it uses, such as `GERMAN("de", Locale.GERMANY, "Deutsch")`. Language codes are
-   two letters: `de`, `fr`, `pt`. The last part is its name in itself, which the language list shows. Add its code to
-   `--include-locales` in `tools/package-linux.sh` and `tools/package-windows.ps1`, so the packaged app has its day
-   names and numbers.
+1. **Add the language to the app.** In `desktop/Language.java`, add a constant with the language's ISO 639 code,
+   the locale whose numbers, times and day names it uses, and its name in itself, which the language list shows,
+   such as `GERMAN("de", Locale.GERMANY, "Deutsch")`. Language codes are two letters: `de`, `fr`, `pt`. Add the code
+   to `--include-locales` in `tools/package-linux.sh` and `tools/package-windows.ps1` too, so the packaged app has
+   the language's day names and numbers.
 
 2. **Start the file.** Copy `messages_en.properties` to `messages_<code>.properties` and translate every text after
    the `=`. Things to know:
