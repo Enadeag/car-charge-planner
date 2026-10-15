@@ -13,6 +13,8 @@ public record House(double baseloadKw) {
      * @throws IllegalArgumentException when the baseload is negative
      */
     public House {
-        Checks.require(baseloadKw >= 0, "baseloadKw must not be negative");
+        if (baseloadKw < 0 || Double.isNaN(baseloadKw)) {
+            throw new IllegalArgumentException("baseloadKw must not be negative");
+        }
     }
 }

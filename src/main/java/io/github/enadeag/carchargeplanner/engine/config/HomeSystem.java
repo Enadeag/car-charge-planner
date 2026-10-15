@@ -29,7 +29,9 @@ public record HomeSystem(
      * @throws IllegalArgumentException when there is no panel array
      */
     public HomeSystem {
-        Checks.require(!panels.isEmpty(), "panels needs at least one panel array");
+        if (panels.isEmpty()) {
+            throw new IllegalArgumentException("panels needs at least one panel array");
+        }
         panels = List.copyOf(panels);
     }
 
