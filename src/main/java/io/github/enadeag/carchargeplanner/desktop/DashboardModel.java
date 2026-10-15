@@ -14,19 +14,23 @@ sealed interface DashboardModel {
     String footer();
 
     /**
-     * A plan: one day after the other, today first, and grid advice when the owner has to act.
+     * A plan: one day after the other, today first, grid advice when the owner has to act, and the away periods
+     * entered for the coming days.
      *
      * @param days the days of the plan, today first; may be empty
      * @param advice the grid advice, or empty when there is none
+     * @param away the away periods entered for specific days that have not ended
      * @param footer the forecast's source and freshness
      */
-    record Plan(List<DayModel> days, Optional<GridAdviceModel> advice, String footer) implements DashboardModel {
+    record Plan(List<DayModel> days, Optional<GridAdviceModel> advice, AwayModel away, String footer)
+            implements DashboardModel {
 
         /**
          * Keeps a copy of the days, so the plan cannot change afterwards.
          *
          * @param days the days of the plan, today first; may be empty
          * @param advice the grid advice, or empty when there is none
+         * @param away the away periods entered for specific days that have not ended
          * @param footer the forecast's source and freshness
          */
         public Plan {

@@ -325,6 +325,46 @@
     -fx-pref-width: 6em;
 }
 
+/* the away periods entered for specific days, and their entry */
+.away-list {
+    -fx-spacing: 0.2em;
+}
+
+.away-row {
+    -fx-alignment: center-left;
+    -fx-spacing: 0.5em;
+}
+
+.away-item {
+    -fx-text-fill: -fg;
+}
+
+.away-editor {
+    -fx-spacing: 0.5em;
+}
+
+.away-kinds,
+.away-actions {
+    -fx-hgap: 0.75em;
+    -fx-vgap: 0.4em;
+    -fx-alignment: center-left;
+}
+
+.away-times,
+.away-buttons {
+    -fx-alignment: center-left;
+    -fx-spacing: 0.4em;
+}
+
+/* AtlantaFX gives a radio button the page's background, which shows as a box on a card */
+.away-kinds .radio-button {
+    -fx-background-color: transparent;
+}
+
+.text-input.away-time {
+    -fx-pref-width: 4.5em;
+}
+
 /* chips: a figure with its source's glyph on its source's soft background */
 .chip {
     -fx-background-radius: 999;

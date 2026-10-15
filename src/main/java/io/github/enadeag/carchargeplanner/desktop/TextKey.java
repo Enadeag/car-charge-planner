@@ -11,6 +11,8 @@ public enum TextKey {
     DASHBOARD_DAYS,
     /** The footer's button for the away periods. */
     FOOTER_AWAY,
+    /** What the footer's Away button opens: the weekly away periods, in Settings. */
+    FOOTER_AWAY_HINT,
     /** The footer's button for the settings. */
     FOOTER_SETTINGS,
     /** The footer's forecast part when the fallback provider stands in: {0} is the primary provider's name. */
@@ -71,6 +73,36 @@ public enum TextKey {
     BATTERY_SAVE,
     /** The button that closes the battery level's entry without saving. */
     BATTERY_CANCEL,
+    /** The heading of the card with the away periods entered for specific days. */
+    ONE_OFF_HEADING,
+    /** The button that opens the entry of an away period on the selected day. */
+    ONE_OFF_ADD,
+    /** What the add button does: {0} the selected day as a title, such as "Tomorrow" or "Sunday". */
+    ONE_OFF_ADD_HINT,
+    /** Said when no away period is entered for a day to come. */
+    ONE_OFF_NONE,
+    /** The choice for an away period of the whole day. */
+    ONE_OFF_WHOLE_DAY,
+    /** The choice for an away period of part of the day, between two times. */
+    ONE_OFF_PART_OF_DAY,
+    /** The button that saves the entered away period. */
+    ONE_OFF_SAVE,
+    /** The button that closes the away period's entry without saving. */
+    ONE_OFF_CANCEL,
+    /** Said when the entered end time is not after the start time. */
+    ONE_OFF_END_BEFORE_START,
+    /** Said when the entered away period has ended already. */
+    ONE_OFF_PASSED,
+    /** An away period of a whole day: {0} the day, such as "Tomorrow" or "Sat 17 Oct". */
+    ONE_OFF_ALL_DAY,
+    /** An away period on one day: {0} the day, {1} its times, such as "10:00 – 16:30". */
+    ONE_OFF_PART,
+    /** An away period over more days: {0} the first day, {1} its start time, {2} the last day, {3} its end time. */
+    ONE_OFF_DAYS,
+    /** The button that removes an away period. */
+    ONE_OFF_REMOVE,
+    /** What a screen reader calls the remove button: {0} the period, such as "Tomorrow, all day". */
+    ONE_OFF_REMOVE_SPOKEN,
     /** The chip above the grid advice. */
     ADVICE_LABEL,
     /** The grid advice's title with a window: {0} kWh, {1} the day in a sentence, {2} the window's times. */

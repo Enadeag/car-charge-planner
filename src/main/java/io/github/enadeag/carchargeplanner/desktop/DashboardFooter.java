@@ -4,10 +4,11 @@ import atlantafx.base.theme.Styles;
 import java.util.List;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 
-/** The forecast's source and freshness, and the way to the away periods and to Settings. */
+/** The forecast's source and freshness, and the way to the weekly away periods and to Settings. */
 final class DashboardFooter extends HBox {
 
     private final Label forecast = Texts.paragraph("", "footer-text");
@@ -29,6 +30,9 @@ final class DashboardFooter extends HBox {
             button.setMinWidth(USE_PREF_SIZE);
         }
         away.setText(messages.text(TextKey.FOOTER_AWAY));
+        var awayHint = messages.text(TextKey.FOOTER_AWAY_HINT);
+        away.setTooltip(new Tooltip(awayHint));
+        away.setAccessibleHelp(awayHint);
         settings.setText(messages.text(TextKey.FOOTER_SETTINGS));
         getChildren().setAll(forecast, away, settings);
         getStyleClass().add("dashboard-footer");
@@ -58,7 +62,7 @@ final class DashboardFooter extends HBox {
     }
 
     /**
-     * Lets the Away button open the away periods.
+     * Lets the Away button open the weekly away periods.
      *
      * @param action what the button does; called on the JavaFX thread
      */

@@ -1,8 +1,10 @@
 package io.github.enadeag.carchargeplanner.desktop;
 
 import io.github.enadeag.carchargeplanner.engine.Outlook;
+import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import java.time.InstantSource;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
@@ -29,13 +31,17 @@ public final class Dashboard {
     private Messages messages;
     private DashboardView view;
     private Optional<Outlook> outlook = Optional.empty();
+    private List<AwayPeriod> awayPeriods = List.of();
     private Optional<IntConsumer> batteryEntered = Optional.empty();
+    private Optional<Consumer<AwayPeriod>> awayAdded = Optional.empty();
+    private Optional<Consumer<AwayPeriod>> awayRemoved = Optional.empty();
     private Optional<Runnable> away = Optional.empty();
     private Optional<Runnable> settings = Optional.empty();
     private Optional<Runnable> setUp = Optional.empty();
 
     /**
-     * Makes the dashboard, hidden, showing that the forecast is being fetched until {@link #show(Outlook)} is called.
+     * Makes the dashboard, hidden, showing that the forecast is being fetched until {@link #show(Outlook, List)} is
+     * called.
      *
      * @param icon the app icon, for the window's title bar and the taskbar
      * @param colorScheme light or dark for the windows, followed while the app runs: the owner's appearance over the
@@ -84,11 +90,15 @@ public final class Dashboard {
      * Shows a new outlook from the engine, keeping the selected day.
      *
      * @param outlook the engine's latest plan, or why there is none; never null
+     * @param awayPeriods the away periods the owner entered for specific days, as the engine stores them, in order of
+     *     their start; may be empty, and those that ended before the plan was made are not listed
      */
-    public void show(Outlook outlook) {
+    public void show(Outlook outlook, List<AwayPeriod> awayPeriods) {
+        var periods = List.copyOf(awayPeriods);
         Platform.runLater(() -> {
             this.outlook = Optional.of(outlook);
-            view.show(new OutlookMapper(messages).map(outlook));
+            this.awayPeriods = periods;
+            view.show(new OutlookMapper(messages).map(outlook, periods));
         });
     }
 
@@ -105,7 +115,23 @@ public final class Dashboard {
     }
 
     /**
-     * Lets the footer's Away button open the away periods.
+     * Lets the owner add and remove away periods for specific days on the dashboard: a whole day or part of the
+     * selected day, and any of the coming ones.
+     *
+     * @param added gets a period the owner entered; called on the JavaFX thread, so it should hand the work on
+     * @param removed gets a period the owner removed, as {@link #show(Outlook, List)} gave it; called on the JavaFX
+     *     thread, so it should hand the work on
+     */
+    public void onAwayChange(Consumer<AwayPeriod> added, Consumer<AwayPeriod> removed) {
+        Platform.runLater(() -> {
+            awayAdded = Optional.of(added);
+            awayRemoved = Optional.of(removed);
+            view.onAwayChange(added, removed);
+        });
+    }
+
+    /**
+     * Lets the footer's Away button open the weekly away periods.
      *
      * @param action what the button does; called on the JavaFX thread
      */
@@ -137,7 +163,7 @@ public final class Dashboard {
         Platform.runLater(() -> {
             setUp = Optional.of(action);
             view.onSetUp(action);
-            outlook.ifPresent(shown -> view.show(new OutlookMapper(messages).map(shown)));
+            outlook.ifPresent(shown -> view.show(new OutlookMapper(messages).map(shown, awayPeriods)));
         });
     }
 
@@ -167,11 +193,12 @@ public final class Dashboard {
     private DashboardView newView() {
         var made = new DashboardView(this::detach, this::fitToContent, reducedMotion, messages);
         batteryEntered.ifPresent(made::onBatteryEntered);
+        awayAdded.ifPresent(added -> made.onAwayChange(added, awayRemoved.orElseThrow()));
         away.ifPresent(made::onAway);
         settings.ifPresent(made::onSettings);
         setUp.ifPresent(made::onSetUp);
         var mapper = new OutlookMapper(messages);
-        made.show(outlook.map(mapper::map).orElseGet(mapper::loading));
+        made.show(outlook.map(shown -> mapper.map(shown, awayPeriods)).orElseGet(mapper::loading));
         return made;
     }
 

@@ -1,10 +1,12 @@
 package io.github.enadeag.carchargeplanner.desktop;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
  * One day of the plan, in words.
  *
+ * @param date the day, in the owner's home
  * @param tab the day's short name: "Today", "Fri"
  * @param title the day's name: "Today", "Tomorrow" or the weekday
  * @param kind where the day's charge comes from
@@ -18,6 +20,7 @@ import java.util.List;
  * @param battery the day's battery levels, as the battery bar draws them
  */
 record DayModel(
+        LocalDate date,
         String tab,
         String title,
         DayKind kind,
@@ -33,6 +36,7 @@ record DayModel(
     /**
      * Keeps copies of the lists, so the day cannot change afterwards.
      *
+     * @param date the day, in the owner's home
      * @param tab the day's short name
      * @param title the day's name
      * @param kind where the day's charge comes from

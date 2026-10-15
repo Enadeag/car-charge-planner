@@ -222,7 +222,7 @@ public final class Main {
         Runnable replan = () -> {
             try {
                 var outlook = engine.plan();
-                dashboard.show(outlook);
+                dashboard.show(outlook, engine.awayPeriods());
                 trayTexts.show(outlook);
                 setUpOffer.show(outlook);
             } catch (RuntimeException e) {
@@ -290,6 +290,21 @@ public final class Main {
                 engine.setBatteryLevel(level);
             } catch (IOException e) {
                 LOG.log(Level.WARNING, "could not save the battery level", e);
+            }
+            replan.run();
+        }));
+        dashboard.onAwayChange(period -> replanning.execute(() -> {
+            try {
+                engine.addAwayPeriod(period);
+            } catch (IOException e) {
+                LOG.log(Level.WARNING, "could not save the away period", e);
+            }
+            replan.run();
+        }), period -> replanning.execute(() -> {
+            try {
+                engine.removeAwayPeriod(period);
+            } catch (IOException e) {
+                LOG.log(Level.WARNING, "could not remove the away period", e);
             }
             replan.run();
         }));

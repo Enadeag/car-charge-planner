@@ -8,6 +8,7 @@ The app is rewritten in Java with JavaFX, and the Python version is removed. Wha
 
 ### Added
 - A new dashboard, in the tray icon's popup or a window of its own: a tab per day with that day's charge window or grid advice, a chart of the expected sun against the house's own use, and the car battery, whose level you update there.
+- The dashboard's Car away card: mark the car away on a day, all day or between two times, and remove a coming one. The weekly away times are in Settings.
 - Dutch, beside English. A language is now one Java resource bundle (`messages_<code>.properties`); see CONTRIBUTING.md.
 - A choice between light, dark and the system's appearance, in Settings, App.
 - Set-up checks the forecast and shows a preview of the dashboard before Finish.
@@ -21,7 +22,6 @@ The app is rewritten in Java with JavaFX, and the Python version is removed. Wha
 
 ### Removed
 - The Python version: installing with pipx, the PyInstaller and Inno Setup installer, the gettext translations, and the commands `test-notification`, `install-autostart`, `uninstall-autostart`, `install-launcher`, `uninstall-launcher` and the terminal planner.
-- Entering a one-off away day; the weekly away times are in Settings.
 - Reading the settings of 0.2.0 and earlier (`config.toml`, `app.toml`, `state.json`): run set-up once; the old files are left alone. On Windows the new installer does not remove 0.2.0: uninstall that one in Settings, Apps.
 
 ## [0.2.0] - 2026-10-14
