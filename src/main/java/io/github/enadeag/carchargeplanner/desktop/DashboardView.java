@@ -29,6 +29,7 @@ final class DashboardView extends VBox {
     private final BatteryCard battery;
     private List<DayModel> days = List.of();
     private Optional<GridAdviceModel> advice = Optional.empty();
+    private Optional<Runnable> setUp = Optional.empty();
 
     /**
      * Makes the dashboard, empty until {@link #show(DashboardModel)}.
@@ -86,7 +87,7 @@ final class DashboardView extends VBox {
             case DashboardModel.Message message -> {
                 days = List.of();
                 tabs.show(days);
-                body.show(page(new MessageCard(message)));
+                body.show(page(new MessageCard(message, setUp, messages)));
                 contentChanged.run();
             }
         }
@@ -149,6 +150,23 @@ final class DashboardView extends VBox {
      */
     void onSettings(Runnable action) {
         footer.onSettings(action);
+    }
+
+    /**
+     * Lets a message that asks for set-up offer a button that opens it; a message shown already keeps its buttons
+     * until the next one.
+     *
+     * @param action opens set-up; called on the JavaFX thread
+     */
+    void onSetUp(Runnable action) {
+        setUp = Optional.of(action);
+    }
+
+    /**
+     * Takes the footer's Away and Settings buttons away, for a dashboard that only shows, such as set-up's preview.
+     */
+    void hideFooterButtons() {
+        footer.hideButtons();
     }
 
     /** Grid advice goes on today's tab, below its main card; the charts follow. */

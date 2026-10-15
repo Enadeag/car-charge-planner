@@ -105,7 +105,7 @@ and the Maven wrapper in the root, the code in `src/main/java/io/github/enadeag/
 | Package | What it holds |
 | --- | --- |
 | `engine` | Plans, fetches forecasts and owns the stored data, without user interface; clients get plain records. `engine.config` the config file, `engine.away` the away periods (weekly, and the ones entered by hand and kept in `away.json`), `engine.battery` the battery level the owner entered last (kept in `battery.json`), `engine.forecast` the provider contract and the forecast service (fallback, cache, rate limits), `engine.forecast.providers` Open-Meteo and Forecast.Solar, `engine.secrets` the API keys, `engine.plan` the planner, `engine.notify` when the owner is told about a window (the notifier port, and the announced windows kept in `announced.json`). |
-| `desktop` | The JavaFX dashboard, the notifications' texts, every text in each language (`Messages`, with the bundles in `src/main/resources`), the app settings (`app.json`: language, appearance, units and display mode), and what a tray icon, notifications and start at login must do. `desktop.settings` is the Settings window: a page per category, cards of fields, saved through the engine and `app.json`. |
+| `desktop` | The JavaFX dashboard, the notifications' texts, every text in each language (`Messages`, with the bundles in `src/main/resources`), the app settings (`app.json`: language, appearance, units and display mode), and what a tray icon, notifications and start at login must do. `desktop.settings` is the Settings window (a page per category, cards of fields, saved through the engine and `app.json`) and the first-run set-up, whose steps show the same cards and save through the same storage. |
 | `instance` | One running copy per user: a second start asks the first, over a private Unix domain socket, to show its dashboard. |
 | `platform.linux`, `platform.windows` | The tray icon, notifications, the keychain and start at login on each system: our own StatusNotifierItem, notification and Secret Service clients over D-Bus, and a desktop entry in the autostart folder; AWT's `SystemTray` and its icon's messages, the Credential Manager and the Run key. |
 | `Main` | The composition root: the one place where the parts are made and handed to each other. |
@@ -118,8 +118,10 @@ and the Maven wrapper in the root, the code in `src/main/java/io/github/enadeag/
 The app also takes the commands `quit` (asks the running app to quit), `start-at-login on` and `start-at-login off`;
 start at login needs the packaged app, whose launcher is what starts at login.
 
-There are no set-up screens yet; Settings (from the dashboard's footer or the tray menu) edits a config that exists,
-and the engine writes it back whole. The engine reads the system from `engine.json` in `~/.config/car-charge-planner/`
+Without a config file the app opens set-up: steps over Settings' cards, a forecast check and a preview of the
+dashboard before Finish writes the config. Cancelled, the app stays not set up, and the dashboard's message and the
+tray menu's "Set up…" lead back into it. Settings (from the dashboard's footer or the tray menu) edits a config that
+exists, and the engine writes it back whole; App in Settings runs set-up again, filled in with what is saved. The engine reads the system from `engine.json` in `~/.config/car-charge-planner/`
 (Windows: `%APPDATA%\car-charge-planner\`), or from the file `--config=` names. `docs/example-engine.json` shows
 every setting, for a made-up place; its `forecast` section names the forecast provider and the fallback provider. An
 optional `typical` section lists the values that are typical values, such as `"system": ["CAR_BATTERY"]`.

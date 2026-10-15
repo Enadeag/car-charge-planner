@@ -21,6 +21,8 @@ import io.github.enadeag.carchargeplanner.desktop.Units;
 import io.github.enadeag.carchargeplanner.desktop.settings.AboutFacts;
 import io.github.enadeag.carchargeplanner.desktop.settings.Category;
 import io.github.enadeag.carchargeplanner.desktop.settings.SettingsStores;
+import io.github.enadeag.carchargeplanner.desktop.settings.SetUpOffer;
+import io.github.enadeag.carchargeplanner.desktop.settings.SetUpWindow;
 import io.github.enadeag.carchargeplanner.desktop.settings.SettingsWindow;
 import io.github.enadeag.carchargeplanner.engine.Engine;
 import io.github.enadeag.carchargeplanner.engine.away.AwayFile;
@@ -64,6 +66,7 @@ import java.nio.file.attribute.UserPrincipal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -207,17 +210,22 @@ public final class Main {
 
         ScheduledExecutorService replanning = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform()
                 .name("planner").daemon().factory());
+        var setUpMade = new CompletableFuture<SetUpWindow>();
+        var settingsMade = new CompletableFuture<SettingsWindow>();
+        // the windows are made below, before the first plan
+        var setUpOffer = new SetUpOffer(() -> setUpMade.join().open(), category -> settingsMade.join().open(category),
+                !commandLine.background());
         Runnable replan = () -> {
             try {
                 var outlook = engine.plan();
                 dashboard.show(outlook);
                 trayTexts.show(outlook);
+                setUpOffer.show(outlook);
             } catch (RuntimeException e) {
                 // an uncaught exception would stop the schedule for good
                 LOG.log(Level.ERROR, "planning failed", e);
             }
         };
-        var settingsMade = new CompletableFuture<SettingsWindow>();
         var facts = new AboutFacts(version(), configPath, appSettingsFile.path(), dataFolder, secretsFile.path());
         var stores = new SettingsStores(engine, appSettingsFile, startAtLogin());
         // a Save may have chosen another language or appearance: every part follows at once, before the plan is made
@@ -228,11 +236,24 @@ public final class Main {
             appearance.set(chosen.appearance());
             replanning.execute(replan);
         };
+        // after Finish the app plans with what set-up saved, in the language and appearance it chose
+        Runnable setUpFinished = () -> {
+            saved.run();
+            dashboard.openWindow();
+        };
+        Platform.runLater(() -> {
+            var looks = new SetUpWindow.Looks(colorSchemeFound.join(), appearance,
+                    Platform.getPreferences().reducedMotionProperty());
+            setUpMade.complete(new SetUpWindow(stores, secretsFile.path(), Main::openLink, setUpFinished,
+                    ZoneId.systemDefault(), looks, icon, language));
+        });
+        var setUp = setUpMade.get();
         Platform.runLater(() -> settingsMade.complete(new SettingsWindow(stores, facts, Main::openLink, saved,
-                Optional.empty(), windowSchemeFound.join(), icon, language)));
+                Optional.of(setUp::open), windowSchemeFound.join(), icon, language)));
         var settings = settingsMade.get();
-        dashboard.onSettings(() -> settings.open(Category.SOLAR));
-        dashboard.onAway(() -> settings.open(Category.AWAY));
+        dashboard.onSettings(() -> setUpOffer.openSettings(Category.SOLAR));
+        dashboard.onAway(() -> setUpOffer.openSettings(Category.AWAY));
+        dashboard.onSetUp(setUp::open);
 
         Runnable quit = () -> {
             notifications.close();
@@ -248,7 +269,7 @@ public final class Main {
             }
         });
         var actions = new Tray.TrayActions(dashboard::popUp, dashboard::openWindow,
-                () -> settings.open(Category.SOLAR), () -> settings.open(Category.ABOUT), quit);
+                () -> setUpOffer.openSettings(Category.SOLAR), () -> settings.open(Category.ABOUT), quit);
         boolean windowMode = mode == DisplayMode.WINDOW;
         // Windows shows notifications through the tray icon, so in window mode it is there for them
         boolean inTray = (!windowMode || tray instanceof AwtTray)

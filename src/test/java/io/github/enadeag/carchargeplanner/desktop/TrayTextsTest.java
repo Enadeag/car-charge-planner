@@ -3,6 +3,8 @@ package io.github.enadeag.carchargeplanner.desktop;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.enadeag.carchargeplanner.engine.Outlook;
+import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -79,5 +81,25 @@ class TrayTextsTest {
         texts.show(new Outlook.NoForecast("Open-Meteo: no connection."));
 
         assertThat(tray.statuses.getLast().text()).isEqualTo("Geen voorspelling: Open-Meteo: no connection.");
+    }
+
+    @Test
+    void beforeTheFirstSetUpTheSettingsEntryLeadsIntoSetUpInEveryLanguageUntilThereIsAConfig() {
+        texts.show(new Outlook.NotSetUp(ConfigProblem.Kind.MISSING, Path.of("engine.json"), ""));
+        language.choose(Optional.of(Language.DUTCH));
+        var dutch = tray.labels.getLast();
+        texts.show(new Outlook.NoForecast("Open-Meteo: no connection."));
+
+        assertThat(tray.labels.get(1).settings()).isEqualTo("Set up…");
+        assertThat(dutch.settings()).isEqualTo("Instellen…");
+        assertThat(tray.labels.getLast().settings()).isEqualTo("Instellingen…");
+        assertThat(tray.statuses.get(1).dot()).isEqualTo(StatusDot.ACTION);
+    }
+
+    @Test
+    void aConfigThatCannotBeReadKeepsTheSettingsEntry() {
+        texts.show(new Outlook.NotSetUp(ConfigProblem.Kind.INVALID, Path.of("engine.json"), "system: is required"));
+
+        assertThat(tray.labels).extracting(Tray.MenuLabels::settings).containsOnly("Settings…");
     }
 }

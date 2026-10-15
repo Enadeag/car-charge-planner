@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop;
 
 import io.github.enadeag.carchargeplanner.engine.Outlook;
+import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import io.github.enadeag.carchargeplanner.engine.forecast.Freshness;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderRole;
@@ -45,6 +46,9 @@ final class OutlookMapper {
             case Outlook.Planned planned -> plan(planned);
             case Outlook.NoForecast none -> new DashboardModel.Message(messages.text(TextKey.NO_FORECAST),
                     messages.text(TextKey.NO_FORECAST_DETAIL, none.reason()), "");
+            case Outlook.NotSetUp notSetUp when notSetUp.kind() == ConfigProblem.Kind.MISSING ->
+                    new DashboardModel.Message(messages.text(TextKey.NOT_SET_UP), messages.text(TextKey.NOT_SET_UP_FIRST),
+                            "", true);
             case Outlook.NotSetUp notSetUp ->
                     new DashboardModel.Message(messages.text(TextKey.NOT_SET_UP), whatToFix(notSetUp, messages), "");
         };

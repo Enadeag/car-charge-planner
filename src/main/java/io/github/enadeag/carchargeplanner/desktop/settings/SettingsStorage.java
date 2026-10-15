@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.AppSettings;
+import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
@@ -68,6 +69,19 @@ final class SettingsStorage {
      */
     KeyStorage keyStorage() {
         return stores.engine().keyStorage();
+    }
+
+    /**
+     * The engine's config as its file holds it now.
+     *
+     * @return the config; empty when there is none that can be used, such as before the first set-up
+     */
+    Optional<EngineConfig> readConfig() {
+        try {
+            return Optional.of(stores.engine().config());
+        } catch (ConfigProblem e) {
+            return Optional.empty();
+        }
     }
 
     /**

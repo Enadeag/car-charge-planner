@@ -27,6 +27,7 @@ final class LocationPage implements ConfigPage {
     private final ChoiceField<ZoneId> timezone;
     private final ProblemRows problems;
     private final Card coordinates;
+    private final FieldRow latitudeRow;
 
     /**
      * Makes the page, empty until {@link #load(EngineConfig)}.
@@ -43,9 +44,10 @@ final class LocationPage implements ConfigPage {
         timezone = new ChoiceField<>(ZoneId.getAvailableZoneIds().stream().sorted().map(ZoneId::of).toList(),
                 ZoneId::getId);
         problems = new ProblemRows(messages);
+        latitudeRow = problems.add(Setting.LATITUDE,
+                FieldRow.of(messages, TextKey.FIELD_LATITUDE, TextKey.FIELD_LATITUDE_HINT, latitude));
         coordinates = new Card(messages.text(TextKey.CARD_COORDINATES), messages.text(TextKey.CARD_COORDINATES_HINT),
-                problems.add(Setting.LATITUDE,
-                        FieldRow.of(messages, TextKey.FIELD_LATITUDE, TextKey.FIELD_LATITUDE_HINT, latitude)),
+                latitudeRow,
                 problems.add(Setting.LONGITUDE,
                         FieldRow.of(messages, TextKey.FIELD_LONGITUDE, TextKey.FIELD_LONGITUDE_HINT, longitude)),
                 FieldRow.of(messages, TextKey.FIELD_TIMEZONE, TextKey.FIELD_TIMEZONE_HINT, timezone));
@@ -101,6 +103,20 @@ final class LocationPage implements ConfigPage {
             problems.show(e);
             return Optional.empty();
         }
+    }
+
+    /**
+     * Whether the owner chose a place, as set-up needs before it goes on; when not, says so at the latitude.
+     *
+     * @return false while the coordinates are still {@link Coordinates#NOT_CHOSEN}
+     */
+    boolean checkChosen() {
+        if (Coordinates.areValid(latitude.value(), longitude.value())
+                && new Coordinates(latitude.value(), longitude.value()).isChosen()) {
+            return true;
+        }
+        latitudeRow.showProblem(messages.text(TextKey.PROBLEM_NO_PLACE));
+        return false;
     }
 
     private void choose(Place place) {

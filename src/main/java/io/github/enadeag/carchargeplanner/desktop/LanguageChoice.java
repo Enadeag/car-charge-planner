@@ -42,6 +42,19 @@ public final class LanguageChoice {
     }
 
     /**
+     * The texts in a language the owner is choosing, such as on set-up's App step before it is saved; the language
+     * spoken now does not change.
+     *
+     * @param chosen the language as the app settings would hold it; empty for the system's language
+     * @return the messages of that language
+     */
+    public Messages of(Optional<Language> chosen) {
+        var language = chosen.orElse(system);
+        var now = messages;
+        return language == now.language() ? now : new Messages(language);
+    }
+
+    /**
      * Switches to the owner's choice and tells every listener, on the calling thread, in the order they were added.
      * A choice that comes down to the language spoken already does nothing.
      *
