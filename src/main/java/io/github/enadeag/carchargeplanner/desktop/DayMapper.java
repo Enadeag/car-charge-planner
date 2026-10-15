@@ -5,11 +5,14 @@ import static io.github.enadeag.carchargeplanner.desktop.Format.text;
 import io.github.enadeag.carchargeplanner.desktop.Chip.Source;
 import io.github.enadeag.carchargeplanner.engine.Outlook;
 import io.github.enadeag.carchargeplanner.engine.plan.DayPlan;
+import io.github.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import io.github.enadeag.carchargeplanner.engine.plan.Window;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -22,12 +25,15 @@ final class DayMapper {
     private final ZoneId zone;
     private final LocalDate today;
     private final String todaysNote;
+    /** The day that would end below the minimum charge level without a grid charge. */
+    private final Optional<LocalDate> gridDay;
 
     DayMapper(Outlook.Planned planned) {
         this.zone = planned.zone();
         this.today = planned.madeAt().atZone(zone).toLocalDate();
         this.todaysNote = planned.batteryAssumed()
                 ? text("The plan assumes the battery is at %.0f %%.", planned.batteryPct()) : "";
+        this.gridDay = planned.gridAdvice().map(GridAdvice::day);
     }
 
     List<DayModel> map(List<DayPlan> days) {
@@ -59,10 +65,19 @@ final class DayMapper {
     }
 
     private DayModel withoutWindow(DayPlan day) {
+        if (gridDay.filter(day.date()::equals).isPresent()) {
+            return withoutWindow(day, DayKind.GRID, "Grid charge needed",
+                    "The sun is not enough to stay above the minimum: see the grid advice on today's tab.");
+        }
+        return withoutWindow(day, DayKind.NONE, "No charge window",
+                "The car needs no charging, or there is too little sun for it.");
+    }
+
+    private DayModel withoutWindow(DayPlan day, DayKind kind, String heading, String why) {
         var title = Format.title(day.date(), today);
-        var why = "The car needs no charging, or there is too little sun for it.";
-        return new DayModel(Format.tab(day.date(), today), title, DayKind.NONE, "No charge window", "",
-                List.of(), List.of(battery(day)), sentences(why, noteFor(day)), title + ": no charge window. " + why);
+        var spoken = title + ": " + heading.toLowerCase(Locale.ENGLISH) + ". " + why;
+        return new DayModel(Format.tab(day.date(), today), title, kind, heading, "", List.of(), List.of(battery(day)),
+                sentences(why, noteFor(day)), spoken);
     }
 
     private static Chip battery(DayPlan day) {

@@ -37,4 +37,10 @@ final class Format {
         }
         return WEEKDAY.format(day);
     }
+
+    /** The day as a sentence names it: "today", "tomorrow", "Sunday". */
+    static String inSentence(LocalDate day, LocalDate today) {
+        var title = title(day, today);
+        return day.isAfter(today.plusDays(1)) ? title : title.toLowerCase(Locale.ENGLISH);
+    }
 }

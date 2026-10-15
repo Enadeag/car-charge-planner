@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.github.enadeag.carchargeplanner.desktop.Chip.Source;
 import io.github.enadeag.carchargeplanner.engine.Outlook;
 import io.github.enadeag.carchargeplanner.engine.plan.DayPlan;
+import io.github.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import io.github.enadeag.carchargeplanner.engine.plan.Window;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -35,6 +36,11 @@ class OutlookMapperTest {
 
     private static Outlook.Planned planned(boolean batteryAssumed, DayPlan... days) {
         return new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(days), 50, batteryAssumed, Optional.empty());
+    }
+
+    private static DashboardModel.Plan advised(GridAdvice advice, DayPlan... days) {
+        var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(days), 50, false, Optional.of(advice));
+        return (DashboardModel.Plan) MAPPER.map(planned);
     }
 
     private static DashboardModel.Plan plan(DayPlan... days) {
@@ -116,6 +122,43 @@ class OutlookMapperTest {
         } finally {
             Locale.setDefault(before);
         }
+    }
+
+    @Test
+    void gridAdviceSaysHowMuchWhenAndWhy() {
+        var sunday = TODAY.plusDays(2);
+        var night = new Window(at(TODAY.plusDays(1), 1, 0), at(TODAY.plusDays(1), 4, 0), 16, 3.7, 0, 11.0);
+        var advice = new GridAdvice(sunday, 22, 8, 11.0, Optional.of(night));
+
+        var model = advised(advice, day(TODAY), day(TODAY.plusDays(1)), day(sunday)).advice().orElseThrow();
+
+        assertThat(model.title()).isEqualTo("Charge 11.0 kWh from the grid: tomorrow 01:00 – 04:00.");
+        assertThat(model.detail())
+                .isEqualTo("Without it the battery ends Sunday at 22 %, below the minimum of 30 %. Set 16 A (3.7 kW).");
+    }
+
+    @Test
+    void gridAdviceWithoutRoomForAChargeSaysSo() {
+        var advice = new GridAdvice(TODAY.plusDays(1), -5, 35, 23.3, Optional.empty());
+
+        var model = advised(advice, day(TODAY), day(TODAY.plusDays(1))).advice().orElseThrow();
+
+        assertThat(model.title()).isEqualTo("Charge 23.3 kWh from the grid before tomorrow.");
+        assertThat(model.detail()).contains("runs empty tomorrow", "No day before it has room");
+    }
+
+    @Test
+    void theDayThatNeedsTheGridChargeShowsItOnItsTab() {
+        var advice = new GridAdvice(TODAY.plusDays(1), 22, 8, 11.0, Optional.empty());
+
+        var days = advised(advice, day(TODAY), day(TODAY.plusDays(1)), day(TODAY.plusDays(2))).days();
+
+        assertThat(days).extracting(DayModel::kind).containsExactly(DayKind.NONE, DayKind.GRID, DayKind.NONE);
+    }
+
+    @Test
+    void withoutGridAdviceThereIsNone() {
+        assertThat(plan(day(TODAY)).advice()).isEmpty();
     }
 
     @Test
