@@ -1,51 +1,121 @@
 name: Release
 
-# A tag vX.Y.Z builds the wheel, the sdist and the Windows installer and attaches them, with SHA256SUMS, to a DRAFT
-# GitHub Release. Nothing is ever published here: the maintainer reads the draft and publishes it by hand.
-# The macOS dmg joins the draft once its build exists.
+# A tag vX.Y.Z builds and tests the app, packages the Linux tar.gz and the Windows installer, and attaches them, with
+# SHA256SUMS, to a DRAFT GitHub Release; it also creates the branch release/X.Y.Z at the tag. Nothing is ever published
+# here: the maintainer reads the draft and publishes it by hand. The tag must be "v" plus the version in pom.xml, which
+# has no -SNAPSHOT at a release (CONTRIBUTING.md, Releasing).
 #
-# Dry run: start this workflow by hand (Actions, Release, Run workflow) and leave "dry_run" on. It builds everything
-# and makes a draft called "dry run", without a tag check and without creating the release branch.
+# Dry run: start this workflow by hand (Actions, Release, Run workflow, on main). It builds everything and makes a draft
+# called "dry run", without the tag check and without creating the release branch; a missing changelog section only warns.
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
-    inputs:
-      dry_run:
-        description: "Dry run: build everything, make a draft named 'dry run', skip the tag check and the release branch"
-        type: boolean
-        default: true
 
 permissions:
   contents: read
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     outputs:
       version: ${{ steps.version.outputs.version }}
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
       - name: Read the version and compare it with the tag
         id: version
         run: |
-          version=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          version=$(./mvnw -B -q help:evaluate -Dexpression=project.version -DforceStdout)
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
-            echo "::error::tag $GITHUB_REF_NAME does not match the package version $version (expected v$version)"
+          echo "pom.xml version: $version"
+          [ "$GITHUB_EVENT_NAME" = "push" ] || exit 0
+          case "$version" in
+            *-SNAPSHOT)
+              echo "::error::pom.xml says $version: a release commit sets the version without -SNAPSHOT before it is tagged"
+              exit 1 ;;
+          esac
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match the version in pom.xml, $version (expected tag v$version)"
             exit 1
           fi
       - name: Check that CHANGELOG.md has notes for this version
-        run: python3 tools/release_notes.py "${{ steps.version.outputs.version }}" > /dev/null
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            java tools/ReleaseNotes.java "$VERSION" CHANGELOG.md > /dev/null
+          else
+            java tools/ReleaseNotes.java "${VERSION%-SNAPSHOT}" CHANGELOG.md > /dev/null \
+              || echo "::warning::CHANGELOG.md has no section for ${VERSION%-SNAPSHOT} yet; a tag would stop here"
+          fi
       - name: Stop early if release/X.Y.Z already points elsewhere
         if: github.event_name == 'push'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          existing=$(git ls-remote origin "refs/heads/release/${{ steps.version.outputs.version }}" | cut -f1)
-          if [ -n "$existing" ] && [ "$existing" != "$GITHUB_SHA" ]; then
-            echo "::error::release/${{ steps.version.outputs.version }} exists at $existing, not at this tag ($GITHUB_SHA); not moving it"
+          existing=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/release/$VERSION" --jq .object.sha 2>/dev/null || true)
+          if [ -n "$existing" ] && [ "$existing" != "$(git rev-parse HEAD)" ]; then
+            echo "::error::release/$VERSION exists at $existing, not at this tag ($(git rev-parse HEAD)); not moving it"
             exit 1
           fi
+
+  linux:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - name: D-Bus and GNOME Keyring, for the tests on a private bus
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends dbus-daemon gnome-keyring
+      - name: Build and test
+        run: ./mvnw -B clean verify
+      - name: Package
+        run: sh tools/package-linux.sh
+      - name: Smoke test the unpacked download
+        # "quit" with no copy running starts the runtime and the app, finds nothing to quit and exits with 0; an
+        # unknown command exits with 2, which shows the exit code really comes from the app
+        run: |
+          mkdir "$RUNNER_TEMP/unpacked"
+          tar -C "$RUNNER_TEMP/unpacked" -xzf target/dist/car-charge-planner-*-linux.tar.gz
+          app="$RUNNER_TEMP/unpacked/car-charge-planner/bin/car-charge-planner"
+          "$app" quit
+          status=0; "$app" no-such-command || status=$?
+          if [ "$status" -ne 2 ]; then echo "::error::unknown command: exit code $status, expected 2"; exit 1; fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: linux-download
+          path: target/dist/car-charge-planner-*-linux.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: surefire-reports-linux
+          path: target/surefire-reports/
+          retention-days: 14
 
   installer:
     needs: prepare
@@ -56,7 +126,7 @@ jobs:
   # skipped while the secret SIGNPATH_API_TOKEN does not exist. It is deliberately not wired up yet: the SignPath
   # organisation, project and signing-policy slugs, and signing before the checksums are made, come with the launch.
   release:
-    needs: [prepare, installer]
+    needs: [prepare, linux, installer]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -64,33 +134,34 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       VERSION: ${{ needs.prepare.outputs.version }}
-      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+      DRY_RUN: ${{ github.event_name != 'push' }}
       SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      # keeps the token in the checkout: the release branch is pushed with git
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
-          python-version: "3.13"
-      - name: Build the wheel and the sdist
-        # the build hook compiles the translations into the wheel
-        run: |
-          python -m pip install --upgrade pip build
-          python -m build --outdir dist
-      - uses: actions/download-artifact@v4
+          distribution: temurin
+          java-version: "25"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: linux-download
+          path: release
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: windows-installer
-          path: dist/windows
+          path: release
       - name: Sign the installer (SignPath)
         if: env.SIGNPATH_API_TOKEN != ''
         run: |
           echo "::error::SignPath signing is prepared but not wired up yet; see the comment above this job"
           exit 1
-      - name: Collect the files and checksums
+      - name: Checksums
         run: |
-          mkdir release
-          cp dist/*.whl dist/*.tar.gz dist/windows/*-setup.exe release/
           cd release
-          sha256sum * > SHA256SUMS
+          ls car-charge-planner-*-linux.tar.gz car-charge-planner-*.exe
+          if [ "$(ls | wc -l)" -ne 2 ]; then echo "::error::expected the tar.gz and the installer only"; ls -l; exit 1; fi
+          sha256sum -- * > SHA256SUMS
           cat SHA256SUMS
       - name: Create the release branch
         if: env.DRY_RUN != 'true'
@@ -107,11 +178,11 @@ jobs:
           fi
       - name: Create the draft release
         run: |
-          python3 tools/release_notes.py "$VERSION" > "$RUNNER_TEMP/notes.md"
           if [ "$DRY_RUN" = "true" ]; then
             gh release create "dry-run-$GITHUB_RUN_ID" release/* --draft --target "$GITHUB_SHA" \
-              --title "dry run" --notes "Dry run of the release workflow (run $GITHUB_RUN_ID). Delete this draft."
+              --title "dry run" --notes "Dry run of the release workflow (run $GITHUB_RUN_ID, version $VERSION). Delete this draft."
           else
+            java tools/ReleaseNotes.java "$VERSION" CHANGELOG.md > "$RUNNER_TEMP/notes.md"
             gh release create "$GITHUB_REF_NAME" release/* --draft --verify-tag \
               --title "Car charge planner $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
           fi
