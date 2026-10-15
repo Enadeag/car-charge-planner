@@ -27,12 +27,14 @@ public final class Dashboard {
      * @param colorScheme the system's light or dark, followed while the app runs
      *     ({@code Platform.getPreferences().colorSchemeProperty()}); never null
      * @param clock tells when the popup closed, so the click on the tray icon that closed it does not open it again
+     * @param taskbarHiding how this system keeps the popup out of its taskbar
      */
-    public Dashboard(AppIcon icon, ObservableValue<ColorScheme> colorScheme, InstantSource clock) {
+    public Dashboard(AppIcon icon, ObservableValue<ColorScheme> colorScheme, InstantSource clock,
+            TaskbarHiding taskbarHiding) {
         var theme = new SystemTheme(colorScheme);
         this.mapper = new OutlookMapper();
         this.view = new DashboardView(this::detach, this::fitToContent);
-        this.popup = new DashboardPopup(theme, icon, clock);
+        this.popup = new DashboardPopup(theme, icon, clock, taskbarHiding);
         this.window = new DashboardWindow(theme, icon);
         view.show(mapper.loading());
     }

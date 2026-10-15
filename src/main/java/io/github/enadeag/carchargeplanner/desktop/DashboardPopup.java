@@ -26,6 +26,7 @@ final class DashboardPopup {
 
     private final Stage stage = new Stage(StageStyle.TRANSPARENT);
     private final Stage owner = new Stage(StageStyle.UTILITY);
+    private final boolean owned;
     private final StackPane content = new StackPane();
     private final InstantSource clock;
     private Instant closedAt = Instant.EPOCH;
@@ -37,9 +38,11 @@ final class DashboardPopup {
      * @param theme makes the popup light or dark as the system is
      * @param icon the app icon, for a taskbar that lists the popup
      * @param clock tells when the popup closed, so the click on the tray icon that closed it does not open it again
+     * @param taskbarHiding how this system keeps the popup out of its taskbar
      */
-    DashboardPopup(SystemTheme theme, AppIcon icon, InstantSource clock) {
+    DashboardPopup(SystemTheme theme, AppIcon icon, InstantSource clock, TaskbarHiding taskbarHiding) {
         this.clock = clock;
+        this.owned = taskbarHiding == TaskbarHiding.OWNER_WINDOW;
         content.getStyleClass().add("popup");
         var scene = new Scene(content, Color.TRANSPARENT);
         theme.style(scene);
@@ -52,12 +55,13 @@ final class DashboardPopup {
         stage.setTitle("Car charge planner");
         // where a taskbar still lists the popup (Plasma does), it shows the app's icon
         stage.getIcons().setAll(icon.fxImages());
-        // JavaFX cannot keep a window out of the taskbar, but the Windows taskbar leaves out windows that a utility
-        // window owns; the owner is shown, invisible and one pixel large, beneath the popup
-        owner.setOpacity(0);
-        owner.setWidth(1);
-        owner.setHeight(1);
-        stage.initOwner(owner);
+        if (owned) {
+            // shown, invisible and one pixel large, beneath the popup
+            owner.setOpacity(0);
+            owner.setWidth(1);
+            owner.setHeight(1);
+            stage.initOwner(owner);
+        }
         stage.setAlwaysOnTop(true);
         // the owner can take the focus as it appears; it hands it back instead of the popup closing
         owner.focusedProperty().subscribe(focused -> {
@@ -92,9 +96,11 @@ final class DashboardPopup {
         iconPosition = PopupPlacement.onAScreen(reported, screens, Screen.getPrimary().getVisualBounds());
         view.setDetachable(true);
         content.getChildren().setAll(view);
-        owner.setX(iconPosition.getX());
-        owner.setY(iconPosition.getY());
-        owner.show();
+        if (owned) {
+            owner.setX(iconPosition.getX());
+            owner.setY(iconPosition.getY());
+            owner.show();
+        }
         // its size is only known once it shows: until it has its place beside the icon, it is see-through
         stage.setOpacity(0);
         stage.show();
