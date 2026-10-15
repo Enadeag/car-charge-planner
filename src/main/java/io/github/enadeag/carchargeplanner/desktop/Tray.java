@@ -3,7 +3,7 @@ package io.github.enadeag.carchargeplanner.desktop;
 import java.util.function.Consumer;
 import javafx.geometry.Point2D;
 
-/** The icon in the system's tray that shows the app is running. Each system has its own. */
+/** The icon in the system's tray that shows the app is running and the plan's state. Each system has its own. */
 public interface Tray {
 
     /**
@@ -14,6 +14,14 @@ public interface Tray {
      * @throws TrayUnavailable when the system has no tray this app can use; the app then shows a window instead
      */
     void show(TrayActions actions) throws TrayUnavailable;
+
+    /**
+     * Shows the plan's state on the icon and in its tooltip. May be called from any thread, also before
+     * {@link #show(TrayActions)}: the icon then appears with it.
+     *
+     * @param status the dot and the sentence to show until the next call; never null
+     */
+    void showStatus(TrayStatus status);
 
     /** Takes the icon out of the tray; does nothing when it is not there. */
     void remove();

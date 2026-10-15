@@ -1,7 +1,12 @@
 package io.github.enadeag.carchargeplanner.platform.linux;
 
-import io.github.enadeag.carchargeplanner.desktop.AppIcon;
+import io.github.enadeag.carchargeplanner.desktop.PanelShade;
+import io.github.enadeag.carchargeplanner.desktop.StatusDot;
+import io.github.enadeag.carchargeplanner.desktop.StatusIcon;
 import io.github.enadeag.carchargeplanner.desktop.Tray;
+import io.github.enadeag.carchargeplanner.desktop.TrayStatus;
+import java.lang.System.Logger.Level;
+import java.nio.file.Path;
 import java.util.List;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
 import org.freedesktop.dbus.exceptions.DBusException;
@@ -9,9 +14,13 @@ import org.freedesktop.dbus.exceptions.DBusException;
 /**
  * The tray icon on Linux: our own StatusNotifierItem over D-Bus. AWT's tray is not used here: on Wayland it shows a
  * grey square that ignores clicks.
+ *
+ * <p>The icon goes to the panel twice: by name from an {@link IconThemeFolder}, which KDE Plasma colours to suit its
+ * panel, and as pixels in several sizes for panels that cannot find it by name.
  */
 public final class StatusNotifierTray implements Tray {
 
+    private static final System.Logger LOG = System.getLogger(StatusNotifierTray.class.getName());
     /** The sizes the panel can choose from, so it never has to scale the icon up. */
     private static final List<Integer> SIZES = List.of(16, 22, 24, 32, 48, 64);
 
@@ -28,30 +37,37 @@ public final class StatusNotifierTray implements Tray {
     }
 
     private final BusConnector connector;
-    private final AppIcon icon;
+    private final StatusIcon icon;
+    private final IconThemeFolder theme;
     private final String title;
     // the name the specification asks for: one per process and item
     private final String busName = "org.kde.StatusNotifierItem-" + ProcessHandle.current().pid() + "-1";
 
+    private TrayStatus status = new TrayStatus(StatusDot.NONE, "");
     private DBusConnection bus;
+    private TrayItem item;
 
     /**
      * Makes the tray; nothing appears until {@link #show(TrayActions)}.
      *
      * @param connector opens the session bus connection the icon is served on
-     * @param icon the app icon, sent to the panel in every size it may need
+     * @param icon draws the icon with its status dot, in every size the panel may need
+     * @param iconFolder a folder of the tray's own, which may not exist yet, where it writes its icons for the panel;
+     *     {@link #remove()} removes it again
      * @param title the name the panel shows for the icon, such as in its tooltip
      */
-    public StatusNotifierTray(BusConnector connector, AppIcon icon, String title) {
+    public StatusNotifierTray(BusConnector connector, StatusIcon icon, Path iconFolder, String title) {
         this.connector = connector;
         this.icon = icon;
+        this.theme = new IconThemeFolder(iconFolder);
         this.title = title;
     }
 
     @Override
-    public void show(TrayActions actions) throws TrayUnavailable {
-        var images = SIZES.stream().map(icon::image).toList();
-        var item = new TrayItem("car-charge-planner", title, images, where -> apart(() -> actions.clicked().accept(where)));
+    public synchronized void show(TrayActions actions) throws TrayUnavailable {
+        theme.write(icon);
+        item = new TrayItem("car-charge-planner", title, theme.path(), where -> apart(() -> actions.clicked().accept(where)));
+        update();
         var menu = new TrayMenu(List.of(
                 new TrayMenu.Entry("Open dashboard", () -> apart(actions.open())),
                 new TrayMenu.Entry("Quit", () -> apart(actions.quit()))));
@@ -78,10 +94,33 @@ public final class StatusNotifierTray implements Tray {
     }
 
     @Override
-    public void remove() {
+    public synchronized void showStatus(TrayStatus status) {
+        this.status = status;
+        if (bus == null || !bus.isConnected()) {
+            return;
+        }
+        update();
+        try {
+            bus.sendMessage(new StatusNotifierSignals.NewIcon(TrayItem.OBJECT_PATH));
+            bus.sendMessage(new StatusNotifierSignals.NewToolTip(TrayItem.OBJECT_PATH));
+        } catch (DBusException e) {
+            LOG.log(Level.WARNING, "cannot tell the panel that the tray icon changed", e);
+        }
+    }
+
+    /** Gives the item the icon and tooltip of the status; the panel sees them when it next reads them. */
+    private void update() {
+        // the pixels are for panels without the icon theme, GNOME's dark top bar among them: light shapes
+        var images = SIZES.stream().map(size -> icon.image(status.dot(), PanelShade.DARK, size)).toList();
+        item.show(theme.iconName(status.dot()), images, status.text());
+    }
+
+    @Override
+    public synchronized void remove() {
         if (bus != null) {
             // the panel drops the icon as soon as our name leaves the bus
             bus.disconnect();
         }
+        theme.delete();
     }
 }
