@@ -53,7 +53,27 @@ public final class ForecastService {
      */
     public synchronized ForecastResult get(SystemDescription system, ForecastSelection selection, Instant now,
             boolean force) throws ForecastUnavailable {
-        var stored = storedSecrets();
+        return fetch(system, selection, storedSecrets(), now, force);
+    }
+
+    /**
+     * A forecast for a system with secret settings that need not be stored yet, such as the ones set-up shows before
+     * it saves; from the cache or a provider, as {@link #get(SystemDescription, ForecastSelection, Instant, boolean)}.
+     *
+     * @param system the system to forecast; the cache is used only when it was made for the same one
+     * @param selection the providers to ask and their settings that are not secret
+     * @param secrets every provider's secret settings to ask with, in place of the stored ones; may be none
+     * @param now the current moment, by which the cache's age, waits and rate limits are measured
+     * @return the forecast and where it came from
+     * @throws ForecastUnavailable with the reason of each provider asked, when none has a usable forecast
+     */
+    public synchronized ForecastResult get(SystemDescription system, ForecastSelection selection, Secrets secrets,
+            Instant now) throws ForecastUnavailable {
+        return fetch(system, selection, new StoredSecrets(secrets, Optional.empty()), now, false);
+    }
+
+    private ForecastResult fetch(SystemDescription system, ForecastSelection selection, StoredSecrets stored,
+            Instant now, boolean force) throws ForecastUnavailable {
         var reasons = new ArrayList<String>();
         var order = selection.order();
         for (int index = 0; index < order.size(); index++) {

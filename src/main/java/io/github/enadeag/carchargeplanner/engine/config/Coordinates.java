@@ -12,6 +12,12 @@ import io.github.enadeag.carchargeplanner.engine.setting.Setting;
 public record Coordinates(double latitude, double longitude) {
 
     /**
+     * Where a first-run draft puts the home until the owner chose a place: 0, 0 lies in the ocean, so no home is
+     * there (see "Not set up" in CONTEXT.md).
+     */
+    public static final Coordinates NOT_CHOSEN = new Coordinates(0, 0);
+
+    /**
      * Checks the ranges.
      *
      * @throws InvalidSetting when the latitude or the longitude is out of its range or not a number
@@ -25,6 +31,15 @@ public record Coordinates(double latitude, double longitude) {
             throw new InvalidSetting(Setting.LONGITUDE, InvalidSetting.Rule.OUT_OF_RANGE,
                     "longitude must be between -180 and 180");
         }
+    }
+
+    /**
+     * Whether these are a place the owner chose, rather than {@link #NOT_CHOSEN}.
+     *
+     * @return false when both the latitude and the longitude are 0
+     */
+    public boolean isChosen() {
+        return latitude != 0 || longitude != 0;
     }
 
     /**

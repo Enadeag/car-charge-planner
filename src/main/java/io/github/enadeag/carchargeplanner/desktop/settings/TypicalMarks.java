@@ -65,6 +65,21 @@ final class TypicalMarks {
     }
 
     /**
+     * Changes how the fields show their values without changing what they stand for, such as other units; the tags
+     * stay.
+     *
+     * @param change shows the same values another way
+     */
+    void keep(Runnable change) {
+        filling = true;
+        try {
+            change.run();
+        } finally {
+            filling = false;
+        }
+    }
+
+    /**
      * The settings tagged now.
      *
      * @return the followed settings that hold a typical value
@@ -83,12 +98,7 @@ final class TypicalMarks {
     }
 
     private void mark(Set<Setting> typical, Runnable fill) {
-        filling = true;
-        try {
-            fill.run();
-        } finally {
-            filling = false;
-        }
+        keep(fill);
         marked.clear();
         typical.stream().filter(rows::containsKey).forEach(marked::add);
         rows.forEach((setting, row) -> row.showTag(marked.contains(setting) ? tag : ""));

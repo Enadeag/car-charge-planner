@@ -30,6 +30,7 @@ import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
 import java.io.IOException;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -95,20 +96,47 @@ public final class Engine {
             return new Outlook.NotSetUp(e.kind(), e.file(), e.detail());
         }
         var now = clock.instant();
-        var system = config.system();
         ForecastResult forecast;
         try {
-            forecast = forecasts.get(SystemDescription.of(system), config.forecast(), now, false);
+            forecast = forecasts.get(SystemDescription.of(config.system()), config.forecast(), now, false);
         } catch (ForecastUnavailable e) {
             return new Outlook.NoForecast(e.getMessage());
         }
+        var planned = planned(config, forecast, now);
+        announcer.announceDue(planned.days(), planned.gridAdvice(), forecast.source(), now, config);
+        return planned;
+    }
+
+    /**
+     * Makes a plan from a config that need not be saved, such as the one set-up shows before Finish, so the owner sees
+     * their dashboard with their own data first. Nothing is saved and nobody is told about a window; a forecast that
+     * is fetched is cached as for a plan, so the first plan after saving the same system does not ask the provider
+     * again. Blocks while the forecast is fetched: call it away from the user interface's thread.
+     *
+     * @param config the whole config to plan with, as the owner entered it
+     * @param keys every provider's secret settings as the owner entered them, in place of the stored ones; may be
+     *     none
+     * @return the plan, or why there is none: no forecast; never {@link Outlook.NotSetUp}
+     */
+    public Outlook preview(EngineConfig config, Secrets keys) {
+        var now = clock.instant();
+        try {
+            var forecast = forecasts.get(SystemDescription.of(config.system()), config.forecast(), keys, now);
+            return planned(config, forecast, now);
+        } catch (ForecastUnavailable e) {
+            return new Outlook.NoForecast(e.getMessage());
+        }
+    }
+
+    /** The plan for a config and a forecast, from the stored away periods and battery level. */
+    private Outlook.Planned planned(EngineConfig config, ForecastResult forecast, Instant now) {
+        var system = config.system();
         var away = new AwayTimes(config.away().recurring(), awayFile.periods());
         var entered = batteryFile.reading();
         var battery = entered.map(BatteryReading::level).orElse(ASSUMED_BATTERY_PCT);
         var days = new Planner(system, config.planning(), away)
                 .plan(forecast.steps(), battery, now, announcer.announced());
         var advice = new GridAdvisor(system, config.planning(), away).advise(days, forecast.steps(), now);
-        announcer.announceDue(days, advice, forecast.source(), now, config);
         var planning = config.planning();
         return new Outlook.Planned(now, system.timezone(), days, battery, entered.isEmpty(), advice, forecast.source(),
                 system.house().baseloadKw(), planning.minimumPct(), planning.targetPct());
@@ -215,6 +243,16 @@ public final class Engine {
     public Optional<PlaceResults> searchPlaces(ProviderId providerId, String text, String language) {
         return providers.find(providerId).flatMap(ForecastProvider::placeSearch)
                 .map(search -> search.search(text, language));
+    }
+
+    /**
+     * Whether a provider has a place search, so a client can tell the owner that what they type is sent to it.
+     *
+     * @param providerId the provider to ask about; one this version does not know has none
+     * @return true when {@link #searchPlaces(ProviderId, String, String)} asks it
+     */
+    public boolean hasPlaceSearch(ProviderId providerId) {
+        return providers.find(providerId).flatMap(ForecastProvider::placeSearch).isPresent();
     }
 
     /**

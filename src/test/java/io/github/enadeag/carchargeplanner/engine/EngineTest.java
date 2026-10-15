@@ -10,9 +10,12 @@ import io.github.enadeag.carchargeplanner.engine.battery.BatteryFile;
 import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
+import io.github.enadeag.carchargeplanner.engine.config.Coordinates;
+import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
+import io.github.enadeag.carchargeplanner.engine.config.TypicalValues;
 import io.github.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
 import io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastCache;
@@ -368,6 +371,71 @@ class EngineTest {
                 assertThat(((PlaceResults.Found) results).places()).hasSize(8));
         assertThat(engine.searchPlaces(new ProviderId("forecast-solar"), "Amsterdam", "en")).isEmpty(); // then the owner types coordinates
         assertThat(engine.searchPlaces(new ProviderId("solcast"), "Amsterdam", "en")).isEmpty();
+    }
+
+    @Test
+    void thePreviewPlansAConfigThatIsNotSavedWithTheKeysAsEnteredAndTellsNobody() throws Exception {
+        var needy = new FakeProvider(FakeProvider.info("needy", "Needy",
+                List.of(new SettingSpec("api_key", "API key", "Your key.", false, true))), steps(days(2, 4.0)));
+        var engine = engine(clockAt(9, 50), needy);
+        var needyId = new ProviderId("needy");
+        var stored = Files.readString(config);
+        var draft = EngineConfig.firstRun(BRUSSELS, needyId).withSystem(
+                exampleSystem().withLocation(new Coordinates(51, 5), BRUSSELS), TypicalValues.NONE);
+
+        var preview = engine.preview(draft, new Secrets(Map.of(needyId, Map.of("api_key", "TYPED-KEY"))));
+
+        assertThat(preview).isInstanceOfSatisfying(Outlook.Planned.class, planned -> {
+            assertThat(planned.forecast().attribution()).isEqualTo("Forecast by Needy");
+            assertThat(planned.minimumPct()).isEqualTo(PlanningPreferences.RECOMMENDED.minimumPct());
+            assertThat(planned.nextWindow()).isPresent();
+        });
+        assertThat(needy.calls).extracting(call -> call.settings().get("api_key")).containsExactly("TYPED-KEY");
+        assertThat(Files.readString(config)).isEqualTo(stored);
+        assertThat(engine.apiKeys()).isEqualTo(Secrets.NONE);
+        assertThat(told).isEmpty(); // the window starts at 10:00, within the lead time, yet nobody is told
+    }
+
+    @Test
+    void theFirstPlanAfterSavingWhatThePreviewShowedAsksTheProviderNoMore() throws Exception {
+        var engine = engine(clockAt(7));
+        var draft = engine.config().withPlanning(PlanningPreferences.RECOMMENDED);
+        engine.preview(draft, Secrets.NONE);
+
+        engine.saveConfig(draft);
+
+        assertThat(source(engine).freshness()).isEqualTo(Freshness.CACHED);
+        assertThat(main.callCount()).isEqualTo(1);
+    }
+
+    @Test
+    void aPreviewWithoutAForecastSaysWhy() throws IOException {
+        choose("main", "");
+        main.script(error(new ProviderError.Unavailable("no network")));
+        var engine = engine(clockAt(7));
+
+        assertThat(engine.preview(EngineConfig.firstRun(BRUSSELS, new ProviderId("main")), Secrets.NONE))
+                .isEqualTo(new Outlook.NoForecast("Main: no network"));
+    }
+
+    @Test
+    void theFirstRunConfigHasTypicalValuesTaggedAndNoPlaceYet() {
+        var draft = EngineConfig.firstRun(BRUSSELS, new ProviderId("open-meteo"));
+
+        assertThat(draft.system().location().isChosen()).isFalse();
+        assertThat(draft.typical().system()).isEqualTo(TypicalValues.SYSTEM_SETTINGS);
+        assertThat(draft.typical().ofPanel(0)).isEqualTo(TypicalValues.PANEL_SETTINGS);
+        assertThat(draft.forecast().order()).containsExactly(new ProviderId("open-meteo"));
+    }
+
+    @Test
+    void theOwnerCanBeToldWhetherAProviderSearchesPlaces() {
+        var http = ReplayHttp.always(new Reply(200, Recorded.answer("open_meteo_geocoding_amsterdam.json")));
+        var engine = engine(clockAt(7), new OpenMeteo(http), new ForecastSolar(http));
+
+        assertThat(engine.hasPlaceSearch(new ProviderId("open-meteo"))).isTrue();
+        assertThat(engine.hasPlaceSearch(new ProviderId("forecast-solar"))).isFalse();
+        assertThat(engine.hasPlaceSearch(new ProviderId("solcast"))).isFalse();
     }
 
     @Test

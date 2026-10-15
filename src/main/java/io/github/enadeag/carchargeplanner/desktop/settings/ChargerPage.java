@@ -11,8 +11,6 @@ import io.github.enadeag.carchargeplanner.engine.setting.Setting;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import javafx.scene.control.Button;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 
 /** The wall charger, as far as it limits the charge power, with typical values on request. */
@@ -49,17 +47,13 @@ final class ChargerPage implements ConfigPage {
         efficiency = new NumberField(new NumberField.Range(1, 100, 1, 0), "%", messages);
         problems = new ProblemRows(messages);
         typical = new TypicalMarks(messages.text(TextKey.TYPICAL_TAG));
-        var useTypical = new Button(messages.text(TextKey.USE_TYPICAL));
-        useTypical.setOnAction(event -> useTypical());
-        var buttons = new HBox(useTypical);
-        buttons.getStyleClass().add("card-buttons");
         card = new Card(messages.text(TextKey.CARD_CHARGER), messages.text(TextKey.CARD_CHARGER_HINT),
                 row(Setting.CHARGER_PHASES, TextKey.FIELD_PHASES, TextKey.FIELD_PHASES_HINT, phases),
                 row(Setting.CHARGER_MIN_CURRENT, TextKey.FIELD_MIN_CURRENT, TextKey.FIELD_MIN_CURRENT_HINT, minAmps),
                 row(Setting.CHARGER_MAX_CURRENT, TextKey.FIELD_MAX_CURRENT, TextKey.FIELD_MAX_CURRENT_HINT, maxAmps),
                 row(Setting.CHARGER_VOLTAGE, TextKey.FIELD_VOLTAGE, TextKey.FIELD_VOLTAGE_HINT, volts),
                 row(Setting.CHARGER_EFFICIENCY, TextKey.FIELD_EFFICIENCY, TextKey.FIELD_EFFICIENCY_HINT, efficiency),
-                buttons);
+                TypicalButton.line(this::useTypical, messages));
     }
 
     @Override

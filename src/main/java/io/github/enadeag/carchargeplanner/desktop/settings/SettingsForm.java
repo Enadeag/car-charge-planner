@@ -3,9 +3,6 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 import io.github.enadeag.carchargeplanner.desktop.AppSettings;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
-import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
-import io.github.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -18,6 +15,7 @@ import java.util.Optional;
 final class SettingsForm {
 
     private final SettingsStores stores;
+    private final SettingsStorage storage;
     private final List<ConfigPage> configPages;
     private final ForecastPage forecast;
     private final AppPage app;
@@ -37,6 +35,7 @@ final class SettingsForm {
     SettingsForm(SettingsStores stores, List<ConfigPage> configPages, ForecastPage forecast, AppPage app,
             AboutPage about) {
         this.stores = stores;
+        this.storage = new SettingsStorage(stores);
         this.configPages = List.copyOf(configPages);
         this.forecast = forecast;
         this.app = app;
@@ -45,12 +44,8 @@ final class SettingsForm {
 
     /** Reads every store again and shows what it holds on the pages, as the values not edited. */
     void load() {
-        var storage = stores.engine().keyStorage();
-        try {
-            forecast.loadKeys(stores.engine().apiKeys(), storage, Optional.empty());
-        } catch (SecretsProblem e) {
-            forecast.loadKeys(Secrets.NONE, storage, Optional.of(e.getMessage()));
-        }
+        var keys = storage.readKeys();
+        forecast.loadKeys(keys.keys(), storage.keyStorage(), keys.problem());
         try {
             var config = stores.engine().config();
             storedConfig = Optional.of(config);
@@ -59,9 +54,9 @@ final class SettingsForm {
             storedConfig = Optional.empty();
             configPages.forEach(page -> page.showUnavailable(e.getMessage()));
         }
-        storedApp = stores.appSettings().read();
-        app.load(storedApp, startsAtLogin());
-        about.load(storage);
+        storedApp = storage.readApp();
+        app.load(storedApp, storage.startsAtLogin());
+        about.load(storage.keyStorage());
     }
 
     /**
@@ -75,8 +70,7 @@ final class SettingsForm {
 
     /**
      * Checks and stores what the pages show, then loads them again from the stores. Nothing is stored while a value is
-     * refused. Start at login comes first, as the system may refuse it; then the API keys, the engine's config and
-     * the app's settings.
+     * refused; see {@link SettingsStorage#save} for the order.
      *
      * @return saved, refused with the categories to look at, or failed with the system's error
      */
@@ -96,54 +90,15 @@ final class SettingsForm {
         if (!refused.isEmpty()) {
             return new SaveOutcome.Refused(refused);
         }
-        if (!switchStartAtLogin()) {
-            return new SaveOutcome.Refused(List.of(Category.APP));
+        var changes = new SettingsStorage.Changes(
+                app.startAtLoginChanged() ? Optional.of(app.startsAtLogin()) : Optional.empty(),
+                storedConfig.isPresent() && forecast.keysChanged() ? Optional.of(forecast.keys()) : Optional.empty(),
+                config.equals(storedConfig) ? Optional.empty() : config,
+                app.settings().equals(storedApp) ? Optional.empty() : Optional.of(app.settings()));
+        var outcome = storage.save(changes, app);
+        if (outcome instanceof SaveOutcome.Saved) {
+            load();
         }
-        try {
-            if (storedConfig.isPresent() && forecast.keysChanged()) {
-                stores.engine().saveApiKeys(forecast.keys());
-            }
-            if (!config.equals(storedConfig)) {
-                stores.engine().saveConfig(config.orElseThrow());
-                storedConfig = config;
-            }
-            if (!app.settings().equals(storedApp)) {
-                stores.appSettings().write(app.settings());
-            }
-        } catch (IOException | SecretsProblem e) {
-            return new SaveOutcome.Failed(String.valueOf(e.getMessage()));
-        }
-        load();
-        return new SaveOutcome.Saved();
-    }
-
-    /** Asks the system for start at login when the box changed; false, with the problem shown, when it refused. */
-    private boolean switchStartAtLogin() {
-        var system = stores.startAtLogin();
-        if (system.isEmpty() || !app.startAtLoginChanged()) {
-            return true;
-        }
-        try {
-            if (app.startsAtLogin()) {
-                system.get().switchOn();
-            } else {
-                system.get().switchOff();
-            }
-            return true;
-        } catch (IOException e) {
-            app.showStartAtLoginFailure(String.valueOf(e.getMessage()));
-            return false;
-        }
-    }
-
-    /** The system's answer, read every time; one it cannot give counts as off. */
-    private Optional<Boolean> startsAtLogin() {
-        return stores.startAtLogin().map(system -> {
-            try {
-                return system.isOn();
-            } catch (IOException e) {
-                return false;
-            }
-        });
+        return outcome;
     }
 }
