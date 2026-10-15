@@ -1,7 +1,9 @@
 package io.github.enadeag.carchargeplanner;
 
+import io.github.enadeag.carchargeplanner.desktop.AnnouncementTexts;
 import io.github.enadeag.carchargeplanner.desktop.AppIcon;
 import io.github.enadeag.carchargeplanner.desktop.Dashboard;
+import io.github.enadeag.carchargeplanner.desktop.Notifications;
 import io.github.enadeag.carchargeplanner.desktop.StartAtLogin;
 import io.github.enadeag.carchargeplanner.desktop.StatusIcon;
 import io.github.enadeag.carchargeplanner.desktop.TaskbarHiding;
@@ -16,6 +18,9 @@ import io.github.enadeag.carchargeplanner.engine.forecast.JdkHttpGet;
 import io.github.enadeag.carchargeplanner.engine.forecast.Providers;
 import io.github.enadeag.carchargeplanner.engine.forecast.providers.ForecastSolar;
 import io.github.enadeag.carchargeplanner.engine.forecast.providers.OpenMeteo;
+import io.github.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
+import io.github.enadeag.carchargeplanner.engine.notify.Announcer;
+import io.github.enadeag.carchargeplanner.engine.notify.Notifier;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.Keychain;
@@ -24,6 +29,7 @@ import io.github.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import io.github.enadeag.carchargeplanner.instance.InstanceCommand;
 import io.github.enadeag.carchargeplanner.instance.Reply;
 import io.github.enadeag.carchargeplanner.instance.SingleInstance;
+import io.github.enadeag.carchargeplanner.platform.linux.FreedesktopNotifications;
 import io.github.enadeag.carchargeplanner.platform.linux.LinuxStartAtLogin;
 import io.github.enadeag.carchargeplanner.platform.linux.SecretServiceKeychain;
 import io.github.enadeag.carchargeplanner.platform.linux.StatusNotifierTray;
@@ -33,6 +39,7 @@ import io.github.enadeag.carchargeplanner.platform.windows.RegistryRunKey;
 import io.github.enadeag.carchargeplanner.platform.windows.TaskbarShade;
 import io.github.enadeag.carchargeplanner.platform.windows.WindowsStartAtLogin;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.lang.System.Logger.Level;
 import java.net.http.HttpClient;
 import java.nio.file.Files;
@@ -68,10 +75,11 @@ public final class Main {
     /** The app's name where other programs see it, such as on the keychain's entries. */
     private static final String APP_ID = "car-charge-planner";
     /**
-     * The forecast cache answers in between, so this is how soon a provider that could not be reached is tried again,
-     * not how often it is asked.
+     * Often enough to announce a window within its notification lead time, and to keep "now" on the dashboard current.
+     * The forecast cache answers in between, and a provider that could not be reached waits its own time before it is
+     * asked again, so this is not how often a provider is asked.
      */
-    private static final long REPLAN_MINUTES = 15;
+    private static final long REPLAN_MINUTES = 1;
     /** A running app that is still starting, or busy, may take a moment to confirm a command. */
     private static final Duration INSTANCE_TIMEOUT = Duration.ofSeconds(2);
     /** At login the panel may come up a moment after the app. */
@@ -106,8 +114,8 @@ public final class Main {
     }
 
     /**
-     * Starts the app: the engine, the dashboard, planning every hour, and the tray icon, or a window without a tray.
-     * When a copy runs already, it is asked to show its dashboard instead, and this one exits.
+     * Starts the app: the dashboard, the tray icon (or a window without a tray), the notifications, the engine, and
+     * planning every minute. When a copy runs already, it is asked to show its dashboard instead, and this one exits.
      */
     private static void run(CommandLine commandLine) throws Exception {
         var commands = new CompletableFuture<Consumer<InstanceCommand>>();
@@ -132,11 +140,6 @@ public final class Main {
         var configFile = new ConfigFile(configPath);
         var clock = Clock.systemUTC();
         var secretsFile = new SecretsFile(configPath.resolveSibling("secrets.json"));
-        var engine = engine(configFile, secretsFile, clock);
-        if (engine.keyStorage() == KeyStorage.FILE) {
-            LOG.log(Level.WARNING, "No usable system keychain: API keys are kept in " + secretsFile.path()
-                    + ", readable only by you");
-        }
         var icon = new AppIcon();
 
         Platform.setImplicitExit(false);
@@ -152,21 +155,20 @@ public final class Main {
         var tray = tray(colorSchemeFound.get());
         var trayStatus = new TrayStatusMapper();
         tray.showStatus(trayStatus.loading());
-
-        ScheduledExecutorService replanning = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform()
-                .name("planner").daemon().factory());
-        replanning.scheduleWithFixedDelay(() -> {
-            try {
-                var outlook = engine.plan();
-                dashboard.show(outlook);
-                tray.showStatus(trayStatus.map(outlook));
-            } catch (RuntimeException e) {
-                // an uncaught exception would stop the schedule for good
-                LOG.log(Level.ERROR, "planning failed", e);
-            }
-        }, 0, REPLAN_MINUTES, TimeUnit.MINUTES);
+        // a click on a notification does not say where the tray icon is, and the popup would close again as soon as
+        // the desktop gives the focus elsewhere: the window comes to the front and stays
+        var notifications = notifications(tray, icon);
+        notifications.listen(dashboard::openWindow);
+        var texts = new AnnouncementTexts();
+        var engine = engine(configFile, secretsFile, clock,
+                announcement -> notifications.show(texts.notification(announcement)));
+        if (engine.keyStorage() == KeyStorage.FILE) {
+            LOG.log(Level.WARNING, "No usable system keychain: API keys are kept in " + secretsFile.path()
+                    + ", readable only by you");
+        }
 
         Runnable quit = () -> {
+            notifications.close();
             tray.remove();
             instance.close();
             Platform.exit();
@@ -187,6 +189,19 @@ public final class Main {
                 dashboard.openWindow();
             }
         }
+        // only now: on Windows the first announcement needs the tray icon to show it
+        ScheduledExecutorService replanning = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform()
+                .name("planner").daemon().factory());
+        replanning.scheduleWithFixedDelay(() -> {
+            try {
+                var outlook = engine.plan();
+                dashboard.show(outlook);
+                tray.showStatus(trayStatus.map(outlook));
+            } catch (RuntimeException e) {
+                // an uncaught exception would stop the schedule for good
+                LOG.log(Level.ERROR, "planning failed", e);
+            }
+        }, 0, REPLAN_MINUTES, TimeUnit.MINUTES);
         LOG.log(Level.INFO, "planning with " + configFile.path());
     }
 
@@ -278,15 +293,16 @@ public final class Main {
             throw new IllegalStateException("cannot tell which user this app runs as", e);
         }
     }
-    private static Engine engine(ConfigFile configFile, SecretsFile secretsFile, Clock clock) {
+    private static Engine engine(ConfigFile configFile, SecretsFile secretsFile, Clock clock, Notifier notifier) {
         var http = new JdkHttpGet(HttpClient.newHttpClient());
         var providers = new Providers(List.of(new OpenMeteo(http), new ForecastSolar(http)));
         var apiKeys = new ApiKeys(keychain(), secretsFile);
         var dataFolder = DataLocation.defaultFolder(System.getProperty("os.name"), System.getenv(),
                 Path.of(System.getProperty("user.home")));
         var cache = new ForecastCache(dataFolder.resolve("forecasts"));
+        var announcer = new Announcer(new AnnouncedWindows(dataFolder.resolve("announced.json")), notifier);
         return new Engine(configFile, new ForecastService(providers, cache, apiKeys), providers, apiKeys,
-                new AwayFile(dataFolder.resolve("away.json")), clock);
+                new AwayFile(dataFolder.resolve("away.json")), clock, announcer);
     }
 
     private static Keychain keychain() {
@@ -314,13 +330,25 @@ public final class Main {
             return new AwtTray(new StatusIcon(), new TaskbarShade(), colorScheme, TITLE);
         }
         return new StatusNotifierTray(() -> DBusConnectionBuilder.forSessionBus().withShared(false).build(),
-                new StatusIcon(), trayIconFolder(), TITLE);
+                new StatusIcon(), runtimeFolder("tray"), TITLE);
     }
 
-    /** In the session's own folder for running programs, which is emptied at logout, so a crash leaves nothing behind. */
-    private static Path trayIconFolder() {
-        var runtime = System.getenv("XDG_RUNTIME_DIR");
-        var parent = runtime == null ? Path.of(System.getProperty("java.io.tmpdir")) : Path.of(runtime);
-        return parent.resolve(APP_ID + "-tray-" + ProcessHandle.current().pid());
+    /** Windows shows notifications as the tray icon's messages; Linux has a notification server, also without a tray. */
+    private static Notifications notifications(Tray tray, AppIcon icon) {
+        if (tray instanceof AwtTray awtTray) {
+            return awtTray;
+        }
+        return new FreedesktopNotifications(() -> DBusConnectionBuilder.forSessionBus().withShared(false).build(),
+                TITLE, APP_ID, icon, runtimeFolder("notify"));
+    }
+
+    /** Linux only: a private folder of this process's own; see {@link RuntimeFolder}. */
+    private static Path runtimeFolder(String purpose) {
+        try {
+            return RuntimeFolder.make(purpose, System.getenv(), Path.of(System.getProperty("java.io.tmpdir")),
+                    user().orElseThrow());
+        } catch (IOException e) {
+            throw new UncheckedIOException("cannot make a private folder for the " + purpose + " icons", e);
+        }
     }
 }

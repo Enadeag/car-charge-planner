@@ -2,16 +2,13 @@ package io.github.enadeag.carchargeplanner.platform.linux;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import io.github.enadeag.carchargeplanner.desktop.PanelShade;
 import io.github.enadeag.carchargeplanner.desktop.StatusDot;
 import io.github.enadeag.carchargeplanner.desktop.StatusIcon;
 import io.github.enadeag.carchargeplanner.desktop.Tray;
 import io.github.enadeag.carchargeplanner.desktop.TrayStatus;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -48,7 +45,7 @@ class StatusNotifierTrayTest {
     @TempDir
     Path folder;
 
-    private Process busDaemon;
+    private PrivateBus bus;
     private String address;
     private DBusConnection panel;
     private StatusNotifierTray tray;
@@ -73,15 +70,8 @@ class StatusNotifierTrayTest {
 
     @BeforeEach
     void startAPrivateBus() throws IOException, DBusException {
-        var socket = folder.resolve("bus");
-        try {
-            busDaemon = new ProcessBuilder("dbus-daemon", "--session", "--nofork", "--nopidfile",
-                    "--address=unix:path=" + socket, "--print-address=1").start();
-        } catch (IOException e) {
-            assumeTrue(false, "dbus-daemon is not installed");
-        }
-        // it prints the address once it accepts connections
-        address = new BufferedReader(new InputStreamReader(busDaemon.getInputStream())).readLine().strip();
+        bus = PrivateBus.start(folder);
+        address = bus.address();
         panel = DBusConnectionBuilder.forAddress(address).withShared(false).build();
         tray = new StatusNotifierTray(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),
                 new StatusIcon(), folder.resolve("tray"), "Car charge planner");
@@ -91,7 +81,7 @@ class StatusNotifierTrayTest {
     void stopTheBus() {
         tray.remove();
         panel.disconnect();
-        busDaemon.destroy();
+        bus.stop();
     }
 
     private String showWithAWatcher() throws Exception {

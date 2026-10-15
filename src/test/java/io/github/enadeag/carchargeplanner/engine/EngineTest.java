@@ -29,6 +29,10 @@ import io.github.enadeag.carchargeplanner.engine.forecast.ReplayHttp;
 import io.github.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import io.github.enadeag.carchargeplanner.engine.forecast.providers.ForecastSolar;
 import io.github.enadeag.carchargeplanner.engine.forecast.providers.OpenMeteo;
+import io.github.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
+import io.github.enadeag.carchargeplanner.engine.notify.Announcement;
+import io.github.enadeag.carchargeplanner.engine.notify.AnnouncementKind;
+import io.github.enadeag.carchargeplanner.engine.notify.Announcer;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.MemoryKeychain;
@@ -63,6 +67,7 @@ class EngineTest {
     Path folder;
 
     private final MemoryKeychain keychain = new MemoryKeychain();
+    private final List<Announcement> told = new ArrayList<>();
     private FakeProvider main;
     private FakeProvider backup;
     private Path config;
@@ -81,7 +86,11 @@ class EngineTest {
     }
 
     private static Clock clockAt(int hour) {
-        return Clock.fixed(DAY.atTime(hour, 0).atZone(BRUSSELS).toInstant(), ZoneOffset.UTC);
+        return clockAt(hour, 0);
+    }
+
+    private static Clock clockAt(int hour, int minute) {
+        return Clock.fixed(DAY.atTime(hour, minute).atZone(BRUSSELS).toInstant(), ZoneOffset.UTC);
     }
 
     @BeforeEach
@@ -103,7 +112,13 @@ class EngineTest {
         var known = new Providers(List.of(providers));
         var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
         var service = new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys);
-        return new Engine(new ConfigFile(config), service, known, apiKeys, new AwayFile(folder.resolve("away.json")), clock);
+        return new Engine(new ConfigFile(config), service, known, apiKeys, new AwayFile(folder.resolve("away.json")), clock,
+                announcer());
+    }
+
+    /** Kept in the test's folder, so a new engine is like the app after a restart. */
+    private Announcer announcer() {
+        return new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), told::add);
     }
 
     private Engine engine(Clock clock) {
@@ -310,7 +325,7 @@ class EngineTest {
         var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json")));
         var withoutKeychain = new Engine(new ConfigFile(config),
                 new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys), known, apiKeys,
-                new AwayFile(folder.resolve("away.json")), clockAt(7));
+                new AwayFile(folder.resolve("away.json")), clockAt(7), announcer());
         withoutKeychain.saveApiKeys(new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "x"))));
         assertThat(withoutKeychain.keyStorage()).isEqualTo(KeyStorage.FILE);
     }
@@ -325,6 +340,60 @@ class EngineTest {
 
         assertThat(source(engine).providerRole()).isEqualTo(ProviderRole.PRIMARY);
         assertThat(main.callCount()).isEqualTo(2);
+    }
+
+    // the Python version's notification cases in tests/test_engine.py; the example's window starts at 10:00 and its
+    // lead time is 15 minutes
+
+    @Test
+    void theOwnerIsToldOnceAheadOfTheWindowWhatToSet() {
+        engine(clockAt(9, 50)).plan();
+        var announcement = told.getFirst();
+        assertThat(announcement.kind()).isEqualTo(AnnouncementKind.CHARGE_WINDOW);
+        assertThat(announcement.window().start()).isEqualTo(DAY.atTime(10, 0).atZone(BRUSSELS).toInstant());
+        assertThat(announcement.window().amps()).isEqualTo(13);
+
+        engine(clockAt(9, 52)).plan(); // also after a restart: the announced windows are kept in a file
+
+        assertThat(told).hasSize(1);
+    }
+
+    @Test
+    void theOwnerIsNotToldBeforeTheLeadTime() {
+        engine(clockAt(9, 30)).plan();
+        assertThat(told).isEmpty();
+    }
+
+    @Test
+    void theOwnerIsNotToldWhenTheForecastCouldNotBeRefreshed() {
+        main.script(steps(days(2, 4.0)), error(new ProviderError.Unavailable("down")));
+        backup.script(error(new ProviderError.Unavailable("down")));
+        engine(clockAt(7)).plan();
+
+        assertThat(source(engine(clockAt(9, 50))).freshness()).isEqualTo(Freshness.STALE);
+        assertThat(told).isEmpty();
+    }
+
+    @Test
+    void aLongerLeadTimeInTheConfigFileTellsTheOwnerSooner() throws IOException {
+        var engine = engine(clockAt(9, 30));
+        engine.plan();
+        assertThat(told).isEmpty();
+
+        Files.writeString(config, Files.readString(config).replace("\"notifyLeadMinutes\": 15", "\"notifyLeadMinutes\": 30"));
+        engine.plan();
+
+        assertThat(told).hasSize(1);
+    }
+
+    @Test
+    void anAnnouncedWindowIsPlannedAsItWasAnnouncedWhileItRuns() throws IOException {
+        engine(clockAt(9, 50)).plan();
+        Files.writeString(config, Files.readString(config).replace("\"margin\": 0.85", "\"margin\": 0.5"));
+
+        var window = planned(engine(clockAt(11))).nextWindow().orElseThrow();
+
+        assertThat(window).extracting(w -> w.start(), w -> w.amps()).containsExactly(told.getFirst().window().start(), 13);
     }
 
     private static io.github.enadeag.carchargeplanner.engine.config.HomeSystem exampleSystem() {

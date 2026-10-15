@@ -24,6 +24,10 @@ _Avoid_: Excess, spare solar
 A span of time when the car is not at home and so cannot be charged. Recurring (for example weekdays 06:00–19:00) or entered by hand for a specific day.
 _Avoid_: Absence, trip
 
+**Announcement**:
+A notification that tells the owner, the notification lead time before a charge window starts, what to set in the charger's app; also for the window of a grid charge. Each window is announced once, and not while the forecast could not be refreshed. A click on it opens the dashboard.
+_Avoid_: Reminder, alert
+
 **Minimum charge level**:
 The battery percentage the car must never fall below (30% unless the user changes it). The plan must keep the car above it, even if that means charging outside the best solar window.
 _Avoid_: Floor, reserve

@@ -1,5 +1,7 @@
 package io.github.enadeag.carchargeplanner.platform.windows;
 
+import io.github.enadeag.carchargeplanner.desktop.NotificationText;
+import io.github.enadeag.carchargeplanner.desktop.Notifications;
 import io.github.enadeag.carchargeplanner.desktop.StatusDot;
 import io.github.enadeag.carchargeplanner.desktop.StatusIcon;
 import io.github.enadeag.carchargeplanner.desktop.Tray;
@@ -20,8 +22,11 @@ import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Point2D;
 
-/** The tray icon on Windows, through AWT. */
-public final class AwtTray implements Tray {
+/**
+ * The tray icon on Windows, through AWT, and the app's notifications as the icon's messages: Windows shows them as
+ * toasts, and a click on one reaches the icon's action listener.
+ */
+public final class AwtTray implements Tray, Notifications {
 
     /**
      * The notification area's icon size at 100, 125, 150, 175, 200, 250 and 300 % and beyond. AWT draws the icon at
@@ -37,6 +42,7 @@ public final class AwtTray implements Tray {
     private final String title;
     private TrayStatus status = new TrayStatus(StatusDot.NONE, "");
     private TrayIcon trayIcon;
+    private final TrayMessages messages = new TrayMessages();
 
     /**
      * Makes the tray; nothing appears until {@link #show(TrayActions)}.
@@ -74,11 +80,15 @@ public final class AwtTray implements Tray {
                 }
             }
         });
+        // a click on a message, but also a double click on the icon: the messages tell them apart
+        trayIcon.addActionListener(event -> messages.click());
         try {
             SystemTray.getSystemTray().add(trayIcon);
         } catch (AWTException e) {
             throw new TrayUnavailable("Windows has no notification area for this app", e);
         }
+        var shown = trayIcon;
+        messages.attach((title, body) -> shown.displayMessage(title, body, TrayIcon.MessageType.INFO));
         // JavaFX's properties belong to its thread
         Platform.runLater(() -> colorScheme.subscribe(scheme -> redraw()));
     }
@@ -91,9 +101,35 @@ public final class AwtTray implements Tray {
 
     @Override
     public synchronized void remove() {
+        messages.detach();
         if (trayIcon != null) {
             SystemTray.getSystemTray().remove(trayIcon);
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The action runs on AWT's event thread.
+     */
+    @Override
+    public void listen(Runnable clicked) {
+        messages.listen(clicked);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Shown only while the icon is in the tray, between {@link #show(TrayActions)} and {@link #remove()}.
+     */
+    @Override
+    public void show(NotificationText text) {
+        messages.show(text);
+    }
+
+    /** Nothing to close: the messages go with the icon, at {@link #remove()}. */
+    @Override
+    public void close() {
     }
 
     private synchronized void redraw() {

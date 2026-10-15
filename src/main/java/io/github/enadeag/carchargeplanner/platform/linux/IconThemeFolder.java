@@ -6,7 +6,9 @@ import io.github.enadeag.carchargeplanner.desktop.StatusIcon;
 import java.io.IOException;
 import java.lang.System.Logger.Level;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.Comparator;
 import java.util.Locale;
 
@@ -27,8 +29,8 @@ final class IconThemeFolder {
     /**
      * Makes the theme; nothing is written until {@link #write(StatusIcon)}.
      *
-     * @param root a folder of this theme's own, which may not exist yet; {@link #delete()} removes it with everything
-     *     in it
+     * @param root a folder of this theme's own that only this user may use; {@link #delete()} removes it with
+     *     everything in it
      */
     IconThemeFolder(Path root) {
         this.root = root;
@@ -46,7 +48,10 @@ final class IconThemeFolder {
         try {
             Files.createDirectories(apps);
             for (var dot : StatusDot.values()) {
-                Files.writeString(apps.resolve(name(dot) + ".svg"), icon.svg(dot, PanelShade.DARK));
+                // never through a link another user may have put there
+                Files.writeString(apps.resolve(name(dot) + ".svg"), icon.svg(dot, PanelShade.DARK),
+                        StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE,
+                        LinkOption.NOFOLLOW_LINKS);
             }
             written = true;
         } catch (IOException e) {
