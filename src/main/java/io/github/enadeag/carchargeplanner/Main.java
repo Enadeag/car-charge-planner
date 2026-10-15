@@ -5,14 +5,26 @@ import io.github.enadeag.carchargeplanner.desktop.Dashboard;
 import io.github.enadeag.carchargeplanner.desktop.Tray;
 import io.github.enadeag.carchargeplanner.engine.Engine;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
+import io.github.enadeag.carchargeplanner.engine.forecast.ForecastCache;
+import io.github.enadeag.carchargeplanner.engine.forecast.ForecastService;
 import io.github.enadeag.carchargeplanner.engine.forecast.JdkHttpGet;
-import io.github.enadeag.carchargeplanner.engine.forecast.OpenMeteo;
+import io.github.enadeag.carchargeplanner.engine.forecast.Providers;
+import io.github.enadeag.carchargeplanner.engine.forecast.providers.ForecastSolar;
+import io.github.enadeag.carchargeplanner.engine.forecast.providers.OpenMeteo;
+import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
+import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
+import io.github.enadeag.carchargeplanner.engine.secrets.Keychain;
+import io.github.enadeag.carchargeplanner.engine.secrets.NoKeychain;
+import io.github.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import io.github.enadeag.carchargeplanner.platform.linux.SecretServiceKeychain;
 import io.github.enadeag.carchargeplanner.platform.linux.StatusNotifierTray;
 import io.github.enadeag.carchargeplanner.platform.windows.AwtTray;
+import io.github.enadeag.carchargeplanner.platform.windows.CredentialManagerKeychain;
 import java.lang.System.Logger.Level;
 import java.net.http.HttpClient;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -31,9 +43,13 @@ public final class Main {
     /** Held here because java.util.logging forgets a logger's level once nothing refers to the logger. */
     private static final java.util.logging.Logger DBUS_LOG = java.util.logging.Logger.getLogger("org.freedesktop.dbus");
     private static final String TITLE = "Car charge planner";
-    private static final String FORECAST_SOURCE = "Open-Meteo";
-    /** Open-Meteo updates its forecast about once an hour. */
-    private static final long REPLAN_MINUTES = 60;
+    /** The app's name where other programs see it, such as on the keychain's entries. */
+    private static final String APP_ID = "car-charge-planner";
+    /**
+     * The forecast cache answers in between, so this is how soon a provider that could not be reached is tried again,
+     * not how often it is asked.
+     */
+    private static final long REPLAN_MINUTES = 15;
 
     private Main() {
     }
@@ -47,15 +63,21 @@ public final class Main {
      */
     public static void main(String[] args) throws Exception {
         DBUS_LOG.setLevel(java.util.logging.Level.WARNING); // dbus-java reports every connection at INFO
-        var configFile = new ConfigFile(configPath(args));
+        var configPath = configPath(args);
+        var configFile = new ConfigFile(configPath);
         var clock = Clock.systemUTC();
-        var engine = new Engine(configFile, new OpenMeteo(new JdkHttpGet(HttpClient.newHttpClient())), clock);
+        var secretsFile = new SecretsFile(configPath.resolveSibling("secrets.json"));
+        var engine = engine(configFile, secretsFile, clock);
+        if (engine.keyStorage() == KeyStorage.FILE) {
+            LOG.log(Level.WARNING, "No usable system keychain: API keys are kept in " + secretsFile.path()
+                    + ", readable only by you");
+        }
         var icon = new AppIcon();
 
         Platform.setImplicitExit(false);
         var dashboardMade = new CompletableFuture<Dashboard>();
         Platform.startup(() -> dashboardMade.complete(
-                new Dashboard(icon, Platform.getPreferences().colorSchemeProperty(), FORECAST_SOURCE, clock)));
+                new Dashboard(icon, Platform.getPreferences().colorSchemeProperty(), clock)));
         var dashboard = dashboardMade.get();
 
         ScheduledExecutorService replanning = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform()
@@ -83,6 +105,26 @@ public final class Main {
             dashboard.openWindow();
         }
         LOG.log(Level.INFO, "planning with " + configFile.path());
+    }
+
+    private static Engine engine(ConfigFile configFile, SecretsFile secretsFile, Clock clock) {
+        var http = new JdkHttpGet(HttpClient.newHttpClient());
+        var providers = new Providers(List.of(new OpenMeteo(http), new ForecastSolar(http)));
+        var apiKeys = new ApiKeys(keychain(), secretsFile);
+        var cache = new ForecastCache(DataLocation.defaultFolder(System.getProperty("os.name"), System.getenv(),
+                Path.of(System.getProperty("user.home"))).resolve("forecasts"));
+        return new Engine(configFile, new ForecastService(providers, cache, apiKeys), providers, apiKeys, clock);
+    }
+
+    private static Keychain keychain() {
+        var os = System.getProperty("os.name");
+        if (os.startsWith("Windows")) {
+            return new CredentialManagerKeychain(APP_ID);
+        }
+        if (os.startsWith("Linux")) {
+            return new SecretServiceKeychain(() -> DBusConnectionBuilder.forSessionBus().withShared(false).build(), APP_ID);
+        }
+        return new NoKeychain();
     }
 
     private static Path configPath(String[] args) {

@@ -1,12 +1,38 @@
 package io.github.enadeag.carchargeplanner.engine;
 
+import static io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider.error;
+import static io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider.steps;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
+import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
+import io.github.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
+import io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider;
+import io.github.enadeag.carchargeplanner.engine.forecast.ForecastCache;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
+import io.github.enadeag.carchargeplanner.engine.forecast.ForecastService;
+import io.github.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
-import io.github.enadeag.carchargeplanner.engine.forecast.ForecastUnavailable;
+import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet.Reply;
+import io.github.enadeag.carchargeplanner.engine.forecast.PlaceResults;
+import io.github.enadeag.carchargeplanner.engine.forecast.ProviderError;
+import io.github.enadeag.carchargeplanner.engine.forecast.Providers;
+import io.github.enadeag.carchargeplanner.engine.forecast.Recorded;
+import io.github.enadeag.carchargeplanner.engine.forecast.ReplayHttp;
+import io.github.enadeag.carchargeplanner.engine.forecast.SettingSpec;
+import io.github.enadeag.carchargeplanner.engine.forecast.providers.ForecastSolar;
+import io.github.enadeag.carchargeplanner.engine.forecast.providers.OpenMeteo;
+import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
+import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
+import io.github.enadeag.carchargeplanner.engine.secrets.MemoryKeychain;
+import io.github.enadeag.carchargeplanner.engine.secrets.NoKeychain;
+import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
+import io.github.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import io.github.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -14,24 +40,28 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class EngineTest {
 
-    private static final ConfigFile EXAMPLE = new ConfigFile(Path.of("docs", "example-engine.json"));
+    private static final Path EXAMPLE = Path.of("docs", "example-engine.json");
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");
     private static final LocalDate DAY = LocalDate.of(2026, 7, 3);
 
-    /** Two sunny days: 4 kW from 10:00 to 16:00 local time, nothing the rest of the day. */
-    private static final ForecastProvider SUNNY = system -> days(2, 4.0);
+    @TempDir
+    Path folder;
 
-    /** Three days without any sun. */
-    private static final ForecastProvider DARK = system -> days(3, 0);
+    private final MemoryKeychain keychain = new MemoryKeychain();
+    private FakeProvider main;
+    private FakeProvider backup;
+    private Path config;
 
+    /** Days with 4 kW (or the given power) from 10:00 to 16:00 local time, nothing the rest of the day. */
     private static List<ForecastStep> days(int count, double powerFrom10To16Kw) {
         var steps = new ArrayList<ForecastStep>();
         for (int day = 0; day < count; day++) {
@@ -48,11 +78,50 @@ class EngineTest {
         return Clock.fixed(DAY.atTime(hour, 0).atZone(BRUSSELS).toInstant(), ZoneOffset.UTC);
     }
 
+    @BeforeEach
+    void twoSunnyDaysFromTheMainProviderAndAFallback() throws IOException {
+        main = new FakeProvider("main", "Main", steps(days(2, 4.0)));
+        backup = new FakeProvider("backup", "Backup", steps(days(2, 3.0)));
+        choose("main", "backup");
+    }
+
+    /** The example config with these providers chosen. */
+    private void choose(String primary, String fallback) throws IOException {
+        var example = Files.readString(EXAMPLE);
+        var chosen = example.substring(0, example.indexOf("\"forecast\""))
+                + "\"forecast\": {\"primary\": \"" + primary + "\", \"fallback\": \"" + fallback + "\", \"settings\": {}}}";
+        config = Files.writeString(folder.resolve("engine.json"), chosen);
+    }
+
+    private Engine engine(Clock clock, ForecastProvider... providers) {
+        var known = new Providers(List.of(providers));
+        var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
+        var service = new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys);
+        return new Engine(new ConfigFile(config), service, known, apiKeys, clock);
+    }
+
+    private Engine engine(Clock clock) {
+        return engine(clock, main, backup);
+    }
+
+    private static Outlook.Planned planned(Engine engine) {
+        return (Outlook.Planned) engine.plan();
+    }
+
+    private static ForecastSource source(Engine engine) {
+        return planned(engine).forecast();
+    }
+
+    @Test
+    void theExampleChoosesOpenMeteoWithForecastSolarAsTheFallback() throws ConfigProblem {
+        var forecast = new ConfigFile(EXAMPLE).read().forecast();
+        assertThat(forecast.order()).containsExactly("open-meteo", "forecast-solar");
+    }
+
     @Test
     void plansFromTheForecastForTheSystemInTheConfigFile() {
-        var outlook = new Engine(EXAMPLE, SUNNY, clockAt(7)).plan();
+        var planned = planned(engine(clockAt(7)));
 
-        var planned = (Outlook.Planned) outlook;
         assertThat(planned.zone()).isEqualTo(BRUSSELS);
         assertThat(planned.days()).extracting(day -> day.date()).containsExactly(DAY, DAY.plusDays(1));
         assertThat(planned.batteryPct()).isEqualTo(Engine.ASSUMED_BATTERY_PCT);
@@ -65,8 +134,27 @@ class EngineTest {
     }
 
     @Test
+    void theOutlookCreditsTheProviderThatMadeTheForecast() {
+        var source = source(engine(clockAt(7)));
+
+        assertThat(source.attribution()).isEqualTo("Forecast by Main");
+        assertThat(source.fromFallback()).isFalse();
+        assertThat(main.callCount()).isEqualTo(1);
+    }
+
+    @Test
+    void aFallbackForecastIsWhatThePlanUsesAndTheOutlookSaysSo() {
+        main.script(error(new ProviderError.Unavailable("down")));
+        var source = source(engine(clockAt(7)));
+
+        assertThat(source).extracting(ForecastSource::attribution, ForecastSource::fromFallback, ForecastSource::primaryName)
+                .containsExactly("Forecast by Backup", true, "Main");
+    }
+
+    @Test
     void theOutlookAdvisesAGridChargeWhenTheBatteryWouldEndADayBelowTheMinimum() {
-        var planned = (Outlook.Planned) new Engine(EXAMPLE, DARK, clockAt(7)).plan();
+        main.script(steps(days(3, 0)));
+        var planned = planned(engine(clockAt(7)));
 
         // without sun the example's 12 % a day of driving takes the battery from 50 % to 17.5 % on the third day,
         // below the minimum of 30 %
@@ -78,34 +166,137 @@ class EngineTest {
 
     @Test
     void theNextWindowIsTomorrowsOnceTodaysHasEnded() {
-        var planned = (Outlook.Planned) new Engine(EXAMPLE, SUNNY, clockAt(17)).plan();
-
-        var window = planned.nextWindow().orElseThrow();
+        var window = planned(engine(clockAt(17))).nextWindow().orElseThrow();
         assertThat(window.start()).isEqualTo(DAY.plusDays(1).atTime(10, 0).atZone(BRUSSELS).toInstant());
     }
 
     @Test
-    void withoutAConfigFileThereIsNoPlanButTheReasonNamesTheFile(@TempDir Path folder) {
-        var missing = folder.resolve("engine.json");
-        var outlook = new Engine(new ConfigFile(missing), SUNNY, clockAt(7)).plan();
-
-        assertThat(outlook).isInstanceOfSatisfying(Outlook.NotSetUp.class,
-                notSetUp -> assertThat(notSetUp.reason()).contains(missing.toString()));
+    void withoutAConfigFileThereIsNoPlanButTheReasonNamesTheFile() throws IOException {
+        Files.delete(config);
+        assertThat(engine(clockAt(7)).plan()).isInstanceOfSatisfying(Outlook.NotSetUp.class,
+                notSetUp -> assertThat(notSetUp.reason()).contains(config.toString()));
+        assertThat(main.callCount()).isZero(); // nothing leaves the computer before there is a location
     }
 
     @Test
-    void withoutAForecastThereIsNoPlanButTheProvidersReason() {
-        ForecastProvider down = system -> {
-            throw new ForecastUnavailable("Open-Meteo did not answer the request (status 503)");
-        };
-        var outlook = new Engine(EXAMPLE, down, clockAt(7)).plan();
+    void whenNothingAnswersTheReasonsReachTheOutlook() throws IOException {
+        choose("main", "");
+        main.script(error(new ProviderError.Unavailable("no network")));
 
-        assertThat(outlook).isEqualTo(new Outlook.NoForecast("Open-Meteo did not answer the request (status 503)"));
+        assertThat(engine(clockAt(7)).plan()).isEqualTo(new Outlook.NoForecast("Main: no network"));
+    }
+
+    @Test
+    void switchingTheProviderUsesTheNewOnesForecastAtTheNextPlan() throws IOException {
+        var engine = engine(clockAt(7));
+        engine.plan();
+        choose("backup", "");
+
+        assertThat(source(engine).attribution()).isEqualTo("Forecast by Backup");
+        assertThat(backup.callCount()).isEqualTo(1);
+    }
+
+    @Test
+    void aPlanningChangeKeepsTheForecastAndAsksNobody() throws IOException {
+        var engine = engine(clockAt(7));
+        engine.plan();
+        Files.writeString(config, Files.readString(config).replace("\"margin\": 0.85", "\"margin\": 0.5"));
+
+        assertThat(source(engine).fromCache()).isTrue();
+        assertThat(main.callCount()).isEqualTo(1);
+    }
+
+    @Test
+    void duringACoolDownTheOutlookSaysUntilWhenTheProviderIsBusyAndAfterItDoesNot() {
+        main.script(steps(days(2, 4.0)), error(new ProviderError.RateLimited("busy", Duration.ofHours(1))),
+                steps(days(2, 4.0)));
+        engine(clockAt(7)).plan();
+
+        var busy = source(engine(clockAt(9))); // due again; the provider says wait
+        assertThat(busy.stale()).isTrue();
+        assertThat(busy.cooldownUntil()).contains(DAY.atTime(10, 0).atZone(BRUSSELS).toInstant());
+
+        var after = source(engine(clockAt(11)));
+        assertThat(after.cooldownUntil()).isEmpty();
+        assertThat(main.callCount()).isEqualTo(3);
     }
 
     @Test
     void aPlanWithoutWindowsHasNoNextWindow() {
-        var planned = new Outlook.Planned(Instant.parse("2026-07-03T05:00:00Z"), BRUSSELS, List.of(), 50, true, Optional.empty());
+        var madeAt = Instant.parse("2026-07-03T05:00:00Z");
+        var source = new ForecastSource("main", "Main", "Forecast by Main", madeAt, false, false, false, "", Optional.empty());
+        var planned = new Outlook.Planned(madeAt, BRUSSELS, List.of(), 50, true, Optional.empty(), source);
         assertThat(planned.nextWindow()).isEmpty();
+    }
+
+    @Test
+    void theConnectionCheckAsksTheProviderOnceAndCountsTheDays() {
+        var result = engine(clockAt(7), main, backup).checkConnection("main", exampleSystem(), Map.of());
+
+        assertThat(result).isEqualTo(new ConnectionResult(true, 2, "OK: 2 days of forecast"));
+        assertThat(folder.resolve("cache")).doesNotExist(); // nothing is cached or saved
+    }
+
+    @Test
+    void theConnectionCheckNamesAnUnknownProvider() {
+        assertThat(engine(clockAt(7)).checkConnection("solcast", exampleSystem(), Map.of()).message())
+                .contains("'solcast' is not known");
+    }
+
+    @Test
+    void theConnectionCheckUsesTheStoredKeyWhenNoneIsGiven() throws SecretsProblem {
+        var needy = new FakeProvider(FakeProvider.info("needy", "Needy",
+                List.of(new SettingSpec("api_key", "API key", "Your key.", false, true))), steps(days(2, 4.0)));
+        var engine = engine(clockAt(7), needy);
+
+        assertThat(engine.checkConnection("needy", exampleSystem(), Map.of()))
+                .isEqualTo(new ConnectionResult(false, 0, "API key is required."));
+        engine.saveApiKeys(new Secrets(Map.of("needy", Map.of("api_key", "STORED-KEY"))));
+        assertThat(engine.checkConnection("needy", exampleSystem(), Map.of()).worked()).isTrue();
+        assertThat(engine.checkConnection("needy", exampleSystem(), Map.of("api_key", "TYPED-KEY")).worked()).isTrue();
+        assertThat(needy.calls).extracting(call -> call.settings().get("api_key")).containsExactly("STORED-KEY", "TYPED-KEY");
+    }
+
+    @Test
+    void placesAreSearchedWithTheProvidersOwnSearch() {
+        var http = ReplayHttp.always(new Reply(200, Recorded.answer("open_meteo_geocoding_amsterdam.json")));
+        var engine = engine(clockAt(7), new OpenMeteo(http), new ForecastSolar(http));
+
+        assertThat(engine.searchPlaces("open-meteo", "Amsterdam", "en")).hasValueSatisfying(results ->
+                assertThat(((PlaceResults.Found) results).places()).hasSize(8));
+        assertThat(engine.searchPlaces("forecast-solar", "Amsterdam", "en")).isEmpty(); // then the owner types coordinates
+        assertThat(engine.searchPlaces("solcast", "Amsterdam", "en")).isEmpty();
+    }
+
+    @Test
+    void theOwnerCanBeToldWhereTheKeysAreKept() throws SecretsProblem {
+        assertThat(engine(clockAt(7)).keyStorage()).isEqualTo(KeyStorage.KEYCHAIN);
+
+        var known = new Providers(List.of(main));
+        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json")));
+        var withoutKeychain = new Engine(new ConfigFile(config),
+                new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys), known, apiKeys, clockAt(7));
+        withoutKeychain.saveApiKeys(new Secrets(Map.of("main", Map.of("api_key", "x"))));
+        assertThat(withoutKeychain.keyStorage()).isEqualTo(KeyStorage.FILE);
+    }
+
+    @Test
+    void savingKeysLetsAProviderThatFailedBeAskedAgainAtOnce() throws SecretsProblem {
+        main.script(error(new ProviderError.Unavailable("down")), steps(days(2, 4.0)));
+        var engine = engine(clockAt(7));
+        assertThat(source(engine).fromFallback()).isTrue();
+
+        engine.saveApiKeys(Secrets.NONE);
+
+        assertThat(source(engine).fromFallback()).isFalse();
+        assertThat(main.callCount()).isEqualTo(2);
+    }
+
+    private static io.github.enadeag.carchargeplanner.engine.config.HomeSystem exampleSystem() {
+        try {
+            return new ConfigFile(EXAMPLE).read().system();
+        } catch (ConfigProblem e) {
+            throw new AssertionError(e);
+        }
     }
 }

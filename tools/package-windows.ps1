@@ -40,6 +40,6 @@ jpackage --type $Type --dest target\dist `
   --main-class io.github.enadeag.carchargeplanner.Main `
   --runtime-image target\runtime `
   --icon src\packaging\windows\car-charge-planner.ico `
-  --java-options "--enable-native-access=javafx.graphics" @installer
+  --java-options "--enable-native-access=javafx.graphics,ALL-UNNAMED" @installer
 if ($LASTEXITCODE) { exit 1 }
 Get-ChildItem target\dist

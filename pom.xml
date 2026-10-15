@@ -124,6 +124,8 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.6.0</version>
         <configuration>
+          <!-- the Credential Manager is reached through Java's foreign function API -->
+          <argLine>--enable-native-access=ALL-UNNAMED</argLine>
           <systemPropertyVariables>
             <!-- no test may put an AWT window or tray icon on the developer's desktop -->
             <java.awt.headless>true</java.awt.headless>

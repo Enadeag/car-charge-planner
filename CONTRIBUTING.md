@@ -104,9 +104,9 @@ and the Maven wrapper in the root, the code in `src/main/java/io/github/enadeag/
 
 | Package | What it holds |
 | --- | --- |
-| `engine` | Plans, fetches forecasts and owns the stored data, without user interface; clients get plain records. `engine.config` the config file, `engine.forecast` the forecast providers, `engine.plan` the planner. |
+| `engine` | Plans, fetches forecasts and owns the stored data, without user interface; clients get plain records. `engine.config` the config file, `engine.forecast` the provider contract and the forecast service (fallback, cache, rate limits), `engine.forecast.providers` Open-Meteo and Forecast.Solar, `engine.secrets` the API keys, `engine.plan` the planner. |
 | `desktop` | The JavaFX dashboard and what a tray icon must do. |
-| `platform.linux`, `platform.windows` | The tray icon on each system: our own StatusNotifierItem over D-Bus, AWT's `SystemTray`. |
+| `platform.linux`, `platform.windows` | The tray icon and the keychain on each system: our own StatusNotifierItem and Secret Service client over D-Bus; AWT's `SystemTray` and the Credential Manager. |
 | `Main` | The composition root: the one place where the parts are made and handed to each other. |
 
 ```bash
@@ -116,7 +116,15 @@ and the Maven wrapper in the root, the code in `src/main/java/io/github/enadeag/
 
 There are no set-up screens yet: the engine reads the system from `engine.json` in `~/.config/car-charge-planner/`
 (Windows: `%APPDATA%\car-charge-planner\`), or from the file `--config=` names. `docs/example-engine.json` shows
-every setting, for a made-up place.
+every setting, for a made-up place; its `forecast` section names the forecast provider and the fallback provider.
+API keys are kept in the system keychain, or without one in `secrets.json` beside `engine.json`, readable only by
+you. The forecast cache is in `~/.local/share/car-charge-planner/forecasts/` (Windows:
+`%LOCALAPPDATA%\car-charge-planner\forecasts\`).
+
+The tests never touch the network or your keychain: the providers replay recorded answers, the Linux keychain test
+runs a throwaway GNOME Keyring on a private D-Bus (it is skipped without `dbus-daemon` and `gnome-keyring-daemon`),
+and the Windows one uses an entry of its own that it removes again (it is skipped over ssh, where Windows has no
+logon session for the Credential Manager).
 
 Packages, with a runtime made by jlink (unsigned, as the Python version's):
 

@@ -26,12 +26,11 @@ public final class Dashboard {
      * @param icon the app icon, for the window's title bar and the taskbar
      * @param colorScheme the system's light or dark, followed while the app runs
      *     ({@code Platform.getPreferences().colorSchemeProperty()}); never null
-     * @param forecastSource the forecast provider's name, shown in the footer, such as "Open-Meteo"
      * @param clock tells when the popup closed, so the click on the tray icon that closed it does not open it again
      */
-    public Dashboard(AppIcon icon, ObservableValue<ColorScheme> colorScheme, String forecastSource, InstantSource clock) {
+    public Dashboard(AppIcon icon, ObservableValue<ColorScheme> colorScheme, InstantSource clock) {
         var theme = new SystemTheme(colorScheme);
-        this.mapper = new OutlookMapper(forecastSource);
+        this.mapper = new OutlookMapper();
         this.view = new DashboardView(this::detach, this::fitToContent);
         this.popup = new DashboardPopup(theme, icon, clock);
         this.window = new DashboardWindow(theme, icon);

@@ -1,0 +1,168 @@
+package io.github.enadeag.carchargeplanner.engine.secrets;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.Map;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+/** The private file the keys go to without a usable keychain. */
+class SecretsFileTest {
+
+    private static final String SECRET = "SUPER-SECRET-VALUE-42";
+
+    @TempDir
+    Path folder;
+
+    private Path path() {
+        return folder.resolve("secrets.json");
+    }
+
+    private ApiKeys withoutKeychain() {
+        return new ApiKeys(new NoKeychain(), new SecretsFile(path()));
+    }
+
+    private static Secrets secrets(String providerId, String value) {
+        return new Secrets(Map.of(providerId, Map.of("api_key", value)));
+    }
+
+    private String mode(Path file) throws IOException {
+        return PosixFilePermissions.toString(Files.getPosixFilePermissions(file));
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    void secretsAreWrittenPrivateAndReadBack() throws Exception {
+        var both = new Secrets(Map.of("open-meteo", Map.of("api_key", SECRET), "forecast-solar", Map.of("api_key", "other")));
+        withoutKeychain().save(both);
+
+        assertThat(mode(path())).isEqualTo("rw-------");
+        assertThat(withoutKeychain().load()).isEqualTo(both);
+        assertThat(folder.resolve("secrets.json.tmp")).doesNotExist();
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    void aLeftoverTemporaryFileOpenToOthersDoesNotMakeTheFileOpen() throws Exception {
+        var leftover = folder.resolve("secrets.json.tmp");
+        Files.writeString(leftover, "old leftover");
+        Files.setPosixFilePermissions(leftover, PosixFilePermissions.fromString("rw-rw-rw-"));
+
+        withoutKeychain().save(secrets("open-meteo", SECRET));
+
+        assertThat(mode(path())).isEqualTo("rw-------");
+    }
+
+    @Test
+    void emptyValuesAreNotStored() throws Exception {
+        withoutKeychain().save(new Secrets(Map.of("open-meteo", Map.of("api_key", ""), "forecast-solar", Map.of())));
+
+        assertThat(withoutKeychain().load()).isEqualTo(Secrets.NONE);
+        assertThat(Files.readString(path())).doesNotContain("api_key");
+    }
+
+    @Test
+    void noFileMeansNoSecrets() throws SecretsProblem {
+        assertThat(withoutKeychain().load()).isEqualTo(Secrets.NONE);
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    void aFileOpenToOthersIsCorrectedWhenRead() throws Exception {
+        withoutKeychain().save(secrets("open-meteo", SECRET));
+        Files.setPosixFilePermissions(path(), PosixFilePermissions.fromString("rw-r--r--"));
+
+        assertThat(withoutKeychain().load().of("open-meteo")).containsEntry("api_key", SECRET);
+        assertThat(mode(path())).isEqualTo("rw-------");
+    }
+
+    @Test
+    void aBrokenFileIsReportedWithoutQuotingIt() throws IOException {
+        Files.writeString(path(), "{\"open-meteo\": {\"api_key\": \"" + SECRET + "\" oops}}");
+
+        assertThatThrownBy(() -> withoutKeychain().load()).isInstanceOf(SecretsProblem.class)
+                .hasMessageContaining("not valid JSON").hasMessageNotContaining(SECRET);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{\"api_key\": 5}", "{\"open-meteo\": {\"api_key\": 5}}", "{\"open-meteo\": [\"x\"]}"})
+    void aFileOfTheWrongShapeIsRefused(String text) throws IOException {
+        Files.writeString(path(), text);
+        assertThatThrownBy(() -> withoutKeychain().load()).isInstanceOf(SecretsProblem.class).hasMessageContaining("texts only");
+    }
+
+    @Test
+    void idsAndNamesWithOddCharactersAreNotWritten() {
+        assertThatThrownBy(() -> withoutKeychain().save(secrets("open meteo", "x"))).isInstanceOf(SecretsProblem.class);
+        var evil = new Secrets(Map.of("open-meteo", Map.of("api key\n[evil]", "x")));
+        assertThatThrownBy(() -> withoutKeychain().save(evil)).isInstanceOf(SecretsProblem.class);
+        assertThat(path()).doesNotExist();
+    }
+
+    @Test
+    void aValueWithQuotesAndNewlinesSurvives() throws SecretsProblem {
+        var awkward = "a\"b\\c\nd";
+        withoutKeychain().save(secrets("open-meteo", awkward));
+        assertThat(withoutKeychain().load().of("open-meteo")).containsEntry("api_key", awkward);
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS) // a read-only folder does not stop writing there on Windows
+    void aFailedWriteLeavesTheOldFileAndNoTemporaryOne() throws Exception {
+        withoutKeychain().save(secrets("open-meteo", "old"));
+        Files.setPosixFilePermissions(folder, PosixFilePermissions.fromString("r-x------"));
+        try {
+            assertThatThrownBy(() -> withoutKeychain().save(secrets("open-meteo", SECRET)))
+                    .isInstanceOf(SecretsProblem.class).hasMessageNotContaining(SECRET);
+        } finally {
+            Files.setPosixFilePermissions(folder, PosixFilePermissions.fromString("rwx------"));
+        }
+        assertThat(withoutKeychain().load().of("open-meteo")).containsEntry("api_key", "old");
+        assertThat(folder.resolve("secrets.json.tmp")).doesNotExist();
+    }
+
+    @Test
+    void secretsNeverReachTheLog() throws SecretsProblem {
+        var logged = new StringBuilder();
+        var capture = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                logged.append(record.getMessage()).append('\n');
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+        var root = Logger.getLogger("");
+        var previous = root.getLevel();
+        root.addHandler(capture);
+        root.setLevel(Level.ALL);
+        try {
+            withoutKeychain().save(secrets("open-meteo", SECRET));
+            withoutKeychain().load();
+            new ApiKeys(new MemoryKeychain(), new SecretsFile(path())).load(); // the move into a keychain
+        } finally {
+            root.removeHandler(capture);
+            root.setLevel(previous);
+        }
+        assertThat(logged.toString()).doesNotContain(SECRET);
+    }
+}

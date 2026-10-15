@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sun.javafx.stage.WindowHelper;
 import io.github.enadeag.carchargeplanner.engine.Outlook;
+import io.github.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import io.github.enadeag.carchargeplanner.engine.plan.DayPlan;
 import java.time.Duration;
 import java.time.Instant;
@@ -41,7 +42,7 @@ class DashboardTest {
 
     @BeforeEach
     void make() throws Exception {
-        dashboard = Fx.call(() -> new Dashboard(new AppIcon(), new SimpleObjectProperty<>(ColorScheme.LIGHT), "Open-Meteo", clock));
+        dashboard = Fx.call(() -> new Dashboard(new AppIcon(), new SimpleObjectProperty<>(ColorScheme.LIGHT), clock));
     }
 
     @AfterEach
@@ -226,12 +227,18 @@ class DashboardTest {
         assertThat(Fx.call(() -> tabs.getSelectionModel().getSelectedIndex())).isEqualTo(1);
     }
 
+    private static ForecastSource source(LocalDate today, ZoneId zone) {
+        var fetched = today.atTime(7, 45).atZone(zone).toInstant();
+        return new ForecastSource("open-meteo", "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)", fetched, false,
+                false, false, "", Optional.empty());
+    }
+
     private static Outlook planWithTwoDays() {
         var zone = ZoneId.of("Europe/Brussels");
         var today = LocalDate.of(2026, 10, 15);
         var days = List.of(new DayPlan(today, 50, List.of(), 50, 40, 10),
                 new DayPlan(today.plusDays(1), 40, List.of(), 40, 30, 10));
-        return new Outlook.Planned(today.atTime(8, 0).atZone(zone).toInstant(), zone, days, 50, false, Optional.empty());
+        return new Outlook.Planned(today.atTime(8, 0).atZone(zone).toInstant(), zone, days, 50, false, Optional.empty(), source(today, zone));
     }
 
     /** Today without a window, tomorrow with many windows: a much taller main card than today's. */
@@ -247,7 +254,7 @@ class DashboardTest {
         }
         var days = List.of(new DayPlan(today, 50, List.of(), 50, 40, 10),
                 new DayPlan(tomorrow, 40, windows, 60, 50, 10));
-        return new Outlook.Planned(today.atTime(8, 0).atZone(zone).toInstant(), zone, days, 50, true, Optional.empty());
+        return new Outlook.Planned(today.atTime(8, 0).atZone(zone).toInstant(), zone, days, 50, true, Optional.empty(), source(today, zone));
     }
 
     @Test
