@@ -177,7 +177,7 @@ class PlannerTest {
     @Test
     void aHigherMarginGivesMorePower() {
         var cautious = friday(900, 40).windows().getFirst();
-        var bold = new Planner(Forecasts.example(), new PlanningPreferences(80, 1.0, 0.2, 45))
+        var bold = new Planner(Forecasts.example(), new PlanningPreferences(30, 80, 1.0, 0.2, 45, 15))
                 .plan(bellDay(SUMMER_FRI, 900), 40, at(SUMMER_FRI, 0)).getFirst().windows().getFirst();
         assertThat(bold.powerKw()).isGreaterThan(cautious.powerKw());
     }

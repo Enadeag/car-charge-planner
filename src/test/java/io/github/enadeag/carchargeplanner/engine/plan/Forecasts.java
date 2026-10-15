@@ -22,7 +22,7 @@ final class Forecasts {
     static final ZoneId TZ = ZoneId.of("Europe/Amsterdam");
 
     static final PanelArray PANELS = new PanelArray("", 4.8, 35, -45, 0.14);
-    static final PlanningPreferences PREFERENCES = new PlanningPreferences(80, 0.85, 0.2, 45);
+    static final PlanningPreferences PREFERENCES = new PlanningPreferences(30, 80, 0.85, 0.2, 45, 15);
 
     private Forecasts() {
     }
