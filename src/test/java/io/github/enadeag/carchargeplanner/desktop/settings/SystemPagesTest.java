@@ -2,6 +2,9 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.github.enadeag.carchargeplanner.desktop.AppSettings;
+import io.github.enadeag.carchargeplanner.desktop.Appearance;
+import io.github.enadeag.carchargeplanner.desktop.DisplayMode;
 import io.github.enadeag.carchargeplanner.desktop.Fx;
 import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.Scenes;
@@ -259,6 +262,20 @@ class SystemPagesTest {
                 .contains(settings.messages.text(TextKey.TYPICAL_TAG));
         assertThat(Fx.call(() -> settings.field(view, TextKey.FIELD_CAR_BATTERY).getAccessibleHelp()))
                 .doesNotContain(settings.messages.text(TextKey.TYPICAL_TAG));
+    }
+
+    @Test
+    void typicalValuesStayTaggedInImperialUnits() throws Exception {
+        settings = new SettingsFixture(folder, Language.ENGLISH);
+        var file = new ConfigFile(settings.configPath);
+        var example = file.read();
+        file.write(example.withSystem(example.system(), new TypicalValues(Set.of(Setting.CAR_CONSUMPTION), List.of())));
+        settings.appSettings.write(new AppSettings(Optional.empty(), Units.IMPERIAL, DisplayMode.AUTOMATIC, Appearance.SYSTEM));
+        var view = settings.open();
+
+        assertThat(Fx.call(() -> settings.field(view, TextKey.FIELD_CAR_CONSUMPTION).getAccessibleHelp()))
+                .contains(settings.messages.text(TextKey.TYPICAL_TAG));
+        assertThat(Fx.call(view::isChanged)).isFalse();
     }
 
     /** A provider with only a place search, which always finds the one place. */

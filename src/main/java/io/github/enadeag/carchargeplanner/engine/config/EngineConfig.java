@@ -1,5 +1,10 @@
 package io.github.enadeag.carchargeplanner.engine.config;
 
+import java.time.ZoneId;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 /**
  * What the engine's config file holds: the description of the system, the planning preferences, the chosen forecast
  * providers, the weekly away periods, and which of the system's values are typical values.
@@ -23,6 +28,24 @@ public record EngineConfig(HomeSystem system, PlanningPreferences planning, Fore
         if (typical.panels().size() > system.panels().size()) {
             throw new IllegalArgumentException("typical.panels lists more panel arrays than system.panels has");
         }
+    }
+
+    /**
+     * The config set-up starts from when there is none yet: one panel array, a house, a car and a charger with
+     * typical values, all tagged as such; no place chosen yet; the recommended planning preferences; one forecast
+     * provider without a fallback; and no away periods.
+     *
+     * @param timezone the time zone the home is assumed to be in until the owner chooses a place, such as the
+     *     computer's own
+     * @param primary the forecast provider to ask, normally the first one this version offers
+     * @return a draft that can be planned with, but whose place still has to be chosen
+     */
+    public static EngineConfig firstRun(ZoneId timezone, ProviderId primary) {
+        var system = new HomeSystem(Coordinates.NOT_CHOSEN, timezone, List.of(PanelArray.TYPICAL), House.TYPICAL,
+                Car.TYPICAL, Charger.TYPICAL);
+        return new EngineConfig(system, PlanningPreferences.RECOMMENDED,
+                new ForecastSelection(primary, Optional.empty(), Map.of()), AwaySchedule.NONE,
+                new TypicalValues(TypicalValues.SYSTEM_SETTINGS, List.of(TypicalValues.PANEL_SETTINGS)));
     }
 
     /**
