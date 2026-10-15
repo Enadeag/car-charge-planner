@@ -201,7 +201,8 @@ DAY_SET = Set {0} A ({1} kW)
 4. **Try it.** The app follows the system's language: on Linux `LANGUAGE`, then `LC_ALL`, `LC_MESSAGES` and `LANG`
    (the plain `C` locale means English); on Windows the language of the user's display. To choose one, write
    `{"language": "de"}` to `app.json` beside `engine.json` (`~/.config/car-charge-planner/`, Windows
-   `%APPDATA%\car-charge-planner\`); `"system"` follows the system again. The language is read when the app starts.
+   `%APPDATA%\car-charge-planner\`); `"system"` follows the system again. The file is read when the app starts;
+   choosing a language in Settings (App) and saving switches the running app at once.
 
    ```bash
    LANGUAGE=nl ./mvnw compile exec:exec -Dapp.args="--config=docs/example-engine.json"
