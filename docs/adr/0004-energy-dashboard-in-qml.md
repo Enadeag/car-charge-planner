@@ -1,3 +1,7 @@
+---
+status: superseded in part by ADR-0005 (the dashboard is built in JavaFX; the design stands)
+---
+
 # The interface is an energy dashboard in QML
 
 The app is mostly used at a glance from the tray, and the old Qt Widgets screens looked dated. The new interface, written in QML (ADR 0002) against the engine's plain-data interface (ADR 0001), is one **dashboard**: shown as the popup next to the tray icon, as a window in window mode, and detachable from the popup. It holds the next charge window, grid advice when it is needed, today's solar curve, the battery, and the coming days. Colour carries meaning, the same everywhere: sun amber, grid blue, car and battery green, each with an icon or label too. The app has one look on every system and follows the system's light or dark mode and font. Accessibility (WCAG AA contrast, keyboard, screen-reader labels, 150 and 200 % scaling) is a requirement from the start, not a later pass.

@@ -1,3 +1,7 @@
+---
+status: superseded in part by ADR-0005 (jpackage replaces PyInstaller and Inno Setup; unsigned until SignPath stands)
+---
+
 # Windows builds with PyInstaller, unsigned until SignPath at the launch
 
 The Windows installer wraps a PyInstaller one-folder build in Inno Setup. Nuitka was tried on the same machine: the installer came out the same size (23 MB), later starts were only 0.1 s faster and the first start was slower, Windows Defender flagged neither, and its windowed build found no keychain backend, which would leave API keys in a file. The one-folder layout keeps the Qt libraries as separate files that users can replace, as the LGPL asks of PySide6.
