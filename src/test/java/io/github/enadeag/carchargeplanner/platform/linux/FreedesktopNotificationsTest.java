@@ -15,6 +15,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
@@ -50,6 +51,7 @@ class FreedesktopNotificationsTest {
     private FakeServer server;
     private FreedesktopNotifications notifications;
     private final Semaphore opened = new Semaphore(0);
+    private final AtomicReference<String> openLabel = new AtomicReference<>("Open dashboard");
 
     /** One call of Notify, as the server received it. */
     private record Call(String appName, long replacesId, String appIcon, String summary, String body,
@@ -81,7 +83,7 @@ class FreedesktopNotificationsTest {
         desktop = DBusConnectionBuilder.forAddress(address).withShared(false).build();
         notifications = new FreedesktopNotifications(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),
                 "Car charge planner", "car-charge-planner", new AppIcon(), Files.createDirectory(folder.resolve("notify")),
-                "Open dashboard");
+                openLabel::get);
     }
 
     @AfterEach
@@ -192,11 +194,24 @@ class FreedesktopNotificationsTest {
     }
 
     @Test
+    void theButtonOfTheNextNotificationSpeaksTheLanguageChosenSince() throws Exception {
+        serve();
+        show();
+
+        openLabel.set("Dashboard openen");
+        notifications.show(new NotificationText("Laadvenster 10:00 – 15:00", "Stel de stroom in op 7 A"));
+
+        var call = server.calls.poll(TIMEOUT_S, TimeUnit.SECONDS);
+        assertThat(call).isNotNull();
+        assertThat(call.actions()).containsExactly("default", "Dashboard openen", "open", "Dashboard openen");
+    }
+
+    @Test
     void withoutASessionBusTheAppGoesOnAndTheLogSaysSoOnce() throws IOException {
         var offline = new FreedesktopNotifications(() -> {
             throw new DBusException("no session bus");
         }, "Car charge planner", "car-charge-planner", new AppIcon(), Files.createDirectory(folder.resolve("offline")),
-                "Open dashboard");
+                () -> "Open dashboard");
 
         var warnings = warningsWhile(() -> {
             offline.listen(opened::release);

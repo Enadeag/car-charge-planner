@@ -40,42 +40,52 @@ public final class AwtTray implements Tray, Notifications {
     private final TaskbarShade taskbar;
     private final ObservableValue<ColorScheme> colorScheme;
     private final String title;
-    private final MenuLabels labels;
+    private MenuLabels labels;
+    private List<MenuItem> items = List.of();
     private TrayStatus status = new TrayStatus(StatusDot.NONE, "");
     private TrayIcon trayIcon;
     private final TrayMessages messages = new TrayMessages();
 
     /**
-     * Makes the tray; nothing appears until {@link #show(TrayActions)}.
+     * Makes the tray; nothing appears until {@link #show(TrayActions)}, and its menu needs
+     * {@link #showLabels(MenuLabels)} first.
      *
      * @param icon draws the icon with its status dot, in the sizes the display's scale may ask for
      * @param taskbar tells whether the icon sits on a light or a dark taskbar; read again whenever the icon changes
      * @param colorScheme the system's light or dark ({@code Platform.getPreferences().colorSchemeProperty()}); when it
      *     changes the icon is drawn again, because Windows' own light and dark setting switches the taskbar too
      * @param title the first line of the icon's tooltip
-     * @param labels what the entries of the icon's menu say
      */
-    public AwtTray(StatusIcon icon, TaskbarShade taskbar, ObservableValue<ColorScheme> colorScheme, String title,
-            MenuLabels labels) {
+    public AwtTray(StatusIcon icon, TaskbarShade taskbar, ObservableValue<ColorScheme> colorScheme, String title) {
         this.icon = icon;
         this.taskbar = taskbar;
         this.colorScheme = colorScheme;
         this.title = title;
-        this.labels = labels;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @throws IllegalStateException when the menu has no labels yet: {@link #showLabels(MenuLabels)} comes first
+     */
     @Override
     public synchronized void show(TrayActions actions) throws TrayUnavailable {
+        if (labels == null) {
+            throw new IllegalStateException("the menu needs its labels before the tray shows");
+        }
         // without a desktop (a service, or an ssh session) even making the menu fails
         if (GraphicsEnvironment.isHeadless() || !SystemTray.isSupported()) {
             throw new TrayUnavailable("Windows has no notification area for this app", null);
         }
+        items = List.of(menuItem(actions.open()), menuItem(actions.settings()), menuItem(actions.about()),
+                menuItem(actions.quit()));
+        relabel();
         var menu = new PopupMenu();
-        menu.add(menuItem(labels.open(), actions.open()));
-        menu.add(menuItem(labels.settings(), actions.settings()));
-        menu.add(menuItem(labels.about(), actions.about()));
+        menu.add(items.get(0));
+        menu.add(items.get(1));
+        menu.add(items.get(2));
         menu.addSeparator();
-        menu.add(menuItem(labels.quit(), actions.quit()));
+        menu.add(items.get(3));
         trayIcon = new TrayIcon(image(), tooltip(), menu);
         trayIcon.setImageAutoSize(true);
         trayIcon.addMouseListener(new MouseAdapter() {
@@ -103,6 +113,12 @@ public final class AwtTray implements Tray, Notifications {
     public synchronized void showStatus(TrayStatus status) {
         this.status = status;
         redraw();
+    }
+
+    @Override
+    public synchronized void showLabels(MenuLabels labels) {
+        this.labels = labels;
+        relabel();
     }
 
     @Override
@@ -157,8 +173,18 @@ public final class AwtTray implements Tray, Notifications {
         return text.length() <= TOOLTIP_MAX ? text : text.substring(0, TOOLTIP_MAX - 1) + "…";
     }
 
-    private static MenuItem menuItem(String label, Runnable action) {
-        var item = new MenuItem(label);
+    /** The menu's entries, once they are made, in the order of {@link MenuLabels}. */
+    private void relabel() {
+        if (!items.isEmpty()) {
+            var texts = List.of(labels.open(), labels.settings(), labels.about(), labels.quit());
+            for (int i = 0; i < items.size(); i++) {
+                items.get(i).setLabel(texts.get(i));
+            }
+        }
+    }
+
+    private static MenuItem menuItem(Runnable action) {
+        var item = new MenuItem();
         item.addActionListener(event -> action.run());
         return item;
     }

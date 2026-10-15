@@ -23,6 +23,14 @@ public interface Tray {
      */
     void showStatus(TrayStatus status);
 
+    /**
+     * Gives the entries of the icon's menu new labels, such as in another language. May be called from any thread,
+     * also before {@link #show(TrayActions)}: the menu then appears with them.
+     *
+     * @param labels what the entries say until the next call; never null
+     */
+    void showLabels(MenuLabels labels);
+
     /** Takes the icon out of the tray; does nothing when it is not there. */
     void remove();
 
@@ -48,6 +56,17 @@ public interface Tray {
      * @param quit the entry that quits the app, such as "Quit"; not empty
      */
     record MenuLabels(String open, String settings, String about, String quit) {
+
+        /**
+         * The labels in a language.
+         *
+         * @param messages the texts of the language the menu speaks
+         * @return "Open dashboard", "Settings…", "About…" and "Quit" in that language
+         */
+        public static MenuLabels of(Messages messages) {
+            return new MenuLabels(messages.text(TextKey.OPEN_DASHBOARD), messages.text(TextKey.MENU_SETTINGS),
+                    messages.text(TextKey.MENU_ABOUT), messages.text(TextKey.QUIT));
+        }
     }
 
     /** The system has no tray this app can use, such as GNOME without the AppIndicator extension. */

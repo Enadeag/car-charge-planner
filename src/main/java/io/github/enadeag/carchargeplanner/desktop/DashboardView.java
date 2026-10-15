@@ -94,6 +94,27 @@ final class DashboardView extends VBox {
     }
 
     /**
+     * Which day tab is selected.
+     *
+     * @return the selected day's index, from 0 for today; 0 while no plan shows
+     */
+    int selectedDay() {
+        return Math.max(0, tabs.getSelectionModel().getSelectedIndex());
+    }
+
+    /**
+     * Selects a day tab and shows that day, as a click on its tab does.
+     *
+     * @param index the day's index, from 0 for today; one past the last day selects the last day, and without a plan
+     *     nothing happens
+     */
+    void selectDay(int index) {
+        if (!days.isEmpty()) {
+            tabs.getSelectionModel().select(Math.clamp(index, 0, days.size() - 1));
+        }
+    }
+
+    /**
      * Shows or hides the header's detach button, which only makes sense in the popup.
      *
      * @param detachable true in the popup, false in the window

@@ -45,6 +45,21 @@ final class DashboardWindow {
     }
 
     /**
+     * Puts another view where one is shown, such as the same dashboard in another language. The window stays open or
+     * closed, and fits the new view.
+     *
+     * @param before the view that may be in the window now
+     * @param after the view to show in its place; nothing changes when the window does not hold {@code before}
+     */
+    void replace(DashboardView before, DashboardView after) {
+        if (content.getChildren().contains(before)) {
+            after.setDetachable(false);
+            content.getChildren().setAll(after);
+            fit();
+        }
+    }
+
+    /**
      * Whether the window is open.
      *
      * @return true while it shows

@@ -9,6 +9,7 @@ import io.github.enadeag.carchargeplanner.engine.notify.AnnouncementKind;
 import io.github.enadeag.carchargeplanner.engine.plan.Window;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 /** What a notification says; the Python version's test_messages_say_what_to_set. */
@@ -23,7 +24,7 @@ class AnnouncementTextsTest {
     }
 
     private static NotificationText text(AnnouncementKind kind, Window window, Phases phases) {
-        return new AnnouncementTexts(new Messages(Language.ENGLISH)).notification(new Announcement(kind, window, BRUSSELS, phases, new Percent(30)));
+        return new AnnouncementTexts(new LanguageChoice(Language.ENGLISH)).notification(new Announcement(kind, window, BRUSSELS, phases, new Percent(30)));
     }
 
     @Test
@@ -39,10 +40,23 @@ class AnnouncementTextsTest {
         var announcement = new Announcement(AnnouncementKind.CHARGE_WINDOW, window(10, 15, 7, 1.6, 7.5, 0.1), BRUSSELS,
                 Phases.ONE, new Percent(30));
 
-        var text = new AnnouncementTexts(new Messages(Language.DUTCH)).notification(announcement);
+        var text = new AnnouncementTexts(new LanguageChoice(Language.DUTCH)).notification(announcement);
 
         assertThat(text.title()).isEqualTo("Laadvenster 10:00 – 15:00");
         assertThat(text.body()).isEqualTo("Stel in de app van je laadpaal de stroom in op 7 A (1,6 kW). Ongeveer 7,6 kWh, 99% zon.");
+    }
+
+    @Test
+    void theNextNotificationSpeaksTheLanguageChosenSince() {
+        var language = new LanguageChoice(Language.ENGLISH);
+        var texts = new AnnouncementTexts(language);
+        var announcement = new Announcement(AnnouncementKind.CHARGE_WINDOW, window(10, 15, 7, 1.6, 7.5, 0.1), BRUSSELS,
+                Phases.ONE, new Percent(30));
+        assertThat(texts.notification(announcement).title()).isEqualTo("Charge window 10:00 – 15:00");
+
+        language.choose(Optional.of(Language.DUTCH));
+
+        assertThat(texts.notification(announcement).title()).isEqualTo("Laadvenster 10:00 – 15:00");
     }
 
     @Test

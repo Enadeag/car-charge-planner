@@ -6,6 +6,7 @@ import io.github.enadeag.carchargeplanner.desktop.AppSettingsFile;
 import io.github.enadeag.carchargeplanner.desktop.Dashboard;
 import io.github.enadeag.carchargeplanner.desktop.DisplayMode;
 import io.github.enadeag.carchargeplanner.desktop.Language;
+import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.Notifications;
 import io.github.enadeag.carchargeplanner.desktop.StartAtLogin;
@@ -13,7 +14,7 @@ import io.github.enadeag.carchargeplanner.desktop.StatusIcon;
 import io.github.enadeag.carchargeplanner.desktop.TaskbarHiding;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
 import io.github.enadeag.carchargeplanner.desktop.Tray;
-import io.github.enadeag.carchargeplanner.desktop.TrayStatusMapper;
+import io.github.enadeag.carchargeplanner.desktop.TrayTexts;
 import io.github.enadeag.carchargeplanner.desktop.Units;
 import io.github.enadeag.carchargeplanner.desktop.settings.AboutFacts;
 import io.github.enadeag.carchargeplanner.desktop.settings.Category;
@@ -124,12 +125,13 @@ public final class Main {
         }
         var appSettingsFile = new AppSettingsFile(defaultConfigPath().resolveSibling(APP_SETTINGS_FILE),
                 Units.ofCountry(Locale.getDefault(Locale.Category.FORMAT).getCountry()));
-        // read once, as the app starts: a changed language or mode applies at the next start
+        // the mode is read once, as the app starts, and applies at the next start; the language follows Settings
         var appSettings = appSettingsFile.read();
-        var messages = new Messages(appSettings.language().orElseGet(() ->
-                Language.ofSystem(System.getenv(), Locale.getDefault(Locale.Category.DISPLAY))));
+        var language = new LanguageChoice(Language.ofSystem(System.getenv(), Locale.getDefault(Locale.Category.DISPLAY)));
+        language.choose(appSettings.language());
+        var messages = language.messages();
         switch (commandLine.command()) {
-            case RUN -> run(commandLine, appSettingsFile, appSettings.mode(), messages);
+            case RUN -> run(commandLine, appSettingsFile, appSettings.mode(), language);
             case QUIT -> System.exit(quitRunningApp(messages));
             case START_AT_LOGIN_ON -> System.exit(switchStartAtLogin(true, messages));
             case START_AT_LOGIN_OFF -> System.exit(switchStartAtLogin(false, messages));
@@ -141,17 +143,17 @@ public final class Main {
      * planning every minute. When a copy runs already, it is asked to show its dashboard instead, and this one exits.
      */
     private static void run(CommandLine commandLine, AppSettingsFile appSettingsFile, DisplayMode mode,
-            Messages messages) throws Exception {
+            LanguageChoice language) throws Exception {
         var commands = new CompletableFuture<Consumer<InstanceCommand>>();
         var instance = singleInstance();
         // commands that come in while the app is still starting wait until it can carry them out
         switch (instance.claim(command -> commands.thenAccept(handler -> handler.accept(command)))) {
             case HANDED_OVER -> {
-                System.err.println(messages.text(TextKey.CLI_HANDED_OVER, TITLE));
+                System.err.println(language.messages().text(TextKey.CLI_HANDED_OVER, TITLE));
                 return;
             }
             case NO_ANSWER -> {
-                System.err.println(messages.text(TextKey.CLI_NO_ANSWER, TITLE));
+                System.err.println(language.messages().text(TextKey.CLI_NO_ANSWER, TITLE));
                 System.exit(1);
             }
             case FIRST, UNAVAILABLE -> {
@@ -174,18 +176,16 @@ public final class Main {
             var colorScheme = Platform.getPreferences().colorSchemeProperty();
             colorSchemeFound.complete(colorScheme);
             dashboardMade.complete(new Dashboard(icon, colorScheme, Platform.getPreferences().reducedMotionProperty(),
-                    clock, taskbarHiding(), messages));
+                    clock, taskbarHiding(), language));
         });
         var dashboard = dashboardMade.get();
-        var tray = tray(colorSchemeFound.get(), new Tray.MenuLabels(messages.text(TextKey.OPEN_DASHBOARD),
-                messages.text(TextKey.MENU_SETTINGS), messages.text(TextKey.MENU_ABOUT), messages.text(TextKey.QUIT)));
-        var trayStatus = new TrayStatusMapper(messages);
-        tray.showStatus(trayStatus.loading());
+        var tray = tray(colorSchemeFound.get());
+        var trayTexts = new TrayTexts(tray, language);
         // a click on a notification does not say where the tray icon is, and the popup would close again as soon as
         // the desktop gives the focus elsewhere: the window comes to the front and stays
-        var notifications = notifications(tray, icon, messages.text(TextKey.OPEN_DASHBOARD));
+        var notifications = notifications(tray, icon, language);
         notifications.listen(dashboard::openWindow);
-        var texts = new AnnouncementTexts(messages);
+        var texts = new AnnouncementTexts(language);
         var dataFolder = DataLocation.defaultFolder(System.getProperty("os.name"), System.getenv(),
                 Path.of(System.getProperty("user.home")));
         var engine = engine(configFile, secretsFile, dataFolder, clock,
@@ -201,7 +201,7 @@ public final class Main {
             try {
                 var outlook = engine.plan();
                 dashboard.show(outlook);
-                tray.showStatus(trayStatus.map(outlook));
+                trayTexts.show(outlook);
             } catch (RuntimeException e) {
                 // an uncaught exception would stop the schedule for good
                 LOG.log(Level.ERROR, "planning failed", e);
@@ -210,8 +210,13 @@ public final class Main {
         var settingsMade = new CompletableFuture<SettingsWindow>();
         var facts = new AboutFacts(version(), configPath, appSettingsFile.path(), dataFolder, secretsFile.path());
         var stores = new SettingsStores(engine, appSettingsFile, startAtLogin());
-        Platform.runLater(() -> settingsMade.complete(new SettingsWindow(stores, facts, Main::openLink,
-                () -> replanning.execute(replan), Optional.empty(), colorSchemeFound.join(), icon, messages)));
+        // a Save may have chosen another language: every part follows it at once, before the plan is made again
+        Runnable saved = () -> {
+            language.choose(appSettingsFile.read().language());
+            replanning.execute(replan);
+        };
+        Platform.runLater(() -> settingsMade.complete(new SettingsWindow(stores, facts, Main::openLink, saved,
+                Optional.empty(), colorSchemeFound.join(), icon, language)));
         var settings = settingsMade.get();
         dashboard.onSettings(() -> settings.open(Category.SOLAR));
         dashboard.onAway(() -> settings.open(Category.AWAY));
@@ -407,21 +412,21 @@ public final class Main {
         return System.getProperty("os.name").startsWith("Windows") ? TaskbarHiding.OWNER_WINDOW : TaskbarHiding.NONE;
     }
 
-    private static Tray tray(ObservableValue<ColorScheme> colorScheme, Tray.MenuLabels labels) {
+    private static Tray tray(ObservableValue<ColorScheme> colorScheme) {
         if (System.getProperty("os.name").startsWith("Windows")) {
-            return new AwtTray(new StatusIcon(), new TaskbarShade(), colorScheme, TITLE, labels);
+            return new AwtTray(new StatusIcon(), new TaskbarShade(), colorScheme, TITLE);
         }
         return new StatusNotifierTray(() -> DBusConnectionBuilder.forSessionBus().withShared(false).build(),
-                new StatusIcon(), runtimeFolder("tray"), TITLE, labels);
+                new StatusIcon(), runtimeFolder("tray"), TITLE);
     }
 
     /** Windows shows notifications as the tray icon's messages; Linux has a notification server, also without a tray. */
-    private static Notifications notifications(Tray tray, AppIcon icon, String openLabel) {
+    private static Notifications notifications(Tray tray, AppIcon icon, LanguageChoice language) {
         if (tray instanceof AwtTray awtTray) {
             return awtTray;
         }
         return new FreedesktopNotifications(() -> DBusConnectionBuilder.forSessionBus().withShared(false).build(),
-                TITLE, APP_ID, icon, runtimeFolder("notify"), openLabel);
+                TITLE, APP_ID, icon, runtimeFolder("notify"), () -> language.messages().text(TextKey.OPEN_DASHBOARD));
     }
 
     /** Linux only: a private folder of this process's own; see {@link RuntimeFolder}. */

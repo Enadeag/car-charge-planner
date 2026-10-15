@@ -1,8 +1,10 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
+import io.github.enadeag.carchargeplanner.desktop.AppIcon;
 import io.github.enadeag.carchargeplanner.desktop.AppSettingsFile;
 import io.github.enadeag.carchargeplanner.desktop.Fx;
 import io.github.enadeag.carchargeplanner.desktop.Language;
+import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.Scenes;
 import io.github.enadeag.carchargeplanner.desktop.StartAtLogin;
@@ -33,6 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import javafx.application.ColorScheme;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -104,16 +107,34 @@ final class SettingsFixture {
 
     SettingsView open(boolean installed, ColorScheme scheme, Optional<Runnable> runSetUp) throws Exception {
         return Fx.call(() -> {
-            var stores = new SettingsStores(engine, appSettings, installed ? Optional.of(login) : Optional.empty());
-            var facts = new AboutFacts("1.2.3", configPath, appSettings.path(), folder.resolve("data"),
-                    folder.resolve("secrets.json"));
-            var view = SettingsView.of(stores, facts, opened::add, () -> closed++, () -> saved++, runSetUp, messages);
+            var view = SettingsView.of(stores(installed), facts(), opened::add, () -> closed++, () -> saved++, runSetUp,
+                    messages);
             view.reload();
             stage = Scenes.show(view, scheme);
             stage.setWidth(56 * 13);
             stage.setHeight(40 * 13);
             return view;
         });
+    }
+
+    private SettingsStores stores(boolean installed) {
+        return new SettingsStores(engine, appSettings, installed ? Optional.of(login) : Optional.empty());
+    }
+
+    private AboutFacts facts() {
+        return new AboutFacts("1.2.3", configPath, appSettings.path(), folder.resolve("data"),
+                folder.resolve("secrets.json"));
+    }
+
+    /**
+     * The Settings window, hidden, following a language; after a Save it chooses the language the app settings file
+     * holds, as the app does.
+     */
+    SettingsWindow window(LanguageChoice language) throws Exception {
+        return Fx.call(() -> new SettingsWindow(stores(true), facts(), opened::add, () -> {
+            saved++;
+            language.choose(appSettings.read().language());
+        }, Optional.empty(), new SimpleObjectProperty<>(ColorScheme.LIGHT), new AppIcon(), language));
     }
 
     SettingsView open() throws Exception {

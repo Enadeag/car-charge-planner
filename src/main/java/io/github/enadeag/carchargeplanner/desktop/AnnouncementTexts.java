@@ -6,24 +6,26 @@ import io.github.enadeag.carchargeplanner.engine.notify.Announcement;
 /** An announcement from the engine in words: which window, and what to set in the charger's app. */
 public final class AnnouncementTexts {
 
-    private final Messages messages;
+    private final LanguageChoice language;
 
     /**
      * Makes the mapper; it keeps nothing between announcements.
      *
-     * @param messages the texts, in the owner's language
+     * @param language the language the texts are in, read anew for each announcement; never null
      */
-    public AnnouncementTexts(Messages messages) {
-        this.messages = messages;
+    public AnnouncementTexts(LanguageChoice language) {
+        this.language = language;
     }
 
     /**
      * The notification for an announcement.
      *
      * @param announcement the window the engine announces, with its kind
-     * @return a title with the window's times, and a body with the current, the power and the energy
+     * @return a title with the window's times, and a body with the current, the power and the energy, in the language
+     *     spoken now
      */
     public NotificationText notification(Announcement announcement) {
+        var messages = language.messages();
         var window = announcement.window();
         var span = messages.span(window.start(), window.end(), announcement.zone());
         var power = messages.decimal(window.powerKw());

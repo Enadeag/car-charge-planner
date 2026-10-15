@@ -41,6 +41,7 @@ final class SettingsView extends BorderPane {
     private final HBox actions;
     private final HBox confirm;
     private final Set<Category> refused = EnumSet.noneOf(Category.class);
+    private Optional<SaveOutcome> outcome = Optional.empty();
     private Runnable afterClose = () -> { };
 
     /**
@@ -157,10 +158,33 @@ final class SettingsView extends BorderPane {
     void reload() {
         form.load();
         refused.clear();
+        outcome = Optional.empty();
         categories.refresh();
         status.setText("");
         showActions();
         edited();
+    }
+
+    /**
+     * Takes the place of another view of the same stores, such as one in another language: reads the stores, and
+     * shows the category and the outcome of the last Save that the other view showed.
+     *
+     * @param before the view this one replaces; it should have no unsaved changes, as they are read from the stores
+     */
+    void continueFrom(SettingsView before) {
+        reload();
+        show(before.shown());
+        before.outcome.ifPresent(this::showOutcome);
+        categories.refresh();
+    }
+
+    /**
+     * Whether the owner changed something since Settings opened or was last saved.
+     *
+     * @return true when closing would throw edits away
+     */
+    boolean isChanged() {
+        return form.isChanged();
     }
 
     /**
@@ -180,28 +204,37 @@ final class SettingsView extends BorderPane {
      */
     boolean save() {
         showActions();
-        var outcome = form.save();
+        var result = form.save();
+        showOutcome(result);
+        switch (result) {
+            case SaveOutcome.Saved ignored -> saved.run();
+            case SaveOutcome.Refused problems -> show(problems.categories().getFirst());
+            case SaveOutcome.Failed ignored -> {
+                // the status says it
+            }
+        }
+        categories.refresh();
+        edited();
+        return result instanceof SaveOutcome.Saved;
+    }
+
+    /** The status line, and the categories marked, after a Save. */
+    private void showOutcome(SaveOutcome result) {
+        outcome = Optional.of(result);
         refused.clear();
         status.getStyleClass().remove("problem");
-        switch (outcome) {
-            case SaveOutcome.Saved ignored -> {
-                status.setText(messages.text(TextKey.SETTINGS_SAVED));
-                saved.run();
-            }
+        switch (result) {
+            case SaveOutcome.Saved ignored -> status.setText(messages.text(TextKey.SETTINGS_SAVED));
             case SaveOutcome.Refused problems -> {
                 refused.addAll(problems.categories());
                 status.setText(messages.text(TextKey.SETTINGS_REFUSED));
                 status.getStyleClass().add("problem");
-                show(problems.categories().getFirst());
             }
             case SaveOutcome.Failed failure -> {
                 status.setText(messages.text(TextKey.SETTINGS_SAVE_FAILED, failure.detail()));
                 status.getStyleClass().add("problem");
             }
         }
-        categories.refresh();
-        edited();
-        return outcome instanceof SaveOutcome.Saved;
     }
 
     /** Closes Settings, after asking when that would throw edits away. */

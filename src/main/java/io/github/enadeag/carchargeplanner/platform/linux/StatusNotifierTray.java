@@ -40,42 +40,47 @@ public final class StatusNotifierTray implements Tray {
     private final StatusIcon icon;
     private final IconThemeFolder theme;
     private final String title;
-    private final MenuLabels labels;
     // the name the specification asks for: one per process and item
     private final String busName = "org.kde.StatusNotifierItem-" + ProcessHandle.current().pid() + "-1";
 
     private TrayStatus status = new TrayStatus(StatusDot.NONE, "");
+    private MenuLabels labels;
     private DBusConnection bus;
     private TrayItem item;
+    private TrayMenu menu;
 
     /**
-     * Makes the tray; nothing appears until {@link #show(TrayActions)}.
+     * Makes the tray; nothing appears until {@link #show(TrayActions)}, and its menu needs
+     * {@link #showLabels(MenuLabels)} first.
      *
      * @param connector opens the session bus connection the icon is served on
      * @param icon draws the icon with its status dot, in every size the panel may need
      * @param iconFolder a folder of the tray's own that only this user may use, where it writes its icons for the
      *     panel; {@link #remove()} removes it again
      * @param title the name the panel shows for the icon, such as in its tooltip
-     * @param labels what the entries of the icon's menu say
      */
-    public StatusNotifierTray(BusConnector connector, StatusIcon icon, Path iconFolder, String title, MenuLabels labels) {
+    public StatusNotifierTray(BusConnector connector, StatusIcon icon, Path iconFolder, String title) {
         this.connector = connector;
         this.icon = icon;
         this.theme = new IconThemeFolder(iconFolder);
         this.title = title;
-        this.labels = labels;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @throws IllegalStateException when the menu has no labels yet: {@link #showLabels(MenuLabels)} comes first
+     */
     @Override
     public synchronized void show(TrayActions actions) throws TrayUnavailable {
+        if (labels == null) {
+            throw new IllegalStateException("the menu needs its labels before the tray shows");
+        }
         theme.write(icon);
         item = new TrayItem("car-charge-planner", title, theme.path(), where -> apart(() -> actions.clicked().accept(where)));
         update();
-        var menu = new TrayMenu(List.of(
-                new TrayMenu.Entry(labels.open(), () -> apart(actions.open())),
-                new TrayMenu.Entry(labels.settings(), () -> apart(actions.settings())),
-                new TrayMenu.Entry(labels.about(), () -> apart(actions.about())),
-                new TrayMenu.Entry(labels.quit(), () -> apart(actions.quit()))));
+        menu = new TrayMenu(entryLabels(), List.of(() -> apart(actions.open()), () -> apart(actions.settings()),
+                () -> apart(actions.about()), () -> apart(actions.quit())));
         try {
             bus = connector.connect();
             bus.exportObject(item);
@@ -111,6 +116,25 @@ public final class StatusNotifierTray implements Tray {
         } catch (DBusException e) {
             LOG.log(Level.WARNING, "cannot tell the panel that the tray icon changed", e);
         }
+    }
+
+    /** Gives the menu new labels and tells the panel to read its layout again; its tooltip comes with the status. */
+    @Override
+    public synchronized void showLabels(MenuLabels labels) {
+        this.labels = labels;
+        if (menu == null || bus == null || !bus.isConnected()) {
+            return;
+        }
+        var revision = menu.relabel(entryLabels());
+        try {
+            bus.sendMessage(new DbusMenu.LayoutUpdated(TrayMenu.OBJECT_PATH, revision, 0));
+        } catch (DBusException e) {
+            LOG.log(Level.WARNING, "cannot tell the panel that the tray menu changed", e);
+        }
+    }
+
+    private List<String> entryLabels() {
+        return List.of(labels.open(), labels.settings(), labels.about(), labels.quit());
     }
 
     /** Gives the item the icon and tooltip of the status; the panel sees them when it next reads them. */
