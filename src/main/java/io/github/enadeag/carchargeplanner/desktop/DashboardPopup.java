@@ -15,7 +15,10 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
-/** The dashboard as a popup next to the tray icon. A click elsewhere or Escape closes it. */
+/**
+ * The dashboard as a popup next to the tray icon. A click elsewhere or Escape closes it; Escape in an open entry, such
+ * as the battery level's, closes only the entry.
+ */
 final class DashboardPopup {
 
     /**
@@ -46,9 +49,11 @@ final class DashboardPopup {
         content.getStyleClass().add("popup");
         var scene = new Scene(content, Color.TRANSPARENT);
         theme.style(scene);
-        scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+        // a handler, not a filter: Escape in the battery or away entry closes only the entry, which consumes it
+        scene.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 close();
+                event.consume();
             }
         });
         stage.setScene(scene);

@@ -49,6 +49,8 @@ public enum TextKey {
     CHART_SPOKEN_SPAN,
     /** The current time in words, after the chart's: {0} the time. */
     CHART_SPOKEN_NOW,
+    /** What the arrow keys do on the solar chart, read by a screen reader after the chart's text. */
+    CHART_KEYS,
     /** The battery's heading. */
     BATTERY_HEADING,
     /** The battery's levels: {0} at the start, {1} after charging, in %. */
@@ -407,6 +409,11 @@ public enum TextKey {
     TYPICAL_TAG,
     /** The button that fills a card with typical values. */
     USE_TYPICAL,
+    /**
+     * A control's name for a screen reader where the same control shows more than once: {0} the control's own name,
+     * {1} what tells it apart, such as "Panel array 2" or a provider's name.
+     */
+    IN_GROUP,
     /** The title of a panel array's card: {0} its number. */
     CARD_PANEL_ARRAY,
     /** What a panel array is. */
@@ -625,6 +632,8 @@ public enum TextKey {
     AWAY_FROM_FIELD,
     /** What a screen reader calls the end. */
     AWAY_TO_FIELD,
+    /** One weekly away period, to tell its fields apart for a screen reader: {0} its number, from 1. */
+    AWAY_PERIOD_NUMBER,
     /** The title of the set-up card. */
     CARD_SETUP,
     /** What running set-up again does. */

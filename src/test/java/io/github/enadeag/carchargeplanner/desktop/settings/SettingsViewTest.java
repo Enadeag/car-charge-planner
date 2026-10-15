@@ -82,7 +82,7 @@ class SettingsViewTest {
         assertThat(settings.configPath).hasContent(original);
         assertThat(settings.appSettings.path()).doesNotExist();
         assertThat(Fx.call(view::shown)).isEqualTo(Category.PLANNING);
-        assertThat(Fx.call(() -> settings.field(view, TextKey.FIELD_MINIMUM_CHARGE).getAccessibleHelp()))
+        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_MINIMUM_CHARGE).getAccessibleHelp()))
                 .startsWith(settings.messages.text(TextKey.PROBLEM_NOT_BELOW_TARGET));
         assertThat(settings.saved).isZero();
     }

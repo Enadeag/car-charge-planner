@@ -8,7 +8,8 @@ import javafx.scene.control.TabPane;
 /**
  * The strip of day tabs, today first, each with a glyph of where its charge comes from. Left and Right move between
  * them. The tabs hold no content: the dashboard shows the selected day below them, where its height can follow the
- * width (a TabPane sizes its content without it, which cuts off wrapped text).
+ * width (a TabPane sizes its content without it, which cuts off wrapped text). A screen reader reads a tab's day
+ * with what the glyph shows, such as "Charge window".
  */
 final class DayTabs extends TabPane {
 
@@ -44,9 +45,24 @@ final class DayTabs extends TabPane {
         }
     }
 
+    /**
+     * Lays out the strip, and gives each tab's header the help a screen reader reads after the day.
+     */
+    @Override
+    protected void layoutChildren() {
+        super.layoutChildren();
+        // JavaFX reads only a Tab's text, and its header (the skin's node, made with the skin) is the one that is read
+        for (var header : lookupAll(".tab")) {
+            if (header.getProperties().get(Tab.class) instanceof Tab tab && tab.getUserData() instanceof String help) {
+                header.setAccessibleHelp(help);
+            }
+        }
+    }
+
     private static Tab tab(DayModel day) {
         var tab = new Tab(day.tab());
         tab.setGraphic(Glyphs.of(day.kind()));
+        tab.setUserData(day.heading());
         return tab;
     }
 }

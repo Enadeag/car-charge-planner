@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.Messages;
+import io.github.enadeag.carchargeplanner.desktop.ScreenReader;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
 import io.github.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting;
@@ -21,6 +22,7 @@ final class AwayRow extends VBox {
     private final ChoiceField<DayOfWeek> weekday;
     private final TimeInput start = new TimeInput();
     private final TimeInput end = new TimeInput();
+    private final Button removeButton;
     private final Label problem = FieldRow.paragraph("", "field-problem");
 
     /**
@@ -36,10 +38,7 @@ final class AwayRow extends VBox {
         weekday.load(period.weekday());
         start.load(period.start());
         end.load(period.end());
-        weekday.focusable().setAccessibleText(messages.text(TextKey.AWAY_WEEKDAY));
-        start.focusable().setAccessibleText(messages.text(TextKey.AWAY_FROM_FIELD));
-        end.focusable().setAccessibleText(messages.text(TextKey.AWAY_TO_FIELD));
-        var removeButton = new Button(messages.text(TextKey.AWAY_REMOVE));
+        removeButton = new Button(messages.text(TextKey.AWAY_REMOVE));
         removeButton.setOnAction(event -> remove.accept(this));
         var line = new HBox(weekday.view(), new Label(messages.text(TextKey.AWAY_FROM)), start.view(),
                 new Label(messages.text(TextKey.AWAY_TO)), end.view(), removeButton);
@@ -48,6 +47,27 @@ final class AwayRow extends VBox {
         problem.setManaged(false);
         getChildren().addAll(line, problem);
         getStyleClass().add("away-row");
+        number(0, 1);
+    }
+
+    /**
+     * Gives the row its place among the weekly away periods: with more than one, a screen reader reads each field
+     * and the Remove button with the period's number, so the rows' twins differ.
+     *
+     * @param index the row's place, from 0
+     * @param count how many rows there are, at least 1
+     */
+    void number(int index, int count) {
+        var period = messages.text(TextKey.AWAY_PERIOD_NUMBER, index + 1);
+        ScreenReader.name(weekday.focusable(), spoken(TextKey.AWAY_WEEKDAY, period, count));
+        ScreenReader.name(start.focusable(), spoken(TextKey.AWAY_FROM_FIELD, period, count));
+        ScreenReader.name(end.focusable(), spoken(TextKey.AWAY_TO_FIELD, period, count));
+        // the Remove button's text is short; its name always says which period it removes
+        removeButton.setAccessibleText(messages.text(TextKey.IN_GROUP, removeButton.getText(), period));
+    }
+
+    private String spoken(TextKey name, String period, int count) {
+        return count > 1 ? messages.text(TextKey.IN_GROUP, messages.text(name), period) : messages.text(name);
     }
 
     /**

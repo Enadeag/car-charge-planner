@@ -244,6 +244,48 @@ class DashboardTest {
         assertThat(popup()).isEmpty();
     }
 
+    @Test
+    void escapeInTheBatteryEntryClosesOnlyTheEntryAndAgainThePopup() throws Exception {
+        dashboard.onBatteryEntered(level -> { });
+        dashboard.show(planWithTwoDays(), List.of());
+        clickTheIcon();
+        var root = popup().orElseThrow().getScene().getRoot();
+        Fx.run(() -> Scenes.all(root).stream()
+                .filter(node -> node instanceof Button button
+                        && language.messages().text(TextKey.BATTERY_UPDATE).equals(button.getText()))
+                .map(Button.class::cast).findFirst().orElseThrow().fire());
+
+        Keyboard.press(KeyCode.ESCAPE);
+
+        assertThat(popup()).isPresent();
+        assertThat(Fx.call(() -> Scenes.reallyVisible(root.lookup(".battery-editor")))).isFalse();
+        Keyboard.press(KeyCode.ESCAPE);
+        assertThat(popup()).isEmpty();
+    }
+
+    @Test
+    void escapeHidesTheWindowWhileTheTrayCanBringItBack() throws Exception {
+        dashboard.openWindow();
+        Fx.settle();
+
+        Keyboard.press(KeyCode.ESCAPE);
+
+        assertThat(window()).isEmpty();
+    }
+
+    @Test
+    void escapeLeavesTheWindowOpenWhenClosingItQuitsTheApp() throws Exception {
+        var quit = new AtomicInteger();
+        dashboard.quitWhenClosed(quit::incrementAndGet);
+        dashboard.openWindow();
+        Fx.settle();
+
+        Keyboard.press(KeyCode.ESCAPE);
+
+        assertThat(window()).isPresent();
+        assertThat(quit).hasValue(0);
+    }
+
     /**
      * What a click on another window, or on the panel, does to the popup. The headless platform has no window manager
      * that moves the focus, so the test tells the popup what the system would.

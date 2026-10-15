@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.Messages;
+import io.github.enadeag.carchargeplanner.desktop.ScreenReader;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.forecast.Place;
@@ -45,7 +46,7 @@ final class PlaceSearchCard {
         this.chosen = chosen;
         this.messages = messages;
         text.setPromptText(messages.text(TextKey.PLACE_PROMPT));
-        text.setAccessibleText(messages.text(TextKey.PLACE_FIELD));
+        ScreenReader.name(text, messages.text(TextKey.PLACE_FIELD));
         text.setOnAction(event -> {
             event.consume(); // Enter here searches, it does not save Settings
             search();

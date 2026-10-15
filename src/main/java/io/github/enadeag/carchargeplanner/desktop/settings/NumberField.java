@@ -157,9 +157,14 @@ final class NumberField implements Input {
         return view;
     }
 
+    /**
+     * The spinner, which takes the focus: its own text field only shows that it has it.
+     *
+     * @return the spinner
+     */
     @Override
     public Node focusable() {
-        return spinner.getEditor();
+        return spinner;
     }
 
     @Override

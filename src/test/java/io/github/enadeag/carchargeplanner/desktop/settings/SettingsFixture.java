@@ -10,6 +10,7 @@ import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.Scenes;
 import io.github.enadeag.carchargeplanner.desktop.StartAtLogin;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.TextScale;
 import io.github.enadeag.carchargeplanner.desktop.Units;
 import io.github.enadeag.carchargeplanner.engine.Engine;
 import io.github.enadeag.carchargeplanner.engine.away.AwayFile;
@@ -42,6 +43,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
@@ -152,6 +154,21 @@ final class SettingsFixture {
         return open(true);
     }
 
+    /**
+     * The view as Settings opens it, light, with the system's text this much larger and the window as much, in no
+     * window.
+     */
+    SettingsView open(TextScale scale) throws Exception {
+        return Fx.call(() -> {
+            var view = SettingsView.of(stores(true), facts(), opened::add, () -> closed++, () -> saved++,
+                    Optional.empty(), messages);
+            view.reload();
+            // as large as the app makes its window for the larger text: so many lines of it
+            Scenes.layOut(view, ColorScheme.LIGHT, scale, scale.of(56 * 13), scale.of(40 * 13));
+            return view;
+        });
+    }
+
     void close() throws Exception {
         if (stage != null) {
             Fx.run(stage::close);
@@ -165,13 +182,30 @@ final class SettingsFixture {
     static Node field(SettingsView view, String name) {
         // a page not shown yet has no skins, so a spinner's text field is found through the spinner
         return view.pages().stream().flatMap(page -> Scenes.all(page.view()).stream())
+                .filter(node -> named(node, name))
                 .map(node -> node instanceof Spinner<?> spinner ? spinner.getEditor() : node)
-                .filter(node -> name.equals(node.getAccessibleText()))
                 .findFirst().orElseThrow(() -> new AssertionError("no field " + name));
+    }
+
+    /**
+     * Whether a screen reader calls a control by this name: the name itself, or the name with what tells it apart
+     * from its twin on a card that shows more than once, such as "Size (Panel array 2)".
+     */
+    static boolean named(Node node, String name) {
+        var text = node.getAccessibleText();
+        // a field's label can carry the longer name too: it names the field, and is no field itself
+        return !(node instanceof Label) && text != null && (text.equals(name) || text.startsWith(name + " ("));
     }
 
     Node field(SettingsView view, TextKey name) {
         return field(view, messages.text(name));
+    }
+
+    /** The control a screen reader reads by this name, with its help: the spinner itself, not its text field. */
+    Node control(SettingsView view, TextKey name) {
+        return view.pages().stream().flatMap(page -> Scenes.all(page.view()).stream())
+                .filter(node -> named(node, messages.text(name)))
+                .findFirst().orElseThrow(() -> new AssertionError("no field " + name));
     }
 
     /** Types into a number field as the owner does, without confirming it with Enter. */

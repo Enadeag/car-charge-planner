@@ -47,7 +47,7 @@ final class CarCard implements ConfigPart {
                 row(Setting.CAR_CONSUMPTION, TextKey.FIELD_CAR_CONSUMPTION, TextKey.FIELD_CAR_CONSUMPTION_HINT,
                         consumption),
                 row(Setting.CAR_DAILY_DISTANCE, TextKey.FIELD_CAR_DISTANCE, TextKey.FIELD_CAR_DISTANCE_HINT, distance),
-                TypicalButton.line(this::useTypical, messages));
+                TypicalButton.line(this::useTypical, messages.text(TextKey.CARD_CAR), messages));
     }
 
     /**

@@ -1,15 +1,22 @@
 package io.github.enadeag.carchargeplanner.desktop;
 
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
-/** The dashboard in a window of its own: in window mode, or the popup detached. Closing it hides it. */
+/**
+ * The dashboard in a window of its own: in window mode, or the popup detached. Closing it hides it, and so does Escape
+ * while the tray can bring it back; Escape in an open entry, such as the battery level's, closes only the entry.
+ */
 final class DashboardWindow {
 
     private final Stage stage = new Stage();
     private final StackPane content = new StackPane();
+    /** False once closing quits the app: Escape is too easy a key for that. */
+    private boolean escapeHides = true;
 
     /**
      * Makes the window, hidden.
@@ -26,6 +33,12 @@ final class DashboardWindow {
         stage.setOnCloseRequest(event -> {
             event.consume();
             stage.hide();
+        });
+        scene.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.ESCAPE && escapeHides) {
+                stage.hide();
+                event.consume();
+            }
         });
     }
 
@@ -89,11 +102,12 @@ final class DashboardWindow {
     }
 
     /**
-     * Replaces hiding the window on close by another action.
+     * Replaces hiding the window on close by another action; Escape then no longer closes it.
      *
      * @param action what closing the window does, such as quitting the app; called on the JavaFX thread
      */
     void onClose(Runnable action) {
+        escapeHides = false;
         stage.setOnCloseRequest(event -> action.run());
     }
 }

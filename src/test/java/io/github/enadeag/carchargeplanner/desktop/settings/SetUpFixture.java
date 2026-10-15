@@ -9,6 +9,7 @@ import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.Scenes;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.TextScale;
 import io.github.enadeag.carchargeplanner.desktop.Units;
 import io.github.enadeag.carchargeplanner.engine.Engine;
 import io.github.enadeag.carchargeplanner.engine.away.AwayFile;
@@ -119,6 +120,23 @@ final class SetUpFixture {
         return open(ColorScheme.LIGHT);
     }
 
+    /**
+     * The view as set-up opens it, on its first step, light, with the system's text this much larger and the window
+     * as much, in no window.
+     */
+    SetUpView open(TextScale scale) throws Exception {
+        return Fx.call(() -> {
+            var view = SetUpView.of(stores(), keysFile(), opened::add, Fx.REDUCED_MOTION, () -> closed++,
+                    () -> finished++, messages);
+            // as large as the app makes its window for the larger text: so many lines of it
+            Scenes.layOut(view, ColorScheme.LIGHT, scale, scale.of(50 * 13), scale.of(46 * 13));
+            var start = SetUpStart.read(new SettingsStorage(stores()));
+            view.start(start, start.draft(EngineConfig.firstRun(ZoneId.of("Europe/Amsterdam"),
+                    engine.providers().getFirst().id())), SetUpStep.WELCOME);
+            return view;
+        });
+    }
+
     SetUpView open(ColorScheme scheme) throws Exception {
         return Fx.call(() -> {
             var view = SetUpView.of(stores(), keysFile(), opened::add, Fx.REDUCED_MOTION, () -> closed++,
@@ -150,13 +168,20 @@ final class SetUpFixture {
     static Node field(SetUpView view, String name) {
         view.applyCss(); // a page shown since the last pulse has its controls' skins only then
         return Scenes.all(view).stream()
+                .filter(node -> SettingsFixture.named(node, name))
                 .map(node -> node instanceof Spinner<?> spinner ? spinner.getEditor() : node)
-                .filter(node -> name.equals(node.getAccessibleText()))
                 .findFirst().orElseThrow(() -> new AssertionError("no field " + name));
     }
 
     Node field(SetUpView view, TextKey name) {
         return field(view, messages.text(name));
+    }
+
+    /** The control a screen reader reads by this name, with its help: the spinner itself, not its text field. */
+    Node control(SetUpView view, TextKey name) {
+        view.applyCss();
+        return Scenes.all(view).stream().filter(node -> SettingsFixture.named(node, messages.text(name)))
+                .findFirst().orElseThrow(() -> new AssertionError("no field " + name));
     }
 
     void type(SetUpView view, TextKey name, String text) {

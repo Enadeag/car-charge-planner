@@ -12,10 +12,12 @@ import java.awt.Image;
 import java.awt.MenuItem;
 import java.awt.PopupMenu;
 import java.awt.SystemTray;
+import java.awt.Toolkit;
 import java.awt.TrayIcon;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BaseMultiResolutionImage;
+import java.time.Duration;
 import java.util.List;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
@@ -35,6 +37,13 @@ public final class AwtTray implements Tray, Notifications {
     private static final List<Integer> SIZES = List.of(16, 20, 24, 28, 32, 40, 48, 64);
     /** Windows cuts a tooltip off after 127 characters. */
     private static final int TOOLTIP_MAX = 127;
+    /**
+     * Where Enter on the icon opens the popup: Windows does not say where the icon is, and a place off every screen
+     * puts the popup in the primary screen's bottom right, where the notification area is unless it was moved.
+     */
+    private static final Point2D BY_KEYBOARD = new Point2D(-1_000_000, -1_000_000);
+    /** Windows' own default; AWT names the system's setting when it can. */
+    private static final Duration DOUBLE_CLICK = Duration.ofMillis(500);
 
     private final StatusIcon icon;
     private final TaskbarShade taskbar;
@@ -88,7 +97,13 @@ public final class AwtTray implements Tray, Notifications {
         menu.add(items.get(3));
         trayIcon = new TrayIcon(image(), tooltip(), menu);
         trayIcon.setImageAutoSize(true);
+        var action = new TrayIconAction(doubleClickTime());
         trayIcon.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent event) {
+                action.pressed(event.getWhen());
+            }
+
             @Override
             public void mouseClicked(MouseEvent event) {
                 if (event.getButton() == MouseEvent.BUTTON1) {
@@ -96,8 +111,12 @@ public final class AwtTray implements Tray, Notifications {
                 }
             }
         });
-        // a click on a message, but also a double click on the icon: the messages tell them apart
-        trayIcon.addActionListener(event -> messages.click());
+        // a click on a message, a double click on the icon, or Enter on it after Win+B: the popup opens for the last
+        trayIcon.addActionListener(event -> {
+            if (!messages.click() && action.byKeyboard(event.getWhen())) {
+                actions.clicked().accept(BY_KEYBOARD);
+            }
+        });
         try {
             SystemTray.getSystemTray().add(trayIcon);
         } catch (AWTException e) {
@@ -159,6 +178,11 @@ public final class AwtTray implements Tray, Notifications {
             trayIcon.setImage(image());
             trayIcon.setToolTip(tooltip());
         }
+    }
+
+    private static Duration doubleClickTime() {
+        return Toolkit.getDefaultToolkit().getDesktopProperty("awt.multiClickInterval") instanceof Integer millis
+                ? Duration.ofMillis(millis) : DOUBLE_CLICK;
     }
 
     /** The icon in every size, for AWT to pick the one of the display's scale from. */

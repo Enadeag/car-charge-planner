@@ -102,6 +102,30 @@ class AwayCardTest {
     }
 
     @Test
+    void enterOnTheChoiceOfTheDaySavesThePeriod() throws Exception {
+        show(Models.CLOUDY_TOMORROW, Models.AWAY);
+        openEntry(); // the focus is on "All day"
+
+        Keyboard.press(KeyCode.ENTER);
+
+        assertThat(added).containsExactly(AwayPeriod.allDay(Models.TODAY.plusDays(1), Models.BRUSSELS));
+    }
+
+    @Test
+    void aRefusedPeriodTakesTheFocusToItsTimeWhereAScreenReaderReadsWhy() throws Exception {
+        show(Models.CLOUDY_TOMORROW, Models.AWAY);
+        openEntry();
+        Fx.run(() -> card.editor().enterTimes("16:00", "10:00"));
+
+        Keyboard.press(KeyCode.ENTER);
+
+        assertThat(added).isEmpty();
+        var focused = Fx.call(() -> stage.getScene().getFocusOwner());
+        assertThat(Fx.call(() -> AccessibleNames.of(focused))).isEqualTo(ENGLISH.text(TextKey.AWAY_FROM_FIELD));
+        assertThat(Fx.call(() -> AccessibleNames.help(focused))).isEqualTo(ENGLISH.text(TextKey.ONE_OFF_END_BEFORE_START));
+    }
+
+    @Test
     void escapeClosesTheEntryWithoutSaving() throws Exception {
         show(Models.SUNNY_TODAY, Models.AWAY);
         openEntry();

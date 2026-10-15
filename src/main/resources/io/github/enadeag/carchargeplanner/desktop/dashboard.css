@@ -2,7 +2,8 @@
  * The dashboard's design tokens and styles. Colour means source: sun amber, grid blue, car and battery green,
  * always with a glyph or a label beside it. Text colours (-fg, -muted and the *-text colours) reach WCAG AA 4.5:1
  * on every surface they are used on; source colours and -faint reach 3:1 as marks (glyphs, the card's edge).
- * DashboardContrastTest checks both on the rendered dashboard. AtlantaFX styles the controls (tabs, buttons).
+ * DashboardContrastTest checks both on the rendered dashboard. AtlantaFX styles the controls (tabs, buttons);
+ * the focus ring below is ours, and the keyboard tests check it stands out 3:1 on every screen.
  */
 .root {
     -ground: #e9edf2;
@@ -145,11 +146,30 @@
     -fx-border-color: -grid;
 }
 
+/*
+ * a card's focus ring lies outside it, so its content does not move; the coloured cards keep their edge beside it
+ * (and name their own rules, as a class outweighs a pseudo-class in JavaFX)
+ */
 .card:focus-visible {
     -fx-border-color: -focus;
     -fx-border-width: 2;
-    -fx-border-radius: 14;
-    -fx-border-insets: 0;
+    -fx-border-radius: 16;
+    -fx-border-insets: -4;
+}
+
+.card.sun:focus-visible,
+.card.grid:focus-visible {
+    -fx-border-width: 2, 0 0 0 4;
+    -fx-border-radius: 16, 0;
+    -fx-border-insets: -4, 0.6em 0 0.6em 0;
+}
+
+.card.sun:focus-visible {
+    -fx-border-color: -focus, -sun;
+}
+
+.card.grid:focus-visible {
+    -fx-border-color: -focus, -grid;
 }
 
 .card-label {
@@ -222,7 +242,7 @@
     -fx-border-color: -focus;
     -fx-border-width: 2;
     -fx-border-radius: 6;
-    -fx-border-insets: -3;
+    -fx-border-insets: -4;
 }
 
 .chart-grid {
@@ -567,6 +587,8 @@
 
 .card-buttons {
     -fx-spacing: 0.6em;
+    -fx-hgap: 0.6em;
+    -fx-vgap: 0.4em;
     -fx-padding: 0.3em 0 0 0;
 }
 
@@ -630,4 +652,54 @@
 
 .message-actions {
     -fx-padding: 0.6em 0 0 0;
+}
+
+/*
+ * The focus ring, the same on every control: a 2 px line in -focus, 2 px outside the control. AtlantaFX shows none on
+ * flat buttons, check boxes, radio buttons and links, and in dark only a border that differs too little from the one
+ * it replaces. A border drawn outside the control does not move its content. It shows whenever the control has the
+ * focus, as AtlantaFX's own does: the app also moves the focus itself after a key, such as to what a Save says, and
+ * JavaFX counts only Tab as making the focus visible.
+ */
+.button:focused,
+.toggle-button:focused,
+.hyperlink:focused,
+.check-box:focused,
+.radio-button:focused,
+.combo-box-base:focused,
+.text-input:focused,
+.status-text:focused,
+.message-text:focused {
+    -fx-border-color: -focus;
+    -fx-border-width: 2;
+    -fx-border-insets: -4;
+    -fx-border-radius: 8;
+}
+
+/* a spinner keeps AtlantaFX's own 1 px border inside the ring, so its content does not move */
+.spinner:focused {
+    -fx-border-color: -focus, -color-accent-emphasis;
+    -fx-border-width: 2, 1px;
+    -fx-border-insets: -4, 0;
+    -fx-border-radius: 8, 4px;
+}
+
+/* a spinner's own field shows the spinner's ring, not one of its own */
+.spinner > .text-input:focused {
+    -fx-border-color: transparent;
+}
+
+/*
+ * the day tabs: the selected tab carries the ring while the strip has the focus; every tab has the line, unseen, so
+ * a tab keeps its size as the ring comes and goes
+ */
+.day-tabs > .tab-header-area > .headers-region > .tab {
+    -fx-border-color: transparent;
+    -fx-border-width: 2;
+    -fx-border-insets: 1 1 3 1; /* above the selected tab's underline */
+    -fx-border-radius: 6;
+}
+
+.day-tabs:focus-visible > .tab-header-area > .headers-region > .tab:selected {
+    -fx-border-color: -focus;
 }

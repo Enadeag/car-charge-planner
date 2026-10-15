@@ -80,7 +80,7 @@ class SystemPagesTest {
     private List<TextField> fields(SettingsView view, TextKey name) {
         var label = settings.messages.text(name);
         return view.pages().stream().flatMap(page -> Scenes.all(page.view()).stream())
-                .filter(node -> label.equals(node.getAccessibleText()) && node instanceof TextField)
+                .filter(node -> SettingsFixture.named(node, label) && node instanceof TextField)
                 .map(TextField.class::cast).toList();
     }
 
@@ -177,7 +177,7 @@ class SystemPagesTest {
 
         assertThat(saved).isFalse();
         assertThat(Fx.call(view::shown)).isEqualTo(Category.CHARGER);
-        assertThat(Fx.call(() -> settings.field(view, TextKey.FIELD_MAX_CURRENT).getAccessibleHelp()))
+        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_MAX_CURRENT).getAccessibleHelp()))
                 .startsWith(settings.messages.text(TextKey.PROBLEM_BELOW_MINIMUM_CURRENT));
     }
 
@@ -258,9 +258,9 @@ class SystemPagesTest {
                 new TypicalValues(Set.of(Setting.HOUSE_BASELOAD), List.of())));
         Fx.run(() -> view.show(Category.CAR_HOUSE));
 
-        assertThat(Fx.call(() -> settings.field(view, TextKey.FIELD_BASELOAD).getAccessibleHelp()))
+        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_BASELOAD).getAccessibleHelp()))
                 .contains(settings.messages.text(TextKey.TYPICAL_TAG));
-        assertThat(Fx.call(() -> settings.field(view, TextKey.FIELD_CAR_BATTERY).getAccessibleHelp()))
+        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_CAR_BATTERY).getAccessibleHelp()))
                 .doesNotContain(settings.messages.text(TextKey.TYPICAL_TAG));
     }
 
@@ -273,7 +273,7 @@ class SystemPagesTest {
         settings.appSettings.write(new AppSettings(Optional.empty(), Units.IMPERIAL, DisplayMode.AUTOMATIC, Appearance.SYSTEM));
         var view = settings.open();
 
-        assertThat(Fx.call(() -> settings.field(view, TextKey.FIELD_CAR_CONSUMPTION).getAccessibleHelp()))
+        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_CAR_CONSUMPTION).getAccessibleHelp()))
                 .contains(settings.messages.text(TextKey.TYPICAL_TAG));
         assertThat(Fx.call(view::isChanged)).isFalse();
     }

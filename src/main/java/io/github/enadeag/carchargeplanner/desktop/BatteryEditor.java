@@ -33,6 +33,10 @@ final class BatteryEditor extends HBox {
         var cancel = new Button(messages.text(TextKey.BATTERY_CANCEL));
         cancel.getStyleClass().add("flat");
         cancel.setOnAction(event -> closed.run());
+        // the away entry below can be open as well, with its own Save and Cancel
+        var heading = messages.text(TextKey.BATTERY_HEADING);
+        save.setAccessibleText(messages.text(TextKey.IN_GROUP, save.getText(), heading));
+        cancel.setAccessibleText(messages.text(TextKey.IN_GROUP, cancel.getText(), heading));
         level.getEditor().setOnAction(event -> save());
         setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
