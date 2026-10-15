@@ -17,9 +17,17 @@ public record PanelArray(String name, double kwp, double tiltDeg, double azimuth
      * @throws IllegalArgumentException when a value is outside the range given for it
      */
     public PanelArray {
-        Checks.require(kwp > 0, "kwp must be more than 0");
-        Checks.require(tiltDeg >= 0 && tiltDeg <= 90, "tiltDeg must be between 0 and 90");
-        Checks.require(azimuthDeg >= -180 && azimuthDeg <= 180, "azimuthDeg must be between -180 and 180");
-        Checks.require(systemLosses >= 0 && systemLosses < 1, "systemLosses must be at least 0 and less than 1");
+        if (kwp <= 0 || Double.isNaN(kwp)) {
+            throw new IllegalArgumentException("kwp must be more than 0");
+        }
+        if (tiltDeg < 0 || tiltDeg > 90 || Double.isNaN(tiltDeg)) {
+            throw new IllegalArgumentException("tiltDeg must be between 0 and 90");
+        }
+        if (azimuthDeg < -180 || azimuthDeg > 180 || Double.isNaN(azimuthDeg)) {
+            throw new IllegalArgumentException("azimuthDeg must be between -180 and 180");
+        }
+        if (systemLosses < 0 || systemLosses >= 1 || Double.isNaN(systemLosses)) {
+            throw new IllegalArgumentException("systemLosses must be at least 0 and less than 1");
+        }
     }
 }

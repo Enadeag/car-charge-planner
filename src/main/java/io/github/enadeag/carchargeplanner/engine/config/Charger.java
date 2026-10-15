@@ -17,9 +17,17 @@ public record Charger(Phases phases, int minAmps, int maxAmps, double volts, dou
      * @throws IllegalArgumentException when a value is outside the range given for it
      */
     public Charger {
-        Checks.require(minAmps > 0, "minAmps must be more than 0");
-        Checks.require(maxAmps >= minAmps, "maxAmps must be at least minAmps");
-        Checks.require(volts > 0, "volts must be more than 0");
-        Checks.require(efficiency > 0 && efficiency <= 1, "efficiency must be more than 0 and at most 1");
+        if (minAmps <= 0) {
+            throw new IllegalArgumentException("minAmps must be more than 0");
+        }
+        if (maxAmps < minAmps) {
+            throw new IllegalArgumentException("maxAmps must be at least minAmps");
+        }
+        if (volts <= 0 || Double.isNaN(volts)) {
+            throw new IllegalArgumentException("volts must be more than 0");
+        }
+        if (efficiency <= 0 || efficiency > 1 || Double.isNaN(efficiency)) {
+            throw new IllegalArgumentException("efficiency must be more than 0 and at most 1");
+        }
     }
 }

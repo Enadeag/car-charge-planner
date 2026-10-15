@@ -24,11 +24,21 @@ public record PlanningPreferences(
      * @throws IllegalArgumentException when a value is outside the range given for it
      */
     public PlanningPreferences {
-        Checks.require(minimumPct.value() < targetPct.value(),
-                "minimumPct and targetPct must satisfy 0 <= minimumPct < targetPct <= 100");
-        Checks.require(margin > 0 && margin <= 1, "margin must be more than 0 and at most 1");
-        Checks.require(importToleranceKwh >= 0, "importToleranceKwh must not be negative");
-        Checks.require(minWindowMinutes > 0, "minWindowMinutes must be more than 0");
-        Checks.require(notifyLeadMinutes >= 0, "notifyLeadMinutes must not be negative");
+        if (minimumPct.value() >= targetPct.value()) {
+            throw new IllegalArgumentException(
+                    "minimumPct and targetPct must satisfy 0 <= minimumPct < targetPct <= 100");
+        }
+        if (margin <= 0 || margin > 1 || Double.isNaN(margin)) {
+            throw new IllegalArgumentException("margin must be more than 0 and at most 1");
+        }
+        if (importToleranceKwh < 0 || Double.isNaN(importToleranceKwh)) {
+            throw new IllegalArgumentException("importToleranceKwh must not be negative");
+        }
+        if (minWindowMinutes <= 0) {
+            throw new IllegalArgumentException("minWindowMinutes must be more than 0");
+        }
+        if (notifyLeadMinutes < 0) {
+            throw new IllegalArgumentException("notifyLeadMinutes must not be negative");
+        }
     }
 }

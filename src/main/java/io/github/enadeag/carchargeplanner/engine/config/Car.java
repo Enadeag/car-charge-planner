@@ -15,8 +15,14 @@ public record Car(double usableBatteryKwh, double consumptionKwhPer100km, double
      * @throws IllegalArgumentException when a value is outside the range given for it
      */
     public Car {
-        Checks.require(usableBatteryKwh > 0, "usableBatteryKwh must be more than 0");
-        Checks.require(consumptionKwhPer100km > 0, "consumptionKwhPer100km must be more than 0");
-        Checks.require(kmPerDay >= 0, "kmPerDay must not be negative");
+        if (usableBatteryKwh <= 0 || Double.isNaN(usableBatteryKwh)) {
+            throw new IllegalArgumentException("usableBatteryKwh must be more than 0");
+        }
+        if (consumptionKwhPer100km <= 0 || Double.isNaN(consumptionKwhPer100km)) {
+            throw new IllegalArgumentException("consumptionKwhPer100km must be more than 0");
+        }
+        if (kmPerDay < 0 || Double.isNaN(kmPerDay)) {
+            throw new IllegalArgumentException("kmPerDay must not be negative");
+        }
     }
 }

@@ -30,7 +30,9 @@ public record ForecastSelection(
      *     primary
      */
     public ForecastSelection {
-        Checks.require(!fallback.equals(Optional.of(primary)), "fallback must be different from primary");
+        if (fallback.equals(Optional.of(primary))) {
+            throw new IllegalArgumentException("fallback must be different from primary");
+        }
         settings = checkedCopy(settings);
     }
 
@@ -40,11 +42,14 @@ public record ForecastSelection(
             @JsonProperty("primary") ProviderId primary,
             @JsonProperty("fallback") String fallback,
             @JsonProperty("settings") Map<String, Map<String, String>> settings) {
-        Checks.require(fallback.isEmpty() || ProviderId.isValid(fallback),
-                "fallback must be empty or a provider id such as forecast-solar");
+        if (!fallback.isEmpty() && !ProviderId.isValid(fallback)) {
+            throw new IllegalArgumentException("fallback must be empty or a provider id such as forecast-solar");
+        }
         var byId = new LinkedHashMap<ProviderId, Map<String, String>>();
         settings.forEach((id, values) -> {
-            Checks.require(ProviderId.isValid(id), "settings: '" + id + "' is not a provider id");
+            if (!ProviderId.isValid(id)) {
+                throw new IllegalArgumentException("settings: '" + id + "' is not a provider id");
+            }
             byId.put(new ProviderId(id), values);
         });
         return new ForecastSelection(primary,
@@ -54,8 +59,11 @@ public record ForecastSelection(
     private static Map<ProviderId, Map<String, String>> checkedCopy(Map<ProviderId, Map<String, String>> settings) {
         var copy = new LinkedHashMap<ProviderId, Map<String, String>>();
         settings.forEach((id, values) -> {
-            values.keySet().forEach(key -> Checks.require(SETTING_KEY.matcher(key).matches(),
-                    "settings." + id + ": '" + key + "' is not a setting name"));
+            for (var key : values.keySet()) {
+                if (!SETTING_KEY.matcher(key).matches()) {
+                    throw new IllegalArgumentException("settings." + id + ": '" + key + "' is not a setting name");
+                }
+            }
             copy.put(id, Map.copyOf(values));
         });
         return Map.copyOf(copy);
