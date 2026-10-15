@@ -3,8 +3,6 @@ package io.github.enadeag.carchargeplanner.engine.plan;
 import io.github.enadeag.carchargeplanner.engine.config.HomeSystem;
 import io.github.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -140,7 +138,8 @@ final class WindowFinder {
                     if (Duration.between(run.get(i).start(), segment.end()).compareTo(minWindow) < 0) {
                         continue;
                     }
-                    var score = new Score(round6(Math.min(solar, remaining)), round6(imported), run.get(i).start(), amps);
+                    var score = new Score(Charging.roundKwh(Math.min(solar, remaining)), Charging.roundKwh(imported),
+                            run.get(i).start(), amps);
                     if (bestScore == null || score.compareTo(bestScore) > 0) {
                         bestScore = score;
                         best = new Candidate(amps, i, j);
@@ -169,14 +168,14 @@ final class WindowFinder {
             }
             delivered += rate * segment.hours();
         }
-        trimmedEnd = earliest(trimmedEnd, end);
-        end = earliest(latest(trimmedEnd, start.plus(minWindow)), end);
+        trimmedEnd = Hours.earliest(trimmedEnd, end);
+        end = Hours.earliest(Hours.latest(trimmedEnd, start.plus(minWindow)), end);
 
         double solar = 0;
         double imported = 0;
         for (var segment : segments) {
-            var from = latest(segment.start(), start);
-            var to = earliest(segment.end(), end);
+            var from = Hours.latest(segment.start(), start);
+            var to = Hours.earliest(segment.end(), end);
             if (!to.isAfter(from)) {
                 continue;
             }
@@ -185,18 +184,5 @@ final class WindowFinder {
             imported += Math.max(0, power - segment.usableKw()) * hours;
         }
         return new Window(start, end, candidate.amps(), power, solar, imported);
-    }
-
-    /** Candidates that differ only by floating-point noise count as equal, so the next criterion decides. */
-    private static double round6(double value) {
-        return new BigDecimal(value).setScale(6, RoundingMode.HALF_EVEN).doubleValue();
-    }
-
-    private static Instant earliest(Instant a, Instant b) {
-        return a.isBefore(b) ? a : b;
-    }
-
-    private static Instant latest(Instant a, Instant b) {
-        return a.isAfter(b) ? a : b;
     }
 }

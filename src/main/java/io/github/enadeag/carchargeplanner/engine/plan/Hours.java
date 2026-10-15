@@ -27,4 +27,12 @@ final class Hours {
         double steps = (double) Duration.between(midnight, moment).toNanos() / FIVE_MINUTES_NANOS;
         return midnight.plusNanos((long) Math.ceil(steps - 1e-9) * FIVE_MINUTES_NANOS);
     }
+
+    static Instant earliest(Instant a, Instant b) {
+        return a.isBefore(b) ? a : b;
+    }
+
+    static Instant latest(Instant a, Instant b) {
+        return a.isAfter(b) ? a : b;
+    }
 }

@@ -4,6 +4,8 @@ import io.github.enadeag.carchargeplanner.engine.config.Charger;
 import io.github.enadeag.carchargeplanner.engine.config.HomeSystem;
 import io.github.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 /** The arithmetic of surplus and charge power. */
 final class Charging {
@@ -25,5 +27,10 @@ final class Charging {
     /** Whole amps per phase (rounded down) that fit under the power, at most the charger's maximum. */
     static int ampsFor(double powerKw, Charger charger) {
         return Math.min(charger.maxAmps(), (int) (powerKw * 1000 / (charger.volts() * charger.phases())));
+    }
+
+    /** Energy rounded to six decimals, so amounts that differ only by floating-point noise compare as equal. */
+    static double roundKwh(double kwh) {
+        return new BigDecimal(kwh).setScale(6, RoundingMode.HALF_EVEN).doubleValue();
     }
 }
