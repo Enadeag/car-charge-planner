@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sun.javafx.stage.WindowHelper;
 import io.github.enadeag.carchargeplanner.engine.Outlook;
+import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
@@ -106,7 +107,7 @@ class DashboardTest {
     void aPlanThatCameWhileThePopupWasClosedFitsWhenItOpensAgain() throws Exception {
         clickTheIcon();
         clickTheIcon();
-        dashboard.show(planWithTwoDays());
+        dashboard.show(planWithTwoDays(), List.of());
         later(Duration.ofSeconds(2));
 
         clickTheIcon();
@@ -124,7 +125,7 @@ class DashboardTest {
     /** Detaches the popup with the plan into the window, and returns the window. */
     private Stage detachedWith(Outlook outlook) throws Exception {
         clickTheIcon();
-        dashboard.show(outlook);
+        dashboard.show(outlook, List.of());
         Fx.settle();
         var detach = (Button) popup().orElseThrow().getScene().lookup(".detach");
         Fx.run(detach::fire);
@@ -177,7 +178,7 @@ class DashboardTest {
     @Test
     void thePopupAlsoStaysOnTheScreenWithADayTallerThanIt() throws Exception {
         clickTheIcon();
-        dashboard.show(planWithABusyTomorrow(200));
+        dashboard.show(planWithABusyTomorrow(200), List.of());
         Fx.settle();
         var popup = popup().orElseThrow();
 
@@ -193,7 +194,7 @@ class DashboardTest {
         try (var css = new CssWarnings()) {
             clickTheIcon();
             clickTheIcon();
-            dashboard.show(planWithTwoDays());
+            dashboard.show(planWithTwoDays(), List.of());
             later(Duration.ofSeconds(2));
 
             clickTheIcon();
@@ -274,7 +275,7 @@ class DashboardTest {
     @Test
     void theKeyboardReachesThePopup() throws Exception {
         clickTheIcon();
-        dashboard.show(planWithTwoDays());
+        dashboard.show(planWithTwoDays(), List.of());
         Fx.settle();
         var tabs = (TabPane) popup().orElseThrow().getScene().lookup(".day-tabs");
 
@@ -392,7 +393,7 @@ class DashboardTest {
         var footerSettings = new AtomicReference<Integer>(0);
         dashboard.onSettings(() -> footerSettings.updateAndGet(count -> count + 1));
         clickTheIcon();
-        dashboard.show(planWithTwoDays());
+        dashboard.show(planWithTwoDays(), List.of());
         Fx.settle();
         selectDay(popup().orElseThrow(), 1);
 
@@ -417,12 +418,33 @@ class DashboardTest {
     }
 
     @Test
+    void anotherLanguageListsTheAwayPeriodsInItAndTheirRemoveButtonsStillWork() throws Exception {
+        var removed = new ArrayList<AwayPeriod>();
+        dashboard.onAwayChange(period -> { }, removed::add);
+        var tomorrow = AwayPeriod.allDay(LocalDate.of(2026, 10, 16), ZoneId.of("Europe/Brussels"));
+        clickTheIcon();
+        dashboard.show(planWithTwoDays(), List.of(tomorrow));
+        Fx.settle();
+
+        language.choose(Optional.of(Language.DUTCH));
+        Fx.settle();
+
+        var root = popup().orElseThrow().getScene().getRoot();
+        assertThat(Fx.call(() -> Scenes.visibleTexts(root))).contains("Auto weg", "Morgen, hele dag");
+        var remove = Fx.call(() -> Scenes.all(root).stream()
+                .filter(node -> node instanceof Button button && "Morgen, hele dag verwijderen".equals(button.getAccessibleText()))
+                .map(Button.class::cast).findFirst().orElseThrow());
+        Fx.run(remove::fire);
+        assertThat(removed).containsExactly(tomorrow);
+    }
+
+    @Test
     void anotherLanguageReachesTheWindowAndALaterOutlook() throws Exception {
         var window = detachedWith(planWithTwoDays());
 
         language.choose(Optional.of(Language.DUTCH));
         Fx.settle();
-        dashboard.show(new Outlook.NoForecast("Open-Meteo: no connection."));
+        dashboard.show(new Outlook.NoForecast("Open-Meteo: no connection."), List.of());
         Fx.settle();
 
         assertThat(window()).containsSame(window);
@@ -447,7 +469,7 @@ class DashboardTest {
         clickTheIcon();
 
         dashboard.show(new Outlook.NotSetUp(ConfigProblem.Kind.INVALID, Path.of("/home/owner/engine.json"),
-                "system.car: is required"));
+                "system.car: is required"), List.of());
         Fx.settle();
 
         var popup = popup().orElseThrow();
@@ -461,7 +483,7 @@ class DashboardTest {
         dashboard.onSetUp(opened::incrementAndGet);
         clickTheIcon();
 
-        dashboard.show(new Outlook.NotSetUp(ConfigProblem.Kind.MISSING, Path.of("/home/owner/engine.json"), ""));
+        dashboard.show(new Outlook.NotSetUp(ConfigProblem.Kind.MISSING, Path.of("/home/owner/engine.json"), ""), List.of());
         Fx.settle();
         var root = popup().orElseThrow().getScene().getRoot();
         Fx.run(() -> Scenes.all(root).stream()
@@ -478,7 +500,7 @@ class DashboardTest {
         clickTheIcon();
 
         dashboard.show(new Outlook.NotSetUp(ConfigProblem.Kind.UNREADABLE, Path.of("/home/owner/engine.json"),
-                "access denied"));
+                "access denied"), List.of());
         Fx.settle();
 
         var root = popup().orElseThrow().getScene().getRoot();

@@ -2,6 +2,7 @@ package io.github.enadeag.carchargeplanner.desktop;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -158,7 +159,7 @@ class DashboardViewTest {
     void aPlanWithoutDaysShowsNoTabsAndDoesNotFail() throws Exception {
         var view = shown(Models.plan(Optional.empty()));
 
-        Fx.run(() -> view.show(new DashboardModel.Plan(List.of(), Optional.empty(), Models.FOOTER)));
+        Fx.run(() -> view.show(new DashboardModel.Plan(List.of(), Optional.empty(), Models.AWAY, Models.FOOTER)));
 
         assertThat(Fx.call(() -> tabs(view).getTabs())).isEmpty();
         assertThat(Fx.call(() -> view.lookup(".main-card"))).isNull();
@@ -167,10 +168,11 @@ class DashboardViewTest {
 
     @Test
     void aDayTallerThanTheSpaceScrollsBelowHeaderAndTabsThatStayInView() throws Exception {
-        var busy = new DayModel("Sat", "Tomorrow", DayKind.SUN, "Charge window", "06:00 – 06:10",
+        var busy = new DayModel(Models.TODAY.plusDays(1), "Sat", "Tomorrow", DayKind.SUN, "Charge window", "06:00 – 06:10",
                 Models.SUNNY_TODAY.facts(), Models.SUNNY_TODAY.chips(), "Also 06:15 – 06:25 at 6 A. ".repeat(80), "",
                 Models.SUNNY_TODAY.curve(), Models.CLOUDY_TOMORROW.battery());
-        var plan = new DashboardModel.Plan(List.of(Models.CLOUDY_TOMORROW, busy), Optional.empty(), Models.FOOTER);
+        var plan = new DashboardModel.Plan(List.of(Models.CLOUDY_TOMORROW, busy), Optional.empty(), Models.AWAY,
+                Models.FOOTER);
         var view = Fx.call(() -> {
             var it = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, new Messages(Language.ENGLISH));
             it.show(plan);
@@ -232,6 +234,26 @@ class DashboardViewTest {
         assertThat(away).hasValue(1);
         Fx.run(() -> buttons.getLast().fire());
         assertThat(settings).hasValue(1);
+    }
+
+    @Test
+    void theAwayPeriodsShowOnEveryDayOnceTheyCanBeChangedAndAreAddedOnTheSelectedDay() throws Exception {
+        var view = shown(Models.plan(Optional.empty()));
+        assertThat(Fx.call(() -> view.lookup(".away-card"))).as("nowhere to send a change yet").isNull();
+        var added = new ArrayList<AwayPeriod>();
+
+        Fx.run(() -> {
+            view.onAwayChange(added::add, period -> { });
+            tabs(view).getSelectionModel().select(2);
+        });
+        assertThat(Fx.call(() -> Scenes.visibleTexts(view))).contains("Tomorrow, all day", "Sun 5 Jul, 10:00 – 16:30");
+        var add = Fx.call(() -> view.lookup(".away-card").lookupAll(".button").stream().map(Button.class::cast)
+                .filter(button -> button.getText().equals("Add")).findFirst().orElseThrow());
+        Fx.run(add::fire);
+        Fx.run(() -> ((AwayCard) view.lookup(".away-card")).editor().save());
+
+        assertThat(added).containsExactly(AwayPeriod.allDay(
+                Models.GRID_SUNDAY.date(), Models.BRUSSELS));
     }
 
     @Test

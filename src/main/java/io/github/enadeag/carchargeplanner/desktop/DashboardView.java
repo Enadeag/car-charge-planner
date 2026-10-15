@@ -1,7 +1,9 @@
 package io.github.enadeag.carchargeplanner.desktop;
 
 import java.util.List;
+import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.AccessibleRole;
@@ -27,8 +29,10 @@ final class DashboardView extends VBox {
     private final Runnable contentChanged;
     private final SolarCard solar;
     private final BatteryCard battery;
+    private final AwayCard away;
     private List<DayModel> days = List.of();
     private Optional<GridAdviceModel> advice = Optional.empty();
+    private Optional<AwayModel> awayPeriods = Optional.empty();
     private Optional<Runnable> setUp = Optional.empty();
 
     /**
@@ -48,6 +52,7 @@ final class DashboardView extends VBox {
         this.contentChanged = contentChanged;
         this.solar = new SolarCard(reducedMotion, messages);
         this.battery = new BatteryCard(reducedMotion, messages);
+        this.away = new AwayCard(messages);
         var title = new Label("Car charge planner"); // the app's name, the same in every language
         title.getStyleClass().add("app-title");
         title.setAccessibleRole(AccessibleRole.TEXT);
@@ -81,6 +86,7 @@ final class DashboardView extends VBox {
             case DashboardModel.Plan plan -> {
                 days = plan.days();
                 advice = plan.advice();
+                awayPeriods = Optional.of(plan.away());
                 tabs.show(days);
                 showDay(tabs.getSelectionModel().getSelectedIndex());
             }
@@ -135,7 +141,21 @@ final class DashboardView extends VBox {
     }
 
     /**
-     * Lets the footer's Away button open the away periods.
+     * Lets the owner add and remove away periods for specific days, on the away card below each day; without this
+     * the card is not shown.
+     *
+     * @param added gets a period the owner entered, on the JavaFX thread
+     * @param removed gets a period the owner removed, as the plan listed it, on the JavaFX thread
+     */
+    void onAwayChange(Consumer<AwayPeriod> added, Consumer<AwayPeriod> removed) {
+        away.onChange(added, removed);
+        if (!days.isEmpty()) {
+            showDay(selectedDay());
+        }
+    }
+
+    /**
+     * Lets the footer's Away button open the weekly away periods.
      *
      * @param action what the button does; called on the JavaFX thread
      */
@@ -169,7 +189,7 @@ final class DashboardView extends VBox {
         footer.hideButtons();
     }
 
-    /** Grid advice goes on today's tab, below its main card; the charts follow. */
+    /** Grid advice goes on today's tab, below its main card; the charts follow, and the away periods last. */
     private void showDay(int index) {
         if (days.isEmpty()) {
             body.show(null);
@@ -184,6 +204,12 @@ final class DashboardView extends VBox {
         solar.show(day.curve());
         battery.show(day.battery());
         page.getChildren().addAll(solar, battery);
+        if (away.usable()) {
+            awayPeriods.ifPresent(periods -> {
+                away.show(day, periods);
+                page.getChildren().add(away);
+            });
+        }
         body.show(page);
         contentChanged.run();
     }

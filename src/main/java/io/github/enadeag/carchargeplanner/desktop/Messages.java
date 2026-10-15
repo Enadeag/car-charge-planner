@@ -151,6 +151,21 @@ public final class Messages {
     }
 
     /**
+     * A day's name for a list that may reach beyond the coming week.
+     *
+     * @param day the day to name
+     * @param today the day in the owner's home now
+     * @return "Today", "Tomorrow", or the short weekday and date such as "Sat 17 Oct" in English and "Za 17 okt" in
+     *     Dutch
+     */
+    String date(LocalDate day, LocalDate today) {
+        if (day.equals(today) || day.equals(today.plusDays(1))) {
+            return title(day, today);
+        }
+        return capitalised(DateTimeFormatter.ofPattern("EEE d MMM", locale()).format(day));
+    }
+
+    /**
      * The locale the texts are written in, for changing a text's case.
      *
      * @return the language's locale

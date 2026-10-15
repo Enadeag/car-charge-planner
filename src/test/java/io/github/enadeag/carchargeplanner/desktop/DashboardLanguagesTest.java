@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.desktop;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.enadeag.carchargeplanner.engine.Outlook;
+import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
@@ -16,6 +17,7 @@ import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,6 +75,13 @@ class DashboardLanguagesTest {
                 new Percent(30), new Percent(80));
     }
 
+    /** One of each kind: a whole day, part of a day, and a period over several days. */
+    private static List<AwayPeriod> awayPeriods() {
+        return List.of(AwayPeriod.allDay(TODAY.plusDays(1), BRUSSELS),
+                AwayPeriod.on(TODAY.plusDays(2), LocalTime.of(10, 0), LocalTime.of(16, 30), BRUSSELS),
+                new AwayPeriod(at(TODAY.plusDays(4), 18), at(TODAY.plusDays(6), 12)));
+    }
+
     @ParameterizedTest
     @EnumSource(Language.class)
     void noTextIsCutOffOnAnyDayOrMessage(Language language) throws Exception {
@@ -81,10 +90,11 @@ class DashboardLanguagesTest {
             var mapper = new OutlookMapper(messages);
             var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, messages);
             view.onBatteryEntered(level -> { });
+            view.onAwayChange(period -> { }, period -> { });
             view.lookup(".day-tabs").setStyle("-fx-open-tab-animation: none;"); // a growing tab is narrow on purpose
             stage = Scenes.show(view, ColorScheme.LIGHT);
             var found = new ArrayList<String>();
-            var plan = mapper.map(planned());
+            var plan = mapper.map(planned(), awayPeriods());
             for (int day = 0; day < 3; day++) {
                 view.show(plan);
                 ((TabPane) view.lookup(".day-tabs")).getSelectionModel().select(day);
@@ -97,6 +107,15 @@ class DashboardLanguagesTest {
             view.lookup(".solar-chart").fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.RIGHT, false, false, false, false));
             view.lookupAll(".button").stream().map(Button.class::cast)
                     .filter(button -> button.getText().equals(messages.text(TextKey.BATTERY_UPDATE))).findFirst().orElseThrow().fire();
+            view.applyCss();
+            view.layout();
+            found.addAll(Scenes.cutOff(view));
+            // the away entry open at part of the day, refusing an end before the start
+            view.lookupAll(".button").stream().map(Button.class::cast)
+                    .filter(button -> button.getText().equals(messages.text(TextKey.ONE_OFF_ADD))).findFirst().orElseThrow().fire();
+            var entry = ((AwayCard) view.lookup(".away-card")).editor();
+            entry.enterTimes("16:00", "10:00");
+            entry.save();
             view.applyCss();
             view.layout();
             found.addAll(Scenes.cutOff(view));

@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop;
 
 import io.github.enadeag.carchargeplanner.engine.Outlook;
+import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import io.github.enadeag.carchargeplanner.engine.forecast.Freshness;
@@ -33,17 +34,30 @@ final class OutlookMapper {
     }
 
     /**
-     * The outlook in words.
+     * The outlook in words, without away periods entered for specific days, as set-up's preview shows it.
      *
      * @param outlook the engine's plan, or why there is none; never null
      * @return a plan with its days, or a message when there is no plan or it has no days; only a plan has a footer,
      *     because only a plan has a forecast to credit
      */
     DashboardModel map(Outlook outlook) {
+        return map(outlook, List.of());
+    }
+
+    /**
+     * The outlook in words, with the away periods the owner entered for specific days.
+     *
+     * @param outlook the engine's plan, or why there is none; never null
+     * @param away the stored away periods entered for specific days, in order of their start; may be empty, and those
+     *     that ended before the plan was made are left out
+     * @return a plan with its days, or a message when there is no plan or it has no days; only a plan has a footer,
+     *     because only a plan has a forecast to credit
+     */
+    DashboardModel map(Outlook outlook, List<AwayPeriod> away) {
         return switch (outlook) {
             case Outlook.Planned planned when planned.days().isEmpty() -> new DashboardModel.Message(
                     messages.text(TextKey.NO_FORECAST), messages.text(TextKey.NO_FORECAST_NO_DAYS), footer(planned));
-            case Outlook.Planned planned -> plan(planned);
+            case Outlook.Planned planned -> plan(planned, away);
             case Outlook.NoForecast none -> new DashboardModel.Message(messages.text(TextKey.NO_FORECAST),
                     messages.text(TextKey.NO_FORECAST_DETAIL, none.reason()), "");
             case Outlook.NotSetUp notSetUp when notSetUp.kind() == ConfigProblem.Kind.MISSING ->
@@ -70,10 +84,11 @@ final class OutlookMapper {
         };
     }
 
-    private DashboardModel.Plan plan(Outlook.Planned planned) {
+    private DashboardModel.Plan plan(Outlook.Planned planned, List<AwayPeriod> away) {
         var days = new DayMapper(planned, messages).map(planned.days());
         var advice = planned.gridAdvice().map(new GridAdviceMapper(planned, messages)::map);
-        return new DashboardModel.Plan(days, advice, footer(planned));
+        var coming = new AwayMapper(planned.zone(), planned.madeAt(), messages).map(away);
+        return new DashboardModel.Plan(days, advice, coming, footer(planned));
     }
 
     /**

@@ -74,7 +74,7 @@ final class DayMapper {
         var spoken = messages.text(TextKey.DAY_SPOKEN, title, messages.time(window.start(), zone),
                 messages.time(window.end(), zone), window.amps(), sunPct);
         var note = sentences(laterWindows(day), noteFor(day));
-        return new DayModel(messages.tab(day.date(), today), title, DayKind.SUN, messages.text(TextKey.DAY_WINDOW),
+        return new DayModel(day.date(), messages.tab(day.date(), today), title, DayKind.SUN, messages.text(TextKey.DAY_WINDOW),
                 span(window), facts, chips, note, spoken, charts.curve(day), charts.battery(day));
     }
 
@@ -88,7 +88,7 @@ final class DayMapper {
     private DayModel withoutWindow(DayPlan day, DayKind kind, String heading, String why) {
         var title = messages.title(day.date(), today);
         var spoken = title + ": " + heading.toLowerCase(messages.locale()) + ". " + why;
-        return new DayModel(messages.tab(day.date(), today), title, kind, heading, "", List.of(), List.of(battery(day)),
+        return new DayModel(day.date(), messages.tab(day.date(), today), title, kind, heading, "", List.of(), List.of(battery(day)),
                 sentences(why, noteFor(day)), spoken, charts.curve(day), charts.battery(day));
     }
 

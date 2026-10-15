@@ -16,7 +16,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 /**
  * WCAG AA on the rendered dashboard, in light and in dark: every text reaches 4.5:1 against what it sits on, every
  * glyph and every mark of the charts (the curve's edge, the house line, the windows, "now", the battery and its marks)
- * 3:1. The charts' readout is open, so its text is checked too. Controls that are switched off are exempt, as WCAG
+ * 3:1. The charts' readout and the away entry with its problem are open, so their texts are checked too. Controls that are switched off are exempt, as WCAG
  * allows.
  */
 class DashboardContrastTest {
@@ -32,6 +32,7 @@ class DashboardContrastTest {
     private List<String> problems(ColorScheme scheme) throws Exception {
         return Fx.call(() -> {
             var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, new Messages(Language.ENGLISH));
+            view.onAwayChange(period -> { }, period -> { });
             stage = Scenes.show(view, scheme);
             var problems = new ArrayList<String>();
             var plan = Models.plan(Optional.of(Models.ADVICE));
@@ -42,6 +43,8 @@ class DashboardContrastTest {
                 openReadout(view);
                 problems.addAll(Contrast.problemsIn(view));
             }
+            openAwayEntryWithAProblem(view);
+            problems.addAll(Contrast.problemsIn(view));
             view.show(new DashboardModel.Message("No forecast", "Could not reach Open-Meteo", "Forecast: Open-Meteo"));
             view.applyCss();
             problems.addAll(Contrast.problemsIn(view));
@@ -53,6 +56,17 @@ class DashboardContrastTest {
     private static void openReadout(DashboardView view) {
         var chart = view.lookup(".solar-chart");
         chart.fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.RIGHT, false, false, false, false));
+        view.applyCss();
+        view.layout();
+    }
+
+    /** The away entry at part of the day, saying why an end before the start cannot be saved. */
+    private static void openAwayEntryWithAProblem(DashboardView view) {
+        var card = (AwayCard) view.lookup(".away-card");
+        card.lookupAll(".button").stream().map(javafx.scene.control.Button.class::cast)
+                .filter(button -> button.getText().equals("Add")).findFirst().orElseThrow().fire();
+        card.editor().enterTimes("16:00", "10:00");
+        card.editor().save();
         view.applyCss();
         view.layout();
     }
