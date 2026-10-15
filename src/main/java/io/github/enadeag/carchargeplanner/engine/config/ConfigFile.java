@@ -6,8 +6,11 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.cfg.CoercionAction;
+import tools.jackson.databind.cfg.CoercionInputShape;
 import tools.jackson.databind.exc.ValueInstantiationException;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.type.LogicalType;
 
 /** The engine's own config file, in JSON. Every value must be given: there are no typical values yet. */
 public final class ConfigFile {
@@ -19,6 +22,11 @@ public final class ConfigFile {
             .enable(DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES)
             .enable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
             .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT) // Jackson would read 1.5 phases as 1
+            // and it would read a setting of 5 as the text "5"
+            .withCoercionConfig(LogicalType.Textual, texts -> texts
+                    .setCoercion(CoercionInputShape.Integer, CoercionAction.Fail)
+                    .setCoercion(CoercionInputShape.Float, CoercionAction.Fail)
+                    .setCoercion(CoercionInputShape.Boolean, CoercionAction.Fail))
             .build();
 
     public ConfigFile(Path path) {

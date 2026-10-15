@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine;
 
+import io.github.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import io.github.enadeag.carchargeplanner.engine.plan.DayPlan;
 import io.github.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import io.github.enadeag.carchargeplanner.engine.plan.Window;
@@ -15,6 +16,7 @@ public sealed interface Outlook {
      * @param zone the time zone of the owner's home, in which the days and times are meant
      * @param batteryAssumed true while the battery level is a placeholder, not a reading
      * @param gridAdvice present when the battery would end a day below the minimum charge level
+     * @param forecast where the forecast came from; empty for a plan not made from a fetched forecast
      */
     record Planned(
             Instant madeAt,
@@ -22,10 +24,17 @@ public sealed interface Outlook {
             List<DayPlan> days,
             double batteryPct,
             boolean batteryAssumed,
-            Optional<GridAdvice> gridAdvice) implements Outlook {
+            Optional<GridAdvice> gridAdvice,
+            Optional<ForecastSource> forecast) implements Outlook {
 
         public Planned {
             days = List.copyOf(days);
+        }
+
+        /** A plan without word of where its forecast came from, as clients' tests make them. */
+        public Planned(Instant madeAt, ZoneId zone, List<DayPlan> days, double batteryPct, boolean batteryAssumed,
+                Optional<GridAdvice> gridAdvice) {
+            this(madeAt, zone, days, batteryPct, batteryAssumed, gridAdvice, Optional.empty());
         }
 
         /** The first charge window that has not ended yet. */

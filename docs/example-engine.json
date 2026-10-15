@@ -17,5 +17,12 @@
     "importToleranceKwh": 0.2,
     "minWindowMinutes": 45,
     "notifyLeadMinutes": 15
+  },
+  "forecast": {
+    "primary": "open-meteo",
+    "fallback": "forecast-solar",
+    "settings": {
+      "open-meteo": { "base_url": "" }
+    }
   }
 }
