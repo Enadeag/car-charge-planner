@@ -11,23 +11,26 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/** Plans the charge windows for each day of the forecast. */
+/** Plans the charge windows for each day of the forecast, outside the times the car is away. */
 public final class Planner {
 
     private final HomeSystem system;
     private final PlanningPreferences preferences;
+    private final AwayTimes away;
     private final ZoneId zone;
     private final WindowFinder finder;
 
     /**
-     * Makes a planner for one home and one set of preferences.
+     * Makes a planner for one home, one set of preferences and the times the car is away.
      *
      * @param system the home and equipment
      * @param preferences the planning preferences
+     * @param away when the car is not at home; no window is planned in that time, {@link AwayTimes#NONE} for none
      */
-    public Planner(HomeSystem system, PlanningPreferences preferences) {
+    public Planner(HomeSystem system, PlanningPreferences preferences, AwayTimes away) {
         this.system = system;
         this.preferences = preferences;
+        this.away = away;
         this.zone = system.timezone();
         this.finder = new WindowFinder(system, preferences);
     }
@@ -66,9 +69,13 @@ public final class Planner {
         return days;
     }
 
-    /** The runs outside the running windows; the sun just before or after one belongs to it, not to a second window. */
+    /**
+     * The runs outside the away time and the running windows; the sun just before or after a running window belongs
+     * to it, not to a second window.
+     */
     private List<Run> runsBeside(List<ForecastStep> forecast, Instant now, List<Window> running) {
-        var unavailable = running.stream().map(window -> new Unavailable(window.start(), window.end())).toList();
+        var unavailable = new ArrayList<>(away.during(forecast, zone));
+        running.forEach(window -> unavailable.add(new Unavailable(window.start(), window.end())));
         return finder.runs(forecast, now, unavailable).stream()
                 .filter(run -> running.stream().noneMatch(window -> touches(run, window)))
                 .toList();

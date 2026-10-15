@@ -5,6 +5,8 @@ import static io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider.st
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
+import io.github.enadeag.carchargeplanner.engine.away.AwayFile;
+import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.Percent;
@@ -101,7 +103,7 @@ class EngineTest {
         var known = new Providers(List.of(providers));
         var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
         var service = new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys);
-        return new Engine(new ConfigFile(config), service, known, apiKeys, clock);
+        return new Engine(new ConfigFile(config), service, known, apiKeys, new AwayFile(folder.resolve("away.json")), clock);
     }
 
     private Engine engine(Clock clock) {
@@ -135,6 +137,32 @@ class EngineTest {
         assertThat(window.start()).isEqualTo(DAY.atTime(10, 0).atZone(BRUSSELS).toInstant());
         assertThat(window.amps()).isEqualTo(13);
         assertThat(planned.gridAdvice()).isEmpty();
+    }
+
+    @Test
+    void anAwayPeriodIsStoredAndTheNextPlanKeepsItFree() throws IOException {
+        var engine = engine(clockAt(7));
+        var atHome = planned(engine).days();
+        var away = new AwayPeriod(DAY.atTime(8, 0).atZone(BRUSSELS).toInstant(),
+                DAY.atTime(18, 0).atZone(BRUSSELS).toInstant());
+
+        assertThat(engine.addAwayPeriod(away)).containsExactly(away);
+        assertThat(engine(clockAt(7)).awayPeriods()).containsExactly(away);
+        assertThat(planned(engine).days().getFirst().windows()).isEmpty(); // the sun shines from 10:00 to 16:00
+
+        assertThat(engine.removeAwayPeriod(away)).isEmpty();
+        assertThat(planned(engine).days()).isEqualTo(atHome);
+    }
+
+    @Test
+    void theWeeklyAwayPeriodsInTheConfigFileKeepThatTimeFree() throws IOException {
+        var friday = DAY.getDayOfWeek().name();
+        Files.writeString(config, Files.readString(config).replaceFirst("}$",
+                ", \"away\": {\"recurring\": [{\"weekday\": \"" + friday + "\", \"start\": \"08:00\", \"end\": \"18:00\"}]}}"));
+
+        var days = planned(engine(clockAt(7))).days();
+        assertThat(days.getFirst().windows()).isEmpty();
+        assertThat(days.get(1).windows()).isNotEmpty();
     }
 
     @Test
@@ -281,7 +309,8 @@ class EngineTest {
         var known = new Providers(List.of(main));
         var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json")));
         var withoutKeychain = new Engine(new ConfigFile(config),
-                new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys), known, apiKeys, clockAt(7));
+                new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys), known, apiKeys,
+                new AwayFile(folder.resolve("away.json")), clockAt(7));
         withoutKeychain.saveApiKeys(new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "x"))));
         assertThat(withoutKeychain.keyStorage()).isEqualTo(KeyStorage.FILE);
     }

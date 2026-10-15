@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.engine.plan;
 
 import static io.github.enadeag.carchargeplanner.engine.plan.Forecasts.PREFERENCES;
+import static io.github.enadeag.carchargeplanner.engine.plan.Forecasts.WEEKLY_AWAY;
 import static io.github.enadeag.carchargeplanner.engine.plan.Forecasts.at;
 import static io.github.enadeag.carchargeplanner.engine.plan.Forecasts.bellDay;
 import static io.github.enadeag.carchargeplanner.engine.plan.Forecasts.bellDays;
@@ -8,6 +9,7 @@ import static io.github.enadeag.carchargeplanner.engine.plan.Forecasts.hourly;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
+import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.config.HomeSystem;
 import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.config.Phases;
@@ -16,6 +18,7 @@ import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +51,13 @@ class PlannerTest {
     }
 
     private static List<DayPlan> plan(List<ForecastStep> forecast, HomeSystem system, double soc, Instant now) {
-        return new Planner(system, PREFERENCES).plan(forecast, new Percent(soc), now, List.of());
+        return new Planner(system, PREFERENCES, WEEKLY_AWAY).plan(forecast, new Percent(soc), now, List.of());
+    }
+
+    /** The example system, with its weekly away period and this one entered by hand. */
+    private static List<DayPlan> planAway(List<ForecastStep> forecast, double soc, Instant now, AwayPeriod oneOff) {
+        var away = new AwayTimes(WEEKLY_AWAY.recurring(), List.of(oneOff));
+        return new Planner(Forecasts.example(), PREFERENCES, away).plan(forecast, new Percent(soc), now, List.of());
     }
 
     /** A bell-shaped Friday for the example system, planned from midnight or the given hour. */
@@ -152,9 +161,43 @@ class PlannerTest {
     }
 
     @Test
+    void theWeeklyAwayPeriodOnThursdayLeavesThatDayWithoutAWindow() {
+        var thursday = SUMMER_FRI.minusDays(1);
+        var day = plan(bellDay(thursday, 900), Forecasts.example(), 40, at(thursday, 0)).getFirst();
+        assertThat(day.windows()).isEmpty();
+    }
+
+    @Test
+    void theThursdayAwayPeriodLeavesFridayAlone() {
+        assertThat(friday(900, 40).windows()).isNotEmpty();
+    }
+
+    @Test
+    void awayUntilTheAfternoonLeavesOnlyALaterWindow() {
+        var away = new AwayPeriod(at(SUMMER_FRI, 0), at(SUMMER_FRI, 14));
+        var windows = planAway(bellDay(SUMMER_FRI, 900), 40, at(SUMMER_FRI, 0), away).getFirst().windows();
+        assertThat(windows).isNotEmpty().allSatisfy(window -> assertThat(window.start()).isAfterOrEqualTo(at(SUMMER_FRI, 14)));
+    }
+
+    @Test
+    void awayAllDayLeavesThatDayWithoutAWindowAndTheNextDayAlone() {
+        var forecast = bellDays(Map.of(SUMMER_FRI, 900.0, SUMMER_FRI.plusDays(1), 900.0));
+        var days = planAway(forecast, 40, at(SUMMER_FRI, 7), AwayPeriod.allDay(SUMMER_FRI, Forecasts.TZ));
+        assertThat(days.get(0).windows()).isEmpty();
+        assertThat(days.get(1).windows()).isNotEmpty();
+    }
+
+    @Test
+    void awayForPartOfTheDayLeavesTheRestOfIt() {
+        var away = AwayPeriod.on(SUMMER_FRI, LocalTime.of(0, 0), LocalTime.of(13, 0), Forecasts.TZ);
+        var windows = planAway(bellDay(SUMMER_FRI, 900), 40, at(SUMMER_FRI, 7), away).getFirst().windows();
+        assertThat(windows).isNotEmpty().allSatisfy(window -> assertThat(window.start()).isAfterOrEqualTo(at(SUMMER_FRI, 13)));
+    }
+
+    @Test
     void windowIsTrimmedToTheEnergyNeeded() {
         var day = friday(900, 75);
-        double need = new Planner(Forecasts.example(), PREFERENCES).energyNeededKwh(new Percent(75));
+        double need = new Planner(Forecasts.example(), PREFERENCES, WEEKLY_AWAY).energyNeededKwh(new Percent(75));
         double delivered = day.windows().stream().mapToDouble(Window::solarKwh).sum();
         assertThat(delivered).isGreaterThanOrEqualTo(need).isLessThan(need + 1.5);
         var full = friday(900, 40).windows().getFirst();
@@ -179,7 +222,8 @@ class PlannerTest {
     @Test
     void aHigherMarginGivesMorePower() {
         var cautious = friday(900, 40).windows().getFirst();
-        var bold = new Planner(Forecasts.example(), new PlanningPreferences(new Percent(30), new Percent(80), 1.0, 0.2, 45, 15))
+        var bold = new Planner(Forecasts.example(), new PlanningPreferences(new Percent(30), new Percent(80), 1.0, 0.2, 45, 15),
+                WEEKLY_AWAY)
                 .plan(bellDay(SUMMER_FRI, 900), new Percent(40), at(SUMMER_FRI, 0), List.of()).getFirst().windows().getFirst();
         assertThat(bold.powerKw()).isGreaterThan(cautious.powerKw());
     }
@@ -303,7 +347,7 @@ class PlannerTest {
 
     /** The Friday from 40 %, planned at the hour, with these windows announced. */
     private static DayPlan fridayWithAnnounced(int nowHour, double soc, List<Window> announced) {
-        return new Planner(Forecasts.example(), PREFERENCES)
+        return new Planner(Forecasts.example(), PREFERENCES, WEEKLY_AWAY)
                 .plan(bellDay(SUMMER_FRI, 900), new Percent(soc), at(SUMMER_FRI, nowHour), announced).getFirst();
     }
 

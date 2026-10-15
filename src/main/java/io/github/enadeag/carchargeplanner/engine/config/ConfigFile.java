@@ -10,9 +10,13 @@ import tools.jackson.databind.cfg.CoercionAction;
 import tools.jackson.databind.cfg.CoercionInputShape;
 import tools.jackson.databind.exc.ValueInstantiationException;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 import tools.jackson.databind.type.LogicalType;
 
-/** The engine's own config file, in JSON. Every value must be given: there are no typical values yet. */
+/**
+ * The engine's own config file, in JSON. Every value must be given, as there are no typical values yet, except the
+ * {@code away} section: a file without it, such as one written before away periods existed, has none.
+ */
 public final class ConfigFile {
 
     private final Path path;
@@ -64,7 +68,14 @@ public final class ConfigFile {
             throw new ConfigProblem("Could not read " + path + ": " + e.getMessage());
         }
         try {
-            return json.readValue(text, EngineConfig.class);
+            if (!(json.readTree(text) instanceof ObjectNode file)) {
+                throw new ConfigProblem(path.getFileName() + ": the file must hold one JSON object");
+            }
+            // the mapper refuses any missing value, so the one optional section is filled in before it reads the file
+            if (!file.has("away")) {
+                file.putObject("away").putArray("recurring");
+            }
+            return json.treeToValue(file, EngineConfig.class);
         } catch (ValueInstantiationException e) {
             // a check in one of the records failed: its own message names the setting
             throw new ConfigProblem(where(e) + ": " + e.getCause().getMessage());

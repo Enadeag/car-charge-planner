@@ -1,5 +1,7 @@
 package io.github.enadeag.carchargeplanner.engine;
 
+import io.github.enadeag.carchargeplanner.engine.away.AwayFile;
+import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
@@ -15,12 +17,14 @@ import io.github.enadeag.carchargeplanner.engine.forecast.ForecastUnavailable;
 import io.github.enadeag.carchargeplanner.engine.forecast.PlaceResults;
 import io.github.enadeag.carchargeplanner.engine.forecast.Providers;
 import io.github.enadeag.carchargeplanner.engine.forecast.SystemDescription;
+import io.github.enadeag.carchargeplanner.engine.plan.AwayTimes;
 import io.github.enadeag.carchargeplanner.engine.plan.GridAdvisor;
 import io.github.enadeag.carchargeplanner.engine.plan.Planner;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
+import java.io.IOException;
 import java.time.Clock;
 import java.util.HashMap;
 import java.util.List;
@@ -42,6 +46,7 @@ public final class Engine {
     private final ForecastService forecasts;
     private final Providers providers;
     private final ApiKeys apiKeys;
+    private final AwayFile awayFile;
     private final Clock clock;
 
     /**
@@ -51,13 +56,16 @@ public final class Engine {
      * @param forecasts gives the forecasts, from its cache or the providers
      * @param providers the providers known to this version, for the connection check and place search
      * @param apiKeys where the providers' secret settings are kept
-     * @param clock the time plans are made at
+     * @param awayFile where the away periods the owner enters by hand are kept, read again for every plan
+     * @param clock the time plans are made at, and that decides which away periods are old
      */
-    public Engine(ConfigFile configFile, ForecastService forecasts, Providers providers, ApiKeys apiKeys, Clock clock) {
+    public Engine(ConfigFile configFile, ForecastService forecasts, Providers providers, ApiKeys apiKeys,
+            AwayFile awayFile, Clock clock) {
         this.configFile = configFile;
         this.forecasts = forecasts;
         this.providers = providers;
         this.apiKeys = apiKeys;
+        this.awayFile = awayFile;
         this.clock = clock;
     }
 
@@ -82,10 +90,44 @@ public final class Engine {
         } catch (ForecastUnavailable e) {
             return new Outlook.NoForecast(e.getMessage());
         }
+        var away = new AwayTimes(config.away().recurring(), awayFile.periods());
         // nothing is announced until there are notifications, so there is no announced window to keep
-        var days = new Planner(system, config.planning()).plan(forecast.steps(), ASSUMED_BATTERY_PCT, now, List.of());
-        var advice = new GridAdvisor(system, config.planning()).advise(days, forecast.steps(), now);
+        var days = new Planner(system, config.planning(), away)
+                .plan(forecast.steps(), ASSUMED_BATTERY_PCT, now, List.of());
+        var advice = new GridAdvisor(system, config.planning(), away).advise(days, forecast.steps(), now);
         return new Outlook.Planned(now, system.timezone(), days, ASSUMED_BATTERY_PCT, true, advice, forecast.source());
+    }
+
+    /**
+     * The away periods the owner entered by hand; the weekly ones are in the config file.
+     *
+     * @return the stored periods in order of their start, including any that ended in the last day
+     */
+    public List<AwayPeriod> awayPeriods() {
+        return awayFile.periods();
+    }
+
+    /**
+     * Stores an away period entered by hand, so the next plan leaves that time free. Periods that ended more than a
+     * day ago are forgotten at the same time.
+     *
+     * @param period the time the car is away; one that is stored already is kept once
+     * @return the stored periods after the change, in order of their start
+     * @throws IOException when the periods could not be saved; the stored ones are then unchanged
+     */
+    public List<AwayPeriod> addAwayPeriod(AwayPeriod period) throws IOException {
+        return awayFile.add(period, clock.instant());
+    }
+
+    /**
+     * Forgets an away period entered by hand, so the next plan may use that time again.
+     *
+     * @param period the period as {@link #awayPeriods()} gave it; one that is not stored changes nothing
+     * @return the stored periods after the change, in order of their start
+     * @throws IOException when the periods could not be saved; the stored ones are then unchanged
+     */
+    public List<AwayPeriod> removeAwayPeriod(AwayPeriod period) throws IOException {
+        return awayFile.remove(period);
     }
 
     /**

@@ -3,9 +3,12 @@ package io.github.enadeag.carchargeplanner.engine.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.github.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.DayOfWeek;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.Map;
 import java.util.Optional;
@@ -71,6 +74,14 @@ class ConfigFileTest {
         "\"base_url\": \"\" | \"base_url\": 5 | base_url",
         "\"forecast\": {  | \"forecst\": { | 'forecast'",
         "\"fallback\": \"forecast-solar\", | \"fallback\": \"forecast-solar\", \"fallbak\": \"\", | fallbak",
+        "\"weekday\": \"THURSDAY\" | \"weekday\": \"FUNDAY\" | FUNDAY",
+        "\"weekday\": \"THURSDAY\" | \"weekday\": 3     | weekday",
+        "\"start\": \"06:00\"     | \"start\": \"22:00\" | no periods over midnight",
+        "\"start\": \"06:00\"     | \"start\": \"19:00\" | no periods over midnight",
+        "\"start\": \"06:00\"     | \"start\": \"6am\"   | 6am",
+        "\"end\": \"19:00\"       | \"end\": \"24:00\"   | 24:00",
+        "', \"end\": \"19:00\"'     | ''                  | end",
+        "\"recurring\": [          | \"recuring\": [     | recurring",
     })
     void aWrongOrMissingValueIsRejectedWithAMessageThatNamesIt(String original, String replacement, String named)
             throws IOException {
@@ -81,6 +92,49 @@ class ConfigFileTest {
         assertThatThrownBy(() -> new ConfigFile(file).read())
                 .isInstanceOf(ConfigProblem.class)
                 .hasMessageContaining(named);
+    }
+
+    @Test
+    void theAwaySectionGivesTheWeeklyAwayPeriods() throws ConfigProblem {
+        assertThat(new ConfigFile(EXAMPLE).read().away().recurring())
+                .containsExactly(new RecurringAwayPeriod(DayOfWeek.THURSDAY, LocalTime.of(6, 0), LocalTime.of(19, 0)));
+    }
+
+    @Test
+    void severalWeeklyAwayPeriodsAreReadInTheirOrderAndTheWeekdayInAnyCase() throws IOException, ConfigProblem {
+        var file = write(Files.readString(EXAMPLE).replace(
+                "{ \"weekday\": \"THURSDAY\", \"start\": \"06:00\", \"end\": \"19:00\" }",
+                "{\"weekday\": \"monday\", \"start\": \"07:30\", \"end\": \"17:45\"},"
+                        + "{\"weekday\": \"Thursday\", \"start\": \"06:00\", \"end\": \"19:00\"},"
+                        + "{\"weekday\": \"SUNDAY\", \"start\": \"00:00\", \"end\": \"12:15\"}"));
+
+        assertThat(new ConfigFile(file).read().away().recurring()).containsExactly(
+                new RecurringAwayPeriod(DayOfWeek.MONDAY, LocalTime.of(7, 30), LocalTime.of(17, 45)),
+                new RecurringAwayPeriod(DayOfWeek.THURSDAY, LocalTime.of(6, 0), LocalTime.of(19, 0)),
+                new RecurringAwayPeriod(DayOfWeek.SUNDAY, LocalTime.of(0, 0), LocalTime.of(12, 15)));
+    }
+
+    @Test
+    void anEmptyListMeansNoWeeklyAwayPeriods() throws IOException, ConfigProblem {
+        var example = Files.readString(EXAMPLE);
+        var file = write(example.substring(0, example.indexOf("\"recurring\"")) + "\"recurring\": []}}");
+        assertThat(new ConfigFile(file).read().away()).isEqualTo(AwaySchedule.NONE);
+    }
+
+    /** A config file from before away periods existed must keep working. */
+    @Test
+    void aFileWithoutTheAwaySectionHasNoWeeklyAwayPeriods() throws IOException, ConfigProblem {
+        var example = Files.readString(EXAMPLE);
+        var file = write(example.substring(0, example.indexOf(",\n  \"away\"")) + "\n}");
+        assertThat(new ConfigFile(file).read().away()).isEqualTo(AwaySchedule.NONE);
+    }
+
+    @Test
+    void aFileThatHoldsNoObjectIsRejected() throws IOException {
+        var file = write("[]");
+        assertThatThrownBy(() -> new ConfigFile(file).read())
+                .isInstanceOf(ConfigProblem.class)
+                .hasMessageContaining("engine.json");
     }
 
     @Test

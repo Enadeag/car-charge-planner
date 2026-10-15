@@ -2,6 +2,7 @@ package io.github.enadeag.carchargeplanner.engine.plan;
 
 import static io.github.enadeag.carchargeplanner.engine.plan.Forecasts.PREFERENCES;
 import static io.github.enadeag.carchargeplanner.engine.plan.Forecasts.TZ;
+import static io.github.enadeag.carchargeplanner.engine.plan.Forecasts.WEEKLY_AWAY;
 import static io.github.enadeag.carchargeplanner.engine.plan.Forecasts.at;
 import static io.github.enadeag.carchargeplanner.engine.plan.Forecasts.bellDays;
 import static io.github.enadeag.carchargeplanner.engine.plan.Forecasts.hourly;
@@ -9,17 +10,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.within;
 
+import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.config.HomeSystem;
 import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.config.Phases;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -40,10 +44,21 @@ class GridAdvisorTest {
         }
     }
 
-    private static Advised advise(HomeSystem system, List<ForecastStep> forecast, double soc, Instant now) {
-        var days = new Planner(system, PREFERENCES).plan(forecast, new Percent(soc), now, List.of());
-        var advice = new GridAdvisor(system, PREFERENCES).advise(days, forecast, now).orElse(null);
+    private static Advised advise(HomeSystem system, List<ForecastStep> forecast, double soc, Instant now,
+            AwayTimes away) {
+        var days = new Planner(system, PREFERENCES, away).plan(forecast, new Percent(soc), now, List.of());
+        var advice = new GridAdvisor(system, PREFERENCES, away).advise(days, forecast, now).orElse(null);
         return new Advised(days, advice);
+    }
+
+    private static Advised advise(HomeSystem system, List<ForecastStep> forecast, double soc, Instant now) {
+        return advise(system, forecast, soc, now, WEEKLY_AWAY);
+    }
+
+    /** The example's weekly away period, and this one entered by hand. */
+    private static Advised adviseAway(List<ForecastStep> forecast, double soc, Instant now, AwayPeriod oneOff) {
+        var away = new AwayTimes(WEEKLY_AWAY.recurring(), List.of(oneOff));
+        return advise(Forecasts.example(), forecast, soc, now, away);
     }
 
     private static Advised advise(List<ForecastStep> forecast, double soc, Instant now) {
@@ -141,6 +156,30 @@ class GridAdvisorTest {
                         .as("%s overlaps %s", window, solar).isTrue();
             }
         }
+    }
+
+    @Test
+    void theWindowNeverOverlapsAnAwayPeriod() {
+        var away = AwayPeriod.on(FRI, LocalTime.of(0, 0), LocalTime.of(20, 0), TZ);
+        var window = adviseAway(dull(2), 30, fridayAt(0), away).window();
+        assertThat(!window.end().isAfter(away.start()) || !window.start().isBefore(away.end()))
+                .as("%s overlaps %s", window, away).isTrue();
+    }
+
+    @Test
+    void theWindowFallsBackToAnEarlierDayWhenTheDipDayHasNoTimeAtHome() {
+        var away = AwayPeriod.allDay(SAT, TZ);
+        assertThat(adviseAway(dull(2), 20, fridayAt(0), away).advice().day()).isEqualTo(FRI); // already dips today
+        var advice = adviseAway(dull(3), 45, fridayAt(0), away).advice();
+        assertThat(advice.window().map(window -> window.start().atZone(TZ).toLocalDate())).isNotEqualTo(Optional.of(SAT));
+    }
+
+    @Test
+    void noWindowWhenTheCarIsAwayEveryDay() {
+        var away = new AwayPeriod(fridayAt(0), at(LocalDate.of(2026, 7, 10), 0));
+        var advice = adviseAway(dull(2), 20, fridayAt(0), away).advice();
+        assertThat(advice).isNotNull();
+        assertThat(advice.window()).isEmpty();
     }
 
     @Test
