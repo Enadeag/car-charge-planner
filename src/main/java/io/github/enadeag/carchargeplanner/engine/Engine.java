@@ -2,6 +2,8 @@ package io.github.enadeag.carchargeplanner.engine;
 
 import io.github.enadeag.carchargeplanner.engine.away.AwayFile;
 import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import io.github.enadeag.carchargeplanner.engine.battery.BatteryFile;
+import io.github.enadeag.carchargeplanner.engine.battery.BatteryReading;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
@@ -40,7 +42,7 @@ import java.util.Optional;
  */
 public final class Engine {
 
-    /** Until the owner can enter the battery level, the plan starts from this one. */
+    /** Until the owner enters the battery level, the plan starts from this one. */
     static final Percent ASSUMED_BATTERY_PCT = new Percent(50);
 
     private final ConfigFile configFile;
@@ -48,6 +50,7 @@ public final class Engine {
     private final Providers providers;
     private final ApiKeys apiKeys;
     private final AwayFile awayFile;
+    private final BatteryFile batteryFile;
     private final Clock clock;
     private final Announcer announcer;
 
@@ -59,17 +62,19 @@ public final class Engine {
      * @param providers the providers known to this version, for the connection check and place search
      * @param apiKeys where the providers' secret settings are kept
      * @param awayFile where the away periods the owner enters by hand are kept, read again for every plan
+     * @param batteryFile where the battery level the owner entered last is kept, read again for every plan
      * @param clock the time plans are made at, and that decides which away periods are old
      * @param announcer tells the owner about the plan's windows shortly before they start, and keeps the ones it told
      *     about as they were told
      */
     public Engine(ConfigFile configFile, ForecastService forecasts, Providers providers, ApiKeys apiKeys,
-            AwayFile awayFile, Clock clock, Announcer announcer) {
+            AwayFile awayFile, BatteryFile batteryFile, Clock clock, Announcer announcer) {
         this.configFile = configFile;
         this.forecasts = forecasts;
         this.providers = providers;
         this.apiKeys = apiKeys;
         this.awayFile = awayFile;
+        this.batteryFile = batteryFile;
         this.clock = clock;
         this.announcer = announcer;
     }
@@ -97,11 +102,26 @@ public final class Engine {
             return new Outlook.NoForecast(e.getMessage());
         }
         var away = new AwayTimes(config.away().recurring(), awayFile.periods());
+        var entered = batteryFile.reading();
+        var battery = entered.map(BatteryReading::level).orElse(ASSUMED_BATTERY_PCT);
         var days = new Planner(system, config.planning(), away)
-                .plan(forecast.steps(), ASSUMED_BATTERY_PCT, now, announcer.announced());
+                .plan(forecast.steps(), battery, now, announcer.announced());
         var advice = new GridAdvisor(system, config.planning(), away).advise(days, forecast.steps(), now);
         announcer.announceDue(days, advice, forecast.source(), now, config);
-        return new Outlook.Planned(now, system.timezone(), days, ASSUMED_BATTERY_PCT, true, advice, forecast.source());
+        var planning = config.planning();
+        return new Outlook.Planned(now, system.timezone(), days, battery, entered.isEmpty(), advice, forecast.source(),
+                system.house().baseloadKw(), planning.minimumPct(), planning.targetPct());
+    }
+
+    /**
+     * Stores the battery level the owner read off the car, so the next plan starts from it instead of an assumed
+     * level. The level is kept until the owner enters another one.
+     *
+     * @param level the charge level of the car's battery now
+     * @throws IOException when the level could not be saved; the stored one is then unchanged
+     */
+    public void setBatteryLevel(Percent level) throws IOException {
+        batteryFile.save(new BatteryReading(level, clock.instant()));
     }
 
     /**

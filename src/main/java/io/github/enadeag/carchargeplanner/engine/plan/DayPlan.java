@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.engine.plan;
 
 import io.github.enadeag.carchargeplanner.engine.config.Percent;
+import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -14,6 +15,8 @@ import java.util.List;
  * @param socEndOfDayPct the battery level at the end of the day; 0 when driving takes more than is left
  * @param drivingPct the part of the battery driving takes off the day in percent, 0 or more; more than 100 when the
  *     driving needs more than the battery holds
+ * @param forecast the forecast steps that start on the day in the home's time zone, in time order; empty when the
+ *     forecast does not reach the day
  */
 public record DayPlan(
         LocalDate date,
@@ -21,14 +24,16 @@ public record DayPlan(
         List<Window> windows,
         Percent socAfterChargingPct,
         Percent socEndOfDayPct,
-        double drivingPct) {
+        double drivingPct,
+        List<ForecastStep> forecast) {
 
     /**
-     * Copies the list of windows.
+     * Copies the lists of windows and forecast steps.
      *
-     * @throws NullPointerException when the windows are null or hold null
+     * @throws NullPointerException when the windows or the steps are null or hold null
      */
     public DayPlan {
         windows = List.copyOf(windows);
+        forecast = List.copyOf(forecast);
     }
 }

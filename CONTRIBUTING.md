@@ -104,7 +104,7 @@ and the Maven wrapper in the root, the code in `src/main/java/io/github/enadeag/
 
 | Package | What it holds |
 | --- | --- |
-| `engine` | Plans, fetches forecasts and owns the stored data, without user interface; clients get plain records. `engine.config` the config file, `engine.away` the away periods (weekly, and the ones entered by hand and kept in `away.json`), `engine.forecast` the provider contract and the forecast service (fallback, cache, rate limits), `engine.forecast.providers` Open-Meteo and Forecast.Solar, `engine.secrets` the API keys, `engine.plan` the planner, `engine.notify` when the owner is told about a window (the notifier port, and the announced windows kept in `announced.json`). |
+| `engine` | Plans, fetches forecasts and owns the stored data, without user interface; clients get plain records. `engine.config` the config file, `engine.away` the away periods (weekly, and the ones entered by hand and kept in `away.json`), `engine.battery` the battery level the owner entered last (kept in `battery.json`), `engine.forecast` the provider contract and the forecast service (fallback, cache, rate limits), `engine.forecast.providers` Open-Meteo and Forecast.Solar, `engine.secrets` the API keys, `engine.plan` the planner, `engine.notify` when the owner is told about a window (the notifier port, and the announced windows kept in `announced.json`). |
 | `desktop` | The JavaFX dashboard, the notifications' texts, every text in each language (`Messages`, with the bundles in `src/main/resources`), the app settings (`app.json`, the language for now), and what a tray icon, notifications and start at login must do. |
 | `instance` | One running copy per user: a second start asks the first, over a private Unix domain socket, to show its dashboard. |
 | `platform.linux`, `platform.windows` | The tray icon, notifications, the keychain and start at login on each system: our own StatusNotifierItem, notification and Secret Service clients over D-Bus, and a desktop entry in the autostart folder; AWT's `SystemTray` and its icon's messages, the Credential Manager and the Run key. |
@@ -123,7 +123,8 @@ There are no set-up screens yet: the engine reads the system from `engine.json` 
 every setting, for a made-up place; its `forecast` section names the forecast provider and the fallback provider.
 API keys are kept in the system keychain, or without one in `secrets.json` beside `engine.json`, readable only by
 you. Weekly away periods are in the optional `away` section of `engine.json`; the ones entered for a specific day
-are kept by the engine in `away.json` beside the forecast cache. The forecast cache is in
+are kept by the engine in `away.json` beside the forecast cache, and the battery level entered on the dashboard in
+`battery.json` (until one is entered, the plan assumes 50 %). The forecast cache is in
 `~/.local/share/car-charge-planner/forecasts/` (Windows: `%LOCALAPPDATA%\car-charge-planner\forecasts\`).
 
 The tests never touch the network, your keychain or your desktop: the providers replay recorded answers, the Linux

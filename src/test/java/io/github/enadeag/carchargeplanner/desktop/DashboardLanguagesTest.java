@@ -50,14 +50,15 @@ class DashboardLanguagesTest {
     /** Every kind of day: one with two windows and grid energy, one that needs the grid charge, one without a window. */
     private static Outlook.Planned planned() {
         var today = new DayPlan(TODAY, new Percent(50), List.of(new Window(at(TODAY, 10), at(TODAY, 13), 10, 2.3, 7.3, 0.6),
-                new Window(at(TODAY, 14), at(TODAY, 15), 8, 1.8, 1.8, 0)), new Percent(74), new Percent(62), 12);
-        var tomorrow = new DayPlan(TODAY.plusDays(1), new Percent(62), List.of(), new Percent(62), new Percent(22), 12);
-        var friday = new DayPlan(TODAY.plusDays(2), new Percent(22), List.of(), new Percent(22), new Percent(10), 12);
+                new Window(at(TODAY, 14), at(TODAY, 15), 8, 1.8, 1.8, 0)), new Percent(74), new Percent(62), 12, List.of());
+        var tomorrow = new DayPlan(TODAY.plusDays(1), new Percent(62), List.of(), new Percent(62), new Percent(22), 12, List.of());
+        var friday = new DayPlan(TODAY.plusDays(2), new Percent(22), List.of(), new Percent(22), new Percent(10), 12, List.of());
         var night = new Window(at(TODAY, 22), at(TODAY.plusDays(1), 4), 16, 3.7, 0, 11.0);
         var source = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)",
                 at(TODAY, 7), Freshness.STALE, ProviderRole.FALLBACK, "Forecast.Solar", Optional.of(at(TODAY, 9)));
         return new Outlook.Planned(at(TODAY, 8), BRUSSELS, List.of(today, tomorrow, friday), new Percent(50), true,
-                Optional.of(new GridAdvice(TODAY.plusDays(1), 22, 8, 11.0, Optional.of(night))), source);
+                Optional.of(new GridAdvice(TODAY.plusDays(1), 22, 8, 11.0, Optional.of(night))), source, 0.45,
+                new Percent(30), new Percent(80));
     }
 
     /** Texts shortened with an ellipsis, or wider than a clip above them, as a tab clips its label. */

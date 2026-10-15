@@ -294,9 +294,9 @@ class DashboardTest {
     private static Outlook planWithTwoDays() {
         var zone = ZoneId.of("Europe/Brussels");
         var today = LocalDate.of(2026, 10, 15);
-        var days = List.of(new DayPlan(today, new Percent(50), List.of(), new Percent(50), new Percent(40), 10),
-                new DayPlan(today.plusDays(1), new Percent(40), List.of(), new Percent(40), new Percent(30), 10));
-        return new Outlook.Planned(today.atTime(8, 0).atZone(zone).toInstant(), zone, days, new Percent(50), false, Optional.empty(), source(today, zone));
+        var days = List.of(new DayPlan(today, new Percent(50), List.of(), new Percent(50), new Percent(40), 10, List.of()),
+                new DayPlan(today.plusDays(1), new Percent(40), List.of(), new Percent(40), new Percent(30), 10, List.of()));
+        return new Outlook.Planned(today.atTime(8, 0).atZone(zone).toInstant(), zone, days, new Percent(50), false, Optional.empty(), source(today, zone), 0.4, new Percent(30), new Percent(80));
     }
 
     /** Today without a window, tomorrow with many windows: a much taller main card than today's. */
@@ -310,9 +310,9 @@ class DashboardTest {
             var from = start.plus(Duration.ofMinutes(15L * i));
             windows.add(new io.github.enadeag.carchargeplanner.engine.plan.Window(from, from.plus(Duration.ofMinutes(10)), 6, 1.4, 0.2, 0.05));
         }
-        var days = List.of(new DayPlan(today, new Percent(50), List.of(), new Percent(50), new Percent(40), 10),
-                new DayPlan(tomorrow, new Percent(40), windows, new Percent(60), new Percent(50), 10));
-        return new Outlook.Planned(today.atTime(8, 0).atZone(zone).toInstant(), zone, days, new Percent(50), true, Optional.empty(), source(today, zone));
+        var days = List.of(new DayPlan(today, new Percent(50), List.of(), new Percent(50), new Percent(40), 10, List.of()),
+                new DayPlan(tomorrow, new Percent(40), windows, new Percent(60), new Percent(50), 10, List.of()));
+        return new Outlook.Planned(today.atTime(8, 0).atZone(zone).toInstant(), zone, days, new Percent(50), true, Optional.empty(), source(today, zone), 0.4, new Percent(30), new Percent(80));
     }
 
     @Test

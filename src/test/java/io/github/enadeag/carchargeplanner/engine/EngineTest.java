@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 import io.github.enadeag.carchargeplanner.engine.away.AwayFile;
+import io.github.enadeag.carchargeplanner.engine.battery.BatteryFile;
 import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
@@ -112,8 +113,8 @@ class EngineTest {
         var known = new Providers(List.of(providers));
         var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
         var service = new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys);
-        return new Engine(new ConfigFile(config), service, known, apiKeys, new AwayFile(folder.resolve("away.json")), clock,
-                announcer());
+        return new Engine(new ConfigFile(config), service, known, apiKeys, new AwayFile(folder.resolve("away.json")),
+                new BatteryFile(folder.resolve("battery.json")), clock, announcer());
     }
 
     /** Kept in the test's folder, so a new engine is like the app after a restart. */
@@ -152,6 +153,42 @@ class EngineTest {
         assertThat(window.start()).isEqualTo(DAY.atTime(10, 0).atZone(BRUSSELS).toInstant());
         assertThat(window.amps()).isEqualTo(13);
         assertThat(planned.gridAdvice()).isEmpty();
+    }
+
+    @Test
+    void anEnteredBatteryLevelIsWhereTheNextPlanStartsAlsoAfterARestart() throws IOException {
+        engine(clockAt(7)).setBatteryLevel(new Percent(72));
+
+        var planned = planned(engine(clockAt(8)));
+
+        assertThat(planned.batteryPct()).isEqualTo(new Percent(72));
+        assertThat(planned.batteryAssumed()).isFalse();
+        assertThat(planned.days().getFirst().socStartPct()).isEqualTo(new Percent(72));
+    }
+
+    @Test
+    void untilALevelIsEnteredThePlanSaysItsLevelIsAssumed() {
+        var planned = planned(engine(clockAt(7)));
+
+        assertThat(planned.batteryAssumed()).isTrue();
+        assertThat(planned.days().getFirst().socStartPct()).isEqualTo(Engine.ASSUMED_BATTERY_PCT);
+    }
+
+    @Test
+    void thePlanCarriesWhatTheChartsDraw() {
+        var planned = planned(engine(clockAt(7)));
+
+        // the example's house, minimum and target
+        assertThat(planned.houseKw()).isEqualTo(0.5);
+        assertThat(planned.minimumPct()).isEqualTo(new Percent(30));
+        assertThat(planned.targetPct()).isEqualTo(new Percent(80));
+        var today = planned.days().getFirst().forecast();
+        assertThat(today).hasSize(24);
+        assertThat(today.getFirst().start()).isEqualTo(DAY.atStartOfDay(BRUSSELS).toInstant());
+        assertThat(today).filteredOn(step -> step.powerKw() > 0).hasSize(6)
+                .allSatisfy(step -> assertThat(step.powerKw()).isEqualTo(4.0));
+        assertThat(planned.days().get(1).forecast().getFirst().start())
+                .isEqualTo(DAY.plusDays(1).atStartOfDay(BRUSSELS).toInstant());
     }
 
     @Test
@@ -273,7 +310,8 @@ class EngineTest {
         var madeAt = Instant.parse("2026-07-03T05:00:00Z");
         var source = new ForecastSource(new ProviderId("main"), "Main", "Forecast by Main", madeAt, Freshness.FRESH, ProviderRole.PRIMARY,
                 "", Optional.empty());
-        var planned = new Outlook.Planned(madeAt, BRUSSELS, List.of(), new Percent(50), true, Optional.empty(), source);
+        var planned = new Outlook.Planned(madeAt, BRUSSELS, List.of(), new Percent(50), true, Optional.empty(), source, 0.4,
+                new Percent(30), new Percent(80));
         assertThat(planned.nextWindow()).isEmpty();
     }
 
@@ -325,7 +363,8 @@ class EngineTest {
         var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json")));
         var withoutKeychain = new Engine(new ConfigFile(config),
                 new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys), known, apiKeys,
-                new AwayFile(folder.resolve("away.json")), clockAt(7), announcer());
+                new AwayFile(folder.resolve("away.json")), new BatteryFile(folder.resolve("battery.json")), clockAt(7),
+                announcer());
         withoutKeychain.saveApiKeys(new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "x"))));
         assertThat(withoutKeychain.keyStorage()).isEqualTo(KeyStorage.FILE);
     }

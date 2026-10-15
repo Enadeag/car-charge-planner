@@ -36,13 +36,13 @@ class TrayStatusMapperTest {
     }
 
     private static DayPlan day(LocalDate date, Window... windows) {
-        return new DayPlan(date, new Percent(50), List.of(windows), new Percent(74), new Percent(62), 12);
+        return new DayPlan(date, new Percent(50), List.of(windows), new Percent(74), new Percent(62), 12, List.of());
     }
 
     private static Outlook.Planned plannedAt(int hour, Optional<GridAdvice> advice, DayPlan... days) {
         var source = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)",
                 at(TODAY, 7, 45), Freshness.FRESH, ProviderRole.PRIMARY, "", Optional.empty());
-        return new Outlook.Planned(at(TODAY, hour, 0), BRUSSELS, List.of(days), new Percent(50), false, advice, source);
+        return new Outlook.Planned(at(TODAY, hour, 0), BRUSSELS, List.of(days), new Percent(50), false, advice, source, 0.4, new Percent(30), new Percent(80));
     }
 
     private static TrayStatus at(int hour, DayPlan... days) {

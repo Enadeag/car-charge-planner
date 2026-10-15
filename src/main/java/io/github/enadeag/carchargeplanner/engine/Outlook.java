@@ -25,6 +25,9 @@ public sealed interface Outlook {
      * @param batteryAssumed true while the battery level is a placeholder, not a reading
      * @param gridAdvice present when the battery would end a day below the minimum charge level
      * @param forecast where the forecast came from
+     * @param houseKw the power the house uses on its own in kW, 0 or more
+     * @param minimumPct the minimum charge level of the battery
+     * @param targetPct the target charge level of the battery
      */
     record Planned(
             Instant madeAt,
@@ -33,10 +36,20 @@ public sealed interface Outlook {
             Percent batteryPct,
             boolean batteryAssumed,
             Optional<GridAdvice> gridAdvice,
-            ForecastSource forecast) implements Outlook {
+            ForecastSource forecast,
+            double houseKw,
+            Percent minimumPct,
+            Percent targetPct) implements Outlook {
 
-        /** Copies the days. */
+        /**
+         * Copies the days and checks the house's use.
+         *
+         * @throws IllegalArgumentException when the house's use is negative or not a number
+         */
         public Planned {
+            if (!(houseKw >= 0)) {
+                throw new IllegalArgumentException("houseKw must not be negative, not " + houseKw);
+            }
             days = List.copyOf(days);
         }
 

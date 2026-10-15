@@ -38,7 +38,7 @@ class OutlookMapperTest {
     }
 
     private static DayPlan day(LocalDate date, Window... windows) {
-        return new DayPlan(date, new Percent(50), List.of(windows), new Percent(74), new Percent(62), 12);
+        return new DayPlan(date, new Percent(50), List.of(windows), new Percent(74), new Percent(62), 12, List.of());
     }
 
     /** Fetched at 07:45 from the primary provider, Open-Meteo. */
@@ -48,15 +48,15 @@ class OutlookMapperTest {
     }
 
     private static Outlook.Planned planned(boolean batteryAssumed, DayPlan... days) {
-        return new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(days), new Percent(50), batteryAssumed, Optional.empty(), fresh());
+        return new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(days), new Percent(50), batteryAssumed, Optional.empty(), fresh(), 0.4, new Percent(30), new Percent(80));
     }
 
     private static Outlook.Planned planned(ForecastSource source) {
-        return new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(day(TODAY)), new Percent(50), false, Optional.empty(), source);
+        return new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(day(TODAY)), new Percent(50), false, Optional.empty(), source, 0.4, new Percent(30), new Percent(80));
     }
 
     private static DashboardModel.Plan advised(GridAdvice advice, DayPlan... days) {
-        var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(days), new Percent(50), false, Optional.of(advice), fresh());
+        var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(days), new Percent(50), false, Optional.of(advice), fresh(), 0.4, new Percent(30), new Percent(80));
         return (DashboardModel.Plan) MAPPER.map(planned);
     }
 
@@ -187,7 +187,7 @@ class OutlookMapperTest {
         var sunday = TODAY.plusDays(2);
         var advice = new GridAdvice(sunday, 22, 8, 11.0, Optional.empty());
         var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(day(TODAY), day(sunday)), new Percent(50),
-                false, Optional.of(advice), fresh());
+                false, Optional.of(advice), fresh(), 0.4, new Percent(30), new Percent(80));
 
         var model = ((DashboardModel.Plan) DUTCH.map(planned)).advice().orElseThrow();
 

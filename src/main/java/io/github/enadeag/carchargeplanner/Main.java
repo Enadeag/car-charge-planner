@@ -15,6 +15,7 @@ import io.github.enadeag.carchargeplanner.desktop.Tray;
 import io.github.enadeag.carchargeplanner.desktop.TrayStatusMapper;
 import io.github.enadeag.carchargeplanner.engine.Engine;
 import io.github.enadeag.carchargeplanner.engine.away.AwayFile;
+import io.github.enadeag.carchargeplanner.engine.battery.BatteryFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastCache;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastService;
@@ -318,7 +319,8 @@ public final class Main {
         var cache = new ForecastCache(dataFolder.resolve("forecasts"));
         var announcer = new Announcer(new AnnouncedWindows(dataFolder.resolve("announced.json")), notifier);
         return new Engine(configFile, new ForecastService(providers, cache, apiKeys), providers, apiKeys,
-                new AwayFile(dataFolder.resolve("away.json")), clock, announcer);
+                new AwayFile(dataFolder.resolve("away.json")), new BatteryFile(dataFolder.resolve("battery.json")), clock,
+                announcer);
     }
 
     private static Keychain keychain() {
