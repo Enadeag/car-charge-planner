@@ -148,6 +148,8 @@ class StatusNotifierTrayTest {
         var properties = properties(showWithAWatcher());
 
         assertThat(themeIcon(properties)).isEqualTo(new StatusIcon().svg(StatusDot.SUN, PanelShade.DARK));
+        // icon themes shorten an unknown name at its dashes: Plasma showed the system's "car" icon instead of ours
+        assertThat((String) properties.get("IconName").getValue()).doesNotContain("-");
         // Plasma looks in IconThemePath only when its last folder is called "icons"
         assertThat(Path.of((String) properties.get("IconThemePath").getValue()).getFileName()).hasToString("icons");
         assertThat(toolTipText(properties)).isEqualTo("Charge on sun now, until 14:30, at 10 A.");

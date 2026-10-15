@@ -68,14 +68,18 @@ final class IconThemeFolder {
      * that keeps icons by name never shows an old dot.
      *
      * @param dot the dot the icon shows
-     * @return a name such as "car-charge-planner-tray-sun", or an empty name when the icons could not be written
+     * @return a name such as "car_charge_planner_tray_sun", or an empty name when the icons could not be written
      */
     String iconName(StatusDot dot) {
         return written ? name(dot) : "";
     }
 
+    /**
+     * Without dashes: an icon theme shortens a name it cannot find at its dashes, and Plasma would show the system
+     * theme's "car" before it looks in our folder.
+     */
     private static String name(StatusDot dot) {
-        return "car-charge-planner-tray-" + dot.name().toLowerCase(Locale.ROOT);
+        return "car_charge_planner_tray_" + dot.name().toLowerCase(Locale.ROOT);
     }
 
     /** Removes the folder and the icons in it; a folder that is gone already is fine. */
