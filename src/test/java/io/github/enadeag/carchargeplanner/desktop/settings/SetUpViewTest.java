@@ -216,7 +216,7 @@ class SetUpViewTest {
         assertThat(Fx.call(() -> ((TextField) setUp.field(view, TextKey.FIELD_LATITUDE)).getText()))
                 .isEqualTo(setUp.messages.number(51.0, 4));
 
-        Fx.run(() -> view.show(SetUpStep.PREVIEW));
+        setUp.preview(view);
         next(view, 1);
 
         assertThat(setUp.finished).isEqualTo(1);
@@ -245,13 +245,15 @@ class SetUpViewTest {
         Fx.run(() -> view.show(SetUpStep.FORECAST));
         Fx.run(() -> {
             var key = Scenes.all(view).stream().filter(node -> node instanceof TextField field
-                    && field.isVisible() && "API key".equals(field.getAccessibleText()))
+                    && field.isVisible() && setUp.messages.text(TextKey.PROVIDER_API_KEY).equals(field.getAccessibleText()))
                     .map(TextField.class::cast).findFirst().orElseThrow();
             key.setText("TYPED-KEY");
         });
         next(view, 2);
         waitForText(view, setUp.messages.text(TextKey.SETUP_CHECK_WORKS, setUp.provider.info().name(), 2));
-        next(view, 2);
+        next(view, 1);
+        setUp.awaitPreview(view);
+        next(view, 1);
 
         assertThat(setUp.provider.asked).contains(Map.of("api_key", "TYPED-KEY"));
         assertThat(setUp.engine.apiKeys().of(new ProviderId("open-meteo"))).containsEntry("api_key", "TYPED-KEY");
@@ -280,8 +282,8 @@ class SetUpViewTest {
         Fx.run(() -> {
             setUp.type(view, TextKey.FIELD_MIN_CURRENT, "10");
             setUp.type(view, TextKey.FIELD_MAX_CURRENT, "8");
-            view.show(SetUpStep.PREVIEW);
         });
+        setUp.preview(view);
 
         next(view, 1);
 
@@ -295,7 +297,7 @@ class SetUpViewTest {
         Fx.run(() -> view.show(SetUpStep.MORE));
         Fx.run(() -> setUp.type(view, TextKey.FIELD_BASELOAD, "0.35"));
         next(view, 1);
-        Fx.run(() -> view.show(SetUpStep.PREVIEW));
+        setUp.preview(view);
         next(view, 1);
 
         var config = stored();
@@ -308,7 +310,7 @@ class SetUpViewTest {
     @Test
     void thePreviewShowsTheOwnersOwnPlanWithoutButtonsThatLeadElsewhere() throws Exception {
         var view = atSolar();
-        Fx.run(() -> view.show(SetUpStep.PREVIEW));
+        setUp.preview(view);
         waitForText(view, setUp.provider.info().attribution());
 
         var buttons = Fx.call(() -> Scenes.all(view).stream().filter(Button.class::isInstance)

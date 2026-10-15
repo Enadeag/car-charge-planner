@@ -138,10 +138,8 @@ class SetUpWindowTest {
         setUp.withExample();
         var view = open();
 
-        Fx.run(() -> {
-            view.show(SetUpStep.PREVIEW);
-            view.next();
-        });
+        setUp.preview(view);
+        Fx.run(view::next);
 
         assertThat(setUp.finished).isEqualTo(1);
         assertThat(Fx.call(() -> Window.getWindows().stream().anyMatch(shown -> shown.isShowing()

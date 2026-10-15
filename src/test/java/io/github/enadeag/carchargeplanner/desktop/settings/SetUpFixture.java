@@ -189,6 +189,20 @@ final class SetUpFixture {
         return Scenes.visibleTexts(view);
     }
 
+    /**
+     * Shows the preview and waits until it shows the plan, or why there is none, so nothing is still being written to
+     * the test's folder when the test ends.
+     */
+    void preview(SetUpView view) throws Exception {
+        Fx.run(() -> view.show(SetUpStep.PREVIEW));
+        awaitPreview(view);
+    }
+
+    /** Waits until the preview shown shows the plan, or why there is none. */
+    void awaitPreview(SetUpView view) throws Exception {
+        SettingsFixture.waitFor(() -> !texts(view).contains(messages.text(TextKey.LOADING)));
+    }
+
     /** Searches the place as the owner does and picks the one found; on the location step. */
     void choosePlace(SetUpView view) throws Exception {
         Fx.run(() -> {
