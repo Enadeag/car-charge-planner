@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.AppSettings;
+import io.github.enadeag.carchargeplanner.desktop.Appearance;
 import io.github.enadeag.carchargeplanner.desktop.DisplayMode;
 import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
@@ -16,8 +17,8 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.Region;
 
 /**
- * The desktop app's own settings: how it shows itself, its language, the units, and whether it starts at login. The
- * first three are kept in the app settings file, start at login by the system.
+ * The desktop app's own settings: how it shows itself, its language and appearance, the units, and whether it starts
+ * at login. The first four are kept in the app settings file, start at login by the system.
  */
 final class AppPage implements Page {
 
@@ -25,6 +26,7 @@ final class AppPage implements Page {
     private final PageView view;
     private final ChoiceField<DisplayMode> mode;
     private final ChoiceField<Optional<Language>> language;
+    private final ChoiceField<Appearance> appearance;
     private final ChoiceField<Units> units;
     private final SwitchField startAtLogin;
     private final FieldRow startAtLoginRow;
@@ -40,6 +42,7 @@ final class AppPage implements Page {
         this.view = new PageView(messages.text(Category.APP.title()));
         mode = new ChoiceField<>(List.of(DisplayMode.values()), this::modeName);
         language = new ChoiceField<>(languages(), this::languageName);
+        appearance = new ChoiceField<>(List.of(Appearance.values()), this::appearanceName);
         units = new ChoiceField<>(List.of(Units.values()), this::unitsName);
         startAtLogin = new SwitchField(messages.text(TextKey.FIELD_START_AT_LOGIN));
         startAtLoginRow = new FieldRow("", "", startAtLogin);
@@ -47,7 +50,8 @@ final class AppPage implements Page {
                 new Card(messages.text(TextKey.CARD_DISPLAY), messages.text(TextKey.CARD_DISPLAY_HINT),
                         new FieldRow(messages.text(TextKey.FIELD_MODE), messages.text(TextKey.FIELD_MODE_HINT), mode),
                         new FieldRow(messages.text(TextKey.FIELD_LANGUAGE), messages.text(TextKey.FIELD_LANGUAGE_HINT),
-                                language)),
+                                language),
+                        new FieldRow(messages.text(TextKey.FIELD_APPEARANCE), "", appearance)),
                 new Card(messages.text(TextKey.CARD_UNITS), messages.text(TextKey.CARD_UNITS_HINT),
                         new FieldRow(messages.text(TextKey.FIELD_UNITS), "", units)),
                 new Card(messages.text(TextKey.CARD_START_AT_LOGIN), messages.text(TextKey.CARD_START_AT_LOGIN_HINT),
@@ -65,6 +69,7 @@ final class AppPage implements Page {
     void load(AppSettings settings, Optional<Boolean> startsAtLogin) {
         mode.load(settings.mode());
         language.load(settings.language());
+        appearance.load(settings.appearance());
         units.load(settings.units());
         startAtLogin.load(startsAtLogin.orElse(false));
         startAtLogin.setEnabled(startsAtLogin.isPresent());
@@ -78,7 +83,7 @@ final class AppPage implements Page {
      * @return the app settings to keep
      */
     AppSettings settings() {
-        return new AppSettings(language.value(), units.value(), mode.value());
+        return new AppSettings(language.value(), units.value(), mode.value(), appearance.value());
     }
 
     /**
@@ -142,12 +147,12 @@ final class AppPage implements Page {
 
     @Override
     public void onChange(Runnable action) {
-        Stream.of(mode, language, units, startAtLogin).forEach(input -> input.onChange(action));
+        Stream.of(mode, language, appearance, units, startAtLogin).forEach(input -> input.onChange(action));
     }
 
     @Override
     public boolean isChanged() {
-        return Stream.of(mode, language, units, startAtLogin).anyMatch(Input::isChanged);
+        return Stream.of(mode, language, appearance, units, startAtLogin).anyMatch(Input::isChanged);
     }
 
     private static List<Optional<Language>> languages() {
@@ -160,6 +165,14 @@ final class AppPage implements Page {
     /** A language by its own name, such as "Nederlands", so that the owner finds it whatever the app speaks now. */
     private String languageName(Optional<Language> choice) {
         return choice.map(Language::autonym).orElseGet(() -> messages.text(TextKey.LANGUAGE_SYSTEM));
+    }
+
+    private String appearanceName(Appearance choice) {
+        return messages.text(switch (choice) {
+            case SYSTEM -> TextKey.APPEARANCE_SYSTEM;
+            case LIGHT -> TextKey.APPEARANCE_LIGHT;
+            case DARK -> TextKey.APPEARANCE_DARK;
+        });
     }
 
     private String modeName(DisplayMode choice) {

@@ -31,7 +31,7 @@ class AppSettingsFileTest {
     @Test
     void chosenSettingsAreKept() throws IOException {
         assertThat(read("{\"language\": \"nl\", \"units\": \"metric\", \"mode\": \"window\"}"))
-                .isEqualTo(new AppSettings(Optional.of(Language.DUTCH), Units.METRIC, DisplayMode.WINDOW));
+                .isEqualTo(new AppSettings(Optional.of(Language.DUTCH), Units.METRIC, DisplayMode.WINDOW, Appearance.SYSTEM));
     }
 
     @Test
@@ -41,7 +41,8 @@ class AppSettingsFileTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"{\"language\": \"system\"}", "{}", "{\"language\": \"tlh\"}", "not json",
-        "{\"units\": \"furlongs\", \"mode\": \"hologram\"}", "{\"units\": 3}"})
+        "{\"units\": \"furlongs\", \"mode\": \"hologram\"}", "{\"units\": 3}", "{\"appearance\": \"sepia\"}",
+        "{\"appearance\": \"system\"}"})
     void aFileThatChoosesNothingTheAppHasFollowsTheSystem(String content) throws IOException {
         assertThat(read(content)).isEqualTo(FOLLOWING);
     }
@@ -49,12 +50,17 @@ class AppSettingsFileTest {
     @Test
     void oneUnknownValueLeavesTheOthersAsChosen() throws IOException {
         assertThat(read("{\"language\": \"tlh\", \"units\": \"metric\", \"mode\": \"tray\"}"))
-                .isEqualTo(new AppSettings(Optional.empty(), Units.METRIC, DisplayMode.TRAY));
+                .isEqualTo(new AppSettings(Optional.empty(), Units.METRIC, DisplayMode.TRAY, Appearance.SYSTEM));
+    }
+
+    @Test
+    void anAppearanceChosenIsKept() throws IOException {
+        assertThat(read("{\"appearance\": \"light\"}").appearance()).isEqualTo(Appearance.LIGHT);
     }
 
     @Test
     void writtenSettingsAreReadBack() throws IOException {
-        var chosen = new AppSettings(Optional.of(Language.ENGLISH), Units.METRIC, DisplayMode.WINDOW);
+        var chosen = new AppSettings(Optional.of(Language.ENGLISH), Units.METRIC, DisplayMode.WINDOW, Appearance.DARK);
         var file = new AppSettingsFile(folder.resolve("new", "app.json"), Units.IMPERIAL);
 
         file.write(chosen);
@@ -64,7 +70,7 @@ class AppSettingsFileTest {
 
     @Test
     void followingTheSystemsLanguageIsReadBackAsSuch() throws IOException {
-        file().write(new AppSettings(Optional.empty(), Units.METRIC, DisplayMode.TRAY));
+        file().write(new AppSettings(Optional.empty(), Units.METRIC, DisplayMode.TRAY, Appearance.SYSTEM));
 
         assertThat(new AppSettingsFile(folder.resolve("app.json"), Units.METRIC).read().language()).isEmpty();
     }

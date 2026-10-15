@@ -37,8 +37,8 @@ public final class Dashboard {
      * Makes the dashboard, hidden, showing that the forecast is being fetched until {@link #show(Outlook)} is called.
      *
      * @param icon the app icon, for the window's title bar and the taskbar
-     * @param colorScheme the system's light or dark, followed while the app runs
-     *     ({@code Platform.getPreferences().colorSchemeProperty()}); never null
+     * @param colorScheme light or dark for the windows, followed while the app runs: the owner's appearance over the
+     *     system's ({@link Appearance#scheme}); never null
      * @param reducedMotion true while the system asks for reduced motion
      *     ({@code Platform.getPreferences().reducedMotionProperty()}); the charts then change without moving; never
      *     null

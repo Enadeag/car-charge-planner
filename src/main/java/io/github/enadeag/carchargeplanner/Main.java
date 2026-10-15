@@ -2,6 +2,8 @@ package io.github.enadeag.carchargeplanner;
 
 import io.github.enadeag.carchargeplanner.desktop.AnnouncementTexts;
 import io.github.enadeag.carchargeplanner.desktop.AppIcon;
+import io.github.enadeag.carchargeplanner.desktop.AppSettings;
+import io.github.enadeag.carchargeplanner.desktop.Appearance;
 import io.github.enadeag.carchargeplanner.desktop.AppSettingsFile;
 import io.github.enadeag.carchargeplanner.desktop.Dashboard;
 import io.github.enadeag.carchargeplanner.desktop.DisplayMode;
@@ -73,6 +75,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import org.freedesktop.dbus.connections.impl.DBusConnectionBuilder;
 
@@ -125,13 +128,13 @@ public final class Main {
         }
         var appSettingsFile = new AppSettingsFile(defaultConfigPath().resolveSibling(APP_SETTINGS_FILE),
                 Units.ofCountry(Locale.getDefault(Locale.Category.FORMAT).getCountry()));
-        // the mode is read once, as the app starts, and applies at the next start; the language follows Settings
+        // the mode is read once, as the app starts, and applies at the next start; language and appearance follow Settings
         var appSettings = appSettingsFile.read();
         var language = new LanguageChoice(Language.ofSystem(System.getenv(), Locale.getDefault(Locale.Category.DISPLAY)));
         language.choose(appSettings.language());
         var messages = language.messages();
         switch (commandLine.command()) {
-            case RUN -> run(commandLine, appSettingsFile, appSettings.mode(), language);
+            case RUN -> run(commandLine, appSettingsFile, appSettings, language);
             case QUIT -> System.exit(quitRunningApp(messages));
             case START_AT_LOGIN_ON -> System.exit(switchStartAtLogin(true, messages));
             case START_AT_LOGIN_OFF -> System.exit(switchStartAtLogin(false, messages));
@@ -142,8 +145,11 @@ public final class Main {
      * Starts the app: the dashboard, the tray icon (or a window without a tray), the notifications, the engine, and
      * planning every minute. When a copy runs already, it is asked to show its dashboard instead, and this one exits.
      */
-    private static void run(CommandLine commandLine, AppSettingsFile appSettingsFile, DisplayMode mode,
+    private static void run(CommandLine commandLine, AppSettingsFile appSettingsFile, AppSettings appSettings,
             LanguageChoice language) throws Exception {
+        var mode = appSettings.mode();
+        // set on the JavaFX thread only, as JavaFX's bindings on it are read there
+        var appearance = new SimpleObjectProperty<>(appSettings.appearance());
         var commands = new CompletableFuture<Consumer<InstanceCommand>>();
         var instance = singleInstance();
         // commands that come in while the app is still starting wait until it can carry them out
@@ -170,12 +176,16 @@ public final class Main {
 
         Platform.setImplicitExit(false);
         var colorSchemeFound = new CompletableFuture<ObservableValue<ColorScheme>>();
+        var windowSchemeFound = new CompletableFuture<ObservableValue<ColorScheme>>();
         var dashboardMade = new CompletableFuture<Dashboard>();
         Platform.startup(() -> {
             // JavaFX hands out its preferences on its own thread only
             var colorScheme = Platform.getPreferences().colorSchemeProperty();
             colorSchemeFound.complete(colorScheme);
-            dashboardMade.complete(new Dashboard(icon, colorScheme, Platform.getPreferences().reducedMotionProperty(),
+            // the windows follow the owner's appearance; the tray icon follows the panel, so the system's scheme
+            var windowScheme = Appearance.scheme(appearance, colorScheme);
+            windowSchemeFound.complete(windowScheme);
+            dashboardMade.complete(new Dashboard(icon, windowScheme, Platform.getPreferences().reducedMotionProperty(),
                     clock, taskbarHiding(), language));
         });
         var dashboard = dashboardMade.get();
@@ -210,13 +220,16 @@ public final class Main {
         var settingsMade = new CompletableFuture<SettingsWindow>();
         var facts = new AboutFacts(version(), configPath, appSettingsFile.path(), dataFolder, secretsFile.path());
         var stores = new SettingsStores(engine, appSettingsFile, startAtLogin());
-        // a Save may have chosen another language: every part follows it at once, before the plan is made again
+        // a Save may have chosen another language or appearance: every part follows at once, before the plan is made
+        // again; this runs on the JavaFX thread
         Runnable saved = () -> {
-            language.choose(appSettingsFile.read().language());
+            var chosen = appSettingsFile.read();
+            language.choose(chosen.language());
+            appearance.set(chosen.appearance());
             replanning.execute(replan);
         };
         Platform.runLater(() -> settingsMade.complete(new SettingsWindow(stores, facts, Main::openLink, saved,
-                Optional.empty(), colorSchemeFound.join(), icon, language)));
+                Optional.empty(), windowSchemeFound.join(), icon, language)));
         var settings = settingsMade.get();
         dashboard.onSettings(() -> settings.open(Category.SOLAR));
         dashboard.onAway(() -> settings.open(Category.AWAY));

@@ -289,6 +289,14 @@ public enum TextKey {
     FIELD_LANGUAGE_HINT,
     /** The language choice that follows the system. */
     LANGUAGE_SYSTEM,
+    /** The appearance's name: light, dark or as the system is. */
+    FIELD_APPEARANCE,
+    /** The appearance that follows the system's light or dark. */
+    APPEARANCE_SYSTEM,
+    /** The appearance that is always light. */
+    APPEARANCE_LIGHT,
+    /** The appearance that is always dark. */
+    APPEARANCE_DARK,
     /** The title of the card with the units. */
     CARD_UNITS,
     /** What the units do. */

@@ -2,6 +2,7 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.AppIcon;
 import io.github.enadeag.carchargeplanner.desktop.AppSettingsFile;
+import io.github.enadeag.carchargeplanner.desktop.Appearance;
 import io.github.enadeag.carchargeplanner.desktop.Fx;
 import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
@@ -35,7 +36,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import javafx.application.ColorScheme;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -127,14 +130,22 @@ final class SettingsFixture {
     }
 
     /**
-     * The Settings window, hidden, following a language; after a Save it chooses the language the app settings file
-     * holds, as the app does.
+     * The Settings window, hidden, following a language and an appearance over the system's scheme; after a Save it
+     * chooses the language and appearance the app settings file holds, as the app does.
      */
-    SettingsWindow window(LanguageChoice language) throws Exception {
+    SettingsWindow window(LanguageChoice language, ObjectProperty<Appearance> appearance,
+            ObservableValue<ColorScheme> system) throws Exception {
         return Fx.call(() -> new SettingsWindow(stores(true), facts(), opened::add, () -> {
             saved++;
-            language.choose(appSettings.read().language());
-        }, Optional.empty(), new SimpleObjectProperty<>(ColorScheme.LIGHT), new AppIcon(), language));
+            var chosen = appSettings.read();
+            language.choose(chosen.language());
+            appearance.set(chosen.appearance());
+        }, Optional.empty(), Appearance.scheme(appearance, system), new AppIcon(), language));
+    }
+
+    /** The Settings window, hidden, light, following a language as {@link #window(LanguageChoice, ObjectProperty, ObservableValue)}. */
+    SettingsWindow window(LanguageChoice language) throws Exception {
+        return window(language, new SimpleObjectProperty<>(Appearance.SYSTEM), new SimpleObjectProperty<>(ColorScheme.LIGHT));
     }
 
     SettingsView open() throws Exception {

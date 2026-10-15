@@ -7,6 +7,7 @@ import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
 import io.github.enadeag.carchargeplanner.desktop.Scenes;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -85,6 +86,26 @@ class SettingsWindowLanguageTest {
         @SuppressWarnings("unchecked")
         var chosen = Fx.call(() -> ((ComboBox<Optional<Language>>) SettingsFixture.field(after, "Taal")).getValue());
         assertThat(chosen).contains(Language.DUTCH);
+        assertThat(languageNames(after, "Taal")).containsExactly("Zoals het systeem", "English", "Nederlands");
+    }
+
+    /** What the language list offers, as the owner reads it. */
+    @SuppressWarnings("unchecked")
+    private static List<String> languageNames(SettingsView view, String field) throws Exception {
+        return Fx.call(() -> {
+            var box = (ComboBox<Optional<Language>>) SettingsFixture.field(view, field);
+            return box.getItems().stream().map(box.getConverter()::toString).toList();
+        });
+    }
+
+    @Test
+    void theLanguageListNamesEachLanguageInItselfInEitherLanguage() throws Exception {
+        var english = settings.open();
+        assertThat(languageNames(english, "Language")).containsExactly("Follow the system", "English", "Nederlands");
+        settings.close();
+
+        var dutch = new SettingsFixture(Files.createDirectory(folder.resolve("nl")), Language.DUTCH).open();
+        assertThat(languageNames(dutch, "Taal")).containsExactly("Zoals het systeem", "English", "Nederlands");
     }
 
     @Test

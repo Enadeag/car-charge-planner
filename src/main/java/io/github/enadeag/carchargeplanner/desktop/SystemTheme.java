@@ -20,7 +20,8 @@ public final class SystemTheme {
     /**
      * Makes the theme, following the scheme from now on.
      *
-     * @param scheme the system's colour scheme ({@code Platform.getPreferences().colorSchemeProperty()}); never null
+     * @param scheme the colour scheme to follow: the owner's appearance over the system's ({@link Appearance#scheme});
+     *     never null
      */
     public SystemTheme(ObservableValue<ColorScheme> scheme) {
         this.scheme = scheme;
@@ -28,14 +29,15 @@ public final class SystemTheme {
     }
 
     /**
-     * Gives a scene the dashboard's stylesheet, light or dark as the scheme is, now and whenever it changes.
+     * Gives a scene the dashboard's stylesheet, light or dark as the scheme is, now and whenever it changes, also
+     * when the scene gets another root.
      *
-     * @param scene a scene whose root stays the same; the theme keeps it for as long as the app runs
+     * @param scene the scene to style; the theme keeps it for as long as the app runs
      */
     public void style(Scene scene) {
         scene.getStylesheets().add(STYLESHEET);
         scenes.add(scene);
-        apply(scene, scheme.getValue());
+        scene.rootProperty().subscribe(root -> apply(scene, scheme.getValue()));
     }
 
     private static void apply(Scene scene, ColorScheme scheme) {

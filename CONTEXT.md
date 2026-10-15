@@ -59,7 +59,7 @@ The owner's choices about how the plan is made: the minimum and target charge le
 _Avoid_: Planning settings, options
 
 **App settings**:
-The desktop app's own settings: whether it shows itself as a tray icon or a window, the units it shows and its language. Kept by the desktop app, not the engine, so they stay on the computer even when the engine runs elsewhere.
+The desktop app's own settings: whether it shows itself as a tray icon or a window, the units it shows, its language and whether it looks light, dark or as the system does. Kept by the desktop app, not the engine, so they stay on the computer even when the engine runs elsewhere.
 _Avoid_: Preferences, interface config
 
 **Place search**:

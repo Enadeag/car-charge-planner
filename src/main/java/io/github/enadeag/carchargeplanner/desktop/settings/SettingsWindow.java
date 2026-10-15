@@ -47,8 +47,8 @@ public final class SettingsWindow {
      * @param saved called on the JavaFX thread after something was saved, so the plan is made again with it; it
      *     should hand the work on
      * @param runSetUp opens set-up once Settings closed; empty while the app has no set-up
-     * @param colorScheme the system's light or dark, followed while the app runs
-     *     ({@code Platform.getPreferences().colorSchemeProperty()}); never null
+     * @param colorScheme light or dark for the windows, followed while the app runs: the owner's appearance over the
+     *     system's ({@link io.github.enadeag.carchargeplanner.desktop.Appearance#scheme}); never null
      * @param icon the app icon, for the title bar and the taskbar
      * @param language the language the texts are in, followed while the app runs; never null
      */

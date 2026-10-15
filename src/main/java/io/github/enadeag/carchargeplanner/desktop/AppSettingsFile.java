@@ -14,8 +14,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * The file that keeps the {@link AppSettings}, in JSON, such as
- * {@code {"language": "nl", "units": "metric", "mode": "automatic"}}. {@code "system"}, or no {@code language} at all,
- * follows the system's language. The app always starts: a value it cannot use is logged and replaced by the one that
+ * {@code {"language": "nl", "units": "metric", "mode": "automatic", "appearance": "dark"}}. {@code "system"}, or no
+ * {@code language} at all, follows the system's language; no {@code appearance} follows the system's light or dark. The app always starts: a value it cannot use is logged and replaced by the one that
  * follows the system.
  */
 public final class AppSettingsFile {
@@ -69,7 +69,8 @@ public final class AppSettingsFile {
             return new AppSettings(
                     language.equals(FOLLOW_SYSTEM) ? Optional.empty() : value(file, "language", Language::ofCode),
                     value(file, "units", Units::ofCode).orElse(system.units()),
-                    value(file, "mode", DisplayMode::ofCode).orElse(system.mode()));
+                    value(file, "mode", DisplayMode::ofCode).orElse(system.mode()),
+                    value(file, "appearance", Appearance::ofCode).orElse(system.appearance()));
         } catch (JacksonException e) {
             LOG.log(Level.WARNING, path + " is not JSON, so the app follows the system: " + e.getOriginalMessage());
             return system;
@@ -87,7 +88,8 @@ public final class AppSettingsFile {
         var file = json.createObjectNode()
                 .put("language", settings.language().map(Language::code).orElse(FOLLOW_SYSTEM))
                 .put("units", settings.units().code())
-                .put("mode", settings.mode().code());
+                .put("mode", settings.mode().code())
+                .put("appearance", settings.appearance().code());
         var temporary = path.resolveSibling(path.getFileName() + ".tmp");
         if (path.getParent() != null) {
             Files.createDirectories(path.getParent());
