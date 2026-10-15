@@ -74,7 +74,8 @@ class StatusNotifierTrayTest {
         address = bus.address();
         panel = DBusConnectionBuilder.forAddress(address).withShared(false).build();
         tray = new StatusNotifierTray(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),
-                new StatusIcon(), folder.resolve("tray"), "Car charge planner");
+                new StatusIcon(), folder.resolve("tray"), "Car charge planner",
+                new Tray.MenuLabels("Open dashboard", "Quit"));
     }
 
     @AfterEach

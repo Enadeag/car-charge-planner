@@ -23,7 +23,7 @@ class AnnouncementTextsTest {
     }
 
     private static NotificationText text(AnnouncementKind kind, Window window, Phases phases) {
-        return new AnnouncementTexts().notification(new Announcement(kind, window, BRUSSELS, phases, new Percent(30)));
+        return new AnnouncementTexts(new Messages(Language.ENGLISH)).notification(new Announcement(kind, window, BRUSSELS, phases, new Percent(30)));
     }
 
     @Test
@@ -32,6 +32,17 @@ class AnnouncementTextsTest {
 
         assertThat(text.title()).isEqualTo("Charge window 10:00 – 15:00");
         assertThat(text.body()).isEqualTo("Set the current to 7 A (1.6 kW) in your charger's app. About 7.6 kWh, 99 % solar.");
+    }
+
+    @Test
+    void inDutchTheNotificationSaysTheSameWithADecimalComma() {
+        var announcement = new Announcement(AnnouncementKind.CHARGE_WINDOW, window(10, 15, 7, 1.6, 7.5, 0.1), BRUSSELS,
+                Phases.ONE, new Percent(30));
+
+        var text = new AnnouncementTexts(new Messages(Language.DUTCH)).notification(announcement);
+
+        assertThat(text.title()).isEqualTo("Laadvenster 10:00 – 15:00");
+        assertThat(text.body()).isEqualTo("Stel in de app van je laadpaal de stroom in op 7 A (1,6 kW). Ongeveer 7,6 kWh, 99% zon.");
     }
 
     @Test

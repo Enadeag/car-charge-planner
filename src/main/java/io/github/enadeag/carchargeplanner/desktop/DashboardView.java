@@ -17,9 +17,10 @@ import javafx.scene.layout.VBox;
  */
 final class DashboardView extends VBox {
 
-    private final DayTabs tabs = new DayTabs(this::showDay);
+    private final Messages messages;
+    private final DayTabs tabs;
     private final DayScroll body = new DayScroll();
-    private final DashboardFooter footer = new DashboardFooter();
+    private final DashboardFooter footer;
     private final Button detach = new Button();
     private final Runnable contentChanged;
     private List<DayModel> days = List.of();
@@ -30,18 +31,22 @@ final class DashboardView extends VBox {
      *
      * @param detachAction what the header's button does: open the popup as a window
      * @param contentChanged called when another day or a new plan shows, so the popup or window can fit it
+     * @param messages the texts, in the owner's language
      */
-    DashboardView(Runnable detachAction, Runnable contentChanged) {
+    DashboardView(Runnable detachAction, Runnable contentChanged, Messages messages) {
+        this.messages = messages;
+        this.tabs = new DayTabs(this::showDay, messages);
+        this.footer = new DashboardFooter(messages);
         this.contentChanged = contentChanged;
-        var title = new Label("Car charge planner");
+        var title = new Label("Car charge planner"); // the app's name, the same in every language
         title.getStyleClass().add("app-title");
         title.setAccessibleRole(AccessibleRole.TEXT);
         var spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         detach.setGraphic(Glyphs.detach());
-        detach.setTooltip(new Tooltip("Open in a window"));
-        detach.setAccessibleText("Open in a window");
+        detach.setTooltip(new Tooltip(messages.text(TextKey.DASHBOARD_DETACH)));
+        detach.setAccessibleText(messages.text(TextKey.DASHBOARD_DETACH));
         detach.getStyleClass().addAll("flat", "detach");
         detach.setOnAction(event -> detachAction.run());
 
@@ -101,7 +106,7 @@ final class DashboardView extends VBox {
         if (day == days.getFirst()) {
             advice.ifPresent(it -> page.getChildren().add(new AdviceCard(it)));
         }
-        page.getChildren().add(new ChartSlot());
+        page.getChildren().add(new ChartSlot(messages));
         body.show(page);
         contentChanged.run();
     }

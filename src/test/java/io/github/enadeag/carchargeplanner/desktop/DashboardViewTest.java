@@ -24,7 +24,7 @@ class DashboardViewTest {
 
     private DashboardView shown(DashboardModel model) throws Exception {
         return Fx.call(() -> {
-            var view = new DashboardView(detached::incrementAndGet, () -> { });
+            var view = new DashboardView(detached::incrementAndGet, () -> { }, new Messages(Language.ENGLISH));
             view.show(model);
             stage = Scenes.show(view, ColorScheme.LIGHT);
             return view;
@@ -139,7 +139,7 @@ class DashboardViewTest {
                 Models.SUNNY_TODAY.facts(), Models.SUNNY_TODAY.chips(), "Also 06:15 – 06:25 at 6 A. ".repeat(80), "");
         var plan = new DashboardModel.Plan(List.of(Models.CLOUDY_TOMORROW, busy), Optional.empty(), Models.FOOTER);
         var view = Fx.call(() -> {
-            var it = new DashboardView(() -> { }, () -> { });
+            var it = new DashboardView(() -> { }, () -> { }, new Messages(Language.ENGLISH));
             it.show(plan);
             stage = Scenes.show(it, ColorScheme.LIGHT);
             stage.getScene().getRoot().resize(420, 600);

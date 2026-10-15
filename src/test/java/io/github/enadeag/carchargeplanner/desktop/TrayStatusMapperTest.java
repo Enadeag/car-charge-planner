@@ -11,6 +11,8 @@ import io.github.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import io.github.enadeag.carchargeplanner.engine.plan.DayPlan;
 import io.github.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import io.github.enadeag.carchargeplanner.engine.plan.Window;
+import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -23,7 +25,7 @@ class TrayStatusMapperTest {
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");
     /** A Friday. */
     private static final LocalDate TODAY = LocalDate.of(2026, 7, 3);
-    private static final TrayStatusMapper MAPPER = new TrayStatusMapper();
+    private static final TrayStatusMapper MAPPER = new TrayStatusMapper(new Messages(Language.ENGLISH));
 
     private static Instant at(LocalDate day, int hour, int minute) {
         return day.atTime(hour, minute).atZone(BRUSSELS).toInstant();
@@ -49,10 +51,11 @@ class TrayStatusMapperTest {
 
     @Test
     void withoutASetUpTheOwnerMustActAndIsToldWhatToFix() {
-        var status = MAPPER.map(new Outlook.NotSetUp("engine.json has no location."));
+        var status = MAPPER.map(new Outlook.NotSetUp(ConfigProblem.Kind.INVALID, Path.of("engine.json"),
+                "system.location: is required"));
 
         assertThat(status.dot()).isEqualTo(StatusDot.ACTION);
-        assertThat(status.text()).contains("engine.json has no location.");
+        assertThat(status.text()).contains("engine.json", "system.location: is required");
     }
 
     @Test

@@ -11,11 +11,18 @@ final class DashboardFooter extends HBox {
 
     private final Label forecast = Texts.paragraph("", "footer-text");
 
-    /** Makes the footer, with an empty forecast text and the Away and Settings buttons switched off. */
-    DashboardFooter() {
+    private final Messages messages;
+
+    /**
+     * Makes the footer, with an empty forecast text and the Away and Settings buttons switched off.
+     *
+     * @param messages the texts, in the owner's language
+     */
+    DashboardFooter(Messages messages) {
+        this.messages = messages;
         HBox.setHgrow(forecast, Priority.ALWAYS);
         forecast.setMaxWidth(Double.MAX_VALUE);
-        getChildren().setAll(forecast, notYet("Away"), notYet("Settings"));
+        getChildren().setAll(forecast, notYet(TextKey.FOOTER_AWAY), notYet(TextKey.FOOTER_SETTINGS));
         getStyleClass().add("dashboard-footer");
     }
 
@@ -28,12 +35,13 @@ final class DashboardFooter extends HBox {
         forecast.setText(text);
     }
 
-    private static Button notYet(String name) {
-        var button = new Button(name + " · soon");
+    private Button notYet(TextKey nameKey) {
+        var name = messages.text(nameKey);
+        var button = new Button(messages.text(TextKey.FOOTER_SOON, name));
         button.getStyleClass().add(Styles.SMALL);
         button.setDisable(true);
         button.setMinWidth(USE_PREF_SIZE);
-        button.setAccessibleText(name + ", not available yet");
+        button.setAccessibleText(messages.text(TextKey.FOOTER_NOT_YET, name));
         return button;
     }
 }

@@ -80,7 +80,8 @@ class FreedesktopNotificationsTest {
         address = bus.address();
         desktop = DBusConnectionBuilder.forAddress(address).withShared(false).build();
         notifications = new FreedesktopNotifications(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),
-                "Car charge planner", "car-charge-planner", new AppIcon(), Files.createDirectory(folder.resolve("notify")));
+                "Car charge planner", "car-charge-planner", new AppIcon(), Files.createDirectory(folder.resolve("notify")),
+                "Open dashboard");
     }
 
     @AfterEach
@@ -194,7 +195,8 @@ class FreedesktopNotificationsTest {
     void withoutASessionBusTheAppGoesOnAndTheLogSaysSoOnce() throws IOException {
         var offline = new FreedesktopNotifications(() -> {
             throw new DBusException("no session bus");
-        }, "Car charge planner", "car-charge-planner", new AppIcon(), Files.createDirectory(folder.resolve("offline")));
+        }, "Car charge planner", "car-charge-planner", new AppIcon(), Files.createDirectory(folder.resolve("offline")),
+                "Open dashboard");
 
         var warnings = warningsWhile(() -> {
             offline.listen(opened::release);

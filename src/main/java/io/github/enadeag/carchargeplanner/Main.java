@@ -2,11 +2,15 @@ package io.github.enadeag.carchargeplanner;
 
 import io.github.enadeag.carchargeplanner.desktop.AnnouncementTexts;
 import io.github.enadeag.carchargeplanner.desktop.AppIcon;
+import io.github.enadeag.carchargeplanner.desktop.AppSettingsFile;
 import io.github.enadeag.carchargeplanner.desktop.Dashboard;
+import io.github.enadeag.carchargeplanner.desktop.Language;
+import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.Notifications;
 import io.github.enadeag.carchargeplanner.desktop.StartAtLogin;
 import io.github.enadeag.carchargeplanner.desktop.StatusIcon;
 import io.github.enadeag.carchargeplanner.desktop.TaskbarHiding;
+import io.github.enadeag.carchargeplanner.desktop.TextKey;
 import io.github.enadeag.carchargeplanner.desktop.Tray;
 import io.github.enadeag.carchargeplanner.desktop.TrayStatusMapper;
 import io.github.enadeag.carchargeplanner.engine.Engine;
@@ -49,6 +53,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -74,6 +79,8 @@ public final class Main {
     private static final String TITLE = "Car charge planner";
     /** The app's name where other programs see it, such as on the keychain's entries. */
     private static final String APP_ID = "car-charge-planner";
+    /** The desktop app's own settings, beside the engine's config file in the app's folder. */
+    private static final String APP_SETTINGS_FILE = "app.json";
     /**
      * Often enough to announce a window within its notification lead time, and to keep "now" on the dashboard current.
      * The forecast cache answers in between, and a provider that could not be reached waits its own time before it is
@@ -105,29 +112,37 @@ public final class Main {
             System.exit(2);
             return;
         }
+        var messages = new Messages(language());
         switch (commandLine.command()) {
-            case RUN -> run(commandLine);
-            case QUIT -> System.exit(quitRunningApp());
-            case START_AT_LOGIN_ON -> System.exit(switchStartAtLogin(true));
-            case START_AT_LOGIN_OFF -> System.exit(switchStartAtLogin(false));
+            case RUN -> run(commandLine, messages);
+            case QUIT -> System.exit(quitRunningApp(messages));
+            case START_AT_LOGIN_ON -> System.exit(switchStartAtLogin(true, messages));
+            case START_AT_LOGIN_OFF -> System.exit(switchStartAtLogin(false, messages));
         }
+    }
+
+    /** The language the app settings choose, or else the system's: read once, as the app starts. */
+    private static Language language() {
+        var settings = new AppSettingsFile(defaultConfigPath().resolveSibling(APP_SETTINGS_FILE)).read();
+        return settings.language().orElseGet(() ->
+                Language.ofSystem(System.getenv(), Locale.getDefault(Locale.Category.DISPLAY)));
     }
 
     /**
      * Starts the app: the dashboard, the tray icon (or a window without a tray), the notifications, the engine, and
      * planning every minute. When a copy runs already, it is asked to show its dashboard instead, and this one exits.
      */
-    private static void run(CommandLine commandLine) throws Exception {
+    private static void run(CommandLine commandLine, Messages messages) throws Exception {
         var commands = new CompletableFuture<Consumer<InstanceCommand>>();
         var instance = singleInstance();
         // commands that come in while the app is still starting wait until it can carry them out
         switch (instance.claim(command -> commands.thenAccept(handler -> handler.accept(command)))) {
             case HANDED_OVER -> {
-                System.err.println(TITLE + " is already running: asked it to show its dashboard.");
+                System.err.println(messages.text(TextKey.CLI_HANDED_OVER, TITLE));
                 return;
             }
             case NO_ANSWER -> {
-                System.err.println(TITLE + " is already running, but it did not respond.");
+                System.err.println(messages.text(TextKey.CLI_NO_ANSWER, TITLE));
                 System.exit(1);
             }
             case FIRST, UNAVAILABLE -> {
@@ -149,17 +164,18 @@ public final class Main {
             // JavaFX hands out its preferences on its own thread only
             var colorScheme = Platform.getPreferences().colorSchemeProperty();
             colorSchemeFound.complete(colorScheme);
-            dashboardMade.complete(new Dashboard(icon, colorScheme, clock, taskbarHiding()));
+            dashboardMade.complete(new Dashboard(icon, colorScheme, clock, taskbarHiding(), messages));
         });
         var dashboard = dashboardMade.get();
-        var tray = tray(colorSchemeFound.get());
-        var trayStatus = new TrayStatusMapper();
+        var tray = tray(colorSchemeFound.get(), new Tray.MenuLabels(messages.text(TextKey.OPEN_DASHBOARD),
+                messages.text(TextKey.QUIT)));
+        var trayStatus = new TrayStatusMapper(messages);
         tray.showStatus(trayStatus.loading());
         // a click on a notification does not say where the tray icon is, and the popup would close again as soon as
         // the desktop gives the focus elsewhere: the window comes to the front and stays
-        var notifications = notifications(tray, icon);
+        var notifications = notifications(tray, icon, messages.text(TextKey.OPEN_DASHBOARD));
         notifications.listen(dashboard::openWindow);
-        var texts = new AnnouncementTexts();
+        var texts = new AnnouncementTexts(messages);
         var engine = engine(configFile, secretsFile, clock,
                 announcement -> notifications.show(texts.notification(announcement)));
         if (engine.keyStorage() == KeyStorage.FILE) {
@@ -222,41 +238,41 @@ public final class Main {
         }
     }
 
-    private static int quitRunningApp() {
+    private static int quitRunningApp(Messages messages) {
         try {
             var reply = singleInstance().send(InstanceCommand.QUIT);
             if (reply == Reply.ANSWERED) {
-                System.out.println(TITLE + " was asked to quit and confirmed.");
+                System.out.println(messages.text(TextKey.CLI_QUIT_CONFIRMED, TITLE));
                 return 0;
             }
             if (reply == Reply.SILENT) {
-                System.err.println(TITLE + " is running, but it did not respond.");
+                System.err.println(messages.text(TextKey.CLI_QUIT_SILENT, TITLE));
                 return 1;
             }
         } catch (IOException e) {
             // no private folder for the socket, so no running copy can have made one there
         }
-        System.out.println(TITLE + " is not running.");
+        System.out.println(messages.text(TextKey.CLI_NOT_RUNNING, TITLE));
         return 0;
     }
 
-    private static int switchStartAtLogin(boolean on) {
+    private static int switchStartAtLogin(boolean on, Messages messages) {
         var startAtLogin = startAtLogin();
         if (startAtLogin.isEmpty()) {
-            System.err.println("Start at login needs the installed app: it is not started from its launcher now.");
+            System.err.println(messages.text(TextKey.CLI_START_AT_LOGIN_NEEDS_INSTALL));
             return 1;
         }
         try {
             if (on) {
                 startAtLogin.get().switchOn();
-                System.out.println(TITLE + " now starts at login, hidden in the tray.");
+                System.out.println(messages.text(TextKey.CLI_START_AT_LOGIN_ON, TITLE));
             } else {
                 startAtLogin.get().switchOff();
-                System.out.println(TITLE + " no longer starts at login.");
+                System.out.println(messages.text(TextKey.CLI_START_AT_LOGIN_OFF, TITLE));
             }
             return 0;
         } catch (IOException e) {
-            System.err.println("Could not change start at login: " + e.getMessage());
+            System.err.println(messages.text(TextKey.CLI_START_AT_LOGIN_FAILED, String.valueOf(e.getMessage())));
             return 1;
         }
     }
@@ -325,21 +341,21 @@ public final class Main {
         return System.getProperty("os.name").startsWith("Windows") ? TaskbarHiding.OWNER_WINDOW : TaskbarHiding.NONE;
     }
 
-    private static Tray tray(ObservableValue<ColorScheme> colorScheme) {
+    private static Tray tray(ObservableValue<ColorScheme> colorScheme, Tray.MenuLabels labels) {
         if (System.getProperty("os.name").startsWith("Windows")) {
-            return new AwtTray(new StatusIcon(), new TaskbarShade(), colorScheme, TITLE);
+            return new AwtTray(new StatusIcon(), new TaskbarShade(), colorScheme, TITLE, labels);
         }
         return new StatusNotifierTray(() -> DBusConnectionBuilder.forSessionBus().withShared(false).build(),
-                new StatusIcon(), runtimeFolder("tray"), TITLE);
+                new StatusIcon(), runtimeFolder("tray"), TITLE, labels);
     }
 
     /** Windows shows notifications as the tray icon's messages; Linux has a notification server, also without a tray. */
-    private static Notifications notifications(Tray tray, AppIcon icon) {
+    private static Notifications notifications(Tray tray, AppIcon icon, String openLabel) {
         if (tray instanceof AwtTray awtTray) {
             return awtTray;
         }
         return new FreedesktopNotifications(() -> DBusConnectionBuilder.forSessionBus().withShared(false).build(),
-                TITLE, APP_ID, icon, runtimeFolder("notify"));
+                TITLE, APP_ID, icon, runtimeFolder("notify"), openLabel);
     }
 
     /** Linux only: a private folder of this process's own; see {@link RuntimeFolder}. */

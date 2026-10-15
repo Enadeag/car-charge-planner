@@ -16,11 +16,12 @@ final class DayTabs extends TabPane {
      * Makes the strip, empty.
      *
      * @param selected called with the index of the day tab that gets selected, from 0 for today
+     * @param messages the texts, in the owner's language
      */
-    DayTabs(IntConsumer selected) {
+    DayTabs(IntConsumer selected, Messages messages) {
         setTabClosingPolicy(TabClosingPolicy.UNAVAILABLE);
         getStyleClass().add("day-tabs");
-        setAccessibleText("Days");
+        setAccessibleText(messages.text(TextKey.DASHBOARD_DAYS));
         getSelectionModel().selectedIndexProperty().subscribe(index -> {
             if (index.intValue() >= 0) {
                 selected.accept(index.intValue());

@@ -4,12 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sun.javafx.stage.WindowHelper;
 import io.github.enadeag.carchargeplanner.engine.Outlook;
+import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import io.github.enadeag.carchargeplanner.engine.forecast.Freshness;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import io.github.enadeag.carchargeplanner.engine.plan.DayPlan;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
@@ -51,7 +53,7 @@ class DashboardTest {
 
     private Dashboard dashboard(TaskbarHiding taskbarHiding) throws Exception {
         return Fx.call(() -> new Dashboard(new AppIcon(), new SimpleObjectProperty<>(ColorScheme.LIGHT), clock,
-                taskbarHiding));
+                taskbarHiding, new Messages(Language.ENGLISH)));
     }
 
     private static List<Window> showingWindows() throws Exception {
@@ -386,11 +388,11 @@ class DashboardTest {
     void theDashboardShowsTheLatestOutlook() throws Exception {
         clickTheIcon();
 
-        dashboard.show(new Outlook.NotSetUp("No engine.json in ~/.config/car-charge-planner"));
+        dashboard.show(new Outlook.NotSetUp(ConfigProblem.Kind.MISSING, Path.of("/home/owner/engine.json"), ""));
         Fx.settle();
 
         var popup = popup().orElseThrow();
         var texts = Fx.call(() -> Scenes.visibleTexts(popup.getScene().getRoot()));
-        assertThat(texts).contains("Not set up", "No engine.json in ~/.config/car-charge-planner");
+        assertThat(texts).contains("Not set up", "There is no config file at " + Path.of("/home/owner/engine.json") + ".");
     }
 }

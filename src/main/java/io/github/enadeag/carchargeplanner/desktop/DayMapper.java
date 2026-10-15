@@ -1,7 +1,5 @@
 package io.github.enadeag.carchargeplanner.desktop;
 
-import static io.github.enadeag.carchargeplanner.desktop.Format.text;
-
 import io.github.enadeag.carchargeplanner.desktop.Chip.Source;
 import io.github.enadeag.carchargeplanner.engine.Outlook;
 import io.github.enadeag.carchargeplanner.engine.plan.DayPlan;
@@ -11,7 +9,6 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -22,6 +19,7 @@ final class DayMapper {
     /** Less grid energy than this is shown as none: it is within the forecast's precision. */
     private static final double NO_GRID_KWH = 0.05;
 
+    private final Messages messages;
     private final ZoneId zone;
     private final LocalDate today;
     private final String todaysNote;
@@ -32,12 +30,14 @@ final class DayMapper {
      * Makes the mapper for one plan.
      *
      * @param planned the plan whose time zone, day of making, battery assumption and grid advice the days are told in
+     * @param messages the texts, in the owner's language
      */
-    DayMapper(Outlook.Planned planned) {
+    DayMapper(Outlook.Planned planned, Messages messages) {
+        this.messages = messages;
         this.zone = planned.zone();
         this.today = planned.madeAt().atZone(zone).toLocalDate();
         this.todaysNote = planned.batteryAssumed()
-                ? text("The plan assumes the battery is at %.0f %%.", planned.batteryPct().value()) : "";
+                ? messages.text(TextKey.DAY_BATTERY_ASSUMED, messages.whole(planned.batteryPct().value())) : "";
         this.gridDay = planned.gridAdvice().map(GridAdvice::day);
     }
 
@@ -57,43 +57,41 @@ final class DayMapper {
 
     private DayModel withWindow(DayPlan day) {
         var window = day.windows().getFirst();
-        var title = Format.title(day.date(), today);
-        long sunPct = Math.round(window.solarShare() * 100);
+        var title = messages.title(day.date(), today);
+        var sunPct = messages.whole(window.solarShare() * 100);
         var facts = List.of(
-                text("Set %d A (%.1f kW)", window.amps(), window.powerKw()),
-                text("about %.1f kWh", window.solarKwh() + window.importKwh()));
+                messages.text(TextKey.DAY_SET, window.amps(), messages.decimal(window.powerKw())),
+                messages.text(TextKey.DAY_ENERGY, messages.decimal(window.solarKwh() + window.importKwh())));
         var chips = new ArrayList<Chip>();
-        chips.add(new Chip(Source.SUN, text("%d %% sun", sunPct)));
+        chips.add(new Chip(Source.SUN, messages.text(TextKey.DAY_SUN_SHARE, sunPct)));
         chips.add(battery(day));
         if (window.importKwh() >= NO_GRID_KWH) {
-            chips.add(new Chip(Source.GRID, text("%.1f kWh from the grid", window.importKwh())));
+            chips.add(new Chip(Source.GRID, messages.text(TextKey.DAY_FROM_GRID, messages.decimal(window.importKwh()))));
         }
-        var spoken = text("%s: charge window %s to %s, %d A, %d %% sun.", title,
-                Format.time(window.start(), zone), Format.time(window.end(), zone), window.amps(), sunPct);
+        var spoken = messages.text(TextKey.DAY_SPOKEN, title, messages.time(window.start(), zone),
+                messages.time(window.end(), zone), window.amps(), sunPct);
         var note = sentences(laterWindows(day), noteFor(day));
-        return new DayModel(Format.tab(day.date(), today), title, DayKind.SUN, "Charge window", span(window),
-                facts, chips, note, spoken);
+        return new DayModel(messages.tab(day.date(), today), title, DayKind.SUN, messages.text(TextKey.DAY_WINDOW),
+                span(window), facts, chips, note, spoken);
     }
 
     private DayModel withoutWindow(DayPlan day) {
         if (gridDay.filter(day.date()::equals).isPresent()) {
-            return withoutWindow(day, DayKind.GRID, "Grid charge needed",
-                    "The sun is not enough to stay above the minimum: see the grid advice on today's tab.");
+            return withoutWindow(day, DayKind.GRID, messages.text(TextKey.DAY_GRID), messages.text(TextKey.DAY_GRID_WHY));
         }
-        return withoutWindow(day, DayKind.NONE, "No charge window",
-                "The car needs no charging, or there is too little sun for it.");
+        return withoutWindow(day, DayKind.NONE, messages.text(TextKey.DAY_NONE), messages.text(TextKey.DAY_NONE_WHY));
     }
 
     private DayModel withoutWindow(DayPlan day, DayKind kind, String heading, String why) {
-        var title = Format.title(day.date(), today);
-        var spoken = title + ": " + heading.toLowerCase(Locale.ENGLISH) + ". " + why;
-        return new DayModel(Format.tab(day.date(), today), title, kind, heading, "", List.of(), List.of(battery(day)),
+        var title = messages.title(day.date(), today);
+        var spoken = title + ": " + heading.toLowerCase(messages.locale()) + ". " + why;
+        return new DayModel(messages.tab(day.date(), today), title, kind, heading, "", List.of(), List.of(battery(day)),
                 sentences(why, noteFor(day)), spoken);
     }
 
-    private static Chip battery(DayPlan day) {
-        return new Chip(Source.CAR, text("Battery %.0f → %.0f %%", day.socStartPct().value(),
-                day.socAfterChargingPct().value()));
+    private Chip battery(DayPlan day) {
+        return new Chip(Source.CAR, messages.text(TextKey.DAY_BATTERY, messages.whole(day.socStartPct().value()),
+                messages.whole(day.socAfterChargingPct().value())));
     }
 
     private String laterWindows(DayPlan day) {
@@ -101,8 +99,9 @@ final class DayMapper {
         if (later.isEmpty()) {
             return "";
         }
-        return later.stream().map(window -> span(window) + " at " + window.amps() + " A")
-                .collect(Collectors.joining(", ", "Also ", "."));
+        return messages.text(TextKey.DAY_LATER_WINDOWS, later.stream()
+                .map(window -> messages.text(TextKey.DAY_LATER_WINDOW, span(window), window.amps()))
+                .collect(Collectors.joining(", ")));
     }
 
     private String noteFor(DayPlan day) {
@@ -110,7 +109,7 @@ final class DayMapper {
     }
 
     private String span(Window window) {
-        return Format.time(window.start(), zone) + " – " + Format.time(window.end(), zone);
+        return messages.span(window.start(), window.end(), zone);
     }
 
     private static String sentences(String... sentences) {

@@ -58,6 +58,7 @@ public final class FreedesktopNotifications implements Notifications {
     private final String desktopEntry;
     private final AppIcon icon;
     private final Path iconFolder;
+    private final String openLabel;
     private final Deque<Long> sent = new ArrayDeque<>();
     private Runnable clicked = () -> { };
     private DBusConnection bus;
@@ -74,14 +75,17 @@ public final class FreedesktopNotifications implements Notifications {
      * @param icon the app icon, shown on each notification
      * @param iconFolder an existing folder of the notifications' own that only this user may use, where the icon is
      *     written for the server to read; {@link #close()} removes it again
+     * @param openLabel what the notifications' button that opens the dashboard says, in the owner's language, such as
+     *     "Open dashboard"; not empty
      */
     public FreedesktopNotifications(BusConnector connector, String appName, String desktopEntry, AppIcon icon,
-            Path iconFolder) {
+            Path iconFolder, String openLabel) {
         this.connector = connector;
         this.appName = appName;
         this.desktopEntry = desktopEntry;
         this.icon = icon;
         this.iconFolder = iconFolder;
+        this.openLabel = openLabel;
     }
 
     @Override
@@ -100,7 +104,7 @@ public final class FreedesktopNotifications implements Notifications {
             var server = connection.getRemoteObject(NotificationServer.BUS_NAME, NotificationServer.OBJECT_PATH,
                     NotificationServer.class);
             var id = server.Notify(appName, new UInt32(0), iconUri(), text.title(), text.body(),
-                    List.of(DEFAULT_ACTION, "Open dashboard", OPEN_ACTION, "Open dashboard"),
+                    List.of(DEFAULT_ACTION, openLabel, OPEN_ACTION, openLabel),
                     Map.of("desktop-entry", new Variant<>(desktopEntry)), EXPIRE_MS);
             sent.addLast(id.longValue());
             if (sent.size() > REMEMBER) {

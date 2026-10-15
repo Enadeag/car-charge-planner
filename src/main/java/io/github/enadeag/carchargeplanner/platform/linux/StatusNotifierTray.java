@@ -40,6 +40,7 @@ public final class StatusNotifierTray implements Tray {
     private final StatusIcon icon;
     private final IconThemeFolder theme;
     private final String title;
+    private final MenuLabels labels;
     // the name the specification asks for: one per process and item
     private final String busName = "org.kde.StatusNotifierItem-" + ProcessHandle.current().pid() + "-1";
 
@@ -55,12 +56,14 @@ public final class StatusNotifierTray implements Tray {
      * @param iconFolder a folder of the tray's own that only this user may use, where it writes its icons for the
      *     panel; {@link #remove()} removes it again
      * @param title the name the panel shows for the icon, such as in its tooltip
+     * @param labels what the entries of the icon's menu say
      */
-    public StatusNotifierTray(BusConnector connector, StatusIcon icon, Path iconFolder, String title) {
+    public StatusNotifierTray(BusConnector connector, StatusIcon icon, Path iconFolder, String title, MenuLabels labels) {
         this.connector = connector;
         this.icon = icon;
         this.theme = new IconThemeFolder(iconFolder);
         this.title = title;
+        this.labels = labels;
     }
 
     @Override
@@ -69,8 +72,8 @@ public final class StatusNotifierTray implements Tray {
         item = new TrayItem("car-charge-planner", title, theme.path(), where -> apart(() -> actions.clicked().accept(where)));
         update();
         var menu = new TrayMenu(List.of(
-                new TrayMenu.Entry("Open dashboard", () -> apart(actions.open())),
-                new TrayMenu.Entry("Quit", () -> apart(actions.quit()))));
+                new TrayMenu.Entry(labels.open(), () -> apart(actions.open())),
+                new TrayMenu.Entry(labels.quit(), () -> apart(actions.quit()))));
         try {
             bus = connector.connect();
             bus.exportObject(item);

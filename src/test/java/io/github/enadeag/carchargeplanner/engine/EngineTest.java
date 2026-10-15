@@ -221,7 +221,7 @@ class EngineTest {
     void withoutAConfigFileThereIsNoPlanButTheReasonNamesTheFile() throws IOException {
         Files.delete(config);
         assertThat(engine(clockAt(7)).plan()).isInstanceOfSatisfying(Outlook.NotSetUp.class,
-                notSetUp -> assertThat(notSetUp.reason()).contains(config.toString()));
+                notSetUp -> assertThat(notSetUp.file()).isEqualTo(config));
         assertThat(main.callCount()).isZero(); // nothing leaves the computer before there is a location
     }
 

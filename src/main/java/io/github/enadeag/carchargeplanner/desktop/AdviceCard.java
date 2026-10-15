@@ -16,7 +16,7 @@ final class AdviceCard extends VBox {
      */
     AdviceCard(GridAdviceModel advice) {
         getChildren().setAll(
-                new SourceChip(new Chip(Source.GRID, "Grid advice")),
+                new SourceChip(new Chip(Source.GRID, advice.label())),
                 paragraph(advice.title(), "advice-title"),
                 paragraph(advice.detail(), "advice-detail"));
         getStyleClass().addAll("card", "advice-card", "grid");

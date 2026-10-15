@@ -55,7 +55,7 @@ public final class ConfigFile {
      * Reads and checks the file again; nothing is kept between reads.
      *
      * @return the whole config, every value present and valid
-     * @throws ConfigProblem when the file is missing, unreadable, not JSON, or a value is missing or wrong; the message
+     * @throws ConfigProblem when the file is missing, unreadable, not JSON, or a value is missing or wrong; the problem
      *     names the file and the setting
      */
     public EngineConfig read() throws ConfigProblem {
@@ -63,13 +63,13 @@ public final class ConfigFile {
         try {
             text = Files.readString(path);
         } catch (NoSuchFileException e) {
-            throw new ConfigProblem("There is no config file at " + path);
+            throw new ConfigProblem(ConfigProblem.Kind.MISSING, path, "");
         } catch (IOException e) {
-            throw new ConfigProblem("Could not read " + path + ": " + e.getMessage());
+            throw new ConfigProblem(ConfigProblem.Kind.UNREADABLE, path, String.valueOf(e.getMessage()));
         }
         try {
             if (!(json.readTree(text) instanceof ObjectNode file)) {
-                throw new ConfigProblem(path.getFileName() + ": the file must hold one JSON object");
+                throw new ConfigProblem(ConfigProblem.Kind.INVALID, path, "the file must hold one JSON object");
             }
             // the mapper refuses any missing value, so the one optional section is filled in before it reads the file
             if (!file.has("away")) {
@@ -78,13 +78,13 @@ public final class ConfigFile {
             return json.treeToValue(file, EngineConfig.class);
         } catch (ValueInstantiationException e) {
             // a check in one of the records failed: its own message names the setting
-            throw new ConfigProblem(where(e) + ": " + e.getCause().getMessage());
+            throw new ConfigProblem(ConfigProblem.Kind.INVALID, path, where(e) + e.getCause().getMessage());
         } catch (JacksonException e) {
-            throw new ConfigProblem(where(e) + ": " + e.getOriginalMessage());
+            throw new ConfigProblem(ConfigProblem.Kind.INVALID, path, where(e) + e.getOriginalMessage());
         }
     }
 
-    /** The file and the place in it, such as "engine.json, system.panels[0]". */
+    /** The place in the file, such as "system.panels[0]: ", or nothing when the problem is not in one setting. */
     private String where(JacksonException e) {
         var place = new StringBuilder();
         for (var step : e.getPath()) {
@@ -94,6 +94,6 @@ public final class ConfigFile {
                 place.append('[').append(step.getIndex()).append(']');
             }
         }
-        return path.getFileName() + (place.isEmpty() ? "" : ", " + place);
+        return place.isEmpty() ? "" : place + ": ";
     }
 }
