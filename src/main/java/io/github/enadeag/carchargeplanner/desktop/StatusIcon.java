@@ -16,7 +16,8 @@ import java.util.Optional;
 /**
  * The tray icon: the app icon's sun over a plug in one colour, with a {@link StatusDot} at the bottom right. It is
  * drawn here, at the exact size asked for, so every size is sharp without a set of image files per size, shade and
- * dot. The drawing and the SVG are the same shapes on a 64 by 64 grid, those of {@code car-charge-planner-symbolic.svg}.
+ * dot. The drawing and the SVG are the same shapes on a 64 by 64 grid, those of
+ * {@code src/packaging/icons/car-charge-planner-symbolic.svg}.
  */
 public final class StatusIcon {
 

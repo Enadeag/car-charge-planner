@@ -34,11 +34,11 @@ body:
     attributes:
       label: What did you check?
       options:
-        - label: The app starts and shows the plan (or the set-up wizard on a first run)
-        - label: Clicking the tray icon, or the window, shows the plan
-        - label: A notification appears (`car-charge-planner test-notification`), and clicking it shows the app
+        - label: The app starts and shows the plan (or set-up on a first run)
+        - label: Clicking the tray icon shows the dashboard, or the app shows it in a window
+        - label: A notification appears before a charge window, and clicking it shows the dashboard
         - label: The Settings window opens and saving works
-        - label: Starting at login works (`car-charge-planner install-autostart`)
+        - label: Starting at login works (Settings, App)
   - type: textarea
     id: notes
     attributes:

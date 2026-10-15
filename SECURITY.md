@@ -8,7 +8,7 @@ You will get an answer within a week or so. This is a small project run by one p
 
 ## What matters here
 
-The app runs on your own computer and only talks to the forecast provider you chose. Things worth reporting: a way to read or overwrite files outside the app's own folders, a forecast provider key shown or stored where other users can read it (`secrets.toml` must be readable by you alone), or a crash that a forecast response can trigger.
+The app runs on your own computer and only talks to the forecast provider you chose. Things worth reporting: a way to read or overwrite files outside the app's own folders, a forecast provider key shown or stored where other users can read it (`secrets.json`, used where there is no system keychain, must be readable by you alone), or a crash that a forecast response can trigger.
 
 ## Supported versions
 

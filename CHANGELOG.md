@@ -4,9 +4,25 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+The app is rewritten in Java with JavaFX, and the Python version is removed. What it plans is the same.
+
+### Added
+- A new dashboard, in the tray icon's popup or a window of its own: a tab per day with that day's charge window or grid advice, a chart of the expected sun against the house's own use, and the car battery, whose level you update there.
+- Dutch, beside English. A language is now one Java resource bundle (`messages_<code>.properties`); see CONTRIBUTING.md.
+- A choice between light, dark and the system's appearance, in Settings, App.
+- Set-up checks the forecast and shows a preview of the dashboard before Finish.
+- `car-charge-planner start-at-login on` and `off`, the same as the switch in Settings.
+
 ### Changed
-- The settings are split in two files. `config.toml` keeps your system (location, panels, house, car, charger, away times) and your planning preferences; the charge levels and the notification lead time now sit with the other preferences in its `[planning]` table (file format 3). The app's own settings from the Interface tab (how it shows itself, units, language) move to a new `app.toml` beside it.
-- An existing `config.toml` is converted at the first start of this version: its Interface settings are written to `app.toml`, then the file is rewritten in the new format. Nothing needs to be done by hand. A start that stops halfway is finished at the next one.
+- Linux: a download with its own Java runtime, `car-charge-planner-<version>-linux.tar.gz`, replaces installing with pipx. Unpack it and start `bin/car-charge-planner`.
+- Windows: a new installer, `car-charge-planner-<version>.exe`, with its own Java runtime. It installs in `%LOCALAPPDATA%\Programs\car-charge-planner` and needs no administrator rights. It is not code-signed yet.
+- Settings is one window with a page per category, and set-up shows the same pages. Language and appearance change at once when you save.
+- The settings are JSON files: `engine.json` (your system, planning, forecast providers and weekly away times) and `app.json` (the app's own settings), in the same folder as before. The battery level, away days, the windows you were told about and the forecast cache are in `~/.local/share/car-charge-planner/` (Windows: `%LOCALAPPDATA%\car-charge-planner\`). API keys stay in the system keychain; without one they are kept in `secrets.json`, readable only by you.
+
+### Removed
+- The Python version: installing with pipx, the PyInstaller and Inno Setup installer, the gettext translations, and the commands `test-notification`, `install-autostart`, `uninstall-autostart`, `install-launcher`, `uninstall-launcher` and the terminal planner.
+- Entering a one-off away day; the weekly away times are in Settings.
+- Reading the settings of 0.2.0 and earlier (`config.toml`, `app.toml`, `state.json`): run set-up once; the old files are left alone. On Windows the new installer does not remove 0.2.0: uninstall that one in Settings, Apps.
 
 ## [0.2.0] - 2026-10-14
 
