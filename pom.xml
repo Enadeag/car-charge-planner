@@ -100,6 +100,15 @@
   <build>
     <finalName>car-charge-planner</finalName>
     <plugins>
+      <!-- jpackage makes the Windows launcher read-only; without force, clean cannot remove it -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>3.5.0</version>
+        <configuration>
+          <force>true</force>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
