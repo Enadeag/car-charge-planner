@@ -5,6 +5,7 @@ import io.github.enadeag.carchargeplanner.engine.config.Charger;
 import io.github.enadeag.carchargeplanner.engine.config.HomeSystem;
 import io.github.enadeag.carchargeplanner.engine.config.House;
 import io.github.enadeag.carchargeplanner.engine.config.PanelArray;
+import io.github.enadeag.carchargeplanner.engine.config.Phases;
 import io.github.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import java.time.Duration;
@@ -29,23 +30,23 @@ final class Forecasts {
 
     /** A 4.8 kWp roof facing south-east, a 70 kWh car driving 600 km a week, a 32 A charger on one phase. */
     static HomeSystem example() {
-        return system(600.0 / 7, 1);
+        return system(600.0 / 7, Phases.ONE);
     }
 
-    static HomeSystem exampleOnPhases(int phases) {
+    static HomeSystem exampleOnPhases(Phases phases) {
         return system(600.0 / 7, phases);
     }
 
     /** The example driving 70 km a day: 12.6 kWh, a round 18 % of the battery. */
     static HomeSystem golden() {
-        return system(70, 1);
+        return system(70, Phases.ONE);
     }
 
     static HomeSystem goldenOnThreePhases() {
-        return system(70, 3);
+        return system(70, Phases.THREE);
     }
 
-    private static HomeSystem system(double kmPerDay, int phases) {
+    private static HomeSystem system(double kmPerDay, Phases phases) {
         return new HomeSystem(51.0, 5.0, TZ, List.of(PANELS), new House(0.6),
                 new Car(70, 18, kmPerDay), new Charger(phases, 6, 32, 230, 0.90));
     }

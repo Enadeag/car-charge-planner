@@ -29,7 +29,7 @@ class ConfigFileTest {
 
         assertThat(config.system().timezone()).isEqualTo(ZoneId.of("Europe/Brussels"));
         assertThat(config.system().panels()).containsExactly(new PanelArray("South roof", 5.0, 35, 0, 0.14));
-        assertThat(config.system().charger()).isEqualTo(new Charger(1, 6, 16, 230, 0.9));
+        assertThat(config.system().charger()).isEqualTo(new Charger(Phases.ONE, 6, 16, 230, 0.9));
         assertThat(config.planning()).isEqualTo(new PlanningPreferences(30, 80, 0.85, 0.2, 45, 15));
     }
 
