@@ -10,7 +10,7 @@ sealed interface DashboardModel {
     String footer();
 
     /** A plan: one tab per day, today first, and grid advice when the owner has to act. */
-    record Plan(List<DayModel> days, Optional<GridAdvice> advice, String footer) implements DashboardModel {
+    record Plan(List<DayModel> days, Optional<GridAdviceModel> advice, String footer) implements DashboardModel {
 
         public Plan {
             days = List.copyOf(days);

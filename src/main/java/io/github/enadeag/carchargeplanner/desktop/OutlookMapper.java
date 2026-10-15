@@ -30,7 +30,7 @@ final class OutlookMapper {
     private DashboardModel.Plan plan(Outlook.Planned planned) {
         var days = new DayMapper(planned).map(planned.days());
         var footer = footer() + " · " + Format.time(planned.madeAt(), planned.zone());
-        // the engine gives no grid advice yet
+        // the engine gives no grid advice yet; when it does, it is mapped here
         return new DashboardModel.Plan(days, Optional.empty(), footer);
     }
 
