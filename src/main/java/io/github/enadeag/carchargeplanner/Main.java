@@ -41,13 +41,14 @@ public final class Main {
     public static void main(String[] args) throws Exception {
         DBUS_LOG.setLevel(java.util.logging.Level.WARNING); // dbus-java reports every connection at INFO
         var configFile = new ConfigFile(configPath(args));
-        var engine = new Engine(configFile, new OpenMeteo(new JdkHttpGet(HttpClient.newHttpClient())), Clock.systemUTC());
+        var clock = Clock.systemUTC();
+        var engine = new Engine(configFile, new OpenMeteo(new JdkHttpGet(HttpClient.newHttpClient())), clock);
         var icon = new AppIcon();
 
         Platform.setImplicitExit(false);
         var dashboardMade = new CompletableFuture<Dashboard>();
         Platform.startup(() -> dashboardMade.complete(
-                new Dashboard(icon, Platform.getPreferences().colorSchemeProperty(), FORECAST_SOURCE)));
+                new Dashboard(icon, Platform.getPreferences().colorSchemeProperty(), FORECAST_SOURCE, clock)));
         var dashboard = dashboardMade.get();
 
         ScheduledExecutorService replanning = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform()
@@ -68,11 +69,11 @@ public final class Main {
             System.exit(0);
         };
         try {
-            tray.show(new Tray.TrayActions(dashboard::open, quit));
+            tray.show(new Tray.TrayActions(dashboard::popUp, dashboard::openWindow, quit));
         } catch (Tray.TrayUnavailable e) {
             LOG.log(Level.WARNING, e.getMessage() + "; showing the dashboard as a window instead", e.getCause());
             dashboard.quitWhenClosed(quit);
-            dashboard.open();
+            dashboard.openWindow();
         }
         LOG.log(Level.INFO, "planning with " + configFile.path());
     }

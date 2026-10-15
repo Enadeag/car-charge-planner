@@ -12,7 +12,7 @@ class AwtTrayTest {
     @Test
     void withoutADesktopThereIsNoTrayInsteadOfACrash() {
         var tray = new AwtTray(new AppIcon(), "Car charge planner");
-        assertThatThrownBy(() -> tray.show(new Tray.TrayActions(() -> { }, () -> { })))
+        assertThatThrownBy(() -> tray.show(new Tray.TrayActions(where -> { }, () -> { }, () -> { })))
                 .isInstanceOf(Tray.TrayUnavailable.class);
     }
 }

@@ -4,6 +4,8 @@ import java.awt.image.BufferedImage;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
+import javafx.geometry.Point2D;
 import org.freedesktop.dbus.DBusPath;
 import org.freedesktop.dbus.interfaces.Properties;
 import org.freedesktop.dbus.types.Variant;
@@ -16,9 +18,9 @@ final class TrayItem implements StatusNotifierItem, Properties {
     private final String id;
     private final String title;
     private final List<Pixmap> pixmaps;
-    private final Runnable onActivate;
+    private final Consumer<Point2D> onActivate;
 
-    TrayItem(String id, String title, List<BufferedImage> icons, Runnable onActivate) {
+    TrayItem(String id, String title, List<BufferedImage> icons, Consumer<Point2D> onActivate) {
         this.id = id;
         this.title = title;
         this.pixmaps = icons.stream().map(TrayItem::pixmap).toList();
@@ -32,7 +34,7 @@ final class TrayItem implements StatusNotifierItem, Properties {
 
     @Override
     public void Activate(int x, int y) {
-        onActivate.run();
+        onActivate.accept(new Point2D(x, y));
     }
 
     @Override

@@ -10,6 +10,7 @@ import java.awt.SystemTray;
 import java.awt.TrayIcon;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import javafx.geometry.Point2D;
 
 /** The tray icon on Windows, through AWT. */
 public final class AwtTray implements Tray {
@@ -40,7 +41,7 @@ public final class AwtTray implements Tray {
             @Override
             public void mouseClicked(MouseEvent event) {
                 if (event.getButton() == MouseEvent.BUTTON1) {
-                    actions.open().run();
+                    actions.clicked().accept(new Point2D(event.getXOnScreen(), event.getYOnScreen()));
                 }
             }
         });

@@ -37,10 +37,10 @@ public final class StatusNotifierTray implements Tray {
     @Override
     public void show(TrayActions actions) throws TrayUnavailable {
         var images = SIZES.stream().map(icon::image).toList();
-        var item = new TrayItem("car-charge-planner", title, images, apart(actions.open()));
+        var item = new TrayItem("car-charge-planner", title, images, where -> apart(() -> actions.clicked().accept(where)));
         var menu = new TrayMenu(List.of(
-                new TrayMenu.Entry("Open dashboard", apart(actions.open())),
-                new TrayMenu.Entry("Quit", apart(actions.quit()))));
+                new TrayMenu.Entry("Open dashboard", () -> apart(actions.open())),
+                new TrayMenu.Entry("Quit", () -> apart(actions.quit()))));
         try {
             bus = connector.connect();
             bus.exportObject(item);
@@ -59,8 +59,8 @@ public final class StatusNotifierTray implements Tray {
      * The action on a thread of its own: D-Bus calls it on the connection's thread, and an action that removes the
      * tray would wait there for that same thread to finish.
      */
-    private static Runnable apart(Runnable action) {
-        return () -> Thread.ofVirtual().name("tray-action").start(action);
+    private static void apart(Runnable action) {
+        Thread.ofVirtual().name("tray-action").start(action);
     }
 
     @Override
