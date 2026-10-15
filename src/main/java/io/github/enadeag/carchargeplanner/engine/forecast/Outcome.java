@@ -12,11 +12,10 @@ sealed interface Outcome {
      *
      * @param steps the forecast's steps
      * @param fetchedAt when it was fetched
-     * @param fromCache true when the network was not used for it
-     * @param stale true when a refresh was due but could not be done
+     * @param freshness whether it was fetched just now or comes from the cache, and then whether a refresh was due
      * @param cooldownUntil the end of the provider's rate limit, when it has one
      */
-    record Usable(List<ForecastStep> steps, Instant fetchedAt, boolean fromCache, boolean stale,
+    record Usable(List<ForecastStep> steps, Instant fetchedAt, Freshness freshness,
             Optional<Instant> cooldownUntil) implements Outcome {
     }
 

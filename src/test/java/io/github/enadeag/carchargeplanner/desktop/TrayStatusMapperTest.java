@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.enadeag.carchargeplanner.engine.Outlook;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastSource;
+import io.github.enadeag.carchargeplanner.engine.forecast.Freshness;
+import io.github.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import io.github.enadeag.carchargeplanner.engine.plan.DayPlan;
 import io.github.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import io.github.enadeag.carchargeplanner.engine.plan.Window;
@@ -35,7 +37,7 @@ class TrayStatusMapperTest {
 
     private static Outlook.Planned plannedAt(int hour, Optional<GridAdvice> advice, DayPlan... days) {
         var source = new ForecastSource("open-meteo", "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)",
-                at(TODAY, 7, 45), false, false, false, "", Optional.empty());
+                at(TODAY, 7, 45), Freshness.FRESH, ProviderRole.PRIMARY, "", Optional.empty());
         return new Outlook.Planned(at(TODAY, hour, 0), BRUSSELS, List.of(days), 50, false, advice, source);
     }
 

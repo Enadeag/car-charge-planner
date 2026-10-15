@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.sun.javafx.stage.WindowHelper;
 import io.github.enadeag.carchargeplanner.engine.Outlook;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastSource;
+import io.github.enadeag.carchargeplanner.engine.forecast.Freshness;
+import io.github.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import io.github.enadeag.carchargeplanner.engine.plan.DayPlan;
 import java.time.Duration;
 import java.time.Instant;
@@ -281,8 +283,8 @@ class DashboardTest {
 
     private static ForecastSource source(LocalDate today, ZoneId zone) {
         var fetched = today.atTime(7, 45).atZone(zone).toInstant();
-        return new ForecastSource("open-meteo", "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)", fetched, false,
-                false, false, "", Optional.empty());
+        return new ForecastSource("open-meteo", "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)", fetched,
+                Freshness.FRESH, ProviderRole.PRIMARY, "", Optional.empty());
     }
 
     private static Outlook planWithTwoDays() {
