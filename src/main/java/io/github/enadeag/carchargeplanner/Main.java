@@ -18,6 +18,7 @@ import io.github.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import io.github.enadeag.carchargeplanner.platform.linux.SecretServiceKeychain;
 import io.github.enadeag.carchargeplanner.platform.linux.StatusNotifierTray;
 import io.github.enadeag.carchargeplanner.platform.windows.AwtTray;
+import io.github.enadeag.carchargeplanner.platform.windows.CredentialManagerKeychain;
 import java.lang.System.Logger.Level;
 import java.net.http.HttpClient;
 import java.nio.file.Path;
@@ -111,10 +112,14 @@ public final class Main {
     }
 
     private static Keychain keychain() {
-        if (System.getProperty("os.name").startsWith("Windows")) {
-            return new NoKeychain();
+        var os = System.getProperty("os.name");
+        if (os.startsWith("Windows")) {
+            return new CredentialManagerKeychain(APP_ID);
         }
-        return new SecretServiceKeychain(() -> DBusConnectionBuilder.forSessionBus().withShared(false).build(), APP_ID);
+        if (os.startsWith("Linux")) {
+            return new SecretServiceKeychain(() -> DBusConnectionBuilder.forSessionBus().withShared(false).build(), APP_ID);
+        }
+        return new NoKeychain();
     }
 
     private static Path configPath(String[] args) {
