@@ -17,5 +17,3 @@ the requester's address in the rate-limit zone were replaced. Credit: Solar fore
 `forecast_solar_429.json`, `forecast_solar_dst_spring.json` and `forecast_solar_dst_autumn.json` are **not
 recordings**: they are made by hand in the documented shape (the rate-limit answer from the "Facing 429 responses"
 page; the two daylight saving days to exercise the time handling around the missing and the repeated hour).
-
-All of them are the same files as the Python version's, in `tests/fixtures/`.

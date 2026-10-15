@@ -1,11 +1,5 @@
-# Python
-.venv/
-__pycache__/
-*.py[cod]
-.pytest_cache/
-*.egg-info/
-build/
-dist/
+# Java (Maven)
+target/
 
 # Editors and OS
 .idea/
@@ -13,15 +7,9 @@ dist/
 *.swp
 .DS_Store
 
-# Local runtime files (the app keeps its state under ~/.config, ~/.local/state and ~/.cache)
+# Local runtime files
 *.lock
 *.tmp
 
 # Claude Code local settings
 .claude/settings.local.json
-
-# compiled translations: built from the .po files (python -m car_charge_planner.i18n_tools compile)
-*.mo
-
-# Java (Maven)
-target/
