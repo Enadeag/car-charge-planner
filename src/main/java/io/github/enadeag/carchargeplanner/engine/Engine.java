@@ -1,7 +1,7 @@
 package io.github.enadeag.carchargeplanner.engine;
 
-import io.github.enadeag.carchargeplanner.engine.config.AwayFile;
-import io.github.enadeag.carchargeplanner.engine.config.AwayPeriod;
+import io.github.enadeag.carchargeplanner.engine.away.AwayFile;
+import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;

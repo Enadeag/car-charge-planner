@@ -1,4 +1,4 @@
-package io.github.enadeag.carchargeplanner.engine.config;
+package io.github.enadeag.carchargeplanner.engine.away;
 
 import java.io.IOException;
 import java.nio.file.Files;

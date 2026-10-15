@@ -1,4 +1,4 @@
-package io.github.enadeag.carchargeplanner.engine.config;
+package io.github.enadeag.carchargeplanner.engine.away;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -34,8 +34,10 @@ public record RecurringAwayPeriod(DayOfWeek weekday, LocalTime start, LocalTime 
      * @throws IllegalArgumentException when the end is not after the start
      */
     public RecurringAwayPeriod {
-        Checks.require(start.isBefore(end),
-                "a recurring away period must end after it starts on the same day (no periods over midnight)");
+        if (!start.isBefore(end)) {
+            throw new IllegalArgumentException(
+                    "a recurring away period must end after it starts on the same day (no periods over midnight)");
+        }
     }
 
     /** As the config file has it: the weekday and the times as texts. */
@@ -49,8 +51,9 @@ public record RecurringAwayPeriod(DayOfWeek weekday, LocalTime start, LocalTime 
 
     private static DayOfWeek weekday(String name) {
         var upper = name.toUpperCase(Locale.ROOT);
-        Checks.require(Arrays.stream(DayOfWeek.values()).anyMatch(day -> day.name().equals(upper)),
-                "weekday must be a day of the week such as MONDAY, not '" + name + "'");
+        if (Arrays.stream(DayOfWeek.values()).noneMatch(day -> day.name().equals(upper))) {
+            throw new IllegalArgumentException("weekday must be a day of the week such as MONDAY, not '" + name + "'");
+        }
         return DayOfWeek.valueOf(upper);
     }
 

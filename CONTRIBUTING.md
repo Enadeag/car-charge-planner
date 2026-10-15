@@ -104,7 +104,7 @@ and the Maven wrapper in the root, the code in `src/main/java/io/github/enadeag/
 
 | Package | What it holds |
 | --- | --- |
-| `engine` | Plans, fetches forecasts and owns the stored data, without user interface; clients get plain records. `engine.config` the config file and the away periods entered by hand, `engine.forecast` the provider contract and the forecast service (fallback, cache, rate limits), `engine.forecast.providers` Open-Meteo and Forecast.Solar, `engine.secrets` the API keys, `engine.plan` the planner. |
+| `engine` | Plans, fetches forecasts and owns the stored data, without user interface; clients get plain records. `engine.config` the config file, `engine.away` the away periods (weekly, and the ones entered by hand and kept in `away.json`), `engine.forecast` the provider contract and the forecast service (fallback, cache, rate limits), `engine.forecast.providers` Open-Meteo and Forecast.Solar, `engine.secrets` the API keys, `engine.plan` the planner. |
 | `desktop` | The JavaFX dashboard, and what a tray icon and start at login must do. |
 | `instance` | One running copy per user: a second start asks the first, over a private Unix domain socket, to show its dashboard. |
 | `platform.linux`, `platform.windows` | The tray icon, the keychain and start at login on each system: our own StatusNotifierItem and Secret Service client over D-Bus, and a desktop entry in the autostart folder; AWT's `SystemTray`, the Credential Manager and the Run key. |

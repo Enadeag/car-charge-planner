@@ -1,4 +1,4 @@
-package io.github.enadeag.carchargeplanner.engine.config;
+package io.github.enadeag.carchargeplanner.engine.away;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -19,7 +19,9 @@ public record AwayPeriod(Instant start, Instant end) {
      * @throws IllegalArgumentException when the end is not after the start
      */
     public AwayPeriod {
-        Checks.require(start.isBefore(end), "an away period must end after it starts");
+        if (!start.isBefore(end)) {
+            throw new IllegalArgumentException("an away period must end after it starts");
+        }
     }
 
     /**
@@ -44,7 +46,9 @@ public record AwayPeriod(Instant start, Instant end) {
      * @throws IllegalArgumentException when the end is not after the start
      */
     public static AwayPeriod on(LocalDate date, LocalTime start, LocalTime end, ZoneId zone) {
-        Checks.require(start.isBefore(end), "the end time must be after the start time");
+        if (!start.isBefore(end)) {
+            throw new IllegalArgumentException("the end time must be after the start time");
+        }
         return new AwayPeriod(date.atTime(start).atZone(zone).toInstant(), date.atTime(end).atZone(zone).toInstant());
     }
 }

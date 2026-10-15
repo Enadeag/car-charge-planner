@@ -9,7 +9,7 @@ import static io.github.enadeag.carchargeplanner.engine.plan.Forecasts.hourly;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
-import io.github.enadeag.carchargeplanner.engine.config.AwayPeriod;
+import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.config.HomeSystem;
 import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.config.Phases;

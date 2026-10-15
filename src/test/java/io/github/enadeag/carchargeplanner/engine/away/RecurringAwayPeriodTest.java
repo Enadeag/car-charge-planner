@@ -1,4 +1,4 @@
-package io.github.enadeag.carchargeplanner.engine.config;
+package io.github.enadeag.carchargeplanner.engine.away;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

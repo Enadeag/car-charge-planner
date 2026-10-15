@@ -1,7 +1,7 @@
 package io.github.enadeag.carchargeplanner.engine.plan;
 
-import io.github.enadeag.carchargeplanner.engine.config.AwayPeriod;
-import io.github.enadeag.carchargeplanner.engine.config.RecurringAwayPeriod;
+import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import io.github.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import java.time.ZoneId;
 import java.util.ArrayList;

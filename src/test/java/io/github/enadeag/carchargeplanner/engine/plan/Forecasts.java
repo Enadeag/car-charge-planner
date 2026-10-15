@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine.plan;
 
+import io.github.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.config.Car;
 import io.github.enadeag.carchargeplanner.engine.config.Charger;
 import io.github.enadeag.carchargeplanner.engine.config.Coordinates;
@@ -9,7 +10,6 @@ import io.github.enadeag.carchargeplanner.engine.config.PanelArray;
 import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.config.Phases;
 import io.github.enadeag.carchargeplanner.engine.config.PlanningPreferences;
-import io.github.enadeag.carchargeplanner.engine.config.RecurringAwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import java.time.DayOfWeek;
 import java.time.Duration;

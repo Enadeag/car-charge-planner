@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.engine.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.github.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;

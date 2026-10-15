@@ -8,7 +8,7 @@ import io.github.enadeag.carchargeplanner.desktop.TaskbarHiding;
 import io.github.enadeag.carchargeplanner.desktop.Tray;
 import io.github.enadeag.carchargeplanner.desktop.TrayStatusMapper;
 import io.github.enadeag.carchargeplanner.engine.Engine;
-import io.github.enadeag.carchargeplanner.engine.config.AwayFile;
+import io.github.enadeag.carchargeplanner.engine.away.AwayFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastCache;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastService;

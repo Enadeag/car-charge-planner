@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine.config;
 
+import io.github.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
 import java.util.List;
 
 /**
