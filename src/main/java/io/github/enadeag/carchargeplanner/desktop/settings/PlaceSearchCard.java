@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -55,6 +56,9 @@ final class PlaceSearchCard {
         var line = new HBox(text, search);
         line.getStyleClass().add("field-line");
         results.getStyleClass().add("place-results");
+        // nothing to say or show yet: no empty space on the card either
+        status.managedProperty().bind(status.textProperty().isNotEmpty());
+        results.managedProperty().bind(Bindings.isNotEmpty(results.getChildren()));
         card = new Card(messages.text(TextKey.CARD_PLACE), messages.text(TextKey.CARD_PLACE_HINT), line, status,
                 results);
     }

@@ -472,11 +472,15 @@
 
 .field-unit {
     -fx-text-fill: -muted;
-    -fx-min-width: 3em;
+    -fx-min-width: 5.5em;
 }
 
 .number-field {
     -fx-pref-width: 8.5em;
+}
+
+.number-field.precise {
+    -fx-pref-width: 11em;
 }
 
 .choice-field {

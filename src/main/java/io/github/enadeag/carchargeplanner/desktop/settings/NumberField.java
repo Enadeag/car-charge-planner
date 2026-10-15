@@ -80,6 +80,9 @@ final class NumberField implements Input {
         spinner.setValueFactory(values);
         spinner.setEditable(true);
         spinner.getStyleClass().addAll(Spinner.STYLE_CLASS_SPLIT_ARROWS_HORIZONTAL, "number-field");
+        if (range.decimals() > 2) {
+            spinner.getStyleClass().add("precise"); // such as a latitude: room for "-51.0000"
+        }
         this.unit.setText(unit);
         this.unit.getStyleClass().add("field-unit");
         view = new HBox(spinner, this.unit);
