@@ -472,11 +472,15 @@
 
 .field-unit {
     -fx-text-fill: -muted;
-    -fx-min-width: 3em;
+    -fx-min-width: 5.5em;
 }
 
 .number-field {
     -fx-pref-width: 8.5em;
+}
+
+.number-field.precise {
+    -fx-pref-width: 11em;
 }
 
 .choice-field {
@@ -509,4 +513,32 @@
 
 .status-text {
     -fx-text-fill: -muted;
+}
+
+/* a value set-up or Settings filled in because the owner did not know it, until the owner enters their own */
+.typical-tag {
+    -fx-background-color: -sun-soft;
+    -fx-background-radius: 999;
+    -fx-padding: 0.1em 0.6em 0.1em 0.6em;
+    -fx-font-size: 0.85em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -sun-text;
+}
+
+.card-buttons {
+    -fx-spacing: 0.6em;
+    -fx-padding: 0.3em 0 0 0;
+}
+
+.text-input {
+    -fx-pref-width: 16em;
+}
+
+.place-results {
+    -fx-spacing: 0.1em;
+}
+
+.place-result {
+    -fx-alignment: center-left;
+    -fx-text-fill: -fg;
 }

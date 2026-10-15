@@ -342,5 +342,143 @@ public enum TextKey {
     /** The keys are in the keychain. */
     ABOUT_KEYS_KEYCHAIN,
     /** The keys are in a file: {0} the file. */
-    ABOUT_KEYS_FILE
+    ABOUT_KEYS_FILE,
+    /** The category of the panel arrays. */
+    CATEGORY_SOLAR,
+    /** The category of the home's place and time zone. */
+    CATEGORY_LOCATION,
+    /** The category of the car and the house's use. */
+    CATEGORY_CAR_HOUSE,
+    /** The category of the charger. */
+    CATEGORY_CHARGER,
+    /** A highest current below the lowest. */
+    PROBLEM_BELOW_MINIMUM_CURRENT,
+    /** The tag on a value that is a typical value. */
+    TYPICAL_TAG,
+    /** The button that fills a card with typical values. */
+    USE_TYPICAL,
+    /** The title of a panel array's card: {0} its number. */
+    CARD_PANEL_ARRAY,
+    /** What a panel array is. */
+    CARD_PANEL_ARRAY_HINT,
+    /** The button that adds a panel array. */
+    PANELS_ADD,
+    /** The button that removes a panel array. */
+    PANELS_REMOVE,
+    /** The panel array's name. */
+    FIELD_PANEL_NAME,
+    /** What the name is for. */
+    FIELD_PANEL_NAME_HINT,
+    /** The panel array's size. */
+    FIELD_PANEL_SIZE,
+    /** What the size is. */
+    FIELD_PANEL_SIZE_HINT,
+    /** The panel array's tilt. */
+    FIELD_PANEL_TILT,
+    /** What the tilt is. */
+    FIELD_PANEL_TILT_HINT,
+    /** The panel array's direction. */
+    FIELD_PANEL_DIRECTION,
+    /** What the direction is. */
+    FIELD_PANEL_DIRECTION_HINT,
+    /** The panel array's losses. */
+    FIELD_PANEL_LOSSES,
+    /** What the losses are. */
+    FIELD_PANEL_LOSSES_HINT,
+    /** The title of the place search's card. */
+    CARD_PLACE,
+    /** What the place search does. */
+    CARD_PLACE_HINT,
+    /** What a screen reader calls the place search's text field. */
+    PLACE_FIELD,
+    /** The text in the empty place search field. */
+    PLACE_PROMPT,
+    /** The button that searches. */
+    PLACE_SEARCH,
+    /** Said while the search runs. */
+    PLACE_SEARCHING,
+    /** Said above the results. */
+    PLACE_CHOOSE,
+    /** Said after a place was chosen: {0} the place. */
+    PLACE_CHOSEN,
+    /** No places matched: {0} what was typed. */
+    PLACE_NONE,
+    /** The provider has no place search. */
+    PLACE_NO_SEARCH,
+    /** Fewer than two characters were typed. */
+    PLACE_TOO_SHORT,
+    /** The search could not be reached. */
+    PLACE_UNAVAILABLE,
+    /** The search refuses more requests for now. */
+    PLACE_BUSY,
+    /** The search gave an answer the app cannot read. */
+    PLACE_BAD_RESPONSE,
+    /** The title of the coordinates' card. */
+    CARD_COORDINATES,
+    /** What the coordinates are for. */
+    CARD_COORDINATES_HINT,
+    /** The latitude. */
+    FIELD_LATITUDE,
+    /** What the latitude is. */
+    FIELD_LATITUDE_HINT,
+    /** The longitude. */
+    FIELD_LONGITUDE,
+    /** What the longitude is. */
+    FIELD_LONGITUDE_HINT,
+    /** The time zone. */
+    FIELD_TIMEZONE,
+    /** What the time zone is. */
+    FIELD_TIMEZONE_HINT,
+    /** The title of the car's card. */
+    CARD_CAR,
+    /** What the car's values are for. */
+    CARD_CAR_HINT,
+    /** The usable battery. */
+    FIELD_CAR_BATTERY,
+    /** What the usable battery is. */
+    FIELD_CAR_BATTERY_HINT,
+    /** The consumption. */
+    FIELD_CAR_CONSUMPTION,
+    /** What the consumption is. */
+    FIELD_CAR_CONSUMPTION_HINT,
+    /** The distance a day. */
+    FIELD_CAR_DISTANCE,
+    /** What the distance is. */
+    FIELD_CAR_DISTANCE_HINT,
+    /** The title of the house's card. */
+    CARD_HOUSE,
+    /** What the house's value is for. */
+    CARD_HOUSE_HINT,
+    /** The house's baseload. */
+    FIELD_BASELOAD,
+    /** What the baseload is. */
+    FIELD_BASELOAD_HINT,
+    /** The title of the charger's card. */
+    CARD_CHARGER,
+    /** What the charger's values are for. */
+    CARD_CHARGER_HINT,
+    /** The charger's phases. */
+    FIELD_PHASES,
+    /** What the phases are. */
+    FIELD_PHASES_HINT,
+    /** One phase. */
+    PHASES_ONE,
+    /** Three phases. */
+    PHASES_THREE,
+    /** The lowest current. */
+    FIELD_MIN_CURRENT,
+    /** What the lowest current is. */
+    FIELD_MIN_CURRENT_HINT,
+    /** The highest current. */
+    FIELD_MAX_CURRENT,
+    /** What the highest current is. */
+    FIELD_MAX_CURRENT_HINT,
+    /** The voltage. */
+    FIELD_VOLTAGE,
+    /** What the voltage is. */
+    FIELD_VOLTAGE_HINT,
+    /** The charging efficiency. */
+    FIELD_EFFICIENCY,
+    /** What the efficiency is. */
+    FIELD_EFFICIENCY_HINT
 }

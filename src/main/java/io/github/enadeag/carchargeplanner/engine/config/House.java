@@ -7,14 +7,18 @@ package io.github.enadeag.carchargeplanner.engine.config;
  */
 public record House(double baseloadKw) {
 
+    /** A common household, for an owner who does not know: 0.5 kW. */
+    public static final House TYPICAL = new House(0.5);
+
     /**
      * Checks the value.
      *
-     * @throws IllegalArgumentException when the baseload is negative
+     * @throws InvalidSetting when the baseload is negative
      */
     public House {
         if (baseloadKw < 0 || Double.isNaN(baseloadKw)) {
-            throw new IllegalArgumentException("baseloadKw must not be negative");
+            throw new InvalidSetting(Setting.HOUSE_BASELOAD, InvalidSetting.Rule.OUT_OF_RANGE,
+                    "baseloadKw must not be negative");
         }
     }
 }

@@ -9,20 +9,26 @@ package io.github.enadeag.carchargeplanner.engine.config;
  */
 public record Car(double usableBatteryKwh, double consumptionKwhPer100km, double kmPerDay) {
 
+    /** A common car, for an owner who does not know the values: 60 kWh, 18 kWh per 100 km, 40 km a day. */
+    public static final Car TYPICAL = new Car(60, 18, 40);
+
     /**
      * Checks the values.
      *
-     * @throws IllegalArgumentException when a value is outside the range given for it
+     * @throws InvalidSetting when a value is outside the range given for it
      */
     public Car {
         if (usableBatteryKwh <= 0 || Double.isNaN(usableBatteryKwh)) {
-            throw new IllegalArgumentException("usableBatteryKwh must be more than 0");
+            throw new InvalidSetting(Setting.CAR_BATTERY, InvalidSetting.Rule.OUT_OF_RANGE,
+                    "usableBatteryKwh must be more than 0");
         }
         if (consumptionKwhPer100km <= 0 || Double.isNaN(consumptionKwhPer100km)) {
-            throw new IllegalArgumentException("consumptionKwhPer100km must be more than 0");
+            throw new InvalidSetting(Setting.CAR_CONSUMPTION, InvalidSetting.Rule.OUT_OF_RANGE,
+                    "consumptionKwhPer100km must be more than 0");
         }
         if (kmPerDay < 0 || Double.isNaN(kmPerDay)) {
-            throw new IllegalArgumentException("kmPerDay must not be negative");
+            throw new InvalidSetting(Setting.CAR_DAILY_DISTANCE, InvalidSetting.Rule.OUT_OF_RANGE,
+                    "kmPerDay must not be negative");
         }
     }
 }

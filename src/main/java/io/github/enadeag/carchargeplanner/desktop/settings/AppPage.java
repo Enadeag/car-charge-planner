@@ -9,6 +9,7 @@ import io.github.enadeag.carchargeplanner.desktop.Units;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 import javafx.scene.layout.Region;
 
@@ -74,6 +75,15 @@ final class AppPage implements Page {
      */
     AppSettings settings() {
         return new AppSettings(language.value(), units.value(), mode.value());
+    }
+
+    /**
+     * Calls an action whenever the chosen units change, by the owner or by loading, so distances show in them at once.
+     *
+     * @param action gets the units chosen now, on the JavaFX thread
+     */
+    void onUnitsChanged(Consumer<Units> action) {
+        units.onChange(() -> action.accept(units.value()));
     }
 
     /**

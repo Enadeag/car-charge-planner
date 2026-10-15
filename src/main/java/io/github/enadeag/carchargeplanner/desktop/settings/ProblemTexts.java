@@ -21,6 +21,7 @@ final class ProblemTexts {
         return messages.text(switch (rule) {
             case OUT_OF_RANGE -> TextKey.PROBLEM_OUT_OF_RANGE;
             case NOT_BELOW_TARGET -> TextKey.PROBLEM_NOT_BELOW_TARGET;
+            case BELOW_MINIMUM_CURRENT -> TextKey.PROBLEM_BELOW_MINIMUM_CURRENT;
         });
     }
 }

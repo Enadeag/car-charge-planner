@@ -10,7 +10,6 @@ import io.github.enadeag.carchargeplanner.engine.battery.BatteryFile;
 import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
-import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
@@ -161,9 +160,7 @@ class EngineTest {
     void theNextPlanUsesASavedConfig() throws ConfigProblem, IOException {
         var engine = engine(clockAt(7));
         var stored = engine.config();
-        var changed = new EngineConfig(stored.system(),
-                new PlanningPreferences(new Percent(40), new Percent(90), 0.85, 0.2, 45, 15), stored.forecast(),
-                stored.away());
+        var changed = stored.withPlanning(new PlanningPreferences(new Percent(40), new Percent(90), 0.85, 0.2, 45, 15));
 
         engine.saveConfig(changed);
 

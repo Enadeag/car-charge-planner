@@ -6,6 +6,9 @@ import io.github.enadeag.carchargeplanner.desktop.Fx;
 import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.Scenes;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
+import io.github.enadeag.carchargeplanner.engine.config.PanelArray;
+import io.github.enadeag.carchargeplanner.engine.config.TypicalValues;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -16,8 +19,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 /**
- * In every language Settings shows each text whole, at the size it opens with: on every category, with a problem
- * next to a field, with the question before discarding, and without a config file.
+ * In every language Settings shows each text whole, at the size it opens with: on every category, with every value
+ * tagged as typical and two panel arrays, with a problem next to a field, with the question before discarding, and
+ * without a config file.
  */
 class SettingsLanguagesTest {
 
@@ -46,6 +50,10 @@ class SettingsLanguagesTest {
     @EnumSource(Language.class)
     void noTextIsCutOff(Language language) throws Exception {
         settings = new SettingsFixture(folder, language);
+        var file = new ConfigFile(settings.configPath);
+        var example = file.read();
+        file.write(example.withSystem(example.system().withPanels(List.of(PanelArray.TYPICAL, PanelArray.TYPICAL)),
+                new TypicalValues(TypicalValues.SYSTEM_SETTINGS, List.of(TypicalValues.PANEL_SETTINGS))));
         var view = settings.open(false);
 
         var problems = Fx.call(() -> {

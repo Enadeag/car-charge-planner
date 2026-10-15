@@ -8,6 +8,8 @@ import javafx.scene.layout.VBox;
 /** Settings that belong together, under a title and a short explanation. */
 final class Card extends VBox {
 
+    private final Label heading = new Label();
+
     /**
      * Makes the card.
      *
@@ -16,7 +18,7 @@ final class Card extends VBox {
      * @param content the rows and other nodes on the card, in order
      */
     Card(String title, String explanation, Node... content) {
-        var heading = new Label(title);
+        heading.setText(title);
         heading.getStyleClass().add("card-title");
         heading.setWrapText(true);
         heading.setAccessibleRole(AccessibleRole.TEXT);
@@ -26,5 +28,14 @@ final class Card extends VBox {
         }
         getChildren().addAll(content);
         getStyleClass().addAll("card", "settings-card");
+    }
+
+    /**
+     * Changes the card's title.
+     *
+     * @param title the new title, in the owner's language
+     */
+    void setTitle(String title) {
+        heading.setText(title);
     }
 }

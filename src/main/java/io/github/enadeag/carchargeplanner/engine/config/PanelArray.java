@@ -11,23 +11,30 @@ package io.github.enadeag.carchargeplanner.engine.config;
  */
 public record PanelArray(String name, double kwp, double tiltDeg, double azimuthDeg, double systemLosses) {
 
+    /** A common array, for an owner who does not know the values: 5 kWp, 35 degrees, facing south, 14 % lost. */
+    public static final PanelArray TYPICAL = new PanelArray("", 5, 35, 0, 0.14);
+
     /**
      * Checks the values.
      *
-     * @throws IllegalArgumentException when a value is outside the range given for it
+     * @throws InvalidSetting when a value is outside the range given for it
      */
     public PanelArray {
         if (kwp <= 0 || Double.isNaN(kwp)) {
-            throw new IllegalArgumentException("kwp must be more than 0");
+            throw new InvalidSetting(Setting.PANEL_SIZE, InvalidSetting.Rule.OUT_OF_RANGE,
+                    "kwp must be more than 0");
         }
         if (tiltDeg < 0 || tiltDeg > 90 || Double.isNaN(tiltDeg)) {
-            throw new IllegalArgumentException("tiltDeg must be between 0 and 90");
+            throw new InvalidSetting(Setting.PANEL_TILT, InvalidSetting.Rule.OUT_OF_RANGE,
+                    "tiltDeg must be between 0 and 90");
         }
         if (azimuthDeg < -180 || azimuthDeg > 180 || Double.isNaN(azimuthDeg)) {
-            throw new IllegalArgumentException("azimuthDeg must be between -180 and 180");
+            throw new InvalidSetting(Setting.PANEL_DIRECTION, InvalidSetting.Rule.OUT_OF_RANGE,
+                    "azimuthDeg must be between -180 and 180");
         }
         if (systemLosses < 0 || systemLosses >= 1 || Double.isNaN(systemLosses)) {
-            throw new IllegalArgumentException("systemLosses must be at least 0 and less than 1");
+            throw new InvalidSetting(Setting.PANEL_LOSSES, InvalidSetting.Rule.OUT_OF_RANGE,
+                    "systemLosses must be at least 0 and less than 1");
         }
     }
 }

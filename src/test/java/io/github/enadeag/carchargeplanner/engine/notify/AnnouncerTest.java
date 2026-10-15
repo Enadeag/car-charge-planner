@@ -64,9 +64,8 @@ class AnnouncerTest {
         try {
             var example = new ConfigFile(Path.of("docs", "example-engine.json")).read();
             var planning = example.planning();
-            return new EngineConfig(example.system(), new PlanningPreferences(planning.minimumPct(), planning.targetPct(),
-                    planning.margin(), planning.importToleranceKwh(), planning.minWindowMinutes(), leadMinutes),
-                    example.forecast(), example.away());
+            return example.withPlanning(new PlanningPreferences(planning.minimumPct(), planning.targetPct(),
+                    planning.margin(), planning.importToleranceKwh(), planning.minWindowMinutes(), leadMinutes));
         } catch (ConfigProblem e) {
             throw new AssertionError(e);
         }

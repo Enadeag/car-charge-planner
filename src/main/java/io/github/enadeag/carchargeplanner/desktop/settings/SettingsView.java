@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -114,11 +115,21 @@ final class SettingsView extends BorderPane {
      */
     static SettingsView of(SettingsStores stores, AboutFacts facts, Consumer<URI> openLink, Runnable close,
             Runnable saved, Messages messages) {
+        var solar = new SolarPage(messages);
+        var location = new LocationPage(
+                (provider, text) -> stores.engine().searchPlaces(provider, text, messages.language().code()), messages);
+        var carHouse = new CarHousePage(messages);
+        var charger = new ChargerPage(messages);
         var planning = new PlanningPage(messages);
         var app = new AppPage(messages);
+        app.onUnitsChanged(carHouse::showIn);
         var about = new AboutPage(facts, openLink, messages);
-        var form = new SettingsForm(stores, List.of(planning), app, about);
-        return new SettingsView(form, List.of(planning, app, about), close, saved, messages);
+        List<ConfigPage> configPages = List.of(solar, location, carHouse, charger, planning);
+        var form = new SettingsForm(stores, configPages, app, about);
+        var pages = new ArrayList<Page>(configPages);
+        pages.add(app);
+        pages.add(about);
+        return new SettingsView(form, pages, close, saved, messages);
     }
 
     /**
