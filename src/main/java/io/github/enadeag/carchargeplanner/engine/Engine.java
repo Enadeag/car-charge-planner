@@ -83,8 +83,7 @@ public final class Engine {
         // nothing is announced until there are notifications, so there is no announced window to keep
         var days = new Planner(system, config.planning()).plan(forecast.steps(), ASSUMED_BATTERY_PCT, now, List.of());
         var advice = new GridAdvisor(system, config.planning()).advise(days, forecast.steps(), now);
-        return new Outlook.Planned(now, system.timezone(), days, ASSUMED_BATTERY_PCT, true, advice,
-                Optional.of(forecast.source()));
+        return new Outlook.Planned(now, system.timezone(), days, ASSUMED_BATTERY_PCT, true, advice, forecast.source());
     }
 
     /**

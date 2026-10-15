@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.enadeag.carchargeplanner.desktop.Chip.Source;
 import io.github.enadeag.carchargeplanner.engine.Outlook;
+import io.github.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import io.github.enadeag.carchargeplanner.engine.plan.DayPlan;
 import io.github.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import io.github.enadeag.carchargeplanner.engine.plan.Window;
@@ -20,7 +21,8 @@ class OutlookMapperTest {
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");
     /** A Friday. */
     private static final LocalDate TODAY = LocalDate.of(2026, 7, 3);
-    private static final OutlookMapper MAPPER = new OutlookMapper("Open-Meteo");
+    private static final OutlookMapper MAPPER = new OutlookMapper();
+    private static final String CREDIT = "Weather data: Open-Meteo.com (CC BY 4.0)";
 
     private static Instant at(LocalDate day, int hour, int minute) {
         return day.atTime(hour, minute).atZone(BRUSSELS).toInstant();
@@ -34,12 +36,22 @@ class OutlookMapperTest {
         return new DayPlan(date, 50, List.of(windows), 74, 62, 12);
     }
 
+    /** Fetched at 07:45 from the primary provider, Open-Meteo. */
+    private static ForecastSource fresh() {
+        return new ForecastSource("open-meteo", "Open-Meteo", CREDIT, at(TODAY, 7, 45), false, false, false, "",
+                Optional.empty());
+    }
+
     private static Outlook.Planned planned(boolean batteryAssumed, DayPlan... days) {
-        return new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(days), 50, batteryAssumed, Optional.empty());
+        return new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(days), 50, batteryAssumed, Optional.empty(), fresh());
+    }
+
+    private static Outlook.Planned planned(ForecastSource source) {
+        return new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(day(TODAY)), 50, false, Optional.empty(), source);
     }
 
     private static DashboardModel.Plan advised(GridAdvice advice, DayPlan... days) {
-        var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(days), 50, false, Optional.of(advice));
+        var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(days), 50, false, Optional.of(advice), fresh());
         return (DashboardModel.Plan) MAPPER.map(planned);
     }
 
@@ -108,8 +120,30 @@ class OutlookMapperTest {
     }
 
     @Test
-    void theFooterNamesTheForecastAndWhenThePlanWasMade() {
-        assertThat(plan(day(TODAY)).footer()).isEqualTo("Forecast: Open-Meteo · 08:12");
+    void theFooterCreditsTheProviderAsItsTermsAskAndSaysWhenTheForecastWasFetched() {
+        assertThat(plan(day(TODAY)).footer()).isEqualTo(CREDIT + " · updated 07:45");
+    }
+
+    @Test
+    void aFallbackForecastSaysWhichProviderItStandsInFor() {
+        var fallback = new ForecastSource("forecast-solar", "Forecast.Solar", "Solar forecast: Forecast.Solar",
+                at(TODAY, 7, 45), false, false, true, "Open-Meteo", Optional.empty());
+
+        assertThat(((DashboardModel.Plan) MAPPER.map(planned(fallback))).footer())
+                .isEqualTo("Solar forecast: Forecast.Solar · Open-Meteo unavailable · updated 07:45");
+    }
+
+    @Test
+    void aStaleForecastAndARateLimitAreNamedUntilTheLimitEnds() {
+        var limited = new ForecastSource("open-meteo", "Open-Meteo", CREDIT, at(TODAY, 5, 30), true, true, false, "",
+                Optional.of(at(TODAY, 9, 0)));
+        var ended = new ForecastSource("open-meteo", "Open-Meteo", CREDIT, at(TODAY, 5, 30), true, true, false, "",
+                Optional.of(at(TODAY, 8, 0)));
+
+        assertThat(((DashboardModel.Plan) MAPPER.map(planned(limited))).footer())
+                .isEqualTo(CREDIT + " · not refreshed since 05:30 · provider busy until 09:00");
+        assertThat(((DashboardModel.Plan) MAPPER.map(planned(ended))).footer())
+                .isEqualTo(CREDIT + " · not refreshed since 05:30");
     }
 
     @Test
@@ -167,7 +201,7 @@ class OutlookMapperTest {
 
         assertThat(message.headline()).isEqualTo("No forecast");
         assertThat(message.detail()).isEqualTo("Could not reach Open-Meteo");
-        assertThat(message.footer()).isEqualTo("Forecast: Open-Meteo");
+        assertThat(message.footer()).isEmpty(); // there is no forecast to credit
     }
 
     @Test

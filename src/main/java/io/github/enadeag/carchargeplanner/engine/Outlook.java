@@ -21,7 +21,7 @@ public sealed interface Outlook {
      * @param batteryPct the battery level the plan starts from, in percent
      * @param batteryAssumed true while the battery level is a placeholder, not a reading
      * @param gridAdvice present when the battery would end a day below the minimum charge level
-     * @param forecast where the forecast came from; empty for a plan not made from a fetched forecast
+     * @param forecast where the forecast came from
      */
     record Planned(
             Instant madeAt,
@@ -30,26 +30,11 @@ public sealed interface Outlook {
             double batteryPct,
             boolean batteryAssumed,
             Optional<GridAdvice> gridAdvice,
-            Optional<ForecastSource> forecast) implements Outlook {
+            ForecastSource forecast) implements Outlook {
 
         /** Copies the days. */
         public Planned {
             days = List.copyOf(days);
-        }
-
-        /**
-         * A plan without word of where its forecast came from, as clients' tests make them.
-         *
-         * @param madeAt when the plan was made
-         * @param zone the time zone of the owner's home
-         * @param days the plan of each day, today first
-         * @param batteryPct the battery level the plan starts from, in percent
-         * @param batteryAssumed true while the battery level is a placeholder, not a reading
-         * @param gridAdvice present when the battery would end a day below the minimum charge level
-         */
-        public Planned(Instant madeAt, ZoneId zone, List<DayPlan> days, double batteryPct, boolean batteryAssumed,
-                Optional<GridAdvice> gridAdvice) {
-            this(madeAt, zone, days, batteryPct, batteryAssumed, gridAdvice, Optional.empty());
         }
 
         /**

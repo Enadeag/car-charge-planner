@@ -9,6 +9,15 @@ final class DataLocation {
     private DataLocation() {
     }
 
+    /**
+     * The app's data folder on this system.
+     *
+     * @param osName the system's name, as the {@code os.name} property gives it
+     * @param environment the environment variables; Windows needs {@code LOCALAPPDATA}, Linux may give
+     *     {@code XDG_DATA_HOME}
+     * @param home the user's home folder, for when Linux gives no usable {@code XDG_DATA_HOME}
+     * @return the app's own folder inside the user's data folder; it need not exist yet
+     */
     static Path defaultFolder(String osName, Map<String, String> environment, Path home) {
         Path folder;
         if (osName.startsWith("Windows")) {

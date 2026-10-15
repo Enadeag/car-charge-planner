@@ -109,7 +109,7 @@ class EngineTest {
     }
 
     private static ForecastSource source(Engine engine) {
-        return planned(engine).forecast().orElseThrow();
+        return planned(engine).forecast();
     }
 
     @Test
@@ -223,7 +223,9 @@ class EngineTest {
 
     @Test
     void aPlanWithoutWindowsHasNoNextWindow() {
-        var planned = new Outlook.Planned(Instant.parse("2026-07-03T05:00:00Z"), BRUSSELS, List.of(), 50, true, Optional.empty());
+        var madeAt = Instant.parse("2026-07-03T05:00:00Z");
+        var source = new ForecastSource("main", "Main", "Forecast by Main", madeAt, false, false, false, "", Optional.empty());
+        var planned = new Outlook.Planned(madeAt, BRUSSELS, List.of(), 50, true, Optional.empty(), source);
         assertThat(planned.nextWindow()).isEmpty();
     }
 
