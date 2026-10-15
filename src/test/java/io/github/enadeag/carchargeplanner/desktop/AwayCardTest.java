@@ -32,7 +32,7 @@ class AwayCardTest {
 
     private void show(DayModel day, AwayModel away) throws Exception {
         Fx.run(() -> {
-            card = new AwayCard(ENGLISH);
+            card = new AwayCard(() -> { }, ENGLISH);
             card.onChange(added::add, removed::add);
             card.show(day, away);
             stage = Scenes.show(card, ColorScheme.LIGHT);

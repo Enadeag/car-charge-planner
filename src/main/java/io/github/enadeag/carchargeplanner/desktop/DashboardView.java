@@ -52,7 +52,7 @@ final class DashboardView extends VBox {
         this.contentChanged = contentChanged;
         this.solar = new SolarCard(reducedMotion, messages);
         this.battery = new BatteryCard(reducedMotion, messages);
-        this.away = new AwayCard(messages);
+        this.away = new AwayCard(contentChanged, messages);
         var title = new Label("Car charge planner"); // the app's name, the same in every language
         title.getStyleClass().add("app-title");
         title.setAccessibleRole(AccessibleRole.TEXT);

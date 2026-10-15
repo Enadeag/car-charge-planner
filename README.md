@@ -37,6 +37,7 @@ Tried it on your desktop? Please tell us, whether it works or not, with the **Do
 - **Grid advice:** if the battery would end a day below your minimum charge level, it says how much to charge from the grid and when.
 - A tray icon whose dot shows the state of the plan, with the plan in its tooltip. Click it for the **dashboard**: a tab per day with that day's charge window, grid advice, the expected sun against the house's use, and the car battery. The dashboard also opens in a window of its own.
 - **Update** on the battery card is where you enter the level the car shows. Until you do, the plan assumes 50 % and says so.
+- **Add** on the Car away card marks the car away on the day you are looking at, all day or from a time to a time; the card lists the coming ones, each with **Remove**. The plan changes at once. Away times that repeat every week are in Settings, which the footer's **Away** button opens.
 - Right-click the icon for **Open dashboard**, **Settings…** (**Set up…** until the app is set up), **About…** and **Quit**.
 - Sends a desktop notification a few minutes before each window (the lead time is a setting), once per window. Clicking it opens the dashboard. On Linux notifications go straight to the desktop's notification service over D-Bus, so they work with or without a tray; on Windows they come from the tray icon.
 
@@ -47,7 +48,7 @@ The planner, the dashboard, the tray icon, the notifications, set-up and Setting
 Limits to know about:
 
 - **The plan is forecast-only.** It uses a weather forecast and the values you enter, not measured data: no smart-meter, inverter or car readings. The more accurate your panel, battery and consumption values, the better the plan.
-- **You enter the battery level by hand**, and the times the car is away as weekly times in Settings. There is no calendar sync and no connection to the car.
+- **You enter the battery level by hand**, and the times the car is away: weekly in Settings, or for a single day on the dashboard. There is no calendar sync and no connection to the car.
 - **You set the charge current yourself**, in your charger's own app. The app only recommends it.
 - **Settings of the Python version (0.2.0 and earlier) are not read.** Run set-up once; the old files are left alone.
 

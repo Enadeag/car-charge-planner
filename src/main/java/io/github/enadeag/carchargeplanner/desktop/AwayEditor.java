@@ -28,14 +28,16 @@ import javafx.scene.layout.VBox;
 final class AwayEditor extends VBox {
 
     /** Both of the app's languages write a time on a 24-hour clock; a leading zero may be left out. */
-    private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("H:mm")
+    private static final DateTimeFormatter TYPED = DateTimeFormatter.ofPattern("H:mm")
             .withResolverStyle(ResolverStyle.STRICT);
+    private static final DateTimeFormatter SHOWN = DateTimeFormatter.ofPattern("HH:mm");
     private static final LocalTime FIRST_START = LocalTime.of(9, 0);
     private static final LocalTime FIRST_END = LocalTime.of(17, 0);
 
     private final Messages messages;
     private final Consumer<AwayPeriod> saved;
     private final Runnable closed;
+    private final Runnable resized;
     private final RadioButton wholeDay;
     private final RadioButton partOfDay;
     private final TextField from = new TextField();
@@ -51,12 +53,14 @@ final class AwayEditor extends VBox {
      *
      * @param saved gets the period the owner saved; called on the JavaFX thread
      * @param closed called when the entry should close, after a save or a cancel
+     * @param resized called when the entry grows or shrinks while open: the times or a problem show or go
      * @param messages the texts, in the owner's language
      */
-    AwayEditor(Consumer<AwayPeriod> saved, Runnable closed, Messages messages) {
+    AwayEditor(Consumer<AwayPeriod> saved, Runnable closed, Runnable resized, Messages messages) {
         this.messages = messages;
         this.saved = saved;
         this.closed = closed;
+        this.resized = resized;
         var kind = new ToggleGroup();
         wholeDay = new RadioButton(messages.text(TextKey.ONE_OFF_WHOLE_DAY));
         partOfDay = new RadioButton(messages.text(TextKey.ONE_OFF_PART_OF_DAY));
@@ -83,7 +87,9 @@ final class AwayEditor extends VBox {
         var cancel = new Button(messages.text(TextKey.ONE_OFF_CANCEL));
         cancel.getStyleClass().add("flat");
         cancel.setOnAction(event -> closed.run());
-        var actions = new FlowPane(times, save, cancel);
+        var buttons = new HBox(save, cancel);
+        buttons.getStyleClass().add("away-buttons");
+        var actions = new FlowPane(times, buttons);
         actions.getStyleClass().add("away-actions");
 
         setOnKeyPressed(event -> {
@@ -94,7 +100,8 @@ final class AwayEditor extends VBox {
         });
         getChildren().setAll(kinds, actions, problem);
         getStyleClass().add("away-editor");
-        showProblem("");
+        problem.setVisible(false);
+        problem.setManaged(false);
     }
 
     /**
@@ -109,8 +116,8 @@ final class AwayEditor extends VBox {
         this.zone = zone;
         this.now = now;
         wholeDay.setSelected(true);
-        from.setText(CLOCK.format(FIRST_START));
-        to.setText(CLOCK.format(FIRST_END));
+        from.setText(SHOWN.format(FIRST_START));
+        to.setText(SHOWN.format(FIRST_END));
         showProblem("");
         wholeDay.requestFocus();
     }
@@ -176,7 +183,7 @@ final class AwayEditor extends VBox {
 
     private static Optional<LocalTime> time(TextField field) {
         try {
-            return Optional.of(LocalTime.parse(field.getText().strip(), CLOCK));
+            return Optional.of(LocalTime.parse(field.getText().strip(), TYPED));
         } catch (DateTimeParseException e) {
             return Optional.empty();
         }
@@ -186,6 +193,7 @@ final class AwayEditor extends VBox {
         boolean part = partOfDay.isSelected();
         times.setVisible(part);
         times.setManaged(part);
+        resized.run();
     }
 
     private void showProblem(String text) {
@@ -193,5 +201,6 @@ final class AwayEditor extends VBox {
         problem.setVisible(!text.isEmpty());
         problem.setManaged(!text.isEmpty());
         List.of(from, to, wholeDay, partOfDay).forEach(node -> node.setAccessibleHelp(text));
+        resized.run();
     }
 }

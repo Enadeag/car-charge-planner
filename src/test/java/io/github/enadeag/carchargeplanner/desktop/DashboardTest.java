@@ -166,6 +166,34 @@ class DashboardTest {
     }
 
     @Test
+    void theWindowGrowsToShowTheAwayEntryWhenItOpens() throws Exception {
+        dashboard.onAwayChange(period -> { }, period -> { });
+        var window = detachedWith(planWithTwoDays());
+        double before = Fx.call(window::getHeight);
+
+        var add = Fx.call(() -> Scenes.all(window.getScene().lookup(".away-card")).stream()
+                .filter(node -> node instanceof Button button && "Add".equals(button.getText()))
+                .map(Button.class::cast).findFirst().orElseThrow());
+        Fx.run(add::fire);
+        Fx.settle();
+
+        assertThat(Fx.call(window::getHeight)).isGreaterThan(before);
+        var scroll = laidOut(window, ".day-scroll");
+        double dayHeight = Fx.call(() -> ((ScrollPane) window.getScene().lookup(".day-scroll")).getContent()
+                .getLayoutBounds().getHeight());
+        assertThat(scroll.getHeight()).as("the whole day shows, with the entry").isGreaterThanOrEqualTo(dayHeight);
+
+        double withEntry = Fx.call(window::getHeight);
+        Fx.run(() -> {
+            var entry = ((AwayCard) window.getScene().lookup(".away-card")).editor();
+            entry.enterTimes("16:00", "10:00");
+            entry.save();
+        });
+        Fx.settle();
+        assertThat(Fx.call(window::getHeight)).as("and grows again for the times and the problem").isGreaterThan(withEntry);
+    }
+
+    @Test
     void aWindowForADayTallerThanTheScreenStaysOnTheScreen() throws Exception {
         var window = detachedWith(planWithABusyTomorrow(200));
 

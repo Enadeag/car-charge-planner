@@ -350,9 +350,15 @@
     -fx-alignment: center-left;
 }
 
-.away-times {
+.away-times,
+.away-buttons {
     -fx-alignment: center-left;
     -fx-spacing: 0.4em;
+}
+
+/* AtlantaFX gives a radio button the page's background, which shows as a box on a card */
+.away-kinds .radio-button {
+    -fx-background-color: transparent;
 }
 
 .text-input.away-time {

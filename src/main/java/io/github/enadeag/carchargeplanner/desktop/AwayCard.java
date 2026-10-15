@@ -20,6 +20,7 @@ import javafx.scene.layout.VBox;
 final class AwayCard extends VBox {
 
     private final Messages messages;
+    private final Runnable resized;
     private final Button add;
     private final VBox list = new VBox();
     private final AwayEditor editor;
@@ -31,15 +32,21 @@ final class AwayCard extends VBox {
     /**
      * Makes the card, empty until {@link #show(DayModel, AwayModel)}.
      *
+     * @param resized called when the entry opens, closes or changes its height, so the popup or window can fit the
+     *     card
      * @param messages the texts, in the owner's language
      */
-    AwayCard(Messages messages) {
+    AwayCard(Runnable resized, Messages messages) {
         this.messages = messages;
+        this.resized = resized;
         add = new Button(messages.text(TextKey.ONE_OFF_ADD));
         add.getStyleClass().addAll("flat", "small");
         add.setMinWidth(USE_PREF_SIZE);
-        add.setOnAction(event -> edit(true));
-        editor = new AwayEditor(period -> added.ifPresent(handler -> handler.accept(period)), this::closeEntry,
+        add.setOnAction(event -> {
+            edit(true);
+            resized.run();
+        });
+        editor = new AwayEditor(period -> added.ifPresent(handler -> handler.accept(period)), this::closeEntry, resized,
                 messages);
         var spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -122,6 +129,7 @@ final class AwayCard extends VBox {
     private void closeEntry() {
         edit(false);
         add.requestFocus();
+        resized.run();
     }
 
     private void edit(boolean open) {
