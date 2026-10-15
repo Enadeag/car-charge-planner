@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 /** One weekly away period: a weekday, from a time to a time, and a way to remove it. */
@@ -41,7 +41,7 @@ final class AwayRow extends VBox {
         end.focusable().setAccessibleText(messages.text(TextKey.AWAY_TO_FIELD));
         var removeButton = new Button(messages.text(TextKey.AWAY_REMOVE));
         removeButton.setOnAction(event -> remove.accept(this));
-        var line = new FlowPane(weekday.view(), new Label(messages.text(TextKey.AWAY_FROM)), start.view(),
+        var line = new HBox(weekday.view(), new Label(messages.text(TextKey.AWAY_FROM)), start.view(),
                 new Label(messages.text(TextKey.AWAY_TO)), end.view(), removeButton);
         line.getStyleClass().add("away-line");
         problem.setVisible(false);

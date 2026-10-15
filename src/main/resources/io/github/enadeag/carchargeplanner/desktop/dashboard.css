@@ -542,3 +542,21 @@
     -fx-alignment: center-left;
     -fx-text-fill: -fg;
 }
+
+.away-rows {
+    -fx-spacing: 0.5em;
+}
+
+.away-line {
+    -fx-alignment: center-left;
+    -fx-spacing: 0.5em;
+}
+
+.away-line .label {
+    -fx-text-fill: -fg;
+}
+
+.time-input {
+    -fx-pref-width: 4.5em;
+    -fx-min-width: 4.5em;
+}
