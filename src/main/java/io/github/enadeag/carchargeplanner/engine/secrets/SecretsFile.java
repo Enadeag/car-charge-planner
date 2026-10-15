@@ -84,7 +84,7 @@ public final class SecretsFile {
         secrets.byProvider().forEach((id, values) -> sorted.put(id, new TreeMap<>(values)));
         var temporary = path.resolveSibling(path.getFileName() + ".tmp");
         try {
-            Files.createDirectories(path.getParent());
+            Files.createDirectories(path.toAbsolutePath().getParent());
             Files.deleteIfExists(temporary); // a leftover may have other permissions
             Files.writeString(Files.createFile(temporary, privateFile()),
                     json.writerWithDefaultPrettyPrinter().writeValueAsString(sorted), StandardOpenOption.WRITE);

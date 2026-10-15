@@ -12,6 +12,7 @@ import io.github.enadeag.carchargeplanner.engine.forecast.Providers;
 import io.github.enadeag.carchargeplanner.engine.forecast.providers.ForecastSolar;
 import io.github.enadeag.carchargeplanner.engine.forecast.providers.OpenMeteo;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
+import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.Keychain;
 import io.github.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsFile;
@@ -66,7 +67,12 @@ public final class Main {
         var configPath = configPath(args);
         var configFile = new ConfigFile(configPath);
         var clock = Clock.systemUTC();
-        var engine = engine(configFile, new SecretsFile(configPath.resolveSibling("secrets.json")), clock);
+        var secretsFile = new SecretsFile(configPath.resolveSibling("secrets.json"));
+        var engine = engine(configFile, secretsFile, clock);
+        if (engine.keyStorage() == KeyStorage.FILE) {
+            LOG.log(Level.WARNING, "No usable system keychain: API keys are kept in " + secretsFile.path()
+                    + ", readable only by you");
+        }
         var icon = new AppIcon();
 
         Platform.setImplicitExit(false);
