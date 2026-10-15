@@ -1,13 +1,10 @@
 package io.github.enadeag.carchargeplanner.platform.linux;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import io.github.enadeag.carchargeplanner.desktop.AppIcon;
 import io.github.enadeag.carchargeplanner.desktop.NotificationText;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -47,7 +44,7 @@ class FreedesktopNotificationsTest {
     @TempDir
     Path folder;
 
-    private Process busDaemon;
+    private PrivateBus bus;
     private String address;
     private DBusConnection desktop;
     private FakeServer server;
@@ -79,29 +76,8 @@ class FreedesktopNotificationsTest {
 
     @BeforeEach
     void startAPrivateBusWithANotificationServer() throws IOException, DBusException {
-        var socket = folder.resolve("bus");
-        // a session bus without the system's service files: it must never start a real notification server, which
-        // would show the tests' notifications on the developer's desktop
-        var config = Files.writeString(folder.resolve("bus.conf"), """
-                <!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"
-                 "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
-                <busconfig>
-                  <type>session</type>
-                  <listen>unix:tmpdir=/tmp</listen>
-                  <policy context="default">
-                    <allow send_destination="*" eavesdrop="true"/>
-                    <allow eavesdrop="true"/>
-                    <allow own="*"/>
-                  </policy>
-                </busconfig>
-                """);
-        try {
-            busDaemon = new ProcessBuilder("dbus-daemon", "--config-file=" + config, "--nofork", "--nopidfile",
-                    "--address=unix:path=" + socket, "--print-address=1").start();
-        } catch (IOException e) {
-            assumeTrue(false, "dbus-daemon is not installed");
-        }
-        address = new BufferedReader(new InputStreamReader(busDaemon.getInputStream())).readLine().strip();
+        bus = PrivateBus.start(folder);
+        address = bus.address();
         desktop = DBusConnectionBuilder.forAddress(address).withShared(false).build();
         notifications = new FreedesktopNotifications(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),
                 "Car charge planner", "car-charge-planner", new AppIcon(), Files.createDirectory(folder.resolve("notify")));
@@ -111,7 +87,7 @@ class FreedesktopNotificationsTest {
     void stopTheBus() {
         notifications.close();
         desktop.disconnect();
-        busDaemon.destroy();
+        bus.stop();
     }
 
     private void serve() throws DBusException {
