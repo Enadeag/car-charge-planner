@@ -21,17 +21,21 @@ public final class GridAdvisor {
 
     private final HomeSystem system;
     private final PlanningPreferences preferences;
+    private final AwayTimes away;
     private final ZoneId zone;
 
     /**
-     * Makes an advisor for one home and one set of preferences.
+     * Makes an advisor for one home, one set of preferences and the times the car is away.
      *
      * @param system the home and equipment
      * @param preferences the planning preferences, for the minimum charge level and the margin
+     * @param away when the car is not at home; no grid charge is advised in that time, {@link AwayTimes#NONE} for
+     *     none. The same times the {@link Planner} was given.
      */
-    public GridAdvisor(HomeSystem system, PlanningPreferences preferences) {
+    public GridAdvisor(HomeSystem system, PlanningPreferences preferences, AwayTimes away) {
         this.system = system;
         this.preferences = preferences;
+        this.away = away;
         this.zone = system.timezone();
     }
 
@@ -72,8 +76,9 @@ public final class GridAdvisor {
     /** The best window on the last of the days that has room for it. A window does not cross midnight. */
     private Optional<Window> latestPlacement(List<DayPlan> days, double energyKwh, List<ForecastStep> forecast,
             Instant now) {
+        var awayTime = away.during(forecast, zone);
         for (var day : days.reversed()) {
-            var window = bestPlacement(slots(day, forecast, now), energyKwh);
+            var window = bestPlacement(slots(day, forecast, awayTime, now), energyKwh);
             if (window.isPresent()) {
                 return window;
             }
@@ -81,13 +86,17 @@ public final class GridAdvisor {
         return Optional.empty();
     }
 
-    /** A quarter of an hour of one day. It is free when the forecast covers it, it lies ahead and no window uses it. */
+    /**
+     * A quarter of an hour of one day. It is free when the forecast covers it, it lies ahead, the car is at home and no
+     * window uses it.
+     */
     private record Slot(Instant start, Instant end, double usableKw, boolean free) {
     }
 
     /** The day's quarters of an hour in real time, so a daylight saving day has 92 or 100 of them. */
-    private List<Slot> slots(DayPlan day, List<ForecastStep> forecast, Instant now) {
-        var unavailable = day.windows().stream().map(window -> new Unavailable(window.start(), window.end())).toList();
+    private List<Slot> slots(DayPlan day, List<ForecastStep> forecast, List<Unavailable> awayTime, Instant now) {
+        var unavailable = new ArrayList<>(awayTime);
+        day.windows().forEach(window -> unavailable.add(new Unavailable(window.start(), window.end())));
         var end = day.date().plusDays(1).atStartOfDay(zone).toInstant();
         var slots = new ArrayList<Slot>();
         for (var start = day.date().atStartOfDay(zone).toInstant(); start.isBefore(end); start = start.plus(SLOT)) {

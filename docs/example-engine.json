@@ -24,5 +24,10 @@
     "settings": {
       "open-meteo": { "base_url": "" }
     }
+  },
+  "away": {
+    "recurring": [
+      { "weekday": "THURSDAY", "start": "06:00", "end": "19:00" }
+    ]
   }
 }

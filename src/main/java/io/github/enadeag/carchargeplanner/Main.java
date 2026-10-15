@@ -8,6 +8,7 @@ import io.github.enadeag.carchargeplanner.desktop.TaskbarHiding;
 import io.github.enadeag.carchargeplanner.desktop.Tray;
 import io.github.enadeag.carchargeplanner.desktop.TrayStatusMapper;
 import io.github.enadeag.carchargeplanner.engine.Engine;
+import io.github.enadeag.carchargeplanner.engine.config.AwayFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastCache;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastService;
@@ -281,9 +282,11 @@ public final class Main {
         var http = new JdkHttpGet(HttpClient.newHttpClient());
         var providers = new Providers(List.of(new OpenMeteo(http), new ForecastSolar(http)));
         var apiKeys = new ApiKeys(keychain(), secretsFile);
-        var cache = new ForecastCache(DataLocation.defaultFolder(System.getProperty("os.name"), System.getenv(),
-                Path.of(System.getProperty("user.home"))).resolve("forecasts"));
-        return new Engine(configFile, new ForecastService(providers, cache, apiKeys), providers, apiKeys, clock);
+        var dataFolder = DataLocation.defaultFolder(System.getProperty("os.name"), System.getenv(),
+                Path.of(System.getProperty("user.home")));
+        var cache = new ForecastCache(dataFolder.resolve("forecasts"));
+        return new Engine(configFile, new ForecastService(providers, cache, apiKeys), providers, apiKeys,
+                new AwayFile(dataFolder.resolve("away.json")), clock);
     }
 
     private static Keychain keychain() {
