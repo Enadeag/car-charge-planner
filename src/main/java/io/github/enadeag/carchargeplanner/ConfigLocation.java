@@ -6,12 +6,25 @@ import java.util.Map;
 /** Where the engine's config file is, on each system: the folder the user's settings usually go to. */
 final class ConfigLocation {
 
+    /** The folder of the app inside the system's config folder. */
     static final String APP_FOLDER = "car-charge-planner";
+    /** The name of the config file inside the app's folder. */
     static final String FILE_NAME = "engine.json";
 
     private ConfigLocation() {
     }
 
+    /**
+     * Where the config file is when the user names none.
+     *
+     * @param osName the operating system's name as in the {@code os.name} property; a name starting with "Windows"
+     *     selects the Windows folder
+     * @param environment the environment variables; {@code APPDATA} must be present on Windows, {@code XDG_CONFIG_HOME}
+     *     is optional elsewhere and ignored when empty or relative
+     * @param home the user's home folder, used where no config folder is set
+     * @return the path of {@code engine.json} in the app's folder; the file need not exist
+     * @throws NullPointerException on Windows when {@code APPDATA} is missing from the environment
+     */
     static Path defaultPath(String osName, Map<String, String> environment, Path home) {
         Path folder;
         if (osName.startsWith("Windows")) {

@@ -3,11 +3,19 @@ package io.github.enadeag.carchargeplanner.engine.config;
 /**
  * Panels that share one tilt and one direction.
  *
- * @param azimuthDeg the direction the panels face: 0 is south, -90 east, 90 west
+ * @param name the owner's name for the array, such as "east roof"; may be empty
+ * @param kwp the peak power of the array in kWp, more than 0
+ * @param tiltDeg the tilt from the horizontal in degrees, from 0 (flat) to 90 (upright)
+ * @param azimuthDeg the direction the panels face in degrees, from -180 to 180: 0 is south, -90 east, 90 west
  * @param systemLosses the share of the power lost in cables, inverter and dirt, from 0 up to (not including) 1
  */
 public record PanelArray(String name, double kwp, double tiltDeg, double azimuthDeg, double systemLosses) {
 
+    /**
+     * Checks the values.
+     *
+     * @throws IllegalArgumentException when a value is outside the range given for it
+     */
     public PanelArray {
         Checks.require(kwp > 0, "kwp must be more than 0");
         Checks.require(tiltDeg >= 0 && tiltDeg <= 90, "tiltDeg must be between 0 and 90");

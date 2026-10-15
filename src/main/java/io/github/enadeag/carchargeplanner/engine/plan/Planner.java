@@ -18,6 +18,12 @@ public final class Planner {
     private final ZoneId zone;
     private final WindowFinder finder;
 
+    /**
+     * Makes a planner for one home and one set of preferences.
+     *
+     * @param system the home and equipment
+     * @param preferences the planning preferences
+     */
     public Planner(HomeSystem system, PlanningPreferences preferences) {
         this.system = system;
         this.preferences = preferences;
@@ -34,7 +40,11 @@ public final class Planner {
      * <p>An announced window that is running now is kept as it was announced, with the same power and end, so the
      * advice does not change while the owner charges at the power they set. Only its remaining energy counts.
      *
-     * @param announced the windows the owner has been told about
+     * @param forecast the forecast to plan on, in any order; empty gives an empty plan
+     * @param socPct the battery level now in percent
+     * @param now the current moment; nothing is planned before it
+     * @param announced the windows the owner has been told about, possibly none
+     * @return one plan for each day from today to the last day of the forecast, in date order
      */
     public List<DayPlan> plan(List<ForecastStep> forecast, double socPct, Instant now, List<Window> announced) {
         if (forecast.isEmpty()) {
@@ -80,7 +90,12 @@ public final class Planner {
         return new DayPlan(date, socPct, windows, after, Math.max(0, after - driving), driving);
     }
 
-    /** Grid-side energy (kWh) to bring the battery from the level to the target. */
+    /**
+     * The energy to bring the battery from a level to the target charge level.
+     *
+     * @param socPct the battery level in percent
+     * @return the grid-side energy in kWh, 0 when the level is at or above the target
+     */
     double energyNeededKwh(double socPct) {
         double batteryKwh = Math.max(0, preferences.targetPct() - socPct) / 100 * system.car().usableBatteryKwh();
         return batteryKwh / system.charger().efficiency();

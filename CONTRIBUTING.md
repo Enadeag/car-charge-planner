@@ -135,6 +135,17 @@ Packages, with a runtime made by jlink (unsigned, as the Python version's):
   `dotnet tool install --global wix --version 5.0.2`, `wix extension add -g WixToolset.Util.wixext/5.0.2` and
   `wix extension add -g WixToolset.UI.wixext/5.0.2`. WiX 7 asks to accept a maintenance fee agreement first.
 
+### Javadoc in the Java code
+
+All public, protected and package-private code carries full Javadoc; only `private` members are exempt. The build enforces it: `./mvnw verify` fails on any doclint finding in the main sources (the tests are exempt).
+
+- Classes, interfaces, methods and constructors: a main description, then every `@param`, `@return` and `@throws`. Each `@param` states the intent of the value: what it is used for, whether it may be null or empty, its units and range. Never a tautology such as "@param volts the volts".
+- Records: every component gets an `@param` too, but plainly as data, such as "@param volts the voltage per phase in V, more than 0". A record's docs never say how or where the data is used.
+- Enums: each constant gets a line.
+- Fields and nested types that are not private get a line as well.
+
+The rule "comment only where needed" (see Comments and docstrings above) is about inline comments. It does not apply to Javadoc: the Java code documents its whole non-private API, even where the name seems to say it all.
+
 ## Reporting how it runs on your desktop
 
 The app is developed on KDE Plasma under Wayland and checked on Windows. If you try it on another Linux desktop, please open a **Does it work on my desktop?** issue: it takes five minutes and tells us what works where.
