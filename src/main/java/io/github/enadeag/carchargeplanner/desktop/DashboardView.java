@@ -112,6 +112,15 @@ final class DashboardView extends VBox {
         battery.onEntered(handler);
     }
 
+    /**
+     * Lets the footer's Settings button open Settings.
+     *
+     * @param action what the button does; called on the JavaFX thread
+     */
+    void onSettings(Runnable action) {
+        footer.onSettings(action);
+    }
+
     /** Grid advice goes on today's tab, below its main card; the charts follow. */
     private void showDay(int index) {
         if (days.isEmpty()) {

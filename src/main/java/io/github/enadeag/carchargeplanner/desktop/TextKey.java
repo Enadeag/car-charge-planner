@@ -188,5 +188,159 @@ public enum TextKey {
     /** Start at login was switched off: {0} the app's name. */
     CLI_START_AT_LOGIN_OFF,
     /** Start at login could not be changed: {0} the system's error. */
-    CLI_START_AT_LOGIN_FAILED
+    CLI_START_AT_LOGIN_FAILED,
+    /** The tray menu's entry that opens Settings. */
+    MENU_SETTINGS,
+    /** The tray menu's entry that opens Settings on About. */
+    MENU_ABOUT,
+    /** The title of the Settings window. */
+    SETTINGS_TITLE,
+    /** The heading above Settings' categories. */
+    SETTINGS_HEADING,
+    /** What a screen reader calls the list of Settings' categories. */
+    SETTINGS_CATEGORIES,
+    /** The category of the planning preferences. */
+    CATEGORY_PLANNING,
+    /** The category of the desktop app's own settings. */
+    CATEGORY_APP,
+    /** The category with the version, the licence and the files. */
+    CATEGORY_ABOUT,
+    /** What a screen reader says for a category with a refused value: {0} the category. */
+    CATEGORY_HAS_PROBLEMS,
+    /** The button that saves and keeps Settings open. */
+    SETTINGS_SAVE,
+    /** The button that saves and closes Settings. */
+    SETTINGS_SAVE_CLOSE,
+    /** The button that closes Settings while there are unsaved changes. */
+    SETTINGS_CANCEL,
+    /** The button that closes Settings when nothing is unsaved. */
+    SETTINGS_CLOSE,
+    /** Said after a save. */
+    SETTINGS_SAVED,
+    /** Said when a value was refused and nothing was saved. */
+    SETTINGS_REFUSED,
+    /** Said when a file could not be written: {0} the system's error. */
+    SETTINGS_SAVE_FAILED,
+    /** The question before closing with unsaved changes. */
+    SETTINGS_DISCARD_QUESTION,
+    /** The button that closes and throws the changes away. */
+    SETTINGS_DISCARD,
+    /** The button that goes back to the changes. */
+    SETTINGS_KEEP_EDITING,
+    /** The title of a card in place of settings that cannot be edited now. */
+    SETTINGS_NO_CONFIG,
+    /** Why: the config file could not be read; the engine's words follow. */
+    SETTINGS_NO_CONFIG_HINT,
+    /** A value outside the range its setting allows. */
+    PROBLEM_OUT_OF_RANGE,
+    /** A minimum charge level that is not below the target. */
+    PROBLEM_NOT_BELOW_TARGET,
+    /** The unit after a number of minutes. */
+    UNIT_MINUTES,
+    /** The title of the card with the minimum and target charge levels. */
+    CARD_CHARGE_LEVELS,
+    /** What the charge levels do. */
+    CARD_CHARGE_LEVELS_HINT,
+    /** The minimum charge level's name. */
+    FIELD_MINIMUM_CHARGE,
+    /** What the minimum charge level does. */
+    FIELD_MINIMUM_CHARGE_HINT,
+    /** The target charge level's name. */
+    FIELD_TARGET_CHARGE,
+    /** What the target charge level does. */
+    FIELD_TARGET_CHARGE_HINT,
+    /** The title of the card with the margin, import tolerance and window length. */
+    CARD_PLAN,
+    /** What the card's settings do. */
+    CARD_PLAN_HINT,
+    /** The planning margin's name. */
+    FIELD_MARGIN,
+    /** What the planning margin does. */
+    FIELD_MARGIN_HINT,
+    /** The import tolerance's name. */
+    FIELD_IMPORT_TOLERANCE,
+    /** What the import tolerance does. */
+    FIELD_IMPORT_TOLERANCE_HINT,
+    /** The minimum window length's name. */
+    FIELD_MIN_WINDOW,
+    /** What the minimum window length does. */
+    FIELD_MIN_WINDOW_HINT,
+    /** The title of the card with the notification lead time. */
+    CARD_NOTIFICATIONS,
+    /** What notifications do. */
+    CARD_NOTIFICATIONS_HINT,
+    /** The notification lead time's name. */
+    FIELD_NOTIFY_LEAD,
+    /** What the notification lead time does. */
+    FIELD_NOTIFY_LEAD_HINT,
+    /** The title of the card with the display mode and the language. */
+    CARD_DISPLAY,
+    /** When the card's settings apply. */
+    CARD_DISPLAY_HINT,
+    /** The display mode's name. */
+    FIELD_MODE,
+    /** What the display mode needs. */
+    FIELD_MODE_HINT,
+    /** The automatic display mode. */
+    MODE_AUTOMATIC,
+    /** The tray display mode. */
+    MODE_TRAY,
+    /** The window display mode. */
+    MODE_WINDOW,
+    /** The language's name. */
+    FIELD_LANGUAGE,
+    /** What the language does. */
+    FIELD_LANGUAGE_HINT,
+    /** The language choice that follows the system. */
+    LANGUAGE_SYSTEM,
+    /** The title of the card with the units. */
+    CARD_UNITS,
+    /** What the units do. */
+    CARD_UNITS_HINT,
+    /** The units' name. */
+    FIELD_UNITS,
+    /** The metric units. */
+    UNITS_METRIC,
+    /** The imperial units. */
+    UNITS_IMPERIAL,
+    /** The title of the card with start at login. */
+    CARD_START_AT_LOGIN,
+    /** What start at login does. */
+    CARD_START_AT_LOGIN_HINT,
+    /** The start at login box. */
+    FIELD_START_AT_LOGIN,
+    /** Why the box is switched off outside the installed app. */
+    START_AT_LOGIN_UNAVAILABLE,
+    /** The system refused to change start at login: {0} the system's error. */
+    START_AT_LOGIN_FAILED,
+    /** The app's version: {0} the version. */
+    ABOUT_VERSION,
+    /** The title of the licence's card. */
+    ABOUT_LICENCE_TITLE,
+    /** The licence in a sentence. */
+    ABOUT_LICENCE,
+    /** The link to the licence. */
+    ABOUT_LICENCE_LINK,
+    /** The title of the source code's card. */
+    ABOUT_SOURCE_TITLE,
+    /** Where the source code is. */
+    ABOUT_SOURCE,
+    /** The link to the project. */
+    ABOUT_SOURCE_LINK,
+    /** The title of the files' card. */
+    ABOUT_FILES_TITLE,
+    /** What the files' card shows. */
+    ABOUT_FILES,
+    /** The engine's config file. */
+    ABOUT_CONFIG_FILE,
+    /** The app settings file. */
+    ABOUT_APP_FILE,
+    /** The data folder. */
+    ABOUT_DATA_FOLDER,
+    /** Where the API keys are. */
+    ABOUT_KEYS,
+    /** The keys are in the keychain. */
+    ABOUT_KEYS_KEYCHAIN,
+    /** The keys are in a file: {0} the file. */
+    ABOUT_KEYS_FILE
 }

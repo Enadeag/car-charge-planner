@@ -106,6 +106,16 @@
 
   <build>
     <finalName>car-charge-planner</finalName>
+    <!-- only the version file is filtered: the text bundles hold {0}-style places of their own -->
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>src/main/resources-filtered</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
     <plugins>
       <!-- jpackage makes the Windows launcher read-only; without force, clean cannot remove it -->
       <plugin>

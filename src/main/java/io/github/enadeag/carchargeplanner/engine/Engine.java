@@ -114,6 +114,31 @@ public final class Engine {
     }
 
     /**
+     * The config as the file holds it now, for a client that shows it to be changed.
+     *
+     * @return the whole config, every value present and valid
+     * @throws ConfigProblem when the file is missing, unreadable or not valid; the problem names the file and the
+     *     setting
+     */
+    public EngineConfig config() throws ConfigProblem {
+        return configFile.read();
+    }
+
+    /**
+     * Replaces the config file by this config, at once and whole, so the next plan uses it; a provider that failed
+     * before is asked again at the next plan instead of after its wait, as a corrected setting deserves a try. A value
+     * the owner entered is checked as the config's records are made, which refuse it with an {@link
+     * io.github.enadeag.carchargeplanner.engine.config.InvalidSetting} that names the setting.
+     *
+     * @param config the whole config to keep
+     * @throws IOException when the file could not be written; it is then left as it was
+     */
+    public void saveConfig(EngineConfig config) throws IOException {
+        configFile.write(config);
+        forecasts.forgetFailures();
+    }
+
+    /**
      * Stores the battery level the owner read off the car, so the next plan starts from it instead of an assumed
      * level. The level is kept until the owner enters another one.
      *

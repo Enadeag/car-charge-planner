@@ -72,6 +72,8 @@ public final class AwtTray implements Tray, Notifications {
         }
         var menu = new PopupMenu();
         menu.add(menuItem(labels.open(), actions.open()));
+        menu.add(menuItem(labels.settings(), actions.settings()));
+        menu.add(menuItem(labels.about(), actions.about()));
         menu.addSeparator();
         menu.add(menuItem(labels.quit(), actions.quit()));
         trayIcon = new TrayIcon(image(), tooltip(), menu);

@@ -10,7 +10,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.scene.Scene;
 
 /** Light or dark for the dashboard's scenes, as the colour scheme is set, also when it changes while the app runs. */
-final class SystemTheme {
+public final class SystemTheme {
 
     private static final String STYLESHEET = SystemTheme.class.getResource("dashboard.css").toExternalForm();
 
@@ -22,7 +22,7 @@ final class SystemTheme {
      *
      * @param scheme the system's colour scheme ({@code Platform.getPreferences().colorSchemeProperty()}); never null
      */
-    SystemTheme(ObservableValue<ColorScheme> scheme) {
+    public SystemTheme(ObservableValue<ColorScheme> scheme) {
         this.scheme = scheme;
         scheme.subscribe(now -> scenes.forEach(scene -> apply(scene, now)));
     }
@@ -32,7 +32,7 @@ final class SystemTheme {
      *
      * @param scene a scene whose root stays the same; the theme keeps it for as long as the app runs
      */
-    void style(Scene scene) {
+    public void style(Scene scene) {
         scene.getStylesheets().add(STYLESHEET);
         scenes.add(scene);
         apply(scene, scheme.getValue());

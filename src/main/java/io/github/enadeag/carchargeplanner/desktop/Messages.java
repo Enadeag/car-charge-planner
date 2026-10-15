@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.desktop;
 import java.math.RoundingMode;
 import java.text.MessageFormat;
 import java.text.NumberFormat;
+import java.text.ParsePosition;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -10,6 +11,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.time.format.TextStyle;
 import java.util.Locale;
+import java.util.OptionalDouble;
 import java.util.ResourceBundle;
 
 /**
@@ -165,12 +167,38 @@ public final class Messages {
         return text.substring(0, 1).toUpperCase(locale()) + text.substring(1);
     }
 
-    /** A new format each time: a NumberFormat may not be shared between threads. */
-    private String number(double value, int decimals) {
+    /**
+     * A number with a fixed number of decimals, such as a value in a settings field.
+     *
+     * @param value the number, in any unit
+     * @param decimals how many decimals to show, 0 or more
+     * @return such as "0.25" in English and "0,25" in Dutch for two decimals; a half is rounded away from zero
+     */
+    public String number(double value, int decimals) {
+        // a new format each time: a NumberFormat may not be shared between threads
         var format = NumberFormat.getNumberInstance(locale());
         format.setMinimumFractionDigits(decimals);
         format.setMaximumFractionDigits(decimals);
         format.setRoundingMode(RoundingMode.HALF_UP);
         return format.format(value);
+    }
+
+    /**
+     * A number the owner typed, written the way the language writes numbers. Grouping separators are not accepted,
+     * so that "0.5" typed in Dutch is not read as 5.
+     *
+     * @param text what the owner typed; may be empty, and spaces around it are ignored
+     * @return the number, or empty when the text is not wholly a number in this language
+     */
+    public OptionalDouble parse(String text) {
+        var format = NumberFormat.getNumberInstance(locale());
+        format.setGroupingUsed(false);
+        var trimmed = text.strip();
+        var position = new ParsePosition(0);
+        var number = format.parse(trimmed, position);
+        if (number == null || trimmed.isEmpty() || position.getIndex() != trimmed.length()) {
+            return OptionalDouble.empty();
+        }
+        return OptionalDouble.of(number.doubleValue());
     }
 }

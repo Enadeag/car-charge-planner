@@ -21,24 +21,28 @@ public record PlanningPreferences(
     /**
      * Checks the values.
      *
-     * @throws IllegalArgumentException when a value is outside the range given for it
+     * @throws InvalidSetting when a value is outside the range given for it, or the minimum is not below the target
      */
     public PlanningPreferences {
         if (minimumPct.value() >= targetPct.value()) {
-            throw new IllegalArgumentException(
+            throw new InvalidSetting(Setting.MINIMUM_CHARGE, InvalidSetting.Rule.NOT_BELOW_TARGET,
                     "minimumPct and targetPct must satisfy 0 <= minimumPct < targetPct <= 100");
         }
         if (margin <= 0 || margin > 1 || Double.isNaN(margin)) {
-            throw new IllegalArgumentException("margin must be more than 0 and at most 1");
+            throw new InvalidSetting(Setting.PLANNING_MARGIN, InvalidSetting.Rule.OUT_OF_RANGE,
+                    "margin must be more than 0 and at most 1");
         }
         if (importToleranceKwh < 0 || Double.isNaN(importToleranceKwh)) {
-            throw new IllegalArgumentException("importToleranceKwh must not be negative");
+            throw new InvalidSetting(Setting.IMPORT_TOLERANCE, InvalidSetting.Rule.OUT_OF_RANGE,
+                    "importToleranceKwh must not be negative");
         }
         if (minWindowMinutes <= 0) {
-            throw new IllegalArgumentException("minWindowMinutes must be more than 0");
+            throw new InvalidSetting(Setting.MINIMUM_WINDOW, InvalidSetting.Rule.OUT_OF_RANGE,
+                    "minWindowMinutes must be more than 0");
         }
         if (notifyLeadMinutes < 0) {
-            throw new IllegalArgumentException("notifyLeadMinutes must not be negative");
+            throw new InvalidSetting(Setting.NOTIFY_LEAD, InvalidSetting.Rule.OUT_OF_RANGE,
+                    "notifyLeadMinutes must not be negative");
         }
     }
 }
