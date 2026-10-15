@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine.forecast;
 
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -36,7 +37,7 @@ public final class FakeProvider implements ForecastProvider {
     }
 
     public static ProviderInfo info(String id, String name, List<SettingSpec> settings) {
-        return new ProviderInfo(id, name, "A scripted provider for tests.", "https://example.test/terms",
+        return new ProviderInfo(new ProviderId(id), name, "A scripted provider for tests.", "https://example.test/terms",
                 "Forecast by " + name, "Nothing: it is a fake.", Duration.ofHours(1), Duration.ofDays(2),
                 Duration.ofHours(6), settings);
     }

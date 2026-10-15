@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.engine.secrets;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,11 +19,13 @@ import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import tools.jackson.databind.json.JsonMapper;
 
 /** The private file the keys go to without a usable keychain. */
 class SecretsFileTest {
 
     private static final String SECRET = "SUPER-SECRET-VALUE-42";
+    private static final ProviderId OPEN_METEO = new ProviderId("open-meteo");
 
     @TempDir
     Path folder;
@@ -36,7 +39,7 @@ class SecretsFileTest {
     }
 
     private static Secrets secrets(String providerId, String value) {
-        return new Secrets(Map.of(providerId, Map.of("api_key", value)));
+        return new Secrets(Map.of(new ProviderId(providerId), Map.of("api_key", value)));
     }
 
     private String mode(Path file) throws IOException {
@@ -46,7 +49,8 @@ class SecretsFileTest {
     @Test
     @DisabledOnOs(OS.WINDOWS)
     void secretsAreWrittenPrivateAndReadBack() throws Exception {
-        var both = new Secrets(Map.of("open-meteo", Map.of("api_key", SECRET), "forecast-solar", Map.of("api_key", "other")));
+        var both = new Secrets(Map.of(OPEN_METEO, Map.of("api_key", SECRET), new ProviderId("forecast-solar"),
+                Map.of("api_key", "other")));
         withoutKeychain().save(both);
 
         assertThat(mode(path())).isEqualTo("rw-------");
@@ -68,7 +72,7 @@ class SecretsFileTest {
 
     @Test
     void emptyValuesAreNotStored() throws Exception {
-        withoutKeychain().save(new Secrets(Map.of("open-meteo", Map.of("api_key", ""), "forecast-solar", Map.of())));
+        withoutKeychain().save(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", ""), new ProviderId("forecast-solar"), Map.of())));
 
         assertThat(withoutKeychain().load()).isEqualTo(Secrets.NONE);
         assertThat(Files.readString(path())).doesNotContain("api_key");
@@ -85,8 +89,21 @@ class SecretsFileTest {
         withoutKeychain().save(secrets("open-meteo", SECRET));
         Files.setPosixFilePermissions(path(), PosixFilePermissions.fromString("rw-r--r--"));
 
-        assertThat(withoutKeychain().load().of("open-meteo")).containsEntry("api_key", SECRET);
+        assertThat(withoutKeychain().load().of(OPEN_METEO)).containsEntry("api_key", SECRET);
         assertThat(mode(path())).isEqualTo("rw-------");
+    }
+
+    @Test
+    void theFileHoldsTheKeysByProviderIdAsPlainTexts() throws Exception {
+        var written = "{\"forecast-solar\":{\"api_key\":\"other\"},\"open-meteo\":{\"api_key\":\"" + SECRET + "\"}}";
+        Files.writeString(path(), written);
+        var secrets = withoutKeychain().load();
+        assertThat(secrets.of(OPEN_METEO)).containsEntry("api_key", SECRET);
+
+        withoutKeychain().save(secrets);
+
+        var json = new JsonMapper();
+        assertThat(json.readTree(Files.readString(path()))).isEqualTo(json.readTree(written));
     }
 
     @Test
@@ -105,9 +122,16 @@ class SecretsFileTest {
     }
 
     @Test
-    void idsAndNamesWithOddCharactersAreNotWritten() {
-        assertThatThrownBy(() -> withoutKeychain().save(secrets("open meteo", "x"))).isInstanceOf(SecretsProblem.class);
-        var evil = new Secrets(Map.of("open-meteo", Map.of("api key\n[evil]", "x")));
+    void aFileWithAWrongProviderIdIsRefusedWithoutQuotingItsValues() throws IOException {
+        Files.writeString(path(), "{\"Open Meteo\": {\"api_key\": \"" + SECRET + "\"}}");
+
+        assertThatThrownBy(() -> withoutKeychain().load()).isInstanceOf(SecretsProblem.class)
+                .hasMessageContaining("\"Open Meteo\" is not a provider id").hasMessageNotContaining(SECRET);
+    }
+
+    @Test
+    void namesWithOddCharactersAreNotWritten() {
+        var evil = new Secrets(Map.of(OPEN_METEO, Map.of("api key\n[evil]", "x")));
         assertThatThrownBy(() -> withoutKeychain().save(evil)).isInstanceOf(SecretsProblem.class);
         assertThat(path()).doesNotExist();
     }
@@ -116,7 +140,7 @@ class SecretsFileTest {
     void aValueWithQuotesAndNewlinesSurvives() throws SecretsProblem {
         var awkward = "a\"b\\c\nd";
         withoutKeychain().save(secrets("open-meteo", awkward));
-        assertThat(withoutKeychain().load().of("open-meteo")).containsEntry("api_key", awkward);
+        assertThat(withoutKeychain().load().of(OPEN_METEO)).containsEntry("api_key", awkward);
     }
 
     @Test
@@ -130,7 +154,7 @@ class SecretsFileTest {
         } finally {
             Files.setPosixFilePermissions(folder, PosixFilePermissions.fromString("rwx------"));
         }
-        assertThat(withoutKeychain().load().of("open-meteo")).containsEntry("api_key", "old");
+        assertThat(withoutKeychain().load().of(OPEN_METEO)).containsEntry("api_key", "old");
         assertThat(folder.resolve("secrets.json.tmp")).doesNotExist();
     }
 

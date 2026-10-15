@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine.forecast;
 
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import java.lang.System.Logger.Level;
 import java.time.Duration;
 import java.time.Instant;
@@ -26,7 +27,7 @@ final class ProviderAttempt {
     private final ForecastProvider provider;
     private final ProviderInfo info;
     private final ForecastCache cache;
-    private final Map<String, Instant> retryAt;
+    private final Map<ProviderId, Instant> retryAt;
     private final Instant now;
     private final boolean force;
 
@@ -35,12 +36,12 @@ final class ProviderAttempt {
      *
      * @param provider the provider to ask
      * @param cache where its last good forecast and rate limit are kept; written after an answer
-     * @param retryAt per provider id, when it may be asked again after a failure; updated here
+     * @param retryAt per provider, when it may be asked again after a failure; updated here
      * @param force the owner asked for a refresh: skip the minimum refresh interval and the wait after a failure,
      *     never a rate limit
      * @param now the current moment, by which ages, waits and rate limits are measured
      */
-    ProviderAttempt(ForecastProvider provider, ForecastCache cache, Map<String, Instant> retryAt, Instant now,
+    ProviderAttempt(ForecastProvider provider, ForecastCache cache, Map<ProviderId, Instant> retryAt, Instant now,
             boolean force) {
         this.provider = provider;
         this.info = provider.info();

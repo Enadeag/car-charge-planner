@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.engine.forecast.providers;
 
 import io.github.enadeag.carchargeplanner.engine.config.PanelArray;
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet;
@@ -29,7 +30,7 @@ public final class OpenMeteo implements ForecastProvider {
 
     /** What Open-Meteo tells about itself. */
     static final ProviderInfo INFO = new ProviderInfo(
-            "open-meteo",
+            new ProviderId("open-meteo"),
             "Open-Meteo",
             "A free weather service run by Open-Meteo.com. It forecasts the sunlight on your panels and the app turns "
                     + "that into the power of your system. For non-commercial use.",

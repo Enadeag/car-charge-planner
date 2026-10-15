@@ -7,18 +7,19 @@ import static org.assertj.core.api.Assertions.within;
 
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
 import io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastCache;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastService;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastSource;
-import io.github.enadeag.carchargeplanner.engine.forecast.Freshness;
-import io.github.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
+import io.github.enadeag.carchargeplanner.engine.forecast.Freshness;
 import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet.Reply;
 import io.github.enadeag.carchargeplanner.engine.forecast.PlaceResults;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderError;
+import io.github.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import io.github.enadeag.carchargeplanner.engine.forecast.Providers;
 import io.github.enadeag.carchargeplanner.engine.forecast.Recorded;
 import io.github.enadeag.carchargeplanner.engine.forecast.ReplayHttp;
@@ -117,7 +118,7 @@ class EngineTest {
     @Test
     void theExampleChoosesOpenMeteoWithForecastSolarAsTheFallback() throws ConfigProblem {
         var forecast = new ConfigFile(EXAMPLE).read().forecast();
-        assertThat(forecast.order()).containsExactly("open-meteo", "forecast-solar");
+        assertThat(forecast.order()).containsExactly(new ProviderId("open-meteo"), new ProviderId("forecast-solar"));
     }
 
     @Test
@@ -226,7 +227,7 @@ class EngineTest {
     @Test
     void aPlanWithoutWindowsHasNoNextWindow() {
         var madeAt = Instant.parse("2026-07-03T05:00:00Z");
-        var source = new ForecastSource("main", "Main", "Forecast by Main", madeAt, Freshness.FRESH, ProviderRole.PRIMARY,
+        var source = new ForecastSource(new ProviderId("main"), "Main", "Forecast by Main", madeAt, Freshness.FRESH, ProviderRole.PRIMARY,
                 "", Optional.empty());
         var planned = new Outlook.Planned(madeAt, BRUSSELS, List.of(), 50, true, Optional.empty(), source);
         assertThat(planned.nextWindow()).isEmpty();
@@ -234,7 +235,7 @@ class EngineTest {
 
     @Test
     void theConnectionCheckAsksTheProviderOnceAndCountsTheDays() {
-        var result = engine(clockAt(7), main, backup).checkConnection("main", exampleSystem(), Map.of());
+        var result = engine(clockAt(7), main, backup).checkConnection(new ProviderId("main"), exampleSystem(), Map.of());
 
         assertThat(result).isEqualTo(new ConnectionResult(true, 2, "OK: 2 days of forecast"));
         assertThat(folder.resolve("cache")).doesNotExist(); // nothing is cached or saved
@@ -242,7 +243,7 @@ class EngineTest {
 
     @Test
     void theConnectionCheckNamesAnUnknownProvider() {
-        assertThat(engine(clockAt(7)).checkConnection("solcast", exampleSystem(), Map.of()).message())
+        assertThat(engine(clockAt(7)).checkConnection(new ProviderId("solcast"), exampleSystem(), Map.of()).message())
                 .contains("'solcast' is not known");
     }
 
@@ -251,12 +252,13 @@ class EngineTest {
         var needy = new FakeProvider(FakeProvider.info("needy", "Needy",
                 List.of(new SettingSpec("api_key", "API key", "Your key.", false, true))), steps(days(2, 4.0)));
         var engine = engine(clockAt(7), needy);
+        var needyId = new ProviderId("needy");
 
-        assertThat(engine.checkConnection("needy", exampleSystem(), Map.of()))
+        assertThat(engine.checkConnection(needyId, exampleSystem(), Map.of()))
                 .isEqualTo(new ConnectionResult(false, 0, "API key is required."));
-        engine.saveApiKeys(new Secrets(Map.of("needy", Map.of("api_key", "STORED-KEY"))));
-        assertThat(engine.checkConnection("needy", exampleSystem(), Map.of()).worked()).isTrue();
-        assertThat(engine.checkConnection("needy", exampleSystem(), Map.of("api_key", "TYPED-KEY")).worked()).isTrue();
+        engine.saveApiKeys(new Secrets(Map.of(needyId, Map.of("api_key", "STORED-KEY"))));
+        assertThat(engine.checkConnection(needyId, exampleSystem(), Map.of()).worked()).isTrue();
+        assertThat(engine.checkConnection(needyId, exampleSystem(), Map.of("api_key", "TYPED-KEY")).worked()).isTrue();
         assertThat(needy.calls).extracting(call -> call.settings().get("api_key")).containsExactly("STORED-KEY", "TYPED-KEY");
     }
 
@@ -265,10 +267,10 @@ class EngineTest {
         var http = ReplayHttp.always(new Reply(200, Recorded.answer("open_meteo_geocoding_amsterdam.json")));
         var engine = engine(clockAt(7), new OpenMeteo(http), new ForecastSolar(http));
 
-        assertThat(engine.searchPlaces("open-meteo", "Amsterdam", "en")).hasValueSatisfying(results ->
+        assertThat(engine.searchPlaces(new ProviderId("open-meteo"), "Amsterdam", "en")).hasValueSatisfying(results ->
                 assertThat(((PlaceResults.Found) results).places()).hasSize(8));
-        assertThat(engine.searchPlaces("forecast-solar", "Amsterdam", "en")).isEmpty(); // then the owner types coordinates
-        assertThat(engine.searchPlaces("solcast", "Amsterdam", "en")).isEmpty();
+        assertThat(engine.searchPlaces(new ProviderId("forecast-solar"), "Amsterdam", "en")).isEmpty(); // then the owner types coordinates
+        assertThat(engine.searchPlaces(new ProviderId("solcast"), "Amsterdam", "en")).isEmpty();
     }
 
     @Test
@@ -279,7 +281,7 @@ class EngineTest {
         var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json")));
         var withoutKeychain = new Engine(new ConfigFile(config),
                 new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys), known, apiKeys, clockAt(7));
-        withoutKeychain.saveApiKeys(new Secrets(Map.of("main", Map.of("api_key", "x"))));
+        withoutKeychain.saveApiKeys(new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "x"))));
         assertThat(withoutKeychain.keyStorage()).isEqualTo(KeyStorage.FILE);
     }
 

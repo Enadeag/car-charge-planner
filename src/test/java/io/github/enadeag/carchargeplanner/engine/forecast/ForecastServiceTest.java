@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.enadeag.carchargeplanner.engine.config.ForecastSelection;
 import io.github.enadeag.carchargeplanner.engine.config.PanelArray;
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderError.BadResponse;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderError.RateLimited;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderError.Unavailable;
@@ -23,6 +24,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -45,6 +47,9 @@ class ForecastServiceTest {
     private static final Instant T0 = DAY.atTime(7, 0).atZone(SunnyDays.TZ).toInstant();
     private static final SystemDescription SYSTEM = ProviderCase.EXAMPLE_SYSTEM;
     private static final String SECRET = "SERVICE-SECRET-31";
+    private static final ProviderId MAIN = new ProviderId("main");
+    private static final ProviderId BACKUP = new ProviderId("backup");
+    private static final ProviderId UNKNOWN = new ProviderId("solcast");
     private static final SettingSpec REQUIRED_KEY = new SettingSpec("api_key", "API key", "Your key.", false, true);
 
     @TempDir
@@ -54,7 +59,7 @@ class ForecastServiceTest {
     private FakeProvider backup;
     private SecretsSource secrets = () -> Secrets.NONE;
     private ForecastService service;
-    private ForecastSelection selection = new ForecastSelection("main", "backup", Map.of());
+    private ForecastSelection selection = new ForecastSelection(MAIN, Optional.of(BACKUP), Map.of());
 
     @BeforeEach
     void makeTheService() {
@@ -73,7 +78,7 @@ class ForecastServiceTest {
     }
 
     private void withoutFallback() {
-        selection = new ForecastSelection("main", "", Map.of());
+        selection = new ForecastSelection(MAIN, Optional.empty(), Map.of());
     }
 
     private void mainNeedsAKey(FakeProvider.Answer... script) {
@@ -101,8 +106,8 @@ class ForecastServiceTest {
     void thePrimaryIsAskedAndTheResultSaysWhoAnswered() throws ForecastUnavailable {
         var result = get(T0);
 
-        assertThat(result.source()).isEqualTo(new ForecastSource("main", "Main", "Forecast by Main", T0,
-                Freshness.FRESH, ProviderRole.PRIMARY, "", java.util.Optional.empty()));
+        assertThat(result.source()).isEqualTo(new ForecastSource(MAIN, "Main", "Forecast by Main", T0,
+                Freshness.FRESH, ProviderRole.PRIMARY, "", Optional.empty()));
         assertThat(result.steps()).isEqualTo(SunnyDays.day(DAY, 3.0));
         assertThat(main.callCount()).isEqualTo(1);
         assertThat(backup.callCount()).isZero();
@@ -163,7 +168,7 @@ class ForecastServiceTest {
 
         assertThat(result.source()).extracting(ForecastSource::freshness, ForecastSource::providerRole,
                 ForecastSource::providerId, ForecastSource::fetchedAt)
-                .containsExactly(Freshness.STALE, ProviderRole.PRIMARY, "main", T0);
+                .containsExactly(Freshness.STALE, ProviderRole.PRIMARY, MAIN, T0);
         assertThat(backup.callCount()).isZero();
     }
 
@@ -175,7 +180,7 @@ class ForecastServiceTest {
 
         assertThat(result.source()).extracting(ForecastSource::providerRole, ForecastSource::providerId,
                 ForecastSource::primaryName, ForecastSource::attribution, ForecastSource::freshness)
-                .containsExactly(ProviderRole.FALLBACK, "backup", "Main", "Forecast by Backup", Freshness.FRESH);
+                .containsExactly(ProviderRole.FALLBACK, BACKUP, "Main", "Forecast by Backup", Freshness.FRESH);
         assertThat(cacheFile("backup")).exists();
     }
 
@@ -436,8 +441,8 @@ class ForecastServiceTest {
     @Test
     void secretsComeFromTheSecretStoreAndPlainSettingsFromTheConfig() throws ForecastUnavailable {
         mainNeedsAKey(steps(SunnyDays.day(DAY, 3.0)));
-        secrets = () -> new Secrets(Map.of("main", Map.of("api_key", SECRET)));
-        selection = new ForecastSelection("main", "backup", Map.of("main", Map.of("colour", "ignored")));
+        secrets = () -> new Secrets(Map.of(MAIN, Map.of("api_key", SECRET)));
+        selection = new ForecastSelection(MAIN, Optional.of(BACKUP), Map.of(MAIN, Map.of("colour", "ignored")));
 
         get(T0);
 
@@ -447,9 +452,9 @@ class ForecastServiceTest {
     @Test
     void aChangedSecretDoesNotThrowTheCachedForecastAway() throws ForecastUnavailable {
         mainNeedsAKey(steps(SunnyDays.day(DAY, 3.0)));
-        secrets = () -> new Secrets(Map.of("main", Map.of("api_key", "first")));
+        secrets = () -> new Secrets(Map.of(MAIN, Map.of("api_key", "first")));
         get(T0);
-        secrets = () -> new Secrets(Map.of("main", Map.of("api_key", "second")));
+        secrets = () -> new Secrets(Map.of(MAIN, Map.of("api_key", "second")));
 
         assertThat(get(later(5)).source().freshness()).isEqualTo(Freshness.CACHED);
     }
@@ -459,7 +464,7 @@ class ForecastServiceTest {
         secrets = () -> {
             throw new SecretsProblem("secrets.json is not valid JSON");
         };
-        assertThat(get(T0).source().providerId()).isEqualTo("main");
+        assertThat(get(T0).source().providerId()).isEqualTo(MAIN);
 
         mainNeedsAKey(steps(SunnyDays.day(DAY, 3.0)));
         backup.script(error(new Unavailable("down")));
@@ -469,12 +474,12 @@ class ForecastServiceTest {
 
     @Test
     void anUnknownProviderIsAReasonNotACrash() throws ForecastUnavailable {
-        selection = new ForecastSelection("solcast", "backup", Map.of());
+        selection = new ForecastSelection(UNKNOWN, Optional.of(BACKUP), Map.of());
         var result = get(T0);
         assertThat(result.source().providerRole()).isEqualTo(ProviderRole.FALLBACK);
         assertThat(result.source().primaryName()).isEmpty(); // the primary is not known: there is no name to give
 
-        selection = new ForecastSelection("solcast", "", Map.of());
+        selection = new ForecastSelection(UNKNOWN, Optional.empty(), Map.of());
         assertThatThrownBy(() -> get(T0)).isInstanceOf(ForecastUnavailable.class).hasMessageContaining("'solcast' is not known");
     }
 

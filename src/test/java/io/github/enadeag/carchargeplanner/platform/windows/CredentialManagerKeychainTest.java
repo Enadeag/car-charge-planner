@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.platform.windows;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeychainException;
@@ -70,7 +71,7 @@ class CredentialManagerKeychainTest {
     @Test
     void theKeysAreKeptInTheCredentialManager() throws Exception {
         var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
-        var secrets = new Secrets(Map.of("open-meteo", Map.of("api_key", "OM-SECRET-1")));
+        var secrets = new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1")));
 
         keys.save(secrets);
 

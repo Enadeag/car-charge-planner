@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.enadeag.carchargeplanner.desktop.Chip.Source;
 import io.github.enadeag.carchargeplanner.engine.Outlook;
+import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import io.github.enadeag.carchargeplanner.engine.forecast.Freshness;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderRole;
@@ -40,7 +41,7 @@ class OutlookMapperTest {
 
     /** Fetched at 07:45 from the primary provider, Open-Meteo. */
     private static ForecastSource fresh() {
-        return new ForecastSource("open-meteo", "Open-Meteo", CREDIT, at(TODAY, 7, 45), Freshness.FRESH,
+        return new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", CREDIT, at(TODAY, 7, 45), Freshness.FRESH,
                 ProviderRole.PRIMARY, "", Optional.empty());
     }
 
@@ -128,7 +129,7 @@ class OutlookMapperTest {
 
     @Test
     void aForecastFromTheCacheThatIsNotDueForARefreshIsCalledUpdatedAsWell() {
-        var cached = new ForecastSource("open-meteo", "Open-Meteo", CREDIT, at(TODAY, 7, 45), Freshness.CACHED,
+        var cached = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", CREDIT, at(TODAY, 7, 45), Freshness.CACHED,
                 ProviderRole.PRIMARY, "", Optional.empty());
 
         assertThat(((DashboardModel.Plan) MAPPER.map(planned(cached))).footer()).isEqualTo(CREDIT + " · updated 07:45");
@@ -136,7 +137,7 @@ class OutlookMapperTest {
 
     @Test
     void aFallbackForecastSaysWhichProviderItStandsInFor() {
-        var fallback = new ForecastSource("forecast-solar", "Forecast.Solar", "Solar forecast: Forecast.Solar",
+        var fallback = new ForecastSource(new ProviderId("forecast-solar"), "Forecast.Solar", "Solar forecast: Forecast.Solar",
                 at(TODAY, 7, 45), Freshness.FRESH, ProviderRole.FALLBACK, "Open-Meteo", Optional.empty());
 
         assertThat(((DashboardModel.Plan) MAPPER.map(planned(fallback))).footer())
@@ -145,9 +146,9 @@ class OutlookMapperTest {
 
     @Test
     void aStaleForecastAndARateLimitAreNamedUntilTheLimitEnds() {
-        var limited = new ForecastSource("open-meteo", "Open-Meteo", CREDIT, at(TODAY, 5, 30), Freshness.STALE,
+        var limited = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", CREDIT, at(TODAY, 5, 30), Freshness.STALE,
                 ProviderRole.PRIMARY, "", Optional.of(at(TODAY, 9, 0)));
-        var ended = new ForecastSource("open-meteo", "Open-Meteo", CREDIT, at(TODAY, 5, 30), Freshness.STALE,
+        var ended = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", CREDIT, at(TODAY, 5, 30), Freshness.STALE,
                 ProviderRole.PRIMARY, "", Optional.of(at(TODAY, 8, 0)));
 
         assertThat(((DashboardModel.Plan) MAPPER.map(planned(limited))).footer())
