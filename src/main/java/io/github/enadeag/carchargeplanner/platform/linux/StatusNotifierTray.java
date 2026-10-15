@@ -17,6 +17,13 @@ public final class StatusNotifierTray implements Tray {
 
     /** Opens a connection of the tray's own (not a shared one: {@link #remove()} closes it); tests use a private bus. */
     public interface BusConnector {
+
+        /**
+         * Opens the connection.
+         *
+         * @return a new connection, not shared with other parts of the app
+         * @throws DBusException when there is no bus to connect to
+         */
         DBusConnection connect() throws DBusException;
     }
 
@@ -28,6 +35,13 @@ public final class StatusNotifierTray implements Tray {
 
     private DBusConnection bus;
 
+    /**
+     * Makes the tray; nothing appears until {@link #show(TrayActions)}.
+     *
+     * @param connector opens the session bus connection the icon is served on
+     * @param icon the app icon, sent to the panel in every size it may need
+     * @param title the name the panel shows for the icon, such as in its tooltip
+     */
     public StatusNotifierTray(BusConnector connector, AppIcon icon, String title) {
         this.connector = connector;
         this.icon = icon;

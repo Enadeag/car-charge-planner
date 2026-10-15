@@ -38,6 +38,13 @@ public final class Main {
     private Main() {
     }
 
+    /**
+     * Starts the app: the engine, the dashboard, planning every hour, and the tray icon, or a window without a tray.
+     *
+     * @param args {@code --config=path/to/engine.json} to read the system from that file instead of the usual place;
+     *     other arguments are ignored
+     * @throws Exception when JavaFX cannot start or the dashboard cannot be made; the app cannot run then
+     */
     public static void main(String[] args) throws Exception {
         DBUS_LOG.setLevel(java.util.logging.Level.WARNING); // dbus-java reports every connection at INFO
         var configFile = new ConfigFile(configPath(args));

@@ -19,6 +19,12 @@ public final class AwtTray implements Tray {
     private final String title;
     private TrayIcon trayIcon;
 
+    /**
+     * Makes the tray; nothing appears until {@link #show(TrayActions)}.
+     *
+     * @param icon the app icon, scaled down by AWT to the notification area's size
+     * @param title the icon's tooltip
+     */
     public AwtTray(AppIcon icon, String title) {
         this.icon = icon;
         this.title = title;
