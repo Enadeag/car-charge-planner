@@ -17,6 +17,13 @@ public final class StatusNotifierTray implements Tray {
 
     /** Opens a connection of the tray's own (not a shared one: {@link #remove()} closes it); tests use a private bus. */
     public interface BusConnector {
+
+        /**
+         * Opens the connection.
+         *
+         * @return a new connection, not shared with other parts of the app
+         * @throws DBusException when there is no bus to connect to
+         */
         DBusConnection connect() throws DBusException;
     }
 
@@ -28,6 +35,13 @@ public final class StatusNotifierTray implements Tray {
 
     private DBusConnection bus;
 
+    /**
+     * Makes the tray; nothing appears until {@link #show(TrayActions)}.
+     *
+     * @param connector opens the session bus connection the icon is served on
+     * @param icon the app icon, sent to the panel in every size it may need
+     * @param title the name the panel shows for the icon, such as in its tooltip
+     */
     public StatusNotifierTray(BusConnector connector, AppIcon icon, String title) {
         this.connector = connector;
         this.icon = icon;
@@ -37,10 +51,10 @@ public final class StatusNotifierTray implements Tray {
     @Override
     public void show(TrayActions actions) throws TrayUnavailable {
         var images = SIZES.stream().map(icon::image).toList();
-        var item = new TrayItem("car-charge-planner", title, images, apart(actions.open()));
+        var item = new TrayItem("car-charge-planner", title, images, where -> apart(() -> actions.clicked().accept(where)));
         var menu = new TrayMenu(List.of(
-                new TrayMenu.Entry("Open dashboard", apart(actions.open())),
-                new TrayMenu.Entry("Quit", apart(actions.quit()))));
+                new TrayMenu.Entry("Open dashboard", () -> apart(actions.open())),
+                new TrayMenu.Entry("Quit", () -> apart(actions.quit()))));
         try {
             bus = connector.connect();
             bus.exportObject(item);
@@ -59,8 +73,8 @@ public final class StatusNotifierTray implements Tray {
      * The action on a thread of its own: D-Bus calls it on the connection's thread, and an action that removes the
      * tray would wait there for that same thread to finish.
      */
-    private static Runnable apart(Runnable action) {
-        return () -> Thread.ofVirtual().name("tray-action").start(action);
+    private static void apart(Runnable action) {
+        Thread.ofVirtual().name("tray-action").start(action);
     }
 
     @Override

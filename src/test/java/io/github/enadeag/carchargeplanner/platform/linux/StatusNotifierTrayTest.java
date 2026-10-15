@@ -15,6 +15,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import javafx.geometry.Point2D;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
 import org.freedesktop.dbus.connections.impl.DBusConnectionBuilder;
 import org.freedesktop.dbus.exceptions.DBusException;
@@ -47,6 +48,7 @@ class StatusNotifierTrayTest {
     private StatusNotifierTray tray;
     private final CountDownLatch opened = new CountDownLatch(1);
     private final CountDownLatch quit = new CountDownLatch(1);
+    private final BlockingQueue<Point2D> clicks = new LinkedBlockingQueue<>();
 
     /** The panel's side of the protocol: it only notes which items register. */
     private static final class Watcher implements StatusNotifierWatcher {
@@ -90,19 +92,20 @@ class StatusNotifierTrayTest {
         var watcher = new Watcher();
         panel.exportObject(watcher);
         panel.requestBusName(StatusNotifierWatcher.BUS_NAME);
-        tray.show(new Tray.TrayActions(opened::countDown, quit::countDown));
+        tray.show(new Tray.TrayActions(clicks::add, opened::countDown, quit::countDown));
         var name = watcher.registered.poll(TIMEOUT_S, TimeUnit.SECONDS);
         assertThat(name).as("the item registered with the watcher").isNotNull();
         return name;
     }
 
     @Test
-    void aClickOnTheIconOpens() throws Exception {
+    void aClickOnTheIconSaysWhereTheIconIs() throws Exception {
         var name = showWithAWatcher();
 
-        panel.getRemoteObject(name, TrayItem.OBJECT_PATH, StatusNotifierItem.class).Activate(0, 0);
+        panel.getRemoteObject(name, TrayItem.OBJECT_PATH, StatusNotifierItem.class).Activate(1830, 1176);
 
-        assertThat(opened.await(TIMEOUT_S, TimeUnit.SECONDS)).isTrue();
+        assertThat(clicks.poll(TIMEOUT_S, TimeUnit.SECONDS)).isEqualTo(new Point2D(1830, 1176));
+        assertThat(opened.getCount()).isEqualTo(1);
         assertThat(quit.getCount()).isEqualTo(1);
     }
 
@@ -139,7 +142,7 @@ class StatusNotifierTrayTest {
         panel.exportObject(watcher);
         panel.requestBusName(StatusNotifierWatcher.BUS_NAME);
         var removed = new CountDownLatch(1);
-        tray.show(new Tray.TrayActions(opened::countDown, () -> {
+        tray.show(new Tray.TrayActions(clicks::add, opened::countDown, () -> {
             tray.remove();
             removed.countDown();
         }));
@@ -160,7 +163,7 @@ class StatusNotifierTrayTest {
 
     @Test
     void withoutAWatcherThereIsNoTray() {
-        assertThatThrownBy(() -> tray.show(new Tray.TrayActions(opened::countDown, quit::countDown)))
+        assertThatThrownBy(() -> tray.show(new Tray.TrayActions(clicks::add, opened::countDown, quit::countDown)))
                 .isInstanceOf(Tray.TrayUnavailable.class);
     }
 }

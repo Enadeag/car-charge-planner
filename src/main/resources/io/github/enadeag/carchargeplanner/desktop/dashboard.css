@@ -1,89 +1,238 @@
-/* Colour means source: sun amber, grid blue, car and battery green. AtlantaFX supplies the -color-* tokens. */
+/*
+ * The dashboard's design tokens and styles. Colour means source: sun amber, grid blue, car and battery green,
+ * always with a glyph or a label beside it. Text colours (-fg, -muted and the *-text colours) reach WCAG AA 4.5:1
+ * on every surface they are used on; source colours and -faint reach 3:1 as marks (glyphs, the card's edge).
+ * DashboardContrastTest checks both on the rendered dashboard. AtlantaFX styles the controls (tabs, buttons).
+ */
 .root {
-    -sun: #b45309;
-    -sun-soft: rgba(245, 158, 11, 0.16);
-    -grid: #1d4ed8;
-    -grid-soft: rgba(37, 99, 235, 0.12);
-    -car: #15803d;
-    -car-soft: rgba(22, 163, 74, 0.14);
-    -fx-font-size: 14px;
+    -ground: #e9edf2;
+    -panel: #ffffff;
+    -raised: #f4f6f9;
+    -line: #dde3ea;
+
+    -fg: #17202b;
+    -muted: #566373;
+    -faint: #76849a;
+
+    -sun: #b87300;
+    -sun-text: #8f5a00;
+    -sun-soft: #fbe7c2;
+    -grid: #2f6fd0;
+    -grid-text: #2a62b8;
+    -grid-soft: #dbe7fa;
+    -car: #1f8f5c;
+    -car-text: #17734a;
+    -car-soft: #d3f0e1;
+
+    -focus: -grid;
 }
 
 .root.dark {
-    -sun: #fbbf24;
-    -sun-soft: rgba(251, 191, 36, 0.16);
-    -grid: #60a5fa;
-    -grid-soft: rgba(96, 165, 250, 0.16);
-    -car: #4ade80;
-    -car-soft: rgba(74, 222, 128, 0.16);
+    -ground: #0d1117;
+    -panel: #161c24;
+    -raised: #1d2530;
+    -line: #2a3441;
+
+    -fg: #e8edf3;
+    -muted: #9aa7b6;
+    -faint: #6c7a8a;
+
+    -sun: #f2b33d;
+    -sun-text: #f2b33d;
+    -sun-soft: #3a2c10;
+    -grid: #6aa2f5;
+    -grid-text: #6aa2f5;
+    -grid-soft: #17283f;
+    -car: #4cc78c;
+    -car-text: #4cc78c;
+    -car-soft: #13301f;
 }
 
-.page {
-    -fx-background-color: -color-bg-subtle;
-    -fx-padding: 20;
-    -fx-spacing: 14;
+/* the popup's window is transparent, so the dashboard can have rounded corners and a border */
+.popup {
+    -fx-background-color: transparent;
+}
+
+.dashboard {
+    -fx-background-color: -panel;
+    -fx-pref-width: 30em;
+}
+
+.popup .dashboard {
+    -fx-background-radius: 14;
+    -fx-border-color: -line;
+    -fx-border-radius: 14;
+}
+
+.dashboard-header {
+    -fx-alignment: center-left;
+    -fx-padding: 0.75em 0.75em 0.25em 1.15em;
+    -fx-spacing: 0.5em;
 }
 
 .app-title {
-    -fx-font-size: 13px;
     -fx-font-weight: bold;
-    -fx-text-fill: -color-fg-muted;
+    -fx-text-fill: -fg;
 }
 
+.dashboard-content {
+    -fx-padding: 0.85em 1.15em 1.15em 1.15em;
+    -fx-spacing: 0.85em;
+}
+
+/* the tabs and their content */
+.day-tabs > .tab-header-area {
+    -fx-padding: 0 0.85em 0 0.85em;
+}
+
+.day-tabs .tab .tab-label {
+    -fx-content-display: bottom;
+    -fx-graphic-text-gap: 0.15em;
+    -fx-font-weight: bold;
+}
+
+.day-tabs .tab {
+    -fx-pref-width: 4.5em;
+}
+
+/* the selected day scrolls below the fixed header and tabs when the screen is too short */
+.day-scroll,
+.day-scroll > .viewport {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+}
+
+/* cards */
 .card {
-    -fx-background-color: -color-bg-default;
-    -fx-background-radius: 18;
-    -fx-border-color: -color-border-muted;
-    -fx-border-radius: 18;
-    -fx-padding: 18 20 18 20;
-    -fx-spacing: 10;
-    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.06), 18, 0, 0, 4);
+    -fx-background-color: -raised;
+    -fx-background-radius: 14;
+    -fx-padding: 0.85em 1em 0.85em 1em;
+    -fx-spacing: 0.5em;
 }
 
-.root.dark .card {
-    -fx-effect: none;
+.card.sun,
+.card.grid {
+    -fx-border-width: 0 0 0 4;
+    -fx-border-insets: 0.6em 0 0.6em 0;
+    -fx-padding: 0.85em 1em 0.85em 0.85em;
 }
 
-.overline {
-    -fx-font-size: 11.5px;
+.card.sun {
+    -fx-background-color: -sun-soft;
+    -fx-border-color: -sun;
+}
+
+.card.grid {
+    -fx-background-color: -grid-soft;
+    -fx-border-color: -grid;
+}
+
+.card:focus-visible {
+    -fx-border-color: -focus;
+    -fx-border-width: 2;
+    -fx-border-radius: 14;
+    -fx-border-insets: 0;
+}
+
+.card-label {
+    -fx-font-size: 0.85em;
     -fx-font-weight: bold;
-    -fx-text-fill: -color-fg-muted;
+    -fx-text-fill: -muted;
 }
 
-.headline {
-    -fx-font-size: 28px;
+.hero {
+    -fx-font-size: 2.1em;
     -fx-font-weight: bold;
-    -fx-text-fill: -color-fg-default;
+    -fx-text-fill: -fg;
 }
 
-.muted {
-    -fx-font-size: 13px;
-    -fx-text-fill: -color-fg-muted;
+.fact,
+.advice-title,
+.message-headline {
+    -fx-text-fill: -fg;
 }
 
-.pill {
+.advice-title,
+.message-headline {
+    -fx-font-weight: bold;
+}
+
+.advice-detail {
+    -fx-text-fill: -fg;
+}
+
+.note,
+.message-detail {
+    -fx-font-size: 0.9em;
+    -fx-text-fill: -muted;
+}
+
+.figures {
+    -fx-hgap: 1em;
+    -fx-vgap: 0.3em;
+}
+
+.chips {
+    -fx-hgap: 0.5em;
+    -fx-vgap: 0.4em;
+}
+
+/* the reserved place for the solar curve and the battery */
+.chart-slot {
+    -fx-border-color: -line;
+    -fx-border-style: segments(6, 4);
+    -fx-border-radius: 14;
+    -fx-padding: 1em;
+    -fx-alignment: center;
+}
+
+.chart-slot .label {
+    -fx-font-size: 0.9em;
+    -fx-text-fill: -muted;
+}
+
+/* chips: a figure with its source's glyph on its source's soft background */
+.chip {
     -fx-background-radius: 999;
-    -fx-padding: 5 11 5 9;
-    -fx-spacing: 6;
+    -fx-padding: 0.2em 0.65em 0.2em 0.45em;
+    -fx-spacing: 0.35em;
     -fx-alignment: center-left;
 }
 
-.pill .label {
-    -fx-font-size: 13px;
+.chip .label {
+    -fx-font-size: 0.9em;
     -fx-font-weight: bold;
 }
 
-.pill.sun { -fx-background-color: -sun-soft; }
-.pill.sun .label { -fx-text-fill: -sun; }
-.pill.sun .glyph-fill { -fx-fill: -sun; }
-.pill.sun .glyph-stroke { -fx-stroke: -sun; }
+.chip.sun { -fx-background-color: -sun-soft; }
+.chip.sun .label { -fx-text-fill: -sun-text; }
+.chip.grid { -fx-background-color: -grid-soft; }
+.chip.grid .label { -fx-text-fill: -grid-text; }
+.chip.car { -fx-background-color: -car-soft; }
+.chip.car .label { -fx-text-fill: -car-text; }
 
-.pill.car { -fx-background-color: -car-soft; }
-.pill.car .label { -fx-text-fill: -car; }
-.pill.car .glyph-fill { -fx-fill: -car; }
-.pill.car .glyph-stroke { -fx-stroke: -car; }
+/* glyphs: small pictures in the colour of their source; one without a source is muted */
+.glyph .glyph-fill { -fx-fill: -muted; }
+.glyph .glyph-stroke { -fx-stroke: -muted; }
+.glyph .glyph-outline { -fx-fill: transparent; }
+.glyph.sun .glyph-fill { -fx-fill: -sun; }
+.glyph.sun .glyph-stroke { -fx-stroke: -sun; }
+.glyph.grid .glyph-fill { -fx-fill: -grid; }
+.glyph.grid .glyph-stroke { -fx-stroke: -grid; }
+.glyph.car .glyph-fill { -fx-fill: -car; }
+.glyph.car .glyph-stroke { -fx-stroke: -car; }
 
-.pill.grid { -fx-background-color: -grid-soft; }
-.pill.grid .label { -fx-text-fill: -grid; }
-.pill.grid .glyph-fill { -fx-fill: -grid; }
-.pill.grid .glyph-stroke { -fx-stroke: -grid; }
+/* footer */
+.dashboard-footer {
+    -fx-alignment: center-left;
+    -fx-spacing: 0.5em;
+    -fx-padding: 0.65em 0.85em 0.75em 1.15em;
+    -fx-border-color: -line transparent transparent transparent;
+}
+
+.footer-text {
+    -fx-font-size: 0.85em;
+    -fx-text-fill: -muted;
+}

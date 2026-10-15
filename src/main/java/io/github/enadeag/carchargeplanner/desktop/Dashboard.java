@@ -1,61 +1,92 @@
 package io.github.enadeag.carchargeplanner.desktop;
 
 import io.github.enadeag.carchargeplanner.engine.Outlook;
+import java.time.InstantSource;
+import javafx.application.ColorScheme;
 import javafx.application.Platform;
-import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
+import javafx.beans.value.ObservableValue;
+import javafx.geometry.Point2D;
 
 /**
- * The one screen that shows the plan. For now a window with the main card; closing it leaves the app in the tray.
+ * The one screen that shows the plan: a popup beside the tray icon, or a window. Both show the same
+ * {@link DashboardView}; it moves to the window when the popup is detached.
  *
- * <p>Make it on the JavaFX thread; its methods may be called from any thread.
+ * <p>Make it on the JavaFX thread; its public methods may be called from any thread.
  */
 public final class Dashboard {
 
-    private final Stage stage = new Stage();
-    private final MainCard mainCard = new MainCard();
+    private final OutlookMapper mapper;
+    private final DashboardView view;
+    private final DashboardPopup popup;
+    private final DashboardWindow window;
 
-    public Dashboard(AppIcon icon) {
-        var title = new Label("CAR CHARGE PLANNER");
-        title.getStyleClass().add("app-title");
-        var page = new VBox(title, mainCard);
-        page.getStyleClass().add("page");
-        page.setPrefWidth(460);
-        mainCard.show(MainCardText.loading());
-
-        var scene = new Scene(page);
-        scene.getStylesheets().add(Dashboard.class.getResource("dashboard.css").toExternalForm());
-        SystemTheme.follow(scene);
-        stage.setScene(scene);
-        stage.setTitle("Car charge planner");
-        stage.getIcons().setAll(icon.fxImages());
-        stage.setOnCloseRequest(event -> {
-            event.consume();
-            stage.hide();
-        });
+    /**
+     * Makes the dashboard, hidden, showing that the forecast is being fetched until {@link #show(Outlook)} is called.
+     *
+     * @param icon the app icon, for the window's title bar and the taskbar
+     * @param colorScheme the system's light or dark, followed while the app runs
+     *     ({@code Platform.getPreferences().colorSchemeProperty()}); never null
+     * @param forecastSource the forecast provider's name, shown in the footer, such as "Open-Meteo"
+     * @param clock tells when the popup closed, so the click on the tray icon that closed it does not open it again
+     */
+    public Dashboard(AppIcon icon, ObservableValue<ColorScheme> colorScheme, String forecastSource, InstantSource clock) {
+        var theme = new SystemTheme(colorScheme);
+        this.mapper = new OutlookMapper(forecastSource);
+        this.view = new DashboardView(this::detach, this::fitToContent);
+        this.popup = new DashboardPopup(theme, icon, clock);
+        this.window = new DashboardWindow(theme, icon);
+        view.show(mapper.loading());
     }
 
-    public void open() {
+    /**
+     * A click on the tray icon: opens the popup beside it, or closes it when it is open. While the dashboard is shown
+     * as a window, brings the window to the front instead.
+     *
+     * @param icon where the tray says its icon is, in JavaFX's screen coordinates; reported by another process, so
+     *     a position off every screen is replaced by the primary screen's bottom right
+     */
+    public void popUp(Point2D icon) {
         Platform.runLater(() -> {
-            stage.show();
-            stage.setIconified(false);
-            stage.toFront();
-            stage.requestFocus();
+            if (window.isShowing()) {
+                window.show(view);
+            } else {
+                popup.toggle(view, icon);
+            }
         });
     }
 
+    /** Shows the dashboard as a window, taking it out of the popup if it is open there. */
+    public void openWindow() {
+        Platform.runLater(this::detach);
+    }
+
+    /**
+     * Shows a new outlook from the engine, keeping the selected day.
+     *
+     * @param outlook the engine's latest plan, or why there is none; never null
+     */
     public void show(Outlook outlook) {
-        var text = MainCardText.of(outlook);
-        Platform.runLater(() -> {
-            mainCard.show(text);
-            stage.sizeToScene(); // a window opened before the plan came is still the size of "Fetching the forecast"
-        });
+        var model = mapper.map(outlook);
+        Platform.runLater(() -> view.show(model));
     }
 
-    /** Without a tray, closing the window is the only way to quit. */
+    /**
+     * Makes closing the window quit the app instead of hiding it: without a tray it is the only way to quit.
+     *
+     * @param quit what closing the window does; called on the JavaFX thread
+     */
     public void quitWhenClosed(Runnable quit) {
-        Platform.runLater(() -> stage.setOnCloseRequest(event -> quit.run()));
+        Platform.runLater(() -> window.onClose(quit));
+    }
+
+    /** Another day or a new plan: the popup or window takes the height it needs. */
+    private void fitToContent() {
+        popup.fit();
+        window.fit();
+    }
+
+    private void detach() {
+        popup.close();
+        window.show(view);
     }
 }

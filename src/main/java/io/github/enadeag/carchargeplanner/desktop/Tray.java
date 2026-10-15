@@ -1,21 +1,43 @@
 package io.github.enadeag.carchargeplanner.desktop;
 
+import java.util.function.Consumer;
+import javafx.geometry.Point2D;
+
 /** The icon in the system's tray that shows the app is running. Each system has its own. */
 public interface Tray {
 
     /**
-     * Puts the icon in the tray. A click on it calls {@code actions.open()}; its menu offers open and quit.
-     * The actions are called on a thread of the tray's, not the JavaFX thread; an action may remove the tray.
+     * Puts the icon in the tray. The actions are called on a thread of the tray's, not the JavaFX thread; an action
+     * may remove the tray.
+     *
+     * @param actions what a click on the icon and the entries of its menu do
+     * @throws TrayUnavailable when the system has no tray this app can use; the app then shows a window instead
      */
     void show(TrayActions actions) throws TrayUnavailable;
 
+    /** Takes the icon out of the tray; does nothing when it is not there. */
     void remove();
 
-    record TrayActions(Runnable open, Runnable quit) {
+    /**
+     * What the tray icon and its menu do.
+     *
+     * @param clicked the action for a click on the icon, given where the icon is on the screen, in JavaFX's
+     *     coordinates
+     * @param open the action for the menu's "Open dashboard"
+     * @param quit the action for the menu's "Quit"
+     */
+    record TrayActions(Consumer<Point2D> clicked, Runnable open, Runnable quit) {
     }
 
+    /** The system has no tray this app can use, such as GNOME without the AppIndicator extension. */
     class TrayUnavailable extends Exception {
 
+        /**
+         * Makes the exception.
+         *
+         * @param message what is missing, for the log, such as "The desktop has no tray that this app can use"
+         * @param cause the error the system gave, for the log; may be null when there was none
+         */
         public TrayUnavailable(String message, Throwable cause) {
             super(message, cause);
         }

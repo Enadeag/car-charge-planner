@@ -31,21 +31,31 @@ public final class Main {
     /** Held here because java.util.logging forgets a logger's level once nothing refers to the logger. */
     private static final java.util.logging.Logger DBUS_LOG = java.util.logging.Logger.getLogger("org.freedesktop.dbus");
     private static final String TITLE = "Car charge planner";
+    private static final String FORECAST_SOURCE = "Open-Meteo";
     /** Open-Meteo updates its forecast about once an hour. */
     private static final long REPLAN_MINUTES = 60;
 
     private Main() {
     }
 
+    /**
+     * Starts the app: the engine, the dashboard, planning every hour, and the tray icon, or a window without a tray.
+     *
+     * @param args {@code --config=path/to/engine.json} to read the system from that file instead of the usual place;
+     *     other arguments are ignored
+     * @throws Exception when JavaFX cannot start or the dashboard cannot be made; the app cannot run then
+     */
     public static void main(String[] args) throws Exception {
         DBUS_LOG.setLevel(java.util.logging.Level.WARNING); // dbus-java reports every connection at INFO
         var configFile = new ConfigFile(configPath(args));
-        var engine = new Engine(configFile, new OpenMeteo(new JdkHttpGet(HttpClient.newHttpClient())), Clock.systemUTC());
+        var clock = Clock.systemUTC();
+        var engine = new Engine(configFile, new OpenMeteo(new JdkHttpGet(HttpClient.newHttpClient())), clock);
         var icon = new AppIcon();
 
         Platform.setImplicitExit(false);
         var dashboardMade = new CompletableFuture<Dashboard>();
-        Platform.startup(() -> dashboardMade.complete(new Dashboard(icon)));
+        Platform.startup(() -> dashboardMade.complete(
+                new Dashboard(icon, Platform.getPreferences().colorSchemeProperty(), FORECAST_SOURCE, clock)));
         var dashboard = dashboardMade.get();
 
         ScheduledExecutorService replanning = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform()
@@ -66,11 +76,11 @@ public final class Main {
             System.exit(0);
         };
         try {
-            tray.show(new Tray.TrayActions(dashboard::open, quit));
+            tray.show(new Tray.TrayActions(dashboard::popUp, dashboard::openWindow, quit));
         } catch (Tray.TrayUnavailable e) {
             LOG.log(Level.WARNING, e.getMessage() + "; showing the dashboard as a window instead", e.getCause());
             dashboard.quitWhenClosed(quit);
-            dashboard.open();
+            dashboard.openWindow();
         }
         LOG.log(Level.INFO, "planning with " + configFile.path());
     }
