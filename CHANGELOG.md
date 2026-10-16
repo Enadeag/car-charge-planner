@@ -2,6 +2,8 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
 ## [0.3.0] - 2026-10-16
 
 The app is rewritten in Java with JavaFX, and the Python version is removed. What it plans is the same.
@@ -65,6 +67,7 @@ First version, for Linux.
 - Installation with `pipx` as the command `car-charge-planner`.
 - `config.toml` and `state.json` say which file format they are in, so later versions can upgrade them. A config file from a newer version of the app is refused with a clear message, and a newer state file is left alone. A config file written before this release, with a single `[panels]` table, is read as one panel array.
 
+[Unreleased]: https://github.com/Enadeag/car-charge-planner/compare/v0.3.0...HEAD
 [0.3.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Enadeag/car-charge-planner/releases/tag/v0.1.0
