@@ -67,7 +67,10 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          existing=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/release/$VERSION" --jq .object.sha 2>/dev/null || true)
+          # gh prints the 404 body on stdout when the branch does not exist, so only trust its output on success.
+          if ! existing=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/release/$VERSION" --jq .object.sha 2>/dev/null); then
+            existing=""
+          fi
           if [ -n "$existing" ] && [ "$existing" != "$(git rev-parse HEAD)" ]; then
             echo "::error::release/$VERSION exists at $existing, not at this tag ($(git rev-parse HEAD)); not moving it"
             exit 1
