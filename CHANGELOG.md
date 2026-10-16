@@ -2,7 +2,7 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.3.0] - 2026-10-16
 
 The app is rewritten in Java with JavaFX, and the Python version is removed. What it plans is the same.
 
@@ -13,6 +13,7 @@ The app is rewritten in Java with JavaFX, and the Python version is removed. Wha
 - A choice between light, dark and the system's appearance, in Settings, App.
 - Set-up checks the forecast and shows a preview of the dashboard before Finish.
 - `car-charge-planner start-at-login on` and `off`, the same as the switch in Settings.
+- Linux: `car-charge-planner install-launcher` puts the app in the KDE and GNOME menus with its icon, without root; `uninstall-launcher` removes it again.
 - Keyboard and screen reader use: Tab reaches every control in reading order with a visible focus ring, Enter and Escape save and cancel in every window and entry, and on Windows Enter on the tray icon (after Win+B) opens the dashboard. Narrator and NVDA read a name for every control, the solar chart hour by hour, and what a Save or a refused value says. Orca on Linux cannot read the app yet (JavaFX has no AT-SPI support). See Accessibility in the README.
 
 ### Changed
@@ -22,7 +23,7 @@ The app is rewritten in Java with JavaFX, and the Python version is removed. Wha
 - The settings are JSON files: `engine.json` (your system, planning, forecast providers and weekly away times) and `app.json` (the app's own settings), in the same folder as before. The battery level, away days, the windows you were told about and the forecast cache are in `~/.local/share/car-charge-planner/` (Windows: `%LOCALAPPDATA%\car-charge-planner\`). API keys stay in the system keychain; without one they are kept in `secrets.json`, readable only by you.
 
 ### Removed
-- The Python version: installing with pipx, the PyInstaller and Inno Setup installer, the gettext translations, and the commands `test-notification`, `install-autostart`, `uninstall-autostart`, `install-launcher`, `uninstall-launcher` and the terminal planner.
+- The Python version: installing with pipx, the PyInstaller and Inno Setup installer, the gettext translations, and the commands `test-notification` (it comes back in #133), `install-autostart` and `uninstall-autostart` (now `start-at-login on` and `off`) and the terminal planner.
 - Reading the settings of 0.2.0 and earlier (`config.toml`, `app.toml`, `state.json`): run set-up once; the old files are left alone. On Windows the new installer does not remove 0.2.0: uninstall that one in Settings, Apps.
 
 ## [0.2.0] - 2026-10-14
@@ -64,6 +65,6 @@ First version, for Linux.
 - Installation with `pipx` as the command `car-charge-planner`.
 - `config.toml` and `state.json` say which file format they are in, so later versions can upgrade them. A config file from a newer version of the app is refused with a clear message, and a newer state file is left alone. A config file written before this release, with a single `[panels]` table, is read as one panel array.
 
-[Unreleased]: https://github.com/Enadeag/car-charge-planner/compare/v0.2.0...HEAD
+[0.3.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Enadeag/car-charge-planner/releases/tag/v0.1.0
