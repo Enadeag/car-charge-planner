@@ -13,3 +13,7 @@ target/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Python bytecode (the Python version is gone; these must never be committed)
+__pycache__/
+*.pyc
