@@ -1,14 +1,11 @@
 package io.github.enadeag.carchargeplanner.engine.config;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
-
 /**
- * A percentage from 0 to 100, such as a charge level of the battery. In JSON it is the plain number.
+ * A percentage from 0 to 100, such as a charge level of the battery.
  *
  * @param value the percentage, from 0 to 100
  */
-public record Percent(@JsonValue double value) {
+public record Percent(double value) {
 
     /**
      * Checks the range.
@@ -19,14 +16,5 @@ public record Percent(@JsonValue double value) {
         if (!(value >= 0 && value <= 100)) {
             throw new IllegalArgumentException("a percentage must be from 0 to 100, not " + value);
         }
-    }
-
-    /** Through Number rather than double, so Jackson reads "30" as it reads any other number in the config file. */
-    @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
-    private static Percent fromJson(Number number) {
-        if (number == null) {
-            throw new IllegalArgumentException("a percentage must be a number");
-        }
-        return new Percent(number.doubleValue());
     }
 }

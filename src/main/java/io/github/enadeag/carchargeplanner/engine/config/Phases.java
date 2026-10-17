@@ -1,9 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine.config;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
-
-/** The phases the charger charges on. In JSON the number of phases: {@code 1} or {@code 3}. */
+/** The phases the charger charges on. */
 public enum Phases {
 
     /** One phase. */
@@ -23,19 +20,17 @@ public enum Phases {
      *
      * @return 1 or 3
      */
-    @JsonValue
     public int count() {
         return count;
     }
 
     /**
-     * The phases for a number of phases, as the config file gives it.
+     * The phases for a number of phases, such as a count the owner entered.
      *
      * @param count the number of phases; only 1 and 3 are allowed
      * @return the phases with that number
      * @throws IllegalArgumentException when the number is not 1 or 3
      */
-    @JsonCreator
     public static Phases of(int count) {
         for (var phases : values()) {
             if (phases.count == count) {

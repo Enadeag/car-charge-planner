@@ -8,7 +8,7 @@ import java.util.Set;
 /**
  * Which values of the system are typical values: filled in with a common value because the owner did not know them
  * (see "Typical value" in CONTEXT.md), until the owner enters their own. Planning preferences are choices and never
- * typical. In JSON the settings are their names, such as {@code "CAR_BATTERY"}.
+ * typical.
  *
  * @param system the typical values of the house, the car and the charger
  * @param panels per panel array, in the order of the system's arrays, its typical values; an array past the end of

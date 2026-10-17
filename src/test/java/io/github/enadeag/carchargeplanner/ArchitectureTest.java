@@ -63,6 +63,14 @@ class ArchitectureTest {
             .because("the system and its user are read once, as the app starts, and handed on");
 
     @ArchTest
+    static final ArchRule theDomainModelDoesNotKnowItsFileFormat = noClasses()
+            .that().resideInAnyPackage("..engine.plan..", "..engine.setting..")
+            .or().areRecords().and().resideInAPackage("..engine..")
+            .or().areEnums().and().resideInAPackage("..engine..")
+            .should().dependOnClassesThat().resideInAnyPackage("tools.jackson..", "com.fasterxml.jackson..")
+            .because("each stored file reads and writes its own JSON by hand, beside the store that keeps it");
+
+    @ArchTest
     static final ArchRule noStaticMutableState = fields()
             .that().areStatic()
             .and().areDeclaredInClassesThat().doNotHaveFullyQualifiedName(Main.class.getName())

@@ -23,7 +23,6 @@
     <atlantafx.version>3.0.0</atlantafx.version>
     <dbus-java.version>5.2.2</dbus-java.version>
     <jackson.version>3.2.3</jackson.version>
-    <jackson-annotations.version>2.22</jackson-annotations.version>
     <slf4j.version>2.0.20</slf4j.version>
 
     <junit.version>5.14.4</junit.version>
@@ -98,12 +97,6 @@
     <dependency>
       <groupId>tools.jackson.core</groupId>
       <artifactId>jackson-core</artifactId>
-    </dependency>
-    <!-- @JsonCreator and @JsonValue; Jackson 3 still takes them from the 2.x annotations -->
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-annotations</artifactId>
-      <version>${jackson-annotations.version}</version>
     </dependency>
     <!-- dbus-java logs through SLF4J; this sends it to java.util.logging, where the app's own messages go -->
     <dependency>
