@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.engine.secrets;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.github.enadeag.carchargeplanner.LogCapture;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -167,4 +168,50 @@ class ApiKeysTest {
         assertThatThrownBy(() -> keys(keychain).save(odd)).isInstanceOf(SecretsProblem.class);
         assertThat(keychain.entries).isEmpty();
     }
+
+    /** A keychain that can be locked and unlocked, as a desktop keyring can. */
+    private static final class Lockable extends MemoryKeychain {
+        private volatile boolean locked;
+
+        @Override
+        public Optional<String> read(String name) throws KeychainException {
+            if (locked) {
+                throw new KeychainException("locked");
+            }
+            return super.read(name);
+        }
+    }
+
+    @Test
+    void whereTheKeysAreKeptIsLoggedWhenItChangesAndNeverAValue() throws SecretsProblem {
+        var lockable = new Lockable();
+        var keys = keys(lockable);
+        try (var log = LogCapture.of(ApiKeys.class)) {
+            keys.save(KEYS);
+            keys.load();
+            lockable.locked = true;
+            keys.load();
+            keys.load();
+            lockable.locked = false;
+            keys.load();
+
+            assertThat(log.lines()).containsExactly("INFO API keys are kept in the system keychain",
+                    "WARNING API keys are kept in " + file().path() + ", readable only by you: the system keychain "
+                            + "cannot be used",
+                    "INFO API keys are kept in the system keychain again");
+        }
+    }
+
+    @Test
+    void keysMovedFromTheFileIntoTheKeychainAreLogged() throws SecretsProblem {
+        file().write(KEYS);
+        try (var log = LogCapture.of(ApiKeys.class)) {
+            keys(keychain).load();
+
+            assertThat(log.lines()).containsExactly(
+                    "INFO moved the API keys from " + file().path() + " into the system keychain",
+                    "INFO API keys are kept in the system keychain");
+        }
+    }
+
 }

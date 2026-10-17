@@ -43,6 +43,13 @@ in `DesktopApp` (`AppLog`); what a thread throws and nothing catches is logged a
 In the code, log through `System.Logger`. Log a change of state, such as a provider that starts failing, not what
 happens every minute. Never log an API key, a request's address (it can hold a key) or the home's coordinates; a
 path is fine, although it shows the user name.
+`ArchitectureTest` keeps every class that makes or reads a request's address from logging at all, and the provider
+conformance kit checks that no address, key or coordinate reaches a log line or the reason the owner is shown.
+
+The engine logs these changes of state, each once: a provider that gives no forecast and one that gives forecasts
+again (`ProviderHealth`), a config file that cannot be used and one that can be used again (`ConfigHealth`), where the
+API keys are kept (`ApiKeys`), a stored file that cannot be used or is set aside (`StoredFile`), and each announcement
+(`Announcer`).
 
 ## Tests
 

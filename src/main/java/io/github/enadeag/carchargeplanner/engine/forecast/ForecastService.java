@@ -23,6 +23,7 @@ public final class ForecastService {
     private final ForecastCache cache;
     private final SecretsSource secrets;
     private final Map<ProviderId, Instant> retryAt = new HashMap<>();
+    private final ProviderHealth health = new ProviderHealth();
 
     /**
      * Makes the service.
@@ -116,7 +117,7 @@ public final class ForecastService {
         var settings = provider.info().settingsFrom(plain, stored.of(providerId));
         // a changed key does not make the cached forecast wrong, so the key is left out of what it depends on
         var key = cache.key(system, provider.info().settingsFrom(plain, Map.of()));
-        return new ProviderAttempt(provider, cache, retryAt, now, force).run(system, settings, key);
+        return new ProviderAttempt(provider, cache, retryAt, health, now, force).run(system, settings, key);
     }
 
     private String primaryName(ForecastSelection selection) {

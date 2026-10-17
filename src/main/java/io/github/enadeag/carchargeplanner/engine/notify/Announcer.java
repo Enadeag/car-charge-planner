@@ -6,6 +6,7 @@ import io.github.enadeag.carchargeplanner.engine.forecast.Freshness;
 import io.github.enadeag.carchargeplanner.engine.plan.DayPlan;
 import io.github.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import io.github.enadeag.carchargeplanner.engine.plan.Window;
+import java.lang.System.Logger.Level;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ import java.util.Optional;
 
 /**
  * Decides when the owner is told about a charge window: once, within the notification lead time before it starts.
+ * Each announcement is logged, with its kind and the window's start.
  *
  * <p>Only windows that have not started are announced. A window that overlaps one announced before counts as
  * announced, for a newer forecast can move a start by a few minutes. Nothing is announced while the forecast could
@@ -26,6 +28,8 @@ public final class Announcer {
     static final Duration MAX_FORECAST_AGE = Duration.ofHours(6);
     /** How long after its end an announced window is kept, so that a window running past midnight is still known. */
     static final Duration KEEP_AFTER_END = Duration.ofDays(1);
+
+    private static final System.Logger LOG = System.getLogger(Announcer.class.getName());
 
     private final AnnouncedWindows store;
     private final Notifier notifier;
@@ -73,6 +77,8 @@ public final class Announcer {
             var window = candidate.window();
             if (now.isBefore(window.start()) && !window.start().isAfter(now.plus(lead)) && !wasAnnounced(window)) {
                 notifier.announce(candidate);
+                LOG.log(Level.INFO, "announced a " + candidate.kind() + " starting at "
+                        + window.start().atZone(candidate.zone()).toOffsetDateTime());
                 remember(window, now);
             }
         }

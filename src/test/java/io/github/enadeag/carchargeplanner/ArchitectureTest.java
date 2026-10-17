@@ -10,6 +10,7 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
+import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import java.util.Locale;
 
 /** The rules of ADR 0005: an engine without user interface, and no global state outside the composition root. */
@@ -76,6 +77,22 @@ class ArchitectureTest {
             .that(DOMAIN_MODEL)
             .should().dependOnClassesThat().resideInAnyPackage("tools.jackson..", "com.fasterxml.jackson..")
             .because("each stored file reads and writes its own JSON by hand, beside the store that keeps it");
+
+    private static final DescribedPredicate<JavaClass> HANDLE_REQUEST_ADDRESSES = DescribedPredicate.describe(
+            "make or read the address of a request to a provider",
+            type -> type.getAccessesFromSelf().stream()
+                    .anyMatch(access -> access.getTargetOwner().isEquivalentTo(HttpGet.Request.class)));
+
+    @ArchTest
+    static final ArchRule requestAddressesNeverReachALog = noClasses()
+            .that(HANDLE_REQUEST_ADDRESSES)
+            .should().dependOnClassesThat().haveFullyQualifiedName(System.Logger.class.getName())
+            .orShould().dependOnClassesThat().resideInAnyPackage("java.util.logging..", "org.slf4j..")
+            .orShould().accessField(System.class, "out")
+            .orShould().accessField(System.class, "err")
+            .orShould().callMethod(Throwable.class, "printStackTrace")
+            .because("an address can hold an API key and the home's coordinates, so what makes or sends one logs "
+                    + "nothing; ProviderConformance checks what the providers' errors say");
 
     @ArchTest
     static final ArchRule noStaticMutableState = fields()

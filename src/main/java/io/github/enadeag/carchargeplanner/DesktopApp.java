@@ -31,7 +31,6 @@ import io.github.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
 import io.github.enadeag.carchargeplanner.engine.notify.Announcer;
 import io.github.enadeag.carchargeplanner.engine.notify.Notifier;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
-import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import io.github.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import io.github.enadeag.carchargeplanner.instance.InstanceCommand;
@@ -269,15 +268,10 @@ final class DesktopApp {
         var apiKeys = new ApiKeys(parts.keychain(), secretsFile);
         var cache = new ForecastCache(dataFolder.resolve("forecasts"));
         var announcer = new Announcer(new AnnouncedWindows(dataFolder.resolve("announced.json")), notifier);
-        var engine = new Engine(new ConfigFile(configPath), new ForecastService(providers, cache, apiKeys), providers,
+        return new Engine(new ConfigFile(configPath), new ForecastService(providers, cache, apiKeys), providers,
                 apiKeys, new AwayFile(dataFolder.resolve("away.json")),
                 new BatteryFile(dataFolder.resolve("battery.json")), Clock.systemUTC(), announcer,
                 Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("planner").daemon().factory()));
-        if (engine.keyStorage() == KeyStorage.FILE) {
-            LOG.log(Level.WARNING, "No usable system keychain: API keys are kept in " + secretsFile.path()
-                    + ", readable only by you");
-        }
-        return engine;
     }
 
     /** In the owner's browser, away from the JavaFX thread: the browser may take a moment to answer. */

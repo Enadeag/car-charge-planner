@@ -5,6 +5,7 @@ import static io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider.st
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
+import io.github.enadeag.carchargeplanner.LogCapture;
 import io.github.enadeag.carchargeplanner.engine.away.AwayFile;
 import io.github.enadeag.carchargeplanner.engine.battery.BatteryFile;
 import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
@@ -525,4 +526,28 @@ class EngineTest {
             throw new AssertionError(e);
         }
     }
+
+    @Test
+    void aConfigThatCannotBeUsedIsLoggedOnceAndSoIsOneThatCanBeUsedAgain() throws IOException {
+        var valid = Files.readString(config);
+        var engine = engine(clockAt(9));
+        try (var log = LogCapture.of(ConfigHealth.class)) {
+            engine.plan();
+            Files.delete(config);
+            engine.plan();
+            Files.writeString(config, "{\"version\": 1}");
+            engine.plan();
+            engine.plan();
+            Files.writeString(config, valid);
+            engine.plan();
+            engine.plan();
+
+            assertThat(log.lines()).satisfiesExactly(
+                    line -> assertThat(line).isEqualTo("INFO there is no config file at " + config),
+                    line -> assertThat(line).startsWith("WARNING the config file " + config
+                            + " cannot be used (INVALID): ").hasSizeGreaterThan(70),
+                    line -> assertThat(line).isEqualTo("INFO the config file can be used again"));
+        }
+    }
+
 }
