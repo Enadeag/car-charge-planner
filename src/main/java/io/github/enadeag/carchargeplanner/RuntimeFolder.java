@@ -24,13 +24,14 @@ final class RuntimeFolder {
      * @param purpose what the folder is for, part of its name, such as "tray"
      * @param environment the environment variables; {@code XDG_RUNTIME_DIR} is used when it is an absolute path
      * @param temporary the system's folder for temporary files, for when there is no usable {@code XDG_RUNTIME_DIR}
-     * @param user the user this app runs as, who must own the folder
+     * @param user the user this app runs as, who must own the folder; empty when that could not be told, and then the
+     *     owner is not checked
      * @return in the user's runtime folder, which the session empties at logout, a folder named after the purpose
      *     and this process; without one, a new folder with a random name in the temporary folder. Either has mode
      *     0700.
      * @throws IOException when the folder cannot be made, or it is a link, another user's, or open to others
      */
-    static Path make(String purpose, Map<String, String> environment, Path temporary, UserPrincipal user)
+    static Path make(String purpose, Map<String, String> environment, Path temporary, Optional<UserPrincipal> user)
             throws IOException {
         var prefix = ConfigLocation.APP_FOLDER + "-" + purpose + "-";
         var runtime = environment.getOrDefault("XDG_RUNTIME_DIR", "");
@@ -38,9 +39,9 @@ final class RuntimeFolder {
             // a guessable name in a shared folder could be made by another user first
             var made = Files.createTempDirectory(temporary, prefix,
                     PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
-            return new PrivateFolder(made, Optional.of(user)).make();
+            return new PrivateFolder(made, user).make();
         }
         var folder = Path.of(runtime).resolve(prefix + ProcessHandle.current().pid());
-        return new PrivateFolder(folder, Optional.of(user)).make();
+        return new PrivateFolder(folder, user).make();
     }
 }

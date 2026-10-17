@@ -53,6 +53,16 @@ class ArchitectureTest {
             .because("the chosen language is handed to whatever writes texts, numbers or times; the JVM's default is not");
 
     @ArchTest
+    static final ArchRule onlyTheHostReadsTheSystem = noClasses()
+            .that().doNotHaveFullyQualifiedName(Host.class.getName())
+            .and().doNotHaveFullyQualifiedName(Os.class.getName())
+            .should().callMethod(System.class, "getProperty", String.class)
+            .orShould().callMethod(System.class, "getProperty", String.class, String.class)
+            .orShould().callMethod(System.class, "getenv")
+            .orShould().callMethod(System.class, "getenv", String.class)
+            .because("the system and its user are read once, as the app starts, and handed on");
+
+    @ArchTest
     static final ArchRule noStaticMutableState = fields()
             .that().areStatic()
             .and().areDeclaredInClassesThat().doNotHaveFullyQualifiedName(Main.class.getName())

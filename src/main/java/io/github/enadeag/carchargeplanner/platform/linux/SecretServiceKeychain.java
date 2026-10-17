@@ -28,17 +28,6 @@ public final class SecretServiceKeychain implements Keychain {
     private static final String LABEL_PROPERTY = "org.freedesktop.Secret.Item.Label";
     private static final String ATTRIBUTES_PROPERTY = "org.freedesktop.Secret.Item.Attributes";
 
-    /** Opens a connection of its own; tests use a private bus. */
-    public interface BusConnector {
-
-        /**
-         * Opens a new connection, which the caller closes.
-         *
-         * @return the connection to the session bus
-         * @throws DBusException when there is no bus to connect to
-         */
-        DBusConnection connect() throws DBusException;
-    }
 
     /** One step done over an open connection. */
     private interface Step<T> {
