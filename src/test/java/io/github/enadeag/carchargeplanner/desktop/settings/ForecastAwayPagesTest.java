@@ -80,7 +80,7 @@ class ForecastAwayPagesTest {
 
         Fx.call(() -> {
             settings.choose(view, TextKey.FIELD_FALLBACK, Optional.empty());
-            ((TextInputControl) settings.field(view, "API key")).setText(" secret-key\n");
+            ((TextInputControl) SettingsFixture.field(view, "API key")).setText(" secret-key\n");
             return view.save();
         });
 
@@ -120,7 +120,7 @@ class ForecastAwayPagesTest {
         Fx.run(() -> view.show(Category.FORECAST));
 
         Fx.run(() -> {
-            ((TextInputControl) settings.field(view, "API key")).setText("typed-key");
+            ((TextInputControl) SettingsFixture.field(view, "API key")).setText("typed-key");
             all(view, Button.class).stream()
                     .filter(button -> button.getText().equals(settings.messages.text(TextKey.PROVIDER_TEST)))
                     .findFirst().orElseThrow().fire();

@@ -195,7 +195,7 @@
         </configuration>
         <executions>
           <!-- main code only: any lint or doclint finding fails the build, so each public, protected and package-private
-               element needs full Javadoc (CONTRIBUTING.md); the tests keep the plain lint above. "restricted" is
+               element needs full Javadoc (CONTRIBUTING.md); the tests get the lint without doclint, below. "restricted" is
                off because the Credential Manager is reached on purpose through the foreign function API. -->
           <execution>
             <id>default-compile</id>
@@ -203,6 +203,16 @@
               <compilerArgs>
                 <arg>-Xlint:all,-serial,-restricted</arg>
                 <arg>-Xdoclint:all/package</arg>
+                <arg>-Werror</arg>
+              </compilerArgs>
+            </configuration>
+          </execution>
+          <!-- the tests fail on any lint finding too, without the doclint of the main code -->
+          <execution>
+            <id>default-testCompile</id>
+            <configuration>
+              <compilerArgs>
+                <arg>-Xlint:all,-serial</arg>
                 <arg>-Werror</arg>
               </compilerArgs>
             </configuration>

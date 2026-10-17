@@ -18,12 +18,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import javafx.geometry.Point2D;
-import org.freedesktop.dbus.DBusMatchRule;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
 import org.freedesktop.dbus.connections.impl.DBusConnectionBuilder;
 import org.freedesktop.dbus.exceptions.DBusException;
 import org.freedesktop.dbus.interfaces.DBus;
 import org.freedesktop.dbus.interfaces.Properties;
+import org.freedesktop.dbus.matchrules.DBusMatchRule;
+import org.freedesktop.dbus.matchrules.DBusMatchRuleBuilder;
 import org.freedesktop.dbus.types.UInt32;
 import org.freedesktop.dbus.types.Variant;
 import org.junit.jupiter.api.AfterEach;
@@ -120,6 +121,10 @@ class StatusNotifierTrayTest {
         assertThat((List<?>) properties.get("IconPixmap").getValue()).hasSize(6);
     }
 
+    private static DBusMatchRule signalRule(String iface, String member) throws DBusException {
+        return DBusMatchRuleBuilder.create().withType("signal").withInterface(iface).withMember(member).build();
+    }
+
     private Map<String, Variant<?>> properties(String name) throws DBusException {
         return panel.getRemoteObject(name, TrayItem.OBJECT_PATH, Properties.class).GetAll("org.kde.StatusNotifierItem");
     }
@@ -155,9 +160,9 @@ class StatusNotifierTrayTest {
         var newIcon = new CountDownLatch(1);
         var newToolTip = new CountDownLatch(1);
         // generic handlers: dbus-java would look for the signals' classes in StatusNotifierItem, by the interface's name
-        panel.addGenericSigHandler(new DBusMatchRule("signal", "org.kde.StatusNotifierItem", "NewIcon"),
+        panel.addGenericSigHandler(signalRule("org.kde.StatusNotifierItem", "NewIcon"),
                 signal -> newIcon.countDown());
-        panel.addGenericSigHandler(new DBusMatchRule("signal", "org.kde.StatusNotifierItem", "NewToolTip"),
+        panel.addGenericSigHandler(signalRule("org.kde.StatusNotifierItem", "NewToolTip"),
                 signal -> newToolTip.countDown());
 
         tray.showStatus(new TrayStatus(StatusDot.GRID, "Charge 8.4 kWh from the grid: Sunday 09:00 – 15:10."));
@@ -204,7 +209,7 @@ class StatusNotifierTrayTest {
         var menu = panel.getRemoteObject(name, TrayMenu.OBJECT_PATH, DbusMenu.class);
         var revisionBefore = menu.GetLayout(0, -1, List.of()).first;
         var updated = new LinkedBlockingQueue<Object[]>();
-        panel.addGenericSigHandler(new DBusMatchRule("signal", "com.canonical.dbusmenu", "LayoutUpdated"),
+        panel.addGenericSigHandler(signalRule("com.canonical.dbusmenu", "LayoutUpdated"),
                 signal -> {
                     try {
                         updated.add(signal.getParameters());
