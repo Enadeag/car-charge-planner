@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -30,7 +31,7 @@ public final class PrivateFolder {
     /**
      * Makes the folder's checker; nothing is made or checked yet.
      *
-     * @param path the folder; its parent must exist
+     * @param path the folder; the folders above it that are missing are made too, with mode 0700 where files have one
      * @param user the user this app runs as, who must own the folder, where files have an owner and a mode; empty on
      *     Windows, where a folder made by an administrator's process is owned by the administrators instead
      */
@@ -43,31 +44,39 @@ public final class PrivateFolder {
      * Makes the folder when it is missing, then checks it, also when it was there already.
      *
      * @return the folder
-     * @throws IOException when it cannot be made, or another user or the whole world could use it
+     * @throws NotPrivateException when it is a link or another kind of file, or another user or the whole world could
+     *     use it
+     * @throws IOException when it cannot be made
      */
     public Path make() throws IOException {
+        var parent = path.toAbsolutePath().getParent();
+        if (parent != null && !Files.isDirectory(parent)) {
+            Files.createDirectories(parent, attributes());
+        }
         try {
-            if (user.isPresent()) {
-                Files.createDirectory(path, PosixFilePermissions.asFileAttribute(OWNER_ONLY));
-            } else {
-                Files.createDirectory(path);
-            }
+            Files.createDirectory(path, attributes());
         } catch (FileAlreadyExistsException e) {
             // checked below like a new one
         }
         var attributes = Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
         if (!attributes.isDirectory() || attributes.isSymbolicLink() || attributes.isOther()) {
-            throw new IOException(path + " is not a folder but a link or another kind of file");
+            throw new NotPrivateException(path + " is not a folder but a link or another kind of file");
         }
         if (user.isPresent()) {
             var posix = Files.readAttributes(path, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
             if (!posix.owner().equals(user.get())) {
-                throw new IOException(path + " belongs to another user");
+                throw new NotPrivateException(path + " belongs to another user");
             }
             if (!posix.permissions().equals(OWNER_ONLY)) {
-                throw new IOException(path + " is open to other users: its mode is not 0700");
+                throw new NotPrivateException(path + " is open to other users: its mode is not 0700");
             }
         }
         return path;
+    }
+
+    private FileAttribute<?>[] attributes() {
+        return user.isPresent()
+                ? new FileAttribute<?>[] {PosixFilePermissions.asFileAttribute(OWNER_ONLY)}
+                : new FileAttribute<?>[0];
     }
 }

@@ -16,7 +16,6 @@ import java.util.Optional;
  * @param environment the environment variables
  * @param home the user's home folder
  * @param temporary the system's folder for temporary files
- * @param userName the user's login name
  * @param user the user the app runs as, where files have an owner and a mode (Linux); empty on other systems, and
  *     when it could not be told
  * @param launcher the program jpackage's launcher started, which start at login and the menu entry start; empty
@@ -24,8 +23,8 @@ import java.util.Optional;
  * @param terminal whether the app runs in a terminal, which shows what it logs; false when it was started from the
  *     desktop, or by Windows' launcher, which has no console
  */
-record Host(Os os, Map<String, String> environment, Path home, Path temporary, String userName,
-        Optional<UserPrincipal> user, Optional<Path> launcher, boolean terminal) {
+record Host(Os os, Map<String, String> environment, Path home, Path temporary, Optional<UserPrincipal> user,
+        Optional<Path> launcher, boolean terminal) {
 
     private static final System.Logger LOG = System.getLogger(Host.class.getName());
 
@@ -35,7 +34,7 @@ record Host(Os os, Map<String, String> environment, Path home, Path temporary, S
      * @throws IllegalArgumentException when a value is null
      */
     Host {
-        if (os == null || environment == null || home == null || temporary == null || userName == null || user == null
+        if (os == null || environment == null || home == null || temporary == null || user == null
                 || launcher == null) {
             throw new IllegalArgumentException("every part of the host must be given");
         }
@@ -52,7 +51,7 @@ record Host(Os os, Map<String, String> environment, Path home, Path temporary, S
         var launcher = System.getProperty("jpackage.app-path");
         var console = System.console();
         return new Host(os, System.getenv(), Path.of(System.getProperty("user.home")),
-                Path.of(System.getProperty("java.io.tmpdir")), System.getProperty("user.name"), user(os),
+                Path.of(System.getProperty("java.io.tmpdir")), user(os),
                 Optional.ofNullable(launcher).map(Path::of).map(Path::toAbsolutePath),
                 console != null && console.isTerminal());
     }

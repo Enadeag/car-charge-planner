@@ -86,8 +86,12 @@ final class Commands {
             if (reply == Reply.SILENT) {
                 return failure(messages.text(TextKey.CLI_QUIT_SILENT, AppName.TITLE));
             }
+            if (reply == Reply.UNREACHABLE) {
+                return new CommandOutcome(ExitCode.UNREACHABLE,
+                        messages.text(TextKey.CLI_QUIT_UNREACHABLE, AppName.TITLE));
+            }
         } catch (IOException e) {
-            // no private folder for the socket, so no running copy can have made one there
+            // no private folder for the lock, so no running copy can have taken it there
         }
         return success(messages.text(TextKey.CLI_NOT_RUNNING, AppName.TITLE));
     }
