@@ -60,6 +60,7 @@ public final class Engine implements AutoCloseable {
     private final Clock clock;
     private final Announcer announcer;
     private final PlanSchedule schedule;
+    private final ConfigHealth configHealth = new ConfigHealth();
 
     /**
      * Makes the engine; nothing is read or fetched yet.
@@ -128,8 +129,10 @@ public final class Engine implements AutoCloseable {
         try {
             config = configFile.read();
         } catch (ConfigProblem e) {
+            configHealth.unusable(e);
             return new Outlook.NotSetUp(e.kind(), e.file(), e.detail());
         }
+        configHealth.usable();
         var now = clock.instant();
         ForecastResult forecast;
         try {

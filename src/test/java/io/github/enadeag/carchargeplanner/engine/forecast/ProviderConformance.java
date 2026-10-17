@@ -7,20 +7,21 @@ import static org.assertj.core.api.Assertions.within;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import io.github.enadeag.carchargeplanner.LogCapture;
 import io.github.enadeag.carchargeplanner.engine.forecast.ReplayHttp.Route;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.http.HttpTimeoutException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Handler;
-import java.util.logging.Level;
-import java.util.logging.LogRecord;
-import java.util.logging.Logger;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -29,6 +30,10 @@ import org.junit.jupiter.params.provider.MethodSource;
  * extends it and describes the provider in {@link #providerCase()}; nothing here touches the network.
  */
 public abstract class ProviderConformance {
+
+    /** Where the forecast cache of {@link #addressesCoordinatesAndSecretsNeverReachLogsOrReasons()} goes. */
+    @TempDir
+    Path cacheFolder;
 
     protected abstract ProviderCase providerCase();
 
@@ -163,41 +168,42 @@ public abstract class ProviderConformance {
     }
 
     @Test
-    void secretsNeverReachLogsOrErrors() {
+    void addressesCoordinatesAndSecretsNeverReachLogsOrReasons() {
         var c = providerCase();
-        assumeFalse(c.secrets().isEmpty(), "this provider has no secret settings");
         var shown = new ArrayList<String>();
-        var capture = new Handler() {
-            @Override
-            public void publish(LogRecord record) {
-                shown.add(record.getMessage());
-            }
-
-            @Override
-            public void flush() {
-            }
-
-            @Override
-            public void close() {
-            }
-        };
-        var root = Logger.getLogger("");
-        var previous = root.getLevel();
-        root.addHandler(capture);
-        root.setLevel(Level.ALL);
-        try {
+        var addresses = new ArrayList<String>();
+        try (var log = LogCapture.of("io.github.enadeag.carchargeplanner")) {
             for (var routes : scenarios(c)) {
-                try {
-                    c.provider(routes).provider().fetch(ProviderCase.EXAMPLE_SYSTEM, c.allSettings(), c.now());
-                } catch (ProviderError e) {
-                    shown.add(e.getMessage());
+                var made = c.provider(routes);
+                var cache = new ForecastCache(cacheFolder);
+                // as the forecast service asks, so the lines it logs about a provider failing are made too
+                var outcome = new ProviderAttempt(made.provider(), cache, new HashMap<>(), new ProviderHealth(), c.now(),
+                        true).run(ProviderCase.EXAMPLE_SYSTEM, c.allSettings(),
+                        cache.key(ProviderCase.EXAMPLE_SYSTEM, Map.of()));
+                if (outcome instanceof Outcome.Failure failure) {
+                    shown.add(failure.reason());
                 }
+                made.http().requests.forEach(request -> {
+                    addresses.add(request.uri().toString());
+                    addresses.add(request.uri().getRawQuery());
+                });
             }
-        } finally {
-            root.removeHandler(capture);
-            root.setLevel(previous);
+            log.records().forEach(record -> {
+                shown.add(record.getMessage());
+                if (record.getThrown() != null) {
+                    shown.add(String.valueOf(record.getThrown()));
+                }
+            });
         }
-        c.secrets().values().forEach(secret -> assertThat(shown).noneMatch(text -> text != null && text.contains(secret)));
+        assertThat(shown).as("what was logged and told").isNotEmpty();
+        assertThat(addresses).as("the requests sent").isNotEmpty();
+        var coordinate = Pattern.compile("(?<![\\d.])(52\\.37|4\\.90?)(?![\\d])");
+        for (var text : shown) {
+            assertThat(addresses).as("an address in: %s", text).noneMatch(address -> address != null
+                    && text.contains(address));
+            assertThat(coordinate.matcher(text).find()).as("a coordinate in: %s", text).isFalse();
+            c.secrets().values().forEach(secret -> assertThat(text).doesNotContain(secret));
+        }
     }
 
     private static List<List<Route>> scenarios(ProviderCase c) {

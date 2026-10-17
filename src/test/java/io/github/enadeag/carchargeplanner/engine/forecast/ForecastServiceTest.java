@@ -6,6 +6,7 @@ import static io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider.st
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.github.enadeag.carchargeplanner.LogCapture;
 import io.github.enadeag.carchargeplanner.engine.config.Coordinates;
 import io.github.enadeag.carchargeplanner.engine.config.ForecastSelection;
 import io.github.enadeag.carchargeplanner.engine.config.PanelArray;
@@ -264,6 +265,23 @@ class ForecastServiceTest {
     void aProviderThatBreaksTheContractIsTreatedAsABadAnswer() throws ForecastUnavailable {
         main.script(steps(List.of(new ForecastStep(T0, T0.plus(Duration.ofHours(1)), -1.0))));
         assertThat(get(T0).source().providerRole()).isEqualTo(ProviderRole.FALLBACK); // the primary's answer was refused, not used
+    }
+
+    @Test
+    void aProviderThatStartsFailingAndOneThatAnswersAgainAreEachLoggedOnce() throws ForecastUnavailable {
+        withoutFallback();
+        main.script(steps(SunnyDays.day(DAY, 3.0)), error(new Unavailable("down")), error(new Unavailable("down")),
+                steps(SunnyDays.day(DAY, 3.5)));
+        try (var log = LogCapture.of(ProviderHealth.class)) {
+            get(T0);
+            get(later(120));
+            get(later(240));
+            get(later(360));
+
+            assertThat(main.callCount()).isEqualTo(4);
+            assertThat(log.lines()).containsExactly("INFO Main gives forecasts", "WARNING Main gives no forecast: down",
+                    "INFO Main gives forecasts again");
+        }
     }
 
     @Test

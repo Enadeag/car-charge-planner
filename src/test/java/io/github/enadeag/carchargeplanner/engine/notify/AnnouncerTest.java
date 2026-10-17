@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.engine.notify;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
+import io.github.enadeag.carchargeplanner.LogCapture;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
@@ -200,4 +201,14 @@ class AnnouncerTest {
         assertThat(announcer().announced()).isEmpty();
         assertThat(check(dayWith(window(10, 15)), at(DAY, 9, 50))).hasSize(1);
     }
+
+    @Test
+    void eachAnnouncementIsLoggedWithItsKindAndStart() {
+        try (var log = LogCapture.of(Announcer.class)) {
+            check(dayWith(window(10, 15)), at(DAY, 9, 50));
+
+            assertThat(log.lines()).containsExactly("INFO announced a CHARGE_WINDOW starting at 2026-07-03T10:00+02:00");
+        }
+    }
+
 }

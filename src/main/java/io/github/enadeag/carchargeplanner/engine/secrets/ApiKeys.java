@@ -1,16 +1,21 @@
 package io.github.enadeag.carchargeplanner.engine.secrets;
 
+import java.lang.System.Logger.Level;
 import java.util.Optional;
 
 /**
  * Where the API keys are kept: in the system keychain, or in a private file when there is no usable keychain. A file
  * found while a keychain is usable is moved into it, and removed only after every value was written and read back.
- * Values never appear in a log line or an error message.
+ * Values never appear in a log line or an error message; where the keys are kept is logged each time it changes.
  */
 public final class ApiKeys implements SecretsSource {
 
+    private static final System.Logger LOG = System.getLogger(ApiKeys.class.getName());
+
     private final KeychainEntries keychain;
     private final SecretsFile file;
+    /** Where the keys were kept when that was logged last; empty until it is first known. */
+    private Optional<KeyStorage> logged = Optional.empty();
 
     /**
      * Makes the store; nothing is read or written yet.
@@ -26,16 +31,20 @@ public final class ApiKeys implements SecretsSource {
     @Override
     public Secrets load() throws SecretsProblem {
         if (!keychain.usable()) {
+            keptIn(KeyStorage.FILE, "the system keychain cannot be used");
             return file.exists() ? file.read() : Secrets.NONE;
         }
         if (file.exists()) {
             var kept = moveToKeychain();
             if (kept.isPresent()) {
+                keptIn(KeyStorage.FILE, "they could not be moved into the system keychain");
                 return kept.get();
             }
         }
         try {
-            return keychain.read();
+            var secrets = keychain.read();
+            keptIn(KeyStorage.KEYCHAIN, "");
+            return secrets;
         } catch (KeychainException e) {
             throw new SecretsProblem("The system keychain could not be read. Unlock it, or enter the keys again.");
         }
@@ -53,12 +62,14 @@ public final class ApiKeys implements SecretsSource {
             try {
                 keychain.write(secrets);
                 file.delete();
+                keptIn(KeyStorage.KEYCHAIN, "");
                 return;
             } catch (KeychainException e) {
                 // such as Windows error 1312 over ssh: no keychain after all, so the file it is
             }
         }
         file.write(secrets);
+        keptIn(KeyStorage.FILE, "the system keychain cannot be used");
     }
 
     /**
@@ -79,6 +90,20 @@ public final class ApiKeys implements SecretsSource {
         return file;
     }
 
+    /** Logs where the keys are kept when that changed: the file is a warning, the keychain is as it should be. */
+    private synchronized void keptIn(KeyStorage storage, String why) {
+        if (logged.equals(Optional.of(storage))) {
+            return;
+        }
+        switch (storage) {
+            case FILE -> LOG.log(Level.WARNING, "API keys are kept in " + file.path() + ", readable only by you: "
+                    + why);
+            case KEYCHAIN -> LOG.log(Level.INFO, "API keys are kept in the system keychain"
+                    + (logged.isPresent() ? " again" : ""));
+        }
+        logged = Optional.of(storage);
+    }
+
     /** The file's secrets when the move failed and the file stays. */
     private Optional<Secrets> moveToKeychain() throws SecretsProblem {
         var secrets = file.read();
@@ -92,6 +117,7 @@ public final class ApiKeys implements SecretsSource {
             return Optional.of(secrets);
         }
         file.delete();
+        LOG.log(Level.INFO, "moved the API keys from " + file.path() + " into the system keychain");
         return Optional.empty();
     }
 }

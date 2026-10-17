@@ -28,6 +28,7 @@ final class ProviderAttempt {
     private final ProviderInfo info;
     private final ForecastCache cache;
     private final Map<ProviderId, Instant> retryAt;
+    private final ProviderHealth health;
     private final Instant now;
     private final boolean force;
 
@@ -37,16 +38,18 @@ final class ProviderAttempt {
      * @param provider the provider to ask
      * @param cache where its last good forecast and rate limit are kept; written after an answer
      * @param retryAt per provider, when it may be asked again after a failure; updated here
+     * @param health whether each provider gave a forecast when it was last asked; updated here
      * @param force the owner asked for a refresh: skip the minimum refresh interval and the wait after a failure,
      *     never a rate limit
      * @param now the current moment, by which ages, waits and rate limits are measured
      */
-    ProviderAttempt(ForecastProvider provider, ForecastCache cache, Map<ProviderId, Instant> retryAt, Instant now,
-            boolean force) {
+    ProviderAttempt(ForecastProvider provider, ForecastCache cache, Map<ProviderId, Instant> retryAt,
+            ProviderHealth health, Instant now, boolean force) {
         this.provider = provider;
         this.info = provider.info();
         this.cache = cache;
         this.retryAt = retryAt;
+        this.health = health;
         this.now = now;
         this.force = force;
     }
@@ -62,7 +65,7 @@ final class ProviderAttempt {
     Outcome run(SystemDescription system, Map<String, String> settings, JsonNode key) {
         var missing = info.missingRequired(settings);
         if (!missing.isEmpty()) { // nothing is sent without what the provider requires
-            return failure(String.join(", ", missing) + " is required");
+            return afterFailure(String.join(", ", missing) + " is required", Optional.empty(), Optional.empty());
         }
         var cached = cache.forecast(info.id(), key, now);
         var cooldown = cache.cooldownUntil(info.id()).filter(now::isBefore);
@@ -87,6 +90,7 @@ final class ProviderAttempt {
         try {
             var steps = Steps.requireValid(provider.fetch(system, settings, now));
             retryAt.remove(info.id());
+            health.answered(info);
             cache.saveForecast(info.id(), key, now, steps);
             return new Outcome.Usable(steps, now, Freshness.FRESH, Optional.empty());
         } catch (ProviderError.RateLimited e) {
@@ -108,7 +112,9 @@ final class ProviderAttempt {
         }
     }
 
+    /** The provider gave no forecast: its last one while that is still useful, else the reason. */
     private Outcome afterFailure(String reason, Optional<ForecastCache.Cached> usable, Optional<Instant> cooldown) {
+        health.failed(info, reason);
         return usable.map(forecast -> fromCache(forecast, Freshness.STALE, cooldown)).orElseGet(() -> failure(reason));
     }
 
