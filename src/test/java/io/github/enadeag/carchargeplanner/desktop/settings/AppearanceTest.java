@@ -6,6 +6,7 @@ import io.github.enadeag.carchargeplanner.desktop.AppIcon;
 import io.github.enadeag.carchargeplanner.desktop.Appearance;
 import io.github.enadeag.carchargeplanner.desktop.Dashboard;
 import io.github.enadeag.carchargeplanner.desktop.Fx;
+import io.github.enadeag.carchargeplanner.desktop.FxTest;
 import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
 import io.github.enadeag.carchargeplanner.desktop.TaskbarHiding;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /** The appearance the owner chooses reaches every open window at once, as the app wires it. */
+@FxTest
 class AppearanceTest {
 
     @TempDir

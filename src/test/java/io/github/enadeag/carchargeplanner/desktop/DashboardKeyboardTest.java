@@ -14,6 +14,7 @@ import org.junit.jupiter.params.provider.EnumSource;
  * The dashboard with only a keyboard, and with a screen reader on Windows: Tab reaches every control in reading
  * order, each with a name of its own and a focus ring that stands out 3:1, in light and in dark.
  */
+@FxTest
 class DashboardKeyboardTest {
 
     private static final Messages ENGLISH = new Messages(Language.ENGLISH);

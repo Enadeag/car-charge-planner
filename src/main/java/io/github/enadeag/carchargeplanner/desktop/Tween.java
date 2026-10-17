@@ -54,6 +54,17 @@ final class Tween {
     }
 
     /**
+     * Ends a change going on at once, at its new values, as if its time had passed; nothing changes when none is going
+     * on. The app lets each change take its time; a test ends it rather than wait.
+     */
+    void finish() {
+        if (isRunning()) {
+            transition.stop();
+            frame.accept(1);
+        }
+    }
+
+    /**
      * Whether a change is going on.
      *
      * @return true while the values are on their way

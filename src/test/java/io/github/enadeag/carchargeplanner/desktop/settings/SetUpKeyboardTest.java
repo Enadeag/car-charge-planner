@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.enadeag.carchargeplanner.desktop.AccessibleNames;
 import io.github.enadeag.carchargeplanner.desktop.Fx;
+import io.github.enadeag.carchargeplanner.desktop.FxTest;
 import io.github.enadeag.carchargeplanner.desktop.Keyboard;
 import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
@@ -23,6 +24,7 @@ import org.junit.jupiter.params.provider.EnumSource;
  * reading order, each with a name of its own and a focus ring that stands out 3:1; Enter goes on, Escape asks before
  * leaving or keeps going, and a refused value gets the focus with its problem.
  */
+@FxTest
 class SetUpKeyboardTest {
 
     @TempDir

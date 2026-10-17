@@ -40,7 +40,6 @@ import org.junit.jupiter.api.io.TempDir;
 class FreedesktopNotificationsTest {
 
     private static final long TIMEOUT_S = 5;
-    private static final long SETTLE_MS = 300;
 
     @TempDir
     Path folder;
@@ -83,7 +82,7 @@ class FreedesktopNotificationsTest {
         desktop = DBusConnectionBuilder.forAddress(address).withShared(false).build();
         notifications = new FreedesktopNotifications(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),
                 "Car charge planner", "car-charge-planner", new AppIcon(), Files.createDirectory(folder.resolve("notify")),
-                openLabel::get);
+                openLabel::get, Runnable::run);
     }
 
     @AfterEach
@@ -111,13 +110,13 @@ class FreedesktopNotificationsTest {
 
     /**
      * How often the dashboard opened besides for a final click on a new notification. The signals are handled in the
-     * order they were sent, but each click's action runs on a thread of its own, so the count waits a moment longer.
+     * order they were sent and each click's action runs as it is handled, so once the final click has opened it, every
+     * click before has been handled.
      */
     private int opensAfterAFinalClickOnALaterNotification() throws Exception {
         var last = show();
         click(last, "default");
         assertThat(opened.tryAcquire(TIMEOUT_S, TimeUnit.SECONDS)).as("the final click").isTrue();
-        Thread.sleep(SETTLE_MS);
         return opened.drainPermits();
     }
 

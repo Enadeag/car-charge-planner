@@ -144,9 +144,7 @@ final class SetUpFixture {
             var start = SetUpStart.read(new SettingsStorage(stores()));
             view.start(start, start.draft(EngineConfig.firstRun(ZoneId.of("Europe/Amsterdam"),
                     engine.providers().getFirst().id())), SetUpStep.WELCOME);
-            stage = Scenes.show(view, scheme);
-            stage.setWidth(50 * 13);
-            stage.setHeight(46 * 13);
+            stage = Scenes.show(view, scheme, 50 * 13, 46 * 13);
             return view;
         });
     }

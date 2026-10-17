@@ -115,9 +115,7 @@ final class SettingsFixture {
             var view = SettingsView.of(stores(installed), facts(), opened::add, () -> closed++, () -> saved++, runSetUp,
                     messages);
             view.reload();
-            stage = Scenes.show(view, scheme);
-            stage.setWidth(56 * 13);
-            stage.setHeight(40 * 13);
+            stage = Scenes.show(view, scheme, 56 * 13, 40 * 13);
             return view;
         });
     }

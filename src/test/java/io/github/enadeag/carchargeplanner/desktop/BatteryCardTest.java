@@ -20,6 +20,7 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+@FxTest
 class BatteryCardTest {
 
     private static final BatteryModel TODAY = Models.SUNNY_TODAY.battery();
@@ -194,15 +195,16 @@ class BatteryCardTest {
         var sliding = Fx.call(() -> {
             var bar = new BatteryBar(motion);
             bar.show(TODAY);
+            bar.tween().finish();
             return bar;
         });
-        Thread.sleep((long) Tween.LENGTH.toMillis() * 2);
-        var halfway = Fx.call(() -> {
+        var starting = Fx.call(() -> {
             sliding.show(TOMORROW);
             return sliding.shownLevels();
         });
-        assertThat(halfway).containsExactly(50, 74);
-        Thread.sleep((long) Tween.LENGTH.toMillis() * 2);
+        assertThat(starting).containsExactly(50, 74);
+        assertThat(Fx.call(() -> sliding.tween().isRunning())).isTrue();
+        Fx.run(() -> sliding.tween().finish());
         assertThat(Fx.call(sliding::shownLevels)).containsExactly(62, 62);
     }
 }

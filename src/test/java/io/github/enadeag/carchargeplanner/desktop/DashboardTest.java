@@ -40,6 +40,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /** The dashboard as the tray and the composition root use it, on JavaFX's headless platform (a 1000 px screen). */
+@FxTest
 class DashboardTest {
 
     private static final Point2D ICON_AT_BOTTOM_RIGHT = new Point2D(960, 990);

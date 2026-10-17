@@ -19,6 +19,7 @@ import org.junit.jupiter.params.provider.EnumSource;
  * 3:1. The charts' readout and the away entry with its problem are open, so their texts are checked too. Controls that are switched off are exempt, as WCAG
  * allows.
  */
+@FxTest
 class DashboardContrastTest {
 
     private Stage stage;

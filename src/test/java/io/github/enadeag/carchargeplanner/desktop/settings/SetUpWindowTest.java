@@ -6,6 +6,7 @@ import io.github.enadeag.carchargeplanner.desktop.AppSettings;
 import io.github.enadeag.carchargeplanner.desktop.Appearance;
 import io.github.enadeag.carchargeplanner.desktop.DisplayMode;
 import io.github.enadeag.carchargeplanner.desktop.Fx;
+import io.github.enadeag.carchargeplanner.desktop.FxTest;
 import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
@@ -30,6 +31,7 @@ import org.junit.jupiter.api.io.TempDir;
  * Set-up in its window: it speaks the language and shows the appearance chosen on its App step at once, takes over
  * what Settings saves meanwhile, keeps everything entered when it is made again, and opens from Settings filled in.
  */
+@FxTest
 class SetUpWindowTest {
 
     private static final Messages DUTCH = new Messages(Language.DUTCH);

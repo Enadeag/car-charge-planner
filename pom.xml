@@ -13,6 +13,8 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>25</maven.compiler.release>
     <main.class>io.github.enadeag.carchargeplanner.Main</main.class>
+    <!-- surefire's test class order; see the surefire plugin below -->
+    <surefire.runOrder>alphabetical</surefire.runOrder>
     <app.args></app.args>
 
     <javafx.version>27</javafx.version>
@@ -214,6 +216,8 @@
         <configuration>
           <!-- the Credential Manager is reached through Java's foreign function API -->
           <argLine>--enable-native-access=ALL-UNNAMED</argLine>
+          <!-- the same order on every system and every run; -Dsurefire.runOrder=random shows what depends on it -->
+          <runOrder>${surefire.runOrder}</runOrder>
           <systemPropertyVariables>
             <!-- no test may put an AWT window or tray icon on the developer's desktop -->
             <java.awt.headless>true</java.awt.headless>

@@ -73,6 +73,15 @@ final class BatteryBar extends Region {
     }
 
     /**
+     * The change that moves the levels from the old ones to the new ones.
+     *
+     * @return the tween, also while it is not running
+     */
+    Tween tween() {
+        return tween;
+    }
+
+    /**
      * Where a level is on a bar.
      *
      * @param pct the level in percent; outside 0 to 100 is put on the nearest end

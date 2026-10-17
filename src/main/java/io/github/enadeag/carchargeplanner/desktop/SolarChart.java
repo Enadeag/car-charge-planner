@@ -147,6 +147,15 @@ final class SolarChart extends Region {
     }
 
     /**
+     * The change that moves the curve from its old shape to its new one.
+     *
+     * @return the tween, also while it is not running
+     */
+    Tween tween() {
+        return tween;
+    }
+
+    /**
      * Where the plot lies after the last layout.
      *
      * @return the plot's place and its hours and power; empty before the first layout of a day

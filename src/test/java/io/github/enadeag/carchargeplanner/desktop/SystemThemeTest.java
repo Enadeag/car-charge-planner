@@ -10,6 +10,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import org.junit.jupiter.api.Test;
 
+@FxTest
 class SystemThemeTest {
 
     @Test

@@ -14,6 +14,7 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 import javax.imageio.ImageIO;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
@@ -60,6 +61,7 @@ public final class FreedesktopNotifications implements Notifications {
     private final AppIcon icon;
     private final Path iconFolder;
     private final Supplier<String> openLabel;
+    private final Executor clickRunner;
     private final Deque<Long> sent = new ArrayDeque<>();
     private Runnable clicked = () -> { };
     private DBusConnection bus;
@@ -81,12 +83,32 @@ public final class FreedesktopNotifications implements Notifications {
      */
     public FreedesktopNotifications(BusConnector connector, String appName, String desktopEntry, AppIcon icon,
             Path iconFolder, Supplier<String> openLabel) {
+        // on a thread of its own: D-Bus hands a click over on the connection's thread, which must not be held up
+        this(connector, appName, desktopEntry, icon, iconFolder, openLabel,
+                action -> Thread.ofVirtual().name("notification-click").start(action));
+    }
+
+    /**
+     * Makes the notifications with a runner of their own for the action of a click.
+     *
+     * @param connector opens the session bus connection the notifications are sent and heard on
+     * @param appName the app's name, which the desktop shows above each notification
+     * @param desktopEntry the name of the app's launcher entry without ".desktop"
+     * @param icon the app icon, shown on each notification
+     * @param iconFolder an existing folder of the notifications' own, where the icon is written for the server
+     * @param openLabel what the button that opens the dashboard says, asked anew for each notification
+     * @param clickRunner runs the action of each click that is passed on, given on the connection's thread in the
+     *     order the clicks came, such as a new thread for each
+     */
+    FreedesktopNotifications(BusConnector connector, String appName, String desktopEntry, AppIcon icon,
+            Path iconFolder, Supplier<String> openLabel, Executor clickRunner) {
         this.connector = connector;
         this.appName = appName;
         this.desktopEntry = desktopEntry;
         this.icon = icon;
         this.iconFolder = iconFolder;
         this.openLabel = openLabel;
+        this.clickRunner = clickRunner;
     }
 
     @Override
@@ -156,8 +178,7 @@ public final class FreedesktopNotifications implements Notifications {
             }
             action = clicked;
         }
-        // on a thread of its own: D-Bus calls this on the connection's thread, which the action must not hold up
-        Thread.ofVirtual().name("notification-click").start(action);
+        clickRunner.execute(action);
     }
 
     /** The app icon as a file the server can read, written once; a stock icon when it cannot be written. */
