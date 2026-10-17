@@ -122,6 +122,9 @@ final class DesktopApp {
         }
         closing.add("the single-instance guard", instance::close);
         Runtime.getRuntime().addShutdownHook(Thread.ofPlatform().name("closing").unstarted(closing::close));
+        var dataFolder = DataLocation.defaultFolder(host.os(), host.environment(), host.home());
+        // only now: a second copy that hands over to this one does not write to its log file
+        startLog(dataFolder);
         DBUS_LOG.setLevel(java.util.logging.Level.WARNING); // dbus-java reports every connection at INFO
         var http = HttpClient.newHttpClient();
         closing.add("the HTTP client", http::close);
@@ -143,10 +146,8 @@ final class DesktopApp {
         var trayTexts = new TrayTexts(tray, language);
 
         var secretsFile = new SecretsFile(configPath.resolveSibling("secrets.json"));
-        var dataFolder = DataLocation.defaultFolder(host.os(), host.environment(), host.home());
         // folders made before the app made its folders private; a folder named with --config= stays as it is
         PrivateFiles.tighten(appSettingsFile.path().toAbsolutePath().getParent());
-        PrivateFiles.tighten(dataFolder);
         var texts = new AnnouncementTexts(language);
         var engine = engine(http, secretsFile, dataFolder,
                 announcement -> notifications.show(texts.notification(announcement)));
@@ -173,7 +174,8 @@ final class DesktopApp {
         var setUp = onFx(() -> new SetUpWindow(stores, secretsFile.path(), this::openLink, setUpFinished,
                 ZoneId.systemDefault(), new SetUpWindow.Looks(looks.system(), appearance, looks.reducedMotion()), icon,
                 language));
-        var facts = new AboutFacts(version(), configPath, appSettingsFile.path(), dataFolder, secretsFile.path());
+        var facts = new AboutFacts(version(), configPath, appSettingsFile.path(), dataFolder,
+                AppLog.file(dataFolder), secretsFile.path());
         var settings = onFx(() -> new SettingsWindow(stores, facts, this::openLink, saved, Optional.of(setUp::open),
                 looks.windows(), icon, language));
         var setUpOffer = new SetUpOffer(setUp::open, settings::open, !commandLine.background());
@@ -204,6 +206,19 @@ final class DesktopApp {
             setUpOffer.show(outlook);
         });
         LOG.log(Level.INFO, "planning with " + configPath);
+    }
+
+    /**
+     * Sends the log to the file in the data folder from now on, and to the terminal when there is one; the log is
+     * closed last. A data folder made before the app made its folders private is made private now.
+     */
+    private void startLog(Path dataFolder) {
+        var log = new AppLog(java.util.logging.Logger.getLogger(""),
+                java.util.logging.Logger.getLogger(Main.class.getPackageName()));
+        log.start(dataFolder, host.environment(), host.terminal(), ZoneId.systemDefault());
+        closing.add("the log file", log::close);
+        LOG.log(Level.INFO, AppName.TITLE + " " + version() + " starts");
+        PrivateFiles.tighten(dataFolder);
     }
 
     /** Closes every part, in order, then ends the app. */

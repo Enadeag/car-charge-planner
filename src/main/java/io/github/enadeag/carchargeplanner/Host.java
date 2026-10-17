@@ -21,9 +21,11 @@ import java.util.Optional;
  *     when it could not be told
  * @param launcher the program jpackage's launcher started, which start at login and the menu entry start; empty
  *     when the app does not run from it, such as from Maven
+ * @param terminal whether the app runs in a terminal, which shows what it logs; false when it was started from the
+ *     desktop, or by Windows' launcher, which has no console
  */
 record Host(Os os, Map<String, String> environment, Path home, Path temporary, String userName,
-        Optional<UserPrincipal> user, Optional<Path> launcher) {
+        Optional<UserPrincipal> user, Optional<Path> launcher, boolean terminal) {
 
     private static final System.Logger LOG = System.getLogger(Host.class.getName());
 
@@ -48,9 +50,11 @@ record Host(Os os, Map<String, String> environment, Path home, Path temporary, S
     static Host current() {
         var os = Os.current();
         var launcher = System.getProperty("jpackage.app-path");
+        var console = System.console();
         return new Host(os, System.getenv(), Path.of(System.getProperty("user.home")),
                 Path.of(System.getProperty("java.io.tmpdir")), System.getProperty("user.name"), user(os),
-                Optional.ofNullable(launcher).map(Path::of).map(Path::toAbsolutePath));
+                Optional.ofNullable(launcher).map(Path::of).map(Path::toAbsolutePath),
+                console != null && console.isTerminal());
     }
 
     /**

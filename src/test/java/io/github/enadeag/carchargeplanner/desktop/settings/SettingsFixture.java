@@ -128,7 +128,7 @@ final class SettingsFixture {
 
     private AboutFacts facts() {
         return new AboutFacts("1.2.3", configPath, appSettings.path(), folder.resolve("data"),
-                folder.resolve("secrets.json"));
+                folder.resolve("data").resolve("app.0.log"), folder.resolve("secrets.json"));
     }
 
     /**

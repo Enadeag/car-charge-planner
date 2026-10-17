@@ -26,6 +26,24 @@ and, on Linux, `install-launcher` and `uninstall-launcher` (the menu entry and i
 `-Dapp.args="quit"`. Start at login and the menu entry need the packaged app, whose launcher is what they start. Try
 `install-launcher` with `XDG_DATA_HOME` pointing at a scratch folder, not your real one.
 
+## Logging
+
+The app writes its log to `car-charge-planner.0.log` in its data folder (`~/.local/share/car-charge-planner` on Linux,
+`%LOCALAPPDATA%\car-charge-planner` on Windows; Settings, About shows the file), one line per record with the time,
+level, logger and message, and an exception's stack trace on the lines after it. At 1 MB the file becomes `.1.log`
+and the one before `.2.log`; older ones are dropped. The files and their folder are readable only by you. When the
+app runs in a terminal it shows the log there too; otherwise follow the file, for example with
+`tail -F ~/.local/share/car-charge-planner/car-charge-planner.0.log`.
+
+It logs from INFO. For more of the app's own records, set `CAR_CHARGE_PLANNER_LOG_LEVEL` to `DEBUG` or `TRACE` (one of
+`System.Logger.Level`'s names) before you start it, such as
+`CAR_CHARGE_PLANNER_LOG_LEVEL=DEBUG ./mvnw compile exec:exec`; the libraries stay at INFO. Logging is set up once,
+in `DesktopApp` (`AppLog`); what a thread throws and nothing catches is logged as an error (`UncaughtLogging`).
+
+In the code, log through `System.Logger`. Log a change of state, such as a provider that starts failing, not what
+happens every minute. Never log an API key, a request's address (it can hold a key) or the home's coordinates; a
+path is fine, although it shows the user name.
+
 ## Tests
 
 `./mvnw verify` compiles, runs every test and checks the Javadoc; it must pass on Linux and on Windows. The tests never

@@ -112,6 +112,17 @@ class DesktopAppSmokeTest {
         return Files.readString(folder.resolve(name + "." + stream), StandardCharsets.UTF_8);
     }
 
+    /** The app's log file, in the data folder of its own XDG folders. */
+    private Path logFile() {
+        return folder.resolve("data-home").resolve(ConfigLocation.APP_FOLDER).resolve("car-charge-planner.0.log");
+    }
+
+    /** What the app said: its log, and what it printed itself. */
+    private String said() throws IOException {
+        var log = Files.exists(logFile()) ? Files.readString(logFile(), StandardCharsets.UTF_8) : "(no log file)";
+        return log + read("app", "err");
+    }
+
     @Test
     void theAppPutsItsIconInTheTrayAndQuitsCleanlyWhenAsked() throws Exception {
         var watcher = new Watcher();
@@ -120,7 +131,7 @@ class DesktopAppSmokeTest {
 
         var app = start("app", "--config=" + folder.resolve("config/engine.json"));
         var item = watcher.registered.poll(TIMEOUT_S, TimeUnit.SECONDS);
-        assertThat(item).as("the tray item registered; the app said: %s", read("app", "err"))
+        assertThat(item).as("the tray item registered; the app said: %s", said())
                 .startsWith("org.kde.StatusNotifierItem-" + app.pid());
 
         var quit = start("quit", "quit");
@@ -130,8 +141,12 @@ class DesktopAppSmokeTest {
                 .isEqualTo(new Messages(Language.ENGLISH).text(TextKey.CLI_QUIT_CONFIRMED, AppName.TITLE));
 
         assertThat(app.waitFor(TIMEOUT_S, TimeUnit.SECONDS)).as("the app ended").isTrue();
-        assertThat(app.exitValue()).as(read("app", "err")).isZero();
+        assertThat(app.exitValue()).as(said()).isZero();
         assertThat(read("app", "err")).doesNotContain("Exception in thread");
+        assertThat(Files.readString(logFile(), StandardCharsets.UTF_8)).as("the log file")
+                .contains("INFO DesktopApp: planning with " + folder.resolve("config/engine.json"))
+                .doesNotContain("nothing caught what thread");
+        assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(logFile()))).isEqualTo("rw-------");
         assertThat(Files.exists(runtime.resolve(AppName.ID).resolve("instance.sock")))
                 .as("the single-instance socket is removed").isFalse();
     }

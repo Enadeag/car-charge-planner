@@ -296,7 +296,7 @@ class SettingsViewTest {
                 .filter(node -> node instanceof javafx.scene.control.TextField field && !field.isEditable())
                 .map(node -> ((javafx.scene.control.TextField) node).getText()).toList());
         assertThat(paths).containsExactly(settings.configPath.toString(), settings.appSettings.path().toString(),
-                folder.resolve("data").toString(),
+                folder.resolve("data").toString(), folder.resolve("data").resolve("app.0.log").toString(),
                 settings.messages.text(TextKey.ABOUT_KEYS_FILE, folder.resolve("secrets.json").toString()));
     }
 }

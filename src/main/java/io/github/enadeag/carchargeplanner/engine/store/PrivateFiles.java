@@ -1,8 +1,10 @@
 package io.github.enadeag.carchargeplanner.engine.store;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.System.Logger.Level;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -68,6 +70,23 @@ public final class PrivateFiles {
             throw e;
         }
         flushFolder(folder);
+    }
+
+    /**
+     * Opens a file to add to its end, such as a log. A file that is missing is made private as it is made, so there is
+     * no moment when others could read it, and so are its missing folders; a file that exists keeps its mode.
+     *
+     * @param file the file to add to; its folder need not exist
+     * @return the stream that writes at the file's end; the caller closes it
+     * @throws IOException when a folder or the file could not be made or opened
+     */
+    public static OutputStream append(Path file) throws IOException {
+        var target = file.toAbsolutePath();
+        var folder = target.getParent();
+        createFolders(folder);
+        return Channels.newOutputStream(FileChannel.open(target,
+                Set.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND),
+                privateMode(folder, PRIVATE_FILE)));
     }
 
     /**
