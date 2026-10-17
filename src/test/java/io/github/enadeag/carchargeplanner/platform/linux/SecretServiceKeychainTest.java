@@ -59,7 +59,7 @@ class SecretServiceKeychainTest {
     }
 
     @BeforeEach
-    void startAPrivateBus() throws IOException {
+    void startAnIsolatedSessionBus() throws IOException {
         var socket = folder.resolve("bus");
         var config = Files.writeString(folder.resolve("bus.conf"), """
                 <!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"

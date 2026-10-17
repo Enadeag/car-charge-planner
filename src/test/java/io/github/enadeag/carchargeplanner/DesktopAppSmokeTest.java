@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
-import io.github.enadeag.carchargeplanner.platform.linux.PrivateBus;
+import io.github.enadeag.carchargeplanner.platform.linux.IsolatedSessionBus;
 import io.github.enadeag.carchargeplanner.platform.linux.StatusNotifierWatcher;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -39,7 +39,7 @@ class DesktopAppSmokeTest {
     @TempDir
     Path folder;
 
-    private PrivateBus bus;
+    private IsolatedSessionBus bus;
     private DBusConnection panel;
     private Path runtime;
     private final List<Process> started = new ArrayList<>();
@@ -60,8 +60,8 @@ class DesktopAppSmokeTest {
     }
 
     @BeforeEach
-    void startAPrivateBusAndFolders() throws Exception {
-        bus = PrivateBus.start(folder);
+    void startAnIsolatedSessionBusAndFolders() throws Exception {
+        bus = IsolatedSessionBus.start(folder);
         panel = DBusConnectionBuilder.forAddress(bus.address()).withShared(false).build();
         // a socket's path has at most 108 bytes, so the runtime folder gets a short one
         runtime = Files.createTempDirectory(Path.of("/tmp"), "ccp",
