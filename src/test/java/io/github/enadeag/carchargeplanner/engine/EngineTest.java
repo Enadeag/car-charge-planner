@@ -42,7 +42,7 @@ import io.github.enadeag.carchargeplanner.engine.notify.AnnouncementKind;
 import io.github.enadeag.carchargeplanner.engine.notify.Announcer;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
-import io.github.enadeag.carchargeplanner.engine.secrets.MemoryKeychain;
+import io.github.enadeag.carchargeplanner.engine.secrets.LockableKeychain;
 import io.github.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsFile;
@@ -76,7 +76,7 @@ class EngineTest {
     @TempDir
     Path folder;
 
-    private final MemoryKeychain keychain = new MemoryKeychain();
+    private final LockableKeychain keychain = new LockableKeychain();
     private final List<Announcement> told = new ArrayList<>();
     private FakeProvider main;
     private FakeProvider backup;
@@ -455,6 +455,36 @@ class EngineTest {
                 announcer(), new ManualScheduler());
         withoutKeychain.saveApiKeys(new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "x"))));
         assertThat(withoutKeychain.keyStorage()).isEqualTo(KeyStorage.FILE);
+    }
+
+    @Test
+    void whileTheKeyringThatHoldsTheKeysIsLockedTheOutlookSaysSoAndNoFileIsWritten() throws Exception {
+        var needy = new FakeProvider(FakeProvider.info("needy", "Needy",
+                List.of(new SettingSpec("api_key", "API key", "Your key.", false, true))), steps(days(2, 4.0)));
+        backup.script(error(new ProviderError.Unavailable("down")));
+        choose("needy", "backup");
+        engine(clockAt(7), needy, backup).saveApiKeys(new Secrets(Map.of(new ProviderId("needy"),
+                Map.of("api_key", "STORED-KEY"))));
+        keychain.locked = true;
+
+        var outlook = engine(clockAt(7), needy, backup).plan(); // as after a login that left the keyring locked
+
+        assertThat(outlook).isInstanceOfSatisfying(Outlook.NoForecast.class,
+                none -> assertThat(none.keychainLocked()).isTrue());
+        assertThat(needy.calls).isEmpty();
+        assertThat(folder.resolve("secrets.json")).doesNotExist();
+        assertThat(engine(clockAt(7), needy, backup).keyStorage()).isEqualTo(KeyStorage.LOCKED_KEYCHAIN);
+    }
+
+    @Test
+    void aMissingKeyIsNotALockedKeyring() throws Exception {
+        var needy = new FakeProvider(FakeProvider.info("needy", "Needy",
+                List.of(new SettingSpec("api_key", "API key", "Your key.", false, true))), steps(days(2, 4.0)));
+        backup.script(error(new ProviderError.Unavailable("down")));
+        choose("needy", "backup");
+
+        assertThat(engine(clockAt(7), needy, backup).plan()).isInstanceOfSatisfying(Outlook.NoForecast.class,
+                none -> assertThat(none.keychainLocked()).isFalse());
     }
 
     @Test

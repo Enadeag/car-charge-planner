@@ -144,12 +144,20 @@ final class SettingsStorage {
     }
 
     /**
+     * Stops a save that waits for the owner to unlock the system keychain, such as when its window closes; that save
+     * then comes to {@link SaveOutcome.KeyringLocked}. Nothing happens when no save waits.
+     */
+    void stopUnlocking() {
+        stores.engine().stopUnlocking();
+    }
+
+    /**
      * Writes the changes, in order; when one part fails, the parts after it are not written. Blocks while the
      * system, the keychain and the files answer.
      *
      * @param changes what to write
-     * @return saved; refused by the system's start at login, with its reason; or failed with the system's error when
-     *     a file or the keychain could not be written
+     * @return saved; refused by the system's start at login, with its reason; not saved as the keychain stayed
+     *     locked; or failed with the system's error when a file or the keychain could not be written
      */
     SaveOutcome save(Changes changes) {
         var system = stores.startAtLogin();
@@ -174,7 +182,10 @@ final class SettingsStorage {
             if (changes.app().isPresent()) {
                 stores.appSettings().write(changes.app().get());
             }
-        } catch (IOException | SecretsProblem e) {
+        } catch (SecretsProblem e) {
+            return e.kind() == SecretsProblem.Kind.LOCKED ? new SaveOutcome.KeyringLocked()
+                    : new SaveOutcome.Failed(String.valueOf(e.getMessage()));
+        } catch (IOException e) {
             return new SaveOutcome.Failed(String.valueOf(e.getMessage()));
         }
         return new SaveOutcome.Saved();

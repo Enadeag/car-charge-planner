@@ -114,16 +114,19 @@ final class ForecastPage implements ConfigPage {
      * cards.
      *
      * @param keys the stored secret settings; none when they could not be read
-     * @param storage where the keys are kept now
+     * @param storage where the keys are kept now; a locked keychain also says why they could not be read
      * @param problem why the keys could not be read, in words for the owner; empty when they could
      */
     void loadKeys(Secrets keys, KeyStorage storage, Optional<String> problem) {
         storedKeys = keys;
         var where = switch (storage) {
             case KEYCHAIN -> messages.text(TextKey.KEYS_IN_KEYCHAIN);
+            case LOCKED_KEYCHAIN -> messages.text(TextKey.KEYS_IN_LOCKED_KEYCHAIN);
             case FILE -> messages.text(TextKey.KEYS_IN_FILE, keysFile.toString());
         };
-        keysNote.setText(problem.map(text -> messages.text(TextKey.KEYS_PROBLEM, text) + " " + where).orElse(where));
+        // a locked keychain is the reason the keys could not be read, and the note says so in the owner's language
+        keysNote.setText(problem.filter(text -> storage != KeyStorage.LOCKED_KEYCHAIN)
+                .map(text -> messages.text(TextKey.KEYS_PROBLEM, text) + " " + where).orElse(where));
     }
 
     /**

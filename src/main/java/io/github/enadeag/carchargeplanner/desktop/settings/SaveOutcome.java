@@ -31,6 +31,13 @@ sealed interface SaveOutcome {
     }
 
     /**
+     * The API keys were not stored, because the system keychain is locked and was not unlocked when the system asked;
+     * nothing after them was stored either.
+     */
+    record KeyringLocked() implements SaveOutcome {
+    }
+
+    /**
      * A file could not be written; what was stored before that stays stored.
      *
      * @param detail the system's error, as it gave it

@@ -23,14 +23,16 @@ import java.util.Optional;
  * {@code advapi32.dll} through Java's own foreign function API, so it needs no library such as JNA, which would add
  * jars and unpack a native library into the temp folder.
  *
- * <p>Over ssh, without an interactive logon session, Windows refuses with error 1312; the engine then keeps the keys in
- * its private file.
+ * <p>Over ssh, without an interactive logon session, Windows refuses with error 1312, which counts as no keychain
+ * ({@link KeychainException.Kind#UNAVAILABLE}); the engine then keeps the keys in its private file. Other errors are
+ * refusals. The Credential Manager is never locked while its user is logged on, so it has no unlocking.
  */
 public final class CredentialManagerKeychain implements Keychain {
 
     private static final int CRED_TYPE_GENERIC = 1;
     private static final int CRED_PERSIST_LOCAL_MACHINE = 2;
     private static final int ERROR_NOT_FOUND = 1168;
+    private static final int ERROR_NO_SUCH_LOGON_SESSION = 1312;
 
     /** CREDENTIALW from wincred.h, as laid out on 64-bit Windows. */
     private static final StructLayout CREDENTIAL = MemoryLayout.structLayout(
@@ -142,7 +144,8 @@ public final class CredentialManagerKeychain implements Keychain {
         } catch (KeychainException e) {
             throw e;
         } catch (Throwable e) {
-            throw new KeychainException("the Credential Manager could not be used (" + e.getClass().getSimpleName() + ")", e);
+            throw new KeychainException(KeychainException.Kind.UNAVAILABLE,
+                    "the Credential Manager could not be used (" + e.getClass().getSimpleName() + ")", e);
         }
     }
 
@@ -158,7 +161,10 @@ public final class CredentialManagerKeychain implements Keychain {
     }
 
     private static KeychainException failed(String action, MemorySegment error) {
-        return new KeychainException("the Credential Manager could not " + action + " (error " + lastError(error) + ")");
+        int code = lastError(error);
+        var kind = code == ERROR_NO_SUCH_LOGON_SESSION ? KeychainException.Kind.UNAVAILABLE
+                : KeychainException.Kind.REFUSED;
+        return new KeychainException(kind, "the Credential Manager could not " + action + " (error " + code + ")");
     }
 
     private static int lastError(MemorySegment error) {

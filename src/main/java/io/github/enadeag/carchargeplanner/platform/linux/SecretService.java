@@ -6,8 +6,11 @@ import org.freedesktop.dbus.DBusPath;
 import org.freedesktop.dbus.Struct;
 import org.freedesktop.dbus.Tuple;
 import org.freedesktop.dbus.annotations.DBusInterfaceName;
+import org.freedesktop.dbus.annotations.MethodNoReply;
 import org.freedesktop.dbus.annotations.Position;
+import org.freedesktop.dbus.exceptions.DBusException;
 import org.freedesktop.dbus.interfaces.DBusInterface;
+import org.freedesktop.dbus.messages.DBusSignal;
 import org.freedesktop.dbus.types.Variant;
 
 /**
@@ -24,8 +27,10 @@ public interface SecretService {
     String DEFAULT_COLLECTION = "/org/freedesktop/secrets/aliases/default";
     /** The interface name of a collection, also for reading its properties. */
     String COLLECTION_INTERFACE = "org.freedesktop.Secret.Collection";
-    /** A method that returns this path as its prompt needed no prompt. */
+    /** A method that returns this path as its prompt needed no prompt; an alias that stands for nothing gives it too. */
     String NO_PROMPT = "/";
+    /** The alias of the default collection, normally the login keyring. */
+    String DEFAULT_ALIAS = "default";
 
     /** The service: sessions and finding items. */
     @DBusInterfaceName("org.freedesktop.Secret.Service")
@@ -56,6 +61,67 @@ public interface SecretService {
          * @return each item's secret, by the item's path
          */
         Map<DBusPath, Secret> GetSecrets(List<DBusPath> items, DBusPath session);
+
+        /**
+         * Unlocks collections or items, as far as that needs no prompt.
+         *
+         * @param objects the collections or items to unlock
+         * @return the objects that are unlocked now, and a prompt's path, or {@link #NO_PROMPT} when none is needed
+         */
+        Pair<List<DBusPath>, DBusPath> Unlock(List<DBusPath> objects);
+
+        /**
+         * Finds the collection an alias stands for.
+         *
+         * @param name the alias, such as "default"
+         * @return the collection's path, or {@link #NO_PROMPT} ("/") when the alias stands for none
+         */
+        DBusPath ReadAlias(String name);
+    }
+
+    /**
+     * A prompt the service made for an action that needs the owner, such as unlocking: the service shows it once it is
+     * asked to, and tells how it ended with {@link Completed}.
+     */
+    @DBusInterfaceName("org.freedesktop.Secret.Prompt")
+    interface Prompt extends DBusInterface {
+
+        /**
+         * Shows the prompt; it returns at once, and {@link Completed} follows when the owner answered.
+         *
+         * @param windowId the platform's id of the window to show it over, or an empty text for none
+         */
+        void Prompt(String windowId);
+
+        /**
+         * Takes the prompt away unanswered; {@link Completed} follows, dismissed. Sent without waiting for the reply,
+         * as nothing is done with it.
+         */
+        @MethodNoReply
+        void Dismiss();
+
+        /** The prompt ended. */
+        class Completed extends DBusSignal {
+
+            /** True when the owner, or a call of {@link Prompt#Dismiss()}, dismissed it. */
+            public final boolean dismissed;
+            /** What the action gave, such as the objects that were unlocked; its type depends on the action. */
+            public final Variant<?> result;
+
+            /**
+             * Makes the signal; dbus-java calls this for each one that arrives, and a service for each one it sends.
+             *
+             * @param path the prompt's object path
+             * @param dismissed whether the prompt was dismissed
+             * @param result what the action gave
+             * @throws DBusException when the signal cannot be made from these values
+             */
+            public Completed(String path, boolean dismissed, Variant<?> result) throws DBusException {
+                super(path, dismissed, result);
+                this.dismissed = dismissed;
+                this.result = result;
+            }
+        }
     }
 
     /** A collection of items, such as a keyring. */

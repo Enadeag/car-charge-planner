@@ -242,7 +242,7 @@ and some services punish ignoring it.
 ### Secrets
 
 Declare a setting secret (the last argument of `SettingSpec`). The app keeps it in the system keychain (or, where
-there is none, in `secrets.json` beside `engine.json`, readable only by the user), never in `engine.json`, shows it
+there is none, in `secrets.json`, readable only by the user), never in `engine.json`, shows it
 masked in Settings, and passes it to `fetch` in `settings` with the other settings. A setting that is empty is
 absent from the map.
 

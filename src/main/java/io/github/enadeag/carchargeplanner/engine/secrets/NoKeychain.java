@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine.secrets;
 
+import java.time.Duration;
 import java.util.Optional;
 
 /** For a system without a keychain the app can use: the keys then go to the private file. */
@@ -25,7 +26,12 @@ public final class NoKeychain implements Keychain {
         throw unavailable();
     }
 
+    @Override
+    public UnlockOutcome unlock(Duration wait) throws KeychainException {
+        throw unavailable();
+    }
+
     private static KeychainException unavailable() {
-        return new KeychainException("this system has no keychain the app can use");
+        return new KeychainException(KeychainException.Kind.UNAVAILABLE, "this system has no keychain the app can use");
     }
 }

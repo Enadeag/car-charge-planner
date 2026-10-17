@@ -58,10 +58,11 @@ touch the network, your keychain or your desktop:
 
 - the providers replay recorded answers (`src/test/resources/.../engine/forecast/providers/`);
 - the Linux keychain test runs a throwaway GNOME Keyring on a private D-Bus (it is skipped without `dbus-daemon` and
-  `gnome-keyring-daemon`), and the notification tests a fake notification server on a private D-Bus that cannot start
-  a real one;
-- the Windows keychain test uses an entry of its own that it removes again (it is skipped over ssh, where Windows has
-  no logon session for the Credential Manager);
+  `gnome-keyring-daemon`); it has no prompter there, so the unlock prompt's outcomes are tested against a fake Secret
+  Service on a private D-Bus, and the notification tests a fake notification server on a private D-Bus that cannot
+  start a real one;
+- the Windows keychain test uses an entry of its own that it removes again (over ssh, where Windows has no logon
+  session for the Credential Manager, it checks only that this counts as no keychain);
 - `DesktopAppSmokeTest` (Linux, skipped without `dbus-daemon`) starts the app in a JVM of its own with the example
   config, on a private D-Bus with a fake tray host, headless JavaFX, private XDG folders and a proxy that refuses
   every connection, waits for the tray icon, sends `quit` and checks that both end cleanly;

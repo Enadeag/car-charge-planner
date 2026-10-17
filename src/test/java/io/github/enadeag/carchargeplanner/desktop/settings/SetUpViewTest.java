@@ -2,6 +2,7 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.github.enadeag.carchargeplanner.desktop.Background;
 import io.github.enadeag.carchargeplanner.desktop.Fx;
 import io.github.enadeag.carchargeplanner.desktop.FxTest;
 import io.github.enadeag.carchargeplanner.desktop.Language;
@@ -15,6 +16,8 @@ import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import io.github.enadeag.carchargeplanner.engine.config.PanelArray;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.config.TypicalValues;
+import io.github.enadeag.carchargeplanner.engine.secrets.KeychainException;
+import io.github.enadeag.carchargeplanner.engine.secrets.LockableKeychain;
 import io.github.enadeag.carchargeplanner.engine.setting.Setting;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,6 +25,7 @@ import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javafx.scene.control.Button;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextField;
@@ -259,6 +263,29 @@ class SetUpViewTest {
 
         assertThat(setUp.provider.asked).contains(Map.of("api_key", "TYPED-KEY"));
         assertThat(setUp.engine.apiKeys().of(new ProviderId("open-meteo"))).containsEntry("api_key", "TYPED-KEY");
+    }
+
+    @Test
+    void finishWhileTheKeyringStaysLockedSavesNothingAndSaysToUnlockItAndFinishAgain() throws Exception {
+        var keychain = new LockableKeychain();
+        keychain.locked = true;
+        keychain.unlockFails = Optional.of(KeychainException.Kind.REFUSED);
+        setUp = new SetUpFixture(folder, Language.ENGLISH, keychain, new Background(Runnable::run, Runnable::run));
+        var view = atSolar();
+        Fx.run(() -> view.show(SetUpStep.FORECAST));
+        Fx.run(() -> Scenes.all(view).stream().filter(node -> node instanceof TextField field && field.isVisible()
+                        && SettingsFixture.named(field, setUp.messages.text(TextKey.PROVIDER_API_KEY)))
+                .map(TextField.class::cast).findFirst().orElseThrow().setText("TYPED-KEY"));
+        Fx.run(() -> view.show(SetUpStep.CHECK));
+        next(view, 1);
+        setUp.awaitPreview(view);
+
+        next(view, 1);
+
+        assertThat(Fx.call(() -> SetUpFixture.texts(view))).contains(setUp.messages.text(TextKey.SETTINGS_KEYRING_LOCKED));
+        assertThat(setUp.finished).isZero();
+        assertThat(setUp.configPath).as("nothing after the keys is saved").doesNotExist();
+        assertThat(setUp.keysFile()).doesNotExist();
     }
 
     @Test

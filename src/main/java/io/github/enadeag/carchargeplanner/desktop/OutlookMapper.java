@@ -59,7 +59,7 @@ final class OutlookMapper {
                     messages.text(TextKey.NO_FORECAST), messages.text(TextKey.NO_FORECAST_NO_DAYS), footer(planned));
             case Outlook.Planned planned -> plan(planned, away);
             case Outlook.NoForecast none -> new DashboardModel.Message(messages.text(TextKey.NO_FORECAST),
-                    messages.text(TextKey.NO_FORECAST_DETAIL, none.reason()), "");
+                    noForecast(none, messages), "");
             case Outlook.NotSetUp notSetUp when notSetUp.kind() == ConfigProblem.Kind.MISSING ->
                     new DashboardModel.Message(messages.text(TextKey.NOT_SET_UP), messages.text(TextKey.NOT_SET_UP_FIRST),
                             "", true);
@@ -82,6 +82,19 @@ final class OutlookMapper {
             case INVALID -> messages.text(TextKey.NOT_SET_UP_INVALID, String.valueOf(notSetUp.file().getFileName()),
                     notSetUp.detail());
         };
+    }
+
+    /**
+     * Why there is no forecast, in the owner's language: what to do when the keyring that holds the API keys is locked,
+     * and otherwise the engine's reasons, which stay in English.
+     *
+     * @param none the engine's outlook without a forecast
+     * @param messages the texts, in the owner's language
+     * @return such as "Unlock your keyring so the app can read your API key."
+     */
+    static String noForecast(Outlook.NoForecast none, Messages messages) {
+        return none.keychainLocked() ? messages.text(TextKey.NO_FORECAST_KEYRING_LOCKED)
+                : messages.text(TextKey.NO_FORECAST_DETAIL, none.reason());
     }
 
     private DashboardModel.Plan plan(Outlook.Planned planned, List<AwayPeriod> away) {

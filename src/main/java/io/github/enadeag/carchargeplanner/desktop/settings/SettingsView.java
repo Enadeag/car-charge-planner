@@ -326,6 +326,7 @@ final class SettingsView extends BorderPane {
             case SaveOutcome.Saved ignored -> ScreenReader.focus(status);
             case SaveOutcome.Refused problems -> show(problems.categories().getFirst());
             case SaveOutcome.StartAtLoginRefused ignored -> show(Category.APP);
+            case SaveOutcome.KeyringLocked ignored -> ScreenReader.focus(status);
             case SaveOutcome.Failed ignored -> ScreenReader.focus(status);
         }
         edited();
@@ -346,6 +347,7 @@ final class SettingsView extends BorderPane {
                 refused.add(Category.APP);
                 showProblem(messages.text(TextKey.SETTINGS_REFUSED));
             }
+            case SaveOutcome.KeyringLocked ignored -> showProblem(messages.text(TextKey.SETTINGS_KEYRING_LOCKED));
             case SaveOutcome.Failed failure ->
                     showProblem(messages.text(TextKey.SETTINGS_SAVE_FAILED, failure.detail()));
         }
@@ -402,13 +404,17 @@ final class SettingsView extends BorderPane {
 
     /**
      * Closes Settings and then runs an action, after asking when closing would throw edits away; the owner may keep
-     * editing instead.
+     * editing instead. While a Save runs nothing closes, but a Save that waits for the owner to unlock the keyring
+     * stops waiting.
      *
      * @param next what to run once Settings closed, such as set-up
      */
     void closeThen(Runnable next) {
         if (state == State.SAVING) {
-            return; // in a moment the edits are either stored or the reason they are not shows
+            // a save that waits for the keyring to be unlocked stops waiting; in a moment the edits are either stored
+            // or the reason they are not shows
+            form.stopUnlocking();
+            return;
         }
         afterClose = next;
         if (state == State.READY && form.isChanged()) {

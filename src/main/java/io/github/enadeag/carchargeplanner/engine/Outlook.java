@@ -80,7 +80,18 @@ public sealed interface Outlook {
      * No forecast provider had a usable forecast.
      *
      * @param reason in English: the reason of each provider asked, which may quote the provider's own reply
+     * @param keychainLocked true when the API keys were not available because the system keychain that holds them is
+     *     locked, so the owner should unlock it
      */
-    record NoForecast(String reason) implements Outlook {
+    record NoForecast(String reason, boolean keychainLocked) implements Outlook {
+
+        /**
+         * No forecast, for a reason other than a locked keychain.
+         *
+         * @param reason in English: the reason of each provider asked, which may quote the provider's own reply
+         */
+        public NoForecast(String reason) {
+            this(reason, false);
+        }
     }
 }

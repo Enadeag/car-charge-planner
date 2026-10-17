@@ -44,7 +44,7 @@ public final class ForecastService {
     }
 
     /** The stored secrets, or none and why: the providers that need no key still work. */
-    private record StoredSecrets(Secrets secrets, Optional<String> problem) {
+    private record StoredSecrets(Secrets secrets, Optional<SecretsProblem> problem) {
     }
 
     /**
@@ -91,8 +91,12 @@ public final class ForecastService {
             }
             reasons.add(((Outcome.Failure) outcome).reason());
         }
-        stored.ifMade(secrets -> secrets.problem().ifPresent(reasons::add));
-        throw new ForecastUnavailable(String.join("; ", reasons));
+        var locked = new boolean[1];
+        stored.ifMade(secrets -> secrets.problem().ifPresent(problem -> {
+            reasons.add(problem.getMessage());
+            locked[0] = problem.kind() == SecretsProblem.Kind.LOCKED;
+        }));
+        throw new ForecastUnavailable(String.join("; ", reasons), locked[0]);
     }
 
     /**
@@ -107,7 +111,7 @@ public final class ForecastService {
         try {
             return new StoredSecrets(secrets.load(), Optional.empty());
         } catch (SecretsProblem e) {
-            return new StoredSecrets(Secrets.NONE, Optional.of(e.getMessage()));
+            return new StoredSecrets(Secrets.NONE, Optional.of(e));
         }
     }
 

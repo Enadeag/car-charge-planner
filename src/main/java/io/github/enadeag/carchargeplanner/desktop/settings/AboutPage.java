@@ -44,7 +44,7 @@ final class AboutPage implements Page {
     /**
      * Shows the page, with where the API keys are kept now.
      *
-     * @param keys whether the keys are in the system keychain or in the file
+     * @param keys whether the keys are in the system keychain, in the locked keychain or in the file
      */
     void load(KeyStorage keys) {
         view.show(
@@ -85,6 +85,7 @@ final class AboutPage implements Page {
     private String keys(KeyStorage storage, Path file) {
         return switch (storage) {
             case KEYCHAIN -> messages.text(TextKey.ABOUT_KEYS_KEYCHAIN);
+            case LOCKED_KEYCHAIN -> messages.text(TextKey.ABOUT_KEYS_LOCKED);
             case FILE -> messages.text(TextKey.ABOUT_KEYS_FILE, file.toString());
         };
     }
