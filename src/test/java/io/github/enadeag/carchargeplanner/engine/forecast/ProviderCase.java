@@ -19,6 +19,7 @@ import java.util.function.Function;
  * @param settings a working set of plain settings, required ones filled in
  * @param secrets secret settings with recognisable values
  * @param now when the recorded answer was fetched
+ * @param errorSaying an error answer in which the provider's server gives the text it is handed, as its own words
  */
 public record ProviderCase(
         Function<HttpGet, ForecastProvider> make,
@@ -30,7 +31,8 @@ public record ProviderCase(
         Duration retryAfter,
         Map<String, String> settings,
         Map<String, String> secrets,
-        Instant now) {
+        Instant now,
+        Function<String, List<Route>> errorSaying) {
 
     public static final SystemDescription EXAMPLE_SYSTEM = new SystemDescription(new Coordinates(52.37, 4.90),
             ZoneId.of("Europe/Amsterdam"), List.of(new PanelArray("", 4.8, 35, -45, 0.14)));

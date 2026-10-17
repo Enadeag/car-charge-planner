@@ -126,7 +126,65 @@ public abstract class ProviderConformance {
     }
 
     static Stream<IOException> noNetwork() {
-        return Stream.of(new ConnectException("unreachable"), new HttpTimeoutException("slow"), new IOException("reset"));
+        return Stream.of(new ConnectException("unreachable"), new HttpTimeoutException("slow"), new IOException("reset"),
+                new HttpGet.TooLarge(HttpGet.DEFAULT_MAX_BODY));
+    }
+
+    @Test
+    void itReadsNoMoreThanAForecastAnswerMayHold() throws ProviderError {
+        var c = providerCase();
+        var made = c.provider(c.ok());
+        made.provider().fetch(ProviderCase.EXAMPLE_SYSTEM, c.allSettings(), c.now());
+        assertThat(made.http().requests).allSatisfy(request -> {
+            assertThat(request.maxBody().bytes()).isLessThanOrEqualTo(HttpGet.DEFAULT_MAX_BODY.bytes());
+            assertThat(request.timeout()).isLessThanOrEqualTo(HttpGet.DEFAULT_TIMEOUT);
+        });
+    }
+
+    /**
+     * What a server writes in an error answer reaches the owner and the log as "<provider> says: ...": without the key
+     * it was sent (also when cut short right in it), without control or direction characters, and no longer than
+     * {@link ProviderText#MAX_LENGTH}.
+     */
+    @Test
+    void theServersOwnWordsAreQuotedCleanedShortAndWithoutTheKey() {
+        var c = providerCase();
+        var name = c.provider(c.ok()).provider().info().name();
+        assumeFalse(c.secrets().isEmpty(), "this provider has no secret settings");
+        var secret = c.secrets().values().iterator().next();
+        var prefix = "You sent \u202Ekey\u0007 "; // "You sent key " once cleaned: 13 characters
+        // the key straddles the point where the text is cut
+        var words = prefix + "x".repeat(ProviderText.MAX_LENGTH - 13 - 3) + secret + " and much more\n".repeat(50);
+
+        var error = fails(c.errorSaying().apply(words), ProviderError.class);
+
+        var message = error.getMessage();
+        assertThat(message).contains(name + " says: You sent key ");
+        assertThat(message).doesNotContain(secret).doesNotContain(secret.substring(0, secret.length() / 2));
+        assertThat(message).doesNotContainPattern("[\\p{Cc}\\p{Cf}]");
+        var quoted = message.substring(message.indexOf(name + " says: ") + (name + " says: ").length());
+        assertThat(quoted.codePointCount(0, quoted.length())).isLessThanOrEqualTo(ProviderText.MAX_LENGTH + 1);
+    }
+
+    /** A server could have been sent, or learned, another provider's key: no stored key reaches a reason or a log. */
+    @Test
+    void noStoredKeyOfAnyProviderReachesAReasonOrTheLog() {
+        var c = providerCase();
+        var otherKey = "OtherProviderKey31";
+        var made = c.provider(c.errorSaying().apply("we also know " + otherKey));
+        var cache = new ForecastCache(cacheFolder);
+        try (var log = LogCapture.of("io.github.enadeag.carchargeplanner")) {
+            var outcome = new ProviderAttempt(made.provider(), cache, new HashMap<>(), new ProviderHealth(), c.now(), true)
+                    .run(ProviderCase.EXAMPLE_SYSTEM, c::allSettings, cache.key(ProviderCase.EXAMPLE_SYSTEM, Map.of()),
+                            () -> List.of(otherKey));
+            var check = ConnectionCheck.attempt(made.provider(), ProviderCase.EXAMPLE_SYSTEM, c.allSettings(), c.now(),
+                    List.of(otherKey));
+
+            assertThat(outcome).isInstanceOfSatisfying(Outcome.Failure.class,
+                    failure -> assertThat(failure.reason()).contains("we also know ***").doesNotContain(otherKey));
+            assertThat(check.message()).contains("we also know ***").doesNotContain(otherKey);
+            assertThat(log.lines()).isNotEmpty().noneMatch(line -> line.contains(otherKey));
+        }
     }
 
     @ParameterizedTest
@@ -179,7 +237,7 @@ public abstract class ProviderConformance {
                 // as the forecast service asks, so the lines it logs about a provider failing are made too
                 var outcome = new ProviderAttempt(made.provider(), cache, new HashMap<>(), new ProviderHealth(), c.now(),
                         true).run(ProviderCase.EXAMPLE_SYSTEM, c::allSettings,
-                        cache.key(ProviderCase.EXAMPLE_SYSTEM, Map.of()));
+                        cache.key(ProviderCase.EXAMPLE_SYSTEM, Map.of()), List::of);
                 if (outcome instanceof Outcome.Failure failure) {
                     shown.add(failure.reason());
                 }
@@ -207,8 +265,10 @@ public abstract class ProviderConformance {
     }
 
     private static List<List<Route>> scenarios(ProviderCase c) {
+        var echo = new StringBuilder("you sent");
+        c.secrets().values().forEach(secret -> echo.append(' ').append(secret));
         var scenarios = new ArrayList<>(List.of(c.ok(), c.serverError(), c.badBody(), c.emptyBody(),
-                List.of(Route.failure(new ConnectException("down")))));
+                List.of(Route.failure(new ConnectException("down"))), c.errorSaying().apply(echo.toString())));
         if (c.rateLimited() != null) {
             scenarios.add(c.rateLimited());
         }

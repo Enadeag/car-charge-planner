@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.engine.forecast.providers;
 
 import io.github.enadeag.carchargeplanner.engine.config.Coordinates;
+import io.github.enadeag.carchargeplanner.engine.forecast.ByteSize;
 import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import io.github.enadeag.carchargeplanner.engine.forecast.Place;
 import io.github.enadeag.carchargeplanner.engine.forecast.PlaceResults;
@@ -31,6 +32,8 @@ public final class OpenMeteoPlaces implements PlaceSearch {
     private static final int RESULTS = 8;
     /** A person is waiting at a search box. */
     private static final Duration TIMEOUT = Duration.ofSeconds(6);
+    /** Eight places are a few kilobytes. */
+    static final ByteSize MAX_BODY = ByteSize.ofKilobytes(256);
 
     private final HttpGet http;
 
@@ -51,7 +54,7 @@ public final class OpenMeteoPlaces implements PlaceSearch {
         }
         HttpGet.Reply reply;
         try {
-            reply = Exchange.send(http, new HttpGet.Request(requestUri(name, language), Map.of(), TIMEOUT), "Open-Meteo");
+            reply = Exchange.send(http, new HttpGet.Request(requestUri(name, language), Map.of(), TIMEOUT, MAX_BODY), "Open-Meteo");
         } catch (ProviderError.Unavailable e) {
             return new PlaceResults.Failed(Problem.UNAVAILABLE);
         }

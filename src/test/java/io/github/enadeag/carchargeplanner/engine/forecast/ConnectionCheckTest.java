@@ -23,7 +23,8 @@ class ConnectionCheckTest {
     private static final String SECRET = "CHECK-SECRET-8";
 
     private static ConnectionResult attempt(FakeProvider.Answer answer) {
-        return ConnectionCheck.attempt(new FakeProvider("main", "Main", answer), ProviderCase.EXAMPLE_SYSTEM, Map.of(), NOW);
+        return ConnectionCheck.attempt(new FakeProvider("main", "Main", answer), ProviderCase.EXAMPLE_SYSTEM, Map.of(), NOW,
+                List.of());
     }
 
     @Test
@@ -77,9 +78,23 @@ class ConnectionCheckTest {
         var needy = new FakeProvider(FakeProvider.info("main", "Main",
                 List.of(new SettingSpec("api_key", "API key", "Your key.", false, true))), steps(SunnyDays.day(DAY, 3.0)));
 
-        var result = ConnectionCheck.attempt(needy, ProviderCase.EXAMPLE_SYSTEM, Map.of(), NOW);
+        var result = ConnectionCheck.attempt(needy, ProviderCase.EXAMPLE_SYSTEM, Map.of(), NOW, List.of());
 
         assertThat(result).isEqualTo(new ConnectionResult(false, 0, "API key is required."));
         assertThat(needy.callCount()).isZero();
+    }
+
+    /** A server can echo what it was sent; the key tried and every stored one are hidden. */
+    @Test
+    void aKeyTheServerEchoesIsNeverInTheMessage() {
+        var echoing = new FakeProvider(FakeProvider.info("main", "Main",
+                List.of(new SettingSpec("api_key", "API key", "Your key.", false, true))),
+                error(new ProviderError.BadResponse("Main says: you sent " + SECRET + ", not STORED-ELSEWHERE-4")));
+
+        var result = ConnectionCheck.attempt(echoing, ProviderCase.EXAMPLE_SYSTEM, Map.of("api_key", SECRET), NOW,
+                List.of("STORED-ELSEWHERE-4"));
+
+        assertThat(result.message()).isEqualTo("Main gave an answer the app does not understand: Main says: you sent "
+                + "***, not ***");
     }
 }

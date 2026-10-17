@@ -67,4 +67,18 @@ public record ProviderInfo(
                 .map(SettingSpec::label)
                 .toList();
     }
+
+    /**
+     * The values of the secret settings among these, such as API keys, to keep out of what is shown or logged.
+     *
+     * @param values settings of this provider, as {@link #settingsFrom} makes them; others are ignored
+     * @return the values of the declared secret settings that have one, in declared order
+     */
+    public List<String> secretValues(Map<String, String> values) {
+        return settings.stream()
+                .filter(SettingSpec::secret)
+                .map(spec -> values.getOrDefault(spec.key(), ""))
+                .filter(value -> !value.isBlank())
+                .toList();
+    }
 }

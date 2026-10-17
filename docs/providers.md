@@ -17,7 +17,7 @@ All of it is in the package `engine.forecast` ([`src/main/java/io/github/enadeag
 | --- | --- |
 | `ForecastProvider` | The interface: `info()`, `fetch(system, settings, now)`, and optionally `placeSearch()`. |
 | `ProviderInfo` | What a provider tells about itself: a `ProviderId` (lower-case letters, digits and hyphens, used in the config and in cache file names), the name, a description, an `https` terms link, the credit its terms ask for, in plain words what is sent, the shortest time between two requests (`minRefresh`), how far ahead it forecasts (`horizon`), how long a forecast stays worth keeping when it cannot be refreshed (`maxUsefulAge`), and its settings. |
-| `SettingSpec` | One setting, such as a server address or an API key: a key, a label, a hint, whether it is optional and whether it is secret. |
+| `SettingSpec` | One setting, such as a server address or an API key: a key, a label, a hint, whether it is optional, whether it is secret, and its `SettingFormat`: any text, a `SERVER_ADDRESS` a key may be sent to (`ServerAddress`: https, or plain http only to localhost, 127.0.0.1 or [::1]; no user name, query or fragment), or `LETTERS_AND_DIGITS`. Settings and set-up refuse a value of the wrong format when it is saved; check it again before you send, as a config file can be edited by hand. |
 | `SystemDescription` | What a provider is told: the coordinates, the time zone, and the panel arrays (`PanelArray`: size in kWp, tilt, azimuth with 0 south, -90 east and 90 west, and the system losses as a share, 0.14 for 14 %). |
 | `ForecastStep` | What it returns, a list of them: `start` (inclusive), `end` (exclusive), both `Instant`s, and `powerKw`, the expected AC power of the whole system over the step. |
 | `HttpGet` | The only way a provider reaches the network (below). |
@@ -50,14 +50,22 @@ so in the description.
 | `NotConfigured` | a setting is missing or unusable (checked before anything is sent) | reports it |
 
 A `RuntimeException` is treated as a bug: the app carries on without that provider and logs only the kind of error.
-Error messages are shown to the user: **never put the URL (it may hold a key) or a setting's value in one.**
+Error messages are shown to the user: **never put the URL (it may hold a key) or a setting's value in one.** Text
+the server wrote, such as the reason in an error answer, goes in only through
+`ProviderText.quoted(INFO.name(), text, INFO.secretValues(settings))`: it reads "Example Solar says: ...", without
+the keys, without control or direction characters, and at most 200 characters. The forecast service and the
+connection check also replace every stored key with `***` in whatever a provider reports, before it is shown or
+logged.
 
 ## The network
 
 A provider never opens a connection itself. It takes an `HttpGet` when it is made and sends every request through
-it: a `Request` (address, headers, timeout) goes in, a `Reply` (status, body, headers) comes out. A refusal such as a
-429 or a 503 is a `Reply` with that status; only "could not talk to the server at all" throws, as an `IOException`.
-`Exchange.send` in the providers' package turns that into `Unavailable` without the address in the message, and
+it: a `Request` (address, headers, timeout, largest body) goes in, a `Reply` (status, body, headers) comes out. A
+refusal such as a 429 or a 503 is a `Reply` with that status; only "could not talk to the server at all", an answer
+that did not come whole within the timeout and one larger than the request allows (`HttpGet.TooLarge`) throw, as an
+`IOException`. `Request.of(uri)` and the constants `HttpGet.DEFAULT_TIMEOUT` (15 s) and `HttpGet.DEFAULT_MAX_BODY`
+(2 MB) suit a forecast. `Exchange.send` in the providers' package turns a failure into `Unavailable` without the
+address in the message, `Exchange.json` reads at most 2 MB and 200 000 tokens of JSON, and
 `Reply.retryAfter()` reads a `Retry-After` header. The app passes the real one (`JdkHttpGet`); tests pass a
 `ReplayHttp` with recorded answers.
 
@@ -134,7 +142,7 @@ public final class ExampleSolar implements ForecastProvider {
                 + "&lon=" + Decimals.plain(system.location().longitude()) + "&kwp=" + Decimals.plain(array.kwp())
                 + "&tilt=" + Decimals.plain(array.tiltDeg()) + "&azimuth=" + Decimals.plain(array.azimuthDeg()));
         var request = new HttpGet.Request(uri, Map.of("Authorization", "Bearer " + settings.get("api_key")),
-                HttpGet.DEFAULT_TIMEOUT);
+                HttpGet.DEFAULT_TIMEOUT, HttpGet.DEFAULT_MAX_BODY);
         // Exchange turns a failed connection into Unavailable, without the address in the message
         var reply = Exchange.send(http, request, INFO.name());
         if (reply.status() == 429) {
@@ -194,7 +202,9 @@ class ExampleSolarTest extends ProviderConformance {
                 Duration.ofSeconds(120),
                 Map.of(),
                 Map.of("api_key", "EXAMPLE-SECRET-KEY-123"),
-                Instant.parse("2026-07-03T07:00:00Z"));
+                Instant.parse("2026-07-03T07:00:00Z"),
+                text -> List.of(answer("", new Reply(400,
+                        new JsonMapper().createObjectNode().put("error", text).toString()))));
     }
 }
 ```
@@ -253,7 +263,8 @@ is [`ProviderConformance`](../src/test/java/io/github/enadeag/carchargeplanner/e
 provider in a `ProviderCase`: how to make it from an `HttpGet`, the recorded routes for a good answer, a server
 error, a body that is not as documented, an empty body and a rate limit (`ReplayHttp.Route.answer(part, reply)`
 matches a request whose address contains `part`), the retry time the rate-limit answer gives, working plain
-settings, secret settings with recognisable values (to find leaks), and the moment the answer was recorded.
+settings, secret settings with recognisable values (to find leaks), the moment the answer was recorded, and an error
+answer in which the server says a given text.
 
 What it checks:
 
@@ -264,10 +275,12 @@ What it checks:
 | Several panel arrays | A system with a second array gives one valid forecast. If the provider asks once per array, it is the sum of the single-array forecasts, and a failure for the second array fails the whole forecast. |
 | Same answer, same steps | Deterministic; it leaves its settings alone. |
 | Rate limit | A refusal for too many requests throws `RateLimited` with the retry time the server gave. |
-| Server error, no network | A 5xx and a failed connection (refused, timeout, reset) throw `Unavailable`. |
+| Server error, no network | A 5xx and a failed connection (refused, timeout, reset, an answer too large) throw `Unavailable`. |
+| Limits | Every request reads at most `HttpGet.DEFAULT_MAX_BODY` and waits at most `HttpGet.DEFAULT_TIMEOUT`. |
 | Not as documented | A 200 with the wrong content throws `BadResponse`; an empty answer throws a `ProviderError` or gives valid steps, and never anything else. |
 | Required settings | A missing required setting throws `NotConfigured` before anything is sent. |
-| Secrets | A secret setting never appears in a log line or an error message. |
+| Secrets | A secret setting never appears in a log line or an error message, not even when the server echoes it; nor does another provider's stored key. |
+| The server's words | An error text from the server is shown as "<provider> says: ...", without the key (also where it is cut short), control or direction characters, and at most 200 characters. |
 
 For tests of the code that *uses* providers (the forecast service, the Settings page) there is a scripted
 [`FakeProvider`](../src/test/java/io/github/enadeag/carchargeplanner/engine/forecast/FakeProvider.java): steps, errors and crashes in the order a test gives them, with the calls
@@ -285,7 +298,8 @@ Open-Meteo has one ([`OpenMeteoPlaces`](../src/main/java/io/github/enadeag/carch
   with a problem: `TOO_SHORT` (fewer than two characters: nothing may be sent), `UNAVAILABLE` (no network, a
   timeout, a 5xx), `RATE_LIMITED` (with the retry time when the service says) or `BAD_RESPONSE`. Matching nothing is
   not a problem: it is `Found` with no places.
-- It **never throws**, and uses a short timeout (a person is waiting at a search box): set it in the `Request`.
+- It **never throws**, and uses a short timeout (a person is waiting at a search box) and a small largest body
+  (Open-Meteo's is 256 kB): set them in the `Request`.
 - Leave out results that lack coordinates or a time zone you know.
 - The text typed is sent to the provider: say so in what it sends (or in its terms) and in the README.
 

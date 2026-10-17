@@ -175,7 +175,7 @@ final class ForecastPage implements ConfigPage {
         if (!isChanged()) {
             return Optional.of(config);
         }
-        var complete = chosen().stream().allMatch(id -> !cards.containsKey(id) || cards.get(id).checkRequired());
+        var complete = chosen().stream().allMatch(id -> !cards.containsKey(id) || cards.get(id).check());
         try {
             var settings = new LinkedHashMap<>(stored.settings());
             cards.forEach((id, card) -> settings.put(id, card.plain()));

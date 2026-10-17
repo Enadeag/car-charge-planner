@@ -3,8 +3,10 @@ package io.github.enadeag.carchargeplanner.engine.forecast;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * Asks a provider for one forecast to see whether it works with these settings: set-up's and Settings' connection
@@ -22,10 +24,11 @@ public final class ConnectionCheck {
      * @param system the system to ask a forecast for
      * @param settings the settings to try, secret ones included, as the provider's fetch would get them
      * @param now the current moment; the days are counted from its date in the system's time zone
-     * @return whether it worked, the days of forecast, and a message for the owner
+     * @param otherSecrets further secret values the message must never show, such as every stored key; may be empty
+     * @return whether it worked, the days of forecast, and a message for the owner, which never holds a secret value
      */
     public static ConnectionResult attempt(ForecastProvider provider, SystemDescription system,
-            Map<String, String> settings, Instant now) {
+            Map<String, String> settings, Instant now, Collection<String> otherSecrets) {
         var info = provider.info();
         var missing = info.missingRequired(settings);
         if (!missing.isEmpty()) {
@@ -35,7 +38,9 @@ public final class ConnectionCheck {
         try {
             steps = provider.fetch(system, settings, now);
         } catch (ProviderError e) {
-            return new ConnectionResult(false, 0, describe(info, e));
+            // a server can echo what it was sent
+            var secrets = Stream.concat(info.secretValues(settings).stream(), otherSecrets.stream()).toList();
+            return new ConnectionResult(false, 0, ProviderText.redacted(describe(info, e), secrets));
         } catch (RuntimeException e) {
             // a bug in the provider: say what kind, not what it said, which may hold a key
             return new ConnectionResult(false, 0, info.name() + ": unexpected error (" + e.getClass().getSimpleName() + ")");

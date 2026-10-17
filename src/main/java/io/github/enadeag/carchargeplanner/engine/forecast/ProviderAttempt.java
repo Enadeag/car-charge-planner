@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 import tools.jackson.databind.JsonNode;
 
 /**
@@ -32,6 +33,8 @@ final class ProviderAttempt {
     private final ProviderHealth health;
     private final Instant now;
     private final boolean force;
+    /** The secret values to keep out of a reason; known once the settings are read. */
+    private List<String> secrets = List.of();
 
     /**
      * Prepares one attempt; nothing is read or asked yet.
@@ -63,15 +66,19 @@ final class ProviderAttempt {
      * @param secretSettings gives the provider's settings with values, secret ones included; asked only when the
      *     cache cannot answer by itself, as it may read the keychain
      * @param key what the forecast depends on, as {@link ForecastCache#key} makes it
-     * @return a forecast to use, or the reason there is none
+     * @param storedSecrets gives every stored secret value of every provider, which a reason never shows; asked only
+     *     when the provider is asked, right after {@code secretSettings}
+     * @return a forecast to use, or the reason there is none; it never holds a secret value
      */
-    Outcome run(SystemDescription system, Supplier<Map<String, String>> secretSettings, JsonNode key) {
+    Outcome run(SystemDescription system, Supplier<Map<String, String>> secretSettings, JsonNode key,
+            Supplier<List<String>> storedSecrets) {
         var cached = cache.forecast(info.id(), key, now);
         var cooldown = cache.cooldownUntil(info.id()).filter(now::isBefore);
         if (cached.isPresent() && !force && cached.get().age(now).compareTo(info.minRefresh()) < 0) {
             return fromCache(cached.get(), Freshness.CACHED, cooldown);
         }
         var settings = secretSettings.get();
+        secrets = Stream.concat(info.secretValues(settings).stream(), storedSecrets.get().stream()).toList();
         var missing = info.missingRequired(settings);
         if (!missing.isEmpty()) { // nothing is sent without what the provider requires
             return afterFailure(String.join(", ", missing) + " is required", Optional.empty(), Optional.empty());
@@ -116,8 +123,12 @@ final class ProviderAttempt {
         }
     }
 
-    /** The provider gave no forecast: its last one while that is still useful, else the reason. */
-    private Outcome afterFailure(String reason, Optional<ForecastCache.Cached> usable, Optional<Instant> cooldown) {
+    /**
+     * The provider gave no forecast: its last one while that is still useful, else the reason. A server can echo what
+     * it was sent, so the reason loses every secret value before it is logged or told.
+     */
+    private Outcome afterFailure(String given, Optional<ForecastCache.Cached> usable, Optional<Instant> cooldown) {
+        var reason = ProviderText.redacted(given, secrets);
         health.failed(info, reason);
         return usable.map(forecast -> fromCache(forecast, Freshness.STALE, cooldown)).orElseGet(() -> failure(reason));
     }

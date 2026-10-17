@@ -5,6 +5,7 @@ import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
 import io.github.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
+import io.github.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -117,19 +118,33 @@ final class ProviderCard {
     }
 
     /**
-     * Marks the required settings that are empty; problems shown before are taken away first. A locked secret counts as
-     * there: it is stored, only not readable now.
+     * Marks the required settings that are empty and the settings whose value has the wrong form, such as a server
+     * address a key may not be sent to; problems shown before are taken away first. A locked secret counts as there:
+     * it is stored, only not readable now.
      *
-     * @return true when every required setting has a value
+     * @return true when every required setting has a value and every value has the right form
      */
-    boolean checkRequired() {
+    boolean check() {
         rows.values().forEach(FieldRow::clearProblem);
         var missing = new ArrayList<>(info.missingRequired(info.settingsFrom(plain(), secret())));
         info.settings().stream().filter(setting -> inputs.get(setting.key()) instanceof SecretInput field
                 && field.isLocked()).forEach(setting -> missing.remove(setting.label()));
         info.settings().stream().filter(setting -> missing.contains(setting.label()))
                 .forEach(setting -> rows.get(setting.key()).showProblem(messages.text(TextKey.PROBLEM_REQUIRED)));
-        return missing.isEmpty();
+        var entered = info.settingsFrom(plain(), secret());
+        var wrong = info.settings().stream()
+                .filter(setting -> !setting.format().accepts(entered.getOrDefault(setting.key(), "")))
+                .toList();
+        wrong.forEach(setting -> rows.get(setting.key()).showProblem(messages.text(problem(setting.format()))));
+        return missing.isEmpty() && wrong.isEmpty();
+    }
+
+    private static TextKey problem(SettingFormat format) {
+        return switch (format) {
+            case SERVER_ADDRESS -> TextKey.PROBLEM_SERVER_ADDRESS;
+            case LETTERS_AND_DIGITS -> TextKey.PROBLEM_LETTERS_AND_DIGITS;
+            case TEXT -> throw new IllegalArgumentException("any text has the right form");
+        };
     }
 
     /**

@@ -8,20 +8,24 @@ import java.util.Optional;
 
 /**
  * Fetches a web address: the one way the forecast providers reach the network, so tests can answer instead. A
- * server's refusal (a 429, a 503) is a {@link Reply} with that status; only "could not talk to the server at all"
- * throws.
+ * server's refusal (a 429, a 503) is a {@link Reply} with that status; only "could not talk to the server at all",
+ * an answer that took too long and one that was too large throw.
  */
 public interface HttpGet {
 
-    /** How long a provider waits for an answer unless it asks otherwise. */
+    /** How long a provider waits for the whole answer, body included, unless it asks otherwise. */
     Duration DEFAULT_TIMEOUT = Duration.ofSeconds(15);
 
+    /** The largest forecast answer read; a week of hourly values for one plane is some tens of kilobytes. */
+    ByteSize DEFAULT_MAX_BODY = ByteSize.ofMegabytes(2);
+
     /**
-     * Sends the request and waits for the whole answer.
+     * Sends the request and waits for the whole answer, at most the request's timeout.
      *
      * @param request what to fetch
      * @return the server's answer, whatever its status
-     * @throws IOException when the server could not be reached or did not answer in time
+     * @throws TooLarge when the body is larger than the request allows; nothing more of it is read
+     * @throws IOException when the server could not be reached or the whole answer did not come in time
      * @throws InterruptedException when the waiting thread was interrupted
      */
     Reply get(Request request) throws IOException, InterruptedException;
@@ -31,9 +35,10 @@ public interface HttpGet {
      *
      * @param uri the address
      * @param headers extra headers, by name
-     * @param timeout how long to wait for the answer
+     * @param timeout how long to wait for the whole answer, body included
+     * @param maxBody the largest body that is read; a larger one is refused
      */
-    record Request(URI uri, Map<String, String> headers, Duration timeout) {
+    record Request(URI uri, Map<String, String> headers, Duration timeout, ByteSize maxBody) {
 
         /** Copies the headers. */
         public Request {
@@ -41,13 +46,26 @@ public interface HttpGet {
         }
 
         /**
-         * A request without extra headers and with the usual timeout.
+         * A request without extra headers, with the usual timeout and the usual largest body.
          *
          * @param uri the address to fetch
          * @return the request
          */
         public static Request of(URI uri) {
-            return new Request(uri, Map.of(), DEFAULT_TIMEOUT);
+            return new Request(uri, Map.of(), DEFAULT_TIMEOUT, DEFAULT_MAX_BODY);
+        }
+    }
+
+    /** The answer's body was larger than the request allows. */
+    final class TooLarge extends IOException {
+
+        /**
+         * Makes the error.
+         *
+         * @param limit the largest body the request allowed
+         */
+        public TooLarge(ByteSize limit) {
+            super("the answer is larger than " + limit.bytes() + " bytes");
         }
     }
 

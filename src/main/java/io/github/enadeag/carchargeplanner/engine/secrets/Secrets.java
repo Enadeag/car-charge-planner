@@ -2,6 +2,7 @@ package io.github.enadeag.carchargeplanner.engine.secrets;
 
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -39,6 +40,15 @@ public record Secrets(Map<ProviderId, Map<String, String>> byProvider) {
      */
     public Map<String, String> of(ProviderId providerId) {
         return byProvider.getOrDefault(providerId, Map.of());
+    }
+
+    /**
+     * Every secret value of every provider, to keep out of what is shown or logged.
+     *
+     * @return the values, in no particular order; none is empty
+     */
+    public List<String> values() {
+        return byProvider.values().stream().flatMap(values -> values.values().stream()).toList();
     }
 
     /**

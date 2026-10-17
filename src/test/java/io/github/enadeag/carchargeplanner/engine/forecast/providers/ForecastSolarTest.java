@@ -17,6 +17,7 @@ import io.github.enadeag.carchargeplanner.engine.forecast.ProviderConformance;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderError;
 import io.github.enadeag.carchargeplanner.engine.forecast.Recorded;
 import io.github.enadeag.carchargeplanner.engine.forecast.ReplayHttp;
+import io.github.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import io.github.enadeag.carchargeplanner.engine.forecast.Steps;
 import io.github.enadeag.carchargeplanner.engine.forecast.SystemDescription;
 import java.time.Duration;
@@ -42,7 +43,7 @@ class ForecastSolarTest extends ProviderConformance {
     private static final String RATE_LIMITED = Recorded.answer("forecast_solar_429.json");
     private static final Instant NOW = Instant.parse("2026-10-07T07:52:51Z"); // when the answer was recorded
     private static final String RETRY_AT = "2026-10-07T10:19:59+02:00"; // in the 429 answer: 08:19:59 UTC
-    private static final String SECRET = "FS-SECRET-KEY-5555";
+    private static final String SECRET = "FsSecretKey5555";
     private static final ZoneId AMSTERDAM = ZoneId.of("Europe/Amsterdam");
     private static final SystemDescription TWO_ARRAYS = EXAMPLE_SYSTEM.withArrays(List.of(
             new PanelArray("", 3.0, 30, -90, 0.14), new PanelArray("", 2.0, 10, 90, 0.14)));
@@ -55,7 +56,14 @@ class ForecastSolarTest extends ProviderConformance {
                 List.of(answer("", new Reply(200, "<html>maintenance</html>"))),
                 List.of(answer("", new Reply(200, "{}"))),
                 List.of(answer("", new Reply(429, RATE_LIMITED, Map.of("X-Ratelimit-Retry-At", RETRY_AT)))),
-                Duration.ofMinutes(27).plusSeconds(8), Map.of(), Map.of("api_key", SECRET), NOW);
+                Duration.ofMinutes(27).plusSeconds(8), Map.of(), Map.of("api_key", SECRET), NOW,
+                text -> List.of(answer("", new Reply(422, refusal(text)))));
+    }
+
+    private static String refusal(String text) {
+        var body = new JsonMapper().createObjectNode();
+        body.putObject("message").put("code", 422).put("type", "validation error").put("text", text);
+        return body.toString();
     }
 
     private static List<ForecastStep> fetch(String body, SystemDescription system) throws ProviderError {
@@ -168,6 +176,22 @@ class ForecastSolarTest extends ProviderConformance {
                 .isEqualTo("https://api.forecast.solar/" + SECRET + "/estimate/watthours/period/52.37/4.9/35/-45/4.8");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"abc/../estimate", "key?x=1", "key#x", "with space", "k%2Fey", "sleutel-1",
+            "ключ", "a12345678901234567890123456789012345678901234567890123456789012345"})
+    void aKeyThatIsNotOnlyLettersAndDigitsIsRefusedBeforeAnythingIsSent(String key) {
+        var http = ReplayHttp.always(new Reply(200, RECORDED));
+        assertThatThrownBy(() -> new ForecastSolar(http).fetch(EXAMPLE_SYSTEM, Map.of("api_key", key), NOW))
+                .isInstanceOf(ProviderError.NotConfigured.class).hasMessageContaining("letters and digits")
+                .message().doesNotContain(key);
+        assertThat(http.requests).isEmpty();
+    }
+
+    @Test
+    void itsKeyIsCheckedForLettersAndDigitsWhenEntered() {
+        assertThat(ForecastSolar.INFO.settings().getFirst().format()).isEqualTo(SettingFormat.LETTERS_AND_DIGITS);
+    }
+
     @Test
     void aBlankKeyMeansThePublicPlan() throws ProviderError {
         assertThat(requested(EXAMPLE_SYSTEM, Map.of("api_key", "  "))).startsWith("https://api.forecast.solar/estimate/");
@@ -176,7 +200,7 @@ class ForecastSolarTest extends ProviderConformance {
     /** Both use 0 = south, -90 = east, 90 = west and 180 / -180 = north, so it passes through unchanged. */
     @ParameterizedTest
     @ValueSource(ints = {0, -90, 90, 180, -180, -45})
-    void ourAzimuthIsTheirs(int azimuth) {
+    void ourAzimuthIsTheirs(int azimuth) throws ProviderError {
         var system = EXAMPLE_SYSTEM.withArrays(List.of(new PanelArray("", 4.8, 35, azimuth, 0.14)));
         var parts = ForecastSolar.requestUri(system, system.arrays().getFirst(), Map.of()).toString().split("/");
         assertThat(parts[parts.length - 2]).isEqualTo(String.valueOf(azimuth));
@@ -189,7 +213,7 @@ class ForecastSolarTest extends ProviderConformance {
         "52.0, 4.0, 5.0, 2.5, 0.5, /52/4/2/0/5",
     })
     void numbersAreWholeDegreesAndShortDecimals(double lat, double lon, double kwp, double tilt, double azimuth,
-            String end) {
+            String end) throws ProviderError {
         var system = new SystemDescription(new Coordinates(lat, lon), AMSTERDAM, List.of(new PanelArray("", kwp, tilt, azimuth, 0.14)));
         assertThat(ForecastSolar.requestUri(system, system.arrays().getFirst(), Map.of()).toString()).endsWith(end);
     }
@@ -234,7 +258,7 @@ class ForecastSolarTest extends ProviderConformance {
         var body = "{\"message\": {\"code\": 422, \"type\": \"validation error\", "
                 + "\"text\": \"Latitude must be between -90 and 90\"}}";
         assertThatThrownBy(() -> new ForecastSolar(ReplayHttp.always(new Reply(422, body))).fetch(EXAMPLE_SYSTEM, Map.of(), NOW))
-                .isInstanceOf(ProviderError.BadResponse.class).hasMessageContaining("Latitude must be");
+                .isInstanceOf(ProviderError.BadResponse.class).hasMessageContaining(" says: Latitude must be");
     }
 
     @Test
