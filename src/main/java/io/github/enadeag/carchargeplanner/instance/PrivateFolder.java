@@ -32,6 +32,7 @@ public final class PrivateFolder {
     private final Path path;
     private final Optional<UserPrincipal> user;
     private final ModeChange modeChange;
+    private final EntryOwner entryOwner;
 
     /** Changes a folder's mode; a seam for the tests, which make it fail or swap the folder. */
     @FunctionalInterface
@@ -47,6 +48,20 @@ public final class PrivateFolder {
         void set(Path folder, Set<PosixFilePermission> mode) throws IOException;
     }
 
+    /** Tells who owns a file in the folder; a seam for the tests, as only root can make a file of another user. */
+    @FunctionalInterface
+    interface EntryOwner {
+
+        /**
+         * The file's owner, without following a link.
+         *
+         * @param entry a file in the folder, of any kind
+         * @return its owner
+         * @throws IOException when it cannot be read
+         */
+        UserPrincipal of(Path entry) throws IOException;
+    }
+
     /**
      * Makes the folder's checker; nothing is made or checked yet.
      *
@@ -55,20 +70,23 @@ public final class PrivateFolder {
      *     Windows, where a folder made by an administrator's process is owned by the administrators instead
      */
     public PrivateFolder(Path path, Optional<UserPrincipal> user) {
-        this(path, user, Files::setPosixFilePermissions);
+        this(path, user, Files::setPosixFilePermissions, entry -> Files.getOwner(entry, LinkOption.NOFOLLOW_LINKS));
     }
 
     /**
-     * Makes the folder's checker with its own way of changing a folder's mode, for the tests.
+     * Makes the folder's checker with its own way of changing a folder's mode and of telling a file's owner, for the
+     * tests.
      *
      * @param path the folder; the folders above it that are missing are made too
      * @param user the user this app runs as, who must own the folder; empty where files have no owner and mode
      * @param modeChange how a folder's mode is changed
+     * @param entryOwner how the owner of a file in the folder is told
      */
-    PrivateFolder(Path path, Optional<UserPrincipal> user, ModeChange modeChange) {
+    PrivateFolder(Path path, Optional<UserPrincipal> user, ModeChange modeChange, EntryOwner entryOwner) {
         this.path = path;
         this.user = user;
         this.modeChange = modeChange;
+        this.entryOwner = entryOwner;
     }
 
     /**
@@ -77,8 +95,9 @@ public final class PrivateFolder {
      *
      * @return the folder
      * @throws NotPrivateException when it is a link or another kind of file, another user's, or one that others may
-     *     write in, whose files cannot be trusted; or when making it owner-only fails, or it is no longer the same
-     *     owner-only folder afterwards
+     *     write in, whose files cannot be trusted; or, when it is to be made owner-only, when it holds a file of
+     *     another user or one with another name (a hard link), lies in a folder others may write in, the change
+     *     fails, or it is no longer the same owner-only folder afterwards
      * @throws IOException when it cannot be made
      */
     public Path make() throws IOException {
@@ -107,7 +126,14 @@ public final class PrivateFolder {
         return path;
     }
 
-    /** The user's own folder with a wider mode: their own mistake, or an older version's, put right when it is safe. */
+    /**
+     * The user's own folder with a wider mode: their own mistake, or an older version's, put right when it is safe.
+     * Java cannot change the mode of a folder it holds open, so another folder could take this one's place between
+     * the checks and the change. That needs write access to the parent folder, so a parent others may write in is
+     * refused; and after the change the folder must still be the same one (its file key), owner-only and not a link.
+     * A folder others could once write in, and that was narrowed later, may still hold a file of theirs, so every
+     * file in it must be the user's and have no other name (a hard link).
+     */
     private void tighten(PosixFileAttributes before) throws NotPrivateException {
         var mode = PosixFilePermissions.toString(before.permissions());
         if (before.permissions().stream().anyMatch(WRITE_BY_OTHERS::contains)) {
@@ -116,18 +142,42 @@ public final class PrivateFolder {
         }
         PosixFileAttributes after;
         try {
+            var parent = path.toAbsolutePath().getParent();
+            if (parent != null
+                    && Files.getPosixFilePermissions(parent).stream().anyMatch(WRITE_BY_OTHERS::contains)) {
+                throw new NotPrivateException(path + " is open to other users and lies in " + parent
+                        + ", which other users may write in, so it is not made owner-only");
+            }
+            refuseOthersFiles();
             modeChange.set(path, OWNER_ONLY);
             after = Files.readAttributes(path, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+        } catch (NotPrivateException e) {
+            throw e;
         } catch (IOException e) {
             throw new NotPrivateException(path + " is open to other users and cannot be made owner-only: " + e);
         }
-        // another folder may have been put in its place between the check and the change
         if (!after.isDirectory() || after.isSymbolicLink() || !after.owner().equals(user.orElseThrow())
                 || !after.permissions().equals(OWNER_ONLY) || before.fileKey() == null
                 || !before.fileKey().equals(after.fileKey())) {
             throw new NotPrivateException(path + " is not the same owner-only folder after making it owner-only");
         }
         LOG.log(Level.WARNING, "tightened " + path + " to owner-only: its mode was " + mode);
+    }
+
+    private void refuseOthersFiles() throws IOException {
+        try (var entries = Files.list(path)) {
+            for (var entry : (Iterable<Path>) entries::iterator) {
+                if (!entryOwner.of(entry).equals(user.orElseThrow())) {
+                    throw new NotPrivateException(
+                            path + " holds " + entry.getFileName() + ", which belongs to another user");
+                }
+                // a folder always has more than one name ("." and its entry); only other files can be hard links
+                if (!Files.isDirectory(entry, LinkOption.NOFOLLOW_LINKS)
+                        && ((Number) Files.getAttribute(entry, "unix:nlink", LinkOption.NOFOLLOW_LINKS)).intValue() > 1) {
+                    throw new NotPrivateException(path + " holds " + entry.getFileName() + ", which has another name");
+                }
+            }
+        }
     }
 
     private FileAttribute<?>[] attributes() {
