@@ -33,6 +33,7 @@ import io.github.enadeag.carchargeplanner.engine.notify.Notifier;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import io.github.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import io.github.enadeag.carchargeplanner.instance.InstanceCommand;
 import io.github.enadeag.carchargeplanner.instance.SingleInstance;
 import java.io.IOException;
@@ -143,6 +144,9 @@ final class DesktopApp {
 
         var secretsFile = new SecretsFile(configPath.resolveSibling("secrets.json"));
         var dataFolder = DataLocation.defaultFolder(host.os(), host.environment(), host.home());
+        // folders made before the app made its folders private; a folder named with --config= stays as it is
+        PrivateFiles.tighten(appSettingsFile.path().toAbsolutePath().getParent());
+        PrivateFiles.tighten(dataFolder);
         var texts = new AnnouncementTexts(language);
         var engine = engine(http, secretsFile, dataFolder,
                 announcement -> notifications.show(texts.notification(announcement)));

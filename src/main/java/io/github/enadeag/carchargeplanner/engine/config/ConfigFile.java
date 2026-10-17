@@ -1,10 +1,10 @@
 package io.github.enadeag.carchargeplanner.engine.config;
 
+import io.github.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.Map;
@@ -98,19 +98,14 @@ public final class ConfigFile {
     }
 
     /**
-     * Replaces the file by this config, in the form {@link #read()} reads. The new file is written beside the old one
-     * and then moved over it, so a reader sees the old file or the new one, never half of one.
+     * Replaces the file by this config, in the form {@link #read()} reads, through {@link PrivateFiles}: a reader sees
+     * the old file or the new one, never half of one, and only the owner can read it.
      *
      * @param config the whole config to keep; its records have checked their values already
      * @throws IOException when the file or its folder could not be written; the file is then left as it was
      */
     public void write(EngineConfig config) throws IOException {
-        var temporary = path.resolveSibling(path.getFileName() + ".tmp");
-        if (path.getParent() != null) {
-            Files.createDirectories(path.getParent());
-        }
-        Files.writeString(temporary, json.writerWithDefaultPrettyPrinter().writeValueAsString(tree(config)));
-        Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        PrivateFiles.write(path, json.writerWithDefaultPrettyPrinter().writeValueAsString(tree(config)));
     }
 
     private static ObjectNode tree(EngineConfig config) {
