@@ -110,7 +110,7 @@ class AppearanceTest {
         var view = settingsView();
         Fx.run(() -> settings.choose(view, TextKey.FIELD_APPEARANCE, Appearance.DARK));
 
-        set(view::save);
+        set(() -> SettingsFixture.save(view));
 
         assertThat(appearance.get()).isEqualTo(Appearance.DARK);
         assertThat(darkWindows()).hasSize(2).containsOnly(true);

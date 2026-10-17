@@ -2,6 +2,7 @@ package io.github.enadeag.carchargeplanner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.github.enadeag.carchargeplanner.desktop.Background;
 import io.github.enadeag.carchargeplanner.engine.Engine;
 import io.github.enadeag.carchargeplanner.engine.ManualScheduler;
 import io.github.enadeag.carchargeplanner.engine.away.AwayFile;
@@ -52,7 +53,7 @@ class DashboardChangesTest {
                 Clock.fixed(NOW, ZoneOffset.UTC),
                 new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), announcement -> { }),
                 new ManualScheduler());
-        changes = new DashboardChanges(engine, handedOn::add);
+        changes = new DashboardChanges(engine, new Background(handedOn::add, Runnable::run));
     }
 
     private void runTheSavingThread() {
@@ -80,10 +81,14 @@ class DashboardChangesTest {
     void aChangeThatCannotBeSavedDoesNotStopTheNextOne() throws Exception {
         Files.createDirectory(folder.resolve("battery.json"));
 
-        changes.enterBatteryLevel(new Percent(72));
-        changes.addAwayPeriod(AWAY);
-        runTheSavingThread();
+        try (var log = LogCapture.of(Background.class)) {
+            changes.enterBatteryLevel(new Percent(72));
+            changes.addAwayPeriod(AWAY);
+            runTheSavingThread();
 
+            assertThat(log.lines()).containsExactly(
+                    "WARNING failed in the background: saving the battery level (UncheckedIOException)");
+        }
         assertThat(new AwayFile(folder.resolve("away.json")).periods()).containsExactly(AWAY);
     }
 }

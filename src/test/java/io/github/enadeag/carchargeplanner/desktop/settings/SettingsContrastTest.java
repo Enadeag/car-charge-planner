@@ -47,7 +47,7 @@ class SettingsContrastTest {
 
         var problems = Fx.call(() -> {
             settings.type(view, TextKey.FIELD_MINIMUM_CHARGE, "95");
-            view.save();
+            SettingsFixture.save(view);
             view.cancel();
             var found = new ArrayList<String>();
             for (var category : Category.values()) {
@@ -60,5 +60,13 @@ class SettingsContrastTest {
         });
 
         assertThat(problems).isEmpty();
+    }
+
+    @ParameterizedTest
+    @EnumSource(ColorScheme.class)
+    void whileReadingOrSavingAndWhenReadingFailedEveryTextStandsOutEnough(ColorScheme scheme) throws Exception {
+        settings = new SettingsFixture(folder, Language.ENGLISH);
+
+        assertThat(BusyScreens.settings(folder, Language.ENGLISH, scheme, Contrast::problemsIn)).isEmpty();
     }
 }

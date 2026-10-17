@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
+import io.github.enadeag.carchargeplanner.desktop.Background;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
 import io.github.enadeag.carchargeplanner.engine.config.Coordinates;
@@ -33,12 +34,13 @@ final class LocationPage implements ConfigPage {
      * Makes the page, empty until {@link #load(EngineConfig)}.
      *
      * @param lookup the place search, through the engine
+     * @param background asks the place search away from the JavaFX thread
      * @param messages the texts, in the owner's language
      */
-    LocationPage(PlaceLookup lookup, Messages messages) {
+    LocationPage(PlaceLookup lookup, Background background, Messages messages) {
         this.messages = messages;
         this.view = new PageView(messages.text(Category.LOCATION.title()));
-        this.search = new PlaceSearchCard(lookup, this::choose, messages);
+        this.search = new PlaceSearchCard(lookup, this::choose, background, messages);
         latitude = new NumberField(LATITUDE, "°", messages);
         longitude = new NumberField(LONGITUDE, "°", messages);
         timezone = new ChoiceField<>(ZoneId.getAvailableZoneIds().stream().sorted().map(ZoneId::of).toList(),

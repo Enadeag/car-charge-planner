@@ -1,5 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
+import io.github.enadeag.carchargeplanner.desktop.AppSettings;
+import io.github.enadeag.carchargeplanner.desktop.Background;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.ScreenReader;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
@@ -32,38 +34,64 @@ import javafx.scene.layout.VBox;
  * with unsaved changes asks first, in the bar where the buttons are. Enter saves and Escape closes; while the question
  * shows, Escape keeps editing. After a Save the focus goes to what it says, so a screen reader reads it: the status
  * line, or the category with a refused value.
+ *
+ * <p>The stores are read and written in the background, as the keychain can take seconds to answer: until they are
+ * read the pages cannot be edited and the status line says that they are being read, and while a Save runs it says
+ * so and nothing can be saved again. One read or Save runs at a time.
  */
 final class SettingsView extends BorderPane {
+
+    /** What Settings is doing. */
+    private enum State {
+        /** Reading the stores; the pages show nothing yet. */
+        READING,
+        /** The pages show what is stored, and can be edited and saved. */
+        READY,
+        /** Writing what the pages show. */
+        SAVING,
+        /** The stores could not be read; closing and opening Settings tries again. */
+        UNREADABLE
+    }
 
     private final SettingsForm form;
     private final List<Page> pages;
     private final Runnable close;
-    private final Runnable saved;
+    private final Consumer<AppSettings> saved;
+    private final Background background;
     private final Messages messages;
     private final ListView<Category> categories = new ListView<>();
     private final ScrollPane body = new ScrollPane();
     private final Label status = FieldRow.paragraph("", "status-text");
     private final Button cancel = new Button();
+    private final Button save;
+    private final Button saveAndClose;
     private final HBox actions;
     private final HBox confirm;
     private final Set<Category> refused = EnumSet.noneOf(Category.class);
     private Optional<SaveOutcome> outcome = Optional.empty();
     private Runnable afterClose = () -> { };
+    private State state = State.READING;
+    /** True while a read or a Save runs in the background. */
+    private boolean working;
 
     /**
      * Makes the view, showing the first category. The pages are not loaded here: see {@link #reload()}.
      *
      * @param form what the pages show against what is stored
      * @param pages every category's page, in the sidebar's order
-     * @param close hides Settings; called after Cancel, or after Save and close
-     * @param saved called after something was saved, so the plan can be made again with it
+     * @param close closes Settings; called after Cancel, or after Save and close
+     * @param saved gets the app settings as stored after something was saved, so the app can follow them and the plan
+     *     is made again
+     * @param background reads and writes the stores away from the JavaFX thread
      * @param messages the texts, in the owner's language
      */
-    SettingsView(SettingsForm form, List<Page> pages, Runnable close, Runnable saved, Messages messages) {
+    SettingsView(SettingsForm form, List<Page> pages, Runnable close, Consumer<AppSettings> saved,
+            Background background, Messages messages) {
         this.form = form;
         this.pages = List.copyOf(pages);
         this.close = close;
         this.saved = saved;
+        this.background = background;
         this.messages = messages;
         pages.forEach(page -> page.onChange(this::edited));
 
@@ -92,15 +120,11 @@ final class SettingsView extends BorderPane {
         body.getStyleClass().add("settings-body");
 
         cancel.setOnAction(event -> cancel());
-        var save = new Button(messages.text(TextKey.SETTINGS_SAVE));
+        save = new Button(messages.text(TextKey.SETTINGS_SAVE));
         save.setDefaultButton(true);
-        save.setOnAction(event -> save());
-        var saveAndClose = new Button(messages.text(TextKey.SETTINGS_SAVE_CLOSE));
-        saveAndClose.setOnAction(event -> {
-            if (save()) {
-                close.run();
-            }
-        });
+        save.setOnAction(event -> save(() -> { }));
+        saveAndClose = new Button(messages.text(TextKey.SETTINGS_SAVE_CLOSE));
+        saveAndClose.setOnAction(event -> save(close));
         actions = bar(status, cancel, save, saveAndClose);
 
         var keepEditing = new Button(messages.text(TextKey.SETTINGS_KEEP_EDITING));
@@ -125,6 +149,7 @@ final class SettingsView extends BorderPane {
         showActions();
         getStyleClass().add("settings");
         categories.getSelectionModel().selectFirst();
+        enter(State.READING);
     }
 
     /**
@@ -133,18 +158,21 @@ final class SettingsView extends BorderPane {
      * @param stores where the settings are kept; nothing is read until {@link #reload()}
      * @param facts the version and the places of the files, for the About page
      * @param openLink opens a web page in the owner's browser; called on the JavaFX thread, so it should not block
-     * @param close hides Settings; called after Cancel, or after Save and close
-     * @param saved called after something was saved, so the plan can be made again with it
+     * @param close closes Settings; called after Cancel, or after Save and close
+     * @param saved gets the app settings as stored after something was saved, so the app can follow them and the plan
+     *     is made again
      * @param runSetUp opens set-up, after Settings closed; empty while the app has no set-up, and then App does not
      *     offer it
+     * @param background does the slow work, such as reading the stores, away from the JavaFX thread
      * @param messages the texts, in the owner's language
      * @return the view, showing the first category
      */
     static SettingsView of(SettingsStores stores, AboutFacts facts, Consumer<URI> openLink, Runnable close,
-            Runnable saved, Optional<Runnable> runSetUp, Messages messages) {
+            Consumer<AppSettings> saved, Optional<Runnable> runSetUp, Background background, Messages messages) {
         var solar = new SolarPage(messages);
         var location = new LocationPage(
-                (provider, text) -> stores.engine().searchPlaces(provider, text, messages.language().code()), messages);
+                (provider, text) -> stores.engine().searchPlaces(provider, text, messages.language().code()),
+                background, messages);
         var carHouse = new CarHousePage(messages);
         var charger = new ChargerPage(messages);
         var engine = stores.engine();
@@ -155,7 +183,7 @@ final class SettingsView extends BorderPane {
                 return new ConnectionResult(false, 0, e.getMessage());
             }
         };
-        var forecast = new ForecastPage(engine.providers(), tester, openLink, facts.keysFile(), messages);
+        var forecast = new ForecastPage(engine.providers(), tester, openLink, facts.keysFile(), background, messages);
         var away = new AwayPage(messages);
         var planning = new PlanningPage(messages);
         var app = new AppPage(messages);
@@ -166,22 +194,40 @@ final class SettingsView extends BorderPane {
         var pages = new ArrayList<Page>(configPages);
         pages.add(app);
         pages.add(about);
-        var view = new SettingsView(form, pages, close, saved, messages);
+        var view = new SettingsView(form, pages, close, saved, background, messages);
         runSetUp.ifPresent(setUp -> app.offerSetUp(() -> view.closeThen(setUp)));
         return view;
     }
 
     /**
-     * Reads the stores again and shows what they hold, as when Settings opens.
+     * Reads the stores again in the background and shows what they hold, as when Settings opens; until then the pages
+     * cannot be edited. Does nothing while a read or a Save runs.
      */
     void reload() {
-        form.load();
+        reload(() -> { });
+    }
+
+    /** Reads the stores again, then runs an action on the JavaFX thread once the pages show what they hold. */
+    private void reload(Runnable then) {
+        if (working) {
+            return;
+        }
         refused.clear();
         outcome = Optional.empty();
         categories.refresh();
-        status.setText("");
         showActions();
-        edited();
+        enter(State.READING);
+        working = true;
+        background.run("reading the settings", form::read, stored -> {
+            working = false;
+            form.show(stored);
+            enter(State.READY);
+            then.run();
+        }, failure -> {
+            working = false;
+            enter(State.UNREADABLE);
+            showProblem(messages.text(TextKey.SETTINGS_READ_FAILED, Background.describe(failure, messages)));
+        });
     }
 
     /**
@@ -191,10 +237,11 @@ final class SettingsView extends BorderPane {
      * @param before the view this one replaces; it should have no unsaved changes, as they are read from the stores
      */
     void continueFrom(SettingsView before) {
-        reload();
         show(before.shown());
-        before.outcome.ifPresent(this::showOutcome);
-        categories.refresh();
+        reload(() -> {
+            before.outcome.ifPresent(this::showOutcome);
+            categories.refresh();
+        });
     }
 
     /**
@@ -203,7 +250,16 @@ final class SettingsView extends BorderPane {
      * @return true when closing would throw edits away
      */
     boolean isChanged() {
-        return form.isChanged();
+        return (state == State.READY || state == State.SAVING) && form.isChanged();
+    }
+
+    /**
+     * Whether the stores are being read, so the pages cannot be edited yet.
+     *
+     * @return true from the time Settings opens or reads again until the pages show what is stored
+     */
+    boolean isReading() {
+        return state == State.READING;
     }
 
     /**
@@ -217,25 +273,62 @@ final class SettingsView extends BorderPane {
     }
 
     /**
-     * Checks and stores what the pages show. On a refused value its category is marked and shown.
+     * Checks what the pages show and stores it in the background. On a refused value its category is marked and shown
+     * at once, and nothing is stored. Does nothing while the stores are read or a Save runs.
      *
-     * @return true when everything was stored
+     * @param then what to do once everything was stored, on the JavaFX thread, such as closing Settings
      */
-    boolean save() {
+    void save(Runnable then) {
+        if (state != State.READY || working) {
+            return;
+        }
         showActions();
-        var result = form.save();
+        switch (form.enter()) {
+            case SettingsForm.Entered.Refused refusing -> saved(new SaveOutcome.Refused(refusing.categories()));
+            case SettingsForm.Entered.Accepted accepted -> {
+                enter(State.SAVING);
+                working = true;
+                background.run("saving the settings", () -> form.write(accepted.changes()), written -> {
+                    working = false;
+                    written.stored().ifPresent(form::show);
+                    enter(State.READY);
+                    saved(written.outcome());
+                    if (written.outcome() instanceof SaveOutcome.Saved) {
+                        saved.accept(written.stored().orElseThrow().app());
+                        then.run();
+                    }
+                }, failure -> {
+                    working = false;
+                    enter(State.READY);
+                    saved(new SaveOutcome.Failed(Background.describe(failure, messages)));
+                });
+            }
+        }
+    }
+
+    /**
+     * The outcome of the last Save, for a test that saved.
+     *
+     * @return the outcome; empty before the first Save, while one runs, and after the stores were read again
+     */
+    Optional<SaveOutcome> outcome() {
+        return state == State.SAVING ? Optional.empty() : outcome;
+    }
+
+    /** Shows what a Save came to, and moves the focus to what says so. */
+    private void saved(SaveOutcome result) {
+        if (result instanceof SaveOutcome.StartAtLoginRefused refusal) {
+            form.showStartAtLoginFailure(refusal.detail());
+        }
         showOutcome(result);
         categories.refresh(); // before the focus moves there: the marked category says it has a problem
         switch (result) {
-            case SaveOutcome.Saved ignored -> {
-                saved.run();
-                ScreenReader.focus(status);
-            }
+            case SaveOutcome.Saved ignored -> ScreenReader.focus(status);
             case SaveOutcome.Refused problems -> show(problems.categories().getFirst());
+            case SaveOutcome.StartAtLoginRefused ignored -> show(Category.APP);
             case SaveOutcome.Failed ignored -> ScreenReader.focus(status);
         }
         edited();
-        return result instanceof SaveOutcome.Saved;
     }
 
     /** The status line, and the categories marked, after a Save. */
@@ -247,14 +340,59 @@ final class SettingsView extends BorderPane {
             case SaveOutcome.Saved ignored -> status.setText(messages.text(TextKey.SETTINGS_SAVED));
             case SaveOutcome.Refused problems -> {
                 refused.addAll(problems.categories());
-                status.setText(messages.text(TextKey.SETTINGS_REFUSED));
-                status.getStyleClass().add("problem");
+                showProblem(messages.text(TextKey.SETTINGS_REFUSED));
             }
-            case SaveOutcome.Failed failure -> {
-                status.setText(messages.text(TextKey.SETTINGS_SAVE_FAILED, failure.detail()));
-                status.getStyleClass().add("problem");
+            case SaveOutcome.StartAtLoginRefused ignored -> {
+                refused.add(Category.APP);
+                showProblem(messages.text(TextKey.SETTINGS_REFUSED));
+            }
+            case SaveOutcome.Failed failure ->
+                    showProblem(messages.text(TextKey.SETTINGS_SAVE_FAILED, failure.detail()));
+        }
+    }
+
+    private void showProblem(String text) {
+        status.setText(text);
+        if (!status.getStyleClass().contains("problem")) {
+            status.getStyleClass().add("problem");
+        }
+    }
+
+    /**
+     * Goes over to another state: the pages can be edited only when ready, Save only then, and the status line says
+     * what Settings is doing; the page's own text says it to a screen reader too.
+     */
+    private void enter(State next) {
+        state = next;
+        var ready = next == State.READY;
+        body.setDisable(!ready);
+        save.setDisable(!ready);
+        saveAndClose.setDisable(!ready);
+        switch (next) {
+            case READING -> showBusy(messages.text(TextKey.SETTINGS_READING));
+            case SAVING -> showBusy(messages.text(TextKey.SETTINGS_SAVING));
+            case READY -> {
+                if (status.getStyleClass().contains("busy")) {
+                    status.setText("");
+                }
+                status.getStyleClass().remove("busy");
+                body.setAccessibleText(null);
+            }
+            case UNREADABLE -> {
+                status.getStyleClass().remove("busy");
+                body.setAccessibleText(null);
             }
         }
+        edited();
+    }
+
+    private void showBusy(String text) {
+        status.getStyleClass().remove("problem");
+        if (!status.getStyleClass().contains("busy")) {
+            status.getStyleClass().add("busy");
+        }
+        status.setText(text);
+        body.setAccessibleText(text);
     }
 
     /** Closes Settings, after asking when that would throw edits away. */
@@ -269,8 +407,11 @@ final class SettingsView extends BorderPane {
      * @param next what to run once Settings closed, such as set-up
      */
     void closeThen(Runnable next) {
+        if (state == State.SAVING) {
+            return; // in a moment the edits are either stored or the reason they are not shows
+        }
         afterClose = next;
-        if (form.isChanged()) {
+        if (state == State.READY && form.isChanged()) {
             actions.setVisible(false);
             confirm.setVisible(true);
             confirm.getChildren().get(1).requestFocus();
@@ -300,7 +441,8 @@ final class SettingsView extends BorderPane {
 
     /** "Close" when nothing is unsaved, "Cancel" when closing would throw edits away. */
     private void edited() {
-        cancel.setText(messages.text(form.isChanged() ? TextKey.SETTINGS_CANCEL : TextKey.SETTINGS_CLOSE));
+        var changed = state != State.READING && state != State.UNREADABLE && form.isChanged();
+        cancel.setText(messages.text(changed ? TextKey.SETTINGS_CANCEL : TextKey.SETTINGS_CLOSE));
     }
 
     private void showActions() {

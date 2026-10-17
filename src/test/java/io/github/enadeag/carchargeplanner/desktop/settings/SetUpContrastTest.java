@@ -51,4 +51,12 @@ class SetUpContrastTest {
             assertThat(css.warnings()).isEmpty();
         }
     }
+
+    @ParameterizedTest
+    @EnumSource(ColorScheme.class)
+    void whileReadingOrSavingAndWhenReadingFailedEveryTextStandsOutEnough(ColorScheme scheme) throws Exception {
+        setUp = new SetUpFixture(folder, Language.DUTCH);
+
+        assertThat(BusyScreens.setUp(folder, Language.DUTCH, scheme, Contrast::problemsIn)).isEmpty();
+    }
 }

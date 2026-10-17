@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
+import io.github.enadeag.carchargeplanner.desktop.Background;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
 import io.github.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
@@ -10,7 +11,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
@@ -24,6 +24,7 @@ import javafx.scene.layout.HBox;
 final class ProviderCard {
 
     private final ProviderInfo info;
+    private final Background background;
     private final Messages messages;
     private final Map<String, Input> inputs = new LinkedHashMap<>();
     private final Map<String, FieldRow> rows = new LinkedHashMap<>();
@@ -37,10 +38,13 @@ final class ProviderCard {
      * @param info what the provider tells about itself
      * @param tester asks the provider for a forecast; called away from the JavaFX thread
      * @param openLink opens a web page in the owner's browser
+     * @param background asks the provider away from the JavaFX thread
      * @param messages the texts, in the owner's language
      */
-    ProviderCard(ProviderInfo info, ConnectionTest tester, Consumer<URI> openLink, Messages messages) {
+    ProviderCard(ProviderInfo info, ConnectionTest tester, Consumer<URI> openLink, Background background,
+            Messages messages) {
         this.info = info;
+        this.background = background;
         this.messages = messages;
         var texts = new ProviderTexts(messages);
         var terms = new Hyperlink(messages.text(TextKey.PROVIDER_TERMS));
@@ -171,10 +175,8 @@ final class ProviderCard {
         settings.putAll(secret());
         test.setDisable(true);
         result.setText(messages.text(TextKey.PROVIDER_TESTING, info.name()));
-        Thread.ofVirtual().start(() -> {
-            var outcome = tester.attempt(info.id(), settings);
-            Platform.runLater(() -> showResult(outcome));
-        });
+        background.run("testing a forecast provider", () -> tester.attempt(info.id(), settings), this::showResult,
+                failure -> showResult(new ConnectionResult(false, 0, Background.describe(failure, messages))));
     }
 
     private void showResult(ConnectionResult outcome) {

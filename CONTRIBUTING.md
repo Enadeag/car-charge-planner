@@ -155,6 +155,10 @@ Everything is in the package `io.github.enadeag.carchargeplanner`, under `src/ma
 | `platform.linux`, `platform.windows` | The tray icon, notifications, the keychain and start at login on each system: our own StatusNotifierItem, notification and Secret Service clients over D-Bus, and a desktop entry in the autostart folder; AWT's `SystemTray` and its icon's messages, the Credential Manager and the Run key. |
 | `Main` and the root package | The composition root: the one place where the parts are made and handed to each other. `Main` reads the system once (`Host`, `Os`) and runs a command (`Commands`) or the app (`DesktopApp`: startup order, tray or window (`StartupDecision`, `TrayStarter`), and one `ClosingOrder` for Quit and the shutdown hook); `PlatformParts` with `LinuxParts` and `WindowsParts` makes each system's own parts. |
 
+Nothing slow runs on the JavaFX thread: a window hands work that can wait on the keychain, a file, the system or the
+network to `desktop.Background`, which runs it on a virtual thread, logs a failure, and hands the outcome back to the
+JavaFX thread. A test gives it executors of its own, such as one that runs the work at once or one that holds it.
+
 How to add a forecast provider is in [docs/providers.md](docs/providers.md). `CONTEXT.md` explains the words the
 project uses (window, charge power, away and so on), and `docs/adr/` records the larger decisions.
 

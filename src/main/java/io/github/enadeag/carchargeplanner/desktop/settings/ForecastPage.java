@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
+import io.github.enadeag.carchargeplanner.desktop.Background;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
@@ -49,16 +50,17 @@ final class ForecastPage implements ConfigPage {
      * @param tester asks a provider for a forecast with what is entered
      * @param openLink opens a web page in the owner's browser
      * @param keysFile the file the keys are kept in when there is no usable keychain
+     * @param background asks the providers away from the JavaFX thread
      * @param messages the texts, in the owner's language
      */
     ForecastPage(List<ProviderInfo> providers, ConnectionTest tester, Consumer<URI> openLink, Path keysFile,
-            Messages messages) {
+            Background background, Messages messages) {
         this.messages = messages;
         this.keysFile = keysFile;
         this.view = new PageView(messages.text(Category.FORECAST.title()));
         providers.forEach(info -> {
             known.put(info.id(), info);
-            cards.put(info.id(), new ProviderCard(info, tester, openLink, messages));
+            cards.put(info.id(), new ProviderCard(info, tester, openLink, background, messages));
         });
         var ids = List.copyOf(known.keySet());
         primary = new ChoiceField<>(ids, this::name);

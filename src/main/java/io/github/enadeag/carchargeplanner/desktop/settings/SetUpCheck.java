@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
+import io.github.enadeag.carchargeplanner.desktop.Background;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
@@ -8,7 +9,7 @@ import io.github.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import java.util.List;
 import java.util.function.BiFunction;
-import javafx.application.Platform;
+import java.util.function.Consumer;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
@@ -21,6 +22,7 @@ final class SetUpCheck implements SetUpPage {
 
     private final BiFunction<EngineConfig, Secrets, ConnectionResult> check;
     private final List<ProviderInfo> providers;
+    private final Background background;
     private final Messages messages;
     private final Label status = FieldRow.paragraph("", "status-text");
     private final Button again;
@@ -35,12 +37,14 @@ final class SetUpCheck implements SetUpPage {
      * @param check asks the config's primary provider for one forecast with these keys, nothing saved; blocks, so it
      *     is called away from the JavaFX thread
      * @param providers what the known providers tell about themselves, to name the one asked
+     * @param background asks the provider away from the JavaFX thread
      * @param messages the texts, in the language set-up speaks
      */
     SetUpCheck(BiFunction<EngineConfig, Secrets, ConnectionResult> check, List<ProviderInfo> providers,
-            Messages messages) {
+            Background background, Messages messages) {
         this.check = check;
         this.providers = List.copyOf(providers);
+        this.background = background;
         this.messages = messages;
         again = new Button(messages.text(TextKey.SETUP_CHECK_AGAIN));
         again.setOnAction(event -> ask());
@@ -82,14 +86,13 @@ final class SetUpCheck implements SetUpPage {
         again.setDisable(true);
         status.getStyleClass().remove("problem");
         status.setText(messages.text(TextKey.SETUP_CHECK_ASKING, name));
-        Thread.ofVirtual().start(() -> {
-            var result = check.apply(askedConfig, askedKeys);
-            Platform.runLater(() -> {
-                if (asking == asked) {
-                    show(name, result);
-                }
-            });
-        });
+        Consumer<ConnectionResult> answered = result -> {
+            if (asking == asked) {
+                show(name, result);
+            }
+        };
+        background.run("checking the forecast for set-up", () -> check.apply(askedConfig, askedKeys), answered,
+                failure -> answered.accept(new ConnectionResult(false, 0, Background.describe(failure, messages))));
     }
 
     private void show(String name, ConnectionResult result) {

@@ -23,6 +23,14 @@ sealed interface SaveOutcome {
     }
 
     /**
+     * The system refused to start the app at login, or to stop it; nothing after it was stored.
+     *
+     * @param detail the system's reason, as it gave it
+     */
+    record StartAtLoginRefused(String detail) implements SaveOutcome {
+    }
+
+    /**
      * A file could not be written; what was stored before that stays stored.
      *
      * @param detail the system's error, as it gave it

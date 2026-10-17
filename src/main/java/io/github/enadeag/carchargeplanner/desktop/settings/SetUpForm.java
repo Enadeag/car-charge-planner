@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
+import io.github.enadeag.carchargeplanner.desktop.AppSettings;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import java.util.EnumMap;
@@ -10,6 +11,8 @@ import java.util.Optional;
 /**
  * What set-up's steps show against what is stored: it loads the steps' parts from a draft, has the engine's records
  * check a step's values, and at Finish writes what differs from what is stored, through the same storage as Settings.
+ *
+ * <p>{@link #write} blocks and runs away from the JavaFX thread; the rest belongs to the JavaFX thread.
  */
 final class SetUpForm {
 
@@ -24,7 +27,7 @@ final class SetUpForm {
     /**
      * Makes the form; nothing is shown until {@link #start(SetUpStart, SetUpDraft)}.
      *
-     * @param storage reads the key storage and writes at Finish
+     * @param storage writes at Finish
      * @param parts per step the parts of the config it shows; a step without any is left out
      * @param location the location page, one of the parts, which also needs a place chosen
      * @param forecast the forecast page, one of the parts, which also holds the API keys
@@ -48,7 +51,7 @@ final class SetUpForm {
     void start(SetUpStart start, SetUpDraft draft) {
         stored = start;
         base = draft.config();
-        forecast.loadKeys(draft.keys(), storage.keyStorage(), start.keysProblem());
+        forecast.loadKeys(draft.keys(), start.keyStorage(), start.keysProblem());
         allParts().forEach(part -> part.load(base));
         app.load(draft.app(), start.startsAtLogin().map(possible -> draft.startAtLogin()));
     }
@@ -125,18 +128,45 @@ final class SetUpForm {
     }
 
     /**
-     * Writes what differs from what is stored: the config always when none was stored.
+     * What differs from what is stored: the config always when none was stored.
      *
      * @param config the whole config to keep, as {@link #config()} gave it
-     * @return saved; refused with the App category when the system refused start at login; or failed with the
-     *     system's error
+     * @return the changes for {@link #write}
      */
-    SaveOutcome save(EngineConfig config) {
+    SettingsStorage.Changes changes(EngineConfig config) {
         var startAtLogin = stored.startsAtLogin().filter(on -> on != app.startsAtLogin()).map(on -> app.startsAtLogin());
         var keys = Optional.of(keys()).filter(entered -> !entered.equals(stored.keys()));
         var newConfig = Optional.of(config).filter(entered -> !Optional.of(entered).equals(stored.config()));
         var settings = Optional.of(app.settings()).filter(chosen -> !chosen.equals(stored.app()));
-        return storage.save(new SettingsStorage.Changes(startAtLogin, keys, newConfig, settings), app);
+        return new SettingsStorage.Changes(startAtLogin, keys, newConfig, settings);
+    }
+
+    /**
+     * Writes the changes. Blocks while the system, the keychain and the files answer; may be called from any thread.
+     *
+     * @param changes what {@link #changes(EngineConfig)} gave
+     * @return saved; refused by the system's start at login; or failed with the system's error
+     */
+    SaveOutcome write(SettingsStorage.Changes changes) {
+        return storage.save(changes);
+    }
+
+    /**
+     * The app's own settings as entered, which Finish stores.
+     *
+     * @return the settings on the App step
+     */
+    AppSettings appSettings() {
+        return app.settings();
+    }
+
+    /**
+     * Shows at start at login why the system refused it.
+     *
+     * @param detail the system's reason
+     */
+    void showStartAtLoginFailure(String detail) {
+        app.showStartAtLoginFailure(detail);
     }
 
     private List<ConfigPart> allParts() {

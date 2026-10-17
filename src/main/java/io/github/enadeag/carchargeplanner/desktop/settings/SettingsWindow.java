@@ -1,14 +1,16 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.AppIcon;
+import io.github.enadeag.carchargeplanner.desktop.AppSettings;
+import io.github.enadeag.carchargeplanner.desktop.Background;
 import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.SystemTheme;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
 import java.net.URI;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
@@ -19,7 +21,8 @@ import javafx.stage.Stage;
 
 /**
  * Settings in a window of its own, beside the dashboard; the tray and the dashboard keep working while it is open.
- * It reads what is stored each time it opens, and keeps the owner's edits while it stays open.
+ * The window is made each time it opens, and reads what is stored in the background; it keeps the owner's edits while
+ * it stays open. Closed, it is let go of entirely, so its pages take no memory while the app runs in the tray.
  *
  * <p>When the owner chooses another language, Settings is made again in it, on the category it showed. Saving is what
  * chooses a language, and after a Save nothing is left unsaved; should the language change while edits are unsaved,
@@ -32,61 +35,53 @@ public final class SettingsWindow {
     private static final double WIDTH_EM = 60;
     private static final double HEIGHT_EM = 46;
 
-    private final Stage stage = new Stage();
-    private final Function<Messages, SettingsView> views;
+    /** Makes the view in a language; the runnable closes the window it is shown in. */
+    private final BiFunction<Messages, Runnable, SettingsView> views;
     private final LanguageChoice language;
-    // both belong to the JavaFX thread
+    private final SystemTheme theme;
+    private final AppIcon icon;
+    // the fields below belong to the JavaFX thread; all are null while the window is closed
+    private Stage stage;
     private SettingsView view;
     private Messages spoken;
 
     /**
-     * Makes the window, hidden.
+     * Makes what opens the window; no window is made yet.
      *
      * @param stores where the settings are kept, read when the window opens
      * @param facts the version and the places of the files, for the About page
      * @param openLink opens a web page in the owner's browser; called on the JavaFX thread, so it should not block
-     * @param saved called on the JavaFX thread after something was saved, so the plan is made again with it; it
-     *     should hand the work on
+     * @param saved gets the app settings as stored, on the JavaFX thread, after something was saved, so the app follows
+     *     them and plans again; it should hand slow work on
      * @param runSetUp opens set-up once Settings closed; empty while the app has no set-up
      * @param colorScheme light or dark for the windows, followed while the app runs: the owner's appearance over the
      *     system's ({@link io.github.enadeag.carchargeplanner.desktop.Appearance#scheme}); never null
      * @param icon the app icon, for the title bar and the taskbar
      * @param language the language the texts are in, followed while the app runs; never null
+     * @param background reads and writes the stores away from the JavaFX thread
      */
-    public SettingsWindow(SettingsStores stores, AboutFacts facts, Consumer<URI> openLink, Runnable saved,
-            Optional<Runnable> runSetUp, ObservableValue<ColorScheme> colorScheme, AppIcon icon,
-            LanguageChoice language) {
-        this.views = messages -> SettingsView.of(stores, facts, openLink, stage::hide, saved, runSetUp, messages);
+    public SettingsWindow(SettingsStores stores, AboutFacts facts, Consumer<URI> openLink,
+            Consumer<AppSettings> saved, Optional<Runnable> runSetUp, ObservableValue<ColorScheme> colorScheme,
+            AppIcon icon, LanguageChoice language, Background background) {
+        this.views = (messages, close) -> SettingsView.of(stores, facts, openLink, close, saved, runSetUp, background,
+                messages);
         this.language = language;
-        this.spoken = language.messages();
-        this.view = views.apply(spoken);
-        var scene = new Scene(view);
-        new SystemTheme(colorScheme).style(scene);
-        stage.setScene(scene);
-        stage.setTitle(spoken.text(TextKey.SETTINGS_TITLE));
-        stage.getIcons().setAll(icon.fxImages());
-        var size = WindowSize.on(WIDTH_EM, HEIGHT_EM, Font.getDefault().getSize(),
-                Screen.getPrimary().getVisualBounds());
-        stage.setWidth(size.getWidth());
-        stage.setHeight(size.getHeight());
-        stage.setOnCloseRequest(event -> {
-            event.consume();
-            view.cancel();
-        });
+        this.theme = new SystemTheme(colorScheme);
+        this.icon = icon;
         // later, also on the JavaFX thread: a Save chooses the language while its button is still handling the click
         language.onChange(chosen -> Platform.runLater(this::speak));
     }
 
     /**
-     * Shows Settings on a category, in front. A window that is open already keeps the owner's edits; one that was
-     * closed reads what is stored again.
+     * Shows Settings on a category, in front. A window that is open already keeps the owner's edits; otherwise a new
+     * one opens and reads what is stored.
      *
      * @param category the category to show
      */
     public void open(Category category) {
         Platform.runLater(() -> {
-            if (!stage.isShowing()) {
-                speak();
+            if (stage == null) {
+                make();
                 view.reload();
             }
             view.show(category);
@@ -97,19 +92,51 @@ public final class SettingsWindow {
         });
     }
 
-    /** Makes Settings again in the language spoken now, unless it speaks it or holds edits that are not saved. */
+    /** Makes the window and its view, in the language spoken now. */
+    private void make() {
+        var made = new Stage();
+        stage = made;
+        spoken = language.messages();
+        view = views.apply(spoken, () -> close(made));
+        var scene = new Scene(view);
+        theme.style(scene);
+        made.setScene(scene);
+        made.setTitle(spoken.text(TextKey.SETTINGS_TITLE));
+        made.getIcons().setAll(icon.fxImages());
+        var size = WindowSize.on(WIDTH_EM, HEIGHT_EM, Font.getDefault().getSize(),
+                Screen.getPrimary().getVisualBounds());
+        made.setWidth(size.getWidth());
+        made.setHeight(size.getHeight());
+        made.setOnCloseRequest(event -> {
+            event.consume();
+            view.cancel();
+        });
+    }
+
+    /** Closes the window and lets go of it; a view of a window closed before changes nothing. */
+    private void close(Stage closing) {
+        if (closing != stage) {
+            return;
+        }
+        theme.forget(closing.getScene());
+        closing.close();
+        stage = null;
+        view = null;
+        spoken = null;
+    }
+
+    /** Makes Settings again in the language spoken now, unless it is closed, speaks it or holds unsaved edits. */
     private void speak() {
         var now = language.messages();
-        if (now == spoken || (stage.isShowing() && view.isChanged())) {
+        if (stage == null || now == spoken || view.isChanged()) {
             return;
         }
         spoken = now;
         var before = view;
-        view = views.apply(now);
+        var shown = stage;
+        view = views.apply(now, () -> close(shown));
         stage.getScene().setRoot(view);
         stage.setTitle(now.text(TextKey.SETTINGS_TITLE));
-        if (stage.isShowing()) {
-            view.continueFrom(before);
-        }
+        view.continueFrom(before);
     }
 }

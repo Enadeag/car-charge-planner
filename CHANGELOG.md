@@ -11,6 +11,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ### Changed
 - The API keys are read from the system keychain once and kept in memory until you save new ones, instead of at every plan, and only when a forecast provider is about to be asked. A keychain that cannot be used, or does not answer within 5 seconds, holds nothing up and is tried again after 5 minutes. On Linux the app keeps one connection to the Secret Service instead of opening one for every question, and first checks that there is one.
 - Saving the API keys or the settings no longer waits for a forecast that is being fetched.
+- Settings and set-up open at once and say "Reading your settings…" until the keychain and the files have answered, and Save and Finish say "Saving…" while they store; meanwhile the dashboard and the tray keep working. Closed, these windows are let go of instead of hidden, so they take no memory while the app runs in the tray.
 
 ## [0.3.0] - 2026-10-16
 

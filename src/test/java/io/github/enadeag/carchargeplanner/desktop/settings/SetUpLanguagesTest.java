@@ -2,13 +2,14 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.FxTest;
+import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.Scenes;
 import io.github.enadeag.carchargeplanner.desktop.TextScale;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.stream.Stream;
+import javafx.application.ColorScheme;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -70,5 +71,13 @@ class SetUpLanguagesTest {
         var view = setUp.open();
 
         assertThat(SetUpScreens.problems(setUp, view, Scenes::cutOff)).isEmpty();
+    }
+
+    @ParameterizedTest
+    @EnumSource(Language.class)
+    void noTextIsCutOffWhileReadingOrSavingOrWhenReadingFailed(Language language) throws Exception {
+        setUp = new SetUpFixture(folder, language);
+
+        assertThat(BusyScreens.setUp(folder, language, ColorScheme.LIGHT, Scenes::cutOff)).isEmpty();
     }
 }

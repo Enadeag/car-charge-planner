@@ -265,6 +265,14 @@ public enum TextKey {
     SETTINGS_REFUSED,
     /** Said when a file could not be written: {0} the system's error. */
     SETTINGS_SAVE_FAILED,
+    /** Said while Settings or set-up reads what is stored, before anything can be edited. */
+    SETTINGS_READING,
+    /** Said while Save or Finish stores what was entered. */
+    SETTINGS_SAVING,
+    /** Said when what is stored could not be read: {0} what went wrong. */
+    SETTINGS_READ_FAILED,
+    /** What went wrong when the app itself failed, in place of the system's error: {0} the kind of failure. */
+    UNEXPECTED_ERROR,
     /** The question before closing with unsaved changes. */
     SETTINGS_DISCARD_QUESTION,
     /** The button that closes and throws the changes away. */

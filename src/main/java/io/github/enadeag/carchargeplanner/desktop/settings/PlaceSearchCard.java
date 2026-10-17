@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
+import io.github.enadeag.carchargeplanner.desktop.Background;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.ScreenReader;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
@@ -9,7 +10,6 @@ import io.github.enadeag.carchargeplanner.engine.forecast.PlaceResults;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
-import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -26,6 +26,7 @@ final class PlaceSearchCard {
 
     private final PlaceLookup lookup;
     private final Consumer<Place> chosen;
+    private final Background background;
     private final Messages messages;
     private final TextField text = new TextField();
     private final Button search;
@@ -39,11 +40,13 @@ final class PlaceSearchCard {
      *
      * @param lookup asks the provider's place search; called away from the JavaFX thread
      * @param chosen gets the place the owner picked from the results, on the JavaFX thread
+     * @param background asks the place search away from the JavaFX thread
      * @param messages the texts, in the owner's language
      */
-    PlaceSearchCard(PlaceLookup lookup, Consumer<Place> chosen, Messages messages) {
+    PlaceSearchCard(PlaceLookup lookup, Consumer<Place> chosen, Background background, Messages messages) {
         this.lookup = lookup;
         this.chosen = chosen;
+        this.background = background;
         this.messages = messages;
         text.setPromptText(messages.text(TextKey.PLACE_PROMPT));
         ScreenReader.name(text, messages.text(TextKey.PLACE_FIELD));
@@ -90,10 +93,8 @@ final class PlaceSearchCard {
         search.setDisable(true);
         results.getChildren().clear();
         status.setText(messages.text(TextKey.PLACE_SEARCHING));
-        Thread.ofVirtual().start(() -> {
-            var found = lookup.search(asked, typed);
-            Platform.runLater(() -> show(typed, found));
-        });
+        background.run("searching for a place", () -> lookup.search(asked, typed), found -> show(typed, found),
+                failure -> show(typed, Optional.of(new PlaceResults.Failed(PlaceResults.Problem.UNAVAILABLE))));
     }
 
     private void show(String typed, Optional<PlaceResults> found) {

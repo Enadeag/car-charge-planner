@@ -2,6 +2,7 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.AppSettings;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
+import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import java.util.Optional;
 
@@ -11,22 +12,24 @@ import java.util.Optional;
  * @param config the engine's config; empty when there is none that can be used, as before the first set-up
  * @param keys every provider's secret settings; none when they could not be read
  * @param keysProblem why the keys could not be read, in words for the owner; empty when they could
+ * @param keyStorage where the keys are kept
  * @param app the app's own settings
  * @param startsAtLogin whether the system starts the app at login; empty when this copy of the app cannot
  */
-record SetUpStart(Optional<EngineConfig> config, Secrets keys, Optional<String> keysProblem, AppSettings app,
-        Optional<Boolean> startsAtLogin) {
+record SetUpStart(Optional<EngineConfig> config, Secrets keys, Optional<String> keysProblem, KeyStorage keyStorage,
+        AppSettings app, Optional<Boolean> startsAtLogin) {
 
     /**
-     * Reads what is stored now.
+     * Reads what is stored now. Blocks while the keychain, the files and the system answer: call it away from the
+     * JavaFX thread.
      *
      * @param storage the stores to read
      * @return what they hold
      */
     static SetUpStart read(SettingsStorage storage) {
-        var keys = storage.readKeys();
-        return new SetUpStart(storage.readConfig(), keys.keys(), keys.problem(), storage.readApp(),
-                storage.startsAtLogin());
+        var stored = storage.read();
+        return new SetUpStart(stored.config(), stored.keys().keys(), stored.keys().problem(), stored.keyStorage(),
+                stored.app(), stored.startsAtLogin());
     }
 
     /**
