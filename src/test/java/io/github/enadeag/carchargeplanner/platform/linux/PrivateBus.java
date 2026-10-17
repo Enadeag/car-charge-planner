@@ -14,7 +14,7 @@ import java.nio.file.Path;
  * system's session config, a call to a missing name such as org.freedesktop.Notifications would start the desktop's
  * own server, which could show a test's notification on the developer's desktop.
  */
-final class PrivateBus {
+public final class PrivateBus {
 
     private static final String CONFIG = """
             <!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"
@@ -39,7 +39,7 @@ final class PrivateBus {
     }
 
     /** Starts the bus with its socket and config in the folder; skips the test when dbus-daemon is not installed. */
-    static PrivateBus start(Path folder) throws IOException {
+    public static PrivateBus start(Path folder) throws IOException {
         var config = Files.writeString(folder.resolve("bus.conf"), CONFIG);
         Process daemon = null;
         try {
@@ -54,11 +54,11 @@ final class PrivateBus {
         return new PrivateBus(daemon, address);
     }
 
-    String address() {
+    public String address() {
         return address;
     }
 
-    void stop() {
+    public void stop() {
         daemon.destroy();
     }
 }

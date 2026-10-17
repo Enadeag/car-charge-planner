@@ -37,6 +37,9 @@ touch the network, your keychain or your desktop:
   a real one;
 - the Windows keychain test uses an entry of its own that it removes again (it is skipped over ssh, where Windows has
   no logon session for the Credential Manager);
+- `DesktopAppSmokeTest` (Linux, skipped without `dbus-daemon`) starts the app in a JVM of its own with the example
+  config, on a private D-Bus with a fake tray host, headless JavaFX, private XDG folders and a proxy that refuses
+  every connection, waits for the tray icon, sends `quit` and checks that both end cleanly;
 - no test may put a window or a tray icon on the developer's desktop: the JavaFX tests run on JavaFX's headless
   platform, and AWT runs with `java.awt.headless`.
 
