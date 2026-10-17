@@ -1,10 +1,10 @@
 package io.github.enadeag.carchargeplanner.engine.battery;
 
+import io.github.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.util.Optional;
@@ -64,11 +64,6 @@ public final class BatteryFile {
         var blob = json.createObjectNode()
                 .put("levelPct", reading.level().value())
                 .put("enteredAt", reading.enteredAt().toString());
-        var temporary = path.resolveSibling(path.getFileName() + ".tmp");
-        if (path.getParent() != null) {
-            Files.createDirectories(path.getParent());
-        }
-        Files.writeString(temporary, json.writerWithDefaultPrettyPrinter().writeValueAsString(blob));
-        Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        PrivateFiles.write(path, json.writerWithDefaultPrettyPrinter().writeValueAsString(blob));
     }
 }

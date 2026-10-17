@@ -1,10 +1,10 @@
 package io.github.enadeag.carchargeplanner.engine.forecast;
 
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
+import io.github.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
@@ -153,12 +153,8 @@ public final class ForecastCache {
     }
 
     private void write(ProviderId providerId, ObjectNode blob) {
-        var target = file(providerId);
-        var temporary = target.resolveSibling(target.getFileName() + ".tmp");
         try {
-            Files.createDirectories(folder);
-            Files.writeString(temporary, json.writeValueAsString(blob));
-            Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            PrivateFiles.write(file(providerId), json.writeValueAsString(blob));
         } catch (IOException e) {
             // a cache that cannot be written must not stop planning; the forecast is simply asked for again later
         }

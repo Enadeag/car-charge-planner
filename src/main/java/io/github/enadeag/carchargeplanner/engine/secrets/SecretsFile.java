@@ -1,12 +1,10 @@
 package io.github.enadeag.carchargeplanner.engine.secrets;
 
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
+import io.github.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
-import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.HashMap;
@@ -104,7 +102,8 @@ public final class SecretsFile {
     }
 
     /**
-     * Writes the file atomically, and created private: there is no moment when others can read it.
+     * Writes the file through {@link PrivateFiles}: atomically, and made private, so there is no moment when others
+     * can read it.
      *
      * @param secrets the secrets to keep; what is left out is forgotten
      * @throws SecretsProblem when a name has characters that are not allowed or the file could not be written; the
@@ -114,15 +113,9 @@ public final class SecretsFile {
         secrets.checkNames();
         var sorted = new TreeMap<String, Map<String, String>>();
         secrets.byProvider().forEach((id, values) -> sorted.put(id.value(), new TreeMap<>(values)));
-        var temporary = path.resolveSibling(path.getFileName() + ".tmp");
         try {
-            Files.createDirectories(path.toAbsolutePath().getParent());
-            Files.deleteIfExists(temporary); // a leftover may have other permissions
-            Files.writeString(Files.createFile(temporary, privateFile()),
-                    json.writerWithDefaultPrettyPrinter().writeValueAsString(sorted), StandardOpenOption.WRITE);
-            Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            PrivateFiles.write(path, json.writerWithDefaultPrettyPrinter().writeValueAsString(sorted));
         } catch (IOException e) {
-            deleteQuietly(temporary);
             throw new SecretsProblem("Could not write " + path + " (" + e.getClass().getSimpleName() + ")");
         }
     }
@@ -156,11 +149,6 @@ public final class SecretsFile {
 
     private boolean hasFileModes() {
         return path.getFileSystem().supportedFileAttributeViews().contains("posix");
-    }
-
-    private FileAttribute<?>[] privateFile() {
-        return hasFileModes() ? new FileAttribute<?>[] {PosixFilePermissions.asFileAttribute(OWNER_ONLY)}
-                : new FileAttribute<?>[0];
     }
 
     private static void deleteQuietly(Path file) {

@@ -1,9 +1,9 @@
 package io.github.enadeag.carchargeplanner.engine.away;
 
+import io.github.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
@@ -95,12 +95,7 @@ public final class AwayFile {
         periods.forEach(period -> rows.addObject()
                 .put("start", period.start().toString())
                 .put("end", period.end().toString()));
-        var temporary = path.resolveSibling(path.getFileName() + ".tmp");
-        if (path.getParent() != null) {
-            Files.createDirectories(path.getParent());
-        }
-        Files.writeString(temporary, json.writerWithDefaultPrettyPrinter().writeValueAsString(blob));
-        Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        PrivateFiles.write(path, json.writerWithDefaultPrettyPrinter().writeValueAsString(blob));
     }
 
     private static Optional<AwayPeriod> period(JsonNode entry) {

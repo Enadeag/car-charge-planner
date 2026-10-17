@@ -1,10 +1,10 @@
 package io.github.enadeag.carchargeplanner.engine.notify;
 
 import io.github.enadeag.carchargeplanner.engine.plan.Window;
+import io.github.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
@@ -52,11 +52,8 @@ public final class AnnouncedWindows {
      * @param windows the windows to keep, possibly none
      */
     public void save(List<Window> windows) {
-        var temporary = file.resolveSibling(file.getFileName() + ".tmp");
         try {
-            Files.createDirectories(file.toAbsolutePath().getParent());
-            Files.writeString(temporary, json.writeValueAsString(windows));
-            Files.move(temporary, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            PrivateFiles.write(file, json.writeValueAsString(windows));
         } catch (IOException | JacksonException e) {
             // the windows are kept for this run all the same: the announcer remembers them itself
         }

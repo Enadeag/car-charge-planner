@@ -1,11 +1,11 @@
 package io.github.enadeag.carchargeplanner.desktop;
 
+import io.github.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
 import java.lang.System.Logger.Level;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 import java.util.function.Function;
 import tools.jackson.core.JacksonException;
@@ -78,8 +78,8 @@ public final class AppSettingsFile {
     }
 
     /**
-     * Replaces the file by these settings. The new file is written beside the old one and then moved over it, so the
-     * file is never half written.
+     * Replaces the file by these settings, through {@link PrivateFiles}: the file is never half written, and only the
+     * owner can read it.
      *
      * @param settings the settings to keep
      * @throws IOException when the file or its folder could not be written; the file is then left as it was
@@ -90,12 +90,7 @@ public final class AppSettingsFile {
                 .put("units", settings.units().code())
                 .put("mode", settings.mode().code())
                 .put("appearance", settings.appearance().code());
-        var temporary = path.resolveSibling(path.getFileName() + ".tmp");
-        if (path.getParent() != null) {
-            Files.createDirectories(path.getParent());
-        }
-        Files.writeString(temporary, json.writerWithDefaultPrettyPrinter().writeValueAsString(file));
-        Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        PrivateFiles.write(path, json.writerWithDefaultPrettyPrinter().writeValueAsString(file));
     }
 
     /** A value of the file the app knows, or empty (and logged when it was there but unknown). */
