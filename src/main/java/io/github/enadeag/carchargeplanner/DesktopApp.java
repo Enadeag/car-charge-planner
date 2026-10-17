@@ -76,6 +76,7 @@ final class DesktopApp {
     private final AppSettings appSettings;
     private final LanguageChoice language;
     private final ClosingOrder closing = new ClosingOrder();
+    private final InstanceClaim claim;
     /** Runs the windows' slow work, such as reading the keychain, away from the JavaFX thread. */
     private final Background background = Background.onVirtualThreads();
     // set on the JavaFX thread only, as JavaFX's bindings on it are read there
@@ -109,6 +110,7 @@ final class DesktopApp {
         this.appSettings = appSettings;
         this.language = language;
         this.appearance = new SimpleObjectProperty<>(appSettings.appearance());
+        this.claim = new InstanceClaim(instance, language.messages(), System.err, LOG);
     }
 
     /**
@@ -128,6 +130,7 @@ final class DesktopApp {
         var dataFolder = DataLocation.defaultFolder(host.os(), host.environment(), host.home());
         // only now: a second copy that hands over to this one does not write to its log file
         startLog(dataFolder);
+        claim.logProblem();
         DBUS_LOG.setLevel(java.util.logging.Level.WARNING); // dbus-java reports every connection at INFO
         var http = JdkHttpGet.newClient();
         closing.add("the HTTP client", http::close);
@@ -237,18 +240,14 @@ final class DesktopApp {
      * is still starting wait until it can carry them out.
      */
     private boolean claim(CompletableFuture<Consumer<InstanceCommand>> commands) {
-        return switch (instance.claim(command -> commands.thenAccept(handler -> handler.accept(command)))) {
-            case HANDED_OVER -> {
-                System.err.println(language.messages().text(TextKey.CLI_HANDED_OVER, AppName.TITLE));
-                yield false;
-            }
-            case NO_ANSWER -> {
-                System.err.println(language.messages().text(TextKey.CLI_NO_ANSWER, AppName.TITLE));
-                System.exit(ExitCode.FAILURE.code());
-                yield false;
-            }
-            case FIRST, UNAVAILABLE -> true; // this copy runs; UNAVAILABLE has been logged
-        };
+        var end = claim.claim(command -> commands.thenAccept(handler -> handler.accept(command)));
+        if (end.isEmpty()) {
+            return true;
+        }
+        if (end.get() != ExitCode.SUCCESS) {
+            System.exit(end.get().code());
+        }
+        return false;
     }
 
     private void showTrayOrWindow(StartupDecision decision, Tray tray, Dashboard dashboard, Tray.TrayActions actions)

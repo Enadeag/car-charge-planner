@@ -19,7 +19,7 @@ public final class Main {
 
     /** The desktop app's own settings, beside the engine's config file in the app's folder. */
     private static final String APP_SETTINGS_FILE = "app.json";
-    /** A running app that is still starting, or busy, may take a moment to confirm a command. */
+    /** A running app that is still starting, or busy, may take a moment to listen or to confirm a command. */
     private static final Duration INSTANCE_TIMEOUT = Duration.ofSeconds(2);
 
     private Main() {
@@ -51,8 +51,8 @@ public final class Main {
         var appSettings = appSettingsFile.read();
         var language = new LanguageChoice(Language.ofSystem(host.environment(), Locale.getDefault(Locale.Category.DISPLAY)));
         language.choose(appSettings.language());
-        var instance = new SingleInstance(InstanceLocation.folder(host.os(), host.environment(), host.temporary(),
-                host.userName()), host.user(), INSTANCE_TIMEOUT);
+        var instance = new SingleInstance(InstanceLocation.folder(host.os(), host.environment(), host.home()),
+                host.user(), INSTANCE_TIMEOUT);
 
         if (commandLine.command() == CommandLine.Command.RUN) {
             new DesktopApp(commandLine, host, parts, instance, commandLine.config().orElse(defaultConfig),

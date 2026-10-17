@@ -97,7 +97,7 @@ The program also takes a few commands:
 
 | Command | What it does |
 | --- | --- |
-| `car-charge-planner quit` | Asks the running app to quit. |
+| `car-charge-planner quit` | Asks the running app to quit. It ends with exit code 3 when the app runs but cannot be reached. |
 | `car-charge-planner start-at-login on` | Starts the app at login, hidden in the tray. The same as the switch in Settings, App. |
 | `car-charge-planner start-at-login off` | Stops starting it at login. |
 | `car-charge-planner install-launcher` | Linux only: adds the app to the application menu, with its icons. Run it again after moving the folder. |
@@ -149,6 +149,7 @@ Open **Settings…** from the tray menu or the dashboard. Settings is a window w
 | Log: what the app did, the newest in `.0.log` and two older ones of up to 1 MB | `~/.local/share/car-charge-planner/car-charge-planner.0.log` | `%LOCALAPPDATA%\car-charge-planner\car-charge-planner.0.log` |
 | API keys | The system keychain; `~/.config/car-charge-planner/secrets.json` (readable only by you) only where there is none | Credential Manager; `%LOCALAPPDATA%\car-charge-planner\secrets.json` only where it cannot be used |
 | Start at login | `~/.config/autostart/car-charge-planner.desktop` | The `Run` key of your user in the registry |
+| `instance.lock`, which keeps a second copy from running, and `instance.sock`, through which a second start reaches the running app | `$XDG_RUNTIME_DIR/car-charge-planner/`; without a usable `XDG_RUNTIME_DIR`, `~/.local/share/car-charge-planner/run/` | `%LOCALAPPDATA%\car-charge-planner\` |
 
 On Linux `XDG_CONFIG_HOME` and `XDG_DATA_HOME` move the config and data folders, as usual, and the app keeps both folders and every file it writes readable only by you (a folder made by an older version is made private when the app starts; a file named with `--config=` keeps its folder as it is). On Windows, `%APPDATA%` is usually `C:\Users\<you>\AppData\Roaming` and `%LOCALAPPDATA%` is `C:\Users\<you>\AppData\Local`. Settings, About lists the folders of your computer.
 
@@ -218,7 +219,7 @@ the providers can change them):
 - **Nothing else.** The battery level, your away times, your panels' size (except to Forecast.Solar, which needs
   it), the house and car settings and the plan itself never leave the computer.
 - **Local only.** Notifications go through your desktop's own notification service. A second start finds the
-  running app through a socket in a folder only you can open. Nothing listens on the network.
+  running app through a lock file and a socket in a folder only you can open. Nothing listens on the network.
 
 ### What is kept, and where
 

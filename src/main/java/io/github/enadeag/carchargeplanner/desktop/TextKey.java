@@ -207,10 +207,21 @@ public enum TextKey {
     CLI_HANDED_OVER,
     /** A second start found the running app silent: {0} the app's name. */
     CLI_NO_ANSWER,
+    /** A second start found the running app's lock, but could not reach it: {0} the app's name. */
+    CLI_UNREACHABLE,
+    /** The running app could not make its socket, so later starts cannot reach it: {0} the app's name. */
+    CLI_RUNS_UNREACHABLE,
+    /**
+     * The app did not start, as the single-instance guard's folder is not the user's only: {0} the app's name, {1}
+     * what is wrong with which folder, in English.
+     */
+    CLI_INSTANCE_NOT_PRIVATE,
     /** The running app confirmed it quits: {0} the app's name. */
     CLI_QUIT_CONFIRMED,
     /** The running app did not answer the request to quit: {0} the app's name. */
     CLI_QUIT_SILENT,
+    /** The running app's lock is held, but the request to quit could not reach it: {0} the app's name. */
+    CLI_QUIT_UNREACHABLE,
     /** No app was running to quit: {0} the app's name. */
     CLI_NOT_RUNNING,
     /** Start at login was asked for outside the installed app. */

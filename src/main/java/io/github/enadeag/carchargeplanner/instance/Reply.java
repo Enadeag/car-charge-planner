@@ -9,5 +9,7 @@ public enum Reply {
     /** The running app confirmed the command. */
     ANSWERED,
     /** Something listens, but it did not confirm the command in time. */
-    SILENT
+    SILENT,
+    /** A copy runs, as it holds the instance lock, but its socket cannot be reached. */
+    UNREACHABLE
 }

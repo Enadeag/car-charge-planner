@@ -138,6 +138,16 @@ class CommandsTest {
     }
 
     @Test
+    void quitSaysTheAppRunsButCannotBeReachedWhenItHoldsTheLockWithoutASocket() {
+        // longer than a Unix domain socket's path may be, so the running app has the lock but no socket
+        instanceFolder = temp.resolve("a-folder-with-a-long-name-" + "x".repeat(100));
+        assertThat(instance().claim(command -> { })).isEqualTo(Claim.FIRST_UNREACHABLE);
+
+        assertThat(commands().run(Command.QUIT)).isEqualTo(
+                new CommandOutcome(ExitCode.UNREACHABLE, MESSAGES.text(TextKey.CLI_QUIT_UNREACHABLE, AppName.TITLE)));
+    }
+
+    @Test
     void quitFailsWhenTheRunningAppDoesNotAnswer() throws Exception {
         FileAttribute<?>[] onlyMine = hasFileModes()
                 ? new FileAttribute<?>[] {PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------"))}

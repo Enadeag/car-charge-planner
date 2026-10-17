@@ -7,7 +7,9 @@ enum ExitCode {
     /** It could not do what was asked; the message on standard error says why. */
     FAILURE(1),
     /** The command line names no command the app knows. */
-    USAGE(2);
+    USAGE(2),
+    /** The app runs already, but this start could not reach it: neither to show its dashboard nor to quit it. */
+    UNREACHABLE(3);
 
     private final int code;
 
@@ -18,7 +20,7 @@ enum ExitCode {
     /**
      * The number the process ends with.
      *
-     * @return 0 for success, more for a failure
+     * @return 0 for success, more for a failure, each its own number
      */
     int code() {
         return code;
