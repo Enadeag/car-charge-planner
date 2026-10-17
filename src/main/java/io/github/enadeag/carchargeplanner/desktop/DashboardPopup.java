@@ -164,12 +164,18 @@ final class DashboardPopup {
     /**
      * Sizes the popup to its content, at most as tall as the screen's free area (the day scrolls inside), and places
      * it beside the icon. Only while it shows: a hidden window's styles are not resolved, so it would measure wrong.
+     *
+     * <p>Measured rather than {@code Stage.sizeToScene()}: that resizes the window at once, where it is now, so a
+     * taller day would reach past the screen's edge until the next frame moves it.
      */
     private void fitToScreen() {
         var area = screenOf(iconPosition).getVisualBounds();
-        stage.sizeToScene();
-        stage.setHeight(Math.min(stage.getHeight(), area.getHeight() - 2 * PopupPlacement.MARGIN));
-        var size = new Dimension2D(stage.getWidth(), stage.getHeight());
+        content.applyCss();
+        double width = content.prefWidth(-1);
+        double height = Math.min(content.prefHeight(width), area.getHeight() - 2 * PopupPlacement.MARGIN);
+        stage.setWidth(width);
+        stage.setHeight(height);
+        var size = new Dimension2D(width, height);
         var position = PopupPlacement.position(iconPosition, size, area);
         stage.setX(position.getX());
         stage.setY(position.getY());
