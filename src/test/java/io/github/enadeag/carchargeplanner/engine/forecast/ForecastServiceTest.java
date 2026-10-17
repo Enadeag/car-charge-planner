@@ -285,6 +285,34 @@ class ForecastServiceTest {
         }
     }
 
+    /** A server can echo what it was sent: neither the provider's own key nor any other stored one is shown or logged. */
+    @Test
+    void aServerThatEchoesKeysPutsNoneInTheReasonOrTheLog() {
+        var otherKey = "BACKUP-KEY-77";
+        var echoing = new ForecastProvider() {
+            @Override
+            public ProviderInfo info() {
+                return FakeProvider.info("main", "Main", List.of(REQUIRED_KEY));
+            }
+
+            @Override
+            public List<ForecastStep> fetch(SystemDescription system, Map<String, String> settings, Instant now)
+                    throws ProviderError {
+                throw new BadResponse("Main says: you sent " + settings.get("api_key") + "; we know " + otherKey);
+            }
+        };
+        secrets = () -> new Secrets(Map.of(MAIN, Map.of("api_key", SECRET), BACKUP, Map.of("api_key", otherKey)));
+        withoutFallback();
+        var echoed = new ForecastService(new Providers(List.of(echoing, backup)), new ForecastCache(cacheFolder()),
+                () -> secrets.load());
+
+        try (var log = LogCapture.of("io.github.enadeag.carchargeplanner")) {
+            assertThatThrownBy(() -> echoed.get(SYSTEM, selection, T0, false)).isInstanceOf(ForecastUnavailable.class)
+                    .hasMessage("Main: Main says: you sent ***; we know ***");
+            assertThat(log.lines()).containsExactly("WARNING Main gives no forecast: Main says: you sent ***; we know ***");
+        }
+    }
+
     @Test
     void aBugInAProviderDoesNotStopTheAppAndItsMessageIsNeitherLoggedNorShown() throws ForecastUnavailable {
         var logged = new CopyOnWriteArrayList<String>();

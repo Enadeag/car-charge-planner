@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.engine.forecast.providers;
 import io.github.enadeag.carchargeplanner.engine.config.PanelArray;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderError;
+import io.github.enadeag.carchargeplanner.engine.forecast.ProviderText;
 import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
@@ -28,11 +29,13 @@ final class OpenMeteoSeries {
      *
      * @param body the answer's body
      * @param array the panel array asked for, whose size and losses turn sunlight into power
+     * @param secrets the secret values the request was sent with, kept out of the reason an error answer gives
      * @return an hourly step per value; they may break the contract (negative or out of order)
      * @throws ProviderError.BadResponse when the answer is not JSON, reports an error, or is not what the service
      *     documents
      */
-    static List<ForecastStep> steps(String body, PanelArray array) throws ProviderError.BadResponse {
+    static List<ForecastStep> steps(String body, PanelArray array, List<String> secrets)
+            throws ProviderError.BadResponse {
         var root = Exchange.json(body);
         if (root.isMissingNode()) {
             throw new ProviderError.BadResponse("Open-Meteo gave an answer that is not JSON");
@@ -41,8 +44,9 @@ final class OpenMeteoSeries {
             throw new ProviderError.BadResponse("Open-Meteo gave an unexpected answer");
         }
         if (root.path("error").asBoolean(false)) {
-            throw new ProviderError.BadResponse("Open-Meteo reports an error: "
-                    + reason(body).orElse("no reason given"));
+            throw new ProviderError.BadResponse("Open-Meteo reports an error"
+                    + reason(body).map(reason -> "; " + ProviderText.quoted("Open-Meteo", reason, secrets))
+                            .orElse(", without a reason"));
         }
         var hourly = root.path("hourly");
         var stamps = hourly.path("time");

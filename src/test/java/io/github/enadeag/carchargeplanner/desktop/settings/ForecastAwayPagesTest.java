@@ -12,6 +12,7 @@ import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider;
+import io.github.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import io.github.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import io.github.enadeag.carchargeplanner.engine.forecast.SunnyDays;
 import java.nio.file.Files;
@@ -87,6 +88,40 @@ class ForecastAwayPagesTest {
         assertThat(stored().forecast().fallback()).isEmpty();
         assertThat(settings.engine.apiKeys().of(OPEN_METEO)).isEqualTo(Map.of("api_key", "secret-key"));
         assertThat(Files.readString(settings.configPath)).doesNotContain("secret-key");
+    }
+
+    @Test
+    void aServerAddressAKeyMayNotGoToAndAKeyWithOtherCharactersAreRefusedWhenSaved() throws Exception {
+        var checked = new FakeProvider(FakeProvider.info("open-meteo", "Open-Meteo", List.of(
+                        new SettingSpec("base_url", "Server address", "", true, false, SettingFormat.SERVER_ADDRESS),
+                        new SettingSpec("api_key", "API key", "", true, true, SettingFormat.LETTERS_AND_DIGITS))),
+                FakeProvider.steps(SunnyDays.days(LocalDate.now(SunnyDays.TZ), 3, 4.0)));
+        settings = new SettingsFixture(folder, Language.ENGLISH,
+                List.of(checked, provider("forecast-solar", "Forecast.Solar")));
+        var view = settings.open();
+        var address = (TextInputControl) SettingsFixture.field(view, "Server address");
+        var key = (TextInputControl) SettingsFixture.field(view, "API key");
+
+        boolean saved = Fx.call(() -> {
+            address.setText("http://localhost@evil.example");
+            key.setText("my-key/../x");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(saved).isFalse();
+        assertThat(Fx.call(address::getAccessibleHelp)).contains(settings.messages.text(TextKey.PROBLEM_SERVER_ADDRESS));
+        assertThat(Fx.call(key::getAccessibleHelp)).contains(settings.messages.text(TextKey.PROBLEM_LETTERS_AND_DIGITS));
+        assertThat(settings.engine.apiKeys().of(OPEN_METEO)).isEmpty();
+
+        boolean savedAfterwards = Fx.call(() -> {
+            address.setText("http://[::1]:8080/");
+            key.setText("MyKey42");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(savedAfterwards).isTrue();
+        assertThat(settings.engine.apiKeys().of(OPEN_METEO)).isEqualTo(Map.of("api_key", "MyKey42"));
+        assertThat(stored().forecast().settingsOf(OPEN_METEO)).containsEntry("base_url", "http://[::1]:8080/");
     }
 
     @Test

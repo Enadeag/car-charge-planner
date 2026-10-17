@@ -1,5 +1,7 @@
 package io.github.enadeag.carchargeplanner.engine.forecast.providers;
 
+import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet;
+import io.github.enadeag.carchargeplanner.engine.forecast.ByteSize;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.enadeag.carchargeplanner.engine.config.Coordinates;
@@ -57,6 +59,16 @@ class OpenMeteoPlacesTest {
                 .containsExactly(new Coordinates(52.37403, 4.88969), ZoneId.of("Europe/Amsterdam"));
         assertThat(places.get(4).label()).isEqualTo("eMvelo, Mpumalanga, South Africa");
         assertThat(http.requests).allMatch(r -> r.timeout().compareTo(Duration.ofSeconds(10)) <= 0);
+    }
+
+    /** A person waits at the search box for a few kilobytes; a server that sends more is not read on. */
+    @Test
+    void anAnswerLargerThanAPlaceSearchNeedsIsRefusedAndTheServiceCountsAsUnavailable() {
+        var tooLarge = new ReplayHttp(List.of(ReplayHttp.Route.failure(new HttpGet.TooLarge(ByteSize.ofKilobytes(256)))));
+
+        assertThat(new OpenMeteoPlaces(tooLarge).search("Amsterdam", "en"))
+                .isEqualTo(new PlaceResults.Failed(PlaceResults.Problem.UNAVAILABLE));
+        assertThat(tooLarge.requests.getFirst().maxBody()).isEqualTo(ByteSize.ofKilobytes(256));
     }
 
     @Test

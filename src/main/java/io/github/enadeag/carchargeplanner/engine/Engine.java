@@ -284,10 +284,12 @@ public final class Engine implements AutoCloseable {
             return new ConnectionResult(false, 0,
                     "The forecast provider '" + providerId + "' is not known to this version of the app.");
         }
-        var secret = new HashMap<>(storedSecrets().of(providerId));
+        var stored = storedSecrets();
+        var secret = new HashMap<>(stored.of(providerId));
         secret.putAll(settings);
         var values = found.get().info().settingsFrom(settings, secret);
-        return ConnectionCheck.attempt(found.get(), SystemDescription.of(system), values, clock.instant());
+        return ConnectionCheck.attempt(found.get(), SystemDescription.of(system), values, clock.instant(),
+                stored.values());
     }
 
     /**

@@ -15,6 +15,7 @@ import io.github.enadeag.carchargeplanner.engine.forecast.ProviderConformance;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderError;
 import io.github.enadeag.carchargeplanner.engine.forecast.Recorded;
 import io.github.enadeag.carchargeplanner.engine.forecast.ReplayHttp;
+import io.github.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import io.github.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import io.github.enadeag.carchargeplanner.engine.forecast.SystemDescription;
 import java.net.URI;
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import tools.jackson.databind.json.JsonMapper;
 
 class OpenMeteoTest extends ProviderConformance {
 
@@ -44,7 +46,12 @@ class OpenMeteoTest extends ProviderConformance {
                 List.of(answer("", new Reply(200, "<html>maintenance</html>"))),
                 List.of(answer("", new Reply(200, "{}"))),
                 List.of(answer("", new Reply(429, "{\"error\": true, \"reason\": \"limit\"}", Map.of("Retry-After", "90")))),
-                Duration.ofSeconds(90), Map.of(), Map.of("api_key", SECRET), NOW);
+                Duration.ofSeconds(90), Map.of(), Map.of("api_key", SECRET), NOW,
+                text -> List.of(answer("", new Reply(400, refusal(text)))));
+    }
+
+    private static String refusal(String reason) {
+        return new JsonMapper().createObjectNode().put("error", true).put("reason", reason).toString();
     }
 
     private static List<ForecastStep> fetch(String body, Map<String, String> settings, SystemDescription system)
@@ -122,7 +129,7 @@ class OpenMeteoTest extends ProviderConformance {
     void theReasonTheServerGivesForARefusalIsKept() {
         var body = "{\"error\": true, \"reason\": \"Latitude must be in range of -90 to 90°.\"}";
         assertThatThrownBy(() -> new OpenMeteo(ReplayHttp.always(new Reply(400, body))).fetch(EXAMPLE_SYSTEM, Map.of(), NOW))
-                .isInstanceOf(ProviderError.BadResponse.class).hasMessageContaining("Latitude must be");
+                .isInstanceOf(ProviderError.BadResponse.class).hasMessageContaining(" says: Latitude must be");
     }
 
     @Test
@@ -164,8 +171,11 @@ class OpenMeteoTest extends ProviderConformance {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"http://api.open-meteo.com", "ftp://x", "api.open-meteo.com", "javascript:alert(1)"})
-    void anAddressThatIsNotHttpsIsRefusedBeforeAnythingIsSent(String address) {
+    @ValueSource(strings = {"http://api.open-meteo.com", "ftp://x", "api.open-meteo.com", "javascript:alert(1)",
+            "http://localhost.evil.example", "http://localhost@evil.example", "http://127.0.0.1.nip.io",
+            "https://user:secret@customer-api.open-meteo.com", "https://customer-api.open-meteo.com/?x=1",
+            "https://customer-api.open-meteo.com#here", "https://", "http://[::2]:8080", "https://exa mple.org"})
+    void anAddressAKeyMayNotBeSentToIsRefusedBeforeAnythingIsSent(String address) {
         var http = ReplayHttp.always(new Reply(200, RECORDED));
         assertThatThrownBy(() -> new OpenMeteo(http).fetch(EXAMPLE_SYSTEM, Map.of("base_url", address), NOW))
                 .isInstanceOf(ProviderError.NotConfigured.class).hasMessageContaining("https");
@@ -173,9 +183,16 @@ class OpenMeteoTest extends ProviderConformance {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"http://localhost:8080", "http://127.0.0.1:8080"})
+    @ValueSource(strings = {"http://localhost:8080", "http://127.0.0.1:8080", "http://[::1]:8080", "http://LOCALHOST",
+            "http://localhost:8080/open-meteo"})
     void aServerOfYourOwnOnThisComputerMayUsePlainHttp(String address) throws ProviderError {
-        assertThat(asked(Map.of("base_url", address)).requests.getFirst().uri().toString()).startsWith(address);
+        assertThat(asked(Map.of("base_url", address)).requests.getFirst().uri().toString())
+                .startsWith(address + "/v1/forecast?");
+    }
+
+    @Test
+    void itsServerAddressIsCheckedWhenEntered() {
+        assertThat(OpenMeteo.INFO.settings().getFirst().format()).isEqualTo(SettingFormat.SERVER_ADDRESS);
     }
 
     @Test

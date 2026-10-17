@@ -568,6 +568,10 @@ public enum TextKey {
     PROBLEM_NOT_A_TIME,
     /** A required provider setting that is empty. */
     PROBLEM_REQUIRED,
+    /** A provider's server address that a key may not be sent to. */
+    PROBLEM_SERVER_ADDRESS,
+    /** A provider setting, such as an API key, that must be letters and digits only. */
+    PROBLEM_LETTERS_AND_DIGITS,
     /** The title of the card that chooses the providers. */
     CARD_PROVIDERS,
     /** What the providers are. */

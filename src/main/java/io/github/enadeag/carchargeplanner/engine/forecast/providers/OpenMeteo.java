@@ -8,6 +8,9 @@ import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import io.github.enadeag.carchargeplanner.engine.forecast.PlaceSearch;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderError;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
+import io.github.enadeag.carchargeplanner.engine.forecast.ProviderText;
+import io.github.enadeag.carchargeplanner.engine.forecast.ServerAddress;
+import io.github.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import io.github.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import io.github.enadeag.carchargeplanner.engine.forecast.Steps;
 import io.github.enadeag.carchargeplanner.engine.forecast.SystemDescription;
@@ -43,11 +46,12 @@ public final class OpenMeteo implements ForecastProvider {
             Duration.ofHours(12),
             List.of(
                     new SettingSpec("base_url", "Server address", "Leave empty for the free public service. A paid "
-                            + "plan, or a server of your own, has its own address.", true, false),
+                            + "plan, or a server of your own, has its own address.", true, false,
+                            SettingFormat.SERVER_ADDRESS),
                     new SettingSpec("api_key", "API key", "Only for a paid plan (commercial use). Free use needs none.",
                             true, true)));
 
-    private static final String PUBLIC_SERVER = "https://api.open-meteo.com";
+    private static final ServerAddress PUBLIC_SERVER = new ServerAddress(URI.create("https://api.open-meteo.com"));
     private static final String PATH = "/v1/forecast";
 
     private final HttpGet http;
@@ -94,8 +98,7 @@ public final class OpenMeteo implements ForecastProvider {
      * @param settings the provider's settings: "base_url" (blank for the public service) and "api_key" (blank for
      *     none)
      * @return the request's address
-     * @throws ProviderError.NotConfigured when the server address is not https (or plain http on this computer) or
-     *     not a web address
+     * @throws ProviderError.NotConfigured when the server address is not one {@link ServerAddress#parse} accepts
      */
     static URI requestUri(SystemDescription system, PanelArray array, Map<String, String> settings)
             throws ProviderError.NotConfigured {
@@ -114,7 +117,7 @@ public final class OpenMeteo implements ForecastProvider {
             query.put("apikey", key); // the way Open-Meteo documents it for its customer servers
         }
         try {
-            return URI.create(server + PATH + "?" + query.entrySet().stream()
+            return URI.create(server.resolve(PATH) + "?" + query.entrySet().stream()
                     .map(e -> e.getKey() + "=" + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
                     .collect(Collectors.joining("&")));
         } catch (IllegalArgumentException e) {
@@ -122,17 +125,13 @@ public final class OpenMeteo implements ForecastProvider {
         }
     }
 
-    /** A server of your own on this computer may use plain http; anywhere else the key would travel readable. */
-    private static String server(Map<String, String> settings) throws ProviderError.NotConfigured {
-        var server = settings.getOrDefault("base_url", "").strip().replaceAll("/+$", "");
-        if (server.isEmpty()) {
+    private static ServerAddress server(Map<String, String> settings) throws ProviderError.NotConfigured {
+        var server = settings.getOrDefault("base_url", "");
+        if (server.isBlank()) {
             return PUBLIC_SERVER;
         }
-        if (!(server.startsWith("https://") || server.startsWith("http://localhost")
-                || server.startsWith("http://127.0.0.1"))) {
-            throw new ProviderError.NotConfigured("the server address must start with https://");
-        }
-        return server;
+        return ServerAddress.parse(server).orElseThrow(() -> new ProviderError.NotConfigured("the server address must "
+                + "start with https://, or http:// for localhost, 127.0.0.1 or [::1], with no user name, \"?\" or \"#\""));
     }
 
     @Override
@@ -147,11 +146,12 @@ public final class OpenMeteo implements ForecastProvider {
     private List<ForecastStep> fetchArray(SystemDescription system, PanelArray array, Map<String, String> settings)
             throws ProviderError {
         var reply = Exchange.send(http, HttpGet.Request.of(requestUri(system, array, settings)), INFO.name());
-        checkStatus(reply);
-        return Steps.requireValid(OpenMeteoSeries.steps(reply.body(), array));
+        var secrets = INFO.secretValues(settings);
+        checkStatus(reply, secrets);
+        return Steps.requireValid(OpenMeteoSeries.steps(reply.body(), array, secrets));
     }
 
-    private static void checkStatus(HttpGet.Reply reply) throws ProviderError {
+    private static void checkStatus(HttpGet.Reply reply, List<String> secrets) throws ProviderError {
         if (reply.ok()) {
             return;
         }
@@ -166,6 +166,7 @@ public final class OpenMeteo implements ForecastProvider {
                     + "): check the API key and server address");
         }
         throw new ProviderError.BadResponse("Open-Meteo did not accept the request (status " + reply.status() + ")"
-                + OpenMeteoSeries.reason(reply.body()).map(": "::concat).orElse(""));
+                + OpenMeteoSeries.reason(reply.body())
+                        .map(reason -> "; " + ProviderText.quoted(INFO.name(), reason, secrets)).orElse(""));
     }
 }

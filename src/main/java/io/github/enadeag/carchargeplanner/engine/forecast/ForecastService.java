@@ -130,7 +130,8 @@ public final class ForecastService {
         var lock = asking.computeIfAbsent(providerId, id -> new ReentrantLock());
         lock.lock();
         try {
-            return new ProviderAttempt(provider, cache, retryAt, health, now, force).run(system, settings, key);
+            return new ProviderAttempt(provider, cache, retryAt, health, now, force).run(system, settings, key,
+                    () -> stored.get().secrets().values());
         } finally {
             lock.unlock();
         }

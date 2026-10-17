@@ -129,7 +129,7 @@ final class DesktopApp {
         // only now: a second copy that hands over to this one does not write to its log file
         startLog(dataFolder);
         DBUS_LOG.setLevel(java.util.logging.Level.WARNING); // dbus-java reports every connection at INFO
-        var http = HttpClient.newHttpClient();
+        var http = JdkHttpGet.newClient();
         closing.add("the HTTP client", http::close);
         var icon = new AppIcon();
 

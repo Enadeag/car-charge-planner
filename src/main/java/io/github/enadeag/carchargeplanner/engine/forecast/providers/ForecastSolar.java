@@ -7,6 +7,8 @@ import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderError;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
+import io.github.enadeag.carchargeplanner.engine.forecast.ProviderText;
+import io.github.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import io.github.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import io.github.enadeag.carchargeplanner.engine.forecast.Steps;
 import io.github.enadeag.carchargeplanner.engine.forecast.SystemDescription;
@@ -40,7 +42,7 @@ public final class ForecastSolar implements ForecastProvider {
             Duration.ofDays(2),
             Duration.ofHours(6),
             List.of(new SettingSpec("api_key", "API key", "Only for a paid plan, which adds more days and finer "
-                    + "steps. The free public plan needs none.", true, true)));
+                    + "steps. The free public plan needs none.", true, true, SettingFormat.LETTERS_AND_DIGITS)));
 
     private static final String SERVER = "https://api.forecast.solar";
     private static final String ROUTE = "estimate/watthours/period";
@@ -69,11 +71,17 @@ public final class ForecastSolar implements ForecastProvider {
      * @param array the panel array to ask for
      * @param settings the provider's settings; a blank "api_key" means the public plan
      * @return the request's address
+     * @throws ProviderError.NotConfigured when the key has other characters than letters and digits: it goes into the
+     *     path, where a "/" or "?" would change what is asked
      */
-    static URI requestUri(SystemDescription system, PanelArray array, Map<String, String> settings) {
+    static URI requestUri(SystemDescription system, PanelArray array, Map<String, String> settings)
+            throws ProviderError.NotConfigured {
         var parts = new ArrayList<String>();
         parts.add(SERVER);
         var key = settings.getOrDefault("api_key", "").strip();
+        if (!SettingFormat.LETTERS_AND_DIGITS.accepts(key)) {
+            throw new ProviderError.NotConfigured("the API key may hold only letters and digits");
+        }
         if (!key.isEmpty()) {
             parts.add(key);
         }
@@ -94,19 +102,22 @@ public final class ForecastSolar implements ForecastProvider {
     @Override
     public List<ForecastStep> fetch(SystemDescription system, Map<String, String> settings, Instant now)
             throws ProviderError {
+        for (var array : system.arrays()) {
+            requestUri(system, array, settings); // a wrong key is reported before anything is sent
+        }
         return Steps.requireValid(Steps.eachArray(system, array -> fetchArray(system, array, settings, now)));
     }
 
     private List<ForecastStep> fetchArray(SystemDescription system, PanelArray array, Map<String, String> settings,
             Instant now) throws ProviderError {
         var request = new HttpGet.Request(requestUri(system, array, settings), Map.of("Accept", "application/json"),
-                HttpGet.DEFAULT_TIMEOUT);
+                HttpGet.DEFAULT_TIMEOUT, HttpGet.DEFAULT_MAX_BODY);
         var reply = Exchange.send(http, request, INFO.name());
-        checkStatus(reply, now);
+        checkStatus(reply, now, INFO.secretValues(settings));
         return Steps.requireValid(ForecastSolarPeriods.steps(reply.body(), system.timezone()));
     }
 
-    private static void checkStatus(HttpGet.Reply reply, Instant now) throws ProviderError {
+    private static void checkStatus(HttpGet.Reply reply, Instant now, List<String> secrets) throws ProviderError {
         if (reply.ok()) {
             return;
         }
@@ -122,6 +133,7 @@ public final class ForecastSolar implements ForecastProvider {
                     + "): check the API key");
         }
         throw new ProviderError.BadResponse("Forecast.Solar did not accept the request (status " + reply.status() + ")"
-                + ForecastSolarPeriods.messageText(reply.body()).map(": "::concat).orElse(""));
+                + ForecastSolarPeriods.messageText(reply.body())
+                        .map(text -> "; " + ProviderText.quoted(INFO.name(), text, secrets)).orElse(""));
     }
 }
