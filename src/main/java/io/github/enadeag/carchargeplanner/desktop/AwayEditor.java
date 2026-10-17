@@ -9,6 +9,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Consumer;
 import javafx.scene.control.Button;
@@ -30,9 +31,9 @@ import javafx.scene.layout.VBox;
 final class AwayEditor extends VBox {
 
     /** Both of the app's languages write a time on a 24-hour clock; a leading zero may be left out. */
-    private static final DateTimeFormatter TYPED = DateTimeFormatter.ofPattern("H:mm")
+    private static final DateTimeFormatter TYPED = DateTimeFormatter.ofPattern("H:mm", Locale.ROOT)
             .withResolverStyle(ResolverStyle.STRICT);
-    private static final DateTimeFormatter SHOWN = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter SHOWN = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
     private static final LocalTime FIRST_START = LocalTime.of(9, 0);
     private static final LocalTime FIRST_END = LocalTime.of(17, 0);
 

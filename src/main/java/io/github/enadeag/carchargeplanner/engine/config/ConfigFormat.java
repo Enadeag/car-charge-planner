@@ -39,7 +39,7 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
 
     /** Strict, so that "24:00" is refused rather than read as the midnight that starts the day. */
     private static final DateTimeFormatter TIME =
-            DateTimeFormatter.ofPattern("HH:mm").withResolverStyle(ResolverStyle.STRICT);
+            DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT).withResolverStyle(ResolverStyle.STRICT);
 
     /** Makes the format; it keeps nothing. */
     ConfigFormat() {
