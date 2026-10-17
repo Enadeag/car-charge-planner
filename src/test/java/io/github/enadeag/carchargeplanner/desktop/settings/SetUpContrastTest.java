@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.enadeag.carchargeplanner.desktop.Contrast;
 import io.github.enadeag.carchargeplanner.desktop.CssWarnings;
+import io.github.enadeag.carchargeplanner.desktop.FxTest;
 import io.github.enadeag.carchargeplanner.desktop.Language;
 import java.nio.file.Path;
 import javafx.application.ColorScheme;
@@ -16,6 +17,7 @@ import org.junit.jupiter.params.provider.EnumSource;
  * WCAG AA in set-up, light and dark, in both languages: every step with typical values tagged, the check and the
  * dashboard's preview answered, a refused value and the question before leaving.
  */
+@FxTest
 class SetUpContrastTest {
 
     @TempDir

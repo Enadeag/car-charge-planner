@@ -19,6 +19,7 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+@FxTest
 class DashboardViewTest {
 
     private final AtomicInteger detached = new AtomicInteger();

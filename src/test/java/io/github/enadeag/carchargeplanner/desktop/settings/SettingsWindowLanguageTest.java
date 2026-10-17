@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.enadeag.carchargeplanner.desktop.Fx;
+import io.github.enadeag.carchargeplanner.desktop.FxTest;
 import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
 import io.github.enadeag.carchargeplanner.desktop.Scenes;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /** Settings follows the language the owner saves, without a restart. */
+@FxTest
 class SettingsWindowLanguageTest {
 
     @TempDir

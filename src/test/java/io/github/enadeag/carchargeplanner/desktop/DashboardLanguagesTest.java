@@ -39,6 +39,7 @@ import org.junit.jupiter.params.provider.MethodSource;
  * In every language, and with the system's text at 150 and 200 %, the dashboard shows each text whole and on its own:
  * a longer word widens or wraps its place, never cuts it off or runs into another text.
  */
+@FxTest
 class DashboardLanguagesTest {
 
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");

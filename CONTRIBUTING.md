@@ -40,6 +40,11 @@ touch the network, your keychain or your desktop:
 - no test may put a window or a tray icon on the developer's desktop: the JavaFX tests run on JavaFX's headless
   platform, and AWT runs with `java.awt.headless`.
 
+All JavaFX tests share one headless platform in one JVM, so a test class that uses it is marked `@FxTest` (`Fx`
+refuses to run without it): each test then starts without a window, and fails when the JavaFX thread threw an
+exception that nothing caught. Its allow-list takes only OpenJFX bugs, each with a link. The test classes run in
+alphabetical order; `-Dsurefire.runOrder=random` shows whether a test depends on the ones before it.
+
 A test that only makes sense on one system says so with JUnit's `@EnabledOnOs`. Tests without one must pass on every
 system, so they use the location classes and not hard-coded folders. `ArchitectureTest` keeps the packages apart:
 the engine knows nothing of the desktop, and only the platform packages know their system.

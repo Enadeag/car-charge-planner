@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.enadeag.carchargeplanner.desktop.Contrast;
 import io.github.enadeag.carchargeplanner.desktop.Fx;
+import io.github.enadeag.carchargeplanner.desktop.FxTest;
 import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
 import java.nio.file.Path;
@@ -21,6 +22,7 @@ import org.junit.jupiter.params.provider.EnumSource;
  * WCAG AA in Settings, light and dark: every category, with typical values tagged, a refused value, its marked
  * category and the question.
  */
+@FxTest
 class SettingsContrastTest {
 
     @TempDir

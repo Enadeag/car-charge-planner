@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.enadeag.carchargeplanner.desktop.Language;
+import io.github.enadeag.carchargeplanner.desktop.FxTest;
 import io.github.enadeag.carchargeplanner.desktop.Scenes;
 import io.github.enadeag.carchargeplanner.desktop.TextScale;
 import java.nio.file.Path;
@@ -20,6 +21,7 @@ import org.junit.jupiter.params.provider.MethodSource;
  * 200 % (and then on its own, too): on every step, with the forecast
  * answered and with it failing, with a refused value and with the question before leaving.
  */
+@FxTest
 class SetUpLanguagesTest {
 
     @TempDir

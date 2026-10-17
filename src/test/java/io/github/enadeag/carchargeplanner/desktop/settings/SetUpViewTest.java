@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.enadeag.carchargeplanner.desktop.Fx;
+import io.github.enadeag.carchargeplanner.desktop.FxTest;
 import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.Scenes;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
@@ -33,6 +34,7 @@ import org.junit.jupiter.api.io.TempDir;
  * The first-run set-up and running it again: step by step over Settings' cards, each step checked by the engine's
  * records, a forecast checked and the dashboard previewed before Finish saves it all at once.
  */
+@FxTest
 class SetUpViewTest {
 
     @TempDir

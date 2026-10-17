@@ -25,6 +25,7 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+@FxTest
 class SolarChartTest {
 
     private static final SolarCurveModel TODAY = Models.SUNNY_TODAY.curve();
@@ -225,7 +226,7 @@ class SolarChartTest {
     void otherwiseTheCurveMovesToItsNewShape() throws Exception {
         var motion = new SimpleBooleanProperty(false);
         show(TODAY, motion);
-        Thread.sleep((long) Tween.LENGTH.toMillis() * 2);
+        Fx.run(() -> chart.tween().finish());
 
         var target = CurvePoints.of(TOMORROW.steps(), 6, 20);
         var moving = Fx.call(() -> {
@@ -234,7 +235,8 @@ class SolarChartTest {
         });
 
         assertThat(moving).isNotEqualTo(target);
-        Thread.sleep((long) Tween.LENGTH.toMillis() * 2);
+        assertThat(Fx.call(() -> chart.tween().isRunning())).isTrue();
+        Fx.run(() -> chart.tween().finish());
         assertThat(Fx.call(chart::shownPoints)).isEqualTo(target);
     }
 

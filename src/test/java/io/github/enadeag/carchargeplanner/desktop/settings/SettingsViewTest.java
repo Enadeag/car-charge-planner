@@ -6,6 +6,7 @@ import io.github.enadeag.carchargeplanner.desktop.AppSettings;
 import io.github.enadeag.carchargeplanner.desktop.Appearance;
 import io.github.enadeag.carchargeplanner.desktop.DisplayMode;
 import io.github.enadeag.carchargeplanner.desktop.Fx;
+import io.github.enadeag.carchargeplanner.desktop.FxTest;
 import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.Scenes;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+@FxTest
 class SettingsViewTest {
 
     @TempDir

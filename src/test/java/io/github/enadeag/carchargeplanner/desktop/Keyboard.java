@@ -41,10 +41,14 @@ public final class Keyboard {
         });
     }
 
-    /** Presses a key in a window, which takes the focus first, as a click on it would. */
+    /**
+     * Presses a key in a window, which takes the focus first, as a click on it would. A pulse then lets a window that
+     * has no focus owner yet give the focus to its first control, as it does before anyone can press a key; without
+     * one, a key pressed right after the window changed would reach no control.
+     */
     public static void press(Scene scene, KeyCode key) throws Exception {
         Fx.run(() -> scene.getWindow().requestFocus());
-        Fx.settle();
+        Fx.pulse();
         press(key);
     }
 

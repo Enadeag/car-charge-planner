@@ -29,6 +29,25 @@ public final class Scenes {
         return stage;
     }
 
+    /**
+     * Shows a node in a window of a size, which it has from the start: a window first shown as large as the node asks
+     * would reach past the 1000 px headless screen.
+     *
+     * @param node what the window shows
+     * @param scheme light or dark
+     * @param width the window's width in pixels
+     * @param height the window's height in pixels
+     * @return the window, showing
+     */
+    public static Stage show(Node node, ColorScheme scheme, double width, double height) {
+        var scene = new Scene(new StackPane(node), width, height);
+        new SystemTheme(new SimpleObjectProperty<>(scheme)).style(scene);
+        var stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        return stage;
+    }
+
     /** Shows a node with larger text, in a window no larger than the headless screen, at its top. */
     public static Stage show(Node node, ColorScheme scheme, TextScale scale) {
         var stage = stage(node, scheme, scale);
