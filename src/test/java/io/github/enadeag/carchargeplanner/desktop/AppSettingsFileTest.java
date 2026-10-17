@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.desktop;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.github.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,7 +43,7 @@ class AppSettingsFileTest {
     @ParameterizedTest
     @ValueSource(strings = {"{\"language\": \"system\"}", "{}", "{\"language\": \"tlh\"}", "not json",
         "{\"units\": \"furlongs\", \"mode\": \"hologram\"}", "{\"units\": 3}", "{\"appearance\": \"sepia\"}",
-        "{\"appearance\": \"system\"}"})
+        "{\"appearance\": \"system\"}", "{\"version\": 2, \"language\": \"nl\"}"})
     void aFileThatChoosesNothingTheAppHasFollowsTheSystem(String content) throws IOException {
         assertThat(read(content)).isEqualTo(FOLLOWING);
     }
@@ -89,5 +90,29 @@ class AppSettingsFileTest {
         assertThat(Units.ofCountry("GB")).isEqualTo(Units.IMPERIAL);
         assertThat(Units.ofCountry("NL")).isEqualTo(Units.METRIC);
         assertThat(Units.ofCountry("")).isEqualTo(Units.METRIC);
+    }
+
+    @Test
+    void aWrittenFileHasVersionOneAndAFileWithoutOneIsReadAsBefore() throws IOException {
+        assertThat(read("{\"language\": \"nl\"}").language()).contains(Language.DUTCH);
+
+        file().write(FOLLOWING);
+
+        assertThat(StoredJson.parse(Files.readString(folder.resolve("app.json"))).path("version").intValue())
+                .isEqualTo(1);
+    }
+
+    @Test
+    void aFileOfANewerVersionIsKeptAsideWhenTheSettingsAreSaved() throws IOException {
+        var newer = "{\"version\": 2, \"language\": \"nl\"}";
+        Files.writeString(folder.resolve("app.json"), newer);
+
+        file().write(FOLLOWING);
+
+        assertThat(file().read()).isEqualTo(FOLLOWING);
+        try (var kept = Files.list(folder)) {
+            assertThat(kept.filter(path -> path.getFileName().toString().startsWith("app.json.damaged-")))
+                    .singleElement().satisfies(path -> assertThat(path).hasContent(newer));
+        }
     }
 }

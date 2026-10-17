@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.enadeag.carchargeplanner.engine.config.Percent;
+import io.github.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -67,5 +68,32 @@ class BatteryFileTest {
     void aReadingNeedsALevelAndAMoment() {
         assertThatThrownBy(() -> new BatteryReading(null, NOW)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new BatteryReading(new Percent(40), null)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void aFileWithoutAVersionIsReadAndAWrittenOneHasVersionOne() throws IOException {
+        Files.createDirectories(path().getParent());
+        Files.writeString(path(), "{\"levelPct\": 40, \"enteredAt\": \"2026-07-03T07:00:00Z\"}");
+        assertThat(new BatteryFile(path()).reading()).contains(new BatteryReading(new Percent(40), NOW));
+
+        new BatteryFile(path()).save(new BatteryReading(new Percent(70), NOW));
+
+        assertThat(StoredJson.parse(Files.readString(path())).path("version").intValue()).isEqualTo(1);
+    }
+
+    @Test
+    void aFileOfANewerVersionCountsAsNoReadingAndIsKeptAsideWhenALevelIsSaved() throws IOException {
+        Files.createDirectories(path().getParent());
+        var newer = "{\"version\": 2, \"levelPct\": 40, \"enteredAt\": \"2026-07-03T07:00:00Z\"}";
+        Files.writeString(path(), newer);
+        assertThat(new BatteryFile(path()).reading()).isEmpty();
+
+        new BatteryFile(path()).save(new BatteryReading(new Percent(70), NOW));
+
+        assertThat(new BatteryFile(path()).reading()).contains(new BatteryReading(new Percent(70), NOW));
+        try (var kept = Files.list(path().getParent())) {
+            assertThat(kept.filter(file -> file.getFileName().toString().startsWith("battery.json.damaged-")))
+                    .singleElement().satisfies(file -> assertThat(file).hasContent(newer));
+        }
     }
 }

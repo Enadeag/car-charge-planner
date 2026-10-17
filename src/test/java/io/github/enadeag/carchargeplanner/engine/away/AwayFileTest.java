@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.engine.away;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.github.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,6 +13,8 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class AwayFileTest {
 
@@ -81,5 +84,32 @@ class AwayFileTest {
         var period = AwayPeriod.allDay(DAY, TZ);
 
         assertThatThrownBy(() -> file().add(period, NOW)).isInstanceOf(IOException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{oops", "{\"version\": 2, \"periods\": []}",
+        "{\"periods\": [{\"start\": 1}, {\"start\": \"2026-07-04T06:00:00Z\", \"end\": \"2026-07-04T08:00:00Z\"}]}"})
+    void aFileThatCannotBeReadWholeIsNeverOverwritten(String content) throws IOException {
+        var path = Files.writeString(folder.resolve("away.json"), content);
+        var period = AwayPeriod.allDay(DAY, TZ);
+
+        assertThatThrownBy(() -> new AwayFile(path).add(period, NOW)).isInstanceOf(IOException.class)
+                .hasMessageContaining("left as it is");
+        assertThatThrownBy(() -> new AwayFile(path).remove(period)).isInstanceOf(IOException.class);
+        assertThat(path).hasContent(content);
+    }
+
+    @Test
+    void aFileWithoutAVersionIsReadAndAWrittenOneHasVersionOne() throws IOException {
+        var path = Files.writeString(folder.resolve("away.json"),
+                "{\"periods\": [{\"start\": \"2026-07-04T06:00:00Z\", \"end\": \"2026-07-04T08:00:00Z\"}]}");
+        var stored = new AwayPeriod(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z"));
+        assertThat(new AwayFile(path).periods()).containsExactly(stored);
+
+        var added = AwayPeriod.allDay(LocalDate.of(2026, 7, 5), TZ);
+        new AwayFile(path).add(added, NOW);
+
+        assertThat(StoredJson.parse(Files.readString(path)).path("version").intValue()).isEqualTo(1);
+        assertThat(new AwayFile(path).periods()).containsExactly(stored, added);
     }
 }

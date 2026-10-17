@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
+import io.github.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,7 +20,6 @@ import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import tools.jackson.databind.json.JsonMapper;
 
 /** The private file the keys go to without a usable keychain. */
 class SecretsFileTest {
@@ -102,8 +102,8 @@ class SecretsFileTest {
 
         withoutKeychain().save(secrets);
 
-        var json = new JsonMapper();
-        assertThat(json.readTree(Files.readString(path()))).isEqualTo(json.readTree(written));
+        var withVersion = "{\"version\":1," + written.substring(1);
+        assertThat(StoredJson.parse(Files.readString(path()))).isEqualTo(StoredJson.parse(withVersion));
     }
 
     @Test
@@ -159,7 +159,7 @@ class SecretsFileTest {
     }
 
     @Test
-    void secretsNeverReachTheLog() throws SecretsProblem {
+    void secretsNeverReachTheLog() throws SecretsProblem, IOException {
         var logged = new StringBuilder();
         var capture = new Handler() {
             @Override
@@ -183,10 +183,63 @@ class SecretsFileTest {
             withoutKeychain().save(secrets("open-meteo", SECRET));
             withoutKeychain().load();
             new ApiKeys(new MemoryKeychain(), new SecretsFile(path())).load(); // the move into a keychain
+            Files.writeString(path(), "{\"open-meteo\": {\"api_key\": \"" + SECRET + "\" oops}}");
+            assertThatThrownBy(() -> withoutKeychain().load()).isInstanceOf(SecretsProblem.class);
+            withoutKeychain().save(secrets("open-meteo", "new")); // keeps the damaged file aside
         } finally {
             root.removeHandler(capture);
             root.setLevel(previous);
         }
         assertThat(logged.toString()).doesNotContain(SECRET);
+    }
+
+    @Test
+    void aFileOfANewerVersionIsRefusedAsWrittenByANewerApp() throws IOException {
+        Files.writeString(path(), "{\"version\": 2, \"open-meteo\": {\"api_key\": \"" + SECRET + "\"}}");
+
+        assertThatThrownBy(() -> withoutKeychain().load()).isInstanceOf(SecretsProblem.class)
+                .hasMessageContaining("written by a newer version of the app").hasMessageNotContaining(SECRET);
+    }
+
+    @Test
+    void aFileWithoutAVersionIsRead() throws Exception {
+        Files.writeString(path(), "{\"open-meteo\": {\"api_key\": \"" + SECRET + "\"}}");
+
+        assertThat(withoutKeychain().load().of(OPEN_METEO)).containsEntry("api_key", SECRET);
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    void aBrokenFileIsKeptAsideAsPrivateAsItWasWhenNewKeysAreSaved() throws Exception {
+        var broken = "{\"open-meteo\": {\"api_key\": \"" + SECRET + "\" oops}}";
+        Files.writeString(path(), broken);
+        Files.setPosixFilePermissions(path(), PosixFilePermissions.fromString("rw-------"));
+
+        withoutKeychain().save(secrets("open-meteo", "new"));
+
+        assertThat(withoutKeychain().load().of(OPEN_METEO)).containsEntry("api_key", "new");
+        try (var kept = Files.list(folder)) {
+            assertThat(kept.filter(file -> file.getFileName().toString().startsWith("secrets.json.damaged-")))
+                    .singleElement().satisfies(file -> {
+                        assertThat(file).hasContent(broken);
+                        assertThat(mode(file)).isEqualTo("rw-------");
+                    });
+        }
+    }
+
+    @Test
+    void aBrokenFileIsKeptAsideWhenTheKeysGoToTheKeychain() throws Exception {
+        var broken = "{\"open-meteo\": oops}";
+        Files.writeString(path(), broken);
+        var keys = new ApiKeys(new MemoryKeychain(), new SecretsFile(path()));
+
+        keys.save(secrets("open-meteo", SECRET));
+
+        assertThat(path()).doesNotExist();
+        assertThat(keys.load().of(OPEN_METEO)).containsEntry("api_key", SECRET);
+        try (var kept = Files.list(folder)) {
+            assertThat(kept.filter(file -> file.getFileName().toString().startsWith("secrets.json.damaged-")))
+                    .singleElement().satisfies(file -> assertThat(file).hasContent(broken));
+        }
     }
 }

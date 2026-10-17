@@ -43,7 +43,8 @@ import java.util.function.Consumer;
  *
  * <p>Once {@linkplain #start(Consumer) started}, the engine plans on its own thread every minute, and again after
  * each change to its config, keys, battery level or away periods, and tells its listener each new outlook. Each plan
- * reads the config file again; the forecast service decides whether a provider is asked or its cache answers.
+ * uses the stored files as they are on disk, reading one again only when it changed; the forecast service decides
+ * whether a provider is asked or its cache answers.
  */
 public final class Engine implements AutoCloseable {
 
@@ -63,12 +64,14 @@ public final class Engine implements AutoCloseable {
     /**
      * Makes the engine; nothing is read or fetched yet.
      *
-     * @param configFile the owner's config file, read again for every plan
+     * @param configFile the owner's config file, read again for a plan when it changed on disk
      * @param forecasts gives the forecasts, from its cache or the providers
      * @param providers the providers known to this version, for the connection check and place search
      * @param apiKeys where the providers' secret settings are kept
-     * @param awayFile where the away periods the owner enters by hand are kept, read again for every plan
-     * @param batteryFile where the battery level the owner entered last is kept, read again for every plan
+     * @param awayFile where the away periods the owner enters by hand are kept, read again for a plan when it
+     *     changed on disk
+     * @param batteryFile where the battery level the owner entered last is kept, read again for a plan when it
+     *     changed on disk
      * @param clock the time plans are made at, and that decides which away periods are old
      * @param announcer tells the owner about the plan's windows shortly before they start, and keeps the ones it told
      *     about as they were told
@@ -234,7 +237,8 @@ public final class Engine implements AutoCloseable {
      *
      * @param period the time the car is away; one that is stored already is kept once
      * @return the stored periods after the change, in order of their start
-     * @throws IOException when the periods could not be saved; the stored ones are then unchanged
+     * @throws IOException when the periods could not be saved, or the stored ones could not be read whole and are
+     *     left as they are; the stored ones are then unchanged
      */
     public List<AwayPeriod> addAwayPeriod(AwayPeriod period) throws IOException {
         try {
@@ -250,7 +254,8 @@ public final class Engine implements AutoCloseable {
      *
      * @param period the period as {@link #awayPeriods()} gave it; one that is not stored changes nothing
      * @return the stored periods after the change, in order of their start
-     * @throws IOException when the periods could not be saved; the stored ones are then unchanged
+     * @throws IOException when the periods could not be saved, or the stored ones could not be read whole and are
+     *     left as they are; the stored ones are then unchanged
      */
     public List<AwayPeriod> removeAwayPeriod(AwayPeriod period) throws IOException {
         try {

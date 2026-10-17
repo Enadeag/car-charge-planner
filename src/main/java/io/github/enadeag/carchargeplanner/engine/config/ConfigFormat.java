@@ -2,6 +2,8 @@ package io.github.enadeag.carchargeplanner.engine.config;
 
 import io.github.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.setting.Setting;
+import io.github.enadeag.carchargeplanner.engine.store.FileFormat;
+import io.github.enadeag.carchargeplanner.engine.store.FileVersion;
 import io.github.enadeag.carchargeplanner.engine.store.FormatProblem;
 import io.github.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.time.DateTimeException;
@@ -28,15 +30,19 @@ import tools.jackson.databind.node.ObjectNode;
  * Every value must be given, except the {@code away} and {@code typical} sections; a name the shape does not have is
  * refused. Percentages, charger phases and provider ids are plain numbers and texts; an empty fallback means none; a
  * weekday is its English name in any case and a time is {@code "HH:mm"}; a typical value is its {@link Setting}'s
- * name.
+ * name. The file's {@code version} is 1; a file without one is read as version 1.
  */
-final class ConfigFormat {
+final class ConfigFormat implements FileFormat<EngineConfig> {
+
+    /** The shape this app writes, and where the migrations from older shapes go: none yet, 1 is the first. */
+    private static final FileVersion VERSION = new FileVersion(1, List.of());
 
     /** Strict, so that "24:00" is refused rather than read as the midnight that starts the day. */
     private static final DateTimeFormatter TIME =
             DateTimeFormatter.ofPattern("HH:mm").withResolverStyle(ResolverStyle.STRICT);
 
-    private ConfigFormat() {
+    /** Makes the format; it keeps nothing. */
+    ConfigFormat() {
     }
 
     /**
@@ -44,11 +50,13 @@ final class ConfigFormat {
      *
      * @param root the file's JSON
      * @return the config, every value checked by its record
-     * @throws FormatProblem when a value is missing, of the wrong kind, refused by its record, or a name is not known;
-     *     the message names the place in the file and what is allowed
+     * @throws FormatProblem when a value is missing, of the wrong kind, refused by its record, or a name is not known,
+     *     or the file was written by a newer version of the app; the message names the place in the file and what is
+     *     allowed
      */
-    static EngineConfig read(JsonNode root) throws FormatProblem {
-        var file = ConfigFields.of(root, "").only("system", "planning", "forecast", "away", "typical");
+    @Override
+    public EngineConfig read(JsonNode root) throws FormatProblem {
+        var file = ConfigFields.of(VERSION.upToDate(root), "").only("system", "planning", "forecast", "away", "typical");
         var system = system(file.object("system"));
         var planning = planning(file.object("planning"));
         var forecast = forecast(file.object("forecast"));
@@ -61,9 +69,10 @@ final class ConfigFormat {
      * Writes a whole config in the shape {@link #read(JsonNode)} reads.
      *
      * @param config the config to write
-     * @return its JSON
+     * @return its JSON, with the version first
      */
-    static ObjectNode write(EngineConfig config) {
+    @Override
+    public ObjectNode write(EngineConfig config) {
         var file = StoredJson.object();
         writeSystem(file.putObject("system"), config.system());
         var planning = config.planning();
@@ -88,7 +97,7 @@ final class ConfigFormat {
             var settings = panels.addArray();
             array.stream().sorted().forEach(setting -> settings.add(setting.name()));
         });
-        return file;
+        return VERSION.stamped(file);
     }
 
     private static HomeSystem system(ConfigFields system) throws FormatProblem {

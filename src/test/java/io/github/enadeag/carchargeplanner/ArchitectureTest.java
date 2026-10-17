@@ -3,6 +3,9 @@ package io.github.enadeag.carchargeplanner;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
+import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
@@ -62,11 +65,15 @@ class ArchitectureTest {
             .orShould().callMethod(System.class, "getenv", String.class)
             .because("the system and its user are read once, as the app starts, and handed on");
 
+    private static final DescribedPredicate<JavaClass> DOMAIN_MODEL = DescribedPredicate.describe(
+            "are the domain model: the planner, the settings, and the engine's public records and enums",
+            type -> type.getPackageName().endsWith(".engine.plan") || type.getPackageName().endsWith(".engine.setting")
+                    || type.getPackageName().contains(".engine") && !type.getPackageName().endsWith(".engine.store")
+                    && (type.isRecord() || type.isEnum()) && type.getModifiers().contains(JavaModifier.PUBLIC));
+
     @ArchTest
     static final ArchRule theDomainModelDoesNotKnowItsFileFormat = noClasses()
-            .that().resideInAnyPackage("..engine.plan..", "..engine.setting..")
-            .or().areRecords().and().resideInAPackage("..engine..")
-            .or().areEnums().and().resideInAPackage("..engine..")
+            .that(DOMAIN_MODEL)
             .should().dependOnClassesThat().resideInAnyPackage("tools.jackson..", "com.fasterxml.jackson..")
             .because("each stored file reads and writes its own JSON by hand, beside the store that keeps it");
 
