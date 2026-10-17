@@ -31,6 +31,7 @@ import io.github.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
 import io.github.enadeag.carchargeplanner.engine.notify.Announcer;
 import io.github.enadeag.carchargeplanner.engine.notify.Notifier;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
+import io.github.enadeag.carchargeplanner.engine.secrets.Keychain;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import io.github.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import io.github.enadeag.carchargeplanner.instance.InstanceCommand;
@@ -148,7 +149,9 @@ final class DesktopApp {
         // folders made before the app made its folders private; a folder named with --config= stays as it is
         PrivateFiles.tighten(appSettingsFile.path().toAbsolutePath().getParent());
         var texts = new AnnouncementTexts(language);
-        var engine = engine(http, secretsFile, dataFolder,
+        var keychain = parts.keychain();
+        closing.add("the keychain", keychain::close);
+        var engine = engine(http, keychain, secretsFile, dataFolder,
                 announcement -> notifications.show(texts.notification(announcement)));
         closing.add("the engine", engine::close);
         var saving = Executors.newSingleThreadExecutor(Thread.ofVirtual().name("dashboard-changes").factory());
@@ -262,10 +265,11 @@ final class DesktopApp {
         }
     }
 
-    private Engine engine(HttpClient http, SecretsFile secretsFile, Path dataFolder, Notifier notifier) {
+    private Engine engine(HttpClient http, Keychain keychain, SecretsFile secretsFile, Path dataFolder,
+            Notifier notifier) {
         var get = new JdkHttpGet(http);
         var providers = new Providers(List.of(new OpenMeteo(get), new ForecastSolar(get)));
-        var apiKeys = new ApiKeys(parts.keychain(), secretsFile);
+        var apiKeys = new ApiKeys(keychain, secretsFile, Clock.systemUTC());
         var cache = new ForecastCache(dataFolder.resolve("forecasts"));
         var announcer = new Announcer(new AnnouncedWindows(dataFolder.resolve("announced.json")), notifier);
         return new Engine(new ConfigFile(configPath), new ForecastService(providers, cache, apiKeys), providers,

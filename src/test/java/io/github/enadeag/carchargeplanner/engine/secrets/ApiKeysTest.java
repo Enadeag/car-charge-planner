@@ -7,8 +7,12 @@ import io.github.enadeag.carchargeplanner.LogCapture;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -27,6 +31,7 @@ class ApiKeysTest {
     Path folder;
 
     private final MemoryKeychain keychain = new MemoryKeychain();
+    private final AtomicReference<Instant> now = new AtomicReference<>(Instant.parse("2026-07-03T07:00:00Z"));
 
     /** Refuses to store anything, as the Credential Manager does over ssh, without a logon session. */
     private static final class FailingWrites extends MemoryKeychain {
@@ -55,7 +60,28 @@ class ApiKeysTest {
     }
 
     private ApiKeys keys(Keychain keychain) {
-        return new ApiKeys(keychain, file());
+        return new ApiKeys(keychain, file(), now::get);
+    }
+
+    private void later(Duration time) {
+        now.set(now.get().plus(time));
+    }
+
+    /** Counts what it is asked, as the system's keychain takes its time for each call. */
+    private static class Counting extends MemoryKeychain {
+        final AtomicInteger calls = new AtomicInteger();
+
+        @Override
+        public Optional<String> read(String name) throws KeychainException {
+            calls.incrementAndGet();
+            return super.read(name);
+        }
+
+        @Override
+        public void write(String name, String value) throws KeychainException {
+            calls.incrementAndGet();
+            super.write(name, value);
+        }
     }
 
     @Test
@@ -185,21 +211,89 @@ class ApiKeysTest {
     @Test
     void whereTheKeysAreKeptIsLoggedWhenItChangesAndNeverAValue() throws SecretsProblem {
         var lockable = new Lockable();
+        lockable.locked = true;
         var keys = keys(lockable);
         try (var log = LogCapture.of(ApiKeys.class)) {
             keys.save(KEYS);
             keys.load();
-            lockable.locked = true;
-            keys.load();
-            keys.load();
             lockable.locked = false;
             keys.load();
+            later(ApiKeys.RETRY_AFTER);
+            keys.load();
+            keys.load();
 
-            assertThat(log.lines()).containsExactly("INFO API keys are kept in the system keychain",
+            assertThat(log.lines()).containsExactly(
                     "WARNING API keys are kept in " + file().path() + ", readable only by you: the system keychain "
                             + "cannot be used",
+                    "INFO moved the API keys from " + file().path() + " into the system keychain",
                     "INFO API keys are kept in the system keychain again");
         }
+    }
+
+    @Test
+    void keysReadFromTheKeychainAreKeptSoAPlanEveryMinuteDoesNotAskItAgain() throws SecretsProblem {
+        var counting = new Counting();
+        keys(counting).save(KEYS);
+        var keys = keys(counting);
+        keys.load();
+        var asked = counting.calls.get();
+
+        for (int minute = 0; minute < 60; minute++) {
+            later(Duration.ofMinutes(1));
+            assertThat(keys.load()).isEqualTo(KEYS);
+            assertThat(keys.storage()).isEqualTo(KeyStorage.KEYCHAIN);
+        }
+
+        assertThat(counting.calls.get()).isEqualTo(asked);
+    }
+
+    @Test
+    void aSaveReplacesTheKeysThatWereKeptWithoutReadingThemBack() throws SecretsProblem {
+        var counting = new Counting();
+        var keys = keys(counting);
+        keys.load();
+        var changed = new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW")));
+
+        keys.save(changed);
+        var asked = counting.calls.get();
+
+        assertThat(keys.load()).isEqualTo(changed);
+        assertThat(counting.calls.get()).isEqualTo(asked);
+    }
+
+    @Test
+    void aKeychainThatCannotBeUsedIsLeftAloneForAWhileAndThenAskedAgain() throws SecretsProblem {
+        var lockable = new Lockable();
+        lockable.entries.put("index", "[\"forecast/open-meteo/api_key\"]");
+        lockable.entries.put("forecast/open-meteo/api_key", "OM-SECRET-1");
+        lockable.locked = true;
+        var keys = keys(lockable);
+        assertThat(keys.load()).isEqualTo(Secrets.NONE);
+        lockable.locked = false;
+
+        later(ApiKeys.RETRY_AFTER.minusSeconds(1));
+        assertThat(keys.load()).isEqualTo(Secrets.NONE);
+        assertThat(keys.storage()).isEqualTo(KeyStorage.FILE);
+
+        later(Duration.ofSeconds(1));
+        assertThat(keys.load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-SECRET-1"))));
+        assertThat(keys.storage()).isEqualTo(KeyStorage.KEYCHAIN);
+    }
+
+    @Test
+    void aKeychainThatCannotBeReadKeepsSayingSoUntilItIsAskedAgain() throws SecretsProblem {
+        var counting = new Counting();
+        counting.entries.put("index", "not a list");
+        var keys = keys(counting);
+        assertThatThrownBy(keys::load).isInstanceOf(SecretsProblem.class);
+        var asked = counting.calls.get();
+
+        assertThatThrownBy(keys::load).isInstanceOf(SecretsProblem.class).hasMessageContaining("could not be read");
+        assertThat(counting.calls.get()).isEqualTo(asked);
+
+        counting.entries.put("index", "[]");
+        later(ApiKeys.RETRY_AFTER);
+        assertThat(keys.load()).isEqualTo(Secrets.NONE);
     }
 
     @Test

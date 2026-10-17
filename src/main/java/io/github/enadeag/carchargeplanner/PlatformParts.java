@@ -48,9 +48,10 @@ sealed interface PlatformParts permits LinuxParts, WindowsParts {
     TrayParts trayParts(ObservableValue<ColorScheme> colorScheme, AppIcon icon, LanguageChoice language);
 
     /**
-     * The system's keychain for the API keys.
+     * The system's keychain for the API keys; the caller closes it when the app ends, as it may keep a connection.
      *
-     * @return the keychain; one that refuses everything on a system without one, so the keys go to the private file
+     * @return a new keychain client; one that refuses everything on a system without one, so the keys go to the
+     *     private file
      */
     Keychain keychain();
 

@@ -7,9 +7,12 @@ import io.github.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsSource;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Which provider to ask, when, and what to do when it cannot answer. The primary provider is asked first, and its last
@@ -22,7 +25,8 @@ public final class ForecastService {
     private final Providers providers;
     private final ForecastCache cache;
     private final SecretsSource secrets;
-    private final Map<ProviderId, Instant> retryAt = new HashMap<>();
+    private final Map<ProviderId, Instant> retryAt = new ConcurrentHashMap<>();
+    private final Map<ProviderId, ReentrantLock> asking = new ConcurrentHashMap<>();
     private final ProviderHealth health = new ProviderHealth();
 
     /**
@@ -30,7 +34,8 @@ public final class ForecastService {
      *
      * @param providers the providers it may ask, found by the ids the selection names
      * @param cache where each provider's last good forecast and rate limit are kept
-     * @param secrets where the providers' secret settings come from; read on every request
+     * @param secrets where the providers' secret settings come from; read at most once per request, and only when a
+     *     provider is about to be asked
      */
     public ForecastService(Providers providers, ForecastCache cache, SecretsSource secrets) {
         this.providers = providers;
@@ -52,9 +57,9 @@ public final class ForecastService {
      * @return the forecast and where it came from
      * @throws ForecastUnavailable with the reason of each provider asked, when none has a usable forecast
      */
-    public synchronized ForecastResult get(SystemDescription system, ForecastSelection selection, Instant now,
-            boolean force) throws ForecastUnavailable {
-        return fetch(system, selection, storedSecrets(), now, force);
+    public ForecastResult get(SystemDescription system, ForecastSelection selection, Instant now, boolean force)
+            throws ForecastUnavailable {
+        return fetch(system, selection, new Once<>(this::storedSecrets), now, force);
     }
 
     /**
@@ -68,17 +73,17 @@ public final class ForecastService {
      * @return the forecast and where it came from
      * @throws ForecastUnavailable with the reason of each provider asked, when none has a usable forecast
      */
-    public synchronized ForecastResult get(SystemDescription system, ForecastSelection selection, Secrets secrets,
-            Instant now) throws ForecastUnavailable {
-        return fetch(system, selection, new StoredSecrets(secrets, Optional.empty()), now, false);
+    public ForecastResult get(SystemDescription system, ForecastSelection selection, Secrets secrets, Instant now)
+            throws ForecastUnavailable {
+        return fetch(system, selection, new Once<>(() -> new StoredSecrets(secrets, Optional.empty())), now, false);
     }
 
-    private ForecastResult fetch(SystemDescription system, ForecastSelection selection, StoredSecrets stored,
+    private ForecastResult fetch(SystemDescription system, ForecastSelection selection, Once<StoredSecrets> stored,
             Instant now, boolean force) throws ForecastUnavailable {
         var reasons = new ArrayList<String>();
         var order = selection.order();
         for (int index = 0; index < order.size(); index++) {
-            var outcome = ask(order.get(index), system, selection, stored.secrets(), now, force);
+            var outcome = ask(order.get(index), system, selection, stored, now, force);
             if (outcome instanceof Outcome.Usable usable) {
                 var info = providers.find(order.get(index)).orElseThrow().info();
                 var role = index == 0 ? ProviderRole.PRIMARY : ProviderRole.FALLBACK;
@@ -86,15 +91,15 @@ public final class ForecastService {
             }
             reasons.add(((Outcome.Failure) outcome).reason());
         }
-        stored.problem().ifPresent(reasons::add);
+        stored.ifMade(secrets -> secrets.problem().ifPresent(reasons::add));
         throw new ForecastUnavailable(String.join("; ", reasons));
     }
 
     /**
      * The settings changed: what failed before may work now, so the waits after failures are forgotten. A rate limit
-     * stays: that is the provider's word, not ours.
+     * stays: that is the provider's word, not ours. Never waits for a provider that is being asked.
      */
-    public synchronized void forgetFailures() {
+    public void forgetFailures() {
         retryAt.clear();
     }
 
@@ -106,18 +111,25 @@ public final class ForecastService {
         }
     }
 
-    private Outcome ask(ProviderId providerId, SystemDescription system, ForecastSelection selection, Secrets stored,
-            Instant now, boolean force) {
+    private Outcome ask(ProviderId providerId, SystemDescription system, ForecastSelection selection,
+            Once<StoredSecrets> stored, Instant now, boolean force) {
         var found = providers.find(providerId);
         if (found.isEmpty()) {
             return new Outcome.Failure("The forecast provider '" + providerId + "' is not known to this version of the app");
         }
         var provider = found.get();
         var plain = selection.settingsOf(providerId);
-        var settings = provider.info().settingsFrom(plain, stored.of(providerId));
+        Supplier<Map<String, String>> settings =
+                () -> provider.info().settingsFrom(plain, stored.get().secrets().of(providerId));
         // a changed key does not make the cached forecast wrong, so the key is left out of what it depends on
         var key = cache.key(system, provider.info().settingsFrom(plain, Map.of()));
-        return new ProviderAttempt(provider, cache, retryAt, health, now, force).run(system, settings, key);
+        var lock = asking.computeIfAbsent(providerId, id -> new ReentrantLock());
+        lock.lock();
+        try {
+            return new ProviderAttempt(provider, cache, retryAt, health, now, force).run(system, settings, key);
+        } finally {
+            lock.unlock();
+        }
     }
 
     private String primaryName(ForecastSelection selection) {
@@ -129,5 +141,27 @@ public final class ForecastService {
         var source = new ForecastSource(info.id(), info.name(), info.attribution(), usable.fetchedAt(),
                 usable.freshness(), role, primaryName, usable.cooldownUntil());
         return new ForecastResult(usable.steps(), source);
+    }
+
+    /** A value made the first time it is asked for, and kept; for one request, on one thread. */
+    private static final class Once<T> {
+
+        private final Supplier<T> make;
+        private Optional<T> made = Optional.empty();
+
+        Once(Supplier<T> make) {
+            this.make = make;
+        }
+
+        T get() {
+            if (made.isEmpty()) {
+                made = Optional.of(make.get());
+            }
+            return made.get();
+        }
+
+        void ifMade(Consumer<T> action) {
+            made.ifPresent(action);
+        }
     }
 }

@@ -2,20 +2,20 @@ package io.github.enadeag.carchargeplanner.engine.forecast;
 
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import java.lang.System.Logger.Level;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Whether each provider gave a forecast the last time it was asked, so that a provider that starts failing, and one
  * that answers again, is logged once rather than at every planning round. The reason logged is the one the owner
- * sees, which never holds a secret setting or the request's address. Not safe for several threads: the forecast
- * service uses it under its own lock.
+ * sees, which never holds a secret setting or the request's address. Safe for several threads, as long as one
+ * provider is asked by one thread at a time, as the forecast service does.
  */
 final class ProviderHealth {
 
     private static final System.Logger LOG = System.getLogger(ProviderHealth.class.getName());
 
-    private final Map<ProviderId, Boolean> answering = new HashMap<>();
+    private final Map<ProviderId, Boolean> answering = new ConcurrentHashMap<>();
 
     /** Starts knowing nothing of any provider. */
     ProviderHealth() {

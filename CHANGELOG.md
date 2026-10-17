@@ -8,6 +8,10 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - A log file, `car-charge-planner.0.log` in the data folder, readable only by you: Settings, About shows where it is, and a bug report can quote it. `CAR_CHARGE_PLANNER_LOG_LEVEL=DEBUG` logs more.
 - The log tells when a forecast provider stops or starts giving forecasts, when the config file cannot be used or can be used again, where the API keys are kept, and each notification of a charge window. It never holds an API key, a request's address or your coordinates.
 
+### Changed
+- The API keys are read from the system keychain once and kept in memory until you save new ones, instead of at every plan, and only when a forecast provider is about to be asked. A keychain that cannot be used, or does not answer within 5 seconds, holds nothing up and is tried again after 5 minutes. On Linux the app keeps one connection to the Secret Service instead of opening one for every question, and first checks that there is one.
+- Saving the API keys or the settings no longer waits for a forecast that is being fetched.
+
 ## [0.3.0] - 2026-10-16
 
 The app is rewritten in Java with JavaFX, and the Python version is removed. What it plans is the same.

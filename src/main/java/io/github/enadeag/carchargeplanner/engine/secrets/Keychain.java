@@ -4,9 +4,10 @@ import java.util.Optional;
 
 /**
  * The system's keychain (the Secret Service on Linux, the Credential Manager on Windows), holding one text per name.
- * The engine reaches it only through this interface; each system's client lives in its platform package.
+ * The engine reaches it only through this interface; each system's client lives in its platform package. A client may
+ * keep a connection open between calls; whoever made it closes it when the app ends.
  */
-public interface Keychain {
+public interface Keychain extends AutoCloseable {
 
     /**
      * Reads one entry.
@@ -33,4 +34,10 @@ public interface Keychain {
      * @throws KeychainException when there is no keychain, it is locked, or it failed
      */
     void delete(String name) throws KeychainException;
+
+    /** Lets go of what the client keeps between calls, such as a connection; most keep nothing. Never throws. */
+    @Override
+    default void close() {
+        // nothing is kept between calls
+    }
 }

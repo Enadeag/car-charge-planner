@@ -235,7 +235,9 @@ API keys are kept by the system, not in a file:
 
 The entries are named `forecast/<provider>/<key>`, and one more entry, `index`, lists the names (no values) because a
 keychain cannot be asked what it holds. Without a usable keychain (a Linux machine with no Secret Service, for one)
-the keys are kept in `secrets.json` beside `engine.json`, readable only by you, and the app says so.
+the keys are kept in `secrets.json` beside `engine.json`, readable only by you, and the app says so. The app reads
+the keys from the keychain once and keeps them in memory until you save new ones; a keychain that cannot be used, or
+does not answer within a few seconds, is tried again five minutes later.
 
 ### Third-party software
 

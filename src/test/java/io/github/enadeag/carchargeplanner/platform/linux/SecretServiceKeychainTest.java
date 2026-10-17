@@ -21,6 +21,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.freedesktop.dbus.DBusPath;
 import org.freedesktop.dbus.annotations.DBusInterfaceName;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
@@ -28,6 +31,7 @@ import org.freedesktop.dbus.connections.impl.DBusConnectionBuilder;
 import org.freedesktop.dbus.exceptions.DBusException;
 import org.freedesktop.dbus.interfaces.DBus;
 import org.freedesktop.dbus.interfaces.DBusInterface;
+import org.freedesktop.dbus.types.Variant;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -141,6 +145,47 @@ class SecretServiceKeychainTest {
         return new SecretServiceKeychain(this::connect, application);
     }
 
+    /** Every connection the keychain made, oldest first. */
+    private final List<DBusConnection> made = new CopyOnWriteArrayList<>();
+
+    private SecretServiceKeychain counted() {
+        return new SecretServiceKeychain(() -> {
+            var connection = connect();
+            made.add(connection);
+            return connection;
+        }, "car-charge-planner");
+    }
+
+    /** A Secret Service that takes the name and then never answers a search, until it is let go. */
+    private static final class Silent implements SecretService.Service {
+        final CountDownLatch letGo = new CountDownLatch(1);
+
+        @Override
+        public SecretService.Pair<Variant<?>, DBusPath> OpenSession(String algorithm, Variant<?> input) {
+            return new SecretService.Pair<>(new Variant<>(""), new DBusPath("/session"));
+        }
+
+        @Override
+        public SecretService.Pair<List<DBusPath>, List<DBusPath>> SearchItems(Map<String, String> attributes) {
+            try {
+                letGo.await(30, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            return new SecretService.Pair<>(List.of(), List.of());
+        }
+
+        @Override
+        public Map<DBusPath, SecretService.Secret> GetSecrets(List<DBusPath> items, DBusPath session) {
+            return Map.of();
+        }
+
+        @Override
+        public String getObjectPath() {
+            return SecretService.SERVICE_PATH;
+        }
+    }
+
     @Test
     void aValueIsWrittenReadBackReplacedAndDeleted() throws Exception {
         startAThrowawayKeyring();
@@ -196,8 +241,53 @@ class SecretServiceKeychainTest {
     }
 
     @Test
+    void oneConnectionServesEveryCallAndClosingTheKeychainClosesIt() throws Exception {
+        startAThrowawayKeyring();
+        var keychain = counted();
+        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
+        var secrets = new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1")));
+
+        keys.save(secrets);
+        assertThat(new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"))).load()).isEqualTo(secrets);
+        keychain.delete("index");
+
+        assertThat(made).hasSize(1);
+        assertThat(made.getFirst().isConnected()).isTrue();
+        keychain.close();
+        assertThat(made.getFirst().isConnected()).isFalse();
+    }
+
+    @Test
+    void aConnectionThatBrokeIsMadeAgainAtTheNextCall() throws Exception {
+        startAThrowawayKeyring();
+        var keychain = counted();
+        keychain.write("index", "[]");
+        made.getFirst().disconnect();
+
+        assertThat(keychain.read("index")).contains("[]");
+        assertThat(made).hasSize(2);
+        keychain.close();
+    }
+
+    @Test
+    void aSecretServiceThatDoesNotAnswerInTimeCountsAsNoKeychain() throws Exception {
+        var silent = new Silent();
+        try (var service = connect()) {
+            service.exportObject(silent);
+            service.requestBusName(SecretService.BUS_NAME);
+            var keychain = new SecretServiceKeychain(this::connect, "car-charge-planner", Duration.ofMillis(300));
+
+            assertThatThrownBy(() -> keychain.read("index")).isInstanceOf(KeychainException.class)
+                    .hasMessageContaining("did not answer");
+            silent.letGo.countDown();
+            keychain.close();
+        }
+    }
+
+    @Test
     void withoutASecretServiceOnTheBusThereIsNoKeychain() {
-        assertThatThrownBy(() -> keychain("car-charge-planner").read("index")).isInstanceOf(KeychainException.class);
+        assertThatThrownBy(() -> keychain("car-charge-planner").read("index")).isInstanceOf(KeychainException.class)
+                .hasMessageContaining("no Secret Service");
         assertThat(new ApiKeys(keychain("car-charge-planner"), new SecretsFile(folder.resolve("secrets.json"))).storage())
                 .isEqualTo(KeyStorage.FILE);
     }

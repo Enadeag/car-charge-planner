@@ -178,7 +178,7 @@ public abstract class ProviderConformance {
                 var cache = new ForecastCache(cacheFolder);
                 // as the forecast service asks, so the lines it logs about a provider failing are made too
                 var outcome = new ProviderAttempt(made.provider(), cache, new HashMap<>(), new ProviderHealth(), c.now(),
-                        true).run(ProviderCase.EXAMPLE_SYSTEM, c.allSettings(),
+                        true).run(ProviderCase.EXAMPLE_SYSTEM, c::allSettings,
                         cache.key(ProviderCase.EXAMPLE_SYSTEM, Map.of()));
                 if (outcome instanceof Outcome.Failure failure) {
                     shown.add(failure.reason());
