@@ -6,8 +6,6 @@ import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import java.time.InstantSource;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.IntConsumer;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
@@ -27,17 +25,12 @@ public final class Dashboard {
     private final ObservableValue<Boolean> reducedMotion;
     private final DashboardPopup popup;
     private final DashboardWindow window;
+    private final DashboardActions actions;
     // the fields below belong to the JavaFX thread
     private Messages messages;
     private DashboardView view;
     private Optional<Outlook> outlook = Optional.empty();
     private List<AwayPeriod> awayPeriods = List.of();
-    private Optional<IntConsumer> batteryEntered = Optional.empty();
-    private Optional<Consumer<AwayPeriod>> awayAdded = Optional.empty();
-    private Optional<Consumer<AwayPeriod>> awayRemoved = Optional.empty();
-    private Optional<Runnable> away = Optional.empty();
-    private Optional<Runnable> settings = Optional.empty();
-    private Optional<Runnable> setUp = Optional.empty();
 
     /**
      * Makes the dashboard, hidden, showing that the forecast is being fetched until {@link #show(Outlook, List)} is
@@ -52,11 +45,16 @@ public final class Dashboard {
      * @param clock tells when the popup closed, so the click on the tray icon that closed it does not open it again
      * @param taskbarHiding how this system keeps the popup out of its taskbar
      * @param language the language the texts are in, followed while the app runs; never null
+     * @param actions what the dashboard's controls do; never null
      */
     public Dashboard(AppIcon icon, ObservableValue<ColorScheme> colorScheme, ObservableValue<Boolean> reducedMotion,
-            InstantSource clock, TaskbarHiding taskbarHiding, LanguageChoice language) {
+            InstantSource clock, TaskbarHiding taskbarHiding, LanguageChoice language, DashboardActions actions) {
+        if (actions == null) {
+            throw new IllegalArgumentException("the dashboard's actions must not be null");
+        }
         var theme = new SystemTheme(colorScheme);
         this.reducedMotion = reducedMotion;
+        this.actions = actions;
         this.popup = new DashboardPopup(theme, icon, clock, taskbarHiding);
         this.window = new DashboardWindow(theme, icon);
         this.messages = language.messages();
@@ -103,77 +101,11 @@ public final class Dashboard {
     }
 
     /**
-     * Lets the owner enter the battery level the car shows, on today's battery card.
-     *
-     * @param entered gets the level the owner saved; called on the JavaFX thread, so it should hand the work on
+     * Makes closing the window quit the app, with {@link DashboardActions#quit()}, instead of hiding it: without a
+     * tray it is the only way to quit.
      */
-    public void onBatteryEntered(Consumer<Percent> entered) {
-        Platform.runLater(() -> {
-            batteryEntered = Optional.of(pct -> entered.accept(new Percent(pct)));
-            view.onBatteryEntered(batteryEntered.get());
-        });
-    }
-
-    /**
-     * Lets the owner add and remove away periods for specific days on the dashboard: a whole day or part of the
-     * selected day, and any of the coming ones.
-     *
-     * @param added gets a period the owner entered; called on the JavaFX thread, so it should hand the work on
-     * @param removed gets a period the owner removed, as {@link #show(Outlook, List)} gave it; called on the JavaFX
-     *     thread, so it should hand the work on
-     */
-    public void onAwayChange(Consumer<AwayPeriod> added, Consumer<AwayPeriod> removed) {
-        Platform.runLater(() -> {
-            awayAdded = Optional.of(added);
-            awayRemoved = Optional.of(removed);
-            view.onAwayChange(added, removed);
-        });
-    }
-
-    /**
-     * Lets the footer's Away button open the weekly away periods.
-     *
-     * @param action what the button does; called on the JavaFX thread
-     */
-    public void onAway(Runnable action) {
-        Platform.runLater(() -> {
-            away = Optional.of(action);
-            view.onAway(action);
-        });
-    }
-
-    /**
-     * Lets the footer's Settings button open Settings.
-     *
-     * @param action what the button does; called on the JavaFX thread
-     */
-    public void onSettings(Runnable action) {
-        Platform.runLater(() -> {
-            settings = Optional.of(action);
-            view.onSettings(action);
-        });
-    }
-
-    /**
-     * Lets the message before the first set-up offer a button that opens set-up.
-     *
-     * @param action what the button does; called on the JavaFX thread
-     */
-    public void onSetUp(Runnable action) {
-        Platform.runLater(() -> {
-            setUp = Optional.of(action);
-            view.onSetUp(action);
-            outlook.ifPresent(shown -> view.show(new OutlookMapper(messages).map(shown, awayPeriods)));
-        });
-    }
-
-    /**
-     * Makes closing the window quit the app instead of hiding it: without a tray it is the only way to quit.
-     *
-     * @param quit what closing the window does; called on the JavaFX thread
-     */
-    public void quitWhenClosed(Runnable quit) {
-        Platform.runLater(() -> window.onClose(quit));
+    public void quitWhenClosed() {
+        Platform.runLater(() -> window.onClose(actions.quit()));
     }
 
     /**
@@ -189,14 +121,14 @@ public final class Dashboard {
         window.replace(before, view);
     }
 
-    /** A view in the language spoken now, with the actions given so far, showing the latest outlook. */
+    /** A view in the language spoken now, with the dashboard's actions, showing the latest outlook. */
     private DashboardView newView() {
         var made = new DashboardView(this::detach, this::fitToContent, reducedMotion, messages);
-        batteryEntered.ifPresent(made::onBatteryEntered);
-        awayAdded.ifPresent(added -> made.onAwayChange(added, awayRemoved.orElseThrow()));
-        away.ifPresent(made::onAway);
-        settings.ifPresent(made::onSettings);
-        setUp.ifPresent(made::onSetUp);
+        made.onBatteryEntered(pct -> actions.batteryEntered().accept(new Percent(pct)));
+        made.onAwayChange(actions.awayAdded(), actions.awayRemoved());
+        made.onAway(actions.away());
+        made.onSettings(actions.settings());
+        made.onSetUp(actions.setUp());
         var mapper = new OutlookMapper(messages);
         made.show(outlook.map(shown -> mapper.map(shown, awayPeriods)).orElseGet(mapper::loading));
         return made;
