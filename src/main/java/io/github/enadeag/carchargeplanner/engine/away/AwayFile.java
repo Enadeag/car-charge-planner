@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine.away;
 
+import io.github.enadeag.carchargeplanner.engine.store.StoredJson;
 import io.github.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -13,7 +14,6 @@ import java.util.List;
 import java.util.Optional;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * The away periods the owner entered by hand for specific days, in a JSON file the engine keeps. A file that is
@@ -25,7 +25,6 @@ public final class AwayFile {
     static final Duration KEEP_AFTER_END = Duration.ofDays(1);
 
     private final Path path;
-    private final JsonMapper json = new JsonMapper();
 
     /**
      * Makes the store for one file; nothing is read or written yet.
@@ -44,7 +43,7 @@ public final class AwayFile {
     public List<AwayPeriod> periods() {
         JsonNode blob;
         try {
-            blob = json.readTree(Files.readString(path));
+            blob = StoredJson.parse(Files.readString(path));
         } catch (IOException | JacksonException e) {
             return List.of();
         }
@@ -90,12 +89,12 @@ public final class AwayFile {
     }
 
     private void write(List<AwayPeriod> periods) throws IOException {
-        var blob = json.createObjectNode();
+        var blob = StoredJson.object();
         var rows = blob.putArray("periods");
         periods.forEach(period -> rows.addObject()
                 .put("start", period.start().toString())
                 .put("end", period.end().toString()));
-        PrivateFiles.write(path, json.writerWithDefaultPrettyPrinter().writeValueAsString(blob));
+        PrivateFiles.write(path, StoredJson.print(blob));
     }
 
     private static Optional<AwayPeriod> period(JsonNode entry) {

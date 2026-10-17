@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine.forecast;
 
+import io.github.enadeag.carchargeplanner.engine.store.StoredJson;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
@@ -15,7 +16,6 @@ import java.util.Optional;
 import java.util.TreeMap;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
@@ -45,7 +45,6 @@ public final class ForecastCache {
     }
 
     private final Path folder;
-    private final JsonMapper json = new JsonMapper();
 
     /**
      * Makes the cache; nothing is read or written yet.
@@ -64,7 +63,7 @@ public final class ForecastCache {
      * @return a JSON object that equals the one stored with a forecast for the same system and settings
      */
     JsonNode key(SystemDescription system, Map<String, String> plainSettings) {
-        var key = json.createObjectNode();
+        var key = StoredJson.object();
         key.put("latitude", system.location().latitude());
         key.put("longitude", system.location().longitude());
         key.put("timezone", system.timezone().getId());
@@ -74,7 +73,8 @@ public final class ForecastCache {
                 .put("tiltDeg", array.tiltDeg())
                 .put("azimuthDeg", array.azimuthDeg())
                 .put("systemLosses", array.systemLosses()));
-        key.set("settings", json.valueToTree(new TreeMap<>(plainSettings)));
+        var settings = key.putObject("settings");
+        new TreeMap<>(plainSettings).forEach(settings::put);
         return key;
     }
 
@@ -119,7 +119,7 @@ public final class ForecastCache {
      * @param steps its steps, keeping the providers' contract
      */
     void saveForecast(ProviderId providerId, JsonNode key, Instant fetchedAt, List<ForecastStep> steps) {
-        var blob = json.createObjectNode();
+        var blob = StoredJson.object();
         blob.set("key", key);
         blob.put("fetchedAt", fetchedAt.toString());
         var rows = blob.putArray("steps");
@@ -146,15 +146,15 @@ public final class ForecastCache {
 
     private ObjectNode read(ProviderId providerId) {
         try {
-            return json.readTree(Files.readString(file(providerId))) instanceof ObjectNode blob ? blob : json.createObjectNode();
+            return StoredJson.parse(Files.readString(file(providerId))) instanceof ObjectNode blob ? blob : StoredJson.object();
         } catch (IOException | JacksonException e) {
-            return json.createObjectNode();
+            return StoredJson.object();
         }
     }
 
     private void write(ProviderId providerId, ObjectNode blob) {
         try {
-            PrivateFiles.write(file(providerId), json.writeValueAsString(blob));
+            PrivateFiles.write(file(providerId), StoredJson.compact(blob));
         } catch (IOException e) {
             // a cache that cannot be written must not stop planning; the forecast is simply asked for again later
         }

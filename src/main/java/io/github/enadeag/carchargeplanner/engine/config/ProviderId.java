@@ -1,17 +1,14 @@
 package io.github.enadeag.carchargeplanner.engine.config;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.regex.Pattern;
 
 /**
  * The short, stable name of a forecast provider, such as {@code open-meteo}: lower case letters, digits and hyphens.
- * Not an enum, because providers may come from outside the app later. In JSON it is the plain text, also as an
- * object's key.
+ * Not an enum, because providers may come from outside the app later.
  *
  * @param value the id itself: lower case letters, digits and hyphens, starting with a letter or digit
  */
-public record ProviderId(@JsonValue String value) {
+public record ProviderId(String value) {
 
     private static final Pattern FORM = Pattern.compile("[a-z0-9][a-z0-9-]*");
 
@@ -20,7 +17,6 @@ public record ProviderId(@JsonValue String value) {
      *
      * @throws IllegalArgumentException when the value is not lower case letters, digits and hyphens
      */
-    @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
     public ProviderId {
         if (!isValid(value)) {
             throw new IllegalArgumentException(

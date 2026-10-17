@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.desktop;
 
+import io.github.enadeag.carchargeplanner.engine.store.StoredJson;
 import io.github.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
 import java.lang.System.Logger.Level;
@@ -10,7 +11,6 @@ import java.util.Optional;
 import java.util.function.Function;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * The file that keeps the {@link AppSettings}, in JSON, such as
@@ -25,7 +25,6 @@ public final class AppSettingsFile {
 
     private final Path path;
     private final AppSettings system;
-    private final JsonMapper json = JsonMapper.builder().build();
 
     /**
      * Makes the reader and writer for one file; nothing is read yet.
@@ -64,7 +63,7 @@ public final class AppSettingsFile {
             return system;
         }
         try {
-            var file = json.readTree(text);
+            var file = StoredJson.parse(text);
             var language = file.path("language").asString(FOLLOW_SYSTEM);
             return new AppSettings(
                     language.equals(FOLLOW_SYSTEM) ? Optional.empty() : value(file, "language", Language::ofCode),
@@ -85,12 +84,12 @@ public final class AppSettingsFile {
      * @throws IOException when the file or its folder could not be written; the file is then left as it was
      */
     public void write(AppSettings settings) throws IOException {
-        var file = json.createObjectNode()
+        var file = StoredJson.object()
                 .put("language", settings.language().map(Language::code).orElse(FOLLOW_SYSTEM))
                 .put("units", settings.units().code())
                 .put("mode", settings.mode().code())
                 .put("appearance", settings.appearance().code());
-        PrivateFiles.write(path, json.writerWithDefaultPrettyPrinter().writeValueAsString(file));
+        PrivateFiles.write(path, StoredJson.print(file));
     }
 
     /** A value of the file the app knows, or empty (and logged when it was there but unknown). */

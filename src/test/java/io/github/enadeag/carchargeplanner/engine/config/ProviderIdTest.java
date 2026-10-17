@@ -3,16 +3,11 @@ package io.github.enadeag.carchargeplanner.engine.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.json.JsonMapper;
 
 class ProviderIdTest {
-
-    private static final JsonMapper JSON = JsonMapper.builder().build();
 
     @ParameterizedTest
     @ValueSource(strings = {"open-meteo", "forecast-solar", "a", "7", "solcast2", "a-"})
@@ -40,31 +35,5 @@ class ProviderIdTest {
     @Test
     void itShowsAsItsText() {
         assertThat("provider '" + new ProviderId("open-meteo") + "'").isEqualTo("provider 'open-meteo'");
-    }
-
-    @Test
-    void inJsonAnIdIsItsText() {
-        var id = new ProviderId("open-meteo");
-
-        assertThat(JSON.writeValueAsString(id)).isEqualTo("\"open-meteo\"");
-        assertThat(JSON.readValue("\"open-meteo\"", ProviderId.class)).isEqualTo(id);
-    }
-
-    @Test
-    void asAnObjectsKeyAnIdIsItsText() {
-        var byProvider = Map.of(new ProviderId("open-meteo"), "x");
-        var json = "{\"open-meteo\":\"x\"}";
-
-        assertThat(JSON.writeValueAsString(byProvider)).isEqualTo(json);
-        assertThat(JSON.readValue(json, new TypeReference<Map<ProviderId, String>>() { })).isEqualTo(byProvider);
-    }
-
-    @Test
-    void inJsonAWrongIdIsRefused() {
-        assertThatThrownBy(() -> JSON.readValue("\"Open Meteo\"", ProviderId.class))
-                .hasRootCauseMessage("'Open Meteo' is not a provider id: lower case letters, digits and hyphens, "
-                        + "such as open-meteo");
-        assertThatThrownBy(() -> JSON.readValue("{\"Open Meteo\":\"x\"}", new TypeReference<Map<ProviderId, String>>() { }))
-                .hasMessageContaining("is not a provider id");
     }
 }

@@ -53,6 +53,10 @@ class ConfigFileTest {
         "\"phases\": 1,         | \"phases\": -1,        | phases must be 1 or 3",
         "\"phases\": 1,         | \"phases\": 1.5,       | phases",
         "\"phases\": 1,         | \"phases\": true,      | phases",
+        "\"phases\": 1,         | \"phases\": \"ONE\",     | phases",
+        "\"minimumPct\": 30,    | \"minimumPct\": \"\",    | minimumPct",
+        "\"name\": \"South roof\" | \"name\": 5          | system.panels[0].name",
+        "\"house\": { \"baseloadKw\": 0.5 } | \"house\": 0.5 | system.house: must be a JSON object",
         "\"margin\": 0.85,      | \"margin\": 1.5,       | margin",
         "\"timezone\": \"Europe/Brussels\" | \"timezone\": \"Mars/Base\" | Mars/Base",
         "\"latitude\": 51.0,    | \"latitude\": 120,     | latitude must be between -90 and 90",
@@ -96,6 +100,34 @@ class ConfigFileTest {
         assertThatThrownBy(() -> new ConfigFile(file).read())
                 .isInstanceOf(ConfigProblem.class)
                 .hasMessageContaining(named);
+    }
+
+    @Test
+    void aNumberInQuotesIsReadAsTheNumber() throws IOException, ConfigProblem {
+        var file = write(Files.readString(EXAMPLE).replace("\"minimumPct\": 30", "\"minimumPct\": \"30\"")
+                .replace("\"phases\": 1", "\"phases\": \"3\""));
+
+        var config = new ConfigFile(file).read();
+
+        assertThat(config.planning().minimumPct()).isEqualTo(new Percent(30));
+        assertThat(config.system().charger().phases()).isEqualTo(Phases.THREE);
+    }
+
+    @Test
+    void aWrongValueIsNamedByItsWholePlaceInTheFile() throws IOException {
+        var file = write(Files.readString(EXAMPLE).replace("\"kwp\": 5.0", "\"kwp\": 0"));
+
+        assertThatThrownBy(() -> new ConfigFile(file).read()).isInstanceOf(ConfigProblem.class)
+                .hasMessage("engine.json: system.panels[0]: kwp must be more than 0");
+    }
+
+    @Test
+    void anUnknownNameIsRefusedWithTheNamesThatAreAllowed() throws IOException {
+        var file = write(Files.readString(EXAMPLE).replace("\"kmPerDay\"", "\"kmPerWeek\""));
+
+        assertThatThrownBy(() -> new ConfigFile(file).read()).isInstanceOf(ConfigProblem.class)
+                .hasMessage("engine.json: system.car: unknown setting 'kmPerWeek'; allowed are 'usableBatteryKwh', "
+                        + "'consumptionKwhPer100km', 'kmPerDay'");
     }
 
     @Test

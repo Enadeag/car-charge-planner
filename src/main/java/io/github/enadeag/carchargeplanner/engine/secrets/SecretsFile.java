@@ -2,6 +2,7 @@ package io.github.enadeag.carchargeplanner.engine.secrets;
 
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.store.PrivateFiles;
+import io.github.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,7 +14,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * The keys in a JSON file beside the config, for when there is no usable keychain:
@@ -25,7 +25,6 @@ public final class SecretsFile {
     private static final Set<PosixFilePermission> OWNER_ONLY = PosixFilePermissions.fromString("rw-------");
 
     private final Path path;
-    private final JsonMapper json = new JsonMapper();
 
     /**
      * Makes the file's reader and writer; nothing is read or written yet.
@@ -70,7 +69,7 @@ public final class SecretsFile {
             throw new SecretsProblem("Could not read " + path + " (" + e.getClass().getSimpleName() + ")");
         }
         try {
-            return secrets(json.readTree(text));
+            return secrets(StoredJson.parse(text));
         } catch (JacksonException e) {
             // its message would quote part of the file: say where, not what
             throw new SecretsProblem(path + " is not valid JSON. Fix it or delete it and enter the keys again.");
@@ -113,8 +112,13 @@ public final class SecretsFile {
         secrets.checkNames();
         var sorted = new TreeMap<String, Map<String, String>>();
         secrets.byProvider().forEach((id, values) -> sorted.put(id.value(), new TreeMap<>(values)));
+        var file = StoredJson.object();
+        sorted.forEach((id, values) -> {
+            var provider = file.putObject(id);
+            values.forEach(provider::put);
+        });
         try {
-            PrivateFiles.write(path, json.writerWithDefaultPrettyPrinter().writeValueAsString(sorted));
+            PrivateFiles.write(path, StoredJson.print(file));
         } catch (IOException e) {
             throw new SecretsProblem("Could not write " + path + " (" + e.getClass().getSimpleName() + ")");
         }

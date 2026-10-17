@@ -1,14 +1,13 @@
 package io.github.enadeag.carchargeplanner.engine.secrets;
 
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
+import io.github.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import tools.jackson.core.JacksonException;
-import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * The secrets as keychain entries: one per value, named {@code forecast/<provider>/<key>}, so other integrations can
@@ -23,7 +22,6 @@ final class KeychainEntries {
     private static final String PREFIX = "forecast/";
 
     private final Keychain keychain;
-    private final JsonMapper json = new JsonMapper();
 
     /**
      * Makes the entries' reader and writer; nothing is read yet.
@@ -84,7 +82,9 @@ final class KeychainEntries {
         for (var entry : wanted.entrySet()) {
             writeAndCheck(entry.getKey(), entry.getValue());
         }
-        writeAndCheck(INDEX, json.writeValueAsString(new ArrayList<>(wanted.keySet())));
+        var index = StoredJson.array();
+        wanted.keySet().forEach(index::add);
+        writeAndCheck(INDEX, StoredJson.compact(index));
         for (var name : old) {
             if (!wanted.containsKey(name)) {
                 keychain.delete(name);
@@ -104,13 +104,19 @@ final class KeychainEntries {
         if (text.isEmpty()) {
             return List.of();
         }
-        List<String> names;
+        var names = new ArrayList<String>();
         try {
-            names = json.readValue(text.get(), new TypeReference<List<String>>() { });
+            var stored = StoredJson.parse(text.get());
+            if (!stored.isArray()) {
+                throw new KeychainException("the keychain's index of names is damaged");
+            }
+            for (var name : stored.values()) {
+                if (!name.isString() || !isEntryName(name.stringValue())) {
+                    throw new KeychainException("the keychain's index of names is damaged");
+                }
+                names.add(name.stringValue());
+            }
         } catch (JacksonException e) {
-            throw new KeychainException("the keychain's index of names is damaged");
-        }
-        if (names == null || !names.stream().allMatch(KeychainEntries::isEntryName)) {
             throw new KeychainException("the keychain's index of names is damaged");
         }
         return names;

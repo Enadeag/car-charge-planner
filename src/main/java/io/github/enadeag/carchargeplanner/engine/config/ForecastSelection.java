@@ -1,7 +1,5 @@
 package io.github.enadeag.carchargeplanner.engine.config;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import io.github.enadeag.carchargeplanner.engine.setting.Setting;
 import java.util.LinkedHashMap;
@@ -12,8 +10,7 @@ import java.util.regex.Pattern;
 
 /**
  * Which forecast providers the owner chose, and their settings that are not secret (secret ones are in the keychain).
- * A provider this version does not know is not refused here: the forecast service says so when it is asked. In JSON
- * the ids are plain texts, and an empty fallback means there is none.
+ * A provider this version does not know is not refused here: the forecast service says so when it is asked.
  *
  * @param primary the primary forecast provider
  * @param fallback the fallback provider, different from the primary, or empty for none
@@ -37,26 +34,6 @@ public record ForecastSelection(
                     "fallback must be different from primary");
         }
         settings = checkedCopy(settings);
-    }
-
-    /** As the config file has it: the fallback is a text, empty for none, and the settings' ids are texts. */
-    @JsonCreator
-    private static ForecastSelection fromJson(
-            @JsonProperty("primary") ProviderId primary,
-            @JsonProperty("fallback") String fallback,
-            @JsonProperty("settings") Map<String, Map<String, String>> settings) {
-        if (!fallback.isEmpty() && !ProviderId.isValid(fallback)) {
-            throw new IllegalArgumentException("fallback must be empty or a provider id such as forecast-solar");
-        }
-        var byId = new LinkedHashMap<ProviderId, Map<String, String>>();
-        settings.forEach((id, values) -> {
-            if (!ProviderId.isValid(id)) {
-                throw new IllegalArgumentException("settings: '" + id + "' is not a provider id");
-            }
-            byId.put(new ProviderId(id), values);
-        });
-        return new ForecastSelection(primary,
-                fallback.isEmpty() ? Optional.empty() : Optional.of(new ProviderId(fallback)), byId);
     }
 
     private static Map<ProviderId, Map<String, String>> checkedCopy(Map<ProviderId, Map<String, String>> settings) {

@@ -1,7 +1,5 @@
 package io.github.enadeag.carchargeplanner.engine.config;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -76,30 +74,5 @@ public record HomeSystem(
      */
     public HomeSystem withCharger(Charger newCharger) {
         return new HomeSystem(location, timezone, panels, house, car, newCharger);
-    }
-
-    /**
-     * The system as the config file gives it, with the latitude and the longitude side by side.
-     *
-     * @param latitude the latitude of the home in degrees, from -90 to 90, north positive
-     * @param longitude the longitude of the home in degrees, from -180 to 180, east positive
-     * @param timezone the time zone of the home
-     * @param panels the panel arrays, at least one
-     * @param house the home's own use of power
-     * @param car the car
-     * @param charger the charger
-     * @return the system with those values
-     * @throws IllegalArgumentException when a coordinate is out of range or there is no panel array
-     */
-    @JsonCreator
-    static HomeSystem fromFile(
-            @JsonProperty("latitude") double latitude,
-            @JsonProperty("longitude") double longitude,
-            @JsonProperty("timezone") ZoneId timezone,
-            @JsonProperty("panels") List<PanelArray> panels,
-            @JsonProperty("house") House house,
-            @JsonProperty("car") Car car,
-            @JsonProperty("charger") Charger charger) {
-        return new HomeSystem(new Coordinates(latitude, longitude), timezone, panels, house, car, charger);
     }
 }
