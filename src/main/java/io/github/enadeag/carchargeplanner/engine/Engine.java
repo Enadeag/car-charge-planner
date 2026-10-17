@@ -314,8 +314,8 @@ public final class Engine implements AutoCloseable {
     }
 
     /**
-     * Where the API keys are kept, so a client can tell the owner when it is a file rather than the keychain. Asks the
-     * keychain whether it can be used.
+     * Where the API keys are kept, so a client can tell the owner when it is a file rather than the keychain. May ask
+     * the keychain, which can take a few seconds: call it away from the user interface's thread.
      *
      * @return the keychain, or the private file
      */
@@ -334,7 +334,8 @@ public final class Engine implements AutoCloseable {
     }
 
     /**
-     * The providers' secret settings as they are stored, for a client that shows them to be changed.
+     * The providers' secret settings as they are stored, for a client that shows them to be changed. May ask the
+     * keychain, which can take a few seconds: call it away from the user interface's thread.
      *
      * @return every provider's secret settings, possibly none
      * @throws SecretsProblem when the keychain or the private file could not be read; the message says so in words

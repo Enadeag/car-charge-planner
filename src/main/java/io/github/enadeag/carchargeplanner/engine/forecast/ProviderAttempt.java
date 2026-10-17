@@ -9,12 +9,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 import tools.jackson.databind.JsonNode;
 
 /**
- * Asking one provider for a forecast, cache first: within the minimum refresh interval the cache answers; while the
- * provider is rate limited, or waiting after a failure, its last forecast is used for as long as it is still useful;
- * otherwise the provider is asked.
+ * Asking one provider for a forecast, cache first: within the minimum refresh interval the cache answers, without the
+ * secret settings being read; while the provider is rate limited, or waiting after a failure, its last forecast is
+ * used for as long as it is still useful; otherwise the provider is asked.
  */
 final class ProviderAttempt {
 
@@ -37,7 +38,8 @@ final class ProviderAttempt {
      *
      * @param provider the provider to ask
      * @param cache where its last good forecast and rate limit are kept; written after an answer
-     * @param retryAt per provider, when it may be asked again after a failure; updated here
+     * @param retryAt per provider, when it may be asked again after a failure; updated here, so a map that is safe
+     *     for several threads when other providers are asked at the same time
      * @param health whether each provider gave a forecast when it was last asked; updated here
      * @param force the owner asked for a refresh: skip the minimum refresh interval and the wait after a failure,
      *     never a rate limit
@@ -58,21 +60,23 @@ final class ProviderAttempt {
      * Gets a forecast from the cache or the provider, whichever the rules allow; never throws.
      *
      * @param system the system to forecast
-     * @param settings the provider's settings with values, secret ones included
+     * @param secretSettings gives the provider's settings with values, secret ones included; asked only when the
+     *     cache cannot answer by itself, as it may read the keychain
      * @param key what the forecast depends on, as {@link ForecastCache#key} makes it
      * @return a forecast to use, or the reason there is none
      */
-    Outcome run(SystemDescription system, Map<String, String> settings, JsonNode key) {
+    Outcome run(SystemDescription system, Supplier<Map<String, String>> secretSettings, JsonNode key) {
+        var cached = cache.forecast(info.id(), key, now);
+        var cooldown = cache.cooldownUntil(info.id()).filter(now::isBefore);
+        if (cached.isPresent() && !force && cached.get().age(now).compareTo(info.minRefresh()) < 0) {
+            return fromCache(cached.get(), Freshness.CACHED, cooldown);
+        }
+        var settings = secretSettings.get();
         var missing = info.missingRequired(settings);
         if (!missing.isEmpty()) { // nothing is sent without what the provider requires
             return afterFailure(String.join(", ", missing) + " is required", Optional.empty(), Optional.empty());
         }
-        var cached = cache.forecast(info.id(), key, now);
-        var cooldown = cache.cooldownUntil(info.id()).filter(now::isBefore);
         var usable = cached.filter(forecast -> forecast.age(now).compareTo(info.maxUsefulAge()) <= 0);
-        if (cached.isPresent() && !force && cached.get().age(now).compareTo(info.minRefresh()) < 0) {
-            return fromCache(cached.get(), Freshness.CACHED, cooldown);
-        }
         var waitUntil = cooldown.or(this::waitingAfterFailure);
         if (waitUntil.isPresent()) {
             return usable.map(forecast -> fromCache(forecast, Freshness.STALE, cooldown))

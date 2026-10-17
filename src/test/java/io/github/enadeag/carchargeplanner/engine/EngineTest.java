@@ -4,6 +4,7 @@ import static io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider.er
 import static io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider.steps;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import io.github.enadeag.carchargeplanner.LogCapture;
 import io.github.enadeag.carchargeplanner.engine.away.AwayFile;
@@ -59,6 +60,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -550,4 +554,29 @@ class EngineTest {
         }
     }
 
+
+    @Test
+    void savingTheKeysDoesNotWaitForAForecastThatIsBeingFetched() throws Exception {
+        var asked = new CountDownLatch(1);
+        var answer = new CountDownLatch(1);
+        main.script(() -> {
+            asked.countDown();
+            try {
+                answer.await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                throw new ProviderError.Unavailable("interrupted");
+            }
+            return days(2, 4.0);
+        });
+        var engine = engine(clockAt(9));
+        var planning = CompletableFuture.supplyAsync(engine::plan);
+        assertThat(asked.await(10, TimeUnit.SECONDS)).as("the provider is being asked").isTrue();
+
+        var keys = new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "NEW-KEY")));
+        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> engine.saveApiKeys(keys));
+
+        answer.countDown();
+        assertThat(planning.get(10, TimeUnit.SECONDS)).isInstanceOf(Outlook.Planned.class);
+        assertThat(engine.apiKeys()).isEqualTo(keys);
+    }
 }

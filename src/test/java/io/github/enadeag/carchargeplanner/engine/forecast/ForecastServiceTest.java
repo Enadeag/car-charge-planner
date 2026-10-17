@@ -30,6 +30,7 @@ import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
@@ -489,6 +490,24 @@ class ForecastServiceTest {
         backup.script(error(new Unavailable("down")));
         assertThatThrownBy(() -> get(later(120), true)).isInstanceOf(ForecastUnavailable.class)
                 .hasMessageContaining("not valid JSON");
+    }
+
+    @Test
+    void theSecretsAreReadOnlyWhenAProviderIsAskedNotWhenTheCacheAnswers() throws ForecastUnavailable {
+        mainNeedsAKey(steps(SunnyDays.day(DAY, 3.0)));
+        var reads = new AtomicInteger();
+        secrets = () -> {
+            reads.incrementAndGet();
+            return new Secrets(Map.of(MAIN, Map.of("api_key", SECRET)));
+        };
+
+        get(T0);
+        assertThat(reads).hasValue(1);
+        for (int minute = 1; minute < 15; minute++) {
+            assertThat(get(later(minute)).source().freshness()).isEqualTo(Freshness.CACHED);
+        }
+
+        assertThat(reads).hasValue(1);
     }
 
     @Test

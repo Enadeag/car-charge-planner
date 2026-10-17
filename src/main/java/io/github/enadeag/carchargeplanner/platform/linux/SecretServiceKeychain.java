@@ -2,13 +2,22 @@ package io.github.enadeag.carchargeplanner.platform.linux;
 
 import io.github.enadeag.carchargeplanner.engine.secrets.Keychain;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeychainException;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 import org.freedesktop.dbus.DBusPath;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
 import org.freedesktop.dbus.exceptions.DBusException;
+import org.freedesktop.dbus.interfaces.DBus;
 import org.freedesktop.dbus.interfaces.Properties;
 import org.freedesktop.dbus.types.Variant;
 
@@ -22,30 +31,57 @@ import org.freedesktop.dbus.types.Variant;
  *
  * <p>The session uses the "plain" algorithm: the value crosses the owner's own session bus unencrypted, as with any
  * other message on it; the bus is not reachable by other users.
+ *
+ * <p>One connection of its own is kept open from the first call until {@link #close()}, and made again after a call
+ * failed. A new connection first asks the bus whether a Secret Service is there or can be started, so a desktop
+ * without one costs no wait. Each call gets {@link #REPLY_TIMEOUT} to answer: dbus-java's own wait is 20 seconds per
+ * message, for the whole process, and a call here sends several. Calls take turns.
  */
 public final class SecretServiceKeychain implements Keychain {
+
+    /** How long one call (a read, a write or a delete, of several messages) may take before it counts as failed. */
+    public static final Duration REPLY_TIMEOUT = Duration.ofSeconds(5);
 
     private static final String LABEL_PROPERTY = "org.freedesktop.Secret.Item.Label";
     private static final String ATTRIBUTES_PROPERTY = "org.freedesktop.Secret.Item.Attributes";
 
-
-    /** One step done over an open connection. */
+    /** One step done over the open connection. */
     private interface Step<T> {
         T run(DBusConnection bus) throws DBusException, KeychainException;
     }
 
     private final BusConnector connector;
     private final String application;
+    private final Duration replyTimeout;
+    private final Object turn = new Object();
+    /** The connection, once made; set by the call that made it, which may finish after its caller gave up. */
+    private final AtomicReference<DBusConnection> connection = new AtomicReference<>();
+
+    /**
+     * Makes the keychain with the usual reply timeout; nothing is connected yet.
+     *
+     * @param connector opens the keychain's own connection, at the first call and again after one failed
+     * @param application the attribute that tells this app's items from others', such as "car-charge-planner"
+     */
+    public SecretServiceKeychain(BusConnector connector, String application) {
+        this(connector, application, REPLY_TIMEOUT);
+    }
 
     /**
      * Makes the keychain; nothing is connected yet.
      *
-     * @param connector opens a connection for each call
+     * @param connector opens the keychain's own connection, at the first call and again after one failed
      * @param application the attribute that tells this app's items from others', such as "car-charge-planner"
+     * @param replyTimeout how long one call may take, more than zero
+     * @throws IllegalArgumentException when the timeout is null, zero or negative
      */
-    public SecretServiceKeychain(BusConnector connector, String application) {
+    public SecretServiceKeychain(BusConnector connector, String application, Duration replyTimeout) {
+        if (replyTimeout == null || replyTimeout.isNegative() || replyTimeout.isZero()) {
+            throw new IllegalArgumentException("the reply timeout must be more than zero, not " + replyTimeout);
+        }
         this.connector = connector;
         this.application = application;
+        this.replyTimeout = replyTimeout;
     }
 
     @Override
@@ -92,6 +128,12 @@ public final class SecretServiceKeychain implements Keychain {
         });
     }
 
+    /** Closes the connection, when there is one; a later call makes a new one. */
+    @Override
+    public void close() {
+        disconnect();
+    }
+
     private Map<String, String> attributes(String name) {
         return Map.of("application", application, "name", name);
     }
@@ -116,15 +158,77 @@ public final class SecretServiceKeychain implements Keychain {
         return new KeychainException("the keyring is locked");
     }
 
-    /** A connection for each call: the keys are read when a forecast is fetched, at most a few times an hour. */
+    /**
+     * Runs a step over the connection, in time. The step runs on a thread of its own, as dbus-java's calls block:
+     * when it takes too long, the connection is closed, which ends the step's wait for its answer.
+     */
     private <T> T over(Step<T> step) throws KeychainException {
-        try (var bus = connector.connect()) {
-            return step.run(bus);
-        } catch (DBusException | RuntimeException e) {
-            // no session bus, no Secret Service, or it refused; dbus-java reports a refusal as a RuntimeException
-            throw new KeychainException("the Secret Service could not be used (" + e.getClass().getSimpleName() + ")", e);
-        } catch (java.io.IOException e) {
-            throw new KeychainException("the connection to the Secret Service did not close", e);
+        synchronized (turn) {
+            var call = new FutureTask<T>(() -> step.run(connected()));
+            Thread.ofVirtual().name("keychain").start(call);
+            try {
+                return call.get(replyTimeout.toMillis(), TimeUnit.MILLISECONDS);
+            } catch (TimeoutException e) {
+                disconnect();
+                throw new KeychainException(
+                        "the Secret Service did not answer within " + replyTimeout.toMillis() + " ms");
+            } catch (InterruptedException e) {
+                disconnect();
+                Thread.currentThread().interrupt();
+                throw new KeychainException("interrupted while waiting for the Secret Service", e);
+            } catch (ExecutionException e) {
+                if (e.getCause() instanceof KeychainException refused) {
+                    throw refused; // the Secret Service answered: the connection is fine
+                }
+                // no session bus, no Secret Service, or it refused; dbus-java reports a refusal as a RuntimeException
+                disconnect();
+                var kind = e.getCause() == null ? "unknown" : e.getCause().getClass().getSimpleName();
+                throw new KeychainException("the Secret Service could not be used (" + kind + ")", e.getCause());
+            }
+        }
+    }
+
+    /** The open connection, or a new one to a bus that has a Secret Service. */
+    private DBusConnection connected() throws DBusException, KeychainException {
+        var open = connection.get();
+        if (open != null && open.isConnected()) {
+            return open;
+        }
+        var made = connector.connect();
+        try {
+            requireSecretService(made);
+        } catch (DBusException | KeychainException | RuntimeException e) {
+            closeQuietly(made);
+            throw e;
+        }
+        var before = connection.getAndSet(made);
+        if (before != null) {
+            closeQuietly(before);
+        }
+        return made;
+    }
+
+    /** Asks the bus itself, which always answers, so a call is never sent to a name nobody owns or can start. */
+    private static void requireSecretService(DBusConnection bus) throws DBusException, KeychainException {
+        var daemon = bus.getRemoteObject("org.freedesktop.DBus", "/org/freedesktop/DBus", DBus.class);
+        if (!Arrays.asList(daemon.ListNames()).contains(SecretService.BUS_NAME)
+                && !Arrays.asList(daemon.ListActivatableNames()).contains(SecretService.BUS_NAME)) {
+            throw new KeychainException("there is no Secret Service on the session bus");
+        }
+    }
+
+    private void disconnect() {
+        var open = connection.getAndSet(null);
+        if (open != null) {
+            closeQuietly(open);
+        }
+    }
+
+    private static void closeQuietly(DBusConnection bus) {
+        try {
+            bus.close();
+        } catch (IOException e) {
+            // it is not used again either way
         }
     }
 }
