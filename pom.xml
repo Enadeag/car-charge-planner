@@ -224,8 +224,16 @@
           <systemPropertyVariables>
             <!-- no test may put an AWT window or tray icon on the developer's desktop -->
             <java.awt.headless>true</java.awt.headless>
+            <!-- nor a JavaFX one: whichever test touches JavaFX first, it starts headless -->
+            <glass.platform>Headless</glass.platform>
+            <prism.order>sw</prism.order>
             <java.util.logging.config.file>${project.basedir}/src/test/resources/logging.properties</java.util.logging.config.file>
           </systemPropertyVariables>
+          <!-- and the test JVM cannot reach the developer's display at all -->
+          <excludedEnvironmentVariables>
+            <param>DISPLAY</param>
+            <param>WAYLAND_DISPLAY</param>
+          </excludedEnvironmentVariables>
         </configuration>
       </plugin>
       <plugin>
