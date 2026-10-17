@@ -46,7 +46,7 @@ class StatusNotifierTrayTest {
     @TempDir
     Path folder;
 
-    private PrivateBus bus;
+    private IsolatedSessionBus bus;
     private String address;
     private DBusConnection panel;
     private StatusNotifierTray tray;
@@ -72,8 +72,8 @@ class StatusNotifierTrayTest {
     }
 
     @BeforeEach
-    void startAPrivateBus() throws IOException, DBusException {
-        bus = PrivateBus.start(folder);
+    void startAnIsolatedSessionBus() throws IOException, DBusException {
+        bus = IsolatedSessionBus.start(folder);
         address = bus.address();
         panel = DBusConnectionBuilder.forAddress(address).withShared(false).build();
         tray = new StatusNotifierTray(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),

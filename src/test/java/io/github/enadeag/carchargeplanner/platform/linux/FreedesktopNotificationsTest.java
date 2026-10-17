@@ -44,7 +44,7 @@ class FreedesktopNotificationsTest {
     @TempDir
     Path folder;
 
-    private PrivateBus bus;
+    private IsolatedSessionBus bus;
     private String address;
     private DBusConnection desktop;
     private FakeServer server;
@@ -76,8 +76,8 @@ class FreedesktopNotificationsTest {
     }
 
     @BeforeEach
-    void startAPrivateBusWithANotificationServer() throws IOException, DBusException {
-        bus = PrivateBus.start(folder);
+    void startAnIsolatedSessionBusWithANotificationServer() throws IOException, DBusException {
+        bus = IsolatedSessionBus.start(folder);
         address = bus.address();
         desktop = DBusConnectionBuilder.forAddress(address).withShared(false).build();
         notifications = new FreedesktopNotifications(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),
