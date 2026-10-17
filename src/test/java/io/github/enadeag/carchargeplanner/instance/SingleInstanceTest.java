@@ -236,11 +236,39 @@ class SingleInstanceTest {
 
     @Test
     @EnabledOnOs(OS.LINUX)
-    void aFolderOpenToOthersIsNotUsedAndNoCopyRuns() throws Exception {
+    void theUsersOwnFolderOpenToOthersIsMadeOwnerOnlyAndUsed() throws Exception {
         Files.createDirectory(folder, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxr-xr-x")));
-        assertThat(instance().claim(command -> { })).isEqualTo(Claim.NOT_PRIVATE);
-        assertThat(instance().claim(command -> { })).isEqualTo(Claim.NOT_PRIVATE);
-        assertThat(folder).isEmptyDirectory();
+        assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(folder))).isEqualTo("rwxr-xr-x");
+
+        var warnings = new ArrayList<String>();
+        var logger = Logger.getLogger(PrivateFolder.class.getName());
+        var handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                if (record.getLevel() == java.util.logging.Level.WARNING) {
+                    warnings.add(record.getMessage());
+                }
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+        logger.setUseParentHandlers(false);
+        logger.addHandler(handler);
+        try {
+            first();
+        } finally {
+            logger.removeHandler(handler);
+            logger.setUseParentHandlers(true);
+        }
+        assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(folder))).isEqualTo("rwx------");
+        assertThat(warnings).singleElement().asString().contains("tightened").contains("owner-only");
+        assertThat(instance().claim(command -> { })).isEqualTo(Claim.HANDED_OVER);
     }
 
     @Test

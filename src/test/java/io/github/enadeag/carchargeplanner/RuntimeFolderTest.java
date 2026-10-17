@@ -57,13 +57,14 @@ class RuntimeFolderTest {
     }
 
     @Test
-    void aFolderThereAlreadyThatOthersMayUseIsRefused() throws IOException {
+    void theUsersOwnFolderThereAlreadyThatOthersMayUseIsMadeOwnerOnly() throws IOException {
         var open = runtime.resolve("car-charge-planner-tray-" + ProcessHandle.current().pid());
         Files.createDirectory(open, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx")));
         Files.setPosixFilePermissions(open, PosixFilePermissions.fromString("rwxrwxrwx"));
 
-        assertThatThrownBy(() -> RuntimeFolder.make("tray", Map.of("XDG_RUNTIME_DIR", runtime.toString()), temporary, Optional.of(user)))
-                .isInstanceOf(IOException.class).hasMessageContaining("0700");
+        assertThat(RuntimeFolder.make("tray", Map.of("XDG_RUNTIME_DIR", runtime.toString()), temporary, Optional.of(user)))
+                .isEqualTo(open);
+        assertThat(mode(open)).isEqualTo("rwx------");
     }
 
     @Test

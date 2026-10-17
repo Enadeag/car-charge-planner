@@ -35,7 +35,6 @@ import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import io.github.enadeag.carchargeplanner.engine.secrets.Keychain;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import io.github.enadeag.carchargeplanner.engine.store.PrivateFiles;
-import io.github.enadeag.carchargeplanner.instance.Claim;
 import io.github.enadeag.carchargeplanner.instance.InstanceCommand;
 import io.github.enadeag.carchargeplanner.instance.SingleInstance;
 import java.io.IOException;
@@ -77,7 +76,7 @@ final class DesktopApp {
     private final AppSettings appSettings;
     private final LanguageChoice language;
     private final ClosingOrder closing = new ClosingOrder();
-    private Claim claim;
+    private final InstanceClaim claim;
     /** Runs the windows' slow work, such as reading the keychain, away from the JavaFX thread. */
     private final Background background = Background.onVirtualThreads();
     // set on the JavaFX thread only, as JavaFX's bindings on it are read there
@@ -111,6 +110,7 @@ final class DesktopApp {
         this.appSettings = appSettings;
         this.language = language;
         this.appearance = new SimpleObjectProperty<>(appSettings.appearance());
+        this.claim = new InstanceClaim(instance, language.messages(), System.err, LOG);
     }
 
     /**
@@ -130,7 +130,7 @@ final class DesktopApp {
         var dataFolder = DataLocation.defaultFolder(host.os(), host.environment(), host.home());
         // only now: a second copy that hands over to this one does not write to its log file
         startLog(dataFolder);
-        logInstanceProblem();
+        claim.logProblem();
         DBUS_LOG.setLevel(java.util.logging.Level.WARNING); // dbus-java reports every connection at INFO
         var http = JdkHttpGet.newClient();
         closing.add("the HTTP client", http::close);
@@ -240,43 +240,14 @@ final class DesktopApp {
      * is still starting wait until it can carry them out.
      */
     private boolean claim(CompletableFuture<Consumer<InstanceCommand>> commands) {
-        claim = instance.claim(command -> commands.thenAccept(handler -> handler.accept(command)));
-        var messages = language.messages();
-        return switch (claim) {
-            case HANDED_OVER -> {
-                System.err.println(messages.text(TextKey.CLI_HANDED_OVER, AppName.TITLE));
-                yield false;
-            }
-            case NO_ANSWER -> exit(messages.text(TextKey.CLI_NO_ANSWER, AppName.TITLE), ExitCode.FAILURE);
-            case UNREACHABLE -> exit(messages.text(TextKey.CLI_UNREACHABLE, AppName.TITLE), ExitCode.UNREACHABLE);
-            case NOT_PRIVATE -> exit(messages.text(TextKey.CLI_INSTANCE_NOT_PRIVATE, AppName.TITLE,
-                    instance.problem().orElse("")), ExitCode.FAILURE);
-            case FIRST_UNREACHABLE -> {
-                System.err.println(messages.text(TextKey.CLI_RUNS_UNREACHABLE, AppName.TITLE));
-                yield true;
-            }
-            case FIRST, UNAVAILABLE -> true; // the problem is logged once the log file is open
-        };
-    }
-
-    private static boolean exit(String text, ExitCode code) {
-        System.err.println(text);
-        System.exit(code.code());
-        return false;
-    }
-
-    /** Logs why the single-instance guard does not fully work, now that the log file is open. */
-    private void logInstanceProblem() {
-        switch (claim) {
-            case FIRST_UNREACHABLE -> LOG.log(Level.WARNING, "a later start cannot reach this copy to show its "
-                    + "dashboard, nor can the quit command, but the instance lock still keeps a second copy from "
-                    + "running: " + instance.problem().orElse(""));
-            case UNAVAILABLE -> LOG.log(Level.WARNING, "no instance lock, so a second copy of the app could start: "
-                    + instance.problem().orElse(""));
-            default -> {
-                // the guard works
-            }
+        var end = claim.claim(command -> commands.thenAccept(handler -> handler.accept(command)));
+        if (end.isEmpty()) {
+            return true;
         }
+        if (end.get() != ExitCode.SUCCESS) {
+            System.exit(end.get().code());
+        }
+        return false;
     }
 
     private void showTrayOrWindow(StartupDecision decision, Tray tray, Dashboard dashboard, Tray.TrayActions actions)
