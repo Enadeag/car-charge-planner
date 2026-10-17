@@ -147,7 +147,7 @@ public final class SingleInstance implements AutoCloseable {
      *
      * @param command what to ask
      * @return what came of it: {@link Reply#NOBODY} or {@link Reply#STALE} when no copy holds the lock and none answers
-     * @throws NotPrivateException when the private folder is another user's or a link
+     * @throws NotPrivateException when the private folder is another user's, a link, or one others may write in
      * @throws IOException when the private folder cannot be made, or whether a copy holds the lock cannot be told
      */
     public Reply send(InstanceCommand command) throws IOException {

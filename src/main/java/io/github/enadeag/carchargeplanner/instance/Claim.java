@@ -16,8 +16,9 @@ public enum Claim {
     /** Another copy holds the instance lock, but its socket cannot be reached; this one should exit. */
     UNREACHABLE,
     /**
-     * The private folder for the lock and the socket is another user's or a link: it is not used,
-     * and no copy may run until it is put right, as it could otherwise let a second copy run.
+     * The private folder for the lock and the socket is another user's, a link, or one others may write in, or it
+     * could not safely be made owner-only: it is not used, and no copy may run until it is put right, as it could
+     * otherwise let a second copy run.
      */
     NOT_PRIVATE,
     /**

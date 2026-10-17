@@ -37,6 +37,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class SingleInstanceTest {
 
@@ -269,6 +271,18 @@ class SingleInstanceTest {
         assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(folder))).isEqualTo("rwx------");
         assertThat(warnings).singleElement().asString().contains("tightened").contains("owner-only");
         assertThat(instance().claim(command -> { })).isEqualTo(Claim.HANDED_OVER);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"rwxrwxr-x", "rwxrwxrwx", "rwx-w----"})
+    @EnabledOnOs(OS.LINUX)
+    void theUsersOwnFolderThatOthersMayWriteInIsNotUsedAndNoCopyRuns(String mode) throws Exception {
+        Files.createDirectory(folder);
+        Files.setPosixFilePermissions(folder, PosixFilePermissions.fromString(mode));
+        assertThat(instance().claim(command -> { })).isEqualTo(Claim.NOT_PRIVATE);
+        assertThat(instance().claim(command -> { })).isEqualTo(Claim.NOT_PRIVATE);
+        assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(folder))).isEqualTo(mode);
+        assertThat(folder).isEmptyDirectory();
     }
 
     @Test
