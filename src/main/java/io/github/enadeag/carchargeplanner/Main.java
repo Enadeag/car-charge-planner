@@ -32,6 +32,7 @@ public final class Main {
      * @throws Exception when JavaFX cannot start or the dashboard cannot be made; the app cannot run then
      */
     public static void main(String[] args) throws Exception {
+        new UncaughtLogging(System.getLogger(UncaughtLogging.class.getName())).install();
         CommandLine commandLine;
         try {
             commandLine = CommandLine.parse(args);

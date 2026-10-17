@@ -389,6 +389,8 @@ public enum TextKey {
     ABOUT_APP_FILE,
     /** The data folder. */
     ABOUT_DATA_FOLDER,
+    /** The log file. */
+    ABOUT_LOG_FILE,
     /** Where the API keys are. */
     ABOUT_KEYS,
     /** The keys are in the keychain. */

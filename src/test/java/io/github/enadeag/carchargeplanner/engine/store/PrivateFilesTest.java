@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -23,6 +24,30 @@ class PrivateFilesTest {
 
     private static void setMode(Path path, String mode) throws IOException {
         Files.setPosixFilePermissions(path, PosixFilePermissions.fromString(mode));
+    }
+
+    @Test
+    void appendingAddsToTheEndOfWhatIsThere() throws IOException {
+        var file = Files.writeString(folder.resolve("app.log"), "first\n");
+
+        try (var out = PrivateFiles.append(file)) {
+            out.write("second\n".getBytes(StandardCharsets.UTF_8));
+        }
+
+        assertThat(Files.readString(file)).isEqualTo("first\nsecond\n");
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    void aFileMadeToAppendToIsOnlyForTheOwnerAndSoAreItsFolders() throws IOException {
+        var file = folder.resolve("data").resolve("app.log");
+
+        try (var out = PrivateFiles.append(file)) {
+            out.write('x');
+        }
+
+        assertThat(mode(folder.resolve("data"))).isEqualTo("rwx------");
+        assertThat(mode(file)).isEqualTo("rw-------");
     }
 
     @Test

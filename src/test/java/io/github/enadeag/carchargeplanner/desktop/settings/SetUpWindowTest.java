@@ -153,7 +153,8 @@ class SetUpWindowTest {
         setUp.withExample();
         var settings = Fx.call(() -> {
             var made = SettingsView.of(setUp.stores(), new AboutFacts("1.2.3", setUp.configPath,
-                    setUp.appSettings.path(), folder.resolve("data"), setUp.keysFile()), setUp.opened::add, () -> { },
+                    setUp.appSettings.path(), folder.resolve("data"), folder.resolve("data").resolve("app.0.log"),
+                    setUp.keysFile()), setUp.opened::add, () -> { },
                     () -> { }, Optional.of(window::open), setUp.messages);
             made.reload();
             Scenes.show(made, ColorScheme.LIGHT);

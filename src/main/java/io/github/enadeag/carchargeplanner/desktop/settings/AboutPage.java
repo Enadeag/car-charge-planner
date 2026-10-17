@@ -58,6 +58,7 @@ final class AboutPage implements Page {
                         place(TextKey.ABOUT_CONFIG_FILE, facts.configFile().toString()),
                         place(TextKey.ABOUT_APP_FILE, facts.appSettingsFile().toString()),
                         place(TextKey.ABOUT_DATA_FOLDER, facts.dataFolder().toString()),
+                        place(TextKey.ABOUT_LOG_FILE, facts.logFile().toString()),
                         place(TextKey.ABOUT_KEYS, keys(keys, facts.keysFile()))));
     }
 
