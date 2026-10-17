@@ -100,12 +100,10 @@ class ArchitectureTest {
             .should().dependOnClassesThat().resideInAnyPackage("tools.jackson..", "com.fasterxml.jackson..")
             .because("each stored file reads and writes its own JSON by hand, beside the store that keeps it");
 
-    /** A call is made on the exception's own class, so the call names a subclass of Throwable, not Throwable. */
+    /** The call names the exception's own class, a subclass of Throwable, whichever overload is called. */
     private static final DescribedPredicate<JavaMethodCall> PRINT_A_STACK_TRACE = DescribedPredicate.describe(
-            "print a stack trace to the console",
-            call -> call.getName().equals("printStackTrace") && call.getTargetOwner().isAssignableTo(Throwable.class)
-                    && !call.getTarget().getRawParameterTypes().stream()
-                            .anyMatch(type -> type.isEquivalentTo(java.io.PrintWriter.class)));
+            "print a stack trace",
+            call -> call.getName().equals("printStackTrace") && call.getTargetOwner().isAssignableTo(Throwable.class));
 
     private static final DescribedPredicate<JavaClass> HANDLE_REQUEST_ADDRESSES = DescribedPredicate.describe(
             "make or read the address of a request to a provider",
@@ -271,10 +269,11 @@ class ArchitectureTest {
                     + "platforms and the single-instance guard run the calls and the listener they own");
 
     @ArchTest
-    static final ArchRule nothingPrintsAStackTrace = noClasses()
+    static final ArchRule onlyTheLogLinePrintsAStackTrace = noClasses()
+            .that().doNotHaveFullyQualifiedName(LogLine.class.getName())
             .should().callMethodWhere(PRINT_A_STACK_TRACE)
             .because("a failure goes to the log, which knows what it may show; only LogLine, which writes the log, "
-                    + "prints a trace, and to a writer of its own (ADR 0005)");
+                    + "prints a trace, to a writer of its own (ADR 0005)");
 
     @ArchTest
     static final ArchRule onlyTheRootConfiguresJavaUtilLogging = noClasses()
@@ -291,6 +290,11 @@ class ArchitectureTest {
 
     // what is confined to one place
 
+    private static DescribedPredicate<JavaClass> notPartOf(String topLevelClassName) {
+        return DescribedPredicate.describe("are not part of " + topLevelClassName,
+                type -> !type.getName().equals(topLevelClassName) && !type.getName().startsWith(topLevelClassName + "$"));
+    }
+
     @ArchTest
     static final ArchRule theDesktopBusIsOnlyForLinux = noClasses()
             .that().resideOutsideOfPackages("..platform.linux..", ROOT)
@@ -300,16 +304,14 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule onlyOneClassMakesHttpCalls = noClasses()
             .that().resideOutsideOfPackage(ROOT)
-            .and().doNotHaveFullyQualifiedName(JdkHttpGet.class.getName())
-            .and().areNotNestedClasses()
+            .and(notPartOf(JdkHttpGet.class.getName()))
             .should().dependOnClassesThat().resideInAPackage("java.net.http..")
             .because("every provider asks through the HttpGet port, so a test can answer instead (ADR 0001)");
 
     @ArchTest
     static final ArchRule jacksonIsOnlyForStoredFiles = noClasses()
             .that().resideOutsideOfPackage(ENGINE + "..")
-            .and().doNotHaveFullyQualifiedName(ROOT + ".desktop.AppSettingsFile")
-            .and().areNotNestedClasses()
+            .and(notPartOf(ROOT + ".desktop.AppSettingsFile"))
             .should().dependOnClassesThat().resideInAnyPackage("tools.jackson..", "com.fasterxml.jackson..")
             .because("the engine's files and the desktop's app settings are the only JSON the app reads and writes "
                     + "(ADR 0001)");
@@ -317,30 +319,74 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule theDesktopWritesFilesOnlyForItsAppSettings = noClasses()
             .that().resideInAPackage("..desktop..")
-            .and().doNotHaveFullyQualifiedName(ROOT + ".desktop.AppSettingsFile")
+            .and(notPartOf(ROOT + ".desktop.AppSettingsFile"))
             .should().dependOnClassesThat().haveFullyQualifiedName("java.nio.file.Files")
+            .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileOutputStream")
+            .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileWriter")
+            .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.RandomAccessFile")
+            .orShould().dependOnClassesThat().resideInAPackage("java.nio.channels..")
             .because("no client writes the engine's files; the desktop keeps its own app settings (ADR 0001)");
 
+    private static final DescribedPredicate<JavaMethodCall> CHANGE_FILES = DescribedPredicate.describe(
+            "write, move or delete a file",
+            call -> call.getTargetOwner().isEquivalentTo(java.nio.file.Files.class)
+                    && Set.of("write", "writeString", "newOutputStream", "newBufferedWriter", "createFile",
+                            "createTempFile", "createTempDirectory", "createDirectory", "createDirectories", "move",
+                            "copy", "delete", "deleteIfExists").contains(call.getName()));
+
+    @ArchTest
+    static final ArchRule theEngineWritesFilesOnlyInItsStore = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .and().resideOutsideOfPackage(ENGINE + ".store..")
+            .should().callMethodWhere(CHANGE_FILES)
+            .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileOutputStream")
+            .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileWriter")
+            .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.RandomAccessFile")
+            .orShould().dependOnClassesThat().resideInAPackage("java.nio.channels..")
+            .because("the engine owns its files and keeps each written in one safe way, by StoredFile and "
+                    + "PrivateFiles (ADR 0001)");
+
     // texts, numbers and times are written in a chosen language
+
+    private static boolean hasLocale(java.util.List<JavaClass> types) {
+        return types.stream().anyMatch(type -> type.isEquivalentTo(Locale.class)
+                || type.isEquivalentTo(Locale.Category.class)
+                || type.getName().equals("java.text.DecimalFormatSymbols")
+                || type.getName().equals("java.text.DateFormatSymbols"));
+    }
 
     private static final DescribedPredicate<JavaMethodCall> USE_THE_DEFAULT_LOCALE = DescribedPredicate.describe(
             "format or change case in the JVM's default locale",
             call -> {
-                var owner = call.getTargetOwner().getName();
+                var ownerType = call.getTargetOwner();
+                var owner = ownerType.getName();
                 var name = call.getName();
                 var types = call.getTarget().getRawParameterTypes();
-                var hasLocale = types.stream().anyMatch(type -> type.isEquivalentTo(Locale.class)
-                        || type.isEquivalentTo(Locale.Category.class));
+                var hasLocale = hasLocale(types);
                 return owner.equals(String.class.getName()) && !hasLocale
-                                && Set.of("toLowerCase", "toUpperCase", "format").contains(name)
-                        || owner.equals("java.text.NumberFormat") && name.endsWith("Instance") && !hasLocale
+                                && Set.of("toLowerCase", "toUpperCase", "format", "formatted").contains(name)
+                        || (owner.equals("java.text.NumberFormat") || owner.equals("java.text.DateFormat"))
+                                && name.endsWith("Instance") && !hasLocale
                         || owner.equals("java.time.format.DateTimeFormatter") && name.equals("ofPattern")
-                                && types.size() == 1;
+                                && types.size() == 1
+                        || (ownerType.isAssignableTo(java.io.PrintStream.class)
+                                || ownerType.isAssignableTo(java.io.PrintWriter.class)
+                                || owner.equals("java.util.Formatter"))
+                                && Set.of("printf", "format").contains(name) && !hasLocale;
             });
+
+    private static final DescribedPredicate<com.tngtech.archunit.core.domain.JavaConstructorCall>
+            MAKE_A_FORMAT_IN_THE_DEFAULT_LOCALE = DescribedPredicate.describe(
+                    "make a format that uses the JVM's default locale",
+                    call -> Set.of("java.text.SimpleDateFormat", "java.text.DecimalFormat",
+                            "java.text.MessageFormat", "java.util.Formatter")
+                            .contains(call.getTargetOwner().getName())
+                            && !hasLocale(call.getTarget().getRawParameterTypes()));
 
     @ArchTest
     static final ArchRule textsNumbersAndTimesNameTheirLocale = noClasses()
             .should().callMethodWhere(USE_THE_DEFAULT_LOCALE)
+            .orShould().callConstructorWhere(MAKE_A_FORMAT_IN_THE_DEFAULT_LOCALE)
             .because("the chosen language is handed to whatever writes them; use Locale.ROOT for what a machine "
                     + "reads (ADR 0005)");
 

@@ -33,6 +33,7 @@ class TestCodeArchitectureTest {
             .should().callMethod(System.class, "getProperty", String.class)
             .orShould().callMethod(System.class, "getProperty", String.class, String.class)
             .orShould().callMethod(System.class, "getProperties")
+            .orShould().callMethod(System.class, "getenv")
             .orShould().callMethod(System.class, "getenv", String.class)
             .because("a test works in a folder of its own and is handed what it needs, never the owner's home or "
                     + "environment; ArchUnit cannot read which property, so only a test that starts a JVM may read "
