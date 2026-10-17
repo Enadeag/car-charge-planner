@@ -1,16 +1,8 @@
 name: Windows installer
 
-# Windows minutes count double while the repository is private, so the installer is built when what goes into it
-# changes on main and by hand; not for every pull request. A version tag builds it through release.yml, which calls this.
+# Windows minutes count double while the repository is private, so the installer is built only by hand and for a
+# release (release.yml calls this on a version tag); #31 brings back a build on main when the packaging changes.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "tools/package-windows.ps1"
-      - "src/packaging/windows/**"
-      - "pom.xml"
-      - ".mvn/**"
-      - ".github/workflows/windows-installer.yml"
   workflow_dispatch:
   workflow_call:
 

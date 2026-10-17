@@ -82,13 +82,17 @@ The app icon's drawings are in `src/packaging/icons/`: `car-charge-planner.svg` 
 
 The workflows are in `.github/workflows/`:
 
-- `ci.yml` runs `./mvnw -B clean verify` for every pull request and every push to `main`, on Linux (with
+- `ci.yml` runs `./mvnw -B clean verify` for every pull request into `main` and every push to `main`, on Linux (with
   `dbus-daemon` and GNOME Keyring, so the private-bus tests run) and on Windows. A change to documentation only
   (`*.md`, `docs/` except `docs/example-engine.json`, which the tests read) skips both, and GitHub counts a skipped job
-  as passed. The macOS job is switched off until the JavaFX tests run on the macOS runner (#134); the maintainer decides when it comes back.
+  as passed. While the repository is private, Windows minutes count double, so a pull request builds on Windows only
+  when it touches `platform/windows`, the Windows packaging, `pom.xml`, the Maven wrapper or the workflows; every
+  push to `main` still builds on Windows. A stacked pull request runs once it is retargeted to `main`. The public
+  launch (#31) turns Windows back on for every pull request. The macOS job is switched off until the JavaFX tests run
+  on the macOS runner (#134); the maintainer decides when it comes back.
 - `windows-installer.yml` builds the installer with `tools\package-windows.ps1`, installs it silently, runs the
-  installed `car-charge-planner.exe quit`, uninstalls it and keeps the installer as an artifact for 14 days. It runs
-  when the packaging changes on `main`, by hand, and for a release.
+  installed `car-charge-planner.exe quit`, uninstalls it and keeps the installer as an artifact for 14 days. While the
+  repository is private it runs only by hand and for a release.
 - `release.yml` makes a release; see below.
 
 The actions are pinned to a full commit SHA, with the version in a comment beside it: update both together.
