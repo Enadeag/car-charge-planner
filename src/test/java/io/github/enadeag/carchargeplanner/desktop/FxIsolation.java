@@ -28,16 +28,20 @@ public final class FxIsolation implements BeforeAllCallback, AfterAllCallback, B
     private record UpstreamBug(String link, Predicate<Throwable> matches) {
     }
 
+    private static final String HEADLESS_WINDOW = "com.sun.glass.ui.headless.HeadlessWindow";
+
     /**
-     * The only entries: bugs of OpenJFX, each with a link. The headless window clears what a window no longer covers
-     * when it shrinks, without keeping to its 1000 px frame: a window the dashboard first sizes to a day taller than
-     * the screen, as {@code Stage.sizeToScene()} does at once, throws when the next pulse caps it.
+     * The only entries: bugs of OpenJFX, each with a link. The headless window draws a window's pixels into its 1000 px
+     * frame, and clears them when the window shrinks, without keeping to that frame: a window that reaches past the
+     * screen throws. The dashboard's window does so for a moment when it is sized to a day taller than the screen, as
+     * {@code Stage.sizeToScene()} does at once, before the next pulse caps it; when that moment is drawn depends on
+     * the system's timing.
      */
     private static final List<UpstreamBug> UPSTREAM_BUGS = List.of(new UpstreamBug(
             "https://github.com/openjdk/jfx/blob/88ad997176fa/modules/javafx.graphics/src/main/java/com/sun/glass/ui/headless/"
-                    + "HeadlessWindow.java#L157-L162",
+                    + "HeadlessWindow.java#L320-L346",
             thrown -> thrown instanceof IndexOutOfBoundsException
-                    && thrownIn(thrown, "com.sun.glass.ui.headless.HeadlessWindow", "clearRect")));
+                    && (thrownIn(thrown, HEADLESS_WINDOW, "blit") || thrownIn(thrown, HEADLESS_WINDOW, "clearRect"))));
 
     /** Made by JUnit, for each class marked {@link FxTest}. */
     public FxIsolation() {
