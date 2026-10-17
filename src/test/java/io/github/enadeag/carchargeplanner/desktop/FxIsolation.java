@@ -29,19 +29,23 @@ public final class FxIsolation implements BeforeAllCallback, AfterAllCallback, B
     }
 
     private static final String HEADLESS_WINDOW = "com.sun.glass.ui.headless.HeadlessWindow";
+    /** The app's own classes, and those of its tests. */
+    private static final String APP = "io.github.enadeag.carchargeplanner.";
 
     /**
      * The only entries: bugs of OpenJFX, each with a link. The headless window draws a window's pixels into its 1000 px
      * frame, and clears them when the window shrinks, without keeping to that frame: a window that reaches past the
      * screen throws. The dashboard's window does so for a moment when it is sized to a day taller than the screen, as
      * {@code Stage.sizeToScene()} does at once, before the next pulse caps it; when that moment is drawn depends on
-     * the system's timing.
+     * the system's timing. Excused only while JavaFX draws or the test runs a pulse: when it comes up through the
+     * app's code, it broke off what the app was doing, such as a popup taking another language.
      */
     private static final List<UpstreamBug> UPSTREAM_BUGS = List.of(new UpstreamBug(
             "https://github.com/openjdk/jfx/blob/88ad997176fa/modules/javafx.graphics/src/main/java/com/sun/glass/ui/headless/"
                     + "HeadlessWindow.java#L320-L346",
             thrown -> thrown instanceof IndexOutOfBoundsException
-                    && (thrownIn(thrown, HEADLESS_WINDOW, "blit") || thrownIn(thrown, HEADLESS_WINDOW, "clearRect"))));
+                    && (thrownIn(thrown, HEADLESS_WINDOW, "blit") || thrownIn(thrown, HEADLESS_WINDOW, "clearRect"))
+                    && !throughTheApp(thrown)));
 
     /** Made by JUnit, for each class marked {@link FxTest}. */
     public FxIsolation() {
@@ -105,6 +109,17 @@ public final class FxIsolation implements BeforeAllCallback, AfterAllCallback, B
                 + "caught " + when + "; the first: " + unexpected.getFirst(), unexpected.getFirst());
         unexpected.stream().skip(1).forEach(failure::addSuppressed);
         throw failure;
+    }
+
+    /**
+     * Whether the exception came up through the app's own code, such as a fit that sized a window, rather than only
+     * through JavaFX drawing a frame: then it broke off what the app was doing, and the test must not pass over it.
+     */
+    private static boolean throughTheApp(Throwable thrown) {
+        return Arrays.stream(thrown.getStackTrace())
+                .map(StackTraceElement::getClassName)
+                .anyMatch(name -> name.startsWith(APP) && !name.equals(Fx.class.getName())
+                        && !name.matches(".*Test(\\$.*)?"));
     }
 
     /** Whether the first frame outside the JDK is a method of a class: where the exception really arose. */

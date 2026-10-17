@@ -223,6 +223,31 @@ class DashboardTest {
     }
 
     @Test
+    void thePopupStaysOnTheScreenWhenTheDayChangesTwiceBeforeTheNextFrame() throws Exception {
+        clickTheIcon();
+        dashboard.show(planWithABusyTomorrow(20), List.of());
+        Fx.settle();
+        var popup = popup().orElseThrow();
+        var tabs = Fx.call(() -> (TabPane) popup.getScene().lookup(".day-tabs"));
+
+        // in one go on the JavaFX thread, so no frame comes between the two fits: the second one finds the popup where
+        // the first left it, which must be on the screen already, or the headless window throws and breaks it off
+        Fx.run(() -> {
+            tabs.getSelectionModel().select(1);
+            tabs.getSelectionModel().select(0);
+        });
+
+        double needed = Fx.call(() -> {
+            var root = popup.getScene().getRoot();
+            root.applyCss();
+            root.layout();
+            return root.prefHeight(popup.getWidth());
+        });
+        assertThat(popup.getHeight()).isEqualTo(needed);
+        assertThat(popup.getY() + popup.getHeight()).isLessThanOrEqualTo(1000 - PopupPlacement.MARGIN);
+    }
+
+    @Test
     void everyStyleResolvesWhenThePopupReopensWithAPlanThatCameWhileItWasClosed() throws Exception {
         try (var css = new CssWarnings()) {
             clickTheIcon();
