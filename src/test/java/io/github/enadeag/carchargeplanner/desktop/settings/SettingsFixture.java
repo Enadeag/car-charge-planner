@@ -13,6 +13,7 @@ import io.github.enadeag.carchargeplanner.desktop.TextKey;
 import io.github.enadeag.carchargeplanner.desktop.TextScale;
 import io.github.enadeag.carchargeplanner.desktop.Units;
 import io.github.enadeag.carchargeplanner.engine.Engine;
+import io.github.enadeag.carchargeplanner.engine.ManualScheduler;
 import io.github.enadeag.carchargeplanner.engine.away.AwayFile;
 import io.github.enadeag.carchargeplanner.engine.battery.BatteryFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
@@ -83,7 +84,8 @@ final class SettingsFixture {
         engine = new Engine(new ConfigFile(configPath),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
                 new AwayFile(folder.resolve("away.json")), new BatteryFile(folder.resolve("battery.json")),
-                Clock.systemUTC(), new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), told -> { }));
+                Clock.systemUTC(), new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), told -> { }),
+                new ManualScheduler());
     }
 
     /**

@@ -75,7 +75,6 @@ import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import javafx.application.ColorScheme;
@@ -100,12 +99,6 @@ public final class Main {
     private static final String APP_ID = "car-charge-planner";
     /** The desktop app's own settings, beside the engine's config file in the app's folder. */
     private static final String APP_SETTINGS_FILE = "app.json";
-    /**
-     * Often enough to announce a window within its notification lead time, and to keep "now" on the dashboard current.
-     * The forecast cache answers in between, and a provider that could not be reached waits its own time before it is
-     * asked again, so this is not how often a provider is asked.
-     */
-    private static final long REPLAN_MINUTES = 1;
     /** A running app that is still starting, or busy, may take a moment to confirm a command. */
     private static final Duration INSTANCE_TIMEOUT = Duration.ofSeconds(2);
     /** At login the panel may come up a moment after the app. */
@@ -149,8 +142,8 @@ public final class Main {
     }
 
     /**
-     * Starts the app: the dashboard, the tray icon (or a window without a tray), the notifications, the engine, and
-     * planning every minute. When a copy runs already, it is asked to show its dashboard instead, and this one exits.
+     * Starts the app: the dashboard, the tray icon (or a window without a tray), the notifications, and the engine,
+     * which plans every minute. When a copy runs already, it is asked to show its dashboard instead, and this one exits.
      */
     private static void run(CommandLine commandLine, AppSettingsFile appSettingsFile, AppSettings appSettings,
             LanguageChoice language) throws Exception {
@@ -206,39 +199,26 @@ public final class Main {
         var dataFolder = DataLocation.defaultFolder(System.getProperty("os.name"), System.getenv(),
                 Path.of(System.getProperty("user.home")));
         var engine = engine(configFile, secretsFile, dataFolder, clock,
-                announcement -> notifications.show(texts.notification(announcement)));
+                announcement -> notifications.show(texts.notification(announcement)),
+                Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("planner").daemon().factory()));
         if (engine.keyStorage() == KeyStorage.FILE) {
             LOG.log(Level.WARNING, "No usable system keychain: API keys are kept in " + secretsFile.path()
                     + ", readable only by you");
         }
 
-        ScheduledExecutorService replanning = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform()
-                .name("planner").daemon().factory());
         var setUpMade = new CompletableFuture<SetUpWindow>();
         var settingsMade = new CompletableFuture<SettingsWindow>();
         // the windows are made below, before the first plan
         var setUpOffer = new SetUpOffer(() -> setUpMade.join().open(), category -> settingsMade.join().open(category),
                 !commandLine.background());
-        Runnable replan = () -> {
-            try {
-                var outlook = engine.plan();
-                dashboard.show(outlook, engine.awayPeriods());
-                trayTexts.show(outlook);
-                setUpOffer.show(outlook);
-            } catch (RuntimeException e) {
-                // an uncaught exception would stop the schedule for good
-                LOG.log(Level.ERROR, "planning failed", e);
-            }
-        };
         var facts = new AboutFacts(version(), configPath, appSettingsFile.path(), dataFolder, secretsFile.path());
         var stores = new SettingsStores(engine, appSettingsFile, startAtLogin());
-        // a Save may have chosen another language or appearance: every part follows at once, before the plan is made
-        // again; this runs on the JavaFX thread
+        // a Save may have chosen another language or appearance: every part follows at once; the engine plans again
+        // by itself after a save of its config. This runs on the JavaFX thread.
         Runnable saved = () -> {
             var chosen = appSettingsFile.read();
             language.choose(chosen.language());
             appearance.set(chosen.appearance());
-            replanning.execute(replan);
         };
         // after Finish the app plans with what set-up saved, in the language and appearance it chose
         Runnable setUpFinished = () -> {
@@ -260,6 +240,7 @@ public final class Main {
         dashboard.onSetUp(setUp::open);
 
         Runnable quit = () -> {
+            engine.close();
             notifications.close();
             tray.remove();
             instance.close();
@@ -284,31 +265,16 @@ public final class Main {
                 dashboard.openWindow();
             }
         }
+        var changes = new DashboardChanges(engine,
+                Executors.newSingleThreadExecutor(Thread.ofVirtual().name("dashboard-changes").factory()));
+        dashboard.onBatteryEntered(changes::enterBatteryLevel);
+        dashboard.onAwayChange(changes::addAwayPeriod, changes::removeAwayPeriod);
         // only now: on Windows the first announcement needs the tray icon to show it
-        dashboard.onBatteryEntered(level -> replanning.execute(() -> {
-            try {
-                engine.setBatteryLevel(level);
-            } catch (IOException e) {
-                LOG.log(Level.WARNING, "could not save the battery level", e);
-            }
-            replan.run();
-        }));
-        dashboard.onAwayChange(period -> replanning.execute(() -> {
-            try {
-                engine.addAwayPeriod(period);
-            } catch (IOException e) {
-                LOG.log(Level.WARNING, "could not save the away period", e);
-            }
-            replan.run();
-        }), period -> replanning.execute(() -> {
-            try {
-                engine.removeAwayPeriod(period);
-            } catch (IOException e) {
-                LOG.log(Level.WARNING, "could not remove the away period", e);
-            }
-            replan.run();
-        }));
-        replanning.scheduleWithFixedDelay(replan, 0, REPLAN_MINUTES, TimeUnit.MINUTES);
+        engine.start(outlook -> {
+            dashboard.show(outlook, engine.awayPeriods());
+            trayTexts.show(outlook);
+            setUpOffer.show(outlook);
+        });
         LOG.log(Level.INFO, "planning with " + configFile.path());
     }
 
@@ -468,7 +434,7 @@ public final class Main {
         }
     }
     private static Engine engine(ConfigFile configFile, SecretsFile secretsFile, Path dataFolder, Clock clock,
-            Notifier notifier) {
+            Notifier notifier, ScheduledExecutorService planner) {
         var http = new JdkHttpGet(HttpClient.newHttpClient());
         var providers = new Providers(List.of(new OpenMeteo(http), new ForecastSolar(http)));
         var apiKeys = new ApiKeys(keychain(), secretsFile);
@@ -476,7 +442,7 @@ public final class Main {
         var announcer = new Announcer(new AnnouncedWindows(dataFolder.resolve("announced.json")), notifier);
         return new Engine(configFile, new ForecastService(providers, cache, apiKeys), providers, apiKeys,
                 new AwayFile(dataFolder.resolve("away.json")), new BatteryFile(dataFolder.resolve("battery.json")), clock,
-                announcer);
+                announcer, planner);
     }
 
     private static Keychain keychain() {

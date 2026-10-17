@@ -35,14 +35,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
 
 /**
  * Plans, fetches forecasts and owns the stored data, without any user interface. Clients get plain records back.
  *
- * <p>Each plan reads the config file again; the forecast service decides whether a provider is asked or its cache
- * answers.
+ * <p>Once {@linkplain #start(Consumer) started}, the engine plans on its own thread every minute, and again after
+ * each change to its config, keys, battery level or away periods, and tells its listener each new outlook. Each plan
+ * reads the config file again; the forecast service decides whether a provider is asked or its cache answers.
  */
-public final class Engine {
+public final class Engine implements AutoCloseable {
 
     /** Until the owner enters the battery level, the plan starts from this one. */
     static final Percent ASSUMED_BATTERY_PCT = new Percent(50);
@@ -55,6 +58,7 @@ public final class Engine {
     private final BatteryFile batteryFile;
     private final Clock clock;
     private final Announcer announcer;
+    private final PlanSchedule schedule;
 
     /**
      * Makes the engine; nothing is read or fetched yet.
@@ -68,9 +72,12 @@ public final class Engine {
      * @param clock the time plans are made at, and that decides which away periods are old
      * @param announcer tells the owner about the plan's windows shortly before they start, and keeps the ones it told
      *     about as they were told
+     * @param planner the engine's own thread, where it plans once {@linkplain #start(Consumer) started}; {@link
+     *     #close()} shuts it down. Nothing runs on it before the start; never null.
      */
     public Engine(ConfigFile configFile, ForecastService forecasts, Providers providers, ApiKeys apiKeys,
-            AwayFile awayFile, BatteryFile batteryFile, Clock clock, Announcer announcer) {
+            AwayFile awayFile, BatteryFile batteryFile, Clock clock, Announcer announcer,
+            ScheduledExecutorService planner) {
         this.configFile = configFile;
         this.forecasts = forecasts;
         this.providers = providers;
@@ -79,12 +86,37 @@ public final class Engine {
         this.batteryFile = batteryFile;
         this.clock = clock;
         this.announcer = announcer;
+        this.schedule = new PlanSchedule(planner);
+    }
+
+    /**
+     * Starts planning on the engine's own thread: at once, then every minute, and again after each change made through
+     * the engine, also one that could not be saved, so the listener sees what is stored. A plan that fails, even with
+     * an {@link Error}, is logged, and the next one is made as planned.
+     *
+     * @param listener gets each new outlook, on the engine's thread, so it should hand slow work on; never null
+     * @throws IllegalStateException when the engine was started before
+     */
+    public void start(Consumer<Outlook> listener) {
+        if (listener == null) {
+            throw new IllegalArgumentException("the listener must not be null");
+        }
+        schedule.start(() -> listener.accept(plan()));
+    }
+
+    /**
+     * Stops planning: a plan that is being made may finish for a few seconds, and no listener is told after this
+     * returns. Closing again does nothing.
+     */
+    @Override
+    public void close() {
+        schedule.stop();
     }
 
     /**
      * Makes a plan from the config file and a forecast, and tells the owner about a window that starts within the
-     * notification lead time. Blocks while the forecast is fetched: call it away from the user interface's thread,
-     * and often enough for the lead time, such as every minute.
+     * notification lead time. Blocks while the forecast is fetched. {@link #start(Consumer)} calls it on the engine's
+     * thread, often enough for the lead time.
      *
      * @return the plan, or why there is none: the config file is not usable, or no forecast is
      */
@@ -157,25 +189,34 @@ public final class Engine {
      * Replaces the config file by this config, at once and whole, so the next plan uses it; a provider that failed
      * before is asked again at the next plan instead of after its wait, as a corrected setting deserves a try. A value
      * the owner entered is checked as the config's records are made, which refuse it with an {@link
-     * io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting} that names the setting.
+     * io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting} that names the setting. Once started, the
+     * engine plans again soon after.
      *
      * @param config the whole config to keep
      * @throws IOException when the file could not be written; it is then left as it was
      */
     public void saveConfig(EngineConfig config) throws IOException {
-        configFile.write(config);
-        forecasts.forgetFailures();
+        try {
+            configFile.write(config);
+            forecasts.forgetFailures();
+        } finally {
+            schedule.runSoon();
+        }
     }
 
     /**
      * Stores the battery level the owner read off the car, so the next plan starts from it instead of an assumed
-     * level. The level is kept until the owner enters another one.
+     * level. The level is kept until the owner enters another one. Once started, the engine plans again soon after.
      *
      * @param level the charge level of the car's battery now
      * @throws IOException when the level could not be saved; the stored one is then unchanged
      */
     public void setBatteryLevel(Percent level) throws IOException {
-        batteryFile.save(new BatteryReading(level, clock.instant()));
+        try {
+            batteryFile.save(new BatteryReading(level, clock.instant()));
+        } finally {
+            schedule.runSoon();
+        }
     }
 
     /**
@@ -189,25 +230,34 @@ public final class Engine {
 
     /**
      * Stores an away period entered by hand, so the next plan leaves that time free. Periods that ended more than a
-     * day ago are forgotten at the same time.
+     * day ago are forgotten at the same time. Once started, the engine plans again soon after.
      *
      * @param period the time the car is away; one that is stored already is kept once
      * @return the stored periods after the change, in order of their start
      * @throws IOException when the periods could not be saved; the stored ones are then unchanged
      */
     public List<AwayPeriod> addAwayPeriod(AwayPeriod period) throws IOException {
-        return awayFile.add(period, clock.instant());
+        try {
+            return awayFile.add(period, clock.instant());
+        } finally {
+            schedule.runSoon();
+        }
     }
 
     /**
-     * Forgets an away period entered by hand, so the next plan may use that time again.
+     * Forgets an away period entered by hand, so the next plan may use that time again. Once started, the engine
+     * plans again soon after.
      *
      * @param period the period as {@link #awayPeriods()} gave it; one that is not stored changes nothing
      * @return the stored periods after the change, in order of their start
      * @throws IOException when the periods could not be saved; the stored ones are then unchanged
      */
     public List<AwayPeriod> removeAwayPeriod(AwayPeriod period) throws IOException {
-        return awayFile.remove(period);
+        try {
+            return awayFile.remove(period);
+        } finally {
+            schedule.runSoon();
+        }
     }
 
     /**
@@ -288,14 +338,18 @@ public final class Engine {
 
     /**
      * Stores the providers' secret settings, replacing all of them; a provider that failed before is asked again at
-     * the next plan instead of after its wait.
+     * the next plan instead of after its wait. Once started, the engine plans again soon after.
      *
      * @param secrets every provider's secret settings; what is left out is forgotten
      * @throws SecretsProblem when neither the keychain nor the private file could store them
      */
     public void saveApiKeys(Secrets secrets) throws SecretsProblem {
-        apiKeys.save(secrets);
-        forecasts.forgetFailures();
+        try {
+            apiKeys.save(secrets);
+            forecasts.forgetFailures();
+        } finally {
+            schedule.runSoon();
+        }
     }
 
     private Secrets storedSecrets() {

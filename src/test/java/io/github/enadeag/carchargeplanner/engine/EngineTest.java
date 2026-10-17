@@ -118,7 +118,7 @@ class EngineTest {
         var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
         var service = new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys);
         return new Engine(new ConfigFile(config), service, known, apiKeys, new AwayFile(folder.resolve("away.json")),
-                new BatteryFile(folder.resolve("battery.json")), clock, announcer());
+                new BatteryFile(folder.resolve("battery.json")), clock, announcer(), new ManualScheduler());
     }
 
     /** Kept in the test's folder, so a new engine is like the app after a restart. */
@@ -447,7 +447,7 @@ class EngineTest {
         var withoutKeychain = new Engine(new ConfigFile(config),
                 new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys), known, apiKeys,
                 new AwayFile(folder.resolve("away.json")), new BatteryFile(folder.resolve("battery.json")), clockAt(7),
-                announcer());
+                announcer(), new ManualScheduler());
         withoutKeychain.saveApiKeys(new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "x"))));
         assertThat(withoutKeychain.keyStorage()).isEqualTo(KeyStorage.FILE);
     }
