@@ -155,7 +155,7 @@ class SettingsViewTest {
     void startAtLoginChangesOnlyWhenSaved() throws Exception {
         var view = settings.open();
 
-        Fx.run(() -> ((CheckBox) settings.field(view, settings.messages.text(TextKey.FIELD_START_AT_LOGIN)))
+        Fx.run(() -> ((CheckBox) SettingsFixture.field(view, settings.messages.text(TextKey.FIELD_START_AT_LOGIN)))
                 .setSelected(true));
         assertThat(settings.login.on).isFalse();
         Fx.call(view::save);
@@ -170,7 +170,7 @@ class SettingsViewTest {
         var view = settings.open();
 
         boolean saved = Fx.call(() -> {
-            ((CheckBox) settings.field(view, settings.messages.text(TextKey.FIELD_START_AT_LOGIN))).setSelected(true);
+            ((CheckBox) SettingsFixture.field(view, settings.messages.text(TextKey.FIELD_START_AT_LOGIN))).setSelected(true);
             settings.type(view, TextKey.FIELD_TARGET_CHARGE, "90");
             return view.save();
         });
@@ -186,7 +186,7 @@ class SettingsViewTest {
     void outsideTheInstalledAppStartAtLoginCannotBeChosen() throws Exception {
         var view = settings.open(false);
 
-        assertThat(Fx.call(() -> settings.field(view, settings.messages.text(TextKey.FIELD_START_AT_LOGIN))
+        assertThat(Fx.call(() -> SettingsFixture.field(view, settings.messages.text(TextKey.FIELD_START_AT_LOGIN))
                 .isDisabled())).isTrue();
     }
 
