@@ -105,6 +105,10 @@ class ArchitectureTest {
             "print a stack trace",
             call -> call.getName().equals("printStackTrace") && call.getTargetOwner().isAssignableTo(Throwable.class));
 
+    private static final DescribedPredicate<JavaMethodCall> PRINT_A_STACK_TRACE_TO_THE_CONSOLE =
+            DescribedPredicate.describe("print a stack trace to the console, taking no argument",
+                    call -> PRINT_A_STACK_TRACE.test(call) && call.getTarget().getRawParameterTypes().isEmpty());
+
     private static final DescribedPredicate<JavaClass> HANDLE_REQUEST_ADDRESSES = DescribedPredicate.describe(
             "make or read the address of a request to a provider",
             type -> type.getAccessesFromSelf().stream()
@@ -269,6 +273,12 @@ class ArchitectureTest {
                     + "platforms and the single-instance guard run the calls and the listener they own");
 
     @ArchTest
+    static final ArchRule nothingPrintsAStackTraceToTheConsole = noClasses()
+            .should().callMethodWhere(PRINT_A_STACK_TRACE_TO_THE_CONSOLE)
+            .because("the console is for Main's answers; no class, not even LogLine, writes a trace there "
+                    + "(ADR 0005)");
+
+    @ArchTest
     static final ArchRule onlyTheLogLinePrintsAStackTrace = noClasses()
             .that().doNotHaveFullyQualifiedName(LogLine.class.getName())
             .should().callMethodWhere(PRINT_A_STACK_TRACE)
@@ -319,7 +329,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule theDesktopWritesFilesOnlyForItsAppSettings = noClasses()
             .that().resideInAPackage("..desktop..")
-            .and(notPartOf(ROOT + ".desktop.AppSettingsFile"))
+            .and().doNotHaveFullyQualifiedName(ROOT + ".desktop.AppSettingsFile")
             .should().dependOnClassesThat().haveFullyQualifiedName("java.nio.file.Files")
             .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileOutputStream")
             .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileWriter")
@@ -332,12 +342,16 @@ class ArchitectureTest {
             call -> call.getTargetOwner().isEquivalentTo(java.nio.file.Files.class)
                     && Set.of("write", "writeString", "newOutputStream", "newBufferedWriter", "createFile",
                             "createTempFile", "createTempDirectory", "createDirectory", "createDirectories", "move",
-                            "copy", "delete", "deleteIfExists").contains(call.getName()));
+                            "copy", "delete", "deleteIfExists", "newByteChannel", "setPosixFilePermissions",
+                            "setOwner", "setAttribute", "getFileAttributeView", "createSymbolicLink",
+                            "createLink").contains(call.getName()));
 
     @ArchTest
     static final ArchRule theEngineWritesFilesOnlyInItsStore = noClasses()
             .that().resideInAPackage(ENGINE + "..")
             .and().resideOutsideOfPackage(ENGINE + ".store..")
+            // SecretsFile.makePrivate() tightens the permissions of the fallback secrets file, nothing more
+            .and().doNotHaveFullyQualifiedName(ENGINE + ".secrets.SecretsFile")
             .should().callMethodWhere(CHANGE_FILES)
             .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileOutputStream")
             .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileWriter")
