@@ -325,10 +325,16 @@ final class SetUpView extends BorderPane {
         }
     }
 
-    /** Leaves set-up without saving, after asking once the owner started. */
+    /**
+     * Leaves set-up without saving, after asking once the owner started. While Finish saves nothing closes, but a
+     * Finish that waits for the owner to unlock the keyring stops waiting.
+     */
     void cancel() {
         if (state == State.SAVING) {
-            return; // in a moment it is saved, or the reason it is not shows
+            // a save that waits for the keyring to be unlocked stops waiting; in a moment it is saved, or the reason
+            // it is not shows
+            form.stopUnlocking();
+            return;
         }
         if (state != State.READY || step == SetUpStep.WELCOME && !form.isChanged()) {
             close.run();
@@ -361,7 +367,8 @@ final class SetUpView extends BorderPane {
         status.getStyleClass().remove("problem");
         status.setText(messages.text(TextKey.SETTINGS_SAVING));
         body.setAccessibleText(status.getText());
-        background.run("saving set-up", () -> form.write(changes), outcome -> {
+        Runnable prompting = () -> background.onFx(this::waitingForUnlock);
+        background.run("saving set-up", () -> form.write(changes, prompting), outcome -> {
             enter(State.READY);
             body.setAccessibleText(null);
             status.setText("");
@@ -371,6 +378,18 @@ final class SetUpView extends BorderPane {
             body.setAccessibleText(null);
             saved(new SaveOutcome.Failed(Background.describe(failure, messages)), chosen);
         });
+    }
+
+    /**
+     * The system asks the owner to unlock the keyring for the Finish that runs: the status says where, and a screen
+     * reader reads it.
+     */
+    private void waitingForUnlock() {
+        if (state == State.SAVING) {
+            status.setText(messages.text(TextKey.SETTINGS_SAVING_UNLOCK));
+            body.setAccessibleText(status.getText());
+            ScreenReader.focus(status);
+        }
     }
 
     /** What Finish came to: closed when saved, otherwise the reason, with the focus on it. */
@@ -388,6 +407,10 @@ final class SetUpView extends BorderPane {
             case SaveOutcome.Refused ignored -> {
                 show(SetUpStep.APP);
                 showRefused();
+            }
+            case SaveOutcome.KeyringLocked ignored -> {
+                showProblem(messages.text(TextKey.SETTINGS_KEYRING_LOCKED));
+                ScreenReader.focus(status);
             }
             case SaveOutcome.Failed failure -> {
                 showProblem(messages.text(TextKey.SETTINGS_SAVE_FAILED, failure.detail()));

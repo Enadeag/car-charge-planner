@@ -241,6 +241,15 @@ class OutlookMapperTest {
     }
 
     @Test
+    void withoutAForecastBecauseTheKeyringIsLockedTheOwnerIsToldToUnlockIt() {
+        var message = (DashboardModel.Message) MAPPER.map(new Outlook.NoForecast(
+                "API key is required; The system keychain is locked.", true));
+
+        assertThat(message.headline()).isEqualTo("No forecast");
+        assertThat(message.detail()).isEqualTo("Unlock your keyring so the app can read your API key.");
+    }
+
+    @Test
     void aPlanWithoutDaysIsShownAsNoForecast() {
         assertThat(MAPPER.map(planned(false))).isInstanceOf(DashboardModel.Message.class);
     }

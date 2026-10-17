@@ -127,6 +127,8 @@ public enum TextKey {
     NO_FORECAST_NO_DAYS,
     /** The dashboard's detail without a forecast: {0} is the engine's reason, in English. */
     NO_FORECAST_DETAIL,
+    /** Without a forecast because the API keys are in a locked keyring: what the owner should do. */
+    NO_FORECAST_KEYRING_LOCKED,
     /** The dashboard's headline without a usable config file. */
     NOT_SET_UP,
     /** There is no config file: {0} is its path. */
@@ -265,10 +267,14 @@ public enum TextKey {
     SETTINGS_REFUSED,
     /** Said when a file could not be written: {0} the system's error. */
     SETTINGS_SAVE_FAILED,
+    /** Said when nothing was saved because the keyring stayed locked. */
+    SETTINGS_KEYRING_LOCKED,
     /** Said while Settings or set-up reads what is stored, before anything can be edited. */
     SETTINGS_READING,
     /** Said while Save or Finish stores what was entered. */
     SETTINGS_SAVING,
+    /** Said while Save or Finish waits for the owner to unlock the keyring in the system's prompt. */
+    SETTINGS_SAVING_UNLOCK,
     /** Said when what is stored could not be read: {0} what went wrong. */
     SETTINGS_READ_FAILED,
     /** What went wrong when the app itself failed, in place of the system's error: {0} the kind of failure. */
@@ -405,6 +411,8 @@ public enum TextKey {
     ABOUT_KEYS_KEYCHAIN,
     /** The keys are in a file: {0} the file. */
     ABOUT_KEYS_FILE,
+    /** The keys are in the keychain, which is locked. */
+    ABOUT_KEYS_LOCKED,
     /** The category of the panel arrays. */
     CATEGORY_SOLAR,
     /** The category of the home's place and time zone. */
@@ -614,12 +622,20 @@ public enum TextKey {
     SECRET_SHOW,
     /** The button that hides a key again. */
     SECRET_HIDE,
+    /** In a key's field that could not be read because the keyring is locked. */
+    SECRET_LOCKED,
+    /** The button that lets the owner enter a new key in place of one that could not be read. */
+    SECRET_REPLACE,
+    /** What a screen reader says for that button: {0} the key's field. */
+    SECRET_LOCKED_SPOKEN,
     /** The title of the card about where the keys are kept. */
     CARD_KEYS,
     /** The keys are in the keychain. */
     KEYS_IN_KEYCHAIN,
     /** The keys are in a file: {0} the file. */
     KEYS_IN_FILE,
+    /** The keys are in the keychain, which is locked, so they cannot be read yet. */
+    KEYS_IN_LOCKED_KEYCHAIN,
     /** The stored keys could not be read: {0} why, in words for the owner. */
     KEYS_PROBLEM,
     /** The title of the weekly away periods' card. */

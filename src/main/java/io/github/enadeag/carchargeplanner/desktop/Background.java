@@ -70,6 +70,16 @@ public final class Background {
     }
 
     /**
+     * Runs an action on the JavaFX thread, after what was handed there before, such as from slow work that wants to
+     * tell the window something before it ends.
+     *
+     * @param action what to run on the JavaFX thread
+     */
+    public void onFx(Runnable action) {
+        fx.execute(action);
+    }
+
+    /**
      * What a failure handed back is, in words a window can show: its kind, never its message.
      *
      * @param failure what the work threw

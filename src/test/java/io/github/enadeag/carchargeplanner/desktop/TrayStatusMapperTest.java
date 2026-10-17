@@ -67,6 +67,14 @@ class TrayStatusMapperTest {
     }
 
     @Test
+    void withoutAForecastBecauseTheKeyringIsLockedTheOwnerIsToldToUnlockIt() {
+        var status = MAPPER.map(new Outlook.NoForecast("API key is required", true));
+
+        assertThat(status.dot()).isEqualTo(StatusDot.ACTION);
+        assertThat(status.text()).isEqualTo("No forecast: Unlock your keyring so the app can read your API key.");
+    }
+
+    @Test
     void aForecastWithoutDaysAsksTheOwnerToActToo() {
         assertThat(at(8).dot()).isEqualTo(StatusDot.ACTION);
     }

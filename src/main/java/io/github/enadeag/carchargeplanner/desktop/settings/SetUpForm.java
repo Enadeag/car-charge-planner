@@ -2,6 +2,7 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.AppSettings;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
+import io.github.enadeag.carchargeplanner.engine.secrets.KeyChanges;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import java.util.EnumMap;
 import java.util.List;
@@ -135,7 +136,7 @@ final class SetUpForm {
      */
     SettingsStorage.Changes changes(EngineConfig config) {
         var startAtLogin = stored.startsAtLogin().filter(on -> on != app.startsAtLogin()).map(on -> app.startsAtLogin());
-        var keys = Optional.of(keys()).filter(entered -> !entered.equals(stored.keys()));
+        var keys = Optional.of(KeyChanges.between(stored.keys(), keys())).filter(changed -> !changed.isEmpty());
         var newConfig = Optional.of(config).filter(entered -> !Optional.of(entered).equals(stored.config()));
         var settings = Optional.of(app.settings()).filter(chosen -> !chosen.equals(stored.app()));
         return new SettingsStorage.Changes(startAtLogin, keys, newConfig, settings);
@@ -145,10 +146,12 @@ final class SetUpForm {
      * Writes the changes. Blocks while the system, the keychain and the files answer; may be called from any thread.
      *
      * @param changes what {@link #changes(EngineConfig)} gave
-     * @return saved; refused by the system's start at login; or failed with the system's error
+     * @param prompting runs, on the saving thread, once the system asks the owner to unlock the keychain
+     * @return saved; refused by the system's start at login; not saved as the keychain stayed locked; or failed with
+     *     the system's error
      */
-    SaveOutcome write(SettingsStorage.Changes changes) {
-        return storage.save(changes);
+    SaveOutcome write(SettingsStorage.Changes changes, Runnable prompting) {
+        return storage.save(changes, prompting);
     }
 
     /**
@@ -158,6 +161,14 @@ final class SetUpForm {
      */
     AppSettings appSettings() {
         return app.settings();
+    }
+
+    /**
+     * Stops a write that waits for the owner to unlock the system keychain, which then comes to
+     * {@link SaveOutcome.KeyringLocked}; nothing happens when none waits. Never blocks for long.
+     */
+    void stopUnlocking() {
+        storage.stopUnlocking();
     }
 
     /**

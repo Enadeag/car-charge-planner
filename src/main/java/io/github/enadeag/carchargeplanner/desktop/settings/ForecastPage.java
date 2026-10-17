@@ -7,6 +7,7 @@ import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import io.github.enadeag.carchargeplanner.engine.config.ForecastSelection;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
+import io.github.enadeag.carchargeplanner.engine.secrets.KeyChanges;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting;
@@ -42,6 +43,8 @@ final class ForecastPage implements ConfigPage {
     private final Path keysFile;
     private ForecastSelection stored;
     private Secrets storedKeys = Secrets.NONE;
+    /** Whether the stored keys could not be read because the keyring is locked. */
+    private boolean keysLocked;
 
     /**
      * Makes the page, empty until {@link #load(EngineConfig)}.
@@ -105,25 +108,29 @@ final class ForecastPage implements ConfigPage {
         primary.load(stored.primary());
         fallback.load(stored.fallback());
         fallbackRow.clearProblem();
-        cards.forEach((id, card) -> card.load(stored.settingsOf(id), storedKeys.of(id)));
+        cards.forEach((id, card) -> card.load(stored.settingsOf(id), storedKeys.of(id), keysLocked));
         show();
     }
 
     /**
      * Shows the stored API keys and where they are kept. Call before {@link #load(EngineConfig)}, which fills the
-     * cards.
+     * cards. While the keyring is locked, the key fields without a value show as locked.
      *
      * @param keys the stored secret settings; none when they could not be read
-     * @param storage where the keys are kept now
+     * @param storage where the keys are kept now; a locked keychain also says why they could not be read
      * @param problem why the keys could not be read, in words for the owner; empty when they could
      */
     void loadKeys(Secrets keys, KeyStorage storage, Optional<String> problem) {
         storedKeys = keys;
+        keysLocked = storage == KeyStorage.LOCKED_KEYCHAIN;
         var where = switch (storage) {
             case KEYCHAIN -> messages.text(TextKey.KEYS_IN_KEYCHAIN);
+            case LOCKED_KEYCHAIN -> messages.text(TextKey.KEYS_IN_LOCKED_KEYCHAIN);
             case FILE -> messages.text(TextKey.KEYS_IN_FILE, keysFile.toString());
         };
-        keysNote.setText(problem.map(text -> messages.text(TextKey.KEYS_PROBLEM, text) + " " + where).orElse(where));
+        // a locked keychain is the reason the keys could not be read, and the note says so in the owner's language
+        keysNote.setText(problem.filter(text -> storage != KeyStorage.LOCKED_KEYCHAIN)
+                .map(text -> messages.text(TextKey.KEYS_PROBLEM, text) + " " + where).orElse(where));
     }
 
     /**
@@ -139,12 +146,22 @@ final class ForecastPage implements ConfigPage {
     }
 
     /**
+     * What the owner entered and emptied in the secret settings, to apply to the stored ones. A key that could not be
+     * read is never emptied by this.
+     *
+     * @return the changes; empty when nothing differs
+     */
+    KeyChanges keyChanges() {
+        return KeyChanges.between(storedKeys, keys());
+    }
+
+    /**
      * Whether the secret settings differ from the stored ones.
      *
      * @return true when saving has to store the keys
      */
     boolean keysChanged() {
-        return !keys().equals(storedKeys);
+        return !keyChanges().isEmpty();
     }
 
     @Override

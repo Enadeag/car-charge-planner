@@ -25,6 +25,7 @@ import io.github.enadeag.carchargeplanner.engine.plan.AwayTimes;
 import io.github.enadeag.carchargeplanner.engine.plan.GridAdvisor;
 import io.github.enadeag.carchargeplanner.engine.plan.Planner;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
+import io.github.enadeag.carchargeplanner.engine.secrets.KeyChanges;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
@@ -138,7 +139,7 @@ public final class Engine implements AutoCloseable {
         try {
             forecast = forecasts.get(SystemDescription.of(config.system()), config.forecast(), now, false);
         } catch (ForecastUnavailable e) {
-            return new Outlook.NoForecast(e.getMessage());
+            return new Outlook.NoForecast(e.getMessage(), e.keychainLocked());
         }
         var planned = planned(config, forecast, now);
         announcer.announceDue(planned.days(), planned.gridAdvice(), forecast.source(), now, config);
@@ -314,10 +315,11 @@ public final class Engine implements AutoCloseable {
     }
 
     /**
-     * Where the API keys are kept, so a client can tell the owner when it is a file rather than the keychain. May ask
-     * the keychain, which can take a few seconds: call it away from the user interface's thread.
+     * Where the API keys are kept, so a client can tell the owner when it is a file rather than the keychain, or when
+     * the keychain is locked. May ask the keychain, which can take a few seconds: call it away from the user
+     * interface's thread.
      *
-     * @return the keychain, or the private file
+     * @return the keychain, the locked keychain, or the private file
      */
     public KeyStorage keyStorage() {
         return apiKeys.storage();
@@ -338,7 +340,8 @@ public final class Engine implements AutoCloseable {
      * keychain, which can take a few seconds: call it away from the user interface's thread.
      *
      * @return every provider's secret settings, possibly none
-     * @throws SecretsProblem when the keychain or the private file could not be read; the message says so in words
+     * @throws SecretsProblem when the keychain or the private file could not be read, or of the kind
+     *     {@link SecretsProblem.Kind#LOCKED} while the keychain that holds them is locked; the message says so in words
      *     for the owner
      */
     public Secrets apiKeys() throws SecretsProblem {
@@ -347,10 +350,13 @@ public final class Engine implements AutoCloseable {
 
     /**
      * Stores the providers' secret settings, replacing all of them; a provider that failed before is asked again at
-     * the next plan instead of after its wait. Once started, the engine plans again soon after.
+     * the next plan instead of after its wait. Once started, the engine plans again soon after. When the system
+     * keychain is locked, the system asks the owner to unlock it, and this waits for their answer, up to
+     * {@link ApiKeys#UNLOCK_WAIT}: call it away from the user interface's thread.
      *
      * @param secrets every provider's secret settings; what is left out is forgotten
-     * @throws SecretsProblem when neither the keychain nor the private file could store them
+     * @throws SecretsProblem when neither the keychain nor the private file could store them; of the kind
+     *     {@link SecretsProblem.Kind#LOCKED} when the keychain stayed locked and nothing was stored
      */
     public void saveApiKeys(Secrets secrets) throws SecretsProblem {
         try {
@@ -359,6 +365,32 @@ public final class Engine implements AutoCloseable {
         } finally {
             schedule.runSoon();
         }
+    }
+
+    /**
+     * Applies the owner's changes to the stored secret settings: every key they did not enter or empty stays, also one
+     * that could not be read, such as from a locked keyring. Otherwise as {@link #saveApiKeys(Secrets)}, which this
+     * waits for the owner as.
+     *
+     * @param changes what the owner entered and emptied
+     * @param prompting runs, on the calling thread, once the system's prompt to unlock the keychain shows
+     * @throws SecretsProblem as {@link #saveApiKeys(Secrets)}
+     */
+    public void saveApiKeys(KeyChanges changes, Runnable prompting) throws SecretsProblem {
+        try {
+            apiKeys.update(changes, prompting);
+            forecasts.forgetFailures();
+        } finally {
+            schedule.runSoon();
+        }
+    }
+
+    /**
+     * Stops a save of the keys that waits for the owner to unlock the system keychain, such as when the window that
+     * saves closes; that save then stores nothing. Nothing happens when no save waits.
+     */
+    public void stopUnlocking() {
+        apiKeys.stopUnlocking();
     }
 
     private Secrets storedSecrets() {

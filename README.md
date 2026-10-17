@@ -147,7 +147,7 @@ Open **Settings…** from the tray menu or the dashboard. Settings is a window w
 | The windows you were notified about | `~/.local/share/car-charge-planner/announced.json` | `%LOCALAPPDATA%\car-charge-planner\announced.json` |
 | Forecast cache, one file per provider | `~/.local/share/car-charge-planner/forecasts/` | `%LOCALAPPDATA%\car-charge-planner\forecasts\` |
 | Log: what the app did, the newest in `.0.log` and two older ones of up to 1 MB | `~/.local/share/car-charge-planner/car-charge-planner.0.log` | `%LOCALAPPDATA%\car-charge-planner\car-charge-planner.0.log` |
-| API keys | The system keychain; `~/.config/car-charge-planner/secrets.json` (readable only by you) only where there is none | Credential Manager |
+| API keys | The system keychain; `~/.config/car-charge-planner/secrets.json` (readable only by you) only where there is none | Credential Manager; `%LOCALAPPDATA%\car-charge-planner\secrets.json` only where it cannot be used |
 | Start at login | `~/.config/autostart/car-charge-planner.desktop` | The `Run` key of your user in the registry |
 
 On Linux `XDG_CONFIG_HOME` and `XDG_DATA_HOME` move the config and data folders, as usual, and the app keeps both folders and every file it writes readable only by you (a folder made by an older version is made private when the app starts; a file named with `--config=` keeps its folder as it is). On Windows, `%APPDATA%` is usually `C:\Users\<you>\AppData\Roaming` and `%LOCALAPPDATA%` is `C:\Users\<you>\AppData\Local`. Settings, About lists the folders of your computer.
@@ -235,9 +235,21 @@ API keys are kept by the system, not in a file:
 
 The entries are named `forecast/<provider>/<key>`, and one more entry, `index`, lists the names (no values) because a
 keychain cannot be asked what it holds. Without a usable keychain (a Linux machine with no Secret Service, for one)
-the keys are kept in `secrets.json` beside `engine.json`, readable only by you, and the app says so. The app reads
-the keys from the keychain once and keeps them in memory until you save new ones; a keychain that cannot be used, or
-does not answer within a few seconds, is tried again five minutes later.
+the keys are kept in `secrets.json`, readable only by you, and the app says so: beside `engine.json` on Linux, and in
+`%LOCALAPPDATA%\car-charge-planner` on Windows, so a roaming profile does not copy it to other computers (a file an
+older version kept beside `engine.json` is moved there once). The app reads the keys from the keychain once and keeps
+them in memory until you save new ones; a keychain that cannot be used, or does not answer within a few seconds, is
+tried again five minutes later.
+
+A locked keyring is not a missing one. When your login did not unlock it (common with automatic login), the keys are
+not available yet: the dashboard and the tray say "Unlock your keyring so the app can read your API key", and the
+app plans with them as soon as you unlock it. Settings and set-up show the key fields locked, as the
+keys cannot be read; choose "Enter a new key" to replace one. A save only writes the keys you entered or emptied, so
+the others stay as they are. When you save a key while the keyring is locked, your desktop asks for the keyring's
+password (GNOME's or KDE's own prompt), the status says so, and the app waits up to two minutes for it.
+Only when you dismiss that prompt do the keys go to `secrets.json` instead, and the page says so; when nobody answers,
+or the keyring cannot be unlocked that way, nothing is saved and the app asks you to unlock your keyring and save
+again. Cancel stops the wait.
 
 ### Third-party software
 

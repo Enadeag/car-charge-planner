@@ -1,7 +1,9 @@
 package io.github.enadeag.carchargeplanner.platform.windows;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
@@ -22,7 +24,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Against the real Credential Manager, under a name of its own that it removes again. Over ssh there is no logon
- * session (error 1312) and the test is skipped; it runs in a session where the user is logged in.
+ * session (error 1312): the tests that need one are skipped then, and the one about its absence runs instead.
  */
 @EnabledOnOs(OS.WINDOWS)
 class CredentialManagerKeychainTest {
@@ -37,13 +39,14 @@ class CredentialManagerKeychainTest {
     private boolean loggedOn;
 
     @BeforeEach
-    void skipWithoutALogonSession() throws KeychainException {
+    void findOutWhetherThereIsALogonSession() throws KeychainException {
         try {
             keychain.write("probe", "x");
             loggedOn = true;
         } catch (KeychainException e) {
-            assumeFalse(e.getMessage().contains("error 1312"), "no logon session, as over ssh: " + e.getMessage());
-            throw e;
+            if (!e.getMessage().contains("error 1312")) {
+                throw e;
+            }
         }
     }
 
@@ -59,6 +62,7 @@ class CredentialManagerKeychainTest {
 
     @Test
     void aValueIsWrittenReadBackReplacedAndDeleted() throws KeychainException {
+        assumeTrue(loggedOn, "no logon session, as over ssh");
         assertThat(keychain.read("forecast/open-meteo/api_key")).isEmpty();
         keychain.write("forecast/open-meteo/api_key", "FIRST-KEY");
         keychain.write("forecast/open-meteo/api_key", "SECOND-KEY-ëß");
@@ -70,6 +74,7 @@ class CredentialManagerKeychainTest {
 
     @Test
     void theKeysAreKeptInTheCredentialManager() throws Exception {
+        assumeTrue(loggedOn, "no logon session, as over ssh");
         var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
         var secrets = new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1")));
 
@@ -78,5 +83,19 @@ class CredentialManagerKeychainTest {
         assertThat(keys.load()).isEqualTo(secrets);
         assertThat(keys.storage()).isEqualTo(KeyStorage.KEYCHAIN);
         assertThat(folder.resolve("secrets.json")).doesNotExist();
+    }
+
+    @Test
+    void withoutALogonSessionThereIsNoKeychainAndTheKeysGoToTheFile() throws Exception {
+        assumeFalse(loggedOn, "a logon session, so the Credential Manager works");
+        assertThatThrownBy(() -> keychain.write("probe", "x")).isInstanceOfSatisfying(KeychainException.class,
+                e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.UNAVAILABLE));
+        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
+        var secrets = new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1")));
+
+        keys.save(secrets);
+
+        assertThat(keys.storage()).isEqualTo(KeyStorage.FILE);
+        assertThat(keys.load()).isEqualTo(secrets);
     }
 }

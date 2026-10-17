@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.engine.secrets;
 
+import java.time.Duration;
 import java.util.Optional;
 
 /**
@@ -35,7 +36,36 @@ public interface Keychain extends AutoCloseable {
      */
     void delete(String name) throws KeychainException;
 
-    /** Lets go of what the client keeps between calls, such as a connection; most keep nothing. Never throws. */
+    /**
+     * Asks the owner to unlock the keychain with the system's own prompt, and waits for their answer. Only a keychain
+     * that can be locked, such as a desktop keyring, can do this; the others refuse. Blocks for as long as the prompt
+     * shows, up to {@code wait}: call it away from the user interface's thread, and never while holding a lock that
+     * reading the keychain needs.
+     *
+     * @param wait how long to wait for the owner's answer, more than zero; then the prompt is dismissed
+     * @param prompting runs once the prompt shows, before the wait, so the app can tell the owner; not when the
+     *     keychain unlocks without one
+     * @return unlocked, dismissed by the owner, or not answered in time or no longer waited for
+     * @throws KeychainException {@link KeychainException.Kind#UNAVAILABLE} when there is no keychain to unlock;
+     *     {@link KeychainException.Kind#REFUSED} when this keychain cannot be unlocked by the app, or the unlocking
+     *     failed at once
+     */
+    default UnlockOutcome unlock(Duration wait, Runnable prompting) throws KeychainException {
+        throw new KeychainException(KeychainException.Kind.REFUSED, "this keychain cannot be unlocked by the app");
+    }
+
+    /**
+     * Stops waiting for the owner's answer to {@link #unlock(Duration, Runnable)}, which then ends as not answered and dismisses
+     * its prompt; nothing happens when it is not waiting. Never blocks for long and never throws.
+     */
+    default void stopUnlocking() {
+        // nothing waits for an answer
+    }
+
+    /**
+     * Lets go of what the client keeps between calls, such as a connection, and stops waiting for an unlock; most keep
+     * nothing. Never throws.
+     */
     @Override
     default void close() {
         // nothing is kept between calls

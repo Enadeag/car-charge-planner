@@ -52,10 +52,10 @@ class SlowStoresTest {
         public Optional<String> read(String name) throws KeychainException {
             try {
                 if (!letGo.await(10, TimeUnit.SECONDS)) {
-                    throw new KeychainException("the test never let the read go");
+                    throw new KeychainException(KeychainException.Kind.UNAVAILABLE, "the test never let the read go");
                 }
             } catch (InterruptedException e) {
-                throw new KeychainException("interrupted", e);
+                throw new KeychainException(KeychainException.Kind.UNAVAILABLE, "interrupted", e);
             }
             return super.read(name);
         }

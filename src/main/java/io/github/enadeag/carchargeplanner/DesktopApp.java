@@ -148,7 +148,7 @@ final class DesktopApp {
         closing.add("the notifications", notifications::close);
         var trayTexts = new TrayTexts(tray, language);
 
-        var secretsFile = new SecretsFile(configPath.resolveSibling("secrets.json"));
+        var secretsFile = new SecretsFile(SecretsLocation.moveFromOldPlace(host.os(), configPath, dataFolder));
         // folders made before the app made its folders private; a folder named with --config= stays as it is
         PrivateFiles.tighten(appSettingsFile.path().toAbsolutePath().getParent());
         var texts = new AnnouncementTexts(language);

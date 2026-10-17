@@ -17,6 +17,16 @@ import tools.jackson.core.JacksonException;
  */
 final class KeychainEntries {
 
+    /** Whether the keychain can be used now. */
+    enum State {
+        /** It answered: the entries can be read and written. */
+        USABLE,
+        /** It is there but locked: nothing can be read or written until the owner unlocks it. */
+        LOCKED,
+        /** There is none, it does not answer, or it refused. */
+        UNUSABLE
+    }
+
     /** The name of the entry that lists the others. */
     static final String INDEX = "index";
     private static final String PREFIX = "forecast/";
@@ -35,14 +45,15 @@ final class KeychainEntries {
     /**
      * Whether the keychain can be used now, tried by reading the index.
      *
-     * @return false when there is no keychain, or it cannot be read (locked, or no logon session on Windows)
+     * @return usable; locked; or unusable when there is no keychain, it does not answer, or it refused (such as
+     *     without a logon session on Windows)
      */
-    boolean usable() {
+    State state() {
         try {
             keychain.read(INDEX);
-            return true;
+            return State.USABLE;
         } catch (KeychainException e) {
-            return false;
+            return e.kind() == KeychainException.Kind.LOCKED ? State.LOCKED : State.UNUSABLE;
         }
     }
 
@@ -95,7 +106,8 @@ final class KeychainEntries {
     private void writeAndCheck(String name, String value) throws KeychainException {
         keychain.write(name, value);
         if (!keychain.read(name).filter(value::equals).isPresent()) {
-            throw new KeychainException("the keychain did not keep a value that was written to it");
+            throw new KeychainException(KeychainException.Kind.REFUSED,
+                    "the keychain did not keep a value that was written to it");
         }
     }
 
@@ -108,18 +120,22 @@ final class KeychainEntries {
         try {
             var stored = StoredJson.parse(text.get());
             if (!stored.isArray()) {
-                throw new KeychainException("the keychain's index of names is damaged");
+                throw damaged();
             }
             for (var name : stored.values()) {
                 if (!name.isString() || !isEntryName(name.stringValue())) {
-                    throw new KeychainException("the keychain's index of names is damaged");
+                    throw damaged();
                 }
                 names.add(name.stringValue());
             }
         } catch (JacksonException e) {
-            throw new KeychainException("the keychain's index of names is damaged");
+            throw damaged();
         }
         return names;
+    }
+
+    private static KeychainException damaged() {
+        return new KeychainException(KeychainException.Kind.REFUSED, "the keychain's index of names is damaged");
     }
 
     private static boolean isEntryName(String name) {

@@ -33,7 +33,7 @@ final class ProviderCard {
     private final Card card;
 
     /**
-     * Makes the card, with empty settings until {@link #load(Map, Map)}.
+     * Makes the card, with empty settings until {@link #load(Map, Map, boolean)}.
      *
      * @param info what the provider tells about itself
      * @param tester asks the provider for a forecast; called away from the JavaFX thread
@@ -81,11 +81,14 @@ final class ProviderCard {
      *
      * @param plain the provider's settings from the config file
      * @param secret the provider's secret settings from the keychain
+     * @param keysLocked true when the stored secret settings could not be read as the keyring is locked: a secret
+     *     field without a value then shows as locked, so it never empties a stored one
      */
-    void load(Map<String, String> plain, Map<String, String> secret) {
+    void load(Map<String, String> plain, Map<String, String> secret, boolean keysLocked) {
         for (var setting : info.settings()) {
             var stored = (setting.secret() ? secret : plain).getOrDefault(setting.key(), "");
             switch (inputs.get(setting.key())) {
+                case SecretInput field when keysLocked && stored.isEmpty() -> field.lock();
                 case SecretInput field -> field.load(stored);
                 case TextInput field -> field.load(stored);
                 default -> throw new IllegalStateException("a provider setting is a text or a secret");
@@ -114,13 +117,16 @@ final class ProviderCard {
     }
 
     /**
-     * Marks the required settings that are empty; problems shown before are taken away first.
+     * Marks the required settings that are empty; problems shown before are taken away first. A locked secret counts as
+     * there: it is stored, only not readable now.
      *
      * @return true when every required setting has a value
      */
     boolean checkRequired() {
         rows.values().forEach(FieldRow::clearProblem);
-        var missing = info.missingRequired(info.settingsFrom(plain(), secret()));
+        var missing = new ArrayList<>(info.missingRequired(info.settingsFrom(plain(), secret())));
+        info.settings().stream().filter(setting -> inputs.get(setting.key()) instanceof SecretInput field
+                && field.isLocked()).forEach(setting -> missing.remove(setting.label()));
         info.settings().stream().filter(setting -> missing.contains(setting.label()))
                 .forEach(setting -> rows.get(setting.key()).showProblem(messages.text(TextKey.PROBLEM_REQUIRED)));
         return missing.isEmpty();

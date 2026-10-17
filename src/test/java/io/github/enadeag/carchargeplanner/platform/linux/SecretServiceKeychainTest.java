@@ -10,6 +10,8 @@ import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeychainException;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import io.github.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
+import io.github.enadeag.carchargeplanner.engine.secrets.UnlockOutcome;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -56,10 +58,14 @@ class SecretServiceKeychainTest {
     private Process keyring;
     private String address;
 
-    /** Only for the test: locking the throwaway keyring. */
+    /** Only for the test: locking the throwaway keyring, and asking to unlock it on a connection of the test's own. */
     @DBusInterfaceName("org.freedesktop.Secret.Service")
     interface Locker extends DBusInterface {
         SecretService.Pair<List<DBusPath>, DBusPath> Lock(List<DBusPath> objects);
+
+        SecretService.Pair<List<DBusPath>, DBusPath> Unlock(List<DBusPath> objects);
+
+        DBusPath ReadAlias(String name);
     }
 
     @BeforeEach
@@ -181,6 +187,16 @@ class SecretServiceKeychainTest {
         }
 
         @Override
+        public SecretService.Pair<List<DBusPath>, DBusPath> Unlock(List<DBusPath> objects) {
+            return new SecretService.Pair<>(objects, new DBusPath(SecretService.NO_PROMPT));
+        }
+
+        @Override
+        public DBusPath ReadAlias(String name) {
+            return new DBusPath(SecretService.DEFAULT_COLLECTION);
+        }
+
+        @Override
         public String getObjectPath() {
             return SecretService.SERVICE_PATH;
         }
@@ -223,21 +239,54 @@ class SecretServiceKeychainTest {
         assertThat(folder.resolve("secrets.json")).doesNotExist();
     }
 
-    @Test
-    void aLockedKeyringIsReportedAndTheKeysGoToTheFileWithoutAPrompt() throws Exception {
-        startAThrowawayKeyring();
-        var keychain = keychain("car-charge-planner");
-        keychain.write("index", "[]");
+    /** Locks the throwaway keyring's default collection, as a keyring is locked after a login without its password. */
+    private void lockTheKeyring() throws Exception {
         try (var connection = connect()) {
             connection.getRemoteObject(SecretService.BUS_NAME, SecretService.SERVICE_PATH, Locker.class)
                     .Lock(List.of(new DBusPath(SecretService.DEFAULT_COLLECTION)));
         }
+    }
 
-        assertThatThrownBy(() -> keychain.read("index")).isInstanceOf(KeychainException.class).hasMessageContaining("locked");
+    @Test
+    void aLockedKeyringIsReportedAsLockedAndTheKeysAreNotAvailableYet() throws Exception {
+        startAThrowawayKeyring();
+        var keychain = keychain("car-charge-planner");
+        keychain.write("index", "[]");
+        lockTheKeyring();
+
+        assertThatThrownBy(() -> keychain.read("index")).isInstanceOfSatisfying(KeychainException.class,
+                e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.LOCKED));
+        assertThatThrownBy(() -> keychain.write("index", "[]")).isInstanceOfSatisfying(KeychainException.class,
+                e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.LOCKED));
+        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
+        assertThatThrownBy(keys::load).isInstanceOfSatisfying(SecretsProblem.class,
+                problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.LOCKED));
+        assertThat(keys.storage()).isEqualTo(KeyStorage.LOCKED_KEYCHAIN);
+        assertThat(folder.resolve("secrets.json")).doesNotExist();
+    }
+
+    @Test
+    void unlockingALockedKeyringAsksForThePromptOfGnomeKeyring() throws Exception {
+        startAThrowawayKeyring();
+        var keychain = keychain("car-charge-planner");
+        keychain.write("index", "[]");
+        lockTheKeyring();
+        try (var connection = connect()) {
+            var service = connection.getRemoteObject(SecretService.BUS_NAME, SecretService.SERVICE_PATH, Locker.class);
+            var collection = service.ReadAlias(SecretService.DEFAULT_ALIAS);
+            var asked = service.Unlock(List.of(collection));
+            assertThat(asked.first).as("nothing is unlocked without the owner").isEmpty();
+            assertThat(asked.second.getPath()).as("a prompt to show").startsWith("/org/freedesktop/secrets/prompt/");
+        }
+
+        // the private bus has no GNOME prompter (gcr), so GNOME Keyring cannot show a real one and ends it dismissed
+        assertThat(keychain.unlock(TIMEOUT, () -> { })).isEqualTo(UnlockOutcome.DISMISSED);
+        assertThatThrownBy(() -> keychain.read("index")).isInstanceOfSatisfying(KeychainException.class,
+                e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.LOCKED));
         var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
         keys.save(new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1"))));
-        assertThat(keys.storage()).isEqualTo(KeyStorage.FILE);
-        assertThat(folder.resolve("secrets.json")).exists();
+        assertThat(keys.storage()).as("dismissed: the owner chose the file").isEqualTo(KeyStorage.FILE);
+        keychain.close();
     }
 
     @Test
