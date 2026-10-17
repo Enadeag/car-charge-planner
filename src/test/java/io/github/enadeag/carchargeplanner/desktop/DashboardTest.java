@@ -48,6 +48,10 @@ class DashboardTest {
     private final AtomicReference<Instant> now = new AtomicReference<>(Instant.parse("2026-10-15T08:00:00Z"));
     private final InstantSource clock = now::get;
     private final LanguageChoice language = new LanguageChoice(Language.ENGLISH);
+    private final List<AwayPeriod> removed = new ArrayList<>();
+    private final AtomicInteger settingsOpened = new AtomicInteger();
+    private final AtomicInteger setUpOpened = new AtomicInteger();
+    private final AtomicInteger quit = new AtomicInteger();
     private Dashboard dashboard;
 
     @BeforeEach
@@ -57,8 +61,9 @@ class DashboardTest {
 
     private Dashboard dashboard(TaskbarHiding taskbarHiding) throws Exception {
         return Fx.call(() -> new Dashboard(new AppIcon(), new SimpleObjectProperty<>(ColorScheme.LIGHT),
-                new SimpleObjectProperty<>(true), clock,
-                taskbarHiding, language));
+                new SimpleObjectProperty<>(true), clock, taskbarHiding, language,
+                new DashboardActions(level -> { }, period -> { }, removed::add, () -> { },
+                        settingsOpened::incrementAndGet, setUpOpened::incrementAndGet, quit::incrementAndGet)));
     }
 
     private static List<Window> showingWindows() throws Exception {
@@ -168,7 +173,6 @@ class DashboardTest {
 
     @Test
     void theWindowGrowsToShowTheAwayEntryWhenItOpens() throws Exception {
-        dashboard.onAwayChange(period -> { }, period -> { });
         var window = detachedWith(planWithTwoDays());
         double before = Fx.call(window::getHeight);
 
@@ -247,7 +251,6 @@ class DashboardTest {
 
     @Test
     void escapeInTheBatteryEntryClosesOnlyTheEntryAndAgainThePopup() throws Exception {
-        dashboard.onBatteryEntered(level -> { });
         dashboard.show(planWithTwoDays(), List.of());
         clickTheIcon();
         var root = popup().orElseThrow().getScene().getRoot();
@@ -276,8 +279,7 @@ class DashboardTest {
 
     @Test
     void escapeLeavesTheWindowOpenWhenClosingItQuitsTheApp() throws Exception {
-        var quit = new AtomicInteger();
-        dashboard.quitWhenClosed(quit::incrementAndGet);
+        dashboard.quitWhenClosed();
         dashboard.openWindow();
         Fx.settle();
 
@@ -461,8 +463,6 @@ class DashboardTest {
 
     @Test
     void anotherLanguageRendersTheOpenPopupAgainOnTheSameDayWithItsChartsAndAccessibleTexts() throws Exception {
-        var footerSettings = new AtomicReference<Integer>(0);
-        dashboard.onSettings(() -> footerSettings.updateAndGet(count -> count + 1));
         clickTheIcon();
         dashboard.show(planWithTwoDays(), List.of());
         Fx.settle();
@@ -485,13 +485,11 @@ class DashboardTest {
                 .filter(node -> node instanceof Button button && "Instellingen".equals(button.getText()))
                 .map(Button.class::cast).findFirst().orElseThrow());
         Fx.run(settings::fire);
-        assertThat(footerSettings.get()).as("the footer's actions still work").isEqualTo(1);
+        assertThat(settingsOpened).as("the footer's actions still work").hasValue(1);
     }
 
     @Test
     void anotherLanguageListsTheAwayPeriodsInItAndTheirRemoveButtonsStillWork() throws Exception {
-        var removed = new ArrayList<AwayPeriod>();
-        dashboard.onAwayChange(period -> { }, removed::add);
         var tomorrow = AwayPeriod.allDay(LocalDate.of(2026, 10, 16), ZoneId.of("Europe/Brussels"));
         clickTheIcon();
         dashboard.show(planWithTwoDays(), List.of(tomorrow));
@@ -550,8 +548,6 @@ class DashboardTest {
 
     @Test
     void beforeTheFirstSetUpTheMessageOpensSetUp() throws Exception {
-        var opened = new AtomicInteger();
-        dashboard.onSetUp(opened::incrementAndGet);
         clickTheIcon();
 
         dashboard.show(new Outlook.NotSetUp(ConfigProblem.Kind.MISSING, Path.of("/home/owner/engine.json"), ""), List.of());
@@ -562,12 +558,11 @@ class DashboardTest {
                         && language.messages().text(TextKey.START_SETUP).equals(button.getText()))
                 .map(Button.class::cast).findFirst().orElseThrow().fire());
 
-        assertThat(opened).hasValue(1);
+        assertThat(setUpOpened).hasValue(1);
     }
 
     @Test
     void aConfigThatCannotBeReadOffersNoSetUpThatWouldWriteOverIt() throws Exception {
-        dashboard.onSetUp(() -> { });
         clickTheIcon();
 
         dashboard.show(new Outlook.NotSetUp(ConfigProblem.Kind.UNREADABLE, Path.of("/home/owner/engine.json"),

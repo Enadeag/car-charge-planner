@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.github.enadeag.carchargeplanner.desktop.AppIcon;
 import io.github.enadeag.carchargeplanner.desktop.Appearance;
 import io.github.enadeag.carchargeplanner.desktop.Dashboard;
+import io.github.enadeag.carchargeplanner.desktop.DashboardActions;
 import io.github.enadeag.carchargeplanner.desktop.Fx;
 import io.github.enadeag.carchargeplanner.desktop.FxTest;
 import io.github.enadeag.carchargeplanner.desktop.Language;
@@ -43,7 +44,8 @@ class AppearanceTest {
         settings = new SettingsFixture(folder, Language.ENGLISH);
         settingsWindow = settings.window(language, appearance, system);
         dashboard = Fx.call(() -> new Dashboard(new AppIcon(), Appearance.scheme(appearance, system), Fx.REDUCED_MOTION,
-                () -> Instant.parse("2026-10-15T08:00:00Z"), TaskbarHiding.NONE, language));
+                () -> Instant.parse("2026-10-15T08:00:00Z"), TaskbarHiding.NONE, language,
+                new DashboardActions(level -> { }, period -> { }, period -> { }, () -> { }, () -> { }, () -> { }, () -> { })));
         dashboard.openWindow();
         settingsWindow.open(Category.APP);
         Fx.settle();
