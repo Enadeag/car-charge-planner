@@ -43,17 +43,6 @@ public final class FreedesktopNotifications implements Notifications {
     private static final String ICON_FILE = "car-charge-planner.png";
     private static final int ICON_SIZE = 128;
 
-    /** Opens a connection of the notifications' own (not a shared one: {@link #close()} closes it). */
-    public interface BusConnector {
-
-        /**
-         * Opens the connection.
-         *
-         * @return a new connection, not shared with other parts of the app
-         * @throws DBusException when there is no bus to connect to
-         */
-        DBusConnection connect() throws DBusException;
-    }
 
     private final BusConnector connector;
     private final String appName;

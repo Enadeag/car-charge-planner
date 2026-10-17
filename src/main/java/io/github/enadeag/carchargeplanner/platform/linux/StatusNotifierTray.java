@@ -24,17 +24,6 @@ public final class StatusNotifierTray implements Tray {
     /** The sizes the panel can choose from, so it never has to scale the icon up. */
     private static final List<Integer> SIZES = List.of(16, 22, 24, 32, 48, 64);
 
-    /** Opens a connection of the tray's own (not a shared one: {@link #remove()} closes it); tests use a private bus. */
-    public interface BusConnector {
-
-        /**
-         * Opens the connection.
-         *
-         * @return a new connection, not shared with other parts of the app
-         * @throws DBusException when there is no bus to connect to
-         */
-        DBusConnection connect() throws DBusException;
-    }
 
     private final BusConnector connector;
     private final StatusIcon icon;

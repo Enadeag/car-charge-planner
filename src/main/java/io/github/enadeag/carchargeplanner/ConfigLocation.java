@@ -17,31 +17,29 @@ final class ConfigLocation {
     /**
      * Where the config file is when the user names none.
      *
-     * @param osName the operating system's name as in the {@code os.name} property; a name starting with "Windows"
-     *     selects the Windows folder
+     * @param os the system the app runs on; Windows has a folder of its own, the others share the XDG one
      * @param environment the environment variables; {@code APPDATA} must be present on Windows, {@code XDG_CONFIG_HOME}
      *     is optional elsewhere and ignored when empty or relative
      * @param home the user's home folder, used where no config folder is set
      * @return the path of {@code engine.json} in the app's folder; the file need not exist
      * @throws NullPointerException on Windows when {@code APPDATA} is missing from the environment
      */
-    static Path defaultPath(String osName, Map<String, String> environment, Path home) {
-        return systemFolder(osName, environment, home).resolve(APP_FOLDER).resolve(FILE_NAME);
+    static Path defaultPath(Os os, Map<String, String> environment, Path home) {
+        return systemFolder(os, environment, home).resolve(APP_FOLDER).resolve(FILE_NAME);
     }
 
     /**
      * The folder the user's settings of all programs go in, such as {@code ~/.config}.
      *
-     * @param osName the operating system's name as in the {@code os.name} property; a name starting with "Windows"
-     *     selects the Windows folder
+     * @param os the system the app runs on; Windows has a folder of its own, the others share the XDG one
      * @param environment the environment variables; {@code APPDATA} must be present on Windows, {@code XDG_CONFIG_HOME}
      *     is optional elsewhere and ignored when empty or relative
      * @param home the user's home folder, used where no config folder is set
      * @return the folder; it need not exist
      * @throws NullPointerException on Windows when {@code APPDATA} is missing from the environment
      */
-    static Path systemFolder(String osName, Map<String, String> environment, Path home) {
-        if (osName.startsWith("Windows")) {
+    static Path systemFolder(Os os, Map<String, String> environment, Path home) {
+        if (os == Os.WINDOWS) {
             return Path.of(environment.get("APPDATA"));
         }
         var xdg = environment.getOrDefault("XDG_CONFIG_HOME", "");

@@ -12,27 +12,27 @@ final class DataLocation {
     /**
      * The app's data folder on this system.
      *
-     * @param osName the system's name, as the {@code os.name} property gives it
+     * @param os the system the app runs on
      * @param environment the environment variables; Windows needs {@code LOCALAPPDATA}, Linux may give
      *     {@code XDG_DATA_HOME}
      * @param home the user's home folder, for when Linux gives no usable {@code XDG_DATA_HOME}
      * @return the app's own folder inside the user's data folder; it need not exist yet
      */
-    static Path defaultFolder(String osName, Map<String, String> environment, Path home) {
-        return systemFolder(osName, environment, home).resolve(ConfigLocation.APP_FOLDER);
+    static Path defaultFolder(Os os, Map<String, String> environment, Path home) {
+        return systemFolder(os, environment, home).resolve(ConfigLocation.APP_FOLDER);
     }
 
     /**
      * The folder the user's data of all programs goes in, such as {@code ~/.local/share}.
      *
-     * @param osName the system's name, as the {@code os.name} property gives it
+     * @param os the system the app runs on
      * @param environment the environment variables; Windows needs {@code LOCALAPPDATA}, Linux may give
      *     {@code XDG_DATA_HOME}, which is ignored when empty or relative
      * @param home the user's home folder, for when Linux gives no usable {@code XDG_DATA_HOME}
      * @return the folder; it need not exist yet
      */
-    static Path systemFolder(String osName, Map<String, String> environment, Path home) {
-        if (osName.startsWith("Windows")) {
+    static Path systemFolder(Os os, Map<String, String> environment, Path home) {
+        if (os == Os.WINDOWS) {
             return Path.of(environment.get("LOCALAPPDATA")); // stays on this computer, unlike the roaming folder
         }
         var xdg = environment.getOrDefault("XDG_DATA_HOME", "");
