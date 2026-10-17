@@ -367,7 +367,8 @@ final class SetUpView extends BorderPane {
         status.getStyleClass().remove("problem");
         status.setText(messages.text(TextKey.SETTINGS_SAVING));
         body.setAccessibleText(status.getText());
-        background.run("saving set-up", () -> form.write(changes), outcome -> {
+        Runnable prompting = () -> background.onFx(this::waitingForUnlock);
+        background.run("saving set-up", () -> form.write(changes, prompting), outcome -> {
             enter(State.READY);
             body.setAccessibleText(null);
             status.setText("");
@@ -377,6 +378,18 @@ final class SetUpView extends BorderPane {
             body.setAccessibleText(null);
             saved(new SaveOutcome.Failed(Background.describe(failure, messages)), chosen);
         });
+    }
+
+    /**
+     * The system asks the owner to unlock the keyring for the Finish that runs: the status says where, and a screen
+     * reader reads it.
+     */
+    private void waitingForUnlock() {
+        if (state == State.SAVING) {
+            status.setText(messages.text(TextKey.SETTINGS_SAVING_UNLOCK));
+            body.setAccessibleText(status.getText());
+            ScreenReader.focus(status);
+        }
     }
 
     /** What Finish came to: closed when saved, otherwise the reason, with the focus on it. */

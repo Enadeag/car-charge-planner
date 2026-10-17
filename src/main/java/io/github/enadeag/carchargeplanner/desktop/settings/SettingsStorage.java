@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 import io.github.enadeag.carchargeplanner.desktop.AppSettings;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
+import io.github.enadeag.carchargeplanner.engine.secrets.KeyChanges;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
@@ -23,11 +24,12 @@ final class SettingsStorage {
      * What to write; each part only when it is present.
      *
      * @param startAtLogin whether the app should start at login; present when the owner changed it
-     * @param keys every provider's secret settings, replacing the stored ones; present when they changed
+     * @param keys what the owner entered and emptied in the API keys, applied to the stored ones; present when they
+     *     changed
      * @param config the engine's whole config; present when it changed, or was never saved
      * @param app the app's own settings; present when they changed
      */
-    record Changes(Optional<Boolean> startAtLogin, Optional<Secrets> keys, Optional<EngineConfig> config,
+    record Changes(Optional<Boolean> startAtLogin, Optional<KeyChanges> keys, Optional<EngineConfig> config,
             Optional<AppSettings> app) {
     }
 
@@ -156,10 +158,11 @@ final class SettingsStorage {
      * system, the keychain and the files answer.
      *
      * @param changes what to write
+     * @param prompting runs, on the saving thread, once the system asks the owner to unlock the keychain
      * @return saved; refused by the system's start at login, with its reason; not saved as the keychain stayed
      *     locked; or failed with the system's error when a file or the keychain could not be written
      */
-    SaveOutcome save(Changes changes) {
+    SaveOutcome save(Changes changes, Runnable prompting) {
         var system = stores.startAtLogin();
         if (changes.startAtLogin().isPresent() && system.isPresent()) {
             try {
@@ -174,7 +177,7 @@ final class SettingsStorage {
         }
         try {
             if (changes.keys().isPresent()) {
-                stores.engine().saveApiKeys(changes.keys().get());
+                stores.engine().saveApiKeys(changes.keys().get(), prompting);
             }
             if (changes.config().isPresent()) {
                 stores.engine().saveConfig(changes.config().get());

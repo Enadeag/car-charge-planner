@@ -135,7 +135,7 @@ final class SettingsForm {
         }
         return new Entered.Accepted(new SettingsStorage.Changes(
                 app.startAtLoginChanged() ? Optional.of(app.startsAtLogin()) : Optional.empty(),
-                storedConfig.isPresent() && forecast.keysChanged() ? Optional.of(forecast.keys()) : Optional.empty(),
+                storedConfig.isPresent() && forecast.keysChanged() ? Optional.of(forecast.keyChanges()) : Optional.empty(),
                 config.equals(storedConfig) ? Optional.empty() : config,
                 Optional.of(app.settings()).equals(storedApp) ? Optional.empty() : Optional.of(app.settings())));
     }
@@ -145,10 +145,11 @@ final class SettingsForm {
      * Blocks while the system, the keychain and the files answer; may be called from any thread.
      *
      * @param changes what {@link #enter()} accepted
+     * @param prompting runs, on the saving thread, once the system asks the owner to unlock the keychain
      * @return the outcome, and what is stored after a save
      */
-    Written write(SettingsStorage.Changes changes) {
-        var outcome = storage.save(changes);
+    Written write(SettingsStorage.Changes changes, Runnable prompting) {
+        var outcome = storage.save(changes, prompting);
         if (!(outcome instanceof SaveOutcome.Saved)) {
             return new Written(outcome, Optional.empty());
         }

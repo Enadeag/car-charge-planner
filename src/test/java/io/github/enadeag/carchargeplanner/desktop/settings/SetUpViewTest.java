@@ -273,6 +273,7 @@ class SetUpViewTest {
         setUp = new SetUpFixture(folder, Language.ENGLISH, keychain, new Background(Runnable::run, Runnable::run));
         var view = atSolar();
         Fx.run(() -> view.show(SetUpStep.FORECAST));
+        Fx.run(() -> setUp.button(view, TextKey.SECRET_REPLACE).fire());
         Fx.run(() -> Scenes.all(view).stream().filter(node -> node instanceof TextField field && field.isVisible()
                         && SettingsFixture.named(field, setUp.messages.text(TextKey.PROVIDER_API_KEY)))
                 .map(TextField.class::cast).findFirst().orElseThrow().setText("TYPED-KEY"));

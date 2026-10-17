@@ -25,6 +25,7 @@ import io.github.enadeag.carchargeplanner.engine.plan.AwayTimes;
 import io.github.enadeag.carchargeplanner.engine.plan.GridAdvisor;
 import io.github.enadeag.carchargeplanner.engine.plan.Planner;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
+import io.github.enadeag.carchargeplanner.engine.secrets.KeyChanges;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
@@ -360,6 +361,24 @@ public final class Engine implements AutoCloseable {
     public void saveApiKeys(Secrets secrets) throws SecretsProblem {
         try {
             apiKeys.save(secrets);
+            forecasts.forgetFailures();
+        } finally {
+            schedule.runSoon();
+        }
+    }
+
+    /**
+     * Applies the owner's changes to the stored secret settings: every key they did not enter or empty stays, also one
+     * that could not be read, such as from a locked keyring. Otherwise as {@link #saveApiKeys(Secrets)}, which this
+     * waits for the owner as.
+     *
+     * @param changes what the owner entered and emptied
+     * @param prompting runs, on the calling thread, once the system's prompt to unlock the keychain shows
+     * @throws SecretsProblem as {@link #saveApiKeys(Secrets)}
+     */
+    public void saveApiKeys(KeyChanges changes, Runnable prompting) throws SecretsProblem {
+        try {
+            apiKeys.update(changes, prompting);
             forecasts.forgetFailures();
         } finally {
             schedule.runSoon();

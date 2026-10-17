@@ -243,8 +243,10 @@ tried again five minutes later.
 
 A locked keyring is not a missing one. When your login did not unlock it (common with automatic login), the keys are
 not available yet: the dashboard and the tray say "Unlock your keyring so the app can read your API key", and the
-app plans with them as soon as you unlock it. When you save a key in Settings or set-up while it is locked, your
-desktop asks for the keyring's password (GNOME's or KDE's own prompt), and the app waits up to two minutes for it.
+app plans with them as soon as you unlock it. Settings and set-up show the key fields locked, as the
+keys cannot be read; choose "Enter a new key" to replace one. A save only writes the keys you entered or emptied, so
+the others stay as they are. When you save a key while the keyring is locked, your desktop asks for the keyring's
+password (GNOME's or KDE's own prompt), the status says so, and the app waits up to two minutes for it.
 Only when you dismiss that prompt do the keys go to `secrets.json` instead, and the page says so; when nobody answers,
 or the keyring cannot be unlocked that way, nothing is saved and the app asks you to unlock your keyring and save
 again. Cancel stops the wait.

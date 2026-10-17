@@ -27,7 +27,7 @@ public final class NoKeychain implements Keychain {
     }
 
     @Override
-    public UnlockOutcome unlock(Duration wait) throws KeychainException {
+    public UnlockOutcome unlock(Duration wait, Runnable prompting) throws KeychainException {
         throw unavailable();
     }
 

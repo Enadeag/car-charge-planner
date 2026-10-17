@@ -280,7 +280,7 @@ class SecretServiceKeychainTest {
         }
 
         // the private bus has no GNOME prompter (gcr), so GNOME Keyring cannot show a real one and ends it dismissed
-        assertThat(keychain.unlock(TIMEOUT)).isEqualTo(UnlockOutcome.DISMISSED);
+        assertThat(keychain.unlock(TIMEOUT, () -> { })).isEqualTo(UnlockOutcome.DISMISSED);
         assertThatThrownBy(() -> keychain.read("index")).isInstanceOfSatisfying(KeychainException.class,
                 e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.LOCKED));
         var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));

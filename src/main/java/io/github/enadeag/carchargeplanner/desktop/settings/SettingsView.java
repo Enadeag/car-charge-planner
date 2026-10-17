@@ -288,7 +288,8 @@ final class SettingsView extends BorderPane {
             case SettingsForm.Entered.Accepted accepted -> {
                 enter(State.SAVING);
                 working = true;
-                background.run("saving the settings", () -> form.write(accepted.changes()), written -> {
+                Runnable prompting = () -> background.onFx(this::waitingForUnlock);
+                background.run("saving the settings", () -> form.write(accepted.changes(), prompting), written -> {
                     working = false;
                     written.stored().ifPresent(form::show);
                     enter(State.READY);
@@ -313,6 +314,17 @@ final class SettingsView extends BorderPane {
      */
     Optional<SaveOutcome> outcome() {
         return state == State.SAVING ? Optional.empty() : outcome;
+    }
+
+    /**
+     * The system asks the owner to unlock the keyring for the Save that runs: the status says where, and a screen
+     * reader reads it.
+     */
+    private void waitingForUnlock() {
+        if (state == State.SAVING) {
+            showBusy(messages.text(TextKey.SETTINGS_SAVING_UNLOCK));
+            ScreenReader.focus(status);
+        }
     }
 
     /** Shows what a Save came to, and moves the focus to what says so. */

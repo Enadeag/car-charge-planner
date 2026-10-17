@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -377,7 +378,9 @@ class ApiKeysTest {
 
         lockable.locked = false;
         later(ApiKeys.RETRY_AFTER);
-        assertThat(keys.load()).isEqualTo(changed);
+        // laid over what the keychain held, so a key that was not in the file is not lost
+        assertThat(keys.load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"),
+                new ProviderId("forecast-solar"), Map.of("api_key", "FS-SECRET-2"))));
         assertThat(file().path()).doesNotExist();
         assertThat(lockable.entries).containsEntry("forecast/open-meteo/api_key", "OM-NEW");
     }
@@ -449,5 +452,75 @@ class ApiKeysTest {
                     "INFO API keys are kept in the system keychain again");
             assertThat(String.join("\n", log.lines())).doesNotContain("OM-SECRET-1", "FS-SECRET-2");
         }
+    }
+
+    private static final ProviderId FORECAST_SOLAR = new ProviderId("forecast-solar");
+    private static final KeyChanges NEW_OPEN_METEO_KEY =
+            KeyChanges.entering(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"))));
+
+    @Test
+    void aKeyEnteredWhileLockedIsAddedOnceUnlockedAndTheOtherStoredKeysStay() throws SecretsProblem {
+        var lockable = lockedWithTheKeys();
+        var keys = keys(lockable);
+        var prompted = new AtomicInteger();
+
+        keys.update(NEW_OPEN_METEO_KEY, prompted::incrementAndGet);
+
+        assertThat(prompted).hasValue(1);
+        assertThat(keys.load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"),
+                FORECAST_SOLAR, Map.of("api_key", "FS-SECRET-2"))));
+        assertThat(lockable.entries).containsEntry("forecast/forecast-solar/api_key", "FS-SECRET-2");
+    }
+
+    @Test
+    void aKeyEnteredWhileLockedGoesAloneToTheFileWhenDismissedAndTheKeychainsOtherKeysStay() throws SecretsProblem {
+        var lockable = lockedWithTheKeys();
+        lockable.answer = Optional.of(UnlockOutcome.DISMISSED);
+        var before = Map.copyOf(lockable.entries);
+        var keys = keys(lockable);
+
+        keys.update(NEW_OPEN_METEO_KEY, () -> { });
+
+        assertThat(file().read()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"))));
+        assertThat(lockable.entries).as("the locked keychain is not touched").isEqualTo(before);
+
+        lockable.locked = false;
+        later(ApiKeys.RETRY_AFTER);
+        assertThat(keys.load()).as("moved in over what the keychain holds").isEqualTo(new Secrets(Map.of(
+                OPEN_METEO, Map.of("api_key", "OM-NEW"), FORECAST_SOLAR, Map.of("api_key", "FS-SECRET-2"))));
+        assertThat(file().path()).doesNotExist();
+    }
+
+    @Test
+    void aKeyEnteredWithoutAKeychainIsAddedToTheFileAndItsOtherKeysStay() throws SecretsProblem {
+        file().write(KEYS);
+        var keys = keys(new NoKeychain());
+
+        keys.update(NEW_OPEN_METEO_KEY, () -> { });
+
+        assertThat(file().read()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"),
+                FORECAST_SOLAR, Map.of("api_key", "FS-SECRET-2"))));
+    }
+
+    @Test
+    void onlyAKeyTheOwnerEmptiedIsRemoved() throws SecretsProblem {
+        var keys = keys(keychain);
+        keys.save(KEYS);
+
+        keys.update(new KeyChanges(Secrets.NONE, Map.of(FORECAST_SOLAR, Set.of("api_key"))), () -> { });
+
+        assertThat(keys.load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-SECRET-1"))));
+        assertThat(keychain.entries).doesNotContainKey("forecast/forecast-solar/api_key");
+    }
+
+    @Test
+    void anUnlockedKeychainAsksForNoPromptAndTheOwnerIsNotToldAboutOne() throws SecretsProblem {
+        var lockable = new LockableKeychain();
+        var prompted = new AtomicInteger();
+
+        keys(lockable).update(NEW_OPEN_METEO_KEY, prompted::incrementAndGet);
+
+        assertThat(prompted).hasValue(0);
+        assertThat(lockable.prompts).hasValue(0);
     }
 }

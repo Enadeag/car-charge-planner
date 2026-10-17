@@ -273,6 +273,8 @@ public enum TextKey {
     SETTINGS_READING,
     /** Said while Save or Finish stores what was entered. */
     SETTINGS_SAVING,
+    /** Said while Save or Finish waits for the owner to unlock the keyring in the system's prompt. */
+    SETTINGS_SAVING_UNLOCK,
     /** Said when what is stored could not be read: {0} what went wrong. */
     SETTINGS_READ_FAILED,
     /** What went wrong when the app itself failed, in place of the system's error: {0} the kind of failure. */
@@ -620,6 +622,12 @@ public enum TextKey {
     SECRET_SHOW,
     /** The button that hides a key again. */
     SECRET_HIDE,
+    /** In a key's field that could not be read because the keyring is locked. */
+    SECRET_LOCKED,
+    /** The button that lets the owner enter a new key in place of one that could not be read. */
+    SECRET_REPLACE,
+    /** What a screen reader says for that button: {0} the key's field. */
+    SECRET_LOCKED_SPOKEN,
     /** The title of the card about where the keys are kept. */
     CARD_KEYS,
     /** The keys are in the keychain. */

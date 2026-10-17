@@ -32,7 +32,7 @@ import org.freedesktop.dbus.types.Variant;
  *
  * <p>Items are found by two attributes, the application and the entry's name, in the default collection (the login
  * keyring). A locked collection is reported as {@link KeychainException.Kind#LOCKED} by reads and writes, which never
- * prompt; only {@link #unlock(Duration)}, which the engine calls when the owner saves, has the service show its own
+ * prompt; only {@link #unlock(Duration, Runnable)}, which the engine calls when the owner saves, has the service show its own
  * prompt for the keyring's password.
  *
  * <p>The session uses the "plain" algorithm: the value crosses the owner's own session bus unencrypted, as with any
@@ -160,7 +160,7 @@ public final class SecretServiceKeychain implements Keychain {
      * @throws IllegalArgumentException when the wait is null, zero or negative
      */
     @Override
-    public UnlockOutcome unlock(Duration wait) throws KeychainException {
+    public UnlockOutcome unlock(Duration wait, Runnable prompting) throws KeychainException {
         if (wait == null || wait.isNegative() || wait.isZero()) {
             throw new IllegalArgumentException("the wait must be more than zero, not " + wait);
         }
@@ -182,6 +182,7 @@ public final class SecretServiceKeychain implements Keychain {
             if (shown.isEmpty()) {
                 return UnlockOutcome.UNLOCKED;
             }
+            prompting.run();
             var outcome = waitFor(waiting, wait);
             if (outcome == UnlockOutcome.NOT_ANSWERED) {
                 dismiss(shown.get());
@@ -193,7 +194,7 @@ public final class SecretServiceKeychain implements Keychain {
         }
     }
 
-    /** Ends the wait of {@link #unlock(Duration)}, which then dismisses its prompt. */
+    /** Ends the wait of {@link #unlock(Duration, Runnable)}, which then dismisses its prompt. */
     @Override
     public void stopUnlocking() {
         var waiting = answer.get();

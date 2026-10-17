@@ -43,6 +43,16 @@ public final class ApiKeys implements SecretsSource {
         IN_FILE
     }
 
+    /** How a save turns what is stored into what is to be stored. */
+    private interface Edit {
+
+        /** The keys to store, from the ones stored now. */
+        Secrets apply(Secrets stored);
+
+        /** Whether what is stored now does not matter, so it need not be read. */
+        boolean replaces();
+    }
+
     private final Keychain system;
     private final KeychainEntries keychain;
     private final SecretsFile file;
@@ -152,27 +162,66 @@ public final class ApiKeys implements SecretsSource {
     }
 
     /**
-     * Stores them all, in the keychain when it works and else in the file. Tries the keychain also while it is left
-     * alone after a failure: the owner asked for this. When the keychain is locked, the system asks the owner to
-     * unlock it and this waits up to {@link #UNLOCK_WAIT} for their answer, while loads go on. Blocks: call it away
-     * from the user interface's thread.
+     * Stores them all, replacing what is stored, in the keychain when it works and else in the file; as
+     * {@link #update(KeyChanges, Runnable)}, which a client that may not have read every stored key uses instead.
      *
      * @param secrets every provider's secret settings; what is left out is forgotten
+     * @throws SecretsProblem as {@link #update(KeyChanges, Runnable)}
+     */
+    public void save(Secrets secrets) throws SecretsProblem {
+        secrets.checkNames();
+        store(new Edit() {
+            @Override
+            public Secrets apply(Secrets stored) {
+                return secrets;
+            }
+
+            @Override
+            public boolean replaces() {
+                return true;
+            }
+        }, () -> { });
+    }
+
+    /**
+     * Applies the owner's changes to the stored keys, in the keychain when it works and else in the file: every key
+     * they did not enter or empty stays as it is, also one that could not be read, such as from a locked keyring.
+     * Tries the keychain also while it is left alone after a failure: the owner asked for this. When the keychain is
+     * locked, the system asks the owner to unlock it and this waits up to {@link #UNLOCK_WAIT} for their answer, while
+     * loads go on. Blocks: call it away from the user interface's thread.
+     *
+     * @param changes what the owner entered and emptied
+     * @param prompting runs, on this thread, once the system's prompt to unlock the keychain shows, so the client can
+     *     tell the owner; not when the keychain unlocks without one
      * @throws SecretsProblem of the kind {@link SecretsProblem.Kind#LOCKED} when the keychain stayed locked, as the
      *     app cannot have it unlocked, nobody answered in time, or {@link #stopUnlocking()} was called: nothing was
      *     saved. Of the kind {@link SecretsProblem.Kind#FAILED} when a name has characters that are not allowed or
      *     the file could not be written
      */
-    public void save(Secrets secrets) throws SecretsProblem {
-        secrets.checkNames();
+    public void update(KeyChanges changes, Runnable prompting) throws SecretsProblem {
+        changes.entered().checkNames();
+        store(new Edit() {
+            @Override
+            public Secrets apply(Secrets stored) {
+                return changes.applyTo(stored);
+            }
+
+            @Override
+            public boolean replaces() {
+                return false;
+            }
+        }, prompting);
+    }
+
+    private void store(Edit edit, Runnable prompting) throws SecretsProblem {
         synchronized (saving) {
-            if (intoKeychain(secrets) != Stored.LOCKED) {
+            if (intoKeychain(edit) != Stored.LOCKED) {
                 return;
             }
-            var stored = switch (unlock()) {
-                case UNLOCKED -> intoKeychain(secrets);
+            var stored = switch (unlock(prompting)) {
+                case UNLOCKED -> intoKeychain(edit);
                 case DISMISSED -> {
-                    intoFile(secrets, "the system keychain is locked, and was not unlocked when asked");
+                    intoFile(edit, "the system keychain is locked, and was not unlocked when asked");
                     yield Stored.IN_FILE;
                 }
                 case NOT_ANSWERED -> Stored.LOCKED;
@@ -218,15 +267,19 @@ public final class ApiKeys implements SecretsSource {
         return file;
     }
 
-    /** Stores the keys in the keychain, or in the file when there is no usable keychain; never while it is locked. */
-    private Stored intoKeychain(Secrets secrets) throws SecretsProblem {
+    /**
+     * Stores the keys in the keychain, or in the file when there is no usable keychain; never while it is locked. The
+     * keys stored now are read first unless the edit replaces them; a damaged index counts as none, as its entries
+     * cannot be found anyway.
+     */
+    private Stored intoKeychain(Edit edit) throws SecretsProblem {
         synchronized (turn) {
             remembered = Optional.empty();
             askAgainAt = Optional.empty();
             unreadable = Optional.empty();
             switch (keychain.state()) {
                 case UNUSABLE -> {
-                    intoFile(secrets, "the system keychain cannot be used");
+                    intoFile(edit, "the system keychain cannot be used");
                     return Stored.IN_FILE;
                 }
                 case LOCKED -> {
@@ -237,6 +290,7 @@ public final class ApiKeys implements SecretsSource {
                 }
             }
             try {
+                var secrets = edit.apply(edit.replaces() ? Secrets.NONE : storedInKeychain());
                 keychain.write(secrets);
                 file.delete();
                 remembered = Optional.of(secrets);
@@ -247,16 +301,43 @@ public final class ApiKeys implements SecretsSource {
                     return Stored.LOCKED; // locked since it was asked, or the keyring holds none of our items yet
                 }
                 // such as Windows error 1312 over ssh: no keychain after all, so the file it is
-                intoFile(secrets, "the system keychain cannot be used");
+                intoFile(edit, "the system keychain cannot be used");
                 return Stored.IN_FILE;
             }
         }
     }
 
-    /** Writes the file, and leaves the keychain alone for a while. */
-    private void intoFile(Secrets secrets, String why) throws SecretsProblem {
+    /**
+     * What the keychain holds, for a save that changes only some keys; none when its index is damaged.
+     *
+     * @throws KeychainException when it is locked or cannot be used
+     */
+    private Secrets storedInKeychain() throws KeychainException {
+        try {
+            return keychain.read();
+        } catch (KeychainException e) {
+            if (e.kind() != KeychainException.Kind.REFUSED) {
+                throw e;
+            }
+            return Secrets.NONE;
+        }
+    }
+
+    /**
+     * Writes the file, applying the edit to what it holds; a file that cannot be read counts as none, and is set aside
+     * as it is replaced. Then leaves the keychain alone for a while.
+     */
+    private void intoFile(Edit edit, String why) throws SecretsProblem {
         synchronized (turn) {
-            file.write(secrets);
+            var stored = Secrets.NONE;
+            if (!edit.replaces() && file.exists()) {
+                try {
+                    stored = file.read();
+                } catch (SecretsProblem e) {
+                    // set aside by the write
+                }
+            }
+            file.write(edit.apply(stored));
             leaveAlone();
             keptIn(KeyStorage.FILE, why);
         }
@@ -267,10 +348,10 @@ public final class ApiKeys implements SecretsSource {
      * it is locked. No keychain after all counts as dismissed, so the keys go to the file; a keychain the app cannot
      * have unlocked counts as not answered, so nothing is saved.
      */
-    private UnlockOutcome unlock() {
+    private UnlockOutcome unlock(Runnable prompting) {
         LOG.log(Level.INFO, "the system keychain is locked: asking to unlock it to save the API keys");
         try {
-            var outcome = system.unlock(UNLOCK_WAIT);
+            var outcome = system.unlock(UNLOCK_WAIT, prompting);
             LOG.log(Level.INFO, switch (outcome) {
                 case UNLOCKED -> "the system keychain was unlocked";
                 case DISMISSED -> "the system keychain was not unlocked: the prompt was dismissed";
@@ -328,17 +409,21 @@ public final class ApiKeys implements SecretsSource {
         where = Optional.of(storage);
     }
 
-    /** The file's secrets when the move failed and the file stays. */
+    /**
+     * The file's secrets when the move failed and the file stays. They are laid over what the keychain holds, so a key
+     * kept only in the keychain, such as one the owner did not enter again while it was locked, stays.
+     */
     private Optional<Secrets> moveToKeychain() throws SecretsProblem {
-        var secrets = file.read();
-        secrets.checkNames();
+        var inFile = file.read();
+        inFile.checkNames();
         try {
+            var secrets = KeyChanges.entering(inFile).applyTo(storedInKeychain());
             keychain.write(secrets);
             if (!keychain.read().equals(secrets)) {
-                return Optional.of(secrets);
+                return Optional.of(inFile);
             }
         } catch (KeychainException e) {
-            return Optional.of(secrets);
+            return Optional.of(inFile);
         }
         file.delete();
         LOG.log(Level.INFO, "moved the API keys from " + file.path() + " into the system keychain");

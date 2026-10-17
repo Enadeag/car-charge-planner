@@ -47,14 +47,15 @@ public class LockableKeychain extends MemoryKeychain {
     }
 
     @Override
-    public UnlockOutcome unlock(Duration wait) throws KeychainException {
+    public UnlockOutcome unlock(Duration wait, Runnable prompting) throws KeychainException {
         if (unlockFails.isPresent()) {
             throw new KeychainException(unlockFails.get(), "cannot unlock");
         }
         prompts.incrementAndGet();
         var answered = new CompletableFuture<UnlockOutcome>();
         waiting.set(answered);
-        prompting.countDown();
+        prompting.run();
+        this.prompting.countDown();
         answer.ifPresent(answered::complete);
         UnlockOutcome outcome;
         try {

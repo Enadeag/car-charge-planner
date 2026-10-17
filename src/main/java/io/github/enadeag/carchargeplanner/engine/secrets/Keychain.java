@@ -43,17 +43,19 @@ public interface Keychain extends AutoCloseable {
      * reading the keychain needs.
      *
      * @param wait how long to wait for the owner's answer, more than zero; then the prompt is dismissed
+     * @param prompting runs once the prompt shows, before the wait, so the app can tell the owner; not when the
+     *     keychain unlocks without one
      * @return unlocked, dismissed by the owner, or not answered in time or no longer waited for
      * @throws KeychainException {@link KeychainException.Kind#UNAVAILABLE} when there is no keychain to unlock;
      *     {@link KeychainException.Kind#REFUSED} when this keychain cannot be unlocked by the app, or the unlocking
      *     failed at once
      */
-    default UnlockOutcome unlock(Duration wait) throws KeychainException {
+    default UnlockOutcome unlock(Duration wait, Runnable prompting) throws KeychainException {
         throw new KeychainException(KeychainException.Kind.REFUSED, "this keychain cannot be unlocked by the app");
     }
 
     /**
-     * Stops waiting for the owner's answer to {@link #unlock(Duration)}, which then ends as not answered and dismisses
+     * Stops waiting for the owner's answer to {@link #unlock(Duration, Runnable)}, which then ends as not answered and dismisses
      * its prompt; nothing happens when it is not waiting. Never blocks for long and never throws.
      */
     default void stopUnlocking() {

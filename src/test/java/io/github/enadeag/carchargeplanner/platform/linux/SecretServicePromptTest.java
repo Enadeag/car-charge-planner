@@ -14,6 +14,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.freedesktop.dbus.DBusPath;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
 import org.freedesktop.dbus.connections.impl.DBusConnectionBuilder;
@@ -168,8 +169,11 @@ class SecretServicePromptTest {
         serve(prompt);
         var keychain = keychain();
 
-        assertThat(keychain.unlock(WAIT)).isEqualTo(UnlockOutcome.UNLOCKED);
+        var told = new AtomicInteger();
+
+        assertThat(keychain.unlock(WAIT, told::incrementAndGet)).isEqualTo(UnlockOutcome.UNLOCKED);
         assertThat(prompt.windowId.getNow("not shown")).as("not over a window of the app").isEmpty();
+        assertThat(told).as("the owner was told to look for the prompt").hasValue(1);
         keychain.close();
     }
 
@@ -178,7 +182,7 @@ class SecretServicePromptTest {
         serve(new OwnersPrompt(Optional.of(true)));
         var keychain = keychain();
 
-        assertThat(keychain.unlock(WAIT)).isEqualTo(UnlockOutcome.DISMISSED);
+        assertThat(keychain.unlock(WAIT, () -> { })).isEqualTo(UnlockOutcome.DISMISSED);
         keychain.close();
     }
 
@@ -188,7 +192,7 @@ class SecretServicePromptTest {
         serve(prompt);
         var keychain = keychain();
 
-        assertThat(keychain.unlock(Duration.ofMillis(300))).isEqualTo(UnlockOutcome.NOT_ANSWERED);
+        assertThat(keychain.unlock(Duration.ofMillis(300), () -> { })).isEqualTo(UnlockOutcome.NOT_ANSWERED);
         assertThat(prompt.takenAway.await(WAIT.toSeconds(), TimeUnit.SECONDS)).as("dismissed by the app").isTrue();
         keychain.close();
     }
@@ -201,7 +205,7 @@ class SecretServicePromptTest {
         var outcome = new CompletableFuture<UnlockOutcome>();
         Thread.ofVirtual().start(() -> {
             try {
-                outcome.complete(keychain.unlock(Duration.ofMinutes(2)));
+                outcome.complete(keychain.unlock(Duration.ofMinutes(2), () -> { }));
             } catch (KeychainException | RuntimeException e) {
                 outcome.completeExceptionally(e);
             }
@@ -223,7 +227,7 @@ class SecretServicePromptTest {
         var outcome = new CompletableFuture<UnlockOutcome>();
         Thread.ofVirtual().start(() -> {
             try {
-                outcome.complete(keychain.unlock(Duration.ofMinutes(2)));
+                outcome.complete(keychain.unlock(Duration.ofMinutes(2), () -> { }));
             } catch (KeychainException | RuntimeException e) {
                 outcome.completeExceptionally(e);
             }
@@ -242,8 +246,10 @@ class SecretServicePromptTest {
         var service = serve(new OwnersPrompt(Optional.empty()));
         service.prompt = SecretService.NO_PROMPT;
         service.unlockedAtOnce = List.of(new DBusPath(COLLECTION));
+        var told = new AtomicInteger();
 
-        assertThat(keychain().unlock(WAIT)).isEqualTo(UnlockOutcome.UNLOCKED);
+        assertThat(keychain().unlock(WAIT, told::incrementAndGet)).isEqualTo(UnlockOutcome.UNLOCKED);
+        assertThat(told).as("no prompt to look for").hasValue(0);
     }
 
     @Test
@@ -251,7 +257,7 @@ class SecretServicePromptTest {
         var service = serve(new OwnersPrompt(Optional.empty()));
         service.prompt = SecretService.NO_PROMPT;
 
-        assertThatThrownBy(() -> keychain().unlock(WAIT)).isInstanceOfSatisfying(KeychainException.class,
+        assertThatThrownBy(() -> keychain().unlock(WAIT, () -> { })).isInstanceOfSatisfying(KeychainException.class,
                 e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.REFUSED));
     }
 
@@ -260,13 +266,13 @@ class SecretServicePromptTest {
         var service = serve(new OwnersPrompt(Optional.empty()));
         service.alias = SecretService.NO_PROMPT;
 
-        assertThatThrownBy(() -> keychain().unlock(WAIT)).isInstanceOfSatisfying(KeychainException.class,
+        assertThatThrownBy(() -> keychain().unlock(WAIT, () -> { })).isInstanceOfSatisfying(KeychainException.class,
                 e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.REFUSED));
     }
 
     @Test
     void withoutASecretServiceThereIsNoKeychainToUnlock() {
-        assertThatThrownBy(() -> keychain().unlock(WAIT)).isInstanceOfSatisfying(KeychainException.class,
+        assertThatThrownBy(() -> keychain().unlock(WAIT, () -> { })).isInstanceOfSatisfying(KeychainException.class,
                 e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.UNAVAILABLE));
     }
 }

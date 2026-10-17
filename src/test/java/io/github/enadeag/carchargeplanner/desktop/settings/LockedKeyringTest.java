@@ -13,8 +13,11 @@ import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider;
 import io.github.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import io.github.enadeag.carchargeplanner.engine.forecast.SunnyDays;
+import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeychainException;
 import io.github.enadeag.carchargeplanner.engine.secrets.LockableKeychain;
+import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
+import io.github.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import io.github.enadeag.carchargeplanner.engine.secrets.UnlockOutcome;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -22,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import javafx.scene.control.Button;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
 import org.junit.jupiter.api.AfterEach;
@@ -37,6 +42,7 @@ import org.junit.jupiter.api.io.TempDir;
 class LockedKeyringTest {
 
     private static final ProviderId OPEN_METEO = new ProviderId("open-meteo");
+    private static final ProviderId FORECAST_SOLAR = new ProviderId("forecast-solar");
 
     @TempDir
     Path folder;
@@ -44,8 +50,13 @@ class LockedKeyringTest {
     private final LockableKeychain keychain = new LockableKeychain();
     private SettingsFixture settings;
 
+    /** Both providers' keys, stored before the keyring was locked. */
+    private static final Secrets STORED = new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-STORED"),
+            FORECAST_SOLAR, Map.of("api_key", "FS-STORED")));
+
     @BeforeEach
-    void lockTheKeyring() {
+    void storeKeysAndLockTheKeyring() throws Exception {
+        new ApiKeys(keychain, new SecretsFile(folder.resolve("unused.json"))).save(STORED);
         keychain.locked = true;
     }
 
@@ -72,8 +83,24 @@ class LockedKeyringTest {
         return open(new Background(Runnable::run, Runnable::run));
     }
 
+    /** The locked fields' buttons to enter a new key, in the order the cards show. */
+    private List<Button> replaceButtons(SettingsView view) {
+        return view.pages().stream().flatMap(page -> Scenes.all(page.view()).stream())
+                .filter(node -> node instanceof Button button
+                        && button.getText().equals(settings.messages.text(TextKey.SECRET_REPLACE)))
+                .map(Button.class::cast).filter(Button::isVisible).toList();
+    }
+
+    /** Chooses to enter a new Open-Meteo key, as the owner does, and types it. */
     private void typeAKey(SettingsView view) {
+        replaceButtons(view).getFirst().fire();
         ((TextInputControl) SettingsFixture.field(view, "API key")).setText("NEW-KEY");
+    }
+
+    /** The keys as stored, read once the keyring is unlocked again. */
+    private Secrets storedAfterUnlocking() throws Exception {
+        keychain.locked = false;
+        return new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"))).load();
     }
 
     private List<String> texts(SettingsView view) throws Exception {
@@ -104,7 +131,8 @@ class LockedKeyringTest {
         })).isTrue();
 
         assertThat(keychain.prompts).hasValue(1);
-        assertThat(settings.engine.apiKeys().of(OPEN_METEO)).isEqualTo(Map.of("api_key", "NEW-KEY"));
+        assertThat(settings.engine.apiKeys()).as("the other provider's key stays").isEqualTo(new Secrets(Map.of(
+                OPEN_METEO, Map.of("api_key", "NEW-KEY"), FORECAST_SOLAR, Map.of("api_key", "FS-STORED"))));
         assertThat(folder.resolve("secrets.json")).doesNotExist();
         Fx.run(() -> view.show(Category.FORECAST));
         assertThat(texts(view)).contains(settings.messages.text(TextKey.KEYS_IN_KEYCHAIN));
@@ -120,7 +148,10 @@ class LockedKeyringTest {
             return SettingsFixture.save(view);
         })).isTrue();
 
-        assertThat(folder.resolve("secrets.json")).exists();
+        assertThat(new SecretsFile(folder.resolve("secrets.json")).path()).exists();
+        assertThat(storedAfterUnlocking()).as("moved in over the keyring's other key").isEqualTo(new Secrets(Map.of(
+                OPEN_METEO, Map.of("api_key", "NEW-KEY"), FORECAST_SOLAR, Map.of("api_key", "FS-STORED"))));
+        keychain.locked = true;
         Fx.run(() -> view.show(Category.FORECAST));
         assertThat(texts(view)).contains(
                 settings.messages.text(TextKey.KEYS_IN_FILE, folder.resolve("secrets.json").toString()));
@@ -142,7 +173,7 @@ class LockedKeyringTest {
         assertThat(texts(view)).contains(settings.messages.text(TextKey.SETTINGS_KEYRING_LOCKED));
         assertThat(new ConfigFile(settings.configPath).read()).as("nothing after the keys").isEqualTo(before);
         assertThat(folder.resolve("secrets.json")).doesNotExist();
-        assertThat(keychain.entries).isEmpty();
+        assertThat(storedAfterUnlocking()).isEqualTo(STORED);
         assertThat(Fx.call(view::isChanged)).as("the edits stay, to save again").isTrue();
     }
 
@@ -157,7 +188,9 @@ class LockedKeyringTest {
             view.save(() -> { });
         });
         assertThat(keychain.prompting.await(10, TimeUnit.SECONDS)).as("the prompt shows").isTrue();
-        assertThat(texts(view)).contains(settings.messages.text(TextKey.SETTINGS_SAVING));
+        SettingsFixture.waitFor(() -> Scenes.visibleTexts(view)
+                .contains(settings.messages.text(TextKey.SETTINGS_SAVING_UNLOCK)));
+        assertThat(Fx.call(() -> view.lookup(".busy").isFocused())).as("read out").isTrue();
 
         Fx.run(view::cancel);
 
@@ -165,5 +198,35 @@ class LockedKeyringTest {
         assertThat(Fx.call(view::outcome)).contains(new SaveOutcome.KeyringLocked());
         assertThat(settings.closed).as("the owner sees why nothing was saved").isZero();
         assertThat(folder.resolve("secrets.json")).doesNotExist();
+    }
+
+    @Test
+    void keyFieldsThatCouldNotBeReadAreLockedAndSayWhy() throws Exception {
+        var view = open();
+        Fx.run(() -> view.show(Category.FORECAST));
+
+        var fields = Fx.call(() -> view.pages().stream().flatMap(page -> Scenes.all(page.view()).stream())
+                .filter(PasswordField.class::isInstance).map(PasswordField.class::cast).toList());
+        assertThat(fields).isNotEmpty().allSatisfy(field -> {
+            assertThat(field.isDisabled()).isTrue();
+            assertThat(field.getText()).isEmpty();
+            assertThat(field.getPromptText()).isEqualTo(settings.messages.text(TextKey.SECRET_LOCKED));
+        });
+        assertThat(Fx.call(() -> replaceButtons(view).getFirst().getAccessibleText())).isEqualTo(
+                settings.messages.text(TextKey.SECRET_LOCKED_SPOKEN, "API key (Open-Meteo)"));
+        assertThat(Fx.call(view::isChanged)).isFalse();
+    }
+
+    @Test
+    void savingOtherSettingsWhileLockedLeavesTheKeysAloneAndAsksForNoPrompt() throws Exception {
+        var view = open();
+
+        assertThat(Fx.call(() -> {
+            settings.choose(view, TextKey.FIELD_FALLBACK, Optional.empty());
+            return SettingsFixture.save(view);
+        })).isTrue();
+
+        assertThat(keychain.prompts).hasValue(0);
+        assertThat(storedAfterUnlocking()).isEqualTo(STORED);
     }
 }
