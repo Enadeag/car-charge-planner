@@ -5,6 +5,7 @@ import io.github.enadeag.carchargeplanner.desktop.AppIcon;
 import io.github.enadeag.carchargeplanner.desktop.AppSettings;
 import io.github.enadeag.carchargeplanner.desktop.AppSettingsFile;
 import io.github.enadeag.carchargeplanner.desktop.Appearance;
+import io.github.enadeag.carchargeplanner.desktop.Background;
 import io.github.enadeag.carchargeplanner.desktop.Dashboard;
 import io.github.enadeag.carchargeplanner.desktop.DashboardActions;
 import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
@@ -75,6 +76,8 @@ final class DesktopApp {
     private final AppSettings appSettings;
     private final LanguageChoice language;
     private final ClosingOrder closing = new ClosingOrder();
+    /** Runs the windows' slow work, such as reading the keychain, away from the JavaFX thread. */
+    private final Background background = Background.onVirtualThreads();
     // set on the JavaFX thread only, as JavaFX's bindings on it are read there
     private final SimpleObjectProperty<Appearance> appearance;
 
@@ -156,30 +159,29 @@ final class DesktopApp {
         closing.add("the engine", engine::close);
         var saving = Executors.newSingleThreadExecutor(Thread.ofVirtual().name("dashboard-changes").factory());
         closing.add("the dashboard's saving", saving::close);
-        var changes = new DashboardChanges(engine, saving);
+        var changes = new DashboardChanges(engine, new Background(saving, Platform::runLater));
 
         var dashboardMade = new CompletableFuture<Dashboard>();
         var stores = new SettingsStores(engine, appSettingsFile, parts.startAtLogin());
         // a Save may have chosen another language or appearance: every part follows at once; the engine plans again
         // by itself after a save of its config. This runs on the JavaFX thread.
-        Runnable saved = () -> {
-            var chosen = appSettingsFile.read();
+        Consumer<AppSettings> saved = chosen -> {
             language.choose(chosen.language());
             appearance.set(chosen.appearance());
         };
         // after Finish the app plans with what set-up saved, in the language and appearance it chose; the dashboard
         // is made after set-up, as it opens set-up
-        Runnable setUpFinished = () -> {
-            saved.run();
+        Consumer<AppSettings> setUpFinished = chosen -> {
+            saved.accept(chosen);
             dashboardMade.join().openWindow();
         };
         var setUp = onFx(() -> new SetUpWindow(stores, secretsFile.path(), this::openLink, setUpFinished,
                 ZoneId.systemDefault(), new SetUpWindow.Looks(looks.system(), appearance, looks.reducedMotion()), icon,
-                language));
+                language, background));
         var facts = new AboutFacts(version(), configPath, appSettingsFile.path(), dataFolder,
                 AppLog.file(dataFolder), secretsFile.path());
         var settings = onFx(() -> new SettingsWindow(stores, facts, this::openLink, saved, Optional.of(setUp::open),
-                looks.windows(), icon, language));
+                looks.windows(), icon, language, background));
         var setUpOffer = new SetUpOffer(setUp::open, settings::open, !commandLine.background());
         var actions = new DashboardActions(changes::enterBatteryLevel, changes::addAwayPeriod,
                 changes::removeAwayPeriod, () -> setUpOffer.openSettings(Category.AWAY),
@@ -280,13 +282,14 @@ final class DesktopApp {
 
     /** In the owner's browser, away from the JavaFX thread: the browser may take a moment to answer. */
     private void openLink(URI link) {
-        Thread.ofVirtual().start(() -> {
+        background.run("opening a link", () -> {
             try {
                 parts.browse(link);
             } catch (IOException | UnsupportedOperationException e) {
                 LOG.log(Level.WARNING, "could not open " + link + ": " + e.getMessage());
             }
-        });
+            return null;
+        }, done -> { }, failed -> { });
     }
 
     /** The version Maven wrote into the build; "development" when the resource is missing, as in an IDE's build. */

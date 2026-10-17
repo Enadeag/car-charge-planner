@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 import io.github.enadeag.carchargeplanner.desktop.AppIcon;
 import io.github.enadeag.carchargeplanner.desktop.AppSettingsFile;
 import io.github.enadeag.carchargeplanner.desktop.Appearance;
+import io.github.enadeag.carchargeplanner.desktop.Background;
 import io.github.enadeag.carchargeplanner.desktop.Fx;
 import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
@@ -36,6 +37,7 @@ import io.github.enadeag.carchargeplanner.engine.forecast.providers.OpenMeteo;
 import io.github.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
 import io.github.enadeag.carchargeplanner.engine.notify.Announcer;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
+import io.github.enadeag.carchargeplanner.engine.secrets.Keychain;
 import io.github.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import java.io.IOException;
@@ -79,17 +81,28 @@ final class SetUpFixture {
     final SettingsFixture.MemoryStartAtLogin login = new SettingsFixture.MemoryStartAtLogin();
     final List<URI> opened = new ArrayList<>();
     final Messages messages;
+    /**
+     * Unless a test chose another: runs the work at once, on the thread that asks for it, so the outcome is there as
+     * the call returns.
+     */
+    final Background background;
     int closed;
     int finished;
     private Stage stage;
 
     SetUpFixture(Path folder, Language language) {
+        this(folder, language, new NoKeychain(), new Background(Runnable::run, Runnable::run));
+    }
+
+    /** With this keychain, and this way to do the slow work, such as on virtual threads as the app does. */
+    SetUpFixture(Path folder, Language language, Keychain keychain, Background background) {
         this.folder = folder;
+        this.background = background;
         this.messages = new Messages(language);
         configPath = folder.resolve("engine.json");
         appSettings = new AppSettingsFile(folder.resolve("app.json"), Units.METRIC);
         var providers = new Providers(List.of(provider, new ForecastSolar(offline())));
-        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json")));
+        var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
         engine = new Engine(new ConfigFile(configPath),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
                 new AwayFile(folder.resolve("away.json")), new BatteryFile(folder.resolve("battery.json")),
@@ -129,7 +142,7 @@ final class SetUpFixture {
     SetUpView open(TextScale scale) throws Exception {
         return Fx.call(() -> {
             var view = SetUpView.of(stores(), keysFile(), opened::add, Fx.REDUCED_MOTION, () -> closed++,
-                    () -> finished++, messages);
+                    chosen -> finished++, background, messages);
             // as large as the app makes its window for the larger text: so many lines of it
             Scenes.layOut(view, ColorScheme.LIGHT, scale, scale.of(50 * 13), scale.of(46 * 13));
             var start = SetUpStart.read(new SettingsStorage(stores()));
@@ -139,10 +152,27 @@ final class SetUpFixture {
         });
     }
 
+    /** The view as set-up opens it, before what is stored was read, shown in this scheme. */
+    SetUpView openReading(ColorScheme scheme) throws Exception {
+        return Fx.call(() -> {
+            var view = SetUpView.of(stores(), keysFile(), opened::add, Fx.REDUCED_MOTION, () -> closed++,
+                    chosen -> finished++, background, messages);
+            stage = Scenes.show(view, scheme, 50 * 13, 46 * 13);
+            return view;
+        });
+    }
+
+    /** Starts a view made by {@link #openReading(ColorScheme)} with what is stored, as set-up does once it is read. */
+    void start(SetUpView view) {
+        var start = SetUpStart.read(new SettingsStorage(stores()));
+        view.start(start, start.draft(EngineConfig.firstRun(ZoneId.of("Europe/Amsterdam"),
+                engine.providers().getFirst().id())), SetUpStep.WELCOME);
+    }
+
     SetUpView open(ColorScheme scheme) throws Exception {
         return Fx.call(() -> {
             var view = SetUpView.of(stores(), keysFile(), opened::add, Fx.REDUCED_MOTION, () -> closed++,
-                    () -> finished++, messages);
+                    chosen -> finished++, background, messages);
             var start = SetUpStart.read(new SettingsStorage(stores()));
             view.start(start, start.draft(EngineConfig.firstRun(ZoneId.of("Europe/Amsterdam"),
                     engine.providers().getFirst().id())), SetUpStep.WELCOME);
@@ -153,9 +183,9 @@ final class SetUpFixture {
 
     /** The set-up window, hidden, following a language and the appearance saved over a light system. */
     SetUpWindow window(LanguageChoice language, SimpleObjectProperty<Appearance> saved) throws Exception {
-        return Fx.call(() -> new SetUpWindow(stores(), keysFile(), opened::add, () -> finished++,
+        return Fx.call(() -> new SetUpWindow(stores(), keysFile(), opened::add, chosen -> finished++,
                 ZoneId.of("Europe/Amsterdam"), new SetUpWindow.Looks(new SimpleObjectProperty<>(ColorScheme.LIGHT),
-                        saved, Fx.REDUCED_MOTION), new AppIcon(), language));
+                        saved, Fx.REDUCED_MOTION), new AppIcon(), language, background));
     }
 
     void close() throws Exception {

@@ -55,7 +55,7 @@ class SettingsViewTest {
         boolean saved = Fx.call(() -> {
             settings.type(view, TextKey.FIELD_TARGET_CHARGE, "90");
             settings.type(view, TextKey.FIELD_MARGIN, "70");
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         var after = new ConfigFile(settings.configPath).read();
@@ -77,7 +77,7 @@ class SettingsViewTest {
         var outcome = Fx.call(() -> {
             settings.type(view, TextKey.FIELD_MINIMUM_CHARGE, "85");
             settings.choose(view, TextKey.FIELD_UNITS, Units.IMPERIAL);
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         assertThat(outcome).isFalse();
@@ -98,7 +98,7 @@ class SettingsViewTest {
 
         Fx.call(() -> {
             settings.type(view, TextKey.FIELD_NOTIFY_LEAD, "30");
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         assertThat(storedPlanning().margin()).isEqualTo(0.8571428);
@@ -115,7 +115,7 @@ class SettingsViewTest {
 
         Fx.call(() -> {
             settings.type(view, TextKey.FIELD_IMPORT_TOLERANCE, "0,35");
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         assertThat(storedPlanning().importToleranceKwh()).isEqualTo(0.35);
@@ -126,7 +126,7 @@ class SettingsViewTest {
         var written = Files.getLastModifiedTime(settings.configPath);
         var view = settings.open();
 
-        assertThat(Fx.call(view::save)).isTrue();
+        assertThat(Fx.call(() -> SettingsFixture.save(view))).isTrue();
 
         assertThat(Files.getLastModifiedTime(settings.configPath)).isEqualTo(written);
         assertThat(settings.appSettings.path()).doesNotExist();
@@ -142,7 +142,7 @@ class SettingsViewTest {
             settings.choose(view, TextKey.FIELD_MODE, DisplayMode.WINDOW);
             settings.choose(view, TextKey.FIELD_APPEARANCE, Appearance.DARK);
             settings.choose(view, TextKey.FIELD_LANGUAGE, Optional.of(Language.DUTCH));
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         assertThat(settings.appSettings.read())
@@ -158,7 +158,7 @@ class SettingsViewTest {
         Fx.run(() -> ((CheckBox) SettingsFixture.field(view, settings.messages.text(TextKey.FIELD_START_AT_LOGIN)))
                 .setSelected(true));
         assertThat(settings.login.on).isFalse();
-        Fx.call(view::save);
+        Fx.call(() -> SettingsFixture.save(view));
 
         assertThat(settings.login.on).isTrue();
     }
@@ -172,7 +172,7 @@ class SettingsViewTest {
         boolean saved = Fx.call(() -> {
             ((CheckBox) SettingsFixture.field(view, settings.messages.text(TextKey.FIELD_START_AT_LOGIN))).setSelected(true);
             settings.type(view, TextKey.FIELD_TARGET_CHARGE, "90");
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         assertThat(saved).isFalse();
@@ -211,7 +211,7 @@ class SettingsViewTest {
         Fx.run(() -> settings.button(view, TextKey.SETTINGS_KEEP_EDITING).fire());
 
         assertThat(settings.closed).isZero();
-        Fx.call(view::save);
+        Fx.call(() -> SettingsFixture.save(view));
         assertThat(storedPlanning().targetPct()).isEqualTo(new Percent(90));
     }
 
@@ -258,7 +258,7 @@ class SettingsViewTest {
 
         boolean saved = Fx.call(() -> {
             settings.choose(view, TextKey.FIELD_UNITS, Units.IMPERIAL);
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         assertThat(saved).isTrue();

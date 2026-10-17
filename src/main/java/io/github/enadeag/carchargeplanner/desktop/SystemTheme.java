@@ -32,12 +32,22 @@ public final class SystemTheme {
      * Gives a scene the dashboard's stylesheet, light or dark as the scheme is, now and whenever it changes, also
      * when the scene gets another root.
      *
-     * @param scene the scene to style; the theme keeps it for as long as the app runs
+     * @param scene the scene to style; the theme keeps it until {@link #forget(Scene)}
      */
     public void style(Scene scene) {
         scene.getStylesheets().add(STYLESHEET);
         scenes.add(scene);
         scene.rootProperty().subscribe(root -> apply(scene, scheme.getValue()));
+    }
+
+    /**
+     * Stops following the scheme for a scene whose window closed for good, so the theme no longer holds on to it and
+     * it can be collected.
+     *
+     * @param scene a scene given to {@link #style(Scene)}; one that was not changes nothing
+     */
+    public void forget(Scene scene) {
+        scenes.remove(scene);
     }
 
     private static void apply(Scene scene, ColorScheme scheme) {

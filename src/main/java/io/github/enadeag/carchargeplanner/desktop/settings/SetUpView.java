@@ -1,6 +1,8 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
+import io.github.enadeag.carchargeplanner.desktop.AppSettings;
 import io.github.enadeag.carchargeplanner.desktop.Appearance;
+import io.github.enadeag.carchargeplanner.desktop.Background;
 import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.ScreenReader;
@@ -37,14 +39,30 @@ import javafx.scene.layout.VBox;
  * everything at once. Leaving after the owner started asks first, in the bar where the buttons are. Enter is Next and
  * Escape is Cancel; while the question shows, Escape keeps going. A refused value takes the focus to its field, whose
  * help a screen reader reads with the problem first.
+ *
+ * <p>What is stored is read in the background before set-up starts, and Finish saves in the background: meanwhile the
+ * steps cannot be edited and the status line says what set-up is doing.
  */
 final class SetUpView extends BorderPane {
+
+    /** What set-up is doing. */
+    private enum State {
+        /** Reading what is stored; no step shows it yet. */
+        READING,
+        /** The steps can be edited. */
+        READY,
+        /** Finish is saving. */
+        SAVING,
+        /** What is stored could not be read; closing and opening set-up tries again. */
+        UNREADABLE
+    }
 
     private final SetUpForm form;
     private final Map<SetUpStep, SetUpPage> pages;
     private final AppPage app;
     private final Runnable close;
-    private final Runnable finished;
+    private final Consumer<AppSettings> finished;
+    private final Background background;
     private final Messages messages;
     private final Label stepLabel = FieldRow.paragraph("", "setup-step");
     private final ProgressBar progress = new ProgressBar();
@@ -55,6 +73,7 @@ final class SetUpView extends BorderPane {
     private final HBox actions;
     private final HBox confirm;
     private SetUpStep step = SetUpStep.WELCOME;
+    private State state = State.READING;
 
     /**
      * Makes the view; nothing shows until {@link #start(SetUpStart, SetUpDraft, SetUpStep)}.
@@ -62,18 +81,20 @@ final class SetUpView extends BorderPane {
      * @param form what the steps show against what is stored
      * @param pages every step's page
      * @param app the page of the app's own settings, one of the pages
-     * @param close hides set-up; called after Cancel, and after Finish saved
-     * @param finished called after Finish saved, after {@code close}, so the app can plan with what was saved and show
-     *     the dashboard
+     * @param close closes set-up; called after Cancel, and after Finish saved
+     * @param finished gets the app settings Finish saved, after {@code close}, so the app can follow them, plan with
+     *     what was saved and show the dashboard
+     * @param background saves at Finish away from the JavaFX thread
      * @param messages the texts, in the language set-up speaks
      */
-    SetUpView(SetUpForm form, Map<SetUpStep, SetUpPage> pages, AppPage app, Runnable close, Runnable finished,
-            Messages messages) {
+    SetUpView(SetUpForm form, Map<SetUpStep, SetUpPage> pages, AppPage app, Runnable close,
+            Consumer<AppSettings> finished, Background background, Messages messages) {
         this.form = form;
         this.pages = new EnumMap<>(pages);
         this.app = app;
         this.close = close;
         this.finished = finished;
+        this.background = background;
         this.messages = messages;
 
         progress.setMaxWidth(Double.MAX_VALUE);
@@ -88,7 +109,7 @@ final class SetUpView extends BorderPane {
         cancel.setOnAction(event -> cancel());
         back = new Button(messages.text(TextKey.SETUP_BACK));
         back.setOnAction(event -> show(step.previous()));
-        next = new Button();
+        next = new Button(messages.text(TextKey.SETUP_NEXT));
         next.setDefaultButton(true);
         next.setOnAction(event -> next());
         actions = bar(status, cancel, back, next);
@@ -113,6 +134,7 @@ final class SetUpView extends BorderPane {
         setBottom(new StackPane(actions, confirm));
         showActions();
         getStyleClass().addAll("settings", "setup");
+        showReading();
     }
 
     /**
@@ -122,18 +144,22 @@ final class SetUpView extends BorderPane {
      * @param keysFile the file the API keys are kept in when there is no usable keychain
      * @param openLink opens a web page in the owner's browser; called on the JavaFX thread, so it should not block
      * @param reducedMotion true while the system asks for reduced motion, for the dashboard's preview
-     * @param close hides set-up; called after Cancel, and after Finish saved
-     * @param finished called after Finish saved, after {@code close}
+     * @param close closes set-up; called after Cancel, and after Finish saved
+     * @param finished gets the app settings Finish saved, after {@code close}
+     * @param background does the slow work, such as asking a provider or saving, away from the JavaFX thread
      * @param messages the texts, in the language set-up speaks
-     * @return the view; nothing shows until {@link #start(SetUpStart, SetUpDraft, SetUpStep)}
+     * @return the view, saying that what is stored is being read, until
+     *     {@link #start(SetUpStart, SetUpDraft, SetUpStep)}
      */
     static SetUpView of(SettingsStores stores, Path keysFile, Consumer<URI> openLink,
-            ObservableValue<Boolean> reducedMotion, Runnable close, Runnable finished, Messages messages) {
+            ObservableValue<Boolean> reducedMotion, Runnable close, Consumer<AppSettings> finished,
+            Background background, Messages messages) {
         var engine = stores.engine();
         var providers = engine.providers();
         var app = new AppPage(messages, TextKey.SETUP_DISPLAY_HINT);
         var location = new LocationPage(
-                (provider, text) -> engine.searchPlaces(provider, text, messages.language().code()), messages);
+                (provider, text) -> engine.searchPlaces(provider, text, messages.language().code()), background,
+                messages);
         var solar = new SolarPage(messages);
         var car = new CarCard(messages);
         app.onUnitsChanged(car::showIn);
@@ -141,7 +167,7 @@ final class SetUpView extends BorderPane {
         // a provider's own Test asks for the system as it was when the owner reached the forecast step
         var system = new AtomicReference<HomeSystem>();
         ConnectionTest tester = (provider, settings) -> engine.checkConnection(provider, system.get(), settings);
-        var forecast = new ForecastPage(providers, tester, openLink, keysFile, messages);
+        var forecast = new ForecastPage(providers, tester, openLink, keysFile, background, messages);
         var house = new HouseCard(messages);
         var away = new AwayCard(messages);
         var more = new PageView(messages.text(SetUpStep.MORE.title()));
@@ -164,8 +190,8 @@ final class SetUpView extends BorderPane {
             var settings = new HashMap<>(config.forecast().settingsOf(primary));
             settings.putAll(keys.of(primary));
             return engine.checkConnection(primary, config.system(), settings);
-        }, providers, messages));
-        pages.put(SetUpStep.PREVIEW, new SetUpPreview(engine::preview, reducedMotion, messages));
+        }, providers, background, messages));
+        pages.put(SetUpStep.PREVIEW, new SetUpPreview(engine::preview, reducedMotion, background, messages));
 
         var parts = new EnumMap<SetUpStep, List<ConfigPart>>(SetUpStep.class);
         parts.put(SetUpStep.LOCATION, List.of(location));
@@ -175,7 +201,29 @@ final class SetUpView extends BorderPane {
         parts.put(SetUpStep.FORECAST, List.of(forecast));
         parts.put(SetUpStep.MORE, List.of(house, away));
         var form = new SetUpForm(new SettingsStorage(stores), parts, location, forecast, app);
-        return new SetUpView(form, pages, app, close, finished, messages);
+        return new SetUpView(form, pages, app, close, finished, background, messages);
+    }
+
+    /**
+     * Says that what is stored is being read: no step can be edited, and Next and Back wait, until
+     * {@link #start(SetUpStart, SetUpDraft, SetUpStep)}.
+     */
+    void showReading() {
+        enter(State.READING);
+        showActions();
+        status.setText(messages.text(TextKey.SETTINGS_READING));
+        body.setAccessibleText(status.getText());
+    }
+
+    /**
+     * Says that what is stored could not be read; set-up cannot go on until it is opened again.
+     *
+     * @param detail what went wrong, as the system said it
+     */
+    void showUnreadable(String detail) {
+        enter(State.UNREADABLE);
+        showProblem(messages.text(TextKey.SETTINGS_READ_FAILED, detail));
+        body.setAccessibleText(null);
     }
 
     /**
@@ -186,10 +234,21 @@ final class SetUpView extends BorderPane {
      * @param first the step to show
      */
     void start(SetUpStart start, SetUpDraft draft, SetUpStep first) {
+        enter(State.READY);
         form.start(start, draft);
         status.setText("");
+        body.setAccessibleText(null);
         showActions();
         show(first);
+    }
+
+    /**
+     * Whether set-up is still reading what is stored.
+     *
+     * @return true until {@link #start(SetUpStart, SetUpDraft, SetUpStep)}
+     */
+    boolean isReading() {
+        return state == State.READING;
     }
 
     /**
@@ -203,7 +262,7 @@ final class SetUpView extends BorderPane {
         progress.setProgress((double) shown.number() / SetUpStep.count());
         progress.setAccessibleText(messages.text(TextKey.SETUP_PROGRESS, shown.number(), SetUpStep.count(),
                 messages.text(shown.title())));
-        back.setDisable(shown == SetUpStep.WELCOME);
+        back.setDisable(state != State.READY || shown == SetUpStep.WELCOME);
         next.setText(messages.text(shown.isLast() ? TextKey.SETUP_FINISH : TextKey.SETUP_NEXT));
         var page = pages.get(shown);
         body.setContent(page.view());
@@ -250,6 +309,9 @@ final class SetUpView extends BorderPane {
 
     /** Goes to the next step when this one's values are accepted; on the last, saves everything. */
     void next() {
+        if (state != State.READY) {
+            return;
+        }
         showActions();
         if (!form.check(step)) {
             showRefused();
@@ -265,7 +327,10 @@ final class SetUpView extends BorderPane {
 
     /** Leaves set-up without saving, after asking once the owner started. */
     void cancel() {
-        if (step == SetUpStep.WELCOME && !form.isChanged()) {
+        if (state == State.SAVING) {
+            return; // in a moment it is saved, or the reason it is not shows
+        }
+        if (state != State.READY || step == SetUpStep.WELCOME && !form.isChanged()) {
             close.run();
             return;
         }
@@ -290,10 +355,35 @@ final class SetUpView extends BorderPane {
             showRefused();
             return;
         }
-        switch (form.save(form.config())) {
+        var changes = form.changes(form.config());
+        var chosen = form.appSettings();
+        enter(State.SAVING);
+        status.getStyleClass().remove("problem");
+        status.setText(messages.text(TextKey.SETTINGS_SAVING));
+        body.setAccessibleText(status.getText());
+        background.run("saving set-up", () -> form.write(changes), outcome -> {
+            enter(State.READY);
+            body.setAccessibleText(null);
+            status.setText("");
+            saved(outcome, chosen);
+        }, failure -> {
+            enter(State.READY);
+            body.setAccessibleText(null);
+            saved(new SaveOutcome.Failed(Background.describe(failure, messages)), chosen);
+        });
+    }
+
+    /** What Finish came to: closed when saved, otherwise the reason, with the focus on it. */
+    private void saved(SaveOutcome outcome, AppSettings chosen) {
+        switch (outcome) {
             case SaveOutcome.Saved ignored -> {
                 close.run();
-                finished.run();
+                finished.accept(chosen);
+            }
+            case SaveOutcome.StartAtLoginRefused refusal -> {
+                form.showStartAtLoginFailure(refusal.detail());
+                show(SetUpStep.APP);
+                showRefused();
             }
             case SaveOutcome.Refused ignored -> {
                 show(SetUpStep.APP);
@@ -304,6 +394,15 @@ final class SetUpView extends BorderPane {
                 ScreenReader.focus(status);
             }
         }
+    }
+
+    /** Goes over to another state: the steps can be edited, and Next and Back used, only when ready. */
+    private void enter(State next) {
+        state = next;
+        var ready = next == State.READY;
+        body.setDisable(!ready);
+        this.next.setDisable(!ready);
+        back.setDisable(!ready || step == SetUpStep.WELCOME);
     }
 
     /** The step's values were refused: the status says so, and the focus goes to the first field with a problem. */

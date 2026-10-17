@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
+import io.github.enadeag.carchargeplanner.desktop.Background;
 import io.github.enadeag.carchargeplanner.desktop.DashboardPreview;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.TextKey;
@@ -7,7 +8,7 @@ import io.github.enadeag.carchargeplanner.engine.Outlook;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import java.util.function.BiFunction;
-import javafx.application.Platform;
+import java.util.function.Consumer;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.layout.StackPane;
 
@@ -15,6 +16,8 @@ import javafx.scene.layout.StackPane;
 final class SetUpPreview implements SetUpPage {
 
     private final BiFunction<EngineConfig, Secrets, Outlook> preview;
+    private final Background background;
+    private final Messages messages;
     private final DashboardPreview dashboard;
     private final PageView view;
     private int asked;
@@ -25,11 +28,14 @@ final class SetUpPreview implements SetUpPage {
      * @param preview plans a config with these keys, nothing saved and nobody told; blocks while the forecast is
      *     fetched, so it is called away from the JavaFX thread
      * @param reducedMotion true while the system asks for reduced motion; the charts then change without moving
+     * @param background plans away from the JavaFX thread
      * @param messages the texts, in the language set-up speaks
      */
     SetUpPreview(BiFunction<EngineConfig, Secrets, Outlook> preview, ObservableValue<Boolean> reducedMotion,
-            Messages messages) {
+            Background background, Messages messages) {
         this.preview = preview;
+        this.background = background;
+        this.messages = messages;
         this.dashboard = new DashboardPreview(reducedMotion, messages);
         var frame = new StackPane(dashboard.view());
         frame.getStyleClass().add("preview-frame");
@@ -46,14 +52,13 @@ final class SetUpPreview implements SetUpPage {
     void run(EngineConfig config, Secrets keys) {
         var asking = ++asked;
         dashboard.showLoading();
-        Thread.ofVirtual().start(() -> {
-            var outlook = preview.apply(config, keys);
-            Platform.runLater(() -> {
-                if (asking == asked) {
-                    dashboard.show(outlook);
-                }
-            });
-        });
+        Consumer<Outlook> planned = outlook -> {
+            if (asking == asked) {
+                dashboard.show(outlook);
+            }
+        };
+        background.run("planning the preview for set-up", () -> preview.apply(config, keys), planned,
+                failure -> planned.accept(new Outlook.NoForecast(Background.describe(failure, messages))));
     }
 
     @Override

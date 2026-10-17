@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
+import javafx.application.ColorScheme;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -67,7 +68,7 @@ class SettingsLanguagesTest {
         var problems = Fx.call(() -> {
             var found = everyCategory(view);
             settings.type(view, TextKey.FIELD_MINIMUM_CHARGE, "95");
-            view.save();
+            SettingsFixture.save(view);
             view.cancel();
             found.addAll(everyCategory(view));
             return found;
@@ -95,7 +96,7 @@ class SettingsLanguagesTest {
         var problems = Fx.call(() -> {
             var found = everyCategory(view);
             settings.type(view, TextKey.FIELD_MINIMUM_CHARGE, "95");
-            view.save();
+            SettingsFixture.save(view);
             view.cancel();
             found.addAll(everyCategory(view));
             return found;
@@ -112,5 +113,17 @@ class SettingsLanguagesTest {
         var view = settings.open();
 
         assertThat(Fx.call(() -> everyCategory(view))).isEmpty();
+    }
+
+    @ParameterizedTest
+    @EnumSource(Language.class)
+    void noTextIsCutOffWhileReadingOrSavingOrWhenReadingFailed(Language language) throws Exception {
+        settings = new SettingsFixture(folder, language);
+
+        assertThat(BusyScreens.settings(folder, language, ColorScheme.LIGHT, node -> {
+            var found = new ArrayList<>(Scenes.cutOff(node));
+            found.addAll(Scenes.overlapping(node));
+            return found;
+        })).isEmpty();
     }
 }

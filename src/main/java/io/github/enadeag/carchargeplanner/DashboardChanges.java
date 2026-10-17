@@ -1,19 +1,18 @@
 package io.github.enadeag.carchargeplanner;
 
+import io.github.enadeag.carchargeplanner.desktop.Background;
 import io.github.enadeag.carchargeplanner.engine.Engine;
 import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import java.io.IOException;
-import java.lang.System.Logger.Level;
-import java.util.concurrent.Executor;
+import java.io.UncheckedIOException;
 
 /**
  * The changes the owner makes on the dashboard, handed to the engine away from the JavaFX thread, one at a time and in
- * the order they were made. The engine plans again after each, and the dashboard shows that plan.
+ * the order they were made. The engine plans again after each, and the dashboard shows that plan; a change that could
+ * not be saved is logged, and the next plan shows the stored data as it was.
  */
 final class DashboardChanges {
-
-    private static final System.Logger LOG = System.getLogger(DashboardChanges.class.getName());
 
     /** One change saved through the engine. */
     @FunctionalInterface
@@ -22,15 +21,15 @@ final class DashboardChanges {
     }
 
     private final Engine engine;
-    private final Executor saving;
+    private final Background saving;
 
     /**
      * Makes the changes' way to the engine.
      *
      * @param engine saves each change, and plans again after it
-     * @param saving runs the saves one at a time, in order, on a thread that is not the JavaFX thread
+     * @param saving runs the saves one at a time, in order, away from the JavaFX thread, and logs one that fails
      */
-    DashboardChanges(Engine engine, Executor saving) {
+    DashboardChanges(Engine engine, Background saving) {
         this.engine = engine;
         this.saving = saving;
     }
@@ -62,14 +61,14 @@ final class DashboardChanges {
         save("the removal of the away period", () -> engine.removeAwayPeriod(period));
     }
 
-    /** A save that fails leaves the stored data as it was, which the next plan shows; the log says why. */
     private void save(String what, Change change) {
-        saving.execute(() -> {
+        saving.run("saving " + what, () -> {
             try {
                 change.save();
             } catch (IOException e) {
-                LOG.log(Level.WARNING, "could not save " + what, e);
+                throw new UncheckedIOException(e);
             }
-        });
+            return null;
+        }, done -> { }, failed -> { });
     }
 }

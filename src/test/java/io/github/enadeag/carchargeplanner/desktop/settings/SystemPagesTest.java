@@ -93,7 +93,7 @@ class SystemPagesTest {
         Fx.call(() -> {
             button(view, TextKey.PANELS_ADD, 0).fire();
             fields(view, TextKey.FIELD_PANEL_NAME).get(1).setText("Garage");
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         var config = stored();
@@ -112,7 +112,7 @@ class SystemPagesTest {
 
         Fx.call(() -> {
             button(view, TextKey.PANELS_REMOVE, 0).fire();
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         var config = stored();
@@ -127,7 +127,7 @@ class SystemPagesTest {
 
         Fx.call(() -> {
             settings.type(view, TextKey.FIELD_CAR_BATTERY, "75");
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         var config = stored();
@@ -143,7 +143,7 @@ class SystemPagesTest {
 
         Fx.call(() -> {
             button(view, TextKey.USE_TYPICAL, 3).fire(); // the panel array, the car, the house, the charger
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         var config = stored();
@@ -174,7 +174,7 @@ class SystemPagesTest {
         boolean saved = Fx.call(() -> {
             settings.type(view, TextKey.FIELD_MIN_CURRENT, "16");
             settings.type(view, TextKey.FIELD_MAX_CURRENT, "10");
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         assertThat(saved).isFalse();
@@ -192,7 +192,7 @@ class SystemPagesTest {
                 .isEqualTo("25"); // 40 km
         Fx.call(() -> {
             settings.type(view, TextKey.FIELD_CAR_DISTANCE, "50");
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         var car = stored().system().car();
@@ -208,7 +208,7 @@ class SystemPagesTest {
             settings.type(view, TextKey.FIELD_CAR_CONSUMPTION, "17.3");
             settings.choose(view, TextKey.FIELD_UNITS, Units.IMPERIAL);
             settings.choose(view, TextKey.FIELD_UNITS, Units.METRIC);
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         assertThat(stored().system().car().consumptionKwhPer100km()).isEqualTo(17.3);
@@ -233,7 +233,7 @@ class SystemPagesTest {
             view.pages().stream().flatMap(page -> Scenes.all(page.view()).stream())
                     .filter(node -> node instanceof Button button && button.getText().equals("Utrecht, Netherlands"))
                     .map(Button.class::cast).findFirst().orElseThrow().fire();
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         var system = stored().system();

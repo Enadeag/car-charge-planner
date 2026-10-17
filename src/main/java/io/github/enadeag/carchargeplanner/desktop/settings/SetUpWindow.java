@@ -1,7 +1,9 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.AppIcon;
+import io.github.enadeag.carchargeplanner.desktop.AppSettings;
 import io.github.enadeag.carchargeplanner.desktop.Appearance;
+import io.github.enadeag.carchargeplanner.desktop.Background;
 import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
 import io.github.enadeag.carchargeplanner.desktop.Messages;
 import io.github.enadeag.carchargeplanner.desktop.SystemTheme;
@@ -10,9 +12,8 @@ import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import java.net.URI;
 import java.nio.file.Path;
 import java.time.ZoneId;
-import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
@@ -25,7 +26,8 @@ import javafx.stage.Stage;
 
 /**
  * Set-up in a window of its own: the first time, before there is a config, and again from Settings, filled in with
- * what is stored. Nothing is saved until Finish.
+ * what is stored. Nothing is saved until Finish. The window is made each time set-up opens, and reads what is stored
+ * in the background; closed, it is let go of entirely.
  *
  * <p>Set-up speaks the language and shows the appearance chosen on its App step at once, before they are saved; when
  * the owner saves another language or appearance in Settings meanwhile, set-up takes them over. Either way set-up is
@@ -38,55 +40,49 @@ public final class SetUpWindow {
     private static final double WIDTH_EM = 50;
     private static final double HEIGHT_EM = 46;
 
-    private final Stage stage = new Stage();
     private final SettingsStorage storage;
-    private final Function<Messages, SetUpView> views;
+    /** Makes the view in a language; the runnable closes the window it is shown in. */
+    private final BiFunction<Messages, Runnable, SetUpView> views;
     private final LanguageChoice language;
     private final EngineConfig firstRun;
-    // all belong to the JavaFX thread
+    private final Looks looks;
+    private final AppIcon icon;
+    private final Background background;
+    // the fields below belong to the JavaFX thread; stage and view are null while the window is closed, start until
+    // what is stored was read
     private final ObjectProperty<Appearance> appearance = new SimpleObjectProperty<>(Appearance.SYSTEM);
+    private Stage stage;
     private SetUpStart start;
     private SetUpView view;
     private Messages spoken;
 
     /**
-     * Makes the window, hidden.
+     * Makes what opens the window; no window is made yet.
      *
      * @param stores where the settings are kept, read each time set-up opens, and the engine that checks, plans and
      *     searches
      * @param keysFile the file the API keys are kept in when there is no usable keychain, to tell the owner
      * @param openLink opens a web page in the owner's browser; called on the JavaFX thread, so it should not block
-     * @param finished called on the JavaFX thread after Finish saved and set-up closed, so the app plans with what was
-     *     saved and shows the dashboard; it should hand slow work on
+     * @param finished gets the app settings Finish saved, on the JavaFX thread, after set-up closed, so the app follows
+     *     them, plans with what was saved and shows the dashboard; it should hand slow work on
      * @param timezone the time zone the home is assumed to be in until the owner chooses a place, such as the
      *     computer's own
      * @param looks the system's colour scheme and reduced motion, and the owner's saved appearance, followed while the
      *     app runs
      * @param icon the app icon, for the title bar and the taskbar
      * @param language the language the app speaks, followed while the app runs; never null
+     * @param background reads and writes the stores, and asks the providers, away from the JavaFX thread
      */
-    public SetUpWindow(SettingsStores stores, Path keysFile, Consumer<URI> openLink, Runnable finished,
-            ZoneId timezone, Looks looks, AppIcon icon, LanguageChoice language) {
+    public SetUpWindow(SettingsStores stores, Path keysFile, Consumer<URI> openLink, Consumer<AppSettings> finished,
+            ZoneId timezone, Looks looks, AppIcon icon, LanguageChoice language, Background background) {
         this.storage = new SettingsStorage(stores);
-        this.views = messages -> SetUpView.of(stores, keysFile, openLink, looks.reducedMotion(), stage::hide, finished,
-                messages);
+        this.views = (messages, close) -> SetUpView.of(stores, keysFile, openLink, looks.reducedMotion(), close,
+                finished, background, messages);
         this.language = language;
         this.firstRun = EngineConfig.firstRun(timezone, stores.engine().providers().getFirst().id());
-        this.spoken = language.messages();
-        this.view = made(spoken);
-        var scene = new Scene(view);
-        new SystemTheme(Appearance.scheme(appearance, looks.system())).style(scene);
-        stage.setScene(scene);
-        stage.setTitle(spoken.text(TextKey.SETUP_TITLE));
-        stage.getIcons().setAll(icon.fxImages());
-        var size = WindowSize.on(WIDTH_EM, HEIGHT_EM, Font.getDefault().getSize(),
-                Screen.getPrimary().getVisualBounds());
-        stage.setWidth(size.getWidth());
-        stage.setHeight(size.getHeight());
-        stage.setOnCloseRequest(event -> {
-            event.consume();
-            view.cancel();
-        });
+        this.looks = looks;
+        this.icon = icon;
+        this.background = background;
         language.onChange(chosen -> Platform.runLater(this::takeOverSaved));
         looks.saved().addListener((property, before, now) -> takeOverSaved());
     }
@@ -105,13 +101,23 @@ public final class SetUpWindow {
 
     /**
      * Shows set-up in front, on its first step, filled in with what is stored, or with a first-run draft when there is
-     * no config yet. A set-up that is open already stays as it is.
+     * no config yet; until that is read, it says so. A set-up that is open already stays as it is.
      */
     public void open() {
         Platform.runLater(() -> {
-            if (!stage.isShowing()) {
-                start = SetUpStart.read(storage);
-                show(start.draft(firstRun), SetUpStep.WELCOME);
+            if (stage == null) {
+                make();
+                var reading = stage;
+                background.run("reading the settings for set-up", () -> SetUpStart.read(storage), read -> {
+                    if (stage == reading) {
+                        start = read;
+                        show(read.draft(firstRun), SetUpStep.WELCOME);
+                    }
+                }, failure -> {
+                    if (stage == reading) {
+                        view.showUnreadable(Background.describe(failure, spoken));
+                    }
+                });
             }
             stage.show();
             stage.setIconified(false);
@@ -120,11 +126,53 @@ public final class SetUpWindow {
         });
     }
 
+    /** Makes the window and its view, in the language spoken now, saying that what is stored is being read. */
+    private void make() {
+        var made = new Stage();
+        stage = made;
+        start = null;
+        appearance.set(Appearance.SYSTEM);
+        spoken = language.messages();
+        view = made(spoken, made);
+        var scene = new Scene(view);
+        var theme = new SystemTheme(Appearance.scheme(appearance, looks.system()));
+        theme.style(scene);
+        made.setScene(scene);
+        made.setTitle(spoken.text(TextKey.SETUP_TITLE));
+        made.getIcons().setAll(icon.fxImages());
+        var size = WindowSize.on(WIDTH_EM, HEIGHT_EM, Font.getDefault().getSize(),
+                Screen.getPrimary().getVisualBounds());
+        made.setWidth(size.getWidth());
+        made.setHeight(size.getHeight());
+        made.setOnCloseRequest(event -> {
+            event.consume();
+            view.cancel();
+        });
+    }
+
+    /** Closes the window and lets go of it; a view of a window closed before changes nothing. */
+    private void close(Stage closing) {
+        if (closing != stage) {
+            return;
+        }
+        closing.close();
+        stage = null;
+        view = null;
+        start = null;
+        spoken = null;
+    }
+
     /** A language or appearance saved in Settings while set-up is open takes the place of the one on its App step. */
     private void takeOverSaved() {
-        if (stage.isShowing()) {
-            show(view.draft().withLooksOf(storage.readApp()), view.step());
+        if (stage == null || start == null) {
+            return; // set-up reads what is stored when it opens, and when its reading is done
         }
+        var shown = stage;
+        background.run("reading the app settings for set-up", storage::readApp, app -> {
+            if (stage == shown && start != null) {
+                show(view.draft().withLooksOf(app), view.step());
+            }
+        }, failure -> { });
     }
 
     /** Shows a draft on a step, in the language and appearance it holds; made again when the language differs. */
@@ -133,7 +181,7 @@ public final class SetUpWindow {
         var now = language.of(draft.app().language());
         if (now.language() != spoken.language()) {
             spoken = now;
-            view = made(now);
+            view = made(now, stage);
             stage.getScene().setRoot(view);
             stage.setTitle(now.text(TextKey.SETUP_TITLE));
         }
@@ -141,12 +189,16 @@ public final class SetUpWindow {
     }
 
     /** The owner's choices on the App step show at once; another language makes set-up again, a moment later. */
-    private SetUpView made(Messages messages) {
-        var made = views.apply(messages);
+    private SetUpView made(Messages messages, Stage in) {
+        var made = views.apply(messages, () -> close(in));
         made.onAppearanceChosen(appearance::set);
         made.onLanguageChosen(chosen -> {
-            if (language.of(chosen).language() != spoken.language()) {
-                Platform.runLater(() -> show(view.draft(), view.step()));
+            if (stage == in && start != null && language.of(chosen).language() != spoken.language()) {
+                Platform.runLater(() -> {
+                    if (stage == in) {
+                        show(view.draft(), view.step());
+                    }
+                });
             }
         });
         return made;

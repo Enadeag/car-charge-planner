@@ -74,7 +74,7 @@ class SettingsWindowLanguageTest {
         var before = view();
         Fx.run(() -> settings.choose(before, TextKey.FIELD_LANGUAGE, Optional.of(Language.DUTCH)));
 
-        Fx.run(before::save);
+        Fx.run(() -> SettingsFixture.save(before));
         Fx.settle();
 
         var stage = stage();
@@ -117,7 +117,7 @@ class SettingsWindowLanguageTest {
         var before = view();
         Fx.run(() -> {
             ((ComboBox<?>) SettingsFixture.field(before, "Taal")).getSelectionModel().selectFirst();
-            before.save();
+            SettingsFixture.save(before);
         });
         Fx.settle();
 
@@ -142,11 +142,16 @@ class SettingsWindowLanguageTest {
         assertThat(Fx.call(() -> ((TextField) settings.field(before, TextKey.FIELD_TARGET_CHARGE)).getText()))
                 .isEqualTo("90");
 
-        var stage = stage();
-        Fx.run(stage::hide);
+        var closed = stage();
+        Fx.run(() -> {
+            before.cancel();
+            settings.button(before, TextKey.SETTINGS_DISCARD).fire();
+        });
         open(Category.PLANNING);
 
+        var stage = stage();
         var reopened = view();
+        assertThat(stage).isNotSameAs(closed);
         assertThat(Fx.call(stage::getTitle)).isEqualTo("Instellingen – Car charge planner");
         assertThat(texts(reopened)).contains("Opslaan");
         assertThat(Fx.call(reopened::isChanged)).isFalse();

@@ -7,13 +7,15 @@ import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
 import java.io.IOException;
-import java.util.List;
 import java.util.Optional;
 
 /**
  * Reads what Settings and set-up show from the stores, and writes what the owner chose back to them in the one order
  * both use: start at login first, as the system may refuse it; then the API keys, the engine's config and the app's
  * settings.
+ *
+ * <p>Reading and writing block: the keychain, the files and the system's start at login may each take a while. Call
+ * them away from the JavaFX thread, through {@link io.github.enadeag.carchargeplanner.desktop.Background}.
  */
 final class SettingsStorage {
 
@@ -38,6 +40,33 @@ final class SettingsStorage {
     record StoredKeys(Secrets keys, Optional<String> problem) {
     }
 
+    /**
+     * Everything Settings shows, as it is stored.
+     *
+     * @param config the engine's config; empty when there is none that can be used
+     * @param configProblem why there is no config that can be used, in words for the owner; present exactly when the
+     *     config is empty
+     * @param keys the stored API keys, or why they could not be read
+     * @param keyStorage where the API keys are kept
+     * @param app the app's own settings
+     * @param startsAtLogin whether the system starts the app at login; empty when this copy of the app cannot
+     */
+    record Stored(Optional<EngineConfig> config, Optional<String> configProblem, StoredKeys keys,
+            KeyStorage keyStorage, AppSettings app, Optional<Boolean> startsAtLogin) {
+
+        /**
+         * Checks that there is a config or a reason why not.
+         *
+         * @throws IllegalArgumentException when both or neither are present
+         */
+        Stored {
+            if (config.isPresent() == configProblem.isPresent()) {
+                throw new IllegalArgumentException("there must be a config or the problem with it, not "
+                        + (config.isPresent() ? "both" : "neither"));
+            }
+        }
+    }
+
     private final SettingsStores stores;
 
     /**
@@ -50,7 +79,26 @@ final class SettingsStorage {
     }
 
     /**
-     * The stored API keys.
+     * Reads every store. Blocks while the keychain, the files and the system answer.
+     *
+     * @return what they hold
+     */
+    Stored read() {
+        var keys = readKeys();
+        Optional<EngineConfig> config;
+        Optional<String> problem;
+        try {
+            config = Optional.of(stores.engine().config());
+            problem = Optional.empty();
+        } catch (ConfigProblem e) {
+            config = Optional.empty();
+            problem = Optional.of(e.getMessage());
+        }
+        return new Stored(config, problem, keys, keyStorage(), readApp(), startsAtLogin());
+    }
+
+    /**
+     * The stored API keys. Blocks while the keychain answers.
      *
      * @return the keys, or none and why, in words for the owner, when they could not be read
      */
@@ -63,25 +111,12 @@ final class SettingsStorage {
     }
 
     /**
-     * Where the API keys are kept; asks the keychain whether it can be used.
+     * Where the API keys are kept; may ask the keychain whether it can be used, and then blocks.
      *
      * @return the keychain, or the private file
      */
     KeyStorage keyStorage() {
         return stores.engine().keyStorage();
-    }
-
-    /**
-     * The engine's config as its file holds it now.
-     *
-     * @return the config; empty when there is none that can be used, such as before the first set-up
-     */
-    Optional<EngineConfig> readConfig() {
-        try {
-            return Optional.of(stores.engine().config());
-        } catch (ConfigProblem e) {
-            return Optional.empty();
-        }
     }
 
     /**
@@ -109,14 +144,14 @@ final class SettingsStorage {
     }
 
     /**
-     * Writes the changes, in order; when one part fails, the parts after it are not written.
+     * Writes the changes, in order; when one part fails, the parts after it are not written. Blocks while the
+     * system, the keychain and the files answer.
      *
      * @param changes what to write
-     * @param app the App page, which shows why the system refused start at login
-     * @return saved; refused with the App category when the system refused start at login; or failed with the
-     *     system's error when a file or the keychain could not be written
+     * @return saved; refused by the system's start at login, with its reason; or failed with the system's error when
+     *     a file or the keychain could not be written
      */
-    SaveOutcome save(Changes changes, AppPage app) {
+    SaveOutcome save(Changes changes) {
         var system = stores.startAtLogin();
         if (changes.startAtLogin().isPresent() && system.isPresent()) {
             try {
@@ -126,8 +161,7 @@ final class SettingsStorage {
                     system.get().switchOff();
                 }
             } catch (IOException e) {
-                app.showStartAtLoginFailure(String.valueOf(e.getMessage()));
-                return new SaveOutcome.Refused(List.of(Category.APP));
+                return new SaveOutcome.StartAtLoginRefused(String.valueOf(e.getMessage()));
             }
         }
         try {

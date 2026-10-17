@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.enadeag.carchargeplanner.desktop.AppSettings;
 import io.github.enadeag.carchargeplanner.desktop.Appearance;
+import io.github.enadeag.carchargeplanner.desktop.Background;
 import io.github.enadeag.carchargeplanner.desktop.DisplayMode;
 import io.github.enadeag.carchargeplanner.desktop.Fx;
 import io.github.enadeag.carchargeplanner.desktop.FxTest;
@@ -155,7 +156,8 @@ class SetUpWindowTest {
             var made = SettingsView.of(setUp.stores(), new AboutFacts("1.2.3", setUp.configPath,
                     setUp.appSettings.path(), folder.resolve("data"), folder.resolve("data").resolve("app.0.log"),
                     setUp.keysFile()), setUp.opened::add, () -> { },
-                    () -> { }, Optional.of(window::open), setUp.messages);
+                    chosen -> { }, Optional.of(window::open), new Background(Runnable::run, Runnable::run),
+                    setUp.messages);
             made.reload();
             Scenes.show(made, ColorScheme.LIGHT);
             return made;

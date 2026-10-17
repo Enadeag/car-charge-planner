@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 import io.github.enadeag.carchargeplanner.desktop.AppIcon;
 import io.github.enadeag.carchargeplanner.desktop.AppSettingsFile;
 import io.github.enadeag.carchargeplanner.desktop.Appearance;
+import io.github.enadeag.carchargeplanner.desktop.Background;
 import io.github.enadeag.carchargeplanner.desktop.Fx;
 import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
@@ -27,6 +28,7 @@ import io.github.enadeag.carchargeplanner.engine.forecast.providers.OpenMeteo;
 import io.github.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
 import io.github.enadeag.carchargeplanner.engine.notify.Announcer;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
+import io.github.enadeag.carchargeplanner.engine.secrets.Keychain;
 import io.github.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import java.io.IOException;
@@ -37,6 +39,9 @@ import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import javafx.application.ColorScheme;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -64,6 +69,11 @@ final class SettingsFixture {
     final MemoryStartAtLogin login = new MemoryStartAtLogin();
     final List<URI> opened = new ArrayList<>();
     final Messages messages;
+    /**
+     * Unless a test chose another: runs the work at once, on the thread that asks for it, so the outcome is there as
+     * the call returns.
+     */
+    final Background background;
     int closed;
     int saved;
     private Stage stage;
@@ -74,13 +84,20 @@ final class SettingsFixture {
 
     /** With these forecast providers, such as one with a place search. */
     SettingsFixture(Path folder, Language language, List<ForecastProvider> known) throws IOException {
+        this(folder, language, known, new NoKeychain(), new Background(Runnable::run, Runnable::run));
+    }
+
+    /** With this keychain, and this way to do the slow work, such as on virtual threads as the app does. */
+    SettingsFixture(Path folder, Language language, List<ForecastProvider> known, Keychain keychain,
+            Background background) throws IOException {
         this.folder = folder;
+        this.background = background;
         this.messages = new Messages(language);
         configPath = folder.resolve("engine.json");
         Files.copy(EXAMPLE, configPath);
         appSettings = new AppSettingsFile(folder.resolve("app.json"), Units.METRIC);
         var providers = new Providers(known);
-        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json")));
+        var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
         engine = new Engine(new ConfigFile(configPath),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
                 new AwayFile(folder.resolve("away.json")), new BatteryFile(folder.resolve("battery.json")),
@@ -114,8 +131,8 @@ final class SettingsFixture {
 
     SettingsView open(boolean installed, ColorScheme scheme, Optional<Runnable> runSetUp) throws Exception {
         return Fx.call(() -> {
-            var view = SettingsView.of(stores(installed), facts(), opened::add, () -> closed++, () -> saved++, runSetUp,
-                    messages);
+            var view = SettingsView.of(stores(installed), facts(), opened::add, () -> closed++, chosen -> saved++,
+                    runSetUp, background, messages);
             view.reload();
             stage = Scenes.show(view, scheme, 56 * 13, 40 * 13);
             return view;
@@ -137,12 +154,11 @@ final class SettingsFixture {
      */
     SettingsWindow window(LanguageChoice language, ObjectProperty<Appearance> appearance,
             ObservableValue<ColorScheme> system) throws Exception {
-        return Fx.call(() -> new SettingsWindow(stores(true), facts(), opened::add, () -> {
+        return Fx.call(() -> new SettingsWindow(stores(true), facts(), opened::add, chosen -> {
             saved++;
-            var chosen = appSettings.read();
             language.choose(chosen.language());
             appearance.set(chosen.appearance());
-        }, Optional.empty(), Appearance.scheme(appearance, system), new AppIcon(), language));
+        }, Optional.empty(), Appearance.scheme(appearance, system), new AppIcon(), language, background));
     }
 
     /** The Settings window, hidden, light, following a language as {@link #window(LanguageChoice, ObjectProperty, ObservableValue)}. */
@@ -160,13 +176,24 @@ final class SettingsFixture {
      */
     SettingsView open(TextScale scale) throws Exception {
         return Fx.call(() -> {
-            var view = SettingsView.of(stores(true), facts(), opened::add, () -> closed++, () -> saved++,
-                    Optional.empty(), messages);
+            var view = SettingsView.of(stores(true), facts(), opened::add, () -> closed++, chosen -> saved++,
+                    Optional.empty(), background, messages);
             view.reload();
             // as large as the app makes its window for the larger text: so many lines of it
             Scenes.layOut(view, ColorScheme.LIGHT, scale, scale.of(56 * 13), scale.of(40 * 13));
             return view;
         });
+    }
+
+    /**
+     * Presses Save as the owner does and waits for what it came to; with this fixture's background, the save is done
+     * by the time this returns. Call on the JavaFX thread.
+     *
+     * @return true when everything was stored
+     */
+    static boolean save(SettingsView view) {
+        view.save(() -> { });
+        return view.outcome().orElseThrow() instanceof SaveOutcome.Saved;
     }
 
     void close() throws Exception {
@@ -237,11 +264,14 @@ final class SettingsFixture {
         }
     }
 
-    /** A start at login that only remembers, and can be told to fail. */
+    /** A start at login that only remembers, and can be told to fail, or to wait before it switches. */
     static final class MemoryStartAtLogin implements StartAtLogin {
 
-        boolean on;
-        boolean failing;
+        volatile boolean on;
+        volatile boolean failing;
+        /** Switching on waits until this opens; open unless a test closes it. */
+        volatile CountDownLatch slow = new CountDownLatch(0);
+        final AtomicInteger switches = new AtomicInteger();
 
         @Override
         public boolean isOn() {
@@ -250,6 +280,12 @@ final class SettingsFixture {
 
         @Override
         public void switchOn() throws IOException {
+            switches.incrementAndGet();
+            try {
+                slow.await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                throw new IOException("interrupted");
+            }
             if (failing) {
                 throw new IOException("access denied");
             }

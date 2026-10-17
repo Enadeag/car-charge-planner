@@ -81,7 +81,7 @@ class ForecastAwayPagesTest {
         Fx.call(() -> {
             settings.choose(view, TextKey.FIELD_FALLBACK, Optional.empty());
             ((TextInputControl) SettingsFixture.field(view, "API key")).setText(" secret-key\n");
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         assertThat(stored().forecast().fallback()).isEmpty();
@@ -95,7 +95,7 @@ class ForecastAwayPagesTest {
 
         boolean saved = Fx.call(() -> {
             settings.choose(view, TextKey.FIELD_PRIMARY, FORECAST_SOLAR);
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         assertThat(saved).isFalse();
@@ -145,7 +145,7 @@ class ForecastAwayPagesTest {
             added.setValue(DayOfWeek.WEDNESDAY);
             times(view, TextKey.AWAY_FROM_FIELD).getLast().setText("07:30");
             times(view, TextKey.AWAY_TO_FIELD).getLast().setText("18:00");
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         assertThat(stored().away().recurring()).containsExactly(
@@ -160,7 +160,7 @@ class ForecastAwayPagesTest {
 
         boolean saved = Fx.call(() -> {
             times(view, TextKey.AWAY_FROM_FIELD).getFirst().setText("20:00");
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         assertThat(saved).isFalse();
@@ -176,7 +176,7 @@ class ForecastAwayPagesTest {
 
         boolean saved = Fx.call(() -> {
             times(view, TextKey.AWAY_TO_FIELD).getFirst().setText("7 pm");
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         assertThat(saved).isFalse();
@@ -190,7 +190,7 @@ class ForecastAwayPagesTest {
 
         Fx.call(() -> {
             button(view, TextKey.AWAY_REMOVE).fire();
-            return view.save();
+            return SettingsFixture.save(view);
         });
 
         assertThat(stored().away().recurring()).isEmpty();
