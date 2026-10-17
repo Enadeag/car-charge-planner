@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
+import io.github.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class ConfigFileTest {
 
@@ -281,5 +283,61 @@ class ConfigFileTest {
 
         assertThatThrownBy(() -> new ConfigFile(file).read()).isInstanceOf(ConfigProblem.class)
                 .hasMessageContaining(named);
+    }
+
+    @Test
+    void aWrittenFileHasVersionOneFirst() throws IOException, ConfigProblem {
+        var path = folder.resolve("engine.json");
+        new ConfigFile(path).write(new ConfigFile(EXAMPLE).read());
+
+        var written = StoredJson.parse(Files.readString(path));
+        assertThat(List.copyOf(written.propertyNames())).startsWith("version", "system");
+        assertThat(written.path("version").intValue()).isEqualTo(1);
+        assertThat(new ConfigFile(path).read()).isEqualTo(new ConfigFile(EXAMPLE).read());
+    }
+
+    @Test
+    void aFileOfANewerVersionIsRefusedAsWrittenByANewerApp() throws IOException {
+        var file = write(Files.readString(EXAMPLE).replaceFirst("\\{", "{\"version\": 2,"));
+
+        assertThatThrownBy(() -> new ConfigFile(file).read()).isInstanceOfSatisfying(ConfigProblem.class,
+                problem -> {
+                    assertThat(problem.kind()).isEqualTo(ConfigProblem.Kind.INVALID);
+                    assertThat(problem.detail()).contains("written by a newer version of the app");
+                });
+    }
+
+    @Test
+    void anUnknownNameIsStillRefusedBesideTheVersion() throws IOException {
+        var file = write(Files.readString(EXAMPLE).replaceFirst("\\{", "{\"version\": 1, \"extra\": 1,"));
+
+        assertThatThrownBy(() -> new ConfigFile(file).read()).isInstanceOf(ConfigProblem.class)
+                .hasMessageContaining("unknown setting 'extra'");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{\"system\": oops", "{\"version\": 2}", "{\"planning\": {}}"})
+    void writingOverAFileThatCannotBeUsedKeepsItAside(String unusable) throws IOException, ConfigProblem {
+        var path = write(unusable);
+        var config = new ConfigFile(EXAMPLE).read();
+
+        new ConfigFile(path).write(config);
+
+        assertThat(new ConfigFile(path).read()).isEqualTo(config);
+        try (var kept = Files.list(folder)) {
+            assertThat(kept.filter(file -> file.getFileName().toString().startsWith("engine.json.damaged-")))
+                    .singleElement().satisfies(file -> assertThat(file).hasContent(unusable));
+        }
+    }
+
+    @Test
+    void aChangedFileIsReadAgainByTheSameReader() throws IOException, ConfigProblem {
+        var path = write(Files.readString(EXAMPLE));
+        var file = new ConfigFile(path);
+        assertThat(file.read().planning().margin()).isEqualTo(0.85);
+
+        write(Files.readString(EXAMPLE).replace("\"margin\": 0.85", "\"margin\": 0.5"));
+
+        assertThat(file.read().planning().margin()).isEqualTo(0.5);
     }
 }

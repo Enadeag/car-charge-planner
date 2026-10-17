@@ -1,9 +1,12 @@
 package io.github.enadeag.carchargeplanner.engine.away;
 
+import io.github.enadeag.carchargeplanner.engine.store.FileFormat;
+import io.github.enadeag.carchargeplanner.engine.store.FileVersion;
+import io.github.enadeag.carchargeplanner.engine.store.FormatProblem;
+import io.github.enadeag.carchargeplanner.engine.store.Stored;
+import io.github.enadeag.carchargeplanner.engine.store.StoredFile;
 import io.github.enadeag.carchargeplanner.engine.store.StoredJson;
-import io.github.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DateTimeException;
 import java.time.Duration;
@@ -12,19 +15,29 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
- * The away periods the owner entered by hand for specific days, in a JSON file the engine keeps. A file that is
- * missing or cannot be read holds none, and a damaged entry is left out, so a bad file never stops planning.
+ * The away periods the owner entered by hand for specific days, in a JSON file the engine keeps:
+ * {@code {"version": 1, "periods": [{"start": "2026-07-04T06:00:00Z", "end": "2026-07-04T16:00:00Z"}]}}, where a file
+ * without a version is version 1. A file that is missing or cannot be used holds none, and a damaged entry is left
+ * out, so a bad file never stops planning. But nothing is added to or removed from such a file: that would lose what
+ * it holds, so the owner is told instead. The periods are kept in memory until the file changes on disk.
  */
 public final class AwayFile {
 
     /** How long a period is kept after it ended. */
     static final Duration KEEP_AFTER_END = Duration.ofDays(1);
 
-    private final Path path;
+    /** The shape this app writes, and where the migrations from older shapes go: none yet, 1 is the first. */
+    private static final FileVersion VERSION = new FileVersion(1, List.of());
+
+    /** The periods in the file, and how many entries were left out as damaged. */
+    private record Entries(List<AwayPeriod> periods, int damaged) {
+    }
+
+    private final StoredFile<Entries> file;
 
     /**
      * Makes the store for one file; nothing is read or written yet.
@@ -32,27 +45,16 @@ public final class AwayFile {
      * @param path where the file is, or should be; it and its folder are made when the first period is added
      */
     public AwayFile(Path path) {
-        this.path = path;
+        this.file = new StoredFile<>(path, new Format());
     }
 
     /**
      * The stored periods.
      *
-     * @return the periods in order of their start, each once; empty when the file is missing or cannot be read
+     * @return the periods in order of their start, each once; empty when the file is missing or cannot be used
      */
     public List<AwayPeriod> periods() {
-        JsonNode blob;
-        try {
-            blob = StoredJson.parse(Files.readString(path));
-        } catch (IOException | JacksonException e) {
-            return List.of();
-        }
-        var periods = new ArrayList<AwayPeriod>();
-        for (var entry : blob.path("periods")) {
-            period(entry).filter(found -> !periods.contains(found)).ifPresent(periods::add);
-        }
-        periods.sort(Comparator.comparing(AwayPeriod::start));
-        return periods;
+        return file.read() instanceof Stored.Found<Entries> found ? found.value().periods() : List.of();
     }
 
     /**
@@ -62,17 +64,18 @@ public final class AwayFile {
      * @param period the period to add
      * @param now the current moment, which decides which periods are old
      * @return the stored periods after the change, in order of their start
-     * @throws IOException when the file could not be written; it is then left as it was
+     * @throws IOException when the file could not be written, or it exists but could not be read whole; it is then
+     *     left as it was
      */
     public List<AwayPeriod> add(AwayPeriod period, Instant now) throws IOException {
         var keepFrom = now.minus(KEEP_AFTER_END);
-        var periods = new ArrayList<>(periods().stream()
+        var periods = new ArrayList<>(storedForChange().stream()
                 .filter(stored -> stored.end().isAfter(keepFrom) && !stored.equals(period))
                 .toList());
         periods.add(period);
         periods.sort(Comparator.comparing(AwayPeriod::start));
-        write(periods);
-        return periods;
+        file.write(new Entries(List.copyOf(periods), 0));
+        return List.copyOf(periods);
     }
 
     /**
@@ -80,29 +83,71 @@ public final class AwayFile {
      *
      * @param period the period to remove; one that is not stored changes nothing
      * @return the stored periods after the change, in order of their start
-     * @throws IOException when the file could not be written; it is then left as it was
+     * @throws IOException when the file could not be written, or it exists but could not be read whole; it is then
+     *     left as it was
      */
     public List<AwayPeriod> remove(AwayPeriod period) throws IOException {
-        var periods = periods().stream().filter(stored -> !stored.equals(period)).toList();
-        write(periods);
+        var periods = storedForChange().stream().filter(stored -> !stored.equals(period)).toList();
+        file.write(new Entries(periods, 0));
         return periods;
     }
 
-    private void write(List<AwayPeriod> periods) throws IOException {
-        var blob = StoredJson.object();
-        var rows = blob.putArray("periods");
-        periods.forEach(period -> rows.addObject()
-                .put("start", period.start().toString())
-                .put("end", period.end().toString()));
-        PrivateFiles.write(path, StoredJson.print(blob));
+    /** The stored periods, when writing them back loses nothing. */
+    private List<AwayPeriod> storedForChange() throws IOException {
+        return switch (file.read()) {
+            case Stored.Absent<Entries> absent -> List.of();
+            case Stored.Unusable<Entries> unusable -> throw new IOException(
+                    file.path() + " could not be read, so it is left as it is: " + unusable.detail());
+            case Stored.Found<Entries> found when found.value().damaged() > 0 -> throw new IOException(
+                    file.path() + " holds " + found.value().damaged() + " damaged entries, so it is left as it is");
+            case Stored.Found<Entries> found -> found.value().periods();
+        };
     }
 
-    private static Optional<AwayPeriod> period(JsonNode entry) {
-        try {
-            return Optional.of(new AwayPeriod(Instant.parse(entry.path("start").asString()),
-                    Instant.parse(entry.path("end").asString())));
-        } catch (DateTimeException | IllegalArgumentException e) {
-            return Optional.empty();
+    /** The JSON shape of the periods. */
+    private static final class Format implements FileFormat<Entries> {
+
+        @Override
+        public Entries read(JsonNode root) throws FormatProblem {
+            var rows = VERSION.upToDate(root).path("periods");
+            if (!rows.isArray()) {
+                throw new FormatProblem("periods: must be a list");
+            }
+            var periods = new ArrayList<AwayPeriod>();
+            int damaged = 0;
+            for (var row : rows.values()) {
+                var found = period(row);
+                if (found.isEmpty()) {
+                    damaged++;
+                } else if (!periods.contains(found.get())) {
+                    periods.add(found.get());
+                }
+            }
+            periods.sort(Comparator.comparing(AwayPeriod::start));
+            return new Entries(List.copyOf(periods), damaged);
+        }
+
+        @Override
+        public ObjectNode write(Entries entries) {
+            var body = StoredJson.object();
+            var rows = body.putArray("periods");
+            entries.periods().forEach(period -> rows.addObject()
+                    .put("start", period.start().toString())
+                    .put("end", period.end().toString()));
+            return VERSION.stamped(body);
+        }
+
+        private static Optional<AwayPeriod> period(JsonNode row) {
+            var start = row.path("start");
+            var end = row.path("end");
+            if (!start.isString() || !end.isString()) {
+                return Optional.empty();
+            }
+            try {
+                return Optional.of(new AwayPeriod(Instant.parse(start.stringValue()), Instant.parse(end.stringValue())));
+            } catch (DateTimeException | IllegalArgumentException e) {
+                return Optional.empty();
+            }
         }
     }
 }

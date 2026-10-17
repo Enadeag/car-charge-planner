@@ -151,7 +151,7 @@ Open **Settings…** from the tray menu or the dashboard. Settings is a window w
 
 On Linux `XDG_CONFIG_HOME` and `XDG_DATA_HOME` move the config and data folders, as usual, and the app keeps both folders and every file it writes readable only by you (a folder made by an older version is made private when the app starts; a file named with `--config=` keeps its folder as it is). On Windows, `%APPDATA%` is usually `C:\Users\<you>\AppData\Roaming` and `%LOCALAPPDATA%` is `C:\Users\<you>\AppData\Local`. Settings, About lists the folders of your computer.
 
-`docs/example-engine.json` shows every setting of `engine.json`, for a made-up place. The app reads the files when it starts and writes them whole when you save; edit one by hand only while the app is closed. Delete the data folder to reset your entries and the cache.
+`docs/example-engine.json` shows every setting of `engine.json`, for a made-up place. The app reads the files when it starts and writes them whole when you save; edit one by hand only while the app is closed. Each file says which version of its shape it holds (`"version": 1`); one without it, from before, is read as version 1, and one written by a newer version of the app is not used. A file the app cannot use, such as a damaged one, is never overwritten: before it saves, the app renames it to `<name>.damaged-<date>-<time>` (UTC) and logs that, so you can still recover what it held. Delete the data folder to reset your entries and the cache.
 
 ## How it plans, briefly
 

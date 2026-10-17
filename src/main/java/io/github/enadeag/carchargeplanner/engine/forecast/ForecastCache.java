@@ -1,10 +1,12 @@
 package io.github.enadeag.carchargeplanner.engine.forecast;
 
-import io.github.enadeag.carchargeplanner.engine.store.StoredJson;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
-import io.github.enadeag.carchargeplanner.engine.store.PrivateFiles;
+import io.github.enadeag.carchargeplanner.engine.store.FileFormat;
+import io.github.enadeag.carchargeplanner.engine.store.FormatProblem;
+import io.github.enadeag.carchargeplanner.engine.store.Stored;
+import io.github.enadeag.carchargeplanner.engine.store.StoredFile;
+import io.github.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DateTimeException;
 import java.time.Duration;
@@ -14,14 +16,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
-import tools.jackson.core.JacksonException;
+import java.util.concurrent.ConcurrentHashMap;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.MissingNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
  * The last good forecast of each provider and the end of its rate limit, in a file per provider, so both survive a
  * restart. A file that cannot be read, or holds a forecast for another system, is not used; a folder that cannot be
- * written does not stop planning.
+ * written does not stop planning. Each file is kept in memory until it changes on disk.
  */
 public final class ForecastCache {
 
@@ -44,7 +47,14 @@ public final class ForecastCache {
         }
     }
 
+    /** What one provider's file holds; a part that is missing or damaged is empty. */
+    private record Entry(JsonNode key, Optional<Cached> forecast, Optional<Instant> cooldownUntil) {
+
+        static final Entry NONE = new Entry(MissingNode.getInstance(), Optional.empty(), Optional.empty());
+    }
+
     private final Path folder;
+    private final Map<ProviderId, StoredFile<Entry>> files = new ConcurrentHashMap<>();
 
     /**
      * Makes the cache; nothing is read or written yet.
@@ -88,16 +98,11 @@ public final class ForecastCache {
      * @return the forecast, or empty when there is none, it is for another key, it is damaged or stamped after now
      */
     Optional<Cached> forecast(ProviderId providerId, JsonNode key, Instant now) {
-        var blob = read(providerId);
-        if (!key.equals(blob.path("key"))) {
+        var entry = read(providerId);
+        if (!key.equals(entry.key())) {
             return Optional.empty();
         }
-        var fetchedAt = instant(blob.path("fetchedAt")).filter(stamp -> !stamp.isAfter(now));
-        var steps = steps(blob.path("steps"));
-        if (fetchedAt.isEmpty() || steps.isEmpty()) {
-            return Optional.empty();
-        }
-        return Optional.of(new Cached(fetchedAt.get(), steps.get()));
+        return entry.forecast().filter(cached -> !cached.fetchedAt().isAfter(now));
     }
 
     /**
@@ -107,7 +112,7 @@ public final class ForecastCache {
      * @return the end, or empty when there is none or the file cannot be read
      */
     Optional<Instant> cooldownUntil(ProviderId providerId) {
-        return instant(read(providerId).path("cooldownUntil"));
+        return read(providerId).cooldownUntil();
     }
 
     /**
@@ -119,13 +124,7 @@ public final class ForecastCache {
      * @param steps its steps, keeping the providers' contract
      */
     void saveForecast(ProviderId providerId, JsonNode key, Instant fetchedAt, List<ForecastStep> steps) {
-        var blob = StoredJson.object();
-        blob.set("key", key);
-        blob.put("fetchedAt", fetchedAt.toString());
-        var rows = blob.putArray("steps");
-        steps.forEach(step -> rows.addArray().add(step.start().toString()).add(step.end().toString()).add(step.powerKw()));
-        blob.putNull("cooldownUntil");
-        write(providerId, blob);
+        write(providerId, new Entry(key, Optional.of(new Cached(fetchedAt, List.copyOf(steps))), Optional.empty()));
     }
 
     /**
@@ -135,28 +134,57 @@ public final class ForecastCache {
      * @param until when it may be asked again
      */
     void saveCooldown(ProviderId providerId, Instant until) {
-        var blob = read(providerId);
-        blob.put("cooldownUntil", until.toString());
-        write(providerId, blob);
+        var entry = read(providerId);
+        write(providerId, new Entry(entry.key(), entry.forecast(), Optional.of(until)));
     }
 
-    private Path file(ProviderId providerId) {
-        return folder.resolve("forecast-" + providerId.value() + ".json");
+    private StoredFile<Entry> file(ProviderId providerId) {
+        return files.computeIfAbsent(providerId,
+                id -> new StoredFile<>(folder.resolve("forecast-" + id.value() + ".json"), new Format()));
     }
 
-    private ObjectNode read(ProviderId providerId) {
+    private Entry read(ProviderId providerId) {
+        return file(providerId).read() instanceof Stored.Found<Entry> found ? found.value() : Entry.NONE;
+    }
+
+    private void write(ProviderId providerId, Entry entry) {
         try {
-            return StoredJson.parse(Files.readString(file(providerId))) instanceof ObjectNode blob ? blob : StoredJson.object();
-        } catch (IOException | JacksonException e) {
-            return StoredJson.object();
+            file(providerId).write(entry);
+        } catch (IOException e) {
+            // a cache that cannot be written must not stop planning; the forecast is simply asked for again later
         }
     }
 
-    private void write(ProviderId providerId, ObjectNode blob) {
-        try {
-            PrivateFiles.write(file(providerId), StoredJson.compact(blob));
-        } catch (IOException e) {
-            // a cache that cannot be written must not stop planning; the forecast is simply asked for again later
+    /** The JSON shape of one provider's file: the key, the forecast's moment and steps, and the rate limit. */
+    private static final class Format implements FileFormat<Entry> {
+
+        @Override
+        public Entry read(JsonNode root) throws FormatProblem {
+            if (!root.isObject()) {
+                throw new FormatProblem("the file must hold one JSON object");
+            }
+            var fetchedAt = instant(root.path("fetchedAt"));
+            var steps = steps(root.path("steps"));
+            var forecast = fetchedAt.isPresent() && steps.isPresent()
+                    ? Optional.of(new Cached(fetchedAt.get(), steps.get())) : Optional.<Cached>empty();
+            return new Entry(root.path("key"), forecast, instant(root.path("cooldownUntil")));
+        }
+
+        @Override
+        public ObjectNode write(Entry entry) {
+            var blob = StoredJson.object();
+            if (!entry.key().isMissingNode()) {
+                blob.set("key", entry.key());
+            }
+            entry.forecast().ifPresent(cached -> {
+                blob.put("fetchedAt", cached.fetchedAt().toString());
+                var rows = blob.putArray("steps");
+                cached.steps().forEach(step -> rows.addArray().add(step.start().toString()).add(step.end().toString())
+                        .add(step.powerKw()));
+            });
+            entry.cooldownUntil().ifPresentOrElse(until -> blob.put("cooldownUntil", until.toString()),
+                    () -> blob.putNull("cooldownUntil"));
+            return blob;
         }
     }
 
