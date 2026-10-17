@@ -38,6 +38,11 @@ class PrivateFolderTest {
         return PosixFilePermissions.toString(Files.getPosixFilePermissions(path));
     }
 
+    /** A user other than root and the one who runs the tests, as the parent may be root's. */
+    private UserPrincipal otherUser() throws IOException {
+        return temp.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByName("nobody");
+    }
+
     private static UserPrincipal ownerOf(Path entry) throws IOException {
         return Files.getOwner(entry, LinkOption.NOFOLLOW_LINKS);
     }
@@ -82,6 +87,23 @@ class PrivateFolderTest {
         Files.setPosixFilePermissions(folder, PosixFilePermissions.fromString("rwxr-xr-x"));
 
         assertRefused(new PrivateFolder(folder, user), "which other users may write in");
+    }
+
+    @Test
+    void whenItsParentBelongsToAnotherUserItIsRefused() throws IOException {
+        var other = otherUser();
+        assumeTrue(!user.equals(Optional.of(other)), "the tests run as that user");
+
+        assertRefused(new PrivateFolder(folder, user, Files::setPosixFilePermissions,
+                entry -> entry.equals(temp) ? other : ownerOf(entry)), "belongs to another user");
+    }
+
+    @Test
+    void whenItsParentIsALinkItIsRefused() throws IOException {
+        var link = Files.createSymbolicLink(temp.resolve("link"), temp);
+        folder = link.resolve("folder");
+
+        assertRefused(new PrivateFolder(folder, user), "is a link");
     }
 
     @Test

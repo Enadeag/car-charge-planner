@@ -48,14 +48,17 @@ public final class PrivateFolder {
         void set(Path folder, Set<PosixFilePermission> mode) throws IOException;
     }
 
-    /** Tells who owns a file in the folder; a seam for the tests, as only root can make a file of another user. */
+    /**
+     * Tells who owns a file in the folder, or the folder's parent; a seam for the tests, as only root can make a file
+     * of another user.
+     */
     @FunctionalInterface
     interface EntryOwner {
 
         /**
          * The file's owner, without following a link.
          *
-         * @param entry a file in the folder, of any kind
+         * @param entry a file in the folder, of any kind, or the folder's parent
          * @return its owner
          * @throws IOException when it cannot be read
          */
@@ -92,6 +95,9 @@ public final class PrivateFolder {
     /**
      * Makes the folder when it is missing, then checks it, also when it was there already. The user's own folder that
      * others may read but not write in is made owner-only, and that is logged: nobody else can have put a file in it.
+     * Only the folder, its files and its parent are checked: the folder lives in the user's own runtime or data
+     * folder, and someone who can write in the user's own folders above it controls the account already, so deeper
+     * checks are deliberately not done.
      *
      * @return the folder
      * @throws NotPrivateException when it is a link or another kind of file, another user's, or one that others may
@@ -143,10 +149,8 @@ public final class PrivateFolder {
         PosixFileAttributes after;
         try {
             var parent = path.toAbsolutePath().getParent();
-            if (parent != null
-                    && Files.getPosixFilePermissions(parent).stream().anyMatch(WRITE_BY_OTHERS::contains)) {
-                throw new NotPrivateException(path + " is open to other users and lies in " + parent
-                        + ", which other users may write in, so it is not made owner-only");
+            if (parent != null) {
+                refuseUnsafeParent(parent);
             }
             refuseOthersFiles();
             modeChange.set(path, OWNER_ONLY);
@@ -164,6 +168,24 @@ public final class PrivateFolder {
         LOG.log(Level.WARNING, "tightened " + path + " to owner-only: its mode was " + mode);
     }
 
+    private void refuseUnsafeParent(Path parent) throws IOException {
+        var attributes = Files.readAttributes(parent, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+        if (!attributes.isDirectory() || attributes.isSymbolicLink()) {
+            throw new NotPrivateException(path + " is open to other users and lies in " + parent
+                    + ", which is a link or not a folder, so it is not made owner-only");
+        }
+        var owner = entryOwner.of(parent);
+        var root = parent.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByName("root");
+        if (!owner.equals(user.orElseThrow()) && !owner.equals(root)) {
+            throw new NotPrivateException(path + " is open to other users and lies in " + parent
+                    + ", which belongs to another user, so it is not made owner-only");
+        }
+        if (attributes.permissions().stream().anyMatch(WRITE_BY_OTHERS::contains)) {
+            throw new NotPrivateException(path + " is open to other users and lies in " + parent
+                    + ", which other users may write in, so it is not made owner-only");
+        }
+    }
+
     private void refuseOthersFiles() throws IOException {
         try (var entries = Files.list(path)) {
             for (var entry : (Iterable<Path>) entries::iterator) {
@@ -172,12 +194,15 @@ public final class PrivateFolder {
                             path + " holds " + entry.getFileName() + ", which belongs to another user");
                 }
                 // a folder always has more than one name ("." and its entry); only other files can be hard links
-                if (!Files.isDirectory(entry, LinkOption.NOFOLLOW_LINKS)
-                        && ((Number) Files.getAttribute(entry, "unix:nlink", LinkOption.NOFOLLOW_LINKS)).intValue() > 1) {
+                if (!Files.isDirectory(entry, LinkOption.NOFOLLOW_LINKS) && names(entry) > 1) {
                     throw new NotPrivateException(path + " holds " + entry.getFileName() + ", which has another name");
                 }
             }
         }
+    }
+
+    private static int names(Path entry) throws IOException {
+        return ((Number) Files.getAttribute(entry, "unix:nlink", LinkOption.NOFOLLOW_LINKS)).intValue();
     }
 
     private FileAttribute<?>[] attributes() {
