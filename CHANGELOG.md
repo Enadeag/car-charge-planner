@@ -28,6 +28,10 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - Linux: the tray icon comes back when the panel restarts, such as after Plasma's shell crashed: the app registers it again with the new panel.
 - Linux: a click on a notification counts only when the desktop's notification server reports it, not when another program sends the same signal.
 
+### Fixed
+- A screen reader reads several charge windows in a chart as a list ("Charging: 10:00 to 12:00, 14:00 to 15:00.") instead of as one "Charge window".
+- Settings in Dutch no longer shows an English reason when the saved API keys cannot be read; the reason goes to the log.
+
 ## [0.3.0] - 2026-10-16
 
 The app is rewritten in Java with JavaFX, and the Python version is removed. What it plans is the same.

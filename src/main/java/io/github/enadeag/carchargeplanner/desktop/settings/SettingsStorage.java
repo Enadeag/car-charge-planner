@@ -21,13 +21,15 @@ import java.util.Optional;
  */
 final class SettingsStorage {
 
+    private static final System.Logger LOG = System.getLogger(SettingsStorage.class.getName());
+
     /**
      * The stored API keys.
      *
      * @param keys every provider's secret settings; none when they could not be read
-     * @param problem why they could not be read, in words for the owner; empty when they could
+     * @param problem the kind of problem that kept them from being read; empty when they could be read
      */
-    record StoredKeys(Secrets keys, Optional<String> problem) {
+    record StoredKeys(Secrets keys, Optional<SecretsProblem.Kind> problem) {
     }
 
     /**
@@ -99,13 +101,15 @@ final class SettingsStorage {
     /**
      * The stored API keys. Blocks while the keychain answers.
      *
-     * @return the keys, or none and why, in words for the owner, when they could not be read
+     * @return the keys, or none and the kind of problem when they could not be read; the problem's own English words
+     *     go to the log
      */
     StoredKeys readKeys() {
         try {
             return new StoredKeys(stores.engine().apiKeys(), Optional.empty());
         } catch (SecretsProblem e) {
-            return new StoredKeys(Secrets.NONE, Optional.of(e.getMessage()));
+            LOG.log(System.Logger.Level.WARNING, "The API keys could not be read for Settings: " + e.getMessage());
+            return new StoredKeys(Secrets.NONE, Optional.of(e.kind()));
         }
     }
 

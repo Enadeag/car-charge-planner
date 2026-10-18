@@ -69,7 +69,7 @@ final class PanelArrayCard {
     /**
      * Shows a stored array, as the values not edited.
      *
-     * @param array the array
+     * @param array the stored array whose name, size, tilt, direction and losses the fields show
      * @param typicalValues which of its values are typical values
      */
     void load(PanelArray array, Set<Setting> typicalValues) {

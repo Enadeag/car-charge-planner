@@ -108,7 +108,7 @@ final class Advapi32 {
      * A text as Windows' wide strings are, with the terminating null character the registry counts in a value's size.
      *
      * @param arena holds the memory as long as the call needs it
-     * @param text the text
+     * @param text the text to hand to Windows, such as a key's path, a value's name or a text value
      * @return the text in UTF-16LE with a null character at the end
      */
     static MemorySegment wide(Arena arena, String text) {

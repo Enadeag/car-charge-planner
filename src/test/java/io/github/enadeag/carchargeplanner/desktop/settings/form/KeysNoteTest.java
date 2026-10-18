@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.enadeag.carchargeplanner.desktop.text.Language;
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
+import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
+import io.github.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
 import java.nio.file.Path;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -25,14 +27,33 @@ class KeysNoteTest {
     }
 
     @Test
-    void keysThatCouldNotBeReadAreSaidFirst() {
-        assertThat(KeysNote.of(KeyStorage.KEYCHAIN, Optional.of("the keychain did not answer"), FILE, ENGLISH))
-                .isEqualTo("Your saved keys could not be read: the keychain did not answer " + IN_KEYCHAIN);
+    void keysThatCouldNotBeReadAreSaidFirstWithoutTheEnginesWords() {
+        assertThat(KeysNote.of(KeyStorage.KEYCHAIN, Optional.of(SecretsProblem.Kind.FAILED), FILE, ENGLISH))
+                .isEqualTo("Your saved keys could not be read. Enter them again and save. " + IN_KEYCHAIN);
     }
 
     @Test
-    void aLockedKeychainIsTheReasonItselfSoItsWordsAreLeftOut() {
-        assertThat(KeysNote.of(KeyStorage.LOCKED_KEYCHAIN, Optional.of("Locked."), FILE, ENGLISH))
+    void theProblemIsSaidInTheOwnersLanguage() {
+        var dutch = new Messages(Language.DUTCH);
+
+        assertThat(KeysNote.of(KeyStorage.FILE, Optional.of(SecretsProblem.Kind.FAILED), FILE, dutch))
+                .isEqualTo("Je opgeslagen sleutels konden niet gelezen worden. Vul ze opnieuw in en sla op. "
+                        + dutch.text(TextKey.KEYS_IN_FILE, "keys.json"));
+    }
+
+    @Test
+    void aLockedKeychainIsTheReasonItselfSoNoOtherProblemIsSaid() {
+        var locked = KeysNote.of(KeyStorage.LOCKED_KEYCHAIN, Optional.empty(), FILE, ENGLISH);
+
+        assertThat(KeysNote.of(KeyStorage.LOCKED_KEYCHAIN, Optional.of(SecretsProblem.Kind.FAILED), FILE, ENGLISH))
+                .isEqualTo(locked);
+        assertThat(KeysNote.of(KeyStorage.LOCKED_KEYCHAIN, Optional.of(SecretsProblem.Kind.LOCKED), FILE, ENGLISH))
+                .isEqualTo(locked);
+    }
+
+    @Test
+    void aProblemThatSaysTheKeychainIsLockedIsSaidAsSoEvenBeforeTheStorageKnows() {
+        assertThat(KeysNote.of(KeyStorage.KEYCHAIN, Optional.of(SecretsProblem.Kind.LOCKED), FILE, ENGLISH))
                 .isEqualTo(KeysNote.of(KeyStorage.LOCKED_KEYCHAIN, Optional.empty(), FILE, ENGLISH));
     }
 }

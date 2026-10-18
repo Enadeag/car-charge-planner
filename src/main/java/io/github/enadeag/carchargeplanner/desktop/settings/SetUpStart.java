@@ -5,6 +5,7 @@ import io.github.enadeag.carchargeplanner.desktop.settings.form.AllSettings;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
+import io.github.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
 import java.util.Optional;
 
 /**
@@ -12,13 +13,13 @@ import java.util.Optional;
  *
  * @param config the engine's config; empty when there is none that can be used, as before the first set-up
  * @param keys every provider's secret settings; none when they could not be read
- * @param keysProblem why the keys could not be read, in words for the owner; empty when they could
+ * @param keysProblem the kind of problem that kept the keys from being read; empty when they could be read
  * @param keyStorage where the keys are kept
  * @param app the app's own settings
  * @param startsAtLogin whether the system starts the app at login; empty when this copy of the app cannot
  */
-record SetUpStart(Optional<EngineConfig> config, Secrets keys, Optional<String> keysProblem, KeyStorage keyStorage,
-        AppSettings app, Optional<Boolean> startsAtLogin) {
+record SetUpStart(Optional<EngineConfig> config, Secrets keys, Optional<SecretsProblem.Kind> keysProblem,
+        KeyStorage keyStorage, AppSettings app, Optional<Boolean> startsAtLogin) {
 
     /**
      * Reads what is stored now. Blocks while the keychain, the files and the system answer: call it away from the

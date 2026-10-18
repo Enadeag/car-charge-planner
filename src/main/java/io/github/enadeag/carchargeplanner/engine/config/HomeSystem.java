@@ -59,7 +59,7 @@ public record HomeSystem(
      * The system with another house and car.
      *
      * @param newHouse the home's own use of power
-     * @param newCar the car
+     * @param newCar the car to plan for in place of the current one
      * @return a system with everything else the same
      */
     public HomeSystem withHouseAndCar(House newHouse, Car newCar) {
@@ -69,7 +69,7 @@ public record HomeSystem(
     /**
      * The system with another charger.
      *
-     * @param newCharger the charger
+     * @param newCharger the charger to plan for in place of the current one
      * @return a system with everything else the same
      */
     public HomeSystem withCharger(Charger newCharger) {

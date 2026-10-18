@@ -19,7 +19,7 @@ class ProblemTextsTest {
         assertThat(ProblemTexts.of(Rule.BELOW_MINIMUM_CURRENT, ENGLISH))
                 .isEqualTo("Must not be below the minimum current.");
         assertThat(ProblemTexts.of(Rule.SAME_AS_PRIMARY, ENGLISH))
-                .isEqualTo("Choose another provider than the first one.");
+                .isEqualTo("Choose a different provider from the first one.");
         assertThat(ProblemTexts.of(Rule.NOT_AFTER_START, ENGLISH))
                 .isEqualTo("Must end after it starts, on the same day.");
         assertThat(Arrays.stream(Rule.values()).map(rule -> ProblemTexts.of(rule, ENGLISH)).distinct())

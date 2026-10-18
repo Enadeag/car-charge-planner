@@ -30,7 +30,7 @@ public interface DbusMenu extends DBusInterface {
     /**
      * The properties of several entries.
      *
-     * @param ids the entries
+     * @param ids the numbers of the entries, as the layout gives them; 0 is the root
      * @param propertyNames the properties wanted; empty for all
      * @return the properties of each of the entries that exist
      */
@@ -39,7 +39,7 @@ public interface DbusMenu extends DBusInterface {
     /**
      * One property of one entry.
      *
-     * @param id the entry
+     * @param id the number of the entry, as the layout gives it; 0 is the root
      * @param name the property, such as "label"
      * @return the value of the property
      */
@@ -59,7 +59,7 @@ public interface DbusMenu extends DBusInterface {
     /**
      * Several events at once.
      *
-     * @param events the events
+     * @param events the events in the order they happened, each as {@link #Event} takes it
      * @return the entries that do not exist, so that their events were not handled
      */
     List<Integer> EventGroup(List<MenuEvent> events);
@@ -67,7 +67,7 @@ public interface DbusMenu extends DBusInterface {
     /**
      * The panel tells that it is about to show an entry's submenu.
      *
-     * @param id the entry
+     * @param id the number of the entry whose submenu is about to show; 0 is the root
      * @return true when the layout has changed and must be fetched again
      */
     boolean AboutToShow(int id);
@@ -75,7 +75,7 @@ public interface DbusMenu extends DBusInterface {
     /**
      * {@link #AboutToShow} for several entries.
      *
-     * @param ids the entries
+     * @param ids the numbers of the entries whose submenus are about to show
      * @return the entries whose layout needs an update, and the entries that do not exist
      */
     Pair<List<Integer>, List<Integer>> AboutToShowGroup(List<Integer> ids);

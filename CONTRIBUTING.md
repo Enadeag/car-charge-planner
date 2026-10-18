@@ -72,7 +72,7 @@ touch the network, your keychain or your desktop:
 
 - the providers replay recorded answers (`src/test/resources/.../engine/forecast/providers/`);
 - the Linux keychain test runs a throwaway GNOME Keyring on a private D-Bus; it has no prompter there, so the unlock prompt's outcomes are tested against a fake Secret
-  Service on a private D-Bus, and the notification tests a fake notification server on a private D-Bus that cannot
+  Service on a private D-Bus, and the notification tests run against a fake notification server on a private D-Bus that cannot
   start a real one;
 - the Windows keychain test uses an entry of its own that it removes again (over ssh, where Windows has no logon
   session for the Credential Manager, it checks only that this counts as no keychain);
@@ -108,7 +108,7 @@ A change comes with a test that fails without it.
 | The same, while the repository is private only for what touches Windows (see [Continuous integration](#continuous-integration)) | Windows CI (`ci.yml`) | `mvnw.cmd -B clean verify`: every test, the Windows-only ones included. |
 | A change to `pom.xml`, the test set-up or `platform.windows`, before the pull request | Windows over ssh, by the maintainer | `mvnw.cmd -B clean verify`. Without a logon session the Credential Manager test only checks that this counts as no keychain. |
 | A pull request into `main` that touches the engine or its tests | `mutation.yml` | PIT on the engine; it fails when fewer than 94 % of the mutants are killed. |
-| Weekly (Monday night) and by hand | `mutation.yml` | PIT on the engine and on the desktop's logic without JavaFX (threshold 89 %), each with its HTML report for 14 days, and the whole build with the test classes in a fresh random order. |
+| Weekly (early Monday, 03:23 UTC) and by hand | `mutation.yml` | PIT on the engine and on the desktop's logic without JavaFX (threshold 89 %), each with its HTML report for 14 days, and the whole build with the test classes in a fresh random order. |
 | Before each release, by hand | The maintainer's machine and real desktops | `./mvnw test -Plive` and the checklist below. |
 | Not yet | macOS | The CI job is off until the JavaFX tests run on the macOS runner (#134); a person checks a release on a Mac (#29). |
 
@@ -154,7 +154,7 @@ hour.
 
 **On Windows, the secrets file.** Where the keychain cannot be used, the API keys are kept in `secrets.json`. On Linux
 the tests check that it is readable by its owner only; on Windows it relies on the access rights of the user's own
-`%APPDATA%`, which no test checks.
+`%LOCALAPPDATA%`, which no test checks.
 
 ### Before a release
 
@@ -168,7 +168,7 @@ On a real desktop, with the packaged app (see [Packaging](#packaging)):
 - [ ] Start at login: switch it on, log out and in again, and the app starts; switch it off, and it does not.
 - [ ] Install, start, quit and uninstall: the Linux tar.gz with `install-launcher` and `uninstall-launcher`, and the
       Windows installer.
-- [ ] The dashboard, set-up and Settings read well with Narrator on Windows and Orca on Linux.
+- [ ] The dashboard, set-up and Settings read well with Narrator on Windows (Orca on Linux cannot read it yet, #132).
 - [ ] At 150 % and 200 % scaling nothing is cut off.
 - [ ] Switching the system between light and dark while the app runs switches the app.
 - [ ] A second start shows the running app's dashboard and ends.
@@ -217,14 +217,13 @@ Linux tar.gz take the time of the last commit (or `SOURCE_DATE_EPOCH`), and the 
 owned by root and not writable by group or others, so the same commit and JDK give the same tar.gz. Neither is signed yet: signing waits
 for SignPath (ADR 0003). Both scripts take jlink's options, such as the modules and locales, from
 `src/packaging/jlink.args`, and link JavaFX from the official jmods, downloaded from a pinned address and checked
-against a pinned SHA-256; they need `curl` (and `unzip` on Linux). A new JavaFX version in `pom.xml` needs the new
+against a pinned SHA-256; they need `curl` and `git` (and `unzip` and GNU tar on Linux). A new JavaFX version in `pom.xml` needs the new
 address and checksum in both scripts (`PackagingTest` checks the version). Each package has a `legal` folder with
 `LICENSE`, `NOTICE`, `ADDITIONAL-TERMS.md` and the files of `src/packaging/legal/`, and the Windows installer shows
 the GPL.
 
 - **Linux:** `sh tools/package-linux.sh` makes `target/dist/car-charge-planner/` (start `bin/car-charge-planner`),
-  `target/dist/car-charge-planner-<version>-linux.tar.gz` and its SBOM `car-charge-planner-<version>-linux.cdx.json`;
-  it needs GNU tar and git besides the JDK.
+  `target/dist/car-charge-planner-<version>-linux.tar.gz` and its SBOM `car-charge-planner-<version>-linux.cdx.json`.
 - **Windows:** `powershell -ExecutionPolicy Bypass -File tools\package-windows.ps1` makes a per-user installer,
   `target\dist\car-charge-planner-<version>.exe`, and its SBOM `car-charge-planner-<version>-windows.cdx.json`;
   `-Type app-image` makes the program folder only. The installer needs WiX 5: install the .NET SDK 8, then run
@@ -391,7 +390,7 @@ The app shows a test notification, the same as an announcement but for its text.
 Every text the app shows is translatable, and a language is one file. The texts are in
 `src/main/resources/io/github/enadeag/carchargeplanner/desktop/text/`, one file per language: `messages_en.properties` for
 English, `messages_nl.properties` for Dutch. They are Java resource bundles in UTF-8 (type `é` and `ü` as they are, no
-`é` escapes). Each line is a key, the same in every language, and its text:
+`\u00e9` escapes). Each line is a key, the same in every language, and its text:
 
 ```properties
 DAY_SET = Set {0} A ({1} kW)

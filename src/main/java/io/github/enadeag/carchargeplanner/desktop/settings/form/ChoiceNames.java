@@ -31,7 +31,7 @@ public final class ChoiceNames {
     /**
      * How the app shows itself.
      *
-     * @param mode the choice
+     * @param mode the way the app shows itself, to name
      * @return such as "Tray icon"
      */
     public String mode(DisplayMode mode) {
@@ -55,7 +55,7 @@ public final class ChoiceNames {
     /**
      * How the app looks.
      *
-     * @param appearance the choice
+     * @param appearance the look to name: the system's, light or dark
      * @return such as "Dark"
      */
     public String appearance(Appearance appearance) {
@@ -69,7 +69,7 @@ public final class ChoiceNames {
     /**
      * The units distances and consumption show in.
      *
-     * @param units the choice
+     * @param units the system of units to name
      * @return such as "Miles"
      */
     public String units(Units units) {
@@ -82,7 +82,7 @@ public final class ChoiceNames {
     /**
      * The phases the charger charges on.
      *
-     * @param phases the choice
+     * @param phases the number of phases the charger uses, to name
      * @return such as "Three phases"
      */
     public String phases(Phases phases) {
@@ -92,7 +92,7 @@ public final class ChoiceNames {
     /**
      * A weekday, written in full and with a capital as it starts the row.
      *
-     * @param day the choice
+     * @param day the day of the week to name, in the owner's language
      * @return such as "Monday" or "Maandag"
      */
     public String weekday(DayOfWeek day) {
@@ -104,7 +104,7 @@ public final class ChoiceNames {
     /**
      * A forecast provider by its name; one the config names but this version does not know, by its id.
      *
-     * @param id the choice
+     * @param id the provider to name; one that is not among {@code known} is named by its id
      * @param known what the providers this version knows tell about themselves
      * @return such as "Open-Meteo"
      */

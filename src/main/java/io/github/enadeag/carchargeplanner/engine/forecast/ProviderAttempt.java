@@ -45,9 +45,9 @@ final class ProviderAttempt {
      * @param retryAt per provider, when it may be asked again after a failure; updated here, so a map that is safe
      *     for several threads when other providers are asked at the same time
      * @param health whether each provider gave a forecast when it was last asked; updated here
+     * @param now the current moment, by which ages, waits and rate limits are measured
      * @param force the owner asked for a refresh: skip the minimum refresh interval and the wait after a failure,
      *     never a rate limit
-     * @param now the current moment, by which ages, waits and rate limits are measured
      */
     ProviderAttempt(ForecastProvider provider, ForecastCache cache, Map<ProviderId, Instant> retryAt,
             ProviderHealth health, Instant now, boolean force) {

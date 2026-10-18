@@ -285,7 +285,7 @@
               </ignoredUnusedDeclaredDependencies>
             </configuration>
           </execution>
-          <!-- the list of runtime libraries LegalFilesTest checks against src/packaging/legal -->
+          <!-- the list of runtime libraries PackagingTest checks against src/packaging/legal -->
           <execution>
             <id>list-runtime-libraries</id>
             <phase>generate-test-resources</phase>
