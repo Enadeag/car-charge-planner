@@ -273,6 +273,18 @@
               </ignoredUnusedDeclaredDependencies>
             </configuration>
           </execution>
+          <!-- the list of runtime libraries LegalFilesTest checks against src/packaging/legal -->
+          <execution>
+            <id>list-runtime-libraries</id>
+            <phase>generate-test-resources</phase>
+            <goals>
+              <goal>list</goal>
+            </goals>
+            <configuration>
+              <includeScope>runtime</includeScope>
+              <outputFile>${project.build.directory}/runtime-libraries.txt</outputFile>
+            </configuration>
+          </execution>
           <execution>
             <id>copy-runtime-libraries</id>
             <phase>package</phase>
