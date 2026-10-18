@@ -48,4 +48,18 @@ class KeyChangesTest {
         assertThatThrownBy(() -> new KeyChanges(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "x"))),
                 Map.of(OPEN_METEO, Set.of("api_key")))).isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void changesAreEmptyOnlyWithNothingEnteredAndNothingRemoved() {
+        var openMeteo = new ProviderId("open-meteo");
+        assertThat(new KeyChanges(Secrets.NONE, Map.of()).isEmpty()).isTrue();
+        assertThat(KeyChanges.entering(new Secrets(Map.of(openMeteo, Map.of("api_key", "x")))).isEmpty()).isFalse();
+        assertThat(new KeyChanges(Secrets.NONE, Map.of(openMeteo, Set.of("api_key"))).isEmpty()).isFalse();
+    }
+
+    @Test
+    void aKeychainFailureAlwaysHasAKind() {
+        assertThatThrownBy(() -> new KeychainException(null, "no kind", new RuntimeException()))
+                .isInstanceOf(IllegalArgumentException.class).hasMessage("the kind must not be null");
+    }
 }

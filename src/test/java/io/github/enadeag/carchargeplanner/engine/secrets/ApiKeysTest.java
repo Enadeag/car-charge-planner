@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.enadeag.carchargeplanner.LogCapture;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -12,8 +13,8 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
@@ -522,5 +523,251 @@ class ApiKeysTest {
 
         assertThat(prompted).hasValue(0);
         assertThat(lockable.prompts).hasValue(0);
+    }
+
+    @Test
+    void aSaveIntoAWorkingKeychainRemovesTheFileTheKeysWereKeptInBefore() throws SecretsProblem {
+        file().write(KEYS);
+        var changed = new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW")));
+
+        keys(keychain).save(changed);
+
+        assertThat(file().path()).doesNotExist();
+        assertThat(keychain.entries).containsEntry("forecast/open-meteo/api_key", "OM-NEW");
+    }
+
+    /** Keeps each value for one read only, so what it holds as a whole differs from what was written. */
+    private static final class ForgetsAfterOneRead extends MemoryKeychain {
+        @Override
+        public Optional<String> read(String name) throws KeychainException {
+            return name.equals(KeychainEntries.INDEX) ? super.read(name) : Optional.ofNullable(entries.remove(name));
+        }
+    }
+
+    @Test
+    void theFileStaysWhenTheKeychainDoesNotGiveBackWhatWasMovedIntoIt() throws SecretsProblem {
+        file().write(KEYS);
+
+        assertThat(keys(new ForgetsAfterOneRead()).load()).isEqualTo(KEYS);
+        assertThat(file().read()).isEqualTo(KEYS);
+    }
+
+    @Test
+    void aFailedMoveIsLoggedAndTheKeychainIsLeftAloneForAWhile() throws SecretsProblem {
+        file().write(KEYS);
+        var forgetful = new Counting() {
+            @Override
+            public void write(String name, String value) {
+                calls.incrementAndGet();
+            }
+        };
+        var keys = keys(forgetful);
+        try (var log = LogCapture.of(ApiKeys.class)) {
+            keys.load();
+            var asked = forgetful.calls.get();
+
+            later(ApiKeys.RETRY_AFTER.minusSeconds(1));
+            assertThat(keys.load()).isEqualTo(KEYS);
+            assertThat(forgetful.calls.get()).isEqualTo(asked);
+            assertThat(log.lines()).containsExactly("WARNING API keys are kept in " + file().path()
+                    + ", readable only by you: they could not be moved into the system keychain");
+        }
+    }
+
+    @Test
+    void withoutAKeychainTheFirstLoadSaysTheKeysAreInTheFile() throws SecretsProblem {
+        try (var log = LogCapture.of(ApiKeys.class)) {
+            keys(new NoKeychain()).load();
+
+            assertThat(log.lines()).containsExactly("WARNING API keys are kept in " + file().path()
+                    + ", readable only by you: the system keychain cannot be used");
+        }
+    }
+
+    @Test
+    void whileLockedWithTheKeysInTheFileTheFileIsSaidToHoldThem() throws SecretsProblem {
+        var lockable = new LockableKeychain();
+        lockable.locked = true;
+        file().write(KEYS);
+        try (var log = LogCapture.of(ApiKeys.class)) {
+            keys(lockable).load();
+
+            assertThat(log.lines()).containsExactly("WARNING API keys are kept in " + file().path()
+                    + ", readable only by you: the system keychain is locked");
+        }
+    }
+
+    @Test
+    void aKeychainThatCannotBeReadStillHoldsTheKeys() {
+        keychain.entries.put("index", "not a list");
+        var keys = keys(keychain);
+
+        assertThat(keys.storage()).isEqualTo(KeyStorage.KEYCHAIN);
+    }
+
+    @Test
+    void anIndexNameOutsideTheAppsOwnIsADamagedIndex() {
+        keychain.entries.put("index", "[\"other/open-meteo/api_key\"]");
+
+        assertThatThrownBy(keys(keychain)::load).isInstanceOf(SecretsProblem.class).hasMessageContaining("could not be read");
+    }
+
+    @Test
+    void aSaveIntoTheFileLeavesTheKeychainAloneForAWhile() throws SecretsProblem {
+        var intermittent = new Intermittent();
+        intermittent.away = true;
+        var keys = keys(intermittent);
+        keys.save(KEYS);
+        intermittent.away = false;
+
+        later(ApiKeys.RETRY_AFTER.minusSeconds(1));
+        assertThat(keys.load()).isEqualTo(KEYS);
+        assertThat(file().path()).exists();
+        assertThat(intermittent.entries).isEmpty();
+
+        later(Duration.ofSeconds(1));
+        assertThat(keys.load()).isEqualTo(KEYS);
+        assertThat(file().path()).doesNotExist();
+    }
+
+    /** Answers the first question, about the index, and is locked from then on. */
+    private static final class LocksAfterTheFirstQuestion extends LockableKeychain {
+        @Override
+        public Optional<String> read(String name) throws KeychainException {
+            var value = super.read(name);
+            locked = true;
+            return value;
+        }
+    }
+
+    @Test
+    void aKeychainThatLocksBetweenTheTwoQuestionsIsLocked() {
+        var lockable = new LocksAfterTheFirstQuestion();
+        lockable.entries.put("index", "[\"forecast/open-meteo/api_key\"]");
+        lockable.entries.put("forecast/open-meteo/api_key", "OM-SECRET-1");
+        var keys = keys(lockable);
+
+        assertThatThrownBy(keys::load).isInstanceOfSatisfying(SecretsProblem.class,
+                problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.LOCKED));
+        assertThat(keys.storage()).isEqualTo(KeyStorage.LOCKED_KEYCHAIN);
+    }
+
+    /** Usable, but refuses its first write as locked, as a keyring that holds none of the app's items yet. */
+    private static final class LockedForTheFirstItem extends LockableKeychain {
+        private boolean refused;
+
+        @Override
+        public void write(String name, String value) throws KeychainException {
+            if (!refused) {
+                refused = true;
+                locked = true;
+            }
+            super.write(name, value);
+        }
+
+        @Override
+        public Optional<String> read(String name) throws KeychainException {
+            return locked && name.equals(KeychainEntries.INDEX) ? Optional.empty() : super.read(name);
+        }
+    }
+
+    @Test
+    void aWriteRefusedAsLockedHasTheOwnerUnlockTheKeychain() throws SecretsProblem {
+        var lockable = new LockedForTheFirstItem();
+
+        keys(lockable).save(KEYS);
+
+        assertThat(lockable.prompts).hasValue(1);
+        assertThat(lockable.entries).containsEntry("forecast/open-meteo/api_key", "OM-SECRET-1");
+        assertThat(file().path()).doesNotExist();
+    }
+
+    @Test
+    void aBadNameIsRefusedBeforeTheOwnerIsAskedToUnlock() throws SecretsProblem {
+        var lockable = lockedWithTheKeys();
+        var before = Map.copyOf(lockable.entries);
+        var prompted = new AtomicInteger();
+        var bad = KeyChanges.entering(new Secrets(Map.of(OPEN_METEO, Map.of("api key", "x"))));
+
+        assertThatThrownBy(() -> keys(lockable).update(bad, prompted::incrementAndGet)).isInstanceOf(SecretsProblem.class);
+
+        assertThat(prompted).hasValue(0);
+        assertThat(lockable.prompts).hasValue(0);
+        assertThat(lockable.entries).isEqualTo(before);
+        assertThat(file().path()).doesNotExist();
+    }
+
+    @Test
+    void aFileWithABadNameIsNotMovedIntoTheKeychain() throws IOException {
+        Files.writeString(file().path(), "{\"open-meteo\": {\"api key\": \"OM-SECRET-1\"}}");
+
+        assertThatThrownBy(keys(keychain)::load).isInstanceOf(SecretsProblem.class)
+                .hasMessage("A setting name has characters that are not allowed");
+        assertThat(keychain.entries).isEmpty();
+        assertThat(file().path()).exists();
+    }
+
+    @Test
+    void anUpdateOverADamagedIndexKeepsOnlyWhatWasEntered() throws SecretsProblem {
+        keychain.entries.put("index", "not a list");
+
+        keys(keychain).update(NEW_OPEN_METEO_KEY, () -> { });
+
+        assertThat(file().path()).doesNotExist();
+        assertThat(keychain.entries).containsEntry("forecast/open-meteo/api_key", "OM-NEW");
+        assertThat(keys(keychain).load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"))));
+    }
+
+    /** Lists a key it cannot give, as an entry that went missing behind the index's back. */
+    private static final class UnreadableEntry extends MemoryKeychain {
+        @Override
+        public Optional<String> read(String name) throws KeychainException {
+            if (name.equals("forecast/forecast-solar/api_key")) {
+                throw new KeychainException(KeychainException.Kind.UNAVAILABLE, "did not answer");
+            }
+            return super.read(name);
+        }
+    }
+
+    @Test
+    void aSaveDoesNotReadTheKeysItReplaces() throws SecretsProblem {
+        var unreadable = new UnreadableEntry();
+        unreadable.entries.put("index", "[\"forecast/forecast-solar/api_key\"]");
+        var changed = new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW")));
+
+        keys(unreadable).save(changed);
+
+        assertThat(unreadable.entries).containsEntry("forecast/open-meteo/api_key", "OM-NEW");
+        assertThat(file().path()).doesNotExist();
+    }
+
+    @Test
+    void unlockingIsLoggedWithItsOutcome() throws SecretsProblem {
+        var lockable = lockedWithTheKeys();
+        try (var log = LogCapture.of(ApiKeys.class)) {
+            keys(lockable).save(KEYS);
+            lockable.locked = true;
+            lockable.answer = Optional.of(UnlockOutcome.DISMISSED);
+            keys(lockable).save(KEYS);
+            lockable.unlockFails = Optional.of(KeychainException.Kind.REFUSED);
+            assertThatThrownBy(() -> keys(lockable).save(KEYS)).isInstanceOf(SecretsProblem.class);
+
+            assertThat(log.lines()).containsExactly(
+                    "INFO the system keychain is locked: asking to unlock it to save the API keys",
+                    "INFO the system keychain was unlocked",
+                    "INFO API keys are kept in the system keychain",
+                    "INFO the system keychain is locked: asking to unlock it to save the API keys",
+                    "INFO the system keychain was not unlocked: the prompt was dismissed",
+                    "WARNING API keys are kept in " + file().path() + ", readable only by you: the system keychain "
+                            + "is locked, and was not unlocked when asked",
+                    "INFO the system keychain is locked: asking to unlock it to save the API keys",
+                    "WARNING the system keychain could not be unlocked: cannot unlock");
+        }
+    }
+
+    @Test
+    void theFileWithoutAKeychainIsTheOneItWasGiven() {
+        var file = file();
+        assertThat(new ApiKeys(new NoKeychain(), file).file()).isSameAs(file);
     }
 }

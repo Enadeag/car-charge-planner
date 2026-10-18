@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.engine.store;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
+import io.github.enadeag.carchargeplanner.LogCapture;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -159,5 +160,59 @@ class StoredFileTest {
         file().write("new");
         assertThat(folder.resolve("data.json.damaged-20261017-143000")).exists();
         assertThat(file().read()).isEqualTo(new Stored.Found<>("new"));
+    }
+
+    @Test
+    void aThirdFileKeptAsideInTheSameSecondGetsTheNextNumber() throws IOException {
+        for (var damage : new String[] {"first damage", "second damage", "third damage"}) {
+            Files.writeString(path(), damage);
+            file().write("new");
+        }
+
+        assertThat(folder.resolve("data.json.damaged-20261017-143000")).hasContent("first damage");
+        assertThat(folder.resolve("data.json.damaged-20261017-143000-2")).hasContent("second damage");
+        assertThat(folder.resolve("data.json.damaged-20261017-143000-3")).hasContent("third damage");
+    }
+
+    @Test
+    void whatTheParserSaysIsShownForAFileWithoutSecrets() throws IOException {
+        Files.writeString(path(), "{\"text\": oops}");
+
+        assertThat(file().read()).isInstanceOfSatisfying(Stored.Unusable.class,
+                unusable -> assertThat(unusable.detail()).startsWith("not valid JSON (line 1").contains(": ")
+                        .contains("oops"));
+    }
+
+    @Test
+    void aFileThatCannotBeUsedIsLoggedOnceAndSoIsKeepingItAside() throws IOException {
+        Files.writeString(path(), "{\"text\": 5}");
+        var file = file();
+        try (var log = LogCapture.of(StoredFile.class)) {
+            file.read();
+            file.read();
+            file.write("new");
+
+            assertThat(log.lines()).containsExactly(
+                    "WARNING " + path() + " cannot be used: text: must be a text",
+                    "WARNING " + path() + " could not be used (text: must be a text), so it is kept as "
+                            + folder.resolve("data.json.damaged-20261017-143000") + " before a new one is written");
+        }
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    void aFileInAFolderThatCannotBeEnteredIsUnreadable() throws IOException {
+        var locked = Files.createDirectory(folder.resolve("locked"));
+        Files.writeString(locked.resolve("data.json"), "{\"text\": \"hello\"}");
+        Files.setPosixFilePermissions(locked, PosixFilePermissions.fromString("---------"));
+        try {
+            assumeFalse(Files.isReadable(locked), "root enters any folder");
+            var file = new StoredFile<>(locked.resolve("data.json"), new TextFormat(), CLOCK);
+
+            assertThat(file.read()).isInstanceOfSatisfying(Stored.Unusable.class,
+                    unusable -> assertThat(unusable.reason()).isEqualTo(Stored.Reason.UNREADABLE));
+        } finally {
+            Files.setPosixFilePermissions(locked, PosixFilePermissions.fromString("rwx------"));
+        }
     }
 }
