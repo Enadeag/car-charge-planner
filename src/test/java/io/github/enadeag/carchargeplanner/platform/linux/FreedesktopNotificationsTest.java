@@ -22,6 +22,7 @@ import java.util.logging.Logger;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
 import org.freedesktop.dbus.connections.impl.DBusConnectionBuilder;
 import org.freedesktop.dbus.exceptions.DBusException;
+import org.freedesktop.dbus.interfaces.DBus;
 import org.freedesktop.dbus.types.UInt32;
 import org.freedesktop.dbus.types.Variant;
 import org.junit.jupiter.api.AfterEach;
@@ -33,8 +34,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 /**
  * The notifications on a private D-Bus session of their own, with this test as the desktop's notification server:
- * nothing appears on the developer's desktop. The cases of the Python version's tests/test_notifier.py and
- * tests/test_notification_actions.py.
+ * nothing appears on the developer's desktop.
  */
 @EnabledOnOs(OS.LINUX)
 class FreedesktopNotificationsTest {
@@ -164,6 +164,35 @@ class FreedesktopNotificationsTest {
         }
 
         assertThat(opensAfterAFinalClickOnALaterNotification()).isZero();
+    }
+
+    @Test
+    void aClickSignalFromAnotherProgramThanTheServerIsIgnored() throws Exception {
+        serve();
+        notifications.listen(opened::release);
+        var id = show();
+
+        var other = DBusConnectionBuilder.forAddress(address).withShared(false).build();
+        try {
+            other.sendMessage(new NotificationServer.ActionInvoked(NotificationServer.OBJECT_PATH, new UInt32(id), "default"));
+            // a call answered by the bus after the signal: the bus has passed the signal on before the final click
+            other.getRemoteObject("org.freedesktop.DBus", "/org/freedesktop/DBus", DBus.class).GetId();
+        } finally {
+            other.disconnect();
+        }
+
+        assertThat(opensAfterAFinalClickOnALaterNotification()).isZero();
+    }
+
+    @Test
+    void aServerThatStartsAfterTheAppIsHeard() throws Exception {
+        notifications.listen(opened::release);
+        serve();
+        var id = show();
+
+        click(id, "default");
+
+        assertThat(opened.tryAcquire(TIMEOUT_S, TimeUnit.SECONDS)).isTrue();
     }
 
     @Test
