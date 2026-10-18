@@ -73,18 +73,27 @@ jobs:
           distribution: temurin
           java-version: "25"
           cache: maven
-      - name: D-Bus and GNOME Keyring, for the tests on a private bus
+      - name: System programs for the tests (D-Bus, GNOME Keyring, desktop-file-validate)
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends dbus-daemon gnome-keyring
-      - name: Build and test
-        run: ./mvnw -B clean verify
+          sudo apt-get install -y --no-install-recommends dbus-daemon gnome-keyring desktop-file-utils
+      # CCP_REQUIRE_PLATFORM: a test whose system program is missing fails here, where it would be skipped elsewhere
+      - name: Build and test, with the coverage floors
+        env:
+          CCP_REQUIRE_PLATFORM: "1"
+        run: ./mvnw -B clean verify -Pcoverage
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: failure()
+        if: always()
         with:
           name: surefire-reports-linux
           path: target/surefire-reports/
-          retention-days: 14
+          retention-days: 7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: coverage-report
+          path: target/site/jacoco/
+          retention-days: 7
 
   windows:
     needs: changes
@@ -101,13 +110,15 @@ jobs:
           java-version: "25"
           cache: maven
       - name: Build and test
+        env:
+          CCP_REQUIRE_PLATFORM: "1"
         run: .\mvnw.cmd -B clean verify
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: failure()
+        if: always()
         with:
           name: surefire-reports-windows
           path: target/surefire-reports/
-          retention-days: 14
+          retention-days: 7
 
   macos:
     # Switched off until the maintainer turns it on again: the JavaFX tests cannot start on the macOS runner yet (#134).

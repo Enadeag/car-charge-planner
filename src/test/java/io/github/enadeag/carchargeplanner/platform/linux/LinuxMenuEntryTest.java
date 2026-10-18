@@ -1,7 +1,6 @@
 package io.github.enadeag.carchargeplanner.platform.linux;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assumptions.assumeThat;
 
 import io.github.enadeag.carchargeplanner.desktop.system.AppIcon;
 import java.io.IOException;
@@ -57,9 +56,9 @@ class LinuxMenuEntryTest {
 
     @Test
     void theEntryPassesDesktopFileValidate() throws Exception {
-        assumeThat(onPath("desktop-file-validate")).isTrue();
         menuEntry("/home/me/My apps/100%/car-charge-planner").install();
-        var process = new ProcessBuilder("desktop-file-validate", entry().toString()).redirectErrorStream(true).start();
+        var process = SystemPrograms.start(
+                new ProcessBuilder("desktop-file-validate", entry().toString()).redirectErrorStream(true));
         var output = new String(process.getInputStream().readAllBytes());
         assertThat(process.waitFor(30, TimeUnit.SECONDS)).isTrue();
         assertThat(output).isEmpty();
@@ -123,10 +122,5 @@ class LinuxMenuEntryTest {
         menuEntry(PROGRAM).install();
         LinuxMenuEntry.refreshCaches(data);
         assertThat(entry()).exists();
-    }
-
-    private static boolean onPath(String tool) {
-        return Stream.of(System.getenv().getOrDefault("PATH", "").split(":"))
-                .anyMatch(folder -> Files.isExecutable(Path.of(folder).resolve(tool)));
     }
 }

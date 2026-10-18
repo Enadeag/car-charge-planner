@@ -83,6 +83,9 @@ class StatusNotifierTrayTest {
 
     @AfterEach
     void stopTheBus() {
+        if (bus == null) {
+            return; // the test was skipped: there is no dbus-daemon
+        }
         tray.remove();
         panel.disconnect();
         bus.stop();

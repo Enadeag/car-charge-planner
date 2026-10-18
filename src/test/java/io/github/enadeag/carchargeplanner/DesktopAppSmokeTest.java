@@ -72,6 +72,9 @@ class DesktopAppSmokeTest {
 
     @AfterEach
     void stopEverything() throws IOException {
+        if (bus == null) {
+            return; // the test was skipped: there is no dbus-daemon
+        }
         started.forEach(Process::destroyForcibly);
         panel.disconnect();
         bus.stop();
