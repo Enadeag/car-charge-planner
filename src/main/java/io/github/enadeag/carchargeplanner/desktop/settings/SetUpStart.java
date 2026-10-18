@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.app.AppSettings;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.AllSettings;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
@@ -30,6 +31,15 @@ record SetUpStart(Optional<EngineConfig> config, Secrets keys, Optional<String> 
         var stored = storage.read();
         return new SetUpStart(stored.config(), stored.keys().keys(), stored.keys().problem(), stored.keyStorage(),
                 stored.app(), stored.startsAtLogin());
+    }
+
+    /**
+     * What is stored, to compare what is entered with.
+     *
+     * @return the config, the API keys, the app's own settings and start at login
+     */
+    AllSettings all() {
+        return new AllSettings(config, keys, app, startsAtLogin);
     }
 
     /**

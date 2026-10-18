@@ -1,5 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
+import io.github.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.TypicalMarks;
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
@@ -7,7 +9,6 @@ import io.github.enadeag.carchargeplanner.engine.config.House;
 import io.github.enadeag.carchargeplanner.engine.config.TypicalValues;
 import io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import io.github.enadeag.carchargeplanner.engine.setting.Setting;
-import java.util.HashSet;
 import java.util.Optional;
 
 /** The house's own use of power, with a typical value on request. */
@@ -24,12 +25,13 @@ final class HouseCard implements ConfigPart {
      * @param messages the texts, in the owner's language
      */
     HouseCard(Messages messages) {
-        baseload = new NumberField(new NumberField.Range(0, 20, 0.05, 2), "kW", messages);
+        baseload = new NumberField(new NumberRange(0, 20, 0.05, 2), "kW", messages);
         problems = new ProblemRows(messages);
         typical = new TypicalMarks(messages.text(TextKey.TYPICAL_TAG));
         var row = problems.add(Setting.HOUSE_BASELOAD,
                 FieldRow.of(messages, TextKey.FIELD_BASELOAD, TextKey.FIELD_BASELOAD_HINT, baseload));
-        typical.follow(Setting.HOUSE_BASELOAD, row, baseload);
+        typical.follow(Setting.HOUSE_BASELOAD, row::showTag);
+        baseload.onChange(() -> typical.edited(Setting.HOUSE_BASELOAD));
         card = new Card(messages.text(TextKey.CARD_HOUSE), messages.text(TextKey.CARD_HOUSE_HINT), row,
                 TypicalButton.line(this::useTypical, messages.text(TextKey.CARD_HOUSE), messages));
     }
@@ -57,12 +59,9 @@ final class HouseCard implements ConfigPart {
         }
         try {
             var house = new House(baseload.value());
-            var marked = new HashSet<>(config.typical().system());
-            marked.remove(Setting.HOUSE_BASELOAD);
-            marked.addAll(typical.marked());
             var system = config.system();
             return Optional.of(config.withSystem(system.withHouseAndCar(house, system.car()),
-                    new TypicalValues(marked, config.typical().panels())));
+                    new TypicalValues(typical.appliedTo(config.typical().system()), config.typical().panels())));
         } catch (InvalidSetting e) {
             problems.show(e);
             return Optional.empty();

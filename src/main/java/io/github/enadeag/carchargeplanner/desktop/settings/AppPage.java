@@ -149,15 +149,6 @@ final class AppPage implements Page {
     }
 
     /**
-     * Whether the owner changed the start at login box since it was loaded.
-     *
-     * @return true when the system has to be told
-     */
-    boolean startAtLoginChanged() {
-        return startAtLogin.isChanged();
-    }
-
-    /**
      * Says that the system could not change start at login.
      *
      * @param detail the system's error, as it gave it

@@ -1,6 +1,9 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.app.Units;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.Quantity;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.TypicalMarks;
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import io.github.enadeag.carchargeplanner.engine.config.Car;
@@ -8,7 +11,6 @@ import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import io.github.enadeag.carchargeplanner.engine.config.TypicalValues;
 import io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import io.github.enadeag.carchargeplanner.engine.setting.Setting;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,9 +20,6 @@ import java.util.Optional;
  * tagged in other units.
  */
 final class CarCard implements ConfigPart {
-
-    private static final List<Setting> OWN = List.of(Setting.CAR_BATTERY, Setting.CAR_CONSUMPTION,
-            Setting.CAR_DAILY_DISTANCE);
 
     private final Messages messages;
     private final NumberField battery;
@@ -37,7 +36,7 @@ final class CarCard implements ConfigPart {
      */
     CarCard(Messages messages) {
         this.messages = messages;
-        battery = new NumberField(new NumberField.Range(1, 200, 1, 1), "kWh", messages);
+        battery = new NumberField(new NumberRange(1, 200, 1, 1), "kWh", messages);
         consumption = new UnitField(Quantity.CONSUMPTION, messages);
         distance = new UnitField(Quantity.DISTANCE, messages);
         problems = new ProblemRows(messages);
@@ -90,12 +89,9 @@ final class CarCard implements ConfigPart {
         }
         try {
             var car = new Car(battery.value(), consumption.value(), distance.value());
-            var marked = new HashSet<>(config.typical().system());
-            marked.removeAll(OWN);
-            marked.addAll(typical.marked());
             var system = config.system();
             return Optional.of(config.withSystem(system.withHouseAndCar(system.house(), car),
-                    new TypicalValues(marked, config.typical().panels())));
+                    new TypicalValues(typical.appliedTo(config.typical().system()), config.typical().panels())));
         } catch (InvalidSetting e) {
             problems.show(e);
             return Optional.empty();
@@ -126,7 +122,8 @@ final class CarCard implements ConfigPart {
 
     private FieldRow row(Setting setting, TextKey name, TextKey hint, Input input) {
         var row = problems.add(setting, FieldRow.of(messages, name, hint, input));
-        typical.follow(setting, row, input);
+        typical.follow(setting, row::showTag);
+        input.onChange(() -> typical.edited(setting));
         return row;
     }
 }

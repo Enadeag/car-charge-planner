@@ -1,5 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
+import io.github.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.NumberText;
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -15,40 +17,11 @@ import javafx.util.StringConverter;
  */
 final class NumberField implements Input {
 
-    /**
-     * What the field allows and how it shows a value.
-     *
-     * @param min the lowest value
-     * @param max the highest value, at least {@code min}
-     * @param step how much the arrow keys and buttons change the value, more than 0
-     * @param decimals the decimals shown, 0 or more
-     */
-    record Range(double min, double max, double step, int decimals) {
-
-        /**
-         * Checks the values.
-         *
-         * @throws IllegalArgumentException when the maximum is below the minimum, the step is not more than 0 or the
-         *     decimals are negative
-         */
-        Range {
-            if (max < min) {
-                throw new IllegalArgumentException("max must be at least min");
-            }
-            if (step <= 0) {
-                throw new IllegalArgumentException("step must be more than 0");
-            }
-            if (decimals < 0) {
-                throw new IllegalArgumentException("decimals must not be negative");
-            }
-        }
-    }
-
     private final Spinner<Double> spinner = new Spinner<>();
     private final SpinnerValueFactory.DoubleSpinnerValueFactory values;
     private final HBox view;
     private final Label unit = new Label();
-    private Range range;
+    private NumberRange range;
     private double loaded;
 
     /**
@@ -58,23 +31,20 @@ final class NumberField implements Input {
      * @param unit the unit after the field, such as "kWh"; empty for none
      * @param messages writes and reads the numbers in the owner's language
      */
-    NumberField(Range range, String unit, Messages messages) {
+    NumberField(NumberRange range, String unit, Messages messages) {
         this.range = range;
         this.values = new SpinnerValueFactory.DoubleSpinnerValueFactory(range.min(), range.max(), range.min(),
                 range.step());
+        var text = new NumberText(messages);
         values.setConverter(new StringConverter<>() {
             @Override
             public String toString(Double value) {
-                return value == null ? "" : messages.number(value, NumberField.this.range.decimals());
+                return value == null ? "" : text.write(value, NumberField.this.range.decimals());
             }
 
             @Override
-            public Double fromString(String text) {
-                var current = values.getValue();
-                if (text.equals(toString(current))) {
-                    return current; // untouched: keep the exact value, not the rounded one shown
-                }
-                return messages.parse(text).stream().boxed().findFirst().orElse(current);
+            public Double fromString(String typed) {
+                return text.read(typed, values.getValue(), NumberField.this.range.decimals());
             }
         });
         spinner.setValueFactory(values);
@@ -117,7 +87,7 @@ final class NumberField implements Input {
      *
      * @param range the new range, step and decimals
      */
-    void setRange(Range range) {
+    void setRange(NumberRange range) {
         this.range = range;
         values.setMin(range.min());
         values.setMax(range.max());
@@ -132,15 +102,6 @@ final class NumberField implements Input {
     double value() {
         commitTyped();
         return values.getValue();
-    }
-
-    /**
-     * The value now, as a whole number.
-     *
-     * @return {@link #value()} rounded to the nearest whole number
-     */
-    int wholeValue() {
-        return (int) Math.round(value());
     }
 
     /**
@@ -179,8 +140,7 @@ final class NumberField implements Input {
      * @return the value in the range; the value shown before while the text is not a number
      */
     double typed() {
-        var typed = values.getConverter().fromString(spinner.getEditor().getText());
-        return Math.clamp(typed, values.getMin(), values.getMax());
+        return range.clamp(values.getConverter().fromString(spinner.getEditor().getText()));
     }
 
     @Override
