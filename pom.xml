@@ -298,6 +298,32 @@
           </execution>
         </executions>
       </plugin>
+      <!-- target/car-charge-planner.cdx.json, an SBOM of the libraries the app brings at run time, which the packaging
+           scripts complete with the runtime (tools/SbomRuntime.java). With project.build.outputTimestamp, which the
+           packaging scripts set to the commit's time, it is reproducible: no timestamp, a serial number from its
+           content. -->
+      <plugin>
+        <groupId>org.cyclonedx</groupId>
+        <artifactId>cyclonedx-maven-plugin</artifactId>
+        <version>2.9.3</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>makeBom</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <projectType>application</projectType>
+          <schemaVersion>1.6</schemaVersion>
+          <outputFormat>json</outputFormat>
+          <outputName>car-charge-planner.cdx</outputName>
+          <includeTestScope>false</includeTestScope>
+          <includeProvidedScope>false</includeProvidedScope>
+          <includeSystemScope>false</includeSystemScope>
+        </configuration>
+      </plugin>
       <!-- ./mvnw compile exec:exec runs the app from the build; -Dapp.args="..." passes it arguments -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>

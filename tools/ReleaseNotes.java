@@ -7,12 +7,14 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
- * Prints the release notes for a version: its CHANGELOG.md section plus how to install it.
+ * Prints the release notes for a version: its CHANGELOG.md section plus how to install and check it, and which Java
+ * runtime the downloads bring.
  *
  * <pre>java tools/ReleaseNotes.java 0.3.0 CHANGELOG.md &gt; notes.md</pre>
  *
- * <p>A single source file that the JDK runs as it is, without Maven: the release workflow needs only a JDK. Exits with
- * code 1 when the changelog has no section for the version, or an empty one, so a release cannot go out without notes.
+ * <p>A single source file that the JDK runs as it is, without Maven: the release workflow needs only a JDK. The runtime
+ * it names is the JDK that runs it, so the release workflow runs it on the Java version it packages. Exits with code 1
+ * when the changelog has no section for the version, or an empty one, so a release cannot go out without notes.
  */
 public final class ReleaseNotes {
 
@@ -23,6 +25,8 @@ public final class ReleaseNotes {
 
             - **Windows:** download `car-charge-planner-%1$s.exe` and `SHA256SUMS`. Check the download in PowerShell with `(Get-FileHash .\\car-charge-planner-%1$s.exe -Algorithm SHA256).Hash` against the line in `SHA256SUMS`. The installer is not code-signed yet, so Windows shows "Windows protected your PC": choose **More info**, then **Run anyway**.
             - **Linux:** download `car-charge-planner-%1$s-linux.tar.gz` and `SHA256SUMS`, check it with `sha256sum --ignore-missing -c SHA256SUMS`, unpack it and start `bin/car-charge-planner`; see the README.
+
+            Both bring their own Java runtime: %3$s. `car-charge-planner-%1$s-linux.cdx.json` and `car-charge-planner-%1$s-windows.cdx.json` list what each download holds (CycloneDX SBOM), and GitHub attests that every file was built here from tag `v%1$s`: check one with `gh attestation verify <file> -R Enadeag/car-charge-planner`.
 
             Full details: [CHANGELOG.md](%2$s/blob/v%1$s/CHANGELOG.md).
             """;
@@ -43,7 +47,8 @@ public final class ReleaseNotes {
             System.exit(1);
         }
         var out = new PrintStream(System.out, true, StandardCharsets.UTF_8);
-        out.print(body.get() + "\n\n" + INSTALLING.formatted(version, REPOSITORY));
+        out.print(body.get() + "\n\n" + INSTALLING.formatted(version, REPOSITORY,
+                "Java " + Runtime.version() + " (" + System.getProperty("java.vendor") + ")"));
     }
 
     /** The text under {@code ## [version]}, up to the next {@code ## [} heading or link definition, if not blank. */

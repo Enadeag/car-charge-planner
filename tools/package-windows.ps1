@@ -1,12 +1,19 @@
 # Builds the Java app for Windows: a per-user installer target\dist\car-charge-planner-<version>.exe, or with
-# -Type app-image only the program folder target\dist\car-charge-planner\. Needs a JDK 25 or newer with jlink and
-# jpackage, and curl.exe (part of Windows 10 and later); the installer also needs WiX 5 (see CONTRIBUTING.md).
+# -Type app-image only the program folder target\dist\car-charge-planner\, and its SBOM
+# target\dist\car-charge-planner-<version>-windows.cdx.json. Needs a JDK 25 or newer with jlink and jpackage, git, and
+# curl.exe (part of Windows 10 and later); the installer also needs WiX 5 (tools\install-wix.ps1).
 # Usage: powershell -ExecutionPolicy Bypass -File tools\package-windows.ps1 [-Type exe|app-image]
 param([ValidateSet("exe", "app-image")][string]$Type = "exe")
 $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
-cmd /c "mvnw.cmd -B -q clean package"
+# The jar and the SBOM take the commit's time, as on Linux.
+$epoch = $env:SOURCE_DATE_EPOCH
+if (-not $epoch) {
+  $epoch = git log -1 --format=%ct
+  if ($LASTEXITCODE) { exit 1 }
+}
+cmd /c "mvnw.cmd -B -q clean package -Dproject.build.outputTimestamp=$epoch"
 if ($LASTEXITCODE) { exit 1 }
 $version = (cmd /c "mvnw.cmd -B -q help:evaluate -Dexpression=project.version -DforceStdout") -replace "-SNAPSHOT", ""
 if ($LASTEXITCODE) { exit 1 }
@@ -55,5 +62,8 @@ jpackage --type $Type --dest target\dist `
   --runtime-image target\runtime --app-content target\legal `
   --icon src\packaging\windows\car-charge-planner.ico `
   --java-options "--enable-native-access=javafx.graphics,ALL-UNNAMED" @installer
+if ($LASTEXITCODE) { exit 1 }
+java -cp "target\lib\*" tools\SbomRuntime.java target\car-charge-planner.cdx.json target\runtime `
+  "target\dist\car-charge-planner-$version-windows.cdx.json"
 if ($LASTEXITCODE) { exit 1 }
 Get-ChildItem target\dist
