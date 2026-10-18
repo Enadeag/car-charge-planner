@@ -1,4 +1,4 @@
-package io.github.enadeag.carchargeplanner.desktop.settings;
+package io.github.enadeag.carchargeplanner.desktop.settings.form;
 
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -10,7 +10,7 @@ import java.util.Optional;
  * What a forecast provider says about itself, in the owner's language for the providers this version knows; a provider
  * the app does not have texts for keeps the engine's English.
  */
-final class ProviderTexts {
+public final class ProviderTexts {
 
     private final Messages messages;
 
@@ -19,7 +19,7 @@ final class ProviderTexts {
      *
      * @param messages the texts, in the owner's language
      */
-    ProviderTexts(Messages messages) {
+    public ProviderTexts(Messages messages) {
         this.messages = messages;
     }
 
@@ -29,7 +29,7 @@ final class ProviderTexts {
      * @param info what the provider tells about itself
      * @return a few sentences about the service
      */
-    String description(ProviderInfo info) {
+    public String description(ProviderInfo info) {
         return text(switch (info.id().value()) {
             case "open-meteo" -> TextKey.PROVIDER_OPEN_METEO;
             case "forecast-solar" -> TextKey.PROVIDER_FORECAST_SOLAR;
@@ -43,7 +43,7 @@ final class ProviderTexts {
      * @param info what the provider tells about itself
      * @return in plain words, what the service is sent
      */
-    String sends(ProviderInfo info) {
+    public String sends(ProviderInfo info) {
         return text(switch (info.id().value()) {
             case "open-meteo" -> TextKey.PROVIDER_OPEN_METEO_SENDS;
             case "forecast-solar" -> TextKey.PROVIDER_FORECAST_SOLAR_SENDS;
@@ -57,7 +57,7 @@ final class ProviderTexts {
      * @param setting the setting the provider asks for
      * @return such as "API key"
      */
-    String label(SettingSpec setting) {
+    public String label(SettingSpec setting) {
         return text(switch (setting.key()) {
             case "api_key" -> TextKey.PROVIDER_API_KEY;
             case "base_url" -> TextKey.PROVIDER_BASE_URL;
@@ -72,7 +72,7 @@ final class ProviderTexts {
      * @param setting the setting
      * @return what to fill in
      */
-    String hint(ProviderInfo info, SettingSpec setting) {
+    public String hint(ProviderInfo info, SettingSpec setting) {
         return text(switch (info.id().value() + "/" + setting.key()) {
             case "open-meteo/api_key" -> TextKey.PROVIDER_OPEN_METEO_API_KEY_HINT;
             case "open-meteo/base_url" -> TextKey.PROVIDER_OPEN_METEO_BASE_URL_HINT;

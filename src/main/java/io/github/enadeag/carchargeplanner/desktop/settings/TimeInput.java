@@ -1,20 +1,13 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
+import io.github.enadeag.carchargeplanner.desktop.settings.form.TimeText;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.time.format.ResolverStyle;
-import java.util.Locale;
 import java.util.Objects;
-import java.util.Optional;
 import javafx.scene.Node;
 import javafx.scene.control.TextField;
 
-/** A time of day as hours and minutes, such as 07:30. Both of the app's languages write it on a 24-hour clock. */
+/** A time of day as hours and minutes, such as 07:30, written and read by {@link TimeText}. */
 final class TimeInput implements Input {
-
-    private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT)
-            .withResolverStyle(ResolverStyle.STRICT);
 
     private final TextField field = new TextField();
     private LocalTime loaded = LocalTime.MIDNIGHT;
@@ -33,20 +26,16 @@ final class TimeInput implements Input {
      */
     void load(LocalTime time) {
         loaded = time;
-        field.setText(CLOCK.format(time));
+        field.setText(TimeText.write(time));
     }
 
     /**
      * The time as typed.
      *
-     * @return the time, or empty when the text is not a time such as 07:30
+     * @return what the field holds, such as "07:30"; not necessarily a time
      */
-    Optional<LocalTime> value() {
-        try {
-            return Optional.of(LocalTime.parse(field.getText().strip(), CLOCK));
-        } catch (DateTimeParseException e) {
-            return Optional.empty();
-        }
+    String text() {
+        return field.getText();
     }
 
     @Override
@@ -61,7 +50,7 @@ final class TimeInput implements Input {
 
     @Override
     public boolean isChanged() {
-        return !Objects.equals(value().orElse(null), loaded);
+        return !Objects.equals(TimeText.read(text()).orElse(null), loaded);
     }
 
     @Override

@@ -4,6 +4,7 @@ import io.github.enadeag.carchargeplanner.desktop.app.AppSettings;
 import io.github.enadeag.carchargeplanner.desktop.app.Appearance;
 import io.github.enadeag.carchargeplanner.desktop.app.DisplayMode;
 import io.github.enadeag.carchargeplanner.desktop.app.Units;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
 import io.github.enadeag.carchargeplanner.desktop.text.Language;
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -51,10 +52,11 @@ final class AppPage implements Page {
     AppPage(Messages messages, TextKey displayHint) {
         this.messages = messages;
         this.view = new PageView(messages.text(Category.APP.title()));
-        mode = new ChoiceField<>(List.of(DisplayMode.values()), this::modeName);
-        language = new ChoiceField<>(languages(), this::languageName);
-        appearance = new ChoiceField<>(List.of(Appearance.values()), this::appearanceName);
-        units = new ChoiceField<>(List.of(Units.values()), this::unitsName);
+        var names = new ChoiceNames(messages);
+        mode = new ChoiceField<>(List.of(DisplayMode.values()), names::mode);
+        language = new ChoiceField<>(languages(), names::language);
+        appearance = new ChoiceField<>(List.of(Appearance.values()), names::appearance);
+        units = new ChoiceField<>(List.of(Units.values()), names::units);
         startAtLogin = new SwitchField(messages.text(TextKey.FIELD_START_AT_LOGIN));
         startAtLoginRow = new FieldRow("", "", startAtLogin);
         cards = new Card[] {
@@ -182,33 +184,5 @@ final class AppPage implements Page {
         choices.add(Optional.empty());
         Stream.of(Language.values()).map(Optional::of).forEach(choices::add);
         return choices;
-    }
-
-    /** A language by its own name, such as "Nederlands", so that the owner finds it whatever the app speaks now. */
-    private String languageName(Optional<Language> choice) {
-        return choice.map(Language::autonym).orElseGet(() -> messages.text(TextKey.LANGUAGE_SYSTEM));
-    }
-
-    private String appearanceName(Appearance choice) {
-        return messages.text(switch (choice) {
-            case SYSTEM -> TextKey.APPEARANCE_SYSTEM;
-            case LIGHT -> TextKey.APPEARANCE_LIGHT;
-            case DARK -> TextKey.APPEARANCE_DARK;
-        });
-    }
-
-    private String modeName(DisplayMode choice) {
-        return messages.text(switch (choice) {
-            case AUTOMATIC -> TextKey.MODE_AUTOMATIC;
-            case TRAY -> TextKey.MODE_TRAY;
-            case WINDOW -> TextKey.MODE_WINDOW;
-        });
-    }
-
-    private String unitsName(Units choice) {
-        return messages.text(switch (choice) {
-            case METRIC -> TextKey.UNITS_METRIC;
-            case IMPERIAL -> TextKey.UNITS_IMPERIAL;
-        });
     }
 }

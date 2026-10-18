@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.settings.form.ChargerEntry;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
 import io.github.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import io.github.enadeag.carchargeplanner.desktop.settings.form.TypicalMarks;
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
@@ -37,8 +38,7 @@ final class ChargerPage implements ConfigPage {
     ChargerPage(Messages messages) {
         this.messages = messages;
         this.view = new PageView(messages.text(Category.CHARGER.title()));
-        phases = new ChoiceField<>(List.of(Phases.values()),
-                choice -> messages.text(choice == Phases.ONE ? TextKey.PHASES_ONE : TextKey.PHASES_THREE));
+        phases = new ChoiceField<>(List.of(Phases.values()), new ChoiceNames(messages)::phases);
         var amps = new NumberRange(1, 80, 1, 0);
         minAmps = new NumberField(amps, "A", messages);
         maxAmps = new NumberField(amps, "A", messages);

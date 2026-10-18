@@ -108,7 +108,7 @@ A change comes with a test that fails without it.
 | The same, while the repository is private only for what touches Windows (see [Continuous integration](#continuous-integration)) | Windows CI (`ci.yml`) | `mvnw.cmd -B clean verify`: every test, the Windows-only ones included. |
 | A change to `pom.xml`, the test set-up or `platform.windows`, before the pull request | Windows over ssh, by the maintainer | `mvnw.cmd -B clean verify`. Without a logon session the Credential Manager test only checks that this counts as no keychain. |
 | A pull request into `main` that touches the engine or its tests | `mutation.yml` | PIT on the engine; it fails when fewer than 94 % of the mutants are killed. |
-| Weekly (Monday night) and by hand | `mutation.yml` | PIT on the engine and on the desktop's logic without JavaFX (threshold 84 %), each with its HTML report for 14 days, and the whole build with the test classes in a fresh random order. |
+| Weekly (Monday night) and by hand | `mutation.yml` | PIT on the engine and on the desktop's logic without JavaFX (threshold 89 %), each with its HTML report for 14 days, and the whole build with the test classes in a fresh random order. |
 | Before each release, by hand | The maintainer's machine and real desktops | `./mvnw test -Plive` and the checklist below. |
 | Not yet | macOS | The CI job is off until the JavaFX tests run on the macOS runner (#134); a person checks a release on a Mac (#29). |
 
