@@ -2,7 +2,9 @@ package io.github.enadeag.carchargeplanner.engine.notify;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.github.enadeag.carchargeplanner.LogCapture;
 import io.github.enadeag.carchargeplanner.engine.plan.Window;
+import io.github.enadeag.carchargeplanner.engine.store.StoredFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -55,5 +57,17 @@ class AnnouncedWindowsTest {
         Files.writeString(path(), content);
 
         assertThat(new AnnouncedWindows(path()).load()).isEmpty();
+    }
+
+    @Test
+    void aDamagedWindowIsNamedByItsPlaceInTheFile() throws IOException {
+        Files.createDirectories(path().getParent());
+        Files.writeString(path(), "[{\"start\":\"2026-07-03T10:00:00Z\",\"end\":\"2026-07-03T12:00:00Z\",\"amps\":16,"
+                + "\"powerKw\":3.68,\"solarKwh\":6.9,\"importKwh\":0.46}, {\"start\":\"2026-07-03T13:00:00Z\"}]");
+        try (var log = LogCapture.of(StoredFile.class)) {
+            assertThat(new AnnouncedWindows(path()).load()).isEmpty();
+
+            assertThat(log.lines()).containsExactly("WARNING " + path() + " cannot be used: window 2 is not a whole window");
+        }
     }
 }

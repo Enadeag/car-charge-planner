@@ -343,7 +343,8 @@ class ForecastServiceTest {
             logger.removeHandler(capture);
             logger.setUseParentHandlers(true);
         }
-        assertThat(logged).isNotEmpty().allMatch(line -> line.contains("IllegalStateException") && !line.contains(SECRET));
+        assertThat(logged).containsExactly("forecast provider main failed unexpectedly (IllegalStateException)",
+                "forecast provider main failed unexpectedly (IllegalStateException)");
     }
 
     @Test
@@ -467,7 +468,7 @@ class ForecastServiceTest {
     @Test
     void anUnwritableCacheFolderDoesNotBreakPlanning() throws Exception {
         Files.writeString(cacheFolder(), "a file where the folder should be");
-        assertThat(get(T0).steps()).isNotEmpty(); // the fetch worked; nothing could be saved
+        assertThat(get(T0).steps()).isEqualTo(SunnyDays.day(DAY, 3.0)); // the fetch worked; nothing could be saved
     }
 
     @Test
@@ -621,5 +622,59 @@ class ForecastServiceTest {
         restart();
         assertThat(service.get(two, selection, later(10), false).source().freshness()).isEqualTo(Freshness.CACHED);
         assertThat(main.callCount()).isEqualTo(1);
+    }
+
+    @Test
+    void exactlyAtTheMinimumRefreshItIsAskedAgain() throws ForecastUnavailable {
+        get(T0);
+        assertThat(get(later(60)).source().freshness()).isEqualTo(Freshness.FRESH);
+        assertThat(main.callCount()).isEqualTo(2);
+    }
+
+    @Test
+    void aForecastExactlyAsOldAsItIsUsefulIsStillUsedWhenTheProviderFails() throws ForecastUnavailable {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), error(new Unavailable("no network")));
+        get(T0);
+
+        var result = get(later(6 * 60));
+
+        assertThat(result.source()).extracting(ForecastSource::freshness, ForecastSource::providerRole)
+                .containsExactly(Freshness.STALE, ProviderRole.PRIMARY);
+        assertThat(backup.callCount()).isZero();
+    }
+
+    @Test
+    void whileAFailedProviderWaitsItsLastGoodForecastIsUsed() throws ForecastUnavailable {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), error(new Unavailable("no network")));
+        get(T0);
+        get(later(120));
+
+        var result = get(later(121));
+
+        assertThat(result.source()).extracting(ForecastSource::freshness, ForecastSource::providerRole, ForecastSource::fetchedAt)
+                .containsExactly(Freshness.STALE, ProviderRole.PRIMARY, T0);
+        assertThat(result.steps()).isEqualTo(SunnyDays.day(DAY, 3.0));
+        assertThat(main.callCount()).isEqualTo(2);
+    }
+
+    @Test
+    void aProviderThatFailsFromTheStartIsLoggedOnce() {
+        withoutFallback();
+        main.script(error(new Unavailable("down")));
+        try (var log = LogCapture.of(ProviderHealth.class)) {
+            assertThatThrownBy(() -> get(T0)).isInstanceOf(ForecastUnavailable.class);
+            assertThatThrownBy(() -> get(later(120))).isInstanceOf(ForecastUnavailable.class);
+
+            assertThat(main.callCount()).isEqualTo(2);
+            assertThat(log.lines()).containsExactly("WARNING Main gives no forecast: down");
+        }
+    }
+
+    @Test
+    void thePlainSettingsArePartOfTheCacheKeyInNameOrder() {
+        var key = new ForecastCache(cacheFolder()).key(SYSTEM, Map.of("b", "2", "a", "1"));
+        assertThat(key.path("settings").propertyNames()).containsExactly("a", "b");
+        assertThat(key.path("settings").path("a").stringValue()).isEqualTo("1");
+        assertThat(key.path("settings").path("b").stringValue()).isEqualTo("2");
     }
 }

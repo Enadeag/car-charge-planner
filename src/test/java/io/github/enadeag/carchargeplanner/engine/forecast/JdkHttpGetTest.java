@@ -46,6 +46,11 @@ class JdkHttpGetTest {
             answer(exchange, 429, "slow down".getBytes(StandardCharsets.UTF_8));
         });
         server.createContext("/exactly-the-limit", exchange -> answer(exchange, 200, new byte[(int) SMALL_LIMIT.bytes()]));
+        server.createContext("/one-over", exchange -> {
+            exchange.sendResponseHeaders(200, 0); // chunked: the length is not known before
+            exchange.getResponseBody().write(new byte[(int) SMALL_LIMIT.bytes() + 1]);
+            exchange.close();
+        });
         server.createContext("/endless", exchange -> {
             exchange.sendResponseHeaders(200, 0); // chunked, with no end
             stream(exchange, 64 * 1024, Duration.ZERO);
@@ -144,5 +149,10 @@ class JdkHttpGetTest {
         assertThat(error).isInstanceOf(HttpTimeoutException.class);
         assertThat(sent.get()).as("the body had started").isPositive().isLessThan(SMALL_LIMIT.bytes());
         assertThat(took).isGreaterThanOrEqualTo(SHORT_TIMEOUT).isLessThan(SHORT_TIMEOUT.plusSeconds(2));
+    }
+
+    @Test
+    void aBodyOfUnknownLengthOneByteOverTheLimitIsRefused() {
+        assertThat(catchThrowable(() -> get("/one-over", Duration.ofSeconds(5)))).isInstanceOf(HttpGet.TooLarge.class);
     }
 }

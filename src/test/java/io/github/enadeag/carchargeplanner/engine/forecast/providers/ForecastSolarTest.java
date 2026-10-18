@@ -10,8 +10,8 @@ import static org.assertj.core.api.Assertions.within;
 import io.github.enadeag.carchargeplanner.engine.config.Coordinates;
 import io.github.enadeag.carchargeplanner.engine.config.PanelArray;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
-import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet.Reply;
+import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderCase;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderConformance;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderError;
@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -320,5 +321,25 @@ class ForecastSolarTest extends ProviderConformance {
                 () -> new ForecastSolar(http).fetch(TWO_ARRAYS, Map.of(), NOW));
         assertThat(error.retryAfter()).contains(Duration.ofMinutes(27).plusSeconds(8));
         assertThat(asked).hasSize(2);
+    }
+
+    @Test
+    void aProblemWithoutATextIsNamedByItsType() {
+        assertThatThrownBy(() -> fetch("{\"result\": {}, \"message\": {\"code\": 1, \"type\": \"maintenance\"}}",
+                EXAMPLE_SYSTEM)).isInstanceOf(ProviderError.BadResponse.class)
+                .hasMessage("Forecast.Solar reports a problem: maintenance");
+    }
+
+    @Test
+    void theHoursMayComeInAnyOrder() throws ProviderError {
+        var mapper = new JsonMapper();
+        var root = (ObjectNode) mapper.readTree(RECORDED);
+        var names = new ArrayList<>(root.path("result").propertyNames());
+        Collections.reverse(names);
+        var reversed = mapper.createObjectNode();
+        names.forEach(name -> reversed.set(name, root.path("result").path(name)));
+        root.set("result", reversed);
+
+        assertThat(fetch(root.toString(), EXAMPLE_SYSTEM)).isEqualTo(fetch(RECORDED, EXAMPLE_SYSTEM));
     }
 }

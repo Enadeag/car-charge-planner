@@ -225,4 +225,11 @@ class OpenMeteoTest extends ProviderConformance {
                 .containsExactly(tuple("base_url", false),
                         tuple("api_key", true));
     }
+
+    @Test
+    void anErrorReportedInAGoodAnswerKeepsItsReason() {
+        assertThatThrownBy(() -> fetch("{\"error\": true, \"reason\": \"Tilt must be 0 to 90\"}", Map.of(), EXAMPLE_SYSTEM))
+                .isInstanceOf(ProviderError.BadResponse.class)
+                .hasMessageStartingWith("Open-Meteo reports an error; ").hasMessageContaining("Tilt must be 0 to 90");
+    }
 }

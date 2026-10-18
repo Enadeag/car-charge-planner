@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 /** When the owner is told about a window; the cases of the Python version's tests/test_notifications.py. */
 class AnnouncerTest {
@@ -211,4 +213,40 @@ class AnnouncerTest {
         }
     }
 
+    @ParameterizedTest
+    @CsvSource({"0, true", "-1, false"})
+    void aForecastExactlyAsOldAsAllowedIsStillAnnouncedOn(long secondsLess, boolean announced) {
+        var now = at(DAY, 9, 50);
+        var fetchedAt = now.minus(Announcer.MAX_FORECAST_AGE).minusSeconds(-secondsLess);
+
+        announcer().announceDue(dayWith(window(10, 15)), Optional.empty(), forecast(fetchedAt, Freshness.CACHED), now,
+                config(15));
+
+        assertThat(told).hasSize(announced ? 1 : 0);
+    }
+
+    @Test
+    void theWindowsAnnouncedEarlierAreKeptBesideTheNewOne() {
+        var announcer = announcer();
+        check(announcer, dayWith(window(10, 11), window(13, 15)), at(DAY, 9, 50), 15);
+        check(announcer, dayWith(window(10, 11), window(13, 15)), at(DAY, 12, 50), 15);
+
+        assertThat(announcer.announced()).containsExactly(window(10, 11), window(13, 15));
+        assertThat(announcer().announced()).containsExactly(window(10, 11), window(13, 15));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0, false", "1, true"})
+    void anAnnouncedWindowIsKeptUntilItEndedADayBeforeTheNextAnnouncement(long secondsLater, boolean kept) {
+        var announcer = announcer();
+        var first = window(10, 11);
+        check(announcer, dayWith(first), at(DAY, 9, 50), 15);
+        var tomorrow = DAY.plusDays(1);
+        var next = new Window(at(tomorrow, 11, 10), at(tomorrow, 12, 0), 7, 1.6, 1.2, 0.1);
+        var now = first.end().plus(Announcer.KEEP_AFTER_END).minusSeconds(secondsLater);
+
+        check(announcer, List.of(day(tomorrow, next)), now, 15);
+
+        assertThat(announcer.announced()).isEqualTo(kept ? List.of(first, next) : List.of(next));
+    }
 }

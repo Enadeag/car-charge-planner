@@ -23,6 +23,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /**
@@ -282,5 +283,12 @@ public abstract class ProviderConformance {
         assertThat(error).isInstanceOf(kind);
         assertThat(made.http().unexpected).isEmpty();
         return (ProviderError) error;
+    }
+
+    @ParameterizedTest
+    @CsvSource({"500, true", "499, false"})
+    void aStatusFrom500OnIsTheServersProblemAndBelowItARefusal(int status, boolean serverProblem) {
+        fails(List.of(Route.answer("", new HttpGet.Reply(status, ""))),
+                serverProblem ? ProviderError.Unavailable.class : ProviderError.BadResponse.class);
     }
 }

@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -111,5 +112,49 @@ class AwayFileTest {
 
         assertThat(StoredJson.parse(Files.readString(path)).path("version").intValue()).isEqualTo(1);
         assertThat(new AwayFile(path).periods()).containsExactly(stored, added);
+    }
+
+    @Test
+    void addingGivesThePeriodsInOrderOfTheirStart() throws IOException {
+        var later = AwayPeriod.allDay(LocalDate.of(2026, 7, 5), TZ);
+        var sooner = AwayPeriod.allDay(LocalDate.of(2026, 7, 4), TZ);
+        file().add(later, NOW);
+
+        assertThat(file().add(sooner, NOW)).containsExactly(sooner, later);
+    }
+
+    @Test
+    void periodsWrittenOutOfOrderAreReadInOrderOfTheirStart() throws IOException {
+        var path = Files.writeString(folder.resolve("away.json"), """
+                {"periods": [{"start": "2026-07-05T06:00:00Z", "end": "2026-07-05T08:00:00Z"},
+                  {"start": "2026-07-04T06:00:00Z", "end": "2026-07-04T08:00:00Z"}]}
+                """);
+
+        assertThat(new AwayFile(path).periods()).containsExactly(
+                new AwayPeriod(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z")),
+                new AwayPeriod(Instant.parse("2026-07-05T06:00:00Z"), Instant.parse("2026-07-05T08:00:00Z")));
+    }
+
+    @Test
+    void removingGivesThePeriodsThatAreLeftAndAnUnknownOneChangesNothing() throws IOException {
+        var first = AwayPeriod.allDay(LocalDate.of(2026, 7, 4), TZ);
+        var second = AwayPeriod.allDay(LocalDate.of(2026, 7, 5), TZ);
+        file().add(first, NOW);
+        file().add(second, NOW);
+
+        assertThat(file().remove(first)).containsExactly(second);
+        assertThat(file().remove(first)).containsExactly(second);
+        assertThat(file().periods()).containsExactly(second);
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = {-1, 0})
+    void aPeriodIsKeptUntilItEndedADayAgo(long secondsLater) throws IOException {
+        var period = AwayPeriod.on(DAY.minusDays(1), LocalTime.of(9, 0), LocalTime.of(17, 0), TZ);
+        file().add(period, NOW);
+        var now = period.end().plus(AwayFile.KEEP_AFTER_END).plusSeconds(secondsLater);
+        var next = AwayPeriod.allDay(DAY.plusDays(1), TZ);
+
+        assertThat(file().add(next, now)).isEqualTo(secondsLater < 0 ? List.of(period, next) : List.of(next));
     }
 }
