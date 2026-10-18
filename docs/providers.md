@@ -271,7 +271,8 @@ and the recorded answer the test replays, `example_solar.json` beside the other 
    easily provoke, a daylight saving day).
 6. **The test class**: `<YourService>Test` extends `ProviderConformance` (below), then tests what is particular to
    your service: the request it builds, each error, the time-zone and daylight saving handling, that a key never
-   shows up in an error message.
+   shows up in an error message. When its free plan needs no key, add it to `LiveProvidersTest` as well, which asks
+   the real services before each release (CONTRIBUTING.md, What is tested where).
 7. **The documents**: add your provider's "what is sent", terms link, free-plan limits and whether commercial use is
    allowed to the README's "Data and privacy" section.
 

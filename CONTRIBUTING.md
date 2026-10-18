@@ -70,22 +70,26 @@ API keys are kept (`ApiKeys`), a stored file that cannot be used or is set aside
 touch the network, your keychain or your desktop:
 
 - the providers replay recorded answers (`src/test/resources/.../engine/forecast/providers/`);
-- the Linux keychain test runs a throwaway GNOME Keyring on a private D-Bus (it is skipped without `dbus-daemon` and
-  `gnome-keyring-daemon`); it has no prompter there, so the unlock prompt's outcomes are tested against a fake Secret
+- the Linux keychain test runs a throwaway GNOME Keyring on a private D-Bus; it has no prompter there, so the unlock prompt's outcomes are tested against a fake Secret
   Service on a private D-Bus, and the notification tests a fake notification server on a private D-Bus that cannot
   start a real one;
 - the Windows keychain test uses an entry of its own that it removes again (over ssh, where Windows has no logon
   session for the Credential Manager, it checks only that this counts as no keychain);
-- `DesktopAppSmokeTest` (Linux, skipped without `dbus-daemon`) starts the app in a JVM of its own with the example
+- `DesktopAppSmokeTest` (Linux) starts the app in a JVM of its own with the example
   config, on a private D-Bus with a fake tray host, headless JavaFX, private XDG folders and a proxy that refuses
   every connection, waits for the tray icon, sends `quit` and checks that both end cleanly;
 - no test may put a window or a tray icon on the developer's desktop: the JavaFX tests run on JavaFX's headless
   platform, and AWT runs with `java.awt.headless`.
 
+The Linux tests that need a program of the system (`dbus-daemon`, `gnome-keyring-daemon`, `desktop-file-validate`)
+start it through `SystemPrograms`, which skips the test when the program is not installed. With
+`CCP_REQUIRE_PLATFORM=1`, as in CI, such a test fails instead, so a missing package cannot hide as a skip. On Debian
+and Ubuntu the packages are `dbus-daemon`, `gnome-keyring` and `desktop-file-utils`.
+
 All JavaFX tests share one headless platform in one JVM, so a test class that uses it is marked `@FxTest` (`Fx`
 refuses to run without it): each test then starts without a window, and fails when the JavaFX thread threw an
 exception that nothing caught. Its allow-list takes only OpenJFX bugs, each with a link. The test classes run in
-alphabetical order; `-Dsurefire.runOrder=random` shows whether a test depends on the ones before it.
+alphabetical order; [What is tested where](#what-is-tested-where) says how to run them in a random one.
 
 A test that only makes sense on one system says so with JUnit's `@EnabledOnOs`. Tests without one must pass on every
 system, so they use the location classes and not hard-coded folders. `ArchitectureTest` keeps the packages apart:
@@ -93,6 +97,75 @@ the engine knows nothing of the desktop, only the platform packages know their s
 `desktop.system` of the desktop.
 
 A change comes with a test that fails without it.
+
+## What is tested where
+
+| When | Where | What |
+| --- | --- | --- |
+| Every pull request into `main` and every push to `main` | Linux CI (`ci.yml`) | `./mvnw -B clean verify -Pcoverage` with `CCP_REQUIRE_PLATFORM=1`: every test, the private-bus tests included, then the coverage floors below; the test and coverage reports are kept 7 days. |
+| The same, while the repository is private only for what touches Windows (see [Continuous integration](#continuous-integration)) | Windows CI (`ci.yml`) | `mvnw.cmd -B clean verify`: every test, the Windows-only ones included. |
+| A change to `pom.xml`, the test set-up or `platform.windows`, before the pull request | Windows over ssh, by the maintainer | `mvnw.cmd -B clean verify`. Without a logon session the Credential Manager test only checks that this counts as no keychain. |
+| A pull request into `main` that touches the engine or its tests | `mutation.yml` | PIT on the engine; it fails when fewer than 94 % of the mutants are killed. |
+| Weekly (Monday night) and by hand | `mutation.yml` | PIT on the engine and on the desktop's logic without JavaFX (threshold 84 %), each with its HTML report for 14 days, and the whole build with the test classes in a fresh random order. |
+| Before each release, by hand | The maintainer's machine and real desktops | `./mvnw test -Plive` and the checklist below. |
+| Not yet | macOS | The CI job is off until the JavaFX tests run on the macOS runner (#134); a person checks a release on a Mac (#29). |
+
+**Coverage.** `./mvnw verify -Pcoverage` (Linux only) writes JaCoCo's report to `target/site/jacoco/` and fails when a
+part's share of covered lines or branches drops below its floor:
+
+| Part | Lines | Branches |
+| --- | --- | --- |
+| `engine` | 96 % | 90 % |
+| `desktop` | 95 % | 82 % |
+| `instance` | 88 % | 74 % |
+| `platform.linux` | 86 % | 75 % |
+
+The root package, which the composition root `DesktopApp` and `Main` are in, is not checked: `DesktopAppSmokeTest`
+runs them in a JVM of their own, which JaCoCo does not see. `platform.windows` is not checked either, because its
+tests run on Windows only. The floors are a point or two below what was measured when they were set; raise them when
+the tests grow, rather than writing tests for the number.
+
+**Mutation testing.** PIT changes the code in small ways (a `<` for a `<=`, a dropped call) and checks that a test
+fails for each change. It runs from the `pit` profile, two test JVMs at a time (`-Dpit.threads=4` for more):
+
+```bash
+./mvnw -Ppit test-compile pitest:mutationCoverage@engine    # report: target/pit-reports/engine/index.html
+./mvnw -Ppit test-compile pitest:mutationCoverage@desktop   # report: target/pit-reports/desktop/index.html
+```
+
+The desktop run covers what the tests without JavaFX test: the mappers to the dashboard's models, the chart and popup
+geometry, the app settings, the tray icon's drawing and the texts. The `@FxTest` classes carry the tag `fx` and are
+left out, because PIT does not run the JavaFX platform. A mutant that survives is a missing test or code that does
+nothing; look at it before you raise or lower a threshold.
+
+**Random order.** The test classes run in alphabetical order. `./mvnw verify -Dsurefire.runOrder=random` runs them in
+a fresh order and prints its seed; `-Dsurefire.runOrder.random.seed=<seed>` repeats that order.
+
+**Live providers.** The tests tagged `live` ask the real forecast services, on their free public plans, whether the
+answers still read as the recorded ones do: a forecast into tomorrow of a sensible size, and a place search. They are
+left out of every build; `./mvnw test -Plive` runs only them. Forecast.Solar's public plan allows 12 requests an
+hour.
+
+**On Windows, the secrets file.** Where the keychain cannot be used, the API keys are kept in `secrets.json`. On Linux
+the tests check that it is readable by its owner only; on Windows it relies on the access rights of the user's own
+`%APPDATA%`, which no test checks.
+
+### Before a release
+
+On a real desktop, with the packaged app (see [Packaging](#packaging)):
+
+- [ ] `./mvnw test -Plive` passes.
+- [ ] The tray icon shows and reads well on KDE Plasma, GNOME and Windows 11, each in light and dark.
+- [ ] Clicking a notification opens the dashboard.
+- [ ] Keychain: in a desktop session the API key is kept in the keychain; without one (on Linux, no Secret Service)
+      it falls back to `secrets.json` (the log says where the keys are kept).
+- [ ] Start at login: switch it on, log out and in again, and the app starts; switch it off, and it does not.
+- [ ] Install, start, quit and uninstall: the Linux tar.gz with `install-launcher` and `uninstall-launcher`, and the
+      Windows installer.
+- [ ] The dashboard, set-up and Settings read well with Narrator on Windows and Orca on Linux.
+- [ ] At 150 % and 200 % scaling nothing is cut off.
+- [ ] Switching the system between light and dark while the app runs switches the app.
+- [ ] A second start shows the running app's dashboard and ends.
 
 ## Dependencies
 
@@ -146,7 +219,8 @@ The app icon's drawings are in `src/packaging/icons/`: `car-charge-planner.svg` 
 The workflows are in `.github/workflows/`:
 
 - `ci.yml` runs `./mvnw -B clean verify` for every pull request into `main` and every push to `main`, on Linux (with
-  `dbus-daemon` and GNOME Keyring, so the private-bus tests run) and on Windows. A change to documentation only
+  `dbus-daemon`, GNOME Keyring and `desktop-file-validate`, so the private-bus tests run, with `CCP_REQUIRE_PLATFORM=1`
+  and the coverage floors) and on Windows. It keeps the test reports, and on Linux the coverage report, for 7 days. A change to documentation only
   (`*.md`, `docs/` except `docs/example-engine.json`, which the tests read) skips both, and GitHub counts a skipped job
   as passed. While the repository is private, Windows minutes count double, so a pull request builds on Windows only
   when it touches `platform/windows`, the Windows packaging, `pom.xml`, the Maven wrapper or the workflows; every
@@ -156,6 +230,8 @@ The workflows are in `.github/workflows/`:
 - `windows-installer.yml` builds the installer with `tools\package-windows.ps1`, installs it silently, runs the
   installed `car-charge-planner.exe quit`, uninstalls it and keeps the installer as an artifact for 14 days. While the
   repository is private it runs only by hand and for a release.
+- `mutation.yml` runs PIT and the tests in a random order, weekly and by hand, and PIT on the engine for a pull
+  request that touches it; see [What is tested where](#what-is-tested-where).
 - `release.yml` makes a release; see below.
 
 The actions are pinned to a full commit SHA, with the version in a comment beside it: update both together.
@@ -168,9 +244,10 @@ Between releases the version in `pom.xml` is the next one with `-SNAPSHOT`, such
 commit carries the exact version, because the app shows it in About and the download names carry it. To release
 X.Y.Z:
 
-1. In a pull request, set `<version>X.Y.Z</version>` in `pom.xml` and turn `## [Unreleased]` in `CHANGELOG.md` into
+1. Go through [Before a release](#before-a-release).
+2. In a pull request, set `<version>X.Y.Z</version>` in `pom.xml` and turn `## [Unreleased]` in `CHANGELOG.md` into
    `## [X.Y.Z] - YYYY-MM-DD`.
-2. After the merge, tag that commit `vX.Y.Z` and push the tag. The release workflow stops when the tag is not `v`
+3. After the merge, tag that commit `vX.Y.Z` and push the tag. The release workflow stops when the tag is not `v`
    plus the version in `pom.xml`, when that version still ends in `-SNAPSHOT`, when `CHANGELOG.md` has no section for
    it, or when `release/X.Y.Z` exists at another commit. Otherwise it builds and tests, packages the Linux tar.gz and
    the Windows installer with an SBOM each and smoke-tests both, stops when OSV-Scanner finds a known vulnerability in
@@ -178,8 +255,8 @@ X.Y.Z:
    creates the branch `release/X.Y.Z` at the tag, and makes a draft release with the changelog section, install notes
    and the Java runtime (`java tools/ReleaseNotes.java X.Y.Z CHANGELOG.md`, made before the job that can write to the
    repository).
-3. Read the draft and publish it by hand.
-4. In a pull request, set the version to the next `-SNAPSHOT` and add an empty `## [Unreleased]`.
+4. Read the draft and publish it by hand.
+5. In a pull request, set the version to the next `-SNAPSHOT` and add an empty `## [Unreleased]`.
 
 To try the workflow without releasing, start it by hand on `main`: it builds everything and makes a draft called
 "dry run" (delete it afterwards), without the tag check, the attestations or the release branch.
