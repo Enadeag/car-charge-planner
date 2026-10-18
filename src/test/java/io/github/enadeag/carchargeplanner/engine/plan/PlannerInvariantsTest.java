@@ -62,7 +62,7 @@ class PlannerInvariantsTest {
             assertThat(window.start()).as("%s starts from now", window).isAfterOrEqualTo(input.now());
             assertThat(Duration.between(window.start(), window.end()))
                     .as("%s lasts the minimum", window)
-                    .isGreaterThanOrEqualTo(Duration.ofMinutes(input.preferences().minWindowMinutes()));
+                    .isGreaterThanOrEqualTo(input.preferences().minWindow());
             assertThat(window.solarKwh()).as("%s takes no more than the surplus", window)
                     .isLessThanOrEqualTo(surplusKwh(input, window.start(), window.end()) + EPS);
             assertThat(window.importKwh()).as("%s imports within the tolerance", window)
@@ -112,7 +112,8 @@ class PlannerInvariantsTest {
                 new Charger(phases, minAmps, minAmps + random.nextInt(27), 230, 0.8 + random.nextDouble() * 0.2));
         int minimum = 10 + random.nextInt(40);
         var preferences = new PlanningPreferences(new Percent(minimum), new Percent(minimum + 10 + random.nextInt(40)),
-                0.5 + random.nextDouble() * 0.5, random.nextDouble() * 0.5, 15 + random.nextInt(60), 15);
+                0.5 + random.nextDouble() * 0.5, random.nextDouble() * 0.5,
+                        Duration.ofMinutes(15 + random.nextInt(60)), Duration.ofMinutes(15));
 
         var start = FIRST_DAY.plusDays(random.nextInt(7));
         int days = 1 + random.nextInt(3);

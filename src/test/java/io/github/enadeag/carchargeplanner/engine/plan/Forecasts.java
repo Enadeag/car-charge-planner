@@ -28,7 +28,8 @@ final class Forecasts {
     static final ZoneId TZ = ZoneId.of("Europe/Amsterdam");
 
     static final PanelArray PANELS = new PanelArray("", 4.8, 35, -45, 0.14);
-    static final PlanningPreferences PREFERENCES = new PlanningPreferences(new Percent(30), new Percent(80), 0.85, 0.2, 45, 15);
+    static final PlanningPreferences PREFERENCES = new PlanningPreferences(new Percent(30), new Percent(80), 0.85, 0.2,
+            Duration.ofMinutes(45), Duration.ofMinutes(15));
     /** The example's weekly away period: Thursdays from 06:00 to 19:00. */
     static final AwayTimes WEEKLY_AWAY = new AwayTimes(
             List.of(new RecurringAwayPeriod(DayOfWeek.THURSDAY, LocalTime.of(6, 0), LocalTime.of(19, 0))), List.of());

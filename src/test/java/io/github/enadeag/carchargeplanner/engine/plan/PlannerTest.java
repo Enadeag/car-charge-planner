@@ -253,7 +253,8 @@ class PlannerTest {
     @Test
     void aHigherMarginGivesMorePower() {
         var cautious = friday(900, 40).windows().getFirst();
-        var bold = new Planner(Forecasts.example(), new PlanningPreferences(new Percent(30), new Percent(80), 1.0, 0.2, 45, 15),
+        var bold = new Planner(Forecasts.example(), new PlanningPreferences(new Percent(30), new Percent(80), 1.0, 0.2,
+                Duration.ofMinutes(45), Duration.ofMinutes(15)),
                 WEEKLY_AWAY)
                 .plan(bellDay(SUMMER_FRI, 900), new Percent(40), at(SUMMER_FRI, 0), List.of()).getFirst().windows().getFirst();
         assertThat(List.of(cautious.amps(), bold.amps())).containsExactly(9, 10);
@@ -534,7 +535,8 @@ class PlannerTest {
     void aWindowOverStepsWithLessSunIsCutWhereTheEnergyIsReached() {
         // with room to import, 11 A (2.53 kW) is the lowest current that gives 4.025 kWh over both hours: 2.53 kWh in
         // the first, then the 1.495 kWh left at the 1.61 kW of the second hour takes 55.7 min, rounded up to 12:00
-        var tolerant = new PlanningPreferences(new Percent(30), new Percent(80), 0.85, 5, 45, 15);
+        var tolerant = new PlanningPreferences(new Percent(30), new Percent(80), 0.85, 5,
+                Duration.ofMinutes(45), Duration.ofMinutes(15));
         var finder = new WindowFinder(Forecasts.golden(), tolerant);
         var run = new Run(List.of(new Segment(at(SUMMER_FRI, 10), at(SUMMER_FRI, 11), 3.22),
                 new Segment(at(SUMMER_FRI, 11), at(SUMMER_FRI, 12), 1.61)));
@@ -563,7 +565,8 @@ class PlannerTest {
     void aWindowIsCutByTheLengthOfItsStepsNotByTheirCount() {
         // a charger that only does 14 A (3.22 kW): half an hour at 3.22 kW, then 1.61 kW, so 2.415 kWh by 11:00
         var system = Forecasts.golden().withCharger(new Charger(Phases.ONE, 14, 14, 230, 0.90));
-        var tolerant = new PlanningPreferences(new Percent(30), new Percent(80), 0.85, 5, 45, 15);
+        var tolerant = new PlanningPreferences(new Percent(30), new Percent(80), 0.85, 5,
+                Duration.ofMinutes(45), Duration.ofMinutes(15));
         var run = new Run(List.of(new Segment(at(SUMMER_FRI, 10), at(SUMMER_FRI, 10, 30), 3.22),
                 new Segment(at(SUMMER_FRI, 10, 30), at(SUMMER_FRI, 12), 1.61)));
         var window = new WindowFinder(system, tolerant).windows(List.of(run), 2.415).getFirst();

@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.engine.config;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
+import java.time.Duration;
 
 class NotANumberTest {
 
@@ -50,10 +51,12 @@ class NotANumberTest {
     void planningPreferencesRefuseAValueThatIsNotANumber() {
         var low = new Percent(20);
         var high = new Percent(80);
-        assertThatThrownBy(() -> new PlanningPreferences(low, high, NAN, 0.5, 15, 10))
+        assertThatThrownBy(() -> new PlanningPreferences(low, high, NAN, 0.5,
+                Duration.ofMinutes(15), Duration.ofMinutes(10)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("margin must be more than 0 and at most 1");
-        assertThatThrownBy(() -> new PlanningPreferences(low, high, 0.8, NAN, 15, 10))
+        assertThatThrownBy(() -> new PlanningPreferences(low, high, 0.8, NAN,
+                Duration.ofMinutes(15), Duration.ofMinutes(10)))
                 .isInstanceOf(IllegalArgumentException.class).hasMessage("importToleranceKwh must not be negative");
     }
 }

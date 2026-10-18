@@ -173,7 +173,8 @@ class EngineTest {
     void theNextPlanUsesASavedConfig() throws ConfigProblem, IOException {
         var engine = engine(clockAt(7));
         var stored = engine.config();
-        var changed = stored.withPlanning(new PlanningPreferences(new Percent(40), new Percent(90), 0.85, 0.2, 45, 15));
+        var changed = stored.withPlanning(new PlanningPreferences(new Percent(40), new Percent(90), 0.85, 0.2,
+                Duration.ofMinutes(45), Duration.ofMinutes(15)));
 
         engine.saveConfig(changed);
 
@@ -521,8 +522,7 @@ class EngineTest {
         assertThat(main.callCount()).isEqualTo(2);
     }
 
-    // the Python version's notification cases in tests/test_engine.py; the example's window starts at 10:00 and its
-    // lead time is 15 minutes
+    // the notifications through the whole engine; the example's window starts at 10:00 and its lead time is 15 minutes
 
     @Test
     void theOwnerIsToldOnceAheadOfTheWindowWhatToSet() {

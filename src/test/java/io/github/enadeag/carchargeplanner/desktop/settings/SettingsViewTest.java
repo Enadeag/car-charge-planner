@@ -17,6 +17,7 @@ import io.github.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Optional;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Hyperlink;
@@ -60,7 +61,8 @@ class SettingsViewTest {
 
         var after = new ConfigFile(settings.configPath).read();
         assertThat(saved).isTrue();
-        assertThat(after.planning()).isEqualTo(new PlanningPreferences(new Percent(30), new Percent(90), 0.7, 0.2, 45, 15));
+        assertThat(after.planning()).isEqualTo(new PlanningPreferences(new Percent(30), new Percent(90), 0.7, 0.2,
+                Duration.ofMinutes(45), Duration.ofMinutes(15)));
         assertThat(after.system()).isEqualTo(before.system());
         assertThat(after.forecast()).isEqualTo(before.forecast());
         assertThat(after.away()).isEqualTo(before.away());
@@ -103,7 +105,7 @@ class SettingsViewTest {
 
         assertThat(storedPlanning().margin()).isEqualTo(0.8571428);
         assertThat(storedPlanning().importToleranceKwh()).isEqualTo(0.123456);
-        assertThat(storedPlanning().notifyLeadMinutes()).isEqualTo(30);
+        assertThat(storedPlanning().notifyLead()).isEqualTo(Duration.ofMinutes(30));
     }
 
     @Test

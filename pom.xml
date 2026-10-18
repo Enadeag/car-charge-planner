@@ -292,7 +292,8 @@
         <artifactId>exec-maven-plugin</artifactId>
         <version>3.6.4</version>
         <configuration>
-          <executable>java</executable>
+          <!-- the JDK that runs Maven, not whichever java comes first on the PATH -->
+          <executable>${java.home}/bin/java</executable>
           <commandlineArgs>--enable-native-access=ALL-UNNAMED -classpath %classpath ${main.class} ${app.args}</commandlineArgs>
         </configuration>
       </plugin>

@@ -94,7 +94,10 @@ public final class ForecastSolar implements ForecastProvider {
         return URI.create(String.join("/", parts));
     }
 
-    /** Rounded half to even, as the Python version did, so both ask for the same plane. */
+    /**
+     * Whole degrees, as Forecast.Solar takes them, within its range; a half goes to the even neighbour, so halves do
+     * not all lean one way.
+     */
     private static String wholeDegrees(double degrees, int lowest, int highest) {
         return String.valueOf((long) Math.min(highest, Math.max(lowest, Math.rint(degrees))));
     }

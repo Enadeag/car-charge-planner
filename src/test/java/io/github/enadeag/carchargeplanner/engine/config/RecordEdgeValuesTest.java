@@ -8,6 +8,7 @@ import io.github.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import io.github.enadeag.carchargeplanner.engine.setting.Setting;
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -26,6 +27,8 @@ class RecordEdgeValuesTest {
 
     private static final Percent LOW = new Percent(30);
     private static final Percent HIGH = new Percent(80);
+    private static final Duration WINDOW = Duration.ofMinutes(45);
+    private static final Duration LEAD = Duration.ofMinutes(15);
 
     private static Arguments ok(String name, Supplier<Object> make) {
         return Arguments.of(name, make);
@@ -49,12 +52,15 @@ class RecordEdgeValuesTest {
                 ok("panels without losses", () -> new PanelArray("", 5, 35, 0, 0)),
                 ok("almost all lost", () -> new PanelArray("", 5, 35, 0, Math.nextDown(1.0))),
                 ok("the smallest panels", () -> new PanelArray("", Double.MIN_VALUE, 35, 0, 0.14)),
-                ok("a margin of 1", () -> new PlanningPreferences(LOW, HIGH, 1, 0.2, 45, 15)),
-                ok("the smallest margin", () -> new PlanningPreferences(LOW, HIGH, Double.MIN_VALUE, 0.2, 45, 15)),
-                ok("no import", () -> new PlanningPreferences(LOW, HIGH, 0.85, 0, 45, 15)),
-                ok("a window of a minute", () -> new PlanningPreferences(LOW, HIGH, 0.85, 0.2, 1, 15)),
-                ok("no lead time", () -> new PlanningPreferences(LOW, HIGH, 0.85, 0.2, 45, 0)),
-                ok("a minimum just below the target", () -> new PlanningPreferences(new Percent(79.9), HIGH, 0.85, 0.2, 45, 15)));
+                ok("a margin of 1", () -> new PlanningPreferences(LOW, HIGH, 1, 0.2, WINDOW, LEAD)),
+                ok("the smallest margin", () -> new PlanningPreferences(LOW, HIGH, Double.MIN_VALUE, 0.2,
+                        WINDOW, LEAD)),
+                ok("no import", () -> new PlanningPreferences(LOW, HIGH, 0.85, 0, WINDOW, LEAD)),
+                ok("a window of a minute", () -> new PlanningPreferences(LOW, HIGH, 0.85, 0.2,
+                        Duration.ofMinutes(1), LEAD)),
+                ok("no lead time", () -> new PlanningPreferences(LOW, HIGH, 0.85, 0.2, WINDOW, Duration.ZERO)),
+                ok("a minimum just below the target", () -> new PlanningPreferences(new Percent(79.9), HIGH, 0.85, 0.2,
+                        WINDOW, LEAD)));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -85,17 +91,22 @@ class RecordEdgeValuesTest {
                 refused(Setting.PANEL_DIRECTION, () -> new PanelArray("", 5, 35, Math.nextUp(180.0), 0.14)),
                 refused(Setting.PANEL_LOSSES, () -> new PanelArray("", 5, 35, 0, -Double.MIN_VALUE)),
                 refused(Setting.PANEL_LOSSES, () -> new PanelArray("", 5, 35, 0, 1)),
-                refused(Setting.PLANNING_MARGIN, () -> new PlanningPreferences(LOW, HIGH, 0, 0.2, 45, 15)),
-                refused(Setting.PLANNING_MARGIN, () -> new PlanningPreferences(LOW, HIGH, Math.nextUp(1.0), 0.2, 45, 15)),
-                refused(Setting.IMPORT_TOLERANCE, () -> new PlanningPreferences(LOW, HIGH, 0.85, -Double.MIN_VALUE, 45, 15)),
-                refused(Setting.MINIMUM_WINDOW, () -> new PlanningPreferences(LOW, HIGH, 0.85, 0.2, 0, 15)),
-                refused(Setting.NOTIFY_LEAD, () -> new PlanningPreferences(LOW, HIGH, 0.85, 0.2, 45, -1)),
-                refused(Setting.MINIMUM_CHARGE, () -> new PlanningPreferences(HIGH, HIGH, 0.85, 0.2, 45, 15)),
+                refused(Setting.PLANNING_MARGIN, () -> new PlanningPreferences(LOW, HIGH, 0, 0.2, WINDOW, LEAD)),
+                refused(Setting.PLANNING_MARGIN, () -> new PlanningPreferences(LOW, HIGH, Math.nextUp(1.0), 0.2,
+                        WINDOW, LEAD)),
+                refused(Setting.IMPORT_TOLERANCE, () -> new PlanningPreferences(LOW, HIGH, 0.85, -Double.MIN_VALUE,
+                        WINDOW, LEAD)),
+                refused(Setting.MINIMUM_WINDOW, () -> new PlanningPreferences(LOW, HIGH, 0.85, 0.2,
+                        Duration.ZERO, LEAD)),
+                refused(Setting.NOTIFY_LEAD, () -> new PlanningPreferences(LOW, HIGH, 0.85, 0.2,
+                        WINDOW, Duration.ofMinutes(-1))),
+                refused(Setting.MINIMUM_CHARGE, () -> new PlanningPreferences(HIGH, HIGH, 0.85, 0.2, WINDOW, LEAD)),
                 refused(Setting.CAR_BATTERY, () -> new Car(Double.NaN, 18, 40)),
                 refused(Setting.CHARGER_VOLTAGE, () -> new Charger(Phases.ONE, 6, 16, Double.NaN, 0.9)),
                 refused(Setting.HOUSE_BASELOAD, () -> new House(Double.NaN)),
                 refused(Setting.PANEL_DIRECTION, () -> new PanelArray("", 5, 35, Double.NaN, 0.14)),
-                refused(Setting.IMPORT_TOLERANCE, () -> new PlanningPreferences(LOW, HIGH, 0.85, Double.NaN, 45, 15)));
+                refused(Setting.IMPORT_TOLERANCE, () -> new PlanningPreferences(LOW, HIGH, 0.85, Double.NaN,
+                        WINDOW, LEAD)));
     }
 
     @ParameterizedTest(name = "{0}")

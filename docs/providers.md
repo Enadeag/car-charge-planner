@@ -71,7 +71,10 @@ address in the message, `Exchange.json` reads at most 2 MB and 200 000 tokens of
 
 ## A skeleton
 
-This is a complete provider for an imaginary service, and it passes the conformance kit:
+This is a complete provider for an imaginary service, and it passes the conformance kit. It is also real code: the
+three blocks below are `ExampleSolar.java`, `ExampleSolarTest.java` and `example_solar.json` in the test tree
+(`src/test/.../engine/forecast/providers/`), where the build runs the kit on it, and `ProvidersGuideTest` fails when
+a block here and its file differ.
 
 ```java
 package io.github.enadeag.carchargeplanner.engine.forecast.providers;
@@ -83,6 +86,7 @@ import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderError;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
+import io.github.enadeag.carchargeplanner.engine.forecast.ProviderText;
 import io.github.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import io.github.enadeag.carchargeplanner.engine.forecast.Steps;
 import io.github.enadeag.carchargeplanner.engine.forecast.SystemDescription;
@@ -152,7 +156,11 @@ public final class ExampleSolar implements ForecastProvider {
             throw new ProviderError.Unavailable("Example Solar has a problem (status " + reply.status() + ")");
         }
         if (!reply.ok()) {
-            throw new ProviderError.BadResponse("Example Solar did not accept the request (status " + reply.status() + ")");
+            // the server's own words, such as {"error": "unknown key"}, only through ProviderText
+            var words = Exchange.json(reply.body()).path("error");
+            throw new ProviderError.BadResponse("Example Solar did not accept the request (status " + reply.status() + ")"
+                    + (words.isString() ? "; " + ProviderText.quoted(INFO.name(), words.stringValue(),
+                            INFO.secretValues(settings)) : ""));
         }
         var steps = new ArrayList<ForecastStep>();
         try {
@@ -186,6 +194,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import tools.jackson.databind.json.JsonMapper;
 
 class ExampleSolarTest extends ProviderConformance {
 

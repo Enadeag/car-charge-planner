@@ -13,7 +13,7 @@ import java.time.ZoneId;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-/** What a notification says; the Python version's test_messages_say_what_to_set. */
+/** What a notification says: what to set on the charger, and when. */
 class AnnouncementTextsTest {
 
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");

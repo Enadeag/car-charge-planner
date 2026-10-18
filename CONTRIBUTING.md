@@ -11,6 +11,16 @@ A contribution is accepted under the project's licence: the GNU General Public L
 You need a JDK 25 or newer, such as Temurin. Maven comes with the repository through the wrapper: `./mvnw` on
 Linux, `mvnw.cmd` on Windows. Nothing else needs to be installed.
 
+CI and the release build use JDK 25, and the packaged app brings a Java 25 runtime. A newer JDK on your machine
+compiles for Java 25 (`--release 25`), so it refuses an API that Java 25 lacks, but the tests and `exec:exec` then
+run on the newer runtime, which can behave differently: Java 25's `HttpClient` timeout, for one, ends when the
+headers are in, which is why `JdkHttpGet` sets a deadline of its own. When a test passes for you and fails in CI,
+or the reverse, try it on JDK 25. `exec:exec` starts the app with the JDK that runs Maven (`JAVA_HOME`), not the
+first `java` on the `PATH`.
+
+`.editorconfig` holds the house style for editors: UTF-8, LF line ends, a final newline, 4 spaces (2 in XML, YAML,
+JSON and scripts), lines of at most 120 characters. There is no formatter.
+
 ```bash
 ./mvnw verify                                                           # build and test; nothing touches the network or your desktop
 ./mvnw compile exec:exec -Dapp.args="--config=docs/example-engine.json"  # run it with the example system
@@ -190,6 +200,10 @@ Write one only when it says something the name, signature and types cannot.
 - **Strict types.** A value with a meaning of its own gets a type of its own (`Percent`, `ProviderId`, `Coordinates`)
   rather than a bare `double` or `String`, and a choice is an enum (`Phases`, `Freshness`, `ProviderRole`), not an
   `int` that must be 1 or 3 or a pair of booleans of which only some combinations make sense.
+- **`Optional` where absent is a real case.** A record component or a parameter may be an `Optional` when having
+  no value is a case of its own that the code handles, such as `AppSettings.language` when the owner chose none
+  and the app follows the system; not to stand for null in general, and not for a collection, which is empty
+  instead.
 - **Plain invariants.** A record checks its own rules in its constructor, each as a plain `if` and
   `throw new IllegalArgumentException(...)` naming the value and what is allowed, without a helper. A range check on a
   `double` refuses NaN explicitly (`if (kwp <= 0 || Double.isNaN(kwp))`). The Javadoc states the same rule, in the

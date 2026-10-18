@@ -17,3 +17,6 @@ the requester's address in the rate-limit zone were replaced. Credit: Solar fore
 `forecast_solar_429.json`, `forecast_solar_dst_spring.json` and `forecast_solar_dst_autumn.json` are **not
 recordings**: they are made by hand in the documented shape (the rate-limit answer from the "Facing 429 responses"
 page; the two daylight saving days to exercise the time handling around the missing and the repeated hour).
+
+`example_solar.json` is **not a recording**: Example Solar is the imaginary service of the provider guide
+(`docs/providers.md`), and this is its answer, made by hand.
