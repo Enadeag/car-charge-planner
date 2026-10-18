@@ -71,13 +71,13 @@ class AppearanceTest {
 
     @Test
     void choosingDarkMakesTheDashboardAndSettingsDarkAndLightMakesThemLightAgain() throws Exception {
-        assertThat(darkWindows()).hasSize(2).containsOnly(false);
+        assertThat(darkWindows()).containsExactly(false, false);
 
         set(() -> appearance.set(Appearance.DARK));
-        assertThat(darkWindows()).hasSize(2).containsOnly(true);
+        assertThat(darkWindows()).containsExactly(true, true);
 
         set(() -> appearance.set(Appearance.LIGHT));
-        assertThat(darkWindows()).containsOnly(false);
+        assertThat(darkWindows()).containsExactly(false, false);
     }
 
     @Test
@@ -96,13 +96,13 @@ class AppearanceTest {
     void followingTheSystemKeepsFollowingItWhileTheAppRuns() throws Exception {
         set(() -> appearance.set(Appearance.LIGHT));
         set(() -> system.set(ColorScheme.DARK));
-        assertThat(darkWindows()).containsOnly(false);
+        assertThat(darkWindows()).containsExactly(false, false);
 
         set(() -> appearance.set(Appearance.SYSTEM));
-        assertThat(darkWindows()).containsOnly(true);
+        assertThat(darkWindows()).containsExactly(true, true);
 
         set(() -> system.set(ColorScheme.LIGHT));
-        assertThat(darkWindows()).containsOnly(false);
+        assertThat(darkWindows()).containsExactly(false, false);
     }
 
     @Test
@@ -113,7 +113,7 @@ class AppearanceTest {
         set(() -> SettingsFixture.save(view));
 
         assertThat(appearance.get()).isEqualTo(Appearance.DARK);
-        assertThat(darkWindows()).hasSize(2).containsOnly(true);
+        assertThat(darkWindows()).containsExactly(true, true);
     }
 
     @Test
@@ -122,8 +122,7 @@ class AppearanceTest {
 
         set(() -> language.choose(Optional.of(Language.DUTCH)));
 
-        assertThat(settingsView()).isNotNull();
-        assertThat(darkWindows()).hasSize(2).containsOnly(true);
+        assertThat(darkWindows()).containsExactly(true, true);
     }
 
     private static SettingsView settingsView() throws Exception {
