@@ -121,11 +121,12 @@ part's share of covered lines or branches drops below its floor:
 | `desktop` | 95 % | 82 % |
 | `instance` | 88 % | 74 % |
 | `platform.linux` | 86 % | 75 % |
+| the root package, without the composition root | 93 % | 94 % |
 
-The root package, which the composition root `DesktopApp` and `Main` are in, is not checked: `DesktopAppSmokeTest`
-runs them in a JVM of their own, which JaCoCo does not see. `platform.windows` is not checked either, because its
-tests run on Windows only. The floors are a point or two below what was measured when they were set; raise them when
-the tests grow, rather than writing tests for the number.
+The composition root in the root package (`Main`, `DesktopApp`, `Host` and the `*Parts` classes) is left out:
+`DesktopAppSmokeTest` runs it in a JVM of its own, which JaCoCo does not see. `platform.windows` is not checked
+either, because its tests run on Windows only. The floors are a point or two below what was measured when they were
+set; raise them when the tests grow, rather than writing tests for the number.
 
 **Mutation testing.** PIT changes the code in small ways (a `<` for a `<=`, a dropped call) and checks that a test
 fails for each change. It runs from the `pit` profile, two test JVMs at a time (`-Dpit.threads=4` for more):
