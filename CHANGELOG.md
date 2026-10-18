@@ -5,6 +5,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ## [Unreleased]
 
 ### Added
+- `car-charge-planner test-notification` asks the running app to show a test notification in your language, with the app's name, icon and "Open dashboard" button; clicking it opens the dashboard. Nothing is planned or recorded for it. When the app does not run, it says so and ends with exit code 3.
 - A log file, `car-charge-planner.0.log` in the data folder, readable only by you: Settings, About shows where it is, and a bug report can quote it. `CAR_CHARGE_PLANNER_LOG_LEVEL=DEBUG` logs more.
 - The log tells when a forecast provider stops or starts giving forecasts, when the config file cannot be used or can be used again, where the API keys are kept, and each notification of a charge window. It never holds an API key, a request's address or your coordinates.
 - Each release has an SBOM per download (`car-charge-planner-<version>-linux.cdx.json`, `-windows.cdx.json`) listing every library and the Java runtime in it, and GitHub attests where each file was built: `gh attestation verify <file> -R Enadeag/car-charge-planner` checks it. The release notes name the Java runtime the downloads bring.

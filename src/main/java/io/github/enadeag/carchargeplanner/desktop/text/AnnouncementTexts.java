@@ -4,7 +4,10 @@ import io.github.enadeag.carchargeplanner.desktop.system.NotificationText;
 import io.github.enadeag.carchargeplanner.engine.config.Phases;
 import io.github.enadeag.carchargeplanner.engine.notify.Announcement;
 
-/** An announcement from the engine in words: which window, and what to set in the charger's app. */
+/**
+ * An announcement from the engine in words: which window, and what to set in the charger's app. Also the test
+ * notification, which shows the owner what an announcement looks like.
+ */
 public final class AnnouncementTexts {
 
     private final LanguageChoice language;
@@ -39,5 +42,19 @@ public final class AnnouncementTexts {
             case GRID_CHARGE -> new NotificationText(messages.text(TextKey.NOTIFY_GRID_TITLE, span), setting + " "
                     + messages.text(TextKey.NOTIFY_GRID_BODY, energy, messages.whole(announcement.minimumPct().value())));
         };
+    }
+
+    /**
+     * The test notification, which the command line asks for: it names no window, so nothing in it can be taken for
+     * a charge window to set the charger for.
+     *
+     * @param appName the app's name, which the body names
+     * @return a title that says it is a test, and a body that says what an announcement is for and what a click does,
+     *     in the language spoken now
+     */
+    public NotificationText test(String appName) {
+        var messages = language.messages();
+        return new NotificationText(messages.text(TextKey.NOTIFY_TEST_TITLE),
+                messages.text(TextKey.NOTIFY_TEST_BODY, appName));
     }
 }
