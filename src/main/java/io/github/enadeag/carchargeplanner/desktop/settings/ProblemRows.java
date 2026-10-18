@@ -26,7 +26,7 @@ final class ProblemRows {
      * Adds a row.
      *
      * @param setting the setting the row holds
-     * @param row the row
+     * @param row the field that shows the setting, where its problem shows when the engine refuses its value
      * @return the same row, to put on a card
      */
     FieldRow add(Setting setting, FieldRow row) {

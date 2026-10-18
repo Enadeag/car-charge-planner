@@ -85,7 +85,7 @@ public final class Messages {
     /**
      * A moment as a clock time.
      *
-     * @param moment the moment
+     * @param moment the instant to tell, such as a charge window's start
      * @param zone the time zone of the owner's home, in which the time is told
      * @return hours and minutes the way the language writes them, such as "09:05" on a 24-hour clock
      */

@@ -14,7 +14,13 @@ import java.util.function.Function;
 /**
  * Describes a provider for the {@link ProviderConformance} kit: how to make it and the recorded answers to play.
  *
- * @param rateLimited null when the provider has no such answer
+ * @param make makes the provider, given the HTTP client that replays the recorded answers
+ * @param ok the recorded answers of a working service, from which a valid forecast is read
+ * @param serverError an answer in which the server fails, which must count as unavailable
+ * @param badBody an answer that is not as the service documents it, which must count as a bad response
+ * @param emptyBody an empty answer, which must never crash the provider
+ * @param rateLimited the answer that says the provider's rate limit is reached; null when the provider has no such
+ *     answer
  * @param retryAfter what the rate-limited answer says, or null when it says nothing
  * @param settings a working set of plain settings, required ones filled in
  * @param secrets secret settings with recognisable values

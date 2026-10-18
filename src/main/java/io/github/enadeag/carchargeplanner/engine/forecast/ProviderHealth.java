@@ -24,7 +24,7 @@ final class ProviderHealth {
     /**
      * The provider gave a forecast; logged when it is the first one, or the first after a failure.
      *
-     * @param info the provider
+     * @param info the provider that answered: its id is what is remembered, its name what is logged
      */
     void answered(ProviderInfo info) {
         var before = answering.put(info.id(), true);
@@ -38,7 +38,7 @@ final class ProviderHealth {
     /**
      * The provider gave no forecast; logged when it gave one before, or was not asked yet.
      *
-     * @param info the provider
+     * @param info the provider that failed: its id is what is remembered, its name what is logged
      * @param reason why, in the words the owner is told after the provider's name
      */
     void failed(ProviderInfo info, String reason) {

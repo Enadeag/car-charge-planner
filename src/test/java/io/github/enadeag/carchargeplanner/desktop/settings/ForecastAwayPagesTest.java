@@ -2,6 +2,7 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.github.enadeag.carchargeplanner.LogCapture;
 import io.github.enadeag.carchargeplanner.desktop.Fx;
 import io.github.enadeag.carchargeplanner.desktop.FxTest;
 import io.github.enadeag.carchargeplanner.desktop.Scenes;
@@ -147,6 +148,23 @@ class ForecastAwayPagesTest {
 
         assertThat(Fx.call(() -> Scenes.visibleTexts(view))).contains(
                 settings.messages.text(TextKey.KEYS_IN_FILE, folder.resolve("secrets.json").toString()));
+    }
+
+    @Test
+    void keysThatCannotBeReadAreSaidInTheOwnersLanguageAndTheEnginesWordsGoToTheLog() throws Exception {
+        Files.writeString(folder.resolve("secrets.json"), "not json");
+        settings = new SettingsFixture(folder, Language.DUTCH, List.of(provider("open-meteo", "Open-Meteo")));
+
+        try (var log = LogCapture.of(SettingsStorage.class)) {
+            var view = settings.open();
+            Fx.run(() -> view.show(Category.FORECAST));
+
+            var note = settings.messages.text(TextKey.KEYS_PROBLEM) + " "
+                    + settings.messages.text(TextKey.KEYS_IN_FILE, folder.resolve("secrets.json").toString());
+            assertThat(Fx.call(() -> Scenes.visibleTexts(view))).contains(note);
+            assertThat(log.lines()).anySatisfy(line -> assertThat(line)
+                    .startsWith("WARNING The API keys could not be read for Settings: ").contains("secrets.json"));
+        }
     }
 
     @Test

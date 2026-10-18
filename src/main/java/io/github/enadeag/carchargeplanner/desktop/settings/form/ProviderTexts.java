@@ -69,7 +69,7 @@ public final class ProviderTexts {
      * The sentence that explains a setting.
      *
      * @param info the provider that asks for it
-     * @param setting the setting
+     * @param setting the setting the provider declares; its own hint is shown when the app has no translation for it
      * @return what to fill in
      */
     public String hint(ProviderInfo info, SettingSpec setting) {

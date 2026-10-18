@@ -17,7 +17,7 @@ final class Charging {
      * The surplus the plan counts on: what is left after the house, scaled down by the planning margin. The provider
      * already accounted for the panels.
      *
-     * @param step the forecast step
+     * @param step the forecast step, whose power is the whole system's expected AC output in kW
      * @param system the home and equipment, for the house's own use
      * @param preferences the planning preferences, for the margin
      * @return the usable surplus in kW, 0 or more

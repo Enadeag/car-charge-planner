@@ -14,7 +14,13 @@ public final class SunnyDays {
     private SunnyDays() {
     }
 
-    /** @param peakKw the power at noon */
+    /**
+     * One day of hourly steps, in {@link #TZ}.
+     *
+     * @param day the date whose midnight the steps start at
+     * @param peakKw the power at noon, in kW
+     * @return 24 hourly steps from that midnight, also on a day the clocks change
+     */
     public static List<ForecastStep> day(LocalDate day, double peakKw) {
         var steps = new ArrayList<ForecastStep>();
         var start = day.atStartOfDay(TZ).toInstant();
@@ -27,6 +33,14 @@ public final class SunnyDays {
         return steps;
     }
 
+    /**
+     * Days one after another, each as {@link #day}.
+     *
+     * @param first the first date
+     * @param count how many days, 0 or more
+     * @param peakKw each day's power at noon, in kW
+     * @return the steps of every day, in time order
+     */
     public static List<ForecastStep> days(LocalDate first, int count, double peakKw) {
         var steps = new ArrayList<ForecastStep>();
         for (int i = 0; i < count; i++) {

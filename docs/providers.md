@@ -11,7 +11,7 @@ recorded answer. This guide is everything a contributor needs.
 
 ## The contract
 
-All of it is in the package `engine.forecast` ([`src/main/java/io/github/enadeag/carchargeplanner/engine/forecast/`](../src/main/java/io/github/enadeag/carchargeplanner/engine/forecast/)):
+All of it is in the package `engine.forecast` ([`src/main/java/io/github/enadeag/carchargeplanner/engine/forecast/`](../src/main/java/io/github/enadeag/carchargeplanner/engine/forecast/)), except `PanelArray` and `ProviderId`, which are in `engine.config`:
 
 | Type | What it is |
 | --- | --- |
@@ -255,11 +255,11 @@ and the recorded answer the test replays, `example_solar.json` beside the other 
 ## Adding yours
 
 1. **The class**: `src/main/java/io/github/enadeag/carchargeplanner/engine/forecast/providers/<YourService>.java`, as above.
-2. **Register it**: add it to the list of providers in `Main.engine` (`new Providers(List.of(new OpenMeteo(http),
-   new ForecastSolar(http), ...))`).
+2. **Register it**: add it to the list of providers in `DesktopApp.engine` (`new Providers(List.of(new OpenMeteo(get),
+   new ForecastSolar(get), ...))`).
 3. **Translate its texts**: the name and the attribution are shown as they are, but the description, what is sent,
    and each setting's label and hint are translated. Add keys to `TextKey.java` and every
-   `messages_*.properties`, and map them in `desktop/settings/ProviderTexts.java`; a provider without texts there is
+   `messages_*.properties`, and map them in `desktop/settings/form/ProviderTexts.java`; a provider without texts there is
    shown in the engine's English.
 4. **Check the service's live documentation** before you write a line: the URL shape, the azimuth convention, the
    time zone of the answer (Forecast.Solar answers in the place's local time), what a timestamp means (the start or
@@ -286,7 +286,7 @@ and some services punish ignoring it.
 
 ### Secrets
 
-Declare a setting secret (the last argument of `SettingSpec`). The app keeps it in the system keychain (or, where
+Declare a setting secret (the argument of `SettingSpec` just before its `format`). The app keeps it in the system keychain (or, where
 there is none, in `secrets.json`, readable only by the user), never in `engine.json`, shows it
 masked in Settings, and passes it to `fetch` in `settings` with the other settings. A setting that is empty is
 absent from the map.

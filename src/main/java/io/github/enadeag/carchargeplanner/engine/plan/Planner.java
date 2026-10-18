@@ -26,7 +26,8 @@ public final class Planner {
      * Makes a planner for one home, one set of preferences and the times the car is away.
      *
      * @param system the home and equipment
-     * @param preferences the planning preferences
+     * @param preferences the owner's choices the plan follows: the target level, the margin on the surplus, the
+     *     shortest window and the grid energy a window may take
      * @param away when the car is not at home; no window is planned in that time, {@link AwayTimes#NONE} for none
      */
     public Planner(HomeSystem system, PlanningPreferences preferences, AwayTimes away) {

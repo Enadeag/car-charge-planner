@@ -76,7 +76,7 @@ final class WindowFinder {
     /**
      * Groups runs by day: a run belongs to the local date it starts on, even when it goes on past midnight.
      *
-     * @param runs the runs
+     * @param runs the runs to group, such as every run in the forecast; may be empty
      * @param zone the time zone that decides the dates
      * @return the runs of each date that has one, in the order they were given
      */

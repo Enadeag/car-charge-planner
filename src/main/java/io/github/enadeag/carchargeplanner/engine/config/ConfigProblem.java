@@ -28,7 +28,7 @@ public class ConfigProblem extends Exception {
      * @param kind what is wrong with the file; not null
      * @param file the config file's path, as the engine was given it; not null
      * @param detail in English: the system's error for an unreadable file, or for an invalid one the setting and what
-     *     is wrong with it, such as "system.car.capacityKwh: must be more than 0"; empty for a missing file
+     *     is wrong with it, such as "system.car.usableBatteryKwh: must be more than 0"; empty for a missing file
      */
     public ConfigProblem(Kind kind, Path file, String detail) {
         super(message(kind, file, detail));

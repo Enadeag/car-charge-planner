@@ -13,6 +13,7 @@ import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
+import io.github.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
 import io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import io.github.enadeag.carchargeplanner.engine.setting.Setting;
 import java.net.URI;
@@ -122,9 +123,9 @@ final class ForecastPage implements ConfigPage {
      *
      * @param keys the stored secret settings; none when they could not be read
      * @param storage where the keys are kept now; a locked keychain also says why they could not be read
-     * @param problem why the keys could not be read, in words for the owner; empty when they could
+     * @param problem the kind of problem that kept the keys from being read; empty when they could be read
      */
-    void loadKeys(Secrets keys, KeyStorage storage, Optional<String> problem) {
+    void loadKeys(Secrets keys, KeyStorage storage, Optional<SecretsProblem.Kind> problem) {
         storedKeys = keys;
         keysLocked = storage == KeyStorage.LOCKED_KEYCHAIN;
         keysNote.setText(KeysNote.of(storage, problem, keysFile, messages));

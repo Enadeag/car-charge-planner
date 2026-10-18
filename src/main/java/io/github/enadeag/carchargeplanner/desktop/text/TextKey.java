@@ -43,7 +43,7 @@ public enum TextKey {
     CHART_SPOKEN,
     /** The solar chart in words on a day without sun: {0} the day. */
     CHART_SPOKEN_NO_SUN,
-    /** The charge windows in words, after the chart's: {0} the windows, joined. */
+    /** The charge windows in words, after the chart's: {0} one window, or several joined with commas. */
     CHART_SPOKEN_WINDOWS,
     /** One window in words: {0} its start, {1} its end. */
     CHART_SPOKEN_SPAN,
@@ -666,7 +666,7 @@ public enum TextKey {
     KEYS_IN_FILE,
     /** The keys are in the keychain, which is locked, so they cannot be read yet. */
     KEYS_IN_LOCKED_KEYCHAIN,
-    /** The stored keys could not be read: {0} why, in words for the owner. */
+    /** The stored keys could not be read, and what to do; the engine's own words about why go to the log. */
     KEYS_PROBLEM,
     /** The title of the weekly away periods' card. */
     CARD_AWAY,

@@ -121,7 +121,7 @@ class ChartMapperTest {
     @Test
     void theChartReadsAsSentencesForAScreenReader() {
         assertThat(curve(TWO_DAYS, 0).spoken()).isEqualTo("Today, expected sun: peak 4.2 kW around 13:00; the house uses "
-                + "about 0.4 kW. Charge window 11:15 to 14:30. Now 08:12.");
+                + "about 0.4 kW. Charging: 11:15 to 14:30. Now 08:12.");
         assertThat(curve(TWO_DAYS, 1).spoken())
                 .isEqualTo("Tomorrow, expected sun: peak 5.3 kW around 13:00; the house uses about 0.4 kW.");
     }
@@ -205,7 +205,7 @@ class ChartMapperTest {
 
         assertThat(curve.stepAt(13.4).orElseThrow().readout()).isEqualTo("13:00 – 4,2 kW zon · 0,4 kW huis");
         assertThat(curve.spoken()).isEqualTo("Vandaag, verwachte zon: piek 4,2 kW rond 13:00; het huis gebruikt "
-                + "ongeveer 0,4 kW. Laadvenster 11:15 tot 14:30. Nu 08:12.");
+                + "ongeveer 0,4 kW. Laden: 11:15 tot 14:30. Nu 08:12.");
         assertThat(battery.minimumText()).isEqualTo("min. 30");
         assertThat(battery.spoken()).isEqualTo(
                 "Accu van de auto 62% aan het begin van morgen, na het laden 62%; minimum 30%, doel 80%.");

@@ -14,7 +14,8 @@ import java.util.Optional;
  * @param freshness whether it was fetched just now or comes from the cache, and then whether a refresh was due
  * @param providerRole whether the provider that made it is the primary or the fallback
  * @param primaryName the name of the provider that was asked first; empty when it was the primary
- * @param cooldownUntil the provider that made it refuses requests until then
+ * @param cooldownUntil the provider that made it refuses requests until then; empty when the provider is not cooling
+ *     down
  */
 public record ForecastSource(
         ProviderId providerId,
