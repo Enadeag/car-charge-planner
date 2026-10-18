@@ -15,8 +15,9 @@
     <main.class>io.github.enadeag.carchargeplanner.Main</main.class>
     <!-- surefire's test class order; see the surefire plugin below -->
     <surefire.runOrder>alphabetical</surefire.runOrder>
-    <!-- tests that reach the network, left out of every build; the live profile runs them -->
-    <test.excludedGroups>live</test.excludedGroups>
+    <!-- left out of every build: the tests that reach the network, which the live profile runs, and the one that
+         writes the README's pictures, which the screenshots profile runs -->
+    <test.excludedGroups>live,screenshots</test.excludedGroups>
     <!-- the coverage profile sets it to JaCoCo's agent -->
     <argLine></argLine>
     <app.args></app.args>
@@ -379,6 +380,15 @@
       <properties>
         <test.excludedGroups></test.excludedGroups>
         <groups>live</groups>
+      </properties>
+    </profile>
+    <!-- ./mvnw test -Pscreenshots makes the README's pictures in docs/screenshots/java again, offscreen on JavaFX's
+         headless platform, and writes only those whose pixels changed (CONTRIBUTING.md, Pictures for the README) -->
+    <profile>
+      <id>screenshots</id>
+      <properties>
+        <test.excludedGroups></test.excludedGroups>
+        <groups>screenshots</groups>
       </properties>
     </profile>
     <!-- ./mvnw verify -Pcoverage: JaCoCo's report in target/site/jacoco/, and the build fails when a part's line or

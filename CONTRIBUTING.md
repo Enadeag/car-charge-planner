@@ -169,6 +169,28 @@ On a real desktop, with the packaged app (see [Packaging](#packaging)):
 - [ ] Switching the system between light and dark while the app runs switches the app.
 - [ ] A second start shows the running app's dashboard and ends.
 
+## Pictures for the README
+
+The pictures the README shows (`docs/screenshots/java/`) are made by code, each in light and in dark, as
+`<name>-light.png` and `<name>-dark.png`. After a change to what a pictured screen shows, make them again and commit
+the ones that changed:
+
+```bash
+./mvnw test -Pscreenshots    # prints which pictures changed, or "No picture changed."
+```
+
+It runs like the other JavaFX tests: offscreen on JavaFX's headless platform, in a JVM that cannot reach your display.
+The screens show the example home of the tests, in English: `docs/example-engine.json`, the made-up place Zonnedorp,
+a forecast made up in the code and a fixed date and time, so the pictures are the same on every run. A file is
+written only when its pixels change, and holds nothing but the pixels, so a run without a change leaves git clean.
+`ReadmePictures` lists the pictures, and `DashboardPictures` and `SettingsPictures` make them; `ReadmePicturesTest`
+makes them all into a temporary folder in every build, and checks that each picture the README names is made and that
+a second run changes nothing. A new picture goes in `ReadmePictures`, and in the README as a `<picture>` with its
+dark file as the `prefers-color-scheme: dark` source.
+
+The text is drawn in JavaFX's system font, which differs per system (Noto Sans on most Linux desktops, Segoe UI on
+Windows): make the pictures on Linux with Noto Sans, or a run changes every picture.
+
 ## Dependencies
 
 Declare every library the code uses directly in `pom.xml`, also one that already comes in through another
