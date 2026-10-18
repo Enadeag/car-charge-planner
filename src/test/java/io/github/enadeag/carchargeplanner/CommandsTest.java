@@ -2,6 +2,7 @@ package io.github.enadeag.carchargeplanner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import io.github.enadeag.carchargeplanner.CommandLine.Command;
 import io.github.enadeag.carchargeplanner.desktop.system.StartAtLogin;
@@ -197,6 +198,22 @@ class CommandsTest {
         assertThat(commands().run(command)).isEqualTo(failure(TextKey.CLI_COMMAND_SILENT, AppName.TITLE));
     }
 
+    @ParameterizedTest
+    @EnumSource(names = {"QUIT", "TEST_NOTIFICATION"})
+    void aCommandSaysTheAppDoesNotRunWhenTheInstanceFolderIsNotPrivate(Command command) throws IOException {
+        // no copy may run from a folder that is not private, so none can be running there
+        try {
+            Files.createSymbolicLink(instanceFolder, Files.createDirectory(temp.resolve("elsewhere")));
+        } catch (IOException | UnsupportedOperationException e) {
+            assumeTrue(false, "this account may not make links: " + e);
+        }
+
+        assertThat(commands().run(command)).isEqualTo(command == Command.QUIT
+                ? success(TextKey.CLI_NOT_RUNNING, AppName.TITLE)
+                : new CommandOutcome(ExitCode.UNREACHABLE,
+                        MESSAGES.text(TextKey.CLI_TEST_NOTIFICATION_NOT_RUNNING, AppName.TITLE)));
+    }
+
     @Test
     void startAtLoginIsSwitchedOnAndOff() {
         assertThat(commands().run(Command.START_AT_LOGIN_ON))
@@ -241,6 +258,27 @@ class CommandsTest {
 
         assertThat(commands.run(Command.UNINSTALL_LAUNCHER))
                 .isEqualTo(success(TextKey.CLI_LAUNCHER_NOT_FOUND, AppName.TITLE));
+    }
+
+    @Test
+    @EnabledOnOs(OS.LINUX)
+    void aLauncherThatCannotBeWrittenOrRemovedFailsWithTheReason() throws Exception {
+        // a file where the data folder should be: nothing can be written below it
+        var notAFolder = Files.createFile(temp.resolve("not-a-folder"));
+        var install = commands(Os.LINUX, Optional.empty(), Optional.of(menuEntry(notAFolder)))
+                .run(Command.INSTALL_LAUNCHER);
+        assertThat(install.exit()).isEqualTo(ExitCode.FAILURE);
+        assertThat(install.text()).startsWith(MESSAGES.text(TextKey.CLI_LAUNCHER_INSTALL_FAILED, ""))
+                .contains(notAFolder.toString());
+
+        // a folder with something in it where the entry is: it cannot be removed
+        var dataHome = temp.resolve("data");
+        Files.createDirectories(dataHome.resolve("applications/car-charge-planner.desktop/inside"));
+        var uninstall = commands(Os.LINUX, Optional.empty(), Optional.of(menuEntry(dataHome)))
+                .run(Command.UNINSTALL_LAUNCHER);
+        assertThat(uninstall.exit()).isEqualTo(ExitCode.FAILURE);
+        assertThat(uninstall.text()).startsWith(MESSAGES.text(TextKey.CLI_LAUNCHER_REMOVE_FAILED, ""))
+                .contains("car-charge-planner.desktop");
     }
 
     @Test
