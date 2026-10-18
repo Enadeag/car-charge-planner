@@ -226,6 +226,11 @@ public enum TextKey {
     CLI_COMMAND_SILENT,
     /** The running app's lock is held, but a command could not reach it: {0} the app's name. */
     CLI_COMMAND_UNREACHABLE,
+    /**
+     * A command was not sent, as the single-instance guard's folder is not the user's only: {0} the app's name, {1}
+     * what is wrong with which folder, in English.
+     */
+    CLI_COMMAND_NOT_PRIVATE,
     /** No app was running to quit: {0} the app's name. */
     CLI_NOT_RUNNING,
     /** The running app confirmed it shows a test notification: {0} the app's name. */
