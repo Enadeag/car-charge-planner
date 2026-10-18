@@ -259,6 +259,19 @@ class StatusNotifierTrayTest {
     }
 
     @Test
+    void theItemRegistersAgainWithAPanelThatRestarted() throws Exception {
+        var name = showWithAWatcher();
+
+        panel.disconnect();
+        panel = DBusConnectionBuilder.forAddress(address).withShared(false).build();
+        var restarted = new Watcher();
+        panel.exportObject(restarted);
+        panel.requestBusName(StatusNotifierWatcher.BUS_NAME);
+
+        assertThat(restarted.registered.poll(TIMEOUT_S, TimeUnit.SECONDS)).isEqualTo(name);
+    }
+
+    @Test
     void withoutAWatcherThereIsNoTray() {
         assertThatThrownBy(() -> tray.show(new Tray.TrayActions(clicks::add, opened::countDown, settings::countDown, about::countDown, quit::countDown)))
                 .isInstanceOf(Tray.TrayUnavailable.class);

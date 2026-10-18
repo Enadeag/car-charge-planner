@@ -20,6 +20,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - A Forecast.Solar key may hold only letters and digits; Settings and set-up say so when you save another one.
 - What a provider's server writes in an error is shown as "<provider> says: …", at most 200 characters, without control or direction characters, and with every stored API key replaced by `***`, also in the log.
 - Settings and set-up open at once and say "Reading your settings…" until the keychain and the files have answered, and Save and Finish say "Saving…" while they store; meanwhile the dashboard and the tray keep working. Closed, these windows are let go of instead of hidden, so they take no memory while the app runs in the tray.
+- Linux: the tray icon comes back when the panel restarts, such as after Plasma's shell crashed: the app registers it again with the new panel.
+- Linux: a click on a notification counts only when the desktop's notification server reports it, not when another program sends the same signal.
 
 ## [0.3.0] - 2026-10-16
 

@@ -19,13 +19,15 @@ import java.util.function.Supplier;
 import javax.imageio.ImageIO;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
 import org.freedesktop.dbus.exceptions.DBusException;
+import org.freedesktop.dbus.interfaces.DBus;
 import org.freedesktop.dbus.types.UInt32;
 import org.freedesktop.dbus.types.Variant;
 
 /**
  * Notifications on Linux, through the desktop's notification server over D-Bus: the same on KDE Plasma and GNOME,
  * also without a tray. A click on the notification or on its button "Open dashboard" is passed on; a click on another
- * app's notification is not, for all apps share the server's ids.
+ * app's notification is not, for all apps share the server's ids. A click counts only when it comes from the
+ * program that owns the server's name: any program on the session bus can send the signal.
  */
 public final class FreedesktopNotifications implements Notifications {
 
@@ -54,6 +56,8 @@ public final class FreedesktopNotifications implements Notifications {
     private final Deque<Long> sent = new ArrayDeque<>();
     private Runnable clicked = () -> { };
     private DBusConnection bus;
+    /** The unique bus name of the notification server; null while no program serves it. */
+    private String serverOwner;
     private String iconUri;
     private boolean warned;
 
@@ -134,6 +138,7 @@ public final class FreedesktopNotifications implements Notifications {
         if (bus != null) {
             bus.disconnect();
             bus = null;
+            serverOwner = null;
         }
         try {
             Files.deleteIfExists(iconFolder.resolve(ICON_FILE));
@@ -150,7 +155,9 @@ public final class FreedesktopNotifications implements Notifications {
         }
         try {
             bus = connector.connect();
+            bus.addSigHandler(DBus.NameOwnerChanged.class, this::ownerChanged);
             bus.addSigHandler(NotificationServer.ActionInvoked.class, this::invoked);
+            serverOwner = owner(bus);
             return bus;
         } catch (DBusException | RuntimeException e) {
             warnOnce("there is no session bus", e);
@@ -159,9 +166,29 @@ public final class FreedesktopNotifications implements Notifications {
         }
     }
 
+    /** The unique name of the server's owner, or null when no program serves it now. */
+    private static String owner(DBusConnection connection) throws DBusException {
+        var daemon = connection.getRemoteObject("org.freedesktop.DBus", "/org/freedesktop/DBus", DBus.class);
+        try {
+            return daemon.GetNameOwner(NotificationServer.BUS_NAME);
+        } catch (RuntimeException e) {
+            // the bus answers NameHasNoOwner as an error; NameOwnerChanged tells when a server comes
+            return null;
+        }
+    }
+
+    private synchronized void ownerChanged(DBus.NameOwnerChanged signal) {
+        if (NotificationServer.BUS_NAME.equals(signal.name)) {
+            serverOwner = signal.newOwner.isEmpty() ? null : signal.newOwner;
+        }
+    }
+
     private void invoked(NotificationServer.ActionInvoked signal) {
         Runnable action;
         synchronized (this) {
+            if (serverOwner == null || !serverOwner.equals(signal.getSource())) {
+                return;
+            }
             if (!Set.of(DEFAULT_ACTION, OPEN_ACTION).contains(signal.actionKey) || !sent.contains(signal.id.longValue())) {
                 return;
             }

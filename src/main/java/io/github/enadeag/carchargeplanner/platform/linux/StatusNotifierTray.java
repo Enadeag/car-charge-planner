@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.List;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
 import org.freedesktop.dbus.exceptions.DBusException;
+import org.freedesktop.dbus.interfaces.DBus;
 
 /**
  * The tray icon on Linux: our own StatusNotifierItem over D-Bus. AWT's tray is not used here: on Wayland it shows a
@@ -17,6 +18,9 @@ import org.freedesktop.dbus.exceptions.DBusException;
  *
  * <p>The icon goes to the panel twice: by name from an {@link IconThemeFolder}, which KDE Plasma colours to suit its
  * panel, and as pixels in several sizes for panels that cannot find it by name.
+ *
+ * <p>When the panel restarts, such as after a crash of Plasma's shell, its new StatusNotifierWatcher knows no items:
+ * the tray registers again as soon as the watcher's name has a new owner.
  */
 public final class StatusNotifierTray implements Tray {
 
@@ -75,12 +79,39 @@ public final class StatusNotifierTray implements Tray {
             bus.exportObject(item);
             bus.exportObject(menu);
             bus.requestBusName(busName);
-            bus.getRemoteObject(StatusNotifierWatcher.BUS_NAME, StatusNotifierWatcher.OBJECT_PATH,
-                    StatusNotifierWatcher.class).RegisterStatusNotifierItem(busName);
+            bus.addSigHandler(DBus.NameOwnerChanged.class, this::watcherChanged);
+            register(bus);
         } catch (DBusException | RuntimeException e) {
             // no session bus, or no StatusNotifierWatcher (GNOME without the AppIndicator extension)
             remove();
             throw new TrayUnavailable("The desktop has no tray that this app can use", e);
+        }
+    }
+
+    private void register(DBusConnection connection) throws DBusException {
+        connection.getRemoteObject(StatusNotifierWatcher.BUS_NAME, StatusNotifierWatcher.OBJECT_PATH,
+                StatusNotifierWatcher.class).RegisterStatusNotifierItem(busName);
+    }
+
+    /** Registers again with a watcher that took over the name: a new one knows nothing of the old one's items. */
+    private void watcherChanged(DBus.NameOwnerChanged signal) {
+        if (!StatusNotifierWatcher.BUS_NAME.equals(signal.name) || signal.newOwner.isEmpty()) {
+            return;
+        }
+        // not on the connection's signal thread, which a call to the watcher would hold up
+        apart(this::registerAgain);
+    }
+
+    private synchronized void registerAgain() {
+        if (bus == null || !bus.isConnected()) {
+            return;
+        }
+        try {
+            register(bus);
+            LOG.log(Level.INFO, "registered the tray icon with the restarted panel");
+        } catch (DBusException | RuntimeException e) {
+            // dbus-java reports a watcher that left again or answers with an error as a runtime exception
+            LOG.log(Level.WARNING, "cannot register the tray icon with the restarted panel", e);
         }
     }
 
