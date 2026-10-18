@@ -89,15 +89,27 @@ class SecretServicePromptTest {
         final CountDownLatch shown = new CountDownLatch(1);
         final CompletableFuture<String> windowId = new CompletableFuture<>();
         final CountDownLatch takenAway = new CountDownLatch(1);
+        /** Holds the service's reply to {@code Prompt} back until it counts down; at zero it replies at once. */
+        final CountDownLatch replyHeld;
 
         OwnersPrompt(Optional<Boolean> dismissedByOwner) {
+            this(dismissedByOwner, new CountDownLatch(0));
+        }
+
+        OwnersPrompt(Optional<Boolean> dismissedByOwner, CountDownLatch replyHeld) {
             this.dismissedByOwner = dismissedByOwner;
+            this.replyHeld = replyHeld;
         }
 
         @Override
         public void Prompt(String window) {
             windowId.complete(window);
             shown.countDown();
+            try {
+                replyHeld.await(WAIT.toSeconds(), TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             dismissedByOwner.ifPresent(this::complete);
         }
 
@@ -205,15 +217,9 @@ class SecretServicePromptTest {
         var prompt = new OwnersPrompt(Optional.empty());
         serve(prompt);
         var keychain = keychain();
-        var outcome = new CompletableFuture<UnlockOutcome>();
-        Thread.ofVirtual().start(() -> {
-            try {
-                outcome.complete(keychain.unlock(Duration.ofMinutes(2), () -> { }));
-            } catch (KeychainException | RuntimeException e) {
-                outcome.completeExceptionally(e);
-            }
-        });
-        assertThat(prompt.shown.await(WAIT.toSeconds(), TimeUnit.SECONDS)).isTrue();
+        var waits = new CountDownLatch(1);
+        var outcome = unlockApart(keychain, waits::countDown);
+        assertThat(waits.await(WAIT.toSeconds(), TimeUnit.SECONDS)).as("the prompt shows").isTrue();
 
         keychain.stopUnlocking();
 
@@ -222,24 +228,52 @@ class SecretServicePromptTest {
         keychain.close();
     }
 
-    @Test
-    void closingTheKeychainWhileItWaitsEndsTheWaitWithoutConnectingAgain() throws Exception {
-        var prompt = new OwnersPrompt(Optional.empty());
-        serve(prompt);
-        var keychain = keychain();
+    /** Unlocks on a thread of its own; the prompting action is told when the prompt shows and the wait begins. */
+    private static CompletableFuture<UnlockOutcome> unlockApart(SecretServiceKeychain keychain, Runnable prompting) {
         var outcome = new CompletableFuture<UnlockOutcome>();
         Thread.ofVirtual().start(() -> {
             try {
-                outcome.complete(keychain.unlock(Duration.ofMinutes(2), () -> { }));
+                outcome.complete(keychain.unlock(Duration.ofMinutes(2), prompting));
             } catch (KeychainException | RuntimeException e) {
                 outcome.completeExceptionally(e);
             }
         });
-        assertThat(prompt.shown.await(WAIT.toSeconds(), TimeUnit.SECONDS)).isTrue();
+        return outcome;
+    }
+
+    @Test
+    void closingTheKeychainWhileItWaitsEndsTheWaitWithoutConnectingAgain() throws Exception {
+        serve(new OwnersPrompt(Optional.empty()));
+        var keychain = keychain();
+        var waits = new CountDownLatch(1);
+        var outcome = unlockApart(keychain, waits::countDown);
+        assertThat(waits.await(WAIT.toSeconds(), TimeUnit.SECONDS)).as("the prompt shows").isTrue();
 
         keychain.close();
 
         assertThat(outcome.get(WAIT.toSeconds(), TimeUnit.SECONDS)).isEqualTo(UnlockOutcome.NOT_ANSWERED);
+        assertThat(made).hasSize(1);
+        assertThat(made.getFirst().isConnected()).isFalse();
+    }
+
+    @Test
+    void closingTheKeychainWhileThePromptIsAskedForEndsTheWaitWithoutConnectingAgain() throws Exception {
+        var replyHeld = new CountDownLatch(1);
+        var prompt = new OwnersPrompt(Optional.empty(), replyHeld);
+        serve(prompt);
+        var keychain = keychain();
+        var told = new AtomicInteger();
+        var outcome = unlockApart(keychain, told::incrementAndGet);
+        try {
+            assertThat(prompt.shown.await(WAIT.toSeconds(), TimeUnit.SECONDS)).isTrue();
+
+            keychain.close();
+
+            assertThat(outcome.get(WAIT.toSeconds(), TimeUnit.SECONDS)).isEqualTo(UnlockOutcome.NOT_ANSWERED);
+        } finally {
+            replyHeld.countDown();
+        }
+        assertThat(told).as("the call to show the prompt never returned").hasValue(0);
         assertThat(made).hasSize(1);
         assertThat(made.getFirst().isConnected()).isFalse();
     }
