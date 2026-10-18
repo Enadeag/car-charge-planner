@@ -143,7 +143,7 @@ final class ProviderCard {
         return switch (format) {
             case SERVER_ADDRESS -> TextKey.PROBLEM_SERVER_ADDRESS;
             case LETTERS_AND_DIGITS -> TextKey.PROBLEM_LETTERS_AND_DIGITS;
-            case TEXT -> throw new IllegalArgumentException("any text has the right form");
+            case TEXT -> TextKey.PROBLEM_ONE_LINE;
         };
     }
 

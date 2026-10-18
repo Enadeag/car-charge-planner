@@ -583,6 +583,8 @@ public enum TextKey {
     PROBLEM_SERVER_ADDRESS,
     /** A provider setting, such as an API key, that must be letters and digits only. */
     PROBLEM_LETTERS_AND_DIGITS,
+    /** A provider setting of any text that holds a line break or another control character. */
+    PROBLEM_ONE_LINE,
     /** The title of the card that chooses the providers. */
     CARD_PROVIDERS,
     /** What the providers are. */

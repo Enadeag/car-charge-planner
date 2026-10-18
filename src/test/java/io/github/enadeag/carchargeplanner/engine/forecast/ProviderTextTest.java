@@ -53,6 +53,12 @@ class ProviderTextTest {
         assertThat(ProviderText.redacted(text.strip(), List.of(secrets.split(",")))).isEqualTo(expected);
     }
 
+    /** A provider sends a key stripped, so the stripped key is what a server can echo. */
+    @Test
+    void aSecretStoredWithWhiteSpaceAroundIsRedactedAsItIsSent() {
+        assertThat(ProviderText.redacted("you sent Key123", List.of("  Key123\n"))).isEqualTo("you sent ***");
+    }
+
     @Test
     void aTextOfExactlyTheMaximumLengthIsNotCut() {
         var text = "a".repeat(ProviderText.MAX_LENGTH);

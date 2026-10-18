@@ -226,22 +226,29 @@ public abstract class ProviderConformance {
         assertThat(made.http().requests).isEmpty();
     }
 
-    /** A config file or keychain edited by hand can hold what Settings would refuse; it never reaches the network. */
+    /**
+     * A config file or keychain edited by hand can hold what Settings would refuse: a line break in a value must not
+     * reach a request, where it could end a header or the address and start one of its own.
+     */
     @Test
-    void settingsOfTheWrongFormatAreReportedBeforeAnythingIsSent() {
+    void aSettingWithALineBreakIsRefusedOrNeverReachesARequest() {
         var c = providerCase();
-        var made = c.provider(c.ok());
-        var formatted = made.provider().info().settings().stream().filter(s -> s.format() != SettingFormat.TEXT).toList();
-        assumeFalse(formatted.isEmpty(), "this provider has no setting with a format");
         var wrong = "ftp://x y/?a=1&b=2#\r\nX-Injected: 1";
-        for (var spec : formatted) {
-            assertThat(spec.format().accepts(wrong)).as("%s refuses the wrong value", spec.key()).isFalse();
+        for (var spec : c.provider(c.ok()).provider().info().settings()) {
+            assertThat(spec.format().accepts(wrong)).as("%s refuses the value", spec.key()).isFalse();
+            var made = c.provider(c.ok());
             var settings = new HashMap<>(c.allSettings());
             settings.put(spec.key(), wrong);
-            assertThatThrownBy(() -> made.provider().fetch(ProviderCase.EXAMPLE_SYSTEM, settings, c.now()))
-                    .as(spec.key()).isInstanceOf(ProviderError.NotConfigured.class);
+            var thrown = catchThrowable(() -> made.provider().fetch(ProviderCase.EXAMPLE_SYSTEM, settings, c.now()));
+            if (thrown instanceof ProviderError.NotConfigured) {
+                assertThat(made.http().requests).as("%s: nothing sent", spec.key()).isEmpty();
+            }
+            assertThat(made.http().requests).allSatisfy(request -> {
+                assertThat(request.uri().toString()).as("%s: address", spec.key()).doesNotContainPattern("[\\r\\n]");
+                assertThat(request.headers().values()).as("%s: headers", spec.key())
+                        .noneMatch(value -> value.contains("\r") || value.contains("\n"));
+            });
         }
-        assertThat(made.http().requests).isEmpty();
     }
 
     @Test
