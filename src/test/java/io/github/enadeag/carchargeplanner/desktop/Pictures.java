@@ -173,12 +173,21 @@ public final class Pictures {
         if (Files.isRegularFile(file) && samePixels(image, read(file))) {
             return false;
         }
-        Files.createDirectories(file.toAbsolutePath().getParent());
-        var temporary = file.resolveSibling(file.getFileName() + ".tmp");
-        if (!ImageIO.write(image, "png", temporary.toFile())) {
-            throw new IOException("no PNG writer");
+        var folder = file.toAbsolutePath().getParent();
+        Files.createDirectories(folder);
+        // a new file with a name nobody can guess, so the write cannot be led through a planted link
+        var temporary = Files.createTempFile(folder, file.getFileName().toString(), ".tmp");
+        try {
+            try (var out = Files.newOutputStream(temporary)) {
+                if (!ImageIO.write(image, "png", out)) {
+                    throw new IOException("no PNG writer");
+                }
+            }
+            Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            Files.deleteIfExists(temporary);
+            throw e;
         }
-        Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING);
         return true;
     }
 
