@@ -1,12 +1,12 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.desktop.AppSettings;
-import io.github.enadeag.carchargeplanner.desktop.Appearance;
-import io.github.enadeag.carchargeplanner.desktop.DisplayMode;
-import io.github.enadeag.carchargeplanner.desktop.Language;
-import io.github.enadeag.carchargeplanner.desktop.Messages;
-import io.github.enadeag.carchargeplanner.desktop.TextKey;
-import io.github.enadeag.carchargeplanner.desktop.Units;
+import io.github.enadeag.carchargeplanner.desktop.app.AppSettings;
+import io.github.enadeag.carchargeplanner.desktop.app.Appearance;
+import io.github.enadeag.carchargeplanner.desktop.app.DisplayMode;
+import io.github.enadeag.carchargeplanner.desktop.app.Units;
+import io.github.enadeag.carchargeplanner.desktop.text.Language;
+import io.github.enadeag.carchargeplanner.desktop.text.Messages;
+import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;

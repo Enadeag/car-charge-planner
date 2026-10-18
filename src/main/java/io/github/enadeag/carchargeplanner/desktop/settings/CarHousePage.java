@@ -1,7 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.desktop.Messages;
-import io.github.enadeag.carchargeplanner.desktop.Units;
+import io.github.enadeag.carchargeplanner.desktop.app.Units;
+import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import java.util.Optional;
 import javafx.scene.layout.Region;

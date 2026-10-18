@@ -2,9 +2,9 @@ package io.github.enadeag.carchargeplanner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.enadeag.carchargeplanner.desktop.Language;
-import io.github.enadeag.carchargeplanner.desktop.Messages;
-import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.text.Language;
+import io.github.enadeag.carchargeplanner.desktop.text.Messages;
+import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import io.github.enadeag.carchargeplanner.instance.SingleInstance;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

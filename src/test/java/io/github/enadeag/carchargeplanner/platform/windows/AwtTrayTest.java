@@ -2,8 +2,8 @@ package io.github.enadeag.carchargeplanner.platform.windows;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.github.enadeag.carchargeplanner.desktop.StatusIcon;
-import io.github.enadeag.carchargeplanner.desktop.Tray;
+import io.github.enadeag.carchargeplanner.desktop.system.StatusIcon;
+import io.github.enadeag.carchargeplanner.desktop.system.Tray;
 import javafx.application.ColorScheme;
 import javafx.beans.property.SimpleObjectProperty;
 import org.junit.jupiter.api.Test;

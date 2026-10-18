@@ -2,7 +2,7 @@ package io.github.enadeag.carchargeplanner.platform.windows;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.enadeag.carchargeplanner.desktop.NotificationText;
+import io.github.enadeag.carchargeplanner.desktop.system.NotificationText;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;

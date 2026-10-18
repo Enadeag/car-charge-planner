@@ -2,7 +2,7 @@ package io.github.enadeag.carchargeplanner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.enadeag.carchargeplanner.desktop.DisplayMode;
+import io.github.enadeag.carchargeplanner.desktop.app.DisplayMode;
 import java.time.Duration;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;

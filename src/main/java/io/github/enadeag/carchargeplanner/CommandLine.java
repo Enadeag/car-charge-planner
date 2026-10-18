@@ -1,6 +1,6 @@
 package io.github.enadeag.carchargeplanner;
 
-import io.github.enadeag.carchargeplanner.desktop.StartAtLogin;
+import io.github.enadeag.carchargeplanner.desktop.system.StartAtLogin;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;

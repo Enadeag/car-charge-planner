@@ -1,6 +1,6 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.desktop.AppSettings;
+import io.github.enadeag.carchargeplanner.desktop.app.AppSettings;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import java.util.ArrayList;
 import java.util.List;

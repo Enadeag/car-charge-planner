@@ -1,6 +1,6 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 
 /** The steps of set-up, one subject each, in the order the owner goes through them. */
 enum SetUpStep {

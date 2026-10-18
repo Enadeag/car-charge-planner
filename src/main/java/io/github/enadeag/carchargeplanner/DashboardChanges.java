@@ -1,6 +1,6 @@
 package io.github.enadeag.carchargeplanner;
 
-import io.github.enadeag.carchargeplanner.desktop.Background;
+import io.github.enadeag.carchargeplanner.desktop.app.Background;
 import io.github.enadeag.carchargeplanner.engine.Engine;
 import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.config.Percent;

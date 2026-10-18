@@ -1,11 +1,11 @@
 package io.github.enadeag.carchargeplanner;
 
-import io.github.enadeag.carchargeplanner.desktop.AppIcon;
-import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
-import io.github.enadeag.carchargeplanner.desktop.Notifications;
-import io.github.enadeag.carchargeplanner.desktop.StartAtLogin;
-import io.github.enadeag.carchargeplanner.desktop.TaskbarHiding;
-import io.github.enadeag.carchargeplanner.desktop.Tray;
+import io.github.enadeag.carchargeplanner.desktop.system.AppIcon;
+import io.github.enadeag.carchargeplanner.desktop.system.Notifications;
+import io.github.enadeag.carchargeplanner.desktop.system.StartAtLogin;
+import io.github.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
+import io.github.enadeag.carchargeplanner.desktop.system.Tray;
+import io.github.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import io.github.enadeag.carchargeplanner.engine.secrets.Keychain;
 import java.io.IOException;
 import java.net.URI;

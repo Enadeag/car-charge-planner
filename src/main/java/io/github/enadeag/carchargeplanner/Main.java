@@ -1,9 +1,9 @@
 package io.github.enadeag.carchargeplanner;
 
-import io.github.enadeag.carchargeplanner.desktop.AppSettingsFile;
-import io.github.enadeag.carchargeplanner.desktop.Language;
-import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
-import io.github.enadeag.carchargeplanner.desktop.Units;
+import io.github.enadeag.carchargeplanner.desktop.app.AppSettingsFile;
+import io.github.enadeag.carchargeplanner.desktop.app.Units;
+import io.github.enadeag.carchargeplanner.desktop.text.Language;
+import io.github.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import io.github.enadeag.carchargeplanner.instance.SingleInstance;
 import java.time.Duration;
 import java.util.Locale;

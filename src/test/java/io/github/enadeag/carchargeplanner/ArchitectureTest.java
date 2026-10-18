@@ -18,9 +18,9 @@ import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.conditions.ArchConditions;
 import com.tngtech.archunit.library.freeze.FreezingArchRule;
-import io.github.enadeag.carchargeplanner.desktop.Notifications;
-import io.github.enadeag.carchargeplanner.desktop.StartAtLogin;
-import io.github.enadeag.carchargeplanner.desktop.Tray;
+import io.github.enadeag.carchargeplanner.desktop.system.Notifications;
+import io.github.enadeag.carchargeplanner.desktop.system.StartAtLogin;
+import io.github.enadeag.carchargeplanner.desktop.system.Tray;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import io.github.enadeag.carchargeplanner.engine.forecast.JdkHttpGet;
@@ -321,7 +321,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule jacksonIsOnlyForStoredFiles = noClasses()
             .that().resideOutsideOfPackage(ENGINE + "..")
-            .and(notPartOf(ROOT + ".desktop.AppSettingsFile"))
+            .and(notPartOf(ROOT + ".desktop.app.AppSettingsFile"))
             .should().dependOnClassesThat().resideInAnyPackage("tools.jackson..", "com.fasterxml.jackson..")
             .because("the engine's files and the desktop's app settings are the only JSON the app reads and writes "
                     + "(ADR 0001)");
@@ -329,7 +329,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule theDesktopWritesFilesOnlyForItsAppSettings = noClasses()
             .that().resideInAPackage("..desktop..")
-            .and().doNotHaveFullyQualifiedName(ROOT + ".desktop.AppSettingsFile")
+            .and().doNotHaveFullyQualifiedName(ROOT + ".desktop.app.AppSettingsFile")
             .should().dependOnClassesThat().haveFullyQualifiedName("java.nio.file.Files")
             .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileOutputStream")
             .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileWriter")

@@ -1,6 +1,6 @@
 package io.github.enadeag.carchargeplanner;
 
-import io.github.enadeag.carchargeplanner.desktop.Tray;
+import io.github.enadeag.carchargeplanner.desktop.system.Tray;
 import java.lang.System.Logger.Level;
 import java.time.Duration;
 import java.time.InstantSource;

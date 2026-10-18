@@ -3,9 +3,9 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.enadeag.carchargeplanner.desktop.FxTest;
-import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.Scenes;
 import io.github.enadeag.carchargeplanner.desktop.TextScale;
+import io.github.enadeag.carchargeplanner.desktop.text.Language;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.stream.Stream;

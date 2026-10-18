@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.desktop;
 
+import io.github.enadeag.carchargeplanner.desktop.theme.SystemTheme;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;

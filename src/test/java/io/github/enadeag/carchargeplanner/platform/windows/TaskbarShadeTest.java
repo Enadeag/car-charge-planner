@@ -2,7 +2,7 @@ package io.github.enadeag.carchargeplanner.platform.windows;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.enadeag.carchargeplanner.desktop.PanelShade;
+import io.github.enadeag.carchargeplanner.desktop.system.PanelShade;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;

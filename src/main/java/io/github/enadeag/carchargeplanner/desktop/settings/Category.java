@@ -1,6 +1,6 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 
 /** A group of settings with a page of its own, in the order of Settings' sidebar. */
 public enum Category {

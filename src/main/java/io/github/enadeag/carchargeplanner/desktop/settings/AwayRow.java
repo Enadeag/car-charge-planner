@@ -1,8 +1,8 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.desktop.Messages;
-import io.github.enadeag.carchargeplanner.desktop.ScreenReader;
-import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.text.Messages;
+import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.theme.ScreenReader;
 import io.github.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import java.time.DayOfWeek;

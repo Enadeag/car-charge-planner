@@ -2,7 +2,7 @@ package io.github.enadeag.carchargeplanner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.enadeag.carchargeplanner.desktop.Background;
+import io.github.enadeag.carchargeplanner.desktop.app.Background;
 import io.github.enadeag.carchargeplanner.engine.Engine;
 import io.github.enadeag.carchargeplanner.engine.ManualScheduler;
 import io.github.enadeag.carchargeplanner.engine.away.AwayFile;

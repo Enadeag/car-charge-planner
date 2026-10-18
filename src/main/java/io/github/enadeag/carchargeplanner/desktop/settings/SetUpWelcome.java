@@ -1,10 +1,10 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.desktop.Messages;
-import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.text.Messages;
+import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
-import io.github.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
+import io.github.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import java.util.List;
 import java.util.function.Predicate;
 import javafx.scene.control.Label;

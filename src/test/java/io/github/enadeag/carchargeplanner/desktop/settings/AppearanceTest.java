@@ -2,16 +2,16 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.enadeag.carchargeplanner.desktop.AppIcon;
-import io.github.enadeag.carchargeplanner.desktop.Appearance;
-import io.github.enadeag.carchargeplanner.desktop.Dashboard;
-import io.github.enadeag.carchargeplanner.desktop.DashboardActions;
 import io.github.enadeag.carchargeplanner.desktop.Fx;
 import io.github.enadeag.carchargeplanner.desktop.FxTest;
-import io.github.enadeag.carchargeplanner.desktop.Language;
-import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
-import io.github.enadeag.carchargeplanner.desktop.TaskbarHiding;
-import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.app.Appearance;
+import io.github.enadeag.carchargeplanner.desktop.dashboard.Dashboard;
+import io.github.enadeag.carchargeplanner.desktop.dashboard.DashboardActions;
+import io.github.enadeag.carchargeplanner.desktop.system.AppIcon;
+import io.github.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
+import io.github.enadeag.carchargeplanner.desktop.text.Language;
+import io.github.enadeag.carchargeplanner.desktop.text.LanguageChoice;
+import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
