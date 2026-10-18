@@ -1,7 +1,5 @@
 package io.github.enadeag.carchargeplanner.platform.linux;
 
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -38,16 +36,11 @@ public final class IsolatedSessionBus {
         this.address = address;
     }
 
-    /** Starts the bus with its socket and config in the folder; skips the test when dbus-daemon is not installed. */
+    /** Starts the bus with its socket and config in the folder; without dbus-daemon, see {@link SystemPrograms}. */
     public static IsolatedSessionBus start(Path folder) throws IOException {
         var config = Files.writeString(folder.resolve("bus.conf"), CONFIG);
-        Process daemon = null;
-        try {
-            daemon = new ProcessBuilder("dbus-daemon", "--config-file=" + config, "--nofork", "--nopidfile",
-                    "--address=unix:path=" + folder.resolve("bus"), "--print-address=1").start();
-        } catch (IOException e) {
-            assumeTrue(false, "dbus-daemon is not installed");
-        }
+        var daemon = SystemPrograms.start(new ProcessBuilder("dbus-daemon", "--config-file=" + config, "--nofork",
+                "--nopidfile", "--address=unix:path=" + folder.resolve("bus"), "--print-address=1"));
         // it prints the address once it accepts connections
         var address = new BufferedReader(new InputStreamReader(daemon.getInputStream(), StandardCharsets.UTF_8))
                 .readLine().strip();

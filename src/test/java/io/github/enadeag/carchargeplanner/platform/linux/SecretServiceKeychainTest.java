@@ -2,7 +2,6 @@ package io.github.enadeag.carchargeplanner.platform.linux;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
@@ -85,21 +84,15 @@ class SecretServiceKeychainTest {
                   </policy>
                 </busconfig>
                 """.formatted(socket));
-        try {
-            bus = sandboxed("dbus-daemon", "--nofork", "--nopidfile", "--config-file=" + config, "--print-address=1").start();
-        } catch (IOException e) {
-            assumeTrue(false, "dbus-daemon is not installed");
-        }
+        bus = SystemPrograms.start(
+                sandboxed("dbus-daemon", "--nofork", "--nopidfile", "--config-file=" + config, "--print-address=1"));
         // it prints the address once it accepts connections
         address = new BufferedReader(new InputStreamReader(bus.getInputStream(), StandardCharsets.UTF_8)).readLine().strip();
     }
 
     private void startAThrowawayKeyring() throws Exception {
-        try {
-            keyring = sandboxed("gnome-keyring-daemon", "--foreground", "--unlock", "--components=secrets").start();
-        } catch (IOException e) {
-            assumeTrue(false, "gnome-keyring-daemon is not installed");
-        }
+        keyring = SystemPrograms.start(
+                sandboxed("gnome-keyring-daemon", "--foreground", "--unlock", "--components=secrets"));
         try (var password = keyring.getOutputStream()) {
             password.write("throwaway".getBytes(StandardCharsets.UTF_8));
         }

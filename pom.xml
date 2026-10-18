@@ -15,6 +15,10 @@
     <main.class>io.github.enadeag.carchargeplanner.Main</main.class>
     <!-- surefire's test class order; see the surefire plugin below -->
     <surefire.runOrder>alphabetical</surefire.runOrder>
+    <!-- tests that reach the network, left out of every build; the live profile runs them -->
+    <test.excludedGroups>live</test.excludedGroups>
+    <!-- the coverage profile sets it to JaCoCo's agent -->
+    <argLine></argLine>
     <app.args></app.args>
 
     <javafx.version>27</javafx.version>
@@ -28,6 +32,12 @@
     <junit.version>5.14.4</junit.version>
     <assertj.version>3.27.7</assertj.version>
     <archunit.version>1.5.1</archunit.version>
+    <jacoco.version>0.8.15</jacoco.version>
+    <pitest.version>1.30.0</pitest.version>
+    <pitest-junit5.version>1.2.3</pitest-junit5.version>
+    <!-- the JVMs PIT runs the tests in at once, each with its own heap (pit.heap) -->
+    <pit.threads>2</pit.threads>
+    <pit.heap>512m</pit.heap>
   </properties>
 
   <dependencyManagement>
@@ -218,9 +228,10 @@
         <version>3.6.0</version>
         <configuration>
           <!-- the Credential Manager is reached through Java's foreign function API -->
-          <argLine>--enable-native-access=ALL-UNNAMED</argLine>
+          <argLine>@{argLine} --enable-native-access=ALL-UNNAMED</argLine>
           <!-- the same order on every system and every run; -Dsurefire.runOrder=random shows what depends on it -->
           <runOrder>${surefire.runOrder}</runOrder>
+          <excludedGroups>${test.excludedGroups}</excludedGroups>
           <systemPropertyVariables>
             <!-- no test may put an AWT window or tray icon on the developer's desktop -->
             <java.awt.headless>true</java.awt.headless>
@@ -360,6 +371,256 @@
       <properties>
         <javafx.platform>mac</javafx.platform>
       </properties>
+    </profile>
+    <!-- ./mvnw test -Plive runs only the tests tagged "live", which ask the real forecast services (CONTRIBUTING.md,
+         What is tested where) -->
+    <profile>
+      <id>live</id>
+      <properties>
+        <test.excludedGroups></test.excludedGroups>
+        <groups>live</groups>
+      </properties>
+    </profile>
+    <!-- ./mvnw verify -Pcoverage: JaCoCo's report in target/site/jacoco/, and the build fails when a part's line or
+         branch coverage drops below its floor (CONTRIBUTING.md, What is tested where). Linux only: the platform.linux
+         tests need dbus-daemon and GNOME Keyring, and Windows runs none of them. Not checked: the root package, the
+         composition root, which DesktopAppSmokeTest tests in a JVM of its own, and platform.windows. Each floor is a
+         point or two below what was measured when it was set: raise it when the tests grow, never lower it to let a
+         change through. -->
+    <profile>
+      <id>coverage</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>${jacoco.version}</version>
+            <executions>
+              <execution>
+                <id>coverage-agent</id>
+                <goals>
+                  <goal>prepare-agent</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>coverage-report</id>
+                <goals>
+                  <goal>report</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>coverage-engine</id>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+                <configuration>
+                  <includes>
+                    <include>io/github/enadeag/carchargeplanner/engine/**</include>
+                  </includes>
+                  <rules>
+                    <rule>
+                      <element>BUNDLE</element>
+                      <limits>
+                        <limit>
+                          <counter>LINE</counter>
+                          <value>COVEREDRATIO</value>
+                          <minimum>0.96</minimum>
+                        </limit>
+                        <limit>
+                          <counter>BRANCH</counter>
+                          <value>COVEREDRATIO</value>
+                          <minimum>0.90</minimum>
+                        </limit>
+                      </limits>
+                    </rule>
+                  </rules>
+                </configuration>
+              </execution>
+              <execution>
+                <id>coverage-desktop</id>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+                <configuration>
+                  <includes>
+                    <include>io/github/enadeag/carchargeplanner/desktop/**</include>
+                  </includes>
+                  <rules>
+                    <rule>
+                      <element>BUNDLE</element>
+                      <limits>
+                        <limit>
+                          <counter>LINE</counter>
+                          <value>COVEREDRATIO</value>
+                          <minimum>0.95</minimum>
+                        </limit>
+                        <limit>
+                          <counter>BRANCH</counter>
+                          <value>COVEREDRATIO</value>
+                          <minimum>0.82</minimum>
+                        </limit>
+                      </limits>
+                    </rule>
+                  </rules>
+                </configuration>
+              </execution>
+              <execution>
+                <id>coverage-instance</id>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+                <configuration>
+                  <includes>
+                    <include>io/github/enadeag/carchargeplanner/instance/**</include>
+                  </includes>
+                  <rules>
+                    <rule>
+                      <element>BUNDLE</element>
+                      <limits>
+                        <limit>
+                          <counter>LINE</counter>
+                          <value>COVEREDRATIO</value>
+                          <minimum>0.88</minimum>
+                        </limit>
+                        <limit>
+                          <counter>BRANCH</counter>
+                          <value>COVEREDRATIO</value>
+                          <minimum>0.74</minimum>
+                        </limit>
+                      </limits>
+                    </rule>
+                  </rules>
+                </configuration>
+              </execution>
+              <execution>
+                <id>coverage-platform-linux</id>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+                <configuration>
+                  <includes>
+                    <include>io/github/enadeag/carchargeplanner/platform/linux/**</include>
+                  </includes>
+                  <rules>
+                    <rule>
+                      <element>BUNDLE</element>
+                      <limits>
+                        <limit>
+                          <counter>LINE</counter>
+                          <value>COVEREDRATIO</value>
+                          <minimum>0.86</minimum>
+                        </limit>
+                        <limit>
+                          <counter>BRANCH</counter>
+                          <value>COVEREDRATIO</value>
+                          <minimum>0.75</minimum>
+                        </limit>
+                      </limits>
+                    </rule>
+                  </rules>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- Mutation testing with PIT (CONTRIBUTING.md, What is tested where), for the engine and for the desktop's logic
+         that needs no JavaFX:
+           ./mvnw -Ppit test-compile pitest:mutationCoverage@engine    report in target/pit-reports/engine/
+           ./mvnw -Ppit test-compile pitest:mutationCoverage@desktop   report in target/pit-reports/desktop/
+         It fails when fewer mutants than the threshold are killed. -Dpit.threads=4 runs more test JVMs at once; each
+         takes a heap of pit.heap. -->
+    <profile>
+      <id>pit</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.pitest</groupId>
+            <artifactId>pitest-maven</artifactId>
+            <version>${pitest.version}</version>
+            <dependencies>
+              <dependency>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-junit5-plugin</artifactId>
+                <version>${pitest-junit5.version}</version>
+              </dependency>
+            </dependencies>
+            <configuration>
+              <threads>${pit.threads}</threads>
+              <timestampedReports>false</timestampedReports>
+              <outputFormats>
+                <param>HTML</param>
+                <param>XML</param>
+              </outputFormats>
+              <!-- PIT runs the tests in JVMs of its own, without surefire's settings: the same headless set-up here -->
+              <jvmArgs>
+                <value>-Xmx${pit.heap}</value>
+                <value>--enable-native-access=ALL-UNNAMED</value>
+                <value>-Djava.awt.headless=true</value>
+                <value>-Dglass.platform=Headless</value>
+                <value>-Dprism.order=sw</value>
+                <value>-Djava.util.logging.config.file=${project.basedir}/src/test/resources/logging.properties</value>
+              </jvmArgs>
+              <excludedGroups>
+                <param>live</param>
+                <param>fx</param>
+              </excludedGroups>
+            </configuration>
+            <executions>
+              <execution>
+                <id>engine</id>
+                <configuration>
+                  <targetClasses>
+                    <param>io.github.enadeag.carchargeplanner.engine.*</param>
+                  </targetClasses>
+                  <targetTests>
+                    <param>io.github.enadeag.carchargeplanner.engine.*</param>
+                  </targetTests>
+                  <reportsDirectory>${project.build.directory}/pit-reports/engine</reportsDirectory>
+                  <!-- a few points below the share of mutants killed when it was set (97 %) -->
+                  <mutationThreshold>94</mutationThreshold>
+                </configuration>
+              </execution>
+              <execution>
+                <id>desktop</id>
+                <configuration>
+                  <!-- the classes that the tests without JavaFX (no @FxTest) cover: the mappers to the dashboard's
+                       models, chart and popup geometry, the app settings, the tray icon's drawing and the texts -->
+                  <targetClasses>
+                    <param>io.github.enadeag.carchargeplanner.desktop.app.AppSettings*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.app.Background*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.app.DisplayMode*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.app.Units*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.AwayMapper*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.BatteryModel*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.ChartMapper*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.CurvePoints*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.DayMapper*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.GridAdviceMapper*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.OutlookMapper*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.PlotArea*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.PopupPlacement*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.SolarCurveModel*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.TrayStatusMapper*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.TrayTexts*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.settings.SetUpOffer*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.settings.WindowSize*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.system.StatusIcon*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.text.*</param>
+                  </targetClasses>
+                  <targetTests>
+                    <param>io.github.enadeag.carchargeplanner.desktop.*</param>
+                  </targetTests>
+                  <reportsDirectory>${project.build.directory}/pit-reports/desktop</reportsDirectory>
+                  <!-- a few points below the share of mutants killed when it was set (87 %) -->
+                  <mutationThreshold>84</mutationThreshold>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 

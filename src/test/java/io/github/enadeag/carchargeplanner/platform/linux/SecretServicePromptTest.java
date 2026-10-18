@@ -130,6 +130,9 @@ class SecretServicePromptTest {
 
     @AfterEach
     void stopTheBus() {
+        if (bus == null) {
+            return; // the test was skipped: there is no dbus-daemon
+        }
         made.forEach(DBusConnection::disconnect);
         desktop.disconnect();
         bus.stop();

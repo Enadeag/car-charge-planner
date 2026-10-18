@@ -87,6 +87,9 @@ class FreedesktopNotificationsTest {
 
     @AfterEach
     void stopTheBus() {
+        if (bus == null) {
+            return; // the test was skipped: there is no dbus-daemon
+        }
         notifications.close();
         desktop.disconnect();
         bus.stop();
