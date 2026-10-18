@@ -53,6 +53,22 @@ Limits to know about:
 - **Settings of the Python version (0.2.0 and earlier) are not read.** Run set-up once; the old files are left alone.
 - **Screen readers on Linux (Orca) cannot read the app**, because JavaFX has no AT-SPI support. Keyboard use, contrast and scaling work on every system; see [Accessibility](#accessibility).
 
+## Which cars can be read
+
+None yet: today you enter the battery level by hand, and that always stays possible. Reading the car is planned, only through routes the car maker offers its owners ([ADR 0006](docs/adr/0006-integrations-built-in.md)):
+
+| Car | Route | Status |
+| --- | --- | --- |
+| Škoda | Škoda's public API, with a key from the MyŠkoda app | Planned, will start as Untested |
+| BMW, Mini | BMW CarData | Planned, will start as Untested |
+| Hyundai, Kia | Pleos, with a developer app of your own | Planned, will start as Untested |
+| Volvo, Polestar | Volvo's Energy API, Polestar's Data Portal, with a developer app of your own | Planned, will start as Untested |
+| Ford | FordConnect Query, with a developer app of your own | Planned, will start as Untested |
+| Tesla | Fleet API, with a developer account of your own | Only if someone contributes it |
+| Volkswagen, Audi, Cupra, Mercedes, Stellantis brands (Peugeot, Opel, Fiat and others), Renault, Toyota, MG, BYD, Nissan | No official route for owners | Not planned |
+
+"Untested" means it is built from the maker's documentation but no owner has confirmed it yet, the same words as in [Supported systems](#supported-systems). Have one of these cars once it is built? Please report with the **Does an integration work with my device?** issue form.
+
 ## Install
 
 The downloads are on the [release page](https://github.com/Enadeag/car-charge-planner/releases). Each brings its own Java runtime: nothing else needs to be installed. Internet access is needed for the forecast; without it the app uses its cached forecast and says so.

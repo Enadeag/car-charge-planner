@@ -1,0 +1,59 @@
+name: Does an integration work with my device?
+description: Tell us how an integration (car, meter, inverter, charger) behaves with your own device
+labels: [needs-triage, help wanted]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Integrations are built against the maker's documentation and recorded answers, and stay "Untested" until an
+        owner confirms one with a real device. Your report, whether it works or not, is what moves it to "Beta".
+  - type: input
+    id: integration
+    attributes:
+      label: Device or brand
+      description: "The integration you used, for example: Škoda, BMW CarData, HomeWizard P1, a SunSpec inverter"
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      description: "For example: the car's model and year, or the meter's or inverter's model and firmware"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "The release you installed (Settings, About shows it), or the commit if you run from a clone"
+    validations:
+      required: true
+  - type: checkboxes
+    id: checked
+    attributes:
+      label: What did you check?
+      options:
+        - label: Setting it up in Settings worked (the sign-in, key or address was accepted)
+        - label: The value the app shows matches what the device or the maker's own app shows
+        - label: The value updates when the device's value changes
+        - label: The app said clearly what was wrong when the device or the service could not be reached
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options: [It works, It partly works, It does not work]
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: What did not work, or looked wrong
+  - type: textarea
+    id: log
+    attributes:
+      label: The log, with secrets removed
+      description: >-
+        The app logs what it did to car-charge-planner.0.log in its data folder (Settings, About shows where). Paste
+        the lines around the problem. Read them first and remove anything private: keys, tokens, passwords, your car's
+        VIN, addresses and your user name in paths.
+      render: text

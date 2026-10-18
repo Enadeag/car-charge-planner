@@ -106,10 +106,9 @@ _Avoid_: Secret, token, password, key (on its own)
 The app launching itself, hidden, when the user signs in to their computer. A choice in Settings, the same on every system.
 _Avoid_: Autostart, run at boot, startup item
 
-**Supported / beta**:
-A system is supported when a person has checked every release on it; it is beta while releases are only tested automatically or by someone not always available.
-_Avoid_: Experimental, unofficial
-
+**Supported / Beta / Untested**:
+How far a system or an integration is known to work. **Supported**: a person checks every release on it. **Beta**: someone has confirmed it on a real system or device, but releases are only tested automatically or by someone not always available. **Untested**: built and tested against documented or recorded behaviour, but nobody has confirmed it on a real one yet.
+_Avoid_: Experimental, unofficial, verified
 
 **Dashboard**:
 The one screen that shows the plan: the next charge window, grid advice, today's solar curve, the battery and the coming days. It opens from the tray as a popup, or as a window in window mode.
@@ -130,3 +129,25 @@ _Avoid_: Status, result, plan (a plan is only one kind of outlook)
 **Desktop app**:
 What the user installs on their computer: the engine and the client together in one program.
 _Avoid_: Tray app, the application (too vague)
+
+## Integrations
+
+**Integration**:
+Built-in code that connects the app to one outside service or device, such as a forecast provider, a smart meter, an inverter or a car maker's service. Added to the app by pull request and released with it.
+_Avoid_: Plugin, connector, driver, recipe (a recipe is a deferred idea, not an integration)
+
+**Ability**:
+One kind of thing a device can give or do, such as a battery level, solar production, house use and grid flow, or the charger's state. The planner asks for an ability without knowing which integration provides it; one integration can offer several.
+_Avoid_: Capability, feature, sensor
+
+**Official route**:
+A way for an owner to read their own car that the car maker offers and allows, with an API key, a sign-in or a developer app of the owner's own. A car without one is read by entering its battery level by hand.
+_Avoid_: Official API (a maker can have an API that owners may not use), unofficial route
+
+**Local network (not encrypted)**:
+An integration that reaches a device on the owner's own network over plain http, which only a private address allows. Settings labels it so.
+_Avoid_: LAN, insecure, http mode
+
+**Home Assistant**:
+A home automation system some owners run. To this app it is one optional integration among others, never a requirement: the app works fully without it.
+_Avoid_: HA, the hub
