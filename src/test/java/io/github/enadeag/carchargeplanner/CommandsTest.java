@@ -200,18 +200,21 @@ class CommandsTest {
 
     @ParameterizedTest
     @EnumSource(names = {"QUIT", "TEST_NOTIFICATION"})
-    void aCommandSaysTheAppDoesNotRunWhenTheInstanceFolderIsNotPrivate(Command command) throws IOException {
-        // no copy may run from a folder that is not private, so none can be running there
+    void aCommandIsNotSentWhenTheInstanceFolderIsNotPrivate(Command command) throws IOException {
         try {
             Files.createSymbolicLink(instanceFolder, Files.createDirectory(temp.resolve("elsewhere")));
         } catch (IOException | UnsupportedOperationException e) {
             assumeTrue(false, "this account may not make links: " + e);
+            return;
         }
 
-        assertThat(commands().run(command)).isEqualTo(command == Command.QUIT
-                ? success(TextKey.CLI_NOT_RUNNING, AppName.TITLE)
-                : new CommandOutcome(ExitCode.UNREACHABLE,
-                        MESSAGES.text(TextKey.CLI_TEST_NOTIFICATION_NOT_RUNNING, AppName.TITLE)));
+        var outcome = commands().run(command);
+
+        // not "not running": a folder in the way may be someone's doing, so the owner is told what is wrong
+        var said = MESSAGES.text(TextKey.CLI_COMMAND_NOT_PRIVATE, AppName.TITLE, "%s");
+        assertThat(outcome.exit()).isEqualTo(ExitCode.FAILURE);
+        assertThat(outcome.text()).startsWith(said.substring(0, said.indexOf("%s")))
+                .contains(instanceFolder.getFileName().toString());
     }
 
     @Test

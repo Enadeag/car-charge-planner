@@ -4,6 +4,7 @@ import io.github.enadeag.carchargeplanner.desktop.system.StartAtLogin;
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import io.github.enadeag.carchargeplanner.instance.InstanceCommand;
+import io.github.enadeag.carchargeplanner.instance.NotPrivateException;
 import io.github.enadeag.carchargeplanner.instance.Reply;
 import io.github.enadeag.carchargeplanner.instance.SingleInstance;
 import io.github.enadeag.carchargeplanner.platform.linux.LinuxMenuEntry;
@@ -95,6 +96,9 @@ final class Commands {
         Reply reply;
         try {
             reply = instance.send(command);
+        } catch (NotPrivateException e) {
+            // may be someone's attempt to get in the way, so say what is wrong instead of "not running"
+            return failure(messages.text(TextKey.CLI_COMMAND_NOT_PRIVATE, AppName.TITLE, e.getMessage()));
         } catch (IOException e) {
             // no private folder for the lock, so no running copy can have taken it there
             return notRunning;
