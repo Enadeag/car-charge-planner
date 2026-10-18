@@ -3,7 +3,7 @@ package io.github.enadeag.carchargeplanner.platform.windows;
 import static java.lang.foreign.ValueLayout.ADDRESS;
 import static java.lang.foreign.ValueLayout.JAVA_INT;
 
-import io.github.enadeag.carchargeplanner.desktop.PanelShade;
+import io.github.enadeag.carchargeplanner.desktop.system.PanelShade;
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;

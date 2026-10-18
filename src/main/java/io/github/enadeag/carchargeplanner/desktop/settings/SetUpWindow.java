@@ -1,13 +1,13 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.desktop.AppIcon;
-import io.github.enadeag.carchargeplanner.desktop.AppSettings;
-import io.github.enadeag.carchargeplanner.desktop.Appearance;
-import io.github.enadeag.carchargeplanner.desktop.Background;
-import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
-import io.github.enadeag.carchargeplanner.desktop.Messages;
-import io.github.enadeag.carchargeplanner.desktop.SystemTheme;
-import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.app.AppSettings;
+import io.github.enadeag.carchargeplanner.desktop.app.Appearance;
+import io.github.enadeag.carchargeplanner.desktop.app.Background;
+import io.github.enadeag.carchargeplanner.desktop.system.AppIcon;
+import io.github.enadeag.carchargeplanner.desktop.text.LanguageChoice;
+import io.github.enadeag.carchargeplanner.desktop.text.Messages;
+import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.theme.SystemTheme;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import java.net.URI;
 import java.nio.file.Path;

@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.enadeag.carchargeplanner.CommandLine.Command;
-import io.github.enadeag.carchargeplanner.desktop.Language;
-import io.github.enadeag.carchargeplanner.desktop.Messages;
-import io.github.enadeag.carchargeplanner.desktop.StartAtLogin;
-import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.system.StartAtLogin;
+import io.github.enadeag.carchargeplanner.desktop.text.Language;
+import io.github.enadeag.carchargeplanner.desktop.text.Messages;
+import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import io.github.enadeag.carchargeplanner.instance.Claim;
 import io.github.enadeag.carchargeplanner.instance.InstanceCommand;
 import io.github.enadeag.carchargeplanner.instance.SingleInstance;

@@ -1,5 +1,7 @@
 package io.github.enadeag.carchargeplanner;
 
+import static com.tngtech.archunit.base.DescribedPredicate.not;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
@@ -18,9 +20,10 @@ import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.conditions.ArchConditions;
 import com.tngtech.archunit.library.freeze.FreezingArchRule;
-import io.github.enadeag.carchargeplanner.desktop.Notifications;
-import io.github.enadeag.carchargeplanner.desktop.StartAtLogin;
-import io.github.enadeag.carchargeplanner.desktop.Tray;
+import io.github.enadeag.carchargeplanner.desktop.app.AppSettingsFile;
+import io.github.enadeag.carchargeplanner.desktop.system.Notifications;
+import io.github.enadeag.carchargeplanner.desktop.system.StartAtLogin;
+import io.github.enadeag.carchargeplanner.desktop.system.Tray;
 import io.github.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import io.github.enadeag.carchargeplanner.engine.forecast.JdkHttpGet;
@@ -39,6 +42,11 @@ import java.util.Set;
 @AnalyzeClasses(packages = "io.github.enadeag.carchargeplanner", importOptions = ImportOption.DoNotIncludeTests.class)
 class ArchitectureTest {
 
+    /** The dashboard, the texts, the app settings, the theme and Settings: what no platform may reach. */
+    private static final DescribedPredicate<JavaClass> DESKTOP_OUTSIDE_ITS_SYSTEM =
+            resideInAPackage("..desktop..").and(not(resideInAPackage("..desktop.system..")))
+                    .as("are in the desktop but not in desktop.system");
+
     @ArchTest
     static final ArchRule engineHasNoUserInterfaceOrDesktopBus = noClasses()
             .that().resideInAPackage("..engine..")
@@ -56,6 +64,19 @@ class ArchitectureTest {
             .that().resideInAPackage("..desktop..")
             .should().dependOnClassesThat().resideInAPackage("..platform..")
             .because("the composition root picks the platform's parts");
+
+    @ArchTest
+    static final ArchRule thePlatformsKnowOnlyTheDesktopSystem = noClasses()
+            .that().resideInAPackage("..platform..")
+            .should().dependOnClassesThat(DESKTOP_OUTSIDE_ITS_SYSTEM)
+            .because("a platform implements the ports and draws the icons of desktop.system; the dashboard, the texts, "
+                    + "the app settings and the theme are the desktop's own (ADR 0005)");
+
+    @ArchTest
+    static final ArchRule theDesktopSystemKnowsNoOtherDesktopPart = noClasses()
+            .that().resideInAPackage("..desktop.system..")
+            .should().dependOnClassesThat(DESKTOP_OUTSIDE_ITS_SYSTEM)
+            .because("the platforms build on desktop.system alone, so it must not bring the rest of the desktop along");
 
     @ArchTest
     static final ArchRule singleInstanceKnowsOnlyTheJdk = noClasses()
@@ -206,16 +227,19 @@ class ArchitectureTest {
             .consideringOnlyDependenciesInLayers()
             .layer("Root").definedBy(ROOT)
             .layer("Platform").definedBy("..platform..")
-            .layer("Desktop").definedBy("..desktop..")
+            .layer("Desktop").definedBy(DESKTOP_OUTSIDE_ITS_SYSTEM)
+            .layer("Desktop system").definedBy("..desktop.system..")
             .layer("Instance").definedBy("..instance..")
             .layer("Engine").definedBy("..engine..")
             .whereLayer("Root").mayNotBeAccessedByAnyLayer()
             .whereLayer("Platform").mayOnlyBeAccessedByLayers("Root")
-            .whereLayer("Desktop").mayOnlyBeAccessedByLayers("Root", "Platform")
+            .whereLayer("Desktop").mayOnlyBeAccessedByLayers("Root")
+            .whereLayer("Desktop system").mayOnlyBeAccessedByLayers("Root", "Platform", "Desktop")
             .whereLayer("Instance").mayOnlyBeAccessedByLayers("Root")
             .whereLayer("Engine").mayOnlyBeAccessedByLayers("Root", "Platform", "Desktop")
-            .because("the composition root sits on the platforms, which implement the desktop's ports, which sit on "
-                    + "the engine; the single-instance guard is used by the root alone (ADR 0001, ADR 0005)");
+            .because("the composition root sits on the platforms, which implement the ports of desktop.system; the "
+                    + "rest of the desktop sits on those ports and on the engine; the single-instance guard is used by "
+                    + "the root alone (ADR 0001, ADR 0005)");
 
     // clocks, threads, logging and output
 
@@ -321,7 +345,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule jacksonIsOnlyForStoredFiles = noClasses()
             .that().resideOutsideOfPackage(ENGINE + "..")
-            .and(notPartOf(ROOT + ".desktop.AppSettingsFile"))
+            .and(notPartOf(AppSettingsFile.class.getName()))
             .should().dependOnClassesThat().resideInAnyPackage("tools.jackson..", "com.fasterxml.jackson..")
             .because("the engine's files and the desktop's app settings are the only JSON the app reads and writes "
                     + "(ADR 0001)");
@@ -329,7 +353,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule theDesktopWritesFilesOnlyForItsAppSettings = noClasses()
             .that().resideInAPackage("..desktop..")
-            .and().doNotHaveFullyQualifiedName(ROOT + ".desktop.AppSettingsFile")
+            .and().doNotHaveFullyQualifiedName(AppSettingsFile.class.getName())
             .should().dependOnClassesThat().haveFullyQualifiedName("java.nio.file.Files")
             .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileOutputStream")
             .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileWriter")

@@ -1,12 +1,12 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.desktop.AppIcon;
-import io.github.enadeag.carchargeplanner.desktop.AppSettings;
-import io.github.enadeag.carchargeplanner.desktop.Background;
-import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
-import io.github.enadeag.carchargeplanner.desktop.Messages;
-import io.github.enadeag.carchargeplanner.desktop.SystemTheme;
-import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.app.AppSettings;
+import io.github.enadeag.carchargeplanner.desktop.app.Background;
+import io.github.enadeag.carchargeplanner.desktop.system.AppIcon;
+import io.github.enadeag.carchargeplanner.desktop.text.LanguageChoice;
+import io.github.enadeag.carchargeplanner.desktop.text.Messages;
+import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.theme.SystemTheme;
 import java.net.URI;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -55,7 +55,7 @@ public final class SettingsWindow {
      *     them and plans again; it should hand slow work on
      * @param runSetUp opens set-up once Settings closed; empty while the app has no set-up
      * @param colorScheme light or dark for the windows, followed while the app runs: the owner's appearance over the
-     *     system's ({@link io.github.enadeag.carchargeplanner.desktop.Appearance#scheme}); never null
+     *     system's ({@link io.github.enadeag.carchargeplanner.desktop.app.Appearance#scheme}); never null
      * @param icon the app icon, for the title bar and the taskbar
      * @param language the language the texts are in, followed while the app runs; never null
      * @param background reads and writes the stores away from the JavaFX thread

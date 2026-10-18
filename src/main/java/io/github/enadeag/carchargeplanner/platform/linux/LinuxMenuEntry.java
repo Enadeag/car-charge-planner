@@ -1,6 +1,6 @@
 package io.github.enadeag.carchargeplanner.platform.linux;
 
-import io.github.enadeag.carchargeplanner.desktop.AppIcon;
+import io.github.enadeag.carchargeplanner.desktop.system.AppIcon;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.System.Logger.Level;

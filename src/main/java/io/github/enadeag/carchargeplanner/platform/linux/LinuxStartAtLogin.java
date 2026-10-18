@@ -1,6 +1,6 @@
 package io.github.enadeag.carchargeplanner.platform.linux;
 
-import io.github.enadeag.carchargeplanner.desktop.StartAtLogin;
+import io.github.enadeag.carchargeplanner.desktop.system.StartAtLogin;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;

@@ -1,8 +1,8 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.desktop.Background;
-import io.github.enadeag.carchargeplanner.desktop.Messages;
-import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.app.Background;
+import io.github.enadeag.carchargeplanner.desktop.text.Messages;
+import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import io.github.enadeag.carchargeplanner.engine.config.ForecastSelection;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
@@ -166,7 +166,7 @@ final class ForecastPage implements ConfigPage {
 
     @Override
     public void showUnavailable(String reason) {
-        view.show(Unavailable.card(reason, messages));
+        view.show(NoConfigCard.card(reason, messages));
     }
 
     @Override

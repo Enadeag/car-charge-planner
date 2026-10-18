@@ -1,7 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.desktop.Messages;
-import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.text.Messages;
+import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import java.util.Optional;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;

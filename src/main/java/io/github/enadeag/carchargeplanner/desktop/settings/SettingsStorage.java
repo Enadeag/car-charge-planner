@@ -1,6 +1,6 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.desktop.AppSettings;
+import io.github.enadeag.carchargeplanner.desktop.app.AppSettings;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyChanges;
@@ -16,7 +16,7 @@ import java.util.Optional;
  * settings.
  *
  * <p>Reading and writing block: the keychain, the files and the system's start at login may each take a while. Call
- * them away from the JavaFX thread, through {@link io.github.enadeag.carchargeplanner.desktop.Background}.
+ * them away from the JavaFX thread, through {@link io.github.enadeag.carchargeplanner.desktop.app.Background}.
  */
 final class SettingsStorage {
 

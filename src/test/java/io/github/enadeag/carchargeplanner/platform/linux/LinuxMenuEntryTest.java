@@ -3,7 +3,7 @@ package io.github.enadeag.carchargeplanner.platform.linux;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
-import io.github.enadeag.carchargeplanner.desktop.AppIcon;
+import io.github.enadeag.carchargeplanner.desktop.system.AppIcon;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;

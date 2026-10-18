@@ -2,8 +2,8 @@ package io.github.enadeag.carchargeplanner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.enadeag.carchargeplanner.desktop.Tray;
-import io.github.enadeag.carchargeplanner.desktop.TrayStatus;
+import io.github.enadeag.carchargeplanner.desktop.system.Tray;
+import io.github.enadeag.carchargeplanner.desktop.system.TrayStatus;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;

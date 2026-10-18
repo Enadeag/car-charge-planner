@@ -79,7 +79,7 @@ public final class Planner {
      */
     private List<Run> runsBeside(List<ForecastStep> forecast, Instant now, List<Window> running) {
         var unavailable = new ArrayList<>(away.during(forecast, zone));
-        running.forEach(window -> unavailable.add(new Unavailable(window.start(), window.end())));
+        running.forEach(window -> unavailable.add(new BlockedTime(window.start(), window.end())));
         return finder.runs(forecast, now, unavailable).stream()
                 .filter(run -> running.stream().noneMatch(window -> touches(run, window)))
                 .toList();

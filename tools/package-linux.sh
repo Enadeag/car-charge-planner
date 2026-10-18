@@ -27,7 +27,7 @@ jpackage --type app-image --dest target/dist \
   --input target/input --main-jar car-charge-planner.jar \
   --main-class io.github.enadeag.carchargeplanner.Main \
   --runtime-image target/runtime \
-  --icon src/main/resources/io/github/enadeag/carchargeplanner/desktop/icons/icon-256.png \
+  --icon src/main/resources/io/github/enadeag/carchargeplanner/desktop/system/icons/icon-256.png \
   --java-options "--enable-native-access=javafx.graphics"
 
 tar -C target/dist -czf "target/dist/car-charge-planner-$version-linux.tar.gz" car-charge-planner

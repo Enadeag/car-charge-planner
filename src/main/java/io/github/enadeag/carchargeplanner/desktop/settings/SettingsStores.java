@@ -1,7 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.desktop.AppSettingsFile;
-import io.github.enadeag.carchargeplanner.desktop.StartAtLogin;
+import io.github.enadeag.carchargeplanner.desktop.app.AppSettingsFile;
+import io.github.enadeag.carchargeplanner.desktop.system.StartAtLogin;
 import io.github.enadeag.carchargeplanner.engine.Engine;
 import java.util.Optional;
 

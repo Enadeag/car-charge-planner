@@ -1,8 +1,8 @@
 package io.github.enadeag.carchargeplanner.platform.linux;
 
-import io.github.enadeag.carchargeplanner.desktop.PanelShade;
-import io.github.enadeag.carchargeplanner.desktop.StatusDot;
-import io.github.enadeag.carchargeplanner.desktop.StatusIcon;
+import io.github.enadeag.carchargeplanner.desktop.system.PanelShade;
+import io.github.enadeag.carchargeplanner.desktop.system.StatusDot;
+import io.github.enadeag.carchargeplanner.desktop.system.StatusIcon;
 import java.io.IOException;
 import java.lang.System.Logger.Level;
 import java.nio.file.Files;

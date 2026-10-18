@@ -1,0 +1,93 @@
+package io.github.enadeag.carchargeplanner.desktop.dashboard;
+
+import io.github.enadeag.carchargeplanner.desktop.system.StatusDot;
+import io.github.enadeag.carchargeplanner.desktop.system.TrayStatus;
+import io.github.enadeag.carchargeplanner.desktop.text.Messages;
+import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
+import io.github.enadeag.carchargeplanner.engine.Outlook;
+import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
+import io.github.enadeag.carchargeplanner.engine.plan.Window;
+import java.time.LocalDate;
+import java.util.Optional;
+
+/**
+ * Turns the engine's outlook into the tray icon's dot and tooltip. What needs the owner most comes first: no plan,
+ * then grid advice (the car would drop below its minimum), then a charge window on sun today.
+ */
+final class TrayStatusMapper {
+
+    private final Messages messages;
+
+    /**
+     * Makes the mapper; it keeps nothing between outlooks.
+     *
+     * @param messages the texts, in the owner's language
+     */
+    TrayStatusMapper(Messages messages) {
+        this.messages = messages;
+    }
+
+    /**
+     * What the tray shows before the first plan.
+     *
+     * @return no dot, and that the forecast is being fetched
+     */
+    TrayStatus loading() {
+        return new TrayStatus(StatusDot.NONE, messages.text(TextKey.LOADING));
+    }
+
+    /**
+     * The outlook as a dot and a sentence.
+     *
+     * @param outlook the engine's plan, or why there is none; never null
+     * @return the dot that asks the most of the owner, with the same in words
+     */
+    TrayStatus map(Outlook outlook) {
+        return switch (outlook) {
+            case Outlook.NotSetUp notSetUp when notSetUp.kind() == ConfigProblem.Kind.MISSING ->
+                    new TrayStatus(StatusDot.ACTION, messages.text(TextKey.TRAY_NOT_SET_UP_FIRST));
+            case Outlook.NotSetUp notSetUp -> new TrayStatus(StatusDot.ACTION,
+                    messages.text(TextKey.TRAY_NOT_SET_UP, OutlookMapper.whatToFix(notSetUp, messages)));
+            case Outlook.NoForecast none when none.keychainLocked() -> new TrayStatus(StatusDot.ACTION,
+                    messages.text(TextKey.TRAY_NO_FORECAST, messages.text(TextKey.NO_FORECAST_KEYRING_LOCKED)));
+            case Outlook.NoForecast none ->
+                    new TrayStatus(StatusDot.ACTION, messages.text(TextKey.TRAY_NO_FORECAST, none.reason()));
+            case Outlook.Planned planned when planned.days().isEmpty() ->
+                    new TrayStatus(StatusDot.ACTION, messages.text(TextKey.TRAY_NO_DAYS));
+            case Outlook.Planned planned -> plan(planned);
+        };
+    }
+
+    private TrayStatus plan(Outlook.Planned planned) {
+        var advice = planned.gridAdvice().map(new GridAdviceMapper(planned, messages)::map);
+        if (advice.isPresent()) {
+            return new TrayStatus(StatusDot.GRID, advice.get().title());
+        }
+        var today = planned.madeAt().atZone(planned.zone()).toLocalDate();
+        var next = planned.nextWindow();
+        // the next window has not ended, so one that started before today is running now
+        return next.filter(window -> !day(window, planned).isAfter(today))
+                .map(window -> new TrayStatus(StatusDot.SUN, sun(window, planned)))
+                .orElseGet(() -> new TrayStatus(StatusDot.NONE, nothingToday(next, planned, today)));
+    }
+
+    private String sun(Window window, Outlook.Planned planned) {
+        var zone = planned.zone();
+        if (window.start().isAfter(planned.madeAt())) {
+            return messages.text(TextKey.TRAY_SUN_LATER, messages.time(window.start(), zone),
+                    messages.time(window.end(), zone), window.amps());
+        }
+        return messages.text(TextKey.TRAY_SUN_NOW, messages.time(window.end(), zone), window.amps());
+    }
+
+    private String nothingToday(Optional<Window> next, Outlook.Planned planned, LocalDate today) {
+        var zone = planned.zone();
+        return next.map(window -> messages.text(TextKey.TRAY_NEXT, messages.inSentence(day(window, planned), today),
+                        messages.time(window.start(), zone), messages.time(window.end(), zone)))
+                .orElseGet(() -> messages.text(TextKey.TRAY_NOTHING));
+    }
+
+    private static LocalDate day(Window window, Outlook.Planned planned) {
+        return window.start().atZone(planned.zone()).toLocalDate();
+    }
+}

@@ -556,7 +556,7 @@ class PlannerTest {
     void withoutAForecastTheAwayTimeIsTheOneOffPeriods() {
         var oneOff = new AwayPeriod(at(SUMMER_FRI, 8), at(SUMMER_FRI, 12));
         assertThat(new AwayTimes(WEEKLY_AWAY.recurring(), List.of(oneOff)).during(List.of(), Forecasts.TZ))
-                .containsExactly(new Unavailable(oneOff.start(), oneOff.end()));
+                .containsExactly(new BlockedTime(oneOff.start(), oneOff.end()));
     }
 
     @Test

@@ -1,11 +1,11 @@
 package io.github.enadeag.carchargeplanner.platform.windows;
 
-import io.github.enadeag.carchargeplanner.desktop.NotificationText;
-import io.github.enadeag.carchargeplanner.desktop.Notifications;
-import io.github.enadeag.carchargeplanner.desktop.StatusDot;
-import io.github.enadeag.carchargeplanner.desktop.StatusIcon;
-import io.github.enadeag.carchargeplanner.desktop.Tray;
-import io.github.enadeag.carchargeplanner.desktop.TrayStatus;
+import io.github.enadeag.carchargeplanner.desktop.system.NotificationText;
+import io.github.enadeag.carchargeplanner.desktop.system.Notifications;
+import io.github.enadeag.carchargeplanner.desktop.system.StatusDot;
+import io.github.enadeag.carchargeplanner.desktop.system.StatusIcon;
+import io.github.enadeag.carchargeplanner.desktop.system.Tray;
+import io.github.enadeag.carchargeplanner.desktop.system.TrayStatus;
 import java.awt.AWTException;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;

@@ -1,6 +1,6 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.desktop.Units;
+import io.github.enadeag.carchargeplanner.desktop.app.Units;
 
 /**
  * A value the engine keeps metric and Settings shows in the owner's units. Consumption converts by the reciprocal:

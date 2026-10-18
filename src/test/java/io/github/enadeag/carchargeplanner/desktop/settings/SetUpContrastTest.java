@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.github.enadeag.carchargeplanner.desktop.Contrast;
 import io.github.enadeag.carchargeplanner.desktop.CssWarnings;
 import io.github.enadeag.carchargeplanner.desktop.FxTest;
-import io.github.enadeag.carchargeplanner.desktop.Language;
+import io.github.enadeag.carchargeplanner.desktop.text.Language;
 import java.nio.file.Path;
 import javafx.application.ColorScheme;
 import org.junit.jupiter.api.AfterEach;

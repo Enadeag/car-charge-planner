@@ -1,12 +1,12 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.desktop.AppSettings;
-import io.github.enadeag.carchargeplanner.desktop.Appearance;
-import io.github.enadeag.carchargeplanner.desktop.Background;
-import io.github.enadeag.carchargeplanner.desktop.Language;
-import io.github.enadeag.carchargeplanner.desktop.Messages;
-import io.github.enadeag.carchargeplanner.desktop.ScreenReader;
-import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.app.AppSettings;
+import io.github.enadeag.carchargeplanner.desktop.app.Appearance;
+import io.github.enadeag.carchargeplanner.desktop.app.Background;
+import io.github.enadeag.carchargeplanner.desktop.text.Language;
+import io.github.enadeag.carchargeplanner.desktop.text.Messages;
+import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.theme.ScreenReader;
 import io.github.enadeag.carchargeplanner.engine.config.HomeSystem;
 import java.net.URI;
 import java.nio.file.Path;
@@ -169,7 +169,7 @@ final class SetUpView extends BorderPane {
         ConnectionTest tester = (provider, settings) -> engine.checkConnection(provider, system.get(), settings);
         var forecast = new ForecastPage(providers, tester, openLink, keysFile, background, messages);
         var house = new HouseCard(messages);
-        var away = new AwayCard(messages);
+        var away = new WeeklyAwayCard(messages);
         var more = new PageView(messages.text(SetUpStep.MORE.title()));
         more.show(FieldRow.paragraph(messages.text(TextKey.SETUP_MORE_HINT), "field-label"), house.view(),
                 away.view());

@@ -1,6 +1,6 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.desktop.Background;
+import io.github.enadeag.carchargeplanner.desktop.app.Background;
 import javafx.application.Platform;
 
 /** The slow work of a window on a virtual thread each, as the app does it, and the outcome on the JavaFX thread. */

@@ -2,8 +2,8 @@ package io.github.enadeag.carchargeplanner.platform.linux;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.enadeag.carchargeplanner.desktop.AppIcon;
-import io.github.enadeag.carchargeplanner.desktop.NotificationText;
+import io.github.enadeag.carchargeplanner.desktop.system.AppIcon;
+import io.github.enadeag.carchargeplanner.desktop.system.NotificationText;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;

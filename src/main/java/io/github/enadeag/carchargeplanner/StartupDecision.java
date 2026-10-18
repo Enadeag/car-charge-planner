@@ -1,6 +1,6 @@
 package io.github.enadeag.carchargeplanner;
 
-import io.github.enadeag.carchargeplanner.desktop.DisplayMode;
+import io.github.enadeag.carchargeplanner.desktop.app.DisplayMode;
 import java.time.Duration;
 
 /**

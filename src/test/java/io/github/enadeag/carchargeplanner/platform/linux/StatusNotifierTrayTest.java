@@ -3,11 +3,11 @@ package io.github.enadeag.carchargeplanner.platform.linux;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.github.enadeag.carchargeplanner.desktop.PanelShade;
-import io.github.enadeag.carchargeplanner.desktop.StatusDot;
-import io.github.enadeag.carchargeplanner.desktop.StatusIcon;
-import io.github.enadeag.carchargeplanner.desktop.Tray;
-import io.github.enadeag.carchargeplanner.desktop.TrayStatus;
+import io.github.enadeag.carchargeplanner.desktop.system.PanelShade;
+import io.github.enadeag.carchargeplanner.desktop.system.StatusDot;
+import io.github.enadeag.carchargeplanner.desktop.system.StatusIcon;
+import io.github.enadeag.carchargeplanner.desktop.system.Tray;
+import io.github.enadeag.carchargeplanner.desktop.system.TrayStatus;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;

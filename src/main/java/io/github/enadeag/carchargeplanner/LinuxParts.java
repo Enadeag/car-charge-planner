@@ -1,11 +1,11 @@
 package io.github.enadeag.carchargeplanner;
 
-import io.github.enadeag.carchargeplanner.desktop.AppIcon;
-import io.github.enadeag.carchargeplanner.desktop.LanguageChoice;
-import io.github.enadeag.carchargeplanner.desktop.StartAtLogin;
-import io.github.enadeag.carchargeplanner.desktop.StatusIcon;
-import io.github.enadeag.carchargeplanner.desktop.TaskbarHiding;
-import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.system.AppIcon;
+import io.github.enadeag.carchargeplanner.desktop.system.StartAtLogin;
+import io.github.enadeag.carchargeplanner.desktop.system.StatusIcon;
+import io.github.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
+import io.github.enadeag.carchargeplanner.desktop.text.LanguageChoice;
+import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import io.github.enadeag.carchargeplanner.engine.secrets.Keychain;
 import io.github.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import io.github.enadeag.carchargeplanner.platform.linux.BusConnector;

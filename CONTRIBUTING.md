@@ -76,7 +76,8 @@ alphabetical order; `-Dsurefire.runOrder=random` shows whether a test depends on
 
 A test that only makes sense on one system says so with JUnit's `@EnabledOnOs`. Tests without one must pass on every
 system, so they use the location classes and not hard-coded folders. `ArchitectureTest` keeps the packages apart:
-the engine knows nothing of the desktop, and only the platform packages know their system.
+the engine knows nothing of the desktop, only the platform packages know their system, and they know only
+`desktop.system` of the desktop.
 
 A change comes with a test that fails without it.
 
@@ -101,7 +102,7 @@ for SignPath (ADR 0003).
   asks to accept a maintenance fee agreement first.
 
 The app icon's drawings are in `src/packaging/icons/`: `car-charge-planner.svg` is the icon the PNGs in
-`src/main/resources/.../desktop/icons/` and `src/packaging/windows/car-charge-planner.ico` show, and
+`src/main/resources/.../desktop/system/icons/` and `src/packaging/windows/car-charge-planner.ico` show, and
 `car-charge-planner-symbolic.svg` has the shapes the tray icon draws (`StatusIcon`).
 
 ## Continuous integration
@@ -151,13 +152,13 @@ Everything is in the package `io.github.enadeag.carchargeplanner`, under `src/ma
 | Package | What it holds |
 | --- | --- |
 | `engine` | Plans, fetches forecasts and owns the stored data, without user interface; clients get plain records. `engine.config` the config file, `engine.away` the away periods (weekly, and the ones entered for a specific day and kept in `away.json`), `engine.battery` the battery level the owner entered last (kept in `battery.json`), `engine.forecast` the provider contract and the forecast service (fallback, cache, rate limits), `engine.forecast.providers` Open-Meteo and Forecast.Solar, `engine.secrets` the API keys, `engine.plan` the planner, `engine.notify` when the owner is told about a window (the notifier port, and the announced windows kept in `announced.json`). |
-| `desktop` | The JavaFX dashboard, the notifications' texts, every text in each language (`Messages`, with the bundles in `src/main/resources`), the app settings (`app.json`: language, appearance, units and display mode), and what a tray icon, notifications and start at login must do. `desktop.settings` is the Settings window (a page per category, cards of fields, saved through the engine and `app.json`) and the first-run set-up, whose steps show the same cards and save through the same storage. |
+| `desktop` | The client on the desktop, in parts that depend one way: `desktop.system` the ports each platform implements (tray, notifications, start at login, keeping the popup out of the taskbar) and the icons they show, without any other desktop part; `desktop.text` every text in each language (`Messages`, with the bundles beside it in `src/main/resources`) and the notifications' texts; `desktop.app` the app settings (`app.json`: language, appearance, units and display mode) and `Background`, which every window uses for slow work; `desktop.theme` light or dark and the stylesheet the windows share, and what a screen reader needs beyond JavaFX; `desktop.dashboard` the JavaFX dashboard and the tray icon's status, mapped from the engine's outlook. `desktop.settings` is the Settings window (a page per category, cards of fields, saved through the engine and `app.json`) and the first-run set-up, whose steps show the same cards and save through the same storage. |
 | `instance` | One running copy per user: the running copy holds a lock file in a private folder, and a second start asks it, over a private Unix domain socket beside it, to show its dashboard. |
 | `platform.linux`, `platform.windows` | The tray icon, notifications, the keychain and start at login on each system: our own StatusNotifierItem, notification and Secret Service clients over D-Bus, and a desktop entry in the autostart folder; AWT's `SystemTray` and its icon's messages, the Credential Manager and the Run key. |
 | `Main` and the root package | The composition root: the one place where the parts are made and handed to each other. `Main` reads the system once (`Host`, `Os`) and runs a command (`Commands`) or the app (`DesktopApp`: startup order, tray or window (`StartupDecision`, `TrayStarter`), and one `ClosingOrder` for Quit and the shutdown hook); `PlatformParts` with `LinuxParts` and `WindowsParts` makes each system's own parts. |
 
 Nothing slow runs on the JavaFX thread: a window hands work that can wait on the keychain, a file, the system or the
-network to `desktop.Background`, which runs it on a virtual thread, logs a failure, and hands the outcome back to the
+network to `desktop.app.Background`, which runs it on a virtual thread, logs a failure, and hands the outcome back to the
 JavaFX thread. A test gives it executors of its own, such as one that runs the work at once or one that holds it.
 
 How to add a forecast provider is in [docs/providers.md](docs/providers.md). `CONTEXT.md` explains the words the
@@ -211,7 +212,7 @@ The app is developed on KDE Plasma under Wayland and checked on Windows. If you 
 ## Adding a language
 
 Every text the app shows is translatable, and a language is one file. The texts are in
-`src/main/resources/io/github/enadeag/carchargeplanner/desktop/`, one file per language: `messages_en.properties` for
+`src/main/resources/io/github/enadeag/carchargeplanner/desktop/text/`, one file per language: `messages_en.properties` for
 English, `messages_nl.properties` for Dutch. They are Java resource bundles in UTF-8 (type `é` and `ü` as they are, no
 `é` escapes). Each line is a key, the same in every language, and its text:
 
@@ -219,7 +220,7 @@ English, `messages_nl.properties` for Dutch. They are Java resource bundles in U
 DAY_SET = Set {0} A ({1} kW)
 ```
 
-1. **Add the language to the app.** In `desktop/Language.java`, add a constant with the language's ISO 639 code,
+1. **Add the language to the app.** In `desktop/text/Language.java`, add a constant with the language's ISO 639 code,
    the locale whose numbers, times and day names it uses, and its name in itself, which the language list shows,
    such as `GERMAN("de", Locale.GERMANY, "Deutsch")`. Language codes are two letters: `de`, `fr`, `pt`. Add the code
    to `--include-locales` in `tools/package-linux.sh` and `tools/package-windows.ps1` too, so the packaged app has

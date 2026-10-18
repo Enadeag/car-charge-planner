@@ -1,6 +1,6 @@
 package io.github.enadeag.carchargeplanner.platform.windows;
 
-import io.github.enadeag.carchargeplanner.desktop.NotificationText;
+import io.github.enadeag.carchargeplanner.desktop.system.NotificationText;
 import java.lang.System.Logger.Level;
 
 /**

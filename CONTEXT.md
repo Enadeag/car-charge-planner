@@ -32,6 +32,14 @@ _Avoid_: Reminder, alert
 The battery percentage the car must never fall below (30% unless the user changes it). The plan must keep the car above it, even if that means charging outside the best solar window.
 _Avoid_: Floor, reserve
 
+**Grid advice**:
+The advice to charge from the grid, because on sun alone the battery would end a day below the minimum charge level: how much energy, and the charge window to take it in, on that day or the latest day before it with room. The charging it asks for is a **grid charge**, announced like any charge window.
+_Avoid_: Grid warning, top-up, emergency charge
+
+**Assumed battery level**:
+The battery level a plan starts from while the owner has not entered the level the car shows. The dashboard says it is assumed until the owner enters one. Not a typical value: it is not a setting, and the next entered level replaces it.
+_Avoid_: Default level, estimated level, state of charge
+
 **Self-consumption**:
 The share of produced solar energy that is used on-site (home or car) rather than fed in. The primary quantity the tool maximises.
 _Avoid_: Own use, direct use
@@ -80,6 +88,18 @@ _Avoid_: Weather source, weather service, API
 A second forecast provider, chosen in Settings, asked only when the first has no forecast that is still usable.
 _Avoid_: Backup provider, secondary source
 
+**Forecast freshness**:
+How recent the forecast behind a plan is: **fresh** when it was just fetched from the provider, **cached** when it was fetched earlier and it is too soon to ask again, **stale** when a refresh was due but failed and the older forecast is still young enough to use. A forecast too old to use is not stale: there is then no forecast.
+_Avoid_: Age, outdated, expired
+
+**Cool-down**:
+The time after a forecast provider said it was asked too often, until which the app does not ask it again. The dashboard shows the provider as busy until then.
+_Avoid_: Rate limit (the provider's rule, not the wait), back-off, cooldown period
+
+**API key**:
+The code a forecast provider gives for a paid plan, which the app sends with each request to that provider. Kept in the system keychain, or in a file only the owner can read when there is no keychain; never in the settings files.
+_Avoid_: Secret, token, password, key (on its own)
+
 ## Running on a computer
 
 **Start at login**:
@@ -102,6 +122,10 @@ _Avoid_: Backend, server, daemon, core
 **Client**:
 Anything that shows the engine's plan and passes on the user's changes: today the desktop app's tray, popup and windows; later perhaps a web or phone app. A client never stores data itself.
 _Avoid_: Frontend, UI (a client is more than its screens)
+
+**Outlook**:
+What the engine tells its clients after each planning round: either the plan for the coming days, with where its forecast came from, or why there is no plan (not set up, or no forecast).
+_Avoid_: Status, result, plan (a plan is only one kind of outlook)
 
 **Desktop app**:
 What the user installs on their computer: the engine and the client together in one program.

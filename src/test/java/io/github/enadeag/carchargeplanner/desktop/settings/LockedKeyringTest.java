@@ -2,12 +2,12 @@ package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.enadeag.carchargeplanner.desktop.Background;
 import io.github.enadeag.carchargeplanner.desktop.Fx;
 import io.github.enadeag.carchargeplanner.desktop.FxTest;
-import io.github.enadeag.carchargeplanner.desktop.Language;
 import io.github.enadeag.carchargeplanner.desktop.Scenes;
-import io.github.enadeag.carchargeplanner.desktop.TextKey;
+import io.github.enadeag.carchargeplanner.desktop.app.Background;
+import io.github.enadeag.carchargeplanner.desktop.text.Language;
+import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider;
