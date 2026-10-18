@@ -1,11 +1,10 @@
 package io.github.enadeag.carchargeplanner.engine.config;
 
-import io.github.enadeag.carchargeplanner.engine.setting.Setting;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
+import io.github.enadeag.carchargeplanner.engine.setting.Setting;
 import io.github.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -13,6 +12,7 @@ import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -339,5 +339,59 @@ class ConfigFileTest {
         write(Files.readString(EXAMPLE).replace("\"margin\": 0.85", "\"margin\": 0.5"));
 
         assertThat(file.read().planning().margin()).isEqualTo(0.5);
+    }
+
+    @Test
+    void aWrongValueInTheSecondPanelArrayIsNamedByItsPlace() throws IOException {
+        var example = Files.readString(EXAMPLE);
+        var roof = example.substring(example.indexOf("{", example.indexOf("\"panels\"")),
+                example.indexOf("}", example.indexOf("\"panels\"")) + 1);
+        var file = write(example.replace(roof, roof + ", " + roof.replace("\"tiltDeg\": 35", "\"tiltDeg\": 91")));
+
+        assertThatThrownBy(() -> new ConfigFile(file).read()).isInstanceOf(ConfigProblem.class)
+                .hasMessage("engine.json: system.panels[1]: tiltDeg must be between 0 and 90");
+    }
+
+    @Test
+    void aWrongTypicalValueIsNamedByItsPlaceInItsList() throws IOException {
+        var example = Files.readString(EXAMPLE);
+        var file = write(example.substring(0, example.lastIndexOf('}'))
+                + ", \"typical\": {\"system\": [], \"panels\": [[\"PANEL_SIZE\", 5]]}}");
+
+        assertThatThrownBy(() -> new ConfigFile(file).read()).isInstanceOf(ConfigProblem.class)
+                .hasMessageContaining("typical.panels[0][1]");
+    }
+
+    @Test
+    void typicalValuesAreInTheFileForTheNextReader() throws IOException, ConfigProblem {
+        var example = new ConfigFile(EXAMPLE).read();
+        var typical = new TypicalValues(Set.of(Setting.CHARGER_PHASES, Setting.CAR_BATTERY),
+                List.of(Set.of(Setting.PANEL_TILT, Setting.PANEL_SIZE)));
+        var path = folder.resolve("engine.json");
+
+        new ConfigFile(path).write(example.withSystem(example.system(), typical));
+
+        var written = StoredJson.parse(Files.readString(path)).path("typical");
+        assertThat(written.path("system").values()).extracting(node -> node.stringValue())
+                .containsExactly("CAR_BATTERY", "CHARGER_PHASES");
+        assertThat(written.path("panels").get(0).values()).extracting(node -> node.stringValue())
+                .containsExactly("PANEL_SIZE", "PANEL_TILT");
+        assertThat(new ConfigFile(path).read().typical()).isEqualTo(typical);
+    }
+
+    @Test
+    void theProvidersSettingsAreWrittenInTheOrderOfTheirIds() throws IOException, ConfigProblem {
+        var example = new ConfigFile(EXAMPLE).read();
+        var settings = new LinkedHashMap<ProviderId, Map<String, String>>();
+        for (var id : List.of("zz-last", "open-meteo", "aa-first", "forecast-solar")) {
+            settings.put(new ProviderId(id), Map.of("note", id));
+        }
+        var path = folder.resolve("engine.json");
+
+        new ConfigFile(path).write(example.withForecast(new ForecastSelection(new ProviderId("open-meteo"),
+                Optional.empty(), settings)));
+
+        var written = StoredJson.parse(Files.readString(path)).path("forecast").path("settings");
+        assertThat(List.copyOf(written.propertyNames())).containsExactly("aa-first", "forecast-solar", "open-meteo", "zz-last");
     }
 }
