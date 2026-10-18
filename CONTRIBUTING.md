@@ -98,10 +98,21 @@ library: `./mvnw verify` runs `dependency:analyze` and fails on a library that i
 but not used. A library that is only found at run time and never named in the code (such as the SLF4J binding) goes
 in the list of ignored ones there, with the reason. Keep the third-party table in the README up to date.
 
+Each library the app brings at run time, also one that comes in through another library, needs its licence text in
+`src/packaging/legal/`, which the packages carry in their `legal` folder: one file per component, starting with its
+name, an `Artifact: groupId:artifactId` line per jar it covers, its source and its licence, then the licence and
+notice texts as the jar's `META-INF` has them (or the project's own `LICENSE` at that release when the jar has none).
+`PackagingTest` fails when a runtime library has no file there, or a file names a library the app no longer brings.
+
 ## Packaging
 
 Each package brings a runtime made by jlink, so users need no Java of their own. Neither is signed yet: signing waits
-for SignPath (ADR 0003).
+for SignPath (ADR 0003). Both scripts take jlink's options, such as the modules and locales, from
+`src/packaging/jlink.args`, and link JavaFX from the official jmods, downloaded from a pinned address and checked
+against a pinned SHA-256; they need `curl` (and `unzip` on Linux). A new JavaFX version in `pom.xml` needs the new
+address and checksum in both scripts (`PackagingTest` checks the version). Each package has a `legal` folder with
+`LICENSE`, `NOTICE`, `ADDITIONAL-TERMS.md` and the files of `src/packaging/legal/`, and the Windows installer shows
+the GPL.
 
 - **Linux:** `sh tools/package-linux.sh` makes `target/dist/car-charge-planner/` (start `bin/car-charge-planner`) and
   `target/dist/car-charge-planner-<version>-linux.tar.gz`.
@@ -241,8 +252,8 @@ DAY_SET = Set {0} A ({1} kW)
 1. **Add the language to the app.** In `desktop/text/Language.java`, add a constant with the language's ISO 639 code,
    the locale whose numbers, times and day names it uses, and its name in itself, which the language list shows,
    such as `GERMAN("de", Locale.GERMANY, "Deutsch")`. Language codes are two letters: `de`, `fr`, `pt`. Add the code
-   to `--include-locales` in `tools/package-linux.sh` and `tools/package-windows.ps1` too, so the packaged app has
-   the language's day names and numbers.
+   to `--include-locales` in `src/packaging/jlink.args` too, so the packaged app has the language's day names and
+   numbers.
 
 2. **Start the file.** Copy `messages_en.properties` to `messages_<code>.properties` and translate every text after
    the `=`. Things to know:

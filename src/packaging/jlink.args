@@ -1,0 +1,15 @@
+# The jlink options of both packaging scripts (tools/package-linux.sh, tools/package-windows.ps1), as an argument file.
+
+# The modules the app needs (jdeps --print-module-deps), plus java.logging for its log and JavaFX, and the locale
+# data of the app's languages (Language.java): without it, Dutch day names, numbers and times come out in English.
+# jdk.jfr is left out: JavaFX needs it only for its optional Flight Recorder events (requires static).
+--add-modules java.base,java.desktop,java.logging,java.net.http,java.sql,jdk.net,jdk.security.auth
+--add-modules javafx.controls,jdk.localedata
+--include-locales=en,nl
+
+# The app starts through jpackage's launcher, so the runtime needs no java or keytool of its own.
+--strip-native-commands
+--strip-debug
+--no-header-files
+--no-man-pages
+--compress zip-6

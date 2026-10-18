@@ -1,0 +1,11 @@
+The Java runtime: OpenJDK and JavaFX
+Artifact: org.openjfx:javafx-base
+Artifact: org.openjfx:javafx-graphics
+Artifact: org.openjfx:javafx-controls
+Source: https://openjdk.org and https://openjfx.io
+Licence: GPL-2.0-only with the Classpath Exception
+
+The app brings its own Java runtime, made by jlink from OpenJDK and the official JavaFX jmods. Its licence, the
+Classpath Exception and the notices of the code that OpenJDK and JavaFX include are in the runtime's own legal
+folder, with a folder per module: lib/runtime/legal in the Linux folder, runtime\legal in the Windows installation
+folder.
