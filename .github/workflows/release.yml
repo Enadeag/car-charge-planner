@@ -1,12 +1,19 @@
 name: Release
 
-# A tag vX.Y.Z builds and tests the app, packages the Linux tar.gz and the Windows installer, and attaches them, with
-# SHA256SUMS, to a DRAFT GitHub Release; it also creates the branch release/X.Y.Z at the tag. Nothing is ever published
+# A tag vX.Y.Z builds and tests the app, packages the Linux tar.gz and the Windows installer with an SBOM each, checks
+# the SBOMs for known vulnerabilities, attests where the files were built, and attaches them, with SHA256SUMS, to a
+# DRAFT GitHub Release; it also creates the branch release/X.Y.Z at the tag. Nothing is ever published
 # here: the maintainer reads the draft and publishes it by hand. The tag must be "v" plus the version in pom.xml, which
 # has no -SNAPSHOT at a release (CONTRIBUTING.md, Releasing).
 #
 # Dry run: start this workflow by hand (Actions, Release, Run workflow, on main). It builds everything and makes a draft
-# called "dry run", without the tag check and without creating the release branch; a missing changelog section only warns.
+# called "dry run", without the tag check, the attestations and the release branch; a missing changelog section only
+# warns.
+#
+# The release builds use one exact Java version, which the packages bring as their runtime and the release notes name:
+# the java-version of every setup-java here and in windows-installer.yml (ReleaseWorkflowTest keeps them the same).
+# Moving to a new Java update is a pull request (CONTRIBUTING.md, Java updates). They use no Maven cache, which another
+# workflow run could have filled.
 on:
   push:
     tags: ["v*"]
@@ -34,8 +41,7 @@ jobs:
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
-          java-version: "25"
-          cache: maven
+          java-version: "25.0.4.1+1"
       - name: Read the version and compare it with the tag
         id: version
         run: |
@@ -52,16 +58,28 @@ jobs:
             echo "::error::tag $GITHUB_REF_NAME does not match the version in pom.xml, $version (expected tag v$version)"
             exit 1
           fi
-      - name: Check that CHANGELOG.md has notes for this version
+      # here, not in the release job, which holds a token that can write to the repository
+      - name: Release notes, from the CHANGELOG.md section for this version
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
+          notes="$RUNNER_TEMP/notes/notes.md"
+          mkdir "$RUNNER_TEMP/notes"
           if [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            java tools/ReleaseNotes.java "$VERSION" CHANGELOG.md > /dev/null
+            java tools/ReleaseNotes.java "$VERSION" CHANGELOG.md > "$notes"
           else
-            java tools/ReleaseNotes.java "${VERSION%-SNAPSHOT}" CHANGELOG.md > /dev/null \
+            printf 'Dry run of the release workflow (run %s, version %s). Delete this draft.\n\n' \
+              "$GITHUB_RUN_ID" "$VERSION" > "$notes"
+            java tools/ReleaseNotes.java "${VERSION%-SNAPSHOT}" CHANGELOG.md >> "$notes" \
               || echo "::warning::CHANGELOG.md has no section for ${VERSION%-SNAPSHOT} yet; a tag would stop here"
           fi
+          cat "$notes"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-notes
+          path: ${{ runner.temp }}/notes/notes.md
+          if-no-files-found: error
+          retention-days: 14
       - name: Stop early if release/X.Y.Z already points elsewhere
         if: github.event_name == 'push'
         env:
@@ -87,8 +105,7 @@ jobs:
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
-          java-version: "25"
-          cache: maven
+          java-version: "25.0.4.1+1"
       - name: D-Bus and GNOME Keyring, for the tests on a private bus
         run: |
           sudo apt-get update
@@ -101,8 +118,15 @@ jobs:
         # "quit" with no copy running starts the runtime and the app, finds nothing to quit and exits with 0; an
         # unknown command exits with 2, which shows the exit code really comes from the app
         run: |
+          tarball=$(ls target/dist/car-charge-planner-*-linux.tar.gz)
+          if tar --numeric-owner -tvzf "$tarball" | awk '$2 != "0/0"' | grep .; then
+            echo "::error::these entries in the tar.gz are not owned by root"; exit 1
+          fi
           mkdir "$RUNNER_TEMP/unpacked"
-          tar -C "$RUNNER_TEMP/unpacked" -xzf target/dist/car-charge-planner-*-linux.tar.gz
+          tar -C "$RUNNER_TEMP/unpacked" -xzf "$tarball"
+          if [ ! -f "$RUNNER_TEMP/unpacked/car-charge-planner/legal/LICENSE" ]; then
+            echo "::error::the tar.gz has no legal/LICENSE"; exit 1
+          fi
           app="$RUNNER_TEMP/unpacked/car-charge-planner/bin/car-charge-planner"
           "$app" quit
           status=0; "$app" no-such-command || status=$?
@@ -110,7 +134,9 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: linux-download
-          path: target/dist/car-charge-planner-*-linux.tar.gz
+          path: |
+            target/dist/car-charge-planner-*-linux.tar.gz
+            target/dist/car-charge-planner-*-linux.cdx.json
           if-no-files-found: error
           retention-days: 14
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -124,28 +150,51 @@ jobs:
     needs: prepare
     uses: ./.github/workflows/windows-installer.yml
 
+  # The release gate on known vulnerabilities, in a job without write access: tools/scan-sbom.sh fails on any finding
+  # that osv-scanner.toml does not list.
+  scan:
+    needs: [linux, installer]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: linux-download
+          path: release
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: windows-installer
+          path: release
+      - name: Check the SBOMs against the OSV vulnerability database
+        run: sh tools/scan-sbom.sh release/*.cdx.json
+
   # Signing: the installer is unsigned until the public launch (docs/adr/0003-pyinstaller-unsigned-until-signpath.md).
   # At the launch the SignPath Foundation signs it from this runner; the step below is prepared for that and stays
   # skipped while the secret SIGNPATH_API_TOKEN does not exist. It is deliberately not wired up yet: the SignPath
   # organisation, project and signing-policy slugs, and signing before the checksums are made, come with the launch.
   release:
-    needs: [prepare, linux, installer]
+    needs: [prepare, linux, installer, scan]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: write  # create the draft release and push release/X.Y.Z
+      id-token: write  # the attestations: a token that says which workflow run built the files
+      attestations: write
     env:
       GH_TOKEN: ${{ github.token }}
       VERSION: ${{ needs.prepare.outputs.version }}
       DRY_RUN: ${{ github.event_name != 'push' }}
       SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
     steps:
-      # keeps the token in the checkout: the release branch is pushed with git
+      # keeps the token in the checkout: the release branch is pushed with git. Nothing from the repository runs here.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          distribution: temurin
-          java-version: "25"
+          name: release-notes
+          path: ${{ runner.temp }}/notes
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: linux-download
@@ -162,10 +211,22 @@ jobs:
       - name: Checksums
         run: |
           cd release
-          ls car-charge-planner-*-linux.tar.gz car-charge-planner-*.exe
-          if [ "$(ls | wc -l)" -ne 2 ]; then echo "::error::expected the tar.gz and the installer only"; ls -l; exit 1; fi
+          ls car-charge-planner-*-linux.tar.gz car-charge-planner-*.exe \
+            car-charge-planner-*-linux.cdx.json car-charge-planner-*-windows.cdx.json
+          if [ "$(ls | wc -l)" -ne 4 ]; then
+            echo "::error::expected the tar.gz, the installer and their SBOMs only"; ls -l; exit 1
+          fi
           sha256sum -- * > SHA256SUMS
           cat SHA256SUMS
+      # Not in a dry run: its files are not a release, and while the repository is private it cannot make attestations.
+      - name: Attest where the files were built
+        if: env.DRY_RUN != 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            release/car-charge-planner-*-linux.tar.gz
+            release/car-charge-planner-*.exe
+            release/car-charge-planner-*.cdx.json
       - name: Create the release branch
         if: env.DRY_RUN != 'true'
         # With rulesets on release/** and v* after the public launch, this token needs the maintainer's bypass,
@@ -183,9 +244,8 @@ jobs:
         run: |
           if [ "$DRY_RUN" = "true" ]; then
             gh release create "dry-run-$GITHUB_RUN_ID" release/* --draft --target "$GITHUB_SHA" \
-              --title "dry run" --notes "Dry run of the release workflow (run $GITHUB_RUN_ID, version $VERSION). Delete this draft."
+              --title "dry run" --notes-file "$RUNNER_TEMP/notes/notes.md"
           else
-            java tools/ReleaseNotes.java "$VERSION" CHANGELOG.md > "$RUNNER_TEMP/notes.md"
             gh release create "$GITHUB_REF_NAME" release/* --draft --verify-tag \
-              --title "Car charge planner $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+              --title "Car charge planner $VERSION" --notes-file "$RUNNER_TEMP/notes/notes.md"
           fi

@@ -1,0 +1,21 @@
+# Dependabot proposes new versions of the libraries and plugins in pom.xml and of the actions in the workflows, as pull
+# requests. A version update waits a week after its release; a security update (switched on in the repository's
+# settings) does not wait.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
