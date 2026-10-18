@@ -3,6 +3,7 @@ package io.github.enadeag.carchargeplanner.engine.store;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.github.enadeag.carchargeplanner.LogCapture;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -131,5 +132,29 @@ class PrivateFilesTest {
         PrivateFiles.tighten(folder.resolve("missing"));
 
         assertThat(folder.resolve("missing")).doesNotExist();
+    }
+
+    @Test
+    void aMoveThatFailsLeavesNoTemporaryFile() throws IOException {
+        // a folder that is not empty in the file's place cannot be replaced
+        var file = Files.createDirectory(folder.resolve("data.json"));
+        Files.writeString(file.resolve("inside"), "kept");
+
+        assertThatThrownBy(() -> PrivateFiles.write(file, "new")).isInstanceOf(IOException.class);
+        assertThat(folder.resolve("data.json.tmp")).doesNotExist();
+        assertThat(file.resolve("inside")).hasContent("kept");
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    void tighteningAFolderIsLoggedOnlyWhenItChangedSomething() throws IOException {
+        var app = Files.createDirectory(folder.resolve("app"));
+        setMode(app, "rwxr-xr-x");
+        try (var log = LogCapture.of(PrivateFiles.class)) {
+            PrivateFiles.tighten(app);
+            PrivateFiles.tighten(app);
+
+            assertThat(log.lines()).containsExactly("INFO made " + app + " readable only by you");
+        }
     }
 }

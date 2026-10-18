@@ -3,13 +3,14 @@ package io.github.enadeag.carchargeplanner.engine;
 import static io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider.error;
 import static io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider.steps;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import io.github.enadeag.carchargeplanner.LogCapture;
 import io.github.enadeag.carchargeplanner.engine.away.AwayFile;
-import io.github.enadeag.carchargeplanner.engine.battery.BatteryFile;
 import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import io.github.enadeag.carchargeplanner.engine.battery.BatteryFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigFile;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.Coordinates;
@@ -40,7 +41,10 @@ import io.github.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
 import io.github.enadeag.carchargeplanner.engine.notify.Announcement;
 import io.github.enadeag.carchargeplanner.engine.notify.AnnouncementKind;
 import io.github.enadeag.carchargeplanner.engine.notify.Announcer;
+import io.github.enadeag.carchargeplanner.engine.plan.DayPlan;
+import io.github.enadeag.carchargeplanner.engine.plan.Window;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
+import io.github.enadeag.carchargeplanner.engine.secrets.KeyChanges;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.LockableKeychain;
 import io.github.enadeag.carchargeplanner.engine.secrets.NoKeychain;
@@ -61,6 +65,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
@@ -339,6 +344,23 @@ class EngineTest {
     }
 
     @Test
+    void theNextWindowIsTheFirstThatHasNotEndedAndAHouseMayUseNothing() {
+        var madeAt = DAY.atTime(10, 0).atZone(BRUSSELS).toInstant();
+        var source = new ForecastSource(new ProviderId("main"), "Main", "Forecast by Main", madeAt, Freshness.FRESH,
+                ProviderRole.PRIMARY, "", Optional.empty());
+        var ended = new Window(madeAt.minus(Duration.ofHours(2)), madeAt,
+                10, 2.3, 4.6, 0);
+        var next = new Window(madeAt.plus(Duration.ofHours(1)),
+                madeAt.plus(Duration.ofHours(3)), 10, 2.3, 4.6, 0);
+        var day = new DayPlan(DAY, new Percent(50), List.of(ended, next),
+                new Percent(60), new Percent(50), 10, List.of());
+        var planned = new Outlook.Planned(madeAt, BRUSSELS, List.of(day), new Percent(50), true, Optional.empty(), source,
+                0, new Percent(30), new Percent(80));
+
+        assertThat(planned.nextWindow()).contains(next);
+    }
+
+    @Test
     void theConnectionCheckAsksTheProviderOnceAndCountsTheDays() {
         var result = engine(clockAt(7), main, backup).checkConnection(new ProviderId("main"), exampleSystem(), Map.of());
 
@@ -608,5 +630,85 @@ class EngineTest {
         answer.countDown();
         assertThat(planning.get(10, TimeUnit.SECONDS)).isInstanceOf(Outlook.Planned.class);
         assertThat(engine.apiKeys()).isEqualTo(keys);
+    }
+
+    @Test
+    void savingTheConfigLetsAProviderThatFailedBeAskedAgainAtOnce() throws ConfigProblem, IOException {
+        main.script(error(new ProviderError.Unavailable("down")), steps(days(2, 4.0)));
+        var engine = engine(clockAt(7));
+        assertThat(source(engine).providerRole()).isEqualTo(ProviderRole.FALLBACK);
+
+        engine.saveConfig(engine.config());
+
+        assertThat(source(engine).providerRole()).isEqualTo(ProviderRole.PRIMARY);
+        assertThat(main.callCount()).isEqualTo(2);
+    }
+
+    @Test
+    void savingKeyChangesStoresThemAndLetsAProviderThatFailedBeAskedAgainAtOnce() throws SecretsProblem {
+        main.script(error(new ProviderError.Unavailable("down")), steps(days(2, 4.0)));
+        var engine = engine(clockAt(7));
+        assertThat(source(engine).providerRole()).isEqualTo(ProviderRole.FALLBACK);
+        var keys = new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "NEW-KEY")));
+
+        engine.saveApiKeys(KeyChanges.entering(keys), () -> { });
+
+        assertThat(engine.apiKeys()).isEqualTo(keys);
+        assertThat(source(engine).providerRole()).isEqualTo(ProviderRole.PRIMARY);
+        assertThat(main.callCount()).isEqualTo(2);
+    }
+
+    @Test
+    void aSaveThatWaitsForTheKeyringToBeUnlockedStopsWhenAsked() throws Exception {
+        var engine = engine(clockAt(7));
+        engine.saveApiKeys(new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "OLD-KEY"))));
+        keychain.locked = true;
+        keychain.answer = Optional.empty();
+        var saving = CompletableFuture.runAsync(() -> {
+            try {
+                engine.saveApiKeys(new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "NEW-KEY"))));
+            } catch (SecretsProblem e) {
+                throw new CompletionException(e);
+            }
+        });
+        assertThat(keychain.prompting.await(10, TimeUnit.SECONDS)).as("the prompt shows").isTrue();
+
+        engine.stopUnlocking();
+
+        assertThatThrownBy(() -> saving.get(10, TimeUnit.SECONDS)).hasCauseInstanceOf(SecretsProblem.class);
+        assertThat(keychain.entries).doesNotContainValue("NEW-KEY").containsValue("OLD-KEY");
+    }
+
+    @Test
+    void theConnectionCheckWorksWithoutTheStoredKeysWhileTheKeyringIsLocked() throws SecretsProblem {
+        var needy = new FakeProvider(FakeProvider.info("needy", "Needy",
+                List.of(new SettingSpec("api_key", "API key", "Your key.", false, true))), steps(days(2, 4.0)));
+        var engine = engine(clockAt(7), needy);
+        var needyId = new ProviderId("needy");
+        engine.saveApiKeys(new Secrets(Map.of(needyId, Map.of("api_key", "STORED-KEY"))));
+        keychain.locked = true;
+
+        assertThat(engine(clockAt(7), needy).checkConnection(needyId, exampleSystem(), Map.of()))
+                .isEqualTo(new ConnectionResult(false, 0, "API key is required."));
+        assertThat(needy.calls).isEmpty();
+    }
+
+    @Test
+    void removingAnAwayPeriodGivesTheOnesThatAreLeft() throws IOException {
+        var engine = engine(clockAt(7));
+        var morning = new AwayPeriod(DAY.atTime(8, 0).atZone(BRUSSELS).toInstant(),
+                DAY.atTime(9, 0).atZone(BRUSSELS).toInstant());
+        var evening = new AwayPeriod(DAY.atTime(18, 0).atZone(BRUSSELS).toInstant(),
+                DAY.atTime(20, 0).atZone(BRUSSELS).toInstant());
+        engine.addAwayPeriod(evening);
+        engine.addAwayPeriod(morning);
+
+        assertThat(engine.removeAwayPeriod(morning)).containsExactly(evening);
+        assertThat(engine.awayPeriods()).containsExactly(evening);
+    }
+
+    @Test
+    void theProvidersAreOfferedInTheirOrder() {
+        assertThat(engine(clockAt(7)).providers()).containsExactly(main.info(), backup.info());
     }
 }

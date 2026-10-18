@@ -16,6 +16,7 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -240,6 +241,69 @@ class SecretsFileTest {
         try (var kept = Files.list(folder)) {
             assertThat(kept.filter(file -> file.getFileName().toString().startsWith("secrets.json.damaged-")))
                     .singleElement().satisfies(file -> assertThat(file).hasContent(broken));
+        }
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    void makingTheFilePrivateSaysWhetherItHadToChangeItsMode() throws Exception {
+        var file = new SecretsFile(path());
+        file.write(secrets("open-meteo", SECRET));
+        Files.setPosixFilePermissions(path(), PosixFilePermissions.fromString("rw-r--r--"));
+
+        assertThat(file.makePrivate()).isTrue();
+        assertThat(mode(path())).isEqualTo("rw-------");
+        assertThat(file.makePrivate()).isFalse();
+    }
+
+    @Test
+    @EnabledOnOs(OS.WINDOWS)
+    void withoutFileModesThereIsNothingToMakePrivate() throws Exception {
+        var file = new SecretsFile(path());
+        file.write(secrets("open-meteo", SECRET));
+
+        assertThat(file.makePrivate()).isFalse();
+    }
+
+    @Test
+    void aBadNameIsRefusedBeforeTheFileIsWritten() {
+        var evil = new Secrets(Map.of(OPEN_METEO, Map.of("api key", "x")));
+
+        assertThatThrownBy(() -> new SecretsFile(path()).write(evil)).isInstanceOf(SecretsProblem.class)
+                .hasMessage("A setting name has characters that are not allowed");
+        assertThat(folder.resolve("secrets.json")).doesNotExist();
+        assertThat(folder.resolve("secrets.json.tmp")).doesNotExist();
+    }
+
+    @Test
+    void whatTheParserQuotesIsNotShownForTheSecretsFile() throws IOException {
+        // the parser's own message would quote the bare word, which is the key
+        Files.writeString(path(), "{\"open-meteo\": {\"api_key\": SUPERSECRETVALUE42}}");
+
+        assertThatThrownBy(() -> withoutKeychain().load()).isInstanceOf(SecretsProblem.class)
+                .hasMessage(path() + ": not valid JSON (line 1, column 28). Fix it or delete it and enter the keys again.");
+    }
+
+    @Test
+    void aFileThatCannotBeUsedIsToldToBeFixedOrDeleted() throws IOException {
+        Files.writeString(path(), "[]");
+
+        assertThatThrownBy(() -> withoutKeychain().load()).isInstanceOf(SecretsProblem.class)
+                .hasMessageEndingWith(". Fix it or delete it and enter the keys again.")
+                .hasMessageStartingWith(path() + ": ");
+    }
+
+    @Test
+    void aFileThatCannotBeReadIsReportedAsSuch() throws IOException {
+        Files.createDirectory(path());
+        try {
+            assertThatThrownBy(() -> withoutKeychain().load()).isInstanceOf(SecretsProblem.class)
+                    .hasMessageStartingWith("Could not read " + path() + " (")
+                    .hasMessageNotContaining("Fix it");
+        } finally {
+            if (path().getFileSystem().supportedFileAttributeViews().contains("posix")) {
+                Files.setPosixFilePermissions(path(), PosixFilePermissions.fromString("rwx------"));
+            }
         }
     }
 }

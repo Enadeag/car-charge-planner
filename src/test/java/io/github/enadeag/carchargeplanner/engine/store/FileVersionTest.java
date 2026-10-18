@@ -62,4 +62,14 @@ class FileVersionTest {
         assertThatThrownBy(() -> new FileVersion(2, List.of())).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new FileVersion(0, List.of())).isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void theFirstVersionIsOneAndNeedsNoMigration() {
+        assertThat(new FileVersion(1, List.of()).current()).isEqualTo(1);
+        assertThatThrownBy(() -> new FileVersion(0, List.of())).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("a file version is 1 or more, not 0");
+        assertThatThrownBy(() -> new FileVersion(3, List.of(UnaryOperator.identity())))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("version 3 needs 2 migrations from the older versions, not 1");
+    }
 }

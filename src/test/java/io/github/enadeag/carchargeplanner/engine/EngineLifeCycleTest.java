@@ -4,6 +4,7 @@ import static io.github.enadeag.carchargeplanner.engine.forecast.FakeProvider.st
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.github.enadeag.carchargeplanner.LogCapture;
 import io.github.enadeag.carchargeplanner.engine.away.AwayFile;
 import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import io.github.enadeag.carchargeplanner.engine.battery.BatteryFile;
@@ -17,6 +18,7 @@ import io.github.enadeag.carchargeplanner.engine.forecast.Providers;
 import io.github.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
 import io.github.enadeag.carchargeplanner.engine.notify.Announcer;
 import io.github.enadeag.carchargeplanner.engine.secrets.ApiKeys;
+import io.github.enadeag.carchargeplanner.engine.secrets.KeyChanges;
 import io.github.enadeag.carchargeplanner.engine.secrets.MemoryKeychain;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsFile;
@@ -109,7 +111,8 @@ class EngineLifeCycleTest {
                 Arguments.of("away period added", (Change) engine -> engine.addAwayPeriod(AWAY)),
                 Arguments.of("away period removed", (Change) engine -> engine.removeAwayPeriod(AWAY)),
                 Arguments.of("config", (Change) engine -> engine.saveConfig(engine.config())),
-                Arguments.of("API keys", (Change) engine -> engine.saveApiKeys(new Secrets(Map.of()))));
+                Arguments.of("API keys", (Change) engine -> engine.saveApiKeys(new Secrets(Map.of()))),
+                Arguments.of("API key changes", (Change) engine -> engine.saveApiKeys(KeyChanges.entering(Secrets.NONE), () -> { })));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -168,12 +171,18 @@ class EngineLifeCycleTest {
             }
             told.add(outlook);
         };
-        engine.start(failsOnce);
-        planner.runPending();
+        try (var log = LogCapture.of(PlanSchedule.class)) {
+            engine.start(failsOnce);
+            planner.runPending();
 
-        planner.advance(PlanSchedule.EVERY);
+            planner.advance(PlanSchedule.EVERY);
 
-        assertThat(told).hasSize(1);
+            assertThat(told).hasSize(1);
+            assertThat(log.records()).singleElement().satisfies(record -> {
+                assertThat(record.getMessage()).isEqualTo("planning failed; trying again at the next round");
+                assertThat(record.getThrown()).isInstanceOf(StackOverflowError.class);
+            });
+        }
     }
 
     @Test

@@ -52,4 +52,10 @@ class ProviderTextTest {
     void everySecretIsRedactedAlsoAsAWebAddressCarriesIt(String text, String secrets, String expected) {
         assertThat(ProviderText.redacted(text.strip(), List.of(secrets.split(",")))).isEqualTo(expected);
     }
+
+    @Test
+    void aTextOfExactlyTheMaximumLengthIsNotCut() {
+        var text = "a".repeat(ProviderText.MAX_LENGTH);
+        assertThat(ProviderText.cleaned(text, List.of())).isEqualTo(text);
+    }
 }
