@@ -83,6 +83,14 @@ tar -xzf car-charge-planner-<version>-linux.tar.gz -C ~/.local/opt    # or any f
 
 The first start opens set-up. The archive is not signed yet either.
 
+### Where a download comes from
+
+GitHub attests each download of a release: a signed record that it was built by this repository's release workflow
+from the release's tag. With the [GitHub CLI](https://cli.github.com), check a download with
+`gh attestation verify <file> -R Enadeag/car-charge-planner`; it says which workflow run built it, or fails. Each
+release also has an SBOM per download (`car-charge-planner-<version>-linux.cdx.json` and `-windows.cdx.json`,
+CycloneDX), which lists every library and the Java runtime it holds, with their versions.
+
 **Add it to the menu.** Run `~/.local/opt/car-charge-planner/bin/car-charge-planner install-launcher` once. It puts the app in your application menu (KDE, GNOME and others) by writing a desktop entry to `$XDG_DATA_HOME/applications` and the icons to `$XDG_DATA_HOME/icons/hicolor` (by default under `~/.local/share`), without administrator rights. GNOME ties the app's notifications to this entry. It names the launcher it was run from, so run it again after you move the folder.
 
 **Update:** quit the app, replace the folder with the new one, and start it again. If it starts at login, switch that off and on again when the folder moved, and run `install-launcher` again if you added the app to the menu.

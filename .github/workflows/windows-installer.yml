@@ -2,6 +2,7 @@ name: Windows installer
 
 # Windows minutes count double while the repository is private, so the installer is built only by hand and for a
 # release (release.yml calls this on a version tag); #31 brings back a build on main when the packaging changes.
+# It builds with the release's exact Java version and without a Maven cache, as release.yml explains.
 on:
   workflow_dispatch:
   workflow_call:
@@ -23,23 +24,16 @@ jobs:
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
-          java-version: "25"
-          cache: maven
+          java-version: "25.0.4.1+1"
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: "8.0.x"
-      - name: WiX 5
-        # WiX 6 and later ask to accept a maintenance fee agreement first; jpackage finds wix.exe on the PATH
+      - name: WiX 5 and its extensions, checked against pinned checksums
+        # jpackage finds wix.exe on the PATH
         run: |
-          dotnet tool install --global wix --version 5.0.2
+          powershell -ExecutionPolicy Bypass -File tools\install-wix.ps1
           if ($LASTEXITCODE) { exit 1 }
           "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      - name: WiX 5 extensions
-        run: |
-          wix extension add -g WixToolset.Util.wixext/5.0.2
-          if ($LASTEXITCODE) { exit 1 }
-          wix extension add -g WixToolset.UI.wixext/5.0.2
-          if ($LASTEXITCODE) { exit 1 }
       - name: Build the installer (runs the tests too)
         run: powershell -ExecutionPolicy Bypass -File tools\package-windows.ps1
       - name: Install, smoke test and uninstall
@@ -54,6 +48,7 @@ jobs:
           $step = Start-Process $setup.FullName -ArgumentList "/quiet", "/norestart" -Wait -PassThru
           if ($step.ExitCode -ne 0) { "install: exit code $($step.ExitCode)"; exit 1 }
           if (-not (Test-Path $app)) { "nothing installed at $app"; exit 1 }
+          if (-not (Test-Path (Join-Path (Split-Path $app) "legal\LICENSE"))) { "no legal\LICENSE beside $app"; exit 1 }
           if (-not (Get-ChildItem $menu -Recurse -Filter car-charge-planner.lnk)) { "no Start menu shortcut"; exit 1 }
 
           # "quit" with no copy running starts the runtime and the app, finds nothing to quit and exits with 0; an
@@ -74,6 +69,8 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows-installer
-          path: target/dist/car-charge-planner-*.exe
+          path: |
+            target/dist/car-charge-planner-*.exe
+            target/dist/car-charge-planner-*-windows.cdx.json
           if-no-files-found: error
           retention-days: 14

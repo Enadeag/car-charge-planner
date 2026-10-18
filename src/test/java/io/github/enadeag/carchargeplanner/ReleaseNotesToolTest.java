@@ -56,7 +56,15 @@ class ReleaseNotesToolTest {
         assertThat(run.out()).startsWith("The Java version.\n\n### Changed\n- Everything.\n\n### Installing\n");
         assertThat(run.out()).doesNotContain("Something new", "A candidate", "Windows.\n")
                 .contains("`car-charge-planner-0.3.0.exe`", "`car-charge-planner-0.3.0-linux.tar.gz`",
+                        "`car-charge-planner-0.3.0-linux.cdx.json`", "`car-charge-planner-0.3.0-windows.cdx.json`",
                         "/blob/v0.3.0/CHANGELOG.md");
+    }
+
+    @Test
+    void namesTheJavaRuntimeOfTheJdkThatRunsIt() throws Exception {
+        var run = releaseNotes("0.3.0", CHANGELOG);
+
+        assertThat(run.out()).contains("Java " + Runtime.version() + " (" + System.getProperty("java.vendor") + ")");
     }
 
     @Test

@@ -9,9 +9,12 @@ A contribution is accepted under the project's licence: the GNU General Public L
 ## Set up
 
 You need a JDK 25 or newer, such as Temurin. Maven comes with the repository through the wrapper: `./mvnw` on
-Linux, `mvnw.cmd` on Windows. Nothing else needs to be installed.
+Linux, `mvnw.cmd` on Windows. Nothing else needs to be installed. The wrapper checks the Maven it downloads against
+`distributionSha256Sum` in `.mvn/wrapper/maven-wrapper.properties`, and `.mvn/maven.config` has Maven refuse a
+library whose checksum does not match (`--strict-checksums`).
 
-CI and the release build use JDK 25, and the packaged app brings a Java 25 runtime. A newer JDK on your machine
+CI uses the latest JDK 25; the release build uses one exact Java 25 version (see [Java updates](#java-updates)), and
+the packaged app brings that runtime. A newer JDK on your machine
 compiles for Java 25 (`--release 25`), so it refuses an API that Java 25 lacks, but the tests and `exec:exec` then
 run on the newer runtime, which can behave differently: Java 25's `HttpClient` timeout, for one, ends when the
 headers are in, which is why `JdkHttpGet` sets a deadline of its own. When a test passes for you and fails in CI,
@@ -106,7 +109,11 @@ notice texts as the jar's `META-INF` has them (or the project's own `LICENSE` at
 
 ## Packaging
 
-Each package brings a runtime made by jlink, so users need no Java of their own. Neither is signed yet: signing waits
+Each package brings a runtime made by jlink, so users need no Java of their own, and comes with an SBOM (CycloneDX
+JSON) of what it holds: `cyclonedx-maven-plugin` lists the libraries in `target/car-charge-planner.cdx.json` at
+`package`, and `tools/SbomRuntime.java` adds the runtime, from the JDK that ran jlink. The jar, the SBOM and the
+Linux tar.gz take the time of the last commit (or `SOURCE_DATE_EPOCH`), and the tar.gz holds its files in name order,
+owned by root and not writable by group or others, so the same commit and JDK give the same tar.gz. Neither is signed yet: signing waits
 for SignPath (ADR 0003). Both scripts take jlink's options, such as the modules and locales, from
 `src/packaging/jlink.args`, and link JavaFX from the official jmods, downloaded from a pinned address and checked
 against a pinned SHA-256; they need `curl` (and `unzip` on Linux). A new JavaFX version in `pom.xml` needs the new
@@ -114,13 +121,21 @@ address and checksum in both scripts (`PackagingTest` checks the version). Each 
 `LICENSE`, `NOTICE`, `ADDITIONAL-TERMS.md` and the files of `src/packaging/legal/`, and the Windows installer shows
 the GPL.
 
-- **Linux:** `sh tools/package-linux.sh` makes `target/dist/car-charge-planner/` (start `bin/car-charge-planner`) and
-  `target/dist/car-charge-planner-<version>-linux.tar.gz`.
+- **Linux:** `sh tools/package-linux.sh` makes `target/dist/car-charge-planner/` (start `bin/car-charge-planner`),
+  `target/dist/car-charge-planner-<version>-linux.tar.gz` and its SBOM `car-charge-planner-<version>-linux.cdx.json`;
+  it needs GNU tar and git besides the JDK.
 - **Windows:** `powershell -ExecutionPolicy Bypass -File tools\package-windows.ps1` makes a per-user installer,
-  `target\dist\car-charge-planner-<version>.exe`; `-Type app-image` makes the program folder only. The installer
-  needs WiX 5: install the .NET SDK 8, then `dotnet tool install --global wix --version 5.0.2`,
-  `wix extension add -g WixToolset.Util.wixext/5.0.2` and `wix extension add -g WixToolset.UI.wixext/5.0.2`. WiX 7
-  asks to accept a maintenance fee agreement first.
+  `target\dist\car-charge-planner-<version>.exe`, and its SBOM `car-charge-planner-<version>-windows.cdx.json`;
+  `-Type app-image` makes the program folder only. The installer needs WiX 5: install the .NET SDK 8, then run
+  `powershell -ExecutionPolicy Bypass -File tools\install-wix.ps1`, which installs WiX 5.0.2 and its Util and UI
+  extensions for you from packages checked against pinned SHA-256 sums. WiX 6 and later ask to accept a maintenance
+  fee agreement first.
+
+`sh tools/scan-sbom.sh target/dist/*.cdx.json` checks SBOMs against the [OSV](https://osv.dev) vulnerability
+database with a pinned, checksum-checked OSV-Scanner, and fails on any known vulnerability; the release workflow runs
+it on both packages. A finding that was looked at and does not reach the app goes in `osv-scanner.toml` at the
+repository root, with the reason and a date it expires. OSV knows the libraries, not the Java runtime: that is what
+[Java updates](#java-updates) is for.
 
 The app icon's drawings are in `src/packaging/icons/`: `car-charge-planner.svg` is the icon the PNGs in
 `src/main/resources/.../desktop/system/icons/` and `src/packaging/windows/car-charge-planner.ico` show, and
@@ -144,6 +159,8 @@ The workflows are in `.github/workflows/`:
 - `release.yml` makes a release; see below.
 
 The actions are pinned to a full commit SHA, with the version in a comment beside it: update both together.
+Dependabot (`.github/dependabot.yml`) proposes new versions of the actions and of what `pom.xml` names, weekly and a
+week after their release, as pull requests that CI builds like any other.
 
 ## Releasing
 
@@ -156,14 +173,32 @@ X.Y.Z:
 2. After the merge, tag that commit `vX.Y.Z` and push the tag. The release workflow stops when the tag is not `v`
    plus the version in `pom.xml`, when that version still ends in `-SNAPSHOT`, when `CHANGELOG.md` has no section for
    it, or when `release/X.Y.Z` exists at another commit. Otherwise it builds and tests, packages the Linux tar.gz and
-   the Windows installer and smoke-tests both, writes `SHA256SUMS` over them, creates the branch `release/X.Y.Z` at
-   the tag, and makes a draft release with the changelog section and install notes
-   (`java tools/ReleaseNotes.java X.Y.Z CHANGELOG.md`).
+   the Windows installer with an SBOM each and smoke-tests both, stops when OSV-Scanner finds a known vulnerability in
+   an SBOM, writes `SHA256SUMS` over the four files, attests where they were built (`actions/attest-build-provenance`),
+   creates the branch `release/X.Y.Z` at the tag, and makes a draft release with the changelog section, install notes
+   and the Java runtime (`java tools/ReleaseNotes.java X.Y.Z CHANGELOG.md`, made before the job that can write to the
+   repository).
 3. Read the draft and publish it by hand.
 4. In a pull request, set the version to the next `-SNAPSHOT` and add an empty `## [Unreleased]`.
 
 To try the workflow without releasing, start it by hand on `main`: it builds everything and makes a draft called
-"dry run" (delete it afterwards), without the tag check or the release branch.
+"dry run" (delete it afterwards), without the tag check, the attestations or the release branch.
+
+### Java updates
+
+The release builds use one exact Java version, the `java-version` of each `setup-java` in `release.yml` and
+`windows-installer.yml` (`ReleaseWorkflowTest` keeps them the same), and the packages bring that runtime: a user's
+app gets Java's security fixes only through a new release. Java's security updates come quarterly, on the third
+Tuesday of January, April, July and October. After each one:
+
+1. Read the advisory of the OpenJDK Vulnerability Group (<https://openjdk.org/groups/vulnerability/advisories/>) and
+   check which fixed vulnerabilities reach the app: the modules it links are in `src/packaging/jlink.args` and in the
+   SBOM (`jlink.modules`); what matters most is what a forecast provider's answer reaches: TLS, the HTTP client and
+   the JSON parsing.
+2. Once Temurin has the update, set its exact version (such as `25.0.5+11`) in both workflows in a pull request, and
+   run `sh tools/scan-sbom.sh` on fresh SBOMs for the libraries.
+3. When a fixed vulnerability reaches the app, release a patch version on the new runtime; otherwise the next release
+   takes it along. The release notes and the SBOMs name the runtime each release brings.
 
 ## Code layout
 

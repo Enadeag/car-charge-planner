@@ -1,11 +1,13 @@
 #!/bin/sh
 # Builds the Java app as a Linux app image: target/dist/car-charge-planner/ (start bin/car-charge-planner)
-# and target/dist/car-charge-planner-<version>-linux.tar.gz. Needs a JDK 25 or newer with jlink and jpackage, curl
-# and unzip.
+# and target/dist/car-charge-planner-<version>-linux.tar.gz, with its SBOM car-charge-planner-<version>-linux.cdx.json.
+# Needs a JDK 25 or newer with jlink and jpackage, curl, unzip, GNU tar and git.
 set -eu
 cd "$(dirname "$0")/.."
 
-./mvnw -B -q clean package
+# The jar, the SBOM and the tar.gz take the commit's time, so the same commit and JDK give the same tar.gz.
+epoch=${SOURCE_DATE_EPOCH:-$(git log -1 --format=%ct)}
+./mvnw -B -q clean package -Dproject.build.outputTimestamp="$epoch"
 version=$(./mvnw -B -q help:evaluate -Dexpression=project.version -DforceStdout | sed 's/-SNAPSHOT//')
 
 # JavaFX comes from the official jmods, not from its Maven jars: jlink then puts JavaFX's native libraries in the
@@ -36,5 +38,11 @@ jpackage --type app-image --dest target/dist \
 mkdir target/dist/car-charge-planner/legal
 cp LICENSE NOTICE ADDITIONAL-TERMS.md src/packaging/legal/*.txt target/dist/car-charge-planner/legal/
 
-tar -C target/dist -czf "target/dist/car-charge-planner-$version-linux.tar.gz" car-charge-planner
+java -cp 'target/lib/*' tools/SbomRuntime.java target/car-charge-planner.cdx.json target/runtime \
+  "target/dist/car-charge-planner-$version-linux.cdx.json"
+
+# Owned by root and not writable by group or others, whoever unpacks it; without the build's own times and order.
+tar -C target/dist --sort=name --mtime="@$epoch" --owner=0 --group=0 --numeric-owner --mode=go-w \
+  -cf "target/dist/car-charge-planner-$version-linux.tar" car-charge-planner
+gzip -9n "target/dist/car-charge-planner-$version-linux.tar"
 du -sh target/dist/car-charge-planner "target/dist/car-charge-planner-$version-linux.tar.gz"
