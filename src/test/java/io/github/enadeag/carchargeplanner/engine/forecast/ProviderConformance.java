@@ -226,6 +226,24 @@ public abstract class ProviderConformance {
         assertThat(made.http().requests).isEmpty();
     }
 
+    /** A config file or keychain edited by hand can hold what Settings would refuse; it never reaches the network. */
+    @Test
+    void settingsOfTheWrongFormatAreReportedBeforeAnythingIsSent() {
+        var c = providerCase();
+        var made = c.provider(c.ok());
+        var formatted = made.provider().info().settings().stream().filter(s -> s.format() != SettingFormat.TEXT).toList();
+        assumeFalse(formatted.isEmpty(), "this provider has no setting with a format");
+        var wrong = "ftp://x y/?a=1&b=2#\r\nX-Injected: 1";
+        for (var spec : formatted) {
+            assertThat(spec.format().accepts(wrong)).as("%s refuses the wrong value", spec.key()).isFalse();
+            var settings = new HashMap<>(c.allSettings());
+            settings.put(spec.key(), wrong);
+            assertThatThrownBy(() -> made.provider().fetch(ProviderCase.EXAMPLE_SYSTEM, settings, c.now()))
+                    .as(spec.key()).isInstanceOf(ProviderError.NotConfigured.class);
+        }
+        assertThat(made.http().requests).isEmpty();
+    }
+
     @Test
     void addressesCoordinatesAndSecretsNeverReachLogsOrReasons() {
         var c = providerCase();

@@ -8,10 +8,13 @@ import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderError;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderText;
+import io.github.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import io.github.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import io.github.enadeag.carchargeplanner.engine.forecast.Steps;
 import io.github.enadeag.carchargeplanner.engine.forecast.SystemDescription;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
@@ -34,7 +37,8 @@ public final class ExampleSolar implements ForecastProvider {
             Duration.ofHours(1),
             Duration.ofDays(3),
             Duration.ofHours(6),
-            List.of(new SettingSpec("api_key", "API key", "From your Example Solar account.", false, true)));
+            List.of(new SettingSpec("api_key", "API key", "From your Example Solar account.", false, true,
+                    SettingFormat.LETTERS_AND_DIGITS)));
 
     private final HttpGet http;
 
@@ -55,18 +59,34 @@ public final class ExampleSolar implements ForecastProvider {
     @Override
     public List<ForecastStep> fetch(SystemDescription system, Map<String, String> settings, Instant now)
             throws ProviderError {
-        if (!INFO.missingRequired(settings).isEmpty()) {
-            throw new ProviderError.NotConfigured("Example Solar needs an API key");
-        }
-        return Steps.requireValid(Steps.eachArray(system, array -> fetchArray(system, array, settings)));
+        var key = apiKey(settings); // checked before anything is sent
+        return Steps.requireValid(Steps.eachArray(system, array -> fetchArray(system, array, key, settings)));
     }
 
-    private List<ForecastStep> fetchArray(SystemDescription system, PanelArray array, Map<String, String> settings)
-            throws ProviderError {
-        var uri = URI.create("https://api.example.com/v1/solar?lat=" + Decimals.plain(system.location().latitude())
-                + "&lon=" + Decimals.plain(system.location().longitude()) + "&kwp=" + Decimals.plain(array.kwp())
-                + "&tilt=" + Decimals.plain(array.tiltDeg()) + "&azimuth=" + Decimals.plain(array.azimuthDeg()));
-        var request = new HttpGet.Request(uri, Map.of("Authorization", "Bearer " + settings.get("api_key")),
+    /**
+     * The key, checked again although Settings checked it when it was saved: the config file and the keychain can be
+     * changed by hand, and the key goes into a header.
+     */
+    private static String apiKey(Map<String, String> settings) throws ProviderError.NotConfigured {
+        var key = settings.getOrDefault("api_key", "").strip();
+        if (key.isEmpty()) {
+            throw new ProviderError.NotConfigured("Example Solar needs an API key");
+        }
+        if (!SettingFormat.LETTERS_AND_DIGITS.accepts(key)) {
+            throw new ProviderError.NotConfigured("the API key may hold only letters and digits");
+        }
+        return key;
+    }
+
+    private List<ForecastStep> fetchArray(SystemDescription system, PanelArray array, String key,
+            Map<String, String> settings) throws ProviderError {
+        var uri = URI.create("https://api.example.com/v1/solar?" + String.join("&",
+                parameter("lat", Decimals.plain(system.location().latitude())),
+                parameter("lon", Decimals.plain(system.location().longitude())),
+                parameter("kwp", Decimals.plain(array.kwp())),
+                parameter("tilt", Decimals.plain(array.tiltDeg())),
+                parameter("azimuth", Decimals.plain(array.azimuthDeg()))));
+        var request = new HttpGet.Request(uri, Map.of("Authorization", "Bearer " + key),
                 HttpGet.DEFAULT_TIMEOUT, HttpGet.DEFAULT_MAX_BODY);
         // Exchange turns a failed connection into Unavailable, without the address in the message
         var reply = Exchange.send(http, request, INFO.name());
@@ -96,5 +116,10 @@ public final class ExampleSolar implements ForecastProvider {
             throw new ProviderError.BadResponse("Example Solar gave no forecast");
         }
         return Steps.requireValid(steps);
+    }
+
+    /** One query parameter, its value encoded, so no value can end the parameter or change the address. */
+    private static String parameter(String name, String value) {
+        return name + "=" + URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 }

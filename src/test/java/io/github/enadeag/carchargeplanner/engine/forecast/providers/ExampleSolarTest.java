@@ -26,7 +26,7 @@ class ExampleSolarTest extends ProviderConformance {
                 List.of(answer("", new Reply(429, "", Map.of("Retry-After", "120")))),
                 Duration.ofSeconds(120),
                 Map.of(),
-                Map.of("api_key", "EXAMPLE-SECRET-KEY-123"),
+                Map.of("api_key", "ExampleSecretKey123"),
                 Instant.parse("2026-07-03T07:00:00Z"),
                 text -> List.of(answer("", new Reply(400,
                         new JsonMapper().createObjectNode().put("error", text).toString()))));
