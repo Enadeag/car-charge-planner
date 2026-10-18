@@ -1,5 +1,8 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
+import io.github.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.PanelArrayEntry;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.TypicalMarks;
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import io.github.enadeag.carchargeplanner.engine.config.PanelArray;
@@ -38,10 +41,10 @@ final class PanelArrayCard {
      */
     PanelArrayCard(Consumer<PanelArrayCard> remove, Messages messages) {
         this.messages = messages;
-        size = new NumberField(new NumberField.Range(0.1, 100, 0.1, 2), "kWp", messages);
-        tilt = new NumberField(new NumberField.Range(0, 90, 1, 0), "°", messages);
-        direction = new NumberField(new NumberField.Range(-180, 180, 5, 0), "°", messages);
-        losses = new NumberField(new NumberField.Range(0, 99, 1, 0), "%", messages);
+        size = new NumberField(new NumberRange(0.1, 100, 0.1, 2), "kWp", messages);
+        tilt = new NumberField(new NumberRange(0, 90, 1, 0), "°", messages);
+        direction = new NumberField(new NumberRange(-180, 180, 5, 0), "°", messages);
+        losses = new NumberField(new NumberRange(0, 99, 1, 0), "%", messages);
         problems = new ProblemRows(messages);
         typical = new TypicalMarks(messages.text(TextKey.TYPICAL_TAG));
         this.useTypical = new Button(messages.text(TextKey.USE_TYPICAL));
@@ -70,12 +73,13 @@ final class PanelArrayCard {
      * @param typicalValues which of its values are typical values
      */
     void load(PanelArray array, Set<Setting> typicalValues) {
+        var shown = PanelArrayEntry.of(array);
         typical.load(typicalValues, () -> {
-            name.load(array.name());
-            size.load(array.kwp());
-            tilt.load(array.tiltDeg());
-            direction.load(array.azimuthDeg());
-            losses.load(array.systemLosses() * 100);
+            name.load(shown.name());
+            size.load(shown.kwp());
+            tilt.load(shown.tiltDeg());
+            direction.load(shown.azimuthDeg());
+            losses.load(shown.lossesPct());
         });
         problems.clear();
     }
@@ -109,8 +113,8 @@ final class PanelArrayCard {
     Optional<PanelArray> value() {
         problems.clear();
         try {
-            return Optional.of(new PanelArray(name.value(), size.value(), tilt.value(), direction.value(),
-                    losses.value() / 100));
+            return Optional.of(new PanelArrayEntry(name.value(), size.value(), tilt.value(), direction.value(),
+                    losses.value()).panelArray());
         } catch (InvalidSetting e) {
             problems.show(e);
             return Optional.empty();
@@ -154,12 +158,12 @@ final class PanelArrayCard {
     }
 
     private void useTypical() {
-        var common = PanelArray.TYPICAL;
+        var common = PanelArrayEntry.of(PanelArray.TYPICAL);
         typical.useTypical(() -> {
             size.set(common.kwp());
             tilt.set(common.tiltDeg());
             direction.set(common.azimuthDeg());
-            losses.set(common.systemLosses() * 100);
+            losses.set(common.lossesPct());
         });
     }
 
@@ -174,7 +178,8 @@ final class PanelArrayCard {
 
     private FieldRow row(Setting setting, TextKey label, TextKey hint, Input input) {
         var row = listed(problems.add(setting, FieldRow.of(messages, label, hint, input)));
-        typical.follow(setting, row, input);
+        typical.follow(setting, row::showTag);
+        input.onChange(() -> typical.edited(setting));
         return row;
     }
 }

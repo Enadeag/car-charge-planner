@@ -596,7 +596,8 @@
                 <id>desktop</id>
                 <configuration>
                   <!-- the classes that the tests without JavaFX (no @FxTest) cover: the mappers to the dashboard's
-                       models, chart and popup geometry, the app settings, the tray icon's drawing and the texts -->
+                       models, chart and popup geometry, the app settings, the logic of the Settings and set-up forms,
+                       the tray icon's drawing and the texts -->
                   <targetClasses>
                     <param>io.github.enadeag.carchargeplanner.desktop.app.AppSettings*</param>
                     <param>io.github.enadeag.carchargeplanner.desktop.app.Background*</param>
@@ -616,6 +617,7 @@
                     <param>io.github.enadeag.carchargeplanner.desktop.dashboard.TrayTexts*</param>
                     <param>io.github.enadeag.carchargeplanner.desktop.settings.SetUpOffer*</param>
                     <param>io.github.enadeag.carchargeplanner.desktop.settings.WindowSize*</param>
+                    <param>io.github.enadeag.carchargeplanner.desktop.settings.form.*</param>
                     <param>io.github.enadeag.carchargeplanner.desktop.system.StatusIcon*</param>
                     <param>io.github.enadeag.carchargeplanner.desktop.text.*</param>
                   </targetClasses>

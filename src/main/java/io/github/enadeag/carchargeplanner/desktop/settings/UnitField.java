@@ -1,21 +1,19 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.app.Units;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.Quantity;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.UnitValue;
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import javafx.scene.Node;
 
 /**
- * A number the engine keeps metric, shown in the owner's units. Switching the units does not change what the value
- * stands for: an untouched value stays exactly as kept, and an edited one comes back as typed when the owner switches
- * back, without rounding drift.
+ * A number the engine keeps metric, shown in the owner's units. {@link UnitValue} keeps what it stands for when the
+ * units change.
  */
 final class UnitField implements Input {
 
-    private final Quantity quantity;
+    private final UnitValue value;
     private final NumberField field;
-    private Units units;
-    private double loaded;
-    private double held;
 
     /**
      * Makes the field, in metric units until {@link #showIn(Units)}.
@@ -24,9 +22,8 @@ final class UnitField implements Input {
      * @param messages writes and reads the numbers in the owner's language
      */
     UnitField(Quantity quantity, Messages messages) {
-        this.quantity = quantity;
-        this.units = Units.METRIC;
-        this.field = new NumberField(quantity.range(units), quantity.unit(units), messages);
+        this.value = new UnitValue(quantity);
+        this.field = new NumberField(value.range(), value.unit(), messages);
     }
 
     /**
@@ -35,9 +32,7 @@ final class UnitField implements Input {
      * @param kept the value as the engine keeps it, metric
      */
     void load(double kept) {
-        loaded = kept;
-        held = kept;
-        field.load(quantity.shown(kept, units));
+        field.load(value.load(kept));
     }
 
     /**
@@ -46,8 +41,7 @@ final class UnitField implements Input {
      * @param kept the value as the engine keeps it, metric
      */
     void set(double kept) {
-        held = kept;
-        field.set(quantity.shown(kept, units));
+        field.set(value.set(kept));
     }
 
     /**
@@ -56,18 +50,15 @@ final class UnitField implements Input {
      * @param newUnits the units to show it in from now on
      */
     void showIn(Units newUnits) {
-        if (newUnits == units) {
+        if (newUnits == value.units()) {
             return;
         }
-        var kept = value();
-        units = newUnits;
-        field.setRange(quantity.range(units));
-        field.setUnit(quantity.unit(units));
-        field.load(quantity.shown(loaded, units));
-        held = kept;
-        if (Double.compare(kept, loaded) != 0) {
-            field.set(quantity.shown(kept, units));
-        }
+        value(); // holds what the owner typed
+        value.showIn(newUnits);
+        field.setRange(value.range());
+        field.setUnit(value.unit());
+        field.load(value.shownLoaded());
+        value.shownEdit().ifPresent(field::set);
     }
 
     /**
@@ -76,8 +67,7 @@ final class UnitField implements Input {
      * @return the metric value; exactly the loaded or last set one while the field shows it unchanged
      */
     double value() {
-        held = kept(field.value());
-        return held;
+        return value.read(field.value());
     }
 
     @Override
@@ -92,20 +82,11 @@ final class UnitField implements Input {
 
     @Override
     public boolean isChanged() {
-        return Double.compare(kept(field.typed()), loaded) != 0;
+        return value.isChanged(field.typed());
     }
 
     @Override
     public void onChange(Runnable action) {
         field.onChange(action);
-    }
-
-    /** What a shown value stands for: the held value while the field shows it as it was shown, at its decimals. */
-    private double kept(double shown) {
-        var decimals = Math.pow(10, quantity.range(units).decimals());
-        if (Math.round(shown * decimals) == Math.round(quantity.shown(held, units) * decimals)) {
-            return held;
-        }
-        return quantity.kept(shown, units);
     }
 }

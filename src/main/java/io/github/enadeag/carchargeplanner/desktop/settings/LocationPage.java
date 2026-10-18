@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.app.Background;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import io.github.enadeag.carchargeplanner.engine.config.Coordinates;
@@ -17,8 +18,8 @@ import javafx.scene.layout.Region;
 /** Where the home is: found by name through the place search, or typed as coordinates, with its time zone. */
 final class LocationPage implements ConfigPage {
 
-    private static final NumberField.Range LATITUDE = new NumberField.Range(-90, 90, 0.01, 4);
-    private static final NumberField.Range LONGITUDE = new NumberField.Range(-180, 180, 0.01, 4);
+    private static final NumberRange LATITUDE = new NumberRange(-90, 90, 0.01, 4);
+    private static final NumberRange LONGITUDE = new NumberRange(-180, 180, 0.01, 4);
 
     private final Messages messages;
     private final PageView view;

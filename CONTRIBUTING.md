@@ -136,8 +136,11 @@ fails for each change. It runs from the `pit` profile, two test JVMs at a time (
 ```
 
 The desktop run covers what the tests without JavaFX test: the mappers to the dashboard's models, the chart and popup
-geometry, the app settings, the tray icon's drawing and the texts. The `@FxTest` classes carry the tag `fx` and are
-left out, because PIT does not run the JavaFX platform. A mutant that survives is a missing test or code that does
+geometry, the app settings, the logic of the Settings and set-up forms, the tray icon's drawing and the texts. The
+`@FxTest` classes carry the tag `fx` and are left out, because PIT does not run the JavaFX platform. That is why a
+form's logic (what a field shows, how a value converts, which problem applies, how the entered values become the
+config) lives in `desktop.settings.form`, which `ArchitectureTest` keeps free of JavaFX, and the pages only bind their
+controls to it. A mutant that survives is a missing test or code that does
 nothing; look at it before you raise or lower a threshold.
 
 **Random order.** The test classes run in alphabetical order. `./mvnw verify -Dsurefire.runOrder=random` runs them in

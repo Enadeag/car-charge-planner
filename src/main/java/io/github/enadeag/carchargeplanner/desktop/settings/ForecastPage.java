@@ -1,13 +1,13 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.app.Background;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.ProblemTexts;
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
 import io.github.enadeag.carchargeplanner.engine.config.ForecastSelection;
 import io.github.enadeag.carchargeplanner.engine.config.ProviderId;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
-import io.github.enadeag.carchargeplanner.engine.secrets.KeyChanges;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting;
@@ -143,25 +143,6 @@ final class ForecastPage implements ConfigPage {
         var all = new LinkedHashMap<>(storedKeys.byProvider());
         cards.forEach((id, card) -> all.put(id, card.secret()));
         return new Secrets(all);
-    }
-
-    /**
-     * What the owner entered and emptied in the secret settings, to apply to the stored ones. A key that could not be
-     * read is never emptied by this.
-     *
-     * @return the changes; empty when nothing differs
-     */
-    KeyChanges keyChanges() {
-        return KeyChanges.between(storedKeys, keys());
-    }
-
-    /**
-     * Whether the secret settings differ from the stored ones.
-     *
-     * @return true when saving has to store the keys
-     */
-    boolean keysChanged() {
-        return !keyChanges().isEmpty();
     }
 
     @Override

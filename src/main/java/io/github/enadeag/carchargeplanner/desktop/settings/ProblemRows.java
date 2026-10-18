@@ -1,5 +1,6 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
+import io.github.enadeag.carchargeplanner.desktop.settings.form.ProblemTexts;
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import io.github.enadeag.carchargeplanner.engine.setting.Setting;

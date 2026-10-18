@@ -60,6 +60,13 @@ class ArchitectureTest {
             .because("the engine also has to run on a machine without a desktop (ADR 0001)");
 
     @ArchTest
+    static final ArchRule theSettingsFormsLogicHasNoUserInterface = noClasses()
+            .that().resideInAPackage("..desktop.settings.form..")
+            .should().dependOnClassesThat().resideInAnyPackage("javafx..", "java.awt..", "javax.swing..", "atlantafx..")
+            .because("the form logic is tested without JavaFX, so the desktop mutation run, which leaves out the "
+                    + "JavaFX tests, covers it");
+
+    @ArchTest
     static final ArchRule engineDoesNotKnowItsClients = noClasses()
             .that().resideInAPackage("..engine..")
             .should().dependOnClassesThat().resideInAnyPackage("..desktop..", "..platform..");

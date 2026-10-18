@@ -1,9 +1,10 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.app.AppSettings;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.AllSettings;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.SettingsChanges;
 import io.github.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
-import io.github.enadeag.carchargeplanner.engine.secrets.KeyChanges;
 import io.github.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import io.github.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
@@ -19,19 +20,6 @@ import java.util.Optional;
  * them away from the JavaFX thread, through {@link io.github.enadeag.carchargeplanner.desktop.app.Background}.
  */
 final class SettingsStorage {
-
-    /**
-     * What to write; each part only when it is present.
-     *
-     * @param startAtLogin whether the app should start at login; present when the owner changed it
-     * @param keys what the owner entered and emptied in the API keys, applied to the stored ones; present when they
-     *     changed
-     * @param config the engine's whole config; present when it changed, or was never saved
-     * @param app the app's own settings; present when they changed
-     */
-    record Changes(Optional<Boolean> startAtLogin, Optional<KeyChanges> keys, Optional<EngineConfig> config,
-            Optional<AppSettings> app) {
-    }
 
     /**
      * The stored API keys.
@@ -66,6 +54,15 @@ final class SettingsStorage {
                 throw new IllegalArgumentException("there must be a config or the problem with it, not "
                         + (config.isPresent() ? "both" : "neither"));
             }
+        }
+
+        /**
+         * What is stored, to compare what is entered with.
+         *
+         * @return the config, the API keys, the app's own settings and start at login
+         */
+        AllSettings all() {
+            return new AllSettings(config, keys.keys(), app, startsAtLogin);
         }
     }
 
@@ -162,7 +159,7 @@ final class SettingsStorage {
      * @return saved; refused by the system's start at login, with its reason; not saved as the keychain stayed
      *     locked; or failed with the system's error when a file or the keychain could not be written
      */
-    SaveOutcome save(Changes changes, Runnable prompting) {
+    SaveOutcome save(SettingsChanges changes, Runnable prompting) {
         var system = stores.startAtLogin();
         if (changes.startAtLogin().isPresent() && system.isPresent()) {
             try {

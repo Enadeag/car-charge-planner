@@ -1,7 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.desktop.app.AppSettings;
-import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.AllSettings;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.SettingsChanges;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -37,7 +37,7 @@ final class SettingsForm {
          *
          * @param changes what differs from what is stored, to write
          */
-        record Accepted(SettingsStorage.Changes changes) implements Entered {
+        record Accepted(SettingsChanges changes) implements Entered {
         }
     }
 
@@ -55,8 +55,7 @@ final class SettingsForm {
     private final ForecastPage forecast;
     private final AppPage app;
     private final AboutPage about;
-    private Optional<EngineConfig> storedConfig = Optional.empty();
-    private Optional<AppSettings> storedApp = Optional.empty();
+    private Optional<AllSettings> stored = Optional.empty();
 
     /**
      * Makes the form; nothing is read until {@link #read()}.
@@ -92,13 +91,12 @@ final class SettingsForm {
      */
     void show(SettingsStorage.Stored stored) {
         forecast.loadKeys(stored.keys().keys(), stored.keyStorage(), stored.keys().problem());
-        storedConfig = stored.config();
+        this.stored = Optional.of(stored.all());
         if (stored.config().isPresent()) {
             configPages.forEach(page -> page.load(stored.config().get()));
         } else {
             configPages.forEach(page -> page.showUnavailable(stored.configProblem().orElseThrow()));
         }
-        storedApp = Optional.of(stored.app());
         app.load(stored.app(), stored.startsAtLogin());
         about.load(stored.keyStorage());
     }
@@ -116,10 +114,12 @@ final class SettingsForm {
      * Has the pages check what they show, as Save does; a refused value shows its problem at its field.
      *
      * @return the categories with a refused value, or what differs from what is stored
+     * @throws IllegalStateException when nothing was shown yet
      */
     Entered enter() {
+        var before = stored.orElseThrow(() -> new IllegalStateException("nothing is shown yet"));
         var refused = new ArrayList<Category>();
-        var config = storedConfig;
+        var config = before.config();
         if (config.isPresent()) {
             for (var page : configPages) {
                 var applied = page.applyTo(config.get());
@@ -133,11 +133,8 @@ final class SettingsForm {
         if (!refused.isEmpty()) {
             return new Entered.Refused(refused);
         }
-        return new Entered.Accepted(new SettingsStorage.Changes(
-                app.startAtLoginChanged() ? Optional.of(app.startsAtLogin()) : Optional.empty(),
-                storedConfig.isPresent() && forecast.keysChanged() ? Optional.of(forecast.keyChanges()) : Optional.empty(),
-                config.equals(storedConfig) ? Optional.empty() : config,
-                Optional.of(app.settings()).equals(storedApp) ? Optional.empty() : Optional.of(app.settings())));
+        var entered = new AllSettings(config, forecast.keys(), app.settings(), Optional.of(app.startsAtLogin()));
+        return new Entered.Accepted(SettingsChanges.between(before, entered));
     }
 
     /**
@@ -148,7 +145,7 @@ final class SettingsForm {
      * @param prompting runs, on the saving thread, once the system asks the owner to unlock the keychain
      * @return the outcome, and what is stored after a save
      */
-    Written write(SettingsStorage.Changes changes, Runnable prompting) {
+    Written write(SettingsChanges changes, Runnable prompting) {
         var outcome = storage.save(changes, prompting);
         if (!(outcome instanceof SaveOutcome.Saved)) {
             return new Written(outcome, Optional.empty());

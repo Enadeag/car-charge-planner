@@ -1,8 +1,9 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.app.AppSettings;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.AllSettings;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.SettingsChanges;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
-import io.github.enadeag.carchargeplanner.engine.secrets.KeyChanges;
 import io.github.enadeag.carchargeplanner.engine.secrets.Secrets;
 import java.util.EnumMap;
 import java.util.List;
@@ -134,12 +135,9 @@ final class SetUpForm {
      * @param config the whole config to keep, as {@link #config()} gave it
      * @return the changes for {@link #write}
      */
-    SettingsStorage.Changes changes(EngineConfig config) {
-        var startAtLogin = stored.startsAtLogin().filter(on -> on != app.startsAtLogin()).map(on -> app.startsAtLogin());
-        var keys = Optional.of(KeyChanges.between(stored.keys(), keys())).filter(changed -> !changed.isEmpty());
-        var newConfig = Optional.of(config).filter(entered -> !Optional.of(entered).equals(stored.config()));
-        var settings = Optional.of(app.settings()).filter(chosen -> !chosen.equals(stored.app()));
-        return new SettingsStorage.Changes(startAtLogin, keys, newConfig, settings);
+    SettingsChanges changes(EngineConfig config) {
+        var entered = new AllSettings(Optional.of(config), keys(), app.settings(), Optional.of(app.startsAtLogin()));
+        return SettingsChanges.between(stored.all(), entered);
     }
 
     /**
@@ -150,7 +148,7 @@ final class SetUpForm {
      * @return saved; refused by the system's start at login; not saved as the keychain stayed locked; or failed with
      *     the system's error
      */
-    SaveOutcome write(SettingsStorage.Changes changes, Runnable prompting) {
+    SaveOutcome write(SettingsChanges changes, Runnable prompting) {
         return storage.save(changes, prompting);
     }
 

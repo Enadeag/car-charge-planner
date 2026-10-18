@@ -1,11 +1,11 @@
-package io.github.enadeag.carchargeplanner.desktop.settings;
+package io.github.enadeag.carchargeplanner.desktop.settings.form;
 
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 
 /** What a field says about a value the engine refused, in the owner's language. */
-final class ProblemTexts {
+public final class ProblemTexts {
 
     private ProblemTexts() {
     }
@@ -17,7 +17,7 @@ final class ProblemTexts {
      * @param messages the texts, in the owner's language
      * @return such as "Must be below the target charge level."
      */
-    static String of(InvalidSetting.Rule rule, Messages messages) {
+    public static String of(InvalidSetting.Rule rule, Messages messages) {
         return messages.text(switch (rule) {
             case OUT_OF_RANGE -> TextKey.PROBLEM_OUT_OF_RANGE;
             case NOT_BELOW_TARGET -> TextKey.PROBLEM_NOT_BELOW_TARGET;
