@@ -8,6 +8,7 @@ import io.github.enadeag.carchargeplanner.engine.store.FormatProblem;
 import io.github.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.time.DateTimeException;
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -81,8 +82,8 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
                 .put("targetPct", planning.targetPct().value())
                 .put("margin", planning.margin())
                 .put("importToleranceKwh", planning.importToleranceKwh())
-                .put("minWindowMinutes", planning.minWindowMinutes())
-                .put("notifyLeadMinutes", planning.notifyLeadMinutes());
+                .put("minWindowMinutes", planning.minWindow().toMinutes())
+                .put("notifyLeadMinutes", planning.notifyLead().toMinutes());
         writeForecast(file.putObject("forecast"), config.forecast());
         var recurring = file.putObject("away").putArray("recurring");
         config.away().recurring().forEach(period -> recurring.addObject()
@@ -169,8 +170,8 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
         var target = percent(planning, "targetPct");
         double margin = planning.number("margin");
         double importTolerance = planning.number("importToleranceKwh");
-        int minWindow = planning.wholeNumber("minWindowMinutes");
-        int notifyLead = planning.wholeNumber("notifyLeadMinutes");
+        var minWindow = Duration.ofMinutes(planning.wholeNumber("minWindowMinutes"));
+        var notifyLead = Duration.ofMinutes(planning.wholeNumber("notifyLeadMinutes"));
         return planning.make(() -> new PlanningPreferences(minimum, target, margin, importTolerance, minWindow,
                 notifyLead));
     }

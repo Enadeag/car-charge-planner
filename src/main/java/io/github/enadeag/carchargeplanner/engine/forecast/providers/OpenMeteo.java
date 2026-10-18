@@ -113,6 +113,9 @@ public final class OpenMeteo implements ForecastProvider {
         query.put("forecast_days", String.valueOf(OpenMeteoSeries.FORECAST_DAYS));
         query.put("timeformat", "unixtime");
         var key = settings.getOrDefault("api_key", "").strip();
+        if (!SettingFormat.TEXT.accepts(key)) {
+            throw new ProviderError.NotConfigured("the API key must not hold a line break or another control character");
+        }
         if (!key.isEmpty()) {
             query.put("apikey", key); // the way Open-Meteo documents it for its customer servers
         }

@@ -83,7 +83,7 @@ final class ForecastSolarPeriods {
             } catch (DateTimeException e) {
                 throw notAsDocumented();
             }
-            // in the repeated autumn hour this is the first of the two, as Python's zoneinfo reads it
+            // a time in the repeated autumn hour could be either of two instants; atZone takes the earlier one
             var at = local.atZone(placeZone).toInstant();
             points.add(new Point(at, local.toLocalDate(), wattHours(entry.getValue())));
         }

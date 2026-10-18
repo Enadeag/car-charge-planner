@@ -31,7 +31,7 @@ final class WindowFinder {
     WindowFinder(HomeSystem system, PlanningPreferences preferences) {
         this.system = system;
         this.preferences = preferences;
-        this.minWindow = Duration.ofMinutes(preferences.minWindowMinutes());
+        this.minWindow = preferences.minWindow();
     }
 
     /**

@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.LinkedHashMap;
@@ -42,7 +43,8 @@ class ConfigFileTest {
         assertThat(config.system().timezone()).isEqualTo(ZoneId.of("Europe/Brussels"));
         assertThat(config.system().panels()).containsExactly(new PanelArray("South roof", 5.0, 35, 0, 0.14));
         assertThat(config.system().charger()).isEqualTo(new Charger(Phases.ONE, 6, 16, 230, 0.9));
-        assertThat(config.planning()).isEqualTo(new PlanningPreferences(new Percent(30), new Percent(80), 0.85, 0.2, 45, 15));
+        assertThat(config.planning()).isEqualTo(new PlanningPreferences(new Percent(30), new Percent(80), 0.85, 0.2,
+                Duration.ofMinutes(45), Duration.ofMinutes(15)));
     }
 
     @ParameterizedTest
@@ -233,7 +235,8 @@ class ConfigFileTest {
         var example = new ConfigFile(EXAMPLE).read();
         var file = new ConfigFile(write(Files.readString(EXAMPLE)));
         var fewer = new EngineConfig(example.system(),
-                new PlanningPreferences(new Percent(20), new Percent(90), 0.7, 0.1, 30, 0),
+                new PlanningPreferences(new Percent(20), new Percent(90), 0.7, 0.1,
+                        Duration.ofMinutes(30), Duration.ofMinutes(0)),
                 new ForecastSelection(new ProviderId("forecast-solar"), Optional.empty(), Map.of()), AwaySchedule.NONE,
                 TypicalValues.NONE);
 

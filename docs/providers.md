@@ -17,7 +17,7 @@ All of it is in the package `engine.forecast` ([`src/main/java/io/github/enadeag
 | --- | --- |
 | `ForecastProvider` | The interface: `info()`, `fetch(system, settings, now)`, and optionally `placeSearch()`. |
 | `ProviderInfo` | What a provider tells about itself: a `ProviderId` (lower-case letters, digits and hyphens, used in the config and in cache file names), the name, a description, an `https` terms link, the credit its terms ask for, in plain words what is sent, the shortest time between two requests (`minRefresh`), how far ahead it forecasts (`horizon`), how long a forecast stays worth keeping when it cannot be refreshed (`maxUsefulAge`), and its settings. |
-| `SettingSpec` | One setting, such as a server address or an API key: a key, a label, a hint, whether it is optional, whether it is secret, and its `SettingFormat`: any text, a `SERVER_ADDRESS` a key may be sent to (`ServerAddress`: https, or plain http only to localhost, 127.0.0.1 or [::1]; no user name, query or fragment), or `LETTERS_AND_DIGITS`. Settings and set-up refuse a value of the wrong format when it is saved; check it again before you send, as a config file can be edited by hand. |
+| `SettingSpec` | One setting, such as a server address or an API key: a key, a label, a hint, whether it is optional, whether it is secret, and its `SettingFormat`: any text, a `SERVER_ADDRESS` a key may be sent to (`ServerAddress`: https, or plain http only to localhost, 127.0.0.1 or [::1]; no user name, query or fragment), or `LETTERS_AND_DIGITS`. Settings and set-up refuse a value of the wrong format when it is saved; check it again before you send, as a config file can be edited by hand. Any value a provider puts into an address's path or query or into a header must carry a format (`TEXT` refuses line breaks and other control characters; take a narrower one where the service allows) and is checked again before sending, as `ExampleSolar.apiKey` below does; a value in a query is encoded besides. |
 | `SystemDescription` | What a provider is told: the coordinates, the time zone, and the panel arrays (`PanelArray`: size in kWp, tilt, azimuth with 0 south, -90 east and 90 west, and the system losses as a share, 0.14 for 14 %). |
 | `ForecastStep` | What it returns, a list of them: `start` (inclusive), `end` (exclusive), both `Instant`s, and `powerKw`, the expected AC power of the whole system over the step. |
 | `HttpGet` | The only way a provider reaches the network (below). |
@@ -71,7 +71,10 @@ address in the message, `Exchange.json` reads at most 2 MB and 200 000 tokens of
 
 ## A skeleton
 
-This is a complete provider for an imaginary service, and it passes the conformance kit:
+This is a complete provider for an imaginary service, and it passes the conformance kit. It is also real code: the
+three blocks below are `ExampleSolar.java`, `ExampleSolarTest.java` and `example_solar.json` in the test tree
+(`src/test/.../engine/forecast/providers/`), where the build runs the kit on it, and `ProvidersGuideTest` fails when
+a block here and its file differ.
 
 ```java
 package io.github.enadeag.carchargeplanner.engine.forecast.providers;
@@ -83,10 +86,14 @@ import io.github.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import io.github.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderError;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
+import io.github.enadeag.carchargeplanner.engine.forecast.ProviderText;
+import io.github.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import io.github.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import io.github.enadeag.carchargeplanner.engine.forecast.Steps;
 import io.github.enadeag.carchargeplanner.engine.forecast.SystemDescription;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
@@ -109,7 +116,8 @@ public final class ExampleSolar implements ForecastProvider {
             Duration.ofHours(1),
             Duration.ofDays(3),
             Duration.ofHours(6),
-            List.of(new SettingSpec("api_key", "API key", "From your Example Solar account.", false, true)));
+            List.of(new SettingSpec("api_key", "API key", "From your Example Solar account.", false, true,
+                    SettingFormat.LETTERS_AND_DIGITS)));
 
     private final HttpGet http;
 
@@ -130,18 +138,34 @@ public final class ExampleSolar implements ForecastProvider {
     @Override
     public List<ForecastStep> fetch(SystemDescription system, Map<String, String> settings, Instant now)
             throws ProviderError {
-        if (!INFO.missingRequired(settings).isEmpty()) {
-            throw new ProviderError.NotConfigured("Example Solar needs an API key");
-        }
-        return Steps.requireValid(Steps.eachArray(system, array -> fetchArray(system, array, settings)));
+        var key = apiKey(settings); // checked before anything is sent
+        return Steps.requireValid(Steps.eachArray(system, array -> fetchArray(system, array, key, settings)));
     }
 
-    private List<ForecastStep> fetchArray(SystemDescription system, PanelArray array, Map<String, String> settings)
-            throws ProviderError {
-        var uri = URI.create("https://api.example.com/v1/solar?lat=" + Decimals.plain(system.location().latitude())
-                + "&lon=" + Decimals.plain(system.location().longitude()) + "&kwp=" + Decimals.plain(array.kwp())
-                + "&tilt=" + Decimals.plain(array.tiltDeg()) + "&azimuth=" + Decimals.plain(array.azimuthDeg()));
-        var request = new HttpGet.Request(uri, Map.of("Authorization", "Bearer " + settings.get("api_key")),
+    /**
+     * The key, checked again although Settings checked it when it was saved: the config file and the keychain can be
+     * changed by hand, and the key goes into a header.
+     */
+    private static String apiKey(Map<String, String> settings) throws ProviderError.NotConfigured {
+        var key = settings.getOrDefault("api_key", "").strip();
+        if (key.isEmpty()) {
+            throw new ProviderError.NotConfigured("Example Solar needs an API key");
+        }
+        if (!SettingFormat.LETTERS_AND_DIGITS.accepts(key)) {
+            throw new ProviderError.NotConfigured("the API key may hold only letters and digits");
+        }
+        return key;
+    }
+
+    private List<ForecastStep> fetchArray(SystemDescription system, PanelArray array, String key,
+            Map<String, String> settings) throws ProviderError {
+        var uri = URI.create("https://api.example.com/v1/solar?" + String.join("&",
+                parameter("lat", Decimals.plain(system.location().latitude())),
+                parameter("lon", Decimals.plain(system.location().longitude())),
+                parameter("kwp", Decimals.plain(array.kwp())),
+                parameter("tilt", Decimals.plain(array.tiltDeg())),
+                parameter("azimuth", Decimals.plain(array.azimuthDeg()))));
+        var request = new HttpGet.Request(uri, Map.of("Authorization", "Bearer " + key),
                 HttpGet.DEFAULT_TIMEOUT, HttpGet.DEFAULT_MAX_BODY);
         // Exchange turns a failed connection into Unavailable, without the address in the message
         var reply = Exchange.send(http, request, INFO.name());
@@ -152,7 +176,11 @@ public final class ExampleSolar implements ForecastProvider {
             throw new ProviderError.Unavailable("Example Solar has a problem (status " + reply.status() + ")");
         }
         if (!reply.ok()) {
-            throw new ProviderError.BadResponse("Example Solar did not accept the request (status " + reply.status() + ")");
+            // the server's own words, such as {"error": "unknown key"}, only through ProviderText
+            var words = Exchange.json(reply.body()).path("error");
+            throw new ProviderError.BadResponse("Example Solar did not accept the request (status " + reply.status() + ")"
+                    + (words.isString() ? "; " + ProviderText.quoted(INFO.name(), words.stringValue(),
+                            INFO.secretValues(settings)) : ""));
         }
         var steps = new ArrayList<ForecastStep>();
         try {
@@ -167,6 +195,11 @@ public final class ExampleSolar implements ForecastProvider {
             throw new ProviderError.BadResponse("Example Solar gave no forecast");
         }
         return Steps.requireValid(steps);
+    }
+
+    /** One query parameter, its value encoded, so no value can end the parameter or change the address. */
+    private static String parameter(String name, String value) {
+        return name + "=" + URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 }
 ```
@@ -186,6 +219,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import tools.jackson.databind.json.JsonMapper;
 
 class ExampleSolarTest extends ProviderConformance {
 
@@ -201,7 +235,7 @@ class ExampleSolarTest extends ProviderConformance {
                 List.of(answer("", new Reply(429, "", Map.of("Retry-After", "120")))),
                 Duration.ofSeconds(120),
                 Map.of(),
-                Map.of("api_key", "EXAMPLE-SECRET-KEY-123"),
+                Map.of("api_key", "ExampleSecretKey123"),
                 Instant.parse("2026-07-03T07:00:00Z"),
                 text -> List.of(answer("", new Reply(400,
                         new JsonMapper().createObjectNode().put("error", text).toString()))));
@@ -279,6 +313,7 @@ What it checks:
 | Limits | Every request reads at most `HttpGet.DEFAULT_MAX_BODY` and waits at most `HttpGet.DEFAULT_TIMEOUT`. |
 | Not as documented | A 200 with the wrong content throws `BadResponse`; an empty answer throws a `ProviderError` or gives valid steps, and never anything else. |
 | Required settings | A missing required setting throws `NotConfigured` before anything is sent. |
+| Setting formats | Every setting, holding a value with a line break that its format refuses: `NotConfigured` before anything is sent, or the value never reaches a request's address or headers unencoded. |
 | Secrets | A secret setting never appears in a log line or an error message, not even when the server echoes it; nor does another provider's stored key. |
 | The server's words | An error text from the server is shown as "<provider> says: ...", without the key (also where it is cut short), control or direction characters, and at most 200 characters. |
 

@@ -5,7 +5,7 @@ import java.util.regex.Pattern;
 /** What the value of a provider's setting must look like, checked when it is entered and before it is sent. */
 public enum SettingFormat {
 
-    /** Any text. */
+    /** Any text on one line: no control characters, such as a line break, which could end a header. */
     TEXT,
 
     /** A server address a key may be sent to, as {@link ServerAddress#parse} accepts it. */
@@ -28,7 +28,7 @@ public enum SettingFormat {
             return true;
         }
         return switch (this) {
-            case TEXT -> true;
+            case TEXT -> stripped.chars().noneMatch(Character::isISOControl);
             case SERVER_ADDRESS -> ServerAddress.parse(stripped).isPresent();
             case LETTERS_AND_DIGITS -> LETTERS_DIGITS.matcher(stripped).matches();
         };

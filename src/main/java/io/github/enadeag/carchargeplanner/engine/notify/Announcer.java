@@ -72,7 +72,7 @@ public final class Announcer {
         if (!usable(forecast, now)) {
             return;
         }
-        var lead = Duration.ofMinutes(config.planning().notifyLeadMinutes());
+        var lead = config.planning().notifyLead();
         for (var candidate : candidates(days, advice, config)) {
             var window = candidate.window();
             if (now.isBefore(window.start()) && !window.start().isAfter(now.plus(lead)) && !wasAnnounced(window)) {

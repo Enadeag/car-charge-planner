@@ -7,6 +7,7 @@ import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import io.github.enadeag.carchargeplanner.engine.setting.Setting;
+import java.time.Duration;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -85,8 +86,8 @@ final class PlanningPage implements ConfigPage {
         target.load(planning.targetPct().value());
         margin.load(planning.margin() * 100);
         importTolerance.load(planning.importToleranceKwh());
-        minWindow.load(planning.minWindowMinutes());
-        notifyLead.load(planning.notifyLeadMinutes());
+        minWindow.load(planning.minWindow().toMinutes());
+        notifyLead.load(planning.notifyLead().toMinutes());
         rows.values().forEach(FieldRow::clearProblem);
         view.show(cards);
     }
@@ -104,7 +105,8 @@ final class PlanningPage implements ConfigPage {
         }
         try {
             var planning = new PlanningPreferences(new Percent(minimum.value()), new Percent(target.value()),
-                    margin.value() / 100, importTolerance.value(), minWindow.wholeValue(), notifyLead.wholeValue());
+                    margin.value() / 100, importTolerance.value(),
+                    Duration.ofMinutes(minWindow.wholeValue()), Duration.ofMinutes(notifyLead.wholeValue()));
             return Optional.of(config.withPlanning(planning));
         } catch (InvalidSetting e) {
             rows.get(e.setting()).showProblem(ProblemTexts.of(e.rule(), messages));

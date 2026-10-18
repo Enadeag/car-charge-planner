@@ -31,7 +31,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-/** When the owner is told about a window; the cases of the Python version's tests/test_notifications.py. */
+/** When the owner is told about a window, and when not. */
 class AnnouncerTest {
 
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");
@@ -68,7 +68,8 @@ class AnnouncerTest {
             var example = new ConfigFile(Path.of("docs", "example-engine.json")).read();
             var planning = example.planning();
             return example.withPlanning(new PlanningPreferences(planning.minimumPct(), planning.targetPct(),
-                    planning.margin(), planning.importToleranceKwh(), planning.minWindowMinutes(), leadMinutes));
+                    planning.margin(), planning.importToleranceKwh(), planning.minWindow(),
+                    Duration.ofMinutes(leadMinutes)));
         } catch (ConfigProblem e) {
             throw new AssertionError(e);
         }
