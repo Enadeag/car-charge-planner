@@ -7,9 +7,11 @@ import static io.github.enadeag.carchargeplanner.engine.plan.Forecasts.bellDay;
 import static io.github.enadeag.carchargeplanner.engine.plan.Forecasts.bellDays;
 import static io.github.enadeag.carchargeplanner.engine.plan.Forecasts.hourly;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.within;
 
 import io.github.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import io.github.enadeag.carchargeplanner.engine.config.Charger;
 import io.github.enadeag.carchargeplanner.engine.config.HomeSystem;
 import io.github.enadeag.carchargeplanner.engine.config.Percent;
 import io.github.enadeag.carchargeplanner.engine.config.Phases;
@@ -97,14 +99,13 @@ class PlannerTest {
     @Test
     void clearSummerDayGivesOneLongWindowNearTheSurplusPeak() {
         var day = friday(900, 40);
-        assertThat(day.windows()).hasSize(1);
+        // the usable surplus peaks at about 2.6 kW: six hours at 9 A (2.07 kW) take a little from the grid at the edges
+        assertThat(spans(day)).containsExactly(new Span(at(SUMMER_FRI, 9), at(SUMMER_FRI, 15), 9));
         var window = day.windows().getFirst();
-        assertThat(window.amps()).isBetween(6, 32);
-        assertThat(window.powerKw()).isBetween(2.0, 3.2); // peak usable is about 2.6 kW
-        assertThat(window.importKwh()).isLessThanOrEqualTo(PREFERENCES.importToleranceKwh());
-        assertThat(window.start()).isAfterOrEqualTo(at(SUMMER_FRI, 8));
-        assertThat(window.end()).isBeforeOrEqualTo(at(SUMMER_FRI, 17));
-        assertThat(window.solarShare()).isGreaterThan(0.95);
+        assertThat(window.powerKw()).isEqualTo(2.07);
+        assertThat(window.solarKwh()).isCloseTo(12.270693, within(1e-6));
+        assertThat(window.importKwh()).isCloseTo(0.149307, within(1e-6));
+        assertThat(window.solarKwh() + window.importKwh()).isCloseTo(2.07 * 6, CLOSE);
     }
 
     @Test
@@ -194,14 +195,15 @@ class PlannerTest {
 
     @Test
     void theThursdayAwayPeriodLeavesFridayAlone() {
-        assertThat(friday(900, 40).windows()).isNotEmpty();
+        assertThat(spans(friday(900, 40))).containsExactly(new Span(at(SUMMER_FRI, 9), at(SUMMER_FRI, 15), 9));
     }
 
     @Test
     void awayUntilTheAfternoonLeavesOnlyALaterWindow() {
         var away = new AwayPeriod(at(SUMMER_FRI, 0), at(SUMMER_FRI, 14));
         var windows = planAway(bellDay(SUMMER_FRI, 900), 40, at(SUMMER_FRI, 0), away).getFirst().windows();
-        assertThat(windows).isNotEmpty().allSatisfy(window -> assertThat(window.start()).isAfterOrEqualTo(at(SUMMER_FRI, 14)));
+        assertThat(windows).extracting(Window::start, Window::end, Window::amps)
+                .containsExactly(tuple(at(SUMMER_FRI, 14), at(SUMMER_FRI, 16), 7));
     }
 
     @Test
@@ -209,32 +211,36 @@ class PlannerTest {
         var forecast = bellDays(Map.of(SUMMER_FRI, 900.0, SUMMER_FRI.plusDays(1), 900.0));
         var days = planAway(forecast, 40, at(SUMMER_FRI, 7), AwayPeriod.allDay(SUMMER_FRI, Forecasts.TZ));
         assertThat(days.get(0).windows()).isEmpty();
-        assertThat(days.get(1).windows()).isNotEmpty();
+        var saturday = SUMMER_FRI.plusDays(1);
+        assertThat(spans(days.get(1))).containsExactly(new Span(at(saturday, 9), at(saturday, 15), 9));
     }
 
     @Test
     void awayForPartOfTheDayLeavesTheRestOfIt() {
         var away = AwayPeriod.on(SUMMER_FRI, LocalTime.of(0, 0), LocalTime.of(13, 0), Forecasts.TZ);
         var windows = planAway(bellDay(SUMMER_FRI, 900), 40, at(SUMMER_FRI, 7), away).getFirst().windows();
-        assertThat(windows).isNotEmpty().allSatisfy(window -> assertThat(window.start()).isAfterOrEqualTo(at(SUMMER_FRI, 13)));
+        assertThat(windows).extracting(Window::start, Window::end, Window::amps)
+                .containsExactly(tuple(at(SUMMER_FRI, 13), at(SUMMER_FRI, 16), 7));
     }
 
     @Test
     void windowIsTrimmedToTheEnergyNeeded() {
         var day = friday(900, 75);
         double need = new Planner(Forecasts.example(), PREFERENCES, WEEKLY_AWAY).energyNeededKwh(new Percent(75));
-        double delivered = day.windows().stream().mapToDouble(Window::solarKwh).sum();
-        assertThat(delivered).isGreaterThanOrEqualTo(need).isLessThan(need + 1.5);
-        var full = friday(900, 40).windows().getFirst();
-        var trimmed = day.windows().getFirst();
-        assertThat(Duration.between(trimmed.start(), trimmed.end())).isLessThan(Duration.between(full.start(), full.end()));
+        assertThat(need).isCloseTo(5.0 / 100 * 70 / 0.9, CLOSE);
+        // every current from 6 A up covers the need from 08:00 in the sun; the earliest start, then the most amps
+        // that still take nothing from the grid: 3.89 kWh at 1.38 kW is 2 h 49 min, rounded up to 10:50
+        assertThat(spans(day)).containsExactly(new Span(at(SUMMER_FRI, 8), at(SUMMER_FRI, 10, 50), 6));
+        assertThat(day.windows().getFirst().solarKwh()).isCloseTo(1.38 * 17 / 6, CLOSE);
+        assertThat(day.socAfterChargingPct().value()).isCloseTo(80, CLOSE);
     }
 
     @Test
     void shortNeedStillGetsTheMinimumWindowLength() {
-        var window = friday(900, 79.8).windows().getFirst();
-        assertThat(Duration.between(window.start(), window.end()))
-                .isGreaterThanOrEqualTo(Duration.ofMinutes(PREFERENCES.minWindowMinutes()));
+        // 0.2 % of 70 kWh / 0.9 = 0.16 kWh: 7 minutes at 6 A, stretched to the 45-minute minimum
+        var day = friday(900, 79.8);
+        assertThat(spans(day)).containsExactly(new Span(at(SUMMER_FRI, 8), at(SUMMER_FRI, 8, 45), 6));
+        assertThat(day.windows().getFirst().solarKwh()).isCloseTo(1.38 * 0.75, CLOSE);
     }
 
     @Test
@@ -250,7 +256,9 @@ class PlannerTest {
         var bold = new Planner(Forecasts.example(), new PlanningPreferences(new Percent(30), new Percent(80), 1.0, 0.2, 45, 15),
                 WEEKLY_AWAY)
                 .plan(bellDay(SUMMER_FRI, 900), new Percent(40), at(SUMMER_FRI, 0), List.of()).getFirst().windows().getFirst();
-        assertThat(bold.powerKw()).isGreaterThan(cautious.powerKw());
+        assertThat(List.of(cautious.amps(), bold.amps())).containsExactly(9, 10);
+        assertThat(bold.powerKw()).isEqualTo(2.3);
+        assertThat(bold.solarKwh()).isCloseTo(2.3 * 6, CLOSE);
     }
 
     @ParameterizedTest
@@ -320,7 +328,7 @@ class PlannerTest {
 
     @Test
     void nowCutsOffTheFirstStep() {
-        assertThat(friday(900, 40, 12).windows().getFirst().start()).isAfterOrEqualTo(at(SUMMER_FRI, 12));
+        assertThat(spans(friday(900, 40, 12))).containsExactly(new Span(at(SUMMER_FRI, 12), at(SUMMER_FRI, 16), 7));
     }
 
     @Test
@@ -338,15 +346,16 @@ class PlannerTest {
         var saturday = SUMMER_FRI.plusDays(1);
         var days = plan(bellDays(Map.of(SUMMER_FRI, 150.0, saturday, 900.0)), Forecasts.example(), 60, at(SUMMER_FRI, 0));
         assertThat(days.get(0).windows()).isEmpty();
-        assertThat(days.get(1).windows()).isNotEmpty();
-        assertThat(days.get(1).socStartPct().value()).isLessThan(60);
+        assertThat(spans(days.get(1))).containsExactly(new Span(at(saturday, 9), at(saturday, 15), 9));
+        assertThat(days.get(1).socStartPct().value()).isCloseTo(60 - 600.0 / 7 * 18 / 100 / 70 * 100, CLOSE);
     }
 
     @Test
     void aSurplusThatOnePhaseCanUseIsTooSmallForThree() {
         // about 3 kW of surplus: 13 A on one phase, but under the 4.1 kW that 6 A on three phases already takes
         var forecast = bellDay(SUMMER_FRI, 1000);
-        assertThat(plan(forecast, Forecasts.exampleOnPhases(Phases.ONE), 40, at(SUMMER_FRI, 0)).getFirst().windows()).isNotEmpty();
+        assertThat(spans(plan(forecast, Forecasts.exampleOnPhases(Phases.ONE), 40, at(SUMMER_FRI, 0)).getFirst()))
+                .containsExactly(new Span(at(SUMMER_FRI, 9), at(SUMMER_FRI, 15), 10));
         assertThat(plan(forecast, Forecasts.exampleOnPhases(Phases.THREE), 40, at(SUMMER_FRI, 0)).getFirst().windows()).isEmpty();
     }
 
@@ -356,7 +365,9 @@ class PlannerTest {
         var charger = system.charger();
         // 2500 W/m2 at the peak is an artificial sky: about 10 kW, enough for three phases
         var windows = plan(bellDay(SUMMER_FRI, 2500), system, 40, at(SUMMER_FRI, 0)).getFirst().windows();
-        assertThat(windows).isNotEmpty().allSatisfy(window -> {
+        assertThat(windows).extracting(Window::start, Window::end, Window::amps)
+                .containsExactly(tuple(at(SUMMER_FRI, 8), at(SUMMER_FRI, 14, 30), 7));
+        assertThat(windows).allSatisfy(window -> {
             assertThat(window.powerKw()).isGreaterThanOrEqualTo(Charging.powerKw(charger.minAmps(), charger) - 1e-9);
             assertThat(window.powerKw()).isCloseTo(Charging.powerKw(window.amps(), charger), CLOSE);
             assertThat(window.amps()).isBetween(charger.minAmps(), charger.maxAmps());
@@ -386,7 +397,10 @@ class PlannerTest {
         // why announced windows are kept: planning again at 12:00 gives another power and end
         var announced = announced();
         var later = friday(900, 40, 12).windows().getFirst();
-        assertThat(List.of(later.end(), later.amps())).isNotEqualTo(List.of(announced.end(), announced.amps()));
+        assertThat(new Span(announced.start(), announced.end(), announced.amps()))
+                .isEqualTo(new Span(at(SUMMER_FRI, 9), at(SUMMER_FRI, 15), 9));
+        assertThat(new Span(later.start(), later.end(), later.amps()))
+                .isEqualTo(new Span(at(SUMMER_FRI, 12), at(SUMMER_FRI, 16), 7));
     }
 
     @ParameterizedTest
@@ -403,7 +417,9 @@ class PlannerTest {
         var day = fridayWithAnnounced(12, 40, List.of(announced));
         double share = Hours.between(at(SUMMER_FRI, 12), announced.end()) / Hours.between(announced.start(), announced.end());
         assertThat(day.windows().getFirst().solarKwh()).isCloseTo(announced.solarKwh() * share, within(1e-9));
-        assertThat(day.socAfterChargingPct().value()).isGreaterThan(40);
+        assertThat(spans(day)).containsExactly(new Span(announced.start(), announced.end(), announced.amps()));
+        assertThat(day.socAfterChargingPct().value())
+                .isCloseTo(40 + announced.solarKwh() * share * 0.9 / 70 * 100, within(1e-9));
     }
 
     @Test
@@ -420,5 +436,140 @@ class PlannerTest {
         assertThat(fridayWithAnnounced(7, 40, List.of(announced)).windows())
                 .isEqualTo(fridayWithAnnounced(7, 40, List.of()).windows());
         assertThat(fridayWithAnnounced(16, 40, List.of(announced)).windows()).doesNotContain(announced);
+    }
+
+    /** Steps of a quarter of an hour at 4.4 kW from the first hour up to the last, 14 A (3.22 kW) for the golden system. */
+    private static List<ForecastStep> quarters(LocalDate day, int fromHour, int toHour) {
+        var steps = new ArrayList<ForecastStep>();
+        for (var start = at(day, fromHour); start.isBefore(at(day, toHour)); start = start.plus(Duration.ofMinutes(15))) {
+            steps.add(new ForecastStep(start, start.plus(Duration.ofMinutes(15)), 4.4));
+        }
+        return steps;
+    }
+
+    @Test
+    void goldenQuarterHourStepsPlannedAtTwentyPast() {
+        var day = plan(quarters(SUMMER_FRI, 10, 16), Forecasts.golden(), 62, at(SUMMER_FRI, 10, 20)).getFirst();
+        // 14 kWh at 3.22 kW is 4 h 20.9 min from 10:20, rounded up to 14:45
+        assertThat(spans(day)).containsExactly(new Span(at(SUMMER_FRI, 10, 20), at(SUMMER_FRI, 14, 45), 14));
+        var window = day.windows().getFirst();
+        assertThat(window.powerKw()).isEqualTo(3.22);
+        assertThat(window.solarKwh()).isCloseTo(3.22 * 265 / 60, CLOSE);
+        assertThat(window.importKwh()).isZero();
+        assertThat(day.socAfterChargingPct().value()).isCloseTo(80, CLOSE);
+        // 13 h 40 min of the day are left
+        assertThat(day.drivingPct()).isCloseTo(18.0 * 820 / 1440, CLOSE);
+        assertThat(day.socEndOfDayPct().value()).isCloseTo(80 - 18.0 * 820 / 1440, CLOSE);
+    }
+
+    @Test
+    void ofTwoRunsWithTheSameSunTheEarlierWins() {
+        // 2 kWh: 37 min at 14 A, so the 45-minute minimum; either hour could give it
+        var forecast = hourly(SUMMER_FRI, Map.of(9, 4.4, 13, 4.4));
+        var day = plan(forecast, Forecasts.golden(), 80 - 2 * 0.9 / 70 * 100, at(SUMMER_FRI, 0)).getFirst();
+        assertThat(spans(day)).containsExactly(new Span(at(SUMMER_FRI, 9), at(SUMMER_FRI, 9, 45), 14));
+        assertThat(day.windows().getFirst().solarKwh()).isCloseTo(3.22 * 0.75, CLOSE);
+    }
+
+    @Test
+    void aGapInTheForecastSplitsTheSunIntoTwoWindowsInTimeOrder() {
+        var forecast = new ArrayList<>(hourly(SUMMER_FRI, Map.of(9, 4.4, 10, 4.4, 13, 4.4, 14, 4.4)));
+        // the forecast has nothing from 11:00 to 13:00
+        forecast.removeIf(step -> !step.start().isBefore(at(SUMMER_FRI, 11)) && step.start().isBefore(at(SUMMER_FRI, 13)));
+        var day = plan(forecast, Forecasts.golden(), 40, at(SUMMER_FRI, 0)).getFirst();
+        assertThat(spans(day)).containsExactly(
+                new Span(at(SUMMER_FRI, 9), at(SUMMER_FRI, 11), 14), new Span(at(SUMMER_FRI, 13), at(SUMMER_FRI, 15), 14));
+        assertThat(day.windows()).extracting(Window::solarKwh).allSatisfy(kwh -> assertThat(kwh).isCloseTo(6.44, CLOSE));
+    }
+
+    @Test
+    void aRunningAnnouncedWindowCutsTheNeedAndKeepsTheSunBesideIt() {
+        // 10:00 to 14:00 at 14 A was announced; at 12:00 half of its 12.88 kWh is still to come
+        var announced = new Window(at(SUMMER_FRI, 10), at(SUMMER_FRI, 14), 14, 3.22, 12.88, 0);
+        var forecast = hourly(SUMMER_FRI, Map.of(10, 4.4, 11, 4.4, 12, 4.4, 13, 4.4, 14, 4.4, 15, 4.4, 17, 4.4));
+        // need 8.05 kWh, 6.44 of it from the announced window: 1.61 kWh is 30 min at 14 A, so the 45-minute minimum.
+        // The sun from 14:00 to 16:00 touches the announced window, so it is not a window of its own.
+        var day = new Planner(Forecasts.golden(), PREFERENCES, WEEKLY_AWAY)
+                .plan(forecast, new Percent(69.65), at(SUMMER_FRI, 12), List.of(announced)).getFirst();
+        assertThat(spans(day)).containsExactly(
+                new Span(at(SUMMER_FRI, 10), at(SUMMER_FRI, 14), 14), new Span(at(SUMMER_FRI, 17), at(SUMMER_FRI, 17, 45), 14));
+        assertThat(day.windows()).extracting(Window::solarKwh)
+                .satisfiesExactly(kwh -> assertThat(kwh).isCloseTo(6.44, CLOSE), kwh -> assertThat(kwh).isCloseTo(2.415, CLOSE));
+        assertThat(day.socAfterChargingPct().value()).isCloseTo(80, CLOSE);
+    }
+
+    @Test
+    void aRunningAnnouncedWindowBelongsOnlyToTheDayItStarts() {
+        var announced = new Window(at(SUMMER_FRI, 10), at(SUMMER_FRI, 14), 14, 3.22, 12.88, 0);
+        var forecast = new ArrayList<>(hourly(SUMMER_FRI, Map.of(10, 4.4, 11, 4.4, 12, 4.4, 13, 4.4)));
+        forecast.addAll(hourly(SUMMER_FRI.plusDays(1), Map.of()));
+        var days = new Planner(Forecasts.golden(), PREFERENCES, WEEKLY_AWAY)
+                .plan(forecast, new Percent(40), at(SUMMER_FRI, 12), List.of(announced));
+        assertThat(spans(days.get(0))).containsExactly(new Span(at(SUMMER_FRI, 10), at(SUMMER_FRI, 14), 14));
+        assertThat(days.get(1).windows()).isEmpty();
+    }
+
+    @Test
+    void aSurplusForTheMinimumCurrentOnlyGivesAWindowAtThatCurrent() {
+        // 2.3 kW leaves 1.445 kW: 6 A (1.38 kW); 7 A would import 0.165 kWh an hour
+        var day = plan(hourly(SUMMER_FRI, Map.of(9, 2.3, 10, 2.3, 11, 2.3)), Forecasts.golden(), 40, at(SUMMER_FRI, 0))
+                .getFirst();
+        assertThat(spans(day)).containsExactly(new Span(at(SUMMER_FRI, 9), at(SUMMER_FRI, 12), 6));
+        assertThat(day.windows().getFirst().solarKwh()).isCloseTo(1.38 * 3, CLOSE);
+        assertThat(day.windows().getFirst().importKwh()).isZero();
+    }
+
+    @Test
+    void aRunOfExactlyTheMinimumLengthTakesTheCurrentThatImportsWithinTheTolerance() {
+        // 45 minutes of quarter-hour steps leaving 3.23 kW: 15 A (3.45 kW) imports 0.165 kWh, 16 A would import 0.34
+        var day = plan(quarters(SUMMER_FRI, 10, 11).subList(0, 3), Forecasts.golden(), 40, at(SUMMER_FRI, 0)).getFirst();
+        assertThat(spans(day)).containsExactly(new Span(at(SUMMER_FRI, 10), at(SUMMER_FRI, 10, 45), 15));
+        var window = day.windows().getFirst();
+        assertThat(window.powerKw()).isCloseTo(3.45, CLOSE);
+        assertThat(window.solarKwh()).isCloseTo(3.23 * 0.75, CLOSE);
+        assertThat(window.importKwh()).isCloseTo(0.22 * 0.75, CLOSE);
+    }
+
+    @Test
+    void aWindowOverStepsWithLessSunIsCutWhereTheEnergyIsReached() {
+        // with room to import, 11 A (2.53 kW) is the lowest current that gives 4.025 kWh over both hours: 2.53 kWh in
+        // the first, then the 1.495 kWh left at the 1.61 kW of the second hour takes 55.7 min, rounded up to 12:00
+        var tolerant = new PlanningPreferences(new Percent(30), new Percent(80), 0.85, 5, 45, 15);
+        var finder = new WindowFinder(Forecasts.golden(), tolerant);
+        var run = new Run(List.of(new Segment(at(SUMMER_FRI, 10), at(SUMMER_FRI, 11), 3.22),
+                new Segment(at(SUMMER_FRI, 11), at(SUMMER_FRI, 12), 1.61)));
+        var window = finder.windows(List.of(run), 4.025).getFirst();
+        assertThat(new Span(window.start(), window.end(), window.amps()))
+                .isEqualTo(new Span(at(SUMMER_FRI, 10), at(SUMMER_FRI, 12), 11));
+        assertThat(window.solarKwh()).isCloseTo(2.53 + 1.61, CLOSE);
+        assertThat(window.importKwh()).isCloseTo(2.53 - 1.61, CLOSE);
+    }
+
+    @Test
+    void theFinderGivesItsWindowsInTimeOrderAlthoughItPicksTheSunniestFirst() {
+        var finder = new WindowFinder(Forecasts.golden(), PREFERENCES);
+        var runs = finder.runs(hourly(SUMMER_FRI, Map.of(9, 4.4, 13, 4.4, 14, 4.4)), at(SUMMER_FRI, 0), List.of());
+        assertThat(finder.windows(runs, 100)).extracting(Window::start).containsExactly(at(SUMMER_FRI, 9), at(SUMMER_FRI, 13));
+    }
+
+    @Test
+    void withoutAForecastTheAwayTimeIsTheOneOffPeriods() {
+        var oneOff = new AwayPeriod(at(SUMMER_FRI, 8), at(SUMMER_FRI, 12));
+        assertThat(new AwayTimes(WEEKLY_AWAY.recurring(), List.of(oneOff)).during(List.of(), Forecasts.TZ))
+                .containsExactly(new Unavailable(oneOff.start(), oneOff.end()));
+    }
+
+    @Test
+    void aWindowIsCutByTheLengthOfItsStepsNotByTheirCount() {
+        // a charger that only does 14 A (3.22 kW): half an hour at 3.22 kW, then 1.61 kW, so 2.415 kWh by 11:00
+        var system = Forecasts.golden().withCharger(new Charger(Phases.ONE, 14, 14, 230, 0.90));
+        var tolerant = new PlanningPreferences(new Percent(30), new Percent(80), 0.85, 5, 45, 15);
+        var run = new Run(List.of(new Segment(at(SUMMER_FRI, 10), at(SUMMER_FRI, 10, 30), 3.22),
+                new Segment(at(SUMMER_FRI, 10, 30), at(SUMMER_FRI, 12), 1.61)));
+        var window = new WindowFinder(system, tolerant).windows(List.of(run), 2.415).getFirst();
+        assertThat(new Span(window.start(), window.end(), window.amps()))
+                .isEqualTo(new Span(at(SUMMER_FRI, 10), at(SUMMER_FRI, 11), 14));
+        assertThat(window.solarKwh()).isCloseTo(2.415, CLOSE);
+        assertThat(window.importKwh()).isCloseTo(0.805, CLOSE);
     }
 }
