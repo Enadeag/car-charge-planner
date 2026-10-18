@@ -1,17 +1,19 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.app.Background;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.ProviderEntry;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.ProviderTexts;
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import io.github.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
 import io.github.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
-import io.github.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
@@ -126,25 +128,12 @@ final class ProviderCard {
      */
     boolean check() {
         rows.values().forEach(FieldRow::clearProblem);
-        var missing = new ArrayList<>(info.missingRequired(info.settingsFrom(plain(), secret())));
-        info.settings().stream().filter(setting -> inputs.get(setting.key()) instanceof SecretInput field
-                && field.isLocked()).forEach(setting -> missing.remove(setting.label()));
-        info.settings().stream().filter(setting -> missing.contains(setting.label()))
-                .forEach(setting -> rows.get(setting.key()).showProblem(messages.text(TextKey.PROBLEM_REQUIRED)));
-        var entered = info.settingsFrom(plain(), secret());
-        var wrong = info.settings().stream()
-                .filter(setting -> !setting.format().accepts(entered.getOrDefault(setting.key(), "")))
-                .toList();
-        wrong.forEach(setting -> rows.get(setting.key()).showProblem(messages.text(problem(setting.format()))));
-        return missing.isEmpty() && wrong.isEmpty();
-    }
-
-    private static TextKey problem(SettingFormat format) {
-        return switch (format) {
-            case SERVER_ADDRESS -> TextKey.PROBLEM_SERVER_ADDRESS;
-            case LETTERS_AND_DIGITS -> TextKey.PROBLEM_LETTERS_AND_DIGITS;
-            case TEXT -> TextKey.PROBLEM_ONE_LINE;
-        };
+        var locked = inputs.entrySet().stream()
+                .filter(input -> input.getValue() instanceof SecretInput field && field.isLocked())
+                .map(Map.Entry::getKey).collect(Collectors.toSet());
+        var problems = new ProviderEntry(info, plain(), secret(), locked).problems(messages);
+        problems.forEach((key, problem) -> rows.get(key).showProblem(problem));
+        return problems.isEmpty();
     }
 
     /**

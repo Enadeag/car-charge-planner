@@ -1,13 +1,12 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
-import io.github.enadeag.carchargeplanner.desktop.settings.form.ProblemTexts;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.AwayPeriodEntry;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import io.github.enadeag.carchargeplanner.desktop.theme.ScreenReader;
 import io.github.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
-import io.github.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import java.time.DayOfWeek;
-import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -35,7 +34,7 @@ final class AwayRow extends VBox {
      */
     AwayRow(RecurringAwayPeriod period, Consumer<AwayRow> remove, Messages messages) {
         this.messages = messages;
-        weekday = new ChoiceField<>(List.of(DayOfWeek.values()), day -> capitalised(day, messages));
+        weekday = new ChoiceField<>(List.of(DayOfWeek.values()), new ChoiceNames(messages)::weekday);
         weekday.load(period.weekday());
         start.load(period.start());
         end.load(period.end());
@@ -77,19 +76,16 @@ final class AwayRow extends VBox {
      * @return the period, or empty when a time is not a time or the end is not after the start
      */
     Optional<RecurringAwayPeriod> value() {
-        showProblem("");
-        var from = start.value();
-        var to = end.value();
-        if (from.isEmpty() || to.isEmpty()) {
-            showProblem(messages.text(TextKey.PROBLEM_NOT_A_TIME));
-            return Optional.empty();
-        }
-        try {
-            return Optional.of(new RecurringAwayPeriod(weekday.value(), from.get(), to.get()));
-        } catch (InvalidSetting e) {
-            showProblem(ProblemTexts.of(e.rule(), messages));
-            return Optional.empty();
-        }
+        return switch (new AwayPeriodEntry(weekday.value(), start.text(), end.text()).check(messages)) {
+            case AwayPeriodEntry.Checked.Accepted accepted -> {
+                showProblem("");
+                yield Optional.of(accepted.period());
+            }
+            case AwayPeriodEntry.Checked.Refused refused -> {
+                showProblem(refused.problem());
+                yield Optional.empty();
+            }
+        };
     }
 
     /**
@@ -115,10 +111,5 @@ final class AwayRow extends VBox {
         problem.setVisible(!text.isEmpty());
         problem.setManaged(!text.isEmpty());
         List.of(weekday.focusable(), start.focusable(), end.focusable()).forEach(node -> node.setAccessibleHelp(text));
-    }
-
-    private static String capitalised(DayOfWeek day, Messages messages) {
-        var name = day.getDisplayName(TextStyle.FULL, messages.language().locale());
-        return name.substring(0, 1).toUpperCase(messages.language().locale()) + name.substring(1);
     }
 }

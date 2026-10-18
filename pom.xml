@@ -625,8 +625,8 @@
                     <param>io.github.enadeag.carchargeplanner.desktop.*</param>
                   </targetTests>
                   <reportsDirectory>${project.build.directory}/pit-reports/desktop</reportsDirectory>
-                  <!-- a few points below the share of mutants killed when it was set (87 %) -->
-                  <mutationThreshold>84</mutationThreshold>
+                  <!-- a few points below the share of mutants killed when it was set (92 %) -->
+                  <mutationThreshold>89</mutationThreshold>
                 </configuration>
               </execution>
             </executions>

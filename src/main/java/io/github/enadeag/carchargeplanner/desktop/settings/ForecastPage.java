@@ -1,6 +1,9 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.app.Background;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.ForecastEntry;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.KeysNote;
 import io.github.enadeag.carchargeplanner.desktop.settings.form.ProblemTexts;
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -66,12 +69,13 @@ final class ForecastPage implements ConfigPage {
             cards.put(info.id(), new ProviderCard(info, tester, openLink, background, messages));
         });
         var ids = List.copyOf(known.keySet());
-        primary = new ChoiceField<>(ids, this::name);
+        var names = new ChoiceNames(messages);
+        var infos = List.copyOf(known.values());
+        primary = new ChoiceField<>(ids, id -> names.provider(id, infos));
         var fallbacks = new ArrayList<Optional<ProviderId>>();
         fallbacks.add(Optional.empty());
         ids.forEach(id -> fallbacks.add(Optional.of(id)));
-        fallback = new ChoiceField<>(fallbacks,
-                choice -> choice.map(this::name).orElseGet(() -> messages.text(TextKey.FALLBACK_NONE)));
+        fallback = new ChoiceField<>(fallbacks, choice -> names.fallback(choice, infos));
         fallbackRow = FieldRow.of(messages, TextKey.FIELD_FALLBACK, TextKey.FIELD_FALLBACK_HINT, fallback);
         choice = new Card(messages.text(TextKey.CARD_PROVIDERS), messages.text(TextKey.CARD_PROVIDERS_HINT),
                 FieldRow.of(messages, TextKey.FIELD_PRIMARY, TextKey.FIELD_PRIMARY_HINT, primary), fallbackRow);
@@ -123,14 +127,7 @@ final class ForecastPage implements ConfigPage {
     void loadKeys(Secrets keys, KeyStorage storage, Optional<String> problem) {
         storedKeys = keys;
         keysLocked = storage == KeyStorage.LOCKED_KEYCHAIN;
-        var where = switch (storage) {
-            case KEYCHAIN -> messages.text(TextKey.KEYS_IN_KEYCHAIN);
-            case LOCKED_KEYCHAIN -> messages.text(TextKey.KEYS_IN_LOCKED_KEYCHAIN);
-            case FILE -> messages.text(TextKey.KEYS_IN_FILE, keysFile.toString());
-        };
-        // a locked keychain is the reason the keys could not be read, and the note says so in the owner's language
-        keysNote.setText(problem.filter(text -> storage != KeyStorage.LOCKED_KEYCHAIN)
-                .map(text -> messages.text(TextKey.KEYS_PROBLEM, text) + " " + where).orElse(where));
+        keysNote.setText(KeysNote.of(storage, problem, keysFile, messages));
     }
 
     /**
@@ -156,12 +153,12 @@ final class ForecastPage implements ConfigPage {
         if (!isChanged()) {
             return Optional.of(config);
         }
-        var complete = chosen().stream().allMatch(id -> !cards.containsKey(id) || cards.get(id).check());
+        var entry = entry();
+        var complete = entry.chosen().stream().allMatch(id -> !cards.containsKey(id) || cards.get(id).check());
         try {
-            var settings = new LinkedHashMap<>(stored.settings());
-            cards.forEach((id, card) -> settings.put(id, card.plain()));
-            settings.values().removeIf(Map::isEmpty);
-            var selection = new ForecastSelection(primary.value(), fallback.value(), settings);
+            var shown = new LinkedHashMap<ProviderId, Map<String, String>>();
+            cards.forEach((id, card) -> shown.put(id, card.plain()));
+            var selection = entry.selection(stored.settings(), shown);
             return complete ? Optional.of(config.withForecast(selection)) : Optional.empty();
         } catch (InvalidSetting e) {
             if (e.setting() == Setting.FALLBACK_PROVIDER) {
@@ -171,11 +168,8 @@ final class ForecastPage implements ConfigPage {
         }
     }
 
-    private List<ProviderId> chosen() {
-        var ids = new ArrayList<ProviderId>();
-        ids.add(primary.value());
-        fallback.value().ifPresent(ids::add);
-        return ids;
+    private ForecastEntry entry() {
+        return new ForecastEntry(primary.value(), fallback.value());
     }
 
     /** Each provider's card under the role it is chosen for; one chosen for both shows once. */
@@ -185,14 +179,8 @@ final class ForecastPage implements ConfigPage {
         }
         var nodes = new ArrayList<Node>();
         nodes.add(choice);
-        chosen().stream().distinct().filter(cards::containsKey).forEach(id -> nodes.add(cards.get(id).view()));
+        entry().chosen().stream().filter(cards::containsKey).forEach(id -> nodes.add(cards.get(id).view()));
         nodes.add(keysCard);
         view.show(nodes.toArray(Node[]::new));
-    }
-
-    /** A provider by its name; one the config names but this version does not know, by its id. */
-    private String name(ProviderId id) {
-        return Optional.ofNullable(known.get(id)).map(ProviderInfo::name)
-                .orElseGet(() -> messages.text(TextKey.PROVIDER_UNKNOWN, id.value()));
     }
 }

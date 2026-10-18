@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.app.Background;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import io.github.enadeag.carchargeplanner.engine.config.EngineConfig;
@@ -107,8 +108,6 @@ final class SetUpCheck implements SetUpPage {
     }
 
     private String name() {
-        var primary = config.forecast().primary();
-        return providers.stream().filter(info -> info.id().equals(primary)).findFirst().map(ProviderInfo::name)
-                .orElseGet(() -> messages.text(TextKey.PROVIDER_UNKNOWN, primary.value()));
+        return new ChoiceNames(messages).provider(config.forecast().primary(), providers);
     }
 }

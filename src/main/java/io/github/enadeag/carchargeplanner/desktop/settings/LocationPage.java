@@ -1,6 +1,7 @@
 package io.github.enadeag.carchargeplanner.desktop.settings;
 
 import io.github.enadeag.carchargeplanner.desktop.app.Background;
+import io.github.enadeag.carchargeplanner.desktop.settings.form.LocationEntry;
 import io.github.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -99,9 +100,7 @@ final class LocationPage implements ConfigPage {
             return Optional.of(config);
         }
         try {
-            var place = new Coordinates(latitude.value(), longitude.value());
-            return Optional.of(config.withSystem(config.system().withLocation(place, timezone.value()),
-                    config.typical()));
+            return Optional.of(entry().applyTo(config));
         } catch (InvalidSetting e) {
             problems.show(e);
             return Optional.empty();
@@ -114,8 +113,7 @@ final class LocationPage implements ConfigPage {
      * @return false while the coordinates are still {@link Coordinates#NOT_CHOSEN}
      */
     boolean checkChosen() {
-        if (Coordinates.areValid(latitude.value(), longitude.value())
-                && new Coordinates(latitude.value(), longitude.value()).isChosen()) {
+        if (entry().isChosen()) {
             return true;
         }
         latitudeRow.showProblem(messages.text(TextKey.PROBLEM_NO_PLACE));
@@ -126,6 +124,10 @@ final class LocationPage implements ConfigPage {
         latitude.set(place.location().latitude());
         longitude.set(place.location().longitude());
         timezone.set(place.timezone());
+    }
+
+    private LocationEntry entry() {
+        return new LocationEntry(latitude.value(), longitude.value(), timezone.value());
     }
 
     private List<Input> inputs() {
