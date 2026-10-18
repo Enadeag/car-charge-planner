@@ -17,7 +17,7 @@ import java.util.Optional;
 record CommandLine(Command command, Optional<Path> config, boolean background) {
 
     /** How to start the app, for the message about arguments it does not know. */
-    static final String USAGE = "Usage: car-charge-planner [run | quit | start-at-login on | start-at-login off"
+    static final String USAGE = "Usage: car-charge-planner [run | quit | test-notification | start-at-login on | start-at-login off"
             + " | install-launcher | uninstall-launcher]"
             + " [--config=path/to/engine.json] [" + StartAtLogin.BACKGROUND + "]";
 
@@ -27,6 +27,8 @@ record CommandLine(Command command, Optional<Path> config, boolean background) {
         RUN,
         /** Ask the running app to quit: "quit". */
         QUIT,
+        /** Ask the running app to show a test notification: "test-notification". */
+        TEST_NOTIFICATION,
         /** Make the app start at login: "start-at-login on". */
         START_AT_LOGIN_ON,
         /** Stop the app from starting at login: "start-at-login off". */
@@ -40,6 +42,7 @@ record CommandLine(Command command, Optional<Path> config, boolean background) {
             return switch (String.join(" ", words)) {
                 case "", "run" -> Optional.of(RUN);
                 case "quit" -> Optional.of(QUIT);
+                case "test-notification" -> Optional.of(TEST_NOTIFICATION);
                 case "start-at-login on" -> Optional.of(START_AT_LOGIN_ON);
                 case "start-at-login off" -> Optional.of(START_AT_LOGIN_OFF);
                 case "install-launcher" -> Optional.of(INSTALL_LAUNCHER);

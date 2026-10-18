@@ -203,6 +203,10 @@ public enum TextKey {
     NOTIFY_GRID_TITLE,
     /** The rest of a grid charge's notification: {0} kWh, {1} the minimum in %. */
     NOTIFY_GRID_BODY,
+    /** The title of the test notification, which the command line asks for. */
+    NOTIFY_TEST_TITLE,
+    /** The rest of the test notification: {0} the app's name. */
+    NOTIFY_TEST_BODY,
     /** A second start handed over to the running app: {0} the app's name. */
     CLI_HANDED_OVER,
     /** A second start found the running app silent: {0} the app's name. */
@@ -218,12 +222,16 @@ public enum TextKey {
     CLI_INSTANCE_NOT_PRIVATE,
     /** The running app confirmed it quits: {0} the app's name. */
     CLI_QUIT_CONFIRMED,
-    /** The running app did not answer the request to quit: {0} the app's name. */
-    CLI_QUIT_SILENT,
-    /** The running app's lock is held, but the request to quit could not reach it: {0} the app's name. */
-    CLI_QUIT_UNREACHABLE,
+    /** The running app did not answer a command, such as the request to quit: {0} the app's name. */
+    CLI_COMMAND_SILENT,
+    /** The running app's lock is held, but a command could not reach it: {0} the app's name. */
+    CLI_COMMAND_UNREACHABLE,
     /** No app was running to quit: {0} the app's name. */
     CLI_NOT_RUNNING,
+    /** The running app confirmed it shows a test notification: {0} the app's name. */
+    CLI_TEST_NOTIFICATION_SHOWN,
+    /** No app was running to show a test notification: {0} the app's name. */
+    CLI_TEST_NOTIFICATION_NOT_RUNNING,
     /** Start at login was asked for outside the installed app. */
     CLI_START_AT_LOGIN_NEEDS_INSTALL,
     /** Start at login was switched on: {0} the app's name. */

@@ -6,6 +6,7 @@ import io.github.enadeag.carchargeplanner.desktop.text.Language;
 import io.github.enadeag.carchargeplanner.desktop.text.Messages;
 import io.github.enadeag.carchargeplanner.desktop.text.TextKey;
 import io.github.enadeag.carchargeplanner.platform.linux.IsolatedSessionBus;
+import io.github.enadeag.carchargeplanner.platform.linux.NotificationServer;
 import io.github.enadeag.carchargeplanner.platform.linux.StatusNotifierWatcher;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -14,11 +15,14 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
 import org.freedesktop.dbus.connections.impl.DBusConnectionBuilder;
+import org.freedesktop.dbus.types.UInt32;
+import org.freedesktop.dbus.types.Variant;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,8 +32,9 @@ import org.junit.jupiter.api.io.TempDir;
 
 /**
  * The app as it is started: in a JVM of its own, with the example config, on a private D-Bus whose only panel is a
- * fake tray host, on JavaFX's headless platform, with folders of its own and no way to the network. It puts its icon
- * in the tray, and quits cleanly when the command line asks it to.
+ * fake tray host and a fake notification server, on JavaFX's headless platform, with folders of its own and no way to
+ * the network. It puts its icon in the tray, shows a test notification and quits cleanly when the command line asks it
+ * to.
  */
 @EnabledOnOs(OS.LINUX)
 class DesktopAppSmokeTest {
@@ -51,6 +56,27 @@ class DesktopAppSmokeTest {
         @Override
         public void RegisterStatusNotifierItem(String service) {
             registered.add(service);
+        }
+
+        @Override
+        public String getObjectPath() {
+            return OBJECT_PATH;
+        }
+    }
+
+    /** One notification, as the desktop's notification server received it. */
+    private record Shown(String appName, String appIcon, String summary, List<String> actions) {
+    }
+
+    /** The desktop's notification server, which only takes note of what it is asked to show. */
+    private static final class NotificationDesktop implements NotificationServer {
+        final BlockingQueue<Shown> shown = new LinkedBlockingQueue<>();
+
+        @Override
+        public UInt32 Notify(String appName, UInt32 replacesId, String appIcon, String summary, String body,
+                List<String> actions, Map<String, Variant<?>> hints, int expireTimeout) {
+            shown.add(new Shown(appName, appIcon, summary, actions));
+            return new UInt32(1);
         }
 
         @Override
@@ -152,5 +178,38 @@ class DesktopAppSmokeTest {
         assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(logFile()))).isEqualTo("rw-------");
         assertThat(Files.exists(runtime.resolve(AppName.ID).resolve("instance.sock")))
                 .as("the single-instance socket is removed").isFalse();
+    }
+
+    @Test
+    void theRunningAppShowsATestNotificationAsItShowsAnAnnouncement() throws Exception {
+        var messages = new Messages(Language.ENGLISH);
+        var watcher = new Watcher();
+        panel.exportObject(watcher);
+        panel.requestBusName(StatusNotifierWatcher.BUS_NAME);
+        var desktop = new NotificationDesktop();
+        panel.exportObject(desktop);
+        panel.requestBusName(NotificationServer.BUS_NAME);
+
+        var tooEarly = start("too-early", "test-notification");
+        assertThat(tooEarly.waitFor(TIMEOUT_S, TimeUnit.SECONDS)).isTrue();
+        assertThat(tooEarly.exitValue()).isEqualTo(ExitCode.UNREACHABLE.code());
+        assertThat(read("too-early", "err").strip())
+                .isEqualTo(messages.text(TextKey.CLI_TEST_NOTIFICATION_NOT_RUNNING, AppName.TITLE));
+
+        start("app", "--config=" + folder.resolve("config/engine.json"));
+        assertThat(watcher.registered.poll(TIMEOUT_S, TimeUnit.SECONDS)).as("the app said: %s", said()).isNotNull();
+        var test = start("test", "test-notification");
+        assertThat(test.waitFor(TIMEOUT_S, TimeUnit.SECONDS)).isTrue();
+        assertThat(test.exitValue()).as(read("test", "err")).isZero();
+        assertThat(read("test", "out").strip())
+                .isEqualTo(messages.text(TextKey.CLI_TEST_NOTIFICATION_SHOWN, AppName.TITLE));
+
+        var shown = desktop.shown.poll(TIMEOUT_S, TimeUnit.SECONDS);
+        assertThat(shown).as("the notification; the app said: %s", said()).isNotNull();
+        assertThat(shown.appName()).isEqualTo(AppName.TITLE);
+        assertThat(shown.appIcon()).startsWith("file:");
+        assertThat(shown.summary()).isEqualTo(messages.text(TextKey.NOTIFY_TEST_TITLE));
+        var open = messages.text(TextKey.OPEN_DASHBOARD);
+        assertThat(shown.actions()).containsExactly("default", open, "open", open);
     }
 }

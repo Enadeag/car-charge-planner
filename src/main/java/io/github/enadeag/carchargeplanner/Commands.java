@@ -14,8 +14,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * The commands of the command line that do one thing and end: quit the running app, switch start at login, and
- * install or uninstall the Linux menu entry. Each gives its exit code and what to tell the owner, and prints nothing.
+ * The commands of the command line that do one thing and end: quit the running app, have it show a test
+ * notification, switch start at login, and install or uninstall the Linux menu entry. Each gives its exit code and what to tell the owner, and prints nothing.
  */
 final class Commands {
 
@@ -70,6 +70,7 @@ final class Commands {
         return switch (command) {
             case RUN -> throw new IllegalArgumentException("running the app is not a command that ends");
             case QUIT -> quitRunningApp();
+            case TEST_NOTIFICATION -> showTestNotification();
             case START_AT_LOGIN_ON -> switchStartAtLogin(true);
             case START_AT_LOGIN_OFF -> switchStartAtLogin(false);
             case INSTALL_LAUNCHER -> switchLauncher(true);
@@ -78,22 +79,33 @@ final class Commands {
     }
 
     private CommandOutcome quitRunningApp() {
+        return askRunningApp(InstanceCommand.QUIT, messages.text(TextKey.CLI_QUIT_CONFIRMED, AppName.TITLE),
+                success(messages.text(TextKey.CLI_NOT_RUNNING, AppName.TITLE)));
+    }
+
+    private CommandOutcome showTestNotification() {
+        return askRunningApp(InstanceCommand.TEST_NOTIFICATION,
+                messages.text(TextKey.CLI_TEST_NOTIFICATION_SHOWN, AppName.TITLE),
+                new CommandOutcome(ExitCode.UNREACHABLE,
+                        messages.text(TextKey.CLI_TEST_NOTIFICATION_NOT_RUNNING, AppName.TITLE)));
+    }
+
+    /** Sends a command to the running app; what to say when it confirmed, and what comes of it when none runs. */
+    private CommandOutcome askRunningApp(InstanceCommand command, String confirmed, CommandOutcome notRunning) {
+        Reply reply;
         try {
-            var reply = instance.send(InstanceCommand.QUIT);
-            if (reply == Reply.ANSWERED) {
-                return success(messages.text(TextKey.CLI_QUIT_CONFIRMED, AppName.TITLE));
-            }
-            if (reply == Reply.SILENT) {
-                return failure(messages.text(TextKey.CLI_QUIT_SILENT, AppName.TITLE));
-            }
-            if (reply == Reply.UNREACHABLE) {
-                return new CommandOutcome(ExitCode.UNREACHABLE,
-                        messages.text(TextKey.CLI_QUIT_UNREACHABLE, AppName.TITLE));
-            }
+            reply = instance.send(command);
         } catch (IOException e) {
             // no private folder for the lock, so no running copy can have taken it there
+            return notRunning;
         }
-        return success(messages.text(TextKey.CLI_NOT_RUNNING, AppName.TITLE));
+        return switch (reply) {
+            case ANSWERED -> success(confirmed);
+            case SILENT -> failure(messages.text(TextKey.CLI_COMMAND_SILENT, AppName.TITLE));
+            case UNREACHABLE -> new CommandOutcome(ExitCode.UNREACHABLE,
+                    messages.text(TextKey.CLI_COMMAND_UNREACHABLE, AppName.TITLE));
+            case NOBODY, STALE -> notRunning;
+        };
     }
 
     private CommandOutcome switchStartAtLogin(boolean on) {

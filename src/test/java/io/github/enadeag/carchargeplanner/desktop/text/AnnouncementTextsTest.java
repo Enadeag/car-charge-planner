@@ -75,4 +75,17 @@ class AnnouncementTextsTest {
         assertThat(text.body()).isEqualTo(
                 "Set the current to 13 A (3.0 kW) in your charger's app. About 17.9 kWh, needed to stay above 30 %.");
     }
+
+    @Test
+    void theTestNotificationSaysItIsATestInTheLanguageSpokenNow() {
+        var language = new LanguageChoice(Language.ENGLISH);
+        var texts = new AnnouncementTexts(language);
+        assertThat(texts.test("Car charge planner")).isEqualTo(new NotificationText("Test notification",
+                "This is how Car charge planner tells you a charge window starts soon. Click it to open the dashboard."));
+
+        language.choose(Optional.of(Language.DUTCH));
+
+        assertThat(texts.test("Car charge planner")).isEqualTo(new NotificationText("Testmelding",
+                "Zo vertelt Car charge planner je dat een laadvenster bijna begint. Klik erop om het dashboard te openen."));
+    }
 }

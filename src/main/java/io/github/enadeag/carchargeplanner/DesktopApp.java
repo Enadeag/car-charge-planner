@@ -200,6 +200,8 @@ final class DesktopApp {
             switch (command) {
                 case SHOW -> dashboard.openWindow();
                 case QUIT -> quit();
+                // not through the engine's announcer: nothing is recorded as announced and the plan stays as it is
+                case TEST_NOTIFICATION -> notifications.show(texts.test(AppName.TITLE));
             }
         });
 

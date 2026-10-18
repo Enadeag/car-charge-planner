@@ -8,7 +8,9 @@ public enum InstanceCommand {
     /** Show the dashboard. */
     SHOW("show"),
     /** Quit the app. */
-    QUIT("quit");
+    QUIT("quit"),
+    /** Show a test notification, which looks like an announcement but is not one: nothing is recorded or planned. */
+    TEST_NOTIFICATION("test-notification");
 
     private final String word;
 

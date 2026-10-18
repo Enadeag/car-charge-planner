@@ -12,8 +12,8 @@ import java.util.Locale;
  * Starts the desktop app or runs a command: the composition root, where the system is read once and the parts are
  * made and handed what they need.
  *
- * <p>Usage: {@code car-charge-planner [run | quit | start-at-login on | start-at-login off | install-launcher
- * | uninstall-launcher] [--config=path/to/engine.json] [--background]}.
+ * <p>Usage: {@code car-charge-planner [run | quit | test-notification | start-at-login on | start-at-login off
+ * | install-launcher | uninstall-launcher] [--config=path/to/engine.json] [--background]}.
  */
 public final class Main {
 

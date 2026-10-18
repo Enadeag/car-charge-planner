@@ -34,7 +34,8 @@ opens set-up. `docs/example-engine.json` shows every setting, for a made-up plac
 forecast provider and the fallback provider, and an optional `typical` section lists the values that are typical
 values, such as `"system": ["CAR_BATTERY"]`.
 
-The app also takes the commands `quit` (asks the running app to quit), `start-at-login on` and `start-at-login off`,
+The app also takes the commands `quit` (asks the running app to quit), `test-notification` (asks the running app to
+show a test notification), `start-at-login on` and `start-at-login off`,
 and, on Linux, `install-launcher` and `uninstall-launcher` (the menu entry and icons), for example
 `-Dapp.args="quit"`. Start at login and the menu entry need the packaged app, whose launcher is what they start. Try
 `install-launcher` with `XDG_DATA_HOME` pointing at a scratch folder, not your real one.
@@ -77,7 +78,8 @@ touch the network, your keychain or your desktop:
   session for the Credential Manager, it checks only that this counts as no keychain);
 - `DesktopAppSmokeTest` (Linux) starts the app in a JVM of its own with the example
   config, on a private D-Bus with a fake tray host, headless JavaFX, private XDG folders and a proxy that refuses
-  every connection, waits for the tray icon, sends `quit` and checks that both end cleanly;
+  every connection, waits for the tray icon, sends `quit` and checks that both end cleanly; and, with a fake
+  notification server, sends `test-notification` and checks the notification it shows;
 - no test may put a window or a tray icon on the developer's desktop: the JavaFX tests run on JavaFX's headless
   platform, and AWT runs with `java.awt.headless`.
 
@@ -156,7 +158,7 @@ On a real desktop, with the packaged app (see [Packaging](#packaging)):
 
 - [ ] `./mvnw test -Plive` passes.
 - [ ] The tray icon shows and reads well on KDE Plasma, GNOME and Windows 11, each in light and dark.
-- [ ] Clicking a notification opens the dashboard.
+- [ ] Clicking a notification opens the dashboard: `car-charge-planner test-notification` shows one on demand.
 - [ ] Keychain: in a desktop session the API key is kept in the keychain; without one (on Linux, no Secret Service)
       it falls back to `secrets.json` (the log says where the keys are kept).
 - [ ] Start at login: switch it on, log out and in again, and the app starts; switch it off, and it does not.
@@ -349,6 +351,14 @@ Write one only when it says something the name, signature and types cannot.
 ## Reporting how it runs on your desktop
 
 The app is developed on KDE Plasma under Wayland and checked on Windows. If you try it on another Linux desktop, please open a **Does it work on my desktop?** issue: it takes five minutes and tells us what works where.
+
+To check the notifications without waiting for a charge window, run this while the app runs:
+
+```bash
+car-charge-planner test-notification
+```
+
+The app shows a test notification, the same as an announcement but for its text. Check that it shows the app's name and icon, then click it: the dashboard should open and come to the front. Nothing is planned or recorded for it. When the app does not run, the command says so and ends with exit code 3. In the report, say whether the name and icon showed and whether the click opened the dashboard, and if not, which notification daemon your desktop uses.
 
 ## Adding a language
 

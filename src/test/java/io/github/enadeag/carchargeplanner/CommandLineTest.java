@@ -24,8 +24,9 @@ class CommandLineTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"quit, QUIT", "start-at-login on, START_AT_LOGIN_ON", "start-at-login off, START_AT_LOGIN_OFF",
-            "install-launcher, INSTALL_LAUNCHER", "uninstall-launcher, UNINSTALL_LAUNCHER"})
+    @CsvSource({"quit, QUIT", "test-notification, TEST_NOTIFICATION", "start-at-login on, START_AT_LOGIN_ON",
+            "start-at-login off, START_AT_LOGIN_OFF", "install-launcher, INSTALL_LAUNCHER",
+            "uninstall-launcher, UNINSTALL_LAUNCHER"})
     void theWordsNameTheCommand(String words, Command command) {
         assertThat(CommandLine.parse(words.split(" ")).command()).isEqualTo(command);
     }

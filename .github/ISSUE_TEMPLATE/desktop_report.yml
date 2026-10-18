@@ -36,6 +36,7 @@ body:
       options:
         - label: The app starts and shows the plan (or set-up on a first run)
         - label: Clicking the tray icon shows the dashboard, or the app shows it in a window
+        - label: "`car-charge-planner test-notification` shows a notification with the app's name and icon, and clicking it shows the dashboard"
         - label: A notification appears before a charge window, and clicking it shows the dashboard
         - label: The Settings window opens and saving works
         - label: Starting at login works (Settings, App)

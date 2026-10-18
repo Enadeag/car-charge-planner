@@ -36,6 +36,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 /** The commands that do one thing and end, each with what it tells the owner and its exit code. */
 class CommandsTest {
@@ -95,6 +97,13 @@ class CommandsTest {
         return temp.getFileSystem().supportedFileAttributeViews().contains("posix");
     }
 
+    private void makeInstanceFolder() throws IOException {
+        FileAttribute<?>[] onlyMine = hasFileModes()
+                ? new FileAttribute<?>[] {PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------"))}
+                : new FileAttribute<?>[0];
+        Files.createDirectory(instanceFolder, onlyMine);
+    }
+
     private SingleInstance instance() {
         var instance = new SingleInstance(instanceFolder, user, Duration.ofMillis(500));
         toClose.add(instance);
@@ -138,27 +147,54 @@ class CommandsTest {
     }
 
     @Test
-    void quitSaysTheAppRunsButCannotBeReachedWhenItHoldsTheLockWithoutASocket() {
-        // longer than a Unix domain socket's path may be, so the running app has the lock but no socket
-        instanceFolder = temp.resolve("a-folder-with-a-long-name-" + "x".repeat(100));
-        assertThat(instance().claim(command -> { })).isEqualTo(Claim.FIRST_UNREACHABLE);
+    void testNotificationAsksTheRunningAppToShowOneAndSaysItDid() throws Exception {
+        var received = new LinkedBlockingQueue<InstanceCommand>();
+        assertThat(instance().claim(received::add)).isEqualTo(Claim.FIRST);
 
-        assertThat(commands().run(Command.QUIT)).isEqualTo(
-                new CommandOutcome(ExitCode.UNREACHABLE, MESSAGES.text(TextKey.CLI_QUIT_UNREACHABLE, AppName.TITLE)));
+        var outcome = commands().run(Command.TEST_NOTIFICATION);
+
+        assertThat(received.poll(5, TimeUnit.SECONDS)).isEqualTo(InstanceCommand.TEST_NOTIFICATION);
+        assertThat(outcome).isEqualTo(success(TextKey.CLI_TEST_NOTIFICATION_SHOWN, AppName.TITLE));
     }
 
     @Test
-    void quitFailsWhenTheRunningAppDoesNotAnswer() throws Exception {
-        FileAttribute<?>[] onlyMine = hasFileModes()
-                ? new FileAttribute<?>[] {PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------"))}
-                : new FileAttribute<?>[0];
-        Files.createDirectory(instanceFolder, onlyMine);
+    void testNotificationWithoutARunningAppSaysSoAndEndsWithTheUnreachableCode() {
+        assertThat(commands().run(Command.TEST_NOTIFICATION)).isEqualTo(new CommandOutcome(ExitCode.UNREACHABLE,
+                MESSAGES.text(TextKey.CLI_TEST_NOTIFICATION_NOT_RUNNING, AppName.TITLE)));
+    }
+
+    @Test
+    void testNotificationAfterACrashSaysTheAppDoesNotRun() throws Exception {
+        makeInstanceFolder();
+        // a socket that nothing listens on and no lock: what a crashed app leaves behind
+        ServerSocketChannel.open(StandardProtocolFamily.UNIX)
+                .bind(UnixDomainSocketAddress.of(instanceFolder.resolve("instance.sock"))).close();
+
+        assertThat(commands().run(Command.TEST_NOTIFICATION)).isEqualTo(new CommandOutcome(ExitCode.UNREACHABLE,
+                MESSAGES.text(TextKey.CLI_TEST_NOTIFICATION_NOT_RUNNING, AppName.TITLE)));
+    }
+
+    @ParameterizedTest
+    @EnumSource(names = {"QUIT", "TEST_NOTIFICATION"})
+    void aCommandSaysTheAppRunsButCannotBeReachedWhenItHoldsTheLockWithoutASocket(Command command) {
+        // longer than a Unix domain socket's path may be, so the running app has the lock but no socket
+        instanceFolder = temp.resolve("a-folder-with-a-long-name-" + "x".repeat(100));
+        assertThat(instance().claim(received -> { })).isEqualTo(Claim.FIRST_UNREACHABLE);
+
+        assertThat(commands().run(command)).isEqualTo(
+                new CommandOutcome(ExitCode.UNREACHABLE, MESSAGES.text(TextKey.CLI_COMMAND_UNREACHABLE, AppName.TITLE)));
+    }
+
+    @ParameterizedTest
+    @EnumSource(names = {"QUIT", "TEST_NOTIFICATION"})
+    void aCommandFailsWhenTheRunningAppDoesNotAnswer(Command command) throws Exception {
+        makeInstanceFolder();
         // listens, but never takes the connection, so the command is never confirmed
         var silent = ServerSocketChannel.open(StandardProtocolFamily.UNIX)
                 .bind(UnixDomainSocketAddress.of(instanceFolder.resolve("instance.sock")));
         toClose.add(silent);
 
-        assertThat(commands().run(Command.QUIT)).isEqualTo(failure(TextKey.CLI_QUIT_SILENT, AppName.TITLE));
+        assertThat(commands().run(command)).isEqualTo(failure(TextKey.CLI_COMMAND_SILENT, AppName.TITLE));
     }
 
     @Test
