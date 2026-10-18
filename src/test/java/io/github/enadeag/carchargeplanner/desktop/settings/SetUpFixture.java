@@ -96,6 +96,15 @@ final class SetUpFixture {
 
     /** With this keychain, and this way to do the slow work, such as on virtual threads as the app does. */
     SetUpFixture(Path folder, Language language, Keychain keychain, Background background) {
+        this(folder, language, keychain, background, Clock.systemUTC());
+    }
+
+    /** At a fixed time, such as for a picture that must be the same on every run. */
+    SetUpFixture(Path folder, Language language, Clock clock) {
+        this(folder, language, new NoKeychain(), new Background(Runnable::run, Runnable::run), clock);
+    }
+
+    private SetUpFixture(Path folder, Language language, Keychain keychain, Background background, Clock clock) {
         this.folder = folder;
         this.background = background;
         this.messages = new Messages(language);
@@ -106,7 +115,7 @@ final class SetUpFixture {
         engine = new Engine(new ConfigFile(configPath),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
                 new AwayFile(folder.resolve("away.json")), new BatteryFile(folder.resolve("battery.json")),
-                Clock.systemUTC(), new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), told -> { }),
+                clock, new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), told -> { }),
                 new ManualScheduler());
     }
 

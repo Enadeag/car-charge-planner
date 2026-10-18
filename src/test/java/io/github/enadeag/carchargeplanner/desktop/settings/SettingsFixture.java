@@ -90,6 +90,16 @@ final class SettingsFixture {
     /** With this keychain, and this way to do the slow work, such as on virtual threads as the app does. */
     SettingsFixture(Path folder, Language language, List<ForecastProvider> known, Keychain keychain,
             Background background) throws IOException {
+        this(folder, language, known, keychain, background, Clock.systemUTC());
+    }
+
+    /** At a fixed time, such as for a picture that must be the same on every run. */
+    SettingsFixture(Path folder, Language language, Clock clock) throws IOException {
+        this(folder, language, List.of(), new NoKeychain(), new Background(Runnable::run, Runnable::run), clock);
+    }
+
+    private SettingsFixture(Path folder, Language language, List<ForecastProvider> known, Keychain keychain,
+            Background background, Clock clock) throws IOException {
         this.folder = folder;
         this.background = background;
         this.messages = new Messages(language);
@@ -101,7 +111,7 @@ final class SettingsFixture {
         engine = new Engine(new ConfigFile(configPath),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
                 new AwayFile(folder.resolve("away.json")), new BatteryFile(folder.resolve("battery.json")),
-                Clock.systemUTC(), new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), told -> { }),
+                clock, new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), told -> { }),
                 new ManualScheduler());
     }
 
@@ -139,11 +149,11 @@ final class SettingsFixture {
         });
     }
 
-    private SettingsStores stores(boolean installed) {
+    SettingsStores stores(boolean installed) {
         return new SettingsStores(engine, appSettings, installed ? Optional.of(login) : Optional.empty());
     }
 
-    private AboutFacts facts() {
+    AboutFacts facts() {
         return new AboutFacts("1.2.3", configPath, appSettings.path(), folder.resolve("data"),
                 folder.resolve("data").resolve("app.0.log"), folder.resolve("secrets.json"));
     }

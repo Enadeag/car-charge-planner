@@ -119,9 +119,9 @@ Until you have said where your panels are, the app knows nothing about you: it *
 Set-up takes a few minutes. It starts with what leaves your computer, then asks for your language and units, the **place** of your panels (searched by name, or typed as coordinates), the panels' **size, direction and tilt** (more than one array if your panels face different ways), your **car** and **charger**, the forecast provider, and optionally more, such as the house's own use and when the car is away. Every question says where to find the answer, and a typical value is used where you don't know one. Before Finish it checks the forecast and shows a preview of the dashboard. **Nothing is saved until Finish**: cancelled, the app stays not set up.
 
 <p>
-<img alt="Set-up's welcome step: language, units and what leaves your computer." src="docs/screenshots/java/setup-welcome-english-light.png" width="300">
-<img alt="Set-up's location step: search by name, or type the coordinates." src="docs/screenshots/java/setup-location-english-light.png" width="300">
-<img alt="Set-up's preview of the dashboard, before Finish." src="docs/screenshots/java/setup-preview-english-light.png" width="300">
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/java/setup-welcome-english-dark.png"><img alt="Set-up's welcome step: language, units and what leaves your computer." src="docs/screenshots/java/setup-welcome-english-light.png" width="300"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/java/setup-location-english-dark.png"><img alt="Set-up's location step: search by name, or type the coordinates." src="docs/screenshots/java/setup-location-english-light.png" width="300"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/java/setup-preview-english-dark.png"><img alt="Set-up's preview of the dashboard, before Finish." src="docs/screenshots/java/setup-preview-english-light.png" width="300"></picture>
 </p>
 
 When the app is started hidden at login, set-up does not open by itself; one notification offers it.
@@ -183,8 +183,8 @@ The dashboard, Settings and set-up are made to be used with a keyboard only, wit
 - **Scaling.** The app follows the system's display scaling on Linux and Windows. At 150 and 200 % nothing is cut off; Settings and set-up are never larger than the screen, and their pages scroll. Windows' separate **Text size** setting is not followed yet: use **Scale** (Settings, System, Display) instead.
 
 <p>
-<img alt="The dashboard at 200 % in dark, with the focus ring on the battery's Update button." src="docs/screenshots/java/dashboard-200-dark.png" width="300">
-<img alt="Settings at 200 % in light, on the Charger page, with the focus ring on the Phases field." src="docs/screenshots/java/settings-200-light.png" width="500">
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/java/dashboard-200-dark.png"><img alt="The dashboard at 200 %, with the focus ring on the battery's Update button." src="docs/screenshots/java/dashboard-200-light.png" width="300"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/java/settings-200-dark.png"><img alt="Settings at 200 %, on the Charger page, with the focus ring on the Phases field." src="docs/screenshots/java/settings-200-light.png" width="500"></picture>
 </p>
 
 If you use a keyboard only or a screen reader every day, please tell us what does not work: open an issue with your system and screen reader.
