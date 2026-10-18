@@ -4,6 +4,7 @@ import io.github.enadeag.carchargeplanner.desktop.StartAtLogin;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 
 /**
  * Start at login on Linux: a desktop entry in the user's autostart folder, which desktops that follow the XDG
@@ -47,7 +48,7 @@ public final class LinuxStartAtLogin implements StartAtLogin {
     }
 
     private String entry() {
-        return """
+        return String.format(Locale.ROOT, """
                 [Desktop Entry]
                 Type=Application
                 Name=%s
@@ -55,7 +56,7 @@ public final class LinuxStartAtLogin implements StartAtLogin {
                 Terminal=false
                 X-GNOME-Autostart-enabled=true
                 X-KDE-autostart-after=panel
-                """.formatted(name, quoted(program.toString()), BACKGROUND);
+                """, name, quoted(program.toString()), BACKGROUND);
     }
 
     /**

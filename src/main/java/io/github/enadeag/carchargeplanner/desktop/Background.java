@@ -4,7 +4,6 @@ import java.lang.System.Logger.Level;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import javafx.application.Platform;
 
 /**
  * Runs slow work, such as reading the keychain, writing a file or asking a provider, away from the JavaFX thread, and
@@ -33,15 +32,6 @@ public final class Background {
         }
         this.work = work;
         this.fx = fx;
-    }
-
-    /**
-     * The helper the app uses: a virtual thread for each piece of work, and the outcome on the JavaFX thread.
-     *
-     * @return a new helper
-     */
-    public static Background onVirtualThreads() {
-        return new Background(task -> Thread.ofVirtual().name("background").start(task), Platform::runLater);
     }
 
     /**

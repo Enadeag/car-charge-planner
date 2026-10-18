@@ -96,7 +96,7 @@ class SlowStoresTest {
     @Test
     void settingsOpensAtOnceAndSaysItIsReadingWhileTheKeychainTakesItsTime() throws Exception {
         var settings = new SettingsFixture(folder, Language.ENGLISH, List.of(), keychain,
-                Background.onVirtualThreads());
+                VirtualThreads.background());
         var window = settings.window(language);
 
         window.open(Category.PLANNING);
@@ -121,7 +121,7 @@ class SlowStoresTest {
     @Test
     void aSaveSaysItIsSavingAndASecondSaveMeanwhileDoesNothing() throws Exception {
         var settings = new SettingsFixture(folder, Language.ENGLISH, List.of(), new MemoryKeychain(),
-                Background.onVirtualThreads());
+                VirtualThreads.background());
         var window = settings.window(language);
         window.open(Category.APP);
         Fx.settle();
@@ -149,7 +149,7 @@ class SlowStoresTest {
 
     @Test
     void setUpOpensAtOnceAndSaysItIsReadingWhileTheKeychainTakesItsTime() throws Exception {
-        var setUp = new SetUpFixture(folder, Language.ENGLISH, keychain, Background.onVirtualThreads());
+        var setUp = new SetUpFixture(folder, Language.ENGLISH, keychain, VirtualThreads.background());
         var window = setUp.window(language, new SimpleObjectProperty<>(Appearance.SYSTEM));
 
         window.open();
@@ -171,7 +171,7 @@ class SlowStoresTest {
 
     @Test
     void finishSaysItIsSavingAndClosesOnceItIsSaved() throws Exception {
-        var setUp = new SetUpFixture(folder, Language.ENGLISH, new MemoryKeychain(), Background.onVirtualThreads())
+        var setUp = new SetUpFixture(folder, Language.ENGLISH, new MemoryKeychain(), VirtualThreads.background())
                 .withExample();
         var window = setUp.window(language, new SimpleObjectProperty<>(Appearance.SYSTEM));
         window.open();

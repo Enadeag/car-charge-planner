@@ -11,6 +11,7 @@ import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
+import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -89,7 +90,7 @@ public final class StatusIcon {
         var colour = dotColour(dot);
         var mask = colour.isPresent() ? " mask=\"url(#gap)\"" : "";
         var circle = colour.map(fill -> "\n  <circle cx=\"52\" cy=\"52\" r=\"12\" fill=\"" + fill + "\"/>").orElse("");
-        return SVG.formatted(shapeColour(shade), mask, circle);
+        return String.format(Locale.ROOT, SVG, shapeColour(shade), mask, circle);
     }
 
     private static String shapeColour(PanelShade shade) {

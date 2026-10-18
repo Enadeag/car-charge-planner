@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -24,7 +25,7 @@ final class ProviderAttempt {
     static final Duration RETRY_AFTER_UNAVAILABLE = Duration.ofMinutes(5);
 
     private static final System.Logger LOG = System.getLogger(ProviderAttempt.class.getName());
-    private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
 
     private final ForecastProvider provider;
     private final ProviderInfo info;

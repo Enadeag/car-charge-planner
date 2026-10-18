@@ -78,7 +78,8 @@ final class DesktopApp {
     private final ClosingOrder closing = new ClosingOrder();
     private final InstanceClaim claim;
     /** Runs the windows' slow work, such as reading the keychain, away from the JavaFX thread. */
-    private final Background background = Background.onVirtualThreads();
+    private final Background background =
+            new Background(task -> Thread.ofVirtual().name("background").start(task), Platform::runLater);
     // set on the JavaFX thread only, as JavaFX's bindings on it are read there
     private final SimpleObjectProperty<Appearance> appearance;
 

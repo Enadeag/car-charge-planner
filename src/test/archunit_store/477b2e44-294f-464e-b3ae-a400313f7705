@@ -1,0 +1,1 @@
+Method <io.github.enadeag.carchargeplanner.instance.SingleInstance.pause(long)> calls method <java.lang.Thread.sleep(java.time.Duration)> in (SingleInstance.java:253)

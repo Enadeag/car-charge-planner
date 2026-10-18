@@ -11,6 +11,7 @@ import java.nio.file.attribute.FileTime;
 import java.time.Clock;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import tools.jackson.core.JacksonException;
 
 /**
@@ -28,7 +29,7 @@ public final class StoredFile<T> {
 
     private static final System.Logger LOG = System.getLogger(StoredFile.class.getName());
     private static final DateTimeFormatter ASIDE_TIME =
-            DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(ZoneOffset.UTC);
+            DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss", Locale.ROOT).withZone(ZoneOffset.UTC);
 
     /** What tells one version of the file from the next, without reading it. */
     private record Stamp(FileTime modified, long size, Object identity) {

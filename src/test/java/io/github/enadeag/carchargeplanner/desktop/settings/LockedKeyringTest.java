@@ -180,7 +180,7 @@ class LockedKeyringTest {
     @Test
     void closingWhileSaveWaitsForTheOwnerStopsTheWaitAndKeepsTheWindowOpen() throws Exception {
         keychain.answer = Optional.empty();
-        var view = open(Background.onVirtualThreads());
+        var view = open(VirtualThreads.background());
         SettingsFixture.waitFor(() -> !view.isReading());
 
         Fx.run(() -> {

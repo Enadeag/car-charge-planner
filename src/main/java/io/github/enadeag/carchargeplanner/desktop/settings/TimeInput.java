@@ -4,6 +4,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import javafx.scene.Node;
@@ -12,7 +13,7 @@ import javafx.scene.control.TextField;
 /** A time of day as hours and minutes, such as 07:30. Both of the app's languages write it on a 24-hour clock. */
 final class TimeInput implements Input {
 
-    private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm")
+    private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT)
             .withResolverStyle(ResolverStyle.STRICT);
 
     private final TextField field = new TextField();

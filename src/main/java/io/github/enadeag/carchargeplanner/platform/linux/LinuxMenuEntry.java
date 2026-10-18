@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -135,7 +136,7 @@ public final class LinuxMenuEntry {
     }
 
     private String entry() {
-        return """
+        return String.format(Locale.ROOT, """
                 [Desktop Entry]
                 Type=Application
                 Name=%s
@@ -143,7 +144,7 @@ public final class LinuxMenuEntry {
                 Icon=%s
                 Terminal=false
                 Categories=Utility;
-                """.formatted(name, LinuxStartAtLogin.quoted(program.toString()), APP_ID);
+                """, name, LinuxStartAtLogin.quoted(program.toString()), APP_ID);
     }
 
     private static byte[] resource(String path) throws IOException {

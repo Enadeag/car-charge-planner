@@ -4,6 +4,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.logging.Formatter;
 import java.util.logging.LogRecord;
 
@@ -15,7 +16,7 @@ import java.util.logging.LogRecord;
 final class LogLine extends Formatter {
 
     private static final String APP_PACKAGE = Main.class.getPackageName() + ".";
-    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS xxx");
+    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS xxx", Locale.ROOT);
 
     private final ZoneId zone;
 

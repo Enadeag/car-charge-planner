@@ -14,6 +14,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import tools.jackson.databind.JsonNode;
@@ -24,7 +25,7 @@ import tools.jackson.databind.JsonNode;
  */
 final class ForecastSolarPeriods {
 
-    private static final DateTimeFormatter KEY = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter KEY = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss", Locale.ROOT);
 
     /** One key of the answer. */
     private record Point(Instant at, LocalDate day, double wattHours) {

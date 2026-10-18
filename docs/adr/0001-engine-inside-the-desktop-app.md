@@ -16,3 +16,7 @@ The app is used first by someone with a laptop or desktop computer and no home s
 - **Desktop app only, for good**: simplest, but charger control would only work while the computer is on.
 - **A separate engine for everyone from the start** (a service on Windows, a daemon on Linux): harder to install and to troubleshoot for every user, now, for a feature that comes later.
 - **A Home Assistant integration**: leaves out the users who have no Home Assistant, who come first.
+
+## Notes
+
+- **2026-10-17**: No client writes the engine's files; the desktop app keeps its own app settings. The engine has no interface of its own until it runs on its own: today the desktop app is its only client and calls the `Engine` class, and the interface is cut when a second client, reached over a transport, needs one.
