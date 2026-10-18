@@ -5,19 +5,24 @@ import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPac
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noCodeUnits;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaCodeUnit;
 import com.tngtech.archunit.core.domain.JavaField;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
+import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.lang.ConditionEvents;
+import com.tngtech.archunit.lang.SimpleConditionEvent;
 import com.tngtech.archunit.lang.conditions.ArchConditions;
 import com.tngtech.archunit.library.freeze.FreezingArchRule;
 import io.github.enadeag.carchargeplanner.desktop.app.AppSettingsFile;
@@ -445,6 +450,27 @@ class ArchitectureTest {
                         || type.isAssignableTo(java.util.Queue.class)
                         || type.isAssignableTo(java.util.concurrent.ConcurrentMap.class);
             });
+
+    private static final ArchCondition<JavaCodeUnit> CATCH_NULL_POINTER =
+            new ArchCondition<>("catch NullPointerException") {
+                @Override
+                public void check(JavaCodeUnit codeUnit, ConditionEvents events) {
+                    for (var block : codeUnit.getTryCatchBlocks()) {
+                        if (block.getCaughtThrowables().stream()
+                                .anyMatch(caught -> caught.isEquivalentTo(NullPointerException.class))) {
+                            events.add(SimpleConditionEvent.satisfied(block,
+                                    codeUnit.getFullName() + " catches NullPointerException in "
+                                            + block.getSourceCodeLocation()));
+                        }
+                    }
+                }
+            };
+
+    /** Throwable is left to {@code CatchClausesTest}: javac catches it itself for every try-with-resources. */
+    @ArchTest
+    static final ArchRule noCatchingNullPointer = noCodeUnits()
+            .should(CATCH_NULL_POINTER)
+            .because("a null is checked where it may come, not caught after it went wrong");
 
     @ArchTest
     static final ArchRule noStaticMutableObjects = noFields()

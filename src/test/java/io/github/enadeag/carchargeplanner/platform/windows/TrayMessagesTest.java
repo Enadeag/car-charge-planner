@@ -11,7 +11,7 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 
-/** The tray icon's messages without a real icon; the Python version's tests/test_tray_notifier.py. */
+/** The tray icon's messages without a real icon. */
 class TrayMessagesTest {
 
     private final TrayMessages messages = new TrayMessages();

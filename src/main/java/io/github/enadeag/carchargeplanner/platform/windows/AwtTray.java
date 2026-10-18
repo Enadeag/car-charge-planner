@@ -18,7 +18,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BaseMultiResolutionImage;
 import java.time.Duration;
-import java.util.List;
+import java.util.EnumMap;
+import java.util.Map;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
@@ -26,17 +27,11 @@ import javafx.geometry.Point2D;
 
 /**
  * The tray icon on Windows, through AWT, and the app's notifications as the icon's messages: Windows shows them as
- * toasts, and a click on one reaches the icon's action listener.
+ * toasts, and a click on one reaches the icon's action listener. What the icon shows and what its menu holds are
+ * decided by {@link TrayLook} and {@link TrayMenuEntry}; this class only hands them to AWT.
  */
 public final class AwtTray implements Tray, Notifications {
 
-    /**
-     * The notification area's icon size at 100, 125, 150, 175, 200, 250 and 300 % and beyond. AWT draws the icon at
-     * 16 px times the display's scale and takes the image of exactly that size from these, so none is scaled.
-     */
-    private static final List<Integer> SIZES = List.of(16, 20, 24, 28, 32, 40, 48, 64);
-    /** Windows cuts a tooltip off after 127 characters. */
-    private static final int TOOLTIP_MAX = 127;
     /**
      * Where Enter on the icon opens the popup: Windows does not say where the icon is, and a place off every screen
      * puts the popup in the primary screen's bottom right, where the notification area is unless it was moved.
@@ -45,12 +40,10 @@ public final class AwtTray implements Tray, Notifications {
     /** Windows' own default; AWT names the system's setting when it can. */
     private static final Duration DOUBLE_CLICK = Duration.ofMillis(500);
 
-    private final StatusIcon icon;
-    private final TaskbarShade taskbar;
+    private final TrayLook look;
     private final ObservableValue<ColorScheme> colorScheme;
-    private final String title;
     private MenuLabels labels;
-    private List<MenuItem> items = List.of();
+    private final Map<TrayMenuEntry, MenuItem> items = new EnumMap<>(TrayMenuEntry.class);
     private TrayStatus status = new TrayStatus(StatusDot.NONE, "");
     private TrayIcon trayIcon;
     private final TrayMessages messages = new TrayMessages();
@@ -66,10 +59,8 @@ public final class AwtTray implements Tray, Notifications {
      * @param title the first line of the icon's tooltip
      */
     public AwtTray(StatusIcon icon, TaskbarShade taskbar, ObservableValue<ColorScheme> colorScheme, String title) {
-        this.icon = icon;
-        this.taskbar = taskbar;
+        this.look = new TrayLook(icon, taskbar::read, title);
         this.colorScheme = colorScheme;
-        this.title = title;
     }
 
     /**
@@ -86,16 +77,18 @@ public final class AwtTray implements Tray, Notifications {
         if (GraphicsEnvironment.isHeadless() || !SystemTray.isSupported()) {
             throw new TrayUnavailable("Windows has no notification area for this app", null);
         }
-        items = List.of(menuItem(actions.open()), menuItem(actions.settings()), menuItem(actions.about()),
-                menuItem(actions.quit()));
-        relabel();
         var menu = new PopupMenu();
-        menu.add(items.get(0));
-        menu.add(items.get(1));
-        menu.add(items.get(2));
-        menu.addSeparator();
-        menu.add(items.get(3));
-        trayIcon = new TrayIcon(image(), tooltip(), menu);
+        for (var entry : TrayMenuEntry.values()) {
+            if (entry.separated()) {
+                menu.addSeparator();
+            }
+            var item = new MenuItem(entry.label(labels));
+            var action = entry.action(actions);
+            item.addActionListener(event -> action.run());
+            items.put(entry, item);
+            menu.add(item);
+        }
+        trayIcon = new TrayIcon(image(), look.tooltip(status), menu);
         trayIcon.setImageAutoSize(true);
         var action = new TrayIconAction(doubleClickTime());
         trayIcon.addMouseListener(new MouseAdapter() {
@@ -176,7 +169,7 @@ public final class AwtTray implements Tray, Notifications {
     private synchronized void redraw() {
         if (trayIcon != null) {
             trayIcon.setImage(image());
-            trayIcon.setToolTip(tooltip());
+            trayIcon.setToolTip(look.tooltip(status));
         }
     }
 
@@ -187,29 +180,11 @@ public final class AwtTray implements Tray, Notifications {
 
     /** The icon in every size, for AWT to pick the one of the display's scale from. */
     private Image image() {
-        var shade = taskbar.read();
-        return new BaseMultiResolutionImage(
-                SIZES.stream().map(size -> icon.image(status.dot(), shade, size)).toArray(Image[]::new));
+        return new BaseMultiResolutionImage(look.images(status).toArray(Image[]::new));
     }
 
-    private String tooltip() {
-        var text = status.text().isEmpty() ? title : title + "\n" + status.text();
-        return text.length() <= TOOLTIP_MAX ? text : text.substring(0, TOOLTIP_MAX - 1) + "…";
-    }
-
-    /** The menu's entries, once they are made, in the order of {@link MenuLabels}. */
+    /** The menu's entries, once they are made. */
     private void relabel() {
-        if (!items.isEmpty()) {
-            var texts = List.of(labels.open(), labels.settings(), labels.about(), labels.quit());
-            for (int i = 0; i < items.size(); i++) {
-                items.get(i).setLabel(texts.get(i));
-            }
-        }
-    }
-
-    private static MenuItem menuItem(Runnable action) {
-        var item = new MenuItem();
-        item.addActionListener(event -> action.run());
-        return item;
+        items.forEach((entry, item) -> item.setLabel(entry.label(labels)));
     }
 }

@@ -194,6 +194,10 @@ Write one only when it says something the name, signature and types cannot.
   `throw new IllegalArgumentException(...)` naming the value and what is allowed, without a helper. A range check on a
   `double` refuses NaN explicitly (`if (kwp <= 0 || Double.isNaN(kwp))`). The Javadoc states the same rule, in the
   `@param` and the `@throws`, so an object that exists is valid.
+- **No catching `NullPointerException` or `Throwable`.** Check a value that may be null where it comes in, and let an
+  `Error` end what it hit. The one exception is `platform.windows.Advapi32`, because `MethodHandle.invokeExact`
+  declares `Throwable`: it passes a `RuntimeException` or `Error` on first and turns only the rest into the caller's
+  exception. `ArchitectureTest` and `CatchClausesTest` check this.
 
 ## What a test should do
 
