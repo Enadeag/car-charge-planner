@@ -68,7 +68,7 @@ final class CarHousePage implements ConfigPage {
 
     @Override
     public void showUnavailable(String reason) {
-        view.show(Unavailable.card(reason, messages));
+        view.show(NoConfigCard.card(reason, messages));
     }
 
     /** Both cards are checked, so each shows its own problems. */

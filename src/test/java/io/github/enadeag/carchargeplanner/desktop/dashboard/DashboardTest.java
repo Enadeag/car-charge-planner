@@ -200,7 +200,7 @@ class DashboardTest {
 
         double withEntry = Fx.call(window::getHeight);
         Fx.run(() -> {
-            var entry = ((AwayCard) window.getScene().lookup(".away-card")).editor();
+            var entry = ((OneOffAwayCard) window.getScene().lookup(".away-card")).editor();
             entry.enterTimes("16:00", "10:00");
             entry.save();
         });

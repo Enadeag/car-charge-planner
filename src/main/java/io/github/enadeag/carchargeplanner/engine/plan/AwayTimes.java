@@ -36,9 +36,9 @@ public record AwayTimes(List<RecurringAwayPeriod> recurring, List<AwayPeriod> on
      * @param zone the home's time zone, which decides the dates the weekly periods fall on
      * @return the periods entered by hand, and the weekly periods on every local date the forecast touches
      */
-    List<Unavailable> during(List<ForecastStep> forecast, ZoneId zone) {
-        var times = new ArrayList<Unavailable>();
-        oneOff.forEach(period -> times.add(new Unavailable(period.start(), period.end())));
+    List<BlockedTime> during(List<ForecastStep> forecast, ZoneId zone) {
+        var times = new ArrayList<BlockedTime>();
+        oneOff.forEach(period -> times.add(new BlockedTime(period.start(), period.end())));
         if (forecast.isEmpty()) {
             return times;
         }
@@ -47,7 +47,7 @@ public record AwayTimes(List<RecurringAwayPeriod> recurring, List<AwayPeriod> on
         var lastDate = last.atZone(zone).toLocalDate();
         for (var date = first.atZone(zone).toLocalDate(); !date.isAfter(lastDate); date = date.plusDays(1)) {
             for (var weekly : recurring) {
-                weekly.on(date, zone).ifPresent(period -> times.add(new Unavailable(period.start(), period.end())));
+                weekly.on(date, zone).ifPresent(period -> times.add(new BlockedTime(period.start(), period.end())));
             }
         }
         return times;

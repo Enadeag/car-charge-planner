@@ -169,7 +169,7 @@ final class SetUpView extends BorderPane {
         ConnectionTest tester = (provider, settings) -> engine.checkConnection(provider, system.get(), settings);
         var forecast = new ForecastPage(providers, tester, openLink, keysFile, background, messages);
         var house = new HouseCard(messages);
-        var away = new AwayCard(messages);
+        var away = new WeeklyAwayCard(messages);
         var more = new PageView(messages.text(SetUpStep.MORE.title()));
         more.show(FieldRow.paragraph(messages.text(TextKey.SETUP_MORE_HINT), "field-label"), house.view(),
                 away.view());

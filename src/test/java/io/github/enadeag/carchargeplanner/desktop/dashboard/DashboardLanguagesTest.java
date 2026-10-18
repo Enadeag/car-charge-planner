@@ -123,7 +123,7 @@ class DashboardLanguagesTest {
             // the away entry open at part of the day, refusing an end before the start
             view.lookupAll(".button").stream().map(Button.class::cast)
                     .filter(button -> button.getText().equals(messages.text(TextKey.ONE_OFF_ADD))).findFirst().orElseThrow().fire();
-            var entry = ((AwayCard) view.lookup(".away-card")).editor();
+            var entry = ((OneOffAwayCard) view.lookup(".away-card")).editor();
             entry.enterTimes("16:00", "10:00");
             entry.save();
             found.addAll(check(view));

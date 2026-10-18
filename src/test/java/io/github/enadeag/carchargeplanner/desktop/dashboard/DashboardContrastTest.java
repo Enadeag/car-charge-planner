@@ -69,7 +69,7 @@ class DashboardContrastTest {
 
     /** The away entry at part of the day, saying why an end before the start cannot be saved. */
     private static void openAwayEntryWithAProblem(DashboardView view) {
-        var card = (AwayCard) view.lookup(".away-card");
+        var card = (OneOffAwayCard) view.lookup(".away-card");
         card.lookupAll(".button").stream().map(javafx.scene.control.Button.class::cast)
                 .filter(button -> button.getText().equals("Add")).findFirst().orElseThrow().fire();
         card.editor().enterTimes("16:00", "10:00");

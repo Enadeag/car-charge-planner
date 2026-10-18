@@ -3,12 +3,12 @@ package io.github.enadeag.carchargeplanner.engine.plan;
 import java.time.Instant;
 
 /**
- * A stretch of time.
+ * A stretch of time in which no new charging is planned: an away period, or a charge window that is already planned.
  *
  * @param start the first moment of the time
  * @param end the end of the time
  */
-record Unavailable(Instant start, Instant end) {
+record BlockedTime(Instant start, Instant end) {
 
     /**
      * Whether another stretch of time shares some of this one.

@@ -25,14 +25,14 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 @FxTest
-class AwayCardTest {
+class OneOffAwayCardTest {
 
     private static final Messages ENGLISH = new Messages(Language.ENGLISH);
 
     private final List<AwayPeriod> added = new ArrayList<>();
     private final List<AwayPeriod> removed = new ArrayList<>();
     private Stage stage;
-    private AwayCard card;
+    private OneOffAwayCard card;
 
     @AfterEach
     void close() throws Exception {
@@ -41,7 +41,7 @@ class AwayCardTest {
 
     private void show(DayModel day, AwayModel away) throws Exception {
         Fx.run(() -> {
-            card = new AwayCard(() -> { }, ENGLISH);
+            card = new OneOffAwayCard(() -> { }, ENGLISH);
             card.onChange(added::add, removed::add);
             card.show(day, away);
             stage = Scenes.show(card, ColorScheme.LIGHT);

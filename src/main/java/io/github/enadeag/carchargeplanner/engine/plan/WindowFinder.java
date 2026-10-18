@@ -42,7 +42,7 @@ final class WindowFinder {
      * @param unavailable the times in which the charger is not free
      * @return the runs in time order
      */
-    List<Run> runs(List<ForecastStep> forecast, Instant now, List<Unavailable> unavailable) {
+    List<Run> runs(List<ForecastStep> forecast, Instant now, List<BlockedTime> unavailable) {
         var runs = new ArrayList<Run>();
         var current = new ArrayList<Segment>();
         for (var step : forecast.stream().sorted(Comparator.comparing(ForecastStep::start)).toList()) {
@@ -68,7 +68,7 @@ final class WindowFinder {
         return runs;
     }
 
-    private boolean canCharge(Segment segment, List<Unavailable> unavailable) {
+    private boolean canCharge(Segment segment, List<BlockedTime> unavailable) {
         boolean free = unavailable.stream().noneMatch(time -> time.overlaps(segment.start(), segment.end()));
         return free && Charging.ampsFor(segment.usableKw(), system.charger()) >= system.charger().minAmps();
     }

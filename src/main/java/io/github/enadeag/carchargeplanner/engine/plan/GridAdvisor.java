@@ -94,9 +94,9 @@ public final class GridAdvisor {
     }
 
     /** The day's quarters of an hour in real time, so a daylight saving day has 92 or 100 of them. */
-    private List<Slot> slots(DayPlan day, List<ForecastStep> forecast, List<Unavailable> awayTime, Instant now) {
+    private List<Slot> slots(DayPlan day, List<ForecastStep> forecast, List<BlockedTime> awayTime, Instant now) {
         var unavailable = new ArrayList<>(awayTime);
-        day.windows().forEach(window -> unavailable.add(new Unavailable(window.start(), window.end())));
+        day.windows().forEach(window -> unavailable.add(new BlockedTime(window.start(), window.end())));
         var end = day.date().plusDays(1).atStartOfDay(zone).toInstant();
         var slots = new ArrayList<Slot>();
         for (var start = day.date().atStartOfDay(zone).toInstant(); start.isBefore(end); start = start.plus(SLOT)) {
@@ -105,7 +105,7 @@ public final class GridAdvisor {
         return slots;
     }
 
-    private Slot slot(Instant start, List<ForecastStep> forecast, List<Unavailable> unavailable, Instant now) {
+    private Slot slot(Instant start, List<ForecastStep> forecast, List<BlockedTime> unavailable, Instant now) {
         var end = start.plus(SLOT);
         var step = forecast.stream()
                 .filter(candidate -> !candidate.start().isAfter(start) && candidate.end().isAfter(start))

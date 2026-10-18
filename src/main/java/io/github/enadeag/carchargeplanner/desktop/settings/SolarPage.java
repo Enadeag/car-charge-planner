@@ -76,7 +76,7 @@ final class SolarPage implements ConfigPage {
     public void showUnavailable(String reason) {
         cards.clear();
         loadedCount = 0;
-        view.show(Unavailable.card(reason, messages));
+        view.show(NoConfigCard.card(reason, messages));
     }
 
     @Override

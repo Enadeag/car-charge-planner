@@ -19,7 +19,7 @@ import javafx.scene.layout.VBox;
  * The card with the away periods the owner entered for specific days: those still to come, each with a Remove button,
  * and an Add button that enters one on the selected day. The weekly away periods are in Settings.
  */
-final class AwayCard extends VBox {
+final class OneOffAwayCard extends VBox {
 
     private final Messages messages;
     private final Runnable resized;
@@ -38,7 +38,7 @@ final class AwayCard extends VBox {
      *     card
      * @param messages the texts, in the owner's language
      */
-    AwayCard(Runnable resized, Messages messages) {
+    OneOffAwayCard(Runnable resized, Messages messages) {
         this.messages = messages;
         this.resized = resized;
         add = new Button(messages.text(TextKey.ONE_OFF_ADD));

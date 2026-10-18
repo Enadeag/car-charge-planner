@@ -278,7 +278,7 @@ class DashboardViewTest {
         var add = Fx.call(() -> view.lookup(".away-card").lookupAll(".button").stream().map(Button.class::cast)
                 .filter(button -> button.getText().equals("Add")).findFirst().orElseThrow());
         Fx.run(add::fire);
-        Fx.run(() -> ((AwayCard) view.lookup(".away-card")).editor().save());
+        Fx.run(() -> ((OneOffAwayCard) view.lookup(".away-card")).editor().save());
 
         assertThat(added).containsExactly(AwayPeriod.allDay(
                 Models.GRID_SUNDAY.date(), Models.BRUSSELS));

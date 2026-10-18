@@ -92,7 +92,7 @@ final class ChargerPage implements ConfigPage {
 
     @Override
     public void showUnavailable(String reason) {
-        view.show(Unavailable.card(reason, messages));
+        view.show(NoConfigCard.card(reason, messages));
     }
 
     @Override

@@ -61,7 +61,7 @@ class DashboardKeyboardTest {
             // both entries open, with the times of part of the day: every control the day can show
             press(view, TextKey.BATTERY_UPDATE);
             press(view, TextKey.ONE_OFF_ADD);
-            ((AwayCard) view.lookup(".away-card")).editor().enterTimes("10:00", "12:00");
+            ((OneOffAwayCard) view.lookup(".away-card")).editor().enterTimes("10:00", "12:00");
         });
 
         assertThat(Keyboard.problems(stage.getScene(), view)).isEmpty();

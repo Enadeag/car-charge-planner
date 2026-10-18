@@ -10,7 +10,7 @@ final class AwayPage implements ConfigPage {
 
     private final Messages messages;
     private final PageView view;
-    private final AwayCard away;
+    private final WeeklyAwayCard away;
 
     /**
      * Makes the page, empty until {@link #load(EngineConfig)}.
@@ -20,7 +20,7 @@ final class AwayPage implements ConfigPage {
     AwayPage(Messages messages) {
         this.messages = messages;
         this.view = new PageView(messages.text(Category.AWAY.title()));
-        this.away = new AwayCard(messages);
+        this.away = new WeeklyAwayCard(messages);
     }
 
     @Override
@@ -51,7 +51,7 @@ final class AwayPage implements ConfigPage {
 
     @Override
     public void showUnavailable(String reason) {
-        view.show(Unavailable.card(reason, messages));
+        view.show(NoConfigCard.card(reason, messages));
     }
 
     @Override

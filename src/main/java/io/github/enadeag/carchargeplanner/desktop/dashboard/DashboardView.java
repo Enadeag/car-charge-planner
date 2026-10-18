@@ -31,7 +31,7 @@ final class DashboardView extends VBox {
     private final Runnable contentChanged;
     private final SolarCard solar;
     private final BatteryCard battery;
-    private final AwayCard away;
+    private final OneOffAwayCard away;
     private List<DayModel> days = List.of();
     private Optional<GridAdviceModel> advice = Optional.empty();
     private Optional<AwayModel> awayPeriods = Optional.empty();
@@ -54,7 +54,7 @@ final class DashboardView extends VBox {
         this.contentChanged = contentChanged;
         this.solar = new SolarCard(reducedMotion, messages);
         this.battery = new BatteryCard(reducedMotion, messages);
-        this.away = new AwayCard(contentChanged, messages);
+        this.away = new OneOffAwayCard(contentChanged, messages);
         var title = new Label("Car charge planner"); // the app's name, the same in every language
         title.getStyleClass().add("app-title");
         title.setAccessibleRole(AccessibleRole.TEXT);

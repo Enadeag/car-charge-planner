@@ -19,7 +19,7 @@ import javafx.scene.layout.VBox;
  * The weekly away periods: times each week when the car is not at home, so no charging is planned then. One period
  * covers one weekday; several days take several periods.
  */
-final class AwayCard implements ConfigPart {
+final class WeeklyAwayCard implements ConfigPart {
 
     private static final RecurringAwayPeriod NEW = new RecurringAwayPeriod(DayOfWeek.MONDAY, LocalTime.of(8, 0),
             LocalTime.of(17, 0));
@@ -37,7 +37,7 @@ final class AwayCard implements ConfigPart {
      *
      * @param messages the texts, in the owner's language
      */
-    AwayCard(Messages messages) {
+    WeeklyAwayCard(Messages messages) {
         this.messages = messages;
         empty = FieldRow.paragraph(messages.text(TextKey.AWAY_NONE), "note");
         rows.getStyleClass().add("away-rows");
