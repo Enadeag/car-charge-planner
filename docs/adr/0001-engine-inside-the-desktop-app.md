@@ -1,3 +1,7 @@
+---
+status: accepted
+---
+
 # The engine runs inside the desktop app first
 
 The app is used first by someone with a laptop or desktop computer and no home server; people with a server, a Raspberry Pi or Home Assistant come later. Reading devices (the car's battery, the inverter, the meter) comes after the public launch, and controlling a charger after that, and control needs something that runs all the time. So the app is split into an **engine** (planning, forecasts, devices, scheduling, all stored data) and **clients**, and the engine runs inside the desktop app for now: one program to install, no service, no network port. Later the same engine can also run on its own on an always-on machine, with the desktop app as one of its clients.

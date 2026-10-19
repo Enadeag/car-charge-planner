@@ -1,0 +1,132 @@
+package nl.enadeag.carchargeplanner.desktop.settings.form;
+
+import nl.enadeag.carchargeplanner.desktop.app.Appearance;
+import nl.enadeag.carchargeplanner.desktop.app.DisplayMode;
+import nl.enadeag.carchargeplanner.desktop.app.Units;
+import nl.enadeag.carchargeplanner.desktop.text.Language;
+import nl.enadeag.carchargeplanner.desktop.text.Messages;
+import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.engine.config.Phases;
+import nl.enadeag.carchargeplanner.engine.config.ProviderId;
+import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
+import java.time.DayOfWeek;
+import java.time.format.TextStyle;
+import java.util.List;
+
+/** What a choice field shows for each of its choices, in the owner's language. */
+public final class ChoiceNames {
+
+    private final Messages messages;
+
+    /**
+     * Makes the names.
+     *
+     * @param messages the texts, in the owner's language
+     */
+    public ChoiceNames(Messages messages) {
+        this.messages = messages;
+    }
+
+    /**
+     * How the app shows itself.
+     *
+     * @param mode the way the app shows itself, to name
+     * @return such as "Tray icon"
+     */
+    public String mode(DisplayMode mode) {
+        return messages.text(switch (mode) {
+            case AUTOMATIC -> TextKey.MODE_AUTOMATIC;
+            case TRAY -> TextKey.MODE_TRAY;
+            case WINDOW -> TextKey.MODE_WINDOW;
+        });
+    }
+
+    /**
+     * A language by its own name, such as "Nederlands", so that the owner finds it whatever the app speaks now.
+     *
+     * @param language the language to name
+     * @return the language's own name
+     */
+    public String language(Language language) {
+        return language.autonym();
+    }
+
+    /**
+     * The choice to follow the system's language.
+     *
+     * @return such as "System language"
+     */
+    public String systemLanguage() {
+        return messages.text(TextKey.LANGUAGE_SYSTEM);
+    }
+
+    /**
+     * How the app looks.
+     *
+     * @param appearance the look to name: the system's, light or dark
+     * @return such as "Dark"
+     */
+    public String appearance(Appearance appearance) {
+        return messages.text(switch (appearance) {
+            case SYSTEM -> TextKey.APPEARANCE_SYSTEM;
+            case LIGHT -> TextKey.APPEARANCE_LIGHT;
+            case DARK -> TextKey.APPEARANCE_DARK;
+        });
+    }
+
+    /**
+     * The units distances and consumption show in.
+     *
+     * @param units the system of units to name
+     * @return such as "Miles"
+     */
+    public String units(Units units) {
+        return messages.text(switch (units) {
+            case METRIC -> TextKey.UNITS_METRIC;
+            case IMPERIAL -> TextKey.UNITS_IMPERIAL;
+        });
+    }
+
+    /**
+     * The phases the charger charges on.
+     *
+     * @param phases the number of phases the charger uses, to name
+     * @return such as "Three phases"
+     */
+    public String phases(Phases phases) {
+        return messages.text(phases == Phases.ONE ? TextKey.PHASES_ONE : TextKey.PHASES_THREE);
+    }
+
+    /**
+     * A weekday, written in full and with a capital as it starts the row.
+     *
+     * @param day the day of the week to name, in the owner's language
+     * @return such as "Monday" or "Maandag"
+     */
+    public String weekday(DayOfWeek day) {
+        var locale = messages.language().locale();
+        var name = day.getDisplayName(TextStyle.FULL, locale);
+        return name.substring(0, 1).toUpperCase(locale) + name.substring(1);
+    }
+
+    /**
+     * A forecast provider by its name; one the config names but this version does not know, by its id.
+     *
+     * @param id the provider to name; one that is not among {@code known} is named by its id
+     * @param known what the providers this version knows tell about themselves
+     * @return such as "Open-Meteo"
+     */
+    public String provider(ProviderId id, List<ProviderInfo> known) {
+        return known.stream().filter(info -> info.id().equals(id)).findFirst().map(ProviderInfo::name)
+                .orElseGet(() -> messages.text(TextKey.PROVIDER_UNKNOWN, id.value()));
+    }
+
+    /**
+     * The choice of no fallback provider; a fallback provider is named as {@link #provider(ProviderId, List)}.
+     *
+     * @return such as "None"
+     */
+    public String noFallback() {
+        return messages.text(TextKey.FALLBACK_NONE);
+    }
+}

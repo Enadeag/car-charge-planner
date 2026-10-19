@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>io.github.enadeag</groupId>
+  <groupId>nl.enadeag</groupId>
   <artifactId>car-charge-planner</artifactId>
   <version>0.4.0-SNAPSHOT</version>
   <name>Car charge planner</name>
@@ -12,11 +12,11 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>25</maven.compiler.release>
-    <main.class>io.github.enadeag.carchargeplanner.Main</main.class>
+    <main.class>nl.enadeag.carchargeplanner.Main</main.class>
     <!-- surefire's test class order; see the surefire plugin below -->
     <surefire.runOrder>alphabetical</surefire.runOrder>
     <!-- left out of every build: the tests that reach the network, which the live profile runs, and the one that
-         writes the README's pictures, which the screenshots profile runs -->
+         writes the documentation's pictures, which the screenshots profile runs -->
     <test.excludedGroups>live,screenshots</test.excludedGroups>
     <!-- the coverage profile sets it to JaCoCo's agent -->
     <argLine></argLine>
@@ -175,7 +175,7 @@
         <includes>
           <include>car-charge-planner.svg</include>
         </includes>
-        <targetPath>io/github/enadeag/carchargeplanner/desktop/system/icons</targetPath>
+        <targetPath>nl/enadeag/carchargeplanner/desktop/system/icons</targetPath>
       </resource>
     </resources>
     <plugins>
@@ -382,8 +382,9 @@
         <groups>live</groups>
       </properties>
     </profile>
-    <!-- ./mvnw test -Pscreenshots makes the README's pictures in docs/screenshots/java again, offscreen on JavaFX's
-         headless platform, and writes only those whose pixels changed (CONTRIBUTING.md, Pictures for the README) -->
+    <!-- ./mvnw test -Pscreenshots makes the documentation's pictures in docs/screenshots/java again, offscreen on
+         JavaFX's headless platform, and writes only those whose pixels changed (CONTRIBUTING.md, Pictures in the
+         documentation) -->
     <profile>
       <id>screenshots</id>
       <properties>
@@ -393,10 +394,10 @@
     </profile>
     <!-- ./mvnw verify -Pcoverage: JaCoCo's report in target/site/jacoco/, and the build fails when a part's line or
          branch coverage drops below its floor (CONTRIBUTING.md, What is tested where). Linux only: the platform.linux
-         tests need dbus-daemon and GNOME Keyring, and Windows runs none of them. Not checked: the composition root in
-         the root package (Main, DesktopApp, Host and the *Parts classes), which DesktopAppSmokeTest tests in a JVM of
-         its own, and platform.windows. Each floor is a point or two below what was measured when it was set: raise it
-         when the tests grow, never lower it to let a change through. -->
+         tests need dbus-daemon and GNOME Keyring, and Windows runs none of them. Not checked: the classes that wire
+         the app (Main, start.DesktopApp, host.Host and the *Parts classes in platforms), which DesktopAppSmokeTest tests in
+         a JVM of its own, and platform.windows. Each floor is a point or two below what was measured when it was set:
+         raise it when the tests grow, never lower it to let a change through. -->
     <profile>
       <id>coverage</id>
       <build>
@@ -425,7 +426,7 @@
                 </goals>
                 <configuration>
                   <includes>
-                    <include>io/github/enadeag/carchargeplanner/engine/**</include>
+                    <include>nl/enadeag/carchargeplanner/engine/**</include>
                   </includes>
                   <rules>
                     <rule>
@@ -453,7 +454,7 @@
                 </goals>
                 <configuration>
                   <includes>
-                    <include>io/github/enadeag/carchargeplanner/desktop/**</include>
+                    <include>nl/enadeag/carchargeplanner/desktop/**</include>
                   </includes>
                   <rules>
                     <rule>
@@ -481,7 +482,7 @@
                 </goals>
                 <configuration>
                   <includes>
-                    <include>io/github/enadeag/carchargeplanner/instance/**</include>
+                    <include>nl/enadeag/carchargeplanner/instance/**</include>
                   </includes>
                   <rules>
                     <rule>
@@ -508,15 +509,21 @@
                   <goal>check</goal>
                 </goals>
                 <configuration>
-                  <!-- the root package's own classes, without its subpackages and without the composition root -->
+                  <!-- the composition root's packages (the root package and start, cli, platforms, logging and
+                       host), without the classes that wire the app -->
                   <includes>
-                    <include>io/github/enadeag/carchargeplanner/*.class</include>
+                    <include>nl/enadeag/carchargeplanner/*.class</include>
+                    <include>nl/enadeag/carchargeplanner/start/**</include>
+                    <include>nl/enadeag/carchargeplanner/cli/**</include>
+                    <include>nl/enadeag/carchargeplanner/platforms/**</include>
+                    <include>nl/enadeag/carchargeplanner/logging/**</include>
+                    <include>nl/enadeag/carchargeplanner/host/**</include>
                   </includes>
                   <excludes>
-                    <exclude>io/github/enadeag/carchargeplanner/Main*.class</exclude>
-                    <exclude>io/github/enadeag/carchargeplanner/DesktopApp*.class</exclude>
-                    <exclude>io/github/enadeag/carchargeplanner/Host*.class</exclude>
-                    <exclude>io/github/enadeag/carchargeplanner/*Parts*.class</exclude>
+                    <exclude>nl/enadeag/carchargeplanner/Main*.class</exclude>
+                    <exclude>nl/enadeag/carchargeplanner/start/DesktopApp*.class</exclude>
+                    <exclude>nl/enadeag/carchargeplanner/host/Host*.class</exclude>
+                    <exclude>nl/enadeag/carchargeplanner/platforms/*Parts*.class</exclude>
                   </excludes>
                   <rules>
                     <rule>
@@ -544,7 +551,7 @@
                 </goals>
                 <configuration>
                   <includes>
-                    <include>io/github/enadeag/carchargeplanner/platform/linux/**</include>
+                    <include>nl/enadeag/carchargeplanner/platform/linux/**</include>
                   </includes>
                   <rules>
                     <rule>
@@ -617,10 +624,10 @@
                 <id>engine</id>
                 <configuration>
                   <targetClasses>
-                    <param>io.github.enadeag.carchargeplanner.engine.*</param>
+                    <param>nl.enadeag.carchargeplanner.engine.*</param>
                   </targetClasses>
                   <targetTests>
-                    <param>io.github.enadeag.carchargeplanner.engine.*</param>
+                    <param>nl.enadeag.carchargeplanner.engine.*</param>
                   </targetTests>
                   <reportsDirectory>${project.build.directory}/pit-reports/engine</reportsDirectory>
                   <!-- a few points below the share of mutants killed when it was set (97 %) -->
@@ -634,30 +641,31 @@
                        models, chart and popup geometry, the app settings, the logic of the Settings and set-up forms,
                        the tray icon's drawing and the texts -->
                   <targetClasses>
-                    <param>io.github.enadeag.carchargeplanner.desktop.app.AppSettings*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.app.Background*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.app.DisplayMode*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.app.Units*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.AwayMapper*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.BatteryModel*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.ChartMapper*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.CurvePoints*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.DayMapper*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.GridAdviceMapper*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.OutlookMapper*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.PlotArea*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.PopupPlacement*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.SolarCurveModel*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.TrayStatusMapper*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.TrayTexts*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.settings.SetUpOffer*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.settings.WindowSize*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.settings.form.*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.system.StatusIcon*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.text.*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.app.AppSettings*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.app.Background*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.app.DisplayMode*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.app.Units*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.PopupPlacement*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.advice.GridAdviceMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryModel*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.day.DayMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.outlook.OutlookMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.solar.CurvePoints*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.solar.PlotArea*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.tray.TrayStatusMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.tray.TrayPresenter*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.settings.form.*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.settings.page.WindowSize*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.settings.setup.SetUpOffer*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.system.StatusIcon*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.text.*</param>
                   </targetClasses>
                   <targetTests>
-                    <param>io.github.enadeag.carchargeplanner.desktop.*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.*</param>
                   </targetTests>
                   <reportsDirectory>${project.build.directory}/pit-reports/desktop</reportsDirectory>
                   <!-- a few points below the share of mutants killed when it was set (92 %) -->

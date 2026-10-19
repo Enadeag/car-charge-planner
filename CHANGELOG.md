@@ -5,32 +5,46 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ## [Unreleased]
 
 ### Added
-- `car-charge-planner test-notification` asks the running app to show a test notification in your language, with the app's name, icon and "Open dashboard" button; clicking it opens the dashboard. Nothing is planned or recorded for it. When the app does not run, it says so and ends with exit code 3.
+- `car-charge-planner test-notification` asks the running app to show a test notification in your language, with the app's name, icon and "Open dashboard" button; clicking it opens the dashboard. Nothing is planned or recorded for it. When the app does not run, it says so and ends with exit code 4; when it runs but cannot be reached, with exit code 3.
 - A log file, `car-charge-planner.0.log` in the data folder, readable only by you: Settings, About shows where it is, and a bug report can quote it. `CAR_CHARGE_PLANNER_LOG_LEVEL=DEBUG` logs more.
-- The log tells when a forecast provider stops or starts giving forecasts, when the config file cannot be used or can be used again, where the API keys are kept, and each notification of a charge window. It never holds an API key, a request's address or your coordinates.
+- The log tells when a forecast provider stops or starts giving forecasts, when the settings file cannot be used or can be used again, where the API keys are kept, and each notification of a charge window. It never holds an API key, a request's address or your coordinates.
 - Each release has an SBOM per download (`car-charge-planner-<version>-linux.cdx.json`, `-windows.cdx.json`) listing every library and the Java runtime in it, and GitHub attests where each file was built: `gh attestation verify <file> -R Enadeag/car-charge-planner` checks it. The release notes name the Java runtime the downloads bring.
 - The downloads hold a `legal` folder with the app's licence (`LICENSE`, `NOTICE`, `ADDITIONAL-TERMS.md`) and a file per library it brings; the Windows installer shows the GPL before it installs.
 
 ### Changed
 - JavaFX's native libraries are part of the app's runtime, so JavaFX no longer unpacks them into the `.openjfx` folder in your home folder at every start. The runtime no longer holds the `java` and `keytool` commands or the Flight Recorder.
-- Only one copy of the app runs, also when its socket cannot be made, such as with a folder path too long for a socket: the running copy holds a lock file (`instance.lock`), which the system lets go of when it ends or crashes. A second start that cannot reach the running copy says "Car charge planner is already running, but could not be reached." and ends with exit code 3; `quit` says it runs but cannot be reached, instead of "not running"; the running copy logs a warning.
-- Linux without a usable `XDG_RUNTIME_DIR`: the lock and the socket go to `~/.local/share/car-charge-planner/run` (or under `XDG_DATA_HOME`) instead of `/tmp/car-charge-planner-<user>`, which another user could make first. When the folder is another user's, a link, or one others may write in, the app does not start and says why; your own folder that others may only read is made owner-only (0700), and the log says so, unless it holds a file of another user or a hard link, or lies in a folder others may write in.
 - The API keys are read from the system keychain once and kept in memory until you save new ones, instead of at every plan, and only when a forecast provider is about to be asked. A keychain that cannot be used, or does not answer within 5 seconds, holds nothing up and is tried again after 5 minutes. On Linux the app keeps one connection to the Secret Service instead of opening one for every question, and first checks that there is one.
-- The Linux tar.gz holds its files as root's and not writable by group or others, so unpacked as root (such as into `/opt`) they belong to root instead of to the build machine's user id; the same source gives the same tar.gz.
 - Saving the API keys or the settings no longer waits for a forecast that is being fetched.
-- A locked keyring (common on Linux with automatic login) no longer sends the API keys to `secrets.json`. The keys count as not available yet: the dashboard and the tray say to unlock the keyring, and the next plan after unlocking uses them. Saving a key while it is locked has your desktop ask for the keyring's password; only when you dismiss that prompt do the keys go to the file, and when it cannot be unlocked that way nothing is saved and the app asks you to unlock it and save again. While it is locked the key fields show as locked, the status says when to look for the unlock prompt, and a save writes only the keys you entered or emptied, so no other stored key is lost.
+- Settings and set-up open at once and say "Reading your settings…" until the keychain and the files have answered, and Save and Finish say "Saving…" while they store; meanwhile the dashboard and the tray keep working. Closed, these windows are let go of instead of hidden, so they take no memory while the app runs in the tray.
+- The texts say keychain, API key, solar power, charge current, charge window and away period throughout, and English writes no space before %, as in "92% solar". The window titles and the dashboard show the app's name the same way everywhere.
+- Dutch: set-up is the Instelhulp ("Instelhulp opnieuw doorlopen", "Instelhulp…"), and the texts say sleutelbos, zonnestroom, laadstroom, laadvenster, afwezig and "uit het net"; where a detail stays in English, the text says "(in het Engels)".
+- Settings and set-up say "Some values need attention: see the marked fields." when they refuse a value.
+- Linux: the tray menu has a separator before Quit, as on Windows.
+
+### Fixed
+- Only one copy of the app runs, also when its socket cannot be made, such as with a folder path too long for a socket: the running copy holds a lock file (`instance.lock`), which the system lets go of when it ends or crashes. A second start that cannot reach the running copy says "Car charge planner is already running, but could not be reached." and ends with exit code 3; `quit` says it runs but cannot be reached, instead of "not running"; the running copy logs a warning.
+- Linux: the tray icon comes back when the panel restarts, such as after Plasma's shell crashed: the app registers it again with the new panel.
+- The dashboard's battery level entry no longer saves the level shown before when what you typed is not a whole number: it says why and stays open, and nothing is saved until you fix it or cancel.
+- An away period entered on the dashboard that has already ended by the time you save it is refused, also when the plan shown was made a while ago; before, only the time of the plan counted.
+- A screen reader reads several charge windows in a chart as a list ("Charging: 10:00 to 12:00, 14:00 to 15:00.") instead of as one "Charge window".
+- Settings in Dutch no longer shows an English reason when the saved API keys cannot be read; the reason goes to the log.
+- Settings and set-up check the settings of every chosen forecast provider before they save, not only those of the first one.
+- When the API keys cannot be stored, Settings and set-up say so in your language and save nothing after them; the reason goes to the log.
+- `quit` and `test-notification` say why they could not ask the running app when its folder cannot be checked, instead of saying it does not run; they then end with exit code 1. Commands no longer change that folder.
+- API keys that were kept in `secrets.json` while the keychain could not be used move into the keychain as soon as it can be used again, also when you unlock it outside the app; a save right after unlocking keeps the keys that were only in the file.
+- Linux: removing an API key while the keychain is locked no longer counts as done while the key stays: the save asks to unlock the keychain, as storing a key does.
+- A `secrets.json` that cannot be read is kept when you save, instead of being replaced, so the keys in it can still be recovered.
+
+### Security
+- Linux without a usable `XDG_RUNTIME_DIR`: the lock and the socket go to `~/.local/share/car-charge-planner/run` (or under `XDG_DATA_HOME`) instead of `/tmp/car-charge-planner-<user>`, which another user could make first. When the folder is another user's, a link, or one others may write in, the app does not start and says why; your own folder that others may only read is made owner-only (0700), and the log says so, unless it holds a file of another user or a hard link, or lies in a folder others may write in.
+- The Linux tar.gz holds its files as root's and not writable by group or others, so unpacked as root (such as into `/opt`) they belong to root instead of to the build machine's user id; the same source gives the same tar.gz.
+- A locked keychain (common on Linux with automatic login) no longer sends the API keys to `secrets.json`. The keys count as not available yet: the dashboard and the tray say to unlock the keychain, and the next plan after unlocking uses them. Saving a key while it is locked has your desktop ask for the keychain's password; only when you dismiss that prompt do the keys go to the file, and when it cannot be unlocked that way nothing is saved and the app asks you to unlock it and save again. While it is locked the key fields show as locked, the status says when to look for the unlock prompt, and a save writes only the keys you entered or emptied, so no other stored key is lost.
 - Windows: without a usable Credential Manager the API keys are kept in `%LOCALAPPDATA%\car-charge-planner\secrets.json`, which stays on this computer, instead of in the roaming folder beside `engine.json`; a file there is moved once.
 - A forecast or place search answer is read up to a limit (2 MB for a forecast, 256 kB for a place search) and must come whole within the timeout, body included; a larger or slower answer counts as the provider not answering, instead of filling the memory or holding the app up. The connection to a provider gives up after 10 seconds.
 - A server address for Open-Meteo must be https, or plain http only to this computer (localhost, 127.0.0.1 or [::1]), without a user name, `?` or `#`; Settings and set-up say so when you save another one.
-- A Forecast.Solar key may hold only letters and digits; Settings and set-up say so when you save another one.
+- A Forecast.Solar API key may hold only letters and digits; Settings and set-up say so when you save another one.
 - What a provider's server writes in an error is shown as "<provider> says: …", at most 200 characters, without control or direction characters, and with every stored API key replaced by `***`, also in the log.
-- Settings and set-up open at once and say "Reading your settings…" until the keychain and the files have answered, and Save and Finish say "Saving…" while they store; meanwhile the dashboard and the tray keep working. Closed, these windows are let go of instead of hidden, so they take no memory while the app runs in the tray.
-- Linux: the tray icon comes back when the panel restarts, such as after Plasma's shell crashed: the app registers it again with the new panel.
 - Linux: a click on a notification counts only when the desktop's notification server reports it, not when another program sends the same signal.
-
-### Fixed
-- A screen reader reads several charge windows in a chart as a list ("Charging: 10:00 to 12:00, 14:00 to 15:00.") instead of as one "Charge window".
-- Settings in Dutch no longer shows an English reason when the saved API keys cannot be read; the reason goes to the log.
 
 ## [0.3.0] - 2026-10-16
 

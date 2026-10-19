@@ -1,0 +1,312 @@
+package nl.enadeag.carchargeplanner.instance;
+
+import java.io.IOException;
+import java.lang.System.Logger.Level;
+import java.net.ConnectException;
+import java.net.UnixDomainSocketAddress;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
+import java.nio.channels.SocketChannel;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.time.Duration;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Consumer;
+
+/**
+ * One running copy of the app per user. The running copy holds a lock on a file in a private folder for as long as it
+ * runs; the system lets go of it when the process ends, also when it crashes, so a lock is never left behind. The lock
+ * alone decides which copy runs. Beside it the running copy listens on a Unix domain socket, which only carries the
+ * commands of later starts: such a start sends {@link InstanceCommand#SHOW} and exits, also when the socket cannot be
+ * reached, for instance because its path is too long for a socket.
+ */
+public final class SingleInstance implements AutoCloseable {
+
+    private static final System.Logger LOG = System.getLogger(SingleInstance.class.getName());
+    private static final String SOCKET_NAME = "instance.sock";
+    private static final String LOCK_NAME = "instance.lock";
+    /** How long to wait between looks while another copy that holds the lock starts listening. */
+    private static final Duration RACE_PAUSE = Duration.ofMillis(50);
+
+    private final Path path;
+    private final PrivateFolder folder;
+    private final Owner owner;
+    private final Duration timeout;
+    private FileLock lock;
+    private InstanceServer server;
+    /** What went wrong in a claim; null until one does. */
+    private String problem;
+
+    /**
+     * Makes the single-instance guard; nothing is made or sent yet.
+     *
+     * @param folder the folder for the lock and the socket, only for this user, such as
+     *     {@code $XDG_RUNTIME_DIR/car-charge-planner}; it is made when missing, with the folders above it
+     * @param owner the user this app runs as, where files have an owner and a mode (Linux): the folder must be theirs
+     *     and only connections of theirs are taken; unchecked on Windows, where the folder's place keeps others out
+     * @param timeout how long one side waits for the other's line, the command or its confirmation, and how long a
+     *     later start waits for a copy that holds the lock to start listening; more than zero. A running app that is
+     *     busy starting may take a moment to answer.
+     */
+    public SingleInstance(Path folder, Owner owner, Duration timeout) {
+        this.path = folder;
+        this.folder = new PrivateFolder(folder, owner);
+        this.owner = owner;
+        this.timeout = timeout;
+    }
+
+    /**
+     * Becomes the running copy, or asks the copy that runs to show its dashboard.
+     *
+     * @param handler what a command of a later start does, when this becomes the running copy; called on a thread of
+     *     its own per command, from now until {@link #close()}
+     * @return what came of it. This copy listens for later starts only after {@link ClaimOutcome#RUNNING}; it should
+     *     go on running after that, {@link ClaimOutcome#RUNNING_UNREACHABLE} or {@link ClaimOutcome#UNAVAILABLE}, and
+     *     end after any other outcome
+     */
+    public ClaimOutcome claim(Consumer<InstanceCommand> handler) {
+        Path made;
+        try {
+            made = folder.ensurePrivate();
+        } catch (NotPrivateException e) {
+            problem = e.getMessage();
+            return ClaimOutcome.NOT_PRIVATE;
+        } catch (IOException e) {
+            problem = "the folder " + path + " for the instance lock cannot be made: " + e;
+            return ClaimOutcome.UNAVAILABLE;
+        }
+        var socket = made.resolve(SOCKET_NAME);
+        var deadline = System.nanoTime() + timeout.toNanos();
+        try {
+            while (true) {
+                var taken = tryLock(made);
+                if (taken.isPresent()) {
+                    lock = taken.get();
+                    var oldVersion = handOverToOldVersion(socket);
+                    if (oldVersion.isPresent()) {
+                        releaseLock();
+                        return oldVersion.get();
+                    }
+                    return listen(socket, handler);
+                }
+                // another copy holds the lock; it may have started a moment ago and not listen yet
+                var reply = ask(socket, InstanceCommand.SHOW);
+                if (reply == Reply.ANSWERED) {
+                    return ClaimOutcome.HANDED_OVER;
+                }
+                if (reply == Reply.SILENT) {
+                    return ClaimOutcome.SILENT;
+                }
+                if (deadlinePassed(deadline)) {
+                    return ClaimOutcome.UNREACHABLE;
+                }
+                pause(deadline);
+            }
+        } catch (IOException e) {
+            problem = "the instance lock in " + made + " cannot be taken: " + e;
+            return ClaimOutcome.UNAVAILABLE;
+        }
+    }
+
+    /**
+     * Holding the lock: no copy that takes it runs, so a socket that is there is an older version's or left over. A
+     * version of the app from before the lock does not take it, but may run and listen: it is asked to show its
+     * dashboard.
+     *
+     * @return what came of handing over to an older version that runs; empty when none listens on the socket
+     */
+    private Optional<ClaimOutcome> handOverToOldVersion(Path socket) {
+        if (!Files.exists(socket, LinkOption.NOFOLLOW_LINKS)) {
+            return Optional.empty();
+        }
+        var reply = ask(socket, InstanceCommand.SHOW);
+        if (reply == Reply.ANSWERED) {
+            return Optional.of(ClaimOutcome.HANDED_OVER);
+        }
+        if (reply == Reply.SILENT) {
+            return Optional.of(ClaimOutcome.SILENT);
+        }
+        LOG.log(Level.INFO, "removing the instance socket left behind by an app that ended without removing it");
+        return Optional.empty();
+    }
+
+    /** Holding the lock, with no older version on the socket: makes the socket anew and listens on it. */
+    private ClaimOutcome listen(Path socket, Consumer<InstanceCommand> handler) {
+        try {
+            Files.deleteIfExists(socket);
+            server = InstanceServer.bind(socket, owner, timeout);
+        } catch (IOException e) {
+            problem = "the instance socket " + socket + " cannot be made: " + e;
+            return ClaimOutcome.RUNNING_UNREACHABLE;
+        }
+        server.serve(handler);
+        return ClaimOutcome.RUNNING;
+    }
+
+    /**
+     * Why the last {@link #claim(Consumer)} gave {@link ClaimOutcome#RUNNING_UNREACHABLE},
+     * {@link ClaimOutcome#NOT_PRIVATE} or {@link ClaimOutcome#UNAVAILABLE}, for the log and the owner.
+     *
+     * @return what went wrong, in English, naming the folder or the socket; empty after any other claim, or before one
+     */
+    public Optional<String> problem() {
+        return Optional.ofNullable(problem);
+    }
+
+    /**
+     * Sends a command to the running copy and waits for its confirmation, such as {@link InstanceCommand#QUIT} from
+     * the command line. Only looks: the private folder is neither made nor changed, as the running copy made it. When
+     * a copy holds the lock but its socket cannot be reached, it looks again until the timeout, as the copy may just be
+     * starting.
+     *
+     * @param command what to ask
+     * @return what came of it: {@link Reply#NOBODY} when there is no private folder, or no copy holds the lock and
+     *     none answers; {@link Reply#STALE} when no copy holds the lock and a socket is left that nothing listens on
+     * @throws NotPrivateException when the private folder is another user's, a link, or not of mode 0700
+     * @throws IOException when the private folder cannot be read, or whether a copy holds the lock cannot be told
+     */
+    public Reply send(InstanceCommand command) throws IOException {
+        Path checked;
+        try {
+            checked = folder.check();
+        } catch (NoSuchFileException _) {
+            return Reply.NOBODY;
+        }
+        var socket = checked.resolve(SOCKET_NAME);
+        var deadline = System.nanoTime() + timeout.toNanos();
+        while (true) {
+            var reply = ask(socket, command);
+            if (reply == Reply.ANSWERED || reply == Reply.SILENT) {
+                return reply;
+            }
+            if (!lockHeld(checked)) {
+                return reply == Reply.UNREACHABLE ? Reply.STALE : reply;
+            }
+            if (deadlinePassed(deadline)) {
+                return Reply.UNREACHABLE;
+            }
+            pause(deadline);
+        }
+    }
+
+    /**
+     * Sends a command over the socket.
+     *
+     * @return {@link Reply#UNREACHABLE} when the socket is there but cannot be connected to for another reason than
+     *     that nobody listens
+     */
+    private Reply ask(Path socket, InstanceCommand command) {
+        if (!Files.exists(socket, LinkOption.NOFOLLOW_LINKS)) {
+            return Reply.NOBODY;
+        }
+        SocketChannel channel;
+        try {
+            channel = SocketChannel.open(UnixDomainSocketAddress.of(socket));
+        } catch (ConnectException _) {
+            // refused: the socket is there but nobody listens; Windows says the same when it is gone meanwhile
+            return Files.exists(socket, LinkOption.NOFOLLOW_LINKS) ? Reply.STALE : Reply.NOBODY;
+        } catch (IOException _) {
+            // such as a socket that may not be opened; or the running copy ended and removed it a moment ago
+            return Files.exists(socket, LinkOption.NOFOLLOW_LINKS) ? Reply.UNREACHABLE : Reply.NOBODY;
+        }
+        try (channel) {
+            Lines.write(channel, command.word());
+            return Lines.read(channel, timeout).filter(InstanceServer.OK::equals).isPresent()
+                    ? Reply.ANSWERED : Reply.SILENT;
+        } catch (IOException _) {
+            return Reply.SILENT; // it listens, but hung up without confirming
+        }
+    }
+
+    /** The lock, when no other process or guard of this one holds it; the lock file is made when missing. */
+    private Optional<FileLock> tryLock(Path made) throws IOException {
+        Set<OpenOption> options = Set.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS);
+        var channel = FileChannel.open(made.resolve(LOCK_NAME), options, lockFileMode());
+        try {
+            var taken = channel.tryLock();
+            if (taken == null) {
+                channel.close();
+            }
+            return Optional.ofNullable(taken);
+        } catch (OverlappingFileLockException _) {
+            channel.close(); // another guard in this JVM holds it
+            return Optional.empty();
+        } catch (IOException | RuntimeException e) {
+            channel.close();
+            throw e;
+        }
+    }
+
+    private FileAttribute<?>[] lockFileMode() {
+        return owner instanceof Owner.User
+                ? new FileAttribute<?>[] {PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"))}
+                : new FileAttribute<?>[0];
+    }
+
+    /** Whether a copy holds the lock: it is taken for a moment to find out, and let go of at once. */
+    private static boolean lockHeld(Path made) throws IOException {
+        var file = made.resolve(LOCK_NAME);
+        if (!Files.exists(file, LinkOption.NOFOLLOW_LINKS)) {
+            return false;
+        }
+        try (var channel = FileChannel.open(file, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS)) {
+            var taken = channel.tryLock();
+            if (taken == null) {
+                return true;
+            }
+            taken.release();
+            return false;
+        } catch (OverlappingFileLockException _) {
+            return true;
+        }
+    }
+
+    /** Whether the time to look again is up, by {@link System#nanoTime()}. */
+    private static boolean deadlinePassed(long deadline) {
+        return deadline - System.nanoTime() <= 0;
+    }
+
+    /** Waits a moment before looking again, but not past the deadline, by {@link System#nanoTime()}. */
+    private static void pause(long deadline) throws IOException {
+        var left = Math.max(0, deadline - System.nanoTime());
+        try {
+            Thread.sleep(Duration.ofNanos(Math.min(left, RACE_PAUSE.toNanos())));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("interrupted while waiting for another copy of the app", e);
+        }
+    }
+
+    private void releaseLock() {
+        if (lock == null) {
+            return;
+        }
+        try {
+            lock.channel().close(); // which lets go of the lock
+        } catch (IOException e) {
+            LOG.log(Level.WARNING, "could not let go of the instance lock", e);
+        }
+        lock = null;
+    }
+
+    /**
+     * Stops listening and removes the socket, then lets go of the lock, when this is the running copy; otherwise does
+     * nothing. The lock file stays: removing it could let two copies lock two different files.
+     */
+    @Override
+    public void close() {
+        if (server != null) {
+            server.close();
+            server = null;
+        }
+        releaseLock();
+    }
+}

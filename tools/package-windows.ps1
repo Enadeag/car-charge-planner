@@ -58,7 +58,7 @@ if ($Type -eq "exe") {
 jpackage --type $Type --dest target\dist `
   --name car-charge-planner --app-version $version --vendor "Car charge planner" `
   --input target\input --main-jar car-charge-planner.jar `
-  --main-class io.github.enadeag.carchargeplanner.Main `
+  --main-class nl.enadeag.carchargeplanner.Main `
   --runtime-image target\runtime --app-content target\legal `
   --icon src\packaging\windows\car-charge-planner.ico `
   --java-options "--enable-native-access=javafx.graphics,ALL-UNNAMED" @installer
