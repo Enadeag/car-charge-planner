@@ -424,6 +424,15 @@ class PlannerTest {
     }
 
     @Test
+    void aBatteryAboveTheTargetKeepsItsLevelWhileAnAnnouncedWindowRuns() {
+        // the window still gives sun, but the level after charging is never below the start nor raised past it
+        var announced = announced();
+        var day = fridayWithAnnounced(12, 85, List.of(announced));
+        assertThat(spans(day)).containsExactly(new Span(announced.start(), announced.end(), announced.amps()));
+        assertThat(day.socAfterChargingPct().value()).isEqualTo(85);
+    }
+
+    @Test
     void noSecondWindowIsPlannedOnTopOfAnAnnouncedOne() {
         var announced = announced();
         var day = fridayWithAnnounced(11, 10, List.of(announced));

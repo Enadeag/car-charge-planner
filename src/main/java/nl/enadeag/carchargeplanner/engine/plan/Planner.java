@@ -105,7 +105,8 @@ public final class Planner {
         windows.sort(Comparator.comparing(Window::start));
 
         double gainedPct = solarKwh(windows) * system.charger().efficiency() / system.car().usableBatteryKwh() * 100;
-        double after = Math.max(socPct.value(), Math.min(preferences.targetPct().value(), socPct.value() + gainedPct));
+        double soc = socPct.value();
+        double after = Math.clamp(soc + gainedPct, soc, Math.max(soc, preferences.targetPct().value()));
         double driving = dailyDrivingPct() * (date.equals(today(now)) ? shareOfDayLeft(now) : 1);
         var end = new Percent(Math.max(0, after - driving));
         return new DayPlan(date, socPct, windows, new Percent(after), end, driving, steps);
