@@ -96,8 +96,10 @@ public final class Engine {
 
     /**
      * Starts planning on the engine's own thread: at once, then every minute, and again after each change made through
-     * the engine, also one that could not be saved, so the listener sees what is stored. A plan that fails, even with
-     * an {@link Error}, is logged, and the next one is made as planned.
+     * the engine, also one that could not be saved, so the listener sees what is stored. Each round makes the
+     * {@linkplain #outlook() outlook}, then tells the owner about a window that starts within the notification lead
+     * time; the rounds come often enough for that. A round that fails, even with an {@link Error}, is logged, and the
+     * next one is made as planned.
      *
      * @param listener gets each new outlook, on the engine's thread, so it should hand slow work on; never null
      * @throws IllegalStateException when the engine was started before
@@ -106,7 +108,7 @@ public final class Engine {
         if (listener == null) {
             throw new IllegalArgumentException("the listener must not be null");
         }
-        schedule.start(() -> listener.accept(plan()));
+        schedule.start(() -> listener.accept(round()));
     }
 
     /**
@@ -118,33 +120,62 @@ public final class Engine {
     }
 
     /**
-     * Makes a plan from the config file and a forecast, and tells the owner about a window that starts within the
-     * notification lead time. Blocks while the forecast is fetched. {@link #start(Consumer)} calls it on the engine's
-     * thread, often enough for the lead time.
+     * Makes a plan from the config file and a forecast; nobody is told about a window, which only the rounds of
+     * {@link #start(Consumer)} do. Blocks while the forecast is fetched.
      *
      * @return the plan, or why there is none: the config file is not usable, or no forecast is
      */
-    public Outlook plan() {
-        EngineConfig config;
+    public Outlook outlook() {
         try {
-            config = configFile.read();
+            return outlook(readConfig());
         } catch (ConfigProblem e) {
-            configHealth.markUnusable(e);
             return new Outlook.NotSetUp(e.kind(), e.file(), e.detail());
         }
-        configHealth.markUsable();
-        var now = clock.instant();
-        ForecastResult forecast;
+    }
+
+    /** One scheduled round: the outlook, then the announcements that are due on it. */
+    private Outlook round() {
+        EngineConfig config;
         try {
-            forecast = forecasts.get(SystemDescription.of(config.system()), config.forecast(), now, false);
+            config = readConfig();
+        } catch (ConfigProblem e) {
+            return new Outlook.NotSetUp(e.kind(), e.file(), e.detail());
+        }
+        var outlook = outlook(config);
+        if (outlook instanceof Outlook.Planned planned) {
+            announce(planned, config);
+        }
+        return outlook;
+    }
+
+    /** The config file's config; whether it could be used is noted, and logged when that changed. */
+    private EngineConfig readConfig() throws ConfigProblem {
+        try {
+            var config = configFile.read();
+            configHealth.markUsable();
+            return config;
+        } catch (ConfigProblem e) {
+            configHealth.markUnusable(e);
+            throw e;
+        }
+    }
+
+    private Outlook outlook(EngineConfig config) {
+        var now = clock.instant();
+        try {
+            var forecast = forecasts.get(SystemDescription.of(config.system()), config.forecast(), now, false);
+            return planned(config, forecast, now);
         } catch (ForecastUnavailable e) {
             return new Outlook.NoForecast(e.getMessage(), e.keychainLocked());
         }
-        var planned = planned(config, forecast, now);
+    }
+
+    /** Tells the owner about each window of the plan that is due, the grid advice's among them. */
+    private void announce(Outlook.Planned planned, EngineConfig config) {
         planned.gridAdvice().ifPresentOrElse(
-                advice -> announcer.announceDue(planned.days(), advice, forecast.source(), now, config),
-                () -> announcer.announceDue(planned.days(), forecast.source(), now, config));
-        return planned;
+                advice -> announcer.announceDue(planned.days(), advice, planned.forecastSource(), planned.madeAt(),
+                        config),
+                () -> announcer.announceDue(planned.days(), planned.forecastSource(), planned.madeAt(), config));
     }
 
     /**

@@ -84,6 +84,7 @@ class EngineTest {
 
     private final LockableKeychain keychain = new LockableKeychain();
     private final List<Announcement> told = new ArrayList<>();
+    private final List<Outlook> rounds = new ArrayList<>();
     private FakeProvider main;
     private FakeProvider backup;
     private Path config;
@@ -125,11 +126,28 @@ class EngineTest {
     }
 
     private Engine engine(Clock clock, ForecastProvider... providers) {
+        return engine(clock, new ManualScheduler(), providers);
+    }
+
+    private Engine engine(Clock clock, ManualScheduler scheduler, ForecastProvider... providers) {
         var known = new Providers(List.of(providers));
         var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
         var service = new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys);
         return new Engine(new ConfigFile(config), service, known, apiKeys, new AwayFile(folder.resolve("away.json")),
-                new BatteryFile(folder.resolve("battery.json")), clock, announcer(), new ManualScheduler());
+                new BatteryFile(folder.resolve("battery.json")), clock, announcer(), scheduler);
+    }
+
+    /** Starts the engine and runs its first round, which announces what is due; its outlooks go to {@link #rounds}. */
+    private void start(Engine engine, ManualScheduler scheduler) {
+        engine.start(rounds::add);
+        scheduler.runPending();
+    }
+
+    /** A new engine at that time, started as by {@link #start(Engine, ManualScheduler)}. */
+    private ManualScheduler startedAt(Clock clock) {
+        var scheduler = new ManualScheduler();
+        start(engine(clock, scheduler, main, backup), scheduler);
+        return scheduler;
     }
 
     /** Kept in the test's folder, so a new engine is like the app after a restart. */
@@ -142,7 +160,7 @@ class EngineTest {
     }
 
     private static Outlook.Planned planned(Engine engine) {
-        return (Outlook.Planned) engine.plan();
+        return (Outlook.Planned) engine.outlook();
     }
 
     private static ForecastSource source(Engine engine) {
@@ -287,7 +305,7 @@ class EngineTest {
     @Test
     void withoutAConfigFileThereIsNoPlanButTheReasonNamesTheFile() throws IOException {
         Files.delete(config);
-        assertThat(engine(clockAt(7)).plan()).isInstanceOfSatisfying(Outlook.NotSetUp.class,
+        assertThat(engine(clockAt(7)).outlook()).isInstanceOfSatisfying(Outlook.NotSetUp.class,
                 notSetUp -> assertThat(notSetUp.file()).isEqualTo(config));
         assertThat(main.callCount()).isZero(); // nothing leaves the computer before there is a location
     }
@@ -297,13 +315,13 @@ class EngineTest {
         choose("main", "");
         main.script(error(new ProviderError.Unavailable("no network")));
 
-        assertThat(engine(clockAt(7)).plan()).isEqualTo(new Outlook.NoForecast("Main: no network"));
+        assertThat(engine(clockAt(7)).outlook()).isEqualTo(new Outlook.NoForecast("Main: no network"));
     }
 
     @Test
     void switchingTheProviderUsesTheNewOnesForecastAtTheNextPlan() throws IOException {
         var engine = engine(clockAt(7));
-        engine.plan();
+        engine.outlook();
         choose("backup", "");
 
         assertThat(source(engine).attribution()).isEqualTo("Forecast by Backup");
@@ -313,7 +331,7 @@ class EngineTest {
     @Test
     void aPlanningChangeKeepsTheForecastAndAsksNobody() throws IOException {
         var engine = engine(clockAt(7));
-        engine.plan();
+        engine.outlook();
         Files.writeString(config, Files.readString(config).replace("\"margin\": 0.85", "\"margin\": 0.5"));
 
         assertThat(source(engine).freshness()).isEqualTo(Freshness.CACHED);
@@ -324,7 +342,7 @@ class EngineTest {
     void duringACoolDownTheOutlookSaysUntilWhenTheProviderIsBusyAndAfterItDoesNot() {
         main.script(steps(days(2, 4.0)), error(new ProviderError.RateLimited("busy", Duration.ofHours(1))),
                 steps(days(2, 4.0)));
-        engine(clockAt(7)).plan();
+        engine(clockAt(7)).outlook();
 
         var busy = source(engine(clockAt(9))); // due again; the provider says wait
         assertThat(busy.freshness()).isEqualTo(Freshness.STALE);
@@ -491,7 +509,7 @@ class EngineTest {
                 Map.of("api_key", "STORED-KEY"))));
         keychain.locked = true;
 
-        var outlook = engine(clockAt(7), needy, backup).plan(); // as after a login that left the keyring locked
+        var outlook = engine(clockAt(7), needy, backup).outlook(); // as after a login that left the keyring locked
 
         assertThat(outlook).isInstanceOfSatisfying(Outlook.NoForecast.class,
                 none -> assertThat(none.keychainLocked()).isTrue());
@@ -507,7 +525,7 @@ class EngineTest {
         backup.script(error(new ProviderError.Unavailable("down")));
         choose("needy", "backup");
 
-        assertThat(engine(clockAt(7), needy, backup).plan()).isInstanceOfSatisfying(Outlook.NoForecast.class,
+        assertThat(engine(clockAt(7), needy, backup).outlook()).isInstanceOfSatisfying(Outlook.NoForecast.class,
                 none -> assertThat(none.keychainLocked()).isFalse());
     }
 
@@ -523,19 +541,29 @@ class EngineTest {
         assertThat(main.callCount()).isEqualTo(2);
     }
 
-    // the notifications through the whole engine; the example's window starts at 10:00 and its lead time is 15 minutes
+    // the notifications through the engine's rounds; the example's window starts at 10:00 and its lead time is 15
+    // minutes
 
     @Test
     void theOwnerIsToldOnceAheadOfTheWindowWhatToSet() {
-        engine(clockAt(9, 50)).plan();
+        startedAt(clockAt(9, 50));
         var announcement = told.getFirst();
         assertThat(announcement.kind()).isEqualTo(AnnouncementKind.CHARGE_WINDOW);
         assertThat(announcement.window().start()).isEqualTo(DAY.atTime(10, 0).atZone(BRUSSELS).toInstant());
         assertThat(announcement.window().amps()).isEqualTo(13);
 
-        engine(clockAt(9, 52)).plan(); // also after a restart: the announced windows are kept in a file
+        startedAt(clockAt(9, 52)); // also after a restart: the announced windows are kept in a file
 
         assertThat(told).hasSize(1);
+    }
+
+    @Test
+    void anOutlookAloneTellsNobody() {
+        var outlook = engine(clockAt(9, 50)).outlook();
+
+        assertThat(((Outlook.Planned) outlook).nextWindow()).hasValueSatisfying(window ->
+                assertThat(window.start()).isEqualTo(DAY.atTime(10, 0).atZone(BRUSSELS).toInstant()));
+        assertThat(told).isEmpty(); // within the lead time, yet only a round announces
     }
 
     @Test
@@ -543,10 +571,12 @@ class EngineTest {
         // without sun, 35 % falls below the minimum of 30 % the next day: the grid charge starts at midnight
         main.script(steps(days(3, 0)));
         var midnight = DAY.plusDays(1).atStartOfDay(BRUSSELS).toInstant();
-        var engine = engine(Clock.fixed(midnight.minus(Duration.ofMinutes(10)), ZoneOffset.UTC));
+        var scheduler = new ManualScheduler();
+        var engine = engine(Clock.fixed(midnight.minus(Duration.ofMinutes(10)), ZoneOffset.UTC), scheduler, main,
+                backup);
         engine.setBatteryLevel(new Percent(35));
 
-        engine.plan();
+        start(engine, scheduler);
 
         assertThat(told).extracting(Announcement::kind, announcement -> announcement.window().start())
                 .containsExactly(tuple(AnnouncementKind.GRID_CHARGE, midnight));
@@ -554,7 +584,8 @@ class EngineTest {
 
     @Test
     void theOwnerIsNotToldBeforeTheLeadTime() {
-        engine(clockAt(9, 30)).plan();
+        startedAt(clockAt(9, 30));
+        assertThat(rounds).singleElement().isInstanceOf(Outlook.Planned.class);
         assertThat(told).isEmpty();
     }
 
@@ -562,27 +593,28 @@ class EngineTest {
     void theOwnerIsNotToldWhenTheForecastCouldNotBeRefreshed() {
         main.script(steps(days(2, 4.0)), error(new ProviderError.Unavailable("down")));
         backup.script(error(new ProviderError.Unavailable("down")));
-        engine(clockAt(7)).plan();
+        engine(clockAt(7)).outlook();
 
-        assertThat(source(engine(clockAt(9, 50))).freshness()).isEqualTo(Freshness.STALE);
+        startedAt(clockAt(9, 50));
+
+        assertThat(((Outlook.Planned) rounds.getFirst()).forecastSource().freshness()).isEqualTo(Freshness.STALE);
         assertThat(told).isEmpty();
     }
 
     @Test
     void aLongerLeadTimeInTheConfigFileTellsTheOwnerSooner() throws IOException {
-        var engine = engine(clockAt(9, 30));
-        engine.plan();
+        var scheduler = startedAt(clockAt(9, 30));
         assertThat(told).isEmpty();
 
         Files.writeString(config, Files.readString(config).replace("\"notifyLeadMinutes\": 15", "\"notifyLeadMinutes\": 30"));
-        engine.plan();
+        scheduler.advance(PlanSchedule.EVERY);
 
         assertThat(told).hasSize(1);
     }
 
     @Test
     void anAnnouncedWindowIsPlannedAsItWasAnnouncedWhileItRuns() throws IOException {
-        engine(clockAt(9, 50)).plan();
+        startedAt(clockAt(9, 50));
         Files.writeString(config, Files.readString(config).replace("\"margin\": 0.85", "\"margin\": 0.5"));
 
         var window = planned(engine(clockAt(11))).nextWindow().orElseThrow();
@@ -603,15 +635,15 @@ class EngineTest {
         var valid = Files.readString(config);
         var engine = engine(clockAt(9));
         try (var log = LogCapture.of(ConfigHealth.class)) {
-            engine.plan();
+            engine.outlook();
             Files.delete(config);
-            engine.plan();
+            engine.outlook();
             Files.writeString(config, "{\"version\": 1}");
-            engine.plan();
-            engine.plan();
+            engine.outlook();
+            engine.outlook();
             Files.writeString(config, valid);
-            engine.plan();
-            engine.plan();
+            engine.outlook();
+            engine.outlook();
 
             assertThat(log.lines()).satisfiesExactly(
                     line -> assertThat(line).isEqualTo("INFO there is no config file at " + config),
@@ -636,7 +668,7 @@ class EngineTest {
             return days(2, 4.0);
         });
         var engine = engine(clockAt(9));
-        var planning = CompletableFuture.supplyAsync(engine::plan);
+        var planning = CompletableFuture.supplyAsync(engine::outlook);
         assertThat(asked.await(10, TimeUnit.SECONDS)).as("the provider is being asked").isTrue();
 
         var keys = new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "NEW-KEY")));

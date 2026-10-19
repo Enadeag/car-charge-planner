@@ -160,7 +160,7 @@ public final class DashboardPictures {
                 new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), _ -> { }),
                 new ManualScheduler());
         try {
-            return new OutlookMapper(new Messages(Language.ENGLISH)).map(engine.plan(), awayFile.periods());
+            return new OutlookMapper(new Messages(Language.ENGLISH)).map(engine.outlook(), awayFile.periods());
         } finally {
             engine.stop();
         }
