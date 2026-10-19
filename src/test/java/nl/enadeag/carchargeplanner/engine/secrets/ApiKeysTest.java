@@ -205,8 +205,10 @@ class ApiKeysTest {
         try (var log = LogCapture.of(ApiKeys.class)) {
             keys.applyChanges(NEW_OPEN_METEO_KEY, () -> { });
 
-            assertThat(log.lines()).contains("WARNING the API keys were saved in the system keychain, but "
-                    + file().path() + " is kept: its keys could not be read, so they were not moved");
+            assertThat(log.lines()).containsExactly("WARNING API keys are kept in " + file().path()
+                    + ", readable only by you: the file could not be read, or holds a name that is not allowed",
+                    "WARNING the API keys were saved in the system keychain, but " + file().path()
+                    + " is kept: its keys could not be read, so they were not moved");
         }
         assertThat(file().path()).hasContent(content);
         assertThat(keychain.entries).containsEntry("forecast/open-meteo/api_key", "OM-NEW");
