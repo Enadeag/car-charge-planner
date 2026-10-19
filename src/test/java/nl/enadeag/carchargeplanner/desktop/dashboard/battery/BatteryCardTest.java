@@ -28,12 +28,15 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @FxTest
 class BatteryCardTest {
 
     private static final BatteryModel TODAY = Models.SUNNY_TODAY.battery();
     private static final BatteryModel TOMORROW = Models.CLOUDY_TOMORROW.battery();
+    private static final Messages ENGLISH = new Messages(Language.ENGLISH);
 
     private final List<Integer> entered = new ArrayList<>();
     private Stage stage;
@@ -150,18 +153,40 @@ class BatteryCardTest {
         assertThat(entered).isEmpty();
     }
 
-    @Test
-    void textThatIsNotANumberKeepsTheLevelShown() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"lots", "6O", "50.5", " "})
+    void aTypoKeepsTheEntryOpenSaysWhyAndSendsNothing(String typed) throws Exception {
         show(TODAY, true);
-        var update = update();
-        Fx.run(update::fire);
+        Fx.run(update()::fire);
 
+        Fx.run(() -> {
+            card.editor().field().getEditor().setText(typed);
+            card.editor().save();
+        });
+
+        var why = ENGLISH.text(TextKey.BATTERY_NOT_A_NUMBER);
+        assertThat(entered).isEmpty();
+        assertThat(editing()).isTrue();
+        assertThat(Fx.call(() -> card.editor().problem())).isEqualTo(why);
+        assertThat(Fx.call(() -> AccessibleNames.help(card.editor().field()))).isEqualTo(why);
+    }
+
+    @Test
+    void aCorrectedTypoIsSavedAndTheReasonGoes() throws Exception {
+        show(TODAY, true);
+        Fx.run(update()::fire);
         Fx.run(() -> {
             card.editor().field().getEditor().setText("lots");
             card.editor().save();
         });
 
-        assertThat(entered).containsExactly(50);
+        Fx.run(() -> {
+            card.editor().field().getEditor().setText("64");
+            card.editor().save();
+        });
+
+        assertThat(entered).containsExactly(64);
+        assertThat(Fx.call(() -> card.editor().problem())).isEmpty();
     }
 
     @Test

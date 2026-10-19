@@ -27,6 +27,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - Settings and set-up open at once and say "Reading your settings…" until the keychain and the files have answered, and Save and Finish say "Saving…" while they store; meanwhile the dashboard and the tray keep working. Closed, these windows are let go of instead of hidden, so they take no memory while the app runs in the tray.
 - Linux: the tray icon comes back when the panel restarts, such as after Plasma's shell crashed: the app registers it again with the new panel.
 - Linux: a click on a notification counts only when the desktop's notification server reports it, not when another program sends the same signal.
+- The dashboard's battery level entry no longer saves the level shown before when what you typed is not a whole number: it says why and stays open, and nothing is saved until you fix it or cancel.
 
 ### Fixed
 - A screen reader reads several charge windows in a chart as a list ("Charging: 10:00 to 12:00, 14:00 to 15:00.") instead of as one "Charge window".

@@ -75,6 +75,8 @@ public enum TextKey {
     BATTERY_SAVE,
     /** The button that closes the battery level's entry without saving. */
     BATTERY_CANCEL,
+    /** Why a battery level that is not a whole number is not saved. */
+    BATTERY_NOT_A_NUMBER,
     /** The heading of the card with the away periods entered for specific days. */
     ONE_OFF_HEADING,
     /** The button that opens the entry of an away period on the selected day. */

@@ -336,7 +336,8 @@
     -fx-stroke-width: 2;
 }
 
-.battery-editor {
+.battery-editor,
+.battery-editor-line {
     -fx-alignment: center-left;
     -fx-spacing: 0.5em;
 }
