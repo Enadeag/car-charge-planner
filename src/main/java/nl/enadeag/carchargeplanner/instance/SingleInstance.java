@@ -98,9 +98,10 @@ public final class SingleInstance implements AutoCloseable {
                 if (reply == Reply.SILENT) {
                     return Claim.NO_ANSWER;
                 }
-                if (!pause(deadline)) {
+                if (deadlinePassed(deadline)) {
                     return Claim.UNREACHABLE;
                 }
+                pause(deadline);
             }
         } catch (IOException e) {
             problem = "the instance lock in " + made + " cannot be taken: " + e;
@@ -165,9 +166,10 @@ public final class SingleInstance implements AutoCloseable {
             if (!lockHeld(made)) {
                 return reply == Reply.UNREACHABLE ? Reply.STALE : reply;
             }
-            if (!pause(deadline)) {
+            if (deadlinePassed(deadline)) {
                 return Reply.UNREACHABLE;
             }
+            pause(deadline);
         }
     }
 
@@ -243,19 +245,20 @@ public final class SingleInstance implements AutoCloseable {
         }
     }
 
-    /** Waits a moment before looking again; false when the deadline has passed instead. */
-    private static boolean pause(long deadline) throws IOException {
-        var left = deadline - System.nanoTime();
-        if (left <= 0) {
-            return false;
-        }
+    /** Whether the time to look again is up, by {@link System#nanoTime()}. */
+    private static boolean deadlinePassed(long deadline) {
+        return deadline - System.nanoTime() <= 0;
+    }
+
+    /** Waits a moment before looking again, but not past the deadline, by {@link System#nanoTime()}. */
+    private static void pause(long deadline) throws IOException {
+        var left = Math.max(0, deadline - System.nanoTime());
         try {
             Thread.sleep(Duration.ofNanos(Math.min(left, RACE_PAUSE.toNanos())));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException("interrupted while waiting for another copy of the app", e);
         }
-        return true;
     }
 
     private void releaseLock() {
