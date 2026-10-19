@@ -60,7 +60,7 @@ public final class ExampleSolar implements ForecastProvider {
     public List<ForecastStep> fetch(SystemDescription system, Map<String, String> settings, Instant now)
             throws ProviderError {
         var key = apiKey(settings); // checked before anything is sent
-        return Steps.requireValid(Steps.eachArray(system, array -> fetchArray(system, array, key, settings)));
+        return Steps.requireValid(Steps.sumOverArrays(system, array -> fetchArray(system, array, key, settings)));
     }
 
     /**

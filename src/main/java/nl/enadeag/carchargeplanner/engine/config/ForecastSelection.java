@@ -9,8 +9,8 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
- * Which forecast providers the owner chose, and their settings that are not secret (secret ones are in the keychain).
- * A provider this version does not know is not refused here: the forecast service says so when it is asked.
+ * Which forecast providers the owner chose, and their settings that are not secret; secret ones are kept with the API
+ * keys. A provider this version does not know is not refused here: the forecast service says so when it is asked.
  *
  * @param primary the primary forecast provider
  * @param fallback the fallback provider, different from the primary, or empty for none

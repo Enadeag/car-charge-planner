@@ -20,7 +20,7 @@ final class ConfigHealth {
     }
 
     /** A plan was made with the config; logged when it could not be used before. */
-    synchronized void usable() {
+    synchronized void markUsable() {
         if (problem != null) {
             LOG.log(Level.INFO, "the config file can be used again");
             problem = null;
@@ -34,7 +34,7 @@ final class ConfigHealth {
      * @param found the problem, with its kind, the file and the engine's detail, which never holds a value of a
      *     setting
      */
-    synchronized void unusable(ConfigProblem found) {
+    synchronized void markUnusable(ConfigProblem found) {
         var text = found.kind() == ConfigProblem.Kind.MISSING ? "there is no config file at " + found.file()
                 : "the config file " + found.file() + " cannot be used (" + found.kind() + "): " + found.detail();
         if (text.equals(problem)) {

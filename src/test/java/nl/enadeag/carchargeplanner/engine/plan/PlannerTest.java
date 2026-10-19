@@ -181,7 +181,7 @@ class PlannerTest {
     void ampsAreRoundedDownAndCappedAtTheChargersMaximum() {
         var system = Forecasts.example();
         var step = new ForecastStep(at(SUMMER_FRI, 12), at(SUMMER_FRI, 13), 3.7);
-        double usable = Charging.usableKw(step, system, PREFERENCES);
+        double usable = Charging.usableSurplusKw(step, system, PREFERENCES);
         assertThat(Charging.ampsFor(usable, system.charger())).isEqualTo((int) (usable * 1000 / 230));
         assertThat(Charging.ampsFor(50, system.charger())).isEqualTo(32);
     }

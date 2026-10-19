@@ -129,10 +129,10 @@ public final class Engine {
         try {
             config = configFile.read();
         } catch (ConfigProblem e) {
-            configHealth.unusable(e);
+            configHealth.markUnusable(e);
             return new Outlook.NotSetUp(e.kind(), e.file(), e.detail());
         }
-        configHealth.usable();
+        configHealth.markUsable();
         var now = clock.instant();
         ForecastResult forecast;
         try {
@@ -149,9 +149,10 @@ public final class Engine {
 
     /**
      * Makes a plan from a config that need not be saved, such as the one set-up shows before Finish, so the owner sees
-     * their dashboard with their own data first. Nothing is saved and nobody is told about a window; a forecast that
-     * is fetched is cached as for a plan, so the first plan after saving the same system does not ask the provider
-     * again. Blocks while the forecast is fetched: call it away from the user interface's thread.
+     * their dashboard with their own data first. The config, the keys and the owner's other files stay as they are,
+     * and nobody is told about a window; only a forecast that is fetched is cached, as for a plan, so the first plan
+     * after saving the same system does not ask the provider again. Blocks while the forecast is fetched: call it away
+     * from the user interface's thread.
      *
      * @param config the whole config to plan with, as the owner entered it
      * @param keys every provider's secret settings as the owner entered them, in place of the stored ones; may be
@@ -161,7 +162,7 @@ public final class Engine {
     public Outlook preview(EngineConfig config, Secrets keys) {
         var now = clock.instant();
         try {
-            var forecast = forecasts.get(SystemDescription.of(config.system()), config.forecast(), keys, now);
+            var forecast = forecasts.getWithKeys(SystemDescription.of(config.system()), config.forecast(), keys, now);
             return planned(config, forecast, now);
         } catch (ForecastUnavailable e) {
             return new Outlook.NoForecast(e.getMessage());
@@ -276,7 +277,8 @@ public final class Engine {
      *
      * @param providerId the provider to try; one this version does not know gives a failed result
      * @param system the system as the owner entered it, which need not be saved yet
-     * @param settings as the owner entered them, secret ones included; a secret one left out comes from the keychain
+     * @param settings as the owner entered them, secret ones included; a secret one left out comes from the stored
+     *     keys, in the keychain or the private file
      * @return whether it worked, the days of forecast, and a message for the owner
      */
     public ConnectionResult checkConnection(ProviderId providerId, HomeSystem system, Map<String, String> settings) {
@@ -347,7 +349,7 @@ public final class Engine {
      *     {@link SecretsProblem.Kind#LOCKED} while the keychain that holds them is locked; the message says so in words
      *     for the owner
      */
-    public Secrets apiKeys() throws SecretsProblem {
+    public Secrets storedApiKeys() throws SecretsProblem {
         return apiKeys.load();
     }
 
@@ -379,9 +381,9 @@ public final class Engine {
      * @param prompting runs, on the calling thread, once the system's prompt to unlock the keychain shows
      * @throws SecretsProblem as {@link #saveApiKeys(Secrets)}
      */
-    public void saveApiKeys(KeyChanges changes, Runnable prompting) throws SecretsProblem {
+    public void applyKeyChanges(KeyChanges changes, Runnable prompting) throws SecretsProblem {
         try {
-            apiKeys.update(changes, prompting);
+            apiKeys.applyChanges(changes, prompting);
             forecasts.forgetFailures();
         } finally {
             schedule.runSoon();

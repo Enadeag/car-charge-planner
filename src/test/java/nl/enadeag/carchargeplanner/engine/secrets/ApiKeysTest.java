@@ -465,7 +465,7 @@ class ApiKeysTest {
         var keys = keys(lockable);
         var prompted = new AtomicInteger();
 
-        keys.update(NEW_OPEN_METEO_KEY, prompted::incrementAndGet);
+        keys.applyChanges(NEW_OPEN_METEO_KEY, prompted::incrementAndGet);
 
         assertThat(prompted).hasValue(1);
         assertThat(keys.load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"),
@@ -480,7 +480,7 @@ class ApiKeysTest {
         var before = Map.copyOf(lockable.entries);
         var keys = keys(lockable);
 
-        keys.update(NEW_OPEN_METEO_KEY, () -> { });
+        keys.applyChanges(NEW_OPEN_METEO_KEY, () -> { });
 
         assertThat(file().read()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"))));
         assertThat(lockable.entries).as("the locked keychain is not touched").isEqualTo(before);
@@ -497,7 +497,7 @@ class ApiKeysTest {
         file().write(KEYS);
         var keys = keys(new NoKeychain());
 
-        keys.update(NEW_OPEN_METEO_KEY, () -> { });
+        keys.applyChanges(NEW_OPEN_METEO_KEY, () -> { });
 
         assertThat(file().read()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"),
                 FORECAST_SOLAR, Map.of("api_key", "FS-SECRET-2"))));
@@ -508,7 +508,7 @@ class ApiKeysTest {
         var keys = keys(keychain);
         keys.save(KEYS);
 
-        keys.update(new KeyChanges(Secrets.NONE, Map.of(FORECAST_SOLAR, Set.of("api_key"))), () -> { });
+        keys.applyChanges(new KeyChanges(Secrets.NONE, Map.of(FORECAST_SOLAR, Set.of("api_key"))), () -> { });
 
         assertThat(keys.load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-SECRET-1"))));
         assertThat(keychain.entries).doesNotContainKey("forecast/forecast-solar/api_key");
@@ -519,7 +519,7 @@ class ApiKeysTest {
         var lockable = new LockableKeychain();
         var prompted = new AtomicInteger();
 
-        keys(lockable).update(NEW_OPEN_METEO_KEY, prompted::incrementAndGet);
+        keys(lockable).applyChanges(NEW_OPEN_METEO_KEY, prompted::incrementAndGet);
 
         assertThat(prompted).hasValue(0);
         assertThat(lockable.prompts).hasValue(0);
@@ -689,7 +689,7 @@ class ApiKeysTest {
         var prompted = new AtomicInteger();
         var bad = KeyChanges.entering(new Secrets(Map.of(OPEN_METEO, Map.of("api key", "x"))));
 
-        assertThatThrownBy(() -> keys(lockable).update(bad, prompted::incrementAndGet)).isInstanceOf(SecretsProblem.class);
+        assertThatThrownBy(() -> keys(lockable).applyChanges(bad, prompted::incrementAndGet)).isInstanceOf(SecretsProblem.class);
 
         assertThat(prompted).hasValue(0);
         assertThat(lockable.prompts).hasValue(0);
@@ -711,7 +711,7 @@ class ApiKeysTest {
     void anUpdateOverADamagedIndexKeepsOnlyWhatWasEntered() throws SecretsProblem {
         keychain.entries.put("index", "not a list");
 
-        keys(keychain).update(NEW_OPEN_METEO_KEY, () -> { });
+        keys(keychain).applyChanges(NEW_OPEN_METEO_KEY, () -> { });
 
         assertThat(file().path()).doesNotExist();
         assertThat(keychain.entries).containsEntry("forecast/open-meteo/api_key", "OM-NEW");

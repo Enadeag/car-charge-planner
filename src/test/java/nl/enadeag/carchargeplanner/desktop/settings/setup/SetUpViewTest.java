@@ -262,7 +262,7 @@ class SetUpViewTest {
         next(view, 1);
 
         assertThat(setUp.provider.asked).contains(Map.of("api_key", "TYPED-KEY"));
-        assertThat(setUp.engine.apiKeys().of(new ProviderId("open-meteo"))).containsEntry("api_key", "TYPED-KEY");
+        assertThat(setUp.engine.storedApiKeys().of(new ProviderId("open-meteo"))).containsEntry("api_key", "TYPED-KEY");
     }
 
     @Test

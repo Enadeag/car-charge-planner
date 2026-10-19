@@ -23,8 +23,9 @@ import tools.jackson.databind.node.ObjectNode;
 /**
  * The keys in a JSON file beside the config, for when there is no usable keychain:
  * {@code {"version": 1, "open-meteo": {"api_key": "..."}}}, where a file without a version is version 1. Where files
- * have modes (Linux, macOS) it is readable and writable by its owner only; on Windows the user's own application data
- * folder already keeps it from other users. A file that cannot be used is kept as {@code secrets.json.damaged-<time>},
+ * have modes (Linux, macOS) it is readable and writable by its owner only: it is written so, and one that others can
+ * read is made so before it is read ({@link #makePrivate()}). On Windows the user's own application data folder
+ * already keeps it from other users. A file that cannot be used is kept as {@code secrets.json.damaged-<time>},
  * as private as it was, before new keys are written; no message quotes it.
  */
 public final class SecretsFile {
@@ -100,8 +101,8 @@ public final class SecretsFile {
     }
 
     /**
-     * The values are safe in the keychain when this is called; a file that stays is moved again next time. A file
-     * that could not be read is kept aside instead, as its keys are not in the keychain.
+     * Removes the file, once its keys are safe in the keychain. A file that could not be read is kept aside instead,
+     * as its keys are not in the keychain; a file that cannot be removed stays, and is moved again next time.
      */
     void delete() {
         try {

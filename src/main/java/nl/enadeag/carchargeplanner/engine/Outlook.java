@@ -24,7 +24,7 @@ public sealed interface Outlook {
      * @param batteryPct the battery level the plan starts from
      * @param batteryAssumed true while the battery level is a placeholder, not a reading
      * @param gridAdvice present when the battery would end a day below the minimum charge level
-     * @param forecast where the forecast came from
+     * @param forecastSource where the forecast came from
      * @param houseKw the power the house uses on its own in kW, 0 or more
      * @param minimumPct the minimum charge level of the battery
      * @param targetPct the target charge level of the battery
@@ -36,7 +36,7 @@ public sealed interface Outlook {
             Percent batteryPct,
             boolean batteryAssumed,
             Optional<GridAdvice> gridAdvice,
-            ForecastSource forecast,
+            ForecastSource forecastSource,
             double houseKw,
             Percent minimumPct,
             Percent targetPct) implements Outlook {

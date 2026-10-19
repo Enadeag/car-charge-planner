@@ -47,7 +47,8 @@ public final class AnnouncedWindows {
     }
 
     /**
-     * Replaces the windows in the file.
+     * Replaces the windows in the file. A file that cannot be written is left as it is, without an error: the
+     * announcer keeps the windows for this run itself, and at worst a window is announced once more after a restart.
      *
      * @param windows the windows to keep, possibly none
      */

@@ -34,7 +34,7 @@ public final class ApiKeys implements SecretsSource {
     private static final System.Logger LOG = System.getLogger(ApiKeys.class.getName());
 
     /** What an attempt to store the keys in the keychain came to. */
-    private enum Stored {
+    private enum SaveResult {
         /** They are in the keychain. */
         IN_KEYCHAIN,
         /** The keychain is locked: nothing was written. */
@@ -53,8 +53,8 @@ public final class ApiKeys implements SecretsSource {
         boolean replaces();
     }
 
-    private final Keychain system;
-    private final KeychainEntries keychain;
+    private final Keychain keychain;
+    private final KeychainEntries entries;
     private final SecretsFile file;
     private final InstantSource clock;
     private final Object turn = new Object();
@@ -92,8 +92,8 @@ public final class ApiKeys implements SecretsSource {
         if (clock == null) {
             throw new IllegalArgumentException("the clock must not be null");
         }
-        this.system = keychain;
-        this.keychain = new KeychainEntries(keychain);
+        this.keychain = keychain;
+        this.entries = new KeychainEntries(keychain);
         this.file = file;
         this.clock = clock;
     }
@@ -114,16 +114,16 @@ public final class ApiKeys implements SecretsSource {
             if (remembered != null) {
                 return remembered;
             }
-            if (leftAlone()) {
+            if (waitingToAskKeychain()) {
                 if (unreadable != null) {
                     throw unreadable;
                 }
                 return fromFile();
             }
             unreadable = null;
-            switch (keychain.state()) {
+            switch (entries.state()) {
                 case UNUSABLE -> {
-                    leaveAlone();
+                    waitBeforeAskingKeychain();
                     keptIn(KeyStorage.FILE, "the system keychain cannot be used");
                     return fromFile();
                 }
@@ -137,13 +137,13 @@ public final class ApiKeys implements SecretsSource {
             if (file.exists()) {
                 var kept = moveToKeychain();
                 if (kept.isPresent()) {
-                    leaveAlone();
+                    waitBeforeAskingKeychain();
                     keptIn(KeyStorage.FILE, "they could not be moved into the system keychain");
                     return kept.get();
                 }
             }
             try {
-                var secrets = keychain.read();
+                var secrets = entries.read();
                 remembered = secrets;
                 keptIn(KeyStorage.KEYCHAIN, "");
                 return secrets;
@@ -153,7 +153,7 @@ public final class ApiKeys implements SecretsSource {
                 }
                 var problem = new SecretsProblem(
                         "The system keychain could not be read. Unlock it, or enter the keys again.");
-                leaveAlone();
+                waitBeforeAskingKeychain();
                 unreadable = problem;
                 keptIn(KeyStorage.KEYCHAIN, "");
                 throw problem;
@@ -163,10 +163,10 @@ public final class ApiKeys implements SecretsSource {
 
     /**
      * Stores them all, replacing what is stored, in the keychain when it works and else in the file; as
-     * {@link #update(KeyChanges, Runnable)}, which a client that may not have read every stored key uses instead.
+     * {@link #applyChanges(KeyChanges, Runnable)}, which a client that may not have read every stored key uses instead.
      *
      * @param secrets every provider's secret settings; what is left out is forgotten
-     * @throws SecretsProblem as {@link #update(KeyChanges, Runnable)}
+     * @throws SecretsProblem as {@link #applyChanges(KeyChanges, Runnable)}
      */
     public void save(Secrets secrets) throws SecretsProblem {
         secrets.checkNames();
@@ -198,7 +198,7 @@ public final class ApiKeys implements SecretsSource {
      *     saved. Of the kind {@link SecretsProblem.Kind#FAILED} when a name has characters that are not allowed or
      *     the file could not be written
      */
-    public void update(KeyChanges changes, Runnable prompting) throws SecretsProblem {
+    public void applyChanges(KeyChanges changes, Runnable prompting) throws SecretsProblem {
         changes.entered().checkNames();
         store(new Edit() {
             @Override
@@ -215,18 +215,18 @@ public final class ApiKeys implements SecretsSource {
 
     private void store(Edit edit, Runnable prompting) throws SecretsProblem {
         synchronized (saving) {
-            if (intoKeychain(edit) != Stored.LOCKED) {
+            if (intoKeychainElseFile(edit) != SaveResult.LOCKED) {
                 return;
             }
             var stored = switch (unlock(prompting)) {
-                case UNLOCKED -> intoKeychain(edit);
+                case UNLOCKED -> intoKeychainElseFile(edit);
                 case DISMISSED -> {
                     intoFile(edit, "the system keychain is locked, and was not unlocked when asked");
-                    yield Stored.IN_FILE;
+                    yield SaveResult.IN_FILE;
                 }
-                case NOT_ANSWERED -> Stored.LOCKED;
+                case NOT_ANSWERED -> SaveResult.LOCKED;
             };
-            if (stored == Stored.LOCKED) {
+            if (stored == SaveResult.LOCKED) {
                 throw new SecretsProblem(SecretsProblem.Kind.LOCKED,
                         "The system keychain is locked. Unlock it and save again.");
             }
@@ -238,7 +238,7 @@ public final class ApiKeys implements SecretsSource {
      * nothing and says that the keychain is locked. Nothing happens when no save waits. Never blocks for long.
      */
     public void stopUnlocking() {
-        system.stopUnlocking();
+        keychain.stopUnlocking();
     }
 
     /**
@@ -272,18 +272,18 @@ public final class ApiKeys implements SecretsSource {
      * keys stored now are read first unless the edit replaces them; a damaged index counts as none, as its entries
      * cannot be found anyway.
      */
-    private Stored intoKeychain(Edit edit) throws SecretsProblem {
+    private SaveResult intoKeychainElseFile(Edit edit) throws SecretsProblem {
         synchronized (turn) {
             remembered = null;
             askAgainAt = null;
             unreadable = null;
-            switch (keychain.state()) {
+            switch (entries.state()) {
                 case UNUSABLE -> {
                     intoFile(edit, "the system keychain cannot be used");
-                    return Stored.IN_FILE;
+                    return SaveResult.IN_FILE;
                 }
                 case LOCKED -> {
-                    return Stored.LOCKED;
+                    return SaveResult.LOCKED;
                 }
                 case USABLE -> {
                     // written below
@@ -291,18 +291,18 @@ public final class ApiKeys implements SecretsSource {
             }
             try {
                 var secrets = edit.apply(edit.replaces() ? Secrets.NONE : storedInKeychain());
-                keychain.write(secrets);
+                entries.write(secrets);
                 file.delete();
                 remembered = secrets;
                 keptIn(KeyStorage.KEYCHAIN, "");
-                return Stored.IN_KEYCHAIN;
+                return SaveResult.IN_KEYCHAIN;
             } catch (KeychainException e) {
                 if (e.kind() == KeychainException.Kind.LOCKED) {
-                    return Stored.LOCKED; // locked since it was asked, or the keyring holds none of our items yet
+                    return SaveResult.LOCKED; // locked since it was asked, or the keyring holds none of our items yet
                 }
                 // such as Windows error 1312 over ssh: no keychain after all, so the file it is
                 intoFile(edit, "the system keychain cannot be used");
-                return Stored.IN_FILE;
+                return SaveResult.IN_FILE;
             }
         }
     }
@@ -314,7 +314,7 @@ public final class ApiKeys implements SecretsSource {
      */
     private Secrets storedInKeychain() throws KeychainException {
         try {
-            return keychain.read();
+            return entries.read();
         } catch (KeychainException e) {
             if (e.kind() != KeychainException.Kind.REFUSED) {
                 throw e;
@@ -338,7 +338,7 @@ public final class ApiKeys implements SecretsSource {
                 }
             }
             file.write(edit.apply(stored));
-            leaveAlone();
+            waitBeforeAskingKeychain();
             keptIn(KeyStorage.FILE, why);
         }
     }
@@ -351,7 +351,7 @@ public final class ApiKeys implements SecretsSource {
     private UnlockOutcome unlock(Runnable prompting) {
         LOG.log(Level.INFO, "the system keychain is locked: asking to unlock it to save the API keys");
         try {
-            var outcome = system.unlock(UNLOCK_WAIT, prompting);
+            var outcome = keychain.unlock(UNLOCK_WAIT, prompting);
             LOG.log(Level.INFO, switch (outcome) {
                 case UNLOCKED -> "the system keychain was unlocked";
                 case DISMISSED -> "the system keychain was not unlocked: the prompt was dismissed";
@@ -378,11 +378,11 @@ public final class ApiKeys implements SecretsSource {
                 "The system keychain is locked. Unlock it so the app can read the API keys.");
     }
 
-    private boolean leftAlone() {
+    private boolean waitingToAskKeychain() {
         return askAgainAt != null && clock.instant().isBefore(askAgainAt);
     }
 
-    private void leaveAlone() {
+    private void waitBeforeAskingKeychain() {
         askAgainAt = clock.instant().plus(RETRY_AFTER);
     }
 
@@ -418,8 +418,8 @@ public final class ApiKeys implements SecretsSource {
         inFile.checkNames();
         try {
             var secrets = KeyChanges.entering(inFile).applyTo(storedInKeychain());
-            keychain.write(secrets);
-            if (!keychain.read().equals(secrets)) {
+            entries.write(secrets);
+            if (!entries.read().equals(secrets)) {
                 return Optional.of(inFile);
             }
         } catch (KeychainException _) {

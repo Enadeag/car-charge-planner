@@ -133,7 +133,7 @@ class LockedKeyringTest {
         })).isTrue();
 
         assertThat(keychain.prompts).hasValue(1);
-        assertThat(settings.engine.apiKeys()).as("the other provider's key stays").isEqualTo(new Secrets(Map.of(
+        assertThat(settings.engine.storedApiKeys()).as("the other provider's key stays").isEqualTo(new Secrets(Map.of(
                 OPEN_METEO, Map.of("api_key", "NEW-KEY"), FORECAST_SOLAR, Map.of("api_key", "FS-STORED"))));
         assertThat(folder.resolve("secrets.json")).doesNotExist();
         Fx.run(() -> view.show(Category.FORECAST));

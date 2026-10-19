@@ -120,7 +120,7 @@ public final class OpenMeteo implements ForecastProvider {
             query.put("apikey", key); // the way Open-Meteo documents it for its customer servers
         }
         try {
-            return URI.create(server.resolve(PATH) + "?" + query.entrySet().stream()
+            return URI.create(server.withPath(PATH) + "?" + query.entrySet().stream()
                     .map(e -> e.getKey() + "=" + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
                     .collect(Collectors.joining("&")));
         } catch (IllegalArgumentException _) {
@@ -143,7 +143,7 @@ public final class OpenMeteo implements ForecastProvider {
         for (var array : system.arrays()) {
             requestUri(system, array, settings); // a wrong address is reported before anything is sent
         }
-        return Steps.requireValid(Steps.eachArray(system, array -> fetchArray(system, array, settings)));
+        return Steps.requireValid(Steps.sumOverArrays(system, array -> fetchArray(system, array, settings)));
     }
 
     private List<ForecastStep> fetchArray(SystemDescription system, PanelArray array, Map<String, String> settings)

@@ -112,7 +112,7 @@ class EngineLifeCycleTest {
                 Arguments.of("away period removed", (Change) engine -> engine.removeAwayPeriod(AWAY)),
                 Arguments.of("config", (Change) engine -> engine.saveConfig(engine.config())),
                 Arguments.of("API keys", (Change) engine -> engine.saveApiKeys(new Secrets(Map.of()))),
-                Arguments.of("API key changes", (Change) engine -> engine.saveApiKeys(KeyChanges.entering(Secrets.NONE), () -> { })));
+                Arguments.of("API key changes", (Change) engine -> engine.applyKeyChanges(KeyChanges.entering(Secrets.NONE), () -> { })));
     }
 
     @ParameterizedTest(name = "{0}")

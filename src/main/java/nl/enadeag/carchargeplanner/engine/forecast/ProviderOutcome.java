@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 /** What asking one provider came to: a forecast to use, or the reason there is none. */
-sealed interface Outcome {
+sealed interface ProviderOutcome {
 
     /**
      * A forecast to use.
@@ -16,7 +16,7 @@ sealed interface Outcome {
      * @param cooldownUntil the end of the provider's rate limit, when it has one
      */
     record Usable(List<ForecastStep> steps, Instant fetchedAt, Freshness freshness,
-            Optional<Instant> cooldownUntil) implements Outcome {
+            Optional<Instant> cooldownUntil) implements ProviderOutcome {
     }
 
     /**
@@ -24,6 +24,6 @@ sealed interface Outcome {
      *
      * @param reason why, starting with the provider's name
      */
-    record Failure(String reason) implements Outcome {
+    record Failure(String reason) implements ProviderOutcome {
     }
 }

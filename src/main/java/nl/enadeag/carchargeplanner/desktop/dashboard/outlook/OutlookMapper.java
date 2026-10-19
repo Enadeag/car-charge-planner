@@ -114,7 +114,7 @@ public final class OutlookMapper {
      * as "Weather data: Open-Meteo.com (CC BY 4.0) · updated 10:51". The credit is the provider's own, in English.
      */
     private String footer(Outlook.Planned planned) {
-        var source = planned.forecast();
+        var source = planned.forecastSource();
         var parts = new ArrayList<>(List.of(source.attribution()));
         if (source.providerRole() == ProviderRole.FALLBACK) {
             parts.add(source.primaryName().isEmpty() ? messages.text(TextKey.FOOTER_FALLBACK_UNKNOWN)

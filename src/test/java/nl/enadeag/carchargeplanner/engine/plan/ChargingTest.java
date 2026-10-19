@@ -61,7 +61,7 @@ class ChargingTest {
         var system = Forecasts.exampleOnPhases(Phases.THREE);
         var noon = Instant.parse("2026-07-03T10:00:00Z");
         var step = new ForecastStep(noon, noon.plusSeconds(3600), 9.0);
-        double surplus = Charging.usableKw(step, system, PREFERENCES);
+        double surplus = Charging.usableSurplusKw(step, system, PREFERENCES);
         int amps = Charging.ampsFor(surplus, system.charger());
         assertThat(Charging.powerKw(amps, system.charger())).isLessThanOrEqualTo(surplus + 1e-9);
     }

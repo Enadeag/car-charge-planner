@@ -131,7 +131,7 @@ class StepsTest {
         var system = new SystemDescription(new Coordinates(52.37, 4.9), AMSTERDAM, List.of(east, west));
         var asked = new ArrayList<PanelArray>();
 
-        var total = Steps.eachArray(system, array -> {
+        var total = Steps.sumOverArrays(system, array -> {
             asked.add(array);
             return List.of(step(8, array.kwp()));
         });

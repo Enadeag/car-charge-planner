@@ -41,7 +41,7 @@ public record ProviderInfo(
      * What the provider's fetch is given: its declared settings that have a value, and nothing else.
      *
      * @param plain settings from the config file; a secret setting found here is not used
-     * @param secret settings from the keychain or as the owner typed them; only the secret ones are used
+     * @param secret settings as stored with the API keys or as the owner typed them; only the secret ones are used
      * @return per declared setting key, its value; empty values are left out
      */
     public Map<String, String> settingsFrom(Map<String, String> plain, Map<String, String> secret) {

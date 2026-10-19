@@ -34,7 +34,7 @@ public final class StoredJson {
      * @param tree the tree to write
      * @return the JSON text
      */
-    public static String print(JsonNode tree) {
+    public static String pretty(JsonNode tree) {
         return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(tree);
     }
 

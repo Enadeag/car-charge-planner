@@ -50,7 +50,7 @@ final class WindowFinder {
             if (!step.end().isAfter(start)) {
                 continue;
             }
-            var segment = new Segment(start, step.end(), Charging.usableKw(step, system, preferences));
+            var segment = new Segment(start, step.end(), Charging.usableSurplusKw(step, system, preferences));
             if (canCharge(segment, unavailable)) {
                 if (!current.isEmpty() && !current.getLast().end().equals(segment.start())) {
                     runs.add(new Run(current));
@@ -92,7 +92,8 @@ final class WindowFinder {
      * Picks the windows, one per run at most, that deliver the energy needed.
      *
      * @param runs the runs of one day
-     * @param neededKwh the grid-side energy to deliver in kWh
+     * @param neededKwh the wall-side energy to take from the solar surplus in kWh; import within the tolerance is not
+     *     counted toward it
      * @return the chosen windows in time order; they may fall short when the runs hold too little sun
      */
     List<Window> windows(List<Run> runs, double neededKwh) {

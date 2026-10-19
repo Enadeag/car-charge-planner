@@ -42,8 +42,8 @@ public final class StoredFile<T> {
     private Stored<T> remembered = new Stored.Absent<>();
 
     /**
-     * Makes the store for one file, which names a file that cannot be used by the system's clock; nothing is read
-     * yet.
+     * Makes the store for one file; a file that cannot be used is renamed with the time on the system's clock.
+     * Nothing is read yet.
      *
      * @param path where the file is, or will be made; its folder is made when needed
      * @param format how the file is read and written
@@ -109,7 +109,7 @@ public final class StoredFile<T> {
      */
     public synchronized void write(T value) throws IOException {
         moveAsideWhenUnusable();
-        PrivateFiles.write(path, StoredJson.print(format.write(value)));
+        PrivateFiles.write(path, StoredJson.pretty(format.write(value)));
         remembered = new Stored.Found<>(value);
         try {
             seen = stamp();

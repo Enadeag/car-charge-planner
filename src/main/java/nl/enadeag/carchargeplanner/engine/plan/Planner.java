@@ -116,7 +116,7 @@ public final class Planner {
      * The energy to bring the battery from a level to the target charge level.
      *
      * @param socPct the battery level to start from
-     * @return the grid-side energy in kWh, 0 when the level is at or above the target
+     * @return the wall-side energy in kWh, 0 when the level is at or above the target
      */
     double energyNeededKwh(Percent socPct) {
         double missingPct = Math.max(0, preferences.targetPct().value() - socPct.value());

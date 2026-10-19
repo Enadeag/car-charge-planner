@@ -108,7 +108,7 @@ public final class ForecastSolar implements ForecastProvider {
         for (var array : system.arrays()) {
             requestUri(system, array, settings); // a wrong key is reported before anything is sent
         }
-        return Steps.requireValid(Steps.eachArray(system, array -> fetchArray(system, array, settings, now)));
+        return Steps.requireValid(Steps.sumOverArrays(system, array -> fetchArray(system, array, settings, now)));
     }
 
     private List<ForecastStep> fetchArray(SystemDescription system, PanelArray array, Map<String, String> settings,

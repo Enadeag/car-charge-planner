@@ -28,7 +28,7 @@ what is wrong with a list of steps in words; `Steps.requireValid(steps)` throws 
 
 **Several panel arrays.** A home can have panels facing different ways (an east and a west roof, a garage); each is
 a `PanelArray` in `system.arrays()`, and the forecast you return is their total. A service that takes one plane per
-request is asked once per array: `Steps.eachArray(system, fetchOne)` calls `fetchOne` for each and adds the answers
+request is asked once per array: `Steps.sumOverArrays(system, fetchOne)` calls `fetchOne` for each and adds the answers
 up with `Steps.addUp`. When the steps line up (one service, the same place) each step's power is the sum; when they
 do not, the steps are cut where any array's step starts or ends, so no energy is lost; an array without a step at
 some time adds nothing then, and the total only covers the time every array's answer covers. A failure for any
@@ -139,7 +139,7 @@ public final class ExampleSolar implements ForecastProvider {
     public List<ForecastStep> fetch(SystemDescription system, Map<String, String> settings, Instant now)
             throws ProviderError {
         var key = apiKey(settings); // checked before anything is sent
-        return Steps.requireValid(Steps.eachArray(system, array -> fetchArray(system, array, key, settings)));
+        return Steps.requireValid(Steps.sumOverArrays(system, array -> fetchArray(system, array, key, settings)));
     }
 
     /**

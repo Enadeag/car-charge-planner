@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.engine.forecast;
 
-/** An ability a forecast provider may have: turning what a person typed into places. */
+/** A place search a forecast provider may offer: it turns what the owner typed into places. */
 public interface PlaceSearch {
 
     /**

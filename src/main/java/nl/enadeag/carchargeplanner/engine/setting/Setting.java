@@ -27,9 +27,9 @@ public enum Setting {
     CAR_DAILY_DISTANCE,
     /** The phases the charger charges on. */
     CHARGER_PHASES,
-    /** The lowest current the charger and car accept. */
+    /** The lowest current per phase the charger and the car accept. */
     CHARGER_MIN_CURRENT,
-    /** The highest current the charger and the home connection allow. */
+    /** The highest current per phase the charger, the car and the home connection allow. */
     CHARGER_MAX_CURRENT,
     /** The voltage at the charger. */
     CHARGER_VOLTAGE,

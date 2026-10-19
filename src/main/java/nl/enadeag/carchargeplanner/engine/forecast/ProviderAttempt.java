@@ -62,14 +62,14 @@ final class ProviderAttempt {
      * Gets a forecast from the cache or the provider, whichever the rules allow; never throws.
      *
      * @param system the system to forecast
-     * @param secretSettings gives the provider's settings with values, secret ones included; asked only when the
-     *     cache cannot answer by itself, as it may read the keychain
+     * @param settings gives the provider's settings with values, secret ones included; asked only when the cache
+     *     cannot answer by itself, as it may read the keychain
      * @param key what the forecast depends on, as {@link ForecastCache#key} makes it
-     * @param storedSecrets gives every stored secret value of every provider, which a reason never shows; asked only
-     *     when the provider is asked, right after {@code secretSettings}
+     * @param storedSecrets gives every stored secret value of every provider, which a reason never shows; asked right
+     *     after {@code settings}, so also only when the cache cannot answer by itself
      * @return a forecast to use, or the reason there is none; it never holds a secret value
      */
-    Outcome run(SystemDescription system, Supplier<Map<String, String>> secretSettings, JsonNode key,
+    ProviderOutcome forecastOrReason(SystemDescription system, Supplier<Map<String, String>> settings, JsonNode key,
             Supplier<List<String>> storedSecrets) {
         var cached = cache.forecast(info.id(), key, now);
         var held = new CacheState(cached.filter(forecast -> forecast.age(now).compareTo(info.maxUsefulAge()) <= 0),
@@ -77,16 +77,16 @@ final class ProviderAttempt {
         if (cached.isPresent() && !force && cached.get().age(now).compareTo(info.minRefresh()) < 0) {
             return held.fromCache(cached.get(), Freshness.CACHED);
         }
-        var settings = secretSettings.get();
-        var secrets = Stream.concat(info.secretValues(settings).stream(), storedSecrets.get().stream()).toList();
-        var missing = info.missingRequired(settings);
+        var values = settings.get();
+        var secrets = Stream.concat(info.secretValues(values).stream(), storedSecrets.get().stream()).toList();
+        var missing = info.missingRequired(values);
         if (!missing.isEmpty()) { // nothing is sent without what the provider requires
             return afterFailure(String.join(", ", missing) + " is required", secrets, CacheState.NONE);
         }
         return held.cooldownUntil().or(this::waitingAfterFailure)
                 .map(until -> held.stale().orElseGet(
                         () -> failure("not asked again until " + clock(until, system.timezone()))))
-                .orElseGet(() -> fetch(system, settings, key, secrets, held));
+                .orElseGet(() -> fetch(system, values, key, secrets, held));
     }
 
     private Optional<Instant> waitingAfterFailure() {
@@ -104,14 +104,14 @@ final class ProviderAttempt {
      *     not be asked
      * @return the provider's forecast, else as {@link #afterFailure} tells it
      */
-    private Outcome fetch(SystemDescription system, Map<String, String> settings, JsonNode key, List<String> secrets,
-            CacheState held) {
+    private ProviderOutcome fetch(SystemDescription system, Map<String, String> settings, JsonNode key,
+            List<String> secrets, CacheState held) {
         try {
             var steps = Steps.requireValid(provider.fetch(system, settings, now));
             retryAt.remove(info.id());
-            health.answered(info);
+            health.recordAnswer(info);
             cache.saveForecast(info.id(), key, now, steps);
-            return new Outcome.Usable(steps, now, Freshness.FRESH, Optional.empty());
+            return new ProviderOutcome.Usable(steps, now, Freshness.FRESH, Optional.empty());
         } catch (ProviderError.RateLimited e) {
             var until = now.plus(e.retryAfter().orElse(info.minRefresh()));
             cache.saveCooldown(info.id(), until);
@@ -140,14 +140,14 @@ final class ProviderAttempt {
      * @param held what the cache holds now, the rate limit just told included
      * @return the last forecast as a stale one, or the failure with its redacted reason
      */
-    private Outcome afterFailure(String given, List<String> secrets, CacheState held) {
+    private ProviderOutcome afterFailure(String given, List<String> secrets, CacheState held) {
         var reason = ProviderText.redacted(given, secrets);
-        health.failed(info, reason);
+        health.recordFailure(info, reason);
         return held.stale().orElseGet(() -> failure(reason));
     }
 
-    private Outcome failure(String reason) {
-        return new Outcome.Failure(info.name() + ": " + reason);
+    private ProviderOutcome failure(String reason) {
+        return new ProviderOutcome.Failure(info.name() + ": " + reason);
     }
 
     private static String clock(Instant moment, ZoneId zone) {
@@ -181,7 +181,7 @@ final class ProviderAttempt {
          *
          * @return the stale forecast, or empty when there is no useful one
          */
-        Optional<Outcome> stale() {
+        Optional<ProviderOutcome> stale() {
             return usable.map(forecast -> fromCache(forecast, Freshness.STALE));
         }
 
@@ -192,8 +192,9 @@ final class ProviderAttempt {
          * @param freshness how fresh it is told to be
          * @return the forecast to use
          */
-        Outcome fromCache(ForecastCache.Cached forecast, Freshness freshness) {
-            return new Outcome.Usable(List.copyOf(forecast.steps()), forecast.fetchedAt(), freshness, cooldownUntil);
+        ProviderOutcome fromCache(ForecastCache.Cached forecast, Freshness freshness) {
+            return new ProviderOutcome.Usable(List.copyOf(forecast.steps()), forecast.fetchedAt(), freshness,
+                    cooldownUntil);
         }
     }
 }

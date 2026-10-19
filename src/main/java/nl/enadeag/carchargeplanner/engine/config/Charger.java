@@ -7,8 +7,9 @@ import nl.enadeag.carchargeplanner.engine.setting.Setting;
  * The wall charger, as far as it limits the charge power.
  *
  * @param phases the phases the charger charges on
- * @param minAmps the lowest current per phase the charger or car accepts in A, more than 0
- * @param maxAmps the highest current per phase the charger or car accepts in A, at least {@code minAmps}
+ * @param minAmps the lowest current per phase the charger and the car accept in A, more than 0
+ * @param maxAmps the highest current per phase the charger, the car and the home connection allow in A, at least
+ *     {@code minAmps}
  * @param volts the voltage per phase in V, more than 0
  * @param efficiency the share of the energy from the wall that ends up in the battery, more than 0 and at most 1
  */

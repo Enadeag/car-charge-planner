@@ -60,13 +60,13 @@ public final class Announcer {
      * Tells the owner about each window of the plan that is due, and remembers it.
      *
      * @param days the plan's days, whose charge windows are announced
-     * @param forecast the forecast the plan was made on; announcements wait while it is stale or too old
+     * @param source where the plan's forecast came from; announcements wait while it is stale or too old
      * @param now the current moment
      * @param config the system and preferences the plan was made for: the lead time, the time zone, the phases and
      *     the minimum charge level
      */
-    public void announceDue(List<DayPlan> days, ForecastSource forecast, Instant now, EngineConfig config) {
-        announce(candidates(days, config), forecast, now, config);
+    public void announceDue(List<DayPlan> days, ForecastSource source, Instant now, EngineConfig config) {
+        announce(candidates(days, config), source, now, config);
     }
 
     /**
@@ -74,22 +74,22 @@ public final class Announcer {
      *
      * @param days the plan's days, whose charge windows are announced
      * @param advice the grid advice, whose window, when it has one, is announced as a grid charge
-     * @param forecast the forecast the plan was made on; announcements wait while it is stale or too old
+     * @param source where the plan's forecast came from; announcements wait while it is stale or too old
      * @param now the current moment
      * @param config the system and preferences the plan was made for: the lead time, the time zone, the phases and
      *     the minimum charge level
      */
-    public void announceDue(List<DayPlan> days, GridAdvice advice, ForecastSource forecast, Instant now,
+    public void announceDue(List<DayPlan> days, GridAdvice advice, ForecastSource source, Instant now,
             EngineConfig config) {
         var candidates = candidates(days, config);
         advice.window().ifPresent(window -> candidates.add(announcement(AnnouncementKind.GRID_CHARGE, window, config)));
-        announce(candidates, forecast, now, config);
+        announce(candidates, source, now, config);
     }
 
     /** Announces the candidates that are due, in the order they start. */
-    private synchronized void announce(List<Announcement> candidates, ForecastSource forecast, Instant now,
+    private synchronized void announce(List<Announcement> candidates, ForecastSource source, Instant now,
             EngineConfig config) {
-        if (!usable(forecast, now)) {
+        if (!fitToAnnounceOn(source, now)) {
             return;
         }
         candidates.sort(Comparator.comparing(announcement -> announcement.window().start()));
@@ -100,14 +100,14 @@ public final class Announcer {
                 notifier.announce(candidate);
                 LOG.log(Level.INFO, "announced a " + candidate.kind() + " starting at "
                         + window.start().atZone(candidate.zone()).toOffsetDateTime());
-                remember(window, now);
+                rememberAndSave(window, now);
             }
         }
     }
 
-    private static boolean usable(ForecastSource forecast, Instant now) {
-        return forecast.freshness() != Freshness.STALE
-                && Duration.between(forecast.fetchedAt(), now).compareTo(MAX_FORECAST_AGE) <= 0;
+    private static boolean fitToAnnounceOn(ForecastSource source, Instant now) {
+        return source.freshness() != Freshness.STALE
+                && Duration.between(source.fetchedAt(), now).compareTo(MAX_FORECAST_AGE) <= 0;
     }
 
     /** The plan's windows on the sun, as announcements. */
@@ -127,7 +127,7 @@ public final class Announcer {
         return announced.stream().anyMatch(told -> told.start().isBefore(window.end()) && window.start().isBefore(told.end()));
     }
 
-    private void remember(Window window, Instant now) {
+    private void rememberAndSave(Window window, Instant now) {
         var kept = new ArrayList<>(announced.stream()
                 .filter(told -> told.end().isAfter(now.minus(KEEP_AFTER_END)))
                 .toList());

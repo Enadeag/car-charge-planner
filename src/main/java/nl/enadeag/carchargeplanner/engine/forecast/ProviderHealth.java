@@ -26,7 +26,7 @@ final class ProviderHealth {
      *
      * @param info the provider that answered: its id is what is remembered, its name what is logged
      */
-    void answered(ProviderInfo info) {
+    void recordAnswer(ProviderInfo info) {
         var before = answering.put(info.id(), true);
         if (before == null) {
             LOG.log(Level.INFO, info.name() + " gives forecasts");
@@ -41,7 +41,7 @@ final class ProviderHealth {
      * @param info the provider that failed: its id is what is remembered, its name what is logged
      * @param reason why, in the words the owner is told after the provider's name
      */
-    void failed(ProviderInfo info, String reason) {
+    void recordFailure(ProviderInfo info, String reason) {
         var before = answering.put(info.id(), false);
         if (before == null || before) {
             LOG.log(Level.WARNING, info.name() + " gives no forecast: " + reason);

@@ -10,7 +10,7 @@ import java.util.Optional;
  * @param socEndPct the level at the end of that day without the grid charge; below 0 when the driving needs more than
  *     the battery holds
  * @param deficitPct how far that is below the minimum
- * @param energyKwh the grid-side energy that brings the end of that day up to the minimum
+ * @param energyKwh the wall-side energy that brings the end of that day up to the minimum
  * @param window the window to charge in, on that day or the latest day before it with room; empty when no day has room
  */
 public record GridAdvice(LocalDate day, double socEndPct, double deficitPct, double energyKwh, Optional<Window> window) {

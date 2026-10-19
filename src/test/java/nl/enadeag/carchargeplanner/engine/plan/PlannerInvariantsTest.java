@@ -174,7 +174,7 @@ class PlannerInvariantsTest {
             var start = Hours.latest(step.start(), from);
             var end = Hours.earliest(step.end(), to);
             if (end.isAfter(start)) {
-                kwh += Charging.usableKw(step, input.system(), input.preferences()) * Hours.between(start, end);
+                kwh += Charging.usableSurplusKw(step, input.system(), input.preferences()) * Hours.between(start, end);
             }
         }
         return kwh;

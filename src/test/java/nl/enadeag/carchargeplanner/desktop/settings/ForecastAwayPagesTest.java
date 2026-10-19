@@ -89,7 +89,7 @@ class ForecastAwayPagesTest {
         });
 
         assertThat(stored().forecast().fallback()).isEmpty();
-        assertThat(settings.engine.apiKeys().of(OPEN_METEO)).isEqualTo(Map.of("api_key", "secret-key"));
+        assertThat(settings.engine.storedApiKeys().of(OPEN_METEO)).isEqualTo(Map.of("api_key", "secret-key"));
         assertThat(Files.readString(settings.configPath)).doesNotContain("secret-key");
     }
 
@@ -114,7 +114,7 @@ class ForecastAwayPagesTest {
         assertThat(saved).isFalse();
         assertThat(Fx.call(address::getAccessibleHelp)).contains(settings.messages.text(TextKey.PROBLEM_SERVER_ADDRESS));
         assertThat(Fx.call(key::getAccessibleHelp)).contains(settings.messages.text(TextKey.PROBLEM_LETTERS_AND_DIGITS));
-        assertThat(settings.engine.apiKeys().of(OPEN_METEO)).isEmpty();
+        assertThat(settings.engine.storedApiKeys().of(OPEN_METEO)).isEmpty();
 
         boolean savedAfterwards = Fx.call(() -> {
             address.setText("http://[::1]:8080/");
@@ -123,7 +123,7 @@ class ForecastAwayPagesTest {
         });
 
         assertThat(savedAfterwards).isTrue();
-        assertThat(settings.engine.apiKeys().of(OPEN_METEO)).isEqualTo(Map.of("api_key", "MyKey42"));
+        assertThat(settings.engine.storedApiKeys().of(OPEN_METEO)).isEqualTo(Map.of("api_key", "MyKey42"));
         assertThat(stored().forecast().settingsOf(OPEN_METEO)).containsEntry("base_url", "http://[::1]:8080/");
     }
 
@@ -183,7 +183,7 @@ class ForecastAwayPagesTest {
 
         SettingsFixture.waitFor(() -> Scenes.visibleTexts(view).stream()
                 .anyMatch(text -> text.startsWith(settings.messages.text(TextKey.PROVIDER_WORKS, 3).substring(0, 5))));
-        assertThat(settings.engine.apiKeys().of(OPEN_METEO)).as("nothing saved").isEmpty();
+        assertThat(settings.engine.storedApiKeys().of(OPEN_METEO)).as("nothing saved").isEmpty();
     }
 
     @Test

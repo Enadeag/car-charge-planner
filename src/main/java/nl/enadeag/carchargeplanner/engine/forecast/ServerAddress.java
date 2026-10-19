@@ -64,7 +64,7 @@ public record ServerAddress(URI uri) {
      * @param path the path to add, starting with "/"
      * @return the address as text, without a query
      */
-    public String resolve(String path) {
+    public String withPath(String path) {
         return uri + path;
     }
 }

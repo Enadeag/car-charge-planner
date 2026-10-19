@@ -35,8 +35,8 @@ public final class ForecastService {
      *
      * @param providers the providers it may ask, found by the ids the selection names
      * @param cache where each provider's last good forecast and rate limit are kept
-     * @param secrets where the providers' secret settings come from; read at most once per request, and only when a
-     *     provider is about to be asked
+     * @param secrets where the providers' secret settings come from; read at most once per request, and only when the
+     *     cache cannot answer by itself
      */
     public ForecastService(Providers providers, ForecastCache cache, SecretsSource secrets) {
         this.providers = providers;
@@ -45,7 +45,7 @@ public final class ForecastService {
     }
 
     /** The stored secrets, or none and why: the providers that need no key still work. */
-    private record StoredSecrets(Secrets secrets, Optional<SecretsProblem> problem) {
+    private record KeysOrProblem(Secrets secrets, Optional<SecretsProblem> problem) {
     }
 
     /**
@@ -60,7 +60,7 @@ public final class ForecastService {
      */
     public ForecastResult get(SystemDescription system, ForecastSelection selection, Instant now, boolean force)
             throws ForecastUnavailable {
-        return fetch(system, selection, new Once<>(this::storedSecrets), now, force);
+        return fetch(system, selection, new Once<>(this::storedKeys), now, force);
     }
 
     /**
@@ -74,23 +74,23 @@ public final class ForecastService {
      * @return the forecast and where it came from
      * @throws ForecastUnavailable with the reason of each provider asked, when none has a usable forecast
      */
-    public ForecastResult get(SystemDescription system, ForecastSelection selection, Secrets secrets, Instant now)
-            throws ForecastUnavailable {
-        return fetch(system, selection, new Once<>(() -> new StoredSecrets(secrets, Optional.empty())), now, false);
+    public ForecastResult getWithKeys(SystemDescription system, ForecastSelection selection, Secrets secrets,
+            Instant now) throws ForecastUnavailable {
+        return fetch(system, selection, new Once<>(() -> new KeysOrProblem(secrets, Optional.empty())), now, false);
     }
 
-    private ForecastResult fetch(SystemDescription system, ForecastSelection selection, Once<StoredSecrets> stored,
+    private ForecastResult fetch(SystemDescription system, ForecastSelection selection, Once<KeysOrProblem> stored,
             Instant now, boolean force) throws ForecastUnavailable {
         var reasons = new ArrayList<String>();
         var order = selection.order();
         for (int index = 0; index < order.size(); index++) {
             var outcome = ask(order.get(index), system, selection, stored, now, force);
-            if (outcome instanceof Outcome.Usable usable) {
+            if (outcome instanceof ProviderOutcome.Usable usable) {
                 var info = providers.find(order.get(index)).orElseThrow().info();
                 var role = index == 0 ? ProviderRole.PRIMARY : ProviderRole.FALLBACK;
                 return result(usable, info, role, role == ProviderRole.FALLBACK ? primaryName(selection) : "");
             }
-            reasons.add(((Outcome.Failure) outcome).reason());
+            reasons.add(((ProviderOutcome.Failure) outcome).reason());
         }
         var locked = new boolean[1];
         stored.ifMade(secrets -> secrets.problem().ifPresent(problem -> {
@@ -108,19 +108,20 @@ public final class ForecastService {
         retryAt.clear();
     }
 
-    private StoredSecrets storedSecrets() {
+    private KeysOrProblem storedKeys() {
         try {
-            return new StoredSecrets(secrets.load(), Optional.empty());
+            return new KeysOrProblem(secrets.load(), Optional.empty());
         } catch (SecretsProblem e) {
-            return new StoredSecrets(Secrets.NONE, Optional.of(e));
+            return new KeysOrProblem(Secrets.NONE, Optional.of(e));
         }
     }
 
-    private Outcome ask(ProviderId providerId, SystemDescription system, ForecastSelection selection,
-            Once<StoredSecrets> stored, Instant now, boolean force) {
+    private ProviderOutcome ask(ProviderId providerId, SystemDescription system, ForecastSelection selection,
+            Once<KeysOrProblem> stored, Instant now, boolean force) {
         var found = providers.find(providerId);
         if (found.isEmpty()) {
-            return new Outcome.Failure("The forecast provider '" + providerId + "' is not known to this version of the app");
+            return new ProviderOutcome.Failure(
+                    "The forecast provider '" + providerId + "' is not known to this version of the app");
         }
         var provider = found.get();
         var plain = selection.settingsOf(providerId);
@@ -131,8 +132,8 @@ public final class ForecastService {
         var lock = asking.computeIfAbsent(providerId, _ -> new ReentrantLock());
         lock.lock();
         try {
-            return new ProviderAttempt(provider, cache, retryAt, health, now, force).run(system, settings, key,
-                    () -> stored.get().secrets().values());
+            return new ProviderAttempt(provider, cache, retryAt, health, now, force).forecastOrReason(system, settings,
+                    key, () -> stored.get().secrets().values());
         } finally {
             lock.unlock();
         }
@@ -142,7 +143,7 @@ public final class ForecastService {
         return providers.find(selection.primary()).map(provider -> provider.info().name()).orElse("");
     }
 
-    private static ForecastResult result(Outcome.Usable usable, ProviderInfo info, ProviderRole role,
+    private static ForecastResult result(ProviderOutcome.Usable usable, ProviderInfo info, ProviderRole role,
             String primaryName) {
         var source = new ForecastSource(info.id(), info.name(), info.attribution(), usable.fetchedAt(),
                 usable.freshness(), role, primaryName, usable.cooldownUntil());

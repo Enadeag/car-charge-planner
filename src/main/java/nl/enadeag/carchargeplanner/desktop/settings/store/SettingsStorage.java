@@ -106,7 +106,7 @@ public final class SettingsStorage {
      */
     StoredKeys readKeys() {
         try {
-            return new StoredKeys(stores.engine().apiKeys(), Optional.empty());
+            return new StoredKeys(stores.engine().storedApiKeys(), Optional.empty());
         } catch (SecretsProblem e) {
             LOG.log(System.Logger.Level.WARNING, "The API keys could not be read for Settings: " + e.getMessage());
             return new StoredKeys(Secrets.NONE, Optional.of(e.kind()));
@@ -178,7 +178,7 @@ public final class SettingsStorage {
         }
         try {
             if (changes.keys().isPresent()) {
-                stores.engine().saveApiKeys(changes.keys().get(), prompting);
+                stores.engine().applyKeyChanges(changes.keys().get(), prompting);
             }
             if (changes.config().isPresent()) {
                 stores.engine().saveConfig(changes.config().get());

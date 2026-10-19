@@ -176,12 +176,12 @@ public abstract class ProviderConformance {
         var cache = new ForecastCache(cacheFolder);
         try (var log = LogCapture.of("nl.enadeag.carchargeplanner")) {
             var outcome = new ProviderAttempt(made.provider(), cache, new HashMap<>(), new ProviderHealth(), c.now(), true)
-                    .run(ProviderCase.EXAMPLE_SYSTEM, c::allSettings, cache.key(ProviderCase.EXAMPLE_SYSTEM, Map.of()),
-                            () -> List.of(otherKey));
+                    .forecastOrReason(ProviderCase.EXAMPLE_SYSTEM, c::allSettings,
+                            cache.key(ProviderCase.EXAMPLE_SYSTEM, Map.of()), () -> List.of(otherKey));
             var check = ConnectionCheck.attempt(made.provider(), ProviderCase.EXAMPLE_SYSTEM, c.allSettings(), c.now(),
                     List.of(otherKey));
 
-            assertThat(outcome).isInstanceOfSatisfying(Outcome.Failure.class,
+            assertThat(outcome).isInstanceOfSatisfying(ProviderOutcome.Failure.class,
                     failure -> assertThat(failure.reason()).contains("we also know ***").doesNotContain(otherKey));
             assertThat(check.message()).contains("we also know ***").doesNotContain(otherKey);
             assertThat(log.lines()).isNotEmpty().noneMatch(line -> line.contains(otherKey));
@@ -262,9 +262,9 @@ public abstract class ProviderConformance {
                 var cache = new ForecastCache(cacheFolder);
                 // as the forecast service asks, so the lines it logs about a provider failing are made too
                 var outcome = new ProviderAttempt(made.provider(), cache, new HashMap<>(), new ProviderHealth(), c.now(),
-                        true).run(ProviderCase.EXAMPLE_SYSTEM, c::allSettings,
+                        true).forecastOrReason(ProviderCase.EXAMPLE_SYSTEM, c::allSettings,
                         cache.key(ProviderCase.EXAMPLE_SYSTEM, Map.of()), List::of);
-                if (outcome instanceof Outcome.Failure failure) {
+                if (outcome instanceof ProviderOutcome.Failure failure) {
                     shown.add(failure.reason());
                 }
                 made.http().requests.forEach(request -> {

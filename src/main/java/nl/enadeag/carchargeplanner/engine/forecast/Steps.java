@@ -87,7 +87,7 @@ public final class Steps {
      * @return the arrays' forecasts added up, as {@link #addUp} does
      * @throws ProviderError the first array's error, when one of them has no forecast
      */
-    public static List<ForecastStep> eachArray(SystemDescription system, ArrayFetch fetchOne) throws ProviderError {
+    public static List<ForecastStep> sumOverArrays(SystemDescription system, ArrayFetch fetchOne) throws ProviderError {
         var forecasts = new ArrayList<List<ForecastStep>>();
         for (var array : system.arrays()) {
             forecasts.add(fetchOne.fetch(array));

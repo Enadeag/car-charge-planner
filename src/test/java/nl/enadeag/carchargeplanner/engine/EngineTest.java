@@ -146,7 +146,7 @@ class EngineTest {
     }
 
     private static ForecastSource source(Engine engine) {
-        return planned(engine).forecast();
+        return planned(engine).forecastSource();
     }
 
     @Test
@@ -415,13 +415,13 @@ class EngineTest {
         var preview = engine.preview(draft, new Secrets(Map.of(needyId, Map.of("api_key", "TYPED-KEY"))));
 
         assertThat(preview).isInstanceOfSatisfying(Outlook.Planned.class, planned -> {
-            assertThat(planned.forecast().attribution()).isEqualTo("Forecast by Needy");
+            assertThat(planned.forecastSource().attribution()).isEqualTo("Forecast by Needy");
             assertThat(planned.minimumPct()).isEqualTo(PlanningPreferences.RECOMMENDED.minimumPct());
             assertThat(planned.nextWindow()).isPresent();
         });
         assertThat(needy.calls).extracting(call -> call.settings().get("api_key")).containsExactly("TYPED-KEY");
         assertThat(Files.readString(config)).isEqualTo(stored);
-        assertThat(engine.apiKeys()).isEqualTo(Secrets.NONE);
+        assertThat(engine.storedApiKeys()).isEqualTo(Secrets.NONE);
         assertThat(told).isEmpty(); // the window starts at 10:00, within the lead time, yet nobody is told
     }
 
@@ -644,7 +644,7 @@ class EngineTest {
 
         answer.countDown();
         assertThat(planning.get(10, TimeUnit.SECONDS)).isInstanceOf(Outlook.Planned.class);
-        assertThat(engine.apiKeys()).isEqualTo(keys);
+        assertThat(engine.storedApiKeys()).isEqualTo(keys);
     }
 
     @Test
@@ -666,9 +666,9 @@ class EngineTest {
         assertThat(source(engine).providerRole()).isEqualTo(ProviderRole.FALLBACK);
         var keys = new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "NEW-KEY")));
 
-        engine.saveApiKeys(KeyChanges.entering(keys), () -> { });
+        engine.applyKeyChanges(KeyChanges.entering(keys), () -> { });
 
-        assertThat(engine.apiKeys()).isEqualTo(keys);
+        assertThat(engine.storedApiKeys()).isEqualTo(keys);
         assertThat(source(engine).providerRole()).isEqualTo(ProviderRole.PRIMARY);
         assertThat(main.callCount()).isEqualTo(2);
     }

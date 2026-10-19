@@ -15,7 +15,7 @@ public final class GridAdvisor {
 
     private static final Duration SLOT = Duration.ofMinutes(15);
     private static final double SLOT_HOURS = 0.25;
-    /** A shortfall smaller than this is forecast noise, not worth a warning. */
+    /** A shortfall smaller than this is forecast noise, not worth advice. */
     private static final double MIN_DEFICIT_PCT = 1.0;
     private static final double EPS = 1e-9;
 
@@ -41,12 +41,13 @@ public final class GridAdvisor {
 
     /**
      * Advice for the first day that ends below the minimum after its planned solar charging and driving, so a dip that
-     * the sun fixes in time gives no warning.
+     * the sun fixes in time gives no advice.
      *
      * @param days the plan the {@link Planner} made from this forecast
      * @param forecast the forecast the plan was made from, in time order
      * @param now the current moment; no window is placed before it
-     * @return the advice, or empty when no day ends below the minimum or the forecast is empty
+     * @return the advice, or empty when no day ends more than 1 percentage point below the minimum, as less is
+     *     forecast noise, or the forecast is empty
      */
     public Optional<GridAdvice> advise(List<DayPlan> days, List<ForecastStep> forecast, Instant now) {
         var dip = days.stream().filter(this::endsBelowMinimum).findFirst();
@@ -113,7 +114,7 @@ public final class GridAdvisor {
         boolean free = step.isPresent()
                 && !start.isBefore(now)
                 && unavailable.stream().noneMatch(time -> time.overlaps(start, end));
-        double usableKw = step.map(found -> Charging.usableKw(found, system, preferences)).orElse(0.0);
+        double usableKw = step.map(found -> Charging.usableSurplusKw(found, system, preferences)).orElse(0.0);
         return new Slot(start, end, usableKw, free);
     }
 

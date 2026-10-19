@@ -22,7 +22,7 @@ final class Charging {
      * @param preferences the planning preferences, for the margin
      * @return the usable surplus in kW, 0 or more
      */
-    static double usableKw(ForecastStep step, HomeSystem system, PlanningPreferences preferences) {
+    static double usableSurplusKw(ForecastStep step, HomeSystem system, PlanningPreferences preferences) {
         double surplus = step.powerKw() - system.house().baseloadKw();
         return Math.max(0, surplus) * preferences.margin();
     }
