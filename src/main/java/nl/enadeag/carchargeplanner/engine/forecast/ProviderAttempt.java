@@ -83,12 +83,10 @@ final class ProviderAttempt {
         if (!missing.isEmpty()) { // nothing is sent without what the provider requires
             return afterFailure(String.join(", ", missing) + " is required", secrets, CacheState.NONE);
         }
-        var waitUntil = held.cooldownUntil().or(this::waitingAfterFailure);
-        if (waitUntil.isPresent()) {
-            return held.stale().orElseGet(
-                    () -> failure("not asked again until " + clock(waitUntil.get(), system.timezone())));
-        }
-        return fetch(system, settings, key, secrets, held);
+        return held.cooldownUntil().or(this::waitingAfterFailure)
+                .map(until -> held.stale().orElseGet(
+                        () -> failure("not asked again until " + clock(until, system.timezone()))))
+                .orElseGet(() -> fetch(system, settings, key, secrets, held));
     }
 
     private Optional<Instant> waitingAfterFailure() {
