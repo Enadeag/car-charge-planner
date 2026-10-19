@@ -32,6 +32,7 @@ public final class StatusNotifierTray implements Tray {
     private final BusConnector connector;
     private final StatusIcon icon;
     private final IconThemeFolder theme;
+    private final String id;
     private final String title;
     // the name the specification asks for: one per process and item
     private final String busName = "org.kde.StatusNotifierItem-" + ProcessHandle.current().pid() + "-1";
@@ -50,12 +51,14 @@ public final class StatusNotifierTray implements Tray {
      * @param icon draws the icon with its status dot, in every size the panel may need
      * @param iconFolder a folder of the tray's own that only this user may use, where it writes its icons for the
      *     panel; {@link #remove()} removes it again
+     * @param id the app's ID, by which the panel knows the icon from one run to the next, such as to keep its place
      * @param title the name the panel shows for the icon, such as in its tooltip
      */
-    public StatusNotifierTray(BusConnector connector, StatusIcon icon, Path iconFolder, String title) {
+    public StatusNotifierTray(BusConnector connector, StatusIcon icon, Path iconFolder, String id, String title) {
         this.connector = connector;
         this.icon = icon;
         this.theme = new IconThemeFolder(iconFolder);
+        this.id = id;
         this.title = title;
     }
 
@@ -70,7 +73,7 @@ public final class StatusNotifierTray implements Tray {
             throw new IllegalStateException("the menu needs its labels before the tray shows");
         }
         theme.write(icon);
-        item = new TrayItem("car-charge-planner", title, theme.path(), where -> apart(() -> actions.clicked().accept(where)));
+        item = new TrayItem(id, title, theme.path(), where -> apart(() -> actions.clicked().accept(where)));
         update();
         menu = new TrayMenu(entryLabels(), List.of(() -> apart(actions.open()), () -> apart(actions.settings()),
                 () -> apart(actions.about()), () -> apart(actions.quit())));

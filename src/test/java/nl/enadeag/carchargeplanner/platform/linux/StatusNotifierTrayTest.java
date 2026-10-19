@@ -77,7 +77,7 @@ class StatusNotifierTrayTest {
         address = bus.address();
         panel = DBusConnectionBuilder.forAddress(address).withShared(false).build();
         tray = new StatusNotifierTray(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),
-                new StatusIcon(), folder.resolve("tray"), "Car charge planner");
+                new StatusIcon(), folder.resolve("tray"), "car-charge-planner", "Car charge planner");
         tray.showLabels(new Tray.MenuLabels("Open dashboard", "Settings…", "About…", "Quit"));
     }
 
@@ -120,6 +120,7 @@ class StatusNotifierTrayTest {
                 .GetAll("org.kde.StatusNotifierItem");
 
         assertThat(properties.get("Title").getValue()).isEqualTo("Car charge planner");
+        assertThat(properties.get("Id").getValue()).isEqualTo("car-charge-planner");
         assertThat(properties.get("IconPixmap").getSig()).isEqualTo("a(iiay)");
         assertThat((List<?>) properties.get("IconPixmap").getValue()).hasSize(6);
     }

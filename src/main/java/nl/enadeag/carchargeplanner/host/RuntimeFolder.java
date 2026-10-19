@@ -33,7 +33,7 @@ public final class RuntimeFolder {
      */
     public static Path make(String purpose, Map<String, String> environment, Path temporary,
             Optional<UserPrincipal> user) throws IOException {
-        var prefix = ConfigLocation.APP_FOLDER + "-" + purpose + "-";
+        var prefix = AppName.ID + "-" + purpose + "-";
         var runtime = environment.getOrDefault("XDG_RUNTIME_DIR", "");
         if (runtime.isEmpty() || !Path.of(runtime).isAbsolute()) {
             // a guessable name in a shared folder could be made by another user first

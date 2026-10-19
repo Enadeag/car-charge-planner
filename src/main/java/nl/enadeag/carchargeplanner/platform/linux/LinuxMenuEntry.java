@@ -20,15 +20,14 @@ import java.util.function.Consumer;
  */
 public final class LinuxMenuEntry {
 
-    /** The icon's name in the icon theme, and the entry's file name without {@code .desktop}. */
-    public static final String APP_ID = "car-charge-planner";
-
     private static final System.Logger LOG = System.getLogger(LinuxMenuEntry.class.getName());
-    private static final String SVG_RESOURCE = "icons/" + APP_ID + ".svg";
+    // a file in the jar, named in pom.xml; not the app ID, so a new ID would not lose the drawing
+    private static final String SVG_RESOURCE = "icons/car-charge-planner.svg";
     private static final int CACHE_TOOL_SECONDS = 10;
 
     private final Path dataHome;
     private final Path program;
+    private final String id;
     private final String name;
     private final Consumer<Path> cachesChanged;
 
@@ -38,13 +37,16 @@ public final class LinuxMenuEntry {
      * @param dataHome the user's data folder, {@code $XDG_DATA_HOME}; the folders below it are made when missing
      * @param program the app's launcher, an absolute path; it is quoted in the entry, so it may hold spaces, but no
      *     line break
+     * @param id the app's ID: the entry's file name without {@code .desktop}, and the icon's name in the icon theme;
+     *     installed entries are found by it, so it must stay the same between versions
      * @param name the app's name that the menu shows
      * @param cachesChanged told the data folder after files were written or removed, so the desktop's caches can be
      *     refreshed, such as with {@link #refreshCaches(Path)}; it must not fail when it cannot
      */
-    public LinuxMenuEntry(Path dataHome, Path program, String name, Consumer<Path> cachesChanged) {
+    public LinuxMenuEntry(Path dataHome, Path program, String id, String name, Consumer<Path> cachesChanged) {
         this.dataHome = dataHome;
         this.program = program;
+        this.id = id;
         this.name = name;
         this.cachesChanged = cachesChanged;
     }
@@ -124,15 +126,15 @@ public final class LinuxMenuEntry {
     }
 
     private Path entryFile() {
-        return dataHome.resolve("applications").resolve(APP_ID + ".desktop");
+        return dataHome.resolve("applications").resolve(id + ".desktop");
     }
 
     private Path scalableIcon() {
-        return dataHome.resolve("icons/hicolor/scalable/apps").resolve(APP_ID + ".svg");
+        return dataHome.resolve("icons/hicolor/scalable/apps").resolve(id + ".svg");
     }
 
     private Path pngIcon(int size) {
-        return dataHome.resolve("icons/hicolor").resolve(size + "x" + size).resolve("apps").resolve(APP_ID + ".png");
+        return dataHome.resolve("icons/hicolor").resolve(size + "x" + size).resolve("apps").resolve(id + ".png");
     }
 
     private String entry() {
@@ -144,7 +146,7 @@ public final class LinuxMenuEntry {
                 Icon=%s
                 Terminal=false
                 Categories=Utility;
-                """, name, LinuxStartAtLogin.quoted(program.toString()), APP_ID);
+                """, name, LinuxStartAtLogin.quoted(program.toString()), id);
     }
 
     private static byte[] resource(String path) throws IOException {

@@ -42,7 +42,6 @@ public final class FreedesktopNotifications implements Notifications {
     static final int REMEMBER = 50;
     /** The stock icon used when the app's own cannot be written. */
     static final String FALLBACK_ICON = "dialog-information";
-    private static final String ICON_FILE = "car-charge-planner.png";
     private static final int ICON_SIZE = 128;
 
 
@@ -67,7 +66,7 @@ public final class FreedesktopNotifications implements Notifications {
      * @param connector opens the session bus connection the notifications are sent and heard on
      * @param appName the app's name, which the desktop shows above each notification, such as "Car charge planner"
      * @param desktopEntry the name of the app's launcher entry without ".desktop", which ties the notifications to the
-     *     app in the desktop's settings; it need not be installed
+     *     app in the desktop's settings; it need not be installed. The icon's file is named after it too.
      * @param icon the app icon, shown on each notification
      * @param iconFolder an existing folder of the notifications' own that only this user may use, where the icon is
      *     written for the server to read; {@link #close()} removes it again
@@ -86,7 +85,7 @@ public final class FreedesktopNotifications implements Notifications {
      *
      * @param connector opens the session bus connection the notifications are sent and heard on
      * @param appName the app's name, which the desktop shows above each notification
-     * @param desktopEntry the name of the app's launcher entry without ".desktop"
+     * @param desktopEntry the name of the app's launcher entry without ".desktop", which also names the icon's file
      * @param icon the app icon, shown on each notification
      * @param iconFolder an existing folder of the notifications' own, where the icon is written for the server
      * @param openLabel what the button that opens the dashboard says, asked anew for each notification
@@ -141,7 +140,7 @@ public final class FreedesktopNotifications implements Notifications {
             serverOwner = null;
         }
         try {
-            Files.deleteIfExists(iconFolder.resolve(ICON_FILE));
+            Files.deleteIfExists(iconFolder.resolve(desktopEntry + ".png"));
             Files.deleteIfExists(iconFolder);
         } catch (IOException e) {
             LOG.log(Level.WARNING, "cannot remove the notification icon from " + iconFolder, e);
@@ -200,7 +199,7 @@ public final class FreedesktopNotifications implements Notifications {
     /** The app icon as a file the server can read, written once; a stock icon when it cannot be written. */
     private String iconUri() {
         if (iconUri == null) {
-            var file = iconFolder.resolve(ICON_FILE);
+            var file = iconFolder.resolve(desktopEntry + ".png");
             try {
                 // never through a link another user may have put there
                 try (var out = Files.newOutputStream(file, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING,

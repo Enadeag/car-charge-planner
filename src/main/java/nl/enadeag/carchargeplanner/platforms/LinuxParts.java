@@ -47,7 +47,8 @@ final class LinuxParts implements PlatformParts {
 
     @Override
     public TrayParts trayParts(ObservableValue<ColorScheme> colorScheme, AppIcon icon, LanguageChoice language) {
-        var tray = new StatusNotifierTray(sessionBus, new StatusIcon(), runtimeFolder("tray"), AppName.TITLE);
+        var tray = new StatusNotifierTray(sessionBus, new StatusIcon(), runtimeFolder("tray"), AppName.ID,
+                AppName.TITLE);
         // a notification server is there also without a tray
         var notifications = new FreedesktopNotifications(sessionBus, AppName.TITLE, AppName.ID, icon,
                 runtimeFolder("notify"), () -> language.messages().text(TextKey.OPEN_DASHBOARD));

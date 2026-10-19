@@ -122,7 +122,7 @@ class CommandsTest {
     }
 
     private LinuxMenuEntry menuEntry(Path dataHome) {
-        return new LinuxMenuEntry(dataHome, PROGRAM, AppName.TITLE, refreshed -> { });
+        return new LinuxMenuEntry(dataHome, PROGRAM, AppName.ID, AppName.TITLE, refreshed -> { });
     }
 
     private static CommandOutcome success(TextKey key, Object... values) {

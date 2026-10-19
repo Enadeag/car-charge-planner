@@ -19,7 +19,7 @@ public final class DataLocation {
      * @return the app's own folder inside the user's data folder; it need not exist yet
      */
     public static Path defaultFolder(Os os, Map<String, String> environment, Path home) {
-        return systemFolder(os, environment, home).resolve(ConfigLocation.APP_FOLDER);
+        return systemFolder(os, environment, home).resolve(AppName.ID);
     }
 
     /**

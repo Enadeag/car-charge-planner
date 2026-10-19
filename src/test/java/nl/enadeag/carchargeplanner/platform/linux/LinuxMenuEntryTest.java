@@ -27,7 +27,7 @@ class LinuxMenuEntryTest {
     private final List<Path> refreshed = new ArrayList<>();
 
     private LinuxMenuEntry menuEntry(String program) {
-        return new LinuxMenuEntry(data, Path.of(program), "Car charge planner", refreshed::add);
+        return new LinuxMenuEntry(data, Path.of(program), "car-charge-planner", "Car charge planner", refreshed::add);
     }
 
     private Path entry() {

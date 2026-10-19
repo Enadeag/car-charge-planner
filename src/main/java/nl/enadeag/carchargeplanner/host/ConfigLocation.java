@@ -6,8 +6,6 @@ import java.util.Map;
 /** Where the engine's config file is, on each system: the folder the user's settings usually go to. */
 public final class ConfigLocation {
 
-    /** The folder of the app inside the system's config folder. */
-    static final String APP_FOLDER = "car-charge-planner";
     /** The name of the config file inside the app's folder. */
     static final String FILE_NAME = "engine.json";
 
@@ -25,7 +23,7 @@ public final class ConfigLocation {
      * @throws NullPointerException on Windows when {@code APPDATA} is missing from the environment
      */
     public static Path defaultPath(Os os, Map<String, String> environment, Path home) {
-        return systemFolder(os, environment, home).resolve(APP_FOLDER).resolve(FILE_NAME);
+        return systemFolder(os, environment, home).resolve(AppName.ID).resolve(FILE_NAME);
     }
 
     /**

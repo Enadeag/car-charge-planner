@@ -30,13 +30,13 @@ public final class InstanceLocation {
      */
     public static Path folder(Os os, Map<String, String> environment, Path home) {
         if (os == Os.WINDOWS) {
-            return Path.of(environment.get("LOCALAPPDATA")).resolve(ConfigLocation.APP_FOLDER);
+            return Path.of(environment.get("LOCALAPPDATA")).resolve(AppName.ID);
         }
         var runtime = environment.getOrDefault("XDG_RUNTIME_DIR", "");
         if (runtime.isEmpty() || !Path.of(runtime).isAbsolute() || !Files.isDirectory(Path.of(runtime))
                 || !Files.isWritable(Path.of(runtime))) {
             return DataLocation.defaultFolder(os, environment, home).resolve(DATA_SUBFOLDER);
         }
-        return Path.of(runtime).resolve(ConfigLocation.APP_FOLDER);
+        return Path.of(runtime).resolve(AppName.ID);
     }
 }

@@ -61,7 +61,8 @@ public final class Commands {
     public static Commands of(Host host, PlatformParts parts, SingleInstance instance, Messages messages) {
         var dataHome = DataLocation.systemFolder(host.os(), host.environment(), host.home());
         var menuEntry = host.launcher().filter(program -> host.os() == Os.LINUX)
-                .map(program -> new LinuxMenuEntry(dataHome, program, AppName.TITLE, LinuxMenuEntry::refreshCaches));
+                .map(program -> new LinuxMenuEntry(dataHome, program, AppName.ID, AppName.TITLE,
+                        LinuxMenuEntry::refreshCaches));
         return new Commands(host.os(), messages, instance, parts.startAtLogin(), menuEntry);
     }
 
