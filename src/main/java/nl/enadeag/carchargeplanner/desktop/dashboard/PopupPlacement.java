@@ -93,10 +93,10 @@ final class PopupPlacement {
 
     /** Moved the least needed to lie inside the area, a margin from its edges; the top left wins if it cannot fit. */
     private static Point2D keepInside(double x, double y, Dimension2D size, Rectangle2D area) {
+        double left = area.getMinX() + MARGIN;
+        double top = area.getMinY() + MARGIN;
         double right = area.getMaxX() - MARGIN - size.getWidth();
         double bottom = area.getMaxY() - MARGIN - size.getHeight();
-        return new Point2D(
-                Math.max(Math.min(x, right), area.getMinX() + MARGIN),
-                Math.max(Math.min(y, bottom), area.getMinY() + MARGIN));
+        return new Point2D(Math.clamp(x, left, Math.max(left, right)), Math.clamp(y, top, Math.max(top, bottom)));
     }
 }

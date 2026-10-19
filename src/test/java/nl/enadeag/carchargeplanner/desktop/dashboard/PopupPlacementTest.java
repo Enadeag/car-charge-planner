@@ -45,6 +45,13 @@ class PopupPlacementTest {
     }
 
     @Test
+    void besideAPanelAnIconNearTheBottomKeepsThePopupAboveTheScreensEdge() {
+        var position = PopupPlacement.position(new Point2D(20, 1150), POPUP, area(48, 0, 1920, 1200));
+
+        assertThat(position).isEqualTo(new Point2D(48 + M, 1200 - 600 - M));
+    }
+
+    @Test
     void anIconInsideTheAvailableAreaNamesTheNearestEdge() {
         var available = area(0, 0, 1920, 1200);
 
@@ -75,8 +82,12 @@ class PopupPlacementTest {
 
     @Test
     void aPopupTooLargeForTheScreenShowsItsTopLeft() {
-        var position = PopupPlacement.position(new Point2D(300, 500), new Dimension2D(800, 900), area(0, 0, 640, 480));
+        var tooLarge = new Dimension2D(800, 900);
 
-        assertThat(position).isEqualTo(new Point2D(M, M));
+        var primary = PopupPlacement.position(new Point2D(300, 500), tooLarge, area(0, 0, 640, 480));
+        var second = PopupPlacement.position(new Point2D(2200, 500), tooLarge, area(1920, 0, 2560, 480));
+
+        assertThat(primary).isEqualTo(new Point2D(M, M));
+        assertThat(second).isEqualTo(new Point2D(1920 + M, M));
     }
 }
