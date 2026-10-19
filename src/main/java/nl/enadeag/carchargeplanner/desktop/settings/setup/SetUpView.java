@@ -328,7 +328,7 @@ final class SetUpView extends BorderPane {
             return;
         }
         showActions();
-        if (!form.check(step)) {
+        if (form.markRefused(step)) {
             showRefused();
             return;
         }

@@ -178,7 +178,7 @@ public final class ForecastPage implements ConfigPage {
             return Optional.of(config);
         }
         var entry = entry();
-        var complete = entry.chosen().stream().allMatch(id -> !cards.containsKey(id) || cards.get(id).check());
+        var complete = entry.chosen().stream().noneMatch(id -> cards.containsKey(id) && cards.get(id).markRefused());
         try {
             var shown = new LinkedHashMap<ProviderId, Map<String, String>>();
             cards.forEach((id, card) -> shown.put(id, card.plain()));

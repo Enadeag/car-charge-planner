@@ -130,16 +130,16 @@ final class ProviderCard {
      * address a key may not be sent to; problems shown before are taken away first. A locked secret counts as there:
      * it is stored, only not readable now.
      *
-     * @return true when every required setting has a value and every value has the right form
+     * @return true when a required setting is empty or a value has the wrong form
      */
-    boolean check() {
+    boolean markRefused() {
         rows.values().forEach(FieldRow::clearProblem);
         var locked = inputs.entrySet().stream()
                 .filter(input -> input.getValue() instanceof SecretInput field && field.isLocked())
                 .map(Map.Entry::getKey).collect(Collectors.toSet());
         var problems = new ProviderEntry(info, plain(), secret(), locked).problems(messages);
         problems.forEach((key, problem) -> rows.get(key).showProblem(problem));
-        return problems.isEmpty();
+        return !problems.isEmpty();
     }
 
     /**

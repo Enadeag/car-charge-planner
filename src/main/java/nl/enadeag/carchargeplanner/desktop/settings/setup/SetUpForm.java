@@ -67,20 +67,20 @@ final class SetUpForm {
     }
 
     /**
-     * Has the engine's records check a step's values; a refused one shows its problem at its field.
+     * Has the engine's records check a step's values, and marks each refused one by showing its problem at its field.
      *
-     * @param step the step to check; one without config values always passes
-     * @return true when every value is accepted, and on the location step a place is chosen
+     * @param step the step to check; one without config values is never refused
+     * @return true when a value is refused, or on the location step no place is chosen
      */
-    boolean check(SetUpStep step) {
-        var accepted = true;
+    boolean markRefused(SetUpStep step) {
+        var refused = false;
         for (var part : parts.getOrDefault(step, List.of())) {
-            accepted &= part.applyTo(base).isPresent();
+            refused |= part.applyTo(base).isEmpty();
         }
-        if (step == SetUpStep.LOCATION && accepted) {
-            accepted = location.checkChosen();
+        if (step == SetUpStep.LOCATION && !refused) {
+            refused = !location.checkChosen();
         }
-        return accepted;
+        return refused;
     }
 
     /**
@@ -90,7 +90,7 @@ final class SetUpForm {
      */
     Optional<SetUpStep> firstRefused() {
         for (var step : SetUpStep.values()) {
-            if (!check(step)) {
+            if (markRefused(step)) {
                 return Optional.of(step);
             }
         }
