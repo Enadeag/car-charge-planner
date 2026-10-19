@@ -7,7 +7,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.field.NumberField;
 import nl.enadeag.carchargeplanner.desktop.settings.field.UnitField;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import nl.enadeag.carchargeplanner.desktop.settings.form.Quantity;
-import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalMarks;
+import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalTags;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPart;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ProblemRows;
@@ -34,7 +34,7 @@ public final class CarCard implements ConfigPart {
     private final UnitField consumption;
     private final UnitField distance;
     private final ProblemRows problems;
-    private final TypicalMarks typical;
+    private final TypicalTags typical;
     private final Card card;
 
     /**
@@ -48,7 +48,7 @@ public final class CarCard implements ConfigPart {
         consumption = new UnitField(Quantity.CONSUMPTION, messages);
         distance = new UnitField(Quantity.DISTANCE, messages);
         problems = new ProblemRows(messages);
-        typical = new TypicalMarks(messages.text(TextKey.TYPICAL_TAG));
+        typical = new TypicalTags(messages.text(TextKey.TYPICAL_TAG));
         card = new Card(messages.text(TextKey.CARD_CAR), messages.text(TextKey.CARD_CAR_HINT),
                 row(ConfigSetting.CAR_BATTERY, TextKey.FIELD_CAR_BATTERY, TextKey.FIELD_CAR_BATTERY_HINT, battery),
                 row(ConfigSetting.CAR_CONSUMPTION, TextKey.FIELD_CAR_CONSUMPTION, TextKey.FIELD_CAR_CONSUMPTION_HINT,
@@ -64,7 +64,7 @@ public final class CarCard implements ConfigPart {
      * @param units the units to show them in
      */
     public void showIn(Units units) {
-        typical.keep(() -> {
+        typical.keepTagsWhile(() -> {
             consumption.showIn(units);
             distance.showIn(units);
         });
@@ -96,6 +96,7 @@ public final class CarCard implements ConfigPart {
         if (!isChanged()) {
             return Optional.of(config);
         }
+        inputs().forEach(Input::commitTyped);
         try {
             var car = new Car(battery.value(), consumption.value(), distance.value());
             var system = config.system();

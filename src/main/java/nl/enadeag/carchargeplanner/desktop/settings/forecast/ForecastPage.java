@@ -90,8 +90,8 @@ public final class ForecastPage implements ConfigPage {
         choice = new Card(messages.text(TextKey.CARD_PROVIDERS), messages.text(TextKey.CARD_PROVIDERS_HINT),
                 FieldRow.of(messages, TextKey.FIELD_PRIMARY, TextKey.FIELD_PRIMARY_HINT, primary), fallbackRow);
         keysCard = new Card(messages.text(TextKey.CARD_KEYS), "", keysNote);
-        primary.onChange(this::show);
-        fallback.onChange(this::show);
+        primary.onChange(this::showChosenCards);
+        fallback.onChange(this::showChosenCards);
     }
 
     @Override
@@ -123,7 +123,7 @@ public final class ForecastPage implements ConfigPage {
         fallback.load(stored.fallback());
         fallbackRow.clearProblem();
         cards.forEach((id, card) -> card.load(stored.settingsOf(id), storedKeys.of(id), keysLocked));
-        show();
+        showChosenCards();
     }
 
     /**
@@ -200,7 +200,7 @@ public final class ForecastPage implements ConfigPage {
     }
 
     /** Each provider's card under the role it is chosen for; one chosen for both shows once. */
-    private void show() {
+    private void showChosenCards() {
         if (stored == null) {
             return;
         }

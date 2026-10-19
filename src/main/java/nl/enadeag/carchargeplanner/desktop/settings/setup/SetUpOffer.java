@@ -22,7 +22,7 @@ public final class SetUpOffer {
     private volatile boolean missing;
 
     /**
-     * Makes the offer; nothing is opened until {@link #show(Outlook)}.
+     * Makes the offer; nothing is opened until {@link #follow(Outlook)}.
      *
      * @param setUp opens set-up; may be called from any thread
      * @param settings opens Settings on a category; may be called from any thread
@@ -36,11 +36,12 @@ public final class SetUpOffer {
     }
 
     /**
-     * Takes note of the latest plan; the first one without a config opens set-up.
+     * Follows the engine's latest outlook: while it says the app is not set up, the ways into Settings lead to set-up,
+     * and the first such outlook of the run opens set-up, unless the app started hidden. Shows nothing itself.
      *
      * @param outlook the engine's latest plan, or why there is none; never null
      */
-    public void show(Outlook outlook) {
+    public void follow(Outlook outlook) {
         missing = outlook instanceof Outlook.NotSetUp;
         if (missing && openFirst && opened.compareAndSet(false, true)) {
             setUp.run();

@@ -20,7 +20,7 @@ record SetUpDraft(EngineConfig config, Secrets keys, AppSettings app, boolean st
      * @param saved the app settings whose language and appearance to take
      * @return the same draft otherwise
      */
-    SetUpDraft withLooksOf(AppSettings saved) {
+    SetUpDraft withLanguageAndAppearanceOf(AppSettings saved) {
         return new SetUpDraft(config, keys,
                 new AppSettings(saved.language(), app.units(), app.mode(), saved.appearance()), startAtLogin);
     }

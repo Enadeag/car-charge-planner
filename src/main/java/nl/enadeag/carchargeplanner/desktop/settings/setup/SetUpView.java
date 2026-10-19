@@ -73,7 +73,7 @@ final class SetUpView extends BorderPane {
     }
 
     private final SetUpForm form;
-    private final Map<SetUpStep, SetUpPage> pages;
+    private final Map<SetUpStep, SetUpStepPage> pages;
     private final AppPage app;
     private final Runnable close;
     private final Consumer<AppSettings> finished;
@@ -102,7 +102,7 @@ final class SetUpView extends BorderPane {
      * @param background saves at Finish away from the JavaFX thread
      * @param messages the texts, in the language set-up speaks
      */
-    SetUpView(SetUpForm form, Map<SetUpStep, SetUpPage> pages, AppPage app, Runnable close,
+    SetUpView(SetUpForm form, Map<SetUpStep, SetUpStepPage> pages, AppPage app, Runnable close,
             Consumer<AppSettings> finished, Background background, Messages messages) {
         this.form = form;
         this.pages = new EnumMap<>(pages);
@@ -191,15 +191,16 @@ final class SetUpView extends BorderPane {
         var carPage = new PageView(messages.text(SetUpStep.CAR.title()));
         carPage.show(car.view());
 
-        var pages = new EnumMap<SetUpStep, SetUpPage>(SetUpStep.class);
+        var pages = new EnumMap<SetUpStep, SetUpStepPage>(SetUpStep.class);
         pages.put(SetUpStep.WELCOME, new SetUpWelcome(providers, engine::hasPlaceSearch, messages));
-        pages.put(SetUpStep.APP, SetUpPage.of(app.view()));
-        pages.put(SetUpStep.LOCATION, SetUpPage.of(location.view()));
-        pages.put(SetUpStep.SOLAR, SetUpPage.of(solar.view()));
-        pages.put(SetUpStep.CAR, SetUpPage.of(carPage));
-        pages.put(SetUpStep.CHARGER, SetUpPage.of(charger.view()));
-        pages.put(SetUpStep.FORECAST, SetUpPage.of(forecast.view(), entered -> system.set(entered.config().system())));
-        pages.put(SetUpStep.MORE, SetUpPage.of(more));
+        pages.put(SetUpStep.APP, SetUpStepPage.of(app.view()));
+        pages.put(SetUpStep.LOCATION, SetUpStepPage.of(location.view()));
+        pages.put(SetUpStep.SOLAR, SetUpStepPage.of(solar.view()));
+        pages.put(SetUpStep.CAR, SetUpStepPage.of(carPage));
+        pages.put(SetUpStep.CHARGER, SetUpStepPage.of(charger.view()));
+        pages.put(SetUpStep.FORECAST,
+                SetUpStepPage.of(forecast.view(), reached -> system.set(reached.config().system())));
+        pages.put(SetUpStep.MORE, SetUpStepPage.of(more));
         pages.put(SetUpStep.CHECK, new SetUpCheck((config, keys) -> {
             var primary = config.forecast().primary();
             var settings = new HashMap<>(config.forecast().settingsOf(primary));
@@ -224,7 +225,7 @@ final class SetUpView extends BorderPane {
      * {@link #start(SetUpStart, SetUpDraft, SetUpStep)}.
      */
     void showReading() {
-        enter(State.READING);
+        goTo(State.READING);
         showActions();
         status.setText(messages.text(TextKey.SETTINGS_READING));
         body.setAccessibleText(status.getText());
@@ -236,20 +237,21 @@ final class SetUpView extends BorderPane {
      * @param detail what went wrong, as the system said it
      */
     void showUnreadable(String detail) {
-        enter(State.UNREADABLE);
+        goTo(State.UNREADABLE);
         showProblem(messages.text(TextKey.SETTINGS_READ_FAILED, detail));
         body.setAccessibleText(null);
     }
 
     /**
-     * Shows a draft on a step, with nothing asked yet.
+     * Shows a draft on a step. What the step does as the owner reaches it runs at once, as when it is reached with
+     * Next: the check and the preview ask for a forecast.
      *
      * @param start what is stored, which Finish compares with
      * @param draft what the steps show
      * @param first the step to show
      */
     void start(SetUpStart start, SetUpDraft draft, SetUpStep first) {
-        enter(State.READY);
+        goTo(State.READY);
         form.start(start, draft);
         status.setText("");
         body.setAccessibleText(null);
@@ -282,7 +284,7 @@ final class SetUpView extends BorderPane {
         var page = pages.get(shown);
         body.setContent(page.view());
         body.setVvalue(0);
-        page.enter(form);
+        page.onReached(form);
         firstField(page.view()).orElse(next).requestFocus();
     }
 
@@ -365,33 +367,33 @@ final class SetUpView extends BorderPane {
      *
      * @return true while set-up asks whether to leave
      */
-    boolean isAsking() {
+    boolean isAskingToLeave() {
         return confirm.isVisible();
     }
 
     private void finish() {
-        var refused = form.firstRefused();
+        var refused = form.markFirstRefused();
         if (refused.isPresent()) {
             show(refused.get());
             showRefused();
             return;
         }
-        var changes = form.changes(form.config());
+        var changes = form.changes();
         var chosen = form.appSettings();
-        enter(State.SAVING);
+        goTo(State.SAVING);
         status.getStyleClass().remove("problem");
         status.setText(messages.text(TextKey.SETTINGS_SAVING));
         body.setAccessibleText(status.getText());
-        Runnable prompting = () -> background.onFx(this::waitingForUnlock);
+        Runnable prompting = () -> background.onFx(this::showUnlockPrompt);
         background.run("saving set-up", () -> form.write(changes, prompting), outcome -> {
-            enter(State.READY);
+            goTo(State.READY);
             body.setAccessibleText(null);
             status.setText("");
-            saved(outcome, chosen);
+            afterFinish(outcome, chosen);
         }, failure -> {
-            enter(State.READY);
+            goTo(State.READY);
             body.setAccessibleText(null);
-            saved(new SaveOutcome.Failed(Background.describe(failure, messages)), chosen);
+            afterFinish(new SaveOutcome.Failed(Background.describe(failure, messages)), chosen);
         });
     }
 
@@ -399,7 +401,7 @@ final class SetUpView extends BorderPane {
      * The system asks the owner to unlock the keychain for the Finish that runs: the status says where, and a screen
      * reader reads it.
      */
-    private void waitingForUnlock() {
+    private void showUnlockPrompt() {
         if (state == State.SAVING) {
             status.setText(messages.text(TextKey.SETTINGS_SAVING_UNLOCK));
             body.setAccessibleText(status.getText());
@@ -408,7 +410,7 @@ final class SetUpView extends BorderPane {
     }
 
     /** What Finish came to: closed when saved, otherwise the reason, with the focus on it. */
-    private void saved(SaveOutcome outcome, AppSettings chosen) {
+    private void afterFinish(SaveOutcome outcome, AppSettings chosen) {
         switch (outcome) {
             case SaveOutcome.Saved _ -> {
                 close.run();
@@ -435,7 +437,7 @@ final class SetUpView extends BorderPane {
     }
 
     /** Goes over to another state: the steps can be edited, and Next and Back used, only when ready. */
-    private void enter(State next) {
+    private void goTo(State next) {
         state = next;
         var ready = next == State.READY;
         body.setDisable(!ready);

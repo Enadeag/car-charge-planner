@@ -193,7 +193,7 @@ class SetUpViewTest {
         var view = atSolar();
 
         Fx.run(view::cancel);
-        assertThat(Fx.call(view::isAsking)).isTrue();
+        assertThat(Fx.call(view::isAskingToLeave)).isTrue();
         assertThat(setUp.closed).isZero();
         Fx.run(() -> setUp.button(view, TextKey.SETUP_LEAVE).fire());
 
@@ -210,7 +210,7 @@ class SetUpViewTest {
         Fx.run(view::cancel);
 
         assertThat(setUp.closed).isEqualTo(1);
-        assertThat(Fx.call(view::isAsking)).isFalse();
+        assertThat(Fx.call(view::isAskingToLeave)).isFalse();
     }
 
     @Test

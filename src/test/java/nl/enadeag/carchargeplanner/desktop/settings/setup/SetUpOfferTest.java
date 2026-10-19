@@ -27,8 +27,8 @@ class SetUpOfferTest {
     void theFirstPlanWithoutAConfigOpensSetUpOnceAndCancellingLeavesItClosed() {
         var offer = offer(true);
 
-        offer.show(MISSING);
-        offer.show(MISSING);
+        offer.follow(MISSING);
+        offer.follow(MISSING);
 
         assertThat(opened).containsExactly("set-up");
     }
@@ -37,7 +37,7 @@ class SetUpOfferTest {
     void startedHiddenItOnlyOffersSetUp() {
         var offer = offer(false);
 
-        offer.show(MISSING);
+        offer.follow(MISSING);
         offer.openSettings(Category.SOLAR);
 
         assertThat(opened).containsExactly("set-up");
@@ -46,9 +46,9 @@ class SetUpOfferTest {
     @Test
     void onceSetUpSettingsOpensAgain() {
         var offer = offer(true);
-        offer.show(MISSING);
+        offer.follow(MISSING);
 
-        offer.show(new Outlook.NoForecast("Open-Meteo: no connection."));
+        offer.follow(new Outlook.NoForecast("Open-Meteo: no connection."));
         offer.openSettings(Category.AWAY);
 
         assertThat(opened).containsExactly("set-up", "AWAY");
@@ -59,7 +59,7 @@ class SetUpOfferTest {
     void aConfigThatIsThereButWrongIsLeftToSettings(ConfigProblem.Kind kind) {
         var offer = offer(true);
 
-        offer.show(new Outlook.ConfigUnusable(kind, Path.of("engine.json"), "detail"));
+        offer.follow(new Outlook.ConfigUnusable(kind, Path.of("engine.json"), "detail"));
         offer.openSettings(Category.SOLAR);
 
         assertThat(opened).containsExactly("SOLAR");

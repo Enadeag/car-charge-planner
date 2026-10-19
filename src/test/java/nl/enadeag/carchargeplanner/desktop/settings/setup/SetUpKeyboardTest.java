@@ -89,10 +89,10 @@ class SetUpKeyboardTest {
         Fx.run(() -> view.show(SetUpStep.CHARGER));
 
         Keyboard.press(view.getScene(), KeyCode.ESCAPE);
-        assertThat(Fx.call(view::isAsking)).isTrue();
+        assertThat(Fx.call(view::isAskingToLeave)).isTrue();
         Keyboard.press(view.getScene(), KeyCode.ESCAPE);
 
-        assertThat(Fx.call(view::isAsking)).isFalse();
+        assertThat(Fx.call(view::isAskingToLeave)).isFalse();
         assertThat(setUp.closed).isZero();
         assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.CHARGER);
     }

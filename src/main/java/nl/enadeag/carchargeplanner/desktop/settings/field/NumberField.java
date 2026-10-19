@@ -95,13 +95,29 @@ public final class NumberField implements Input {
     }
 
     /**
-     * The value now, with what the owner typed but did not confirm yet.
+     * The value now, with what the owner typed but did not confirm yet; the field does not change, see
+     * {@link #commitTyped()}.
      *
-     * @return the value in the range; exactly the loaded one when the owner did not change it
+     * @return the value in the range; the value shown before while the text is not a number; exactly the loaded one
+     *     when the owner did not change it
      */
     public double value() {
-        commitTyped();
-        return values.getValue();
+        return range.clamp(values.getConverter().fromString(spinner.getEditor().getText()));
+    }
+
+    /**
+     * Confirms what the owner typed, as Enter does: the field then shows it as it writes numbers, brought into the
+     * range, and a text that is not a number gives way to the value shown before. Not done while the owner types, as
+     * it rewrites the text.
+     */
+    @Override
+    public void commitTyped() {
+        var typed = spinner.getEditor().getText();
+        var shown = values.getConverter().toString(values.getValue());
+        if (!typed.equals(shown)) {
+            values.setValue(values.getConverter().fromString(typed));
+            spinner.getEditor().setText(values.getConverter().toString(values.getValue()));
+        }
     }
 
     /**
@@ -130,31 +146,12 @@ public final class NumberField implements Input {
 
     @Override
     public boolean isChanged() {
-        return Double.compare(typed(), loaded) != 0;
-    }
-
-    /**
-     * The value now, with what the owner typed, without confirming it: that would rewrite the text while the owner
-     * types.
-     *
-     * @return the value in the range; the value shown before while the text is not a number
-     */
-    double typed() {
-        return range.clamp(values.getConverter().fromString(spinner.getEditor().getText()));
+        return Double.compare(value(), loaded) != 0;
     }
 
     @Override
     public void onChange(Runnable action) {
         spinner.valueProperty().addListener((_, _, _) -> action.run());
         spinner.getEditor().textProperty().addListener((_, _, _) -> action.run());
-    }
-
-    private void commitTyped() {
-        var typed = spinner.getEditor().getText();
-        var shown = values.getConverter().toString(values.getValue());
-        if (!typed.equals(shown)) {
-            values.setValue(values.getConverter().fromString(typed));
-            spinner.getEditor().setText(values.getConverter().toString(values.getValue()));
-        }
     }
 }

@@ -3,7 +3,7 @@ package nl.enadeag.carchargeplanner.desktop.settings.car;
 import nl.enadeag.carchargeplanner.desktop.settings.field.FieldRow;
 import nl.enadeag.carchargeplanner.desktop.settings.field.NumberField;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
-import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalMarks;
+import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalTags;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPart;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ProblemRows;
@@ -22,7 +22,7 @@ public final class HouseCard implements ConfigPart {
 
     private final NumberField baseload;
     private final ProblemRows problems;
-    private final TypicalMarks typical;
+    private final TypicalTags typical;
     private final Card card;
 
     /**
@@ -33,7 +33,7 @@ public final class HouseCard implements ConfigPart {
     public HouseCard(Messages messages) {
         baseload = new NumberField(new NumberRange(0, 20, 0.05, 2), "kW", messages);
         problems = new ProblemRows(messages);
-        typical = new TypicalMarks(messages.text(TextKey.TYPICAL_TAG));
+        typical = new TypicalTags(messages.text(TextKey.TYPICAL_TAG));
         var row = problems.add(ConfigSetting.HOUSE_BASELOAD,
                 FieldRow.of(messages, TextKey.FIELD_BASELOAD, TextKey.FIELD_BASELOAD_HINT, baseload));
         typical.follow(ConfigSetting.HOUSE_BASELOAD, row::showTag);
@@ -63,6 +63,7 @@ public final class HouseCard implements ConfigPart {
         if (!isChanged()) {
             return Optional.of(config);
         }
+        baseload.commitTyped();
         try {
             var house = new House(baseload.value());
             var system = config.system();

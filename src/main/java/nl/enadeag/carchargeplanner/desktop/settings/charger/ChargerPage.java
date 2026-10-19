@@ -7,7 +7,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.field.NumberField;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ChargerEntry;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
-import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalMarks;
+import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalTags;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPage;
@@ -38,7 +38,7 @@ public final class ChargerPage implements ConfigPage {
     private final NumberField volts;
     private final NumberField efficiency;
     private final ProblemRows problems;
-    private final TypicalMarks typical;
+    private final TypicalTags typical;
     private final Card card;
 
     /**
@@ -56,7 +56,7 @@ public final class ChargerPage implements ConfigPage {
         volts = new NumberField(new NumberRange(100, 400, 1, 0), "V", messages);
         efficiency = new NumberField(new NumberRange(1, 100, 1, 0), "%", messages);
         problems = new ProblemRows(messages);
-        typical = new TypicalMarks(messages.text(TextKey.TYPICAL_TAG));
+        typical = new TypicalTags(messages.text(TextKey.TYPICAL_TAG));
         card = new Card(messages.text(TextKey.CARD_CHARGER), messages.text(TextKey.CARD_CHARGER_HINT),
                 row(ConfigSetting.CHARGER_PHASES, TextKey.FIELD_PHASES, TextKey.FIELD_PHASES_HINT, phases),
                 row(ConfigSetting.CHARGER_MIN_CURRENT, TextKey.FIELD_MIN_CURRENT, TextKey.FIELD_MIN_CURRENT_HINT,
@@ -114,6 +114,7 @@ public final class ChargerPage implements ConfigPage {
         if (!isChanged()) {
             return Optional.of(config);
         }
+        inputs().forEach(Input::commitTyped);
         try {
             var charger = new ChargerEntry(phases.value(), minAmps.value(), maxAmps.value(), volts.value(),
                     efficiency.value()).charger();

@@ -51,7 +51,7 @@ final class AwayRow extends VBox {
         problem.setManaged(false);
         getChildren().addAll(line, problem);
         getStyleClass().add("away-row");
-        number(0, 1);
+        placeAmong(0, 1);
     }
 
     /**
@@ -61,7 +61,7 @@ final class AwayRow extends VBox {
      * @param index the row's place, from 0
      * @param count how many rows there are, at least 1
      */
-    void number(int index, int count) {
+    void placeAmong(int index, int count) {
         var period = messages.text(TextKey.AWAY_PERIOD_NUMBER, index + 1);
         ScreenReader.name(weekday.focusable(), spoken(TextKey.AWAY_WEEKDAY, period, count));
         ScreenReader.name(start.focusable(), spoken(TextKey.AWAY_FROM_FIELD, period, count));

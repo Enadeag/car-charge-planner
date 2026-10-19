@@ -28,6 +28,13 @@ public interface Input {
     boolean isChanged();
 
     /**
+     * Confirms what the owner typed but did not confirm yet, as Enter does, so the control shows the value as it is
+     * read. Does nothing for a control whose text is its value as it stands.
+     */
+    default void commitTyped() {
+    }
+
+    /**
      * Calls an action whenever the value changes, by the owner or by loading.
      *
      * @param action what to run, on the JavaFX thread

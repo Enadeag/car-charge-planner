@@ -111,7 +111,7 @@ final class SettingsView extends BorderPane {
         this.saved = saved;
         this.background = background;
         this.messages = messages;
-        pages.forEach(page -> page.onChange(this::edited));
+        pages.forEach(page -> page.onChange(this::updateCancelText));
 
         categories.getItems().setAll(pages.stream().map(Page::category).toList());
         categories.setCellFactory(_ -> new CategoryCell());
@@ -166,7 +166,7 @@ final class SettingsView extends BorderPane {
         showActions();
         getStyleClass().add("settings");
         categories.getSelectionModel().selectFirst();
-        enter(State.READING);
+        goTo(State.READING);
     }
 
     /**
@@ -256,16 +256,16 @@ final class SettingsView extends BorderPane {
         outcome = null;
         categories.refresh();
         showActions();
-        enter(State.READING);
+        goTo(State.READING);
         working = true;
         background.run("reading the settings", form::read, stored -> {
             working = false;
             form.show(stored);
-            enter(State.READY);
+            goTo(State.READY);
             then.run();
         }, failure -> {
             working = false;
-            enter(State.UNREADABLE);
+            goTo(State.UNREADABLE);
             showProblem(messages.text(TextKey.SETTINGS_READ_FAILED, Background.describe(failure, messages)));
         });
     }
@@ -326,24 +326,24 @@ final class SettingsView extends BorderPane {
         }
         showActions();
         switch (form.enter()) {
-            case SettingsForm.Entered.Refused refusing -> saved(new SaveOutcome.Refused(refusing.categories()));
+            case SettingsForm.Entered.Refused refusing -> afterSave(new SaveOutcome.Refused(refusing.categories()));
             case SettingsForm.Entered.Accepted accepted -> {
-                enter(State.SAVING);
+                goTo(State.SAVING);
                 working = true;
-                Runnable prompting = () -> background.onFx(this::waitingForUnlock);
+                Runnable prompting = () -> background.onFx(this::showUnlockPrompt);
                 background.run("saving the settings", () -> form.write(accepted.changes(), prompting), written -> {
                     working = false;
                     written.stored().ifPresent(form::show);
-                    enter(State.READY);
-                    saved(written.outcome());
+                    goTo(State.READY);
+                    afterSave(written.outcome());
                     if (written.outcome() instanceof SaveOutcome.Saved) {
                         saved.accept(written.stored().orElseThrow().app());
                         then.run();
                     }
                 }, failure -> {
                     working = false;
-                    enter(State.READY);
-                    saved(new SaveOutcome.Failed(Background.describe(failure, messages)));
+                    goTo(State.READY);
+                    afterSave(new SaveOutcome.Failed(Background.describe(failure, messages)));
                 });
             }
         }
@@ -362,7 +362,7 @@ final class SettingsView extends BorderPane {
      * The system asks the owner to unlock the keychain for the Save that runs: the status says where, and a screen
      * reader reads it.
      */
-    private void waitingForUnlock() {
+    private void showUnlockPrompt() {
         if (state == State.SAVING) {
             showBusy(messages.text(TextKey.SETTINGS_SAVING_UNLOCK));
             ScreenReader.focus(status);
@@ -370,7 +370,7 @@ final class SettingsView extends BorderPane {
     }
 
     /** Shows what a Save came to, and moves the focus to what says so. */
-    private void saved(SaveOutcome result) {
+    private void afterSave(SaveOutcome result) {
         if (result instanceof SaveOutcome.StartAtLoginRefused(var detail)) {
             form.showStartAtLoginFailure(detail);
         }
@@ -383,7 +383,7 @@ final class SettingsView extends BorderPane {
             case SaveOutcome.KeyringLocked _ -> ScreenReader.focus(status);
             case SaveOutcome.Failed _ -> ScreenReader.focus(status);
         }
-        edited();
+        updateCancelText();
     }
 
     /** The status line, and the categories marked, after a Save. */
@@ -418,7 +418,7 @@ final class SettingsView extends BorderPane {
      * Goes over to another state: the pages can be edited only when ready, Save only then, and the status line says
      * what Settings is doing; the page's own text says it to a screen reader too.
      */
-    private void enter(State next) {
+    private void goTo(State next) {
         state = next;
         var ready = next == State.READY;
         body.setDisable(!ready);
@@ -439,7 +439,7 @@ final class SettingsView extends BorderPane {
                 body.setAccessibleText(null);
             }
         }
-        edited();
+        updateCancelText();
     }
 
     private void showBusy(String text) {
@@ -500,7 +500,7 @@ final class SettingsView extends BorderPane {
     }
 
     /** "Close" when nothing is unsaved, "Cancel" when closing would throw edits away. */
-    private void edited() {
+    private void updateCancelText() {
         var changed = state != State.READING && state != State.UNREADABLE && form.isChanged();
         cancel.setText(messages.text(changed ? TextKey.SETTINGS_CANCEL : TextKey.SETTINGS_CLOSE));
     }

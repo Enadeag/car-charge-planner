@@ -78,17 +78,18 @@ final class SetUpForm {
             refused |= part.applyTo(base).isEmpty();
         }
         if (step == SetUpStep.LOCATION && !refused) {
-            refused = !location.checkChosen();
+            refused = location.markNotChosen();
         }
         return refused;
     }
 
     /**
-     * The first step with a value that is refused, such as one changed after going back.
+     * Finds the first step with a value that is refused, such as one changed after going back, and marks its refused
+     * values; the steps before it show no problems.
      *
-     * @return that step, showing its problems; empty when every step's values are accepted
+     * @return that step; empty when every step's values are accepted
      */
-    Optional<SetUpStep> firstRefused() {
+    Optional<SetUpStep> markFirstRefused() {
         for (var step : SetUpStep.values()) {
             if (markRefused(step)) {
                 return Optional.of(step);
@@ -98,9 +99,11 @@ final class SetUpForm {
     }
 
     /**
-     * The whole config as entered; call when {@link #firstRefused()} found nothing.
+     * The whole config as entered: the draft, with each part's values laid over it in the order of the steps. A part
+     * with a refused value adds none of its values, so the draft's stay; call {@link #markFirstRefused()} first for a
+     * config to save.
      *
-     * @return the config with every step's values; the draft's for any value that is refused
+     * @return the config with every step's accepted values
      */
     EngineConfig config() {
         var config = base;
@@ -138,20 +141,20 @@ final class SetUpForm {
     }
 
     /**
-     * What differs from what is stored: the config always when none was stored.
+     * What differs from what is stored: the whole config as entered, {@link #config()}, always when none was stored.
+     * Call when {@link #markFirstRefused()} found nothing.
      *
-     * @param config the whole config to keep, as {@link #config()} gave it
      * @return the changes for {@link #write}
      */
-    SettingsChanges changes(EngineConfig config) {
-        var entered = new AllSettings(Optional.of(config), keys(), app.settings(), Optional.of(app.startsAtLogin()));
+    SettingsChanges changes() {
+        var entered = new AllSettings(Optional.of(config()), keys(), app.settings(), Optional.of(app.startsAtLogin()));
         return SettingsChanges.between(stored.all(), entered);
     }
 
     /**
      * Writes the changes. Blocks while the system, the keychain and the files answer; may be called from any thread.
      *
-     * @param changes what {@link #changes(EngineConfig)} gave
+     * @param changes what {@link #changes()} gave
      * @param prompting runs, on the saving thread, once the system asks the owner to unlock the keychain
      * @return saved; refused by the system's start at login; not saved as the keychain stayed locked; or failed with
      *     the system's error

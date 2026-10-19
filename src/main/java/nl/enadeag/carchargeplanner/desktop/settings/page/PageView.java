@@ -4,7 +4,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 
-/** A category's page: its title, and its cards below it. */
+/** A page of Settings or a step of set-up: its title, and its cards below it. */
 public final class PageView extends VBox {
 
     private final Label title = new Label();
@@ -12,7 +12,7 @@ public final class PageView extends VBox {
     /**
      * Makes the page, without cards until {@link #show(Node...)}.
      *
-     * @param title the category's name, in the owner's language
+     * @param title the category's or the step's name, in the owner's language
      */
     public PageView(String title) {
         this.title.setText(title);

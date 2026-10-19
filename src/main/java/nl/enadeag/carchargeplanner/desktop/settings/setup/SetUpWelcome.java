@@ -14,7 +14,7 @@ import java.util.function.Predicate;
 import javafx.scene.control.Label;
 
 /** Set-up's first step: what the app does, what leaves the computer, and what to do with a value one does not know. */
-final class SetUpWelcome implements SetUpPage {
+final class SetUpWelcome implements SetUpStepPage {
 
     private final Messages messages;
     private final List<ProviderInfo> providers;
@@ -23,7 +23,7 @@ final class SetUpWelcome implements SetUpPage {
     private final PageView view;
 
     /**
-     * Makes the step, saying nothing about a provider until {@link #load(EngineConfig)}.
+     * Makes the step, saying nothing about a provider until {@link #nameProviderOf(EngineConfig)}.
      *
      * @param providers what the known providers tell about themselves, to name the chosen one
      * @param searchesPlaces whether a provider has a place search, which is then sent what the owner types
@@ -45,7 +45,7 @@ final class SetUpWelcome implements SetUpPage {
      *
      * @param config the draft set-up starts from
      */
-    void load(EngineConfig config) {
+    void nameProviderOf(EngineConfig config) {
         var texts = new ProviderTexts(messages);
         var primary = providers.stream().filter(info -> info.id().equals(config.forecast().primary())).findFirst();
         privacy.setText(primary.map(info -> messages.text(TextKey.SETUP_PRIVACY, info.name(), texts.sends(info))
@@ -59,7 +59,7 @@ final class SetUpWelcome implements SetUpPage {
     }
 
     @Override
-    public void enter(SetUpForm form) {
-        load(form.config());
+    public void onReached(SetUpForm form) {
+        nameProviderOf(form.config());
     }
 }

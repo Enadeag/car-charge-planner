@@ -73,7 +73,7 @@ public final class SolarPage implements ConfigPage {
             newCard().load(panels.get(index), config.typical().ofPanel(index));
         }
         loadedCount = panels.size();
-        show();
+        showCards();
     }
 
     @Override
@@ -102,7 +102,7 @@ public final class SolarPage implements ConfigPage {
     /** One more array, with typical values tagged as such until the owner enters their own. */
     private void addArray() {
         newCard().load(PanelArray.TYPICAL, TypicalValues.PANEL_SETTINGS);
-        show();
+        showCards();
         listeners.forEach(Runnable::run);
     }
 
@@ -116,13 +116,13 @@ public final class SolarPage implements ConfigPage {
     /** The arrays after the removed one move up; what was typed in them stays. */
     private void remove(PanelArrayCard card) {
         cards.remove(card);
-        show();
+        showCards();
         listeners.forEach(Runnable::run);
     }
 
-    private void show() {
+    private void showCards() {
         for (int index = 0; index < cards.size(); index++) {
-            cards.get(index).number(index, cards.size());
+            cards.get(index).placeAmong(index, cards.size());
         }
         var nodes = new ArrayList<Node>(cards.stream().map(PanelArrayCard::view).toList());
         nodes.add(add);

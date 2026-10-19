@@ -9,7 +9,7 @@ import java.util.OptionalDouble;
  * switches back, without rounding drift.
  *
  * <p>The value held is the kept value behind what the field shows: the loaded one, the last one set, or what the
- * owner typed when last read.
+ * owner typed when last held.
  */
 public final class UnitValue {
 
@@ -78,14 +78,29 @@ public final class UnitValue {
     }
 
     /**
-     * Reads what the field shows, and holds what it stands for.
+     * Holds what a value in the field stands for, such as one the owner typed, so that it stays the same when the
+     * units change.
+     *
+     * @param shown the value in the field, in the units it shows
+     * @return the metric value now held, as {@link #kept(double)} gives it
+     */
+    public double hold(double shown) {
+        held = kept(shown);
+        return held;
+    }
+
+    /**
+     * What a value in the field stands for; holds nothing.
      *
      * @param shown the value in the field, in the units it shows
      * @return the metric value; exactly the held one while the field shows it as it was shown, at its decimals
      */
-    public double read(double shown) {
-        held = kept(shown);
-        return held;
+    public double kept(double shown) {
+        var decimals = Math.pow(10, quantity.range(units).decimals());
+        if (Math.round(shown * decimals) == Math.round(quantity.shown(held, units) * decimals)) {
+            return held;
+        }
+        return quantity.kept(shown, units);
     }
 
     /**
@@ -99,7 +114,7 @@ public final class UnitValue {
     }
 
     /**
-     * Shows the value in other units from now on; what is held does not change. Read what the field shows first, so
+     * Shows the value in other units from now on; what is held does not change. Hold what the field shows first, so
      * that a typed value is held.
      *
      * @param newUnits the units to show it in
@@ -124,14 +139,5 @@ public final class UnitValue {
      */
     public OptionalDouble shownEdit() {
         return Double.compare(held, loaded) != 0 ? OptionalDouble.of(quantity.shown(held, units)) : OptionalDouble.empty();
-    }
-
-    /** What a shown value stands for: the held value while the field shows it as it was shown, at its decimals. */
-    private double kept(double shown) {
-        var decimals = Math.pow(10, quantity.range(units).decimals());
-        if (Math.round(shown * decimals) == Math.round(quantity.shown(held, units) * decimals)) {
-            return held;
-        }
-        return quantity.kept(shown, units);
     }
 }

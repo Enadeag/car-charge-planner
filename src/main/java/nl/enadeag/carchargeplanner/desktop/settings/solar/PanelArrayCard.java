@@ -6,7 +6,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.field.NumberField;
 import nl.enadeag.carchargeplanner.desktop.settings.field.TextInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import nl.enadeag.carchargeplanner.desktop.settings.form.PanelArrayEntry;
-import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalMarks;
+import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalTags;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ProblemRows;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
@@ -33,7 +33,7 @@ final class PanelArrayCard {
     private final NumberField direction;
     private final NumberField losses;
     private final ProblemRows problems;
-    private final TypicalMarks typical;
+    private final TypicalTags typical;
     private final Button useTypical;
     private final Button remove;
     private final List<FieldRow> rows = new ArrayList<>();
@@ -52,7 +52,7 @@ final class PanelArrayCard {
         direction = new NumberField(new NumberRange(-180, 180, 5, 0), "°", messages);
         losses = new NumberField(new NumberRange(0, 99, 1, 0), "%", messages);
         problems = new ProblemRows(messages);
-        typical = new TypicalMarks(messages.text(TextKey.TYPICAL_TAG));
+        typical = new TypicalTags(messages.text(TextKey.TYPICAL_TAG));
         this.useTypical = new Button(messages.text(TextKey.USE_TYPICAL));
         this.useTypical.setOnAction(_ -> useTypical());
         this.remove = new Button(messages.text(TextKey.PANELS_REMOVE));
@@ -97,7 +97,7 @@ final class PanelArrayCard {
      * @param index the array's place, from 0
      * @param count how many arrays there are, at least 1
      */
-    void number(int index, int count) {
+    void placeAmong(int index, int count) {
         var title = messages.text(TextKey.CARD_PANEL_ARRAY, index + 1);
         card.setTitle(title);
         remove.setVisible(count > 1);
@@ -118,6 +118,7 @@ final class PanelArrayCard {
      */
     Optional<PanelArray> value() {
         problems.clear();
+        inputs().forEach(Input::commitTyped);
         try {
             return Optional.of(new PanelArrayEntry(name.value(), size.value(), tilt.value(), direction.value(),
                     losses.value()).panelArray());
@@ -133,7 +134,7 @@ final class PanelArrayCard {
      * @return the tagged settings
      */
     Set<ConfigSetting> typical() {
-        return typical.marked();
+        return typical.tagged();
     }
 
     /**

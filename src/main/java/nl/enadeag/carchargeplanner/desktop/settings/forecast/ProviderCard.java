@@ -97,7 +97,7 @@ final class ProviderCard {
         for (var setting : info.settings()) {
             var stored = (setting.secret() ? secret : plain).getOrDefault(setting.name(), "");
             switch (inputs.get(setting.name())) {
-                case SecretInput field when keysLocked && stored.isEmpty() -> field.lock();
+                case SecretInput field when keysLocked && stored.isEmpty() -> field.showLocked();
                 case SecretInput field -> field.load(stored);
                 case TextInput field -> field.load(stored);
                 default -> throw new IllegalStateException("a provider setting is a text or a secret");

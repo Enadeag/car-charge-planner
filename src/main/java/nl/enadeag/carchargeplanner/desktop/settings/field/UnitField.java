@@ -53,7 +53,7 @@ public final class UnitField implements Input {
         if (newUnits == value.units()) {
             return;
         }
-        value(); // holds what the owner typed
+        commitTyped();
         value.showIn(newUnits);
         field.setRange(value.range());
         field.setUnit(value.unit());
@@ -62,12 +62,23 @@ public final class UnitField implements Input {
     }
 
     /**
-     * The value as the engine keeps it.
+     * The value as the engine keeps it, with what the owner typed but did not confirm yet; the field does not change,
+     * see {@link #commitTyped()}.
      *
      * @return the metric value; exactly the loaded or last set one while the field shows it unchanged
      */
     public double value() {
-        return value.read(field.value());
+        return value.kept(field.value());
+    }
+
+    /**
+     * Confirms what the owner typed, as {@link NumberField#commitTyped()} does, and holds what it stands for, so it
+     * stays the same when the units change.
+     */
+    @Override
+    public void commitTyped() {
+        field.commitTyped();
+        value.hold(field.value());
     }
 
     @Override
@@ -82,7 +93,7 @@ public final class UnitField implements Input {
 
     @Override
     public boolean isChanged() {
-        return value.isChanged(field.typed());
+        return value.isChanged(field.value());
     }
 
     @Override

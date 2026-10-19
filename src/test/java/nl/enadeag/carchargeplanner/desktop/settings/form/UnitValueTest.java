@@ -22,7 +22,7 @@ class UnitValueTest {
     void aLoadedValueIsShownInTheUnitsAndIsNotChanged() {
         assertThat(consumption.load(18)).isEqualTo(18);
         assertThat(consumption.isChanged(18)).isFalse();
-        assertThat(consumption.read(18)).isEqualTo(18);
+        assertThat(consumption.hold(18)).isEqualTo(18);
         assertThat(consumption.shownEdit()).isEmpty();
     }
 
@@ -43,7 +43,7 @@ class UnitValueTest {
         consumption.showIn(Units.IMPERIAL);
 
         assertThat(consumption.isChanged(3.45)).isFalse();
-        assertThat(consumption.read(3.45)).isEqualTo(18);
+        assertThat(consumption.hold(3.45)).isEqualTo(18);
         assertThat(consumption.shownEdit()).isEmpty();
     }
 
@@ -54,18 +54,19 @@ class UnitValueTest {
 
         assertThat(distance.isChanged(25)).as("25 mi is how 40 km shows without decimals").isFalse();
         assertThat(distance.isChanged(26)).isTrue();
-        assertThat(distance.read(26)).isEqualTo(26 * 1.609344, within(1e-9));
+        assertThat(distance.hold(26)).isEqualTo(26 * 1.609344, within(1e-9));
         assertThat(distance.shownEdit()).hasValueCloseTo(26.0, within(1e-9));
     }
 
     @Test
-    void isChangedHoldsNothingButReadDoes() {
+    void isChangedAndKeptHoldNothingButHoldDoes() {
         distance.load(40);
 
         assertThat(distance.isChanged(50)).isTrue();
+        assertThat(distance.kept(50)).isEqualTo(50);
         assertThat(distance.shownEdit()).isEmpty();
 
-        distance.read(50);
+        distance.hold(50);
         assertThat(distance.shownEdit()).hasValue(50);
         assertThat(distance.isChanged(50)).isTrue();
     }
@@ -73,12 +74,12 @@ class UnitValueTest {
     @Test
     void anEditedValueComesBackAsTypedWhenTheUnitsSwitchBack() {
         consumption.load(18);
-        consumption.read(20);
+        consumption.hold(20);
         consumption.showIn(Units.IMPERIAL);
 
         var shown = consumption.shownEdit().orElseThrow();
         assertThat(shown).isEqualTo(3.11, within(0.01));
-        assertThat(consumption.read(Math.round(shown * 100) / 100.0)).as("rounded as the field shows it")
+        assertThat(consumption.hold(Math.round(shown * 100) / 100.0)).as("rounded as the field shows it")
                 .isEqualTo(20);
 
         consumption.showIn(Units.METRIC);
@@ -93,13 +94,13 @@ class UnitValueTest {
 
         assertThat(consumption.set(17)).isEqualTo(Quantity.CONSUMPTION.shown(17, Units.IMPERIAL));
         assertThat(consumption.isChanged(Quantity.CONSUMPTION.shown(17, Units.IMPERIAL))).isTrue();
-        assertThat(consumption.read(Quantity.CONSUMPTION.shown(17, Units.IMPERIAL))).isEqualTo(17);
+        assertThat(consumption.hold(Quantity.CONSUMPTION.shown(17, Units.IMPERIAL))).isEqualTo(17);
     }
 
     @Test
     void loadingAgainMakesTheNewValueTheOneNotEdited() {
         distance.load(40);
-        distance.read(50);
+        distance.hold(50);
 
         assertThat(distance.load(60)).isEqualTo(60);
         assertThat(distance.shownEdit()).isEmpty();

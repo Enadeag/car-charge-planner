@@ -58,11 +58,11 @@ public final class SecretInput implements Input {
                         ? null : messages.text(TextKey.SECRET_LOCKED_SPOKEN, hidden.getAccessibleText()),
                 hidden.accessibleTextProperty()));
         replace.setOnAction(_ -> {
-            editable();
+            makeEditable();
             hidden.requestFocus();
         });
         view = new HBox(new StackPane(hidden, shown), toggle, replace);
-        editable();
+        makeEditable();
         view.getStyleClass().addAll("field-line", "secret-input");
     }
 
@@ -72,7 +72,7 @@ public final class SecretInput implements Input {
      * @param secret the secret; may be empty
      */
     public void load(String secret) {
-        editable();
+        makeEditable();
         loaded = secret;
         hidden.setText(secret);
     }
@@ -81,7 +81,7 @@ public final class SecretInput implements Input {
      * Shows that the stored secret could not be read, as the keychain is locked: empty, not editable and marked locked,
      * with a button to enter a new one instead. Until then the field holds nothing to save.
      */
-    public void lock() {
+    public void showLocked() {
         loaded = "";
         hidden.setText("");
         locked = true;
@@ -103,7 +103,7 @@ public final class SecretInput implements Input {
         return locked;
     }
 
-    private void editable() {
+    private void makeEditable() {
         locked = false;
         hidden.setDisable(false);
         shown.setDisable(false);

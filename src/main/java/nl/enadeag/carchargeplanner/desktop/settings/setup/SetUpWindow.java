@@ -136,7 +136,7 @@ public final class SetUpWindow {
         start = null;
         appearance.set(Appearance.SYSTEM);
         spoken = language.messages();
-        view = made(spoken, made);
+        view = makeView(spoken, made);
         var scene = new Scene(view);
         var theme = new WindowTheme(Appearance.scheme(appearance, looks.system()));
         theme.style(scene);
@@ -173,7 +173,7 @@ public final class SetUpWindow {
         var shown = stage;
         background.run("reading the app settings for set-up", storage::readApp, app -> {
             if (stage == shown && start != null) {
-                show(view.draft().withLooksOf(app), view.step());
+                show(view.draft().withLanguageAndAppearanceOf(app), view.step());
             }
         }, failure -> { });
     }
@@ -184,7 +184,7 @@ public final class SetUpWindow {
         var now = draft.app().language().map(language::of).orElseGet(language::ofSystem);
         if (now.language() != spoken.language()) {
             spoken = now;
-            view = made(now, stage);
+            view = makeView(now, stage);
             stage.getScene().setRoot(view);
             stage.setTitle(now.text(TextKey.SETUP_TITLE));
         }
@@ -192,7 +192,7 @@ public final class SetUpWindow {
     }
 
     /** The owner's choices on the App step show at once; another language makes set-up again, a moment later. */
-    private SetUpView made(Messages messages, Stage in) {
+    private SetUpView makeView(Messages messages, Stage in) {
         var made = views.apply(messages, () -> close(in));
         made.onAppearanceChosen(appearance::set);
         made.onLanguageChosen(chosen -> {

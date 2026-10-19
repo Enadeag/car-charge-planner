@@ -115,6 +115,7 @@ public final class PlanningPage implements ConfigPage {
         if (!isChanged()) {
             return Optional.of(config);
         }
+        fields().forEach(NumberField::commitTyped);
         try {
             var planning = new PlanningEntry(minimum.value(), target.value(), margin.value(), importTolerance.value(),
                     minWindow.value(), notifyLead.value()).planning();

@@ -11,20 +11,20 @@ import java.util.function.Consumer;
  * Which fields of a card hold a typical value: tagged as such until the owner enters a value of their own. Values
  * filled in by Settings itself, as it loads or as the owner asks for typical values, keep the tag.
  */
-public final class TypicalMarks {
+public final class TypicalTags {
 
     private final Map<ConfigSetting, Consumer<String>> tags = new EnumMap<>(ConfigSetting.class);
-    private final Set<ConfigSetting> marked = EnumSet.noneOf(ConfigSetting.class);
+    private final Set<ConfigSetting> tagged = EnumSet.noneOf(ConfigSetting.class);
     private final Set<ConfigSetting> loaded = EnumSet.noneOf(ConfigSetting.class);
     private final String tag;
     private boolean filling;
 
     /**
-     * Makes the marks for one card.
+     * Makes the tags for one card.
      *
      * @param tag what a tagged field says, such as "Typical value", in the owner's language
      */
-    public TypicalMarks(String tag) {
+    public TypicalTags(String tag) {
         this.tag = tag;
     }
 
@@ -44,7 +44,7 @@ public final class TypicalMarks {
      * @param setting the followed setting whose field changed
      */
     public void edited(ConfigSetting setting) {
-        if (!filling && marked.remove(setting)) {
+        if (!filling && tagged.remove(setting)) {
             tags.get(setting).accept("");
         }
     }
@@ -56,9 +56,9 @@ public final class TypicalMarks {
      * @param fill puts the stored values in the fields
      */
     public void load(Set<ConfigSetting> typical, Runnable fill) {
-        mark(typical, fill);
+        tag(typical, fill);
         loaded.clear();
-        loaded.addAll(marked);
+        loaded.addAll(tagged);
     }
 
     /**
@@ -67,7 +67,7 @@ public final class TypicalMarks {
      * @param fill puts the typical values in the fields
      */
     public void useTypical(Runnable fill) {
-        mark(tags.keySet(), fill);
+        tag(tags.keySet(), fill);
     }
 
     /**
@@ -76,7 +76,7 @@ public final class TypicalMarks {
      *
      * @param change shows the same values another way
      */
-    public void keep(Runnable change) {
+    public void keepTagsWhile(Runnable change) {
         filling = true;
         try {
             change.run();
@@ -90,8 +90,8 @@ public final class TypicalMarks {
      *
      * @return the followed settings that hold a typical value
      */
-    public Set<ConfigSetting> marked() {
-        return Set.copyOf(marked);
+    public Set<ConfigSetting> tagged() {
+        return Set.copyOf(tagged);
     }
 
     /**
@@ -104,7 +104,7 @@ public final class TypicalMarks {
         var applied = EnumSet.noneOf(ConfigSetting.class);
         applied.addAll(stored);
         applied.removeAll(tags.keySet());
-        applied.addAll(marked);
+        applied.addAll(tagged);
         return Set.copyOf(applied);
     }
 
@@ -114,13 +114,13 @@ public final class TypicalMarks {
      * @return true when saving would change which values are typical
      */
     public boolean isChanged() {
-        return !marked.equals(loaded);
+        return !tagged.equals(loaded);
     }
 
-    private void mark(Set<ConfigSetting> typical, Runnable fill) {
-        keep(fill);
-        marked.clear();
-        typical.stream().filter(tags::containsKey).forEach(marked::add);
-        tags.forEach((setting, showTag) -> showTag.accept(marked.contains(setting) ? tag : ""));
+    private void tag(Set<ConfigSetting> typical, Runnable fill) {
+        keepTagsWhile(fill);
+        tagged.clear();
+        typical.stream().filter(tags::containsKey).forEach(tagged::add);
+        tags.forEach((setting, showTag) -> showTag.accept(tagged.contains(setting) ? tag : ""));
     }
 }

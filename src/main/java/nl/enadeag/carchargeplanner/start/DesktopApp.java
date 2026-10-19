@@ -199,7 +199,7 @@ public final class DesktopApp {
         engine.start(outlook -> {
             dashboard.show(outlook, engine.awayPeriods());
             trayPresenter.show(outlook);
-            windows.setUpOffer().show(outlook);
+            windows.setUpOffer().follow(outlook);
         });
         LOG.log(Level.INFO, "planning with " + configPath);
     }

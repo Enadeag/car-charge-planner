@@ -72,7 +72,7 @@ public final class SettingsWindow {
         this.theme = new WindowTheme(colorScheme);
         this.icon = icon;
         // later, also on the JavaFX thread: a Save chooses the language while its button is still handling the click
-        language.onChange(_ -> Platform.runLater(this::speak));
+        language.onChange(_ -> Platform.runLater(this::remakeInChosenLanguage));
     }
 
     /**
@@ -129,7 +129,7 @@ public final class SettingsWindow {
     }
 
     /** Makes Settings again in the language spoken now, unless it is closed, speaks it or holds unsaved edits. */
-    private void speak() {
+    private void remakeInChosenLanguage() {
         var now = language.messages();
         if (stage == null || now == spoken || view.isChanged()) {
             return;

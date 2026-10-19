@@ -118,16 +118,17 @@ public final class LocationPage implements ConfigPage {
     }
 
     /**
-     * Whether the owner chose a place, as set-up needs before it goes on; when not, says so at the latitude.
+     * Says at the latitude that no place is chosen yet, as set-up needs one before it goes on.
      *
-     * @return false while the coordinates are still {@link Coordinates#NOT_CHOSEN}
+     * @return true when no place is chosen, the coordinates still being {@link Coordinates#NOT_CHOSEN}; false when one
+     *     is, and nothing is shown
      */
-    public boolean checkChosen() {
+    public boolean markNotChosen() {
         if (entry().isChosen()) {
-            return true;
+            return false;
         }
         latitudeRow.showProblem(messages.text(TextKey.PROBLEM_NO_PLACE));
-        return false;
+        return true;
     }
 
     private void choose(Place place) {
@@ -137,6 +138,7 @@ public final class LocationPage implements ConfigPage {
     }
 
     private LocationEntry entry() {
+        inputs().forEach(Input::commitTyped);
         return new LocationEntry(latitude.value(), longitude.value(), timezone.value());
     }
 

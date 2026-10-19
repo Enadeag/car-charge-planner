@@ -111,7 +111,7 @@ final class SettingsForm {
         }
         stored.startsAtLogin().ifPresentOrElse(startsAtLogin -> app.load(stored.app(), startsAtLogin),
                 () -> app.loadWithoutStartAtLogin(stored.app()));
-        about.load(stored.keyStorage());
+        about.show(stored.keyStorage());
     }
 
     /**

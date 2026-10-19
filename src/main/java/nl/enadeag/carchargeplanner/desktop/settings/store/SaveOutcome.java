@@ -39,7 +39,7 @@ public sealed interface SaveOutcome {
     }
 
     /**
-     * A file could not be written; what was stored before that stays stored.
+     * A file or the system keychain could not be written; what was stored before that stays stored.
      *
      * @param detail the system's error, as it gave it
      */

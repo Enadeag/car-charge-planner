@@ -32,7 +32,7 @@ public final class AboutPage implements Page {
     private final PageView view;
 
     /**
-     * Makes the page, without the files' card until {@link #load(KeyStorage)}.
+     * Makes the page, without the files' card until {@link #show(KeyStorage)}.
      *
      * @param facts the version and the places of the files
      * @param openLink opens a web page in the owner's browser; called on the JavaFX thread, so it should not block
@@ -48,9 +48,9 @@ public final class AboutPage implements Page {
     /**
      * Shows the page, with where the API keys are kept now.
      *
-     * @param keys whether the keys are in the system keychain, in the locked keychain or in the file
+     * @param keyStorage whether the keys are in the system keychain, in the locked keychain or in the file
      */
-    public void load(KeyStorage keys) {
+    public void show(KeyStorage keyStorage) {
         view.show(
                 new Card(APP_NAME, "", Labels.paragraph(messages.text(TextKey.ABOUT_VERSION, facts.version()), "fact"),
                         Labels.paragraph(ATTRIBUTION, "fact"), Labels.paragraph(COPYRIGHT, "note")),
@@ -63,7 +63,7 @@ public final class AboutPage implements Page {
                         place(TextKey.ABOUT_APP_FILE, facts.appSettingsFile().toString()),
                         place(TextKey.ABOUT_DATA_FOLDER, facts.dataFolder().toString()),
                         place(TextKey.ABOUT_LOG_FILE, facts.logFile().toString()),
-                        place(TextKey.ABOUT_KEYS, keys(keys, facts.keysFile()))));
+                        place(TextKey.ABOUT_KEYS, keys(keyStorage, facts.keysFile()))));
     }
 
     @Override

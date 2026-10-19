@@ -22,9 +22,9 @@ import javafx.scene.layout.HBox;
  * Set-up's step before the last: one forecast from the primary provider for the system as entered, so the owner knows
  * it works before Finish. A failure only says so; the app keeps trying once it is set up.
  */
-final class SetUpCheck implements SetUpPage {
+final class SetUpCheck implements SetUpStepPage {
 
-    private final BiFunction<EngineConfig, Secrets, ConnectionResult> check;
+    private final BiFunction<EngineConfig, Secrets, ConnectionResult> askProvider;
     private final List<ProviderInfo> providers;
     private final Background background;
     private final Messages messages;
@@ -36,17 +36,17 @@ final class SetUpCheck implements SetUpPage {
     private int asked;
 
     /**
-     * Makes the step; nothing is asked until {@link #run(EngineConfig, Secrets)}.
+     * Makes the step; nothing is asked until {@link #check(EngineConfig, Secrets)}.
      *
-     * @param check asks the config's primary provider for one forecast with these keys, nothing saved; blocks, so it
+     * @param askProvider asks the config's primary provider for one forecast with these keys, nothing saved; blocks, so it
      *     is called away from the JavaFX thread
      * @param providers what the known providers tell about themselves, to name the one asked
      * @param background asks the provider away from the JavaFX thread
      * @param messages the texts, in the language set-up speaks
      */
-    SetUpCheck(BiFunction<EngineConfig, Secrets, ConnectionResult> check, List<ProviderInfo> providers,
+    SetUpCheck(BiFunction<EngineConfig, Secrets, ConnectionResult> askProvider, List<ProviderInfo> providers,
             Background background, Messages messages) {
-        this.check = check;
+        this.askProvider = askProvider;
         this.providers = List.copyOf(providers);
         this.background = background;
         this.messages = messages;
@@ -65,7 +65,7 @@ final class SetUpCheck implements SetUpPage {
      * @param entered the whole config as entered
      * @param enteredKeys every provider's secret settings as entered
      */
-    void run(EngineConfig entered, Secrets enteredKeys) {
+    void check(EngineConfig entered, Secrets enteredKeys) {
         config = entered;
         keys = enteredKeys;
         ask();
@@ -77,8 +77,8 @@ final class SetUpCheck implements SetUpPage {
     }
 
     @Override
-    public void enter(SetUpForm form) {
-        run(form.config(), form.keys());
+    public void onReached(SetUpForm form) {
+        check(form.config(), form.keys());
     }
 
     /** Only the latest answer counts: the owner may ask again, or come back with other values, before one arrives. */
@@ -95,7 +95,7 @@ final class SetUpCheck implements SetUpPage {
                 show(name, result);
             }
         };
-        background.run("checking the forecast for set-up", () -> check.apply(askedConfig, askedKeys), answered,
+        background.run("checking the forecast for set-up", () -> askProvider.apply(askedConfig, askedKeys), answered,
                 failure -> answered.accept(new ConnectionResult(false, 0, Background.describe(failure, messages))));
     }
 

@@ -15,7 +15,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.scene.layout.StackPane;
 
 /** Set-up's last step: the owner's dashboard, planned with what they entered, before Finish saves it. */
-final class SetUpPreview implements SetUpPage {
+final class SetUpPreview implements SetUpStepPage {
 
     private final BiFunction<EngineConfig, Secrets, Outlook> preview;
     private final Background background;
@@ -25,7 +25,7 @@ final class SetUpPreview implements SetUpPage {
     private int asked;
 
     /**
-     * Makes the step; nothing is planned until {@link #run(EngineConfig, Secrets)}.
+     * Makes the step; nothing is planned until {@link #plan(EngineConfig, Secrets)}.
      *
      * @param preview plans a config with these keys, nothing saved and nobody told; blocks while the forecast is
      *     fetched, so it is called away from the JavaFX thread
@@ -51,7 +51,7 @@ final class SetUpPreview implements SetUpPage {
      * @param config the whole config as entered
      * @param keys every provider's secret settings as entered
      */
-    void run(EngineConfig config, Secrets keys) {
+    void plan(EngineConfig config, Secrets keys) {
         var asking = ++asked;
         dashboard.showLoading();
         Consumer<Outlook> planned = outlook -> {
@@ -69,7 +69,7 @@ final class SetUpPreview implements SetUpPage {
     }
 
     @Override
-    public void enter(SetUpForm form) {
-        run(form.config(), form.keys());
+    public void onReached(SetUpForm form) {
+        plan(form.config(), form.keys());
     }
 }

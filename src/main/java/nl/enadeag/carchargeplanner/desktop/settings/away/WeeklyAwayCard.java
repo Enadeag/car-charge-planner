@@ -97,24 +97,21 @@ public final class WeeklyAwayCard implements ConfigPart {
         listeners.forEach(row::onChange);
         shown.add(row);
         rows.getChildren().add(row);
-        showEmpty();
-    }
-
-    private void numberRows() {
-        for (int i = 0; i < shown.size(); i++) {
-            shown.get(i).number(i, shown.size());
-        }
+        refreshRows();
     }
 
     private void remove(AwayRow row) {
         shown.remove(row);
         rows.getChildren().remove(row);
-        showEmpty();
+        refreshRows();
         listeners.forEach(Runnable::run);
     }
 
-    private void showEmpty() {
-        numberRows();
+    /** Gives each row its place among the rows, and says so when there are none. */
+    private void refreshRows() {
+        for (int i = 0; i < shown.size(); i++) {
+            shown.get(i).placeAmong(i, shown.size());
+        }
         empty.setVisible(shown.isEmpty());
         empty.setManaged(shown.isEmpty());
     }
