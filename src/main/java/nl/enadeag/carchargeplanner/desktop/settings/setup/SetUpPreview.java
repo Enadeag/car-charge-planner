@@ -30,15 +30,16 @@ final class SetUpPreview implements SetUpStepPage {
      * @param preview plans a config with these keys, nothing saved and nobody told; blocks while the forecast is
      *     fetched, so it is called away from the JavaFX thread
      * @param reducedMotion true while the system asks for reduced motion; the charts then change without moving
+     * @param appName the app's name, for the dashboard's header
      * @param background plans away from the JavaFX thread
      * @param messages the texts, in the language set-up speaks
      */
     SetUpPreview(BiFunction<EngineConfig, Secrets, Outlook> preview, ObservableValue<Boolean> reducedMotion,
-            Background background, Messages messages) {
+            String appName, Background background, Messages messages) {
         this.preview = preview;
         this.background = background;
         this.messages = messages;
-        this.dashboard = new DashboardPreview(reducedMotion, messages);
+        this.dashboard = new DashboardPreview(reducedMotion, appName, messages);
         var frame = new StackPane(dashboard.view());
         frame.getStyleClass().add("preview-frame");
         view = new PageView(messages.text(SetUpStep.PREVIEW.title()));

@@ -50,6 +50,7 @@ public final class SetUpWindow {
     private final EngineConfig firstRun;
     private final Looks looks;
     private final AppIcon icon;
+    private final String appName;
     private final Background background;
     // the fields below belong to the JavaFX thread; stage and view are null while the window is closed, start until
     // what is stored was read
@@ -73,18 +74,21 @@ public final class SetUpWindow {
      * @param looks the system's colour scheme and reduced motion, and the owner's saved appearance, followed while the
      *     app runs
      * @param icon the app icon, for the title bar and the taskbar
+     * @param appName the app's name, for the title bar and the dashboard's preview
      * @param language the language the app speaks, followed while the app runs; never null
      * @param background reads and writes the stores, and asks the providers, away from the JavaFX thread
      */
     public SetUpWindow(SettingsStores stores, Path keysFile, Consumer<URI> openLink, Consumer<AppSettings> finished,
-            ZoneId timezone, Looks looks, AppIcon icon, LanguageChoice language, Background background) {
+            ZoneId timezone, Looks looks, AppIcon icon, String appName, LanguageChoice language,
+            Background background) {
         this.storage = new SettingsStorage(stores);
-        this.views = (messages, close) -> SetUpView.of(stores, keysFile, openLink, looks.reducedMotion(), close,
-                finished, background, messages);
+        this.views = (messages, close) -> SetUpView.of(stores, keysFile, openLink, looks.reducedMotion(), appName,
+                close, finished, background, messages);
         this.language = language;
         this.firstRun = EngineConfig.setUpDraft(timezone, stores.engine().providers().getFirst().id());
         this.looks = looks;
         this.icon = icon;
+        this.appName = appName;
         this.background = background;
         language.onChange(_ -> Platform.runLater(this::takeOverSaved));
         looks.saved().addListener((_, _, _) -> takeOverSaved());
@@ -141,7 +145,7 @@ public final class SetUpWindow {
         var theme = new WindowTheme(Appearance.scheme(appearance, looks.system()));
         theme.style(scene);
         made.setScene(scene);
-        made.setTitle(spoken.text(TextKey.SET_UP_TITLE));
+        made.setTitle(spoken.text(TextKey.SET_UP_TITLE, appName));
         made.getIcons().setAll(icon.fxImages());
         var size = WindowSize.on(WIDTH_EM, HEIGHT_EM, Font.getDefault().getSize(),
                 Screen.getPrimary().getVisualBounds());
@@ -186,7 +190,7 @@ public final class SetUpWindow {
             spoken = now;
             view = makeView(now, stage);
             stage.getScene().setRoot(view);
-            stage.setTitle(now.text(TextKey.SET_UP_TITLE));
+            stage.setTitle(now.text(TextKey.SET_UP_TITLE, appName));
         }
         view.start(start, draft, step);
     }

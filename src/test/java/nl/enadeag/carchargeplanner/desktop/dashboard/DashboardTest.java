@@ -22,6 +22,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
+import nl.enadeag.carchargeplanner.host.AppName;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -70,7 +71,7 @@ class DashboardTest {
     }
 
     private Dashboard dashboard(TaskbarHiding taskbarHiding) throws Exception {
-        return Fx.call(() -> new Dashboard(new AppIcon(), new SimpleObjectProperty<>(ColorScheme.LIGHT),
+        return Fx.call(() -> new Dashboard(new AppIcon(), AppName.TITLE, new SimpleObjectProperty<>(ColorScheme.LIGHT),
                 new SimpleObjectProperty<>(true), clock, taskbarHiding, language,
                 new DashboardActions(level -> { }, period -> { }, removed::add, () -> { },
                         settingsOpened::incrementAndGet, setUpOpened::incrementAndGet, quit::incrementAndGet)));

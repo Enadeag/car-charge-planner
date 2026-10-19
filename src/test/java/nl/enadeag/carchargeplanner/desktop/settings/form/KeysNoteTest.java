@@ -28,7 +28,7 @@ class KeysNoteTest {
     @Test
     void keysThatCouldNotBeReadAreSaidFirstWithoutTheEnginesWords() {
         assertThat(KeysNote.of(KeyStorage.KEYCHAIN, SecretsProblem.Kind.FAILED, FILE, ENGLISH))
-                .isEqualTo("Your saved keys could not be read. Enter them again and save. " + IN_KEYCHAIN);
+                .isEqualTo("Your saved API keys could not be read. Enter them again and save. " + IN_KEYCHAIN);
     }
 
     @Test

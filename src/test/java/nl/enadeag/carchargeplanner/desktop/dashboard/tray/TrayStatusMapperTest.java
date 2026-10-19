@@ -75,7 +75,7 @@ class TrayStatusMapperTest {
         var status = MAPPER.map(new Outlook.NoForecast("API key is required", true));
 
         assertThat(status.dot()).isEqualTo(StatusDot.ACTION);
-        assertThat(status.text()).isEqualTo("No forecast: Unlock your keyring so the app can read your API key.");
+        assertThat(status.text()).isEqualTo("No forecast: Unlock your keychain so the app can read your API key.");
     }
 
     @Test
@@ -87,14 +87,14 @@ class TrayStatusMapperTest {
     void aWindowRunningNowIsChargingOnSunUntilItsEnd() {
         var status = at(12, day(TODAY, window(TODAY, 11, 14)));
 
-        assertThat(status).isEqualTo(new TrayStatus(StatusDot.SOLAR, "Charge on sun now, until 14:30, at 10 A."));
+        assertThat(status).isEqualTo(new TrayStatus(StatusDot.SOLAR, "Charge on solar now, until 14:30, at 10 A."));
     }
 
     @Test
     void aWindowLaterTodayIsChargingOnSunSoon() {
         var status = at(8, day(TODAY, window(TODAY, 11, 14)));
 
-        assertThat(status).isEqualTo(new TrayStatus(StatusDot.SOLAR, "Charge on sun today 11:15 – 14:30, at 10 A."));
+        assertThat(status).isEqualTo(new TrayStatus(StatusDot.SOLAR, "Charge on solar today 11:15 – 14:30, at 10 A."));
     }
 
     @Test
@@ -110,7 +110,7 @@ class TrayStatusMapperTest {
         var status = at(15, day(TODAY, window(TODAY, 11, 14)), day(tomorrow, window(tomorrow, 10, 13)));
 
         assertThat(status).isEqualTo(
-                new TrayStatus(StatusDot.NONE, "Nothing to do today. Next charge on sun: tomorrow 10:15 – 13:30."));
+                new TrayStatus(StatusDot.NONE, "Nothing to do today. Next solar charge: tomorrow 10:15 – 13:30."));
     }
 
     @Test

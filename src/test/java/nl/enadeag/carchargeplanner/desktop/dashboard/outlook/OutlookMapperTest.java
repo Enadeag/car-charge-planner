@@ -74,7 +74,7 @@ class OutlookMapperTest {
     void theMainCardReadsAsOneSentence() {
         var today = plan(day(TODAY, window(TODAY, 11, 14, 0.6))).days().getFirst();
 
-        assertThat(today.spoken()).isEqualTo("Today: charge window 11:15 to 14:30, 10 A, 92 % sun.");
+        assertThat(today.spoken()).isEqualTo("Today: charge window 11:15 to 14:30, 10 A, 92% solar.");
     }
 
     @Test
@@ -110,7 +110,7 @@ class OutlookMapperTest {
 
         assertThat(withoutGrid).extracting(ChipModel::source).containsExactly(EnergySource.SOLAR, EnergySource.CAR);
         assertThat(withGrid).containsExactly(
-                new ChipModel(EnergySource.SOLAR, "92 % sun"), new ChipModel(EnergySource.CAR, "Battery 50 → 74 %"),
+                new ChipModel(EnergySource.SOLAR, "92% solar"), new ChipModel(EnergySource.CAR, "Battery 50 → 74%"),
                 new ChipModel(EnergySource.GRID, "0.6 kWh from the grid"));
     }
 
@@ -126,7 +126,7 @@ class OutlookMapperTest {
     void anAssumedBatteryLevelIsMentionedOnTodayOnly() {
         var days = ((DashboardModel.Plan) MAPPER.map(planned(true, day(TODAY), day(TODAY.plusDays(1))))).days();
 
-        assertThat(days.get(0).note()).contains("assumes the battery is at 50 %");
+        assertThat(days.get(0).note()).contains("assumes the battery is at 50%");
         assertThat(days.get(1).note()).doesNotContain("assumes");
     }
 
@@ -210,7 +210,7 @@ class OutlookMapperTest {
 
         assertThat(model.title()).isEqualTo("Charge 11.0 kWh from the grid: tomorrow 01:00 – 04:00.");
         assertThat(model.detail())
-                .isEqualTo("Without it the battery ends Sunday at 22 %, below the minimum of 30 %. Set 16 A (3.7 kW).");
+                .isEqualTo("Without it the battery ends Sunday at 22%, below the minimum of 30%. Set 16 A (3.7 kW).");
     }
 
     @Test
@@ -252,7 +252,7 @@ class OutlookMapperTest {
                 "API key is required; The system keychain is locked.", true));
 
         assertThat(message.headline()).isEqualTo("No forecast");
-        assertThat(message.detail()).isEqualTo("Unlock your keyring so the app can read your API key.");
+        assertThat(message.detail()).isEqualTo("Unlock your keychain so the app can read your API key.");
     }
 
     @Test

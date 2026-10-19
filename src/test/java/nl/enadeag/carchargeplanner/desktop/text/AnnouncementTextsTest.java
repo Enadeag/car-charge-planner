@@ -32,7 +32,8 @@ class AnnouncementTextsTest {
         var text = text(AnnouncementKind.SOLAR_WINDOW, window(10, 15, 7, 1.6, 7.5, 0.1), Phases.ONE);
 
         assertThat(text.title()).isEqualTo("Charge window 10:00 – 15:00");
-        assertThat(text.body()).isEqualTo("Set the current to 7 A (1.6 kW) in your charger's app. About 7.6 kWh, 99 % solar.");
+        assertThat(text.body())
+                .isEqualTo("Set the charge current to 7 A (1.6 kW) in your charger's app. About 7.6 kWh, 99% solar.");
     }
 
     @Test
@@ -63,7 +64,7 @@ class AnnouncementTextsTest {
     void onThreePhasesTheCurrentIsPerPhase() {
         var text = text(AnnouncementKind.SOLAR_WINDOW, window(10, 15, 7, 4.8, 20, 0), Phases.THREE);
 
-        assertThat(text.body()).startsWith("Set the current to 7 A per phase (4.8 kW) in your charger's app.");
+        assertThat(text.body()).startsWith("Set the charge current to 7 A per phase (4.8 kW) in your charger's app.");
     }
 
     @Test
@@ -72,7 +73,8 @@ class AnnouncementTextsTest {
 
         assertThat(text.title()).isEqualTo("Grid charge window 00:00 – 06:00");
         assertThat(text.body()).isEqualTo(
-                "Set the current to 13 A (3.0 kW) in your charger's app. About 17.9 kWh, needed to stay above 30 %.");
+                "Set the charge current to 13 A (3.0 kW) in your charger's app. About 17.9 kWh, needed to stay above "
+                        + "30%.");
     }
 
     @Test

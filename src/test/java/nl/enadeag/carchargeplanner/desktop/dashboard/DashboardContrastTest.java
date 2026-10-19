@@ -9,6 +9,7 @@ import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
+import nl.enadeag.carchargeplanner.host.AppName;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -39,7 +40,8 @@ class DashboardContrastTest {
     /** Every day of the example plan, and the message shown without a plan. */
     private List<String> problems(ColorScheme scheme) throws Exception {
         return Fx.call(() -> {
-            var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, new Messages(Language.ENGLISH));
+            var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION,
+                    AppName.TITLE, new Messages(Language.ENGLISH));
             view.onOneOffAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
             stage = Scenes.show(view, scheme);
             var problems = new ArrayList<String>();

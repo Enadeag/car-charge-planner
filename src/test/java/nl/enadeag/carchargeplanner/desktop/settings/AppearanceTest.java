@@ -13,6 +13,7 @@ import nl.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.host.AppName;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
@@ -43,8 +44,8 @@ class AppearanceTest {
     void make() throws Exception {
         settings = new SettingsFixture(folder, Language.ENGLISH);
         settingsWindow = settings.window(language, appearance, system);
-        dashboard = Fx.call(() -> new Dashboard(new AppIcon(), Appearance.scheme(appearance, system), Fx.REDUCED_MOTION,
-                () -> Instant.parse("2026-10-15T08:00:00Z"), TaskbarHiding.NONE, language,
+        dashboard = Fx.call(() -> new Dashboard(new AppIcon(), AppName.TITLE, Appearance.scheme(appearance, system),
+                Fx.REDUCED_MOTION, () -> Instant.parse("2026-10-15T08:00:00Z"), TaskbarHiding.NONE, language,
                 new DashboardActions(level -> { }, period -> { }, period -> { }, () -> { }, () -> { }, () -> { }, () -> { })));
         dashboard.openWindow();
         settingsWindow.open(Category.APP);

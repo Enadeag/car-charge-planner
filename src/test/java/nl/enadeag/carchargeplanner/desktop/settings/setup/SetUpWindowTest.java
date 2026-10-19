@@ -18,6 +18,7 @@ import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
+import nl.enadeag.carchargeplanner.host.AppName;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -90,7 +91,7 @@ class SetUpWindowTest {
         var after = view();
         assertThat(after).isNotSameAs(before);
         assertThat(Fx.call(after::step)).isEqualTo(SetUpStep.APP);
-        assertThat(Fx.call(() -> shownStage().getTitle())).isEqualTo(DUTCH.text(TextKey.SET_UP_TITLE));
+        assertThat(Fx.call(() -> shownStage().getTitle())).isEqualTo(DUTCH.text(TextKey.SET_UP_TITLE, AppName.TITLE));
         assertThat(Fx.call(() -> SetUpFixture.texts(after))).contains(DUTCH.text(TextKey.SET_UP_NEXT));
         assertThat(Fx.call(() -> after.draft().app().units())).isEqualTo(Units.IMPERIAL);
         assertThat(language.messages().language()).isEqualTo(Language.ENGLISH); // nothing is saved before Finish
@@ -158,7 +159,7 @@ class SetUpWindowTest {
         var settings = Fx.call(() -> new SettingsWindow(setUp.stores(), new AboutFacts("1.2.3", setUp.configPath,
                 setUp.appSettings.path(), folder.resolve("data"), folder.resolve("data").resolve("app.0.log"),
                 setUp.keysFile()), setUp.opened::add, chosen -> { }, window::open,
-                new SimpleObjectProperty<>(ColorScheme.LIGHT), new AppIcon(), language,
+                new SimpleObjectProperty<>(ColorScheme.LIGHT), new AppIcon(), AppName.TITLE, language,
                 new Background(Runnable::run, Runnable::run)));
         settings.open(Category.APP);
         Fx.settle();

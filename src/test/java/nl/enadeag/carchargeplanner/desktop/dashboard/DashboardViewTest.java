@@ -12,6 +12,7 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.parts.DayKind;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
+import nl.enadeag.carchargeplanner.host.AppName;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -37,7 +38,8 @@ class DashboardViewTest {
 
     private DashboardView shown(DashboardModel model) throws Exception {
         return Fx.call(() -> {
-            var view = new DashboardView(detached::incrementAndGet, () -> { }, Fx.REDUCED_MOTION, new Messages(Language.ENGLISH));
+            var view = new DashboardView(detached::incrementAndGet, () -> { }, Fx.REDUCED_MOTION,
+                    AppName.TITLE, new Messages(Language.ENGLISH));
             view.show(model);
             stage = Scenes.show(view, ColorScheme.LIGHT);
             return view;
@@ -207,7 +209,8 @@ class DashboardViewTest {
         var plan = new DashboardModel.Plan(List.of(Models.CLOUDY_TOMORROW, busy), Optional.empty(), Models.AWAY,
                 Models.FOOTER);
         var view = Fx.call(() -> {
-            var it = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, new Messages(Language.ENGLISH));
+            var it = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION,
+                    AppName.TITLE, new Messages(Language.ENGLISH));
             it.show(plan);
             stage = Scenes.show(it, ColorScheme.LIGHT);
             stage.getScene().getRoot().resize(420, 600);

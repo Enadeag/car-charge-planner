@@ -43,10 +43,12 @@ final class DashboardPopup {
      *
      * @param theme makes the popup light or dark as the system is
      * @param icon the app icon, for a taskbar that lists the popup
+     * @param appName the app's name, for a taskbar that lists the popup
      * @param clock tells when the popup closed, so the click on the tray icon that closed it does not open it again
      * @param taskbarHiding how this system keeps the popup out of its taskbar
      */
-    DashboardPopup(WindowTheme theme, AppIcon icon, InstantSource clock, TaskbarHiding taskbarHiding) {
+    DashboardPopup(WindowTheme theme, AppIcon icon, String appName, InstantSource clock,
+            TaskbarHiding taskbarHiding) {
         this.clock = clock;
         this.owned = taskbarHiding == TaskbarHiding.OWNER_WINDOW;
         content.getStyleClass().add("popup");
@@ -60,7 +62,7 @@ final class DashboardPopup {
             }
         });
         stage.setScene(scene);
-        stage.setTitle("Car charge planner");
+        stage.setTitle(appName);
         // where a taskbar still lists the popup (Plasma does), it shows the app's icon
         stage.getIcons().setAll(icon.fxImages());
         if (owned) {

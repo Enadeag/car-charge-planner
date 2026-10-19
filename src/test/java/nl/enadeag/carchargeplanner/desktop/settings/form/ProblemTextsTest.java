@@ -17,7 +17,7 @@ class ProblemTextsTest {
         assertThat(ProblemTexts.of(Rule.OUT_OF_RANGE, ENGLISH)).isEqualTo("This value is outside what is allowed here.");
         assertThat(ProblemTexts.of(Rule.NOT_BELOW_TARGET, ENGLISH)).isEqualTo("Must be below the target charge level.");
         assertThat(ProblemTexts.of(Rule.BELOW_MINIMUM_CURRENT, ENGLISH))
-                .isEqualTo("Must not be below the minimum current.");
+                .isEqualTo("Must not be below the minimum charge current.");
         assertThat(ProblemTexts.of(Rule.SAME_AS_PRIMARY, ENGLISH))
                 .isEqualTo("Choose a different provider from the first one.");
         assertThat(ProblemTexts.of(Rule.NOT_AFTER_START, ENGLISH))

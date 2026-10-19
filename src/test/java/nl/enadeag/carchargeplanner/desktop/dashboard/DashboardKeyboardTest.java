@@ -10,6 +10,7 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.host.AppName;
 import java.util.Optional;
 import javafx.application.ColorScheme;
 import javafx.scene.control.Button;
@@ -37,7 +38,7 @@ class DashboardKeyboardTest {
     /** The headless screen is 1000 px tall: the window stays on it, and the day scrolls as in a short popup. */
     private DashboardView show(ColorScheme scheme) throws Exception {
         return Fx.call(() -> {
-            var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, ENGLISH);
+            var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, AppName.TITLE, ENGLISH);
             view.onOneOffAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
             view.onBatteryEntered(_ -> { });
             view.onSetUp(() -> { });

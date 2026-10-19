@@ -34,6 +34,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import nl.enadeag.carchargeplanner.host.AppName;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
@@ -174,7 +175,7 @@ public final class SettingsFixture {
             saved++;
             chosen.language().ifPresentOrElse(language::choose, language::followSystem);
             appearance.set(chosen.appearance());
-        }, () -> { }, Appearance.scheme(appearance, system), new AppIcon(), language, background));
+        }, () -> { }, Appearance.scheme(appearance, system), new AppIcon(), AppName.TITLE, language, background));
     }
 
     /** The Settings window, hidden, light, following a language as {@link #window(LanguageChoice, ObjectProperty, ObservableValue)}. */

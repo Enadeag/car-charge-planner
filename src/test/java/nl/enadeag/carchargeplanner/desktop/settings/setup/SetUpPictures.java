@@ -4,6 +4,7 @@ import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.Pictures.Frame;
 import nl.enadeag.carchargeplanner.desktop.Pictures.Studio;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
+import nl.enadeag.carchargeplanner.host.AppName;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -82,6 +83,7 @@ public final class SetUpPictures {
     private static WritableImage setUp(ColorScheme scheme, Path folder, Steps steps) throws Exception {
         var setUp = new SetUpFixture(folder, Language.ENGLISH, CLOCK);
         var view = Fx.call(() -> SetUpView.of(setUp.stores(), setUp.keysFile(), uri -> { }, Fx.REDUCED_MOTION,
+                AppName.TITLE,
                 () -> { }, chosen -> { }, setUp.background, setUp.messages));
         var studio = Fx.call(() -> {
             // shown first, so the step's first field, or Next, takes the focus as set-up's window opens

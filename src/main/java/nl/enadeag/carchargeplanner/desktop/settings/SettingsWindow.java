@@ -43,6 +43,7 @@ public final class SettingsWindow {
     private final LanguageChoice language;
     private final WindowTheme theme;
     private final AppIcon icon;
+    private final String appName;
     // the fields below belong to the JavaFX thread; all are null while the window is closed
     private Stage stage;
     private SettingsView view;
@@ -60,17 +61,19 @@ public final class SettingsWindow {
      * @param colorScheme light or dark for the windows, followed while the app runs: the owner's appearance over the
      *     system's ({@link nl.enadeag.carchargeplanner.desktop.app.Appearance#scheme}); never null
      * @param icon the app icon, for the title bar and the taskbar
+     * @param appName the app's name, for the title bar
      * @param language the language the texts are in, followed while the app runs; never null
      * @param background reads and writes the stores away from the JavaFX thread
      */
     public SettingsWindow(SettingsStores stores, AboutFacts facts, Consumer<URI> openLink,
             Consumer<AppSettings> saved, Runnable runSetUp, ObservableValue<ColorScheme> colorScheme,
-            AppIcon icon, LanguageChoice language, Background background) {
+            AppIcon icon, String appName, LanguageChoice language, Background background) {
         this.views = (messages, close) -> SettingsView.of(stores, facts, openLink, close, saved, runSetUp, background,
                 messages);
         this.language = language;
         this.theme = new WindowTheme(colorScheme);
         this.icon = icon;
+        this.appName = appName;
         // later, also on the JavaFX thread: a Save chooses the language while its button is still handling the click
         language.onChange(_ -> Platform.runLater(this::remakeInChosenLanguage));
     }
@@ -104,7 +107,7 @@ public final class SettingsWindow {
         var scene = new Scene(view);
         theme.style(scene);
         made.setScene(scene);
-        made.setTitle(spoken.text(TextKey.SETTINGS_TITLE));
+        made.setTitle(spoken.text(TextKey.SETTINGS_TITLE, appName));
         made.getIcons().setAll(icon.fxImages());
         var size = WindowSize.on(WIDTH_EM, HEIGHT_EM, Font.getDefault().getSize(),
                 Screen.getPrimary().getVisualBounds());
@@ -139,7 +142,7 @@ public final class SettingsWindow {
         var shown = stage;
         view = views.apply(now, () -> close(shown));
         stage.getScene().setRoot(view);
-        stage.setTitle(now.text(TextKey.SETTINGS_TITLE));
+        stage.setTitle(now.text(TextKey.SETTINGS_TITLE, appName));
         view.continueFrom(before);
     }
 }

@@ -28,6 +28,7 @@ import nl.enadeag.carchargeplanner.engine.notify.Announcer;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import nl.enadeag.carchargeplanner.host.AppName;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -111,7 +112,7 @@ public final class DashboardPictures {
     private static WritableImage dashboard(DashboardModel plan, ColorScheme scheme, Frame frame,
             double zoom, Consumer<DashboardView> ready) {
         var messages = new Messages(Language.ENGLISH);
-        var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, messages);
+        var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, AppName.TITLE, messages);
         view.setDetachable(frame == Frame.POPUP);
         view.onBatteryEntered(_ -> { });
         view.onOneOffAwayChange(_ -> { }, _ -> { }, Models.CLOCK);

@@ -159,6 +159,7 @@ final class SetUpView extends BorderPane {
      * @param keysFile the file the API keys are kept in when there is no usable keychain
      * @param openLink opens a web page in the owner's browser; called on the JavaFX thread, so it should not block
      * @param reducedMotion true while the system asks for reduced motion, for the dashboard's preview
+     * @param appName the app's name, for the dashboard's preview
      * @param close closes set-up; called after Cancel, and after Finish saved
      * @param finished gets the app settings Finish saved, after {@code close}
      * @param background does the slow work, such as asking a provider or saving, away from the JavaFX thread
@@ -167,7 +168,7 @@ final class SetUpView extends BorderPane {
      *     {@link #start(SettingsStorage.Stored, SetUpDraft, SetUpStep)}
      */
     static SetUpView of(SettingsStores stores, Path keysFile, Consumer<URI> openLink,
-            ObservableValue<Boolean> reducedMotion, Runnable close, Consumer<AppSettings> finished,
+            ObservableValue<Boolean> reducedMotion, String appName, Runnable close, Consumer<AppSettings> finished,
             Background background, Messages messages) {
         var engine = stores.engine();
         var providers = engine.providers();
@@ -207,7 +208,7 @@ final class SetUpView extends BorderPane {
             settings.putAll(keys.of(primary));
             return engine.checkConnection(primary, config.system(), settings);
         }, providers, background, messages));
-        pages.put(SetUpStep.PREVIEW, new SetUpPreview(engine::preview, reducedMotion, background, messages));
+        pages.put(SetUpStep.PREVIEW, new SetUpPreview(engine::preview, reducedMotion, appName, background, messages));
 
         var parts = new EnumMap<SetUpStep, List<ConfigPart>>(SetUpStep.class);
         parts.put(SetUpStep.LOCATION, List.of(location));

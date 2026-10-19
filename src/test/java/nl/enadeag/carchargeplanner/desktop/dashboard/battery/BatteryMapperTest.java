@@ -20,8 +20,8 @@ class BatteryMapperTest {
     void todaysBatteryIsNowAndCanBeEntered() {
         var battery = new BatteryMapper(TWO_DAYS, ENGLISH).map(TWO_DAYS.days().getFirst());
 
-        assertThat(battery).isEqualTo(new BatteryModel(50, 74, 30, 80, "50 → 74 %", "min 30", "target 80", true,
-                "Car battery 50 % now, 74 % after charging; minimum 30 %, target 80 %. "
+        assertThat(battery).isEqualTo(new BatteryModel(50, 74, 30, 80, "50 → 74%", "min 30%", "target 80%", true,
+                "Car battery 50% now, 74% after charging; minimum 30%, target 80%. "
                         + "The level is assumed: enter the level the car shows."));
     }
 
@@ -32,7 +32,7 @@ class BatteryMapperTest {
         assertThat(battery.editable()).isFalse();
         assertThat(battery.levelPct()).isEqualTo(62);
         assertThat(battery.spoken()).isEqualTo(
-                "Car battery 62 % at the start of tomorrow, 62 % after charging; minimum 30 %, target 80 %.");
+                "Car battery 62% at the start of tomorrow, 62% after charging; minimum 30%, target 80%.");
     }
 
     @Test

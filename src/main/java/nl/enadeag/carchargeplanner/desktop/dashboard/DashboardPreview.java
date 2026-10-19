@@ -23,11 +23,12 @@ public final class DashboardPreview {
      * @param reducedMotion true while the system asks for reduced motion
      *     ({@code Platform.getPreferences().reducedMotionProperty()}); the charts then change without moving; never
      *     null
+     * @param appName the app's name, for the header; the same in every language
      * @param messages the texts, in the language set-up speaks
      */
-    public DashboardPreview(ObservableValue<Boolean> reducedMotion, Messages messages) {
+    public DashboardPreview(ObservableValue<Boolean> reducedMotion, String appName, Messages messages) {
         this.messages = messages;
-        this.view = new DashboardView(() -> { }, () -> { }, reducedMotion, messages);
+        this.view = new DashboardView(() -> { }, () -> { }, reducedMotion, appName, messages);
         view.setDetachable(false);
         view.hideFooterButtons();
         view.getStyleClass().add("dashboard-preview");

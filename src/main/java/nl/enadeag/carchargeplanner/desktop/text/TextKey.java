@@ -41,7 +41,7 @@ public enum TextKey {
     CHART_READOUT,
     /** The solar chart in words: {0} the day, {1} the peak power in kW, {2} the peak's time, {3} the house's use in kW. */
     CHART_SPOKEN,
-    /** The solar chart in words on a day without sun: {0} the day. */
+    /** The solar chart in words on a day without solar power: {0} the day. */
     CHART_SPOKEN_NO_SOLAR,
     /** The charge windows in words, after the chart's: {0} one window, or several joined with commas. */
     CHART_SPOKEN_WINDOWS,
@@ -55,9 +55,9 @@ public enum TextKey {
     BATTERY_HEADING,
     /** The battery's levels: {0} at the start, {1} after charging, in %. */
     BATTERY_LEVELS,
-    /** The label of the minimum charge level's mark: {0} the minimum in %. */
+    /** The label of the minimum charge level's mark: {0} the minimum, a number of percent without the sign. */
     BATTERY_MINIMUM,
-    /** The label of the target charge level's mark: {0} the target in %. */
+    /** The label of the target charge level's mark: {0} the target, a number of percent without the sign. */
     BATTERY_TARGET,
     /** Today's battery in words: {0} now, {1} after charging, {2} the minimum, {3} the target, all in %. */
     BATTERY_SPOKEN_TODAY,
@@ -143,9 +143,9 @@ public enum TextKey {
     TRAY_NO_FORECAST,
     /** The tray's tooltip when the forecast has no days. */
     TRAY_NO_DAYS,
-    /** The tray's tooltip for a window later today: {0} start, {1} end, {2} the current in A. */
+    /** The tray's tooltip for a charge window later today: {0} start, {1} end, {2} the charge current in A. */
     TRAY_SOLAR_LATER,
-    /** The tray's tooltip during a window: {0} its end, {1} the current in A. */
+    /** The tray's tooltip during a charge window: {0} its end, {1} the charge current in A. */
     TRAY_SOLAR_NOW,
     /** The tray's tooltip with no window today: {0} the day in a sentence, {1} start, {2} end. */
     TRAY_NEXT,
@@ -169,11 +169,14 @@ public enum TextKey {
     DAY_SET,
     /** A window's energy: {0} kWh. */
     DAY_ENERGY,
-    /** A window's share of sun: {0} in %. */
+    /** A charge window's solar share: {0} in %. */
     DAY_SOLAR_SHARE,
     /** A window's energy from the grid: {0} kWh. */
     DAY_FROM_GRID,
-    /** A day with a window for a screen reader: {0} the day, {1} start, {2} end, {3} the current in A, {4} sun in %. */
+    /**
+     * A day with a charge window for a screen reader: {0} the day, {1} start, {2} end, {3} the charge current in A,
+     * {4} the solar share in %.
+     */
     DAY_SPOKEN,
     /** The heading of a day with a charge window. */
     DAY_WINDOW,
@@ -191,13 +194,13 @@ public enum TextKey {
     DAY_LATER_WINDOW,
     /** The later windows of the same day: {0} the windows, separated by commas. */
     DAY_LATER_WINDOWS,
-    /** A notification's setting on one phase: {0} the current in A, {1} the power in kW. */
+    /** A notification's setting on one phase: {0} the charge current in A, {1} the power in kW. */
     NOTIFY_SET_ONE_PHASE,
-    /** A notification's setting on three phases: {0} the current per phase in A, {1} the power in kW. */
+    /** A notification's setting on three phases: {0} the charge current per phase in A, {1} the power in kW. */
     NOTIFY_SET_THREE_PHASES,
     /** The title of a charge window's notification: {0} the window's times. */
     NOTIFY_WINDOW_TITLE,
-    /** The rest of a charge window's notification: {0} kWh, {1} sun in %. */
+    /** The rest of a charge window's notification: {0} kWh, {1} the solar share in %. */
     NOTIFY_WINDOW_BODY,
     /** The title of a grid charge's notification: {0} the window's times. */
     NOTIFY_GRID_TITLE,
@@ -268,7 +271,7 @@ public enum TextKey {
     MENU_SETTINGS,
     /** The tray menu's entry that opens Settings on About. */
     MENU_ABOUT,
-    /** The title of the Settings window. */
+    /** The title of the Settings window: {0} the app's name. */
     SETTINGS_TITLE,
     /** The heading above Settings' categories. */
     SETTINGS_HEADING,
@@ -292,7 +295,7 @@ public enum TextKey {
     SETTINGS_CLOSE,
     /** Said after a save. */
     SETTINGS_SAVED,
-    /** Said when a value was refused and nothing was saved. */
+    /** Said when a value was refused and nothing was saved: the refused values are marked. */
     SETTINGS_REFUSED,
     /** Said when a file could not be written: {0} the system's error. */
     SETTINGS_SAVE_FAILED,
@@ -569,13 +572,13 @@ public enum TextKey {
     PHASES_ONE,
     /** Three phases. */
     PHASES_THREE,
-    /** The lowest current. */
+    /** The lowest charge current. */
     FIELD_MIN_CURRENT,
-    /** What the lowest current is. */
+    /** What the lowest charge current is. */
     FIELD_MIN_CURRENT_HINT,
-    /** The highest current. */
+    /** The highest charge current. */
     FIELD_MAX_CURRENT,
-    /** What the highest current is. */
+    /** What the highest charge current is. */
     FIELD_MAX_CURRENT_HINT,
     /** The voltage. */
     FIELD_VOLTAGE,
@@ -711,7 +714,7 @@ public enum TextKey {
     MENU_SET_UP,
     /** The tray's tooltip before the first set-up. */
     TRAY_NOT_SET_UP_FIRST,
-    /** The set-up window's title. */
+    /** The set-up window's title: {0} the app's name. */
     SET_UP_TITLE,
     /** Above set-up's page: {0} the step's number, {1} how many steps there are. */
     SET_UP_STEP,

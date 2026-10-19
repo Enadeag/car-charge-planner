@@ -25,12 +25,13 @@ final class DashboardWindow {
      *
      * @param theme makes the window light or dark as the system is
      * @param icon the app icon, for the title bar and the taskbar
+     * @param appName the app's name, for the title bar and the taskbar
      */
-    DashboardWindow(WindowTheme theme, AppIcon icon) {
+    DashboardWindow(WindowTheme theme, AppIcon icon, String appName) {
         var scene = new Scene(content);
         theme.style(scene);
         stage.setScene(scene);
-        stage.setTitle("Car charge planner");
+        stage.setTitle(appName);
         stage.getIcons().setAll(icon.fxImages());
         stage.setOnCloseRequest(event -> {
             event.consume();

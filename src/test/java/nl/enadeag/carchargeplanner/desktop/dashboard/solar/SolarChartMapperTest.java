@@ -54,7 +54,7 @@ class SolarChartMapperTest {
 
     @Test
     void eachStepReadsOutItsTimeTheSunAndTheHouse() {
-        assertThat(stepFrom(curve(TWO_DAYS, 0), 13).readout()).isEqualTo("13:00 – 4.2 kW sun · 0.4 kW house");
+        assertThat(stepFrom(curve(TWO_DAYS, 0), 13).readout()).isEqualTo("13:00: 4.2 kW solar · 0.4 kW house");
     }
 
     @Test
@@ -76,10 +76,10 @@ class SolarChartMapperTest {
 
     @Test
     void theChartReadsAsSentencesForAScreenReader() {
-        assertThat(curve(TWO_DAYS, 0).spoken()).isEqualTo("Today, expected sun: peak 4.2 kW around 13:00; the house uses "
-                + "about 0.4 kW. Charging: 11:15 to 14:30. Now 08:12.");
+        assertThat(curve(TWO_DAYS, 0).spoken()).isEqualTo("Today, expected solar power: peak 4.2 kW around 13:00; the "
+                + "house uses about 0.4 kW. Charging: 11:15 to 14:30. Now 08:12.");
         assertThat(curve(TWO_DAYS, 1).spoken())
-                .isEqualTo("Tomorrow, expected sun: peak 5.3 kW around 13:00; the house uses about 0.4 kW.");
+                .isEqualTo("Tomorrow, expected solar power: peak 5.3 kW around 13:00; the house uses about 0.4 kW.");
     }
 
     @Test
@@ -91,7 +91,7 @@ class SolarChartMapperTest {
         assertThat(curve.fromHour()).isEqualTo(6);
         assertThat(curve.toHour()).isEqualTo(20);
         assertThat(curve.scaleKw()).isEqualTo(1);
-        assertThat(curve.spoken()).isEqualTo("Today, expected sun: none.");
+        assertThat(curve.spoken()).isEqualTo("Today, expected solar power: none.");
     }
 
     @Test
@@ -104,7 +104,7 @@ class SolarChartMapperTest {
         // the hour from 02:00 to 03:00 comes twice, so 09:00 is 10 hours after midnight
         assertThat(curve.ticks()).contains(new Tick(10, "09"), new Tick(13, "12"));
         assertThat(curve.fromHour()).isEqualTo(9);
-        assertThat(stepFrom(curve, 10).readout()).startsWith("09:00 – 2.0 kW sun");
+        assertThat(stepFrom(curve, 10).readout()).startsWith("09:00: 2.0 kW solar");
     }
 
     @Test

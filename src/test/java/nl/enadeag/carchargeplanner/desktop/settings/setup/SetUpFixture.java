@@ -43,6 +43,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import nl.enadeag.carchargeplanner.host.AppName;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
@@ -153,7 +154,7 @@ final class SetUpFixture {
      */
     SetUpView open(TextScale scale) throws Exception {
         return Fx.call(() -> {
-            var view = SetUpView.of(stores(), keysFile(), opened::add, Fx.REDUCED_MOTION, () -> closed++,
+            var view = SetUpView.of(stores(), keysFile(), opened::add, Fx.REDUCED_MOTION, AppName.TITLE, () -> closed++,
                     chosen -> finished++, background, messages);
             // as large as the app makes its window for the larger text: so many lines of it
             Scenes.layOut(view, ColorScheme.LIGHT, scale, scale.of(50 * 13), scale.of(46 * 13));
@@ -167,7 +168,7 @@ final class SetUpFixture {
     /** The view as set-up opens it, before what is stored was read, shown in this scheme. */
     SetUpView openReading(ColorScheme scheme) throws Exception {
         return Fx.call(() -> {
-            var view = SetUpView.of(stores(), keysFile(), opened::add, Fx.REDUCED_MOTION, () -> closed++,
+            var view = SetUpView.of(stores(), keysFile(), opened::add, Fx.REDUCED_MOTION, AppName.TITLE, () -> closed++,
                     chosen -> finished++, background, messages);
             stage = Scenes.show(view, scheme, 50 * 13, 46 * 13);
             return view;
@@ -183,7 +184,7 @@ final class SetUpFixture {
 
     SetUpView open(ColorScheme scheme) throws Exception {
         return Fx.call(() -> {
-            var view = SetUpView.of(stores(), keysFile(), opened::add, Fx.REDUCED_MOTION, () -> closed++,
+            var view = SetUpView.of(stores(), keysFile(), opened::add, Fx.REDUCED_MOTION, AppName.TITLE, () -> closed++,
                     chosen -> finished++, background, messages);
             var start = new SettingsStorage(stores()).read();
             view.start(start, SetUpDraft.of(start, EngineConfig.setUpDraft(ZoneId.of("Europe/Amsterdam"),
@@ -197,7 +198,7 @@ final class SetUpFixture {
     SetUpWindow window(LanguageChoice language, SimpleObjectProperty<Appearance> saved) throws Exception {
         return Fx.call(() -> new SetUpWindow(stores(), keysFile(), opened::add, chosen -> finished++,
                 ZoneId.of("Europe/Amsterdam"), new SetUpWindow.Looks(new SimpleObjectProperty<>(ColorScheme.LIGHT),
-                        saved, Fx.REDUCED_MOTION), new AppIcon(), language, background));
+                        saved, Fx.REDUCED_MOTION), new AppIcon(), AppName.TITLE, language, background));
     }
 
     void close() throws Exception {

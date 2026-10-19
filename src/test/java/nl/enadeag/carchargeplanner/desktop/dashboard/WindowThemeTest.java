@@ -7,6 +7,7 @@ import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
+import nl.enadeag.carchargeplanner.host.AppName;
 import java.util.Optional;
 import javafx.application.ColorScheme;
 import javafx.beans.property.SimpleObjectProperty;
@@ -22,7 +23,8 @@ class WindowThemeTest {
     void switchingTheSystemToDarkWhileTheAppRunsRestylesTheDashboard() throws Exception {
         var scheme = new SimpleObjectProperty<>(ColorScheme.LIGHT);
         var dashboard = Fx.call(() -> {
-            var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, new Messages(Language.ENGLISH));
+            var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION,
+                    AppName.TITLE, new Messages(Language.ENGLISH));
             view.show(Models.plan(Optional.empty()));
             new WindowTheme(scheme).style(new Scene(new StackPane(view)));
             return view;

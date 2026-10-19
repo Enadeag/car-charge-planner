@@ -27,6 +27,7 @@ import javafx.geometry.Point2D;
  */
 public final class Dashboard {
 
+    private final String appName;
     private final ObservableValue<Boolean> reducedMotion;
     private final InstantSource clock;
     private final DashboardPopup popup;
@@ -44,6 +45,7 @@ public final class Dashboard {
      * called.
      *
      * @param icon the app icon, for the window's title bar and the taskbar
+     * @param appName the app's name, for the header and the window's title bar; the same in every language
      * @param colorScheme light or dark for the windows, followed while the app runs: the owner's appearance over the
      *     system's ({@link nl.enadeag.carchargeplanner.desktop.app.Appearance#scheme}); never null
      * @param reducedMotion true while the system asks for reduced motion
@@ -55,8 +57,9 @@ public final class Dashboard {
      * @param language the language the texts are in, followed while the app runs; never null
      * @param actions what the dashboard's controls do; never null
      */
-    public Dashboard(AppIcon icon, ObservableValue<ColorScheme> colorScheme, ObservableValue<Boolean> reducedMotion,
-            InstantSource clock, TaskbarHiding taskbarHiding, LanguageChoice language, DashboardActions actions) {
+    public Dashboard(AppIcon icon, String appName, ObservableValue<ColorScheme> colorScheme,
+            ObservableValue<Boolean> reducedMotion, InstantSource clock, TaskbarHiding taskbarHiding,
+            LanguageChoice language, DashboardActions actions) {
         if (actions == null) {
             throw new IllegalArgumentException("the dashboard's actions must not be null");
         }
@@ -64,8 +67,9 @@ public final class Dashboard {
         this.reducedMotion = reducedMotion;
         this.clock = clock;
         this.actions = actions;
-        this.popup = new DashboardPopup(theme, icon, clock, taskbarHiding);
-        this.window = new DashboardWindow(theme, icon);
+        this.appName = appName;
+        this.popup = new DashboardPopup(theme, icon, appName, clock, taskbarHiding);
+        this.window = new DashboardWindow(theme, icon, appName);
         this.messages = language.messages();
         this.view = newView();
         language.onChange(chosen -> Platform.runLater(() -> switchLanguage(chosen)));
@@ -132,7 +136,7 @@ public final class Dashboard {
 
     /** A view in the language spoken now, with the dashboard's actions, showing the latest outlook. */
     private DashboardView newView() {
-        var made = new DashboardView(this::detach, this::fitToContent, reducedMotion, messages);
+        var made = new DashboardView(this::detach, this::fitToContent, reducedMotion, appName, messages);
         made.onBatteryEntered(pct -> actions.batteryEntered().accept(new Percent(pct)));
         made.onOneOffAwayChange(actions.oneOffAdded(), actions.oneOffRemoved(), clock);
         made.onWeeklyAway(actions.openWeeklyAway());

@@ -21,6 +21,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
+import nl.enadeag.carchargeplanner.host.AppName;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -101,7 +102,7 @@ class DashboardLanguagesTest {
         return Fx.call(() -> {
             var messages = new Messages(language);
             var mapper = new OutlookMapper(messages);
-            var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, messages);
+            var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, AppName.TITLE, messages);
             view.onBatteryEntered(_ -> { });
             view.onOneOffAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
             view.lookup(".day-tabs").setStyle("-fx-open-tab-animation: none;"); // a growing tab is narrow on purpose

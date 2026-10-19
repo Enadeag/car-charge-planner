@@ -225,17 +225,17 @@ public final class DesktopApp {
         };
         var setUp = makeOnFx(() -> new SetUpWindow(stores, secretsPath, this::openLink, setUpFinished,
                 ZoneId.systemDefault(), new SetUpWindow.Looks(preferences.system(), appearance,
-                preferences.reducedMotion()), icon, language, background));
+                preferences.reducedMotion()), icon, AppName.TITLE, language, background));
         var facts = new AboutFacts(version(), configPath, appSettingsFile.path(), dataFolder,
                 AppLog.file(dataFolder), secretsPath);
         var settings = makeOnFx(() -> new SettingsWindow(stores, facts, this::openLink, saved, setUp::open,
-                preferences.windows(), icon, language, background));
+                preferences.windows(), icon, AppName.TITLE, language, background));
         var setUpOffer = new SetUpOffer(setUp::open, settings::open, !commandLine.atLogin());
         var actions = new DashboardActions(changes::setBatteryLevel, changes::addAwayPeriod,
                 changes::removeAwayPeriod, () -> setUpOffer.openSettingsOrSetUp(Category.AWAY),
                 () -> setUpOffer.openSettingsOrSetUp(Category.SOLAR), setUp::open, this::quit);
-        var dashboard = makeOnFx(() -> new Dashboard(icon, preferences.windows(), preferences.reducedMotion(),
-                Clock.systemUTC(), parts.taskbarHiding(), language, actions));
+        var dashboard = makeOnFx(() -> new Dashboard(icon, AppName.TITLE, preferences.windows(),
+                preferences.reducedMotion(), Clock.systemUTC(), parts.taskbarHiding(), language, actions));
         dashboardMade.complete(dashboard);
         return new Windows(dashboard, settings, setUpOffer);
     }

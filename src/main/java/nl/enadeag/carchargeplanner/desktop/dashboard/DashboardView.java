@@ -60,10 +60,11 @@ final class DashboardView extends VBox {
      * @param contentChanged called when another day or a new plan shows, so the popup or window can fit it
      * @param reducedMotion true while the system asks for reduced motion
      *     ({@code Platform.getPreferences().reducedMotionProperty()}); the charts then change without moving
+     * @param appName the app's name, for the header; the same in every language
      * @param messages the texts, in the owner's language
      */
     DashboardView(Runnable detachAction, Runnable contentChanged, ObservableValue<Boolean> reducedMotion,
-            Messages messages) {
+            String appName, Messages messages) {
         this.messages = messages;
         this.tabs = new DayTabs(this::showDay, messages);
         this.footer = new DashboardFooter(messages);
@@ -71,7 +72,7 @@ final class DashboardView extends VBox {
         this.solar = new SolarCard(reducedMotion, messages);
         this.battery = new BatteryCard(reducedMotion, messages);
         this.away = new OneOffAwayCard(contentChanged, messages);
-        var title = new Label("Car charge planner"); // the app's name, the same in every language
+        var title = new Label(appName);
         title.getStyleClass().add("app-title");
         title.setAccessibleRole(AccessibleRole.TEXT);
         var spacer = new Region();
