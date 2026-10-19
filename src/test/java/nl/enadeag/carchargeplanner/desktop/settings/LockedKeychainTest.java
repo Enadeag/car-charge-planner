@@ -37,11 +37,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Settings while the keyring that holds the API keys is locked, as after a login that did not unlock it: the pages say
+ * Settings while the keychain that holds the API keys is locked, as after a login that did not unlock it: the pages say
  * so, and Save has the system ask the owner to unlock it, with the file only when the owner dismisses that.
  */
 @FxTest
-class LockedKeyringTest {
+class LockedKeychainTest {
 
     private static final ProviderId OPEN_METEO = new ProviderId("open-meteo");
     private static final ProviderId FORECAST_SOLAR = new ProviderId("forecast-solar");
@@ -52,12 +52,12 @@ class LockedKeyringTest {
     private final LockableKeychain keychain = new LockableKeychain();
     private SettingsFixture settings;
 
-    /** Both providers' keys, stored before the keyring was locked. */
+    /** Both providers' keys, stored before the keychain was locked. */
     private static final Secrets STORED = new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-STORED"),
             FORECAST_SOLAR, Map.of("api_key", "FS-STORED")));
 
     @BeforeEach
-    void storeKeysAndLockTheKeyring() throws Exception {
+    void storeKeysAndLockTheKeychain() throws Exception {
         new ApiKeys(keychain, new SecretsFile(folder.resolve("unused.json"))).save(STORED);
         keychain.locked = true;
     }
@@ -99,7 +99,7 @@ class LockedKeyringTest {
         ((TextInputControl) SettingsFixture.field(view, "API key")).setText("NEW-KEY");
     }
 
-    /** The keys as stored, read once the keyring is unlocked again. */
+    /** The keys as stored, read once the keychain is unlocked again. */
     private Secrets storedAfterUnlocking() throws Exception {
         keychain.locked = false;
         var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
@@ -112,7 +112,7 @@ class LockedKeyringTest {
     }
 
     @Test
-    void theForecastAndAboutPagesSayTheKeyringIsLocked() throws Exception {
+    void theForecastAndAboutPagesSayTheKeychainIsLocked() throws Exception {
         var view = open();
 
         Fx.run(() -> view.show(Category.FORECAST));
@@ -126,7 +126,7 @@ class LockedKeyringTest {
     }
 
     @Test
-    void aKeySavedWhileLockedGoesIntoTheKeyringOnceTheOwnerUnlocksIt() throws Exception {
+    void aKeySavedWhileLockedGoesIntoTheKeychainOnceTheOwnerUnlocksIt() throws Exception {
         var view = open();
 
         assertThat(Fx.call(() -> {
@@ -153,7 +153,7 @@ class LockedKeyringTest {
         })).isTrue();
 
         assertThat(new SecretsFile(folder.resolve("secrets.json")).path()).exists();
-        assertThat(storedAfterUnlocking()).as("moved in over the keyring's other key").isEqualTo(new Secrets(Map.of(
+        assertThat(storedAfterUnlocking()).as("moved in over the keychain's other key").isEqualTo(new Secrets(Map.of(
                 OPEN_METEO, Map.of("api_key", "NEW-KEY"), FORECAST_SOLAR, Map.of("api_key", "FS-STORED"))));
         keychain.locked = true;
         Fx.run(() -> view.show(Category.FORECAST));
@@ -162,7 +162,7 @@ class LockedKeyringTest {
     }
 
     @Test
-    void whenTheKeyringCannotBeUnlockedNothingIsSavedAndTheOwnerIsToldToUnlockItAndSaveAgain() throws Exception {
+    void whenTheKeychainCannotBeUnlockedNothingIsSavedAndTheOwnerIsToldToUnlockItAndSaveAgain() throws Exception {
         keychain.unlockFails = KeychainException.Kind.REFUSED;
         var view = open();
         var before = new ConfigFile(settings.configPath).read();
@@ -174,7 +174,7 @@ class LockedKeyringTest {
         });
 
         assertThat(Fx.call(view::outcome)).contains(new SaveOutcome.KeyringLocked());
-        assertThat(texts(view)).contains(settings.messages.text(TextKey.SETTINGS_KEYRING_LOCKED));
+        assertThat(texts(view)).contains(settings.messages.text(TextKey.SETTINGS_KEYCHAIN_LOCKED));
         assertThat(new ConfigFile(settings.configPath).read()).as("nothing after the keys").isEqualTo(before);
         assertThat(folder.resolve("secrets.json")).doesNotExist();
         assertThat(storedAfterUnlocking()).isEqualTo(STORED);

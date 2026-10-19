@@ -359,7 +359,7 @@ final class SettingsView extends BorderPane {
     }
 
     /**
-     * The system asks the owner to unlock the keyring for the Save that runs: the status says where, and a screen
+     * The system asks the owner to unlock the keychain for the Save that runs: the status says where, and a screen
      * reader reads it.
      */
     private void waitingForUnlock() {
@@ -401,7 +401,7 @@ final class SettingsView extends BorderPane {
                 refused.add(Category.APP);
                 showProblem(messages.text(TextKey.SETTINGS_REFUSED));
             }
-            case SaveOutcome.KeyringLocked _ -> showProblem(messages.text(TextKey.SETTINGS_KEYRING_LOCKED));
+            case SaveOutcome.KeyringLocked _ -> showProblem(messages.text(TextKey.SETTINGS_KEYCHAIN_LOCKED));
             case SaveOutcome.Failed failure ->
                     showProblem(messages.text(TextKey.SETTINGS_SAVE_FAILED, failure.detail()));
         }
@@ -458,14 +458,14 @@ final class SettingsView extends BorderPane {
 
     /**
      * Closes Settings and then runs an action, after asking when closing would throw edits away; the owner may keep
-     * editing instead. While a Save runs nothing closes, but a Save that waits for the owner to unlock the keyring
+     * editing instead. While a Save runs nothing closes, but a Save that waits for the owner to unlock the keychain
      * stops waiting.
      *
      * @param next what to run once Settings closed, such as set-up
      */
     void closeThen(Runnable next) {
         if (state == State.SAVING) {
-            // a save that waits for the keyring to be unlocked stops waiting; in a moment the edits are either stored
+            // a save that waits for the keychain to be unlocked stops waiting; in a moment the edits are either stored
             // or the reason they are not shows
             form.stopUnlocking();
             return;

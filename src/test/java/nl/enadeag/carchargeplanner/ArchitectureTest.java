@@ -500,7 +500,7 @@ class ArchitectureTest {
     static final ArchRule theDesktopBusIsOnlyForLinux = noClasses()
             .that().resideOutsideOfPackage("..platform.linux..")
             .should().dependOnClassesThat().resideInAPackage("org.freedesktop..")
-            .because("D-Bus is how the Linux platform talks to the tray, notifications and keyring (ADR 0005)");
+            .because("D-Bus is how the Linux platform talks to the tray, notifications and keychain (ADR 0005)");
 
     @ArchTest
     static final ArchRule onlyOneClassMakesHttpCalls = noClasses()

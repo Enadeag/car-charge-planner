@@ -90,7 +90,7 @@ final class ProviderCard {
      *
      * @param plain the provider's settings from the config file
      * @param secret the provider's secret settings from the keychain
-     * @param keysLocked true when the stored secret settings could not be read as the keyring is locked: a secret
+     * @param keysLocked true when the stored secret settings could not be read as the keychain is locked: a secret
      *     field without a value then shows as locked, so it never empties a stored one
      */
     void load(Map<String, String> plain, Map<String, String> secret, boolean keysLocked) {

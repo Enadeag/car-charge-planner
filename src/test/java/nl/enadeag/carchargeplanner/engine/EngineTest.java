@@ -528,7 +528,7 @@ class EngineTest {
     }
 
     @Test
-    void whileTheKeyringThatHoldsTheKeysIsLockedTheOutlookSaysSoAndNoFileIsWritten() throws Exception {
+    void whileTheKeychainThatHoldsTheKeysIsLockedTheOutlookSaysSoAndNoFileIsWritten() throws Exception {
         var needy = new FakeProvider(FakeProvider.info("needy", "Needy",
                 List.of(new SettingSpec("api_key", "API key", "Your key.", false, true))), steps(days(2, 4.0)));
         backup.script(error(new ProviderError.Unavailable("down")));
@@ -537,7 +537,7 @@ class EngineTest {
                 Map.of("api_key", "STORED-KEY"))));
         keychain.locked = true;
 
-        var outlook = engine(clockAt(7), needy, backup).outlook(); // as after a login that left the keyring locked
+        var outlook = engine(clockAt(7), needy, backup).outlook(); // as after a login that left the keychain locked
 
         assertThat(outlook).isInstanceOfSatisfying(Outlook.NoForecast.class,
                 none -> assertThat(none.keychainLocked()).isTrue());
@@ -573,7 +573,7 @@ class EngineTest {
     }
 
     @Test
-    void aMissingKeyIsNotALockedKeyring() throws Exception {
+    void aMissingKeyIsNotALockedKeychain() throws Exception {
         var needy = new FakeProvider(FakeProvider.info("needy", "Needy",
                 List.of(new SettingSpec("api_key", "API key", "Your key.", false, true))), steps(days(2, 4.0)));
         backup.script(error(new ProviderError.Unavailable("down")));
@@ -760,7 +760,7 @@ class EngineTest {
     }
 
     @Test
-    void aSaveThatWaitsForTheKeyringToBeUnlockedStopsWhenAsked() throws Exception {
+    void aSaveThatWaitsForTheKeychainToBeUnlockedStopsWhenAsked() throws Exception {
         var engine = engine(clockAt(7));
         engine.saveApiKeys(new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "OLD-KEY"))));
         keychain.locked = true;
@@ -781,7 +781,7 @@ class EngineTest {
     }
 
     @Test
-    void theConnectionCheckWorksWithoutTheStoredKeysWhileTheKeyringIsLocked() throws SecretsProblem {
+    void theConnectionCheckWorksWithoutTheStoredKeysWhileTheKeychainIsLocked() throws SecretsProblem {
         var needy = new FakeProvider(FakeProvider.info("needy", "Needy",
                 List.of(new SettingSpec("api_key", "API key", "Your key.", false, true))), steps(days(2, 4.0)));
         var engine = engine(clockAt(7), needy);

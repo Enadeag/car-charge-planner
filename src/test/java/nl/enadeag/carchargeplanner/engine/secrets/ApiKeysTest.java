@@ -819,7 +819,7 @@ class ApiKeysTest {
         assertThat(keys.storage()).isEqualTo(KeyStorage.LOCKED_KEYCHAIN);
     }
 
-    /** Usable, but refuses its first write as locked, as a keyring that holds none of the app's items yet. */
+    /** Usable, but refuses its first write as locked, as a keychain that holds none of the app's items yet. */
     private static final class LockedForTheFirstItem extends LockableKeychain {
         private boolean refused;
 

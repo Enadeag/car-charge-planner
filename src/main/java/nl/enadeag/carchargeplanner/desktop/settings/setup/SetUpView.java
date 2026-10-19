@@ -342,11 +342,11 @@ final class SetUpView extends BorderPane {
 
     /**
      * Leaves set-up without saving, after asking once the owner started. While Finish saves nothing closes, but a
-     * Finish that waits for the owner to unlock the keyring stops waiting.
+     * Finish that waits for the owner to unlock the keychain stops waiting.
      */
     void cancel() {
         if (state == State.SAVING) {
-            // a save that waits for the keyring to be unlocked stops waiting; in a moment it is saved, or the reason
+            // a save that waits for the keychain to be unlocked stops waiting; in a moment it is saved, or the reason
             // it is not shows
             form.stopUnlocking();
             return;
@@ -396,7 +396,7 @@ final class SetUpView extends BorderPane {
     }
 
     /**
-     * The system asks the owner to unlock the keyring for the Finish that runs: the status says where, and a screen
+     * The system asks the owner to unlock the keychain for the Finish that runs: the status says where, and a screen
      * reader reads it.
      */
     private void waitingForUnlock() {
@@ -424,7 +424,7 @@ final class SetUpView extends BorderPane {
                 showRefused();
             }
             case SaveOutcome.KeyringLocked _ -> {
-                showProblem(messages.text(TextKey.SETTINGS_KEYRING_LOCKED));
+                showProblem(messages.text(TextKey.SETTINGS_KEYCHAIN_LOCKED));
                 ScreenReader.focus(status);
             }
             case SaveOutcome.Failed failure -> {

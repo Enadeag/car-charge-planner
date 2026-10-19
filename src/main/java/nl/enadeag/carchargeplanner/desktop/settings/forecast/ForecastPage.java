@@ -55,7 +55,7 @@ public final class ForecastPage implements ConfigPage {
     private final Path keysFile;
     private ForecastSelection stored;
     private Secrets storedKeys = Secrets.NONE;
-    /** Whether the stored keys could not be read because the keyring is locked. */
+    /** Whether the stored keys could not be read because the keychain is locked. */
     private boolean keysLocked;
 
     /**
@@ -128,7 +128,7 @@ public final class ForecastPage implements ConfigPage {
 
     /**
      * Shows the stored API keys and where they are kept. Call before {@link #load(EngineConfig)}, which fills the
-     * cards. While the keyring is locked, the key fields without a value show as locked.
+     * cards. While the keychain is locked, the key fields without a value show as locked.
      *
      * @param keys the stored secret settings
      * @param storage where the keys are kept now

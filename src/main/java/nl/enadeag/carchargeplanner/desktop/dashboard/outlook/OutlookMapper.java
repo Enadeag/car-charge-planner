@@ -89,15 +89,15 @@ public final class OutlookMapper {
     }
 
     /**
-     * Why there is no forecast, in the owner's language: what to do when the keyring that holds the API keys is locked,
-     * and otherwise the engine's reasons, which stay in English.
+     * Why there is no forecast, in the owner's language: what to do when the keychain that holds the API keys is
+     * locked, and otherwise the engine's reasons, which stay in English.
      *
      * @param none the engine's outlook without a forecast
      * @param messages the texts, in the owner's language
      * @return such as "Unlock your keyring so the app can read your API key."
      */
     static String noForecast(Outlook.NoForecast none, Messages messages) {
-        return none.keychainLocked() ? messages.text(TextKey.NO_FORECAST_KEYRING_LOCKED)
+        return none.keychainLocked() ? messages.text(TextKey.NO_FORECAST_KEYCHAIN_LOCKED)
                 : messages.text(TextKey.NO_FORECAST_DETAIL, none.reason());
     }
 

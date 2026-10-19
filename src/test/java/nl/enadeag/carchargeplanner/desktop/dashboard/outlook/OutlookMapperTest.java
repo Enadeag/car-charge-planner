@@ -246,7 +246,7 @@ class OutlookMapperTest {
     }
 
     @Test
-    void withoutAForecastBecauseTheKeyringIsLockedTheOwnerIsToldToUnlockIt() {
+    void withoutAForecastBecauseTheKeychainIsLockedTheOwnerIsToldToUnlockIt() {
         var message = (DashboardModel.Message) MAPPER.map(new Outlook.NoForecast(
                 "API key is required; The system keychain is locked.", true));
 

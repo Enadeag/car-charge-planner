@@ -127,8 +127,8 @@ public enum TextKey {
     NO_FORECAST_NO_DAYS,
     /** The dashboard's detail without a forecast: {0} is the engine's reason, in English. */
     NO_FORECAST_DETAIL,
-    /** Without a forecast because the API keys are in a locked keyring: what the owner should do. */
-    NO_FORECAST_KEYRING_LOCKED,
+    /** Without a forecast because the API keys are in a locked keychain: what the owner should do. */
+    NO_FORECAST_KEYCHAIN_LOCKED,
     /** The dashboard's headline without a usable config file. */
     NOT_SET_UP,
     /** There is no config file: {0} is its path. */
@@ -296,13 +296,13 @@ public enum TextKey {
     SETTINGS_REFUSED,
     /** Said when a file could not be written: {0} the system's error. */
     SETTINGS_SAVE_FAILED,
-    /** Said when nothing was saved because the keyring stayed locked. */
-    SETTINGS_KEYRING_LOCKED,
+    /** Said when nothing was saved because the keychain stayed locked. */
+    SETTINGS_KEYCHAIN_LOCKED,
     /** Said while Settings or set-up reads what is stored, before anything can be edited. */
     SETTINGS_READING,
     /** Said while Save or Finish stores what was entered. */
     SETTINGS_SAVING,
-    /** Said while Save or Finish waits for the owner to unlock the keyring in the system's prompt. */
+    /** Said while Save or Finish waits for the owner to unlock the keychain in the system's prompt. */
     SETTINGS_SAVING_UNLOCK,
     /** Said when what is stored could not be read: {0} what went wrong. */
     SETTINGS_READ_FAILED,
@@ -657,7 +657,7 @@ public enum TextKey {
     SECRET_SHOW,
     /** The button that hides a key again. */
     SECRET_HIDE,
-    /** In a key's field that could not be read because the keyring is locked. */
+    /** In a key's field that could not be read because the keychain is locked. */
     SECRET_LOCKED,
     /** The button that lets the owner enter a new key in place of one that could not be read. */
     SECRET_REPLACE,

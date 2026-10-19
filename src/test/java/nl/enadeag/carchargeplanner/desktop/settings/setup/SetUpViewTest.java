@@ -266,7 +266,7 @@ class SetUpViewTest {
     }
 
     @Test
-    void finishWhileTheKeyringStaysLockedSavesNothingAndSaysToUnlockItAndFinishAgain() throws Exception {
+    void finishWhileTheKeychainStaysLockedSavesNothingAndSaysToUnlockItAndFinishAgain() throws Exception {
         var keychain = new LockableKeychain();
         keychain.locked = true;
         keychain.unlockFails = KeychainException.Kind.REFUSED;
@@ -283,7 +283,8 @@ class SetUpViewTest {
 
         next(view, 1);
 
-        assertThat(Fx.call(() -> SetUpFixture.texts(view))).contains(setUp.messages.text(TextKey.SETTINGS_KEYRING_LOCKED));
+        assertThat(Fx.call(() -> SetUpFixture.texts(view)))
+                .contains(setUp.messages.text(TextKey.SETTINGS_KEYCHAIN_LOCKED));
         assertThat(setUp.finished).isZero();
         assertThat(setUp.configPath).as("nothing after the keys is saved").doesNotExist();
         assertThat(setUp.keysFile()).doesNotExist();

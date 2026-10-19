@@ -71,7 +71,7 @@ class TrayStatusMapperTest {
     }
 
     @Test
-    void withoutAForecastBecauseTheKeyringIsLockedTheOwnerIsToldToUnlockIt() {
+    void withoutAForecastBecauseTheKeychainIsLockedTheOwnerIsToldToUnlockIt() {
         var status = MAPPER.map(new Outlook.NoForecast("API key is required", true));
 
         assertThat(status.dot()).isEqualTo(StatusDot.ACTION);

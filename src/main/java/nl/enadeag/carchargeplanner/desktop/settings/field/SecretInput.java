@@ -14,7 +14,7 @@ import javafx.scene.layout.StackPane;
 
 /**
  * A secret, such as an API key: dots, with a button to look at what was typed. A pasted key often carries a space or
- * a line break, which is not kept. A stored secret that could not be read, as the keyring is locked, shows as locked:
+ * a line break, which is not kept. A stored secret that could not be read, as the keychain is locked, shows as locked:
  * the field cannot be edited, so it never empties the stored one, until the owner chooses to enter a new one.
  */
 public final class SecretInput implements Input {
@@ -78,7 +78,7 @@ public final class SecretInput implements Input {
     }
 
     /**
-     * Shows that the stored secret could not be read, as the keyring is locked: empty, not editable and marked locked,
+     * Shows that the stored secret could not be read, as the keychain is locked: empty, not editable and marked locked,
      * with a button to enter a new one instead. Until then the field holds nothing to save.
      */
     public void lock() {

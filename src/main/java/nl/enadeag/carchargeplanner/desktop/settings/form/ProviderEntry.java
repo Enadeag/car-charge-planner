@@ -14,7 +14,7 @@ import java.util.Set;
  * @param info what the provider tells about itself, with the settings it asks for
  * @param plain the settings that are not secret, as entered, per key; empty ones left out
  * @param secret the secret settings, as entered, per key; empty ones left out
- * @param locked the keys of secret settings that are stored but cannot be read while the keyring is locked
+ * @param locked the keys of secret settings that are stored but cannot be read while the keychain is locked
  */
 public record ProviderEntry(ProviderInfo info, Map<String, String> plain, Map<String, String> secret,
         Set<String> locked) {

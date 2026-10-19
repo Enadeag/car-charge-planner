@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * A keychain in memory that can be locked, as a desktop keyring can, and whose owner answers the unlock prompt as the
+ * A keychain in memory that can be locked, as a desktop keychain can, and whose owner answers the unlock prompt as the
  * test says. Without an answer it waits, as the real prompt does, until {@link #stopUnlocking()} or the wait is over.
  */
 public class LockableKeychain extends MemoryKeychain {
@@ -86,7 +86,7 @@ public class LockableKeychain extends MemoryKeychain {
 
     private void requireUnlocked() throws KeychainException {
         if (locked) {
-            throw new KeychainException(KeychainException.Kind.LOCKED, "the keyring is locked");
+            throw new KeychainException(KeychainException.Kind.LOCKED, "the keychain is locked");
         }
     }
 }
