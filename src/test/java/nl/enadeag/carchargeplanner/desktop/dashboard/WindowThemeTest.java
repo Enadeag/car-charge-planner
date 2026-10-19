@@ -6,7 +6,7 @@ import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
-import nl.enadeag.carchargeplanner.desktop.theme.SystemTheme;
+import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import java.util.Optional;
 import javafx.application.ColorScheme;
 import javafx.beans.property.SimpleObjectProperty;
@@ -16,7 +16,7 @@ import javafx.scene.paint.Color;
 import org.junit.jupiter.api.Test;
 
 @FxTest
-class SystemThemeTest {
+class WindowThemeTest {
 
     @Test
     void switchingTheSystemToDarkWhileTheAppRunsRestylesTheDashboard() throws Exception {
@@ -24,7 +24,7 @@ class SystemThemeTest {
         var dashboard = Fx.call(() -> {
             var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, new Messages(Language.ENGLISH));
             view.show(Models.plan(Optional.empty()));
-            new SystemTheme(scheme).style(new Scene(new StackPane(view)));
+            new WindowTheme(scheme).style(new Scene(new StackPane(view)));
             return view;
         });
 

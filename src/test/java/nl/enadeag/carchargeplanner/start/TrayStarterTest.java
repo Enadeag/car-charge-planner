@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 
 class TrayStarterTest {
 
-    private static final Tray.TrayActions ACTIONS = new Tray.TrayActions(icon -> { }, () -> { }, () -> { }, () -> { },
+    private static final Tray.Actions ACTIONS = new Tray.Actions(icon -> { }, () -> { }, () -> { }, () -> { },
             () -> { });
 
     private Instant now = Instant.parse("2026-10-17T07:00:00Z");
@@ -34,7 +34,7 @@ class TrayStarterTest {
         }
 
         @Override
-        public void show(TrayActions actions) throws TrayUnavailable {
+        public void show(Actions actions) throws TrayUnavailable {
             if (now.isBefore(comesAt)) {
                 throw new TrayUnavailable("no tray yet", null);
             }

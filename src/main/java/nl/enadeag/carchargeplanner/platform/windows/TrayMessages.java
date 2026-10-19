@@ -39,7 +39,7 @@ final class TrayMessages {
      *
      * @param clicked the action, run on the thread that reports the click
      */
-    synchronized void listen(Runnable clicked) {
+    synchronized void onClick(Runnable clicked) {
         this.clicked = clicked;
     }
 

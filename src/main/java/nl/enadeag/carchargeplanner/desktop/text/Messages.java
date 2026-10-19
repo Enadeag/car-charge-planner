@@ -205,7 +205,7 @@ public final class Messages {
      * @param text what the owner typed; may be empty, and spaces around it are ignored
      * @return the number, or empty when the text is not wholly a number in this language
      */
-    public OptionalDouble parse(String text) {
+    public OptionalDouble parseNumber(String text) {
         var format = NumberFormat.getNumberInstance(locale());
         format.setGroupingUsed(false);
         var trimmed = text.strip();

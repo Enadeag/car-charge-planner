@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.battery;
 
-import nl.enadeag.carchargeplanner.desktop.theme.Texts;
+import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Tween;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.AccessibleRole;
@@ -26,8 +26,8 @@ final class BatteryBar extends Region {
     private final Rectangle level = shape(new Rectangle(), "battery-level", "chart-fill");
     private final Line minimum = shape(new Line(), "battery-mark", "chart-stroke");
     private final Line target = shape(new Line(), "battery-mark", "chart-stroke");
-    private final Label minimumText = Texts.label("", "chart-axis");
-    private final Label targetText = Texts.label("", "chart-axis");
+    private final Label minimumText = Labels.line("", "chart-axis");
+    private final Label targetText = Labels.line("", "chart-axis");
     private final Tween tween;
 
     private BatteryModel model;

@@ -49,7 +49,7 @@ public final class AwtTray implements Tray, Notifications {
     private final TrayMessages messages = new TrayMessages();
 
     /**
-     * Makes the tray; nothing appears until {@link #show(TrayActions)}, and its menu needs
+     * Makes the tray; nothing appears until {@link #show(Actions)}, and its menu needs
      * {@link #showLabels(MenuLabels)} first.
      *
      * @param icon draws the icon with its status dot, in the sizes the display's scale may ask for
@@ -69,7 +69,7 @@ public final class AwtTray implements Tray, Notifications {
      * @throws IllegalStateException when the menu has no labels yet: {@link #showLabels(MenuLabels)} comes first
      */
     @Override
-    public synchronized void show(TrayActions actions) throws TrayUnavailable {
+    public synchronized void show(Actions actions) throws TrayUnavailable {
         if (labels == null) {
             throw new IllegalStateException("the menu needs its labels before the tray shows");
         }
@@ -147,14 +147,14 @@ public final class AwtTray implements Tray, Notifications {
      * <p>The action runs on AWT's event thread.
      */
     @Override
-    public void listen(Runnable clicked) {
-        messages.listen(clicked);
+    public void onClick(Runnable clicked) {
+        messages.onClick(clicked);
     }
 
     /**
      * {@inheritDoc}
      *
-     * <p>Shown only while the icon is in the tray, between {@link #show(TrayActions)} and {@link #remove()}.
+     * <p>Shown only while the icon is in the tray, between {@link #show(Actions)} and {@link #remove()}.
      */
     @Override
     public void show(NotificationText text) {

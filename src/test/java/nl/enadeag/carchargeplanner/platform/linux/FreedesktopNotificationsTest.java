@@ -146,7 +146,7 @@ class FreedesktopNotificationsTest {
     @Test
     void aClickOnOurNotificationOrItsButtonOpensTheDashboard() throws Exception {
         serve();
-        notifications.listen(opened::release);
+        notifications.onClick(opened::release);
         var id = show();
 
         click(id, "default");
@@ -158,7 +158,7 @@ class FreedesktopNotificationsTest {
     @Test
     void clicksOnOtherAppsNotificationsAndOtherActionsAreIgnored() throws Exception {
         serve();
-        notifications.listen(opened::release);
+        notifications.onClick(opened::release);
         var id = show();
 
         click(999_999, "default");
@@ -172,7 +172,7 @@ class FreedesktopNotificationsTest {
     @Test
     void aClickSignalFromAnotherProgramThanTheServerIsIgnored() throws Exception {
         serve();
-        notifications.listen(opened::release);
+        notifications.onClick(opened::release);
         var id = show();
 
         var other = DBusConnectionBuilder.forAddress(address).withShared(false).build();
@@ -189,7 +189,7 @@ class FreedesktopNotificationsTest {
 
     @Test
     void aServerThatStartsAfterTheAppIsHeard() throws Exception {
-        notifications.listen(opened::release);
+        notifications.onClick(opened::release);
         serve();
         var id = show();
 
@@ -201,7 +201,7 @@ class FreedesktopNotificationsTest {
     @Test
     void onlyTheLatestNotificationsAreRecognised() throws Exception {
         serve();
-        notifications.listen(opened::release);
+        notifications.onClick(opened::release);
         var first = show();
         for (int i = 0; i < FreedesktopNotifications.REMEMBER; i++) {
             show();
@@ -215,7 +215,7 @@ class FreedesktopNotificationsTest {
     @Test
     void withoutANotificationServerTheAppGoesOnAndTheLogSaysSoOnce() {
         var warnings = warningsWhile(() -> {
-            notifications.listen(opened::release);
+            notifications.onClick(opened::release);
             for (int i = 0; i < 3; i++) {
                 notifications.show(new NotificationText("a", "b"));
             }
@@ -245,7 +245,7 @@ class FreedesktopNotificationsTest {
                 () -> "Open dashboard");
 
         var warnings = warningsWhile(() -> {
-            offline.listen(opened::release);
+            offline.onClick(opened::release);
             offline.show(new NotificationText("a", "b"));
             offline.show(new NotificationText("a", "b"));
         });

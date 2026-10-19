@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop;
 
 import com.sun.javafx.tk.Toolkit;
-import nl.enadeag.carchargeplanner.desktop.theme.SystemTheme;
+import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
@@ -89,7 +89,7 @@ public final class Pictures {
             var root = new Group(holder);
             root.setAutoSizeChildren(false);
             var scene = new Scene(root, WINDOW, WINDOW, Color.TRANSPARENT);
-            new SystemTheme(new SimpleObjectProperty<>(scheme)).style(scene);
+            new WindowTheme(new SimpleObjectProperty<>(scheme)).style(scene);
             stage.setScene(scene);
             stage.show();
             stage.requestFocus();

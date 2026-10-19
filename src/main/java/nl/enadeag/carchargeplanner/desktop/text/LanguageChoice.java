@@ -6,7 +6,8 @@ import java.util.function.Consumer;
 
 /**
  * The language the app speaks now, and who to tell when the owner chooses another. The composition root owns the one
- * instance and hands it to every part that shows texts; Settings changes it after the owner saved another language.
+ * instance, hands it to every part that shows texts, and changes it once the owner saved another language in Settings
+ * or set-up.
  *
  * <p>A plain listener rather than a JavaFX property: the tray and the notifications run on threads of their own, and
  * a JavaFX property would tie them to JavaFX's thread. Each part moves the change to its own thread itself.

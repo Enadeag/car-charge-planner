@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop;
 
-import nl.enadeag.carchargeplanner.desktop.theme.SystemTheme;
+import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -23,7 +23,7 @@ public final class Scenes {
 
     public static Stage show(Node node, ColorScheme scheme) {
         var scene = new Scene(new StackPane(node));
-        new SystemTheme(new SimpleObjectProperty<>(scheme)).style(scene);
+        new WindowTheme(new SimpleObjectProperty<>(scheme)).style(scene);
         var stage = new Stage();
         stage.setScene(scene);
         stage.show();
@@ -42,7 +42,7 @@ public final class Scenes {
      */
     public static Stage show(Node node, ColorScheme scheme, double width, double height) {
         var scene = new Scene(new StackPane(node), width, height);
-        new SystemTheme(new SimpleObjectProperty<>(scheme)).style(scene);
+        new WindowTheme(new SimpleObjectProperty<>(scheme)).style(scene);
         var stage = new Stage();
         stage.setScene(scene);
         stage.show();
@@ -66,7 +66,7 @@ public final class Scenes {
         var root = new StackPane(node);
         root.setStyle(scale.rootStyle());
         var scene = new Scene(root, width, height);
-        new SystemTheme(new SimpleObjectProperty<>(scheme)).style(scene);
+        new WindowTheme(new SimpleObjectProperty<>(scheme)).style(scene);
         root.applyCss();
         root.resize(width, height);
         root.layout();
@@ -77,7 +77,7 @@ public final class Scenes {
         var root = new StackPane(node);
         root.setStyle(scale.rootStyle());
         var scene = new Scene(root);
-        new SystemTheme(new SimpleObjectProperty<>(scheme)).style(scene);
+        new WindowTheme(new SimpleObjectProperty<>(scheme)).style(scene);
         var stage = new Stage();
         stage.setScene(scene);
         stage.setY(0);

@@ -2,7 +2,7 @@ package nl.enadeag.carchargeplanner.desktop.dashboard;
 
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
-import nl.enadeag.carchargeplanner.desktop.theme.SystemTheme;
+import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
@@ -46,7 +46,7 @@ final class DashboardPopup {
      * @param clock tells when the popup closed, so the click on the tray icon that closed it does not open it again
      * @param taskbarHiding how this system keeps the popup out of its taskbar
      */
-    DashboardPopup(SystemTheme theme, AppIcon icon, InstantSource clock, TaskbarHiding taskbarHiding) {
+    DashboardPopup(WindowTheme theme, AppIcon icon, InstantSource clock, TaskbarHiding taskbarHiding) {
         this.clock = clock;
         this.owned = taskbarHiding == TaskbarHiding.OWNER_WINDOW;
         content.getStyleClass().add("popup");

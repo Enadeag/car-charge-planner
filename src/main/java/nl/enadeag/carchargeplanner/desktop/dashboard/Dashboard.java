@@ -5,7 +5,7 @@ import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
-import nl.enadeag.carchargeplanner.desktop.theme.SystemTheme;
+import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import nl.enadeag.carchargeplanner.engine.Outlook;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
@@ -58,7 +58,7 @@ public final class Dashboard {
         if (actions == null) {
             throw new IllegalArgumentException("the dashboard's actions must not be null");
         }
-        var theme = new SystemTheme(colorScheme);
+        var theme = new WindowTheme(colorScheme);
         this.reducedMotion = reducedMotion;
         this.actions = actions;
         this.popup = new DashboardPopup(theme, icon, clock, taskbarHiding);

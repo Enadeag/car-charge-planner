@@ -1,26 +1,26 @@
 package nl.enadeag.carchargeplanner.platform.windows;
 
 import nl.enadeag.carchargeplanner.desktop.system.Tray.MenuLabels;
-import nl.enadeag.carchargeplanner.desktop.system.Tray.TrayActions;
+import nl.enadeag.carchargeplanner.desktop.system.Tray.Actions;
 import java.util.function.Function;
 
 /** The entries of the tray icon's menu, in the order the menu shows them. */
 enum TrayMenuEntry {
 
     /** Opens the dashboard. */
-    OPEN(MenuLabels::open, TrayActions::open, false),
+    OPEN(MenuLabels::open, Actions::open, false),
     /** Opens Settings. */
-    SETTINGS(MenuLabels::settings, TrayActions::settings, false),
+    SETTINGS(MenuLabels::settings, Actions::settings, false),
     /** Opens Settings on About. */
-    ABOUT(MenuLabels::about, TrayActions::about, false),
+    ABOUT(MenuLabels::about, Actions::about, false),
     /** Quits the app; a line sets it apart from the others, so it is not chosen by mistake. */
-    QUIT(MenuLabels::quit, TrayActions::quit, true);
+    QUIT(MenuLabels::quit, Actions::quit, true);
 
     private final Function<MenuLabels, String> label;
-    private final Function<TrayActions, Runnable> action;
+    private final Function<Actions, Runnable> action;
     private final boolean separated;
 
-    TrayMenuEntry(Function<MenuLabels, String> label, Function<TrayActions, Runnable> action, boolean separated) {
+    TrayMenuEntry(Function<MenuLabels, String> label, Function<Actions, Runnable> action, boolean separated) {
         this.label = label;
         this.action = action;
         this.separated = separated;
@@ -42,7 +42,7 @@ enum TrayMenuEntry {
      * @param actions the tray's actions
      * @return this entry's action among them
      */
-    Runnable action(TrayActions actions) {
+    Runnable action(Actions actions) {
         return action.apply(actions);
     }
 

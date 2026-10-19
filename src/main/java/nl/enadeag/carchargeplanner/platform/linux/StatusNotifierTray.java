@@ -44,7 +44,7 @@ public final class StatusNotifierTray implements Tray {
     private TrayMenu menu;
 
     /**
-     * Makes the tray; nothing appears until {@link #show(TrayActions)}, and its menu needs
+     * Makes the tray; nothing appears until {@link #show(Actions)}, and its menu needs
      * {@link #showLabels(MenuLabels)} first.
      *
      * @param connector opens the session bus connection the icon is served on
@@ -68,7 +68,7 @@ public final class StatusNotifierTray implements Tray {
      * @throws IllegalStateException when the menu has no labels yet: {@link #showLabels(MenuLabels)} comes first
      */
     @Override
-    public synchronized void show(TrayActions actions) throws TrayUnavailable {
+    public synchronized void show(Actions actions) throws TrayUnavailable {
         if (labels == null) {
             throw new IllegalStateException("the menu needs its labels before the tray shows");
         }

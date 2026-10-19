@@ -10,7 +10,7 @@ import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.desktop.theme.SystemTheme;
+import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import java.net.URI;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -41,7 +41,7 @@ public final class SettingsWindow {
     /** Makes the view in a language; the runnable closes the window it is shown in. */
     private final BiFunction<Messages, Runnable, SettingsView> views;
     private final LanguageChoice language;
-    private final SystemTheme theme;
+    private final WindowTheme theme;
     private final AppIcon icon;
     // the fields below belong to the JavaFX thread; all are null while the window is closed
     private Stage stage;
@@ -69,7 +69,7 @@ public final class SettingsWindow {
         this.views = (messages, close) -> SettingsView.of(stores, facts, openLink, close, saved, runSetUp, background,
                 messages);
         this.language = language;
-        this.theme = new SystemTheme(colorScheme);
+        this.theme = new WindowTheme(colorScheme);
         this.icon = icon;
         // later, also on the JavaFX thread: a Save chooses the language while its button is still handling the click
         language.onChange(_ -> Platform.runLater(this::speak));

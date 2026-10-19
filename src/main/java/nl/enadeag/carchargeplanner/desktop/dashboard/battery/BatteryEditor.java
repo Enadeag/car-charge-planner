@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.battery;
 
-import nl.enadeag.carchargeplanner.desktop.theme.Texts;
+import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import java.util.function.IntConsumer;
@@ -29,7 +29,7 @@ final class BatteryEditor extends HBox {
         level.setEditable(true);
         level.setAccessibleText(messages.text(TextKey.BATTERY_LEVEL_FIELD));
         level.getStyleClass().add("battery-level-field");
-        var percent = Texts.label("%", "fact");
+        var percent = Labels.line("%", "fact");
         var save = new Button(messages.text(TextKey.BATTERY_SAVE));
         save.getStyleClass().add("accent");
         save.setOnAction(_ -> save());

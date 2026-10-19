@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.solar;
 
-import static nl.enadeag.carchargeplanner.desktop.theme.Texts.label;
+import static nl.enadeag.carchargeplanner.desktop.theme.Labels.line;
 
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -30,7 +30,7 @@ public final class SolarCard extends VBox {
         chart = new SolarChart(reducedMotion, messages.text(TextKey.CHART_NOW), messages.text(TextKey.CHART_KEYS));
         var spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        var header = new HBox(label(messages.text(TextKey.CHART_SOLAR), "card-label"), spacer,
+        var header = new HBox(line(messages.text(TextKey.CHART_SOLAR), "card-label"), spacer,
                 entry(area(), messages.text(TextKey.CHART_SOLAR_LEGEND)),
                 entry(houseLine(), messages.text(TextKey.CHART_HOUSE_LEGEND)),
                 entry(window(), messages.text(TextKey.CHART_WINDOW_LEGEND)));
@@ -58,7 +58,7 @@ public final class SolarCard extends VBox {
     }
 
     private static HBox entry(Node swatch, String text) {
-        var entry = new HBox(swatch, label(text, "legend-text"));
+        var entry = new HBox(swatch, line(text, "legend-text"));
         entry.getStyleClass().add("legend-entry");
         return entry;
     }

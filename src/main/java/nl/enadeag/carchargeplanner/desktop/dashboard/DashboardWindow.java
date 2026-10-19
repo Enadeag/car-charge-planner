@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard;
 
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
-import nl.enadeag.carchargeplanner.desktop.theme.SystemTheme;
+import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -26,7 +26,7 @@ final class DashboardWindow {
      * @param theme makes the window light or dark as the system is
      * @param icon the app icon, for the title bar and the taskbar
      */
-    DashboardWindow(SystemTheme theme, AppIcon icon) {
+    DashboardWindow(WindowTheme theme, AppIcon icon) {
         var scene = new Scene(content);
         theme.style(scene);
         stage.setScene(scene);

@@ -3,9 +3,9 @@ package nl.enadeag.carchargeplanner.desktop.theme;
 import javafx.scene.control.Label;
 
 /** Labels for the desktop's windows: the dashboard and Settings build their texts with these. */
-public final class Texts {
+public final class Labels {
 
-    private Texts() {
+    private Labels() {
     }
 
     /**
@@ -15,7 +15,7 @@ public final class Texts {
      * @param styleClass the label's class in the shared stylesheet, such as "hero"
      * @return a new label
      */
-    public static Label label(String text, String styleClass) {
+    public static Label line(String text, String styleClass) {
         var label = new Label(text);
         label.getStyleClass().add(styleClass);
         return label;
@@ -29,7 +29,7 @@ public final class Texts {
      * @return a new label
      */
     public static Label paragraph(String text, String styleClass) {
-        var label = label(text, styleClass);
+        var label = line(text, styleClass);
         label.setWrapText(true);
         label.setMinHeight(Label.USE_PREF_SIZE);
         return label;

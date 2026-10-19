@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard;
 
 import atlantafx.base.theme.Styles;
-import nl.enadeag.carchargeplanner.desktop.theme.Texts;
+import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import java.util.List;
@@ -14,7 +14,7 @@ import javafx.scene.layout.Priority;
 /** The forecast's source and freshness, and the way to the weekly away periods and to Settings. */
 final class DashboardFooter extends HBox {
 
-    private final Label forecast = Texts.paragraph("", "footer-text");
+    private final Label forecast = Labels.paragraph("", "footer-text");
 
     private final Button away = new Button();
     private final Button settings = new Button();

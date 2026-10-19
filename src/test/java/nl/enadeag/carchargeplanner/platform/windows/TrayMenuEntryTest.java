@@ -3,7 +3,7 @@ package nl.enadeag.carchargeplanner.platform.windows;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import nl.enadeag.carchargeplanner.desktop.system.Tray.MenuLabels;
-import nl.enadeag.carchargeplanner.desktop.system.Tray.TrayActions;
+import nl.enadeag.carchargeplanner.desktop.system.Tray.Actions;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -22,7 +22,7 @@ class TrayMenuEntryTest {
     @Test
     void eachEntryRunsItsOwnAction() {
         var ran = new ArrayList<String>();
-        var actions = new TrayActions(where -> ran.add("click"), () -> ran.add("open"), () -> ran.add("settings"),
+        var actions = new Actions(where -> ran.add("click"), () -> ran.add("open"), () -> ran.add("settings"),
                 () -> ran.add("about"), () -> ran.add("quit"));
 
         for (var entry : TrayMenuEntry.values()) {

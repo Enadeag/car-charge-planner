@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.away;
 
-import static nl.enadeag.carchargeplanner.desktop.theme.Texts.label;
-import static nl.enadeag.carchargeplanner.desktop.theme.Texts.paragraph;
+import static nl.enadeag.carchargeplanner.desktop.theme.Labels.line;
+import static nl.enadeag.carchargeplanner.desktop.theme.Labels.paragraph;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
@@ -55,7 +55,7 @@ public final class OneOffAwayCard extends VBox {
                 messages);
         var spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        var header = new HBox(label(messages.text(TextKey.ONE_OFF_HEADING), "card-label"), spacer, add);
+        var header = new HBox(line(messages.text(TextKey.ONE_OFF_HEADING), "card-label"), spacer, add);
         header.getStyleClass().add("chart-header");
         list.getStyleClass().add("away-list");
         getChildren().setAll(header, list, editor);

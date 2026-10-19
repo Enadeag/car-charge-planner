@@ -2,7 +2,7 @@ package nl.enadeag.carchargeplanner.desktop.settings.page;
 
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.desktop.theme.Texts;
+import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 
 /** The card a page shows in place of its settings when the engine's config file cannot be read. */
 public final class NoConfigCard {
@@ -19,6 +19,6 @@ public final class NoConfigCard {
      */
     public static Card card(String reason, Messages messages) {
         return new Card(messages.text(TextKey.SETTINGS_NO_CONFIG), messages.text(TextKey.SETTINGS_NO_CONFIG_HINT),
-                Texts.paragraph(reason, "note"));
+                Labels.paragraph(reason, "note"));
     }
 }

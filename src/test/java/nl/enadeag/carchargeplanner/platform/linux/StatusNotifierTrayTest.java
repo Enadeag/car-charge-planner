@@ -95,7 +95,7 @@ class StatusNotifierTrayTest {
         var watcher = new Watcher();
         panel.exportObject(watcher);
         panel.requestBusName(StatusNotifierWatcher.BUS_NAME);
-        tray.show(new Tray.TrayActions(clicks::add, opened::countDown, settings::countDown, about::countDown, quit::countDown));
+        tray.show(new Tray.Actions(clicks::add, opened::countDown, settings::countDown, about::countDown, quit::countDown));
         var name = watcher.registered.poll(TIMEOUT_S, TimeUnit.SECONDS);
         assertThat(name).as("the item registered with the watcher").isNotNull();
         return name;
@@ -243,7 +243,7 @@ class StatusNotifierTrayTest {
         panel.exportObject(watcher);
         panel.requestBusName(StatusNotifierWatcher.BUS_NAME);
         var removed = new CountDownLatch(1);
-        tray.show(new Tray.TrayActions(clicks::add, opened::countDown, settings::countDown, about::countDown, () -> {
+        tray.show(new Tray.Actions(clicks::add, opened::countDown, settings::countDown, about::countDown, () -> {
             tray.remove();
             removed.countDown();
         }));
@@ -277,7 +277,7 @@ class StatusNotifierTrayTest {
 
     @Test
     void withoutAWatcherThereIsNoTray() {
-        assertThatThrownBy(() -> tray.show(new Tray.TrayActions(clicks::add, opened::countDown, settings::countDown, about::countDown, quit::countDown)))
+        assertThatThrownBy(() -> tray.show(new Tray.Actions(clicks::add, opened::countDown, settings::countDown, about::countDown, quit::countDown)))
                 .isInstanceOf(Tray.TrayUnavailable.class);
     }
 }

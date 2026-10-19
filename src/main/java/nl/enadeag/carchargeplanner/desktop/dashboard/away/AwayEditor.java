@@ -3,7 +3,7 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.away;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
-import nl.enadeag.carchargeplanner.desktop.theme.Texts;
+import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -50,7 +50,7 @@ final class AwayEditor extends VBox {
     private final TextField from = new TextField();
     private final TextField to = new TextField();
     private final HBox times;
-    private final Label problem = Texts.paragraph("", "field-problem");
+    private final Label problem = Labels.paragraph("", "field-problem");
     private LocalDate day = LocalDate.EPOCH;
     private ZoneId zone = ZoneId.of("UTC");
     private Instant now = Instant.EPOCH;
@@ -83,8 +83,8 @@ final class AwayEditor extends VBox {
             field.getStyleClass().add("away-time");
             field.setPrefColumnCount(4);
         }
-        times = new HBox(Texts.label(messages.text(TextKey.AWAY_FROM), "fact"), from,
-                Texts.label(messages.text(TextKey.AWAY_TO), "fact"), to);
+        times = new HBox(Labels.line(messages.text(TextKey.AWAY_FROM), "fact"), from,
+                Labels.line(messages.text(TextKey.AWAY_TO), "fact"), to);
         times.getStyleClass().add("away-times");
 
         var save = new Button(messages.text(TextKey.ONE_OFF_SAVE));

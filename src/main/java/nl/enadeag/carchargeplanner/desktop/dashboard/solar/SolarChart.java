@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.solar;
 
-import nl.enadeag.carchargeplanner.desktop.theme.Texts;
+import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Tween;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel.Step;
 import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
@@ -46,9 +46,9 @@ final class SolarChart extends Region {
     private final Line middle = shape(new Line(), "chart-grid");
     private final Line baseline = shape(new Line(), "chart-grid");
     private final Label nowLabel;
-    private final Label scale = Texts.label("", "chart-axis");
-    private final Label zero = Texts.label("0", "chart-axis");
-    private final Label readoutText = Texts.label("", "chart-readout-text");
+    private final Label scale = Labels.line("", "chart-axis");
+    private final Label zero = Labels.line("0", "chart-axis");
+    private final Label readoutText = Labels.line("", "chart-readout-text");
     private final StackPane readout = new StackPane(readoutText);
     private final List<Rectangle> bands = new ArrayList<>();
     private final List<Line> marks = new ArrayList<>();
@@ -73,7 +73,7 @@ final class SolarChart extends Region {
      * @param keys what the arrow keys do, for a screen reader to read after the chart's text
      */
     SolarChart(ObservableValue<Boolean> reducedMotion, String now, String keys) {
-        this.nowLabel = Texts.label(now, "chart-now");
+        this.nowLabel = Labels.line(now, "chart-now");
         this.tween = new Tween(reducedMotion, this::frame);
         readout.getStyleClass().add("chart-readout");
         readout.setManaged(false);
@@ -117,7 +117,7 @@ final class SolarChart extends Region {
             marks.add(shape(new Line(), "window-mark", "chart-stroke"));
         });
         ticks.clear();
-        day.ticks().forEach(tick -> ticks.add(Texts.label(tick.label(), "chart-axis")));
+        day.ticks().forEach(tick -> ticks.add(Labels.line(tick.label(), "chart-axis")));
         var children = new ArrayList<Node>(List.of(top, middle, baseline));
         children.addAll(bands);
         children.addAll(List.of(area, house));

@@ -8,7 +8,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
-import nl.enadeag.carchargeplanner.desktop.theme.Texts;
+import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import java.time.DayOfWeek;
 import java.util.List;
@@ -27,7 +27,7 @@ final class AwayRow extends VBox {
     private final TimeInput start = new TimeInput();
     private final TimeInput end = new TimeInput();
     private final Button removeButton;
-    private final Label problem = Texts.paragraph("", "field-problem");
+    private final Label problem = Labels.paragraph("", "field-problem");
 
     /**
      * Makes the row.

@@ -79,12 +79,12 @@ class AnnouncementTextsTest {
     void theTestNotificationSaysItIsATestInTheLanguageSpokenNow() {
         var language = new LanguageChoice(Language.ENGLISH);
         var texts = new AnnouncementTexts(language);
-        assertThat(texts.test("Car charge planner")).isEqualTo(new NotificationText("Test notification",
+        assertThat(texts.testNotification("Car charge planner")).isEqualTo(new NotificationText("Test notification",
                 "This is how Car charge planner tells you a charge window starts soon. Click it to open the dashboard."));
 
         language.choose(Language.DUTCH);
 
-        assertThat(texts.test("Car charge planner")).isEqualTo(new NotificationText("Testmelding",
+        assertThat(texts.testNotification("Car charge planner")).isEqualTo(new NotificationText("Testmelding",
                 "Zo vertelt Car charge planner je dat een laadvenster bijna begint. Klik erop om het dashboard te openen."));
     }
 }

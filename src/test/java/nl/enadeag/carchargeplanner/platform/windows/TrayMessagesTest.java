@@ -20,7 +20,7 @@ class TrayMessagesTest {
 
     private void attached() {
         messages.attach((title, body) -> shown.add(title + " | " + body));
-        messages.listen(opened::incrementAndGet);
+        messages.onClick(opened::incrementAndGet);
     }
 
     @Test
@@ -72,7 +72,7 @@ class TrayMessagesTest {
         };
         logger.addHandler(handler);
         try {
-            messages.listen(opened::incrementAndGet);
+            messages.onClick(opened::incrementAndGet);
             for (int i = 0; i < 3; i++) {
                 messages.show(new NotificationText("a", "b"));
             }

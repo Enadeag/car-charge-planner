@@ -10,7 +10,7 @@ public interface Notifications {
      * @param clicked the action for a click on a notification or its button; called on a thread of the notifications',
      *     not the JavaFX thread
      */
-    void listen(Runnable clicked);
+    void onClick(Runnable clicked);
 
     /**
      * Shows a notification. Never throws: when the system cannot show it, that is logged once and the app goes on.

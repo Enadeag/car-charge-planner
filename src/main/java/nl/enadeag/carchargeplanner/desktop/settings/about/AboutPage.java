@@ -6,7 +6,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.page.Page;
 import nl.enadeag.carchargeplanner.desktop.settings.page.PageView;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.desktop.theme.Texts;
+import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import java.net.URI;
 import java.nio.file.Path;
@@ -52,8 +52,8 @@ public final class AboutPage implements Page {
      */
     public void load(KeyStorage keys) {
         view.show(
-                new Card(APP_NAME, "", Texts.paragraph(messages.text(TextKey.ABOUT_VERSION, facts.version()), "fact"),
-                        Texts.paragraph(ATTRIBUTION, "fact"), Texts.paragraph(COPYRIGHT, "note")),
+                new Card(APP_NAME, "", Labels.paragraph(messages.text(TextKey.ABOUT_VERSION, facts.version()), "fact"),
+                        Labels.paragraph(ATTRIBUTION, "fact"), Labels.paragraph(COPYRIGHT, "note")),
                 new Card(messages.text(TextKey.ABOUT_LICENCE_TITLE), messages.text(TextKey.ABOUT_LICENCE),
                         link(TextKey.ABOUT_LICENCE_LINK, LICENCE)),
                 new Card(messages.text(TextKey.ABOUT_SOURCE_TITLE), messages.text(TextKey.ABOUT_SOURCE),
@@ -103,7 +103,7 @@ public final class AboutPage implements Page {
 
     /** A place as text the owner can select and copy, under what is kept there. */
     private VBox place(TextKey what, String where) {
-        var name = Texts.label(messages.text(what), "field-label");
+        var name = Labels.line(messages.text(what), "field-label");
         var path = new TextField(where);
         path.setEditable(false);
         path.getStyleClass().add("path-field");

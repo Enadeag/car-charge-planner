@@ -52,7 +52,7 @@ public final class AnnouncementTexts {
      * @return a title that says it is a test, and a body that says what an announcement is for and what a click does,
      *     in the language spoken now
      */
-    public NotificationText test(String appName) {
+    public NotificationText testNotification(String appName) {
         var messages = language.messages();
         return new NotificationText(messages.text(TextKey.NOTIFY_TEST_TITLE),
                 messages.text(TextKey.NOTIFY_TEST_BODY, appName));

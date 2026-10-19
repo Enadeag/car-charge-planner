@@ -4,7 +4,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPart;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.desktop.theme.Texts;
+import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.WeeklyAwaySchedule;
@@ -42,7 +42,7 @@ public final class WeeklyAwayCard implements ConfigPart {
      */
     public WeeklyAwayCard(Messages messages) {
         this.messages = messages;
-        empty = Texts.paragraph(messages.text(TextKey.AWAY_NONE), "note");
+        empty = Labels.paragraph(messages.text(TextKey.AWAY_NONE), "note");
         rows.getStyleClass().add("away-rows");
         var add = new Button(messages.text(TextKey.AWAY_ADD));
         add.setOnAction(_ -> {

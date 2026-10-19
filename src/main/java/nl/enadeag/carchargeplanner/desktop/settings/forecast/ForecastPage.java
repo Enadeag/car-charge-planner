@@ -14,7 +14,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.page.NoConfigCard;
 import nl.enadeag.carchargeplanner.desktop.settings.page.PageView;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.desktop.theme.Texts;
+import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.ForecastSelection;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
@@ -49,7 +49,7 @@ public final class ForecastPage implements ConfigPage {
     private final ChoiceField<ProviderId> primary;
     private final ChoiceField<Optional<ProviderId>> fallback;
     private final FieldRow fallbackRow;
-    private final Label keysNote = Texts.paragraph("", "note");
+    private final Label keysNote = Labels.paragraph("", "note");
     private final Card choice;
     private final Card keysCard;
     private final Path keysFile;

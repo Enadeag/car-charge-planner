@@ -10,7 +10,7 @@ import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.desktop.theme.SystemTheme;
+import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import java.net.URI;
 import java.nio.file.Path;
@@ -138,7 +138,7 @@ public final class SetUpWindow {
         spoken = language.messages();
         view = made(spoken, made);
         var scene = new Scene(view);
-        var theme = new SystemTheme(Appearance.scheme(appearance, looks.system()));
+        var theme = new WindowTheme(Appearance.scheme(appearance, looks.system()));
         theme.style(scene);
         made.setScene(scene);
         made.setTitle(spoken.text(TextKey.SETUP_TITLE));

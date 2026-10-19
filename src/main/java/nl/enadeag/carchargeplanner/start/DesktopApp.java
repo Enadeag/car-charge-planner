@@ -208,18 +208,18 @@ public final class DesktopApp {
         dashboardMade.complete(dashboard);
         // a click on a notification does not say where the tray icon is, and the popup would close again as soon as
         // the desktop gives the focus elsewhere: the window comes to the front and stays
-        notifications.listen(dashboard::openWindow);
+        notifications.onClick(dashboard::openWindow);
         commands.complete(command -> {
             switch (command) {
                 case SHOW -> dashboard.openWindow();
                 case QUIT -> quit();
                 // not through the engine's announcer: nothing is recorded as announced and the plan stays as it is
-                case TEST_NOTIFICATION -> notifications.show(texts.test(AppName.TITLE));
+                case TEST_NOTIFICATION -> notifications.show(texts.testNotification(AppName.TITLE));
             }
         });
 
         showTrayOrWindow(new StartupDecision(appSettings.mode(), commandLine.background(), trayParts.needTheTray()),
-                tray, dashboard, new Tray.TrayActions(dashboard::popUp, dashboard::openWindow,
+                tray, dashboard, new Tray.Actions(dashboard::popUp, dashboard::openWindow,
                         () -> setUpOffer.openSettings(Category.SOLAR), () -> settings.open(Category.ABOUT),
                         this::quit));
         // only now: on Windows the first announcement needs the tray icon to show it
@@ -260,7 +260,7 @@ public final class DesktopApp {
         return claim.claim(command -> commands.thenAccept(handler -> handler.accept(command)));
     }
 
-    private void showTrayOrWindow(StartupDecision decision, Tray tray, Dashboard dashboard, Tray.TrayActions actions)
+    private void showTrayOrWindow(StartupDecision decision, Tray tray, Dashboard dashboard, Tray.Actions actions)
             throws InterruptedException {
         boolean trayShown = decision.triesTheTray()
                 && new TrayStarter(Clock.systemUTC(), Thread::sleep).show(tray, actions, decision.trayWait());

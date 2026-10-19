@@ -23,7 +23,7 @@ class TrayTextsTest {
         final List<TrayStatus> statuses = new ArrayList<>();
 
         @Override
-        public void show(TrayActions actions) {
+        public void show(Actions actions) {
         }
 
         @Override

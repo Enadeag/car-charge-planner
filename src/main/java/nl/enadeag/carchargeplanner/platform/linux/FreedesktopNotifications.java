@@ -61,7 +61,7 @@ public final class FreedesktopNotifications implements Notifications {
     private boolean warned;
 
     /**
-     * Makes the notifications; nothing is connected or written until {@link #listen} or {@link #show}.
+     * Makes the notifications; nothing is connected or written until {@link #onClick} or {@link #show}.
      *
      * @param connector opens the session bus connection the notifications are sent and heard on
      * @param appName the app's name, which the desktop shows above each notification, such as "Car charge planner"
@@ -104,7 +104,7 @@ public final class FreedesktopNotifications implements Notifications {
     }
 
     @Override
-    public synchronized void listen(Runnable clicked) {
+    public synchronized void onClick(Runnable clicked) {
         this.clicked = clicked;
         connected();
     }

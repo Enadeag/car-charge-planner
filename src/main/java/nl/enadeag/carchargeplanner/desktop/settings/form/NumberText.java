@@ -44,6 +44,6 @@ public final class NumberText {
         if (text.equals(write(held, decimals))) {
             return held; // untouched: keep the exact value, not the rounded one shown
         }
-        return messages.parse(text).orElse(held);
+        return messages.parseNumber(text).orElse(held);
     }
 }

@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.day;
 
-import static nl.enadeag.carchargeplanner.desktop.theme.Texts.label;
-import static nl.enadeag.carchargeplanner.desktop.theme.Texts.paragraph;
+import static nl.enadeag.carchargeplanner.desktop.theme.Labels.line;
+import static nl.enadeag.carchargeplanner.desktop.theme.Labels.paragraph;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Glyphs;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.SourceChip;
@@ -18,13 +18,13 @@ public final class MainCard extends VBox {
      * @param day the day to show; its empty texts and lists are left out of the card
      */
     public MainCard(DayModel day) {
-        getChildren().add(label(day.title() + " · " + day.heading(), "card-label"));
+        getChildren().add(line(day.title() + " · " + day.heading(), "card-label"));
         if (!day.hero().isEmpty()) {
-            getChildren().add(label(day.hero(), "hero"));
+            getChildren().add(line(day.hero(), "hero"));
         }
         if (!day.facts().isEmpty()) {
             var facts = new FlowPane();
-            day.facts().forEach(fact -> facts.getChildren().add(label(fact, "fact")));
+            day.facts().forEach(fact -> facts.getChildren().add(line(fact, "fact")));
             facts.getStyleClass().add("figures");
             getChildren().add(facts);
         }

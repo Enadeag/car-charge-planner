@@ -13,11 +13,11 @@ public interface Tray {
      * @param actions what a click on the icon and the entries of its menu do
      * @throws TrayUnavailable when the system has no tray this app can use; the app then shows a window instead
      */
-    void show(TrayActions actions) throws TrayUnavailable;
+    void show(Actions actions) throws TrayUnavailable;
 
     /**
      * Shows the plan's state on the icon and in its tooltip. May be called from any thread, also before
-     * {@link #show(TrayActions)}: the icon then appears with it.
+     * {@link #show(Actions)}: the icon then appears with it.
      *
      * @param status the dot and the sentence to show until the next call; never null
      */
@@ -25,7 +25,7 @@ public interface Tray {
 
     /**
      * Gives the entries of the icon's menu new labels, such as in another language. May be called from any thread,
-     * also before {@link #show(TrayActions)}: the menu then appears with them.
+     * also before {@link #show(Actions)}: the menu then appears with them.
      *
      * @param labels what the entries say until the next call; never null
      */
@@ -44,7 +44,7 @@ public interface Tray {
      * @param about the action for the menu's "About…"
      * @param quit the action for the menu's "Quit"
      */
-    record TrayActions(Consumer<Point2D> clicked, Runnable open, Runnable settings, Runnable about, Runnable quit) {
+    record Actions(Consumer<Point2D> clicked, Runnable open, Runnable settings, Runnable about, Runnable quit) {
     }
 
     /**

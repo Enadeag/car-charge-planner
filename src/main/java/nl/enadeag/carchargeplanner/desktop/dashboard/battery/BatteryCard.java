@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.battery;
 
-import static nl.enadeag.carchargeplanner.desktop.theme.Texts.label;
+import static nl.enadeag.carchargeplanner.desktop.theme.Labels.line;
 
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -22,7 +22,7 @@ import javafx.scene.layout.VBox;
 public final class BatteryCard extends VBox {
 
     private final BatteryBar bar;
-    private final Label levels = label("", "battery-levels");
+    private final Label levels = line("", "battery-levels");
     private final Button update;
     private final BatteryEditor editor;
     private IntConsumer entered = _ -> { };
@@ -55,7 +55,7 @@ public final class BatteryCard extends VBox {
         });
         var spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        var header = new HBox(label(messages.text(TextKey.BATTERY_HEADING), "card-label"), spacer, levels, update);
+        var header = new HBox(line(messages.text(TextKey.BATTERY_HEADING), "card-label"), spacer, levels, update);
         header.getStyleClass().add("chart-header");
         getChildren().setAll(header, bar, editor);
         getStyleClass().addAll("card", "battery-card");

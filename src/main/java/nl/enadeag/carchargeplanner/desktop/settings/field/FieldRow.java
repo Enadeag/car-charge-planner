@@ -2,7 +2,7 @@ package nl.enadeag.carchargeplanner.desktop.settings.field;
 
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.desktop.theme.Texts;
+import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -19,8 +19,8 @@ public final class FieldRow extends VBox {
     private final String name;
     /** The name on screen; left out of the row, and so never seen, when the name is empty. */
     private final Label label;
-    private final Label hint = Texts.paragraph("", "note");
-    private final Label problem = Texts.paragraph("", "field-problem");
+    private final Label hint = Labels.paragraph("", "note");
+    private final Label problem = Labels.paragraph("", "field-problem");
     private final Label tag = new Label();
 
     /**
@@ -36,7 +36,7 @@ public final class FieldRow extends VBox {
         this.name = name;
         var line = new HBox();
         line.getStyleClass().add("field-line");
-        label = Texts.paragraph(name, "field-label");
+        label = Labels.paragraph(name, "field-label");
         if (!name.isEmpty()) {
             label.setLabelFor(input.focusable());
             label.setMaxWidth(Double.MAX_VALUE);

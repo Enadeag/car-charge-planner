@@ -21,7 +21,7 @@ import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
-import nl.enadeag.carchargeplanner.desktop.theme.Texts;
+import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.engine.config.HomeSystem;
 import java.net.URI;
 import java.nio.file.Path;
@@ -79,10 +79,10 @@ final class SetUpView extends BorderPane {
     private final Consumer<AppSettings> finished;
     private final Background background;
     private final Messages messages;
-    private final Label stepLabel = Texts.paragraph("", "setup-step");
+    private final Label stepLabel = Labels.paragraph("", "setup-step");
     private final ProgressBar progress = new ProgressBar();
     private final ScrollPane body = new ScrollPane();
-    private final Label status = Texts.paragraph("", "status-text");
+    private final Label status = Labels.paragraph("", "status-text");
     private final Button back;
     private final Button next;
     private final HBox actions;
@@ -137,7 +137,7 @@ final class SetUpView extends BorderPane {
             showActions();
             close.run();
         });
-        confirm = bar(Texts.paragraph(messages.text(TextKey.SETUP_LEAVE_QUESTION), "field-label"), keepGoing,
+        confirm = bar(Labels.paragraph(messages.text(TextKey.SETUP_LEAVE_QUESTION), "field-label"), keepGoing,
                 leave);
         // a scene has one Escape: the bar that shows has it, and the other lets go of it first
         cancel.cancelButtonProperty().bind(actions.visibleProperty());
@@ -186,7 +186,7 @@ final class SetUpView extends BorderPane {
         var house = new HouseCard(messages);
         var away = new WeeklyAwayCard(messages);
         var more = new PageView(messages.text(SetUpStep.MORE.title()));
-        more.show(Texts.paragraph(messages.text(TextKey.SETUP_MORE_HINT), "field-label"), house.view(),
+        more.show(Labels.paragraph(messages.text(TextKey.SETUP_MORE_HINT), "field-label"), house.view(),
                 away.view());
         var carPage = new PageView(messages.text(SetUpStep.CAR.title()));
         carPage.show(car.view());

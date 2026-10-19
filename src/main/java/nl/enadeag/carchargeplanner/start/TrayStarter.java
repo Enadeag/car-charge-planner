@@ -50,7 +50,7 @@ final class TrayStarter {
      *     window
      * @throws InterruptedException when the thread was interrupted while it waited
      */
-    boolean show(Tray tray, Tray.TrayActions actions, Duration wait) throws InterruptedException {
+    boolean show(Tray tray, Tray.Actions actions, Duration wait) throws InterruptedException {
         var deadline = clock.instant().plus(wait);
         while (true) {
             try {

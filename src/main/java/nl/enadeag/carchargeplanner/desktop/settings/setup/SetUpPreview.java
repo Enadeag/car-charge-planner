@@ -5,7 +5,7 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.DashboardPreview;
 import nl.enadeag.carchargeplanner.desktop.settings.page.PageView;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.desktop.theme.Texts;
+import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.engine.Outlook;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
@@ -42,7 +42,7 @@ final class SetUpPreview implements SetUpPage {
         var frame = new StackPane(dashboard.view());
         frame.getStyleClass().add("preview-frame");
         view = new PageView(messages.text(SetUpStep.PREVIEW.title()));
-        view.show(Texts.paragraph(messages.text(TextKey.SETUP_PREVIEW_HINT), "field-label"), frame);
+        view.show(Labels.paragraph(messages.text(TextKey.SETUP_PREVIEW_HINT), "field-label"), frame);
     }
 
     /**

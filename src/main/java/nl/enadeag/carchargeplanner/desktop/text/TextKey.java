@@ -23,7 +23,7 @@ public enum TextKey {
     FOOTER_UPDATED,
     /** The footer's freshness when a refresh failed: {0} is the time the forecast was fetched. */
     FOOTER_STALE,
-    /** The footer's rate limit: {0} is the time the provider may be asked again. */
+    /** The footer's cool-down: {0} is the time the provider may be asked again. */
     FOOTER_BUSY,
     /** The solar chart's heading. */
     CHART_SOLAR,
@@ -431,7 +431,7 @@ public enum TextKey {
     ABOUT_LOG_FILE,
     /** Where the API keys are. */
     ABOUT_KEYS,
-    /** The keys are in the keychain. */
+    /** About's short answer to where the API keys are: in the keychain. */
     ABOUT_KEYS_KEYCHAIN,
     /** The keys are in a file: {0} the file. */
     ABOUT_KEYS_FILE,
@@ -660,7 +660,7 @@ public enum TextKey {
     SECRET_LOCKED_SPOKEN,
     /** The title of the card about where the keys are kept. */
     CARD_KEYS,
-    /** The keys are in the keychain. */
+    /** The note on the keys' card when the API keys are in the keychain, not in the settings files. */
     KEYS_IN_KEYCHAIN,
     /** The keys are in a file: {0} the file. */
     KEYS_IN_FILE,
