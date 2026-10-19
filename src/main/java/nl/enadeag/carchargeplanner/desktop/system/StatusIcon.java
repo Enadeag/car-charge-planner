@@ -30,10 +30,11 @@ public final class StatusIcon {
     private static final float STROKE = 5;
 
     /**
-     * The SVG, filled in with the shapes' colour, the gap's mask and the dot. KDE Plasma replaces the colour of the
-     * class {@code ColorScheme-Text} with its panel's text colour; other desktops show the colour given.
+     * The template of the icon's SVG document for the panel, for {@link String#format}: its three {@code %s} take the
+     * shapes' colour, the gap's mask and the dot. KDE Plasma recolours the class {@code ColorScheme-Text} with its
+     * panel's text colour; other desktops show the colour given.
      */
-    private static final String SVG = """
+    private static final String PANEL_ICON_TEMPLATE = """
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
               <style id="current-color-scheme">.ColorScheme-Text { color: %s; }</style>
               <mask id="gap"><rect width="64" height="64" fill="#fff"/><circle cx="52" cy="52" r="15" fill="#000"/></mask>
@@ -90,7 +91,7 @@ public final class StatusIcon {
         var colour = dotColour(dot);
         var mask = colour.isPresent() ? " mask=\"url(#gap)\"" : "";
         var circle = colour.map(fill -> "\n  <circle cx=\"52\" cy=\"52\" r=\"12\" fill=\"" + fill + "\"/>").orElse("");
-        return String.format(Locale.ROOT, SVG, shapeColour(shade), mask, circle);
+        return String.format(Locale.ROOT, PANEL_ICON_TEMPLATE, shapeColour(shade), mask, circle);
     }
 
     private static String shapeColour(PanelShade shade) {
