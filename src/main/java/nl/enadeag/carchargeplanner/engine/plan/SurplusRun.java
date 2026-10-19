@@ -8,14 +8,14 @@ import java.util.List;
  *
  * @param segments the segments in time order, each starting where the one before ends; at least one
  */
-record Run(List<Segment> segments) {
+record SurplusRun(List<Segment> segments) {
 
     /**
      * Copies the list of segments.
      *
      * @throws NullPointerException when the segments are null or hold null
      */
-    Run {
+    SurplusRun {
         segments = List.copyOf(segments);
     }
 

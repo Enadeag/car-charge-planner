@@ -40,7 +40,7 @@ public record EngineConfig(HomeSystem system, PlanningPreferences planning, Fore
      * @param primary the forecast provider to ask, normally the first one this version offers
      * @return a draft that can be planned with, but whose place still has to be chosen
      */
-    public static EngineConfig firstRun(ZoneId timezone, ProviderId primary) {
+    public static EngineConfig setUpDraft(ZoneId timezone, ProviderId primary) {
         var system = new HomeSystem(Coordinates.NOT_CHOSEN, timezone, List.of(PanelArray.TYPICAL), House.TYPICAL,
                 Car.TYPICAL, Charger.TYPICAL);
         return new EngineConfig(system, PlanningPreferences.RECOMMENDED,

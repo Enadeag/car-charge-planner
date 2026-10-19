@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import nl.enadeag.carchargeplanner.engine.config.ForecastSelection;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -40,6 +40,6 @@ class ForecastEntryTest {
     void theFallbackCannotBeThePrimary() {
         assertThatThrownBy(() -> new ForecastEntry(OPEN_METEO, Optional.of(OPEN_METEO)).selection(Map.of(), Map.of()))
                 .isInstanceOfSatisfying(InvalidSetting.class,
-                        refused -> assertThat(refused.setting()).isEqualTo(Setting.FALLBACK_PROVIDER));
+                        refused -> assertThat(refused.setting()).isEqualTo(ConfigSetting.FALLBACK_PROVIDER));
     }
 }

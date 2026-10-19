@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.engine.config;
 
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
 
 /**
  * The home's own use of power.
@@ -20,7 +20,7 @@ public record House(double baseloadKw) {
      */
     public House {
         if (baseloadKw < 0 || Double.isNaN(baseloadKw)) {
-            throw new InvalidSetting(Setting.HOUSE_BASELOAD, InvalidSetting.Rule.OUT_OF_RANGE,
+            throw new InvalidSetting(ConfigSetting.HOUSE_BASELOAD, InvalidSetting.Rule.OUT_OF_RANGE,
                     "baseloadKw must not be negative");
         }
     }

@@ -26,8 +26,8 @@ import nl.enadeag.carchargeplanner.engine.forecast.Place;
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults;
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceSearch;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
-import nl.enadeag.carchargeplanner.engine.forecast.SystemDescription;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
+import nl.enadeag.carchargeplanner.engine.forecast.SolarSite;
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -109,7 +109,7 @@ class SystemPagesTest {
         var view = openWith(config -> config.withSystem(config.system().withPanels(List.of(
                 new PanelArray("East", 3, 30, -90, 0.14), new PanelArray("West", 3, 30, 90, 0.14),
                 new PanelArray("Garage", 1, 10, 0, 0.1))),
-                new TypicalValues(Set.of(), List.of(Set.of(), Set.of(Setting.PANEL_TILT)))));
+                new TypicalValues(Set.of(), List.of(Set.of(), Set.of(ConfigSetting.PANEL_TILT)))));
 
         Fx.call(() -> {
             button(view, TextKey.PANELS_REMOVE, 0).fire();
@@ -118,13 +118,13 @@ class SystemPagesTest {
 
         var config = stored();
         assertThat(config.system().panels()).extracting(PanelArray::name).containsExactly("West", "Garage");
-        assertThat(config.typical().panels()).containsExactly(Set.of(Setting.PANEL_TILT), Set.of());
+        assertThat(config.typical().panels()).containsExactly(Set.of(ConfigSetting.PANEL_TILT), Set.of());
     }
 
     @Test
     void enteringAValueOfOnesOwnTakesItsTypicalTagAway() throws Exception {
         var view = openWith(config -> config.withSystem(config.system(),
-                new TypicalValues(Set.of(Setting.CAR_BATTERY, Setting.CAR_CONSUMPTION), List.of())));
+                new TypicalValues(Set.of(ConfigSetting.CAR_BATTERY, ConfigSetting.CAR_CONSUMPTION), List.of())));
 
         Fx.call(() -> {
             settings.type(view, TextKey.FIELD_CAR_BATTERY, "75");
@@ -133,7 +133,7 @@ class SystemPagesTest {
 
         var config = stored();
         assertThat(config.system().car().usableBatteryKwh()).isEqualTo(75);
-        assertThat(config.typical().system()).containsExactly(Setting.CAR_CONSUMPTION);
+        assertThat(config.typical().system()).containsExactly(ConfigSetting.CAR_CONSUMPTION);
     }
 
     @Test
@@ -149,9 +149,9 @@ class SystemPagesTest {
 
         var config = stored();
         assertThat(config.system().charger()).isEqualTo(Charger.TYPICAL);
-        assertThat(config.typical().system()).containsExactlyInAnyOrder(Setting.CHARGER_PHASES,
-                Setting.CHARGER_MIN_CURRENT, Setting.CHARGER_MAX_CURRENT, Setting.CHARGER_VOLTAGE,
-                Setting.CHARGER_EFFICIENCY);
+        assertThat(config.typical().system()).containsExactlyInAnyOrder(ConfigSetting.CHARGER_PHASES,
+                ConfigSetting.CHARGER_MIN_CURRENT, ConfigSetting.CHARGER_MAX_CURRENT, ConfigSetting.CHARGER_VOLTAGE,
+                ConfigSetting.CHARGER_EFFICIENCY);
     }
 
     @Test
@@ -258,7 +258,7 @@ class SystemPagesTest {
     @Test
     void typicalValuesAreTaggedNextToTheirFields() throws Exception {
         var view = openWith(config -> config.withSystem(config.system(),
-                new TypicalValues(Set.of(Setting.HOUSE_BASELOAD), List.of())));
+                new TypicalValues(Set.of(ConfigSetting.HOUSE_BASELOAD), List.of())));
         Fx.run(() -> view.show(Category.CAR_HOUSE));
 
         assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_BASELOAD).getAccessibleHelp()))
@@ -272,7 +272,7 @@ class SystemPagesTest {
         settings = new SettingsFixture(folder, Language.ENGLISH);
         var file = new ConfigFile(settings.configPath);
         var example = file.read();
-        file.write(example.withSystem(example.system(), new TypicalValues(Set.of(Setting.CAR_CONSUMPTION), List.of())));
+        file.write(example.withSystem(example.system(), new TypicalValues(Set.of(ConfigSetting.CAR_CONSUMPTION), List.of())));
         settings.appSettings.write(new AppSettings(Optional.empty(), Units.IMPERIAL, DisplayMode.AUTOMATIC, Appearance.SYSTEM));
         var view = settings.open();
 
@@ -291,7 +291,7 @@ class SystemPagesTest {
         }
 
         @Override
-        public List<ForecastStep> fetch(SystemDescription system, Map<String, String> values, Instant now) {
+        public List<ForecastStep> fetch(SolarSite system, Map<String, String> values, Instant now) {
             return List.of();
         }
 

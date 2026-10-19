@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.engine.forecast.providers;
 
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
+import nl.enadeag.carchargeplanner.engine.forecast.ArraySum;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
@@ -10,8 +11,8 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderText;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingSpec;
-import nl.enadeag.carchargeplanner.engine.forecast.Steps;
-import nl.enadeag.carchargeplanner.engine.forecast.SystemDescription;
+import nl.enadeag.carchargeplanner.engine.forecast.SolarSite;
+import nl.enadeag.carchargeplanner.engine.forecast.StepRules;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -57,10 +58,10 @@ public final class ExampleSolar implements ForecastProvider {
     }
 
     @Override
-    public List<ForecastStep> fetch(SystemDescription system, Map<String, String> settings, Instant now)
+    public List<ForecastStep> fetch(SolarSite system, Map<String, String> settings, Instant now)
             throws ProviderError {
         var key = apiKey(settings); // checked before anything is sent
-        return Steps.requireValid(Steps.sumOverArrays(system, array -> fetchArray(system, array, key, settings)));
+        return StepRules.requireValid(ArraySum.sumOverArrays(system, array -> fetchArray(system, array, key, settings)));
     }
 
     /**
@@ -78,7 +79,7 @@ public final class ExampleSolar implements ForecastProvider {
         return key;
     }
 
-    private List<ForecastStep> fetchArray(SystemDescription system, PanelArray array, String key,
+    private List<ForecastStep> fetchArray(SolarSite system, PanelArray array, String key,
             Map<String, String> settings) throws ProviderError {
         var uri = URI.create("https://api.example.com/v1/solar?" + String.join("&",
                 parameter("lat", Decimals.plain(system.location().latitude())),
@@ -115,7 +116,7 @@ public final class ExampleSolar implements ForecastProvider {
         if (steps.isEmpty()) {
             throw new ProviderError.BadResponse("Example Solar gave no forecast");
         }
-        return Steps.requireValid(steps);
+        return StepRules.requireValid(steps);
     }
 
     /** One query parameter, its value encoded, so no value can end the parameter or change the address. */

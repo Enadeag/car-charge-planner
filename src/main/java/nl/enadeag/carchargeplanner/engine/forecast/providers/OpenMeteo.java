@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.engine.forecast.providers;
 
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
+import nl.enadeag.carchargeplanner.engine.forecast.ArraySum;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
@@ -12,8 +13,8 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderText;
 import nl.enadeag.carchargeplanner.engine.forecast.ServerAddress;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingSpec;
-import nl.enadeag.carchargeplanner.engine.forecast.Steps;
-import nl.enadeag.carchargeplanner.engine.forecast.SystemDescription;
+import nl.enadeag.carchargeplanner.engine.forecast.SolarSite;
+import nl.enadeag.carchargeplanner.engine.forecast.StepRules;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -100,7 +101,7 @@ public final class OpenMeteo implements ForecastProvider {
      * @return the request's address
      * @throws ProviderError.NotConfigured when the server address is not one {@link ServerAddress#parse} accepts
      */
-    static URI requestUri(SystemDescription system, PanelArray array, Map<String, String> settings)
+    static URI requestUri(SolarSite system, PanelArray array, Map<String, String> settings)
             throws ProviderError.NotConfigured {
         var server = server(settings);
         Map<String, String> query = new LinkedHashMap<>();
@@ -138,20 +139,20 @@ public final class OpenMeteo implements ForecastProvider {
     }
 
     @Override
-    public List<ForecastStep> fetch(SystemDescription system, Map<String, String> settings, Instant now)
+    public List<ForecastStep> fetch(SolarSite system, Map<String, String> settings, Instant now)
             throws ProviderError {
         for (var array : system.arrays()) {
             requestUri(system, array, settings); // a wrong address is reported before anything is sent
         }
-        return Steps.requireValid(Steps.sumOverArrays(system, array -> fetchArray(system, array, settings)));
+        return StepRules.requireValid(ArraySum.sumOverArrays(system, array -> fetchArray(system, array, settings)));
     }
 
-    private List<ForecastStep> fetchArray(SystemDescription system, PanelArray array, Map<String, String> settings)
+    private List<ForecastStep> fetchArray(SolarSite system, PanelArray array, Map<String, String> settings)
             throws ProviderError {
         var reply = Exchange.send(http, HttpGet.Request.of(requestUri(system, array, settings)), INFO.name());
         var secrets = INFO.secretValues(settings);
         checkStatus(reply, secrets);
-        return Steps.requireValid(OpenMeteoSeries.steps(reply.body(), array, secrets));
+        return StepRules.requireValid(OpenMeteoSeries.steps(reply.body(), array, secrets));
     }
 
     private static void checkStatus(HttpGet.Reply reply, List<String> secrets) throws ProviderError {

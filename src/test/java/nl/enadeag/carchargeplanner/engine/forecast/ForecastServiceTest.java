@@ -48,7 +48,7 @@ class ForecastServiceTest {
 
     private static final LocalDate DAY = LocalDate.of(2026, 7, 3);
     private static final Instant T0 = DAY.atTime(7, 0).atZone(SunnyDays.TZ).toInstant();
-    private static final SystemDescription SYSTEM = ProviderCase.EXAMPLE_SYSTEM;
+    private static final SolarSite SYSTEM = ProviderCase.EXAMPLE_SYSTEM;
     private static final String SECRET = "SERVICE-SECRET-31";
     private static final ProviderId MAIN = new ProviderId("main");
     private static final ProviderId BACKUP = new ProviderId("backup");
@@ -296,7 +296,7 @@ class ForecastServiceTest {
             }
 
             @Override
-            public List<ForecastStep> fetch(SystemDescription system, Map<String, String> settings, Instant now)
+            public List<ForecastStep> fetch(SolarSite system, Map<String, String> settings, Instant now)
                     throws ProviderError {
                 throw new BadResponse("Main says: you sent " + settings.get("api_key") + "; we know " + otherKey);
             }
@@ -409,7 +409,7 @@ class ForecastServiceTest {
         get(T0);
         var bigger = SYSTEM.withArrays(List.of(new PanelArray("", 9.0, 35, -45, 0.14)));
         assertThat(service.get(bigger, selection, later(5), false).source().freshness()).isEqualTo(Freshness.FRESH);
-        var moved = new SystemDescription(new Coordinates(51.0, SYSTEM.location().longitude()), SYSTEM.timezone(), SYSTEM.arrays());
+        var moved = new SolarSite(new Coordinates(51.0, SYSTEM.location().longitude()), SYSTEM.timezone(), SYSTEM.arrays());
         assertThat(service.get(moved, selection, later(6), false).source().freshness()).isEqualTo(Freshness.FRESH);
         assertThat(main.callCount()).isEqualTo(3);
         assertThat(service.get(moved, selection, later(7), false).source().freshness()).isEqualTo(Freshness.CACHED); // cached in turn

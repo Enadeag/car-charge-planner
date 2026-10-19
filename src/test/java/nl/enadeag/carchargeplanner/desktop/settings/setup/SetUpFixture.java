@@ -33,8 +33,8 @@ import nl.enadeag.carchargeplanner.engine.forecast.PlaceSearch;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderError;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.forecast.Providers;
+import nl.enadeag.carchargeplanner.engine.forecast.SolarSite;
 import nl.enadeag.carchargeplanner.engine.forecast.SunnyDays;
-import nl.enadeag.carchargeplanner.engine.forecast.SystemDescription;
 import nl.enadeag.carchargeplanner.engine.forecast.providers.ForecastSolar;
 import nl.enadeag.carchargeplanner.engine.forecast.providers.OpenMeteo;
 import nl.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
@@ -158,7 +158,7 @@ final class SetUpFixture {
             // as large as the app makes its window for the larger text: so many lines of it
             Scenes.layOut(view, ColorScheme.LIGHT, scale, scale.of(50 * 13), scale.of(46 * 13));
             var start = SetUpStart.read(new SettingsStorage(stores()));
-            view.start(start, start.draft(EngineConfig.firstRun(ZoneId.of("Europe/Amsterdam"),
+            view.start(start, start.draft(EngineConfig.setUpDraft(ZoneId.of("Europe/Amsterdam"),
                     engine.providers().getFirst().id())), SetUpStep.WELCOME);
             return view;
         });
@@ -177,7 +177,7 @@ final class SetUpFixture {
     /** Starts a view made by {@link #openReading(ColorScheme)} with what is stored, as set-up does once it is read. */
     void start(SetUpView view) {
         var start = SetUpStart.read(new SettingsStorage(stores()));
-        view.start(start, start.draft(EngineConfig.firstRun(ZoneId.of("Europe/Amsterdam"),
+        view.start(start, start.draft(EngineConfig.setUpDraft(ZoneId.of("Europe/Amsterdam"),
                 engine.providers().getFirst().id())), SetUpStep.WELCOME);
     }
 
@@ -186,7 +186,7 @@ final class SetUpFixture {
             var view = SetUpView.of(stores(), keysFile(), opened::add, Fx.REDUCED_MOTION, () -> closed++,
                     chosen -> finished++, background, messages);
             var start = SetUpStart.read(new SettingsStorage(stores()));
-            view.start(start, start.draft(EngineConfig.firstRun(ZoneId.of("Europe/Amsterdam"),
+            view.start(start, start.draft(EngineConfig.setUpDraft(ZoneId.of("Europe/Amsterdam"),
                     engine.providers().getFirst().id())), SetUpStep.WELCOME);
             stage = Scenes.show(view, scheme, 50 * 13, 46 * 13);
             return view;
@@ -300,7 +300,7 @@ final class SetUpFixture {
         }
 
         @Override
-        public List<ForecastStep> fetch(SystemDescription system, Map<String, String> settings, Instant now)
+        public List<ForecastStep> fetch(SolarSite system, Map<String, String> settings, Instant now)
                 throws ProviderError {
             asked.add(Map.copyOf(settings));
             if (failing) {

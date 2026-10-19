@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.engine.away;
 
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -25,7 +25,7 @@ public record RecurringAwayPeriod(DayOfWeek weekday, LocalTime start, LocalTime 
      */
     public RecurringAwayPeriod {
         if (!start.isBefore(end)) {
-            throw new InvalidSetting(Setting.AWAY_PERIOD, InvalidSetting.Rule.NOT_AFTER_START,
+            throw new InvalidSetting(ConfigSetting.AWAY_PERIOD, InvalidSetting.Rule.NOT_AFTER_START,
                     "a recurring away period must end after it starts on the same day (no periods over midnight)");
         }
     }

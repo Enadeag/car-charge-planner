@@ -42,8 +42,8 @@ final class WindowFinder {
      * @param unavailable the times in which the charger is not free
      * @return the runs in time order
      */
-    List<Run> runs(List<ForecastStep> forecast, Instant now, List<BlockedTime> unavailable) {
-        var runs = new ArrayList<Run>();
+    List<SurplusRun> runs(List<ForecastStep> forecast, Instant now, List<BlockedTime> unavailable) {
+        var runs = new ArrayList<SurplusRun>();
         var current = new ArrayList<Segment>();
         for (var step : forecast.stream().sorted(Comparator.comparing(ForecastStep::start)).toList()) {
             var start = step.start().isAfter(now) ? step.start() : now;
@@ -53,17 +53,17 @@ final class WindowFinder {
             var segment = new Segment(start, step.end(), Charging.usableSurplusKw(step, system, preferences));
             if (canCharge(segment, unavailable)) {
                 if (!current.isEmpty() && !current.getLast().end().equals(segment.start())) {
-                    runs.add(new Run(current));
+                    runs.add(new SurplusRun(current));
                     current.clear();
                 }
                 current.add(segment);
             } else if (!current.isEmpty()) {
-                runs.add(new Run(current));
+                runs.add(new SurplusRun(current));
                 current.clear();
             }
         }
         if (!current.isEmpty()) {
-            runs.add(new Run(current));
+            runs.add(new SurplusRun(current));
         }
         return runs;
     }
@@ -80,8 +80,8 @@ final class WindowFinder {
      * @param zone the time zone that decides the dates
      * @return the runs of each date that has one, in the order they were given
      */
-    static Map<LocalDate, List<Run>> byDay(List<Run> runs, ZoneId zone) {
-        var days = new LinkedHashMap<LocalDate, List<Run>>();
+    static Map<LocalDate, List<SurplusRun>> byDay(List<SurplusRun> runs, ZoneId zone) {
+        var days = new LinkedHashMap<LocalDate, List<SurplusRun>>();
         for (var run : runs) {
             days.computeIfAbsent(run.start().atZone(zone).toLocalDate(), _ -> new ArrayList<>()).add(run);
         }
@@ -96,12 +96,12 @@ final class WindowFinder {
      *     counted toward it
      * @return the chosen windows in time order; they may fall short when the runs hold too little sun
      */
-    List<Window> windows(List<Run> runs, double neededKwh) {
+    List<Window> windows(List<SurplusRun> runs, double neededKwh) {
         double remaining = neededKwh;
         var unused = new ArrayList<>(runs);
         var chosen = new ArrayList<Window>();
         while (remaining > EPS && !unused.isEmpty()) {
-            Run bestRun = null;
+            SurplusRun bestRun = null;
             Window best = null;
             for (var run : unused) {
                 var candidate = bestCandidate(run, remaining);
@@ -145,7 +145,7 @@ final class WindowFinder {
         }
     }
 
-    private Candidate bestCandidate(Run run, double remaining) {
+    private Candidate bestCandidate(SurplusRun run, double remaining) {
         var charger = system.charger();
         Candidate best = null;
         Score bestScore = null;
@@ -177,7 +177,7 @@ final class WindowFinder {
     }
 
     /** The candidate as a window, cut short once it has delivered the energy needed, but never below the minimum length. */
-    private Window window(Run run, Candidate candidate, double remaining) {
+    private Window window(SurplusRun run, Candidate candidate, double remaining) {
         double power = Charging.powerKw(candidate.amps(), system.charger());
         var segments = run.segments().subList(candidate.first(), candidate.last() + 1);
         var start = segments.getFirst().start();

@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.engine.config;
 
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +30,7 @@ public record ForecastSelection(
      */
     public ForecastSelection {
         if (fallback.equals(Optional.of(primary))) {
-            throw new InvalidSetting(Setting.FALLBACK_PROVIDER, InvalidSetting.Rule.SAME_AS_PRIMARY,
+            throw new InvalidSetting(ConfigSetting.FALLBACK_PROVIDER, InvalidSetting.Rule.SAME_AS_PRIMARY,
                     "fallback must be different from primary");
         }
         settings = checkedCopy(settings);

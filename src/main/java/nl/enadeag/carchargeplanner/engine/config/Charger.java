@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.engine.config;
 
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
 
 /**
  * The wall charger, as far as it limits the charge power.
@@ -25,19 +25,19 @@ public record Charger(Phases phases, int minAmps, int maxAmps, double volts, dou
      */
     public Charger {
         if (minAmps <= 0) {
-            throw new InvalidSetting(Setting.CHARGER_MIN_CURRENT, InvalidSetting.Rule.OUT_OF_RANGE,
+            throw new InvalidSetting(ConfigSetting.CHARGER_MIN_CURRENT, InvalidSetting.Rule.OUT_OF_RANGE,
                     "minAmps must be more than 0");
         }
         if (maxAmps < minAmps) {
-            throw new InvalidSetting(Setting.CHARGER_MAX_CURRENT, InvalidSetting.Rule.BELOW_MINIMUM_CURRENT,
+            throw new InvalidSetting(ConfigSetting.CHARGER_MAX_CURRENT, InvalidSetting.Rule.BELOW_MINIMUM_CURRENT,
                     "maxAmps must be at least minAmps");
         }
         if (volts <= 0 || Double.isNaN(volts)) {
-            throw new InvalidSetting(Setting.CHARGER_VOLTAGE, InvalidSetting.Rule.OUT_OF_RANGE,
+            throw new InvalidSetting(ConfigSetting.CHARGER_VOLTAGE, InvalidSetting.Rule.OUT_OF_RANGE,
                     "volts must be more than 0");
         }
         if (efficiency <= 0 || efficiency > 1 || Double.isNaN(efficiency)) {
-            throw new InvalidSetting(Setting.CHARGER_EFFICIENCY, InvalidSetting.Rule.OUT_OF_RANGE,
+            throw new InvalidSetting(ConfigSetting.CHARGER_EFFICIENCY, InvalidSetting.Rule.OUT_OF_RANGE,
                     "efficiency must be more than 0 and at most 1");
         }
     }

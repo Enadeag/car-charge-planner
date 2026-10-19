@@ -27,7 +27,7 @@ public final class ConnectionCheck {
      * @param otherSecrets further secret values the message must never show, such as every stored key; may be empty
      * @return whether it worked, the days of forecast, and a message for the owner, which never holds a secret value
      */
-    public static ConnectionResult attempt(ForecastProvider provider, SystemDescription system,
+    public static ConnectionResult attempt(ForecastProvider provider, SolarSite system,
             Map<String, String> settings, Instant now, Collection<String> otherSecrets) {
         var info = provider.info();
         var missing = info.missingRequired(settings);

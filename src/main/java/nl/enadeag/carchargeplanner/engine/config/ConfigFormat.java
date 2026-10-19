@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.engine.config;
 
 import nl.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.store.FileFormat;
 import nl.enadeag.carchargeplanner.engine.store.FileVersion;
 import nl.enadeag.carchargeplanner.engine.store.FormatProblem;
@@ -30,7 +30,7 @@ import tools.jackson.databind.node.ObjectNode;
  * The JSON shape of {@code engine.json}, read and written side by side, as {@code docs/example-engine.json} shows it.
  * Every value must be given, except the {@code away} and {@code typical} sections; a name the shape does not have is
  * refused. Percentages, charger phases and provider ids are plain numbers and texts; an empty fallback means none; a
- * weekday is its English name in any case and a time is {@code "HH:mm"}; a typical value is its {@link Setting}'s
+ * weekday is its English name in any case and a time is {@code "HH:mm"}; a typical value is its {@link ConfigSetting}'s
  * name. The file's {@code version} is 1; a file without one is read as version 1.
  */
 final class ConfigFormat implements FileFormat<EngineConfig> {
@@ -243,7 +243,7 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
     private static TypicalValues typical(ConfigFields typical) throws FormatProblem {
         typical.only("system", "panels");
         var system = settings(typical.texts("system"), "typical.system");
-        var panels = new ArrayList<Set<Setting>>();
+        var panels = new ArrayList<Set<ConfigSetting>>();
         var lists = typical.textLists("panels");
         for (int i = 0; i < lists.size(); i++) {
             panels.add(settings(lists.get(i), "typical.panels[" + i + "]"));
@@ -251,11 +251,11 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
         return typical.make(() -> new TypicalValues(system, panels));
     }
 
-    private static Set<Setting> settings(List<String> names, String place) throws FormatProblem {
-        var settings = EnumSet.noneOf(Setting.class);
+    private static Set<ConfigSetting> settings(List<String> names, String place) throws FormatProblem {
+        var settings = EnumSet.noneOf(ConfigSetting.class);
         for (var name : names) {
             try {
-                settings.add(Setting.valueOf(name));
+                settings.add(ConfigSetting.valueOf(name));
             } catch (IllegalArgumentException _) {
                 throw new FormatProblem(place + ": '" + name + "' is not a setting such as CAR_BATTERY");
             }

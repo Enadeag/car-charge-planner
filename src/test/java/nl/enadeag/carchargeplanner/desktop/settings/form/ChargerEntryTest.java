@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import nl.enadeag.carchargeplanner.engine.config.Charger;
 import nl.enadeag.carchargeplanner.engine.config.Phases;
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
 import org.junit.jupiter.api.Test;
 
 class ChargerEntryTest {
@@ -32,11 +32,11 @@ class ChargerEntryTest {
     void aValueTheChargerRefusesNamesItsSetting() {
         assertThatThrownBy(() -> new ChargerEntry(Phases.ONE, 16, 10, 230, 90).charger())
                 .isInstanceOfSatisfying(InvalidSetting.class, refused -> {
-                    assertThat(refused.setting()).isEqualTo(Setting.CHARGER_MAX_CURRENT);
+                    assertThat(refused.setting()).isEqualTo(ConfigSetting.CHARGER_MAX_CURRENT);
                     assertThat(refused.rule()).isEqualTo(InvalidSetting.Rule.BELOW_MINIMUM_CURRENT);
                 });
         assertThatThrownBy(() -> new ChargerEntry(Phases.ONE, 6, 16, 230, 101).charger())
                 .isInstanceOfSatisfying(InvalidSetting.class,
-                        refused -> assertThat(refused.setting()).isEqualTo(Setting.CHARGER_EFFICIENCY));
+                        refused -> assertThat(refused.setting()).isEqualTo(ConfigSetting.CHARGER_EFFICIENCY));
     }
 }

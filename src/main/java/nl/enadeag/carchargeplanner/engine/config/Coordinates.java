@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.engine.config;
 
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
 
 /**
  * A place on earth in degrees.
@@ -24,11 +24,11 @@ public record Coordinates(double latitude, double longitude) {
      */
     public Coordinates {
         if (!isLatitude(latitude)) {
-            throw new InvalidSetting(Setting.LATITUDE, InvalidSetting.Rule.OUT_OF_RANGE,
+            throw new InvalidSetting(ConfigSetting.LATITUDE, InvalidSetting.Rule.OUT_OF_RANGE,
                     "latitude must be between -90 and 90");
         }
         if (!isLongitude(longitude)) {
-            throw new InvalidSetting(Setting.LONGITUDE, InvalidSetting.Rule.OUT_OF_RANGE,
+            throw new InvalidSetting(ConfigSetting.LONGITUDE, InvalidSetting.Rule.OUT_OF_RANGE,
                     "longitude must be between -180 and 180");
         }
     }

@@ -13,8 +13,8 @@ import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.House;
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
 import java.util.Optional;
 
 /** The house's own use of power, with a typical value on request. */
@@ -34,10 +34,10 @@ public final class HouseCard implements ConfigPart {
         baseload = new NumberField(new NumberRange(0, 20, 0.05, 2), "kW", messages);
         problems = new ProblemRows(messages);
         typical = new TypicalMarks(messages.text(TextKey.TYPICAL_TAG));
-        var row = problems.add(Setting.HOUSE_BASELOAD,
+        var row = problems.add(ConfigSetting.HOUSE_BASELOAD,
                 FieldRow.of(messages, TextKey.FIELD_BASELOAD, TextKey.FIELD_BASELOAD_HINT, baseload));
-        typical.follow(Setting.HOUSE_BASELOAD, row::showTag);
-        baseload.onChange(() -> typical.edited(Setting.HOUSE_BASELOAD));
+        typical.follow(ConfigSetting.HOUSE_BASELOAD, row::showTag);
+        baseload.onChange(() -> typical.edited(ConfigSetting.HOUSE_BASELOAD));
         card = new Card(messages.text(TextKey.CARD_HOUSE), messages.text(TextKey.CARD_HOUSE_HINT), row,
                 TypicalButton.line(this::useTypical, messages.text(TextKey.CARD_HOUSE), messages));
     }

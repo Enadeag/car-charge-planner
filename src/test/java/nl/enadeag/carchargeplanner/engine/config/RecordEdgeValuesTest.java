@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import nl.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalTime;
@@ -69,49 +69,49 @@ class RecordEdgeValuesTest {
         assertThatCode(make::get).doesNotThrowAnyException();
     }
 
-    private static Arguments refused(Setting setting, Supplier<Object> make) {
+    private static Arguments refused(ConfigSetting setting, Supplier<Object> make) {
         return Arguments.of(setting, make);
     }
 
     static Stream<Arguments> pastTheEdge() {
         return Stream.of(
-                refused(Setting.CAR_BATTERY, () -> new Car(0, 18, 40)),
-                refused(Setting.CAR_CONSUMPTION, () -> new Car(60, 0, 40)),
-                refused(Setting.CAR_DAILY_DISTANCE, () -> new Car(60, 18, -Double.MIN_VALUE)),
-                refused(Setting.CHARGER_MIN_CURRENT, () -> new Charger(Phases.ONE, 0, 16, 230, 0.9)),
-                refused(Setting.CHARGER_MAX_CURRENT, () -> new Charger(Phases.ONE, 16, 15, 230, 0.9)),
-                refused(Setting.CHARGER_VOLTAGE, () -> new Charger(Phases.ONE, 6, 16, 0, 0.9)),
-                refused(Setting.CHARGER_EFFICIENCY, () -> new Charger(Phases.ONE, 6, 16, 230, 0)),
-                refused(Setting.CHARGER_EFFICIENCY, () -> new Charger(Phases.ONE, 6, 16, 230, Math.nextUp(1.0))),
-                refused(Setting.HOUSE_BASELOAD, () -> new House(-Double.MIN_VALUE)),
-                refused(Setting.PANEL_SIZE, () -> new PanelArray("", 0, 35, 0, 0.14)),
-                refused(Setting.PANEL_TILT, () -> new PanelArray("", 5, -Double.MIN_VALUE, 0, 0.14)),
-                refused(Setting.PANEL_TILT, () -> new PanelArray("", 5, Math.nextUp(90.0), 0, 0.14)),
-                refused(Setting.PANEL_DIRECTION, () -> new PanelArray("", 5, 35, Math.nextDown(-180.0), 0.14)),
-                refused(Setting.PANEL_DIRECTION, () -> new PanelArray("", 5, 35, Math.nextUp(180.0), 0.14)),
-                refused(Setting.PANEL_LOSSES, () -> new PanelArray("", 5, 35, 0, -Double.MIN_VALUE)),
-                refused(Setting.PANEL_LOSSES, () -> new PanelArray("", 5, 35, 0, 1)),
-                refused(Setting.PLANNING_MARGIN, () -> new PlanningPreferences(LOW, HIGH, 0, 0.2, WINDOW, LEAD)),
-                refused(Setting.PLANNING_MARGIN, () -> new PlanningPreferences(LOW, HIGH, Math.nextUp(1.0), 0.2,
+                refused(ConfigSetting.CAR_BATTERY, () -> new Car(0, 18, 40)),
+                refused(ConfigSetting.CAR_CONSUMPTION, () -> new Car(60, 0, 40)),
+                refused(ConfigSetting.CAR_DAILY_DISTANCE, () -> new Car(60, 18, -Double.MIN_VALUE)),
+                refused(ConfigSetting.CHARGER_MIN_CURRENT, () -> new Charger(Phases.ONE, 0, 16, 230, 0.9)),
+                refused(ConfigSetting.CHARGER_MAX_CURRENT, () -> new Charger(Phases.ONE, 16, 15, 230, 0.9)),
+                refused(ConfigSetting.CHARGER_VOLTAGE, () -> new Charger(Phases.ONE, 6, 16, 0, 0.9)),
+                refused(ConfigSetting.CHARGER_EFFICIENCY, () -> new Charger(Phases.ONE, 6, 16, 230, 0)),
+                refused(ConfigSetting.CHARGER_EFFICIENCY, () -> new Charger(Phases.ONE, 6, 16, 230, Math.nextUp(1.0))),
+                refused(ConfigSetting.HOUSE_BASELOAD, () -> new House(-Double.MIN_VALUE)),
+                refused(ConfigSetting.PANEL_SIZE, () -> new PanelArray("", 0, 35, 0, 0.14)),
+                refused(ConfigSetting.PANEL_TILT, () -> new PanelArray("", 5, -Double.MIN_VALUE, 0, 0.14)),
+                refused(ConfigSetting.PANEL_TILT, () -> new PanelArray("", 5, Math.nextUp(90.0), 0, 0.14)),
+                refused(ConfigSetting.PANEL_DIRECTION, () -> new PanelArray("", 5, 35, Math.nextDown(-180.0), 0.14)),
+                refused(ConfigSetting.PANEL_DIRECTION, () -> new PanelArray("", 5, 35, Math.nextUp(180.0), 0.14)),
+                refused(ConfigSetting.PANEL_LOSSES, () -> new PanelArray("", 5, 35, 0, -Double.MIN_VALUE)),
+                refused(ConfigSetting.PANEL_LOSSES, () -> new PanelArray("", 5, 35, 0, 1)),
+                refused(ConfigSetting.PLANNING_MARGIN, () -> new PlanningPreferences(LOW, HIGH, 0, 0.2, WINDOW, LEAD)),
+                refused(ConfigSetting.PLANNING_MARGIN, () -> new PlanningPreferences(LOW, HIGH, Math.nextUp(1.0), 0.2,
                         WINDOW, LEAD)),
-                refused(Setting.IMPORT_TOLERANCE, () -> new PlanningPreferences(LOW, HIGH, 0.85, -Double.MIN_VALUE,
+                refused(ConfigSetting.IMPORT_TOLERANCE, () -> new PlanningPreferences(LOW, HIGH, 0.85, -Double.MIN_VALUE,
                         WINDOW, LEAD)),
-                refused(Setting.MINIMUM_WINDOW, () -> new PlanningPreferences(LOW, HIGH, 0.85, 0.2,
+                refused(ConfigSetting.MINIMUM_WINDOW, () -> new PlanningPreferences(LOW, HIGH, 0.85, 0.2,
                         Duration.ZERO, LEAD)),
-                refused(Setting.NOTIFY_LEAD, () -> new PlanningPreferences(LOW, HIGH, 0.85, 0.2,
+                refused(ConfigSetting.NOTIFY_LEAD, () -> new PlanningPreferences(LOW, HIGH, 0.85, 0.2,
                         WINDOW, Duration.ofMinutes(-1))),
-                refused(Setting.MINIMUM_CHARGE, () -> new PlanningPreferences(HIGH, HIGH, 0.85, 0.2, WINDOW, LEAD)),
-                refused(Setting.CAR_BATTERY, () -> new Car(Double.NaN, 18, 40)),
-                refused(Setting.CHARGER_VOLTAGE, () -> new Charger(Phases.ONE, 6, 16, Double.NaN, 0.9)),
-                refused(Setting.HOUSE_BASELOAD, () -> new House(Double.NaN)),
-                refused(Setting.PANEL_DIRECTION, () -> new PanelArray("", 5, 35, Double.NaN, 0.14)),
-                refused(Setting.IMPORT_TOLERANCE, () -> new PlanningPreferences(LOW, HIGH, 0.85, Double.NaN,
+                refused(ConfigSetting.MINIMUM_CHARGE, () -> new PlanningPreferences(HIGH, HIGH, 0.85, 0.2, WINDOW, LEAD)),
+                refused(ConfigSetting.CAR_BATTERY, () -> new Car(Double.NaN, 18, 40)),
+                refused(ConfigSetting.CHARGER_VOLTAGE, () -> new Charger(Phases.ONE, 6, 16, Double.NaN, 0.9)),
+                refused(ConfigSetting.HOUSE_BASELOAD, () -> new House(Double.NaN)),
+                refused(ConfigSetting.PANEL_DIRECTION, () -> new PanelArray("", 5, 35, Double.NaN, 0.14)),
+                refused(ConfigSetting.IMPORT_TOLERANCE, () -> new PlanningPreferences(LOW, HIGH, 0.85, Double.NaN,
                         WINDOW, LEAD)));
     }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("pastTheEdge")
-    void aValuePastTheEdgeIsRefusedAndNamed(Setting setting, Supplier<Object> make) {
+    void aValuePastTheEdgeIsRefusedAndNamed(ConfigSetting setting, Supplier<Object> make) {
         assertThatThrownBy(make::get).isInstanceOfSatisfying(InvalidSetting.class,
                 problem -> assertThat(problem.setting()).isEqualTo(setting));
     }
@@ -157,9 +157,9 @@ class RecordEdgeValuesTest {
 
     @Test
     void anArrayTheTypicalValuesDoNotReachHasNone() {
-        var typical = new TypicalValues(Set.of(), List.of(Set.of(Setting.PANEL_SIZE)));
+        var typical = new TypicalValues(Set.of(), List.of(Set.of(ConfigSetting.PANEL_SIZE)));
 
-        assertThat(typical.ofPanel(0)).containsExactly(Setting.PANEL_SIZE);
+        assertThat(typical.ofPanel(0)).containsExactly(ConfigSetting.PANEL_SIZE);
         assertThat(typical.ofPanel(1)).isEmpty();
     }
 }

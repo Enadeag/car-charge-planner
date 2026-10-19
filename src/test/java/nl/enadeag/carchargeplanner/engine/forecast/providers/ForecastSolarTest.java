@@ -10,16 +10,16 @@ import static org.assertj.core.api.Assertions.within;
 import nl.enadeag.carchargeplanner.engine.config.Coordinates;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
-import nl.enadeag.carchargeplanner.engine.forecast.HttpGet.Reply;
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
+import nl.enadeag.carchargeplanner.engine.forecast.HttpGet.Reply;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderCase;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderConformance;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderError;
 import nl.enadeag.carchargeplanner.engine.forecast.Recorded;
 import nl.enadeag.carchargeplanner.engine.forecast.ReplayHttp;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingFormat;
-import nl.enadeag.carchargeplanner.engine.forecast.Steps;
-import nl.enadeag.carchargeplanner.engine.forecast.SystemDescription;
+import nl.enadeag.carchargeplanner.engine.forecast.SolarSite;
+import nl.enadeag.carchargeplanner.engine.forecast.StepRules;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
@@ -46,7 +46,7 @@ class ForecastSolarTest extends ProviderConformance {
     private static final String RETRY_AT = "2026-10-07T10:19:59+02:00"; // in the 429 answer: 08:19:59 UTC
     private static final String SECRET = "FsSecretKey5555";
     private static final ZoneId AMSTERDAM = ZoneId.of("Europe/Amsterdam");
-    private static final SystemDescription TWO_ARRAYS = EXAMPLE_SYSTEM.withArrays(List.of(
+    private static final SolarSite TWO_ARRAYS = EXAMPLE_SYSTEM.withArrays(List.of(
             new PanelArray("", 3.0, 30, -90, 0.14), new PanelArray("", 2.0, 10, 90, 0.14)));
 
     @Override
@@ -67,11 +67,11 @@ class ForecastSolarTest extends ProviderConformance {
         return body.toString();
     }
 
-    private static List<ForecastStep> fetch(String body, SystemDescription system) throws ProviderError {
+    private static List<ForecastStep> fetch(String body, SolarSite system) throws ProviderError {
         return new ForecastSolar(ReplayHttp.always(new Reply(200, body))).fetch(system, Map.of(), NOW);
     }
 
-    private static String requested(SystemDescription system, Map<String, String> settings) throws ProviderError {
+    private static String requested(SolarSite system, Map<String, String> settings) throws ProviderError {
         var http = ReplayHttp.always(new Reply(200, RECORDED));
         new ForecastSolar(http).fetch(system, settings, NOW);
         return http.requests.getFirst().uri().toString();
@@ -114,7 +114,7 @@ class ForecastSolarTest extends ProviderConformance {
     @Test
     void nightGivesNoStepsAndTheStepsKeepTheContract() throws ProviderError {
         var steps = fetch(RECORDED, EXAMPLE_SYSTEM);
-        assertThat(Steps.problems(steps)).isEmpty();
+        assertThat(StepRules.problems(steps)).isEmpty();
         var gaps = new ArrayList<Duration>();
         for (int i = 1; i < steps.size(); i++) {
             if (!steps.get(i).start().equals(steps.get(i - 1).end())) {
@@ -141,7 +141,7 @@ class ForecastSolarTest extends ProviderConformance {
     @Test
     void acrossTheMissingHourAPeriodIsTheRealElapsedTime() throws ProviderError {
         var steps = fetch(Recorded.answer("forecast_solar_dst_spring.json"), EXAMPLE_SYSTEM);
-        assertThat(Steps.problems(steps)).isEmpty();
+        assertThat(StepRules.problems(steps)).isEmpty();
         var across = steps.getFirst(); // 01:30 (CET) to 03:30 (CEST) on 2026-03-29: one hour has gone, not two
         assertThat(across.start()).isEqualTo(Instant.parse("2026-03-29T00:30:00Z"));
         assertThat(across.end()).isEqualTo(Instant.parse("2026-03-29T01:30:00Z"));
@@ -151,7 +151,7 @@ class ForecastSolarTest extends ProviderConformance {
     @Test
     void acrossTheRepeatedHourAPeriodIsTheRealElapsedTime() throws ProviderError {
         var steps = fetch(Recorded.answer("forecast_solar_dst_autumn.json"), EXAMPLE_SYSTEM);
-        assertThat(Steps.problems(steps)).isEmpty();
+        assertThat(StepRules.problems(steps)).isEmpty();
         // 01:30 CEST, then the first 02:30 (CEST), then 03:30 CET: the repeated hour is counted
         var first = steps.get(0);
         var second = steps.get(1);
@@ -215,7 +215,7 @@ class ForecastSolarTest extends ProviderConformance {
     })
     void numbersAreWholeDegreesAndShortDecimals(double lat, double lon, double kwp, double tilt, double azimuth,
             String end) throws ProviderError {
-        var system = new SystemDescription(new Coordinates(lat, lon), AMSTERDAM, List.of(new PanelArray("", kwp, tilt, azimuth, 0.14)));
+        var system = new SolarSite(new Coordinates(lat, lon), AMSTERDAM, List.of(new PanelArray("", kwp, tilt, azimuth, 0.14)));
         assertThat(ForecastSolar.requestUri(system, system.arrays().getFirst(), Map.of()).toString()).endsWith(end);
     }
 
@@ -299,7 +299,7 @@ class ForecastSolarTest extends ProviderConformance {
         for (int i = 0; i < steps.size(); i++) {
             assertThat(steps.get(i).powerKw()).isCloseTo(2 * single.get(i).powerKw(), within(1e-9));
         }
-        assertThat(Steps.problems(steps)).isEmpty();
+        assertThat(StepRules.problems(steps)).isEmpty();
     }
 
     @Test

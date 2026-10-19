@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import nl.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -259,8 +259,8 @@ class ConfigFileTest {
     @Test
     void typicalValuesAreWrittenAndReadBack() throws IOException, ConfigProblem {
         var example = new ConfigFile(EXAMPLE).read();
-        var typical = new TypicalValues(Set.of(Setting.CAR_BATTERY, Setting.CHARGER_PHASES),
-                List.of(Set.of(Setting.PANEL_SIZE, Setting.PANEL_TILT)));
+        var typical = new TypicalValues(Set.of(ConfigSetting.CAR_BATTERY, ConfigSetting.CHARGER_PHASES),
+                List.of(Set.of(ConfigSetting.PANEL_SIZE, ConfigSetting.PANEL_TILT)));
         var file = new ConfigFile(folder.resolve("engine.json"));
 
         file.write(example.withSystem(example.system(), typical));
@@ -368,8 +368,8 @@ class ConfigFileTest {
     @Test
     void typicalValuesAreInTheFileForTheNextReader() throws IOException, ConfigProblem {
         var example = new ConfigFile(EXAMPLE).read();
-        var typical = new TypicalValues(Set.of(Setting.CHARGER_PHASES, Setting.CAR_BATTERY),
-                List.of(Set.of(Setting.PANEL_TILT, Setting.PANEL_SIZE)));
+        var typical = new TypicalValues(Set.of(ConfigSetting.CHARGER_PHASES, ConfigSetting.CAR_BATTERY),
+                List.of(Set.of(ConfigSetting.PANEL_TILT, ConfigSetting.PANEL_SIZE)));
         var path = folder.resolve("engine.json");
 
         new ConfigFile(path).write(example.withSystem(example.system(), typical));

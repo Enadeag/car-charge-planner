@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
 import org.junit.jupiter.api.Test;
 
 class PanelArrayEntryTest {
@@ -27,6 +27,6 @@ class PanelArrayEntryTest {
     void aValueTheArrayRefusesNamesItsSetting() {
         assertThatThrownBy(() -> new PanelArrayEntry("", 5, 35, 0, 100).panelArray())
                 .isInstanceOfSatisfying(InvalidSetting.class,
-                        refused -> assertThat(refused.setting()).isEqualTo(Setting.PANEL_LOSSES));
+                        refused -> assertThat(refused.setting()).isEqualTo(ConfigSetting.PANEL_LOSSES));
     }
 }

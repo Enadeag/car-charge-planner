@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.engine.config;
 
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -14,17 +14,17 @@ import java.util.Set;
  * @param panels per panel array, in the order of the system's arrays, its typical values; an array past the end of
  *     the list has none
  */
-public record TypicalValues(Set<Setting> system, List<Set<Setting>> panels) {
+public record TypicalValues(Set<ConfigSetting> system, List<Set<ConfigSetting>> panels) {
 
     /** The settings of the house, the car and the charger that can hold a typical value. */
-    public static final Set<Setting> SYSTEM_SETTINGS = Set.copyOf(EnumSet.of(Setting.HOUSE_BASELOAD,
-            Setting.CAR_BATTERY, Setting.CAR_CONSUMPTION, Setting.CAR_DAILY_DISTANCE, Setting.CHARGER_PHASES,
-            Setting.CHARGER_MIN_CURRENT, Setting.CHARGER_MAX_CURRENT, Setting.CHARGER_VOLTAGE,
-            Setting.CHARGER_EFFICIENCY));
+    public static final Set<ConfigSetting> SYSTEM_SETTINGS = Set.copyOf(EnumSet.of(ConfigSetting.HOUSE_BASELOAD,
+            ConfigSetting.CAR_BATTERY, ConfigSetting.CAR_CONSUMPTION, ConfigSetting.CAR_DAILY_DISTANCE, ConfigSetting.CHARGER_PHASES,
+            ConfigSetting.CHARGER_MIN_CURRENT, ConfigSetting.CHARGER_MAX_CURRENT, ConfigSetting.CHARGER_VOLTAGE,
+            ConfigSetting.CHARGER_EFFICIENCY));
 
     /** The settings of a panel array that can hold a typical value; its name never does. */
-    public static final Set<Setting> PANEL_SETTINGS = Set.copyOf(EnumSet.of(Setting.PANEL_SIZE, Setting.PANEL_TILT,
-            Setting.PANEL_DIRECTION, Setting.PANEL_LOSSES));
+    public static final Set<ConfigSetting> PANEL_SETTINGS = Set.copyOf(EnumSet.of(ConfigSetting.PANEL_SIZE, ConfigSetting.PANEL_TILT,
+            ConfigSetting.PANEL_DIRECTION, ConfigSetting.PANEL_LOSSES));
 
     /** No typical values: the owner entered every value. */
     public static final TypicalValues NONE = new TypicalValues(Set.of(), List.of());
@@ -52,7 +52,7 @@ public record TypicalValues(Set<Setting> system, List<Set<Setting>> panels) {
      * @param array the array's place in the system's list, from 0
      * @return its typical values; none for an array the list does not reach
      */
-    public Set<Setting> ofPanel(int array) {
+    public Set<ConfigSetting> ofPanel(int array) {
         return array < panels.size() ? panels.get(array) : Set.of();
     }
 }

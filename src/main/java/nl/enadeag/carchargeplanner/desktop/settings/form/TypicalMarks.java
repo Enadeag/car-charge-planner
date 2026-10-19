@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.settings.form;
 
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
@@ -13,9 +13,9 @@ import java.util.function.Consumer;
  */
 public final class TypicalMarks {
 
-    private final Map<Setting, Consumer<String>> tags = new EnumMap<>(Setting.class);
-    private final Set<Setting> marked = EnumSet.noneOf(Setting.class);
-    private final Set<Setting> loaded = EnumSet.noneOf(Setting.class);
+    private final Map<ConfigSetting, Consumer<String>> tags = new EnumMap<>(ConfigSetting.class);
+    private final Set<ConfigSetting> marked = EnumSet.noneOf(ConfigSetting.class);
+    private final Set<ConfigSetting> loaded = EnumSet.noneOf(ConfigSetting.class);
     private final String tag;
     private boolean filling;
 
@@ -29,12 +29,12 @@ public final class TypicalMarks {
     }
 
     /**
-     * Follows one field; call {@link #edited(Setting)} whenever its value changes.
+     * Follows one field; call {@link #edited(ConfigSetting)} whenever its value changes.
      *
      * @param setting the setting the field holds
      * @param showTag shows a text as the field's tag: the tag, or empty for none
      */
-    public void follow(Setting setting, Consumer<String> showTag) {
+    public void follow(ConfigSetting setting, Consumer<String> showTag) {
         tags.put(setting, showTag);
     }
 
@@ -43,7 +43,7 @@ public final class TypicalMarks {
      *
      * @param setting the followed setting whose field changed
      */
-    public void edited(Setting setting) {
+    public void edited(ConfigSetting setting) {
         if (!filling && marked.remove(setting)) {
             tags.get(setting).accept("");
         }
@@ -55,7 +55,7 @@ public final class TypicalMarks {
      * @param typical the stored typical values; settings of other cards are ignored
      * @param fill puts the stored values in the fields
      */
-    public void load(Set<Setting> typical, Runnable fill) {
+    public void load(Set<ConfigSetting> typical, Runnable fill) {
         mark(typical, fill);
         loaded.clear();
         loaded.addAll(marked);
@@ -90,7 +90,7 @@ public final class TypicalMarks {
      *
      * @return the followed settings that hold a typical value
      */
-    public Set<Setting> marked() {
+    public Set<ConfigSetting> marked() {
         return Set.copyOf(marked);
     }
 
@@ -100,8 +100,8 @@ public final class TypicalMarks {
      * @param stored the stored typical settings, also of other cards
      * @return those of other cards unchanged, and of this card the ones tagged now
      */
-    public Set<Setting> appliedTo(Set<Setting> stored) {
-        var applied = EnumSet.noneOf(Setting.class);
+    public Set<ConfigSetting> appliedTo(Set<ConfigSetting> stored) {
+        var applied = EnumSet.noneOf(ConfigSetting.class);
         applied.addAll(stored);
         applied.removeAll(tags.keySet());
         applied.addAll(marked);
@@ -117,7 +117,7 @@ public final class TypicalMarks {
         return !marked.equals(loaded);
     }
 
-    private void mark(Set<Setting> typical, Runnable fill) {
+    private void mark(Set<ConfigSetting> typical, Runnable fill) {
         keep(fill);
         marked.clear();
         typical.stream().filter(tags::containsKey).forEach(marked::add);

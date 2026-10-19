@@ -12,8 +12,8 @@ import nl.enadeag.carchargeplanner.desktop.settings.page.ProblemRows;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -64,11 +64,11 @@ final class PanelArrayCard {
         buttons.getStyleClass().add("card-buttons");
         card = new Card("", messages.text(TextKey.CARD_PANEL_ARRAY_HINT),
                 listed(FieldRow.of(messages, TextKey.FIELD_PANEL_NAME, TextKey.FIELD_PANEL_NAME_HINT, name)),
-                row(Setting.PANEL_SIZE, TextKey.FIELD_PANEL_SIZE, TextKey.FIELD_PANEL_SIZE_HINT, size),
-                row(Setting.PANEL_TILT, TextKey.FIELD_PANEL_TILT, TextKey.FIELD_PANEL_TILT_HINT, tilt),
-                row(Setting.PANEL_DIRECTION, TextKey.FIELD_PANEL_DIRECTION, TextKey.FIELD_PANEL_DIRECTION_HINT,
+                row(ConfigSetting.PANEL_SIZE, TextKey.FIELD_PANEL_SIZE, TextKey.FIELD_PANEL_SIZE_HINT, size),
+                row(ConfigSetting.PANEL_TILT, TextKey.FIELD_PANEL_TILT, TextKey.FIELD_PANEL_TILT_HINT, tilt),
+                row(ConfigSetting.PANEL_DIRECTION, TextKey.FIELD_PANEL_DIRECTION, TextKey.FIELD_PANEL_DIRECTION_HINT,
                         direction),
-                row(Setting.PANEL_LOSSES, TextKey.FIELD_PANEL_LOSSES, TextKey.FIELD_PANEL_LOSSES_HINT, losses),
+                row(ConfigSetting.PANEL_LOSSES, TextKey.FIELD_PANEL_LOSSES, TextKey.FIELD_PANEL_LOSSES_HINT, losses),
                 buttons);
     }
 
@@ -78,7 +78,7 @@ final class PanelArrayCard {
      * @param array the stored array whose name, size, tilt, direction and losses the fields show
      * @param typicalValues which of its values are typical values
      */
-    void load(PanelArray array, Set<Setting> typicalValues) {
+    void load(PanelArray array, Set<ConfigSetting> typicalValues) {
         var shown = PanelArrayEntry.of(array);
         typical.load(typicalValues, () -> {
             name.load(shown.name());
@@ -132,7 +132,7 @@ final class PanelArrayCard {
      *
      * @return the tagged settings
      */
-    Set<Setting> typical() {
+    Set<ConfigSetting> typical() {
         return typical.marked();
     }
 
@@ -182,7 +182,7 @@ final class PanelArrayCard {
         return row;
     }
 
-    private FieldRow row(Setting setting, TextKey label, TextKey hint, Input input) {
+    private FieldRow row(ConfigSetting setting, TextKey label, TextKey hint, Input input) {
         var row = listed(problems.add(setting, FieldRow.of(messages, label, hint, input)));
         typical.follow(setting, row::showTag);
         input.onChange(() -> typical.edited(setting));

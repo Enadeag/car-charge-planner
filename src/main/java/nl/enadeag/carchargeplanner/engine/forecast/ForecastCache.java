@@ -72,7 +72,7 @@ public final class ForecastCache {
      * @param plainSettings the provider's declared settings that are not secret; a changed key does not count
      * @return a JSON object that equals the one stored with a forecast for the same system and settings
      */
-    JsonNode key(SystemDescription system, Map<String, String> plainSettings) {
+    JsonNode key(SolarSite system, Map<String, String> plainSettings) {
         var key = StoredJson.object();
         key.put("latitude", system.location().latitude());
         key.put("longitude", system.location().longitude());
@@ -207,6 +207,6 @@ public final class ForecastCache {
             }
             steps.add(new ForecastStep(start.get(), end.get(), row.path(2).doubleValue()));
         }
-        return steps.isEmpty() || !Steps.problems(steps).isEmpty() ? Optional.empty() : Optional.of(steps);
+        return steps.isEmpty() || !StepRules.problems(steps).isEmpty() ? Optional.empty() : Optional.of(steps);
     }
 }

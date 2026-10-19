@@ -4,7 +4,7 @@ package nl.enadeag.carchargeplanner.engine.setting;
  * A value in the config file that the owner sets, so that a client can show a problem with it next to the place where
  * it is entered.
  */
-public enum Setting {
+public enum ConfigSetting {
     /** The latitude of the home. */
     LATITUDE,
     /** The longitude of the home. */

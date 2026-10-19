@@ -21,7 +21,7 @@ public class InvalidSetting extends IllegalArgumentException {
         NOT_AFTER_START
     }
 
-    private final Setting setting;
+    private final ConfigSetting setting;
     private final Rule rule;
 
     /**
@@ -33,7 +33,7 @@ public class InvalidSetting extends IllegalArgumentException {
      * @param message in English, naming the value as the config file does, such as "margin must be more than 0 and at
      *     most 1"
      */
-    public InvalidSetting(Setting setting, Rule rule, String message) {
+    public InvalidSetting(ConfigSetting setting, Rule rule, String message) {
         super(message);
         this.setting = setting;
         this.rule = rule;
@@ -44,7 +44,7 @@ public class InvalidSetting extends IllegalArgumentException {
      *
      * @return the setting this exception was made with
      */
-    public Setting setting() {
+    public ConfigSetting setting() {
         return setting;
     }
 

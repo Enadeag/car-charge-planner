@@ -69,7 +69,7 @@ final class ProviderAttempt {
      *     after {@code settings}, so also only when the cache cannot answer by itself
      * @return a forecast to use, or the reason there is none; it never holds a secret value
      */
-    ProviderOutcome forecastOrReason(SystemDescription system, Supplier<Map<String, String>> settings, JsonNode key,
+    ProviderOutcome forecastOrReason(SolarSite system, Supplier<Map<String, String>> settings, JsonNode key,
             Supplier<List<String>> storedSecrets) {
         var cached = cache.forecast(info.id(), key, now);
         var held = new CacheState(cached.filter(forecast -> forecast.age(now).compareTo(info.maxUsefulAge()) <= 0),
@@ -104,10 +104,10 @@ final class ProviderAttempt {
      *     not be asked
      * @return the provider's forecast, else as {@link #afterFailure} tells it
      */
-    private ProviderOutcome fetch(SystemDescription system, Map<String, String> settings, JsonNode key,
+    private ProviderOutcome fetch(SolarSite system, Map<String, String> settings, JsonNode key,
             List<String> secrets, CacheState held) {
         try {
-            var steps = Steps.requireValid(provider.fetch(system, settings, now));
+            var steps = StepRules.requireValid(provider.fetch(system, settings, now));
             retryAt.remove(info.id());
             health.recordAnswer(info);
             cache.saveForecast(info.id(), key, now, steps);

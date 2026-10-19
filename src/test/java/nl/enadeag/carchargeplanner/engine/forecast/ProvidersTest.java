@@ -29,7 +29,7 @@ class ProvidersTest {
             }
 
             @Override
-            public List<ForecastStep> fetch(SystemDescription system, Map<String, String> settings, Instant now) {
+            public List<ForecastStep> fetch(SolarSite system, Map<String, String> settings, Instant now) {
                 return List.of();
             }
         };

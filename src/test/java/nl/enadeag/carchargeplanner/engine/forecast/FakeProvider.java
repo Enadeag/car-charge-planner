@@ -19,7 +19,7 @@ public final class FakeProvider implements ForecastProvider {
         List<ForecastStep> give() throws ProviderError;
     }
 
-    public record Call(SystemDescription system, Map<String, String> settings, Instant now) {
+    public record Call(SolarSite system, Map<String, String> settings, Instant now) {
     }
 
     public final List<Call> calls = new CopyOnWriteArrayList<>();
@@ -73,7 +73,7 @@ public final class FakeProvider implements ForecastProvider {
     }
 
     @Override
-    public List<ForecastStep> fetch(SystemDescription system, Map<String, String> settings, Instant now)
+    public List<ForecastStep> fetch(SolarSite system, Map<String, String> settings, Instant now)
             throws ProviderError {
         calls.add(new Call(system, Map.copyOf(settings), now));
         var current = script;

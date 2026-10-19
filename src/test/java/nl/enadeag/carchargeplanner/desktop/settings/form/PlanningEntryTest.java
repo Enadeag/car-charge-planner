@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.PlanningPreferences;
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
@@ -35,7 +35,7 @@ class PlanningEntryTest {
     void aMinimumNotBelowTheTargetIsRefusedAtTheMinimum() {
         assertThatThrownBy(() -> new PlanningEntry(80, 80, 85, 0.2, 45, 15).planning())
                 .isInstanceOfSatisfying(InvalidSetting.class, refused -> {
-                    assertThat(refused.setting()).isEqualTo(Setting.MINIMUM_CHARGE);
+                    assertThat(refused.setting()).isEqualTo(ConfigSetting.MINIMUM_CHARGE);
                     assertThat(refused.rule()).isEqualTo(InvalidSetting.Rule.NOT_BELOW_TARGET);
                 });
     }

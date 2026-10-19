@@ -17,8 +17,8 @@ import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.Car;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
 import java.util.List;
 import java.util.Optional;
 
@@ -50,10 +50,11 @@ public final class CarCard implements ConfigPart {
         problems = new ProblemRows(messages);
         typical = new TypicalMarks(messages.text(TextKey.TYPICAL_TAG));
         card = new Card(messages.text(TextKey.CARD_CAR), messages.text(TextKey.CARD_CAR_HINT),
-                row(Setting.CAR_BATTERY, TextKey.FIELD_CAR_BATTERY, TextKey.FIELD_CAR_BATTERY_HINT, battery),
-                row(Setting.CAR_CONSUMPTION, TextKey.FIELD_CAR_CONSUMPTION, TextKey.FIELD_CAR_CONSUMPTION_HINT,
+                row(ConfigSetting.CAR_BATTERY, TextKey.FIELD_CAR_BATTERY, TextKey.FIELD_CAR_BATTERY_HINT, battery),
+                row(ConfigSetting.CAR_CONSUMPTION, TextKey.FIELD_CAR_CONSUMPTION, TextKey.FIELD_CAR_CONSUMPTION_HINT,
                         consumption),
-                row(Setting.CAR_DAILY_DISTANCE, TextKey.FIELD_CAR_DISTANCE, TextKey.FIELD_CAR_DISTANCE_HINT, distance),
+                row(ConfigSetting.CAR_DAILY_DISTANCE, TextKey.FIELD_CAR_DISTANCE, TextKey.FIELD_CAR_DISTANCE_HINT,
+                        distance),
                 TypicalButton.line(this::useTypical, messages.text(TextKey.CARD_CAR), messages));
     }
 
@@ -128,7 +129,7 @@ public final class CarCard implements ConfigPart {
         return List.of(battery, consumption, distance);
     }
 
-    private FieldRow row(Setting setting, TextKey name, TextKey hint, Input input) {
+    private FieldRow row(ConfigSetting setting, TextKey name, TextKey hint, Input input) {
         var row = problems.add(setting, FieldRow.of(messages, name, hint, input));
         typical.follow(setting, row::showTag);
         input.onChange(() -> typical.edited(setting));

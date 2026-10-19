@@ -56,7 +56,7 @@ public abstract class ProviderConformance {
         var made = c.provider(c.ok());
         var steps = made.provider().fetch(ProviderCase.EXAMPLE_SYSTEM, c.allSettings(), c.now());
         assertThat(steps).isNotEmpty();
-        assertThat(Steps.problems(steps)).isEmpty();
+        assertThat(StepRules.problems(steps)).isEmpty();
         assertThat(made.http().requests).as("asked through the HttpGet it was given").isNotEmpty();
         assertThat(made.http().unexpected).isEmpty();
         // a day of slack: a provider may give the rest of the last day
@@ -76,14 +76,14 @@ public abstract class ProviderConformance {
         var made = c.provider(c.ok());
         var total = made.provider().fetch(system, c.allSettings(), c.now());
         assertThat(total).isNotEmpty();
-        assertThat(Steps.problems(total)).isEmpty();
+        assertThat(StepRules.problems(total)).isEmpty();
         assumeTrue(made.http().requests.size() == arrays.size(), "one request for all arrays: the sum is unknown");
 
         var singles = new ArrayList<List<ForecastStep>>();
         for (var array : arrays) {
             singles.add(c.provider(c.ok()).provider().fetch(system.withArrays(List.of(array)), c.allSettings(), c.now()));
         }
-        var expected = Steps.addUp(singles);
+        var expected = ArraySum.addUp(singles);
         assertThat(total).hasSameSizeAs(expected);
         for (int i = 0; i < total.size(); i++) {
             assertThat(total.get(i).start()).isEqualTo(expected.get(i).start());
@@ -204,7 +204,7 @@ public abstract class ProviderConformance {
         var c = providerCase();
         var made = c.provider(c.emptyBody());
         try {
-            assertThat(Steps.problems(made.provider().fetch(ProviderCase.EXAMPLE_SYSTEM, c.allSettings(), c.now()))).isEmpty();
+            assertThat(StepRules.problems(made.provider().fetch(ProviderCase.EXAMPLE_SYSTEM, c.allSettings(), c.now()))).isEmpty();
         } catch (ProviderError _) {
             // a provider error is a fine answer to nothing
         }

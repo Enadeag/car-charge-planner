@@ -21,8 +21,8 @@ import nl.enadeag.carchargeplanner.engine.config.Charger;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.Phases;
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
 import java.util.List;
 import java.util.Optional;
 import javafx.scene.layout.Region;
@@ -58,11 +58,14 @@ public final class ChargerPage implements ConfigPage {
         problems = new ProblemRows(messages);
         typical = new TypicalMarks(messages.text(TextKey.TYPICAL_TAG));
         card = new Card(messages.text(TextKey.CARD_CHARGER), messages.text(TextKey.CARD_CHARGER_HINT),
-                row(Setting.CHARGER_PHASES, TextKey.FIELD_PHASES, TextKey.FIELD_PHASES_HINT, phases),
-                row(Setting.CHARGER_MIN_CURRENT, TextKey.FIELD_MIN_CURRENT, TextKey.FIELD_MIN_CURRENT_HINT, minAmps),
-                row(Setting.CHARGER_MAX_CURRENT, TextKey.FIELD_MAX_CURRENT, TextKey.FIELD_MAX_CURRENT_HINT, maxAmps),
-                row(Setting.CHARGER_VOLTAGE, TextKey.FIELD_VOLTAGE, TextKey.FIELD_VOLTAGE_HINT, volts),
-                row(Setting.CHARGER_EFFICIENCY, TextKey.FIELD_EFFICIENCY, TextKey.FIELD_EFFICIENCY_HINT, efficiency),
+                row(ConfigSetting.CHARGER_PHASES, TextKey.FIELD_PHASES, TextKey.FIELD_PHASES_HINT, phases),
+                row(ConfigSetting.CHARGER_MIN_CURRENT, TextKey.FIELD_MIN_CURRENT, TextKey.FIELD_MIN_CURRENT_HINT,
+                        minAmps),
+                row(ConfigSetting.CHARGER_MAX_CURRENT, TextKey.FIELD_MAX_CURRENT, TextKey.FIELD_MAX_CURRENT_HINT,
+                        maxAmps),
+                row(ConfigSetting.CHARGER_VOLTAGE, TextKey.FIELD_VOLTAGE, TextKey.FIELD_VOLTAGE_HINT, volts),
+                row(ConfigSetting.CHARGER_EFFICIENCY, TextKey.FIELD_EFFICIENCY, TextKey.FIELD_EFFICIENCY_HINT,
+                        efficiency),
                 TypicalButton.line(this::useTypical, messages.text(TextKey.CARD_CHARGER), messages));
     }
 
@@ -137,7 +140,7 @@ public final class ChargerPage implements ConfigPage {
         return List.of(phases, minAmps, maxAmps, volts, efficiency);
     }
 
-    private FieldRow row(Setting setting, TextKey name, TextKey hint, Input input) {
+    private FieldRow row(ConfigSetting setting, TextKey name, TextKey hint, Input input) {
         var row = problems.add(setting, FieldRow.of(messages, name, hint, input));
         typical.follow(setting, row::showTag);
         input.onChange(() -> typical.edited(setting));

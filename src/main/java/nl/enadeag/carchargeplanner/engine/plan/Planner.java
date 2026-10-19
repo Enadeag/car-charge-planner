@@ -78,7 +78,7 @@ public final class Planner {
      * The runs outside the away time and the running windows; the sun just before or after a running window belongs
      * to it, not to a second window.
      */
-    private List<Run> runsBeside(List<ForecastStep> forecast, Instant now, List<Window> running) {
+    private List<SurplusRun> runsBeside(List<ForecastStep> forecast, Instant now, List<Window> running) {
         var unavailable = new ArrayList<>(away.during(forecast, zone));
         running.forEach(window -> unavailable.add(new BlockedTime(window.start(), window.end())));
         return finder.runs(forecast, now, unavailable).stream()
@@ -86,7 +86,7 @@ public final class Planner {
                 .toList();
     }
 
-    private static boolean touches(Run run, Window window) {
+    private static boolean touches(SurplusRun run, Window window) {
         return run.start().equals(window.end()) || run.end().equals(window.start());
     }
 
@@ -96,7 +96,7 @@ public final class Planner {
                 .collect(Collectors.groupingBy(step -> step.start().atZone(zone).toLocalDate(), Collectors.toList()));
     }
 
-    private DayPlan planDay(LocalDate date, Percent socPct, List<Run> runs, List<Window> running, Instant now,
+    private DayPlan planDay(LocalDate date, Percent socPct, List<SurplusRun> runs, List<Window> running, Instant now,
             List<ForecastStep> steps) {
         var kept = running.stream().filter(window -> window.start().atZone(zone).toLocalDate().equals(date)).toList();
         double neededKwh = Math.max(0, energyNeededKwh(socPct) - solarKwh(kept));

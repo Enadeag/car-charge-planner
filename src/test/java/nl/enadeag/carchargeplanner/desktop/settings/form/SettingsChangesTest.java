@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 class SettingsChangesTest {
 
     private static final ProviderId PROVIDER = new ProviderId("forecast-solar");
-    private static final EngineConfig CONFIG = EngineConfig.firstRun(ZoneId.of("Europe/Amsterdam"), PROVIDER);
+    private static final EngineConfig CONFIG = EngineConfig.setUpDraft(ZoneId.of("Europe/Amsterdam"), PROVIDER);
     private static final EngineConfig OTHER_CONFIG = CONFIG.withPlanning(new PlanningPreferences(
             PlanningPreferences.RECOMMENDED.minimumPct(), PlanningPreferences.RECOMMENDED.targetPct(), 0.5, 0.2,
             Duration.ofMinutes(45), Duration.ofMinutes(15)));

@@ -19,7 +19,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ForecastUnavailable;
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.forecast.Providers;
-import nl.enadeag.carchargeplanner.engine.forecast.SystemDescription;
+import nl.enadeag.carchargeplanner.engine.forecast.SolarSite;
 import nl.enadeag.carchargeplanner.engine.notify.Announcer;
 import nl.enadeag.carchargeplanner.engine.plan.AwayTimes;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvisor;
@@ -168,7 +168,7 @@ public final class Engine {
     private Outlook outlook(EngineConfig config) {
         var now = clock.instant();
         try {
-            var forecast = forecasts.get(SystemDescription.of(config.system()), config.forecast(), now, false);
+            var forecast = forecasts.get(SolarSite.of(config.system()), config.forecast(), now, false);
             return planned(config, forecast, now);
         } catch (ForecastUnavailable e) {
             return new Outlook.NoForecast(e.getMessage(), e.keychainLocked());
@@ -198,7 +198,7 @@ public final class Engine {
     public Outlook preview(EngineConfig config, Secrets keys) {
         var now = clock.instant();
         try {
-            var forecast = forecasts.getWithKeys(SystemDescription.of(config.system()), config.forecast(), keys, now);
+            var forecast = forecasts.getWithKeys(SolarSite.of(config.system()), config.forecast(), keys, now);
             return planned(config, forecast, now);
         } catch (ForecastUnavailable e) {
             return new Outlook.NoForecast(e.getMessage());
@@ -327,7 +327,7 @@ public final class Engine {
         var secret = new HashMap<>(stored.of(providerId));
         secret.putAll(settings);
         var values = found.get().info().settingsFrom(settings, secret);
-        return ConnectionCheck.attempt(found.get(), SystemDescription.of(system), values, clock.instant(),
+        return ConnectionCheck.attempt(found.get(), SolarSite.of(system), values, clock.instant(),
                 stored.values());
     }
 

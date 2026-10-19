@@ -14,8 +14,8 @@ import nl.enadeag.carchargeplanner.desktop.settings.page.PageView;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +36,7 @@ public final class PlanningPage implements ConfigPage {
     private final NumberField importTolerance;
     private final NumberField minWindow;
     private final NumberField notifyLead;
-    private final Map<Setting, FieldRow> rows = new EnumMap<>(Setting.class);
+    private final Map<ConfigSetting, FieldRow> rows = new EnumMap<>(ConfigSetting.class);
     private final Card[] cards;
 
     /**
@@ -55,15 +55,19 @@ public final class PlanningPage implements ConfigPage {
         notifyLead = new NumberField(new NumberRange(0, 1440, 5, 0), messages.text(TextKey.UNIT_MINUTES), messages);
         cards = new Card[] {
             new Card(messages.text(TextKey.CARD_CHARGE_LEVELS), messages.text(TextKey.CARD_CHARGE_LEVELS_HINT),
-                    row(Setting.MINIMUM_CHARGE, TextKey.FIELD_MINIMUM_CHARGE, TextKey.FIELD_MINIMUM_CHARGE_HINT, minimum),
-                    row(Setting.TARGET_CHARGE, TextKey.FIELD_TARGET_CHARGE, TextKey.FIELD_TARGET_CHARGE_HINT, target)),
+                    row(ConfigSetting.MINIMUM_CHARGE, TextKey.FIELD_MINIMUM_CHARGE, TextKey.FIELD_MINIMUM_CHARGE_HINT,
+                            minimum),
+                    row(ConfigSetting.TARGET_CHARGE, TextKey.FIELD_TARGET_CHARGE, TextKey.FIELD_TARGET_CHARGE_HINT,
+                            target)),
             new Card(messages.text(TextKey.CARD_PLAN), messages.text(TextKey.CARD_PLAN_HINT),
-                    row(Setting.PLANNING_MARGIN, TextKey.FIELD_MARGIN, TextKey.FIELD_MARGIN_HINT, margin),
-                    row(Setting.IMPORT_TOLERANCE, TextKey.FIELD_IMPORT_TOLERANCE, TextKey.FIELD_IMPORT_TOLERANCE_HINT,
-                            importTolerance),
-                    row(Setting.MINIMUM_WINDOW, TextKey.FIELD_MIN_WINDOW, TextKey.FIELD_MIN_WINDOW_HINT, minWindow)),
+                    row(ConfigSetting.PLANNING_MARGIN, TextKey.FIELD_MARGIN, TextKey.FIELD_MARGIN_HINT, margin),
+                    row(ConfigSetting.IMPORT_TOLERANCE, TextKey.FIELD_IMPORT_TOLERANCE,
+                            TextKey.FIELD_IMPORT_TOLERANCE_HINT, importTolerance),
+                    row(ConfigSetting.MINIMUM_WINDOW, TextKey.FIELD_MIN_WINDOW, TextKey.FIELD_MIN_WINDOW_HINT,
+                            minWindow)),
             new Card(messages.text(TextKey.CARD_NOTIFICATIONS), messages.text(TextKey.CARD_NOTIFICATIONS_HINT),
-                    row(Setting.NOTIFY_LEAD, TextKey.FIELD_NOTIFY_LEAD, TextKey.FIELD_NOTIFY_LEAD_HINT, notifyLead))
+                    row(ConfigSetting.NOTIFY_LEAD, TextKey.FIELD_NOTIFY_LEAD, TextKey.FIELD_NOTIFY_LEAD_HINT,
+                            notifyLead))
         };
     }
 
@@ -125,7 +129,7 @@ public final class PlanningPage implements ConfigPage {
         return List.of(minimum, target, margin, importTolerance, minWindow, notifyLead);
     }
 
-    private FieldRow row(Setting setting, TextKey name, TextKey hint, Input input) {
+    private FieldRow row(ConfigSetting setting, TextKey name, TextKey hint, Input input) {
         var row = new FieldRow(messages.text(name), messages.text(hint), input);
         rows.put(setting, row);
         return row;

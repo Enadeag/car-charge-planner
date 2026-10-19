@@ -18,18 +18,18 @@ All of it is in the package `engine.forecast` ([`src/main/java/nl/enadeag/carcha
 | `ForecastProvider` | The interface: `info()`, `fetch(system, settings, now)`, and optionally `placeSearch()`. |
 | `ProviderInfo` | What a provider tells about itself: a `ProviderId` (lower-case letters, digits and hyphens, used in the config and in cache file names), the name, a description, an `https` terms link, the credit its terms ask for, in plain words what is sent, the shortest time between two requests (`minRefresh`), how far ahead it forecasts (`horizon`), how long a forecast stays worth keeping when it cannot be refreshed (`maxUsefulAge`), and its settings. |
 | `SettingSpec` | One setting, such as a server address or an API key: a key, a label, a hint, whether it is optional, whether it is secret, and its `SettingFormat`: any text, a `SERVER_ADDRESS` a key may be sent to (`ServerAddress`: https, or plain http only to localhost, 127.0.0.1 or [::1]; no user name, query or fragment), or `LETTERS_AND_DIGITS`. Settings and set-up refuse a value of the wrong format when it is saved; check it again before you send, as a config file can be edited by hand. Any value a provider puts into an address's path or query or into a header must carry a format (`TEXT` refuses line breaks and other control characters; take a narrower one where the service allows) and is checked again before sending, as `ExampleSolar.apiKey` below does; a value in a query is encoded besides. |
-| `SystemDescription` | What a provider is told: the coordinates, the time zone, and the panel arrays (`PanelArray`: size in kWp, tilt, azimuth with 0 south, -90 east and 90 west, and the system losses as a share, 0.14 for 14 %). |
+| `SolarSite` | What a provider is told: the coordinates, the time zone, and the panel arrays (`PanelArray`: size in kWp, tilt, azimuth with 0 south, -90 east and 90 west, and the system losses as a share, 0.14 for 14 %). |
 | `ForecastStep` | What it returns, a list of them: `start` (inclusive), `end` (exclusive), both `Instant`s, and `powerKw`, the expected AC power of the whole system over the step. |
 | `HttpGet` | The only way a provider reaches the network (below). |
 
 **Steps** may be 15, 30 or 60 minutes, or irregular (Forecast.Solar's follow sunrise and sunset). They must be in
-order, must not overlap, and may have gaps (night). Power is finite and not negative. `Steps.problems(steps)` says
-what is wrong with a list of steps in words; `Steps.requireValid(steps)` throws `BadResponse` for you.
+order, must not overlap, and may have gaps (night). Power is finite and not negative. `StepRules.problems(steps)` says
+what is wrong with a list of steps in words; `StepRules.requireValid(steps)` throws `BadResponse` for you.
 
 **Several panel arrays.** A home can have panels facing different ways (an east and a west roof, a garage); each is
 a `PanelArray` in `system.arrays()`, and the forecast you return is their total. A service that takes one plane per
-request is asked once per array: `Steps.sumOverArrays(system, fetchOne)` calls `fetchOne` for each and adds the answers
-up with `Steps.addUp`. When the steps line up (one service, the same place) each step's power is the sum; when they
+request is asked once per array: `ArraySum.sumOverArrays(system, fetchOne)` calls `fetchOne` for each and adds the answers
+up with `ArraySum.addUp`. When the steps line up (one service, the same place) each step's power is the sum; when they
 do not, the steps are cut where any array's step starts or ends, so no energy is lost; an array without a step at
 some time adds nothing then, and the total only covers the time every array's answer covers. A failure for any
 array must fail the whole `fetch`: a total without one of the arrays would look right and be wrong. A service that
@@ -81,6 +81,7 @@ package nl.enadeag.carchargeplanner.engine.forecast.providers;
 
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
+import nl.enadeag.carchargeplanner.engine.forecast.ArraySum;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
@@ -89,8 +90,8 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderText;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingSpec;
-import nl.enadeag.carchargeplanner.engine.forecast.Steps;
-import nl.enadeag.carchargeplanner.engine.forecast.SystemDescription;
+import nl.enadeag.carchargeplanner.engine.forecast.SolarSite;
+import nl.enadeag.carchargeplanner.engine.forecast.StepRules;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -136,10 +137,10 @@ public final class ExampleSolar implements ForecastProvider {
     }
 
     @Override
-    public List<ForecastStep> fetch(SystemDescription system, Map<String, String> settings, Instant now)
+    public List<ForecastStep> fetch(SolarSite system, Map<String, String> settings, Instant now)
             throws ProviderError {
         var key = apiKey(settings); // checked before anything is sent
-        return Steps.requireValid(Steps.sumOverArrays(system, array -> fetchArray(system, array, key, settings)));
+        return StepRules.requireValid(ArraySum.sumOverArrays(system, array -> fetchArray(system, array, key, settings)));
     }
 
     /**
@@ -157,7 +158,7 @@ public final class ExampleSolar implements ForecastProvider {
         return key;
     }
 
-    private List<ForecastStep> fetchArray(SystemDescription system, PanelArray array, String key,
+    private List<ForecastStep> fetchArray(SolarSite system, PanelArray array, String key,
             Map<String, String> settings) throws ProviderError {
         var uri = URI.create("https://api.example.com/v1/solar?" + String.join("&",
                 parameter("lat", Decimals.plain(system.location().latitude())),
@@ -194,7 +195,7 @@ public final class ExampleSolar implements ForecastProvider {
         if (steps.isEmpty()) {
             throw new ProviderError.BadResponse("Example Solar gave no forecast");
         }
-        return Steps.requireValid(steps);
+        return StepRules.requireValid(steps);
     }
 
     /** One query parameter, its value encoded, so no value can end the parameter or change the address. */

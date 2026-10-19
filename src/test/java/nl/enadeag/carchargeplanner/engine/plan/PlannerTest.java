@@ -547,7 +547,7 @@ class PlannerTest {
         var tolerant = new PlanningPreferences(new Percent(30), new Percent(80), 0.85, 5,
                 Duration.ofMinutes(45), Duration.ofMinutes(15));
         var finder = new WindowFinder(Forecasts.golden(), tolerant);
-        var run = new Run(List.of(new Segment(at(SUMMER_FRI, 10), at(SUMMER_FRI, 11), 3.22),
+        var run = new SurplusRun(List.of(new Segment(at(SUMMER_FRI, 10), at(SUMMER_FRI, 11), 3.22),
                 new Segment(at(SUMMER_FRI, 11), at(SUMMER_FRI, 12), 1.61)));
         var window = finder.windows(List.of(run), 4.025).getFirst();
         assertThat(new Span(window.start(), window.end(), window.amps()))
@@ -576,7 +576,7 @@ class PlannerTest {
         var system = Forecasts.golden().withCharger(new Charger(Phases.ONE, 14, 14, 230, 0.90));
         var tolerant = new PlanningPreferences(new Percent(30), new Percent(80), 0.85, 5,
                 Duration.ofMinutes(45), Duration.ofMinutes(15));
-        var run = new Run(List.of(new Segment(at(SUMMER_FRI, 10), at(SUMMER_FRI, 10, 30), 3.22),
+        var run = new SurplusRun(List.of(new Segment(at(SUMMER_FRI, 10), at(SUMMER_FRI, 10, 30), 3.22),
                 new Segment(at(SUMMER_FRI, 10, 30), at(SUMMER_FRI, 12), 1.61)));
         var window = new WindowFinder(system, tolerant).windows(List.of(run), 2.415).getFirst();
         assertThat(new Span(window.start(), window.end(), window.amps()))

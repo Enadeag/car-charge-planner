@@ -58,14 +58,14 @@ public final class ForecastService {
      * @return the forecast and where it came from
      * @throws ForecastUnavailable with the reason of each provider asked, when none has a usable forecast
      */
-    public ForecastResult get(SystemDescription system, ForecastSelection selection, Instant now, boolean force)
+    public ForecastResult get(SolarSite system, ForecastSelection selection, Instant now, boolean force)
             throws ForecastUnavailable {
         return fetch(system, selection, new Once<>(this::storedKeys), now, force);
     }
 
     /**
      * A forecast for a system with secret settings that need not be stored yet, such as the ones set-up shows before
-     * it saves; from the cache or a provider, as {@link #get(SystemDescription, ForecastSelection, Instant, boolean)}.
+     * it saves; from the cache or a provider, as {@link #get(SolarSite, ForecastSelection, Instant, boolean)}.
      *
      * @param system the system to forecast; the cache is used only when it was made for the same one
      * @param selection the providers to ask and their settings that are not secret
@@ -74,12 +74,12 @@ public final class ForecastService {
      * @return the forecast and where it came from
      * @throws ForecastUnavailable with the reason of each provider asked, when none has a usable forecast
      */
-    public ForecastResult getWithKeys(SystemDescription system, ForecastSelection selection, Secrets secrets,
+    public ForecastResult getWithKeys(SolarSite system, ForecastSelection selection, Secrets secrets,
             Instant now) throws ForecastUnavailable {
         return fetch(system, selection, new Once<>(() -> new KeysOrProblem(secrets, Optional.empty())), now, false);
     }
 
-    private ForecastResult fetch(SystemDescription system, ForecastSelection selection, Once<KeysOrProblem> stored,
+    private ForecastResult fetch(SolarSite system, ForecastSelection selection, Once<KeysOrProblem> stored,
             Instant now, boolean force) throws ForecastUnavailable {
         var reasons = new ArrayList<String>();
         var order = selection.order();
@@ -116,7 +116,7 @@ public final class ForecastService {
         }
     }
 
-    private ProviderOutcome ask(ProviderId providerId, SystemDescription system, ForecastSelection selection,
+    private ProviderOutcome ask(ProviderId providerId, SolarSite system, ForecastSelection selection,
             Once<KeysOrProblem> stored, Instant now, boolean force) {
         var found = providers.find(providerId);
         if (found.isEmpty()) {

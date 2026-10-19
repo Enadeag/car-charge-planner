@@ -17,7 +17,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.Recorded;
 import nl.enadeag.carchargeplanner.engine.forecast.ReplayHttp;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingSpec;
-import nl.enadeag.carchargeplanner.engine.forecast.SystemDescription;
+import nl.enadeag.carchargeplanner.engine.forecast.SolarSite;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -54,12 +54,12 @@ class OpenMeteoTest extends ProviderConformance {
         return new JsonMapper().createObjectNode().put("error", true).put("reason", reason).toString();
     }
 
-    private static List<ForecastStep> fetch(String body, Map<String, String> settings, SystemDescription system)
+    private static List<ForecastStep> fetch(String body, Map<String, String> settings, SolarSite system)
             throws ProviderError {
         return new OpenMeteo(ReplayHttp.always(new Reply(200, body))).fetch(system, settings, NOW);
     }
 
-    private static List<ForecastStep> fetch(SystemDescription system) throws ProviderError {
+    private static List<ForecastStep> fetch(SolarSite system) throws ProviderError {
         return fetch(RECORDED, Map.of(), system);
     }
 
@@ -74,7 +74,7 @@ class OpenMeteoTest extends ProviderConformance {
                 .collect(Collectors.toMap(pair -> pair[0], pair -> URLDecoder.decode(pair[1], StandardCharsets.UTF_8)));
     }
 
-    private static SystemDescription withArrays(PanelArray... arrays) {
+    private static SolarSite withArrays(PanelArray... arrays) {
         return EXAMPLE_SYSTEM.withArrays(List.of(arrays));
     }
 

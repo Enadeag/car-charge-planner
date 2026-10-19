@@ -19,7 +19,7 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
 import nl.enadeag.carchargeplanner.engine.secrets.KeychainException;
 import nl.enadeag.carchargeplanner.engine.secrets.LockableKeychain;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
@@ -108,9 +108,9 @@ class SetUpViewTest {
         assertThat(config.system().panels()).extracting(PanelArray::kwp).containsExactly(6.2);
         assertThat(config.system().car()).isEqualTo(new Car(75, Car.TYPICAL.consumptionKwhPer100km(),
                 Car.TYPICAL.kmPerDay()));
-        assertThat(config.typical().system()).contains(Setting.CAR_CONSUMPTION, Setting.HOUSE_BASELOAD,
-                Setting.CHARGER_MAX_CURRENT).doesNotContain(Setting.CAR_BATTERY);
-        assertThat(config.typical().ofPanel(0)).contains(Setting.PANEL_TILT).doesNotContain(Setting.PANEL_SIZE);
+        assertThat(config.typical().system()).contains(ConfigSetting.CAR_CONSUMPTION, ConfigSetting.HOUSE_BASELOAD,
+                ConfigSetting.CHARGER_MAX_CURRENT).doesNotContain(ConfigSetting.CAR_BATTERY);
+        assertThat(config.typical().ofPanel(0)).contains(ConfigSetting.PANEL_TILT).doesNotContain(ConfigSetting.PANEL_SIZE);
         assertThat(config.away().recurring()).containsExactly(
                 new RecurringAwayPeriod(DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(17, 0)));
         assertThat(setUp.appSettings.read().units()).isEqualTo(Units.IMPERIAL);
@@ -332,7 +332,7 @@ class SetUpViewTest {
 
         var config = stored();
         assertThat(config.system().house().baseloadKw()).isEqualTo(0.35);
-        assertThat(config.typical().system()).doesNotContain(Setting.HOUSE_BASELOAD);
+        assertThat(config.typical().system()).doesNotContain(ConfigSetting.HOUSE_BASELOAD);
         assertThat(config.away().recurring()).isEmpty();
         assertThat(config.typical().panels()).containsExactly(TypicalValues.PANEL_SETTINGS);
     }

@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.engine.config;
 
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
 import java.time.Duration;
 
 /**
@@ -38,23 +38,23 @@ public record PlanningPreferences(
      */
     public PlanningPreferences {
         if (minimumPct.value() >= targetPct.value()) {
-            throw new InvalidSetting(Setting.MINIMUM_CHARGE, InvalidSetting.Rule.NOT_BELOW_TARGET,
+            throw new InvalidSetting(ConfigSetting.MINIMUM_CHARGE, InvalidSetting.Rule.NOT_BELOW_TARGET,
                     "minimumPct and targetPct must satisfy 0 <= minimumPct < targetPct <= 100");
         }
         if (margin <= 0 || margin > 1 || Double.isNaN(margin)) {
-            throw new InvalidSetting(Setting.PLANNING_MARGIN, InvalidSetting.Rule.OUT_OF_RANGE,
+            throw new InvalidSetting(ConfigSetting.PLANNING_MARGIN, InvalidSetting.Rule.OUT_OF_RANGE,
                     "margin must be more than 0 and at most 1");
         }
         if (importToleranceKwh < 0 || Double.isNaN(importToleranceKwh)) {
-            throw new InvalidSetting(Setting.IMPORT_TOLERANCE, InvalidSetting.Rule.OUT_OF_RANGE,
+            throw new InvalidSetting(ConfigSetting.IMPORT_TOLERANCE, InvalidSetting.Rule.OUT_OF_RANGE,
                     "importToleranceKwh must not be negative");
         }
         if (minWindow.isNegative() || minWindow.isZero()) {
-            throw new InvalidSetting(Setting.MINIMUM_WINDOW, InvalidSetting.Rule.OUT_OF_RANGE,
+            throw new InvalidSetting(ConfigSetting.MINIMUM_WINDOW, InvalidSetting.Rule.OUT_OF_RANGE,
                     "minWindowMinutes must be more than 0");
         }
         if (notifyLead.isNegative()) {
-            throw new InvalidSetting(Setting.NOTIFY_LEAD, InvalidSetting.Rule.OUT_OF_RANGE,
+            throw new InvalidSetting(ConfigSetting.NOTIFY_LEAD, InvalidSetting.Rule.OUT_OF_RANGE,
                     "notifyLeadMinutes must not be negative");
         }
         if (minWindow.toSecondsPart() != 0 || minWindow.toNanosPart() != 0) {

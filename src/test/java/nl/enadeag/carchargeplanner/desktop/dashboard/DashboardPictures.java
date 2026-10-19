@@ -20,7 +20,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ForecastService;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.forecast.Providers;
-import nl.enadeag.carchargeplanner.engine.forecast.SystemDescription;
+import nl.enadeag.carchargeplanner.engine.forecast.SolarSite;
 import nl.enadeag.carchargeplanner.engine.forecast.providers.ForecastSolar;
 import nl.enadeag.carchargeplanner.engine.forecast.providers.OpenMeteo;
 import nl.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
@@ -170,7 +170,7 @@ public final class DashboardPictures {
     private record Played(ProviderInfo info) implements ForecastProvider {
 
         @Override
-        public List<ForecastStep> fetch(SystemDescription system, Map<String, String> settings, Instant now) {
+        public List<ForecastStep> fetch(SolarSite system, Map<String, String> settings, Instant now) {
             var steps = new ArrayList<ForecastStep>();
             for (int day = 0; day < PEAKS.length; day++) {
                 var midnight = TODAY.plusDays(day).atStartOfDay(BRUSSELS).toInstant();

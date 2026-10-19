@@ -40,7 +40,7 @@ public record ProviderCase(
         Instant now,
         Function<String, List<Route>> errorSaying) {
 
-    public static final SystemDescription EXAMPLE_SYSTEM = new SystemDescription(new Coordinates(52.37, 4.90),
+    public static final SolarSite EXAMPLE_SYSTEM = new SolarSite(new Coordinates(52.37, 4.90),
             ZoneId.of("Europe/Amsterdam"), List.of(new PanelArray("", 4.8, 35, -45, 0.14)));
 
     /** Added to the example's array for the check on several arrays. */

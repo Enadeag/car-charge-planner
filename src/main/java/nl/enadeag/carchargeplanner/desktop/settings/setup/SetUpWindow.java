@@ -82,7 +82,7 @@ public final class SetUpWindow {
         this.views = (messages, close) -> SetUpView.of(stores, keysFile, openLink, looks.reducedMotion(), close,
                 finished, background, messages);
         this.language = language;
-        this.firstRun = EngineConfig.firstRun(timezone, stores.engine().providers().getFirst().id());
+        this.firstRun = EngineConfig.setUpDraft(timezone, stores.engine().providers().getFirst().id());
         this.looks = looks;
         this.icon = icon;
         this.background = background;

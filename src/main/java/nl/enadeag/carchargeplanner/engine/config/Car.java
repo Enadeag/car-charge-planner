@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.engine.config;
 
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
 
 /**
  * The owner's electric car.
@@ -22,15 +22,15 @@ public record Car(double usableBatteryKwh, double consumptionKwhPer100km, double
      */
     public Car {
         if (usableBatteryKwh <= 0 || Double.isNaN(usableBatteryKwh)) {
-            throw new InvalidSetting(Setting.CAR_BATTERY, InvalidSetting.Rule.OUT_OF_RANGE,
+            throw new InvalidSetting(ConfigSetting.CAR_BATTERY, InvalidSetting.Rule.OUT_OF_RANGE,
                     "usableBatteryKwh must be more than 0");
         }
         if (consumptionKwhPer100km <= 0 || Double.isNaN(consumptionKwhPer100km)) {
-            throw new InvalidSetting(Setting.CAR_CONSUMPTION, InvalidSetting.Rule.OUT_OF_RANGE,
+            throw new InvalidSetting(ConfigSetting.CAR_CONSUMPTION, InvalidSetting.Rule.OUT_OF_RANGE,
                     "consumptionKwhPer100km must be more than 0");
         }
         if (kmPerDay < 0 || Double.isNaN(kmPerDay)) {
-            throw new InvalidSetting(Setting.CAR_DAILY_DISTANCE, InvalidSetting.Rule.OUT_OF_RANGE,
+            throw new InvalidSetting(ConfigSetting.CAR_DAILY_DISTANCE, InvalidSetting.Rule.OUT_OF_RANGE,
                     "kmPerDay must not be negative");
         }
     }

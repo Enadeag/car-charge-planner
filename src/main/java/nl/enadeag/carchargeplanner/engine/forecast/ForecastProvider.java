@@ -27,10 +27,10 @@ public interface ForecastProvider {
      * @param system where the panels are and their arrays; the forecast is for all arrays together
      * @param settings the provider's declared settings that have a value, secret ones included; not changed
      * @param now the moment of the request, for answers that are relative to it
-     * @return the power of all panel arrays together, in steps that satisfy {@link Steps#problems}
+     * @return the power of all panel arrays together, in steps that satisfy {@link StepRules#problems}
      * @throws ProviderError when there is no forecast; the kind says why
      */
-    List<ForecastStep> fetch(SystemDescription system, Map<String, String> settings, Instant now) throws ProviderError;
+    List<ForecastStep> fetch(SolarSite system, Map<String, String> settings, Instant now) throws ProviderError;
 
     /**
      * The provider's place search, when it has one.

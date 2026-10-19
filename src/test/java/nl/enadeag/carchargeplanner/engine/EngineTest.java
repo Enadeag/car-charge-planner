@@ -427,7 +427,7 @@ class EngineTest {
         var engine = engine(clockAt(9, 50), needy);
         var needyId = new ProviderId("needy");
         var stored = Files.readString(config);
-        var draft = EngineConfig.firstRun(BRUSSELS, needyId).withSystem(
+        var draft = EngineConfig.setUpDraft(BRUSSELS, needyId).withSystem(
                 exampleSystem().withLocation(new Coordinates(51, 5), BRUSSELS), TypicalValues.NONE);
 
         var preview = engine.preview(draft, new Secrets(Map.of(needyId, Map.of("api_key", "TYPED-KEY"))));
@@ -461,13 +461,13 @@ class EngineTest {
         main.script(error(new ProviderError.Unavailable("no network")));
         var engine = engine(clockAt(7));
 
-        assertThat(engine.preview(EngineConfig.firstRun(BRUSSELS, new ProviderId("main")), Secrets.NONE))
+        assertThat(engine.preview(EngineConfig.setUpDraft(BRUSSELS, new ProviderId("main")), Secrets.NONE))
                 .isEqualTo(new Outlook.NoForecast("Main: no network"));
     }
 
     @Test
     void theFirstRunConfigHasTypicalValuesTaggedAndNoPlaceYet() {
-        var draft = EngineConfig.firstRun(BRUSSELS, new ProviderId("open-meteo"));
+        var draft = EngineConfig.setUpDraft(BRUSSELS, new ProviderId("open-meteo"));
 
         assertThat(draft.system().location().isChosen()).isFalse();
         assertThat(draft.typical().system()).isEqualTo(TypicalValues.SYSTEM_SETTINGS);

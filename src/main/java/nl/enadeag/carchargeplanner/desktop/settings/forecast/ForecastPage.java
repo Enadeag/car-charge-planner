@@ -22,8 +22,8 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import nl.enadeag.carchargeplanner.engine.setting.Setting;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -185,7 +185,7 @@ public final class ForecastPage implements ConfigPage {
             var selection = entry.selection(stored.settings(), shown);
             return complete ? Optional.of(config.withForecast(selection)) : Optional.empty();
         } catch (InvalidSetting e) {
-            if (e.setting() == Setting.FALLBACK_PROVIDER) {
+            if (e.setting() == ConfigSetting.FALLBACK_PROVIDER) {
                 fallbackRow.showProblem(ProblemTexts.of(e.rule(), messages));
             }
             return Optional.empty();
