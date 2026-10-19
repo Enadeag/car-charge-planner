@@ -44,8 +44,8 @@ public final class StatusNotifierTray implements Tray {
     private TrayMenu menu;
 
     /**
-     * Makes the tray; nothing appears until {@link #show(Actions)}, and its menu needs
-     * {@link #showLabels(MenuLabels)} first.
+     * Makes the tray; nothing appears until {@link #add(Actions)}, and its menu needs
+     * {@link #setMenuLabels(MenuLabels)} first.
      *
      * @param connector opens the session bus connection the icon is served on
      * @param icon draws the icon with its status dot, in every size the panel may need
@@ -65,19 +65,17 @@ public final class StatusNotifierTray implements Tray {
     /**
      * {@inheritDoc}
      *
-     * @throws IllegalStateException when the menu has no labels yet: {@link #showLabels(MenuLabels)} comes first
+     * @throws IllegalStateException when the menu has no labels yet: {@link #setMenuLabels(MenuLabels)} comes first
      */
     @Override
-    public synchronized void show(Actions actions) throws TrayUnavailable {
+    public synchronized void add(Actions actions) throws TrayUnavailable {
         if (labels == null) {
             throw new IllegalStateException("the menu needs its labels before the tray shows");
         }
         theme.write(icon);
         item = new TrayItem(id, title, theme.path(), where -> onOwnThread(() -> actions.clicked().accept(where)));
         copyStatusToItem();
-        menu = new TrayMenu(entryLabels(), List.of(() -> onOwnThread(actions.open()),
-                () -> onOwnThread(actions.settings()), () -> onOwnThread(actions.about()),
-                () -> onOwnThread(actions.quit())));
+        menu = new TrayMenu(labels, entry -> () -> onOwnThread(entry.action(actions)));
         try {
             bus = connector.connect();
             bus.exportObject(item);
@@ -128,7 +126,7 @@ public final class StatusNotifierTray implements Tray {
     }
 
     @Override
-    public synchronized void showStatus(TrayStatus status) {
+    public synchronized void setStatus(TrayStatus status) {
         this.status = status;
         if (bus == null || !bus.isConnected()) {
             return;
@@ -144,21 +142,17 @@ public final class StatusNotifierTray implements Tray {
 
     /** Gives the menu new labels and tells the panel to read its layout again; its tooltip comes with the status. */
     @Override
-    public synchronized void showLabels(MenuLabels labels) {
+    public synchronized void setMenuLabels(MenuLabels labels) {
         this.labels = labels;
         if (menu == null || bus == null || !bus.isConnected()) {
             return;
         }
-        var revision = menu.relabel(entryLabels());
+        var revision = menu.relabel(labels);
         try {
             bus.sendMessage(new DbusMenu.LayoutUpdated(TrayMenu.OBJECT_PATH, revision, 0));
         } catch (DBusException e) {
             LOG.log(Level.WARNING, "cannot tell the panel that the tray menu changed", e);
         }
-    }
-
-    private List<String> entryLabels() {
-        return List.of(labels.open(), labels.settings(), labels.about(), labels.quit());
     }
 
     /** Gives the item the icon and tooltip of the status; the panel sees them when it next reads them. */

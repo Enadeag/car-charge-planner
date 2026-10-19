@@ -68,8 +68,8 @@ public final class SingleInstance implements AutoCloseable {
      *
      * @param handler what a command of a later start does, when this becomes the running copy; called on a thread of
      *     its own per command, from now until {@link #close()}
-     * @return what came of it; only with {@link ClaimOutcome#FIRST} does this copy listen, and only with it,
-     *     {@link ClaimOutcome#FIRST_UNREACHABLE} and {@link ClaimOutcome#UNAVAILABLE} should this copy run
+     * @return what came of it; only with {@link ClaimOutcome#RUNNING} does this copy listen, and only with it,
+     *     {@link ClaimOutcome#RUNNING_UNREACHABLE} and {@link ClaimOutcome#UNAVAILABLE} should this copy run
      */
     public ClaimOutcome claim(Consumer<InstanceCommand> handler) {
         Path made;
@@ -102,7 +102,7 @@ public final class SingleInstance implements AutoCloseable {
                     return ClaimOutcome.HANDED_OVER;
                 }
                 if (reply == Reply.SILENT) {
-                    return ClaimOutcome.NO_ANSWER;
+                    return ClaimOutcome.SILENT;
                 }
                 if (deadlinePassed(deadline)) {
                     return ClaimOutcome.UNREACHABLE;
@@ -131,7 +131,7 @@ public final class SingleInstance implements AutoCloseable {
             return Optional.of(ClaimOutcome.HANDED_OVER);
         }
         if (reply == Reply.SILENT) {
-            return Optional.of(ClaimOutcome.NO_ANSWER);
+            return Optional.of(ClaimOutcome.SILENT);
         }
         LOG.log(Level.INFO, "removing the instance socket left behind by an app that ended without removing it");
         return Optional.empty();
@@ -144,14 +144,14 @@ public final class SingleInstance implements AutoCloseable {
             server = InstanceServer.bind(socket, owner, timeout);
         } catch (IOException e) {
             problem = "the instance socket " + socket + " cannot be made: " + e;
-            return ClaimOutcome.FIRST_UNREACHABLE;
+            return ClaimOutcome.RUNNING_UNREACHABLE;
         }
         server.serve(handler);
-        return ClaimOutcome.FIRST;
+        return ClaimOutcome.RUNNING;
     }
 
     /**
-     * Why the last {@link #claim(Consumer)} gave {@link ClaimOutcome#FIRST_UNREACHABLE},
+     * Why the last {@link #claim(Consumer)} gave {@link ClaimOutcome#RUNNING_UNREACHABLE},
      * {@link ClaimOutcome#NOT_PRIVATE} or {@link ClaimOutcome#UNAVAILABLE}, for the log and the owner.
      *
      * @return what went wrong, in English, naming the folder or the socket; empty after any other claim, or before one

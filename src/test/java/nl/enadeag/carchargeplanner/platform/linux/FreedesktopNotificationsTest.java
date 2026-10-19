@@ -102,7 +102,7 @@ class FreedesktopNotificationsTest {
     }
 
     private long show() throws InterruptedException {
-        notifications.show(new NotificationText("Charge window 10:00 – 15:00", "Set the current to 7 A"));
+        notifications.send(new NotificationText("Charge window 10:00 – 15:00", "Set the current to 7 A"));
         assertThat(server.calls.poll(TIMEOUT_S, TimeUnit.SECONDS)).as("the server got the notification").isNotNull();
         return server.nextId;
     }
@@ -126,7 +126,7 @@ class FreedesktopNotificationsTest {
     @Test
     void theCallCarriesTheAppNameIconTextActionsHintAndExpiry() throws Exception {
         serve();
-        notifications.show(new NotificationText("Charge window 10:00 – 15:00", "Set the current to 7 A"));
+        notifications.send(new NotificationText("Charge window 10:00 – 15:00", "Set the current to 7 A"));
 
         var call = server.calls.poll(TIMEOUT_S, TimeUnit.SECONDS);
         assertThat(call).isNotNull();
@@ -217,7 +217,7 @@ class FreedesktopNotificationsTest {
         var warnings = warningsWhile(() -> {
             notifications.onClick(opened::release);
             for (int i = 0; i < 3; i++) {
-                notifications.show(new NotificationText("a", "b"));
+                notifications.send(new NotificationText("a", "b"));
             }
         });
 
@@ -230,7 +230,7 @@ class FreedesktopNotificationsTest {
         show();
 
         openLabel.set("Dashboard openen");
-        notifications.show(new NotificationText("Laadvenster 10:00 – 15:00", "Stel de stroom in op 7 A"));
+        notifications.send(new NotificationText("Laadvenster 10:00 – 15:00", "Stel de stroom in op 7 A"));
 
         var call = server.calls.poll(TIMEOUT_S, TimeUnit.SECONDS);
         assertThat(call).isNotNull();
@@ -246,8 +246,8 @@ class FreedesktopNotificationsTest {
 
         var warnings = warningsWhile(() -> {
             offline.onClick(opened::release);
-            offline.show(new NotificationText("a", "b"));
-            offline.show(new NotificationText("a", "b"));
+            offline.send(new NotificationText("a", "b"));
+            offline.send(new NotificationText("a", "b"));
         });
         offline.close();
 
@@ -260,7 +260,7 @@ class FreedesktopNotificationsTest {
         Files.createSymbolicLink(folder.resolve("notify").resolve("car-charge-planner.png"), target);
         serve();
 
-        notifications.show(new NotificationText("a", "b"));
+        notifications.send(new NotificationText("a", "b"));
 
         var call = server.calls.poll(TIMEOUT_S, TimeUnit.SECONDS);
         assertThat(call).isNotNull();

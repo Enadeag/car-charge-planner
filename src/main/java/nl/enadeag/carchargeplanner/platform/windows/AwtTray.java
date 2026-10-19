@@ -5,6 +5,7 @@ import nl.enadeag.carchargeplanner.desktop.system.Notifications;
 import nl.enadeag.carchargeplanner.desktop.system.StatusDot;
 import nl.enadeag.carchargeplanner.desktop.system.StatusIcon;
 import nl.enadeag.carchargeplanner.desktop.system.Tray;
+import nl.enadeag.carchargeplanner.desktop.system.TrayMenuEntry;
 import nl.enadeag.carchargeplanner.desktop.system.TrayStatus;
 import java.awt.AWTException;
 import java.awt.GraphicsEnvironment;
@@ -49,8 +50,8 @@ public final class AwtTray implements Tray, Notifications {
     private final TrayMessages messages = new TrayMessages();
 
     /**
-     * Makes the tray; nothing appears until {@link #show(Actions)}, and its menu needs
-     * {@link #showLabels(MenuLabels)} first.
+     * Makes the tray; nothing appears until {@link #add(Actions)}, and its menu needs
+     * {@link #setMenuLabels(MenuLabels)} first.
      *
      * @param icon draws the icon with its status dot, in the sizes the display's scale may ask for
      * @param taskbar tells whether the icon sits on a light or a dark taskbar; read again whenever the icon changes
@@ -66,10 +67,10 @@ public final class AwtTray implements Tray, Notifications {
     /**
      * {@inheritDoc}
      *
-     * @throws IllegalStateException when the menu has no labels yet: {@link #showLabels(MenuLabels)} comes first
+     * @throws IllegalStateException when the menu has no labels yet: {@link #setMenuLabels(MenuLabels)} comes first
      */
     @Override
-    public synchronized void show(Actions actions) throws TrayUnavailable {
+    public synchronized void add(Actions actions) throws TrayUnavailable {
         if (labels == null) {
             throw new IllegalStateException("the menu needs its labels before the tray shows");
         }
@@ -122,13 +123,13 @@ public final class AwtTray implements Tray, Notifications {
     }
 
     @Override
-    public synchronized void showStatus(TrayStatus status) {
+    public synchronized void setStatus(TrayStatus status) {
         this.status = status;
         refreshIconAndTooltip();
     }
 
     @Override
-    public synchronized void showLabels(MenuLabels labels) {
+    public synchronized void setMenuLabels(MenuLabels labels) {
         this.labels = labels;
         relabel();
     }
@@ -154,10 +155,10 @@ public final class AwtTray implements Tray, Notifications {
     /**
      * {@inheritDoc}
      *
-     * <p>Shown only while the icon is in the tray, between {@link #show(Actions)} and {@link #remove()}.
+     * <p>Shown only while the icon is in the tray, between {@link #add(Actions)} and {@link #remove()}.
      */
     @Override
-    public void show(NotificationText text) {
+    public void send(NotificationText text) {
         messages.show(text);
     }
 
@@ -184,7 +185,7 @@ public final class AwtTray implements Tray, Notifications {
         return new BaseMultiResolutionImage(look.images(status).toArray(Image[]::new));
     }
 
-    /** Gives the menu's entries the current labels; does nothing before {@link #show(Actions)} made them. */
+    /** Gives the menu's entries the current labels; does nothing before {@link #add(Actions)} made them. */
     private void relabel() {
         items.forEach((entry, item) -> item.setLabel(entry.label(labels)));
     }

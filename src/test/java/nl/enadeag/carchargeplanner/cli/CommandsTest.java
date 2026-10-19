@@ -143,7 +143,7 @@ class CommandsTest {
     @Test
     void quitAsksTheRunningAppToQuitAndSaysItDid() throws Exception {
         var received = new LinkedBlockingQueue<InstanceCommand>();
-        assertThat(instance().claim(received::add)).isEqualTo(ClaimOutcome.FIRST);
+        assertThat(instance().claim(received::add)).isEqualTo(ClaimOutcome.RUNNING);
 
         var outcome = commands().carryOut(Command.QUIT);
 
@@ -159,7 +159,7 @@ class CommandsTest {
     @Test
     void testNotificationAsksTheRunningAppToShowOneAndSaysItDid() throws Exception {
         var received = new LinkedBlockingQueue<InstanceCommand>();
-        assertThat(instance().claim(received::add)).isEqualTo(ClaimOutcome.FIRST);
+        assertThat(instance().claim(received::add)).isEqualTo(ClaimOutcome.RUNNING);
 
         var outcome = commands().carryOut(Command.TEST_NOTIFICATION);
 
@@ -168,8 +168,8 @@ class CommandsTest {
     }
 
     @Test
-    void testNotificationWithoutARunningAppSaysSoAndEndsWithTheUnreachableCode() {
-        assertThat(commands().carryOut(Command.TEST_NOTIFICATION)).isEqualTo(new CommandOutcome(ExitCode.UNREACHABLE,
+    void testNotificationWithoutARunningAppSaysSoAndEndsWithTheNotRunningCode() {
+        assertThat(commands().carryOut(Command.TEST_NOTIFICATION)).isEqualTo(new CommandOutcome(ExitCode.NOT_RUNNING,
                 MESSAGES.text(TextKey.CLI_TEST_NOTIFICATION_NOT_RUNNING, AppName.TITLE)));
     }
 
@@ -180,7 +180,7 @@ class CommandsTest {
         ServerSocketChannel.open(StandardProtocolFamily.UNIX)
                 .bind(UnixDomainSocketAddress.of(instanceFolder.resolve("instance.sock"))).close();
 
-        assertThat(commands().carryOut(Command.TEST_NOTIFICATION)).isEqualTo(new CommandOutcome(ExitCode.UNREACHABLE,
+        assertThat(commands().carryOut(Command.TEST_NOTIFICATION)).isEqualTo(new CommandOutcome(ExitCode.NOT_RUNNING,
                 MESSAGES.text(TextKey.CLI_TEST_NOTIFICATION_NOT_RUNNING, AppName.TITLE)));
     }
 
@@ -189,7 +189,7 @@ class CommandsTest {
     void aCommandSaysTheAppRunsButCannotBeReachedWhenItHoldsTheLockWithoutASocket(Command command) {
         // longer than a Unix domain socket's path may be, so the running app has the lock but no socket
         instanceFolder = temp.resolve("a-folder-with-a-long-name-" + "x".repeat(100));
-        assertThat(instance().claim(_ -> { })).isEqualTo(ClaimOutcome.FIRST_UNREACHABLE);
+        assertThat(instance().claim(_ -> { })).isEqualTo(ClaimOutcome.RUNNING_UNREACHABLE);
 
         assertThat(commands().carryOut(command)).isEqualTo(
                 new CommandOutcome(ExitCode.UNREACHABLE, MESSAGES.text(TextKey.CLI_COMMAND_UNREACHABLE, AppName.TITLE)));

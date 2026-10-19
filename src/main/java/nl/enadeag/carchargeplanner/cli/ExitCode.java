@@ -8,11 +8,10 @@ public enum ExitCode {
     FAILURE(1),
     /** The command line names no command the app knows. */
     USAGE(2),
-    /**
-     * The app runs already, but this start could not reach it: neither to show its dashboard nor to quit it. Also when
-     * a command that only the running app can carry out, such as showing a test notification, finds no app running.
-     */
-    UNREACHABLE(3);
+    /** The app runs already, but this start could not reach it: neither to show its dashboard nor to quit it. */
+    UNREACHABLE(3),
+    /** A command that only the running app can carry out, such as showing a test notification, found no app running. */
+    NOT_RUNNING(4);
 
     private final int code;
 

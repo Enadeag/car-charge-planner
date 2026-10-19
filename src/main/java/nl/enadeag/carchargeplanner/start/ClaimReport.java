@@ -50,15 +50,15 @@ final class ClaimReport {
         outcome = instance.claim(handler);
         return switch (outcome) {
             case HANDED_OVER -> end(messages.text(TextKey.CLI_HANDED_OVER, AppName.TITLE), ExitCode.SUCCESS);
-            case NO_ANSWER -> end(messages.text(TextKey.CLI_NO_ANSWER, AppName.TITLE), ExitCode.FAILURE);
+            case SILENT -> end(messages.text(TextKey.CLI_NO_ANSWER, AppName.TITLE), ExitCode.FAILURE);
             case UNREACHABLE -> end(messages.text(TextKey.CLI_UNREACHABLE, AppName.TITLE), ExitCode.UNREACHABLE);
             case NOT_PRIVATE -> end(messages.text(TextKey.CLI_INSTANCE_NOT_PRIVATE, AppName.TITLE,
                     instance.problem().orElse("")), ExitCode.FAILURE);
-            case FIRST_UNREACHABLE -> {
+            case RUNNING_UNREACHABLE -> {
                 err.println(messages.text(TextKey.CLI_RUNS_UNREACHABLE, AppName.TITLE));
                 yield Optional.empty();
             }
-            case FIRST, UNAVAILABLE -> Optional.empty(); // the problem is logged once the log file is open
+            case RUNNING, UNAVAILABLE -> Optional.empty(); // the problem is logged once the log file is open
         };
     }
 
@@ -78,7 +78,7 @@ final class ClaimReport {
             throw new IllegalStateException("nothing was claimed yet");
         }
         switch (outcome) {
-            case FIRST_UNREACHABLE -> log.log(Level.WARNING, "a later start cannot reach this copy to show its "
+            case RUNNING_UNREACHABLE -> log.log(Level.WARNING, "a later start cannot reach this copy to show its "
                     + "dashboard, nor can the quit command, but the instance lock still keeps a second copy from "
                     + "running: " + instance.problem().orElse(""));
             case UNAVAILABLE -> log.log(Level.WARNING, "no instance lock, so a second copy of the app could start: "

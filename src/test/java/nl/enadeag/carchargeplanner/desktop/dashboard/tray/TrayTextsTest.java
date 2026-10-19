@@ -23,16 +23,16 @@ class TrayTextsTest {
         final List<TrayStatus> statuses = new ArrayList<>();
 
         @Override
-        public void show(Actions actions) {
+        public void add(Actions actions) {
         }
 
         @Override
-        public void showStatus(TrayStatus status) {
+        public void setStatus(TrayStatus status) {
             statuses.add(status);
         }
 
         @Override
-        public void showLabels(MenuLabels labels) {
+        public void setMenuLabels(MenuLabels labels) {
             this.labels.add(labels);
         }
 

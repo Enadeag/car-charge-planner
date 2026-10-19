@@ -30,8 +30,8 @@ public final class TrayTexts {
     public TrayTexts(Tray tray, LanguageChoice language) {
         this.tray = tray;
         this.language = language;
-        tray.showLabels(menuLabels(language.messages()));
-        tray.showStatus(new TrayStatusMapper(language.messages()).loading());
+        tray.setMenuLabels(menuLabels(language.messages()));
+        tray.setStatus(new TrayStatusMapper(language.messages()).loading());
         language.onChange(this::speak);
     }
 
@@ -45,9 +45,9 @@ public final class TrayTexts {
         var missing = outlook instanceof Outlook.NotSetUp;
         if (missing != notSetUp) {
             notSetUp = missing;
-            tray.showLabels(labels(language.messages()));
+            tray.setMenuLabels(labels(language.messages()));
         }
-        tray.showStatus(new TrayStatusMapper(language.messages()).map(outlook));
+        tray.setStatus(new TrayStatusMapper(language.messages()).map(outlook));
     }
 
     /** Before the first set-up, the Settings entry is the way into set-up, and says so. */
@@ -64,8 +64,8 @@ public final class TrayTexts {
     }
 
     private synchronized void speak(Messages messages) {
-        tray.showLabels(labels(messages));
+        tray.setMenuLabels(labels(messages));
         var mapper = new TrayStatusMapper(messages);
-        tray.showStatus(outlook == null ? mapper.loading() : mapper.map(outlook));
+        tray.setStatus(outlook == null ? mapper.loading() : mapper.map(outlook));
     }
 }

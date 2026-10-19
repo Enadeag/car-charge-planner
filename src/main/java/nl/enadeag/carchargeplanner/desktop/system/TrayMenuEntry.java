@@ -1,11 +1,11 @@
-package nl.enadeag.carchargeplanner.platform.windows;
+package nl.enadeag.carchargeplanner.desktop.system;
 
-import nl.enadeag.carchargeplanner.desktop.system.Tray.MenuLabels;
 import nl.enadeag.carchargeplanner.desktop.system.Tray.Actions;
+import nl.enadeag.carchargeplanner.desktop.system.Tray.MenuLabels;
 import java.util.function.Function;
 
-/** The entries of the tray icon's menu, in the order the menu shows them. */
-enum TrayMenuEntry {
+/** The entries of the tray icon's menu, in the order the menu shows them, the same on every system. */
+public enum TrayMenuEntry {
 
     /** Opens the dashboard. */
     OPEN(MenuLabels::open, Actions::open, false),
@@ -32,7 +32,7 @@ enum TrayMenuEntry {
      * @param labels the menu's labels in the owner's language
      * @return this entry's label among them
      */
-    String label(MenuLabels labels) {
+    public String label(MenuLabels labels) {
         return label.apply(labels);
     }
 
@@ -42,7 +42,7 @@ enum TrayMenuEntry {
      * @param actions the tray's actions
      * @return this entry's action among them
      */
-    Runnable action(Actions actions) {
+    public Runnable action(Actions actions) {
         return action.apply(actions);
     }
 
@@ -51,7 +51,7 @@ enum TrayMenuEntry {
      *
      * @return true for the entry set apart from the ones above it
      */
-    boolean separated() {
+    public boolean separated() {
         return separated;
     }
 }

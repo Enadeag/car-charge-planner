@@ -144,7 +144,7 @@ public final class Commands {
     private CommandOutcome showTestNotification() {
         return askRunningApp(InstanceCommand.TEST_NOTIFICATION,
                 messages.text(TextKey.CLI_TEST_NOTIFICATION_SHOWN, AppName.TITLE),
-                new CommandOutcome(ExitCode.UNREACHABLE,
+                new CommandOutcome(ExitCode.NOT_RUNNING,
                         messages.text(TextKey.CLI_TEST_NOTIFICATION_NOT_RUNNING, AppName.TITLE)));
     }
 

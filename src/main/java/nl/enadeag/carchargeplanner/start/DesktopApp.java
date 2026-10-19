@@ -16,6 +16,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.setup.SetUpOffer;
 import nl.enadeag.carchargeplanner.desktop.settings.setup.SetUpWindow;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStores;
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
+import nl.enadeag.carchargeplanner.desktop.system.Notifications;
 import nl.enadeag.carchargeplanner.desktop.system.Tray;
 import nl.enadeag.carchargeplanner.desktop.text.AnnouncementTexts;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
@@ -89,6 +90,10 @@ public final class DesktopApp {
             new Background(task -> Thread.ofVirtual().name("background").start(task), Platform::runLater);
     // set on the JavaFX thread only, as JavaFX's bindings on it are read there
     private final SimpleObjectProperty<Appearance> appearance;
+
+    /** The windows the app makes once, and what opens set-up or Settings for the owner. */
+    private record Windows(Dashboard dashboard, SettingsWindow settings, SetUpOffer setUpOffer) {
+    }
 
     /** JavaFX's preferences, which it hands out on its own thread only. */
     private record FxPreferences(ObservableValue<ColorScheme> system, ObservableValue<ColorScheme> windows,
@@ -172,12 +177,37 @@ public final class DesktopApp {
         var keychain = parts.keychain();
         closing.add("the keychain", keychain::close);
         var engine = engine(http, keychain, secretsFile, dataFolder,
-                announcement -> notifications.show(texts.notification(announcement)));
+                announcement -> notifications.send(texts.notification(announcement)));
         closing.add("the engine", engine::stop);
         var saving = Executors.newSingleThreadExecutor(Thread.ofVirtual().name("dashboard-changes").factory());
         closing.add("the dashboard's saving", saving::close);
         var changes = new DashboardChanges(engine, new Background(saving, Platform::runLater));
 
+        var windows = makeWindows(engine, changes, secretsFile.path(), dataFolder, icon, preferences);
+        var dashboard = windows.dashboard();
+        // a click on a notification does not say where the tray icon is, and the popup would close again as soon as
+        // the desktop gives the focus elsewhere: the window comes to the front and stays
+        notifications.onClick(dashboard::openWindow);
+        commands.complete(commandHandler(dashboard, notifications, texts));
+
+        showTrayOrWindow(new StartupDecision(appSettings.mode(), commandLine.atLogin(), trayParts.needTheTray()),
+                tray, dashboard, new Tray.Actions(dashboard::popUp, dashboard::openWindow,
+                        () -> windows.setUpOffer().openSettings(Category.SOLAR),
+                        () -> windows.settings().open(Category.ABOUT), this::quit));
+        // only now: on Windows the first announcement needs the tray icon to show it
+        engine.start(outlook -> {
+            dashboard.show(outlook, engine.awayPeriods());
+            trayTexts.show(outlook);
+            windows.setUpOffer().show(outlook);
+        });
+        LOG.log(Level.INFO, "planning with " + configPath);
+    }
+
+    /**
+     * Makes set-up, Settings and the dashboard on the JavaFX thread, each able to open the others. None is shown yet.
+     */
+    private Windows makeWindows(Engine engine, DashboardChanges changes, Path secretsPath, Path dataFolder,
+            AppIcon icon, FxPreferences preferences) throws InterruptedException, ExecutionException {
         var dashboardMade = new CompletableFuture<Dashboard>();
         var stores = new SettingsStores(engine, appSettingsFile, parts.startAtLogin());
         // a Save may have chosen another language or appearance: every part follows at once; the engine plans again
@@ -192,11 +222,11 @@ public final class DesktopApp {
             saved.accept(chosen);
             dashboardMade.join().openWindow();
         };
-        var setUp = makeOnFx(() -> new SetUpWindow(stores, secretsFile.path(), this::openLink, setUpFinished,
+        var setUp = makeOnFx(() -> new SetUpWindow(stores, secretsPath, this::openLink, setUpFinished,
                 ZoneId.systemDefault(), new SetUpWindow.Looks(preferences.system(), appearance,
                 preferences.reducedMotion()), icon, language, background));
         var facts = new AboutFacts(version(), configPath, appSettingsFile.path(), dataFolder,
-                AppLog.file(dataFolder), secretsFile.path());
+                AppLog.file(dataFolder), secretsPath);
         var settings = makeOnFx(() -> new SettingsWindow(stores, facts, this::openLink, saved, setUp::open,
                 preferences.windows(), icon, language, background));
         var setUpOffer = new SetUpOffer(setUp::open, settings::open, !commandLine.atLogin());
@@ -206,29 +236,20 @@ public final class DesktopApp {
         var dashboard = makeOnFx(() -> new Dashboard(icon, preferences.windows(), preferences.reducedMotion(),
                 Clock.systemUTC(), parts.taskbarHiding(), language, actions));
         dashboardMade.complete(dashboard);
-        // a click on a notification does not say where the tray icon is, and the popup would close again as soon as
-        // the desktop gives the focus elsewhere: the window comes to the front and stays
-        notifications.onClick(dashboard::openWindow);
-        commands.complete(command -> {
+        return new Windows(dashboard, settings, setUpOffer);
+    }
+
+    /** What a command of a later start, or of the command line, does in this running app. */
+    private Consumer<InstanceCommand> commandHandler(Dashboard dashboard, Notifications notifications,
+            AnnouncementTexts texts) {
+        return command -> {
             switch (command) {
                 case SHOW -> dashboard.openWindow();
                 case QUIT -> quit();
                 // not through the engine's announcer: nothing is recorded as announced and the plan stays as it is
-                case TEST_NOTIFICATION -> notifications.show(texts.testNotification(AppName.TITLE));
+                case TEST_NOTIFICATION -> notifications.send(texts.testNotification(AppName.TITLE));
             }
-        });
-
-        showTrayOrWindow(new StartupDecision(appSettings.mode(), commandLine.atLogin(), trayParts.needTheTray()),
-                tray, dashboard, new Tray.Actions(dashboard::popUp, dashboard::openWindow,
-                        () -> setUpOffer.openSettings(Category.SOLAR), () -> settings.open(Category.ABOUT),
-                        this::quit));
-        // only now: on Windows the first announcement needs the tray icon to show it
-        engine.start(outlook -> {
-            dashboard.show(outlook, engine.awayPeriods());
-            trayTexts.show(outlook);
-            setUpOffer.show(outlook);
-        });
-        LOG.log(Level.INFO, "planning with " + configPath);
+        };
     }
 
     /**
@@ -263,7 +284,7 @@ public final class DesktopApp {
     private void showTrayOrWindow(StartupDecision decision, Tray tray, Dashboard dashboard, Tray.Actions actions)
             throws InterruptedException {
         boolean trayShown = decision.triesTheTray()
-                && new TrayStarter(Clock.systemUTC(), Thread::sleep).show(tray, actions, decision.trayWait());
+                && new TrayStarter(Clock.systemUTC(), Thread::sleep).tryAdd(tray, actions, decision.trayWait());
         switch (decision.dashboard(trayShown)) {
             case POPUP -> {
                 // the tray icon opens it

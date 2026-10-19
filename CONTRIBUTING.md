@@ -401,7 +401,7 @@ To check the notifications without waiting for a charge window, run this while t
 car-charge-planner test-notification
 ```
 
-The app shows a test notification, the same as an announcement but for its text. Check that it shows the app's name and icon, then click it: the dashboard should open and come to the front. Nothing is planned or recorded for it. When the app does not run, the command says so and ends with exit code 3. In the report, say whether the name and icon showed and whether the click opened the dashboard, and if not, which notification daemon your desktop uses.
+The app shows a test notification, the same as an announcement but for its text. Check that it shows the app's name and icon, then click it: the dashboard should open and come to the front. Nothing is planned or recorded for it. When the app does not run, the command says so and ends with exit code 4. In the report, say whether the name and icon showed and whether the click opened the dashboard, and if not, which notification daemon your desktop uses.
 
 ## Adding a language
 

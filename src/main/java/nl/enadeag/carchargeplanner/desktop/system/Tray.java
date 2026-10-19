@@ -11,25 +11,25 @@ public interface Tray {
      * may remove the tray.
      *
      * @param actions what a click on the icon and the entries of its menu do
-     * @throws TrayUnavailable when the system has no tray this app can use; the app then shows a window instead
+     * @throws TrayUnavailable when the system has no tray this app can use; the dashboard is then a window
      */
-    void show(Actions actions) throws TrayUnavailable;
+    void add(Actions actions) throws TrayUnavailable;
 
     /**
      * Shows the plan's state on the icon and in its tooltip. May be called from any thread, also before
-     * {@link #show(Actions)}: the icon then appears with it.
+     * {@link #add(Actions)}: the icon then appears with it.
      *
      * @param status the dot and the sentence to show until the next call; never null
      */
-    void showStatus(TrayStatus status);
+    void setStatus(TrayStatus status);
 
     /**
      * Gives the entries of the icon's menu new labels, such as in another language. May be called from any thread,
-     * also before {@link #show(Actions)}: the menu then appears with them.
+     * also before {@link #add(Actions)}: the menu then appears with them.
      *
      * @param labels what the entries say until the next call; never null
      */
-    void showLabels(MenuLabels labels);
+    void setMenuLabels(MenuLabels labels);
 
     /** Takes the icon out of the tray; does nothing when it is not there. */
     void remove();

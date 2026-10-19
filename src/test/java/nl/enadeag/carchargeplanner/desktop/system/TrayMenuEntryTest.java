@@ -1,4 +1,4 @@
-package nl.enadeag.carchargeplanner.platform.windows;
+package nl.enadeag.carchargeplanner.desktop.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

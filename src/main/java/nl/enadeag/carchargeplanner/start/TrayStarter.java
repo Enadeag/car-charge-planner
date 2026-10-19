@@ -41,7 +41,7 @@ final class TrayStarter {
     }
 
     /**
-     * Shows the icon, trying until it works or the wait is over.
+     * Adds the icon to the tray, trying until it works or the wait is over.
      *
      * @param tray the system's tray
      * @param actions what the icon and its menu do
@@ -50,11 +50,11 @@ final class TrayStarter {
      *     window
      * @throws InterruptedException when the thread was interrupted while it waited
      */
-    boolean show(Tray tray, Tray.Actions actions, Duration wait) throws InterruptedException {
+    boolean tryAdd(Tray tray, Tray.Actions actions, Duration wait) throws InterruptedException {
         var deadline = clock.instant().plus(wait);
         while (true) {
             try {
-                tray.show(actions);
+                tray.add(actions);
                 return true;
             } catch (Tray.TrayUnavailable e) {
                 if (!clock.instant().isBefore(deadline)) {

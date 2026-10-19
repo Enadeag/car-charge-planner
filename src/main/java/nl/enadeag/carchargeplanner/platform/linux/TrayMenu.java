@@ -1,15 +1,23 @@
 package nl.enadeag.carchargeplanner.platform.linux;
 
+import nl.enadeag.carchargeplanner.desktop.system.Tray.MenuLabels;
+import nl.enadeag.carchargeplanner.desktop.system.TrayMenuEntry;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
 import org.freedesktop.dbus.errors.InvalidMethodArgument;
 import org.freedesktop.dbus.interfaces.Properties;
 import org.freedesktop.dbus.types.UInt32;
 import org.freedesktop.dbus.types.Variant;
 
-/** The tray item's menu, served over the dbusmenu protocol so the panel draws it natively. Entry 0 is the root. */
+/**
+ * The tray item's menu, served over the dbusmenu protocol so the panel draws it natively: the entries of
+ * {@link TrayMenuEntry}, with a separator line where it asks for one. Entry 0 is the root.
+ */
 final class TrayMenu implements DbusMenu, Properties {
 
     /** The object path the menu is served on. */
@@ -17,42 +25,46 @@ final class TrayMenu implements DbusMenu, Properties {
 
     private static final String NODE_SIGNATURE = "(ia{sv}av)";
 
-    private final List<Runnable> actions;
+    /** The entries' ids are 1 and up, in the order of {@link TrayMenuEntry}; the separators' come after them. */
+    private static final List<TrayMenuEntry> ENTRIES = List.of(TrayMenuEntry.values());
+
+    private final Map<TrayMenuEntry, Runnable> actions = new EnumMap<>(TrayMenuEntry.class);
+    /** The root's children, in the order the panel shows them: an entry's id, or a separator's. */
+    private final List<Integer> shown = new ArrayList<>();
     /** Replaced as a whole with its revision, so the panel never reads labels of one revision with another's number. */
     private volatile Layout layout;
 
     /** The entries' labels as the panel reads them, and the layout's revision, which the panel compares. */
-    private record Layout(List<String> labels, UInt32 revision) {
+    private record Layout(MenuLabels labels, UInt32 revision) {
     }
 
     /**
-     * Makes the menu.
+     * Makes the menu of every {@link TrayMenuEntry}, with a separator before each one that is set apart.
      *
-     * @param labels the texts of the entries below the root, in the order shown; they are copied
-     * @param actions what a click on each entry does, in the same order as the labels and as many; they are copied
-     * @throws IllegalArgumentException when there are not as many labels as actions
+     * @param labels what the entries say
+     * @param actions what a click on an entry does; asked once per entry, now
      */
-    TrayMenu(List<String> labels, List<Runnable> actions) {
-        if (labels.size() != actions.size()) {
-            throw new IllegalArgumentException("each entry needs a label and an action");
+    TrayMenu(MenuLabels labels, Function<TrayMenuEntry, Runnable> actions) {
+        var separator = ENTRIES.size();
+        for (var entry : ENTRIES) {
+            if (entry.separated()) {
+                shown.add(++separator);
+            }
+            shown.add(id(entry));
+            this.actions.put(entry, actions.apply(entry));
         }
-        this.actions = List.copyOf(actions);
-        this.layout = new Layout(List.copyOf(labels), new UInt32(1));
+        this.layout = new Layout(labels, new UInt32(1));
     }
 
     /**
      * Gives the entries new texts, such as in another language; the panel reads them once it is sent
      * {@link DbusMenu.LayoutUpdated} with the revision returned.
      *
-     * @param labels the new texts, in the order of the entries and as many
+     * @param labels what the entries say from now on
      * @return the layout's new revision, one more than before
-     * @throws IllegalArgumentException when there are not as many labels as entries
      */
-    synchronized UInt32 relabel(List<String> labels) {
-        if (labels.size() != actions.size()) {
-            throw new IllegalArgumentException("each entry needs a label");
-        }
-        layout = new Layout(List.copyOf(labels), new UInt32(layout.revision().longValue() + 1));
+    synchronized UInt32 relabel(MenuLabels labels) {
+        layout = new Layout(labels, new UInt32(layout.revision().longValue() + 1));
         return layout.revision();
     }
 
@@ -97,8 +109,8 @@ final class TrayMenu implements DbusMenu, Properties {
 
     @Override
     public void Event(int id, String eventId, Variant<?> data, UInt32 timestamp) {
-        if (eventId.equals("clicked") && id > 0 && exists(id)) {
-            actions.get(id - 1).run();
+        if (eventId.equals("clicked")) {
+            entry(id).ifPresent(entry -> actions.get(entry).run());
         }
     }
 
@@ -151,7 +163,7 @@ final class TrayMenu implements DbusMenu, Properties {
     }
 
     private boolean exists(int id) {
-        return id >= 0 && id <= actions.size();
+        return id == 0 || shown.contains(id);
     }
 
     private void requireEntry(int id) {
@@ -160,10 +172,19 @@ final class TrayMenu implements DbusMenu, Properties {
         }
     }
 
+    private static int id(TrayMenuEntry entry) {
+        return entry.ordinal() + 1;
+    }
+
+    /** The entry an id stands for; empty for the root, a separator, or an id the menu does not have. */
+    private static Optional<TrayMenuEntry> entry(int id) {
+        return id >= 1 && id <= ENTRIES.size() ? Optional.of(ENTRIES.get(id - 1)) : Optional.empty();
+    }
+
     private MenuNode node(Layout now, int id) {
         var children = new ArrayList<Variant<?>>();
         if (id == 0) {
-            for (int child = 1; child <= actions.size(); child++) {
+            for (var child : shown) {
                 children.add(new Variant<>(node(now, child), NODE_SIGNATURE));
             }
         }
@@ -174,11 +195,13 @@ final class TrayMenu implements DbusMenu, Properties {
         var properties = new LinkedHashMap<String, Variant<?>>();
         if (id == 0) {
             properties.put("children-display", new Variant<>("submenu"));
-        } else {
-            properties.put("label", new Variant<>(now.labels().get(id - 1)));
-            properties.put("enabled", new Variant<>(true));
-            properties.put("visible", new Variant<>(true));
+            return properties;
         }
+        entry(id).ifPresentOrElse(entry -> {
+            properties.put("label", new Variant<>(entry.label(now.labels())));
+            properties.put("enabled", new Variant<>(true));
+        }, () -> properties.put("type", new Variant<>("separator")));
+        properties.put("visible", new Variant<>(true));
         return properties;
     }
 }

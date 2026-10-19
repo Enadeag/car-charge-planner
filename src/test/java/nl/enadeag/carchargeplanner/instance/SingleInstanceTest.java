@@ -70,7 +70,7 @@ class SingleInstanceTest {
 
     private SingleInstance first() {
         var first = instance();
-        assertThat(first.claim(received::add)).isEqualTo(ClaimOutcome.FIRST);
+        assertThat(first.claim(received::add)).isEqualTo(ClaimOutcome.RUNNING);
         return first;
     }
 
@@ -156,7 +156,7 @@ class SingleInstanceTest {
         Files.createDirectory(folder, privateFolder());
         try (var mute = ServerSocketChannel.open(StandardProtocolFamily.UNIX)) {
             mute.bind(UnixDomainSocketAddress.of(socket()));
-            assertThat(instance().claim(_ -> { })).isEqualTo(ClaimOutcome.NO_ANSWER);
+            assertThat(instance().claim(_ -> { })).isEqualTo(ClaimOutcome.SILENT);
             assertThat(socket()).exists();
         }
     }
@@ -174,7 +174,7 @@ class SingleInstanceTest {
             var other = threads.submit(claim);
             start.countDown();
             assertThat(List.of(one.get(), other.get()))
-                    .containsExactlyInAnyOrder(ClaimOutcome.FIRST, ClaimOutcome.HANDED_OVER);
+                    .containsExactlyInAnyOrder(ClaimOutcome.RUNNING, ClaimOutcome.HANDED_OVER);
         }
         assertThat(nextReceived()).isEqualTo(InstanceCommand.SHOW);
     }
@@ -327,7 +327,7 @@ class SingleInstanceTest {
     void withASocketPathTooLongForASocketTheLockStillKeepsASecondCopyOut() throws Exception {
         useTooLongPath();
         var first = instance();
-        assertThat(first.claim(received::add)).isEqualTo(ClaimOutcome.FIRST_UNREACHABLE);
+        assertThat(first.claim(received::add)).isEqualTo(ClaimOutcome.RUNNING_UNREACHABLE);
         assertThat(first.problem()).hasValueSatisfying(problem -> assertThat(problem).contains("instance.sock"));
 
         assertThat(instance().claim(_ -> { })).isEqualTo(ClaimOutcome.UNREACHABLE);
@@ -336,7 +336,7 @@ class SingleInstanceTest {
 
         first.close();
         assertThat(instance().send(InstanceCommand.QUIT)).isEqualTo(Reply.NOBODY);
-        assertThat(instance().claim(_ -> { })).isEqualTo(ClaimOutcome.FIRST_UNREACHABLE);
+        assertThat(instance().claim(_ -> { })).isEqualTo(ClaimOutcome.RUNNING_UNREACHABLE);
     }
 
     @Test
@@ -353,7 +353,7 @@ class SingleInstanceTest {
             var other = threads.submit(claim);
             start.countDown();
             assertThat(List.of(one.get(), other.get()))
-                    .containsExactlyInAnyOrder(ClaimOutcome.FIRST_UNREACHABLE, ClaimOutcome.UNREACHABLE);
+                    .containsExactlyInAnyOrder(ClaimOutcome.RUNNING_UNREACHABLE, ClaimOutcome.UNREACHABLE);
         }
     }
 
@@ -361,25 +361,25 @@ class SingleInstanceTest {
     void theLockOfACopyInAnotherProcessKeepsThisOneOutUntilThatProcessDies() throws Exception {
         useTooLongPath();
         var other = startClaimingProcess();
-        assertThat(firstLine(other)).isEqualTo(ClaimOutcome.FIRST_UNREACHABLE.name());
+        assertThat(firstLine(other)).isEqualTo(ClaimOutcome.RUNNING_UNREACHABLE.name());
         assertThat(instance().claim(_ -> { })).isEqualTo(ClaimOutcome.UNREACHABLE);
 
         other.destroyForcibly(); // as in a crash: nothing is closed
         assertThat(other.waitFor(30, TimeUnit.SECONDS)).isTrue();
-        assertThat(patient().claim(_ -> { })).isEqualTo(ClaimOutcome.FIRST_UNREACHABLE);
+        assertThat(patient().claim(_ -> { })).isEqualTo(ClaimOutcome.RUNNING_UNREACHABLE);
     }
 
     @Test
     void theSocketOfACopyInAnotherProcessThatCrashedIsTakenOver() throws Exception {
         var other = startClaimingProcess();
-        assertThat(firstLine(other)).isEqualTo(ClaimOutcome.FIRST.name());
+        assertThat(firstLine(other)).isEqualTo(ClaimOutcome.RUNNING.name());
         assertThat(instance().send(InstanceCommand.SHOW)).isEqualTo(Reply.ANSWERED);
 
         other.destroyForcibly();
         assertThat(other.waitFor(30, TimeUnit.SECONDS)).isTrue();
         assertThat(socket()).exists();
         var next = patient();
-        assertThat(next.claim(received::add)).isEqualTo(ClaimOutcome.FIRST);
+        assertThat(next.claim(received::add)).isEqualTo(ClaimOutcome.RUNNING);
         assertThat(instance().send(InstanceCommand.SHOW)).isEqualTo(Reply.ANSWERED);
         assertThat(nextReceived()).isEqualTo(InstanceCommand.SHOW);
     }

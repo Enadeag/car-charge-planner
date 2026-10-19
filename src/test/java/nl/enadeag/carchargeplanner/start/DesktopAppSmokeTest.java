@@ -195,7 +195,7 @@ class DesktopAppSmokeTest {
 
         var tooEarly = start("too-early", "test-notification");
         assertThat(tooEarly.waitFor(TIMEOUT_S, TimeUnit.SECONDS)).isTrue();
-        assertThat(tooEarly.exitValue()).isEqualTo(ExitCode.UNREACHABLE.code());
+        assertThat(tooEarly.exitValue()).isEqualTo(ExitCode.NOT_RUNNING.code());
         assertThat(read("too-early", "err").strip())
                 .isEqualTo(messages.text(TextKey.CLI_TEST_NOTIFICATION_NOT_RUNNING, AppName.TITLE));
 

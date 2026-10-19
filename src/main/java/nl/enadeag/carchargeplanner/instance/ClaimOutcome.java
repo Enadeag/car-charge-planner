@@ -3,16 +3,16 @@ package nl.enadeag.carchargeplanner.instance;
 /** What came of trying to become the one running copy of the app. */
 public enum ClaimOutcome {
     /** This is the running copy now: it holds the instance lock and listens for the commands of later starts. */
-    FIRST,
+    RUNNING,
     /**
      * This is the running copy now, as it holds the instance lock, but its socket could not be made: a later start
      * still does not run, but cannot ask this copy to show its dashboard or to quit.
      */
-    FIRST_UNREACHABLE,
+    RUNNING_UNREACHABLE,
     /** Another copy runs and confirmed it shows its dashboard; this one should exit. */
     HANDED_OVER,
     /** Another copy holds the socket but did not confirm; this one should exit. */
-    NO_ANSWER,
+    SILENT,
     /** Another copy holds the instance lock, but its socket cannot be reached; this one should exit. */
     UNREACHABLE,
     /**

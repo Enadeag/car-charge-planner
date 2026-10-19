@@ -34,7 +34,7 @@ class TrayStarterTest {
         }
 
         @Override
-        public void show(Actions actions) throws TrayUnavailable {
+        public void add(Actions actions) throws TrayUnavailable {
             if (now.isBefore(comesAt)) {
                 throw new TrayUnavailable("no tray yet", null);
             }
@@ -42,11 +42,11 @@ class TrayStarterTest {
         }
 
         @Override
-        public void showStatus(TrayStatus status) {
+        public void setStatus(TrayStatus status) {
         }
 
         @Override
-        public void showLabels(MenuLabels labels) {
+        public void setMenuLabels(MenuLabels labels) {
         }
 
         @Override
@@ -58,7 +58,7 @@ class TrayStarterTest {
     void aTrayThatIsThereIsShownAtOnce() throws InterruptedException {
         var tray = new LateTray(Duration.ZERO);
 
-        assertThat(starter.show(tray, ACTIONS, Duration.ZERO)).isTrue();
+        assertThat(starter.tryAdd(tray, ACTIONS, Duration.ZERO)).isTrue();
         assertThat(tray.shown).isEqualTo(1);
         assertThat(slept).isEmpty();
     }
@@ -67,7 +67,7 @@ class TrayStarterTest {
     void aTrayThatComesWithinTheWaitIsShownWhenItComes() throws InterruptedException {
         var tray = new LateTray(Duration.ofSeconds(2));
 
-        assertThat(starter.show(tray, ACTIONS, StartupDecision.TRAY_WAIT)).isTrue();
+        assertThat(starter.tryAdd(tray, ACTIONS, StartupDecision.TRAY_WAIT)).isTrue();
         assertThat(tray.shown).isEqualTo(1);
         assertThat(slept).hasSize(4).containsOnly(TrayStarter.RETRY);
     }
@@ -76,7 +76,7 @@ class TrayStarterTest {
     void aTrayThatDoesNotComeWithinTheWaitIsGivenUp() throws InterruptedException {
         var tray = new LateTray(Duration.ofSeconds(6));
 
-        assertThat(starter.show(tray, ACTIONS, StartupDecision.TRAY_WAIT)).isFalse();
+        assertThat(starter.tryAdd(tray, ACTIONS, StartupDecision.TRAY_WAIT)).isFalse();
         assertThat(tray.shown).isZero();
         assertThat(slept.stream().reduce(Duration.ZERO, Duration::plus)).isEqualTo(StartupDecision.TRAY_WAIT);
     }
@@ -85,7 +85,7 @@ class TrayStarterTest {
     void withoutAWaitTheTrayIsTriedOnce() throws InterruptedException {
         var tray = new LateTray(Duration.ofMillis(1));
 
-        assertThat(starter.show(tray, ACTIONS, Duration.ZERO)).isFalse();
+        assertThat(starter.tryAdd(tray, ACTIONS, Duration.ZERO)).isFalse();
         assertThat(slept).isEmpty();
     }
 }

@@ -15,8 +15,8 @@ class AwtTrayTest {
     void withoutADesktopThereIsNoTrayInsteadOfACrash() {
         var tray = new AwtTray(new StatusIcon(), new TaskbarShade(),
                 new SimpleObjectProperty<>(ColorScheme.LIGHT), "Car charge planner");
-        tray.showLabels(new Tray.MenuLabels("Open dashboard", "Settings…", "About…", "Quit"));
-        assertThatThrownBy(() -> tray.show(new Tray.Actions(where -> { }, () -> { }, () -> { }, () -> { }, () -> { })))
+        tray.setMenuLabels(new Tray.MenuLabels("Open dashboard", "Settings…", "About…", "Quit"));
+        assertThatThrownBy(() -> tray.add(new Tray.Actions(where -> { }, () -> { }, () -> { }, () -> { }, () -> { })))
                 .isInstanceOf(Tray.TrayUnavailable.class);
     }
 }

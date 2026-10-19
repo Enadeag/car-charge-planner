@@ -78,7 +78,7 @@ class StatusNotifierTrayTest {
         panel = DBusConnectionBuilder.forAddress(address).withShared(false).build();
         tray = new StatusNotifierTray(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),
                 new StatusIcon(), folder.resolve("tray"), "car-charge-planner", "Car charge planner");
-        tray.showLabels(new Tray.MenuLabels("Open dashboard", "Settings…", "About…", "Quit"));
+        tray.setMenuLabels(new Tray.MenuLabels("Open dashboard", "Settings…", "About…", "Quit"));
     }
 
     @AfterEach
@@ -95,7 +95,8 @@ class StatusNotifierTrayTest {
         var watcher = new Watcher();
         panel.exportObject(watcher);
         panel.requestBusName(StatusNotifierWatcher.BUS_NAME);
-        tray.show(new Tray.Actions(clicks::add, opened::countDown, settings::countDown, about::countDown, quit::countDown));
+        tray.add(new Tray.Actions(clicks::add, opened::countDown, settings::countDown, about::countDown,
+                quit::countDown));
         var name = watcher.registered.poll(TIMEOUT_S, TimeUnit.SECONDS);
         assertThat(name).as("the item registered with the watcher").isNotNull();
         return name;
@@ -146,7 +147,7 @@ class StatusNotifierTrayTest {
 
     @Test
     void theIconShowsTheStatusGivenBeforeItAppearedByNameAndInTheTooltip() throws Exception {
-        tray.showStatus(new TrayStatus(StatusDot.SUN, "Charge on sun now, until 14:30, at 10 A."));
+        tray.setStatus(new TrayStatus(StatusDot.SUN, "Charge on sun now, until 14:30, at 10 A."));
         var properties = properties(showWithAWatcher());
 
         assertThat(themeIcon(properties)).isEqualTo(new StatusIcon().svg(StatusDot.SUN, PanelShade.DARK));
@@ -169,7 +170,7 @@ class StatusNotifierTrayTest {
         panel.addGenericSigHandler(signalRule("org.kde.StatusNotifierItem", "NewToolTip"),
                 _ -> newToolTip.countDown());
 
-        tray.showStatus(new TrayStatus(StatusDot.GRID, "Charge 8.4 kWh from the grid: Sunday 09:00 – 15:10."));
+        tray.setStatus(new TrayStatus(StatusDot.GRID, "Charge 8.4 kWh from the grid: Sunday 09:00 – 15:10."));
 
         assertThat(newIcon.await(TIMEOUT_S, TimeUnit.SECONDS)).as("NewIcon").isTrue();
         assertThat(newToolTip.await(TIMEOUT_S, TimeUnit.SECONDS)).as("NewToolTip").isTrue();
@@ -222,7 +223,7 @@ class StatusNotifierTrayTest {
                     }
                 });
 
-        tray.showLabels(new Tray.MenuLabels("Dashboard openen", "Instellingen…", "Over…", "Afsluiten"));
+        tray.setMenuLabels(new Tray.MenuLabels("Dashboard openen", "Instellingen…", "Over…", "Afsluiten"));
 
         var signal = updated.poll(TIMEOUT_S, TimeUnit.SECONDS);
         assertThat(signal).as("LayoutUpdated").isNotNull();
@@ -243,7 +244,7 @@ class StatusNotifierTrayTest {
         panel.exportObject(watcher);
         panel.requestBusName(StatusNotifierWatcher.BUS_NAME);
         var removed = new CountDownLatch(1);
-        tray.show(new Tray.Actions(clicks::add, opened::countDown, settings::countDown, about::countDown, () -> {
+        tray.add(new Tray.Actions(clicks::add, opened::countDown, settings::countDown, about::countDown, () -> {
             tray.remove();
             removed.countDown();
         }));
@@ -277,7 +278,8 @@ class StatusNotifierTrayTest {
 
     @Test
     void withoutAWatcherThereIsNoTray() {
-        assertThatThrownBy(() -> tray.show(new Tray.Actions(clicks::add, opened::countDown, settings::countDown, about::countDown, quit::countDown)))
-                .isInstanceOf(Tray.TrayUnavailable.class);
+        var actions = new Tray.Actions(clicks::add, opened::countDown, settings::countDown, about::countDown,
+                quit::countDown);
+        assertThatThrownBy(() -> tray.add(actions)).isInstanceOf(Tray.TrayUnavailable.class);
     }
 }
