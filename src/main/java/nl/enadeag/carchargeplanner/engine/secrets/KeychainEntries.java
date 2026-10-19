@@ -23,8 +23,11 @@ final class KeychainEntries {
         USABLE,
         /** It is there but locked: nothing can be read or written until the owner unlocks it. */
         LOCKED,
-        /** There is none, it does not answer, or it refused. */
-        UNUSABLE
+        /**
+         * There is none or it does not answer; one that refused, such as without a logon session, counts as
+         * unavailable too.
+         */
+        UNAVAILABLE
     }
 
     /** The name of the entry that lists the others. */
@@ -45,15 +48,15 @@ final class KeychainEntries {
     /**
      * Whether the keychain can be used now, tried by reading the index.
      *
-     * @return usable; locked; or unusable when there is no keychain, it does not answer, or it refused (such as
-     *     without a logon session on Windows)
+     * @return usable; locked; or unavailable when there is no keychain, it does not answer, or it refused (such as
+     *     without a logon session on Windows), which counts as unavailable
      */
     State state() {
         try {
             keychain.read(INDEX);
             return State.USABLE;
         } catch (KeychainException e) {
-            return e.kind() == KeychainException.Kind.LOCKED ? State.LOCKED : State.UNUSABLE;
+            return e.kind() == KeychainException.Kind.LOCKED ? State.LOCKED : State.UNAVAILABLE;
         }
     }
 

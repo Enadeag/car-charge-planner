@@ -54,18 +54,32 @@ public final class ForecastService {
      * @param system the system to forecast; the cache is used only when it was made for the same one
      * @param selection the providers to ask and their settings that are not secret
      * @param now the current moment, by which the cache's age, waits and rate limits are measured
-     * @param force the owner asked for a refresh: skips the minimum refresh interval, never a provider's rate limit
      * @return the forecast and where it came from
      * @throws ForecastUnavailable with the reason of each provider asked, when none has a usable forecast
      */
-    public ForecastResult get(SolarSite system, ForecastSelection selection, Instant now, boolean force)
+    public ForecastResult get(SolarSite system, ForecastSelection selection, Instant now) throws ForecastUnavailable {
+        return fetch(system, selection, new Once<>(this::storedKeys), now, false);
+    }
+
+    /**
+     * A forecast for the system that the owner asked to refresh: as {@link #get(SolarSite, ForecastSelection,
+     * Instant)}, but a provider is asked also before its minimum refresh interval has passed, and after a failure
+     * without its wait; never during its rate limit.
+     *
+     * @param system the system to forecast; the cache is used only when it was made for the same one
+     * @param selection the providers to ask and their settings that are not secret
+     * @param now the current moment, by which the cache's age and rate limits are measured
+     * @return the forecast and where it came from
+     * @throws ForecastUnavailable with the reason of each provider asked, when none has a usable forecast
+     */
+    public ForecastResult refresh(SolarSite system, ForecastSelection selection, Instant now)
             throws ForecastUnavailable {
-        return fetch(system, selection, new Once<>(this::storedKeys), now, force);
+        return fetch(system, selection, new Once<>(this::storedKeys), now, true);
     }
 
     /**
      * A forecast for a system with secret settings that need not be stored yet, such as the ones set-up shows before
-     * it saves; from the cache or a provider, as {@link #get(SolarSite, ForecastSelection, Instant, boolean)}.
+     * it saves; from the cache or a provider, as {@link #get(SolarSite, ForecastSelection, Instant)}.
      *
      * @param system the system to forecast; the cache is used only when it was made for the same one
      * @param selection the providers to ask and their settings that are not secret

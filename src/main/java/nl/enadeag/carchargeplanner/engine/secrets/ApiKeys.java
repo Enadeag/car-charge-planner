@@ -129,7 +129,7 @@ public final class ApiKeys implements SecretsSource {
             }
             unreadable = null;
             switch (entries.state()) {
-                case UNUSABLE -> {
+                case UNAVAILABLE -> {
                     waitBeforeAskingKeychain();
                     keptIn(KeyStorage.FILE, "the system keychain cannot be used");
                     return Secrets.NONE;
@@ -175,7 +175,7 @@ public final class ApiKeys implements SecretsSource {
                 return;
             }
             switch (entries.state()) {
-                case UNUSABLE -> {
+                case UNAVAILABLE -> {
                     waitBeforeAskingKeychain();
                     keptIn(KeyStorage.FILE, "the system keychain cannot be used");
                     return;
@@ -336,7 +336,7 @@ public final class ApiKeys implements SecretsSource {
             askAgainAt = null;
             unreadable = null;
             switch (entries.state()) {
-                case UNUSABLE -> {
+                case UNAVAILABLE -> {
                     intoFile(edit, "the system keychain cannot be used");
                     return SaveResult.IN_FILE;
                 }

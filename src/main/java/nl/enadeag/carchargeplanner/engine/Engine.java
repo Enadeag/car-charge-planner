@@ -168,7 +168,7 @@ public final class Engine {
     private Outlook outlook(EngineConfig config) {
         var now = clock.instant();
         try {
-            var forecast = forecasts.get(SolarSite.of(config.system()), config.forecast(), now, false);
+            var forecast = forecasts.get(SolarSite.of(config.system()), config.forecast(), now);
             return planned(config, forecast, now);
         } catch (ForecastUnavailable e) {
             return new Outlook.NoForecast(e.getMessage(), e.keychainLocked());

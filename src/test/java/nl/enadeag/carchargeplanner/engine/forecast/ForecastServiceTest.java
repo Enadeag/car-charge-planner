@@ -89,12 +89,12 @@ class ForecastServiceTest {
         restart();
     }
 
-    private ForecastResult get(Instant now, boolean force) throws ForecastUnavailable {
-        return service.get(SYSTEM, selection, now, force);
+    private ForecastResult get(Instant now) throws ForecastUnavailable {
+        return service.get(SYSTEM, selection, now);
     }
 
-    private ForecastResult get(Instant now) throws ForecastUnavailable {
-        return get(now, false);
+    private ForecastResult refresh(Instant now) throws ForecastUnavailable {
+        return service.refresh(SYSTEM, selection, now);
     }
 
     private static Instant later(int minutes) {
@@ -136,7 +136,7 @@ class ForecastServiceTest {
     @Test
     void theOwnerCanForceARefreshInsideTheMinimumInterval() throws ForecastUnavailable {
         get(T0);
-        assertThat(get(later(5), true).source().freshness()).isEqualTo(Freshness.FRESH);
+        assertThat(refresh(later(5)).source().freshness()).isEqualTo(Freshness.FRESH);
         assertThat(main.callCount()).isEqualTo(2);
     }
 
@@ -206,7 +206,7 @@ class ForecastServiceTest {
         assertThat(main.callCount()).isEqualTo(2);
         assertThat(backup.callCount()).isEqualTo(1);
 
-        var pushed = get(later(11), true); // the owner pressed refresh: whoever answers is asked again
+        var pushed = refresh(later(11)); // the owner pressed refresh: whoever answers is asked again
         assertThat(pushed.source().freshness()).isEqualTo(Freshness.FRESH);
         assertThat(backup.callCount()).isEqualTo(2);
     }
@@ -248,7 +248,7 @@ class ForecastServiceTest {
         assertThat(main.callCount()).isEqualTo(1); // waiting out the short delay: the fallback's cache answered
         get(later(6));
         assertThat(main.callCount()).isEqualTo(2);
-        get(later(7), true); // the owner may push
+        refresh(later(7)); // the owner may push
         assertThat(main.callCount()).isEqualTo(3);
     }
 
@@ -307,7 +307,7 @@ class ForecastServiceTest {
                 () -> secrets.load());
 
         try (var log = LogCapture.of("nl.enadeag.carchargeplanner")) {
-            assertThatThrownBy(() -> echoed.get(SYSTEM, selection, T0, false)).isInstanceOf(ForecastUnavailable.class)
+            assertThatThrownBy(() -> echoed.get(SYSTEM, selection, T0)).isInstanceOf(ForecastUnavailable.class)
                     .hasMessage("Main: Main says: you sent ***; we know ***");
             assertThat(log.lines()).containsExactly("WARNING Main gives no forecast: Main says: you sent ***; we know ***");
         }
@@ -357,8 +357,8 @@ class ForecastServiceTest {
         assertThat(limited.source().freshness()).isEqualTo(Freshness.STALE);
         assertThat(limited.source().cooldownUntil()).contains(later(150));
         assertThat(main.callCount()).isEqualTo(2);
-        get(later(125), true);
-        get(later(140), true);
+        refresh(later(125));
+        refresh(later(140));
         assertThat(main.callCount()).isEqualTo(2); // not asked during the cool-down, forced or not
 
         var again = get(later(151));
@@ -382,7 +382,7 @@ class ForecastServiceTest {
     void duringACoolDownWithNoUsableCacheTheFallbackAnswers() throws ForecastUnavailable {
         main.script(error(new RateLimited("busy", Duration.ofHours(1))));
         assertThat(get(T0).source().providerRole()).isEqualTo(ProviderRole.FALLBACK);
-        assertThat(get(later(30), true).source().providerRole()).isEqualTo(ProviderRole.FALLBACK);
+        assertThat(refresh(later(30)).source().providerRole()).isEqualTo(ProviderRole.FALLBACK);
         assertThat(main.callCount()).isEqualTo(1);
     }
 
@@ -408,18 +408,18 @@ class ForecastServiceTest {
     void aChangedSystemOrSettingMakesTheCacheNotApply() throws ForecastUnavailable {
         get(T0);
         var bigger = SYSTEM.withArrays(List.of(new PanelArray("", 9.0, 35, -45, 0.14)));
-        assertThat(service.get(bigger, selection, later(5), false).source().freshness()).isEqualTo(Freshness.FRESH);
+        assertThat(service.get(bigger, selection, later(5)).source().freshness()).isEqualTo(Freshness.FRESH);
         var moved = new SolarSite(new Coordinates(51.0, SYSTEM.location().longitude()), SYSTEM.timezone(), SYSTEM.arrays());
-        assertThat(service.get(moved, selection, later(6), false).source().freshness()).isEqualTo(Freshness.FRESH);
+        assertThat(service.get(moved, selection, later(6)).source().freshness()).isEqualTo(Freshness.FRESH);
         assertThat(main.callCount()).isEqualTo(3);
-        assertThat(service.get(moved, selection, later(7), false).source().freshness()).isEqualTo(Freshness.CACHED); // cached in turn
+        assertThat(service.get(moved, selection, later(7)).source().freshness()).isEqualTo(Freshness.CACHED); // cached in turn
     }
 
     @Test
     void renamingAPanelArrayKeepsTheCache() throws ForecastUnavailable {
         get(T0);
         var renamed = SYSTEM.withArrays(List.of(new PanelArray("Garage", 4.8, 35, -45, 0.14)));
-        assertThat(service.get(renamed, selection, later(5), false).source().freshness()).isEqualTo(Freshness.CACHED);
+        assertThat(service.get(renamed, selection, later(5)).source().freshness()).isEqualTo(Freshness.CACHED);
     }
 
     @ParameterizedTest
@@ -446,7 +446,7 @@ class ForecastServiceTest {
     /** The clock was set back after the forecast was cached, so the cache seems to come from the future. */
     @Test
     void aCacheStampedAnHourAheadIsNotTakenForFresh() throws ForecastUnavailable {
-        service.get(SYSTEM, selection, later(60), false);
+        service.get(SYSTEM, selection, later(60));
         var result = get(T0);
 
         assertThat(result.source().freshness()).isEqualTo(Freshness.FRESH);
@@ -460,7 +460,7 @@ class ForecastServiceTest {
         assertThat(cacheFolder()).doesNotExist();
 
         assertThatThrownBy(() -> {
-            service.get(SYSTEM, selection, later(60), false);
+            service.get(SYSTEM, selection, later(60));
             get(T0);
         }).isInstanceOf(ForecastUnavailable.class).hasMessage("Main: no network");
     }
@@ -517,7 +517,7 @@ class ForecastServiceTest {
 
         mainNeedsAKey(steps(SunnyDays.day(DAY, 3.0)));
         backup.script(error(new Unavailable("down")));
-        assertThatThrownBy(() -> get(later(120), true)).isInstanceOf(ForecastUnavailable.class)
+        assertThatThrownBy(() -> refresh(later(120))).isInstanceOf(ForecastUnavailable.class)
                 .hasMessageContaining("not valid JSON");
     }
 
@@ -618,9 +618,9 @@ class ForecastServiceTest {
     @Test
     void severalArraysAreServedFromTheCache() throws IOException, ForecastUnavailable {
         var two = SYSTEM.withArrays(List.of(new PanelArray("", 3.0, 30, -90, 0.14), new PanelArray("", 2.0, 30, 90, 0.14)));
-        service.get(two, selection, T0, false);
+        service.get(two, selection, T0);
         restart();
-        assertThat(service.get(two, selection, later(10), false).source().freshness()).isEqualTo(Freshness.CACHED);
+        assertThat(service.get(two, selection, later(10)).source().freshness()).isEqualTo(Freshness.CACHED);
         assertThat(main.callCount()).isEqualTo(1);
     }
 
