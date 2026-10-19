@@ -37,7 +37,6 @@ import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.host.Host;
 import nl.enadeag.carchargeplanner.host.Os;
 import java.time.Clock;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -179,12 +178,13 @@ class ArchitectureTest {
     private static final String[] OUTER = Stream.concat(Stream.of(ROOT),
             OUTER_PARTS.stream().map(part -> ROOT + "." + part + "..")).toArray(String[]::new);
 
-    private static final String ENGINE = ROOT + ".engine";
+    private static final String START = ROOT + ".start..";
 
-    /** The composition root's packages and some more, for a rule that lets them all do something. */
-    private static String[] outerAnd(String... more) {
-        return Stream.concat(Arrays.stream(OUTER), Arrays.stream(more)).toArray(String[]::new);
-    }
+    private static final String CLI = ROOT + ".cli..";
+
+    private static final String LOGGING = ROOT + ".logging..";
+
+    private static final String ENGINE = ROOT + ".engine";
 
     // package structure
 
@@ -217,9 +217,10 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule onlyTheCompositionRootDependsOnThePlatforms = noClasses()
-            .that().resideOutsideOfPackages(outerAnd("..platform.."))
+            .that().resideOutsideOfPackages(ROOT, START, CLI, "..platform..")
             .should().dependOnClassesThat().resideInAPackage("..platform..")
-            .because("the composition root picks the platform's parts and hands them on as the ports (ADR 0005)");
+            .because("the composition root picks the platform's parts and hands them on as the ports (ADR 0005); "
+                    + "start makes each system's parts, and cli the Linux menu entry");
 
     @ArchTest
     static final ArchRule foreignMemoryIsOnlyForWindows = noClasses()
@@ -242,7 +243,7 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule providersAreOnlyReachedThroughTheForecast = noClasses()
-            .that().resideOutsideOfPackages(outerAnd(ENGINE + ".forecast.."))
+            .that().resideOutsideOfPackages(ENGINE + ".forecast..", ROOT, START)
             .should().dependOnClassesThat().resideInAPackage(ENGINE + ".forecast.providers..")
             .because("a provider is chosen by engine.forecast; the plan and the clients know only the forecast");
 
@@ -291,7 +292,7 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule onlyTheCompositionRootReadsTheClock = FreezingArchRule.freeze(noClasses()
-            .that().resideOutsideOfPackages(OUTER)
+            .that().resideOutsideOfPackages(ROOT, START)
             .should().callMethodWhere(READ_THE_SYSTEM_CLOCK)
             .because("the clock and the zone are handed in, so a test can set the time (ADR 0005); the stored "
                     + "defaults of StoredFile and ApiKeys are frozen until their callers pass a clock"));
@@ -317,7 +318,7 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule onlyTheRootThePlatformsAndTheGuardOwnThreads = noClasses()
-            .that().resideOutsideOfPackages(outerAnd("..platform..", "..instance.."))
+            .that().resideOutsideOfPackages(ROOT, START, "..platform..", "..instance..")
             .should().callMethodWhere(START_A_THREAD)
             .orShould().callConstructorWhere(DescribedPredicate.describe("make a thread, a timer or a pool",
                     call -> call.getTargetOwner().isAssignableTo(Thread.class)
@@ -342,16 +343,25 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule onlyTheRootConfiguresJavaUtilLogging = noClasses()
-            .that().resideOutsideOfPackages(OUTER)
+            .that().resideOutsideOfPackages(ROOT, START, LOGGING)
             .should().dependOnClassesThat().resideInAPackage("java.util.logging..")
             .because("the app's log is set up once, by AppLog; everything else logs through System.Logger (ADR 0005)");
 
     @ArchTest
+    static final ArchRule onlyTheLogHandlesAndFormatsRecords = noClasses()
+            .that().resideOutsideOfPackage(LOGGING)
+            .should().dependOnClassesThat().areAssignableTo(java.util.logging.Handler.class)
+            .orShould().dependOnClassesThat().areAssignableTo(java.util.logging.Formatter.class)
+            .because("the log file, its format and the terminal are set up in logging alone, so every record is "
+                    + "written the same way (ADR 0005)");
+
+    @ArchTest
     static final ArchRule onlyTheRootWritesToTheConsole = noClasses()
-            .that().resideOutsideOfPackages(OUTER)
+            .that().resideOutsideOfPackages(ROOT, START)
             .should().accessField(System.class, "out")
             .orShould().accessField(System.class, "err")
-            .because("the command line's answers are printed by Main; the rest logs (ADR 0005)");
+            .because("the command line's answers are printed by Main, and by start when a second start ends; the "
+                    + "rest logs (ADR 0005)");
 
     // what is confined to one place
 
@@ -362,13 +372,13 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule theDesktopBusIsOnlyForLinux = noClasses()
-            .that().resideOutsideOfPackages(outerAnd("..platform.linux.."))
+            .that().resideOutsideOfPackage("..platform.linux..")
             .should().dependOnClassesThat().resideInAPackage("org.freedesktop..")
             .because("D-Bus is how the Linux platform talks to the tray, notifications and keyring (ADR 0005)");
 
     @ArchTest
     static final ArchRule onlyOneClassMakesHttpCalls = noClasses()
-            .that().resideOutsideOfPackages(OUTER)
+            .that().resideOutsideOfPackages(ROOT, START)
             .and(notPartOf(JdkHttpGet.class.getName()))
             .should().dependOnClassesThat().resideInAPackage("java.net.http..")
             .because("every provider asks through the HttpGet port, so a test can answer instead (ADR 0001)");
