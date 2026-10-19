@@ -7,6 +7,9 @@ import nl.enadeag.carchargeplanner.desktop.app.AppSettingsFile;
 import nl.enadeag.carchargeplanner.desktop.app.Appearance;
 import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
+import nl.enadeag.carchargeplanner.desktop.settings.about.AboutFacts;
+import nl.enadeag.carchargeplanner.desktop.settings.store.SaveOutcome;
+import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStores;
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.system.StartAtLogin;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
@@ -58,9 +61,9 @@ import javafx.stage.Stage;
  * Settings over stores in a test's own folder: the example config, an app settings file, and a start at login that
  * only remembers. Nothing touches the owner's files, keychain or autostart.
  */
-final class SettingsFixture {
+public final class SettingsFixture {
 
-    static final Path EXAMPLE = Path.of("docs", "example-engine.json");
+    public static final Path EXAMPLE = Path.of("docs", "example-engine.json");
 
     final Path folder;
     final Path configPath;
@@ -231,7 +234,7 @@ final class SettingsFixture {
      * Whether a screen reader calls a control by this name: the name itself, or the name with what tells it apart
      * from its twin on a card that shows more than once, such as "Size (Panel array 2)".
      */
-    static boolean named(Node node, String name) {
+    public static boolean named(Node node, String name) {
         var text = node.getAccessibleText();
         // a field's label can carry the longer name too: it names the field, and is no field itself
         return !(node instanceof Label) && text != null && (text.equals(name) || text.startsWith(name + " ("));
@@ -267,7 +270,7 @@ final class SettingsFixture {
     }
 
     /** Waits until the JavaFX thread finds the condition true, such as after a search on another thread. */
-    static void waitFor(java.util.concurrent.Callable<Boolean> condition) throws Exception {
+    public static void waitFor(java.util.concurrent.Callable<Boolean> condition) throws Exception {
         long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(10);
         while (!Fx.call(condition)) {
             if (System.nanoTime() > deadline) {
@@ -278,13 +281,13 @@ final class SettingsFixture {
     }
 
     /** A start at login that only remembers, and can be told to fail, or to wait before it switches. */
-    static final class MemoryStartAtLogin implements StartAtLogin {
+    public static final class MemoryStartAtLogin implements StartAtLogin {
 
-        volatile boolean on;
+        public volatile boolean on;
         volatile boolean failing;
         /** Switching on waits until this opens; open unless a test closes it. */
-        volatile CountDownLatch slow = new CountDownLatch(0);
-        final AtomicInteger switches = new AtomicInteger();
+        public volatile CountDownLatch slow = new CountDownLatch(0);
+        public final AtomicInteger switches = new AtomicInteger();
 
         @Override
         public boolean isOn() {

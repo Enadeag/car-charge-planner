@@ -1,7 +1,16 @@
 package nl.enadeag.carchargeplanner.desktop.settings;
 
+import nl.enadeag.carchargeplanner.desktop.settings.about.AboutPage;
+import nl.enadeag.carchargeplanner.desktop.settings.app.AppPage;
+import nl.enadeag.carchargeplanner.desktop.settings.forecast.ForecastPage;
 import nl.enadeag.carchargeplanner.desktop.settings.form.AllSettings;
 import nl.enadeag.carchargeplanner.desktop.settings.form.SettingsChanges;
+import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
+import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPage;
+import nl.enadeag.carchargeplanner.desktop.settings.page.Page;
+import nl.enadeag.carchargeplanner.desktop.settings.store.SaveOutcome;
+import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStorage;
+import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStores;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;

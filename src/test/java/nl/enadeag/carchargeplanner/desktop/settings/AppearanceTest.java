@@ -7,6 +7,7 @@ import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.app.Appearance;
 import nl.enadeag.carchargeplanner.desktop.dashboard.Dashboard;
 import nl.enadeag.carchargeplanner.desktop.dashboard.DashboardActions;
+import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
 import nl.enadeag.carchargeplanner.desktop.text.Language;

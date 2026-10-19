@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.desktop;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.DashboardPictures;
 import nl.enadeag.carchargeplanner.desktop.settings.SettingsPictures;
+import nl.enadeag.carchargeplanner.desktop.settings.setup.SetUpPictures;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -29,9 +30,9 @@ public final class ReadmePictures {
     /** The pictures by name. */
     static final Map<String, Picture> PICTURES = Map.of(
             "charts", DashboardPictures::charts,
-            "setup-welcome-english", SettingsPictures::setUpWelcome,
-            "setup-location-english", SettingsPictures::setUpLocation,
-            "setup-preview-english", SettingsPictures::setUpPreview,
+            "setup-welcome-english", SetUpPictures::setUpWelcome,
+            "setup-location-english", SetUpPictures::setUpLocation,
+            "setup-preview-english", SetUpPictures::setUpPreview,
             "dashboard-200", DashboardPictures::at200,
             "settings-200", SettingsPictures::settingsAt200);
 

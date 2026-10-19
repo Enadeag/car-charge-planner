@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.desktop.settings;
 import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.app.Background;
+import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.secrets.MemoryKeychain;
@@ -18,20 +19,22 @@ import javafx.scene.Parent;
 import javafx.scene.control.CheckBox;
 
 /**
- * Settings and set-up while they wait: reading what is stored, saving, and after a read that failed; each screen is
- * checked once it is laid out. The slow work is held until the test lets it run.
+ * Settings while it waits: reading what is stored, saving, and after a read that failed; each screen is checked once
+ * it is laid out. The slow work is held until the test lets it run. Set-up's are in {@code SetUpBusyScreens}.
  */
-final class BusyScreens {
+public final class BusyScreens {
 
     private BusyScreens() {
     }
 
     /** Work handed over and not yet run; its outcome is shown on the thread that runs it. */
-    private static final class Held {
-        final List<Runnable> work = new ArrayList<>();
-        final Background background = new Background(work::add, Runnable::run);
+    public static final class Held {
+        private final List<Runnable> work = new ArrayList<>();
+        /** Holds the work handed to it. */
+        public final Background background = new Background(work::add, Runnable::run);
 
-        void runAll() {
+        /** Runs the work held so far. */
+        public void runAll() {
             var now = List.copyOf(work);
             work.clear();
             now.forEach(Runnable::run);
@@ -80,32 +83,8 @@ final class BusyScreens {
         return found;
     }
 
-    static List<String> setUp(Path folder, Language language, ColorScheme scheme, Function<Node, List<String>> check)
-            throws Exception {
-        var held = new Held();
-        var setUp = new SetUpFixture(Files.createDirectories(folder.resolve("busy")), language, new MemoryKeychain(),
-                held.background).withExample();
-        try {
-            var view = setUp.openReading(scheme);
-            return Fx.call(() -> {
-                var problems = new ArrayList<>(laidOut(view, check, setUp.messages.text(TextKey.SETTINGS_READING)));
-                setUp.start(view);
-                view.show(SetUpStep.PREVIEW);
-                held.runAll();
-                view.next();
-                problems.addAll(laidOut(view, check, setUp.messages.text(TextKey.SETTINGS_SAVING)));
-                var failure = setUp.messages.text(TextKey.UNEXPECTED_ERROR, "IllegalStateException");
-                view.showUnreadable(failure);
-                problems.addAll(laidOut(view, check, setUp.messages.text(TextKey.SETTINGS_READ_FAILED, failure)));
-                return problems;
-            });
-        } finally {
-            setUp.close();
-        }
-    }
-
     /** The check's problems, and one more when the screen does not say what it should. */
-    private static List<String> laidOut(Parent view, Function<Node, List<String>> check, String says) {
+    public static List<String> laidOut(Parent view, Function<Node, List<String>> check, String says) {
         view.applyCss();
         view.layout();
         var problems = new ArrayList<>(check.apply(view));

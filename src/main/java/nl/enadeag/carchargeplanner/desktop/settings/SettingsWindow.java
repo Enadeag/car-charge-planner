@@ -2,6 +2,10 @@ package nl.enadeag.carchargeplanner.desktop.settings;
 
 import nl.enadeag.carchargeplanner.desktop.app.AppSettings;
 import nl.enadeag.carchargeplanner.desktop.app.Background;
+import nl.enadeag.carchargeplanner.desktop.settings.about.AboutFacts;
+import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
+import nl.enadeag.carchargeplanner.desktop.settings.page.WindowSize;
+import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStores;
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;

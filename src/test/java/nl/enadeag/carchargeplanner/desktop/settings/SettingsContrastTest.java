@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import nl.enadeag.carchargeplanner.desktop.Contrast;
 import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
+import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;

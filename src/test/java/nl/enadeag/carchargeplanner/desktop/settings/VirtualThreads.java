@@ -4,7 +4,7 @@ import nl.enadeag.carchargeplanner.desktop.app.Background;
 import javafx.application.Platform;
 
 /** The slow work of a window on a virtual thread each, as the app does it, and the outcome on the JavaFX thread. */
-final class VirtualThreads {
+public final class VirtualThreads {
 
     private VirtualThreads() {
     }
@@ -14,7 +14,7 @@ final class VirtualThreads {
      *
      * @return a new helper
      */
-    static Background background() {
+    public static Background background() {
         return new Background(task -> Thread.ofVirtual().name("background").start(task), Platform::runLater);
     }
 }
