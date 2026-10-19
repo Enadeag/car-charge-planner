@@ -15,7 +15,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /** The tray's menu and tooltip follow the language the owner chooses. */
-class TrayTextsTest {
+class TrayPresenterTest {
 
     /** A tray that only notes what it is told. */
     private static final class NotedTray implements Tray {
@@ -43,7 +43,7 @@ class TrayTextsTest {
 
     private final NotedTray tray = new NotedTray();
     private final LanguageChoice language = new LanguageChoice(Language.ENGLISH);
-    private final TrayTexts texts = new TrayTexts(tray, language);
+    private final TrayPresenter texts = new TrayPresenter(tray, language);
 
     @Test
     void theTrayStartsWithItsMenuAndTheForecastBeingFetched() {

@@ -8,7 +8,7 @@ import nl.enadeag.carchargeplanner.desktop.app.Appearance;
 import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.desktop.dashboard.Dashboard;
 import nl.enadeag.carchargeplanner.desktop.dashboard.DashboardActions;
-import nl.enadeag.carchargeplanner.desktop.dashboard.tray.TrayTexts;
+import nl.enadeag.carchargeplanner.desktop.dashboard.tray.TrayPresenter;
 import nl.enadeag.carchargeplanner.desktop.settings.SettingsWindow;
 import nl.enadeag.carchargeplanner.desktop.settings.about.AboutFacts;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
@@ -168,7 +168,7 @@ public final class DesktopApp {
         var notifications = trayParts.notifications();
         closing.add("the tray icon", tray::remove);
         closing.add("the notifications", notifications::close);
-        var trayTexts = new TrayTexts(tray, language);
+        var trayPresenter = new TrayPresenter(tray, language);
 
         var secretsFile = new SecretsFile(SecretsLocation.moveFromOldPlace(host.os(), configPath, dataFolder));
         // folders made before the app made its folders private; a folder named with --config= stays as it is
@@ -198,7 +198,7 @@ public final class DesktopApp {
         // only now: on Windows the first announcement needs the tray icon to show it
         engine.start(outlook -> {
             dashboard.show(outlook, engine.awayPeriods());
-            trayTexts.show(outlook);
+            trayPresenter.show(outlook);
             windows.setUpOffer().show(outlook);
         });
         LOG.log(Level.INFO, "planning with " + configPath);

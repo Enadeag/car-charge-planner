@@ -2,9 +2,10 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.outlook;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import nl.enadeag.carchargeplanner.desktop.dashboard.PlannedDays;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Chip;
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Chip.Source;
+import nl.enadeag.carchargeplanner.desktop.dashboard.parts.ChipModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.parts.EnergySource;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.DayKind;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
@@ -107,10 +108,10 @@ class OutlookMapperTest {
         var withoutGrid = plan(day(TODAY, window(TODAY, 11, 14, 0.04))).days().getFirst().chips();
         var withGrid = plan(day(TODAY, window(TODAY, 11, 14, 0.6))).days().getFirst().chips();
 
-        assertThat(withoutGrid).extracting(Chip::source).containsExactly(Source.SUN, Source.CAR);
+        assertThat(withoutGrid).extracting(ChipModel::source).containsExactly(EnergySource.SUN, EnergySource.CAR);
         assertThat(withGrid).containsExactly(
-                new Chip(Source.SUN, "92 % sun"), new Chip(Source.CAR, "Battery 50 → 74 %"),
-                new Chip(Source.GRID, "0.6 kWh from the grid"));
+                new ChipModel(EnergySource.SUN, "92 % sun"), new ChipModel(EnergySource.CAR, "Battery 50 → 74 %"),
+                new ChipModel(EnergySource.GRID, "0.6 kWh from the grid"));
     }
 
     @Test
@@ -238,7 +239,7 @@ class OutlookMapperTest {
 
     @Test
     void withoutAPlanTheReasonIsShown() {
-        var message = (DashboardModel.Message) MAPPER.map(new Outlook.NoForecast("Could not reach Open-Meteo"));
+        var message = (DashboardModel.NoPlan) MAPPER.map(new Outlook.NoForecast("Could not reach Open-Meteo"));
 
         assertThat(message.headline()).isEqualTo("No forecast");
         assertThat(message.detail()).endsWith("Could not reach Open-Meteo");
@@ -247,7 +248,7 @@ class OutlookMapperTest {
 
     @Test
     void withoutAForecastBecauseTheKeychainIsLockedTheOwnerIsToldToUnlockIt() {
-        var message = (DashboardModel.Message) MAPPER.map(new Outlook.NoForecast(
+        var message = (DashboardModel.NoPlan) MAPPER.map(new Outlook.NoForecast(
                 "API key is required; The system keychain is locked.", true));
 
         assertThat(message.headline()).isEqualTo("No forecast");
@@ -256,6 +257,14 @@ class OutlookMapperTest {
 
     @Test
     void aPlanWithoutDaysIsShownAsNoForecast() {
-        assertThat(MAPPER.map(planned(false))).isInstanceOf(DashboardModel.Message.class);
+        assertThat(MAPPER.map(planned(false))).isInstanceOf(DashboardModel.NoPlan.class);
+    }
+
+    @Test
+    void theDayModelsCarryTheirCharts() {
+        var plan = (DashboardModel.Plan) MAPPER.map(PlannedDays.TWO_DAYS);
+
+        assertThat(plan.days()).extracting(day -> day.curve().madeAtHour().isPresent()).containsExactly(true, false);
+        assertThat(plan.days()).extracting(day -> day.battery().editable()).containsExactly(true, false);
     }
 }

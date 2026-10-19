@@ -90,7 +90,7 @@ class DashboardViewTest {
     }
 
     @Test
-    void theMainCardReadsAsOneSentence() throws Exception {
+    void theDayCardReadsAsOneSentence() throws Exception {
         var view = shown(Models.plan(Optional.empty()));
 
         var spoken = Fx.call(() -> selectedPage(view).lookup(".main-card").queryAccessibleAttribute(AccessibleAttribute.TEXT));
@@ -99,7 +99,7 @@ class DashboardViewTest {
     }
 
     @Test
-    void gridAdviceComesRightBelowTodaysMainCardAndTheChartsFollow() throws Exception {
+    void gridAdviceComesRightBelowTodaysDayCardAndTheChartsFollow() throws Exception {
         var view = shown(Models.plan(Optional.of(Models.ADVICE)));
 
         var cards = Fx.call(() -> Scenes.all(selectedPage(view)).stream()
@@ -155,7 +155,7 @@ class DashboardViewTest {
     }
 
     @Test
-    void withoutAdviceThereIsNoAdviceCard() throws Exception {
+    void withoutAdviceThereIsNoGridAdviceCard() throws Exception {
         var view = shown(Models.plan(Optional.empty()));
 
         assertThat(Fx.call(() -> view.lookup(".advice-card"))).isNull();
@@ -236,7 +236,7 @@ class DashboardViewTest {
 
     @Test
     void withoutAPlanTheMessageIsShownInsteadOfTheDays() throws Exception {
-        var view = shown(new DashboardModel.Message("No forecast", "Could not reach Open-Meteo", "Forecast: Open-Meteo", false));
+        var view = shown(new DashboardModel.NoPlan("No forecast", "Could not reach Open-Meteo", "Forecast: Open-Meteo", false));
 
         var texts = Fx.call(() -> Scenes.visibleTexts(view));
 

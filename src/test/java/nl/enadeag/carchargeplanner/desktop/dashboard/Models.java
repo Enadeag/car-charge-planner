@@ -5,8 +5,8 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.away.AwayModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Chip;
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Chip.Source;
+import nl.enadeag.carchargeplanner.desktop.dashboard.parts.ChipModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.parts.EnergySource;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.DayKind;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.WindowSpan;
@@ -31,15 +31,15 @@ public final class Models {
 
     public static final DayModel SUNNY_TODAY = new DayModel(TODAY, "Today", "Today", DayKind.SUN, "Charge window", "11:15 – 14:30",
             List.of("Set 10 A (2.3 kW)", "about 7.9 kWh"),
-            List.of(new Chip(Source.SUN, "92 % sun"), new Chip(Source.CAR, "Battery 50 → 74 %"),
-                    new Chip(Source.GRID, "0.6 kWh from the grid")),
+            List.of(new ChipModel(EnergySource.SUN, "92 % sun"), new ChipModel(EnergySource.CAR, "Battery 50 → 74 %"),
+                    new ChipModel(EnergySource.GRID, "0.6 kWh from the grid")),
             "The plan assumes the battery is at 50 %.", "Today: charge window 11:15 to 14:30, 10 A, 92 % sun.",
             curve(3.6, List.of(new WindowSpan(11.25, 14.5)), OptionalDouble.of(8.2)),
             new BatteryModel(50, 74, 30, 80, "50 → 74 %", "min 30", "target 80", true,
                     "Car battery 50 % now, 74 % after charging; minimum 30 %, target 80 %."));
 
     public static final DayModel CLOUDY_TOMORROW = new DayModel(TODAY.plusDays(1), "Sat", "Tomorrow", DayKind.NONE, "No charge window", "",
-            List.of(), List.of(new Chip(Source.CAR, "Battery 62 → 62 %")),
+            List.of(), List.of(new ChipModel(EnergySource.CAR, "Battery 62 → 62 %")),
             "The car needs no charging, or there is too little sun for it.",
             "Tomorrow: no charge window. The car needs no charging, or there is too little sun for it.",
             curve(0.9, List.of(), OptionalDouble.empty()),
@@ -47,7 +47,7 @@ public final class Models {
                     "Car battery 62 % at the start of tomorrow, 62 % after charging; minimum 30 %, target 80 %."));
 
     public static final DayModel GRID_SUNDAY = new DayModel(TODAY.plusDays(2), "Sun", "Sunday", DayKind.GRID, "No good window", "01:00 – 04:00",
-            List.of("Set 16 A (3.7 kW)"), List.of(new Chip(Source.GRID, "11.0 kWh from the grid")),
+            List.of("Set 16 A (3.7 kW)"), List.of(new ChipModel(EnergySource.GRID, "11.0 kWh from the grid")),
             "Charge from the grid to stay above the minimum.", "Sunday: grid charge 01:00 to 04:00, 16 A.",
             curve(2.0, List.of(), OptionalDouble.empty()),
             new BatteryModel(20, 20, 30, 80, "20 → 20 %", "min 30", "target 80", false,

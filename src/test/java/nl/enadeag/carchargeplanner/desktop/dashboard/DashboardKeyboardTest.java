@@ -72,7 +72,7 @@ class DashboardKeyboardTest {
     @EnumSource(ColorScheme.class)
     void theMessageBeforeSetUpAndItsButtonAreReachedTheSameWay(ColorScheme scheme) throws Exception {
         var view = show(scheme);
-        Fx.run(() -> view.show(new DashboardModel.Message("Not set up yet", "Set up the app to see a plan.",
+        Fx.run(() -> view.show(new DashboardModel.NoPlan("Not set up yet", "Set up the app to see a plan.",
                 "Forecast: none", true)));
 
         assertThat(Keyboard.problems(stage.getScene(), view)).isEmpty();

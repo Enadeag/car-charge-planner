@@ -53,7 +53,7 @@ class DashboardContrastTest {
             }
             openAwayEntryWithAProblem(view);
             problems.addAll(Contrast.problemsIn(view));
-            view.show(new DashboardModel.Message("No forecast", "Could not reach Open-Meteo", "Forecast: Open-Meteo", false));
+            view.show(new DashboardModel.NoPlan("No forecast", "Could not reach Open-Meteo", "Forecast: Open-Meteo", false));
             view.applyCss();
             problems.addAll(Contrast.problemsIn(view));
             return problems;

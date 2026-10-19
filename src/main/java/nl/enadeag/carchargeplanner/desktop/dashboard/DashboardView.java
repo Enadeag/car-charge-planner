@@ -8,7 +8,7 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryCard;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayScroll;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayTabs;
-import nl.enadeag.carchargeplanner.desktop.dashboard.day.MainCard;
+import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayCard;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Glyphs;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCard;
@@ -30,8 +30,8 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 /**
- * The dashboard itself: the header, the day tabs with the selected day below them (or a message when there is no
- * plan), and the footer. The popup and the window both show this one component.
+ * The dashboard itself: the header, the day tabs with the selected day below them (or why there is no plan), and the
+ * footer. The popup and the window both show this one component.
  */
 final class DashboardView extends VBox {
 
@@ -50,7 +50,7 @@ final class DashboardView extends VBox {
     /** The away periods for specific days; null until a plan shows. */
     private AwayModel awayPeriods;
     private Runnable setUp = () -> { };
-    /** True once {@link #onSetUp(Runnable)} was called: only then does a message offer set-up. */
+    /** True once {@link #onSetUp(Runnable)} was called: only then does a card without a plan offer set-up. */
     private boolean canOpenSetUp;
 
     /**
@@ -108,10 +108,10 @@ final class DashboardView extends VBox {
                 tabs.show(days);
                 showDay(tabs.getSelectionModel().getSelectedIndex());
             }
-            case DashboardModel.Message message -> {
+            case DashboardModel.NoPlan noPlan -> {
                 days = List.of();
                 tabs.show(days);
-                body.show(page(new MessageCard(message, canOpenSetUp, setUp, messages)));
+                body.show(page(new NoPlanCard(noPlan, canOpenSetUp, setUp, messages)));
                 contentChanged.run();
             }
         }
@@ -192,8 +192,8 @@ final class DashboardView extends VBox {
     }
 
     /**
-     * Lets a message that asks for set-up offer a button that opens it; a message shown already keeps its buttons
-     * until the next one.
+     * Lets the card shown without a plan offer a button that opens set-up when it asks for set-up; a card shown
+     * already keeps its buttons until the next one.
      *
      * @param action opens set-up; called on the JavaFX thread
      */
@@ -209,7 +209,7 @@ final class DashboardView extends VBox {
         footer.hideButtons();
     }
 
-    /** Grid advice goes on today's tab, below its main card; the charts follow, and the away periods last. */
+    /** Grid advice goes on today's tab, below its day card; the charts follow, and the away periods last. */
     private void showDay(int index) {
         if (days.isEmpty()) {
             body.show(null);
@@ -217,7 +217,7 @@ final class DashboardView extends VBox {
             return;
         }
         var day = days.get(Math.clamp(index, 0, days.size() - 1));
-        var page = page(new MainCard(day));
+        var page = page(new DayCard(day));
         if (day == days.getFirst()) {
             if (advice != null) {
                 page.getChildren().add(new GridAdviceCard(advice));

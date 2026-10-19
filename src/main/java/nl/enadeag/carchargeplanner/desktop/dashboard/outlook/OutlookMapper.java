@@ -31,18 +31,18 @@ public final class OutlookMapper {
     /**
      * What the dashboard shows before the first plan.
      *
-     * @return a message that the forecast is being fetched
+     * @return no plan yet, because the forecast is being fetched
      */
     public DashboardModel loading() {
-        return new DashboardModel.Message(messages.text(TextKey.LOADING), "", "");
+        return new DashboardModel.NoPlan(messages.text(TextKey.LOADING), "", "");
     }
 
     /**
      * The outlook in words, without away periods entered for specific days, as set-up's preview shows it.
      *
      * @param outlook the engine's plan, or why there is none; never null
-     * @return a plan with its days, or a message when there is no plan or it has no days; only an outlook with a
-     *     plan has a footer, also when the plan has no days, because only a plan has a forecast to credit
+     * @return a plan with its days, or why there is none when there is no plan or it has no days; only an outlook
+     *     with a plan has a footer, also when the plan has no days, because only a plan has a forecast to credit
      */
     public DashboardModel map(Outlook outlook) {
         return map(outlook, List.of());
@@ -54,21 +54,21 @@ public final class OutlookMapper {
      * @param outlook the engine's plan, or why there is none; never null
      * @param away the stored away periods entered for specific days, in order of their start; may be empty, and those
      *     that ended before the plan was made are left out
-     * @return a plan with its days, or a message when there is no plan or it has no days; only an outlook with a
-     *     plan has a footer, also when the plan has no days, because only a plan has a forecast to credit
+     * @return a plan with its days, or why there is none when there is no plan or it has no days; only an outlook
+     *     with a plan has a footer, also when the plan has no days, because only a plan has a forecast to credit
      */
     public DashboardModel map(Outlook outlook, List<OneOffAwayPeriod> away) {
         return switch (outlook) {
-            case Outlook.Planned planned when planned.days().isEmpty() -> new DashboardModel.Message(
+            case Outlook.Planned planned when planned.days().isEmpty() -> new DashboardModel.NoPlan(
                     messages.text(TextKey.NO_FORECAST), messages.text(TextKey.NO_FORECAST_NO_DAYS), footer(planned));
             case Outlook.Planned planned -> plan(planned, away);
-            case Outlook.NoForecast none -> new DashboardModel.Message(messages.text(TextKey.NO_FORECAST),
+            case Outlook.NoForecast none -> new DashboardModel.NoPlan(messages.text(TextKey.NO_FORECAST),
                     noForecast(none, messages), "");
             case Outlook.NotSetUp _ ->
-                    new DashboardModel.Message(messages.text(TextKey.NOT_SET_UP), messages.text(TextKey.NOT_SET_UP_FIRST),
+                    new DashboardModel.NoPlan(messages.text(TextKey.NOT_SET_UP), messages.text(TextKey.NOT_SET_UP_FIRST),
                             "", true);
             case Outlook.ConfigUnusable unusable ->
-                    new DashboardModel.Message(messages.text(TextKey.NOT_SET_UP), whatToFix(unusable, messages), "");
+                    new DashboardModel.NoPlan(messages.text(TextKey.NOT_SET_UP), whatToFix(unusable, messages), "");
         };
     }
 

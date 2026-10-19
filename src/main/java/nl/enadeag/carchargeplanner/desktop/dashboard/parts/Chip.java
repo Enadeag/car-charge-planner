@@ -1,20 +1,21 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.parts;
 
-/**
- * A short figure about one source of energy: "92 % sun".
- *
- * @param source where the energy in the figure comes from or goes to
- * @param text the figure in words, such as "92 % sun" or "Battery 50 → 74 %"
- */
-public record Chip(Source source, String text) {
+import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
 
-    /** Colour means source: sun amber, grid blue, car and battery green. */
-    public enum Source {
-        /** Solar energy, amber. */
-        SUN,
-        /** Energy from the grid, blue. */
-        GRID,
-        /** The car and its battery, green. */
-        CAR
+/** A {@link ChipModel} on screen: its source's glyph and its text, on its source's soft background. */
+public final class Chip extends HBox {
+
+    /**
+     * Makes the chip; it never gets narrower than its text.
+     *
+     * @param chip the figure and its source
+     */
+    public Chip(ChipModel chip) {
+        var label = new Label(chip.text());
+        label.setMinWidth(USE_PREF_SIZE);
+        getChildren().setAll(Glyphs.of(chip.source()), label);
+        getStyleClass().addAll("chip", Glyphs.styleClass(chip.source()));
+        setMinWidth(USE_PREF_SIZE);
     }
 }

@@ -11,29 +11,29 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 /** Why there is no plan to show: still fetching, not set up, or no forecast; before the first set-up, a way into it. */
-final class MessageCard extends VBox {
+final class NoPlanCard extends VBox {
 
     /**
      * Makes the card.
      *
-     * @param message what to say; an empty detail is left out
-     * @param canOpenSetUp true when the dashboard can open set-up; the card offers it only then, when the message asks
-     *     for set-up
+     * @param noPlan what to say; an empty detail is left out
+     * @param canOpenSetUp true when the dashboard can open set-up; the card offers it only then, when it asks for
+     *     set-up
      * @param setUp opens set-up
      * @param messages the texts, in the owner's language
      */
-    MessageCard(DashboardModel.Message message, boolean canOpenSetUp, Runnable setUp, Messages messages) {
-        var text = new VBox(paragraph(message.headline(), "message-headline"));
-        if (!message.detail().isEmpty()) {
-            text.getChildren().add(paragraph(message.detail(), "message-detail"));
+    NoPlanCard(DashboardModel.NoPlan noPlan, boolean canOpenSetUp, Runnable setUp, Messages messages) {
+        var text = new VBox(paragraph(noPlan.headline(), "message-headline"));
+        if (!noPlan.detail().isEmpty()) {
+            text.getChildren().add(paragraph(noPlan.detail(), "message-detail"));
         }
         text.setAccessibleRole(AccessibleRole.TEXT);
-        text.setAccessibleText(message.detail().isEmpty() ? message.headline()
-                : message.headline() + ". " + message.detail());
+        text.setAccessibleText(noPlan.detail().isEmpty() ? noPlan.headline()
+                : noPlan.headline() + ". " + noPlan.detail());
         text.setFocusTraversable(true);
         text.getStyleClass().add("message-text");
         getChildren().add(text);
-        if (message.offersSetUp() && canOpenSetUp) {
+        if (noPlan.offersSetUp() && canOpenSetUp) {
             var button = new Button(messages.text(TextKey.START_SETUP));
             button.getStyleClass().add("accent");
             button.setOnAction(_ -> setUp.run());

@@ -3,21 +3,21 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.day;
 import static nl.enadeag.carchargeplanner.desktop.theme.Labels.line;
 import static nl.enadeag.carchargeplanner.desktop.theme.Labels.paragraph;
 
+import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Chip;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Glyphs;
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.SourceChip;
 import javafx.scene.AccessibleRole;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 
-/** A day's main card: its charge window and what to set, or why there is none. A screen reader reads it as one sentence. */
-public final class MainCard extends VBox {
+/** A day's card: its charge window and what to set, or why there is none. A screen reader reads it as one sentence. */
+public final class DayCard extends VBox {
 
     /**
      * Makes the card for one day.
      *
      * @param day the day to show; its empty texts and lists are left out of the card
      */
-    public MainCard(DayModel day) {
+    public DayCard(DayModel day) {
         getChildren().add(line(day.title() + " · " + day.heading(), "card-label"));
         if (!day.hero().isEmpty()) {
             getChildren().add(line(day.hero(), "hero"));
@@ -29,7 +29,7 @@ public final class MainCard extends VBox {
             getChildren().add(facts);
         }
         var chips = new FlowPane();
-        day.chips().forEach(chip -> chips.getChildren().add(new SourceChip(chip)));
+        day.chips().forEach(chip -> chips.getChildren().add(new Chip(chip)));
         chips.getStyleClass().add("chips");
         getChildren().add(chips);
         if (!day.note().isEmpty()) {

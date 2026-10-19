@@ -1,10 +1,8 @@
-package nl.enadeag.carchargeplanner.desktop.dashboard.day;
+package nl.enadeag.carchargeplanner.desktop.dashboard.solar;
 
-import nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryModel;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.WindowSpan;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Step;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Tick;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.WindowSpan;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.Outlook;
@@ -23,8 +21,8 @@ import java.util.OptionalDouble;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/** The days of a plan as the solar chart and the battery bar draw them, in the time zone of the owner's home. */
-final class ChartMapper {
+/** The days of a plan as the solar chart draws them, in the time zone of the owner's home. */
+public final class SolarChartMapper {
 
     /** Less power than this counts as no sun: a forecast's dawn and dusk. */
     private static final double SUN_KW = 0.01;
@@ -44,11 +42,11 @@ final class ChartMapper {
     /**
      * Makes the mapper for one plan.
      *
-     * @param planned the plan whose time zone, moment of making, house use, charge levels and days the charts show;
-     *     all days share one power scale, so they can be compared
+     * @param planned the plan whose time zone, moment of making, house use and days the charts show; all days share
+     *     one power scale, so they can be compared
      * @param messages the texts, numbers and times, in the owner's language
      */
-    ChartMapper(Outlook.Planned planned, Messages messages) {
+    public SolarChartMapper(Outlook.Planned planned, Messages messages) {
         this.planned = planned;
         this.messages = messages;
         this.zone = planned.zone();
@@ -65,7 +63,7 @@ final class ChartMapper {
      * @return the chart's data, showing the hours with sun and an hour on either side; 06:00 to 20:00 for a day
      *     without sun
      */
-    SolarChartModel curve(DayPlan day) {
+    public SolarChartModel map(DayPlan day) {
         var start = day.date().atStartOfDay(zone);
         var shown = shownHours(day, start);
         double from = shown.from();
@@ -84,29 +82,6 @@ final class ChartMapper {
                 : OptionalDouble.empty();
         return new SolarChartModel(from, to, scaleKw, messages.text(TextKey.CHART_SCALE, messages.whole(scaleKw)), steps, planned.baseloadKw(),
                 windows, madeAtHour, ticks(day.date(), start, from, to), spoken(day, madeAtHour.isPresent()));
-    }
-
-    /**
-     * A day's battery: its level at the start and after charging, with the minimum and target.
-     *
-     * @param day one of the plan's days
-     * @return the bar's data; only today's level can be entered
-     */
-    BatteryModel battery(DayPlan day) {
-        double level = day.startLevelPct().value();
-        double after = day.levelAfterChargingPct().value();
-        double minimum = planned.minimumPct().value();
-        double target = planned.targetPct().value();
-        boolean isToday = day.date().equals(today);
-        var spoken = isToday
-                ? sentences(messages.text(TextKey.BATTERY_SPOKEN_TODAY, pct(level), pct(after), pct(minimum), pct(target)),
-                        planned.batteryAssumed() ? messages.text(TextKey.BATTERY_ASSUMED) : "")
-                : messages.text(TextKey.BATTERY_SPOKEN_DAY, pct(level), messages.inSentence(day.date(), today),
-                        pct(after), pct(minimum), pct(target));
-        return new BatteryModel(level, after, minimum, target,
-                messages.text(TextKey.BATTERY_LEVELS, pct(level), pct(after)),
-                messages.text(TextKey.BATTERY_MINIMUM, pct(minimum)), messages.text(TextKey.BATTERY_TARGET, pct(target)),
-                isToday, spoken);
     }
 
     /**
@@ -150,10 +125,6 @@ final class ChartMapper {
                 .collect(Collectors.joining(", ")));
         var now = showsNow ? messages.text(TextKey.CHART_SPOKEN_NOW, messages.time(planned.madeAt(), zone)) : "";
         return sentences(chart, windows, now);
-    }
-
-    private String pct(double value) {
-        return messages.whole(value);
     }
 
     private static String sentences(String... sentences) {

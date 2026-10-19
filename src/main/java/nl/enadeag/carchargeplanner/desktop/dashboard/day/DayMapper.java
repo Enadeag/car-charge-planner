@@ -1,8 +1,10 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.day;
 
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Chip;
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Chip.Source;
+import nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryMapper;
+import nl.enadeag.carchargeplanner.desktop.dashboard.parts.ChipModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.parts.EnergySource;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.DayKind;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartMapper;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.Outlook;
@@ -31,7 +33,8 @@ public final class DayMapper {
      * advice.
      */
     private final LocalDate gridDay;
-    private final ChartMapper charts;
+    private final SolarChartMapper charts;
+    private final BatteryMapper batteries;
 
     /**
      * Makes the mapper for one plan.
@@ -47,7 +50,8 @@ public final class DayMapper {
         this.todaysNote = planned.batteryAssumed()
                 ? messages.text(TextKey.DAY_BATTERY_ASSUMED, messages.whole(planned.batteryLevelPct().value())) : "";
         this.gridDay = planned.gridAdvice().map(GridAdvice::day).orElse(null);
-        this.charts = new ChartMapper(planned, messages);
+        this.charts = new SolarChartMapper(planned, messages);
+        this.batteries = new BatteryMapper(planned, messages);
     }
 
     /**
@@ -71,17 +75,18 @@ public final class DayMapper {
         var facts = List.of(
                 messages.text(TextKey.DAY_SET, window.amps(), messages.decimal(window.powerKw())),
                 messages.text(TextKey.DAY_ENERGY, messages.decimal(window.solarKwh() + window.importKwh())));
-        var chips = new ArrayList<Chip>();
-        chips.add(new Chip(Source.SUN, messages.text(TextKey.DAY_SUN_SHARE, sunPct)));
+        var chips = new ArrayList<ChipModel>();
+        chips.add(new ChipModel(EnergySource.SUN, messages.text(TextKey.DAY_SUN_SHARE, sunPct)));
         chips.add(batteryChip(day));
         if (window.importKwh() >= NO_GRID_KWH) {
-            chips.add(new Chip(Source.GRID, messages.text(TextKey.DAY_FROM_GRID, messages.decimal(window.importKwh()))));
+            chips.add(new ChipModel(EnergySource.GRID,
+                    messages.text(TextKey.DAY_FROM_GRID, messages.decimal(window.importKwh()))));
         }
         var spoken = messages.text(TextKey.DAY_SPOKEN, title, messages.time(window.start(), zone),
                 messages.time(window.end(), zone), window.amps(), sunPct);
         var note = sentences(laterWindows(day), noteFor(day));
         return new DayModel(day.date(), messages.tab(day.date(), today), title, DayKind.SUN, messages.text(TextKey.DAY_WINDOW),
-                span(window), facts, chips, note, spoken, charts.curve(day), charts.battery(day));
+                span(window), facts, chips, note, spoken, charts.map(day), batteries.map(day));
     }
 
     private DayModel withoutWindow(DayPlan day) {
@@ -95,11 +100,12 @@ public final class DayMapper {
         var title = messages.title(day.date(), today);
         var spoken = title + ": " + heading.toLowerCase(messages.locale()) + ". " + why;
         return new DayModel(day.date(), messages.tab(day.date(), today), title, kind, heading, "", List.of(), List.of(batteryChip(day)),
-                sentences(why, noteFor(day)), spoken, charts.curve(day), charts.battery(day));
+                sentences(why, noteFor(day)), spoken, charts.map(day), batteries.map(day));
     }
 
-    private Chip batteryChip(DayPlan day) {
-        return new Chip(Source.CAR, messages.text(TextKey.DAY_BATTERY, messages.whole(day.startLevelPct().value()),
+    private ChipModel batteryChip(DayPlan day) {
+        return new ChipModel(EnergySource.CAR, messages.text(TextKey.DAY_BATTERY,
+                messages.whole(day.startLevelPct().value()),
                 messages.whole(day.levelAfterChargingPct().value())));
     }
 

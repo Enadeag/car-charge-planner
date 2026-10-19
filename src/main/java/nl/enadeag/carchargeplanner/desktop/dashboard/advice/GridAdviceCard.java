@@ -3,12 +3,12 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.advice;
 import static nl.enadeag.carchargeplanner.desktop.theme.Labels.paragraph;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Chip;
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Chip.Source;
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.SourceChip;
+import nl.enadeag.carchargeplanner.desktop.dashboard.parts.ChipModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.parts.EnergySource;
 import javafx.scene.AccessibleRole;
 import javafx.scene.layout.VBox;
 
-/** Grid advice, below today's main card, when the sun will not keep the car above its minimum. */
+/** Grid advice, below today's day card, when the sun will not keep the car above its minimum. */
 public final class GridAdviceCard extends VBox {
 
     /**
@@ -18,7 +18,7 @@ public final class GridAdviceCard extends VBox {
      */
     public GridAdviceCard(GridAdviceModel advice) {
         getChildren().setAll(
-                new SourceChip(new Chip(Source.GRID, advice.label())),
+                new Chip(new ChipModel(EnergySource.GRID, advice.label())),
                 paragraph(advice.title(), "advice-title"),
                 paragraph(advice.detail(), "advice-detail"));
         getStyleClass().addAll("card", "advice-card", "grid");

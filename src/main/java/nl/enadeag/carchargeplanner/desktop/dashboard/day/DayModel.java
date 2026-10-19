@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.day;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryModel;
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Chip;
+import nl.enadeag.carchargeplanner.desktop.dashboard.parts.ChipModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.DayKind;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel;
 import java.time.LocalDate;
@@ -31,7 +31,7 @@ public record DayModel(
         String heading,
         String hero,
         List<String> facts,
-        List<Chip> chips,
+        List<ChipModel> chips,
         String note,
         String spoken,
         SolarChartModel curve,

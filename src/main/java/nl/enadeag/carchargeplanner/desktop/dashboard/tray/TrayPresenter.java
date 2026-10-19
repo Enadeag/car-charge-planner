@@ -13,7 +13,7 @@ import nl.enadeag.carchargeplanner.engine.Outlook;
  *
  * <p>Its methods may be called from any thread; the tray is always told in the order they were called.
  */
-public final class TrayTexts {
+public final class TrayPresenter {
 
     private final Tray tray;
     private final LanguageChoice language;
@@ -27,7 +27,7 @@ public final class TrayTexts {
      * @param tray the tray whose menu and tooltip to keep up to date; its menu labels and status are set here
      * @param language the language the texts are in, followed while the app runs; never null
      */
-    public TrayTexts(Tray tray, LanguageChoice language) {
+    public TrayPresenter(Tray tray, LanguageChoice language) {
         this.tray = tray;
         this.language = language;
         tray.setMenuLabels(plainMenuLabels(language.messages()));

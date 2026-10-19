@@ -49,16 +49,16 @@ public sealed interface DashboardModel {
      * @param footer the forecast's source and freshness
      * @param offersSetUp true when set-up is what the owner should do next, as before the first set-up
      */
-    record Message(String headline, String detail, String footer, boolean offersSetUp) implements DashboardModel {
+    record NoPlan(String headline, String detail, String footer, boolean offersSetUp) implements DashboardModel {
 
         /**
-         * A message that leaves what to do to the owner.
+         * No plan, leaving what to do to the owner.
          *
          * @param headline the situation in a few words, such as "No forecast"
          * @param detail the reason, such as "Could not reach Open-Meteo"; may be empty
          * @param footer the forecast's source and freshness
          */
-        Message(String headline, String detail, String footer) {
+        NoPlan(String headline, String detail, String footer) {
             this(headline, detail, footer, false);
         }
     }

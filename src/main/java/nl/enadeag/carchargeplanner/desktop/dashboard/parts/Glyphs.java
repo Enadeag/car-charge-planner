@@ -1,6 +1,5 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.parts;
 
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Chip.Source;
 import java.util.Locale;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -25,7 +24,7 @@ public final class Glyphs {
      * @param source the source to draw
      * @return a new 16 px glyph, coloured by dashboard.css
      */
-    static Node of(Source source) {
+    static Node of(EnergySource source) {
         return switch (source) {
             case SUN -> glyph("sun", sun());
             case GRID -> glyph("grid", bolt());
@@ -41,8 +40,8 @@ public final class Glyphs {
      */
     public static Node of(DayKind kind) {
         return switch (kind) {
-            case SUN -> of(Source.SUN);
-            case GRID -> of(Source.GRID);
+            case SUN -> of(EnergySource.SUN);
+            case GRID -> of(EnergySource.GRID);
             case NONE -> glyph("none", ring());
         };
     }
@@ -62,7 +61,7 @@ public final class Glyphs {
     /**
      * The CSS class of a source or a kind of day.
      *
-     * @param kind a {@link Source} or a {@link DayKind}
+     * @param kind a {@link EnergySource} or a {@link DayKind}
      * @return its name in lower case: "sun", "grid", "car", "none"
      */
     public static String styleClass(Enum<?> kind) {
