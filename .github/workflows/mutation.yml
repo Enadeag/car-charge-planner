@@ -11,8 +11,8 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - src/main/java/io/github/enadeag/carchargeplanner/engine/**
-      - src/test/java/io/github/enadeag/carchargeplanner/engine/**
+      - src/main/java/nl/enadeag/carchargeplanner/engine/**
+      - src/test/java/nl/enadeag/carchargeplanner/engine/**
 
 permissions:
   contents: read

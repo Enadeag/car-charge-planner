@@ -1,0 +1,29 @@
+package nl.enadeag.carchargeplanner.engine.forecast;
+
+import nl.enadeag.carchargeplanner.engine.config.ProviderId;
+import java.time.Instant;
+import java.util.Optional;
+
+/**
+ * Where a forecast came from: who made it, the credit their terms ask for, and how fresh it is.
+ *
+ * @param providerId the provider that made it
+ * @param providerName its name
+ * @param attribution the credit its terms ask for
+ * @param fetchedAt when it was fetched
+ * @param freshness whether it was fetched just now or comes from the cache, and then whether a refresh was due
+ * @param providerRole whether the provider that made it is the primary or the fallback
+ * @param primaryName the name of the provider that was asked first; empty when it was the primary
+ * @param cooldownUntil the provider that made it refuses requests until then; empty when the provider is not cooling
+ *     down
+ */
+public record ForecastSource(
+        ProviderId providerId,
+        String providerName,
+        String attribution,
+        Instant fetchedAt,
+        Freshness freshness,
+        ProviderRole providerRole,
+        String primaryName,
+        Optional<Instant> cooldownUntil) {
+}

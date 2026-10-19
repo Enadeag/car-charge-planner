@@ -297,7 +297,7 @@ and [ArchUnit](https://www.archunit.org) (both Apache-2.0).
 
 The weather and solar data come from the providers above under their own terms. The recorded answers the tests
 use are credited in
-[`src/test/resources/.../forecast/providers/NOTICE.md`](src/test/resources/io/github/enadeag/carchargeplanner/engine/forecast/providers/NOTICE.md).
+[`src/test/resources/.../forecast/providers/NOTICE.md`](src/test/resources/nl/enadeag/carchargeplanner/engine/forecast/providers/NOTICE.md).
 
 ## Attribution
 

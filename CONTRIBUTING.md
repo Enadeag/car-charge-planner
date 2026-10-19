@@ -306,7 +306,7 @@ Tuesday of January, April, July and October. After each one:
 
 ## Code layout
 
-Everything is in the package `io.github.enadeag.carchargeplanner`, under `src/main/java/`; the tests are in
+Everything is in the package `nl.enadeag.carchargeplanner`, under `src/main/java/`; the tests are in
 `src/test/java/`, in the same packages.
 
 | Package | What it holds |
@@ -388,7 +388,7 @@ The app shows a test notification, the same as an announcement but for its text.
 ## Adding a language
 
 Every text the app shows is translatable, and a language is one file. The texts are in
-`src/main/resources/io/github/enadeag/carchargeplanner/desktop/text/`, one file per language: `messages_en.properties` for
+`src/main/resources/nl/enadeag/carchargeplanner/desktop/text/`, one file per language: `messages_en.properties` for
 English, `messages_nl.properties` for Dutch. They are Java resource bundles in UTF-8 (type `é` and `ü` as they are, no
 `\u00e9` escapes). Each line is a key, the same in every language, and its text:
 

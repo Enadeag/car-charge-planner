@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>io.github.enadeag</groupId>
+  <groupId>nl.enadeag</groupId>
   <artifactId>car-charge-planner</artifactId>
   <version>0.4.0-SNAPSHOT</version>
   <name>Car charge planner</name>
@@ -12,7 +12,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>25</maven.compiler.release>
-    <main.class>io.github.enadeag.carchargeplanner.Main</main.class>
+    <main.class>nl.enadeag.carchargeplanner.Main</main.class>
     <!-- surefire's test class order; see the surefire plugin below -->
     <surefire.runOrder>alphabetical</surefire.runOrder>
     <!-- left out of every build: the tests that reach the network, which the live profile runs, and the one that
@@ -175,7 +175,7 @@
         <includes>
           <include>car-charge-planner.svg</include>
         </includes>
-        <targetPath>io/github/enadeag/carchargeplanner/desktop/system/icons</targetPath>
+        <targetPath>nl/enadeag/carchargeplanner/desktop/system/icons</targetPath>
       </resource>
     </resources>
     <plugins>
@@ -425,7 +425,7 @@
                 </goals>
                 <configuration>
                   <includes>
-                    <include>io/github/enadeag/carchargeplanner/engine/**</include>
+                    <include>nl/enadeag/carchargeplanner/engine/**</include>
                   </includes>
                   <rules>
                     <rule>
@@ -453,7 +453,7 @@
                 </goals>
                 <configuration>
                   <includes>
-                    <include>io/github/enadeag/carchargeplanner/desktop/**</include>
+                    <include>nl/enadeag/carchargeplanner/desktop/**</include>
                   </includes>
                   <rules>
                     <rule>
@@ -481,7 +481,7 @@
                 </goals>
                 <configuration>
                   <includes>
-                    <include>io/github/enadeag/carchargeplanner/instance/**</include>
+                    <include>nl/enadeag/carchargeplanner/instance/**</include>
                   </includes>
                   <rules>
                     <rule>
@@ -510,13 +510,13 @@
                 <configuration>
                   <!-- the root package's own classes, without its subpackages and without the composition root -->
                   <includes>
-                    <include>io/github/enadeag/carchargeplanner/*.class</include>
+                    <include>nl/enadeag/carchargeplanner/*.class</include>
                   </includes>
                   <excludes>
-                    <exclude>io/github/enadeag/carchargeplanner/Main*.class</exclude>
-                    <exclude>io/github/enadeag/carchargeplanner/DesktopApp*.class</exclude>
-                    <exclude>io/github/enadeag/carchargeplanner/Host*.class</exclude>
-                    <exclude>io/github/enadeag/carchargeplanner/*Parts*.class</exclude>
+                    <exclude>nl/enadeag/carchargeplanner/Main*.class</exclude>
+                    <exclude>nl/enadeag/carchargeplanner/DesktopApp*.class</exclude>
+                    <exclude>nl/enadeag/carchargeplanner/Host*.class</exclude>
+                    <exclude>nl/enadeag/carchargeplanner/*Parts*.class</exclude>
                   </excludes>
                   <rules>
                     <rule>
@@ -544,7 +544,7 @@
                 </goals>
                 <configuration>
                   <includes>
-                    <include>io/github/enadeag/carchargeplanner/platform/linux/**</include>
+                    <include>nl/enadeag/carchargeplanner/platform/linux/**</include>
                   </includes>
                   <rules>
                     <rule>
@@ -617,10 +617,10 @@
                 <id>engine</id>
                 <configuration>
                   <targetClasses>
-                    <param>io.github.enadeag.carchargeplanner.engine.*</param>
+                    <param>nl.enadeag.carchargeplanner.engine.*</param>
                   </targetClasses>
                   <targetTests>
-                    <param>io.github.enadeag.carchargeplanner.engine.*</param>
+                    <param>nl.enadeag.carchargeplanner.engine.*</param>
                   </targetTests>
                   <reportsDirectory>${project.build.directory}/pit-reports/engine</reportsDirectory>
                   <!-- a few points below the share of mutants killed when it was set (97 %) -->
@@ -634,30 +634,30 @@
                        models, chart and popup geometry, the app settings, the logic of the Settings and set-up forms,
                        the tray icon's drawing and the texts -->
                   <targetClasses>
-                    <param>io.github.enadeag.carchargeplanner.desktop.app.AppSettings*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.app.Background*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.app.DisplayMode*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.app.Units*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.AwayMapper*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.BatteryModel*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.ChartMapper*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.CurvePoints*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.DayMapper*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.GridAdviceMapper*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.OutlookMapper*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.PlotArea*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.PopupPlacement*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.SolarCurveModel*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.TrayStatusMapper*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.dashboard.TrayTexts*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.settings.SetUpOffer*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.settings.WindowSize*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.settings.form.*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.system.StatusIcon*</param>
-                    <param>io.github.enadeag.carchargeplanner.desktop.text.*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.app.AppSettings*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.app.Background*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.app.DisplayMode*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.app.Units*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.AwayMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.BatteryModel*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.ChartMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.CurvePoints*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.DayMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.GridAdviceMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.OutlookMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.PlotArea*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.PopupPlacement*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.SolarCurveModel*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.TrayStatusMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.TrayTexts*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.settings.SetUpOffer*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.settings.WindowSize*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.settings.form.*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.system.StatusIcon*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.text.*</param>
                   </targetClasses>
                   <targetTests>
-                    <param>io.github.enadeag.carchargeplanner.desktop.*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.*</param>
                   </targetTests>
                   <reportsDirectory>${project.build.directory}/pit-reports/desktop</reportsDirectory>
                   <!-- a few points below the share of mutants killed when it was set (92 %) -->

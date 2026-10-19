@@ -29,9 +29,9 @@ jlink --module-path target/javafx @src/packaging/jlink.args --output target/runt
 jpackage --type app-image --dest target/dist \
   --name car-charge-planner --app-version "$version" \
   --input target/input --main-jar car-charge-planner.jar \
-  --main-class io.github.enadeag.carchargeplanner.Main \
+  --main-class nl.enadeag.carchargeplanner.Main \
   --runtime-image target/runtime \
-  --icon src/main/resources/io/github/enadeag/carchargeplanner/desktop/system/icons/icon-256.png \
+  --icon src/main/resources/nl/enadeag/carchargeplanner/desktop/system/icons/icon-256.png \
   --java-options "--enable-native-access=javafx.graphics"
 
 # The licences: the app's own and one file per library; the runtime's are in lib/runtime/legal.
