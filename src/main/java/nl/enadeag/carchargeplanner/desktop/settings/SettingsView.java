@@ -371,8 +371,8 @@ final class SettingsView extends BorderPane {
 
     /** Shows what a Save came to, and moves the focus to what says so. */
     private void saved(SaveOutcome result) {
-        if (result instanceof SaveOutcome.StartAtLoginRefused refusal) {
-            form.showStartAtLoginFailure(refusal.detail());
+        if (result instanceof SaveOutcome.StartAtLoginRefused(var detail)) {
+            form.showStartAtLoginFailure(detail);
         }
         showOutcome(result);
         categories.refresh(); // before the focus moves there: the marked category says it has a problem
