@@ -25,20 +25,25 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * The README's pictures are made by code, so they cannot fall behind the screens unnoticed: every picture the README
- * shows is made, in light and in dark, the same on every run, and a file is written only when its picture changed.
+ * The documentation's pictures are made by code, so they cannot fall behind the screens unnoticed: every picture the
+ * README and the pages in {@code docs/} show is made, in light and in dark, the same on every run, and a file is
+ * written only when its picture changed.
  */
 @FxTest
 class ReadmePicturesTest {
 
-    private static final Pattern README_PICTURE = Pattern.compile("docs/screenshots/java/([a-z0-9-]+\\.png)");
+    /** The folder whose pages show pictures besides the README; its subfolders hold history and are left out. */
+    private static final Path DOCS = Path.of("docs");
+
+    /** A picture a page names by a relative path, in an HTML attribute or a Markdown image; not a web address. */
+    private static final Pattern PICTURE = Pattern.compile("[\"(]([^\"()\\s:]+\\.png)[\")]");
 
     @Test
-    void makesEveryPictureTheReadmeShowsInLightAndDarkAndTheSameAgain(@TempDir Path into, @TempDir Path work)
+    void makesEveryPictureTheDocumentationShowsInLightAndDarkAndTheSameAgain(@TempDir Path into, @TempDir Path work)
             throws Exception {
         var written = ReadmePictures.make(into, Files.createDirectory(work.resolve("first")));
 
-        assertThat(written).containsAll(readmePictures());
+        assertThat(written).containsAll(shownPictures());
         assertThat(written).hasSize(2 * ReadmePictures.PICTURES.size());
         for (var name : ReadmePictures.PICTURES.keySet()) {
             var light = Pictures.read(into.resolve(ReadmePictures.fileName(name, ColorScheme.LIGHT)));
@@ -85,19 +90,30 @@ class ReadmePicturesTest {
     /** Makes the pictures in the repository again; only {@code ./mvnw test -Pscreenshots} runs it. */
     @Test
     @Tag("screenshots")
-    void makeTheReadmePictures(@TempDir Path work) throws Exception {
+    void makeThePictures(@TempDir Path work) throws Exception {
         var written = ReadmePictures.make(ReadmePictures.FOLDER, work);
         System.out.println(written.isEmpty() ? "No picture changed." : "Changed: " + String.join(", ", written));
     }
 
-    /** The pictures the README shows. */
-    private static List<String> readmePictures() throws IOException {
-        var matcher = README_PICTURE.matcher(Files.readString(Path.of("README.md")));
-        var found = new ArrayList<String>();
-        while (matcher.find()) {
-            found.add(matcher.group(1));
+    /** The file names of the pictures the README and the pages in {@code docs/} show; each must be in the folder. */
+    private static List<String> shownPictures() throws IOException {
+        var pages = new ArrayList<Path>();
+        pages.add(Path.of("README.md"));
+        try (Stream<Path> files = Files.list(DOCS)) {
+            files.filter(file -> file.getFileName().toString().endsWith(".md")).sorted().forEach(pages::add);
         }
-        assertThat(found).isNotEmpty();
+        var found = new ArrayList<String>();
+        for (var page : pages) {
+            var folder = page.toAbsolutePath().getParent();
+            var matcher = PICTURE.matcher(Files.readString(page));
+            while (matcher.find()) {
+                var picture = folder.resolve(matcher.group(1)).normalize();
+                assertThat(picture.getParent()).as(page + " names " + matcher.group(1))
+                        .isEqualTo(ReadmePictures.FOLDER.toAbsolutePath());
+                found.add(picture.getFileName().toString());
+            }
+        }
+        assertThat(found).as("the pages show pictures").isNotEmpty();
         return found;
     }
 

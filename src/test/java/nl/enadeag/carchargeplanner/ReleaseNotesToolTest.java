@@ -57,7 +57,7 @@ class ReleaseNotesToolTest {
         assertThat(run.out()).doesNotContain("Something new", "A candidate", "Windows.\n")
                 .contains("`car-charge-planner-0.3.0.exe`", "`car-charge-planner-0.3.0-linux.tar.gz`",
                         "`car-charge-planner-0.3.0-linux.cdx.json`", "`car-charge-planner-0.3.0-windows.cdx.json`",
-                        "/blob/v0.3.0/CHANGELOG.md");
+                        "/blob/v0.3.0/CHANGELOG.md", "/blob/v0.3.0/docs/install.md");
     }
 
     @Test

@@ -31,10 +31,11 @@ as usual.
 ./mvnw compile exec:exec -Dapp.args="--config=docs/example-engine.json"  # run it with the example system
 ```
 
-Without `--config=` the app uses your own `engine.json` (see the README, Where things are kept), and without one it
-opens set-up. `docs/example-engine.json` shows every setting, for a made-up place; its `forecast` section names the
-forecast provider and the fallback provider, and an optional `typical` section lists the values that are typical
-values, such as `"system": ["CAR_BATTERY"]`.
+Without `--config=` the app uses your own `engine.json` (see
+[What is kept, and where](docs/privacy.md#what-is-kept-and-where)), and without one it opens set-up.
+`docs/example-engine.json` shows every setting, for a made-up place; its `forecast` section names the forecast
+provider and the fallback provider, and an optional `typical` section lists the values that are typical values, such
+as `"system": ["CAR_BATTERY"]`.
 
 The app also takes the commands `quit` (asks the running app to quit), `test-notification` (asks the running app to
 show a test notification), `start-at-login on` and `start-at-login off`,
@@ -179,11 +180,11 @@ On a real desktop, with the packaged app (see [Packaging](#packaging)):
 - [ ] Switching the system between light and dark while the app runs switches the app.
 - [ ] A second start shows the running app's dashboard and ends.
 
-## Pictures for the README
+## Pictures in the documentation
 
-The pictures the README shows (`docs/screenshots/java/`) are made by code, each in light and in dark, as
-`<name>-light.png` and `<name>-dark.png`. After a change to what a pictured screen shows, make them again and commit
-the ones that changed:
+The pictures that the README and the pages in `docs/` show (`docs/screenshots/java/`) are made by code, each in light
+and in dark, as `<name>-light.png` and `<name>-dark.png`. After a change to what a pictured screen shows, make them
+again and commit the ones that changed:
 
 ```bash
 ./mvnw test -Pscreenshots    # prints which pictures changed, or "No picture changed."
@@ -193,10 +194,11 @@ It runs like the other JavaFX tests: offscreen on JavaFX's headless platform, in
 The screens show the example home of the tests, in English: `docs/example-engine.json`, the made-up place Zonnedorp,
 a forecast made up in the code and a fixed date and time, so the pictures are the same on every run. A file is
 written only when its pixels change, and holds nothing but the pixels, so a run without a change leaves git clean.
-`ReadmePictures` lists the pictures, and `DashboardPictures` and `SettingsPictures` make them; `ReadmePicturesTest`
-makes them all into a temporary folder in every build, and checks that each picture the README names is made and that
-a second run changes nothing. A new picture goes in `ReadmePictures`, and in the README as a `<picture>` with its
-dark file as the `prefers-color-scheme: dark` source.
+`ReadmePictures` lists the pictures, and `DashboardPictures`, `SetUpPictures` and `SettingsPictures` make them;
+`ReadmePicturesTest` makes them all into a temporary folder in every build, and checks that each picture the README
+and the `docs/*.md` pages name is made and that a second run changes nothing. A new picture goes in `ReadmePictures`,
+and in the page that shows it as a `<picture>` with its dark file as the `prefers-color-scheme: dark` source; a page
+in `docs/` names it relative to itself, as `screenshots/java/<name>-light.png`.
 
 The text is drawn in JavaFX's system font, which differs per system (Noto Sans on most Linux desktops, Segoe UI on
 Windows): make the pictures on Linux with Noto Sans, or a run changes every picture.
@@ -206,7 +208,8 @@ Windows): make the pictures on Linux with Noto Sans, or a run changes every pict
 Declare every library the code uses directly in `pom.xml`, also one that already comes in through another
 library: `./mvnw verify` runs `dependency:analyze` and fails on a library that is used but not declared, or declared
 but not used. A library that is only found at run time and never named in the code (such as the SLF4J binding) goes
-in the list of ignored ones there, with the reason. Keep the third-party table in the README up to date.
+in the list of ignored ones there, with the reason. Keep the third-party table in
+[docs/privacy.md](docs/privacy.md#third-party-software) up to date.
 
 Each library the app brings at run time, also one that comes in through another library, needs its licence text in
 `src/packaging/legal/`, which the packages carry in their `legal` folder: one file per component, starting with its

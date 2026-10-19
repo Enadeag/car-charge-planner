@@ -48,8 +48,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 
 /**
- * The README's pictures of the dashboard: the example home's plan, made by the engine from a forecast and a time that
- * never change, so the pictures are the same on every run.
+ * The documentation's pictures of the dashboard: the example home's plan, made by the engine from a forecast and a
+ * time that never change, so the pictures are the same on every run.
  */
 public final class DashboardPictures {
 

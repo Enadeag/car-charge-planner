@@ -27,8 +27,8 @@ import javafx.stage.Stage;
 import javax.imageio.ImageIO;
 
 /**
- * Takes pictures of the app's screens on the headless platform, for the README, and writes them as PNG files that
- * change only when their pixels do.
+ * Takes pictures of the app's screens on the headless platform, for the documentation, and writes them as PNG files
+ * that change only when their pixels do.
  */
 public final class Pictures {
 

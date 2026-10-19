@@ -13,12 +13,13 @@ import javafx.application.ColorScheme;
 import javafx.scene.image.Image;
 
 /**
- * Every picture the README shows, each in light and in dark, as {@code <name>-light.png} and {@code <name>-dark.png}.
- * {@code ./mvnw test -Pscreenshots} makes them again in {@link #FOLDER} (CONTRIBUTING.md, Pictures for the README).
+ * Every picture the README and the pages in {@code docs/} show, each in light and in dark, as {@code <name>-light.png}
+ * and {@code <name>-dark.png}. {@code ./mvnw test -Pscreenshots} makes them again in {@link #FOLDER} (CONTRIBUTING.md,
+ * Pictures in the documentation).
  */
 public final class ReadmePictures {
 
-    /** Where the README's pictures are, from the repository's root. */
+    /** Where the documentation's pictures are, from the repository's root. */
     public static final Path FOLDER = Path.of("docs", "screenshots", "java");
 
     /** Makes one picture in a scheme, with an empty folder for the files of the example home. */

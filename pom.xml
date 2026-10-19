@@ -16,7 +16,7 @@
     <!-- surefire's test class order; see the surefire plugin below -->
     <surefire.runOrder>alphabetical</surefire.runOrder>
     <!-- left out of every build: the tests that reach the network, which the live profile runs, and the one that
-         writes the README's pictures, which the screenshots profile runs -->
+         writes the documentation's pictures, which the screenshots profile runs -->
     <test.excludedGroups>live,screenshots</test.excludedGroups>
     <!-- the coverage profile sets it to JaCoCo's agent -->
     <argLine></argLine>
@@ -382,8 +382,9 @@
         <groups>live</groups>
       </properties>
     </profile>
-    <!-- ./mvnw test -Pscreenshots makes the README's pictures in docs/screenshots/java again, offscreen on JavaFX's
-         headless platform, and writes only those whose pixels changed (CONTRIBUTING.md, Pictures for the README) -->
+    <!-- ./mvnw test -Pscreenshots makes the documentation's pictures in docs/screenshots/java again, offscreen on
+         JavaFX's headless platform, and writes only those whose pixels changed (CONTRIBUTING.md, Pictures in the
+         documentation) -->
     <profile>
       <id>screenshots</id>
       <properties>

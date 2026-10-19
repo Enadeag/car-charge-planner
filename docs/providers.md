@@ -274,11 +274,11 @@ and the recorded answer the test replays, `example_solar.json` beside the other 
    shows up in an error message. When its free plan needs no key, add it to `LiveProvidersTest` as well, which asks
    the real services before each release (CONTRIBUTING.md, What is tested where).
 7. **The documents**: add your provider's "what is sent", terms link, free-plan limits and whether commercial use is
-   allowed to the README's "Data and privacy" section.
+   allowed to [What is sent, and to whom](privacy.md#what-is-sent-and-to-whom) in `docs/privacy.md`.
 
 ### Rate limits and terms
 
-Say in the README, from the provider's own pages and with the date you read them: what the free plan allows
+Say in `docs/privacy.md`, from the provider's own pages and with the date you read them: what the free plan allows
 (requests per day or hour, per whom), whether commercial use is allowed, whether credit is required. Declare a
 `minRefresh` that keeps a household well inside it; remember that limits per internet address are shared with
 everything else at home. If the service documents a "retry at" time, return it in `RateLimited`: the app obeys it,
@@ -337,7 +337,7 @@ Open-Meteo has one ([`OpenMeteoPlaces`](../src/main/java/nl/enadeag/carchargepla
 - It **never throws**, and uses a short timeout (a person is waiting at a search box) and a small largest body
   (Open-Meteo's is 256 kB): set them in the `Request`.
 - Leave out results that lack coordinates or a time zone you know.
-- The text typed is sent to the provider: say so in what it sends (or in its terms) and in the README.
+- The text typed is sent to the provider: say so in what it sends (or in its terms) and in `docs/privacy.md`.
 
 ## Credit and attribution
 
@@ -353,7 +353,7 @@ provider has to respect, which is why it is not built in:
 - an account and a **registered rooftop site** are needed first (the site, not the request, carries the panel
   description), and an API key;
 - **10 calls a day**, so a `minRefresh` of a few hours and a long `maxUsefulAge`;
-- **personal use only**: the README must say so;
+- **personal use only**: `docs/privacy.md` must say so;
 - 30-minute steps, in UTC.
 
 Check all of this against Solcast's live documentation before building; plans and limits change.

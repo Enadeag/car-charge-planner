@@ -14,7 +14,7 @@ import javafx.application.ColorScheme;
 import javafx.scene.image.WritableImage;
 
 /**
- * The README's pictures of set-up, over the example home of the tests, in English and at a time that never changes,
+ * The guide's pictures of set-up, over the example home of the tests, in English and at a time that never changes,
  * so the pictures are the same on every run.
  */
 public final class SetUpPictures {

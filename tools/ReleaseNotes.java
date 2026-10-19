@@ -24,7 +24,7 @@ public final class ReleaseNotes {
             ### Installing
 
             - **Windows:** download `car-charge-planner-%1$s.exe` and `SHA256SUMS`. Check the download in PowerShell with `(Get-FileHash .\\car-charge-planner-%1$s.exe -Algorithm SHA256).Hash` against the line in `SHA256SUMS`. The installer is not code-signed yet, so Windows shows "Windows protected your PC": choose **More info**, then **Run anyway**.
-            - **Linux:** download `car-charge-planner-%1$s-linux.tar.gz` and `SHA256SUMS`, check it with `sha256sum --ignore-missing -c SHA256SUMS`, unpack it and start `bin/car-charge-planner`; see the README.
+            - **Linux:** download `car-charge-planner-%1$s-linux.tar.gz` and `SHA256SUMS`, check it with `sha256sum --ignore-missing -c SHA256SUMS`, unpack it and start `bin/car-charge-planner`; see [Installing](%2$s/blob/v%1$s/docs/install.md).
 
             Both bring their own Java runtime: %3$s. `car-charge-planner-%1$s-linux.cdx.json` and `car-charge-planner-%1$s-windows.cdx.json` list what each download holds (CycloneDX SBOM), and GitHub attests that every file was built here from tag `v%1$s`: check one with `gh attestation verify <file> -R Enadeag/car-charge-planner`.
 

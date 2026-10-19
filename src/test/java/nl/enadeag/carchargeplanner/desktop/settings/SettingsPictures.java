@@ -16,8 +16,8 @@ import javafx.application.ColorScheme;
 import javafx.scene.image.WritableImage;
 
 /**
- * The README's picture of Settings, over the example home of the tests, in English and at a time that never changes,
- * so the picture is the same on every run. Set-up's are in {@code SetUpPictures}.
+ * The accessibility page's picture of Settings, over the example home of the tests, in English and at a time that
+ * never changes, so the picture is the same on every run. Set-up's are in {@code SetUpPictures}.
  */
 public final class SettingsPictures {
 
