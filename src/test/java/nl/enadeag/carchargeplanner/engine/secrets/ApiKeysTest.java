@@ -131,11 +131,88 @@ class ApiKeysTest {
     void aLoadOnlyReadsTheFileAndLeavesItWhereItIs() throws SecretsProblem {
         file().write(KEYS);
         var keys = keys(keychain);
+        try (var log = LogCapture.of(ApiKeys.class)) {
+            assertThat(keys.load()).isEqualTo(KEYS);
 
-        assertThat(keys.load()).isEqualTo(KEYS);
+            assertThat(log.lines()).containsExactly("WARNING API keys are kept in " + file().path()
+                    + ", readable only by you: they have not been moved into the system keychain");
+        }
         assertThat(keys.storage()).isEqualTo(KeyStorage.FILE);
         assertThat(file().path()).exists();
         assertThat(keychain.entries).isEmpty();
+    }
+
+    @Test
+    void aMoveWithoutAUsableKeychainLeavesItAloneForAWhile() throws SecretsProblem {
+        file().write(KEYS);
+        var intermittent = new Intermittent();
+        intermittent.away = true;
+        var keys = keys(intermittent);
+        try (var log = LogCapture.of(ApiKeys.class)) {
+            keys.moveFileIntoKeychain();
+            intermittent.away = false;
+
+            later(ApiKeys.RETRY_AFTER.minusSeconds(1));
+            keys.moveFileIntoKeychain();
+            assertThat(file().path()).exists();
+
+            later(Duration.ofSeconds(1));
+            keys.moveFileIntoKeychain();
+            assertThat(file().path()).doesNotExist();
+            assertThat(log.lines()).startsWith("WARNING API keys are kept in " + file().path()
+                    + ", readable only by you: the system keychain cannot be used");
+        }
+    }
+
+    @Test
+    void aFileThatCannotBeMovedIsLoggedAndNotTriedAgainForAWhile() throws IOException {
+        Files.writeString(file().path(), "{\"open-meteo\": {\"api key\": \"OM-SECRET-1\"}}");
+        var counting = new Counting();
+        var keys = keys(counting);
+        try (var log = LogCapture.of(ApiKeys.class)) {
+            keys.moveFileIntoKeychain();
+            var asked = counting.calls.get();
+
+            later(ApiKeys.RETRY_AFTER.minusSeconds(1));
+            keys.moveFileIntoKeychain();
+
+            assertThat(counting.calls.get()).isEqualTo(asked);
+            assertThat(log.lines()).containsExactly("WARNING API keys are kept in " + file().path()
+                    + ", readable only by you: the file could not be read, or holds a name that is not allowed");
+        }
+    }
+
+    @Test
+    void aKeychainThatLocksDuringTheMoveKeepsTheFile() throws SecretsProblem {
+        file().write(KEYS);
+        var lockable = new LocksAfterTheFirstQuestion();
+        try (var log = LogCapture.of(ApiKeys.class)) {
+            keys(lockable).moveFileIntoKeychain();
+
+            assertThat(log.lines()).containsExactly("WARNING API keys are kept in " + file().path()
+                    + ", readable only by you: the system keychain is locked");
+        }
+        assertThat(file().read()).isEqualTo(KEYS);
+    }
+
+    @Test
+    void aChangeSavedOverAFileWithABadNameLeavesThatNameOut() throws IOException, SecretsProblem {
+        Files.writeString(file().path(), "{\"open-meteo\": {\"api key\": \"OM-SECRET-1\"}}");
+
+        keys(keychain).applyChanges(NEW_OPEN_METEO_KEY, () -> { });
+
+        assertThat(keychain.entries).containsOnlyKeys("index", "forecast/open-meteo/api_key");
+        assertThat(file().path()).doesNotExist();
+    }
+
+    @Test
+    void aChangeSavedOverAFileThatCannotBeReadKeepsTheChange() throws IOException, SecretsProblem {
+        Files.writeString(file().path(), "not JSON");
+
+        keys(keychain).applyChanges(NEW_OPEN_METEO_KEY, () -> { });
+
+        assertThat(keys(keychain).load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"))));
+        assertThat(file().path()).doesNotExist();
     }
 
     @Test

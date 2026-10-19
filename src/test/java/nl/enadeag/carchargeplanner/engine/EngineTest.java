@@ -329,6 +329,16 @@ class EngineTest {
     }
 
     @Test
+    void aRoundWithoutAConfigFileTellsTheListenerItIsNotSetUp() throws IOException {
+        Files.delete(config);
+
+        startedAt(clockAt(9, 50));
+
+        assertThat(rounds).singleElement().isEqualTo(new Outlook.NotSetUp(config));
+        assertThat(told).isEmpty();
+    }
+
+    @Test
     void whenNothingAnswersTheReasonsReachTheOutlook() throws IOException {
         choose("main", "");
         main.script(error(new ProviderError.Unavailable("no network")));
