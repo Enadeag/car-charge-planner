@@ -3,7 +3,6 @@ package nl.enadeag.carchargeplanner.cli;
 import nl.enadeag.carchargeplanner.desktop.system.StartAtLogin;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -63,7 +62,7 @@ public record CommandLine(Command command, Optional<Path> config, boolean backgr
         var words = new ArrayList<String>();
         Optional<Path> config = Optional.empty();
         var background = false;
-        for (var arg : Arrays.asList(args)) {
+        for (var arg : args) {
             if (arg.startsWith("--config=")) {
                 config = Optional.of(Path.of(arg.substring("--config=".length())));
             } else if (arg.equals(StartAtLogin.BACKGROUND)) {
