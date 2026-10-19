@@ -24,6 +24,8 @@ import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import com.tngtech.archunit.lang.conditions.ArchConditions;
+import com.tngtech.archunit.library.dependencies.SliceAssignment;
+import com.tngtech.archunit.library.dependencies.SliceIdentifier;
 import com.tngtech.archunit.library.freeze.FreezingArchRule;
 import nl.enadeag.carchargeplanner.desktop.app.AppSettingsFile;
 import nl.enadeag.carchargeplanner.desktop.system.Notifications;
@@ -172,7 +174,7 @@ class ArchitectureTest {
     private static final String ROOT = Main.class.getPackageName();
 
     /** The packages that make up the composition root: {@code Main} and the parts it starts the app with. */
-    private static final List<String> OUTER_PARTS = List.of("start", "cli", "logging", "host");
+    private static final List<String> OUTER_PARTS = List.of("start", "cli", "platforms", "logging", "host");
 
     /** The composition root, as package identifiers: the root package itself and its own subpackages. */
     private static final String[] OUTER = Stream.concat(Stream.of(ROOT),
@@ -182,20 +184,61 @@ class ArchitectureTest {
 
     private static final String CLI = ROOT + ".cli..";
 
+    private static final String PLATFORMS = ROOT + ".platforms..";
+
     private static final String LOGGING = ROOT + ".logging..";
+
+    private static final String HOST = ROOT + ".host..";
 
     private static final String ENGINE = ROOT + ".engine";
 
     // package structure
 
+    /** The root package, with {@code Main} alone, as one slice, and each package right below it as another. */
+    private static final SliceAssignment TOP_LEVEL_PACKAGES = new SliceAssignment() {
+        @Override
+        public SliceIdentifier getIdentifierOf(JavaClass type) {
+            var name = type.getPackageName();
+            if (name.equals(ROOT)) {
+                return SliceIdentifier.of("the root package");
+            }
+            if (name.startsWith(ROOT + ".")) {
+                return SliceIdentifier.of(name.substring(ROOT.length() + 1).split("\\.")[0]);
+            }
+            return SliceIdentifier.ignore();
+        }
+
+        @Override
+        public String getDescription() {
+            return "the root package and each package right below it";
+        }
+    };
+
     @ArchTest
     static final ArchRule noCyclesBetweenTheTopLevelPackages = slices()
-            .matching(ROOT + ".(*)..")
-            .that(DescribedPredicate.describe("are not part of the composition root",
-                    slice -> !OUTER_PARTS.contains(slice.getNamePart(1))))
+            .assignedFrom(TOP_LEVEL_PACKAGES)
             .should().beFreeOfCycles()
-            .because("the engine, the desktop, the platforms and the single-instance guard are built and read apart "
-                    + "(ADR 0001, ADR 0005)");
+            .because("the engine, the desktop, the platforms, the single-instance guard and the composition root's "
+                    + "parts are built and read apart (ADR 0001, ADR 0005)");
+
+    @ArchTest
+    static final ArchRule theCompositionRootsPartsPointOneWay = layeredArchitecture()
+            .consideringOnlyDependenciesInLayers()
+            .layer("Main").definedBy(ROOT)
+            .layer("Start").definedBy(START)
+            .layer("Command line").definedBy(CLI)
+            .layer("Platforms").definedBy(PLATFORMS)
+            .layer("Logging").definedBy(LOGGING)
+            .layer("Host").definedBy(HOST)
+            .whereLayer("Main").mayNotBeAccessedByAnyLayer()
+            .whereLayer("Start").mayOnlyBeAccessedByLayers("Main")
+            .whereLayer("Command line").mayOnlyBeAccessedByLayers("Main", "Start")
+            .whereLayer("Platforms").mayOnlyBeAccessedByLayers("Main", "Start", "Command line")
+            .whereLayer("Logging").mayOnlyBeAccessedByLayers("Main", "Start", "Command line")
+            .whereLayer("Host").mayOnlyBeAccessedByLayers("Main", "Start", "Command line", "Platforms", "Logging")
+            .because("Main starts the app or runs a command; the app uses the command line's exit codes; both build "
+                    + "on each system's parts, the log and the host, and the host, which those build on, knows none of "
+                    + "them");
 
     @ArchTest
     static final ArchRule noCyclesBetweenTheEngineParts = slices()
@@ -217,10 +260,10 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule onlyTheCompositionRootDependsOnThePlatforms = noClasses()
-            .that().resideOutsideOfPackages(ROOT, START, CLI, "..platform..")
+            .that().resideOutsideOfPackages(ROOT, PLATFORMS, CLI, "..platform..")
             .should().dependOnClassesThat().resideInAPackage("..platform..")
             .because("the composition root picks the platform's parts and hands them on as the ports (ADR 0005); "
-                    + "start makes each system's parts, and cli the Linux menu entry");
+                    + "platforms makes each system's parts, and cli the Linux menu entry");
 
     @ArchTest
     static final ArchRule foreignMemoryIsOnlyForWindows = noClasses()

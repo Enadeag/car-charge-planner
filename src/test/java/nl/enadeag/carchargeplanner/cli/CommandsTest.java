@@ -14,7 +14,7 @@ import nl.enadeag.carchargeplanner.instance.Claim;
 import nl.enadeag.carchargeplanner.instance.InstanceCommand;
 import nl.enadeag.carchargeplanner.instance.SingleInstance;
 import nl.enadeag.carchargeplanner.platform.linux.LinuxMenuEntry;
-import nl.enadeag.carchargeplanner.start.AppName;
+import nl.enadeag.carchargeplanner.host.AppName;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;

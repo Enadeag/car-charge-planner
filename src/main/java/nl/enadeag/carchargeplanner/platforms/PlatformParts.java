@@ -1,4 +1,4 @@
-package nl.enadeag.carchargeplanner.start;
+package nl.enadeag.carchargeplanner.platforms;
 
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.system.Notifications;

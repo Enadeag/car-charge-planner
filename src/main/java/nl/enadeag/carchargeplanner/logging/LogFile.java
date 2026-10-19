@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.logging;
 
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
-import nl.enadeag.carchargeplanner.start.AppName;
+import nl.enadeag.carchargeplanner.host.AppName;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;

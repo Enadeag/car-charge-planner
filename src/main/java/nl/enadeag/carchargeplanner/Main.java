@@ -12,8 +12,8 @@ import nl.enadeag.carchargeplanner.host.Host;
 import nl.enadeag.carchargeplanner.host.InstanceLocation;
 import nl.enadeag.carchargeplanner.instance.SingleInstance;
 import nl.enadeag.carchargeplanner.logging.UncaughtLogging;
+import nl.enadeag.carchargeplanner.platforms.PlatformParts;
 import nl.enadeag.carchargeplanner.start.DesktopApp;
-import nl.enadeag.carchargeplanner.start.PlatformParts;
 import java.time.Duration;
 import java.util.Locale;
 

@@ -1,4 +1,4 @@
-package nl.enadeag.carchargeplanner.start;
+package nl.enadeag.carchargeplanner.host;
 
 /** The app's names, as the owner and other programs see them. */
 public final class AppName {

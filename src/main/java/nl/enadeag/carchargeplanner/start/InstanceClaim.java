@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.start;
 import nl.enadeag.carchargeplanner.cli.ExitCode;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.host.AppName;
 import nl.enadeag.carchargeplanner.instance.Claim;
 import nl.enadeag.carchargeplanner.instance.InstanceCommand;
 import nl.enadeag.carchargeplanner.instance.SingleInstance;

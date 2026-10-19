@@ -1,6 +1,5 @@
 package nl.enadeag.carchargeplanner.logging;
 
-import nl.enadeag.carchargeplanner.Main;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.time.ZoneId;
@@ -16,7 +15,7 @@ import java.util.logging.LogRecord;
  */
 final class LogLine extends Formatter {
 
-    private static final String APP_PACKAGE = Main.class.getPackageName() + ".";
+    private static final String APP_PACKAGE = AppLog.APP_LOGGER + ".";
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS xxx", Locale.ROOT);
 
     private final ZoneId zone;

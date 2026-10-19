@@ -7,6 +7,7 @@ import nl.enadeag.carchargeplanner.cli.ExitCode;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.host.AppName;
 import nl.enadeag.carchargeplanner.platform.linux.IsolatedSessionBus;
 import nl.enadeag.carchargeplanner.platform.linux.NotificationServer;
 import nl.enadeag.carchargeplanner.platform.linux.StatusNotifierWatcher;

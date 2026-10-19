@@ -21,6 +21,12 @@ import java.util.logging.Logger;
  */
 public final class AppLog implements AutoCloseable {
 
+    /**
+     * The name of the parent logger of the app's own loggers: the app's base package, as each logger is named after
+     * its class.
+     */
+    public static final String APP_LOGGER = "nl.enadeag.carchargeplanner";
+
     /** The environment variable that sets the level of the app's own loggers, such as {@code DEBUG}. */
     static final String LEVEL_VARIABLE = "CAR_CHARGE_PLANNER_LOG_LEVEL";
     /** The size in bytes after which the log file is rotated. */

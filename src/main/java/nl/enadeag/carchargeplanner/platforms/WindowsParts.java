@@ -1,4 +1,4 @@
-package nl.enadeag.carchargeplanner.start;
+package nl.enadeag.carchargeplanner.platforms;
 
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.system.StartAtLogin;
@@ -6,6 +6,7 @@ import nl.enadeag.carchargeplanner.desktop.system.StatusIcon;
 import nl.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
+import nl.enadeag.carchargeplanner.host.AppName;
 import nl.enadeag.carchargeplanner.host.Host;
 import nl.enadeag.carchargeplanner.platform.windows.AwtTray;
 import nl.enadeag.carchargeplanner.platform.windows.CredentialManagerKeychain;

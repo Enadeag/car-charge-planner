@@ -52,7 +52,7 @@ jobs:
             # Windows minutes count double while the repository is private (#31 turns this back to every pull request):
             # pull requests build on Windows only when they touch what is Windows-specific or shared by the build.
             case "$file" in
-              src/*/java/nl/enadeag/carchargeplanner/platform/windows/*|src/packaging/windows/*|tools/package-windows.ps1|pom.xml|.mvn/*|mvnw.cmd|.github/workflows/*) windows=true ;;
+              src/*/java/nl/enadeag/carchargeplanner/platform/windows/*|src/main/java/nl/enadeag/carchargeplanner/platforms/WindowsParts.java|src/packaging/windows/*|tools/package-windows.ps1|pom.xml|.mvn/*|mvnw.cmd|.github/workflows/*) windows=true ;;
             esac
           done <<< "$files"
           echo "code=$code" >> "$GITHUB_OUTPUT"

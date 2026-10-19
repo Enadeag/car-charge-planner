@@ -1,6 +1,5 @@
 package nl.enadeag.carchargeplanner.start;
 
-import nl.enadeag.carchargeplanner.Main;
 import nl.enadeag.carchargeplanner.cli.CommandLine;
 import nl.enadeag.carchargeplanner.cli.ExitCode;
 import nl.enadeag.carchargeplanner.desktop.app.AppSettings;
@@ -38,12 +37,14 @@ import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
+import nl.enadeag.carchargeplanner.host.AppName;
 import nl.enadeag.carchargeplanner.host.DataLocation;
 import nl.enadeag.carchargeplanner.host.Host;
 import nl.enadeag.carchargeplanner.host.SecretsLocation;
 import nl.enadeag.carchargeplanner.instance.InstanceCommand;
 import nl.enadeag.carchargeplanner.instance.SingleInstance;
 import nl.enadeag.carchargeplanner.logging.AppLog;
+import nl.enadeag.carchargeplanner.platforms.PlatformParts;
 import java.io.IOException;
 import java.lang.System.Logger.Level;
 import java.net.URI;
@@ -231,7 +232,7 @@ public final class DesktopApp {
      */
     private void startLog(Path dataFolder) {
         var log = new AppLog(java.util.logging.Logger.getLogger(""),
-                java.util.logging.Logger.getLogger(Main.class.getPackageName()));
+                java.util.logging.Logger.getLogger(AppLog.APP_LOGGER));
         log.start(dataFolder, host.environment(), host.terminal(), ZoneId.systemDefault());
         closing.add("the log file", log::close);
         LOG.log(Level.INFO, AppName.TITLE + " " + version() + " starts");
