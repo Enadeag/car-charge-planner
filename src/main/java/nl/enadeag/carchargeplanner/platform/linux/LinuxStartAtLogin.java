@@ -56,7 +56,7 @@ public final class LinuxStartAtLogin implements StartAtLogin {
                 Terminal=false
                 X-GNOME-Autostart-enabled=true
                 X-KDE-autostart-after=panel
-                """, name, quoted(program.toString()), BACKGROUND);
+                """, name, quoted(program.toString()), AT_LOGIN_FLAG);
     }
 
     /**

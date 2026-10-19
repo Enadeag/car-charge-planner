@@ -18,9 +18,9 @@ import java.util.function.Consumer;
  * {@code $XDG_DATA_HOME/icons/hicolor}, in every size of the icon theme specification the app has. No root is
  * needed, and the desktop's menu and notifications find the app by this entry.
  */
-public final class LinuxMenuEntry {
+public final class ApplicationMenuEntry {
 
-    private static final System.Logger LOG = System.getLogger(LinuxMenuEntry.class.getName());
+    private static final System.Logger LOG = System.getLogger(ApplicationMenuEntry.class.getName());
     // a file in the jar, named in pom.xml; not the app ID, so a new ID would not lose the drawing
     private static final String SVG_RESOURCE = "icons/car-charge-planner.svg";
     private static final int CACHE_TOOL_SECONDS = 10;
@@ -43,7 +43,7 @@ public final class LinuxMenuEntry {
      * @param cachesChanged told the data folder after files were written or removed, so the desktop's caches can be
      *     refreshed, such as with {@link #refreshCaches(Path)}; it must not fail when it cannot
      */
-    public LinuxMenuEntry(Path dataHome, Path program, String id, String name, Consumer<Path> cachesChanged) {
+    public ApplicationMenuEntry(Path dataHome, Path program, String id, String name, Consumer<Path> cachesChanged) {
         this.dataHome = dataHome;
         this.program = program;
         this.id = id;

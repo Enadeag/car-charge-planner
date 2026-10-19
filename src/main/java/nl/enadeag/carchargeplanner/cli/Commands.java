@@ -11,7 +11,7 @@ import nl.enadeag.carchargeplanner.instance.InstanceCommand;
 import nl.enadeag.carchargeplanner.instance.NotPrivateException;
 import nl.enadeag.carchargeplanner.instance.Reply;
 import nl.enadeag.carchargeplanner.instance.SingleInstance;
-import nl.enadeag.carchargeplanner.platform.linux.LinuxMenuEntry;
+import nl.enadeag.carchargeplanner.platform.linux.ApplicationMenuEntry;
 import nl.enadeag.carchargeplanner.platforms.PlatformParts;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -53,7 +53,7 @@ public final class Commands {
          * @param entry the menu entry for that program
          * @return the entry on Linux; elsewhere, that it is Linux's only
          */
-        static MenuEntry of(Os os, LinuxMenuEntry entry) {
+        static MenuEntry of(Os os, ApplicationMenuEntry entry) {
             return os == Os.LINUX ? new Present(entry) : new LinuxOnly();
         }
 
@@ -73,7 +73,7 @@ public final class Commands {
          *
          * @param entry what installs and removes it
          */
-        record Present(LinuxMenuEntry entry) implements MenuEntry { }
+        record Present(ApplicationMenuEntry entry) implements MenuEntry { }
 
         /** The menu entry is Linux's only. */
         record LinuxOnly() implements MenuEntry { }
@@ -109,8 +109,8 @@ public final class Commands {
     public static Commands of(Host host, PlatformParts parts, SingleInstance instance, Messages messages) {
         var dataHome = DataLocation.systemFolder(host.os(), host.environment(), host.home());
         var menuEntry = host.launcher()
-                .map(program -> MenuEntry.of(host.os(), new LinuxMenuEntry(dataHome, program, AppName.ID,
-                        AppName.TITLE, LinuxMenuEntry::refreshCaches)))
+                .map(program -> MenuEntry.of(host.os(), new ApplicationMenuEntry(dataHome, program, AppName.ID,
+                        AppName.TITLE, ApplicationMenuEntry::refreshCaches)))
                 .orElseGet(() -> MenuEntry.none(host.os()));
         var startAtLogin = parts.startAtLogin().<LoginSwitch>map(LoginSwitch.Present::new)
                 .orElseGet(LoginSwitch.OnlyFromLauncher::new);
@@ -197,7 +197,7 @@ public final class Commands {
         };
     }
 
-    private CommandOutcome switchLauncher(LinuxMenuEntry entry, boolean install) {
+    private CommandOutcome switchLauncher(ApplicationMenuEntry entry, boolean install) {
         try {
             if (install) {
                 return success(messages.text(TextKey.CLI_LAUNCHER_INSTALLED, AppName.TITLE, lines(entry.install())));

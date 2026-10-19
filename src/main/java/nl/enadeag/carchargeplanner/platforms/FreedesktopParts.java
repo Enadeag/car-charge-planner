@@ -31,7 +31,7 @@ import javafx.beans.value.ObservableValue;
  * and a desktop entry in the autostart folder. Also used on systems that are neither Linux nor Windows, without a
  * keychain there.
  */
-final class LinuxParts implements PlatformParts {
+final class FreedesktopParts implements PlatformParts {
 
     private final Host host;
     private final BusConnector sessionBus = BusConnector.sessionBus();
@@ -41,7 +41,7 @@ final class LinuxParts implements PlatformParts {
      *
      * @param host the system and its user, for the folders and the private icon folders
      */
-    LinuxParts(Host host) {
+    FreedesktopParts(Host host) {
         this.host = host;
     }
 

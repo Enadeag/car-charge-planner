@@ -16,7 +16,7 @@ import javafx.application.ColorScheme;
 import javafx.beans.value.ObservableValue;
 
 /** The parts each operating system brings itself: the tray, notifications, keychain and start at login. */
-public sealed interface PlatformParts permits LinuxParts, WindowsParts {
+public sealed interface PlatformParts permits FreedesktopParts, WindowsParts {
 
     /**
      * The parts of the system the app runs on.
@@ -25,7 +25,7 @@ public sealed interface PlatformParts permits LinuxParts, WindowsParts {
      * @return Windows' parts on Windows, otherwise the freedesktop.org ones
      */
     static PlatformParts of(Host host) {
-        return host.os() == Os.WINDOWS ? new WindowsParts(host) : new LinuxParts(host);
+        return host.os() == Os.WINDOWS ? new WindowsParts(host) : new FreedesktopParts(host);
     }
 
     /**

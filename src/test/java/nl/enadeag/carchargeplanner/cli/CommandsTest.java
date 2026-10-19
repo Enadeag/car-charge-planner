@@ -11,11 +11,11 @@ import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.host.Host;
 import nl.enadeag.carchargeplanner.host.Os;
-import nl.enadeag.carchargeplanner.instance.Claim;
+import nl.enadeag.carchargeplanner.instance.ClaimOutcome;
 import nl.enadeag.carchargeplanner.instance.InstanceCommand;
 import nl.enadeag.carchargeplanner.instance.Owner;
 import nl.enadeag.carchargeplanner.instance.SingleInstance;
-import nl.enadeag.carchargeplanner.platform.linux.LinuxMenuEntry;
+import nl.enadeag.carchargeplanner.platform.linux.ApplicationMenuEntry;
 import nl.enadeag.carchargeplanner.platforms.PlatformParts;
 import nl.enadeag.carchargeplanner.host.AppName;
 import java.io.ByteArrayOutputStream;
@@ -117,7 +117,7 @@ class CommandsTest {
         return instance;
     }
 
-    private Commands commands(Os os, Optional<StartAtLogin> login, Optional<LinuxMenuEntry> menuEntry) {
+    private Commands commands(Os os, Optional<StartAtLogin> login, Optional<ApplicationMenuEntry> menuEntry) {
         return new Commands(MESSAGES, instance(),
                 login.<Commands.LoginSwitch>map(Commands.LoginSwitch.Present::new)
                         .orElseGet(Commands.LoginSwitch.OnlyFromLauncher::new),
@@ -128,8 +128,8 @@ class CommandsTest {
         return commands(Os.LINUX, Optional.of(startAtLogin), Optional.empty());
     }
 
-    private LinuxMenuEntry menuEntry(Path dataHome) {
-        return new LinuxMenuEntry(dataHome, PROGRAM, AppName.ID, AppName.TITLE, _ -> { });
+    private ApplicationMenuEntry menuEntry(Path dataHome) {
+        return new ApplicationMenuEntry(dataHome, PROGRAM, AppName.ID, AppName.TITLE, _ -> { });
     }
 
     private static CommandOutcome success(TextKey key, Object... values) {
@@ -143,7 +143,7 @@ class CommandsTest {
     @Test
     void quitAsksTheRunningAppToQuitAndSaysItDid() throws Exception {
         var received = new LinkedBlockingQueue<InstanceCommand>();
-        assertThat(instance().claim(received::add)).isEqualTo(Claim.FIRST);
+        assertThat(instance().claim(received::add)).isEqualTo(ClaimOutcome.FIRST);
 
         var outcome = commands().carryOut(Command.QUIT);
 
@@ -159,7 +159,7 @@ class CommandsTest {
     @Test
     void testNotificationAsksTheRunningAppToShowOneAndSaysItDid() throws Exception {
         var received = new LinkedBlockingQueue<InstanceCommand>();
-        assertThat(instance().claim(received::add)).isEqualTo(Claim.FIRST);
+        assertThat(instance().claim(received::add)).isEqualTo(ClaimOutcome.FIRST);
 
         var outcome = commands().carryOut(Command.TEST_NOTIFICATION);
 
@@ -189,7 +189,7 @@ class CommandsTest {
     void aCommandSaysTheAppRunsButCannotBeReachedWhenItHoldsTheLockWithoutASocket(Command command) {
         // longer than a Unix domain socket's path may be, so the running app has the lock but no socket
         instanceFolder = temp.resolve("a-folder-with-a-long-name-" + "x".repeat(100));
-        assertThat(instance().claim(_ -> { })).isEqualTo(Claim.FIRST_UNREACHABLE);
+        assertThat(instance().claim(_ -> { })).isEqualTo(ClaimOutcome.FIRST_UNREACHABLE);
 
         assertThat(commands().carryOut(command)).isEqualTo(
                 new CommandOutcome(ExitCode.UNREACHABLE, MESSAGES.text(TextKey.CLI_COMMAND_UNREACHABLE, AppName.TITLE)));

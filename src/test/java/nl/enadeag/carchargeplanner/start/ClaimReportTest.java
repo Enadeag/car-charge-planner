@@ -38,7 +38,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /** What the app tells the owner, logs and ends with after its single-instance claim. */
-class InstanceClaimTest {
+class ClaimReportTest {
 
     private static final Messages MESSAGES = new Messages(Language.ENGLISH);
 
@@ -80,11 +80,11 @@ class InstanceClaimTest {
         return instance;
     }
 
-    private InstanceClaim claim(SingleInstance instance) {
-        return new InstanceClaim(instance, MESSAGES, new PrintStream(err, true, StandardCharsets.UTF_8), logger);
+    private ClaimReport claim(SingleInstance instance) {
+        return new ClaimReport(instance, MESSAGES, new PrintStream(err, true, StandardCharsets.UTF_8), logger);
     }
 
-    private InstanceClaim claim() {
+    private ClaimReport claim() {
         return claim(instance());
     }
 

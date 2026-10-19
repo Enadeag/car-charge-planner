@@ -68,19 +68,19 @@ public final class SingleInstance implements AutoCloseable {
      *
      * @param handler what a command of a later start does, when this becomes the running copy; called on a thread of
      *     its own per command, from now until {@link #close()}
-     * @return what came of it; only with {@link Claim#FIRST} does this copy listen, and only with it,
-     *     {@link Claim#FIRST_UNREACHABLE} and {@link Claim#UNAVAILABLE} should this copy run
+     * @return what came of it; only with {@link ClaimOutcome#FIRST} does this copy listen, and only with it,
+     *     {@link ClaimOutcome#FIRST_UNREACHABLE} and {@link ClaimOutcome#UNAVAILABLE} should this copy run
      */
-    public Claim claim(Consumer<InstanceCommand> handler) {
+    public ClaimOutcome claim(Consumer<InstanceCommand> handler) {
         Path made;
         try {
             made = folder.ensurePrivate();
         } catch (NotPrivateException e) {
             problem = e.getMessage();
-            return Claim.NOT_PRIVATE;
+            return ClaimOutcome.NOT_PRIVATE;
         } catch (IOException e) {
             problem = "the folder " + path + " for the instance lock cannot be made: " + e;
-            return Claim.UNAVAILABLE;
+            return ClaimOutcome.UNAVAILABLE;
         }
         var socket = made.resolve(SOCKET_NAME);
         var deadline = System.nanoTime() + timeout.toNanos();
@@ -99,19 +99,19 @@ public final class SingleInstance implements AutoCloseable {
                 // another copy holds the lock; it may have started a moment ago and not listen yet
                 var reply = ask(socket, InstanceCommand.SHOW);
                 if (reply == Reply.ANSWERED) {
-                    return Claim.HANDED_OVER;
+                    return ClaimOutcome.HANDED_OVER;
                 }
                 if (reply == Reply.SILENT) {
-                    return Claim.NO_ANSWER;
+                    return ClaimOutcome.NO_ANSWER;
                 }
                 if (deadlinePassed(deadline)) {
-                    return Claim.UNREACHABLE;
+                    return ClaimOutcome.UNREACHABLE;
                 }
                 pause(deadline);
             }
         } catch (IOException e) {
             problem = "the instance lock in " + made + " cannot be taken: " + e;
-            return Claim.UNAVAILABLE;
+            return ClaimOutcome.UNAVAILABLE;
         }
     }
 
@@ -122,37 +122,37 @@ public final class SingleInstance implements AutoCloseable {
      *
      * @return what came of handing over to an older version that runs; empty when none listens on the socket
      */
-    private Optional<Claim> handOverToOldVersion(Path socket) {
+    private Optional<ClaimOutcome> handOverToOldVersion(Path socket) {
         if (!Files.exists(socket, LinkOption.NOFOLLOW_LINKS)) {
             return Optional.empty();
         }
         var reply = ask(socket, InstanceCommand.SHOW);
         if (reply == Reply.ANSWERED) {
-            return Optional.of(Claim.HANDED_OVER);
+            return Optional.of(ClaimOutcome.HANDED_OVER);
         }
         if (reply == Reply.SILENT) {
-            return Optional.of(Claim.NO_ANSWER);
+            return Optional.of(ClaimOutcome.NO_ANSWER);
         }
         LOG.log(Level.INFO, "removing the instance socket left behind by an app that ended without removing it");
         return Optional.empty();
     }
 
     /** Holding the lock, with no older version on the socket: makes the socket anew and listens on it. */
-    private Claim listen(Path socket, Consumer<InstanceCommand> handler) {
+    private ClaimOutcome listen(Path socket, Consumer<InstanceCommand> handler) {
         try {
             Files.deleteIfExists(socket);
             server = InstanceServer.bind(socket, owner, timeout);
         } catch (IOException e) {
             problem = "the instance socket " + socket + " cannot be made: " + e;
-            return Claim.FIRST_UNREACHABLE;
+            return ClaimOutcome.FIRST_UNREACHABLE;
         }
         server.serve(handler);
-        return Claim.FIRST;
+        return ClaimOutcome.FIRST;
     }
 
     /**
-     * Why the last {@link #claim(Consumer)} gave {@link Claim#FIRST_UNREACHABLE}, {@link Claim#NOT_PRIVATE} or
-     * {@link Claim#UNAVAILABLE}, for the log and the owner.
+     * Why the last {@link #claim(Consumer)} gave {@link ClaimOutcome#FIRST_UNREACHABLE},
+     * {@link ClaimOutcome#NOT_PRIVATE} or {@link ClaimOutcome#UNAVAILABLE}, for the log and the owner.
      *
      * @return what went wrong, in English, naming the folder or the socket; empty after any other claim, or before one
      */

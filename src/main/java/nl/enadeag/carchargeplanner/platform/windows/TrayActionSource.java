@@ -7,7 +7,7 @@ import java.time.Duration;
  * after Win+B, the keyboard's way into the notification area. A click on the icon's message is the third; the
  * messages claim that one first. A double click comes right after a press of the mouse on the icon; Enter does not.
  */
-final class TrayIconAction {
+final class TrayActionSource {
 
     private final long doubleClickMillis;
     private long pressedAt = Long.MIN_VALUE;
@@ -18,7 +18,7 @@ final class TrayIconAction {
      * @param doubleClick how long after a press a second one still makes a double click, as the system is set
      * @throws IllegalArgumentException when the time is negative
      */
-    TrayIconAction(Duration doubleClick) {
+    TrayActionSource(Duration doubleClick) {
         if (doubleClick.isNegative()) {
             throw new IllegalArgumentException("the double-click time must not be negative");
         }

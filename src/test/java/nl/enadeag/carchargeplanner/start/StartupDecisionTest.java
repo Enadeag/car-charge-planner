@@ -26,9 +26,9 @@ class StartupDecisionTest {
         "AUTOMATIC, true,  5",
         "TRAY,      false, 5",
         "WINDOW,    false, 0"})
-    void theAppWaitsForTheTrayAtLoginAndWhenTheOwnerAskedForIt(DisplayMode mode, boolean background,
+    void theAppWaitsForTheTrayAtLoginAndWhenTheOwnerAskedForIt(DisplayMode mode, boolean atLogin,
             long waitSeconds) {
-        assertThat(new StartupDecision(mode, background, false).trayWait())
+        assertThat(new StartupDecision(mode, atLogin, false).trayWait())
                 .isEqualTo(Duration.ofSeconds(waitSeconds));
     }
 
@@ -41,8 +41,8 @@ class StartupDecisionTest {
         "WINDOW,    false, true,  WINDOW",
         "WINDOW,    true,  true,  HIDDEN_WINDOW",
         "WINDOW,    false, false, WINDOW"})
-    void theDashboardIsThePopupOnlyBehindATrayIconAndTheWindowStaysHiddenAtLogin(DisplayMode mode, boolean background,
+    void theDashboardIsThePopupOnlyBehindATrayIconAndTheWindowStaysHiddenAtLogin(DisplayMode mode, boolean atLogin,
             boolean trayShown, DashboardStart start) {
-        assertThat(new StartupDecision(mode, background, true).dashboard(trayShown)).isEqualTo(start);
+        assertThat(new StartupDecision(mode, atLogin, true).dashboard(trayShown)).isEqualTo(start);
     }
 }

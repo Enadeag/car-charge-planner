@@ -11,7 +11,7 @@ public interface StartAtLogin {
 
     /** The argument the app is started with at login, so that it starts hidden: as a tray icon, or as a window
      * that is not shown. */
-    String BACKGROUND = "--background";
+    String AT_LOGIN_FLAG = "--background";
 
     /**
      * Whether the app starts at login.

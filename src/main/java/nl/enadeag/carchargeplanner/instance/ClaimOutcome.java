@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.instance;
 
 /** What came of trying to become the one running copy of the app. */
-public enum Claim {
+public enum ClaimOutcome {
     /** This is the running copy now: it holds the instance lock and listens for the commands of later starts. */
     FIRST,
     /**

@@ -11,15 +11,15 @@ import java.util.Optional;
  *
  * @param command what to do
  * @param config the config file named with {@code --config=}; empty when none was named
- * @param background {@code --background} was given: the app was started at login and starts hidden, as a tray icon
+ * @param atLogin {@code --background} was given: the app was started at login and starts hidden, as a tray icon
  *     or as a window that is not shown
  */
-public record CommandLine(Command command, Optional<Path> config, boolean background) {
+public record CommandLine(Command command, Optional<Path> config, boolean atLogin) {
 
     /** How to start the app, for the message about arguments it does not know. */
     public static final String USAGE = "Usage: car-charge-planner [run | quit | test-notification | start-at-login on | start-at-login off"
             + " | install-launcher | uninstall-launcher]"
-            + " [--config=path/to/engine.json] [" + StartAtLogin.BACKGROUND + "]";
+            + " [--config=path/to/engine.json] [" + StartAtLogin.AT_LOGIN_FLAG + "]";
 
     /** What the app can be started to do, named by the words before or between the options. */
     public enum Command {
@@ -62,18 +62,18 @@ public record CommandLine(Command command, Optional<Path> config, boolean backgr
     public static CommandLine parse(String... args) {
         var words = new ArrayList<String>();
         Optional<Path> config = Optional.empty();
-        var background = false;
+        var atLogin = false;
         for (var arg : args) {
             if (arg.startsWith("--config=")) {
                 config = Optional.of(Path.of(arg.substring("--config=".length())));
-            } else if (arg.equals(StartAtLogin.BACKGROUND)) {
-                background = true;
+            } else if (arg.equals(StartAtLogin.AT_LOGIN_FLAG)) {
+                atLogin = true;
             } else if (!arg.startsWith("-")) {
                 words.add(arg);
             }
         }
         var command = Command.of(words)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown command: " + String.join(" ", words)));
-        return new CommandLine(command, config, background);
+        return new CommandLine(command, config, atLogin);
     }
 }

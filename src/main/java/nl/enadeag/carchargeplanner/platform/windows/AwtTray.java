@@ -90,11 +90,11 @@ public final class AwtTray implements Tray, Notifications {
         }
         trayIcon = new TrayIcon(image(), look.tooltip(status), menu);
         trayIcon.setImageAutoSize(true);
-        var action = new TrayIconAction(doubleClickTime());
+        var source = new TrayActionSource(doubleClickTime());
         trayIcon.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent event) {
-                action.recordPress(event.getWhen());
+                source.recordPress(event.getWhen());
             }
 
             @Override
@@ -106,7 +106,7 @@ public final class AwtTray implements Tray, Notifications {
         });
         // a click on a message, a double click on the icon, or Enter on it after Win+B: the popup opens for the last
         trayIcon.addActionListener(event -> {
-            if (!messages.claimClick() && action.cameFromKeyboard(event.getWhen())) {
+            if (!messages.claimClick() && source.cameFromKeyboard(event.getWhen())) {
                 actions.clicked().accept(BY_KEYBOARD);
             }
         });

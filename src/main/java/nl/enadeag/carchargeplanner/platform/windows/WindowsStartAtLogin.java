@@ -34,7 +34,7 @@ public final class WindowsStartAtLogin implements StartAtLogin {
     @Override
     public void switchOn() throws IOException {
         // always quoted: Windows reads an unquoted C:\Program Files\app.exe as the program C:\Program
-        runKey.set(name, "\"" + program + "\" " + BACKGROUND);
+        runKey.set(name, "\"" + program + "\" " + AT_LOGIN_FLAG);
     }
 
     @Override

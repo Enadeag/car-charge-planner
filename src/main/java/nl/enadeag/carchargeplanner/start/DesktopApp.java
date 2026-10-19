@@ -83,7 +83,7 @@ public final class DesktopApp {
     private final AppSettings appSettings;
     private final LanguageChoice language;
     private final ClosingOrder closing = new ClosingOrder();
-    private final InstanceClaim claim;
+    private final ClaimReport claimReport;
     /** Runs the windows' slow work, such as reading the keychain, away from the JavaFX thread. */
     private final Background background =
             new Background(task -> Thread.ofVirtual().name("background").start(task), Platform::runLater);
@@ -118,7 +118,7 @@ public final class DesktopApp {
         this.appSettings = appSettings;
         this.language = language;
         this.appearance = new SimpleObjectProperty<>(appSettings.appearance());
-        this.claim = new InstanceClaim(instance, language.messages(), System.err, LOG);
+        this.claimReport = new ClaimReport(instance, language.messages(), System.err, LOG);
     }
 
     /**
@@ -144,7 +144,7 @@ public final class DesktopApp {
         startLog(dataFolder);
         // a data folder made before the app made its folders private is made private now
         PrivateFiles.tighten(dataFolder);
-        claim.logProblem();
+        claimReport.logProblem();
         DBUS_LOG.setLevel(java.util.logging.Level.WARNING); // dbus-java reports every connection at INFO
         var http = JdkHttpGet.newClient();
         closing.add("the HTTP client", http::close);
@@ -199,7 +199,7 @@ public final class DesktopApp {
                 AppLog.file(dataFolder), secretsFile.path());
         var settings = makeOnFx(() -> new SettingsWindow(stores, facts, this::openLink, saved, setUp::open,
                 preferences.windows(), icon, language, background));
-        var setUpOffer = new SetUpOffer(setUp::open, settings::open, !commandLine.background());
+        var setUpOffer = new SetUpOffer(setUp::open, settings::open, !commandLine.atLogin());
         var actions = new DashboardActions(changes::setBatteryLevel, changes::addAwayPeriod,
                 changes::removeAwayPeriod, () -> setUpOffer.openSettings(Category.AWAY),
                 () -> setUpOffer.openSettings(Category.SOLAR), setUp::open, this::quit);
@@ -218,7 +218,7 @@ public final class DesktopApp {
             }
         });
 
-        showTrayOrWindow(new StartupDecision(appSettings.mode(), commandLine.background(), trayParts.needTheTray()),
+        showTrayOrWindow(new StartupDecision(appSettings.mode(), commandLine.atLogin(), trayParts.needTheTray()),
                 tray, dashboard, new Tray.Actions(dashboard::popUp, dashboard::openWindow,
                         () -> setUpOffer.openSettings(Category.SOLAR), () -> settings.open(Category.ABOUT),
                         this::quit));
@@ -257,7 +257,7 @@ public final class DesktopApp {
      * @return empty when this copy runs; else the exit code this one ends with
      */
     private Optional<ExitCode> claim(CompletableFuture<Consumer<InstanceCommand>> commands) {
-        return claim.claim(command -> commands.thenAccept(handler -> handler.accept(command)));
+        return claimReport.claim(command -> commands.thenAccept(handler -> handler.accept(command)));
     }
 
     private void showTrayOrWindow(StartupDecision decision, Tray tray, Dashboard dashboard, Tray.Actions actions)

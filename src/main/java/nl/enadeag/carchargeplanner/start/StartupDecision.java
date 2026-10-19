@@ -8,10 +8,10 @@ import java.time.Duration;
  * the dashboard starts.
  *
  * @param mode how the owner wants the app shown
- * @param background the app was started at login, hidden
+ * @param atLogin the app was started at login, hidden
  * @param notificationsNeedTheTray the system shows notifications as the tray icon's messages, as Windows does
  */
-record StartupDecision(DisplayMode mode, boolean background, boolean notificationsNeedTheTray) {
+record StartupDecision(DisplayMode mode, boolean atLogin, boolean notificationsNeedTheTray) {
 
     /** At login the panel may come up a moment after the app. */
     static final Duration TRAY_WAIT = Duration.ofSeconds(5);
@@ -43,7 +43,7 @@ record StartupDecision(DisplayMode mode, boolean background, boolean notificatio
      * @return {@link #TRAY_WAIT}, or zero
      */
     Duration trayWait() {
-        return background || mode == DisplayMode.TRAY ? TRAY_WAIT : Duration.ZERO;
+        return atLogin || mode == DisplayMode.TRAY ? TRAY_WAIT : Duration.ZERO;
     }
 
     /**
@@ -56,6 +56,6 @@ record StartupDecision(DisplayMode mode, boolean background, boolean notificatio
         if (trayShown && mode != DisplayMode.WINDOW) {
             return DashboardStart.POPUP;
         }
-        return background ? DashboardStart.HIDDEN_WINDOW : DashboardStart.WINDOW;
+        return atLogin ? DashboardStart.HIDDEN_WINDOW : DashboardStart.WINDOW;
     }
 }

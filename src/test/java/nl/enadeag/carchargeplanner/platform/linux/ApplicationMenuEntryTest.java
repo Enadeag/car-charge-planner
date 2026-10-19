@@ -17,7 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 /** Everything goes to a temporary data folder: never to the real menu. */
 @EnabledOnOs(OS.LINUX)
-class LinuxMenuEntryTest {
+class ApplicationMenuEntryTest {
 
     private static final String PROGRAM = "/opt/car-charge-planner/bin/car-charge-planner";
 
@@ -26,8 +26,9 @@ class LinuxMenuEntryTest {
 
     private final List<Path> refreshed = new ArrayList<>();
 
-    private LinuxMenuEntry menuEntry(String program) {
-        return new LinuxMenuEntry(data, Path.of(program), "car-charge-planner", "Car charge planner", refreshed::add);
+    private ApplicationMenuEntry menuEntry(String program) {
+        return new ApplicationMenuEntry(data, Path.of(program), "car-charge-planner", "Car charge planner",
+                refreshed::add);
     }
 
     private Path entry() {
@@ -120,7 +121,7 @@ class LinuxMenuEntryTest {
     @Test
     void refreshingTheCachesWorksWithOrWithoutTheTools() throws Exception {
         menuEntry(PROGRAM).install();
-        LinuxMenuEntry.refreshCaches(data);
+        ApplicationMenuEntry.refreshCaches(data);
         assertThat(entry()).exists();
     }
 }
