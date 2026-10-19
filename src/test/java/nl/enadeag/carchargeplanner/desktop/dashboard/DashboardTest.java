@@ -101,7 +101,7 @@ class DashboardTest {
     }
 
     private void clickTheIcon() throws Exception {
-        dashboard.popUp(ICON_AT_BOTTOM_RIGHT);
+        dashboard.trayIconClicked(ICON_AT_BOTTOM_RIGHT);
         Fx.settle();
     }
 
@@ -428,7 +428,7 @@ class DashboardTest {
 
     @Test
     void aReportedIconPositionOffEveryScreenFallsBackToTheCornerOfThePrimaryScreen() throws Exception {
-        dashboard.popUp(new Point2D(-40_000, 90_000));
+        dashboard.trayIconClicked(new Point2D(-40_000, 90_000));
         Fx.settle();
 
         var popup = popup().orElseThrow();

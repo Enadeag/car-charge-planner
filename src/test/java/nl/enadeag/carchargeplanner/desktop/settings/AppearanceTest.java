@@ -83,7 +83,7 @@ class AppearanceTest {
     @Test
     void theOpenPopupTurnsDarkToo() throws Exception {
         closeAll();
-        dashboard.popUp(new Point2D(960, 990));
+        dashboard.trayIconClicked(new Point2D(960, 990));
         Fx.settle();
         assertThat(darkWindows()).containsExactly(false);
 

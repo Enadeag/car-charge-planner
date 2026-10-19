@@ -78,7 +78,7 @@ public final class Dashboard {
      * @param icon where the tray says its icon is, in JavaFX's screen coordinates; reported by another process, so
      *     a position off every screen is replaced by the primary screen's bottom right
      */
-    public void popUp(Point2D icon) {
+    public void trayIconClicked(Point2D icon) {
         Platform.runLater(() -> {
             if (window.isShowing()) {
                 window.show(view);

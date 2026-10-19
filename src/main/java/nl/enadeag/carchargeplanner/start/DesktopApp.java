@@ -192,7 +192,7 @@ public final class DesktopApp {
 
         var decision = new StartupDecision(appSettings.mode(), commandLine.atLogin(),
                 trayParts.notificationsNeedTheTray());
-        showTrayOrWindow(decision, tray, dashboard, new Tray.Actions(dashboard::popUp, dashboard::openWindow,
+        showTrayOrWindow(decision, tray, dashboard, new Tray.Actions(dashboard::trayIconClicked, dashboard::openWindow,
                         () -> windows.setUpOffer().openSettings(Category.SOLAR),
                         () -> windows.settings().open(Category.ABOUT), this::quit));
         // only now: on Windows the first announcement needs the tray icon to show it
