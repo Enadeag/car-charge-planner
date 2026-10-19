@@ -161,7 +161,8 @@ public final class SettingsStorage {
      * @param changes what to write
      * @param prompting runs, on the saving thread, once the system asks the owner to unlock the keychain
      * @return saved; refused by the system's start at login, with its reason; not saved as the keychain stayed
-     *     locked; or failed with the system's error when a file or the keychain could not be written
+     *     locked; not saved as the API keys could not be stored, whose English reason goes to the log; or failed with
+     *     the system's error when a file could not be written
      */
     public SaveOutcome save(SettingsChanges changes, Runnable prompting) {
         var system = stores.startAtLogin();
@@ -187,8 +188,11 @@ public final class SettingsStorage {
                 stores.appSettings().write(changes.app().get());
             }
         } catch (SecretsProblem e) {
-            return e.kind() == SecretsProblem.Kind.LOCKED ? new SaveOutcome.KeychainLocked()
-                    : new SaveOutcome.Failed(String.valueOf(e.getMessage()));
+            if (e.kind() == SecretsProblem.Kind.LOCKED) {
+                return new SaveOutcome.KeychainLocked();
+            }
+            LOG.log(System.Logger.Level.WARNING, "The API keys could not be saved from Settings: " + e.getMessage());
+            return new SaveOutcome.KeysNotSaved();
         } catch (IOException e) {
             return new SaveOutcome.Failed(String.valueOf(e.getMessage()));
         }

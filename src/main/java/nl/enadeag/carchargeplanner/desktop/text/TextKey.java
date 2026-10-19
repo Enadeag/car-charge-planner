@@ -303,6 +303,8 @@ public enum TextKey {
     SETTINGS_SAVE_FAILED,
     /** Said when nothing was saved because the keychain stayed locked. */
     SETTINGS_KEYCHAIN_LOCKED,
+    /** Said when the API keys could not be stored for another reason, which the log has in English. */
+    SETTINGS_KEYS_NOT_SAVED,
     /** Said while Settings or set-up reads what is stored, before anything can be edited. */
     SETTINGS_READING,
     /** Said while Save or Finish stores what was entered. */

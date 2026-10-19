@@ -23,7 +23,14 @@ public sealed interface SaveOutcome {
     }
 
     /**
-     * A file or the system keychain could not be written; what was stored before that stays stored.
+     * The API keys could not be stored, in the keychain or in their file, for another reason than a locked keychain;
+     * nothing after them was stored. The reason, in English, is in the log.
+     */
+    record KeysNotSaved() implements SaveOutcome {
+    }
+
+    /**
+     * A file could not be written, or the work failed; what was stored before that stays stored.
      *
      * @param detail the system's error, as it gave it
      */

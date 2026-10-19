@@ -10,18 +10,25 @@ import nl.enadeag.carchargeplanner.desktop.app.Appearance;
 import nl.enadeag.carchargeplanner.desktop.app.DisplayMode;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
+import nl.enadeag.carchargeplanner.desktop.settings.store.SaveOutcome;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.PlanningPreferences;
+import nl.enadeag.carchargeplanner.engine.forecast.FakeProvider;
+import nl.enadeag.carchargeplanner.engine.forecast.SettingSpec;
+import nl.enadeag.carchargeplanner.engine.forecast.SunnyDays;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Hyperlink;
+import javafx.scene.control.TextInputControl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -183,6 +190,35 @@ class SettingsViewTest {
         assertThat(Fx.call(view::shown)).isEqualTo(Category.APP);
         assertThat(Fx.call(() -> Scenes.visibleTexts(view)))
                 .contains(settings.messages.text(TextKey.START_AT_LOGIN_FAILED, "access denied"));
+    }
+
+    private static FakeProvider keyedProvider(String id, String name) {
+        var settings = List.of(new SettingSpec("api_key", "API key", "", true, true));
+        return new FakeProvider(FakeProvider.info(id, name, settings),
+                FakeProvider.steps(SunnyDays.days(LocalDate.now(SunnyDays.TZ), 3, 4.0)));
+    }
+
+    @Test
+    void whenTheApiKeysCannotBeStoredNothingAfterThemIsSavedAndTheOwnerIsToldInTheirLanguage() throws Exception {
+        settings.close();
+        var dutch = Files.createDirectory(folder.resolve("dutch"));
+        settings = new SettingsFixture(dutch, Language.DUTCH,
+                List.of(keyedProvider("open-meteo", "Open-Meteo"), keyedProvider("forecast-solar", "Forecast.Solar")));
+        var before = Files.readString(settings.configPath);
+        var view = settings.open();
+        // where the keys' file goes, a folder with something in it is in the way
+        Files.createDirectories(dutch.resolve("secrets.json").resolve("in-the-way"));
+
+        Fx.run(() -> {
+            ((TextInputControl) settings.field(view, TextKey.PROVIDER_API_KEY)).setText("NEW-KEY");
+            settings.type(view, TextKey.FIELD_TARGET_CHARGE, "90");
+            view.save(() -> { });
+        });
+
+        assertThat(Fx.call(view::outcome)).contains(new SaveOutcome.KeysNotSaved());
+        assertThat(Fx.call(() -> Scenes.visibleTexts(view)))
+                .contains(settings.messages.text(TextKey.SETTINGS_KEYS_NOT_SAVED));
+        assertThat(settings.configPath).as("nothing after the keys").hasContent(before);
     }
 
     @Test

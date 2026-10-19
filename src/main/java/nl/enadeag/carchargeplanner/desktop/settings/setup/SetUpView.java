@@ -426,6 +426,10 @@ final class SetUpView extends BorderPane {
                 showProblem(messages.text(TextKey.SETTINGS_KEYCHAIN_LOCKED));
                 ScreenReader.focus(status);
             }
+            case SaveOutcome.KeysNotSaved _ -> {
+                showProblem(messages.text(TextKey.SETTINGS_KEYS_NOT_SAVED));
+                ScreenReader.focus(status);
+            }
             case SaveOutcome.Failed failure -> {
                 showProblem(messages.text(TextKey.SETTINGS_SAVE_FAILED, failure.detail()));
                 ScreenReader.focus(status);
