@@ -55,19 +55,7 @@ Limits to know about:
 
 ## Which cars can be read
 
-None yet: today you enter the battery level by hand, and that always stays possible. Reading the car is planned, only through routes the car maker offers its owners ([ADR 0006](docs/adr/0006-integrations-built-in.md)):
-
-| Car | Route | Status |
-| --- | --- | --- |
-| Škoda | Škoda's public API, with a key from the MyŠkoda app | Planned, will start as Untested |
-| BMW, Mini | BMW CarData | Planned, will start as Untested |
-| Hyundai, Kia | Pleos, with a developer app of your own | Planned, will start as Untested |
-| Volvo, Polestar | Volvo's Energy API, Polestar's Data Portal, with a developer app of your own | Planned, will start as Untested |
-| Ford | FordConnect Query, with a developer app of your own | Planned, will start as Untested |
-| Tesla | Fleet API, with a developer account of your own | Only if someone contributes it |
-| Volkswagen, Audi, Cupra, Mercedes, Stellantis brands (Peugeot, Opel, Fiat and others), Renault, Toyota, MG, BYD, Nissan | No official route for owners | Not planned |
-
-"Untested" means it is built from the maker's documentation but no owner has confirmed it yet, the same words as in [Supported systems](#supported-systems). Have one of these cars once it is built? Please report with the **Does an integration work with my device?** issue form.
+None: you enter the battery level by hand. Reading it from the car is not planned for now; [ADR 0006](docs/adr/0006-integrations-built-in.md) records which car makers offer their owners an official route, should that change.
 
 ## Install
 
