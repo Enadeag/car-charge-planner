@@ -133,15 +133,6 @@ final class DashboardPopup {
         }
     }
 
-    /**
-     * Whether the popup is open.
-     *
-     * @return true while it shows
-     */
-    boolean isShowing() {
-        return stage.isShowing();
-    }
-
     private void closeUnlessFocused() {
         if (!stage.isFocused() && !owner.isFocused()) {
             close();
