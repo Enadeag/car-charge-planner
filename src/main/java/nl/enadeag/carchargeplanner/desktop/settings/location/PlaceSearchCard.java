@@ -1,11 +1,11 @@
 package nl.enadeag.carchargeplanner.desktop.settings.location;
 
 import nl.enadeag.carchargeplanner.desktop.app.Background;
-import nl.enadeag.carchargeplanner.desktop.settings.field.FieldRow;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
+import nl.enadeag.carchargeplanner.desktop.theme.Texts;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.forecast.Place;
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults;
@@ -31,7 +31,7 @@ final class PlaceSearchCard {
     private final Messages messages;
     private final TextField text = new TextField();
     private final Button search;
-    private final Label status = FieldRow.paragraph("", "note");
+    private final Label status = Texts.paragraph("", "note");
     private final VBox results = new VBox();
     private final Card card;
     private ProviderId provider = new ProviderId("open-meteo");

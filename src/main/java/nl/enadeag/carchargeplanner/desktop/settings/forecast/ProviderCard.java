@@ -10,6 +10,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.form.ProviderTexts;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.desktop.theme.Texts;
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import java.net.URI;
@@ -36,7 +37,7 @@ final class ProviderCard {
     private final Messages messages;
     private final Map<String, Input> inputs = new LinkedHashMap<>();
     private final Map<String, FieldRow> rows = new LinkedHashMap<>();
-    private final Label result = FieldRow.paragraph("", "note");
+    private final Label result = Texts.paragraph("", "note");
     private final Button test;
     private final Card card;
 
@@ -60,8 +61,8 @@ final class ProviderCard {
         // the fallback provider's card can show below the first one's: a screen reader names whose each control is
         terms.setAccessibleText(messages.text(TextKey.IN_GROUP, terms.getText(), info.name()));
         var content = new ArrayList<Node>(List.of(
-                FieldRow.paragraph(messages.text(TextKey.PROVIDER_SENDS, texts.sends(info)), "note"),
-                FieldRow.paragraph(messages.text(TextKey.PROVIDER_LIMITS, info.minRefresh().toMinutes(),
+                Texts.paragraph(messages.text(TextKey.PROVIDER_SENDS, texts.sends(info)), "note"),
+                Texts.paragraph(messages.text(TextKey.PROVIDER_LIMITS, info.minRefresh().toMinutes(),
                         Math.max(1, info.horizon().toDays())), "note"),
                 terms));
         for (var setting : info.settings()) {

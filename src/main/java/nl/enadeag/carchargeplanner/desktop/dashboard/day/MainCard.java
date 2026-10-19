@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.day;
 
-import static nl.enadeag.carchargeplanner.desktop.dashboard.parts.Texts.label;
-import static nl.enadeag.carchargeplanner.desktop.dashboard.parts.Texts.paragraph;
+import static nl.enadeag.carchargeplanner.desktop.theme.Texts.label;
+import static nl.enadeag.carchargeplanner.desktop.theme.Texts.paragraph;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Glyphs;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.SourceChip;

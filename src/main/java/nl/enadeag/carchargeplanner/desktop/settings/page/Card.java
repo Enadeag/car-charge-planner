@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.settings.page;
 
-import nl.enadeag.carchargeplanner.desktop.settings.field.FieldRow;
+import nl.enadeag.carchargeplanner.desktop.theme.Texts;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -25,7 +25,7 @@ public final class Card extends VBox {
         heading.setAccessibleRole(AccessibleRole.TEXT);
         getChildren().add(heading);
         if (!explanation.isEmpty()) {
-            getChildren().add(FieldRow.paragraph(explanation, "note"));
+            getChildren().add(Texts.paragraph(explanation, "note"));
         }
         getChildren().addAll(content);
         getStyleClass().addAll("card", "settings-card");

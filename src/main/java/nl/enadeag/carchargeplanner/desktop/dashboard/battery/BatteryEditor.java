@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.battery;
 
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Texts;
+import nl.enadeag.carchargeplanner.desktop.theme.Texts;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import java.util.function.IntConsumer;

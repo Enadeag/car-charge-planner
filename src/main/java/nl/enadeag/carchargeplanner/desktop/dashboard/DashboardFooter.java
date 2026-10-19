@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard;
 
 import atlantafx.base.theme.Styles;
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Texts;
+import nl.enadeag.carchargeplanner.desktop.theme.Texts;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import java.util.List;

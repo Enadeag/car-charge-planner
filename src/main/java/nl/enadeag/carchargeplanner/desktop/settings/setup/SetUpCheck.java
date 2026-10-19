@@ -1,12 +1,12 @@
 package nl.enadeag.carchargeplanner.desktop.settings.setup;
 
 import nl.enadeag.carchargeplanner.desktop.app.Background;
-import nl.enadeag.carchargeplanner.desktop.settings.field.FieldRow;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
 import nl.enadeag.carchargeplanner.desktop.settings.page.PageView;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.desktop.theme.Texts;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
@@ -28,7 +28,7 @@ final class SetUpCheck implements SetUpPage {
     private final List<ProviderInfo> providers;
     private final Background background;
     private final Messages messages;
-    private final Label status = FieldRow.paragraph("", "status-text");
+    private final Label status = Texts.paragraph("", "status-text");
     private final Button again;
     private final PageView view;
     private EngineConfig config;

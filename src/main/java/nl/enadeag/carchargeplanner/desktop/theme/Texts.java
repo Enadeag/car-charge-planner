@@ -1,8 +1,8 @@
-package nl.enadeag.carchargeplanner.desktop.dashboard.parts;
+package nl.enadeag.carchargeplanner.desktop.theme;
 
 import javafx.scene.control.Label;
 
-/** Labels for the dashboard's cards. */
+/** Labels for the desktop's windows: the dashboard and Settings build their texts with these. */
 public final class Texts {
 
     private Texts() {
@@ -12,7 +12,7 @@ public final class Texts {
      * A label on one line.
      *
      * @param text the text; may be empty
-     * @param styleClass the label's class in dashboard.css, such as "hero"
+     * @param styleClass the label's class in the shared stylesheet, such as "hero"
      * @return a new label
      */
     public static Label label(String text, String styleClass) {
@@ -25,7 +25,7 @@ public final class Texts {
      * A label that wraps onto more lines rather than cutting its text short.
      *
      * @param text the text; may be empty
-     * @param styleClass the label's class in dashboard.css, such as "note"
+     * @param styleClass the label's class in the shared stylesheet, such as "note"
      * @return a new label
      */
     public static Label paragraph(String text, String styleClass) {

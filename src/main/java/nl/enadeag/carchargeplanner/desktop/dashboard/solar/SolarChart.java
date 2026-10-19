@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.solar;
 
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Texts;
+import nl.enadeag.carchargeplanner.desktop.theme.Texts;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Tween;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel.Step;
 import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;

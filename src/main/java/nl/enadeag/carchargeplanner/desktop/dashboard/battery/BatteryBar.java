@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.battery;
 
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Texts;
+import nl.enadeag.carchargeplanner.desktop.theme.Texts;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Tween;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.AccessibleRole;

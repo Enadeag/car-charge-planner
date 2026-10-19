@@ -8,7 +8,6 @@ import nl.enadeag.carchargeplanner.desktop.settings.app.AppPage;
 import nl.enadeag.carchargeplanner.desktop.settings.away.AwayPage;
 import nl.enadeag.carchargeplanner.desktop.settings.car.CarHousePage;
 import nl.enadeag.carchargeplanner.desktop.settings.charger.ChargerPage;
-import nl.enadeag.carchargeplanner.desktop.settings.field.FieldRow;
 import nl.enadeag.carchargeplanner.desktop.settings.forecast.ConnectionTest;
 import nl.enadeag.carchargeplanner.desktop.settings.forecast.ForecastPage;
 import nl.enadeag.carchargeplanner.desktop.settings.location.LocationPage;
@@ -22,6 +21,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStores;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
+import nl.enadeag.carchargeplanner.desktop.theme.Texts;
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
 import java.net.URI;
@@ -78,7 +78,7 @@ final class SettingsView extends BorderPane {
     private final Messages messages;
     private final ListView<Category> categories = new ListView<>();
     private final ScrollPane body = new ScrollPane();
-    private final Label status = FieldRow.paragraph("", "status-text");
+    private final Label status = Texts.paragraph("", "status-text");
     private final Button cancel = new Button();
     private final Button save;
     private final Button saveAndClose;
@@ -128,8 +128,7 @@ final class SettingsView extends BorderPane {
                 }
             }
         });
-        var heading = new Label(messages.text(TextKey.SETTINGS_HEADING));
-        heading.getStyleClass().add("sidebar-title");
+        var heading = Texts.label(messages.text(TextKey.SETTINGS_HEADING), "sidebar-title");
         var sidebar = new VBox(heading, categories);
         VBox.setVgrow(categories, Priority.ALWAYS);
         sidebar.getStyleClass().add("settings-sidebar");
@@ -154,7 +153,7 @@ final class SettingsView extends BorderPane {
             close.run();
             afterClose.run();
         });
-        confirm = bar(FieldRow.paragraph(messages.text(TextKey.SETTINGS_DISCARD_QUESTION), "field-label"),
+        confirm = bar(Texts.paragraph(messages.text(TextKey.SETTINGS_DISCARD_QUESTION), "field-label"),
                 keepEditing, discard);
         // a scene has one Escape: the bar that shows has it, and the other lets go of it first
         cancel.cancelButtonProperty().bind(actions.visibleProperty());

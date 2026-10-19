@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.advice;
 
-import static nl.enadeag.carchargeplanner.desktop.dashboard.parts.Texts.paragraph;
+import static nl.enadeag.carchargeplanner.desktop.theme.Texts.paragraph;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Chip;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Chip.Source;

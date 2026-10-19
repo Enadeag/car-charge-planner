@@ -1,11 +1,11 @@
 package nl.enadeag.carchargeplanner.desktop.settings.setup;
 
-import nl.enadeag.carchargeplanner.desktop.settings.field.FieldRow;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ProviderTexts;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
 import nl.enadeag.carchargeplanner.desktop.settings.page.PageView;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.desktop.theme.Texts;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
@@ -33,9 +33,9 @@ final class SetUpWelcome implements SetUpPage {
         this.messages = messages;
         this.providers = List.copyOf(providers);
         this.searchesPlaces = searchesPlaces;
-        privacy = FieldRow.paragraph("", "note");
+        privacy = Texts.paragraph("", "note");
         view = new PageView(messages.text(SetUpStep.WELCOME.title()));
-        view.show(FieldRow.paragraph(messages.text(TextKey.SETUP_WELCOME_INTRO), "field-label"),
+        view.show(Texts.paragraph(messages.text(TextKey.SETUP_WELCOME_INTRO), "field-label"),
                 new Card(messages.text(TextKey.SETUP_PRIVACY_TITLE), "", privacy),
                 new Card(messages.text(TextKey.SETUP_TYPICAL_TITLE), messages.text(TextKey.SETUP_TYPICAL)));
     }

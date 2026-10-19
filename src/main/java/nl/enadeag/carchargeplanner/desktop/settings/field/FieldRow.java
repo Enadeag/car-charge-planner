@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.desktop.settings.field;
 
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.desktop.theme.Texts;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -18,8 +19,8 @@ public final class FieldRow extends VBox {
     private final String name;
     /** The name on screen; left out of the row, and so never seen, when the name is empty. */
     private final Label label;
-    private final Label hint = paragraph("", "note");
-    private final Label problem = paragraph("", "field-problem");
+    private final Label hint = Texts.paragraph("", "note");
+    private final Label problem = Texts.paragraph("", "field-problem");
     private final Label tag = new Label();
 
     /**
@@ -35,7 +36,7 @@ public final class FieldRow extends VBox {
         this.name = name;
         var line = new HBox();
         line.getStyleClass().add("field-line");
-        label = paragraph(name, "field-label");
+        label = Texts.paragraph(name, "field-label");
         if (!name.isEmpty()) {
             label.setLabelFor(input.focusable());
             label.setMaxWidth(Double.MAX_VALUE);
@@ -146,20 +147,5 @@ public final class FieldRow extends VBox {
      */
     public static FieldRow of(Messages messages, TextKey name, TextKey hint, Input input) {
         return new FieldRow(messages.text(name), messages.text(hint), input);
-    }
-
-    /**
-     * A label that wraps onto more lines rather than cutting its text short.
-     *
-     * @param text the text; may be empty
-     * @param styleClass the label's class in the stylesheet
-     * @return a new label
-     */
-    public static Label paragraph(String text, String styleClass) {
-        var label = new Label(text);
-        label.getStyleClass().add(styleClass);
-        label.setWrapText(true);
-        label.setMinHeight(Label.USE_PREF_SIZE);
-        return label;
     }
 }

@@ -283,7 +283,7 @@ class ArchitectureTest {
             .that().resideInAPackage(DASHBOARD + ".parts..")
             .should().dependOnClassesThat(resideInAPackage(DASHBOARD + "..")
                     .and(not(resideInAPackage(DASHBOARD + ".parts.."))))
-            .because("the chips, glyphs, texts and tweens are what every part of the dashboard builds on");
+            .because("the chips, glyphs and tweens are what every part of the dashboard builds on");
 
     @ArchTest
     static final ArchRule noCyclesBetweenTheSettingsParts = slices()
