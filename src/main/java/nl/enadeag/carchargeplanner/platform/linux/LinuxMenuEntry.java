@@ -96,11 +96,12 @@ public final class LinuxMenuEntry {
      * @param dataHome the user's data folder, {@code $XDG_DATA_HOME}
      */
     public static void refreshCaches(Path dataHome) {
-        run("update-desktop-database", dataHome.resolve("applications").toString());
-        run("gtk-update-icon-cache", "--ignore-theme-index", "--force", dataHome.resolve("icons/hicolor").toString());
+        runCacheTool("update-desktop-database", dataHome.resolve("applications").toString());
+        runCacheTool("gtk-update-icon-cache", "--ignore-theme-index", "--force",
+                dataHome.resolve("icons/hicolor").toString());
     }
 
-    private static void run(String... command) {
+    private static void runCacheTool(String... command) {
         try {
             var process = new ProcessBuilder(command).redirectErrorStream(true)
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD).start();

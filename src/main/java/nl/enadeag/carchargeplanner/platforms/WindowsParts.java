@@ -48,7 +48,7 @@ final class WindowsParts implements PlatformParts {
 
     @Override
     public Optional<StartAtLogin> startAtLogin() {
-        return host.launcher().map(program -> new WindowsStartAtLogin(new RegistryRunKey(RegistryRunKey.RUN),
+        return host.launcher().map(program -> new WindowsStartAtLogin(new RegistryRunKey(RegistryRunKey.RUN_KEY_PATH),
                 AppName.TITLE, program));
     }
 

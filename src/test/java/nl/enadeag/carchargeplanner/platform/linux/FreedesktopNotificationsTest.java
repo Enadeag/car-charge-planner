@@ -203,7 +203,7 @@ class FreedesktopNotificationsTest {
         serve();
         notifications.onClick(opened::release);
         var first = show();
-        for (int i = 0; i < FreedesktopNotifications.REMEMBER; i++) {
+        for (int i = 0; i < FreedesktopNotifications.REMEMBERED_IDS; i++) {
             show();
         }
 

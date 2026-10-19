@@ -39,7 +39,7 @@ public final class FreedesktopNotifications implements Notifications {
     /** How long a notification stays on screen, in milliseconds, before it goes to the desktop's history. */
     static final int EXPIRE_MS = 20_000;
     /** How many of the latest notifications' ids are kept, to recognise a click on one of them later. */
-    static final int REMEMBER = 50;
+    static final int REMEMBERED_IDS = 50;
     /** The stock icon used when the app's own cannot be written. */
     static final String FALLBACK_ICON = "dialog-information";
     private static final int ICON_SIZE = 128;
@@ -106,12 +106,12 @@ public final class FreedesktopNotifications implements Notifications {
     @Override
     public synchronized void onClick(Runnable clicked) {
         this.clicked = clicked;
-        connected();
+        ensureConnection();
     }
 
     @Override
     public synchronized void show(NotificationText text) {
-        var connection = connected();
+        var connection = ensureConnection();
         if (connection == null) {
             return;
         }
@@ -119,11 +119,11 @@ public final class FreedesktopNotifications implements Notifications {
             var server = connection.getRemoteObject(NotificationServer.BUS_NAME, NotificationServer.OBJECT_PATH,
                     NotificationServer.class);
             var open = openLabel.get();
-            var id = server.Notify(appName, new UInt32(0), iconUri(), text.title(), text.body(),
+            var id = server.Notify(appName, new UInt32(0), writeIconOnce(), text.title(), text.body(),
                     List.of(DEFAULT_ACTION, open, OPEN_ACTION, open),
                     Map.of("desktop-entry", new Variant<>(desktopEntry)), EXPIRE_MS);
             sent.addLast(id.longValue());
-            if (sent.size() > REMEMBER) {
+            if (sent.size() > REMEMBERED_IDS) {
                 sent.removeFirst();
             }
         } catch (DBusException | RuntimeException e) {
@@ -148,7 +148,7 @@ public final class FreedesktopNotifications implements Notifications {
     }
 
     /** The connection, opened and listening for clicks when it is not yet; null when there is no session bus. */
-    private DBusConnection connected() {
+    private DBusConnection ensureConnection() {
         if (bus != null && bus.isConnected()) {
             return bus;
         }
@@ -197,7 +197,7 @@ public final class FreedesktopNotifications implements Notifications {
     }
 
     /** The app icon as a file the server can read, written once; a stock icon when it cannot be written. */
-    private String iconUri() {
+    private String writeIconOnce() {
         if (iconUri == null) {
             var file = iconFolder.resolve(desktopEntry + ".png");
             try {

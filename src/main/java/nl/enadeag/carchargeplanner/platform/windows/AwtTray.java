@@ -94,7 +94,7 @@ public final class AwtTray implements Tray, Notifications {
         trayIcon.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent event) {
-                action.pressed(event.getWhen());
+                action.recordPress(event.getWhen());
             }
 
             @Override
@@ -106,7 +106,7 @@ public final class AwtTray implements Tray, Notifications {
         });
         // a click on a message, a double click on the icon, or Enter on it after Win+B: the popup opens for the last
         trayIcon.addActionListener(event -> {
-            if (!messages.click() && action.byKeyboard(event.getWhen())) {
+            if (!messages.claimClick() && action.cameFromKeyboard(event.getWhen())) {
                 actions.clicked().accept(BY_KEYBOARD);
             }
         });
@@ -118,13 +118,13 @@ public final class AwtTray implements Tray, Notifications {
         var shown = trayIcon;
         messages.attach((title, body) -> shown.displayMessage(title, body, TrayIcon.MessageType.INFO));
         // JavaFX's properties belong to its thread
-        Platform.runLater(() -> colorScheme.subscribe(_ -> redraw()));
+        Platform.runLater(() -> colorScheme.subscribe(_ -> refreshIconAndTooltip()));
     }
 
     @Override
     public synchronized void showStatus(TrayStatus status) {
         this.status = status;
-        redraw();
+        refreshIconAndTooltip();
     }
 
     @Override
@@ -161,12 +161,13 @@ public final class AwtTray implements Tray, Notifications {
         messages.show(text);
     }
 
-    /** Nothing to close: the messages go with the icon, at {@link #remove()}. */
+    /** Stops passing clicks on: the messages themselves go with the icon, at {@link #remove()}. */
     @Override
     public void close() {
+        messages.stopPassingClicks();
     }
 
-    private synchronized void redraw() {
+    private synchronized void refreshIconAndTooltip() {
         if (trayIcon != null) {
             trayIcon.setImage(image());
             trayIcon.setToolTip(look.tooltip(status));
@@ -183,7 +184,7 @@ public final class AwtTray implements Tray, Notifications {
         return new BaseMultiResolutionImage(look.images(status).toArray(Image[]::new));
     }
 
-    /** The menu's entries, once they are made. */
+    /** Gives the menu's entries the current labels; does nothing before {@link #show(Actions)} made them. */
     private void relabel() {
         items.forEach((entry, item) -> item.setLabel(entry.label(labels)));
     }

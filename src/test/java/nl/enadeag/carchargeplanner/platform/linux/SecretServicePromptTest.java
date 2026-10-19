@@ -51,6 +51,8 @@ class SecretServicePromptTest {
         volatile String alias = COLLECTION;
         volatile String prompt = PROMPT;
         volatile List<DBusPath> unlockedAtOnce = List.of();
+        volatile List<DBusPath> unlockedItems = List.of();
+        volatile List<DBusPath> lockedItems = List.of(new DBusPath(COLLECTION + "/1"));
 
         @Override
         public SecretService.Pair<Variant<?>, DBusPath> OpenSession(String algorithm, Variant<?> input) {
@@ -59,7 +61,7 @@ class SecretServicePromptTest {
 
         @Override
         public SecretService.Pair<List<DBusPath>, List<DBusPath>> SearchItems(Map<String, String> attributes) {
-            return new SecretService.Pair<>(List.of(), List.of(new DBusPath(COLLECTION + "/1")));
+            return new SecretService.Pair<>(unlockedItems, lockedItems);
         }
 
         @Override
@@ -74,12 +76,27 @@ class SecretServicePromptTest {
 
         @Override
         public DBusPath ReadAlias(String name) {
-            return new DBusPath(SecretService.DEFAULT_ALIAS.equals(name) ? alias : SecretService.NO_PROMPT);
+            return new DBusPath(SecretService.DEFAULT_ALIAS.equals(name) ? alias : SecretService.NO_OBJECT);
         }
 
         @Override
         public String getObjectPath() {
             return SecretService.SERVICE_PATH;
+        }
+    }
+
+    /** An item whose removal needs the owner's password, as one in a collection that locked meanwhile. */
+    private static final class ItemThatNeedsThePrompt implements SecretService.Item {
+        static final String PATH = COLLECTION + "/2";
+
+        @Override
+        public DBusPath Delete() {
+            return new DBusPath(PROMPT);
+        }
+
+        @Override
+        public String getObjectPath() {
+            return PATH;
         }
     }
 
@@ -178,6 +195,25 @@ class SecretServicePromptTest {
         serve(new OwnersPrompt(Optional.empty()));
 
         assertThatThrownBy(() -> keychain().read("index")).isInstanceOfSatisfying(KeychainException.class,
+                e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.LOCKED));
+    }
+
+    @Test
+    void aDeleteFromTheLockedKeyringSaysLockedRatherThanThatItIsGone() throws Exception {
+        serve(new OwnersPrompt(Optional.empty()));
+
+        assertThatThrownBy(() -> keychain().delete("index")).isInstanceOfSatisfying(KeychainException.class,
+                e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.LOCKED));
+    }
+
+    @Test
+    void aDeleteThatWouldNeedThePromptSaysLocked() throws Exception {
+        var service = serve(new OwnersPrompt(Optional.empty()));
+        desktop.exportObject(new ItemThatNeedsThePrompt());
+        service.lockedItems = List.of();
+        service.unlockedItems = List.of(new DBusPath(ItemThatNeedsThePrompt.PATH));
+
+        assertThatThrownBy(() -> keychain().delete("index")).isInstanceOfSatisfying(KeychainException.class,
                 e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.LOCKED));
     }
 
@@ -284,7 +320,7 @@ class SecretServicePromptTest {
     @Test
     void aKeyringUnlockedWithoutAPromptIsUnlocked() throws Exception {
         var service = serve(new OwnersPrompt(Optional.empty()));
-        service.prompt = SecretService.NO_PROMPT;
+        service.prompt = SecretService.NO_OBJECT;
         service.unlockedAtOnce = List.of(new DBusPath(COLLECTION));
         var told = new AtomicInteger();
 
@@ -295,7 +331,7 @@ class SecretServicePromptTest {
     @Test
     void aServiceThatNeitherUnlocksNorPromptsRefuses() throws Exception {
         var service = serve(new OwnersPrompt(Optional.empty()));
-        service.prompt = SecretService.NO_PROMPT;
+        service.prompt = SecretService.NO_OBJECT;
 
         assertThatThrownBy(() -> keychain().unlock(WAIT, () -> { })).isInstanceOfSatisfying(KeychainException.class,
                 e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.REFUSED));
@@ -304,7 +340,7 @@ class SecretServicePromptTest {
     @Test
     void withoutADefaultKeyringThereIsNothingToUnlock() throws Exception {
         var service = serve(new OwnersPrompt(Optional.empty()));
-        service.alias = SecretService.NO_PROMPT;
+        service.alias = SecretService.NO_OBJECT;
 
         assertThatThrownBy(() -> keychain().unlock(WAIT, () -> { })).isInstanceOfSatisfying(KeychainException.class,
                 e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.REFUSED));

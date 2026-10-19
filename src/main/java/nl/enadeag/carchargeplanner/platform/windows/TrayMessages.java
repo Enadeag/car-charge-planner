@@ -52,6 +52,11 @@ final class TrayMessages {
         this.display = display;
     }
 
+    /** Stops passing clicks on: a click on a message that is still shown does nothing from now on. */
+    synchronized void stopPassingClicks() {
+        clicked = () -> { };
+    }
+
     /** The icon left the tray: messages are no longer shown. */
     synchronized void detach() {
         display = null;
@@ -80,7 +85,7 @@ final class TrayMessages {
      *
      * @return true when the click was a message's, false when none was waiting, such as for a double click
      */
-    boolean click() {
+    boolean claimClick() {
         Runnable action;
         synchronized (this) {
             if (!waiting) {

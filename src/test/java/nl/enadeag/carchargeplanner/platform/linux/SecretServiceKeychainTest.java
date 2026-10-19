@@ -181,7 +181,7 @@ class SecretServiceKeychainTest {
 
         @Override
         public SecretService.Pair<List<DBusPath>, DBusPath> Unlock(List<DBusPath> objects) {
-            return new SecretService.Pair<>(objects, new DBusPath(SecretService.NO_PROMPT));
+            return new SecretService.Pair<>(objects, new DBusPath(SecretService.NO_OBJECT));
         }
 
         @Override
@@ -250,6 +250,8 @@ class SecretServiceKeychainTest {
         assertThatThrownBy(() -> keychain.read("index")).isInstanceOfSatisfying(KeychainException.class,
                 e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.LOCKED));
         assertThatThrownBy(() -> keychain.write("index", "[]")).isInstanceOfSatisfying(KeychainException.class,
+                e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.LOCKED));
+        assertThatThrownBy(() -> keychain.delete("index")).isInstanceOfSatisfying(KeychainException.class,
                 e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.LOCKED));
         var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
         assertThatThrownBy(keys::load).isInstanceOfSatisfying(SecretsProblem.class,

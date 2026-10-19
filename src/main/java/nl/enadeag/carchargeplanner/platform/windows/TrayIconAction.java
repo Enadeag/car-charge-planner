@@ -30,7 +30,7 @@ final class TrayIconAction {
      *
      * @param when the press's time in milliseconds, as AWT's events give it
      */
-    synchronized void pressed(long when) {
+    synchronized void recordPress(long when) {
         pressedAt = when;
     }
 
@@ -40,7 +40,7 @@ final class TrayIconAction {
      * @param when the action's time in milliseconds, as AWT's events give it
      * @return true when no press came within the double-click time before it
      */
-    synchronized boolean byKeyboard(long when) {
+    synchronized boolean cameFromKeyboard(long when) {
         return pressedAt == Long.MIN_VALUE || when - pressedAt > doubleClickMillis;
     }
 }

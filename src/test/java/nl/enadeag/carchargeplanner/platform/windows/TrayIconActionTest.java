@@ -12,20 +12,20 @@ class TrayIconActionTest {
 
     @Test
     void anActionWithoutAPressOfTheMouseIsTheKeyboard() {
-        assertThat(action.byKeyboard(10_000)).isTrue();
+        assertThat(action.cameFromKeyboard(10_000)).isTrue();
     }
 
     @Test
     void anActionRightAfterAPressIsADoubleClick() {
-        action.pressed(10_000);
+        action.recordPress(10_000);
 
-        assertThat(action.byKeyboard(10_200)).isFalse();
+        assertThat(action.cameFromKeyboard(10_200)).isFalse();
     }
 
     @Test
     void anActionLongAfterTheLastPressIsTheKeyboardAgain() {
-        action.pressed(10_000);
+        action.recordPress(10_000);
 
-        assertThat(action.byKeyboard(12_000)).isTrue();
+        assertThat(action.cameFromKeyboard(12_000)).isTrue();
     }
 }

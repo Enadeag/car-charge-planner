@@ -52,7 +52,7 @@ final class TrayItem implements StatusNotifierItem, Properties {
      * @param icons the icon in every size the panel may pick from, used when the name is empty or not found
      * @param text the tooltip's text below the title, such as "Charge on sun now, until 14:30, at 10 A."
      */
-    void show(String iconName, List<BufferedImage> icons, String text) {
+    void setLook(String iconName, List<BufferedImage> icons, String text) {
         look = new Look(iconName, icons.stream().map(TrayItem::pixmap).toList(), text);
     }
 

@@ -27,8 +27,11 @@ public interface SecretService {
     String DEFAULT_COLLECTION = "/org/freedesktop/secrets/aliases/default";
     /** The interface name of a collection, also for reading its properties. */
     String COLLECTION_INTERFACE = "org.freedesktop.Secret.Collection";
-    /** A method that returns this path as its prompt needed no prompt; an alias that stands for nothing gives it too. */
-    String NO_PROMPT = "/";
+    /**
+     * The path that stands for no object: a method that gives it as its prompt needed none, and an alias that stands
+     * for no collection gives it as the collection.
+     */
+    String NO_OBJECT = "/";
     /** The alias of the default collection, normally the login keyring. */
     String DEFAULT_ALIAS = "default";
 
@@ -66,7 +69,7 @@ public interface SecretService {
          * Unlocks collections or items, as far as that needs no prompt.
          *
          * @param objects the collections or items to unlock
-         * @return the objects that are unlocked now, and a prompt's path, or {@link #NO_PROMPT} when none is needed
+         * @return the objects that are unlocked now, and a prompt's path, or {@link #NO_OBJECT} when none is needed
          */
         Pair<List<DBusPath>, DBusPath> Unlock(List<DBusPath> objects);
 
@@ -74,7 +77,7 @@ public interface SecretService {
          * Finds the collection an alias stands for.
          *
          * @param name the alias, such as "default"
-         * @return the collection's path, or {@link #NO_PROMPT} ("/") when the alias stands for none
+         * @return the collection's path, or {@link #NO_OBJECT} ("/") when the alias stands for none
          */
         DBusPath ReadAlias(String name);
     }
@@ -133,8 +136,8 @@ public interface SecretService {
          *
          * @param properties the item's label and attributes, by property name
          * @param secret the value to keep
-         * @param replace whether an item with the same attributes is replaced rather than added to
-         * @return the item's path and a prompt's path
+         * @param replace true to replace an item with the same attributes, false to add a second one beside it
+         * @return the item's path, and a prompt's path or {@link #NO_OBJECT} when none is needed
          */
         Pair<DBusPath, DBusPath> CreateItem(Map<String, Variant<?>> properties, Secret secret, boolean replace);
     }
@@ -146,7 +149,7 @@ public interface SecretService {
         /**
          * Removes the item.
          *
-         * @return a prompt's path
+         * @return a prompt's path, or {@link #NO_OBJECT} when none is needed and the item is gone
          */
         DBusPath Delete();
     }

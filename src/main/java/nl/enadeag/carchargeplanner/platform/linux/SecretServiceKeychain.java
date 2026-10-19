@@ -31,9 +31,9 @@ import org.freedesktop.dbus.types.Variant;
  * such as java-keyring are built for an older dbus-java and cannot sit next to the one the tray uses.
  *
  * <p>Items are found by two attributes, the application and the entry's name, in the default collection (the login
- * keyring). A locked collection is reported as {@link KeychainException.Kind#LOCKED} by reads and writes, which never
- * prompt; only {@link #unlock(Duration, Runnable)}, which the engine calls when the owner saves, has the service show its own
- * prompt for the keyring's password.
+ * keyring). A locked collection is reported as {@link KeychainException.Kind#LOCKED} by reads, writes and deletes,
+ * which never prompt; only {@link #unlock(Duration, Runnable)}, which the engine calls when the owner saves, has the
+ * service show its own prompt for the keyring's password.
  *
  * <p>The session uses the "plain" algorithm: the value crosses the owner's own session bus unencrypted, as with any
  * other message on it; the bus is not reachable by other users.
@@ -105,7 +105,7 @@ public final class SecretServiceKeychain implements Keychain {
 
     @Override
     public Optional<String> read(String name) throws KeychainException {
-        return over(bus -> {
+        return callTimed(bus -> {
             var found = service(bus).SearchItems(attributes(name));
             if (found.first.isEmpty()) {
                 if (!found.second.isEmpty()) {
@@ -121,7 +121,7 @@ public final class SecretServiceKeychain implements Keychain {
 
     @Override
     public void write(String name, String value) throws KeychainException {
-        over(bus -> {
+        callTimed(bus -> {
             requireUnlocked(bus);
             var collection = bus.getRemoteObject(SecretService.BUS_NAME, SecretService.DEFAULT_COLLECTION,
                     SecretService.Collection.class);
@@ -130,7 +130,7 @@ public final class SecretServiceKeychain implements Keychain {
             var created = collection.CreateItem(Map.of(
                     LABEL_PROPERTY, new Variant<>("Car charge planner: " + name),
                     ATTRIBUTES_PROPERTY, new Variant<>(attributes(name), "a{ss}")), secret, true);
-            if (!SecretService.NO_PROMPT.equals(created.second.getPath())) {
+            if (!SecretService.NO_OBJECT.equals(created.second.getPath())) {
                 throw locked(); // it would need the owner's password
             }
             return null;
@@ -139,9 +139,17 @@ public final class SecretServiceKeychain implements Keychain {
 
     @Override
     public void delete(String name) throws KeychainException {
-        over(bus -> {
-            for (var item : service(bus).SearchItems(attributes(name)).first) {
-                bus.getRemoteObject(SecretService.BUS_NAME, item.getPath(), SecretService.Item.class).Delete();
+        callTimed(bus -> {
+            var found = service(bus).SearchItems(attributes(name));
+            if (!found.second.isEmpty()) {
+                throw locked(); // a locked item cannot be removed without the owner's password
+            }
+            for (var item : found.first) {
+                var prompt = bus.getRemoteObject(SecretService.BUS_NAME, item.getPath(), SecretService.Item.class)
+                        .Delete();
+                if (!SecretService.NO_OBJECT.equals(prompt.getPath())) {
+                    throw locked(); // it would need the owner's password
+                }
             }
             return null;
         });
@@ -172,7 +180,7 @@ public final class SecretServiceKeychain implements Keychain {
         Optional<Shown> shown = Optional.empty();
         try {
             try {
-                shown = over(bus -> showPrompt(bus, waiting));
+                shown = callTimed(bus -> requestUnlock(bus, waiting));
             } catch (KeychainException e) {
                 if (waiting.isDone()) {
                     return UnlockOutcome.NOT_ANSWERED; // stopped, such as by close(), while the prompt was asked for
@@ -214,15 +222,15 @@ public final class SecretServiceKeychain implements Keychain {
      * Asks to unlock the default collection, and shows the prompt when the service made one, listening for its end
      * first; empty when the collection is unlocked without one.
      */
-    private Optional<Shown> showPrompt(DBusConnection bus, CompletableFuture<UnlockOutcome> waiting)
+    private Optional<Shown> requestUnlock(DBusConnection bus, CompletableFuture<UnlockOutcome> waiting)
             throws DBusException, KeychainException {
         var collection = service(bus).ReadAlias(SecretService.DEFAULT_ALIAS);
-        if (SecretService.NO_PROMPT.equals(collection.getPath())) {
+        if (SecretService.NO_OBJECT.equals(collection.getPath())) {
             throw new KeychainException(KeychainException.Kind.REFUSED, "there is no default keyring to unlock");
         }
         var asked = service(bus).Unlock(List.of(collection));
         var prompt = asked.second.getPath();
-        if (SecretService.NO_PROMPT.equals(prompt)) {
+        if (SecretService.NO_OBJECT.equals(prompt)) {
             if (asked.first.stream().noneMatch(path -> path.getPath().equals(collection.getPath()))) {
                 throw new KeychainException(KeychainException.Kind.REFUSED, "the keyring was not unlocked");
             }
@@ -306,9 +314,9 @@ public final class SecretServiceKeychain implements Keychain {
      * Runs a step over the connection, in time. The step runs on a thread of its own, as dbus-java's calls block:
      * when it takes too long, the connection is closed, which ends the step's wait for its answer.
      */
-    private <T> T over(Step<T> step) throws KeychainException {
+    private <T> T callTimed(Step<T> step) throws KeychainException {
         synchronized (turn) {
-            var call = new FutureTask<T>(() -> step.run(connected()));
+            var call = new FutureTask<T>(() -> step.run(ensureConnection()));
             Thread.ofVirtual().name("keychain").start(call);
             try {
                 return call.get(replyTimeout.toMillis(), TimeUnit.MILLISECONDS);
@@ -347,7 +355,7 @@ public final class SecretServiceKeychain implements Keychain {
     }
 
     /** The open connection, or a new one to a bus that has a Secret Service. */
-    private DBusConnection connected() throws DBusException, KeychainException {
+    private DBusConnection ensureConnection() throws DBusException, KeychainException {
         var open = connection.get();
         if (open != null && open.isConnected()) {
             return open;

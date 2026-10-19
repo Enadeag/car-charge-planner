@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.freedesktop.dbus.errors.InvalidMethodArgument;
 import org.freedesktop.dbus.interfaces.Properties;
 import org.freedesktop.dbus.types.UInt32;
 import org.freedesktop.dbus.types.Variant;
@@ -29,6 +30,7 @@ final class TrayMenu implements DbusMenu, Properties {
      *
      * @param labels the texts of the entries below the root, in the order shown; they are copied
      * @param actions what a click on each entry does, in the same order as the labels and as many; they are copied
+     * @throws IllegalArgumentException when there are not as many labels as actions
      */
     TrayMenu(List<String> labels, List<Runnable> actions) {
         if (labels.size() != actions.size()) {
@@ -44,6 +46,7 @@ final class TrayMenu implements DbusMenu, Properties {
      *
      * @param labels the new texts, in the order of the entries and as many
      * @return the layout's new revision, one more than before
+     * @throws IllegalArgumentException when there are not as many labels as entries
      */
     synchronized UInt32 relabel(List<String> labels) {
         if (labels.size() != actions.size()) {
@@ -58,8 +61,14 @@ final class TrayMenu implements DbusMenu, Properties {
         return OBJECT_PATH;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @throws InvalidMethodArgument when there is no such entry, which the panel gets as an error
+     */
     @Override
     public Pair<UInt32, MenuNode> GetLayout(int parentId, int recursionDepth, List<String> propertyNames) {
+        requireEntry(parentId);
         var now = layout;
         return new Pair<>(now.revision(), node(now, parentId));
     }
@@ -70,9 +79,20 @@ final class TrayMenu implements DbusMenu, Properties {
         return ids.stream().filter(this::exists).map(id -> new IdProperties(id, properties(now, id))).toList();
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @throws InvalidMethodArgument when there is no such entry, or it has no such property, which the panel gets as
+     *     an error
+     */
     @Override
     public Variant<?> GetProperty(int id, String name) {
-        return properties(layout, id).get(name);
+        requireEntry(id);
+        var value = properties(layout, id).get(name);
+        if (value == null) {
+            throw new InvalidMethodArgument("menu entry " + id + " has no property " + name);
+        }
+        return value;
     }
 
     @Override
@@ -82,6 +102,12 @@ final class TrayMenu implements DbusMenu, Properties {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>An event for an entry that does not exist is left out, and not named in the answer either: this always answers
+     * none.
+     */
     @Override
     public List<Integer> EventGroup(List<MenuEvent> events) {
         events.forEach(event -> Event(event.id, event.eventId, event.data, event.timestamp));
@@ -93,6 +119,12 @@ final class TrayMenu implements DbusMenu, Properties {
         return false;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The menu never changes before it shows, and an entry that does not exist is not named: this always answers
+     * none and none.
+     */
     @Override
     public Pair<List<Integer>, List<Integer>> AboutToShowGroup(List<Integer> ids) {
         return new Pair<>(List.of(), List.of());
@@ -120,6 +152,12 @@ final class TrayMenu implements DbusMenu, Properties {
 
     private boolean exists(int id) {
         return id >= 0 && id <= actions.size();
+    }
+
+    private void requireEntry(int id) {
+        if (!exists(id)) {
+            throw new InvalidMethodArgument("there is no menu entry " + id);
+        }
     }
 
     private MenuNode node(Layout now, int id) {

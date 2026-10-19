@@ -73,10 +73,11 @@ public final class StatusNotifierTray implements Tray {
             throw new IllegalStateException("the menu needs its labels before the tray shows");
         }
         theme.write(icon);
-        item = new TrayItem(id, title, theme.path(), where -> apart(() -> actions.clicked().accept(where)));
-        update();
-        menu = new TrayMenu(entryLabels(), List.of(() -> apart(actions.open()), () -> apart(actions.settings()),
-                () -> apart(actions.about()), () -> apart(actions.quit())));
+        item = new TrayItem(id, title, theme.path(), where -> onOwnThread(() -> actions.clicked().accept(where)));
+        copyStatusToItem();
+        menu = new TrayMenu(entryLabels(), List.of(() -> onOwnThread(actions.open()),
+                () -> onOwnThread(actions.settings()), () -> onOwnThread(actions.about()),
+                () -> onOwnThread(actions.quit())));
         try {
             bus = connector.connect();
             bus.exportObject(item);
@@ -102,7 +103,7 @@ public final class StatusNotifierTray implements Tray {
             return;
         }
         // not on the connection's signal thread, which a call to the watcher would hold up
-        apart(this::registerAgain);
+        onOwnThread(this::registerAgain);
     }
 
     private synchronized void registerAgain() {
@@ -122,7 +123,7 @@ public final class StatusNotifierTray implements Tray {
      * The action on a thread of its own: D-Bus calls it on the connection's thread, and an action that removes the
      * tray would wait there for that same thread to finish.
      */
-    private static void apart(Runnable action) {
+    private static void onOwnThread(Runnable action) {
         Thread.ofVirtual().name("tray-action").start(action);
     }
 
@@ -132,7 +133,7 @@ public final class StatusNotifierTray implements Tray {
         if (bus == null || !bus.isConnected()) {
             return;
         }
-        update();
+        copyStatusToItem();
         try {
             bus.sendMessage(new StatusNotifierSignals.NewIcon(TrayItem.OBJECT_PATH));
             bus.sendMessage(new StatusNotifierSignals.NewToolTip(TrayItem.OBJECT_PATH));
@@ -161,10 +162,10 @@ public final class StatusNotifierTray implements Tray {
     }
 
     /** Gives the item the icon and tooltip of the status; the panel sees them when it next reads them. */
-    private void update() {
+    private void copyStatusToItem() {
         // the pixels are for panels without the icon theme, GNOME's dark top bar among them: light shapes
         var images = SIZES.stream().map(size -> icon.image(status.dot(), PanelShade.DARK, size)).toList();
-        item.show(theme.iconName(status.dot()), images, status.text());
+        item.setLook(theme.iconName(status.dot()), images, status.text());
     }
 
     @Override

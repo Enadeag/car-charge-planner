@@ -36,18 +36,29 @@ class TrayMessagesTest {
         attached();
         messages.show(new NotificationText("a", "b"));
 
-        messages.click();
+        messages.claimClick();
 
         assertThat(opened).hasValue(1);
     }
 
     @Test
+    void onceTheNotificationsAreClosedAClickOnAMessageStillShownDoesNothing() {
+        attached();
+        messages.show(new NotificationText("a", "b"));
+
+        messages.stopPassingClicks();
+        messages.claimClick();
+
+        assertThat(opened).hasValue(0);
+    }
+
+    @Test
     void aClickWithNoMessageWaitingIsIgnoredAndAMessageCountsOnce() {
         attached();
-        messages.click(); // such as a double click on the icon
+        messages.claimClick(); // such as a double click on the icon
         messages.show(new NotificationText("a", "b"));
-        messages.click();
-        messages.click();
+        messages.claimClick();
+        messages.claimClick();
 
         assertThat(opened).hasValue(1);
     }
@@ -76,7 +87,7 @@ class TrayMessagesTest {
             for (int i = 0; i < 3; i++) {
                 messages.show(new NotificationText("a", "b"));
             }
-            messages.click();
+            messages.claimClick();
         } finally {
             logger.removeHandler(handler);
         }
@@ -92,7 +103,7 @@ class TrayMessagesTest {
         messages.detach();
 
         messages.show(new NotificationText("c", "d"));
-        messages.click();
+        messages.claimClick();
 
         assertThat(shown).hasSize(1);
         assertThat(opened).hasValue(0);

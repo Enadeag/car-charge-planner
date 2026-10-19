@@ -20,8 +20,8 @@ import java.util.Optional;
  * through {@link Advapi32}.
  *
  * <p>Over ssh, without an interactive logon session, Windows refuses with error 1312, which counts as no keychain
- * ({@link KeychainException.Kind#UNAVAILABLE}); the engine then keeps the keys in its private file. Other errors are
- * refusals. The Credential Manager is never locked while its user is logged on, so it has no unlocking.
+ * ({@link KeychainException.Kind#UNAVAILABLE}); the engine then keeps the API keys in its private file. Other errors
+ * are refusals. The Credential Manager is never locked while its user is logged on, so it has no unlocking.
  */
 public final class CredentialManagerKeychain implements Keychain {
 

@@ -11,15 +11,15 @@ import java.util.Optional;
 public final class RegistryRunKey implements RunKey {
 
     /** The Run key's path below HKEY_CURRENT_USER. */
-    public static final String RUN = "Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+    public static final String RUN_KEY_PATH = "Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 
     private final String key;
 
     /**
      * Makes the key; nothing is read or written yet. Only for Windows.
      *
-     * @param key the key's path below HKEY_CURRENT_USER: {@link #RUN}, or another key for a test, which leaves the
-     *     programs started at login alone; made when a value is first written
+     * @param key the key's path below HKEY_CURRENT_USER: {@link #RUN_KEY_PATH}, or another key for a test, which leaves
+     *     the programs started at login alone; made when a value is first written
      */
     public RegistryRunKey(String key) {
         this.key = key;
