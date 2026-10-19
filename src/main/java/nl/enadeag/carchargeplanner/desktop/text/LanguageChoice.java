@@ -1,7 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.text;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
@@ -21,8 +20,8 @@ public final class LanguageChoice {
     /**
      * Starts with the system's language, until the owner's choice is known.
      *
-     * @param system the system's language, as {@link Language#ofSystem} finds it as the app starts; spoken whenever
-     *     the owner chose to follow the system; never null
+     * @param system the system's language, as {@link Language#ofSystem} finds it as the app starts; spoken while the
+     *     owner follows the system; never null
      */
     public LanguageChoice(Language system) {
         if (system == null) {
@@ -45,29 +44,43 @@ public final class LanguageChoice {
      * The texts in a language the owner is choosing, such as on set-up's App step before it is saved; the language
      * spoken now does not change.
      *
-     * @param chosen the language as the app settings would hold it; empty for the system's language
+     * @param chosen the language the owner is choosing; never null
      * @return the messages of that language
      */
-    public Messages of(Optional<Language> chosen) {
-        var language = chosen.orElse(system);
+    public Messages of(Language chosen) {
         var now = messages;
-        return language == now.language() ? now : new Messages(language);
+        return chosen == now.language() ? now : new Messages(chosen);
+    }
+
+    /**
+     * The texts in the system's language, for an owner who is choosing to follow the system, as {@link #of(Language)}.
+     *
+     * @return the messages of the system's language
+     */
+    public Messages ofSystem() {
+        return of(system);
     }
 
     /**
      * Switches to the owner's choice and tells every listener, on the calling thread, in the order they were added.
-     * A choice that comes down to the language spoken already does nothing.
+     * A choice of the language spoken already does nothing.
      *
-     * @param chosen the language the owner chose, as the app settings hold it; empty to follow the system's language
+     * @param chosen the language the owner chose; never null
      */
-    public synchronized void choose(Optional<Language> chosen) {
-        var language = chosen.orElse(system);
-        if (language == messages.language()) {
+    public synchronized void choose(Language chosen) {
+        if (chosen == messages.language()) {
             return;
         }
-        messages = new Messages(language);
+        messages = new Messages(chosen);
         var now = messages;
         listeners.forEach(listener -> listener.accept(now));
+    }
+
+    /**
+     * Switches to the system's language, as the owner chose to follow the system, as {@link #choose(Language)}.
+     */
+    public void followSystem() {
+        choose(system);
     }
 
     /**

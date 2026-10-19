@@ -178,7 +178,7 @@ public final class SetUpWindow {
     /** Shows a draft on a step, in the language and appearance it holds; made again when the language differs. */
     private void show(SetUpDraft draft, SetUpStep step) {
         appearance.set(draft.app().appearance());
-        var now = language.of(draft.app().language());
+        var now = draft.app().language().map(language::of).orElseGet(language::ofSystem);
         if (now.language() != spoken.language()) {
             spoken = now;
             view = made(now, stage);
@@ -193,7 +193,8 @@ public final class SetUpWindow {
         var made = views.apply(messages, () -> close(in));
         made.onAppearanceChosen(appearance::set);
         made.onLanguageChosen(chosen -> {
-            if (stage == in && start != null && language.of(chosen).language() != spoken.language()) {
+            if (stage == in && start != null
+                    && chosen.map(language::of).orElseGet(language::ofSystem).language() != spoken.language()) {
                 Platform.runLater(() -> {
                     if (stage == in) {
                         show(view.draft(), view.step());

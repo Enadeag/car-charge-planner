@@ -10,9 +10,7 @@ import java.nio.channels.SocketChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.nio.file.attribute.UserPrincipal;
 import java.time.Duration;
-import java.util.Optional;
 import java.util.function.Consumer;
 import jdk.net.ExtendedSocketOptions;
 
@@ -29,14 +27,14 @@ final class InstanceServer implements AutoCloseable {
 
     private final ServerSocketChannel channel;
     private final Path socket;
-    /** The only user whose connections are taken; null where the system cannot name a socket's peer. */
-    private final UserPrincipal user;
+    /** The only user whose connections are taken, where the system names a socket's peer. */
+    private final Owner owner;
     private final Duration timeout;
 
-    private InstanceServer(ServerSocketChannel channel, Path socket, UserPrincipal user, Duration timeout) {
+    private InstanceServer(ServerSocketChannel channel, Path socket, Owner owner, Duration timeout) {
         this.channel = channel;
         this.socket = socket;
-        this.user = user;
+        this.owner = owner;
         this.timeout = timeout;
     }
 
@@ -45,14 +43,14 @@ final class InstanceServer implements AutoCloseable {
      * a mode the socket gets mode 0600.
      *
      * @param socket where the socket is made, in a private folder; nothing may be there yet
-     * @param user the user this app runs as, the only one whose connections are taken where the system names a
-     *     socket's peer (Linux); empty where it cannot (Windows), where the private folder alone keeps others out
+     * @param owner the user this app runs as, the only one whose connections are taken where the system names a
+     *     socket's peer (Linux); unchecked where it cannot (Windows), where the private folder alone keeps others out
      * @param timeout how long a connection may take to send its line; more than zero
      * @return the server, listening
      * @throws java.net.BindException when something is at {@code socket} already, a live server or one left behind
      * @throws IOException when the socket cannot be made
      */
-    static InstanceServer bind(Path socket, Optional<UserPrincipal> user, Duration timeout) throws IOException {
+    static InstanceServer bind(Path socket, Owner owner, Duration timeout) throws IOException {
         var channel = ServerSocketChannel.open(StandardProtocolFamily.UNIX);
         try {
             channel.bind(UnixDomainSocketAddress.of(socket));
@@ -60,8 +58,8 @@ final class InstanceServer implements AutoCloseable {
             channel.close();
             throw e;
         }
-        var server = new InstanceServer(channel, socket, user.orElse(null), timeout);
-        if (user.isPresent()) {
+        var server = new InstanceServer(channel, socket, owner, timeout);
+        if (owner instanceof Owner.User) {
             try {
                 Files.setPosixFilePermissions(socket, PosixFilePermissions.fromString("rw-------"));
             } catch (IOException e) {
@@ -114,7 +112,8 @@ final class InstanceServer implements AutoCloseable {
     }
 
     private boolean fromUser(SocketChannel connection) throws IOException {
-        if (user == null || !connection.supportedOptions().contains(ExtendedSocketOptions.SO_PEERCRED)) {
+        if (!(owner instanceof Owner.User(var user))
+                || !connection.supportedOptions().contains(ExtendedSocketOptions.SO_PEERCRED)) {
             return true;
         }
         return connection.getOption(ExtendedSocketOptions.SO_PEERCRED).user().equals(user);

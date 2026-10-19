@@ -154,7 +154,7 @@ final class SettingsView extends BorderPane {
     }
 
     /**
-     * Makes the view with every category's page.
+     * Makes the view with every category's page; App offers to run set-up.
      *
      * @param stores where the settings are kept; nothing is read until {@link #reload()}
      * @param facts the version and the places of the files, for the About page
@@ -162,14 +162,40 @@ final class SettingsView extends BorderPane {
      * @param close closes Settings; called after Cancel, or after Save and close
      * @param saved gets the app settings as stored after something was saved, so the app can follow them and the plan
      *     is made again
-     * @param runSetUp opens set-up, after Settings closed; empty while the app has no set-up, and then App does not
-     *     offer it
+     * @param runSetUp opens set-up, after Settings closed
      * @param background does the slow work, such as reading the stores, away from the JavaFX thread
      * @param messages the texts, in the owner's language
      * @return the view, showing the first category
      */
     static SettingsView of(SettingsStores stores, AboutFacts facts, Consumer<URI> openLink, Runnable close,
-            Consumer<AppSettings> saved, Optional<Runnable> runSetUp, Background background, Messages messages) {
+            Consumer<AppSettings> saved, Runnable runSetUp, Background background, Messages messages) {
+        var app = new AppPage(messages);
+        var view = of(stores, facts, openLink, close, saved, app, background, messages);
+        app.offerSetUp(() -> view.closeThen(runSetUp));
+        return view;
+    }
+
+    /**
+     * Makes the view with every category's page, as {@link #of(SettingsStores, AboutFacts, Consumer, Runnable,
+     * Consumer, Runnable, Background, Messages)}, for an app that has no set-up: App does not offer it.
+     *
+     * @param stores where the settings are kept; nothing is read until {@link #reload()}
+     * @param facts the version and the places of the files, for the About page
+     * @param openLink opens a web page in the owner's browser; called on the JavaFX thread, so it should not block
+     * @param close closes Settings; called after Cancel, or after Save and close
+     * @param saved gets the app settings as stored after something was saved, so the app can follow them and the plan
+     *     is made again
+     * @param background does the slow work, such as reading the stores, away from the JavaFX thread
+     * @param messages the texts, in the owner's language
+     * @return the view, showing the first category
+     */
+    static SettingsView of(SettingsStores stores, AboutFacts facts, Consumer<URI> openLink, Runnable close,
+            Consumer<AppSettings> saved, Background background, Messages messages) {
+        return of(stores, facts, openLink, close, saved, new AppPage(messages), background, messages);
+    }
+
+    private static SettingsView of(SettingsStores stores, AboutFacts facts, Consumer<URI> openLink, Runnable close,
+            Consumer<AppSettings> saved, AppPage app, Background background, Messages messages) {
         var solar = new SolarPage(messages);
         var location = new LocationPage(
                 (provider, text) -> stores.engine().searchPlaces(provider, text, messages.language().code()),
@@ -187,7 +213,6 @@ final class SettingsView extends BorderPane {
         var forecast = new ForecastPage(engine.providers(), tester, openLink, facts.keysFile(), background, messages);
         var away = new AwayPage(messages);
         var planning = new PlanningPage(messages);
-        var app = new AppPage(messages);
         app.onUnitsChanged(carHouse::showIn);
         var about = new AboutPage(facts, openLink, messages);
         List<ConfigPage> configPages = List.of(solar, location, carHouse, charger, forecast, away, planning);
@@ -195,9 +220,7 @@ final class SettingsView extends BorderPane {
         var pages = new ArrayList<Page>(configPages);
         pages.add(app);
         pages.add(about);
-        var view = new SettingsView(form, pages, close, saved, background, messages);
-        runSetUp.ifPresent(setUp -> app.offerSetUp(() -> view.closeThen(setUp)));
-        return view;
+        return new SettingsView(form, pages, close, saved, background, messages);
     }
 
     /**

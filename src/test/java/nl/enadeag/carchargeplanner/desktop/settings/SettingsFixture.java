@@ -141,8 +141,11 @@ final class SettingsFixture {
 
     SettingsView open(boolean installed, ColorScheme scheme, Optional<Runnable> runSetUp) throws Exception {
         return Fx.call(() -> {
-            var view = SettingsView.of(stores(installed), facts(), opened::add, () -> closed++, chosen -> saved++,
-                    runSetUp, background, messages);
+            var view = runSetUp
+                    .map(setUp -> SettingsView.of(stores(installed), facts(), opened::add, () -> closed++,
+                            chosen -> saved++, setUp, background, messages))
+                    .orElseGet(() -> SettingsView.of(stores(installed), facts(), opened::add, () -> closed++,
+                            chosen -> saved++, background, messages));
             view.reload();
             stage = Scenes.show(view, scheme, 56 * 13, 40 * 13);
             return view;
@@ -166,9 +169,9 @@ final class SettingsFixture {
             ObservableValue<ColorScheme> system) throws Exception {
         return Fx.call(() -> new SettingsWindow(stores(true), facts(), opened::add, chosen -> {
             saved++;
-            language.choose(chosen.language());
+            chosen.language().ifPresentOrElse(language::choose, language::followSystem);
             appearance.set(chosen.appearance());
-        }, Optional.empty(), Appearance.scheme(appearance, system), new AppIcon(), language, background));
+        }, () -> { }, Appearance.scheme(appearance, system), new AppIcon(), language, background));
     }
 
     /** The Settings window, hidden, light, following a language as {@link #window(LanguageChoice, ObjectProperty, ObservableValue)}. */
@@ -187,7 +190,7 @@ final class SettingsFixture {
     SettingsView open(TextScale scale) throws Exception {
         return Fx.call(() -> {
             var view = SettingsView.of(stores(true), facts(), opened::add, () -> closed++, chosen -> saved++,
-                    Optional.empty(), background, messages);
+                    background, messages);
             view.reload();
             // as large as the app makes its window for the larger text: so many lines of it
             Scenes.layOut(view, ColorScheme.LIGHT, scale, scale.of(56 * 13), scale.of(40 * 13));

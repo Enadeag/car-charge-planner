@@ -8,7 +8,6 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.forecast.Place;
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Consumer;
 import javafx.beans.binding.Bindings;
 import javafx.scene.control.Button;
@@ -93,14 +92,20 @@ final class PlaceSearchCard {
         search.setDisable(true);
         results.getChildren().clear();
         status.setText(messages.text(TextKey.PLACE_SEARCHING));
-        background.run("searching for a place", () -> lookup.search(asked, typed), found -> show(typed, found),
-                failure -> show(typed, Optional.of(new PlaceResults.Failed(PlaceResults.Problem.UNAVAILABLE))));
+        background.run("searching for a place", () -> lookup.search(asked, typed),
+                found -> found.ifPresentOrElse(answer -> show(typed, answer), this::showNoSearch),
+                failure -> show(typed, new PlaceResults.Failed(PlaceResults.Problem.UNAVAILABLE)));
     }
 
-    private void show(String typed, Optional<PlaceResults> found) {
+    /** The provider has no place search. */
+    private void showNoSearch() {
         search.setDisable(false);
-        switch (found.orElse(null)) {
-            case null -> status.setText(messages.text(TextKey.PLACE_NO_SEARCH));
+        status.setText(messages.text(TextKey.PLACE_NO_SEARCH));
+    }
+
+    private void show(String typed, PlaceResults found) {
+        search.setDisable(false);
+        switch (found) {
             case PlaceResults.Found places when places.places().isEmpty() ->
                     status.setText(messages.text(TextKey.PLACE_NONE, typed));
             case PlaceResults.Found places -> {

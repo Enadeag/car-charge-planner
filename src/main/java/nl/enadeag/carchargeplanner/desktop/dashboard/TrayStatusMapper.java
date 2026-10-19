@@ -8,7 +8,6 @@ import nl.enadeag.carchargeplanner.engine.Outlook;
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import java.time.LocalDate;
-import java.util.Optional;
 
 /**
  * Turns the engine's outlook into the tray icon's dot and tooltip. What needs the owner most comes first: no plan,
@@ -64,11 +63,12 @@ final class TrayStatusMapper {
             return new TrayStatus(StatusDot.GRID, advice.get().title());
         }
         var today = planned.madeAt().atZone(planned.zone()).toLocalDate();
-        var next = planned.nextWindow();
         // the next window has not ended, so one that started before today is running now
-        return next.filter(window -> !day(window, planned).isAfter(today))
-                .map(window -> new TrayStatus(StatusDot.SUN, sun(window, planned)))
-                .orElseGet(() -> new TrayStatus(StatusDot.NONE, nothingToday(next, planned, today)));
+        return planned.nextWindow()
+                .map(window -> day(window, planned).isAfter(today)
+                        ? new TrayStatus(StatusDot.NONE, laterDay(window, planned, today))
+                        : new TrayStatus(StatusDot.SUN, sun(window, planned)))
+                .orElseGet(() -> new TrayStatus(StatusDot.NONE, messages.text(TextKey.TRAY_NOTHING)));
     }
 
     private String sun(Window window, Outlook.Planned planned) {
@@ -80,11 +80,11 @@ final class TrayStatusMapper {
         return messages.text(TextKey.TRAY_SUN_NOW, messages.time(window.end(), zone), window.amps());
     }
 
-    private String nothingToday(Optional<Window> next, Outlook.Planned planned, LocalDate today) {
+    /** Nothing today: the next window is on a later day. */
+    private String laterDay(Window window, Outlook.Planned planned, LocalDate today) {
         var zone = planned.zone();
-        return next.map(window -> messages.text(TextKey.TRAY_NEXT, messages.inSentence(day(window, planned), today),
-                        messages.time(window.start(), zone), messages.time(window.end(), zone)))
-                .orElseGet(() -> messages.text(TextKey.TRAY_NOTHING));
+        return messages.text(TextKey.TRAY_NEXT, messages.inSentence(day(window, planned), today),
+                messages.time(window.start(), zone), messages.time(window.end(), zone));
     }
 
     private static LocalDate day(Window window, Outlook.Planned planned) {

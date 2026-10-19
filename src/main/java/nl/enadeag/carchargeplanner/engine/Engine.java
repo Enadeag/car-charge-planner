@@ -142,7 +142,9 @@ public final class Engine implements AutoCloseable {
             return new Outlook.NoForecast(e.getMessage(), e.keychainLocked());
         }
         var planned = planned(config, forecast, now);
-        announcer.announceDue(planned.days(), planned.gridAdvice(), forecast.source(), now, config);
+        planned.gridAdvice().ifPresentOrElse(
+                advice -> announcer.announceDue(planned.days(), advice, forecast.source(), now, config),
+                () -> announcer.announceDue(planned.days(), forecast.source(), now, config));
         return planned;
     }
 

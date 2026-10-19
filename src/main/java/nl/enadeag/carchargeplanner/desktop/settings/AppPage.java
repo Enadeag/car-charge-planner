@@ -34,7 +34,7 @@ final class AppPage implements Page {
     private final Card[] cards;
 
     /**
-     * Makes the page as Settings shows it, showing the first choices until {@link #load(AppSettings, Optional)}.
+     * Makes the page as Settings shows it, showing the first choices until {@link #load(AppSettings, boolean)}.
      *
      * @param messages the texts, in the owner's language
      */
@@ -43,7 +43,7 @@ final class AppPage implements Page {
     }
 
     /**
-     * Makes the page, showing the first choices until {@link #load(AppSettings, Optional)}.
+     * Makes the page, showing the first choices until {@link #load(AppSettings, boolean)}.
      *
      * @param messages the texts, in the owner's language
      * @param displayHint what the display card says about when a choice takes effect, which differs between
@@ -54,7 +54,7 @@ final class AppPage implements Page {
         this.view = new PageView(messages.text(Category.APP.title()));
         var names = new ChoiceNames(messages);
         mode = new ChoiceField<>(List.of(DisplayMode.values()), names::mode);
-        language = new ChoiceField<>(languages(), names::language);
+        language = new ChoiceField<>(languages(), choice -> choice.map(names::language).orElseGet(names::systemLanguage));
         appearance = new ChoiceField<>(List.of(Appearance.values()), names::appearance);
         units = new ChoiceField<>(List.of(Units.values()), names::units);
         startAtLogin = new SwitchField(messages.text(TextKey.FIELD_START_AT_LOGIN));
@@ -76,18 +76,35 @@ final class AppPage implements Page {
      * Shows the stored settings, as the ones not edited.
      *
      * @param settings the settings in the app settings file
-     * @param startsAtLogin whether the system starts the app at login; empty when this copy of the app cannot start
-     *     at login, such as one run from the build, and the box is then switched off with a note
+     * @param startsAtLogin whether the system starts the app at login
      */
-    void load(AppSettings settings, Optional<Boolean> startsAtLogin) {
+    void load(AppSettings settings, boolean startsAtLogin) {
+        load(settings);
+        startAtLogin.load(startsAtLogin);
+        startAtLogin.setEnabled(true);
+        startAtLoginRow.clearProblem();
+        startAtLoginRow.setHint("");
+    }
+
+    /**
+     * Shows the stored settings, as the ones not edited, for a copy of the app that cannot start at login, such as one
+     * run from the build: the box is switched off, with a note.
+     *
+     * @param settings the settings in the app settings file
+     */
+    void loadWithoutStartAtLogin(AppSettings settings) {
+        load(settings);
+        startAtLogin.load(false);
+        startAtLogin.setEnabled(false);
+        startAtLoginRow.clearProblem();
+        startAtLoginRow.setHint(messages.text(TextKey.START_AT_LOGIN_UNAVAILABLE));
+    }
+
+    private void load(AppSettings settings) {
         mode.load(settings.mode());
         language.load(settings.language());
         appearance.load(settings.appearance());
         units.load(settings.units());
-        startAtLogin.load(startsAtLogin.orElse(false));
-        startAtLogin.setEnabled(startsAtLogin.isPresent());
-        startAtLoginRow.clearProblem();
-        startAtLoginRow.setHint(startsAtLogin.isPresent() ? "" : messages.text(TextKey.START_AT_LOGIN_UNAVAILABLE));
     }
 
     /**

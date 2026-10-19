@@ -87,7 +87,7 @@ class AnnouncerTest {
     /** Announces with a forecast fetched five minutes ago and the given lead time. */
     private List<Window> check(Announcer announcer, List<DayPlan> days, Instant now, int leadMinutes) {
         told.clear();
-        announcer.announceDue(days, Optional.empty(), forecast(now.minus(Duration.ofMinutes(5)), Freshness.CACHED), now,
+        announcer.announceDue(days, forecast(now.minus(Duration.ofMinutes(5)), Freshness.CACHED), now,
                 config(leadMinutes));
         return told.stream().map(Announcement::window).toList();
     }
@@ -144,11 +144,11 @@ class AnnouncerTest {
         var now = at(DAY, 9, 50);
         var config = config(15);
 
-        announcer().announceDue(days, Optional.empty(), forecast(now.minus(Duration.ofMinutes(30)), Freshness.STALE), now, config);
-        announcer().announceDue(days, Optional.empty(), forecast(now.minus(Duration.ofHours(7)), Freshness.CACHED), now, config);
+        announcer().announceDue(days, forecast(now.minus(Duration.ofMinutes(30)), Freshness.STALE), now, config);
+        announcer().announceDue(days, forecast(now.minus(Duration.ofHours(7)), Freshness.CACHED), now, config);
         assertThat(told).isEmpty();
 
-        announcer().announceDue(days, Optional.empty(), forecast(now.minus(Duration.ofHours(5)), Freshness.CACHED), now, config);
+        announcer().announceDue(days, forecast(now.minus(Duration.ofHours(5)), Freshness.CACHED), now, config);
         assertThat(told).hasSize(1);
     }
 
@@ -168,7 +168,7 @@ class AnnouncerTest {
         var advice = new GridAdvice(DAY, 8, 22, 1.5, Optional.of(grid));
         var now = at(DAY, 5, 20);
 
-        announcer().announceDue(dayWith(solar), Optional.of(advice), forecast(now, Freshness.FRESH), now, config(60));
+        announcer().announceDue(dayWith(solar), advice, forecast(now, Freshness.FRESH), now, config(60));
 
         assertThat(told).extracting(Announcement::kind, Announcement::window).containsExactly(
                 tuple(AnnouncementKind.GRID_CHARGE, grid),
@@ -220,7 +220,7 @@ class AnnouncerTest {
         var now = at(DAY, 9, 50);
         var fetchedAt = now.minus(Announcer.MAX_FORECAST_AGE).minusSeconds(-secondsLess);
 
-        announcer().announceDue(dayWith(window(10, 15)), Optional.empty(), forecast(fetchedAt, Freshness.CACHED), now,
+        announcer().announceDue(dayWith(window(10, 15)), forecast(fetchedAt, Freshness.CACHED), now,
                 config(15));
 
         assertThat(told).hasSize(announced ? 1 : 0);

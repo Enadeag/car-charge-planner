@@ -53,9 +53,11 @@ final class SetUpForm {
     void start(SetUpStart start, SetUpDraft draft) {
         stored = start;
         base = draft.config();
-        forecast.loadKeys(draft.keys(), start.keyStorage(), start.keysProblem());
+        start.keysProblem().ifPresentOrElse(problem -> forecast.loadKeys(draft.keys(), start.keyStorage(), problem),
+                () -> forecast.loadKeys(draft.keys(), start.keyStorage()));
         allParts().forEach(part -> part.load(base));
-        app.load(draft.app(), start.startsAtLogin().map(_ -> draft.startAtLogin()));
+        start.startsAtLogin().ifPresentOrElse(_ -> app.load(draft.app(), draft.startAtLogin()),
+                () -> app.loadWithoutStartAtLogin(draft.app()));
     }
 
     /**

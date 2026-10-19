@@ -10,7 +10,6 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipal;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
@@ -25,13 +24,13 @@ class PrivateFolderTest {
     Path temp;
 
     private Path folder;
-    private Optional<UserPrincipal> user;
+    private UserPrincipal user;
 
     @BeforeEach
     void anOwnFolderOthersMayRead() throws IOException {
         folder = Files.createDirectory(temp.resolve("folder"));
         Files.setPosixFilePermissions(folder, PosixFilePermissions.fromString("rwxr-xr-x"));
-        user = Optional.of(Files.getOwner(temp));
+        user = Files.getOwner(temp);
     }
 
     private String mode(Path path) throws IOException {
@@ -57,7 +56,7 @@ class PrivateFolderTest {
         Files.writeString(folder.resolve("instance.lock"), "");
         Files.createDirectory(folder.resolve("icons"));
 
-        assertThat(new PrivateFolder(folder, user).make()).isEqualTo(folder);
+        assertThat(new PrivateFolder(folder, new Owner.User(user)).make()).isEqualTo(folder);
         assertThat(mode(folder)).isEqualTo("rwx------");
     }
 
@@ -65,9 +64,9 @@ class PrivateFolderTest {
     void whenItHoldsAFileOfAnotherUserItIsRefused() throws IOException {
         var planted = Files.writeString(folder.resolve("instance.sock"), "");
         var root = temp.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByName("root");
-        assumeTrue(!user.equals(Optional.of(root)), "the tests run as root");
+        assumeTrue(!user.equals(root), "the tests run as root");
 
-        assertRefused(new PrivateFolder(folder, user, Files::setPosixFilePermissions,
+        assertRefused(new PrivateFolder(folder, new Owner.User(user), Files::setPosixFilePermissions,
                 entry -> entry.equals(planted) ? root : ownerOf(entry)), "belongs to another user");
     }
 
@@ -76,7 +75,7 @@ class PrivateFolderTest {
         var elsewhere = Files.writeString(temp.resolve("elsewhere"), "");
         Files.createLink(folder.resolve("instance.lock"), elsewhere);
 
-        assertRefused(new PrivateFolder(folder, user), "another name");
+        assertRefused(new PrivateFolder(folder, new Owner.User(user)), "another name");
     }
 
     @Test
@@ -86,15 +85,15 @@ class PrivateFolderTest {
         folder = Files.createDirectory(parent.resolve("folder"));
         Files.setPosixFilePermissions(folder, PosixFilePermissions.fromString("rwxr-xr-x"));
 
-        assertRefused(new PrivateFolder(folder, user), "which other users may write in");
+        assertRefused(new PrivateFolder(folder, new Owner.User(user)), "which other users may write in");
     }
 
     @Test
     void whenItsParentBelongsToAnotherUserItIsRefused() throws IOException {
         var other = otherUser();
-        assumeTrue(!user.equals(Optional.of(other)), "the tests run as that user");
+        assumeTrue(!user.equals(other), "the tests run as that user");
 
-        assertRefused(new PrivateFolder(folder, user, Files::setPosixFilePermissions,
+        assertRefused(new PrivateFolder(folder, new Owner.User(user), Files::setPosixFilePermissions,
                 entry -> entry.equals(temp) ? other : ownerOf(entry)), "belongs to another user");
     }
 
@@ -103,12 +102,12 @@ class PrivateFolderTest {
         var link = Files.createSymbolicLink(temp.resolve("link"), temp);
         folder = link.resolve("folder");
 
-        assertRefused(new PrivateFolder(folder, user), "is a link");
+        assertRefused(new PrivateFolder(folder, new Owner.User(user)), "is a link");
     }
 
     @Test
     void whenItsModeCannotBeChangedItIsRefused() throws IOException {
-        var folderThatResists = new PrivateFolder(folder, user, (_, _) -> {
+        var folderThatResists = new PrivateFolder(folder, new Owner.User(user), (_, _) -> {
             throw new IOException("operation not permitted");
         }, PrivateFolderTest::ownerOf);
         assertThatThrownBy(folderThatResists::make).isInstanceOf(NotPrivateException.class)
@@ -119,7 +118,7 @@ class PrivateFolderTest {
     @Test
     void whenAnotherFolderTakesItsPlaceBeforeTheChangeItIsRefused() throws IOException {
         var original = temp.resolve("original");
-        var swapped = new PrivateFolder(folder, user, (path, mode) -> {
+        var swapped = new PrivateFolder(folder, new Owner.User(user), (path, mode) -> {
             // the checked folder moves away and a new one, owner-only already, takes its place
             Files.move(path, original);
             Files.createDirectory(path, PosixFilePermissions.asFileAttribute(mode));

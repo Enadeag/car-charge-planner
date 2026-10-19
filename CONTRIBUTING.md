@@ -359,13 +359,14 @@ Write one only when it says something the name, signature and types cannot.
 - **Strict types.** A value with a meaning of its own gets a type of its own (`Percent`, `ProviderId`, `Coordinates`)
   rather than a bare `double` or `String`, and a choice is an enum (`Phases`, `Freshness`, `ProviderRole`), not an
   `int` that must be 1 or 3 or a pair of booleans of which only some combinations make sense.
-- **`Optional` where absent is a real case.** A return value may be an `Optional`, and so may a record component
-  when having no value belongs to the data, such as `AppSettings.language` when the owner chose none and the app
-  follows the system. A parameter may take one where absence is a real case the code handles. A field never holds
-  one: an injection that may be missing becomes a null object or a type that says why it is missing, state that
-  becomes known later is a private field that is null until then and goes out through `Optional.ofNullable`, and a
-  callback set later starts as a no-op. Not for a collection either, which is empty instead. `ArchitectureTest`
-  checks the fields.
+- **`Optional` where absent is a real case.** `Optional` is for return values and record components only, such as
+  `AppSettings.language` when the owner chose none and the app follows the system; never a field or a parameter.
+  A method that may get nothing comes in two (`choose(Language)` and `followSystem()`), or takes a type that names
+  the none case (`Owner.Unchecked`), and a caller that holds an `Optional` unwraps it at the call. In a field, an
+  injection that may be missing becomes a null object or a type that says why it is missing, state that becomes
+  known later is a private field that is null until then and goes out through `Optional.ofNullable`, and a callback
+  set later starts as a no-op. Not for a collection either, which is empty instead. `ArchitectureTest` checks the
+  fields and the parameters.
 - **Plain invariants.** A record checks its own rules in its constructor, each as a plain `if` and
   `throw new IllegalArgumentException(...)` naming the value and what is allowed, without a helper. A range check on a
   `double` refuses NaN explicitly (`if (kwp <= 0 || Double.isNaN(kwp))`). The Javadoc states the same rule, in the

@@ -12,7 +12,6 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import java.time.DayOfWeek;
 import java.time.format.TextStyle;
 import java.util.List;
-import java.util.Optional;
 
 /** What a choice field shows for each of its choices, in the owner's language. */
 public final class ChoiceNames {
@@ -45,11 +44,20 @@ public final class ChoiceNames {
     /**
      * A language by its own name, such as "Nederlands", so that the owner finds it whatever the app speaks now.
      *
-     * @param language the choice; empty for the system's language
-     * @return the language's own name, or the words for the system's language
+     * @param language the language to name
+     * @return the language's own name
      */
-    public String language(Optional<Language> language) {
-        return language.map(Language::autonym).orElseGet(() -> messages.text(TextKey.LANGUAGE_SYSTEM));
+    public String language(Language language) {
+        return language.autonym();
+    }
+
+    /**
+     * The choice to follow the system's language.
+     *
+     * @return such as "System language"
+     */
+    public String systemLanguage() {
+        return messages.text(TextKey.LANGUAGE_SYSTEM);
     }
 
     /**
@@ -114,13 +122,11 @@ public final class ChoiceNames {
     }
 
     /**
-     * The fallback provider, or that there is none.
+     * The choice of no fallback provider; a fallback provider is named as {@link #provider(ProviderId, List)}.
      *
-     * @param id the choice; empty for no fallback
-     * @param known what the providers this version knows tell about themselves
-     * @return the provider's name, or the words for none
+     * @return such as "None"
      */
-    public String fallback(Optional<ProviderId> id, List<ProviderInfo> known) {
-        return id.map(chosen -> provider(chosen, known)).orElseGet(() -> messages.text(TextKey.FALLBACK_NONE));
+    public String noFallback() {
+        return messages.text(TextKey.FALLBACK_NONE);
     }
 }

@@ -87,13 +87,13 @@ final class SolarChart extends Region {
         setOnMouseDragged(this::point);
         setOnMouseExited(_ -> {
             if (pointed) {
-                select(Optional.empty(), false);
+                clearSelection();
             }
         });
         addEventHandler(KeyEvent.KEY_PRESSED, this::step);
         focusedProperty().subscribe(focused -> {
             if (!focused && !pointed) {
-                select(Optional.empty(), false);
+                clearSelection();
             }
         });
     }
@@ -126,7 +126,7 @@ final class SolarChart extends Region {
         getChildren().setAll(children);
         before = shown;
         target = CurvePoints.of(day.steps(), day.fromHour(), day.toHour());
-        select(Optional.empty(), false);
+        clearSelection();
         tween.play();
     }
 
@@ -270,7 +270,7 @@ final class SolarChart extends Region {
 
     private void point(MouseEvent event) {
         if (plot != null && model != null) {
-            select(model.stepAt(plot.hourAt(event.getX())), true);
+            model.stepAt(plot.hourAt(event.getX())).ifPresent(step -> select(step, true));
         }
     }
 
@@ -285,19 +285,29 @@ final class SolarChart extends Region {
         var steps = model.steps();
         int index = selected == null ? -1 : steps.indexOf(selected);
         int next = index < 0 ? (direction > 0 ? 0 : steps.size() - 1) : Math.clamp(index + direction, 0, steps.size() - 1);
-        select(Optional.of(steps.get(next)), false);
+        select(steps.get(next), false);
         event.consume();
     }
 
-    private void select(Optional<Step> step, boolean byPointer) {
-        selected = step.orElse(null);
+    /** Reads out a step of the day shown; a step chosen by keyboard is read to the screen reader too. */
+    private void select(Step step, boolean byPointer) {
+        selected = step;
         pointed = byPointer;
-        step.ifPresent(it -> readoutText.setText(it.readout()));
-        if (model != null) {
-            setAccessibleText(step.filter(_ -> !byPointer).map(Step::readout).orElse(model.spoken()));
-        }
-        if (!byPointer && step.isPresent()) {
+        readoutText.setText(step.readout());
+        if (byPointer) {
+            setAccessibleText(model.spoken());
+        } else {
+            setAccessibleText(step.readout());
             ScreenReader.readAgain(this);
+        }
+        requestLayout();
+    }
+
+    private void clearSelection() {
+        selected = null;
+        pointed = false;
+        if (model != null) {
+            setAccessibleText(model.spoken());
         }
         requestLayout();
     }

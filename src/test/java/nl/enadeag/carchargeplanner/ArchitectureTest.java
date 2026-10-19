@@ -39,9 +39,13 @@ import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.host.Host;
 import nl.enadeag.carchargeplanner.host.Os;
 import java.time.Clock;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -570,6 +574,28 @@ class ArchitectureTest {
             .should().haveRawType(Optional.class)
             .because("a field holds a null object, a no-op callback or a private value that may be null, never an "
                     + "Optional (CONTRIBUTING)");
+
+    private static final Set<Class<?>> OPTIONALS =
+            Set.of(Optional.class, OptionalDouble.class, OptionalInt.class, OptionalLong.class);
+
+    private static final DescribedPredicate<JavaCodeUnit> TAKES_AN_OPTIONAL = DescribedPredicate.describe(
+            "an Optional parameter", codeUnit -> codeUnit.getRawParameterTypes().stream()
+                    .anyMatch(type -> OPTIONALS.stream().anyMatch(type::isEquivalentTo)));
+
+    /** A record's canonical constructor takes its components, and there an {@code Optional} is part of the data. */
+    private static final DescribedPredicate<JavaCodeUnit> RECORD_CANONICAL_CONSTRUCTOR = DescribedPredicate.describe(
+            "a record's canonical constructor", codeUnit -> codeUnit.isConstructor() && codeUnit.getOwner().isRecord()
+                    && Arrays.equals(codeUnit.getRawParameterTypes().stream().map(JavaClass::getName).toArray(),
+                            Arrays.stream(codeUnit.getOwner().reflect().getRecordComponents())
+                                    .map(component -> component.getType().getName()).toArray()));
+
+    @ArchTest
+    static final ArchRule noOptionalParameters = noCodeUnits()
+            .that().doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .and(not(RECORD_CANONICAL_CONSTRUCTOR))
+            .should(ArchConditions.have(TAKES_AN_OPTIONAL))
+            .because("a method or constructor takes a value or a type that names the none case, or comes in two; "
+                    + "Optional is for return values and record components (CONTRIBUTING)");
 
     // names
 

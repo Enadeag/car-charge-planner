@@ -112,7 +112,7 @@ class SettingsWindowLanguageTest {
 
     @Test
     void followingTheSystemAgainRelabelsSettingsInTheSystemsLanguage() throws Exception {
-        language.choose(Optional.of(Language.DUTCH));
+        language.choose(Language.DUTCH);
         open(Category.APP);
         var before = view();
         Fx.run(() -> {
@@ -134,7 +134,7 @@ class SettingsWindowLanguageTest {
         var before = view();
         Fx.run(() -> settings.type(before, TextKey.FIELD_TARGET_CHARGE, "90"));
 
-        language.choose(Optional.of(Language.DUTCH));
+        language.choose(Language.DUTCH);
         Fx.settle();
 
         assertThat(view()).isSameAs(before);

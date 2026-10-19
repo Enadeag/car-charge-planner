@@ -15,7 +15,6 @@ import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import javafx.application.ColorScheme;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Point2D;
@@ -120,7 +119,7 @@ class AppearanceTest {
     void aDarkSettingsStaysDarkWhenAnotherLanguageMakesItAgain() throws Exception {
         set(() -> appearance.set(Appearance.DARK));
 
-        set(() -> language.choose(Optional.of(Language.DUTCH)));
+        set(() -> language.choose(Language.DUTCH));
 
         assertThat(darkWindows()).containsExactly(true, true);
     }

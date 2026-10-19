@@ -36,6 +36,10 @@ final class ProviderAttempt {
     private final boolean force;
     /** The secret values to keep out of a reason; known once the settings are read. */
     private List<String> secrets = List.of();
+    /** The end of the provider's rate limit, told along with a cached forecast; null while it has none. */
+    private Instant cooldownUntil;
+    /** The last forecast while it is still useful, for when the provider gives none; null when there is none. */
+    private ForecastCache.Cached usable;
 
     /**
      * Prepares one attempt; nothing is read or asked yet.
@@ -74,31 +78,30 @@ final class ProviderAttempt {
     Outcome run(SystemDescription system, Supplier<Map<String, String>> secretSettings, JsonNode key,
             Supplier<List<String>> storedSecrets) {
         var cached = cache.forecast(info.id(), key, now);
-        var cooldown = cache.cooldownUntil(info.id()).filter(now::isBefore);
+        cooldownUntil = cache.cooldownUntil(info.id()).filter(now::isBefore).orElse(null);
         if (cached.isPresent() && !force && cached.get().age(now).compareTo(info.minRefresh()) < 0) {
-            return fromCache(cached.get(), Freshness.CACHED, cooldown);
+            return fromCache(cached.get(), Freshness.CACHED);
         }
         var settings = secretSettings.get();
         secrets = Stream.concat(info.secretValues(settings).stream(), storedSecrets.get().stream()).toList();
         var missing = info.missingRequired(settings);
         if (!missing.isEmpty()) { // nothing is sent without what the provider requires
-            return afterFailure(String.join(", ", missing) + " is required", Optional.empty(), Optional.empty());
+            return afterFailure(String.join(", ", missing) + " is required");
         }
-        var usable = cached.filter(forecast -> forecast.age(now).compareTo(info.maxUsefulAge()) <= 0);
-        var waitUntil = cooldown.or(this::waitingAfterFailure);
+        usable = cached.filter(forecast -> forecast.age(now).compareTo(info.maxUsefulAge()) <= 0).orElse(null);
+        var waitUntil = Optional.ofNullable(cooldownUntil).or(this::waitingAfterFailure);
         if (waitUntil.isPresent()) {
-            return usable.map(forecast -> fromCache(forecast, Freshness.STALE, cooldown))
-                    .orElseGet(() -> failure("not asked again until " + clock(waitUntil.get(), system.timezone())));
+            return stale().orElseGet(
+                    () -> failure("not asked again until " + clock(waitUntil.get(), system.timezone())));
         }
-        return fetch(system, settings, key, usable);
+        return fetch(system, settings, key);
     }
 
     private Optional<Instant> waitingAfterFailure() {
         return force ? Optional.empty() : Optional.ofNullable(retryAt.get(info.id())).filter(now::isBefore);
     }
 
-    private Outcome fetch(SystemDescription system, Map<String, String> settings, JsonNode key,
-            Optional<ForecastCache.Cached> usable) {
+    private Outcome fetch(SystemDescription system, Map<String, String> settings, JsonNode key) {
         try {
             var steps = Steps.requireValid(provider.fetch(system, settings, now));
             retryAt.remove(info.id());
@@ -108,19 +111,20 @@ final class ProviderAttempt {
         } catch (ProviderError.RateLimited e) {
             var until = now.plus(e.retryAfter().orElse(info.minRefresh()));
             cache.saveCooldown(info.id(), until);
-            return afterFailure(e.getMessage(), usable, Optional.of(until));
+            cooldownUntil = until;
+            return afterFailure(e.getMessage());
         } catch (ProviderError.Unavailable e) {
             retryAt.put(info.id(), now.plus(RETRY_AFTER_UNAVAILABLE));
-            return afterFailure(e.getMessage(), usable, Optional.empty());
+            return afterFailure(e.getMessage());
         } catch (ProviderError e) {
             retryAt.put(info.id(), now.plus(info.minRefresh())); // it answered: that request counted
-            return afterFailure(e.getMessage(), usable, Optional.empty());
+            return afterFailure(e.getMessage());
         } catch (RuntimeException e) {
             // a bug in a provider must not stop the app; its message may hold a secret, so only its kind is told
             var kind = e.getClass().getSimpleName();
             LOG.log(Level.ERROR, "forecast provider " + info.id() + " failed unexpectedly (" + kind + ")");
             retryAt.put(info.id(), now.plus(info.minRefresh()));
-            return afterFailure("an unexpected error (" + kind + ")", usable, Optional.empty());
+            return afterFailure("an unexpected error (" + kind + ")");
         }
     }
 
@@ -128,14 +132,21 @@ final class ProviderAttempt {
      * The provider gave no forecast: its last one while that is still useful, else the reason. A server can echo what
      * it was sent, so the reason loses every secret value before it is logged or told.
      */
-    private Outcome afterFailure(String given, Optional<ForecastCache.Cached> usable, Optional<Instant> cooldown) {
+    private Outcome afterFailure(String given) {
         var reason = ProviderText.redacted(given, secrets);
         health.failed(info, reason);
-        return usable.map(forecast -> fromCache(forecast, Freshness.STALE, cooldown)).orElseGet(() -> failure(reason));
+        return stale().orElseGet(() -> failure(reason));
     }
 
-    private static Outcome fromCache(ForecastCache.Cached forecast, Freshness freshness, Optional<Instant> cooldown) {
-        return new Outcome.Usable(List.copyOf(forecast.steps()), forecast.fetchedAt(), freshness, cooldown);
+    /** The last forecast, while it is still useful, as a stale one. */
+    private Optional<Outcome> stale() {
+        return Optional.ofNullable(usable).map(forecast -> fromCache(forecast, Freshness.STALE));
+    }
+
+    /** A cached forecast, with the provider's rate limit when it has one. */
+    private Outcome fromCache(ForecastCache.Cached forecast, Freshness freshness) {
+        return new Outcome.Usable(List.copyOf(forecast.steps()), forecast.fetchedAt(), freshness,
+                Optional.ofNullable(cooldownUntil));
     }
 
     private Outcome failure(String reason) {

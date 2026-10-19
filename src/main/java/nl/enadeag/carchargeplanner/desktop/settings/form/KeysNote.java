@@ -5,7 +5,6 @@ import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
 import java.nio.file.Path;
-import java.util.Optional;
 
 /** What the forecast page says about where the API keys are kept, and why they could not be read. */
 public final class KeysNote {
@@ -14,21 +13,30 @@ public final class KeysNote {
     }
 
     /**
-     * The note, all in the owner's language: the engine's own words about the problem are English, for the log.
+     * The note for keys that could be read, in the owner's language.
      *
      * @param storage where the keys are kept now
-     * @param problem the kind of problem that kept the keys from being read; empty when they could be read
      * @param keysFile the file the keys are kept in when there is no usable keychain
      * @param messages the texts, in the owner's language
-     * @return where the keys are kept, after the problem when there is one; a locked keychain is the reason itself,
-     *     so the note then only says that
+     * @return where the keys are kept
      */
-    public static String of(KeyStorage storage, Optional<SecretsProblem.Kind> problem, Path keysFile,
-            Messages messages) {
-        if (problem.isEmpty()) {
-            return where(storage, keysFile, messages);
-        }
-        return switch (problem.get()) {
+    public static String of(KeyStorage storage, Path keysFile, Messages messages) {
+        return where(storage, keysFile, messages);
+    }
+
+    /**
+     * The note for keys that could not be read, all in the owner's language: the engine's own words about the problem
+     * are English, for the log.
+     *
+     * @param storage where the keys are kept now
+     * @param problem the kind of problem that kept the keys from being read
+     * @param keysFile the file the keys are kept in when there is no usable keychain
+     * @param messages the texts, in the owner's language
+     * @return where the keys are kept, after the problem; a locked keychain is the reason itself, so the note then
+     *     only says that
+     */
+    public static String of(KeyStorage storage, SecretsProblem.Kind problem, Path keysFile, Messages messages) {
+        return switch (problem) {
             case LOCKED -> where(KeyStorage.LOCKED_KEYCHAIN, keysFile, messages);
             case FAILED -> storage == KeyStorage.LOCKED_KEYCHAIN ? where(storage, keysFile, messages)
                     : messages.text(TextKey.KEYS_PROBLEM) + " " + where(storage, keysFile, messages);

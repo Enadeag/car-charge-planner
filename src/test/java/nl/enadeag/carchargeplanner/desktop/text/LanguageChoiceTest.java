@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class LanguageChoiceTest {
@@ -23,7 +22,7 @@ class LanguageChoiceTest {
 
     @Test
     void choosingAnotherLanguageTellsTheListenersAndSpeaksIt() {
-        language.choose(Optional.of(Language.ENGLISH));
+        language.choose(Language.ENGLISH);
 
         assertThat(told).containsExactly(Language.ENGLISH);
         assertThat(language.messages().text(TextKey.QUIT)).isEqualTo("Quit");
@@ -31,18 +30,27 @@ class LanguageChoiceTest {
 
     @Test
     void followingTheSystemAgainSwitchesBackToItsLanguageAtOnce() {
-        language.choose(Optional.of(Language.ENGLISH));
+        language.choose(Language.ENGLISH);
 
-        language.choose(Optional.empty());
+        language.followSystem();
 
         assertThat(told).containsExactly(Language.ENGLISH, Language.DUTCH);
         assertThat(language.messages().language()).isEqualTo(Language.DUTCH);
     }
 
     @Test
+    void theTextsOfALanguageBeingChosenLeaveTheLanguageSpokenAlone() {
+        assertThat(language.of(Language.ENGLISH).text(TextKey.QUIT)).isEqualTo("Quit");
+        assertThat(language.ofSystem()).isSameAs(language.messages());
+
+        assertThat(language.messages().language()).isEqualTo(Language.DUTCH);
+        assertThat(told).isEmpty();
+    }
+
+    @Test
     void aChoiceThatComesDownToTheLanguageSpokenTellsNobody() {
-        language.choose(Optional.of(Language.DUTCH));
-        language.choose(Optional.empty());
+        language.choose(Language.DUTCH);
+        language.followSystem();
 
         assertThat(told).isEmpty();
     }

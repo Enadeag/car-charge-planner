@@ -91,14 +91,17 @@ final class SettingsForm {
      * @param stored what {@link #read()} or {@link #write} read
      */
     void show(SettingsStorage.Stored stored) {
-        forecast.loadKeys(stored.keys().keys(), stored.keyStorage(), stored.keys().problem());
+        var keys = stored.keys().keys();
+        stored.keys().problem().ifPresentOrElse(problem -> forecast.loadKeys(keys, stored.keyStorage(), problem),
+                () -> forecast.loadKeys(keys, stored.keyStorage()));
         this.stored = stored.all();
         if (stored.config().isPresent()) {
             configPages.forEach(page -> page.load(stored.config().get()));
         } else {
             configPages.forEach(page -> page.showUnavailable(stored.configProblem().orElseThrow()));
         }
-        app.load(stored.app(), stored.startsAtLogin());
+        stored.startsAtLogin().ifPresentOrElse(startsAtLogin -> app.load(stored.app(), startsAtLogin),
+                () -> app.loadWithoutStartAtLogin(stored.app()));
         about.load(stored.keyStorage());
     }
 

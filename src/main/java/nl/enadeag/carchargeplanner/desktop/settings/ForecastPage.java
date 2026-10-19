@@ -76,7 +76,8 @@ final class ForecastPage implements ConfigPage {
         var fallbacks = new ArrayList<Optional<ProviderId>>();
         fallbacks.add(Optional.empty());
         ids.forEach(id -> fallbacks.add(Optional.of(id)));
-        fallback = new ChoiceField<>(fallbacks, choice -> names.fallback(choice, infos));
+        fallback = new ChoiceField<>(fallbacks,
+                choice -> choice.map(id -> names.provider(id, infos)).orElseGet(names::noFallback));
         fallbackRow = FieldRow.of(messages, TextKey.FIELD_FALLBACK, TextKey.FIELD_FALLBACK_HINT, fallback);
         choice = new Card(messages.text(TextKey.CARD_PROVIDERS), messages.text(TextKey.CARD_PROVIDERS_HINT),
                 FieldRow.of(messages, TextKey.FIELD_PRIMARY, TextKey.FIELD_PRIMARY_HINT, primary), fallbackRow);
@@ -121,14 +122,28 @@ final class ForecastPage implements ConfigPage {
      * Shows the stored API keys and where they are kept. Call before {@link #load(EngineConfig)}, which fills the
      * cards. While the keyring is locked, the key fields without a value show as locked.
      *
-     * @param keys the stored secret settings; none when they could not be read
-     * @param storage where the keys are kept now; a locked keychain also says why they could not be read
-     * @param problem the kind of problem that kept the keys from being read; empty when they could be read
+     * @param keys the stored secret settings
+     * @param storage where the keys are kept now
      */
-    void loadKeys(Secrets keys, KeyStorage storage, Optional<SecretsProblem.Kind> problem) {
+    void loadKeys(Secrets keys, KeyStorage storage) {
+        loadKeys(keys, storage, KeysNote.of(storage, keysFile, messages));
+    }
+
+    /**
+     * Shows that the API keys could not be read, and where they are kept, as {@link #loadKeys(Secrets, KeyStorage)}.
+     *
+     * @param keys the secret settings to show; none, as they could not be read
+     * @param storage where the keys are kept now; a locked keychain also says why they could not be read
+     * @param problem the kind of problem that kept the keys from being read
+     */
+    void loadKeys(Secrets keys, KeyStorage storage, SecretsProblem.Kind problem) {
+        loadKeys(keys, storage, KeysNote.of(storage, problem, keysFile, messages));
+    }
+
+    private void loadKeys(Secrets keys, KeyStorage storage, String note) {
         storedKeys = keys;
         keysLocked = storage == KeyStorage.LOCKED_KEYCHAIN;
-        keysNote.setText(KeysNote.of(storage, problem, keysFile, messages));
+        keysNote.setText(note);
     }
 
     /**

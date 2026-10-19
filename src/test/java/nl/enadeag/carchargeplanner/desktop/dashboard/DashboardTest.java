@@ -503,7 +503,7 @@ class DashboardTest {
         Fx.settle();
         selectDay(popup().orElseThrow(), 1);
 
-        language.choose(Optional.of(Language.DUTCH));
+        language.choose(Language.DUTCH);
         Fx.settle();
 
         var popup = popup().orElseThrow();
@@ -530,7 +530,7 @@ class DashboardTest {
         dashboard.show(planWithTwoDays(), List.of(tomorrow));
         Fx.settle();
 
-        language.choose(Optional.of(Language.DUTCH));
+        language.choose(Language.DUTCH);
         Fx.settle();
 
         var root = popup().orElseThrow().getScene().getRoot();
@@ -546,7 +546,7 @@ class DashboardTest {
     void anotherLanguageReachesTheWindowAndALaterOutlook() throws Exception {
         var window = detachedWith(planWithTwoDays());
 
-        language.choose(Optional.of(Language.DUTCH));
+        language.choose(Language.DUTCH);
         Fx.settle();
         dashboard.show(new Outlook.NoForecast("Open-Meteo: no connection."), List.of());
         Fx.settle();
@@ -560,7 +560,7 @@ class DashboardTest {
     void beforeTheFirstOutlookAnotherLanguageSaysTheForecastIsBeingFetchedInIt() throws Exception {
         clickTheIcon();
 
-        language.choose(Optional.of(Language.DUTCH));
+        language.choose(Language.DUTCH);
         Fx.settle();
 
         var popup = popup().orElseThrow();

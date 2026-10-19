@@ -12,7 +12,6 @@ import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipal;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -30,8 +29,7 @@ public final class PrivateFolder {
             Set.of(PosixFilePermission.GROUP_WRITE, PosixFilePermission.OTHERS_WRITE);
 
     private final Path path;
-    /** The user who must own the folder; null where files have no owner and mode. */
-    private final UserPrincipal user;
+    private final Owner owner;
     private final ModeChange modeChange;
     private final EntryOwner entryOwner;
 
@@ -70,11 +68,12 @@ public final class PrivateFolder {
      * Makes the folder's checker; nothing is made or checked yet.
      *
      * @param path the folder; the folders above it that are missing are made too, with mode 0700 where files have one
-     * @param user the user this app runs as, who must own the folder, where files have an owner and a mode; empty on
-     *     Windows, where a folder made by an administrator's process is owned by the administrators instead
+     * @param owner the user this app runs as, who must own the folder, where files have an owner and a mode;
+     *     unchecked on Windows, where a folder made by an administrator's process is owned by the administrators
+     *     instead
      */
-    public PrivateFolder(Path path, Optional<UserPrincipal> user) {
-        this(path, user, Files::setPosixFilePermissions, entry -> Files.getOwner(entry, LinkOption.NOFOLLOW_LINKS));
+    public PrivateFolder(Path path, Owner owner) {
+        this(path, owner, Files::setPosixFilePermissions, entry -> Files.getOwner(entry, LinkOption.NOFOLLOW_LINKS));
     }
 
     /**
@@ -82,13 +81,13 @@ public final class PrivateFolder {
      * tests.
      *
      * @param path the folder; the folders above it that are missing are made too
-     * @param user the user this app runs as, who must own the folder; empty where files have no owner and mode
+     * @param owner the user this app runs as, who must own the folder; unchecked where files have no owner and mode
      * @param modeChange how a folder's mode is changed
      * @param entryOwner how the owner of a file in the folder is told
      */
-    PrivateFolder(Path path, Optional<UserPrincipal> user, ModeChange modeChange, EntryOwner entryOwner) {
+    PrivateFolder(Path path, Owner owner, ModeChange modeChange, EntryOwner entryOwner) {
         this.path = path;
-        this.user = user.orElse(null);
+        this.owner = owner;
         this.modeChange = modeChange;
         this.entryOwner = entryOwner;
     }
@@ -121,13 +120,13 @@ public final class PrivateFolder {
         if (!attributes.isDirectory() || attributes.isSymbolicLink() || attributes.isOther()) {
             throw new NotPrivateException(path + " is not a folder but a link or another kind of file");
         }
-        if (user != null) {
+        if (owner instanceof Owner.User(var user)) {
             var posix = Files.readAttributes(path, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
             if (!posix.owner().equals(user)) {
                 throw new NotPrivateException(path + " belongs to another user");
             }
             if (!posix.permissions().equals(OWNER_ONLY)) {
-                tighten(posix);
+                tighten(posix, user);
             }
         }
         return path;
@@ -141,7 +140,7 @@ public final class PrivateFolder {
      * A folder others could once write in, and that was narrowed later, may still hold a file of theirs, so every
      * file in it must be the user's and have no other name (a hard link).
      */
-    private void tighten(PosixFileAttributes before) throws NotPrivateException {
+    private void tighten(PosixFileAttributes before, UserPrincipal user) throws NotPrivateException {
         var mode = PosixFilePermissions.toString(before.permissions());
         if (before.permissions().stream().anyMatch(WRITE_BY_OTHERS::contains)) {
             throw new NotPrivateException(
@@ -151,9 +150,9 @@ public final class PrivateFolder {
         try {
             var parent = path.toAbsolutePath().getParent();
             if (parent != null) {
-                refuseUnsafeParent(parent);
+                refuseUnsafeParent(parent, user);
             }
-            refuseOthersFiles();
+            refuseOthersFiles(user);
             modeChange.set(path, OWNER_ONLY);
             after = Files.readAttributes(path, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
         } catch (NotPrivateException e) {
@@ -169,7 +168,7 @@ public final class PrivateFolder {
         LOG.log(Level.WARNING, "tightened " + path + " to owner-only: its mode was " + mode);
     }
 
-    private void refuseUnsafeParent(Path parent) throws IOException {
+    private void refuseUnsafeParent(Path parent, UserPrincipal user) throws IOException {
         var attributes = Files.readAttributes(parent, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
         if (!attributes.isDirectory() || attributes.isSymbolicLink()) {
             throw new NotPrivateException(path + " is open to other users and lies in " + parent
@@ -187,7 +186,7 @@ public final class PrivateFolder {
         }
     }
 
-    private void refuseOthersFiles() throws IOException {
+    private void refuseOthersFiles(UserPrincipal user) throws IOException {
         try (var entries = Files.list(path)) {
             for (var entry : (Iterable<Path>) entries::iterator) {
                 if (!entryOwner.of(entry).equals(user)) {
@@ -207,7 +206,7 @@ public final class PrivateFolder {
     }
 
     private FileAttribute<?>[] attributes() {
-        return user != null
+        return owner instanceof Owner.User
                 ? new FileAttribute<?>[] {PosixFilePermissions.asFileAttribute(OWNER_ONLY)}
                 : new FileAttribute<?>[0];
     }

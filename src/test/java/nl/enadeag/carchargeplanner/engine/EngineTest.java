@@ -4,6 +4,7 @@ import static nl.enadeag.carchargeplanner.engine.forecast.FakeProvider.error;
 import static nl.enadeag.carchargeplanner.engine.forecast.FakeProvider.steps;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.within;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
@@ -535,6 +536,20 @@ class EngineTest {
         engine(clockAt(9, 52)).plan(); // also after a restart: the announced windows are kept in a file
 
         assertThat(told).hasSize(1);
+    }
+
+    @Test
+    void theOwnerIsToldAheadOfTheGridAdvicesWindowToo() throws IOException {
+        // without sun, 35 % falls below the minimum of 30 % the next day: the grid charge starts at midnight
+        main.script(steps(days(3, 0)));
+        var midnight = DAY.plusDays(1).atStartOfDay(BRUSSELS).toInstant();
+        var engine = engine(Clock.fixed(midnight.minus(Duration.ofMinutes(10)), ZoneOffset.UTC));
+        engine.setBatteryLevel(new Percent(35));
+
+        engine.plan();
+
+        assertThat(told).extracting(Announcement::kind, announcement -> announcement.window().start())
+                .containsExactly(tuple(AnnouncementKind.GRID_CHARGE, midnight));
     }
 
     @Test

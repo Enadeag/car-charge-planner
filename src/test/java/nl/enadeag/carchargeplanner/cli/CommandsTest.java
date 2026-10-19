@@ -9,11 +9,14 @@ import nl.enadeag.carchargeplanner.desktop.system.StartAtLogin;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.host.Host;
 import nl.enadeag.carchargeplanner.host.Os;
 import nl.enadeag.carchargeplanner.instance.Claim;
 import nl.enadeag.carchargeplanner.instance.InstanceCommand;
+import nl.enadeag.carchargeplanner.instance.Owner;
 import nl.enadeag.carchargeplanner.instance.SingleInstance;
 import nl.enadeag.carchargeplanner.platform.linux.LinuxMenuEntry;
+import nl.enadeag.carchargeplanner.platforms.PlatformParts;
 import nl.enadeag.carchargeplanner.host.AppName;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -26,10 +29,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.nio.file.attribute.UserPrincipal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -52,7 +55,7 @@ class CommandsTest {
     Path temp;
 
     private Path instanceFolder;
-    private Optional<UserPrincipal> user;
+    private Owner owner;
     private final List<AutoCloseable> toClose = new ArrayList<>();
     private final FakeStartAtLogin startAtLogin = new FakeStartAtLogin();
 
@@ -87,7 +90,7 @@ class CommandsTest {
     @BeforeEach
     void setUp() throws IOException {
         instanceFolder = temp.resolve("instance");
-        user = hasFileModes() ? Optional.of(Files.getOwner(temp)) : Optional.empty();
+        owner = hasFileModes() ? new Owner.User(Files.getOwner(temp)) : new Owner.Unchecked();
     }
 
     @AfterEach
@@ -109,13 +112,16 @@ class CommandsTest {
     }
 
     private SingleInstance instance() {
-        var instance = new SingleInstance(instanceFolder, user, Duration.ofMillis(500));
+        var instance = new SingleInstance(instanceFolder, owner, Duration.ofMillis(500));
         toClose.add(instance);
         return instance;
     }
 
     private Commands commands(Os os, Optional<StartAtLogin> login, Optional<LinuxMenuEntry> menuEntry) {
-        return new Commands(os, MESSAGES, instance(), login, menuEntry);
+        return new Commands(MESSAGES, instance(),
+                login.<Commands.LoginSwitch>map(Commands.LoginSwitch.Present::new)
+                        .orElseGet(Commands.LoginSwitch.OnlyFromLauncher::new),
+                menuEntry.map(entry -> Commands.Launcher.of(os, entry)).orElseGet(() -> Commands.Launcher.none(os)));
     }
 
     private Commands commands() {
@@ -291,6 +297,19 @@ class CommandsTest {
     void theLauncherIsLinuxOnly() {
         assertThat(commands(Os.WINDOWS, Optional.empty(), Optional.of(menuEntry(temp))).run(Command.INSTALL_LAUNCHER))
                 .isEqualTo(failure(TextKey.CLI_LAUNCHER_LINUX_ONLY, AppName.TITLE));
+    }
+
+    @Test
+    void theCommandsForASystemOfferTheMenuEntryOnLinuxOnlyAndBothSwitchesOnlyFromTheLauncher() {
+        var windows = new Host(Os.WINDOWS, Map.of("LOCALAPPDATA", temp.toString()), temp, temp, Optional.empty(),
+                Optional.of(PROGRAM), false);
+        var fromTheBuild = new Host(Os.LINUX, Map.of(), temp, temp, Optional.empty(), Optional.empty(), false);
+        var linux = Commands.of(fromTheBuild, PlatformParts.of(fromTheBuild), instance(), MESSAGES);
+
+        assertThat(Commands.of(windows, PlatformParts.of(windows), instance(), MESSAGES).run(Command.INSTALL_LAUNCHER))
+                .isEqualTo(failure(TextKey.CLI_LAUNCHER_LINUX_ONLY, AppName.TITLE));
+        assertThat(linux.run(Command.INSTALL_LAUNCHER)).isEqualTo(failure(TextKey.CLI_LAUNCHER_NEEDS_INSTALL));
+        assertThat(linux.run(Command.START_AT_LOGIN_ON)).isEqualTo(failure(TextKey.CLI_START_AT_LOGIN_NEEDS_INSTALL));
     }
 
     @Test

@@ -12,7 +12,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Decides when the owner is told about a charge window: once, within the notification lead time before it starts.
@@ -61,19 +60,41 @@ public final class Announcer {
      * Tells the owner about each window of the plan that is due, and remembers it.
      *
      * @param days the plan's days, whose charge windows are announced
-     * @param advice the grid advice, whose window is announced as a grid charge; empty when there is none
      * @param forecast the forecast the plan was made on; announcements wait while it is stale or too old
      * @param now the current moment
      * @param config the system and preferences the plan was made for: the lead time, the time zone, the phases and
      *     the minimum charge level
      */
-    public synchronized void announceDue(List<DayPlan> days, Optional<GridAdvice> advice, ForecastSource forecast,
-            Instant now, EngineConfig config) {
+    public void announceDue(List<DayPlan> days, ForecastSource forecast, Instant now, EngineConfig config) {
+        announce(candidates(days, config), forecast, now, config);
+    }
+
+    /**
+     * Tells the owner about each window of the plan that is due, the grid advice's among them, and remembers it.
+     *
+     * @param days the plan's days, whose charge windows are announced
+     * @param advice the grid advice, whose window, when it has one, is announced as a grid charge
+     * @param forecast the forecast the plan was made on; announcements wait while it is stale or too old
+     * @param now the current moment
+     * @param config the system and preferences the plan was made for: the lead time, the time zone, the phases and
+     *     the minimum charge level
+     */
+    public void announceDue(List<DayPlan> days, GridAdvice advice, ForecastSource forecast, Instant now,
+            EngineConfig config) {
+        var candidates = candidates(days, config);
+        advice.window().ifPresent(window -> candidates.add(announcement(AnnouncementKind.GRID_CHARGE, window, config)));
+        announce(candidates, forecast, now, config);
+    }
+
+    /** Announces the candidates that are due, in the order they start. */
+    private synchronized void announce(List<Announcement> candidates, ForecastSource forecast, Instant now,
+            EngineConfig config) {
         if (!usable(forecast, now)) {
             return;
         }
+        candidates.sort(Comparator.comparing(announcement -> announcement.window().start()));
         var lead = config.planning().notifyLead();
-        for (var candidate : candidates(days, advice, config)) {
+        for (var candidate : candidates) {
             var window = candidate.window();
             if (now.isBefore(window.start()) && !window.start().isAfter(now.plus(lead)) && !wasAnnounced(window)) {
                 notifier.announce(candidate);
@@ -89,18 +110,17 @@ public final class Announcer {
                 && Duration.between(forecast.fetchedAt(), now).compareTo(MAX_FORECAST_AGE) <= 0;
     }
 
-    /** The plan's windows on the sun and the grid advice's window, as announcements in the order they start. */
-    private static List<Announcement> candidates(List<DayPlan> days, Optional<GridAdvice> advice, EngineConfig config) {
-        var zone = config.system().timezone();
-        var phases = config.system().charger().phases();
-        var minimumPct = config.planning().minimumPct();
+    /** The plan's windows on the sun, as announcements. */
+    private static List<Announcement> candidates(List<DayPlan> days, EngineConfig config) {
         var found = new ArrayList<Announcement>();
         days.forEach(day -> day.windows().forEach(window ->
-                found.add(new Announcement(AnnouncementKind.CHARGE_WINDOW, window, zone, phases, minimumPct))));
-        advice.flatMap(GridAdvice::window).ifPresent(window ->
-                found.add(new Announcement(AnnouncementKind.GRID_CHARGE, window, zone, phases, minimumPct)));
-        found.sort(Comparator.comparing(announcement -> announcement.window().start()));
+                found.add(announcement(AnnouncementKind.CHARGE_WINDOW, window, config))));
         return found;
+    }
+
+    private static Announcement announcement(AnnouncementKind kind, Window window, EngineConfig config) {
+        return new Announcement(kind, window, config.system().timezone(), config.system().charger().phases(),
+                config.planning().minimumPct());
     }
 
     private boolean wasAnnounced(Window window) {

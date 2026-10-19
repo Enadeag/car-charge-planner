@@ -12,7 +12,6 @@ import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 /** The tray's menu and tooltip follow the language the owner chooses. */
@@ -56,7 +55,7 @@ class TrayTextsTest {
     void anotherLanguageRelabelsTheMenuAndShowsTheLatestOutlookAgainInIt() {
         texts.show(new Outlook.NoForecast("Open-Meteo: no connection."));
 
-        language.choose(Optional.of(Language.DUTCH));
+        language.choose(Language.DUTCH);
 
         assertThat(tray.labels.getLast())
                 .isEqualTo(new Tray.MenuLabels("Dashboard openen", "Instellingen…", "Over…", "Afsluiten"));
@@ -66,14 +65,14 @@ class TrayTextsTest {
 
     @Test
     void beforeTheFirstOutlookAnotherLanguageSaysTheForecastIsBeingFetchedInIt() {
-        language.choose(Optional.of(Language.DUTCH));
+        language.choose(Language.DUTCH);
 
         assertThat(tray.statuses.getLast()).isEqualTo(new TrayStatus(StatusDot.NONE, "De voorspelling wordt opgehaald…"));
     }
 
     @Test
     void choosingTheLanguageSpokenAlreadyChangesNothing() {
-        language.choose(Optional.of(Language.ENGLISH));
+        language.choose(Language.ENGLISH);
 
         assertThat(tray.labels).hasSize(1);
         assertThat(tray.statuses).hasSize(1);
@@ -81,7 +80,7 @@ class TrayTextsTest {
 
     @Test
     void aLaterOutlookIsShownInTheLanguageChosen() {
-        language.choose(Optional.of(Language.DUTCH));
+        language.choose(Language.DUTCH);
 
         texts.show(new Outlook.NoForecast("Open-Meteo: no connection."));
 
@@ -91,7 +90,7 @@ class TrayTextsTest {
     @Test
     void beforeTheFirstSetUpTheSettingsEntryLeadsIntoSetUpInEveryLanguageUntilThereIsAConfig() {
         texts.show(new Outlook.NotSetUp(ConfigProblem.Kind.MISSING, Path.of("engine.json"), ""));
-        language.choose(Optional.of(Language.DUTCH));
+        language.choose(Language.DUTCH);
         var dutch = tray.labels.getLast();
         texts.show(new Outlook.NoForecast("Open-Meteo: no connection."));
 

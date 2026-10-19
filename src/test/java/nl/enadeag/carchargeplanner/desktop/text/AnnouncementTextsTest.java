@@ -10,7 +10,6 @@ import nl.enadeag.carchargeplanner.engine.notify.AnnouncementKind;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 /** What a notification says: what to set on the charger, and when. */
@@ -55,7 +54,7 @@ class AnnouncementTextsTest {
                 Phases.ONE, new Percent(30));
         assertThat(texts.notification(announcement).title()).isEqualTo("Charge window 10:00 – 15:00");
 
-        language.choose(Optional.of(Language.DUTCH));
+        language.choose(Language.DUTCH);
 
         assertThat(texts.notification(announcement).title()).isEqualTo("Laadvenster 10:00 – 15:00");
     }
@@ -83,7 +82,7 @@ class AnnouncementTextsTest {
         assertThat(texts.test("Car charge planner")).isEqualTo(new NotificationText("Test notification",
                 "This is how Car charge planner tells you a charge window starts soon. Click it to open the dashboard."));
 
-        language.choose(Optional.of(Language.DUTCH));
+        language.choose(Language.DUTCH);
 
         assertThat(texts.test("Car charge planner")).isEqualTo(new NotificationText("Testmelding",
                 "Zo vertelt Car charge planner je dat een laadvenster bijna begint. Klik erop om het dashboard te openen."));

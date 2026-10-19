@@ -13,7 +13,6 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class ChoiceNamesTest {
@@ -38,9 +37,9 @@ class ChoiceNamesTest {
 
     @Test
     void aLanguageIsNamedInItselfWhateverTheAppSpeaks() {
-        assertThat(english.language(Optional.of(Language.DUTCH))).isEqualTo("Nederlands");
-        assertThat(dutch.language(Optional.of(Language.DUTCH))).isEqualTo("Nederlands");
-        assertThat(english.language(Optional.empty())).isEqualTo("Follow the system");
+        assertThat(english.language(Language.DUTCH)).isEqualTo("Nederlands");
+        assertThat(dutch.language(Language.DUTCH)).isEqualTo("Nederlands");
+        assertThat(english.systemLanguage()).isEqualTo("Follow the system");
     }
 
     @Test
@@ -64,7 +63,7 @@ class ChoiceNamesTest {
 
     @Test
     void theFallbackIsAProviderOrNone() {
-        assertThat(english.fallback(Optional.of(SUNNY), KNOWN)).isEqualTo("Sunny");
-        assertThat(english.fallback(Optional.empty(), KNOWN)).isEqualTo("None");
+        assertThat(english.provider(SUNNY, KNOWN)).isEqualTo("Sunny");
+        assertThat(english.noFallback()).isEqualTo("None");
     }
 }

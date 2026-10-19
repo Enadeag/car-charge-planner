@@ -53,7 +53,6 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -178,7 +177,7 @@ public final class DesktopApp {
         // a Save may have chosen another language or appearance: every part follows at once; the engine plans again
         // by itself after a save of its config. This runs on the JavaFX thread.
         Consumer<AppSettings> saved = chosen -> {
-            language.choose(chosen.language());
+            chosen.language().ifPresentOrElse(language::choose, language::followSystem);
             appearance.set(chosen.appearance());
         };
         // after Finish the app plans with what set-up saved, in the language and appearance it chose; the dashboard
@@ -192,7 +191,7 @@ public final class DesktopApp {
                 language, background));
         var facts = new AboutFacts(version(), configPath, appSettingsFile.path(), dataFolder,
                 AppLog.file(dataFolder), secretsFile.path());
-        var settings = onFx(() -> new SettingsWindow(stores, facts, this::openLink, saved, Optional.of(setUp::open),
+        var settings = onFx(() -> new SettingsWindow(stores, facts, this::openLink, saved, setUp::open,
                 looks.windows(), icon, language, background));
         var setUpOffer = new SetUpOffer(setUp::open, settings::open, !commandLine.background());
         var actions = new DashboardActions(changes::enterBatteryLevel, changes::addAwayPeriod,

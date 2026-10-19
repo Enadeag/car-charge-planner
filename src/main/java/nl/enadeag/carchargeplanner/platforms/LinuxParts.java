@@ -80,7 +80,7 @@ final class LinuxParts implements PlatformParts {
     /** A private folder of this process's own; see {@link RuntimeFolder}. */
     private Path runtimeFolder(String purpose) {
         try {
-            return RuntimeFolder.make(purpose, host.environment(), host.temporary(), host.user());
+            return RuntimeFolder.make(purpose, host.environment(), host.temporary(), host.owner());
         } catch (IOException e) {
             throw new UncheckedIOException("cannot make a private folder for the " + purpose + " icons", e);
         }

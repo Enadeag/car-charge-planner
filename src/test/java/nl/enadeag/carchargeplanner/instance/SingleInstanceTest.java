@@ -16,11 +16,9 @@ import java.nio.channels.SocketChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.nio.file.attribute.UserPrincipal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -47,14 +45,14 @@ class SingleInstanceTest {
     @TempDir
     Path temp;
     private Path folder;
-    private Optional<UserPrincipal> user;
+    private Owner owner;
     private final BlockingQueue<InstanceCommand> received = new LinkedBlockingQueue<>();
     private final List<AutoCloseable> toClose = new ArrayList<>();
 
     @BeforeEach
     void setUp() throws IOException {
         folder = temp.resolve("instance");
-        user = hasFileModes() ? Optional.of(Files.getOwner(temp)) : Optional.empty();
+        owner = hasFileModes() ? new Owner.User(Files.getOwner(temp)) : new Owner.Unchecked();
     }
 
     @AfterEach
@@ -65,7 +63,7 @@ class SingleInstanceTest {
     }
 
     private SingleInstance instance() {
-        var instance = new SingleInstance(folder, user, TIMEOUT);
+        var instance = new SingleInstance(folder, owner, TIMEOUT);
         toClose.add(instance);
         return instance;
     }
@@ -145,7 +143,7 @@ class SingleInstanceTest {
     @Test
     void anOlderVersionThatListensWithoutTakingTheLockIsHandedOverTo() throws Exception {
         Files.createDirectory(folder, privateFolder());
-        try (var older = InstanceServer.bind(socket(), user, TIMEOUT)) {
+        try (var older = InstanceServer.bind(socket(), owner, TIMEOUT)) {
             older.serve(received::add);
             assertThat(instance().claim(_ -> { })).isEqualTo(Claim.HANDED_OVER);
             assertThat(nextReceived()).isEqualTo(InstanceCommand.SHOW);
@@ -288,8 +286,9 @@ class SingleInstanceTest {
     @Test
     @EnabledOnOs(OS.LINUX)
     void aFolderOfAnotherUserIsNotUsedAndNoCopyRuns() throws Exception {
-        user = Optional.of(temp.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByName("root"));
-        assumeTrue(!user.equals(Optional.of(Files.getOwner(temp))), "the tests run as root");
+        var root = temp.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByName("root");
+        assumeTrue(!root.equals(Files.getOwner(temp)), "the tests run as root");
+        owner = new Owner.User(root);
         var first = instance();
         assertThat(first.claim(_ -> { })).isEqualTo(Claim.NOT_PRIVATE);
         assertThat(first.problem()).hasValueSatisfying(problem -> assertThat(problem).contains("another user"));
@@ -316,7 +315,7 @@ class SingleInstanceTest {
         Files.createDirectory(folder, privateFolder());
         var root = temp.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByName("root");
         assumeTrue(!root.equals(Files.getOwner(temp)), "the tests run as root");
-        try (var server = InstanceServer.bind(socket(), Optional.of(root), TIMEOUT)) {
+        try (var server = InstanceServer.bind(socket(), new Owner.User(root), TIMEOUT)) {
             server.serve(received::add);
             assertThat(instance().send(InstanceCommand.SHOW)).isEqualTo(Reply.SILENT);
         }
@@ -392,7 +391,7 @@ class SingleInstanceTest {
 
     /** A guard that waits long enough for the system to let go of a dead process's lock (Windows takes a moment). */
     private SingleInstance patient() {
-        var instance = new SingleInstance(folder, user, Duration.ofSeconds(10));
+        var instance = new SingleInstance(folder, owner, Duration.ofSeconds(10));
         toClose.add(instance);
         return instance;
     }

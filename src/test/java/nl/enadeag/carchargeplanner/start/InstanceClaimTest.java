@@ -9,6 +9,7 @@ import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.host.AppName;
 import nl.enadeag.carchargeplanner.instance.InstanceCommand;
+import nl.enadeag.carchargeplanner.instance.Owner;
 import nl.enadeag.carchargeplanner.instance.SingleInstance;
 import nl.enadeag.carchargeplanner.logging.AppLog;
 import java.io.ByteArrayOutputStream;
@@ -22,13 +23,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.nio.file.attribute.UserPrincipal;
 import java.time.Duration;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -47,7 +46,7 @@ class InstanceClaimTest {
     Path temp;
 
     private Path folder;
-    private Optional<UserPrincipal> user;
+    private Owner owner;
     private final ByteArrayOutputStream err = new ByteArrayOutputStream();
     private final List<AutoCloseable> toClose = new ArrayList<>();
     private AppLog log;
@@ -57,8 +56,8 @@ class InstanceClaimTest {
     void setUp() throws IOException {
         // longer than a Unix domain socket's path may be: the lock works, the socket cannot be made
         folder = temp.resolve("a-folder-with-a-long-name-" + "x".repeat(100));
-        user = temp.getFileSystem().supportedFileAttributeViews().contains("posix")
-                ? Optional.of(Files.getOwner(temp)) : Optional.empty();
+        owner = temp.getFileSystem().supportedFileAttributeViews().contains("posix")
+                ? new Owner.User(Files.getOwner(temp)) : new Owner.Unchecked();
         var name = "instance-claim-test-" + UUID.randomUUID();
         var root = Logger.getLogger(name);
         root.setUseParentHandlers(false);
@@ -76,7 +75,7 @@ class InstanceClaimTest {
     }
 
     private SingleInstance instance() {
-        var instance = new SingleInstance(folder, user, Duration.ofMillis(500));
+        var instance = new SingleInstance(folder, owner, Duration.ofMillis(500));
         toClose.add(instance);
         return instance;
     }
@@ -118,7 +117,7 @@ class InstanceClaimTest {
     /** A folder for the lock and the socket with a path short enough for a socket, made only for this user. */
     private Path privateFolder() throws IOException {
         folder = temp.resolve("instance");
-        FileAttribute<?>[] onlyMine = user.isPresent()
+        FileAttribute<?>[] onlyMine = owner instanceof Owner.User
                 ? new FileAttribute<?>[] {PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------"))}
                 : new FileAttribute<?>[0];
         return Files.createDirectory(folder, onlyMine);

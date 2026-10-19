@@ -88,7 +88,7 @@ public final class SettingsPictures {
         var settings = new SettingsFixture(folder, Language.ENGLISH, CLOCK);
         return Fx.call(() -> {
             var view = SettingsView.of(settings.stores(true), settings.facts(), uri -> { }, () -> { }, chosen -> { },
-                    Optional.empty(), settings.background, settings.messages);
+                    settings.background, settings.messages);
             view.reload();
             view.show(Category.CHARGER);
             var studio = new Studio(view, scheme, Frame.WINDOW, 2, SETTINGS_WIDTH, Optional.of(SETTINGS_HEIGHT));

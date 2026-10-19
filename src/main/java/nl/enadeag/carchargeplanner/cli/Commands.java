@@ -16,7 +16,6 @@ import nl.enadeag.carchargeplanner.platforms.PlatformParts;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -31,9 +30,13 @@ public final class Commands {
     private final Launcher launcher;
 
     /** The system's start at login, or why the commands cannot switch it. */
-    private sealed interface LoginSwitch {
+    sealed interface LoginSwitch {
 
-        /** The system's own start at login. */
+        /**
+         * The system's own start at login.
+         *
+         * @param startAtLogin what switches it
+         */
         record Present(StartAtLogin startAtLogin) implements LoginSwitch { }
 
         /** Only the installed app, run from its launcher, can start itself at login. */
@@ -41,9 +44,35 @@ public final class Commands {
     }
 
     /** The Linux menu entry, or why the commands cannot install it. */
-    private sealed interface Launcher {
+    sealed interface Launcher {
 
-        /** The menu entry for the program that runs. */
+        /**
+         * The menu entry for the program that runs from its launcher.
+         *
+         * @param os the system, as the menu entry is Linux's only
+         * @param entry the menu entry for that program
+         * @return the entry on Linux; elsewhere, that it is Linux's only
+         */
+        static Launcher of(Os os, LinuxMenuEntry entry) {
+            return os == Os.LINUX ? new Present(entry) : new LinuxOnly();
+        }
+
+        /**
+         * No menu entry, as the app does not run from its launcher.
+         *
+         * @param os the system, as the menu entry is Linux's only
+         * @return that only the installed app can put itself in the menu; elsewhere than on Linux, that the entry is
+         *     Linux's only
+         */
+        static Launcher none(Os os) {
+            return os == Os.LINUX ? new OnlyFromLauncher() : new LinuxOnly();
+        }
+
+        /**
+         * The menu entry for the program that runs.
+         *
+         * @param entry what installs and removes it
+         */
         record Present(LinuxMenuEntry entry) implements Launcher { }
 
         /** The menu entry is Linux's only. */
@@ -56,20 +85,16 @@ public final class Commands {
     /**
      * Makes the commands; nothing is done yet.
      *
-     * @param os the system, as the menu entry is Linux's only
      * @param messages the texts in the owner's language
      * @param instance the single-instance guard, to reach the running app
-     * @param startAtLogin the system's start at login; empty when the app does not run from its launcher
-     * @param menuEntry the Linux menu entry; empty when the app does not run from its launcher, or not on Linux
+     * @param startAtLogin the system's start at login, or why it cannot be switched
+     * @param launcher the Linux menu entry, or why it cannot be installed
      */
-    Commands(Os os, Messages messages, SingleInstance instance, Optional<StartAtLogin> startAtLogin,
-            Optional<LinuxMenuEntry> menuEntry) {
+    Commands(Messages messages, SingleInstance instance, LoginSwitch startAtLogin, Launcher launcher) {
         this.messages = messages;
         this.instance = instance;
-        this.startAtLogin = startAtLogin.<LoginSwitch>map(LoginSwitch.Present::new)
-                .orElseGet(LoginSwitch.OnlyFromLauncher::new);
-        this.launcher = os != Os.LINUX ? new Launcher.LinuxOnly()
-                : menuEntry.<Launcher>map(Launcher.Present::new).orElseGet(Launcher.OnlyFromLauncher::new);
+        this.startAtLogin = startAtLogin;
+        this.launcher = launcher;
     }
 
     /**
@@ -83,10 +108,13 @@ public final class Commands {
      */
     public static Commands of(Host host, PlatformParts parts, SingleInstance instance, Messages messages) {
         var dataHome = DataLocation.systemFolder(host.os(), host.environment(), host.home());
-        var menuEntry = host.launcher().filter(_ -> host.os() == Os.LINUX)
-                .map(program -> new LinuxMenuEntry(dataHome, program, AppName.ID, AppName.TITLE,
-                        LinuxMenuEntry::refreshCaches));
-        return new Commands(host.os(), messages, instance, parts.startAtLogin(), menuEntry);
+        var launcher = host.launcher()
+                .map(program -> Launcher.of(host.os(), new LinuxMenuEntry(dataHome, program, AppName.ID,
+                        AppName.TITLE, LinuxMenuEntry::refreshCaches)))
+                .orElseGet(() -> Launcher.none(host.os()));
+        var startAtLogin = parts.startAtLogin().<LoginSwitch>map(LoginSwitch.Present::new)
+                .orElseGet(LoginSwitch.OnlyFromLauncher::new);
+        return new Commands(messages, instance, startAtLogin, launcher);
     }
 
     /**

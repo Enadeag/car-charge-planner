@@ -101,7 +101,7 @@ class SetUpWindowTest {
 
         setUp.appSettings.write(new AppSettings(Optional.of(Language.DUTCH), Units.METRIC, DisplayMode.AUTOMATIC,
                 Appearance.SYSTEM));
-        language.choose(Optional.of(Language.DUTCH));
+        language.choose(Language.DUTCH);
         Fx.settle();
 
         var after = view();
@@ -156,7 +156,7 @@ class SetUpWindowTest {
             var made = SettingsView.of(setUp.stores(), new AboutFacts("1.2.3", setUp.configPath,
                     setUp.appSettings.path(), folder.resolve("data"), folder.resolve("data").resolve("app.0.log"),
                     setUp.keysFile()), setUp.opened::add, () -> { },
-                    chosen -> { }, Optional.of(window::open), new Background(Runnable::run, Runnable::run),
+                    chosen -> { }, window::open, new Background(Runnable::run, Runnable::run),
                     setUp.messages);
             made.reload();
             Scenes.show(made, ColorScheme.LIGHT);

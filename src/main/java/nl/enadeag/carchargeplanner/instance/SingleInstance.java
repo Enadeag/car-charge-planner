@@ -15,7 +15,6 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.nio.file.attribute.UserPrincipal;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.Set;
@@ -38,8 +37,7 @@ public final class SingleInstance implements AutoCloseable {
 
     private final Path path;
     private final PrivateFolder folder;
-    /** The user this app runs as; null where files have no owner and mode. */
-    private final UserPrincipal user;
+    private final Owner owner;
     private final Duration timeout;
     private FileLock lock;
     private InstanceServer server;
@@ -51,16 +49,16 @@ public final class SingleInstance implements AutoCloseable {
      *
      * @param folder the folder for the lock and the socket, only for this user, such as
      *     {@code $XDG_RUNTIME_DIR/car-charge-planner}; it is made when missing, with the folders above it
-     * @param user the user this app runs as, where files have an owner and a mode (Linux): the folder must be theirs and
-     *     only connections of theirs are taken; empty on Windows, where the folder's place keeps others out
+     * @param owner the user this app runs as, where files have an owner and a mode (Linux): the folder must be theirs
+     *     and only connections of theirs are taken; unchecked on Windows, where the folder's place keeps others out
      * @param timeout how long one side waits for the other's line, the command or its confirmation, and how long a
      *     later start waits for a copy that holds the lock to start listening; more than zero. A running app that is
      *     busy starting may take a moment to answer.
      */
-    public SingleInstance(Path folder, Optional<UserPrincipal> user, Duration timeout) {
+    public SingleInstance(Path folder, Owner owner, Duration timeout) {
         this.path = folder;
-        this.folder = new PrivateFolder(folder, user);
-        this.user = user.orElse(null);
+        this.folder = new PrivateFolder(folder, owner);
+        this.owner = owner;
         this.timeout = timeout;
     }
 
@@ -123,7 +121,7 @@ public final class SingleInstance implements AutoCloseable {
         }
         try {
             Files.deleteIfExists(socket);
-            server = InstanceServer.bind(socket, Optional.ofNullable(user), timeout);
+            server = InstanceServer.bind(socket, owner, timeout);
         } catch (IOException e) {
             problem = "the instance socket " + socket + " cannot be made: " + e;
             return Claim.FIRST_UNREACHABLE;
@@ -222,7 +220,7 @@ public final class SingleInstance implements AutoCloseable {
     }
 
     private FileAttribute<?>[] lockFileMode() {
-        return user != null
+        return owner instanceof Owner.User
                 ? new FileAttribute<?>[] {PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"))}
                 : new FileAttribute<?>[0];
     }

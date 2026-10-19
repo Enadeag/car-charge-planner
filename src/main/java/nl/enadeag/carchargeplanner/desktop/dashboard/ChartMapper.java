@@ -87,7 +87,7 @@ final class ChartMapper {
         double now = hoursFrom(start, planned.madeAt());
         var nowHour = day.date().equals(today) && now >= from && now <= to ? OptionalDouble.of(now) : OptionalDouble.empty();
         return new SolarCurveModel(from, to, scaleKw, messages.text(TextKey.CHART_SCALE, messages.whole(scaleKw)), steps, planned.houseKw(),
-                windows, nowHour, ticks(day.date(), start, from, to), spoken(day, nowHour));
+                windows, nowHour, ticks(day.date(), start, from, to), spoken(day, nowHour.isPresent()));
     }
 
     /**
@@ -126,7 +126,7 @@ final class ChartMapper {
         return ticks;
     }
 
-    private String spoken(DayPlan day, OptionalDouble nowHour) {
+    private String spoken(DayPlan day, boolean showsNow) {
         var title = messages.title(day.date(), today);
         var peak = day.forecast().stream().max(Comparator.comparingDouble(ForecastStep::powerKw));
         if (peak.isEmpty() || peak.get().powerKw() <= SUN_KW) {
@@ -138,7 +138,7 @@ final class ChartMapper {
                 .map(window -> messages.text(TextKey.CHART_SPOKEN_SPAN, messages.time(window.start(), zone),
                         messages.time(window.end(), zone)))
                 .collect(Collectors.joining(", ")));
-        var now = nowHour.isPresent() ? messages.text(TextKey.CHART_SPOKEN_NOW, messages.time(planned.madeAt(), zone)) : "";
+        var now = showsNow ? messages.text(TextKey.CHART_SPOKEN_NOW, messages.time(planned.madeAt(), zone)) : "";
         return sentences(chart, windows, now);
     }
 

@@ -8,7 +8,6 @@ import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.SystemTheme;
 import java.net.URI;
-import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import javafx.application.ColorScheme;
@@ -53,7 +52,7 @@ public final class SettingsWindow {
      * @param openLink opens a web page in the owner's browser; called on the JavaFX thread, so it should not block
      * @param saved gets the app settings as stored, on the JavaFX thread, after something was saved, so the app follows
      *     them and plans again; it should hand slow work on
-     * @param runSetUp opens set-up once Settings closed; empty while the app has no set-up
+     * @param runSetUp opens set-up once Settings closed
      * @param colorScheme light or dark for the windows, followed while the app runs: the owner's appearance over the
      *     system's ({@link nl.enadeag.carchargeplanner.desktop.app.Appearance#scheme}); never null
      * @param icon the app icon, for the title bar and the taskbar
@@ -61,7 +60,7 @@ public final class SettingsWindow {
      * @param background reads and writes the stores away from the JavaFX thread
      */
     public SettingsWindow(SettingsStores stores, AboutFacts facts, Consumer<URI> openLink,
-            Consumer<AppSettings> saved, Optional<Runnable> runSetUp, ObservableValue<ColorScheme> colorScheme,
+            Consumer<AppSettings> saved, Runnable runSetUp, ObservableValue<ColorScheme> colorScheme,
             AppIcon icon, LanguageChoice language, Background background) {
         this.views = (messages, close) -> SettingsView.of(stores, facts, openLink, close, saved, runSetUp, background,
                 messages);

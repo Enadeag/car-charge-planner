@@ -59,9 +59,9 @@ public final class Main {
         // the mode is read once, as the app starts, and applies at the next start; language and appearance follow Settings
         var appSettings = appSettingsFile.read();
         var language = new LanguageChoice(Language.ofSystem(host.environment(), Locale.getDefault(Locale.Category.DISPLAY)));
-        language.choose(appSettings.language());
+        appSettings.language().ifPresentOrElse(language::choose, language::followSystem);
         var instance = new SingleInstance(InstanceLocation.folder(host.os(), host.environment(), host.home()),
-                host.user(), INSTANCE_TIMEOUT);
+                host.owner(), INSTANCE_TIMEOUT);
 
         if (commandLine.command() == CommandLine.Command.RUN) {
             new DesktopApp(commandLine, host, parts, instance, commandLine.config().orElse(defaultConfig),

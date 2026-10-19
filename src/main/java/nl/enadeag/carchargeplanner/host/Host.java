@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.host;
 
+import nl.enadeag.carchargeplanner.instance.Owner;
 import java.io.IOException;
 import java.lang.System.Logger.Level;
 import java.nio.file.Files;
@@ -54,6 +55,15 @@ public record Host(Os os, Map<String, String> environment, Path home, Path tempo
                 Path.of(System.getProperty("java.io.tmpdir")), user(os),
                 Optional.ofNullable(launcher).map(Path::of).map(Path::toAbsolutePath),
                 console != null && console.isTerminal());
+    }
+
+    /**
+     * Who must own the private folders and the instance socket.
+     *
+     * @return the user the app runs as; unchecked when there is none
+     */
+    public Owner owner() {
+        return user.<Owner>map(Owner.User::new).orElseGet(Owner.Unchecked::new);
     }
 
     /**
