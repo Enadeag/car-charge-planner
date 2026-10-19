@@ -33,10 +33,10 @@ public sealed interface PlatformParts permits FreedesktopParts, WindowsParts {
      *
      * @param tray the icon in the system's tray
      * @param notifications the system's notifications
-     * @param needTheTray true when the notifications are the tray icon's messages, so the icon must be there for
-     *     them even when the dashboard is a window
+     * @param notificationsNeedTheTray true when the notifications are the tray icon's messages, so the icon must be
+     *     there for them even when the dashboard is a window
      */
-    record TrayParts(Tray tray, Notifications notifications, boolean needTheTray) {
+    record TrayParts(Tray tray, Notifications notifications, boolean notificationsNeedTheTray) {
     }
 
     /**
