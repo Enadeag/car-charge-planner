@@ -167,7 +167,7 @@ public final class DesktopApp {
         closing.add("the keychain", keychain::close);
         var engine = engine(http, keychain, secretsFile, dataFolder,
                 announcement -> notifications.show(texts.notification(announcement)));
-        closing.add("the engine", engine::close);
+        closing.add("the engine", engine::stop);
         var saving = Executors.newSingleThreadExecutor(Thread.ofVirtual().name("dashboard-changes").factory());
         closing.add("the dashboard's saving", saving::close);
         var changes = new DashboardChanges(engine, new Background(saving, Platform::runLater));

@@ -47,7 +47,7 @@ import java.util.function.Consumer;
  * uses the stored files as they are on disk, reading one again only when it changed; the forecast service decides
  * whether a provider is asked or its cache answers.
  */
-public final class Engine implements AutoCloseable {
+public final class Engine {
 
     /** Until the owner enters the battery level, the plan starts from this one. */
     static final Percent ASSUMED_BATTERY_PCT = new Percent(50);
@@ -78,7 +78,7 @@ public final class Engine implements AutoCloseable {
      * @param announcer tells the owner about the plan's windows shortly before they start, and keeps the ones it told
      *     about as they were told
      * @param planner the engine's own thread, where it plans once {@linkplain #start(Consumer) started}; {@link
-     *     #close()} shuts it down. Nothing runs on it before the start; never null.
+     *     #stop()} shuts it down. Nothing runs on it before the start; never null.
      */
     public Engine(ConfigFile configFile, ForecastService forecasts, Providers providers, ApiKeys apiKeys,
             AwayFile awayFile, BatteryFile batteryFile, Clock clock, Announcer announcer,
@@ -110,11 +110,10 @@ public final class Engine implements AutoCloseable {
     }
 
     /**
-     * Stops planning: a plan that is being made may finish for a few seconds, and no listener is told after this
-     * returns. Closing again does nothing.
+     * Stops planning, the counterpart of {@link #start(Consumer)}: a plan that is being made may finish for a few
+     * seconds, and no listener is told after this returns. Stopping again does nothing.
      */
-    @Override
-    public void close() {
+    public void stop() {
         schedule.stop();
     }
 

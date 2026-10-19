@@ -154,12 +154,15 @@ public final class DashboardPictures {
         })));
         var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json")));
         var awayFile = new AwayFile(folder.resolve("away.json"));
-        try (var engine = new Engine(new ConfigFile(config),
+        var engine = new Engine(new ConfigFile(config),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
                 awayFile, new BatteryFile(folder.resolve("battery.json")), Clock.fixed(NOW, ZoneOffset.UTC),
                 new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), _ -> { }),
-                new ManualScheduler())) {
+                new ManualScheduler());
+        try {
             return new OutlookMapper(new Messages(Language.ENGLISH)).map(engine.plan(), awayFile.periods());
+        } finally {
+            engine.stop();
         }
     }
 

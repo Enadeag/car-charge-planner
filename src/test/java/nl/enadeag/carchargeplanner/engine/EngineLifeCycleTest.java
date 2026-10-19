@@ -186,10 +186,10 @@ class EngineLifeCycleTest {
     }
 
     @Test
-    void afterTheCloseNothingIsPlannedButChangesAreStillSaved() throws Exception {
+    void afterTheStopNothingIsPlannedButChangesAreStillSaved() throws Exception {
         var engine = started();
 
-        engine.close();
+        engine.stop();
         engine.setBatteryLevel(new Percent(72));
         planner.advance(Duration.ofMinutes(5));
 
@@ -205,14 +205,14 @@ class EngineLifeCycleTest {
     }
 
     @Test
-    void theCloseStopsTheEnginesThread() throws Exception {
+    void theStopEndsTheEnginesThread() throws Exception {
         var thread = Executors.newSingleThreadScheduledExecutor();
         var engine = engine(thread);
         var outlooks = new LinkedBlockingQueue<Outlook>();
         engine.start(outlooks::add);
         assertThat(outlooks.poll(10, TimeUnit.SECONDS)).isInstanceOf(Outlook.Planned.class);
 
-        engine.close();
+        engine.stop();
 
         assertThat(thread.isTerminated()).isTrue();
     }
