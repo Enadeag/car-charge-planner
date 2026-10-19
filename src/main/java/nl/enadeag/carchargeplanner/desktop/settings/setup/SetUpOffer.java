@@ -53,7 +53,7 @@ public final class SetUpOffer {
      *
      * @param category the category Settings should show
      */
-    public void openSettings(Category category) {
+    public void openSettingsOrSetUp(Category category) {
         if (missing) {
             setUp.run();
         } else {

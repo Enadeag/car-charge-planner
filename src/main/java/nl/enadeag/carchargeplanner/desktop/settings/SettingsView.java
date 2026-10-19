@@ -26,6 +26,7 @@ import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
@@ -85,7 +86,10 @@ final class SettingsView extends BorderPane {
     private final HBox actions;
     private final HBox confirm;
     private final Set<Category> refused = EnumSet.noneOf(Category.class);
-    /** The outcome of the last Save; null before the first, and after the stores were read again. */
+    /**
+     * The outcome of the last Save that went on to write; null before the first, after one whose values were refused,
+     * and after the stores were read again.
+     */
     private SaveOutcome outcome;
     private Runnable afterClose = () -> { };
     private State state = State.READING;
@@ -281,6 +285,8 @@ final class SettingsView extends BorderPane {
         reload(() -> {
             if (before.outcome != null) {
                 showOutcome(before.outcome);
+            } else if (!before.refused.isEmpty()) {
+                showRefused(before.refused);
             }
             categories.refresh();
         });
@@ -325,34 +331,36 @@ final class SettingsView extends BorderPane {
             return;
         }
         showActions();
-        switch (form.enter()) {
-            case SettingsForm.Entered.Refused refusing -> afterSave(new SaveOutcome.Refused(refusing.categories()));
-            case SettingsForm.Entered.Accepted accepted -> {
-                goTo(State.SAVING);
-                working = true;
-                Runnable prompting = () -> background.onFx(this::showUnlockPrompt);
-                background.run("saving the settings", () -> form.write(accepted.changes(), prompting), written -> {
-                    working = false;
-                    written.stored().ifPresent(form::show);
-                    goTo(State.READY);
-                    afterSave(written.outcome());
-                    if (written.outcome() instanceof SaveOutcome.Saved) {
-                        saved.accept(written.stored().orElseThrow().app());
-                        then.run();
-                    }
-                }, failure -> {
-                    working = false;
-                    goTo(State.READY);
-                    afterSave(new SaveOutcome.Failed(Background.describe(failure, messages)));
-                });
-            }
+        var refusing = form.markRefused();
+        if (!refusing.isEmpty()) {
+            afterRefused(refusing);
+            return;
         }
+        var changes = form.changes();
+        goTo(State.SAVING);
+        working = true;
+        Runnable prompting = () -> background.onFx(this::showUnlockPrompt);
+        background.run("saving the settings", () -> form.write(changes, prompting), written -> {
+            working = false;
+            written.stored().ifPresent(form::show);
+            goTo(State.READY);
+            afterSave(written.outcome());
+            if (written.outcome() instanceof SaveOutcome.Saved) {
+                saved.accept(written.stored().orElseThrow().app());
+                then.run();
+            }
+        }, failure -> {
+            working = false;
+            goTo(State.READY);
+            afterSave(new SaveOutcome.Failed(Background.describe(failure, messages)));
+        });
     }
 
     /**
      * The outcome of the last Save, for a test that saved.
      *
-     * @return the outcome; empty before the first Save, while one runs, and after the stores were read again
+     * @return the outcome; empty before the first Save, while one runs, after one whose values were refused, and after
+     *     the stores were read again
      */
     Optional<SaveOutcome> outcome() {
         return state == State.SAVING ? Optional.empty() : Optional.ofNullable(outcome);
@@ -378,12 +386,27 @@ final class SettingsView extends BorderPane {
         categories.refresh(); // before the focus moves there: the marked category says it has a problem
         switch (result) {
             case SaveOutcome.Saved _ -> ScreenReader.focus(status);
-            case SaveOutcome.Refused problems -> show(problems.categories().getFirst());
             case SaveOutcome.StartAtLoginRefused _ -> show(Category.APP);
             case SaveOutcome.KeyringLocked _ -> ScreenReader.focus(status);
             case SaveOutcome.Failed _ -> ScreenReader.focus(status);
         }
         updateCancelText();
+    }
+
+    /** A Save stored nothing, as values were refused: their categories are marked, and the first one shows. */
+    private void afterRefused(List<Category> refusing) {
+        showRefused(refusing);
+        categories.refresh(); // before the focus moves there: the marked category says it has a problem
+        show(refusing.getFirst());
+        updateCancelText();
+    }
+
+    /** The status line, and the categories marked, after a Save whose values were refused. */
+    private void showRefused(Collection<Category> refusing) {
+        outcome = null;
+        refused.clear();
+        refused.addAll(refusing);
+        showProblem(messages.text(TextKey.SETTINGS_REFUSED));
     }
 
     /** The status line, and the categories marked, after a Save. */
@@ -393,10 +416,6 @@ final class SettingsView extends BorderPane {
         status.getStyleClass().remove("problem");
         switch (result) {
             case SaveOutcome.Saved _ -> status.setText(messages.text(TextKey.SETTINGS_SAVED));
-            case SaveOutcome.Refused problems -> {
-                refused.addAll(problems.categories());
-                showProblem(messages.text(TextKey.SETTINGS_REFUSED));
-            }
             case SaveOutcome.StartAtLoginRefused _ -> {
                 refused.add(Category.APP);
                 showProblem(messages.text(TextKey.SETTINGS_REFUSED));

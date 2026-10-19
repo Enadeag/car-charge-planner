@@ -421,10 +421,6 @@ final class SetUpView extends BorderPane {
                 show(SetUpStep.APP);
                 showRefused();
             }
-            case SaveOutcome.Refused _ -> {
-                show(SetUpStep.APP);
-                showRefused();
-            }
             case SaveOutcome.KeyringLocked _ -> {
                 showProblem(messages.text(TextKey.SETTINGS_KEYCHAIN_LOCKED));
                 ScreenReader.focus(status);

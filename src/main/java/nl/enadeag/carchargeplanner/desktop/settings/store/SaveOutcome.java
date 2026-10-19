@@ -1,26 +1,10 @@
 package nl.enadeag.carchargeplanner.desktop.settings.store;
 
-import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
-import java.util.List;
-
 /** What pressing Save came to. */
 public sealed interface SaveOutcome {
 
     /** Everything was stored. */
     record Saved() implements SaveOutcome {
-    }
-
-    /**
-     * Nothing was stored, because values were refused; each shows its problem next to its field.
-     *
-     * @param categories the categories with a refused value, in the sidebar's order; at least one
-     */
-    record Refused(List<Category> categories) implements SaveOutcome {
-
-        /** Copies the list. */
-        public Refused {
-            categories = List.copyOf(categories);
-        }
     }
 
     /**

@@ -193,7 +193,7 @@ public final class DesktopApp {
         var decision = new StartupDecision(appSettings.mode(), commandLine.atLogin(),
                 trayParts.notificationsNeedTheTray());
         showTrayOrWindow(decision, tray, dashboard, new Tray.Actions(dashboard::trayIconClicked, dashboard::openWindow,
-                        () -> windows.setUpOffer().openSettings(Category.SOLAR),
+                        () -> windows.setUpOffer().openSettingsOrSetUp(Category.SOLAR),
                         () -> windows.settings().open(Category.ABOUT), this::quit));
         // only now: on Windows the first announcement needs the tray icon to show it
         engine.start(outlook -> {
@@ -232,8 +232,8 @@ public final class DesktopApp {
                 preferences.windows(), icon, language, background));
         var setUpOffer = new SetUpOffer(setUp::open, settings::open, !commandLine.atLogin());
         var actions = new DashboardActions(changes::setBatteryLevel, changes::addAwayPeriod,
-                changes::removeAwayPeriod, () -> setUpOffer.openSettings(Category.AWAY),
-                () -> setUpOffer.openSettings(Category.SOLAR), setUp::open, this::quit);
+                changes::removeAwayPeriod, () -> setUpOffer.openSettingsOrSetUp(Category.AWAY),
+                () -> setUpOffer.openSettingsOrSetUp(Category.SOLAR), setUp::open, this::quit);
         var dashboard = makeOnFx(() -> new Dashboard(icon, preferences.windows(), preferences.reducedMotion(),
                 Clock.systemUTC(), parts.taskbarHiding(), language, actions));
         dashboardMade.complete(dashboard);

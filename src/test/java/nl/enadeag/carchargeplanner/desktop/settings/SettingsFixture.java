@@ -209,7 +209,7 @@ public final class SettingsFixture {
      */
     static boolean save(SettingsView view) {
         view.save(() -> { });
-        return view.outcome().orElseThrow() instanceof SaveOutcome.Saved;
+        return view.outcome().filter(SaveOutcome.Saved.class::isInstance).isPresent();
     }
 
     void close() throws Exception {

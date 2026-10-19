@@ -25,31 +25,6 @@ import java.util.Optional;
  */
 final class SettingsForm {
 
-    /** What the pages hold when Save is pressed. */
-    sealed interface Entered {
-
-        /**
-         * A value was refused; each shows its problem next to its field.
-         *
-         * @param categories the categories with a refused value, in the sidebar's order; at least one
-         */
-        record Refused(List<Category> categories) implements Entered {
-
-            /** Copies the list. */
-            public Refused {
-                categories = List.copyOf(categories);
-            }
-        }
-
-        /**
-         * Every value was accepted.
-         *
-         * @param changes what differs from what is stored, to write
-         */
-        record Accepted(SettingsChanges changes) implements Entered {
-        }
-    }
-
     /**
      * What a write came to.
      *
@@ -124,40 +99,52 @@ final class SettingsForm {
     }
 
     /**
-     * Has the pages check what they show, as Save does; a refused value shows its problem at its field.
+     * Has the pages check what they show, as Save does, and marks each refused value by showing its problem at its
+     * field; problems shown before are taken away first. Pages that could not be loaded check nothing.
      *
-     * @return the categories with a refused value, or what differs from what is stored
+     * @return the categories with a refused value, in the sidebar's order; empty when every value is accepted
      * @throws IllegalStateException when nothing was shown yet
      */
-    Entered enter() {
+    List<Category> markRefused() {
         if (stored == null) {
             throw new IllegalStateException("nothing is shown yet");
         }
         var refused = new ArrayList<Category>();
-        var config = stored.config();
-        if (config.isPresent()) {
+        if (stored.config().isPresent()) {
             for (var page : configPages) {
                 if (page.showProblems()) {
                     refused.add(page.category());
                 }
             }
         }
-        if (!refused.isEmpty()) {
-            return new Entered.Refused(refused);
+        return List.copyOf(refused);
+    }
+
+    /**
+     * What differs from what is stored, with every value as the pages show it; only reads. Call it when
+     * {@link #markRefused()} found nothing.
+     *
+     * @return the changes to write
+     * @throws IllegalStateException when nothing was shown yet, or a page refuses a value
+     */
+    SettingsChanges changes() {
+        if (stored == null) {
+            throw new IllegalStateException("nothing is shown yet");
         }
+        var config = stored.config();
         for (var page : configPages) {
-            config = config.map(read -> page.read(read).orElseThrow(
-                    () -> new IllegalStateException(page.category() + " refused a value but showed no problem")));
+            config = config.map(entered -> page.read(entered).orElseThrow(
+                    () -> new IllegalStateException(page.category() + " refuses a value; mark it first")));
         }
         var entered = new AllSettings(config, forecast.keys(), app.settings(), Optional.of(app.startsAtLogin()));
-        return new Entered.Accepted(SettingsChanges.between(stored, entered));
+        return SettingsChanges.between(stored, entered);
     }
 
     /**
      * Stores the changes, and reads the stores again after a save; see {@link SettingsStorage#save} for the order.
      * Blocks while the system, the keychain and the files answer; may be called from any thread.
      *
-     * @param changes what {@link #enter()} accepted
+     * @param changes what {@link #changes()} gave
      * @param prompting runs, on the saving thread, once the system asks the owner to unlock the keychain
      * @return the outcome, and what is stored after a save
      */

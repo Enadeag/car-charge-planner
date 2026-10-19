@@ -38,7 +38,7 @@ class SetUpOfferTest {
         var offer = offer(false);
 
         offer.follow(MISSING);
-        offer.openSettings(Category.SOLAR);
+        offer.openSettingsOrSetUp(Category.SOLAR);
 
         assertThat(opened).containsExactly("set-up");
     }
@@ -49,7 +49,7 @@ class SetUpOfferTest {
         offer.follow(MISSING);
 
         offer.follow(new Outlook.NoForecast("Open-Meteo: no connection."));
-        offer.openSettings(Category.AWAY);
+        offer.openSettingsOrSetUp(Category.AWAY);
 
         assertThat(opened).containsExactly("set-up", "AWAY");
     }
@@ -60,7 +60,7 @@ class SetUpOfferTest {
         var offer = offer(true);
 
         offer.follow(new Outlook.ConfigUnusable(kind, Path.of("engine.json"), "detail"));
-        offer.openSettings(Category.SOLAR);
+        offer.openSettingsOrSetUp(Category.SOLAR);
 
         assertThat(opened).containsExactly("SOLAR");
     }
