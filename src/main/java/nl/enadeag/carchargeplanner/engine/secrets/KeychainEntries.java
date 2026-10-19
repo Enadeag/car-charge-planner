@@ -105,7 +105,7 @@ final class KeychainEntries {
 
     private void writeAndCheck(String name, String value) throws KeychainException {
         keychain.write(name, value);
-        if (!keychain.read(name).filter(value::equals).isPresent()) {
+        if (keychain.read(name).filter(value::equals).isEmpty()) {
             throw new KeychainException(KeychainException.Kind.REFUSED,
                     "the keychain did not keep a value that was written to it");
         }
