@@ -34,9 +34,14 @@ import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import nl.enadeag.carchargeplanner.engine.forecast.JdkHttpGet;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
+import nl.enadeag.carchargeplanner.host.Host;
+import nl.enadeag.carchargeplanner.host.Os;
 import java.time.Clock;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * The rules of ADR 0001 and ADR 0005: an engine without user interface, platforms that do not know each other, one
@@ -167,13 +172,27 @@ class ArchitectureTest {
 
     private static final String ROOT = Main.class.getPackageName();
 
+    /** The packages that make up the composition root: {@code Main} and the parts it starts the app with. */
+    private static final List<String> OUTER_PARTS = List.of("start", "cli", "logging", "host");
+
+    /** The composition root, as package identifiers: the root package itself and its own subpackages. */
+    private static final String[] OUTER = Stream.concat(Stream.of(ROOT),
+            OUTER_PARTS.stream().map(part -> ROOT + "." + part + "..")).toArray(String[]::new);
+
     private static final String ENGINE = ROOT + ".engine";
+
+    /** The composition root's packages and some more, for a rule that lets them all do something. */
+    private static String[] outerAnd(String... more) {
+        return Stream.concat(Arrays.stream(OUTER), Arrays.stream(more)).toArray(String[]::new);
+    }
 
     // package structure
 
     @ArchTest
     static final ArchRule noCyclesBetweenTheTopLevelPackages = slices()
             .matching(ROOT + ".(*)..")
+            .that(DescribedPredicate.describe("are not part of the composition root",
+                    slice -> !OUTER_PARTS.contains(slice.getNamePart(1))))
             .should().beFreeOfCycles()
             .because("the engine, the desktop, the platforms and the single-instance guard are built and read apart "
                     + "(ADR 0001, ADR 0005)");
@@ -198,7 +217,7 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule onlyTheCompositionRootDependsOnThePlatforms = noClasses()
-            .that().resideOutsideOfPackages(ROOT, "..platform..")
+            .that().resideOutsideOfPackages(outerAnd("..platform.."))
             .should().dependOnClassesThat().resideInAPackage("..platform..")
             .because("the composition root picks the platform's parts and hands them on as the ports (ADR 0005)");
 
@@ -218,12 +237,12 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule engineAndDesktopDoNotKnowTheCompositionRoot = noClasses()
             .that().resideInAnyPackage("..engine..", "..desktop..")
-            .should().dependOnClassesThat().resideInAPackage(ROOT)
+            .should().dependOnClassesThat().resideInAnyPackage(OUTER)
             .because("the composition root wires them; they get what they need through their constructors (ADR 0005)");
 
     @ArchTest
     static final ArchRule providersAreOnlyReachedThroughTheForecast = noClasses()
-            .that().resideOutsideOfPackages(ENGINE + ".forecast..", ROOT)
+            .that().resideOutsideOfPackages(outerAnd(ENGINE + ".forecast.."))
             .should().dependOnClassesThat().resideInAPackage(ENGINE + ".forecast.providers..")
             .because("a provider is chosen by engine.forecast; the plan and the clients know only the forecast");
 
@@ -237,7 +256,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule theLayersOnlyPointDownwards = layeredArchitecture()
             .consideringOnlyDependenciesInLayers()
-            .layer("Root").definedBy(ROOT)
+            .layer("Root").definedBy(OUTER)
             .layer("Platform").definedBy("..platform..")
             .layer("Desktop").definedBy(DESKTOP_OUTSIDE_ITS_SYSTEM)
             .layer("Desktop system").definedBy("..desktop.system..")
@@ -272,7 +291,7 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule onlyTheCompositionRootReadsTheClock = FreezingArchRule.freeze(noClasses()
-            .that().resideOutsideOfPackage(ROOT)
+            .that().resideOutsideOfPackages(OUTER)
             .should().callMethodWhere(READ_THE_SYSTEM_CLOCK)
             .because("the clock and the zone are handed in, so a test can set the time (ADR 0005); the stored "
                     + "defaults of StoredFile and ApiKeys are frozen until their callers pass a clock"));
@@ -298,7 +317,7 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule onlyTheRootThePlatformsAndTheGuardOwnThreads = noClasses()
-            .that().resideOutsideOfPackages(ROOT, "..platform..", "..instance..")
+            .that().resideOutsideOfPackages(outerAnd("..platform..", "..instance.."))
             .should().callMethodWhere(START_A_THREAD)
             .orShould().callConstructorWhere(DescribedPredicate.describe("make a thread, a timer or a pool",
                     call -> call.getTargetOwner().isAssignableTo(Thread.class)
@@ -316,20 +335,20 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule onlyTheLogLinePrintsAStackTrace = noClasses()
-            .that().doNotHaveFullyQualifiedName(LogLine.class.getName())
+            .that().doNotHaveFullyQualifiedName(ROOT + ".logging.LogLine")
             .should().callMethodWhere(PRINT_A_STACK_TRACE)
             .because("a failure goes to the log, which knows what it may show; only LogLine, which writes the log, "
                     + "prints a trace, to a writer of its own (ADR 0005)");
 
     @ArchTest
     static final ArchRule onlyTheRootConfiguresJavaUtilLogging = noClasses()
-            .that().resideOutsideOfPackage(ROOT)
+            .that().resideOutsideOfPackages(OUTER)
             .should().dependOnClassesThat().resideInAPackage("java.util.logging..")
             .because("the app's log is set up once, by AppLog; everything else logs through System.Logger (ADR 0005)");
 
     @ArchTest
     static final ArchRule onlyTheRootWritesToTheConsole = noClasses()
-            .that().resideOutsideOfPackage(ROOT)
+            .that().resideOutsideOfPackages(OUTER)
             .should().accessField(System.class, "out")
             .orShould().accessField(System.class, "err")
             .because("the command line's answers are printed by Main; the rest logs (ADR 0005)");
@@ -343,13 +362,13 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule theDesktopBusIsOnlyForLinux = noClasses()
-            .that().resideOutsideOfPackages("..platform.linux..", ROOT)
+            .that().resideOutsideOfPackages(outerAnd("..platform.linux.."))
             .should().dependOnClassesThat().resideInAPackage("org.freedesktop..")
             .because("D-Bus is how the Linux platform talks to the tray, notifications and keyring (ADR 0005)");
 
     @ArchTest
     static final ArchRule onlyOneClassMakesHttpCalls = noClasses()
-            .that().resideOutsideOfPackage(ROOT)
+            .that().resideOutsideOfPackages(OUTER)
             .and(notPartOf(JdkHttpGet.class.getName()))
             .should().dependOnClassesThat().resideInAPackage("java.net.http..")
             .because("every provider asks through the HttpGet port, so a test can answer instead (ADR 0001)");

@@ -121,10 +121,10 @@ part's share of covered lines or branches drops below its floor:
 | `desktop` | 95 % | 82 % |
 | `instance` | 88 % | 74 % |
 | `platform.linux` | 86 % | 75 % |
-| the root package, without the composition root | 93 % | 94 % |
+| `start`, `cli`, `logging` and `host`, without the wiring | 93 % | 94 % |
 
-The composition root in the root package (`Main`, `DesktopApp`, `Host` and the `*Parts` classes) is left out:
-`DesktopAppSmokeTest` runs it in a JVM of its own, which JaCoCo does not see. `platform.windows` is not checked
+The classes that wire the app (`Main`, `start.DesktopApp`, `host.Host` and the `*Parts` classes in `start`) are left
+out: `DesktopAppSmokeTest` runs them in a JVM of its own, which JaCoCo does not see. `platform.windows` is not checked
 either, because its tests run on Windows only. The floors are a point or two below what was measured when they were
 set; raise them when the tests grow, rather than writing tests for the number.
 
@@ -315,7 +315,11 @@ Everything is in the package `nl.enadeag.carchargeplanner`, under `src/main/java
 | `desktop` | The client on the desktop, in parts that depend one way: `desktop.system` the ports each platform implements (tray, notifications, start at login, keeping the popup out of the taskbar) and the icons they show, without any other desktop part; `desktop.text` every text in each language (`Messages`, with the bundles beside it in `src/main/resources`) and the notifications' texts; `desktop.app` the app settings (`app.json`: language, appearance, units and display mode) and `Background`, which every window uses for slow work; `desktop.theme` light or dark and the stylesheet the windows share, and what a screen reader needs beyond JavaFX; `desktop.dashboard` the JavaFX dashboard and the tray icon's status, mapped from the engine's outlook. `desktop.settings` is the Settings window (a page per category, cards of fields, saved through the engine and `app.json`) and the first-run set-up, whose steps show the same cards and save through the same storage. |
 | `instance` | One running copy per user: the running copy holds a lock file in a private folder, and a second start asks it, over a private Unix domain socket beside it, to show its dashboard. |
 | `platform.linux`, `platform.windows` | The tray icon, notifications, the keychain and start at login on each system: our own StatusNotifierItem, notification and Secret Service clients over D-Bus, and a desktop entry in the autostart folder; AWT's `SystemTray` and its icon's messages, the Credential Manager and the Run key. |
-| `Main` and the root package | The composition root: the one place where the parts are made and handed to each other. `Main` reads the system once (`Host`, `Os`) and runs a command (`Commands`) or the app (`DesktopApp`: startup order, tray or window (`StartupDecision`, `TrayStarter`), and one `ClosingOrder` for Quit and the shutdown hook); `PlatformParts` with `LinuxParts` and `WindowsParts` makes each system's own parts. |
+| `Main` | The composition root: the one place where the parts are made and handed to each other. `Main`, the root package's only class, reads the system once (`host`) and runs a command (`cli`) or the app (`start`); the four packages below are the composition root's own. |
+| `start` | The app as it runs (`DesktopApp`): startup order, tray or window (`StartupDecision`, `TrayStarter`), one `ClosingOrder` for Quit and the shutdown hook, and `PlatformParts` with `LinuxParts` and `WindowsParts`, which make each system's own parts. |
+| `cli` | The command line: what the app was started to do (`CommandLine`), the commands that do one thing and end (`Commands`), and the exit codes. |
+| `logging` | The app's log, set up once (`AppLog`): the rotating private log file, one line per record, and the logging of what no thread caught. |
+| `host` | The system and its user, read once (`Host`, `Os`), and where the app's folders and files are on each system: config, data, the instance lock, the private runtime folders and the API keys' file. |
 
 Nothing slow runs on the JavaFX thread: a window hands work that can wait on the keychain, a file, the system or the
 network to `desktop.app.Background`, which runs it on a virtual thread, logs a failure, and hands the outcome back to the

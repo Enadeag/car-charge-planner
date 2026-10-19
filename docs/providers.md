@@ -255,8 +255,8 @@ and the recorded answer the test replays, `example_solar.json` beside the other 
 ## Adding yours
 
 1. **The class**: `src/main/java/nl/enadeag/carchargeplanner/engine/forecast/providers/<YourService>.java`, as above.
-2. **Register it**: add it to the list of providers in `DesktopApp.engine` (`new Providers(List.of(new OpenMeteo(get),
-   new ForecastSolar(get), ...))`).
+2. **Register it**: add it to the list of providers in `DesktopApp.engine`, in the package `start`
+   (`new Providers(List.of(new OpenMeteo(get), new ForecastSolar(get), ...))`).
 3. **Translate its texts**: the name and the attribution are shown as they are, but the description, what is sent,
    and each setting's label and hint are translated. Add keys to `TextKey.java` and every
    `messages_*.properties`, and map them in `desktop/settings/form/ProviderTexts.java`; a provider without texts there is

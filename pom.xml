@@ -393,10 +393,10 @@
     </profile>
     <!-- ./mvnw verify -Pcoverage: JaCoCo's report in target/site/jacoco/, and the build fails when a part's line or
          branch coverage drops below its floor (CONTRIBUTING.md, What is tested where). Linux only: the platform.linux
-         tests need dbus-daemon and GNOME Keyring, and Windows runs none of them. Not checked: the composition root in
-         the root package (Main, DesktopApp, Host and the *Parts classes), which DesktopAppSmokeTest tests in a JVM of
-         its own, and platform.windows. Each floor is a point or two below what was measured when it was set: raise it
-         when the tests grow, never lower it to let a change through. -->
+         tests need dbus-daemon and GNOME Keyring, and Windows runs none of them. Not checked: the classes that wire
+         the app (Main, start.DesktopApp, host.Host and the *Parts classes in start), which DesktopAppSmokeTest tests in
+         a JVM of its own, and platform.windows. Each floor is a point or two below what was measured when it was set:
+         raise it when the tests grow, never lower it to let a change through. -->
     <profile>
       <id>coverage</id>
       <build>
@@ -508,15 +508,20 @@
                   <goal>check</goal>
                 </goals>
                 <configuration>
-                  <!-- the root package's own classes, without its subpackages and without the composition root -->
+                  <!-- the composition root's packages (the root package and start, cli, logging and host), without
+                       the classes that wire the app -->
                   <includes>
                     <include>nl/enadeag/carchargeplanner/*.class</include>
+                    <include>nl/enadeag/carchargeplanner/start/**</include>
+                    <include>nl/enadeag/carchargeplanner/cli/**</include>
+                    <include>nl/enadeag/carchargeplanner/logging/**</include>
+                    <include>nl/enadeag/carchargeplanner/host/**</include>
                   </includes>
                   <excludes>
                     <exclude>nl/enadeag/carchargeplanner/Main*.class</exclude>
-                    <exclude>nl/enadeag/carchargeplanner/DesktopApp*.class</exclude>
-                    <exclude>nl/enadeag/carchargeplanner/Host*.class</exclude>
-                    <exclude>nl/enadeag/carchargeplanner/*Parts*.class</exclude>
+                    <exclude>nl/enadeag/carchargeplanner/start/DesktopApp*.class</exclude>
+                    <exclude>nl/enadeag/carchargeplanner/host/Host*.class</exclude>
+                    <exclude>nl/enadeag/carchargeplanner/start/*Parts*.class</exclude>
                   </excludes>
                   <rules>
                     <rule>
