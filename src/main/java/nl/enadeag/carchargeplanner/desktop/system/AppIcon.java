@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URL;
 import java.util.List;
+import java.util.Objects;
 import javafx.scene.image.Image;
 import javax.imageio.ImageIO;
 
@@ -47,6 +48,7 @@ public final class AppIcon {
         if (!SIZES.contains(size)) {
             throw new IllegalArgumentException("no icon of " + size + " px");
         }
-        return AppIcon.class.getResource("icons/icon-" + size + ".png");
+        var name = "icons/icon-" + size + ".png";
+        return Objects.requireNonNull(AppIcon.class.getResource(name), name + " is missing from the app");
     }
 }

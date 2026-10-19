@@ -4,6 +4,7 @@ import atlantafx.base.theme.PrimerDark;
 import atlantafx.base.theme.PrimerLight;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import javafx.application.Application;
 import javafx.application.ColorScheme;
 import javafx.beans.value.ObservableValue;
@@ -12,7 +13,8 @@ import javafx.scene.Scene;
 /** Light or dark for the dashboard's scenes, as the colour scheme is set, also when it changes while the app runs. */
 public final class SystemTheme {
 
-    private static final String STYLESHEET = SystemTheme.class.getResource("dashboard.css").toExternalForm();
+    private static final String STYLESHEET = Objects.requireNonNull(SystemTheme.class.getResource("dashboard.css"),
+            "dashboard.css is missing from the app").toExternalForm();
 
     private final ObservableValue<ColorScheme> scheme;
     private final List<Scene> scenes = new ArrayList<>();
