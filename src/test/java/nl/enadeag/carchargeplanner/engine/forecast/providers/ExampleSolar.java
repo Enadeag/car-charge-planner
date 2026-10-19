@@ -65,7 +65,7 @@ public final class ExampleSolar implements ForecastProvider {
     }
 
     /**
-     * The key, checked again although Settings checked it when it was saved: the config file and the keychain can be
+     * The key, checked again although Settings checked it when it was saved: the settings file and the keychain can be
      * changed by hand, and the key goes into a header.
      */
     private static String apiKey(Map<String, String> settings) throws ProviderError.MissingSetting {
