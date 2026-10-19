@@ -301,9 +301,9 @@ class CommandsTest {
 
     @Test
     void theCommandsForASystemOfferTheMenuEntryOnLinuxOnlyAndBothSwitchesOnlyFromTheLauncher() {
-        var windows = new Host(Os.WINDOWS, Map.of("LOCALAPPDATA", temp.toString()), temp, temp, Optional.empty(),
+        var windows = new Host(Os.WINDOWS, Map.of("LOCALAPPDATA", temp.toString()), temp, temp, new Owner.Unchecked(),
                 Optional.of(PROGRAM), false);
-        var fromTheBuild = new Host(Os.LINUX, Map.of(), temp, temp, Optional.empty(), Optional.empty(), false);
+        var fromTheBuild = new Host(Os.LINUX, Map.of(), temp, temp, new Owner.Unchecked(), Optional.empty(), false);
         var linux = Commands.of(fromTheBuild, PlatformParts.of(fromTheBuild), instance(), MESSAGES);
 
         assertThat(Commands.of(windows, PlatformParts.of(windows), instance(), MESSAGES).run(Command.INSTALL_LAUNCHER))

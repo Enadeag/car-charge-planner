@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.lang.System.Logger.Level;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.UserPrincipal;
 import java.util.Map;
 import java.util.Optional;
 
@@ -17,14 +16,14 @@ import java.util.Optional;
  * @param environment the environment variables
  * @param home the user's home folder
  * @param temporary the system's folder for temporary files
- * @param user the user the app runs as, where files have an owner and a mode (Linux); empty on other systems, and
- *     when it could not be told
+ * @param owner who must own the private folders and the instance socket: the user the app runs as where files have
+ *     an owner and a mode (Linux); unchecked on other systems, and when the user could not be told
  * @param launcher the program jpackage's launcher started, which start at login and the menu entry start; empty
  *     when the app does not run from it, such as from Maven
  * @param terminal whether the app runs in a terminal, which shows what it logs; false when it was started from the
  *     desktop, or by Windows' launcher, which has no console
  */
-public record Host(Os os, Map<String, String> environment, Path home, Path temporary, Optional<UserPrincipal> user,
+public record Host(Os os, Map<String, String> environment, Path home, Path temporary, Owner owner,
         Optional<Path> launcher, boolean terminal) {
 
     private static final System.Logger LOG = System.getLogger(Host.class.getName());
@@ -35,8 +34,7 @@ public record Host(Os os, Map<String, String> environment, Path home, Path tempo
      * @throws IllegalArgumentException when a value is null
      */
     public Host {
-        if (os == null || environment == null || home == null || temporary == null || user == null
-                || launcher == null) {
+        if (os == null || environment == null || home == null || temporary == null || owner == null) {
             throw new IllegalArgumentException("every part of the host must be given");
         }
         environment = Map.copyOf(environment);
@@ -52,33 +50,24 @@ public record Host(Os os, Map<String, String> environment, Path home, Path tempo
         var launcher = System.getProperty("jpackage.app-path");
         var console = System.console();
         return new Host(os, System.getenv(), Path.of(System.getProperty("user.home")),
-                Path.of(System.getProperty("java.io.tmpdir")), user(os),
+                Path.of(System.getProperty("java.io.tmpdir")), owner(os),
                 Optional.ofNullable(launcher).map(Path::of).map(Path::toAbsolutePath),
                 console != null && console.isTerminal());
     }
 
     /**
-     * Who must own the private folders and the instance socket.
-     *
-     * @return the user the app runs as; unchecked when there is none
-     */
-    public Owner owner() {
-        return user.<Owner>map(Owner.User::new).orElseGet(Owner.Unchecked::new);
-    }
-
-    /**
-     * Linux: the owner of the process's own entry in /proc is the user it runs as. Empty on Windows: see
+     * Linux: the owner of the process's own entry in /proc is the user it runs as. Unchecked on Windows: see
      * SingleInstance. When /proc cannot tell, the app runs on without checking owners, rather than not at all.
      */
-    private static Optional<UserPrincipal> user(Os os) {
+    private static Owner owner(Os os) {
         if (os != Os.LINUX) {
-            return Optional.empty();
+            return new Owner.Unchecked();
         }
         try {
-            return Optional.of(Files.getOwner(Path.of("/proc/self")));
+            return new Owner.User(Files.getOwner(Path.of("/proc/self")));
         } catch (IOException e) {
             LOG.log(Level.WARNING, "cannot tell which user this app runs as; private folders are not checked", e);
-            return Optional.empty();
+            return new Owner.Unchecked();
         }
     }
 }
