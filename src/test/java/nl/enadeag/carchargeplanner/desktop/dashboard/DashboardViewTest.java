@@ -6,6 +6,9 @@ import nl.enadeag.carchargeplanner.desktop.AccessibleNames;
 import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
+import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.parts.DayKind;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
@@ -18,6 +21,7 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Spinner;
 import javafx.scene.control.TabPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.robot.Robot;
@@ -129,9 +133,10 @@ class DashboardViewTest {
 
         Fx.run(() -> {
             update.fire();
-            var editor = (BatteryEditor) selectedPage(view).lookup(".battery-editor");
-            editor.field().getEditor().setText("81");
-            editor.save();
+            var editor = selectedPage(view).lookup(".battery-editor");
+            ((Spinner<?>) editor.lookup(".battery-level-field")).getEditor().setText("81");
+            editor.lookupAll(".button").stream().map(Button.class::cast)
+                    .filter(button -> "Save".equals(button.getText())).findFirst().orElseThrow().fire();
         });
 
         assertThat(levels).containsExactly(81);
@@ -231,7 +236,7 @@ class DashboardViewTest {
 
     @Test
     void withoutAPlanTheMessageIsShownInsteadOfTheDays() throws Exception {
-        var view = shown(new DashboardModel.Message("No forecast", "Could not reach Open-Meteo", "Forecast: Open-Meteo"));
+        var view = shown(new DashboardModel.Message("No forecast", "Could not reach Open-Meteo", "Forecast: Open-Meteo", false));
 
         var texts = Fx.call(() -> Scenes.visibleTexts(view));
 
@@ -278,7 +283,7 @@ class DashboardViewTest {
         var add = Fx.call(() -> view.lookup(".away-card").lookupAll(".button").stream().map(Button.class::cast)
                 .filter(button -> button.getText().equals("Add")).findFirst().orElseThrow());
         Fx.run(add::fire);
-        Fx.run(() -> ((OneOffAwayCard) view.lookup(".away-card")).editor().save());
+        Fx.run(() -> AwayEntry.save(view));
 
         assertThat(added).containsExactly(AwayPeriod.allDay(
                 Models.GRID_SUNDAY.date(), Models.BRUSSELS));

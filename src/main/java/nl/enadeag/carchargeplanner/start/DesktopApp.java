@@ -8,7 +8,7 @@ import nl.enadeag.carchargeplanner.desktop.app.Appearance;
 import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.desktop.dashboard.Dashboard;
 import nl.enadeag.carchargeplanner.desktop.dashboard.DashboardActions;
-import nl.enadeag.carchargeplanner.desktop.dashboard.TrayTexts;
+import nl.enadeag.carchargeplanner.desktop.dashboard.tray.TrayTexts;
 import nl.enadeag.carchargeplanner.desktop.settings.AboutFacts;
 import nl.enadeag.carchargeplanner.desktop.settings.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.SetUpOffer;

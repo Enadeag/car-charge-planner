@@ -644,18 +644,18 @@
                     <param>nl.enadeag.carchargeplanner.desktop.app.Background*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.app.DisplayMode*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.app.Units*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.AwayMapper*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.BatteryModel*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.ChartMapper*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.CurvePoints*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.DayMapper*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.GridAdviceMapper*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.OutlookMapper*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.PlotArea*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.dashboard.PopupPlacement*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.SolarCurveModel*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.TrayStatusMapper*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.TrayTexts*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.advice.GridAdviceMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.away.AwayMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryModel*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.day.ChartMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.day.DayMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.outlook.OutlookMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.solar.CurvePoints*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.solar.PlotArea*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.tray.TrayStatusMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.tray.TrayTexts*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.settings.SetUpOffer*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.settings.WindowSize*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.settings.form.*</param>

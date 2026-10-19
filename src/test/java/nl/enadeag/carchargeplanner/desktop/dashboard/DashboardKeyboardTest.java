@@ -6,6 +6,7 @@ import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Keyboard;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
+import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -61,7 +62,7 @@ class DashboardKeyboardTest {
             // both entries open, with the times of part of the day: every control the day can show
             press(view, TextKey.BATTERY_UPDATE);
             press(view, TextKey.ONE_OFF_ADD);
-            ((OneOffAwayCard) view.lookup(".away-card")).editor().enterTimes("10:00", "12:00");
+            AwayEntry.enterTimes(view, "10:00", "12:00");
         });
 
         assertThat(Keyboard.problems(stage.getScene(), view)).isEmpty();

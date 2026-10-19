@@ -6,6 +6,7 @@ import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.TextScale;
+import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.OutlookMapper;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -123,9 +124,8 @@ class DashboardLanguagesTest {
             // the away entry open at part of the day, refusing an end before the start
             view.lookupAll(".button").stream().map(Button.class::cast)
                     .filter(button -> button.getText().equals(messages.text(TextKey.ONE_OFF_ADD))).findFirst().orElseThrow().fire();
-            var entry = ((OneOffAwayCard) view.lookup(".away-card")).editor();
-            entry.enterTimes("16:00", "10:00");
-            entry.save();
+            AwayEntry.enterTimes(view, "16:00", "10:00");
+            AwayEntry.save(view);
             found.addAll(check(view));
             view.show(mapper.map(new Outlook.NotSetUp(ConfigProblem.Kind.MISSING,
                     Path.of("/home/owner/.config/car-charge-planner/engine.json"), "")));

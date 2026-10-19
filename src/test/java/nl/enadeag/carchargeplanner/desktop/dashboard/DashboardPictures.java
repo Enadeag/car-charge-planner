@@ -4,6 +4,8 @@ import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.Pictures;
 import nl.enadeag.carchargeplanner.desktop.Pictures.Frame;
 import nl.enadeag.carchargeplanner.desktop.Pictures.Studio;
+import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.OutlookMapper;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;

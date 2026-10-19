@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard;
 
+import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.OutlookMapper;
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;

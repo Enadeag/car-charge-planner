@@ -6,6 +6,7 @@ import nl.enadeag.carchargeplanner.desktop.Contrast;
 import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
+import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import java.util.ArrayList;
@@ -52,7 +53,7 @@ class DashboardContrastTest {
             }
             openAwayEntryWithAProblem(view);
             problems.addAll(Contrast.problemsIn(view));
-            view.show(new DashboardModel.Message("No forecast", "Could not reach Open-Meteo", "Forecast: Open-Meteo"));
+            view.show(new DashboardModel.Message("No forecast", "Could not reach Open-Meteo", "Forecast: Open-Meteo", false));
             view.applyCss();
             problems.addAll(Contrast.problemsIn(view));
             return problems;
@@ -69,11 +70,10 @@ class DashboardContrastTest {
 
     /** The away entry at part of the day, saying why an end before the start cannot be saved. */
     private static void openAwayEntryWithAProblem(DashboardView view) {
-        var card = (OneOffAwayCard) view.lookup(".away-card");
-        card.lookupAll(".button").stream().map(javafx.scene.control.Button.class::cast)
+        view.lookup(".away-card").lookupAll(".button").stream().map(javafx.scene.control.Button.class::cast)
                 .filter(button -> button.getText().equals("Add")).findFirst().orElseThrow().fire();
-        card.editor().enterTimes("16:00", "10:00");
-        card.editor().save();
+        AwayEntry.enterTimes(view, "16:00", "10:00");
+        AwayEntry.save(view);
         view.applyCss();
         view.layout();
     }

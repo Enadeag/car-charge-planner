@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard;
 
+import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.OutlookMapper;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.engine.Outlook;
 import javafx.beans.value.ObservableValue;

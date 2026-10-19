@@ -1,5 +1,17 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard;
 
+import nl.enadeag.carchargeplanner.desktop.dashboard.advice.AdviceCard;
+import nl.enadeag.carchargeplanner.desktop.dashboard.advice.GridAdviceModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.away.AwayModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayCard;
+import nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryCard;
+import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayScroll;
+import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayTabs;
+import nl.enadeag.carchargeplanner.desktop.dashboard.day.MainCard;
+import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Glyphs;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCard;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;

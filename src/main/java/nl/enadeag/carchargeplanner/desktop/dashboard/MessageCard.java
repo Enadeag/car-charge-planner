@@ -1,7 +1,8 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard;
 
-import static nl.enadeag.carchargeplanner.desktop.dashboard.Texts.paragraph;
+import static nl.enadeag.carchargeplanner.desktop.dashboard.parts.Texts.paragraph;
 
+import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import javafx.scene.AccessibleRole;
