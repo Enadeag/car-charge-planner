@@ -7,6 +7,7 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
+import java.time.InstantSource;
 import java.util.function.Consumer;
 import javafx.scene.control.Button;
 import javafx.scene.control.Tooltip;
@@ -28,6 +29,8 @@ public final class OneOffAwayCard extends VBox {
     private final AwayEditor editor;
     private Consumer<OneOffAwayPeriod> added = _ -> { };
     private Consumer<OneOffAwayPeriod> removed = _ -> { };
+    /** Tells the time when the owner saves a period; null until {@link #onChange} gives it. */
+    private InstantSource clock;
     /** True once {@link #onChange} gave somewhere to send the periods. */
     private boolean acceptsChanges;
     /** The selected day; null until one shows. */
@@ -92,10 +95,13 @@ public final class OneOffAwayCard extends VBox {
      *
      * @param addedHandler gets a period the owner entered; called on the JavaFX thread
      * @param removedHandler gets a period the owner removed, as the model gave it; called on the JavaFX thread
+     * @param clock tells the time when the owner saves a period, which must not have ended by then; never null
      */
-    public void onChange(Consumer<OneOffAwayPeriod> addedHandler, Consumer<OneOffAwayPeriod> removedHandler) {
+    public void onChange(Consumer<OneOffAwayPeriod> addedHandler, Consumer<OneOffAwayPeriod> removedHandler,
+            InstantSource clock) {
         added = addedHandler;
         removed = removedHandler;
+        this.clock = clock;
         acceptsChanges = true;
     }
 
@@ -142,7 +148,7 @@ public final class OneOffAwayCard extends VBox {
     private void openEditor() {
         if (day != null && acceptsChanges()) {
             showEditor(true);
-            editor.prepare(day.date(), model.zone(), model.now());
+            editor.prepare(day.date(), model.zone(), clock);
         } else {
             closeEditor();
         }

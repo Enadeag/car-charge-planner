@@ -6,6 +6,7 @@ import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import java.time.Instant;
+import java.time.InstantSource;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -53,7 +54,7 @@ final class AwayEditor extends VBox {
     private final Label problem = Labels.paragraph("", "field-problem");
     private LocalDate day = LocalDate.EPOCH;
     private ZoneId zone = ZoneId.of("UTC");
-    private Instant now = Instant.EPOCH;
+    private InstantSource clock = InstantSource.fixed(Instant.EPOCH);
 
     /**
      * Makes the entry, empty until {@link #prepare}.
@@ -127,12 +128,13 @@ final class AwayEditor extends VBox {
      *
      * @param day the day the car is away
      * @param zone the time zone of the owner's home, in which the times are read
-     * @param now the current moment; a period that ends by then is refused
+     * @param clock tells the time when the owner saves: a period that has ended by then is refused, also when the
+     *     plan shown was made earlier
      */
-    void prepare(LocalDate day, ZoneId zone, Instant now) {
+    void prepare(LocalDate day, ZoneId zone, InstantSource clock) {
         this.day = day;
         this.zone = zone;
-        this.now = now;
+        this.clock = clock;
         wholeDay.setSelected(true);
         from.setText(SHOWN.format(FIRST_START));
         to.setText(SHOWN.format(FIRST_END));
@@ -197,7 +199,8 @@ final class AwayEditor extends VBox {
     }
 
     private Checked notPassed(OneOffAwayPeriod period) {
-        return period.end().isAfter(now) ? new Checked.Valid(period) : new Checked.Refused(TextKey.ONE_OFF_PASSED);
+        return period.end().isAfter(clock.instant()) ? new Checked.Valid(period)
+                : new Checked.Refused(TextKey.ONE_OFF_PASSED);
     }
 
     private static Optional<LocalTime> time(TextField field) {

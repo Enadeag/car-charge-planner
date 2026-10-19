@@ -115,16 +115,16 @@ class ChartMapperTest {
         var today = curve(TWO_DAYS, 0);
 
         assertThat(today.windows()).containsExactly(new WindowSpan(11.25, 14.5));
-        assertThat(today.nowHour().orElseThrow()).isCloseTo(8.2, within(1e-9));
+        assertThat(today.madeAtHour().orElseThrow()).isCloseTo(8.2, within(1e-9));
         assertThat(today.houseKw()).isEqualTo(0.4);
-        assertThat(curve(TWO_DAYS, 1).nowHour()).isEmpty();
+        assertThat(curve(TWO_DAYS, 1).madeAtHour()).isEmpty();
     }
 
     @Test
     void nowIsLeftOutWhileItIsOutsideTheHoursShown() {
         var early = planned(at(TODAY, 5, 0), false, day(TODAY, 50, 74, sunny(TODAY, 4.2)));
 
-        assertThat(curve(early, 0).nowHour()).isEmpty();
+        assertThat(curve(early, 0).madeAtHour()).isEmpty();
     }
 
     @Test
@@ -190,7 +190,7 @@ class ChartMapperTest {
     void theDayModelsCarryTheirCharts() {
         var plan = (DashboardModel.Plan) new OutlookMapper(ENGLISH).map(TWO_DAYS);
 
-        assertThat(plan.days()).extracting(day -> day.curve().nowHour().isPresent()).containsExactly(true, false);
+        assertThat(plan.days()).extracting(day -> day.curve().madeAtHour().isPresent()).containsExactly(true, false);
         assertThat(plan.days()).extracting(day -> day.battery().editable()).containsExactly(true, false);
     }
 

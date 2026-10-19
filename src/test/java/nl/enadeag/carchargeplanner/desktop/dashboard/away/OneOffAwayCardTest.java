@@ -13,6 +13,8 @@ import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
+import java.time.Duration;
+import java.time.InstantSource;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,9 +44,13 @@ class OneOffAwayCardTest {
     }
 
     private void show(DayModel day, AwayModel away) throws Exception {
+        show(day, away, InstantSource.fixed(away.madeAt()));
+    }
+
+    private void show(DayModel day, AwayModel away, InstantSource clock) throws Exception {
         Fx.run(() -> {
             card = new OneOffAwayCard(() -> { }, ENGLISH);
-            card.onChange(added::add, removed::add);
+            card.onChange(added::add, removed::add, clock);
             card.show(day, away);
             stage = Scenes.show(card, ColorScheme.LIGHT);
         });
@@ -113,6 +119,23 @@ class OneOffAwayCardTest {
     }
 
     @Test
+    void aPeriodThatHasEndedByTheTimeOfSavingIsRefusedAlthoughThePlanIsOlder() throws Exception {
+        var madeAt = Models.TODAY.atTime(10, 0).atZone(Models.BRUSSELS).toInstant();
+        var plan = new AwayModel(Models.BRUSSELS, madeAt, List.of());
+        show(Models.SUNNY_TODAY, plan, InstantSource.fixed(madeAt.plus(Duration.ofMinutes(10))));
+
+        openEntry();
+        Fx.run(() -> {
+            card.editor().enterTimes("09:00", "10:05");
+            card.editor().save();
+        });
+
+        assertThat(added).isEmpty();
+        assertThat(entering()).isTrue();
+        assertThat(Fx.call(() -> card.editor().problem())).isEqualTo(ENGLISH.text(TextKey.ONE_OFF_PASSED));
+    }
+
+    @Test
     void enterOnTheChoiceOfTheDaySavesThePeriod() throws Exception {
         show(Models.CLOUDY_TOMORROW, Models.AWAY);
         openEntry(); // the focus is on "All day"
@@ -173,7 +196,7 @@ class OneOffAwayCardTest {
 
     @Test
     void withoutComingPeriodsTheCardSaysThereAreNone() throws Exception {
-        show(Models.SUNNY_TODAY, new AwayModel(Models.BRUSSELS, Models.AWAY.now(), List.of()));
+        show(Models.SUNNY_TODAY, new AwayModel(Models.BRUSSELS, Models.AWAY.madeAt(), List.of()));
 
         assertThat(Fx.call(() -> Scenes.visibleTexts(card))).contains(ENGLISH.text(TextKey.ONE_OFF_NONE));
     }

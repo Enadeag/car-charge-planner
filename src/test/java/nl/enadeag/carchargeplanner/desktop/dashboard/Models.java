@@ -13,6 +13,7 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Windo
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Step;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Tick;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
+import java.time.InstantSource;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -65,6 +66,9 @@ public final class Models {
     public static final AwayModel AWAY = new AwayModel(BRUSSELS, TODAY.atTime(8, 12).atZone(BRUSSELS).toInstant(), List.of(
             new AwayModel.Listed(AWAY_TOMORROW, "Tomorrow, all day", "Remove Tomorrow, all day"),
             new AwayModel.Listed(AWAY_SUNDAY, "Sun 5 Jul, 10:00 – 16:30", "Remove Sun 5 Jul, 10:00 – 16:30")));
+
+    /** A clock that stays at the moment {@link #AWAY}'s plan was made. */
+    public static final InstantSource CLOCK = InstantSource.fixed(AWAY.madeAt());
 
     private Models() {
     }

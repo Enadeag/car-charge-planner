@@ -40,7 +40,7 @@ class DashboardContrastTest {
     private List<String> problems(ColorScheme scheme) throws Exception {
         return Fx.call(() -> {
             var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, new Messages(Language.ENGLISH));
-            view.onAwayChange(_ -> { }, _ -> { });
+            view.onAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
             stage = Scenes.show(view, scheme);
             var problems = new ArrayList<String>();
             var plan = Models.plan(Optional.of(Models.ADVICE));

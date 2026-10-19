@@ -79,10 +79,11 @@ final class ChartMapper {
         var windows = day.windows().stream()
                 .map(window -> new WindowSpan(hoursFrom(start, window.start()), hoursFrom(start, window.end())))
                 .toList();
-        double now = hoursFrom(start, planned.madeAt());
-        var nowHour = day.date().equals(today) && now >= from && now <= to ? OptionalDouble.of(now) : OptionalDouble.empty();
+        double madeAt = hoursFrom(start, planned.madeAt());
+        var madeAtHour = day.date().equals(today) && madeAt >= from && madeAt <= to ? OptionalDouble.of(madeAt)
+                : OptionalDouble.empty();
         return new SolarChartModel(from, to, scaleKw, messages.text(TextKey.CHART_SCALE, messages.whole(scaleKw)), steps, planned.baseloadKw(),
-                windows, nowHour, ticks(day.date(), start, from, to), spoken(day, nowHour.isPresent()));
+                windows, madeAtHour, ticks(day.date(), start, from, to), spoken(day, madeAtHour.isPresent()));
     }
 
     /**

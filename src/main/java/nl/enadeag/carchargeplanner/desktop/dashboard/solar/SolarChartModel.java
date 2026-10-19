@@ -15,7 +15,8 @@ import java.util.OptionalDouble;
  * @param steps the forecast steps within the hours shown, in time order; may be empty
  * @param houseKw the power the house uses on its own in kW, 0 or more
  * @param windows the charge windows of the day, in time order; may be empty
- * @param nowHour the current hour when it lies within the hours shown; empty on other days
+ * @param madeAtHour the hour the plan was made, which the chart marks as now, when it lies within the hours shown;
+ *     empty on other days
  * @param ticks the hours marked on the time axis, in time order
  * @param spoken the chart in words, for screen readers
  */
@@ -27,7 +28,7 @@ public record SolarChartModel(
         List<Step> steps,
         double houseKw,
         List<WindowSpan> windows,
-        OptionalDouble nowHour,
+        OptionalDouble madeAtHour,
         List<Tick> ticks,
         String spoken) {
 

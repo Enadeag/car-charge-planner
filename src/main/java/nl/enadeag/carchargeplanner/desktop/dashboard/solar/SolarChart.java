@@ -108,8 +108,8 @@ final class SolarChart extends Region {
     void show(SolarChartModel day) {
         this.model = day;
         scale.setText(day.scaleText());
-        nowLabel.setVisible(day.nowHour().isPresent());
-        now.setVisible(day.nowHour().isPresent());
+        nowLabel.setVisible(day.madeAtHour().isPresent());
+        now.setVisible(day.madeAtHour().isPresent());
         bands.clear();
         marks.clear();
         day.windows().forEach(window -> {
@@ -188,7 +188,7 @@ final class SolarChart extends Region {
         placeWindows();
         area.getElements().setAll(outline(plot, shown));
         placeHorizontal(house, plot, plot.y(model.houseKw()));
-        model.nowHour().ifPresent(hour -> {
+        model.madeAtHour().ifPresent(hour -> {
             placeVertical(now, plot.x(hour), plot.top(), plot.bottom());
             nowLabel.resizeRelocate(Math.min(plot.x(hour) + GAP / 2, plot.right() - nowLabel.prefWidth(-1)),
                     plot.top(), nowLabel.prefWidth(-1), labelHeight);

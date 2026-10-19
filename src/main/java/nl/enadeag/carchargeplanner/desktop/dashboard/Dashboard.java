@@ -28,6 +28,7 @@ import javafx.geometry.Point2D;
 public final class Dashboard {
 
     private final ObservableValue<Boolean> reducedMotion;
+    private final InstantSource clock;
     private final DashboardPopup popup;
     private final DashboardWindow window;
     private final DashboardActions actions;
@@ -48,7 +49,8 @@ public final class Dashboard {
      * @param reducedMotion true while the system asks for reduced motion
      *     ({@code Platform.getPreferences().reducedMotionProperty()}); the charts then change without moving; never
      *     null
-     * @param clock tells when the popup closed, so the click on the tray icon that closed it does not open it again
+     * @param clock tells when the popup closed, so the click on the tray icon that closed it does not open it again,
+     *     and when the owner saves an away period, which must not have ended by then
      * @param taskbarHiding how this system keeps the popup out of its taskbar
      * @param language the language the texts are in, followed while the app runs; never null
      * @param actions what the dashboard's controls do; never null
@@ -60,6 +62,7 @@ public final class Dashboard {
         }
         var theme = new WindowTheme(colorScheme);
         this.reducedMotion = reducedMotion;
+        this.clock = clock;
         this.actions = actions;
         this.popup = new DashboardPopup(theme, icon, clock, taskbarHiding);
         this.window = new DashboardWindow(theme, icon);
@@ -131,7 +134,7 @@ public final class Dashboard {
     private DashboardView newView() {
         var made = new DashboardView(this::detach, this::fitToContent, reducedMotion, messages);
         made.onBatteryEntered(pct -> actions.batteryEntered().accept(new Percent(pct)));
-        made.onAwayChange(actions.awayAdded(), actions.awayRemoved());
+        made.onAwayChange(actions.awayAdded(), actions.awayRemoved(), clock);
         made.onAway(actions.away());
         made.onSettings(actions.settings());
         made.onSetUp(actions.setUp());

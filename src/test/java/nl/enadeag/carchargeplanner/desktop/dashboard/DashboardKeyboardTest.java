@@ -38,7 +38,7 @@ class DashboardKeyboardTest {
     private DashboardView show(ColorScheme scheme) throws Exception {
         return Fx.call(() -> {
             var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, ENGLISH);
-            view.onAwayChange(_ -> { }, _ -> { });
+            view.onAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
             view.onBatteryEntered(_ -> { });
             view.onSetUp(() -> { });
             stage = Scenes.show(view, scheme);

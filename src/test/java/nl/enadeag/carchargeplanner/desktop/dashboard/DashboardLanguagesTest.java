@@ -103,7 +103,7 @@ class DashboardLanguagesTest {
             var mapper = new OutlookMapper(messages);
             var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, messages);
             view.onBatteryEntered(_ -> { });
-            view.onAwayChange(_ -> { }, _ -> { });
+            view.onAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
             view.lookup(".day-tabs").setStyle("-fx-open-tab-animation: none;"); // a growing tab is narrow on purpose
             stage = scale.map(larger -> Scenes.show(view, ColorScheme.LIGHT, larger))
                     .orElseGet(() -> Scenes.show(view, ColorScheme.LIGHT));

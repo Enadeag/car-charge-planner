@@ -11,17 +11,17 @@ import java.util.List;
  * moment of the plan they belong to.
  *
  * @param zone the time zone of the owner's home
- * @param now the moment the plan was made
- * @param coming the periods that had not ended at {@code now}, in order of their start; may be empty
+ * @param madeAt the moment the plan was made
+ * @param coming the periods that had not ended at {@code madeAt}, in order of their start; may be empty
  */
-public record AwayModel(ZoneId zone, Instant now, List<Listed> coming) {
+public record AwayModel(ZoneId zone, Instant madeAt, List<Listed> coming) {
 
     /**
      * Keeps a copy of the periods, so the model cannot change afterwards.
      *
      * @param zone the time zone of the owner's home
-     * @param now the moment the plan was made
-     * @param coming the periods that had not ended at {@code now}, in order of their start; may be empty
+     * @param madeAt the moment the plan was made
+     * @param coming the periods that had not ended at {@code madeAt}, in order of their start; may be empty
      */
     public AwayModel {
         coming = List.copyOf(coming);
@@ -30,10 +30,10 @@ public record AwayModel(ZoneId zone, Instant now, List<Listed> coming) {
     /**
      * The day it is in the owner's home.
      *
-     * @return the local date of {@code now}
+     * @return the local date of {@code madeAt}
      */
     LocalDate today() {
-        return now.atZone(zone).toLocalDate();
+        return madeAt.atZone(zone).toLocalDate();
     }
 
     /**
