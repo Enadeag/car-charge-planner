@@ -41,6 +41,7 @@ import nl.enadeag.carchargeplanner.host.Os;
 import java.time.Clock;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -558,6 +559,17 @@ class ArchitectureTest {
             .and().areDeclaredInClassesThat().doNotHaveFullyQualifiedName(Main.class.getName())
             .should(ArchConditions.have(HOLDS_A_MUTABLE_OBJECT))
             .because("a final field is still global state when what it holds can change (ADR 0005)");
+
+    // absence
+
+    /** A record's components are its fields too, and there an {@code Optional} is part of the data. */
+    @ArchTest
+    static final ArchRule noOptionalFields = noFields()
+            .that().doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .and().areDeclaredInClassesThat().areNotRecords()
+            .should().haveRawType(Optional.class)
+            .because("a field holds a null object, a no-op callback or a private value that may be null, never an "
+                    + "Optional (CONTRIBUTING)");
 
     // names
 
