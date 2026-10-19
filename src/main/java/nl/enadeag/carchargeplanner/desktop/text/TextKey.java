@@ -141,6 +141,8 @@ public enum TextKey {
     TRAY_NOT_SET_UP,
     /** The tray's tooltip without a forecast: {0} is the engine's reason, in English. */
     TRAY_NO_FORECAST,
+    /** The tray's tooltip without a forecast because the API keys are in a locked keychain: what the owner should do. */
+    TRAY_NO_FORECAST_KEYCHAIN_LOCKED,
     /** The tray's tooltip when the forecast has no days. */
     TRAY_NO_DAYS,
     /** The tray's tooltip for a charge window later today: {0} start, {1} end, {2} the charge current in A. */

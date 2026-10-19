@@ -197,7 +197,7 @@ class OutlookMapperTest {
 
         var model = ((DashboardModel.Plan) DUTCH.map(planned)).advice().orElseThrow();
 
-        assertThat(model.title()).isEqualTo("Laad 11,0 kWh van het net vóór zondag.");
+        assertThat(model.title()).isEqualTo("Laad 11,0 kWh uit het net vóór zondag.");
     }
 
     @Test

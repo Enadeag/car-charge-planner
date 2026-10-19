@@ -111,8 +111,8 @@ class SolarChartMapperTest {
     void inDutchTheNumbersHaveADecimalCommaAndTheWordsAreDutch() {
         var curve = new SolarChartMapper(TWO_DAYS, new Messages(Language.DUTCH)).map(TWO_DAYS.days().getFirst());
 
-        assertThat(stepFrom(curve, 13).readout()).isEqualTo("13:00 – 4,2 kW zon · 0,4 kW huis");
-        assertThat(curve.spoken()).isEqualTo("Vandaag, verwachte zon: piek 4,2 kW rond 13:00; het huis gebruikt "
-                + "ongeveer 0,4 kW. Laden: 11:15 tot 14:30. Nu 08:12.");
+        assertThat(stepFrom(curve, 13).readout()).isEqualTo("13:00: 4,2 kW zonnestroom · 0,4 kW huis");
+        assertThat(curve.spoken()).isEqualTo("Vandaag, verwachte zonnestroom: piek 4,2 kW rond 13:00; het huis "
+                + "gebruikt ongeveer 0,4 kW. Laden: 11:15 tot 14:30. Nu 08:12.");
     }
 }

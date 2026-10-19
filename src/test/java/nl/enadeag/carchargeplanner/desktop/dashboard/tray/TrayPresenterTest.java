@@ -60,7 +60,8 @@ class TrayPresenterTest {
         assertThat(tray.labels.getLast())
                 .isEqualTo(new Tray.MenuLabels("Dashboard openen", "Instellingen…", "Over…", "Afsluiten"));
         assertThat(tray.statuses.getLast())
-                .isEqualTo(new TrayStatus(StatusDot.ACTION, "Geen voorspelling: Open-Meteo: no connection."));
+                .isEqualTo(new TrayStatus(StatusDot.ACTION,
+                        "Geen voorspelling. Details (in het Engels): Open-Meteo: no connection."));
     }
 
     @Test
@@ -84,7 +85,8 @@ class TrayPresenterTest {
 
         texts.show(new Outlook.NoForecast("Open-Meteo: no connection."));
 
-        assertThat(tray.statuses.getLast().text()).isEqualTo("Geen voorspelling: Open-Meteo: no connection.");
+        assertThat(tray.statuses.getLast().text())
+                .isEqualTo("Geen voorspelling. Details (in het Engels): Open-Meteo: no connection.");
     }
 
     @Test
@@ -95,7 +97,7 @@ class TrayPresenterTest {
         texts.show(new Outlook.NoForecast("Open-Meteo: no connection."));
 
         assertThat(tray.labels.get(1).settings()).isEqualTo("Set up…");
-        assertThat(dutch.settings()).isEqualTo("Instellen…");
+        assertThat(dutch.settings()).isEqualTo("Instelhulp…");
         assertThat(tray.labels.getLast().settings()).isEqualTo("Instellingen…");
         assertThat(tray.statuses.get(1).dot()).isEqualTo(StatusDot.ACTION);
     }

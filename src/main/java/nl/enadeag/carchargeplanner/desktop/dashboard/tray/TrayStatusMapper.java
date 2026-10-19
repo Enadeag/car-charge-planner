@@ -48,8 +48,8 @@ final class TrayStatusMapper {
                     new TrayStatus(StatusDot.ACTION, messages.text(TextKey.TRAY_NOT_SET_UP_FIRST));
             case Outlook.ConfigUnusable unusable -> new TrayStatus(StatusDot.ACTION,
                     messages.text(TextKey.TRAY_NOT_SET_UP, OutlookMapper.whatToFix(unusable, messages)));
-            case Outlook.NoForecast none when none.keychainLocked() -> new TrayStatus(StatusDot.ACTION,
-                    messages.text(TextKey.TRAY_NO_FORECAST, messages.text(TextKey.NO_FORECAST_KEYCHAIN_LOCKED)));
+            case Outlook.NoForecast none when none.keychainLocked() ->
+                    new TrayStatus(StatusDot.ACTION, messages.text(TextKey.TRAY_NO_FORECAST_KEYCHAIN_LOCKED));
             case Outlook.NoForecast none ->
                     new TrayStatus(StatusDot.ACTION, messages.text(TextKey.TRAY_NO_FORECAST, none.reason()));
             case Outlook.Planned planned when planned.days().isEmpty() ->

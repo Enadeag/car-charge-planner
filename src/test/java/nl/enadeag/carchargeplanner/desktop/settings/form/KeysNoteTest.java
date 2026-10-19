@@ -36,7 +36,7 @@ class KeysNoteTest {
         var dutch = new Messages(Language.DUTCH);
 
         assertThat(KeysNote.of(KeyStorage.FILE, SecretsProblem.Kind.FAILED, FILE, dutch))
-                .isEqualTo("Je opgeslagen sleutels konden niet gelezen worden. Vul ze opnieuw in en sla op. "
+                .isEqualTo("Je opgeslagen API-sleutels konden niet gelezen worden. Vul ze opnieuw in en sla op. "
                         + dutch.text(TextKey.KEYS_IN_FILE, "keys.json"));
     }
 

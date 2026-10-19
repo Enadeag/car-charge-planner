@@ -44,7 +44,8 @@ class AnnouncementTextsTest {
         var text = new AnnouncementTexts(new LanguageChoice(Language.DUTCH)).notification(announcement);
 
         assertThat(text.title()).isEqualTo("Laadvenster 10:00 – 15:00");
-        assertThat(text.body()).isEqualTo("Stel in de app van je laadpaal de stroom in op 7 A (1,6 kW). Ongeveer 7,6 kWh, 99% zon.");
+        assertThat(text.body()).isEqualTo(
+                "Stel in de app van je laadpaal de laadstroom in op 7 A (1,6 kW). Ongeveer 7,6 kWh, 99% zonnestroom.");
     }
 
     @Test

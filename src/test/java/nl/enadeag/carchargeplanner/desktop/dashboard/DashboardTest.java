@@ -512,10 +512,10 @@ class DashboardTest {
         assertThat(Fx.call(() -> tabs.getSelectionModel().getSelectedIndex())).isEqualTo(1);
         assertThat(Fx.call(() -> tabs.getTabs().getFirst().getText())).isEqualTo("Vandaag");
         assertThat(Fx.call(tabs::getAccessibleText)).isEqualTo("Dagen");
-        assertThat(Fx.call(() -> Scenes.visibleTexts(root))).contains("Morgen · Geen laadvenster", "Verwachte zon", "Accu van de auto",
+        assertThat(Fx.call(() -> Scenes.visibleTexts(root))).contains("Morgen · Geen laadvenster", "Voorspelling", "Accu van de auto",
                 "Afwezig", "Instellingen");
         assertThat(Fx.call(() -> root.lookup(".detach").getAccessibleText())).isEqualTo("In een venster openen");
-        assertThat(Fx.call(() -> root.lookup(".solar-chart").getAccessibleText())).startsWith("Morgen, verwachte zon");
+        assertThat(Fx.call(() -> root.lookup(".solar-chart").getAccessibleText())).startsWith("Morgen, verwachte zonnestroom");
         var settings = Fx.call(() -> Scenes.all(root).stream()
                 .filter(node -> node instanceof Button button && "Instellingen".equals(button.getText()))
                 .map(Button.class::cast).findFirst().orElseThrow());
@@ -534,7 +534,7 @@ class DashboardTest {
         Fx.settle();
 
         var root = popup().orElseThrow().getScene().getRoot();
-        assertThat(Fx.call(() -> Scenes.visibleTexts(root))).contains("Auto weg", "Morgen, hele dag");
+        assertThat(Fx.call(() -> Scenes.visibleTexts(root))).contains("Afwezig", "Morgen, hele dag");
         var remove = Fx.call(() -> Scenes.all(root).stream()
                 .filter(node -> node instanceof Button button && "Morgen, hele dag verwijderen".equals(button.getAccessibleText()))
                 .map(Button.class::cast).findFirst().orElseThrow());

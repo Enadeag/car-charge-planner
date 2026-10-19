@@ -46,7 +46,7 @@ class BatteryMapperTest {
     void inDutchTheWordsAreDutch() {
         var battery = new BatteryMapper(TWO_DAYS, new Messages(Language.DUTCH)).map(TWO_DAYS.days().get(1));
 
-        assertThat(battery.minimumText()).isEqualTo("min. 30");
+        assertThat(battery.minimumText()).isEqualTo("min. 30%");
         assertThat(battery.spoken()).isEqualTo(
                 "Accu van de auto 62% aan het begin van morgen, na het laden 62%; minimum 30%, doel 80%.");
     }
