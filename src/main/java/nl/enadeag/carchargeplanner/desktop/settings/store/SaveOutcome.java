@@ -19,7 +19,7 @@ public sealed interface SaveOutcome {
      * The API keys were not stored, because the system keychain is locked and was not unlocked when the system asked;
      * nothing after them was stored either.
      */
-    record KeyringLocked() implements SaveOutcome {
+    record KeychainLocked() implements SaveOutcome {
     }
 
     /**

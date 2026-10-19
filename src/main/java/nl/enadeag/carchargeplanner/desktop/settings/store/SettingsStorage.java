@@ -148,7 +148,7 @@ public final class SettingsStorage {
 
     /**
      * Stops a save that waits for the owner to unlock the system keychain, such as when its window closes; that save
-     * then comes to {@link SaveOutcome.KeyringLocked}. Nothing happens when no save waits.
+     * then comes to {@link SaveOutcome.KeychainLocked}. Nothing happens when no save waits.
      */
     public void stopUnlocking() {
         stores.engine().stopUnlocking();
@@ -187,7 +187,7 @@ public final class SettingsStorage {
                 stores.appSettings().write(changes.app().get());
             }
         } catch (SecretsProblem e) {
-            return e.kind() == SecretsProblem.Kind.LOCKED ? new SaveOutcome.KeyringLocked()
+            return e.kind() == SecretsProblem.Kind.LOCKED ? new SaveOutcome.KeychainLocked()
                     : new SaveOutcome.Failed(String.valueOf(e.getMessage()));
         } catch (IOException e) {
             return new SaveOutcome.Failed(String.valueOf(e.getMessage()));

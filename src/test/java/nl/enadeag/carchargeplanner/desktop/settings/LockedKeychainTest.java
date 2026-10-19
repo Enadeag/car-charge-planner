@@ -173,7 +173,7 @@ class LockedKeychainTest {
             view.save(() -> { });
         });
 
-        assertThat(Fx.call(view::outcome)).contains(new SaveOutcome.KeyringLocked());
+        assertThat(Fx.call(view::outcome)).contains(new SaveOutcome.KeychainLocked());
         assertThat(texts(view)).contains(settings.messages.text(TextKey.SETTINGS_KEYCHAIN_LOCKED));
         assertThat(new ConfigFile(settings.configPath).read()).as("nothing after the keys").isEqualTo(before);
         assertThat(folder.resolve("secrets.json")).doesNotExist();
@@ -199,7 +199,7 @@ class LockedKeychainTest {
         Fx.run(view::cancel);
 
         SettingsFixture.waitFor(() -> view.outcome().isPresent());
-        assertThat(Fx.call(view::outcome)).contains(new SaveOutcome.KeyringLocked());
+        assertThat(Fx.call(view::outcome)).contains(new SaveOutcome.KeychainLocked());
         assertThat(settings.closed).as("the owner sees why nothing was saved").isZero();
         assertThat(folder.resolve("secrets.json")).doesNotExist();
     }

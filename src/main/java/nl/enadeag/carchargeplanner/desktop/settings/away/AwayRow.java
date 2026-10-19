@@ -3,8 +3,8 @@ package nl.enadeag.carchargeplanner.desktop.settings.away;
 import nl.enadeag.carchargeplanner.desktop.settings.field.ChoiceInput;
 import nl.enadeag.carchargeplanner.desktop.settings.field.Input;
 import nl.enadeag.carchargeplanner.desktop.settings.field.TimeInput;
-import nl.enadeag.carchargeplanner.desktop.settings.form.AwayPeriodEntry;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
+import nl.enadeag.carchargeplanner.desktop.settings.form.WeeklyAwayEntry;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
@@ -82,8 +82,8 @@ final class AwayRow extends VBox {
      */
     Optional<WeeklyAwayPeriod> read() {
         return switch (checked()) {
-            case AwayPeriodEntry.Checked.Accepted accepted -> Optional.of(accepted.period());
-            case AwayPeriodEntry.Checked.Refused _ -> Optional.empty();
+            case WeeklyAwayEntry.Checked.Accepted accepted -> Optional.of(accepted.period());
+            case WeeklyAwayEntry.Checked.Refused _ -> Optional.empty();
         };
     }
 
@@ -94,19 +94,19 @@ final class AwayRow extends VBox {
      */
     boolean showProblems() {
         return switch (checked()) {
-            case AwayPeriodEntry.Checked.Accepted _ -> {
+            case WeeklyAwayEntry.Checked.Accepted _ -> {
                 showProblem("");
                 yield false;
             }
-            case AwayPeriodEntry.Checked.Refused refused -> {
+            case WeeklyAwayEntry.Checked.Refused refused -> {
                 showProblem(refused.problem());
                 yield true;
             }
         };
     }
 
-    private AwayPeriodEntry.Checked checked() {
-        return new AwayPeriodEntry(weekday.value(), start.text(), end.text()).check(messages);
+    private WeeklyAwayEntry.Checked checked() {
+        return new WeeklyAwayEntry(weekday.value(), start.text(), end.text()).check(messages);
     }
 
     /**

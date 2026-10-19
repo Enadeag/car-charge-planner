@@ -158,7 +158,7 @@ final class SettingsForm {
 
     /**
      * Stops a write that waits for the owner to unlock the system keychain, which then comes to
-     * {@link SaveOutcome.KeyringLocked}; nothing happens when none waits. Never blocks for long.
+     * {@link SaveOutcome.KeychainLocked}; nothing happens when none waits. Never blocks for long.
      */
     void stopUnlocking() {
         storage.stopUnlocking();

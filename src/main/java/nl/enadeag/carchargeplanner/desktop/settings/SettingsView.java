@@ -387,7 +387,7 @@ final class SettingsView extends BorderPane {
         switch (result) {
             case SaveOutcome.Saved _ -> ScreenReader.focus(status);
             case SaveOutcome.StartAtLoginRefused _ -> show(Category.APP);
-            case SaveOutcome.KeyringLocked _ -> ScreenReader.focus(status);
+            case SaveOutcome.KeychainLocked _ -> ScreenReader.focus(status);
             case SaveOutcome.Failed _ -> ScreenReader.focus(status);
         }
         updateCancelText();
@@ -420,7 +420,7 @@ final class SettingsView extends BorderPane {
                 refused.add(Category.APP);
                 showProblem(messages.text(TextKey.SETTINGS_REFUSED));
             }
-            case SaveOutcome.KeyringLocked _ -> showProblem(messages.text(TextKey.SETTINGS_KEYCHAIN_LOCKED));
+            case SaveOutcome.KeychainLocked _ -> showProblem(messages.text(TextKey.SETTINGS_KEYCHAIN_LOCKED));
             case SaveOutcome.Failed failure ->
                     showProblem(messages.text(TextKey.SETTINGS_SAVE_FAILED, failure.detail()));
         }

@@ -13,7 +13,7 @@ import java.time.DayOfWeek;
  * @param start the start as typed, such as "08:00"
  * @param end the end as typed, such as "17:00"
  */
-public record AwayPeriodEntry(DayOfWeek weekday, String start, String end) {
+public record WeeklyAwayEntry(DayOfWeek weekday, String start, String end) {
 
     /** The period as entered, or what is wrong with it. */
     public sealed interface Checked {
