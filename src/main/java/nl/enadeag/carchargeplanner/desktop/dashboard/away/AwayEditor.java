@@ -142,10 +142,17 @@ final class AwayEditor extends VBox {
 
     /** Saves the period as entered, or says why it cannot be saved. */
     void save() {
-        period().ifPresent(period -> {
-            saved.accept(period);
-            closed.run();
-        });
+        switch (check()) {
+            case Checked.Valid(var period) -> {
+                showProblem("");
+                saved.accept(period);
+                closed.run();
+            }
+            case Checked.Refused(var why) -> {
+                showProblem(messages.text(why));
+                ScreenReader.focus(partOfDay.isSelected() ? from : wholeDay);
+            }
+        }
     }
 
     /**
@@ -169,35 +176,28 @@ final class AwayEditor extends VBox {
         return problem.isVisible() ? problem.getText() : "";
     }
 
-    private Optional<OneOffAwayPeriod> period() {
+    /** The period as entered, or why it cannot be saved; changes nothing on screen. */
+    private Checked check() {
         if (wholeDay.isSelected()) {
             return notPassed(OneOffAwayPeriod.allDay(day, zone));
         }
         var start = time(from);
         var end = time(to);
         if (start.isEmpty() || end.isEmpty()) {
-            return refuse(TextKey.PROBLEM_NOT_A_TIME);
+            return new Checked.Refused(TextKey.PROBLEM_NOT_A_TIME);
         }
+        OneOffAwayPeriod period;
         try {
-            return notPassed(OneOffAwayPeriod.on(day, start.get(), end.get(), zone));
+            period = OneOffAwayPeriod.on(day, start.get(), end.get(), zone);
         } catch (IllegalArgumentException _) {
             // also when the clock is put forward between the two times, so both are the same moment
-            return refuse(TextKey.ONE_OFF_END_BEFORE_START);
+            return new Checked.Refused(TextKey.ONE_OFF_END_BEFORE_START);
         }
+        return notPassed(period);
     }
 
-    private Optional<OneOffAwayPeriod> notPassed(OneOffAwayPeriod period) {
-        if (!period.end().isAfter(now)) {
-            return refuse(TextKey.ONE_OFF_PASSED);
-        }
-        showProblem("");
-        return Optional.of(period);
-    }
-
-    private Optional<OneOffAwayPeriod> refuse(TextKey why) {
-        showProblem(messages.text(why));
-        ScreenReader.focus(partOfDay.isSelected() ? from : wholeDay);
-        return Optional.empty();
+    private Checked notPassed(OneOffAwayPeriod period) {
+        return period.end().isAfter(now) ? new Checked.Valid(period) : new Checked.Refused(TextKey.ONE_OFF_PASSED);
     }
 
     private static Optional<LocalTime> time(TextField field) {
@@ -221,5 +221,17 @@ final class AwayEditor extends VBox {
         problem.setManaged(!text.isEmpty());
         List.of(from, to, wholeDay, partOfDay).forEach(node -> node.setAccessibleHelp(text));
         resized.run();
+    }
+
+    /** What the entry holds: a period that can be saved, or why it cannot. */
+    private sealed interface Checked {
+
+        /** A period that can be saved. */
+        record Valid(OneOffAwayPeriod period) implements Checked {
+        }
+
+        /** Why the entered period cannot be saved. */
+        record Refused(TextKey why) implements Checked {
+        }
     }
 }

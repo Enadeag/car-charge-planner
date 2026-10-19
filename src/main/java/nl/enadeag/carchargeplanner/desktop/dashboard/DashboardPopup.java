@@ -98,9 +98,13 @@ final class DashboardPopup {
             close();
             return;
         }
-        if (Duration.between(closedAt, clock.instant()).compareTo(SAME_CLICK) < 0) {
-            return;
+        if (Duration.between(closedAt, clock.instant()).compareTo(SAME_CLICK) >= 0) {
+            open(view, reported);
         }
+    }
+
+    /** Shows the view beside the icon, in front and with the focus. */
+    private void open(DashboardView view, Point2D reported) {
         var screens = Screen.getScreens().stream().map(Screen::getBounds).toList();
         iconPosition = PopupPlacement.onScreenOrFallback(reported, screens, Screen.getPrimary().getVisualBounds());
         view.setDetachable(true);

@@ -67,17 +67,9 @@ final class ChartMapper {
      */
     SolarChartModel curve(DayPlan day) {
         var start = day.date().atStartOfDay(zone);
-        double dayHours = hoursFrom(start, day.date().plusDays(1).atStartOfDay(zone).toInstant());
-        var sunny = day.forecast().stream().filter(step -> step.powerKw() > SUN_KW).toList();
-        double from;
-        double to;
-        if (sunny.isEmpty()) {
-            from = DARK_FROM;
-            to = DARK_TO;
-        } else {
-            from = Math.max(0, Math.floor(hoursFrom(start, sunny.getFirst().start())) - MARGIN_HOURS);
-            to = Math.min(dayHours, Math.ceil(hoursFrom(start, sunny.getLast().end())) + MARGIN_HOURS);
-        }
+        var shown = shownHours(day, start);
+        double from = shown.from();
+        double to = shown.to();
         var steps = day.forecast().stream()
                 .filter(step -> hoursFrom(start, step.end()) > from && hoursFrom(start, step.start()) < to)
                 .map(step -> new Step(hoursFrom(start, step.start()), hoursFrom(start, step.end()), step.powerKw(),
@@ -114,6 +106,20 @@ final class ChartMapper {
                 messages.text(TextKey.BATTERY_LEVELS, pct(level), pct(after)),
                 messages.text(TextKey.BATTERY_MINIMUM, pct(minimum)), messages.text(TextKey.BATTERY_TARGET, pct(target)),
                 isToday, spoken);
+    }
+
+    /**
+     * The hours the chart shows: from the hour before the first sun to the hour after the last, within the day, or
+     * 06:00 to 20:00 for a day without sun.
+     */
+    private static Hours shownHours(DayPlan day, ZonedDateTime start) {
+        var sunny = day.forecast().stream().filter(step -> step.powerKw() > SUN_KW).toList();
+        if (sunny.isEmpty()) {
+            return new Hours(DARK_FROM, DARK_TO);
+        }
+        double dayHours = hoursFrom(start, start.toLocalDate().plusDays(1).atStartOfDay(start.getZone()).toInstant());
+        return new Hours(Math.max(0, Math.floor(hoursFrom(start, sunny.getFirst().start())) - MARGIN_HOURS),
+                Math.min(dayHours, Math.ceil(hoursFrom(start, sunny.getLast().end())) + MARGIN_HOURS));
     }
 
     /** Every third hour of the clock that lies within the hours shown, where it is on this day. */
@@ -155,5 +161,9 @@ final class ChartMapper {
 
     private static double hoursFrom(ZonedDateTime start, Instant moment) {
         return Duration.between(start.toInstant(), moment).toNanos() / 3_600e9;
+    }
+
+    /** The first and the last hour the chart shows, from the start of the day. */
+    private record Hours(double from, double to) {
     }
 }

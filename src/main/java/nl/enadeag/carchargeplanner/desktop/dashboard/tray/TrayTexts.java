@@ -43,12 +43,17 @@ public final class TrayTexts {
      */
     public synchronized void show(Outlook outlook) {
         this.outlook = outlook;
+        followSetUpState(outlook);
+        tray.setStatus(new TrayStatusMapper(language.messages()).map(outlook));
+    }
+
+    /** Relabels the menu when the outlook moves into or out of the state before the first set-up. */
+    private void followSetUpState(Outlook outlook) {
         var missing = outlook instanceof Outlook.NotSetUp;
         if (missing != notSetUp) {
             notSetUp = missing;
             tray.setMenuLabels(currentMenuLabels(language.messages()));
         }
-        tray.setStatus(new TrayStatusMapper(language.messages()).map(outlook));
     }
 
     /** Before the first set-up, the Settings entry is the way into set-up, and says so. */
