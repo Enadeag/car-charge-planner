@@ -102,7 +102,9 @@ class LockedKeyringTest {
     /** The keys as stored, read once the keyring is unlocked again. */
     private Secrets storedAfterUnlocking() throws Exception {
         keychain.locked = false;
-        return new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"))).load();
+        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
+        keys.moveFileIntoKeychain(); // as the engine's next round does
+        return keys.load();
     }
 
     private List<String> texts(SettingsView view) throws Exception {

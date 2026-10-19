@@ -116,11 +116,70 @@ class ApiKeysTest {
     @Test
     void aFileFoundWhileAKeychainIsUsableMovesIntoItAndIsRemoved() throws SecretsProblem {
         file().write(KEYS);
+        var keys = keys(keychain);
 
-        assertThat(keys(keychain).load()).isEqualTo(KEYS);
+        keys.moveFileIntoKeychain();
+
+        assertThat(keys.load()).isEqualTo(KEYS);
+        assertThat(keys.storage()).isEqualTo(KeyStorage.KEYCHAIN);
         assertThat(file().path()).doesNotExist();
         assertThat(keychain.entries).containsEntry("forecast/open-meteo/api_key", "OM-SECRET-1");
         assertThat(keys(keychain).load()).isEqualTo(KEYS);
+    }
+
+    @Test
+    void aLoadOnlyReadsTheFileAndLeavesItWhereItIs() throws SecretsProblem {
+        file().write(KEYS);
+        var keys = keys(keychain);
+
+        assertThat(keys.load()).isEqualTo(KEYS);
+        assertThat(keys.storage()).isEqualTo(KeyStorage.FILE);
+        assertThat(file().path()).exists();
+        assertThat(keychain.entries).isEmpty();
+    }
+
+    @Test
+    void aMoveWithoutAFileChangesNothing() throws SecretsProblem {
+        var counting = new Counting();
+        var keys = keys(counting);
+
+        keys.moveFileIntoKeychain();
+
+        assertThat(counting.calls).hasValue(0);
+        assertThat(keys.load()).isEqualTo(Secrets.NONE);
+    }
+
+    @Test
+    void aMoveWhileTheKeychainIsLockedWaitsForNothingAndMovesOnceItIsUnlocked() throws SecretsProblem {
+        var lockable = new LockableKeychain();
+        lockable.locked = true;
+        file().write(KEYS);
+        var keys = keys(lockable);
+
+        keys.moveFileIntoKeychain();
+        assertThat(file().path()).exists();
+        assertThat(lockable.prompts).hasValue(0);
+
+        lockable.locked = false; // as by the owner, outside the app; no wait before the next move
+        keys.moveFileIntoKeychain();
+
+        assertThat(file().path()).doesNotExist();
+        assertThat(keys.load()).isEqualTo(KEYS);
+    }
+
+    @Test
+    void aChangeSavedAfterTheOwnerUnlockedTheKeychainKeepsTheKeysThatWereOnlyInTheFile() throws SecretsProblem {
+        var lockable = lockedWithTheKeys();
+        var other = new ProviderId("other");
+        file().write(new Secrets(Map.of(other, Map.of("api_key", "OTHER-IN-FILE"))));
+        var keys = keys(lockable);
+
+        keys.applyChanges(NEW_OPEN_METEO_KEY, () -> { });
+
+        assertThat(lockable.prompts).hasValue(1);
+        assertThat(file().path()).doesNotExist();
+        assertThat(keys.load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"),
+                FORECAST_SOLAR, Map.of("api_key", "FS-SECRET-2"), other, Map.of("api_key", "OTHER-IN-FILE"))));
     }
 
     static Stream<Keychain> keychainsThatDoNotKeepValues() {
@@ -132,6 +191,8 @@ class ApiKeysTest {
     void theFileStaysAndIsUsedWhenTheMoveDoesNotWork(Keychain broken) throws SecretsProblem {
         file().write(KEYS);
         var keys = keys(broken);
+
+        keys.moveFileIntoKeychain();
 
         assertThat(keys.load()).isEqualTo(KEYS);
         assertThat(file().path()).exists();
@@ -223,7 +284,7 @@ class ApiKeysTest {
             intermittent.away = false;
             keys.load();
             later(ApiKeys.RETRY_AFTER);
-            keys.load();
+            keys.moveFileIntoKeychain();
             keys.load();
 
             assertThat(log.lines()).containsExactly(
@@ -304,7 +365,7 @@ class ApiKeysTest {
     void keysMovedFromTheFileIntoTheKeychainAreLogged() throws SecretsProblem {
         file().write(KEYS);
         try (var log = LogCapture.of(ApiKeys.class)) {
-            keys(keychain).load();
+            keys(keychain).moveFileIntoKeychain();
 
             assertThat(log.lines()).containsExactly(
                     "INFO moved the API keys from " + file().path() + " into the system keychain",
@@ -379,6 +440,7 @@ class ApiKeysTest {
 
         lockable.locked = false;
         later(ApiKeys.RETRY_AFTER);
+        keys.moveFileIntoKeychain();
         // laid over what the keychain held, so a key that was not in the file is not lost
         assertThat(keys.load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"),
                 new ProviderId("forecast-solar"), Map.of("api_key", "FS-SECRET-2"))));
@@ -487,6 +549,7 @@ class ApiKeysTest {
 
         lockable.locked = false;
         later(ApiKeys.RETRY_AFTER);
+        keys.moveFileIntoKeychain();
         assertThat(keys.load()).as("moved in over what the keychain holds").isEqualTo(new Secrets(Map.of(
                 OPEN_METEO, Map.of("api_key", "OM-NEW"), FORECAST_SOLAR, Map.of("api_key", "FS-SECRET-2"))));
         assertThat(file().path()).doesNotExist();
@@ -547,8 +610,11 @@ class ApiKeysTest {
     @Test
     void theFileStaysWhenTheKeychainDoesNotGiveBackWhatWasMovedIntoIt() throws SecretsProblem {
         file().write(KEYS);
+        var keys = keys(new ForgetsAfterOneRead());
 
-        assertThat(keys(new ForgetsAfterOneRead()).load()).isEqualTo(KEYS);
+        keys.moveFileIntoKeychain();
+
+        assertThat(keys.load()).isEqualTo(KEYS);
         assertThat(file().read()).isEqualTo(KEYS);
     }
 
@@ -563,10 +629,11 @@ class ApiKeysTest {
         };
         var keys = keys(forgetful);
         try (var log = LogCapture.of(ApiKeys.class)) {
-            keys.load();
+            keys.moveFileIntoKeychain();
             var asked = forgetful.calls.get();
 
             later(ApiKeys.RETRY_AFTER.minusSeconds(1));
+            keys.moveFileIntoKeychain();
             assertThat(keys.load()).isEqualTo(KEYS);
             assertThat(forgetful.calls.get()).isEqualTo(asked);
             assertThat(log.lines()).containsExactly("WARNING API keys are kept in " + file().path()
@@ -590,7 +657,9 @@ class ApiKeysTest {
         lockable.locked = true;
         file().write(KEYS);
         try (var log = LogCapture.of(ApiKeys.class)) {
-            keys(lockable).load();
+            var keys = keys(lockable);
+            keys.moveFileIntoKeychain();
+            keys.load();
 
             assertThat(log.lines()).containsExactly("WARNING API keys are kept in " + file().path()
                     + ", readable only by you: the system keychain is locked");
@@ -621,11 +690,13 @@ class ApiKeysTest {
         intermittent.away = false;
 
         later(ApiKeys.RETRY_AFTER.minusSeconds(1));
+        keys.moveFileIntoKeychain();
         assertThat(keys.load()).isEqualTo(KEYS);
         assertThat(file().path()).exists();
         assertThat(intermittent.entries).isEmpty();
 
         later(Duration.ofSeconds(1));
+        keys.moveFileIntoKeychain();
         assertThat(keys.load()).isEqualTo(KEYS);
         assertThat(file().path()).doesNotExist();
     }
@@ -700,8 +771,11 @@ class ApiKeysTest {
     @Test
     void aFileWithABadNameIsNotMovedIntoTheKeychain() throws IOException {
         Files.writeString(file().path(), "{\"open-meteo\": {\"api key\": \"OM-SECRET-1\"}}");
+        var keys = keys(keychain);
 
-        assertThatThrownBy(keys(keychain)::load).isInstanceOf(SecretsProblem.class)
+        keys.moveFileIntoKeychain();
+
+        assertThatThrownBy(keys::load).isInstanceOf(SecretsProblem.class)
                 .hasMessage("A setting name has characters that are not allowed");
         assertThat(keychain.entries).isEmpty();
         assertThat(file().path()).exists();

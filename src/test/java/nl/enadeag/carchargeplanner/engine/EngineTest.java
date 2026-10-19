@@ -519,6 +519,32 @@ class EngineTest {
     }
 
     @Test
+    void eachRoundMovesKeysKeptInTheFileIntoTheKeychainOnceItIsUnlocked() throws IOException {
+        var file = Files.writeString(folder.resolve("secrets.json"),
+                "{\"version\": 1, \"main\": {\"api_key\": \"KEPT-IN-FILE\"}}");
+        keychain.locked = true;
+        var scheduler = startedAt(clockAt(7));
+        assertThat(file).exists();
+
+        keychain.locked = false; // by the owner, outside the app
+        scheduler.advance(PlanSchedule.EVERY);
+
+        assertThat(file).doesNotExist();
+        assertThat(keychain.entries).containsEntry("forecast/main/api_key", "KEPT-IN-FILE");
+    }
+
+    @Test
+    void anOutlookLeavesKeysKeptInTheFileWhereTheyAre() throws IOException {
+        var file = Files.writeString(folder.resolve("secrets.json"),
+                "{\"version\": 1, \"main\": {\"api_key\": \"KEPT-IN-FILE\"}}");
+
+        engine(clockAt(7)).outlook();
+
+        assertThat(file).exists();
+        assertThat(keychain.entries).isEmpty();
+    }
+
+    @Test
     void aMissingKeyIsNotALockedKeyring() throws Exception {
         var needy = new FakeProvider(FakeProvider.info("needy", "Needy",
                 List.of(new SettingSpec("api_key", "API key", "Your key.", false, true))), steps(days(2, 4.0)));

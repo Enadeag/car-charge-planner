@@ -96,7 +96,8 @@ public final class Engine {
 
     /**
      * Starts planning on the engine's own thread: at once, then every minute, and again after each change made through
-     * the engine, also one that could not be saved, so the listener sees what is stored. Each round makes the
+     * the engine, also one that could not be saved, so the listener sees what is stored. Each round moves API keys
+     * kept in their file into the keychain once it can be used ({@link ApiKeys#moveFileIntoKeychain()}), makes the
      * {@linkplain #outlook() outlook}, then tells the owner about a window that starts within the notification lead
      * time; the rounds come often enough for that. A round that fails, even with an {@link Error}, is logged, and the
      * next one is made as planned.
@@ -133,8 +134,12 @@ public final class Engine {
         }
     }
 
-    /** One scheduled round: the outlook, then the announcements that are due on it. */
+    /**
+     * One scheduled round: first the API keys move from their file into the keychain when they can, so the move
+     * follows the keychain's unlocking within a round; then the outlook, and the announcements that are due on it.
+     */
     private Outlook round() {
+        apiKeys.moveFileIntoKeychain();
         EngineConfig config;
         try {
             config = readConfig();

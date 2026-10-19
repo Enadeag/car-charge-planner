@@ -5,21 +5,21 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
-import java.util.Optional;
 
 /**
- * Where the API keys are kept: in the system keychain, or in a private file when there is no usable keychain. A file
- * found while a keychain is usable is moved into it, and removed only after every value was written and read back.
- * Values never appear in a log line or an error message; where the keys are kept is logged each time it changes.
+ * Where the API keys are kept: in the system keychain, or in a private file when there is no usable keychain. While
+ * the file exists, the keys come from it; {@link #moveFileIntoKeychain()} moves it into a keychain that can be used,
+ * and removes it only after every value was written and read back. Loading never moves it. Values never appear in a
+ * log line or an error message; where the keys are kept is logged each time it changes.
  *
  * <p>The keychain is slow to ask and may not answer at all, while the engine wants the keys for a plan every minute,
  * so what it gave is kept in memory: the keys until the next save, and a keychain that could not be used or read is
  * left alone for {@link #RETRY_AFTER}; the keys then come from the file, which is read again only when it changed. A
- * save always tries the keychain. Loads and saves take turns, so a save never mixes with a load or another save.
+ * save always tries the keychain. Loads, moves and saves take turns, so a save never mixes with another of them.
  *
  * <p>A locked keychain, such as a desktop keyring that was not unlocked at login, is not a missing one: the keys in it
  * are not available yet. A load says so, with {@link SecretsProblem.Kind#LOCKED}, and the keychain is asked again at
- * the next load, so the unlocking is noticed soon. A save into a locked keychain has the system ask the owner to unlock
+ * the next load and the next move, so the unlocking is noticed soon. A save into a locked keychain has the system ask the owner to unlock
  * it, and waits up to {@link #UNLOCK_WAIT} for their answer without holding up the loads. The keys go to the file only
  * when the owner dismisses that prompt or there turns out to be no keychain; when the app cannot have it unlocked, or
  * nobody answers, nothing is saved and the owner is told to unlock it and save again.
@@ -101,12 +101,13 @@ public final class ApiKeys implements SecretsSource {
     /**
      * {@inheritDoc}
      *
-     * <p>Asks the keychain the first time, after a save, at every load while it is locked, and once
-     * {@link #RETRY_AFTER} has passed since it failed; otherwise answers from memory or from the file. While the
-     * keychain is locked, the keys come from the file only when they were kept there already.
+     * <p>Only reads: while the file exists the keys come from it, and it is left where it is. Otherwise asks the
+     * keychain the first time, after a save, at every load while it is locked, and once {@link #RETRY_AFTER} has
+     * passed since it failed; in between answers from memory.
      *
      * @throws SecretsProblem of the kind {@link SecretsProblem.Kind#LOCKED} while the keychain that holds the keys is
-     *     locked; of the kind {@link SecretsProblem.Kind#FAILED} when the keychain or the file could not be read
+     *     locked; of the kind {@link SecretsProblem.Kind#FAILED} when the keychain or the file could not be read, or
+     *     the file holds a name that is not allowed
      */
     @Override
     public Secrets load() throws SecretsProblem {
@@ -114,32 +115,30 @@ public final class ApiKeys implements SecretsSource {
             if (remembered != null) {
                 return remembered;
             }
+            if (file.exists()) {
+                keptIn(KeyStorage.FILE, "they have not been moved into the system keychain");
+                var inFile = file.read();
+                inFile.checkNames();
+                return inFile;
+            }
             if (waitingToAskKeychain()) {
                 if (unreadable != null) {
                     throw unreadable;
                 }
-                return fromFile();
+                return Secrets.NONE;
             }
             unreadable = null;
             switch (entries.state()) {
                 case UNUSABLE -> {
                     waitBeforeAskingKeychain();
                     keptIn(KeyStorage.FILE, "the system keychain cannot be used");
-                    return fromFile();
+                    return Secrets.NONE;
                 }
                 case LOCKED -> {
-                    return whileLocked();
+                    throw locked();
                 }
                 case USABLE -> {
                     // read below
-                }
-            }
-            if (file.exists()) {
-                var kept = moveToKeychain();
-                if (kept.isPresent()) {
-                    waitBeforeAskingKeychain();
-                    keptIn(KeyStorage.FILE, "they could not be moved into the system keychain");
-                    return kept.get();
                 }
             }
             try {
@@ -149,7 +148,7 @@ public final class ApiKeys implements SecretsSource {
                 return secrets;
             } catch (KeychainException e) {
                 if (e.kind() == KeychainException.Kind.LOCKED) {
-                    return whileLocked(); // locked between the two questions
+                    throw locked(); // locked between the two questions
                 }
                 var problem = new SecretsProblem(
                         "The system keychain could not be read. Unlock it, or enter the keys again.");
@@ -158,6 +157,64 @@ public final class ApiKeys implements SecretsSource {
                 keptIn(KeyStorage.KEYCHAIN, "");
                 throw problem;
             }
+        }
+    }
+
+    /**
+     * Moves the keys from the file into the keychain, when there is a file and the keychain can be used. They are
+     * laid over what the keychain holds, so a key kept only in the keychain, such as one the owner did not enter again
+     * while it was locked, stays; the file is removed only after every value was written and read back. Does nothing
+     * without a file, while the keychain is left alone after a failure, or while it is locked, so the next call
+     * notices the unlocking. A keychain that cannot be used, or a move that fails, leaves the keychain alone for
+     * {@link #RETRY_AFTER}. A file that cannot be read, or holds a name that is not allowed, stays, and a load says
+     * why. May ask the keychain, which can take a few seconds: call it away from the user interface's thread.
+     */
+    public void moveFileIntoKeychain() {
+        synchronized (turn) {
+            if (!file.exists() || waitingToAskKeychain()) {
+                return;
+            }
+            switch (entries.state()) {
+                case UNUSABLE -> {
+                    waitBeforeAskingKeychain();
+                    keptIn(KeyStorage.FILE, "the system keychain cannot be used");
+                    return;
+                }
+                case LOCKED -> {
+                    keptIn(KeyStorage.FILE, "the system keychain is locked");
+                    return;
+                }
+                case USABLE -> {
+                    // moved below
+                }
+            }
+            Secrets inFile;
+            try {
+                inFile = file.read();
+                inFile.checkNames();
+            } catch (SecretsProblem _) {
+                waitBeforeAskingKeychain();
+                keptIn(KeyStorage.FILE, "the file could not be read, or holds a name that is not allowed");
+                return;
+            }
+            try {
+                var secrets = KeyChanges.entering(inFile).applyTo(storedInKeychain());
+                entries.write(secrets);
+                if (entries.read().equals(secrets)) {
+                    file.delete();
+                    remembered = secrets;
+                    LOG.log(Level.INFO, "moved the API keys from " + file.path() + " into the system keychain");
+                    keptIn(KeyStorage.KEYCHAIN, "");
+                    return;
+                }
+            } catch (KeychainException e) {
+                if (e.kind() == KeychainException.Kind.LOCKED) {
+                    keptIn(KeyStorage.FILE, "the system keychain is locked");
+                    return; // locked between the questions: tried again next time
+                }
+            }
+            waitBeforeAskingKeychain();
+            keptIn(KeyStorage.FILE, "they could not be moved into the system keychain");
         }
     }
 
@@ -244,8 +301,8 @@ public final class ApiKeys implements SecretsSource {
     /**
      * Where the keys are kept now. Finds out as {@link #load()} does, so it asks the keychain only when a load would.
      *
-     * @return the keychain; the locked keychain while it holds the keys and is locked; or the file when the keychain
-     *     cannot be used, the keys were kept in the file before, or the file could not be moved into the keychain
+     * @return the file while it exists or when the keychain cannot be used; else the locked keychain while it holds
+     *     the keys and is locked, or the keychain
      */
     public KeyStorage storage() {
         synchronized (turn) {
@@ -269,8 +326,9 @@ public final class ApiKeys implements SecretsSource {
 
     /**
      * Stores the keys in the keychain, or in the file when there is no usable keychain; never while it is locked. The
-     * keys stored now are read first unless the edit replaces them; a damaged index counts as none, as its entries
-     * cannot be found anyway.
+     * keys stored now, in the keychain and the file, are read first unless the edit replaces them, so the file is
+     * moved in with the edit, such as after the owner unlocked the keychain; a damaged index counts as none, as its
+     * entries cannot be found anyway.
      */
     private SaveResult intoKeychainElseFile(Edit edit) throws SecretsProblem {
         synchronized (turn) {
@@ -290,7 +348,7 @@ public final class ApiKeys implements SecretsSource {
                 }
             }
             try {
-                var secrets = edit.apply(edit.replaces() ? Secrets.NONE : storedInKeychain());
+                var secrets = edit.apply(edit.replaces() ? Secrets.NONE : storedWithFile());
                 entries.write(secrets);
                 file.delete();
                 remembered = secrets;
@@ -308,7 +366,28 @@ public final class ApiKeys implements SecretsSource {
     }
 
     /**
-     * What the keychain holds, for a save that changes only some keys; none when its index is damaged.
+     * What is stored, for a save that changes only some keys: what the keychain holds, with the file's keys laid over
+     * it, so that no key kept only in the file is lost when the save removes the file. A file that cannot be read, or
+     * holds a name that is not allowed, adds nothing; the save sets an unreadable one aside.
+     *
+     * @throws KeychainException when the keychain is locked or cannot be used
+     */
+    private Secrets storedWithFile() throws KeychainException {
+        var inKeychain = storedInKeychain();
+        if (!file.exists()) {
+            return inKeychain;
+        }
+        try {
+            var inFile = file.read();
+            inFile.checkNames();
+            return KeyChanges.entering(inFile).applyTo(inKeychain);
+        } catch (SecretsProblem _) {
+            return inKeychain;
+        }
+    }
+
+    /**
+     * What the keychain holds; none when its index is damaged.
      *
      * @throws KeychainException when it is locked or cannot be used
      */
@@ -364,17 +443,10 @@ public final class ApiKeys implements SecretsSource {
         }
     }
 
-    /**
-     * The keys while the keychain is locked: from the file when they were kept there, else not available yet. The
-     * keychain is not left alone, so the next load notices the unlocking.
-     */
-    private Secrets whileLocked() throws SecretsProblem {
-        if (file.exists()) {
-            keptIn(KeyStorage.FILE, "the system keychain is locked");
-            return file.read();
-        }
+    /** The keychain that holds the keys is locked: they are not available yet, and the next load asks again. */
+    private SecretsProblem locked() {
         keptIn(KeyStorage.LOCKED_KEYCHAIN, "");
-        throw new SecretsProblem(SecretsProblem.Kind.LOCKED,
+        return new SecretsProblem(SecretsProblem.Kind.LOCKED,
                 "The system keychain is locked. Unlock it so the app can read the API keys.");
     }
 
@@ -384,10 +456,6 @@ public final class ApiKeys implements SecretsSource {
 
     private void waitBeforeAskingKeychain() {
         askAgainAt = clock.instant().plus(RETRY_AFTER);
-    }
-
-    private Secrets fromFile() throws SecretsProblem {
-        return file.exists() ? file.read() : Secrets.NONE;
     }
 
     /**
@@ -409,24 +477,4 @@ public final class ApiKeys implements SecretsSource {
         where = storage;
     }
 
-    /**
-     * The file's secrets when the move failed and the file stays. They are laid over what the keychain holds, so a key
-     * kept only in the keychain, such as one the owner did not enter again while it was locked, stays.
-     */
-    private Optional<Secrets> moveToKeychain() throws SecretsProblem {
-        var inFile = file.read();
-        inFile.checkNames();
-        try {
-            var secrets = KeyChanges.entering(inFile).applyTo(storedInKeychain());
-            entries.write(secrets);
-            if (!entries.read().equals(secrets)) {
-                return Optional.of(inFile);
-            }
-        } catch (KeychainException _) {
-            return Optional.of(inFile);
-        }
-        file.delete();
-        LOG.log(Level.INFO, "moved the API keys from " + file.path() + " into the system keychain");
-        return Optional.empty();
-    }
 }
