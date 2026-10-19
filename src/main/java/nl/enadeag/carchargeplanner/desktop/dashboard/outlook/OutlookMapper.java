@@ -74,15 +74,18 @@ public final class OutlookMapper {
 
     /**
      * What is wrong with the config file, in the owner's language; the engine's details stay in English. A missing
-     * file is never unusable: the engine reports it as {@link Outlook.NotSetUp}, which each caller handles itself.
+     * file is never unusable: {@link Outlook.ConfigUnusable} refuses it, and the engine reports it as
+     * {@link Outlook.NotSetUp}, which each caller handles itself.
      *
      * @param unusable the engine's outlook with a config file that cannot be read or is not valid
      * @param messages the texts, in the owner's language
      * @return such as "Fix engine.json: system: is required"
+     * @throws IllegalStateException when the outlook says the file is missing, which its constructor refuses
      */
     public static String whatToFix(Outlook.ConfigUnusable unusable, Messages messages) {
         return switch (unusable.kind()) {
-            case MISSING -> messages.text(TextKey.NOT_SET_UP_MISSING, unusable.file().toString());
+            case MISSING -> throw new IllegalStateException(
+                    "a missing config file is not set up, never unusable: " + unusable.file());
             case UNREADABLE -> messages.text(TextKey.NOT_SET_UP_UNREADABLE, unusable.file().toString(), unusable.detail());
             case INVALID -> messages.text(TextKey.NOT_SET_UP_INVALID, String.valueOf(unusable.file().getFileName()),
                     unusable.detail());

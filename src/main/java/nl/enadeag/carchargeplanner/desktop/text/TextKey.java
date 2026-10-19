@@ -133,8 +133,6 @@ public enum TextKey {
     NO_FORECAST_KEYCHAIN_LOCKED,
     /** The dashboard's headline without a usable config file. */
     NOT_SET_UP,
-    /** There is no config file: {0} is its path. */
-    NOT_SET_UP_MISSING,
     /** The config file could not be read: {0} is its path, {1} the system's error. */
     NOT_SET_UP_UNREADABLE,
     /** The config file is wrong: {0} is its name, {1} the setting and what is wrong, in English. */
