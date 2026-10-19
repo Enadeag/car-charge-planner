@@ -178,7 +178,10 @@ public final class ForecastPage implements ConfigPage {
             return Optional.of(config);
         }
         var entry = entry();
-        var complete = entry.chosen().stream().noneMatch(id -> cards.containsKey(id) && cards.get(id).markRefused());
+        // every chosen card marks its own problems, also when an earlier one is refused already
+        var refused = entry.chosen().stream().filter(cards::containsKey).map(id -> cards.get(id).markRefused())
+                .toList();
+        var complete = !refused.contains(true);
         try {
             var shown = new LinkedHashMap<ProviderId, Map<String, String>>();
             cards.forEach((id, card) -> shown.put(id, card.plain()));

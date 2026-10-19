@@ -128,6 +128,42 @@ class ForecastAwayPagesTest {
     }
 
     @Test
+    void aSaveMarksTheRefusedValuesOfThePrimaryAndTheFallbackProviderAlike() throws Exception {
+        var withAddress = List.of(
+                new SettingSpec("base_url", "Server address", "", true, false, SettingFormat.SERVER_ADDRESS));
+        var steps = FakeProvider.steps(SunnyDays.days(LocalDate.now(SunnyDays.TZ), 3, 4.0));
+        settings = new SettingsFixture(folder, Language.ENGLISH, List.of(
+                new FakeProvider(FakeProvider.info("open-meteo", "Open-Meteo", withAddress), steps),
+                new FakeProvider(FakeProvider.info("forecast-solar", "Forecast.Solar", withAddress), steps)));
+        var view = settings.open();
+        var address = settings.messages.text(TextKey.PROVIDER_BASE_URL);
+        var primary = (TextInputControl) SettingsFixture.field(view,
+                settings.messages.text(TextKey.IN_GROUP, address, "Open-Meteo"));
+        var fallback = (TextInputControl) SettingsFixture.field(view,
+                settings.messages.text(TextKey.IN_GROUP, address, "Forecast.Solar"));
+        var problem = settings.messages.text(TextKey.PROBLEM_SERVER_ADDRESS);
+
+        boolean saved = Fx.call(() -> {
+            primary.setText("http://localhost@evil.example");
+            fallback.setText("http://localhost@evil.example");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(saved).isFalse();
+        assertThat(Fx.call(primary::getAccessibleHelp)).contains(problem);
+        assertThat(Fx.call(fallback::getAccessibleHelp)).contains(problem);
+
+        Fx.run(() -> {
+            fallback.setText("http://[::1]:8080/");
+            SettingsFixture.save(view);
+        });
+
+        assertThat(Fx.call(primary::getAccessibleHelp)).contains(problem);
+        assertThat(Fx.call(fallback::getAccessibleHelp)).as("the fixed fallback is marked no more")
+                .doesNotContain(problem);
+    }
+
+    @Test
     void theFallbackCannotBeThePrimary() throws Exception {
         var view = open();
 
