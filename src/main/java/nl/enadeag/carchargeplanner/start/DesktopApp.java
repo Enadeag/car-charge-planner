@@ -19,7 +19,6 @@ import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.system.Tray;
 import nl.enadeag.carchargeplanner.desktop.text.AnnouncementTexts;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
-import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.Engine;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;

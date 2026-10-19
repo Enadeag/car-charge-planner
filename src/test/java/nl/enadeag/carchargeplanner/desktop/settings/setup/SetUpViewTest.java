@@ -26,7 +26,6 @@ import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import javafx.scene.control.Button;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextField;
