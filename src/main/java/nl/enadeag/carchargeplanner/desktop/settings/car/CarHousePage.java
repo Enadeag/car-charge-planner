@@ -75,11 +75,16 @@ public final class CarHousePage implements ConfigPage {
         view.show(NoConfigCard.card(reason, messages));
     }
 
+    @Override
+    public Optional<EngineConfig> read(EngineConfig config) {
+        return car.read(config).flatMap(house::read);
+    }
+
     /** Both cards are checked, so each shows its own problems. */
     @Override
-    public Optional<EngineConfig> applyTo(EngineConfig config) {
-        var withCar = car.applyTo(config);
-        var withBoth = house.applyTo(withCar.orElse(config));
-        return withCar.isPresent() ? withBoth : Optional.empty();
+    public boolean showProblems() {
+        var carRefused = car.showProblems();
+        var houseRefused = house.showProblems();
+        return carRefused || houseRefused;
     }
 }

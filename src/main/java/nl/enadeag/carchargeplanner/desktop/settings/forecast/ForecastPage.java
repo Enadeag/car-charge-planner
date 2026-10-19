@@ -172,25 +172,43 @@ public final class ForecastPage implements ConfigPage {
     }
 
     @Override
-    public Optional<EngineConfig> applyTo(EngineConfig config) {
-        fallbackRow.clearProblem();
+    public Optional<EngineConfig> read(EngineConfig config) {
         if (!isChanged()) {
             return Optional.of(config);
+        }
+        var entry = entry();
+        if (entry.chosen().stream().filter(cards::containsKey).anyMatch(id -> cards.get(id).isRefused())) {
+            return Optional.empty();
+        }
+        return selection(entry, _ -> { }).map(config::withForecast);
+    }
+
+    @Override
+    public boolean showProblems() {
+        fallbackRow.clearProblem();
+        if (!isChanged()) {
+            return false;
         }
         var entry = entry();
         // every chosen card marks its own problems, also when an earlier one is refused already
         var refused = entry.chosen().stream().filter(cards::containsKey).map(id -> cards.get(id).markRefused())
                 .toList();
-        var complete = !refused.contains(true);
-        try {
-            var shown = new LinkedHashMap<ProviderId, Map<String, String>>();
-            cards.forEach((id, card) -> shown.put(id, card.plain()));
-            var selection = entry.selection(stored.settings(), shown);
-            return complete ? Optional.of(config.withForecast(selection)) : Optional.empty();
-        } catch (InvalidSetting e) {
+        var selection = selection(entry, e -> {
             if (e.setting() == ConfigSetting.FALLBACK_PROVIDER) {
                 fallbackRow.showProblem(ProblemTexts.of(e.rule(), messages));
             }
+        });
+        return refused.contains(true) || selection.isEmpty();
+    }
+
+    /** The choice of providers with their settings as entered, after its record checked it. */
+    private Optional<ForecastSelection> selection(ForecastEntry entry, Consumer<InvalidSetting> refused) {
+        try {
+            var shown = new LinkedHashMap<ProviderId, Map<String, String>>();
+            cards.forEach((id, card) -> shown.put(id, card.plain()));
+            return Optional.of(entry.selection(stored.settings(), shown));
+        } catch (InvalidSetting e) {
+            refused.accept(e);
             return Optional.empty();
         }
     }

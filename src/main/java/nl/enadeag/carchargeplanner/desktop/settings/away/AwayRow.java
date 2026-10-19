@@ -75,21 +75,38 @@ final class AwayRow extends VBox {
     }
 
     /**
-     * The period as the row shows it, after its record checked it; a refused one shows its problem.
+     * The period as the row shows it, after its record checked it; only reads, as
+     * {@link nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPart#read} does.
      *
      * @return the period, or empty when a time is not a time or the end is not after the start
      */
-    Optional<WeeklyAwayPeriod> value() {
-        return switch (new AwayPeriodEntry(weekday.value(), start.text(), end.text()).check(messages)) {
-            case AwayPeriodEntry.Checked.Accepted accepted -> {
+    Optional<WeeklyAwayPeriod> read() {
+        return switch (checked()) {
+            case AwayPeriodEntry.Checked.Accepted accepted -> Optional.of(accepted.period());
+            case AwayPeriodEntry.Checked.Refused _ -> Optional.empty();
+        };
+    }
+
+    /**
+     * Shows the period's problem below it when it is refused, and takes a problem shown before away otherwise.
+     *
+     * @return true when it is refused
+     */
+    boolean showProblems() {
+        return switch (checked()) {
+            case AwayPeriodEntry.Checked.Accepted _ -> {
                 showProblem("");
-                yield Optional.of(accepted.period());
+                yield false;
             }
             case AwayPeriodEntry.Checked.Refused refused -> {
                 showProblem(refused.problem());
-                yield Optional.empty();
+                yield true;
             }
         };
+    }
+
+    private AwayPeriodEntry.Checked checked() {
+        return new AwayPeriodEntry(weekday.value(), start.text(), end.text()).check(messages);
     }
 
     /**

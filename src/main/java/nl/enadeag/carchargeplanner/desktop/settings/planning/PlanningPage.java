@@ -14,12 +14,14 @@ import nl.enadeag.carchargeplanner.desktop.settings.page.PageView;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
+import nl.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import javafx.scene.layout.Region;
 
 /** The planning preferences: the charge levels, how cautious the plan is, and when the owner is told. */
@@ -110,18 +112,30 @@ public final class PlanningPage implements ConfigPage {
     }
 
     @Override
-    public Optional<EngineConfig> applyTo(EngineConfig config) {
-        rows.values().forEach(FieldRow::clearProblem);
+    public Optional<EngineConfig> read(EngineConfig config) {
         if (!isChanged()) {
             return Optional.of(config);
         }
+        return planning(_ -> { }).map(config::withPlanning);
+    }
+
+    @Override
+    public boolean showProblems() {
+        rows.values().forEach(FieldRow::clearProblem);
+        if (!isChanged()) {
+            return false;
+        }
         fields().forEach(NumberField::commitTyped);
+        return planning(e -> rows.get(e.setting()).showProblem(ProblemTexts.of(e.rule(), messages))).isEmpty();
+    }
+
+    /** The preferences as entered, after their record checked them; a refused value goes to {@code refused}. */
+    private Optional<PlanningPreferences> planning(Consumer<InvalidSetting> refused) {
         try {
-            var planning = new PlanningEntry(minimum.value(), target.value(), margin.value(), importTolerance.value(),
-                    minWindow.value(), notifyLead.value()).planning();
-            return Optional.of(config.withPlanning(planning));
+            return Optional.of(new PlanningEntry(minimum.value(), target.value(), margin.value(),
+                    importTolerance.value(), minWindow.value(), notifyLead.value()).planning());
         } catch (InvalidSetting e) {
-            rows.get(e.setting()).showProblem(ProblemTexts.of(e.rule(), messages));
+            refused.accept(e);
             return Optional.empty();
         }
     }

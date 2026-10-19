@@ -112,20 +112,25 @@ final class PanelArrayCard {
     }
 
     /**
-     * The array as the card shows it, after its record checked it; a refused value shows its problem.
+     * The array as the card shows it, after its record checked it; only reads, as
+     * {@link nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPart#read} does.
      *
      * @return the array, or empty when a value is refused
      */
-    Optional<PanelArray> value() {
+    Optional<PanelArray> read() {
+        return panelArray(_ -> { });
+    }
+
+    /**
+     * Shows the problem of a refused value at its field, after confirming what the owner typed; a problem shown before
+     * is taken away first.
+     *
+     * @return true when a value is refused
+     */
+    boolean showProblems() {
         problems.clear();
         inputs().forEach(Input::commitTyped);
-        try {
-            return Optional.of(new PanelArrayEntry(name.value(), size.value(), tilt.value(), direction.value(),
-                    losses.value()).panelArray());
-        } catch (InvalidSetting e) {
-            problems.show(e);
-            return Optional.empty();
-        }
+        return panelArray(problems::show).isEmpty();
     }
 
     /**
@@ -172,6 +177,16 @@ final class PanelArrayCard {
             direction.set(common.azimuthDeg());
             losses.set(common.lossesPct());
         });
+    }
+
+    private Optional<PanelArray> panelArray(Consumer<InvalidSetting> refused) {
+        try {
+            return Optional.of(new PanelArrayEntry(name.value(), size.value(), tilt.value(), direction.value(),
+                    losses.value()).panelArray());
+        } catch (InvalidSetting e) {
+            refused.accept(e);
+            return Optional.empty();
+        }
     }
 
     private List<Input> inputs() {

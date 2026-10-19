@@ -67,7 +67,8 @@ final class SetUpForm {
     }
 
     /**
-     * Has the engine's records check a step's values, and marks each refused one by showing its problem at its field.
+     * Has the engine's records check a step's values, as Next does, and marks each refused one by showing its problem
+     * at its field; the other steps' fields do not change.
      *
      * @param step the step to check; one without config values is never refused
      * @return true when a value is refused, or on the location step no place is chosen
@@ -75,7 +76,7 @@ final class SetUpForm {
     boolean markRefused(SetUpStep step) {
         var refused = false;
         for (var part : parts.getOrDefault(step, List.of())) {
-            refused |= part.applyTo(base).isEmpty();
+            refused |= part.showProblems();
         }
         if (step == SetUpStep.LOCATION && !refused) {
             refused = location.markNotChosen();
@@ -101,14 +102,14 @@ final class SetUpForm {
     /**
      * The whole config as entered: the draft, with each part's values laid over it in the order of the steps. A part
      * with a refused value adds none of its values, so the draft's stay; call {@link #markFirstRefused()} first for a
-     * config to save.
+     * config to save. Only reads, so a step can ask it as the owner reaches it: no field shows or loses a problem.
      *
      * @return the config with every step's accepted values
      */
     EngineConfig config() {
         var config = base;
         for (var part : allParts()) {
-            config = part.applyTo(config).orElse(config);
+            config = part.read(config).orElse(config);
         }
         return config;
     }

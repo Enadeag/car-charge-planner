@@ -17,14 +17,23 @@ public interface ConfigPart {
     void load(EngineConfig config);
 
     /**
-     * Puts the part's values in a config, after the engine's records checked them. A value they refuse shows its
-     * problem next to its field; problems shown before are taken away first.
+     * Puts the part's values as entered in a config, after the engine's records checked them. Only reads: no problem
+     * shows or goes, and the fields keep what the owner typed as it is; {@link #showProblems()} shows them.
      *
      * @param config the config to change, with the other parts' values in it already
      * @return the config with this part's values; the same config when nothing in the part changed since it was
      *     loaded; empty when a value is refused
      */
-    Optional<EngineConfig> applyTo(EngineConfig config);
+    Optional<EngineConfig> read(EngineConfig config);
+
+    /**
+     * Shows the problem of each value the engine's records refuse next to its field, as Save and Next do; problems
+     * shown before are taken away first. What the owner typed but did not confirm is confirmed first, so a field
+     * shows the value that is checked.
+     *
+     * @return true when a value is refused, so {@link #read(EngineConfig)} gives nothing
+     */
+    boolean showProblems();
 
     /**
      * Calls an action whenever a value in the part changes, by the owner or by loading.

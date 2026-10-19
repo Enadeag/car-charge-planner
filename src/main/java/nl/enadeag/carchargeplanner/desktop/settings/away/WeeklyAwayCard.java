@@ -83,13 +83,19 @@ public final class WeeklyAwayCard implements ConfigPart {
     }
 
     @Override
-    public Optional<EngineConfig> applyTo(EngineConfig config) {
+    public Optional<EngineConfig> read(EngineConfig config) {
         var periods = new ArrayList<WeeklyAwayPeriod>();
-        shown.forEach(row -> row.value().ifPresent(periods::add));
+        shown.forEach(row -> row.read().ifPresent(periods::add));
         if (periods.size() < shown.size()) {
             return Optional.empty();
         }
         return Optional.of(isChanged() ? config.withAway(new WeeklyAwaySchedule(periods)) : config);
+    }
+
+    /** Every row shows its own problem, also after one that is refused. */
+    @Override
+    public boolean showProblems() {
+        return shown.stream().map(AwayRow::showProblems).toList().contains(true);
     }
 
     private void addRow(WeeklyAwayPeriod period) {

@@ -16,6 +16,7 @@ import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 /** The house's own use of power, with a typical value on request. */
 public final class HouseCard implements ConfigPart {
@@ -58,21 +59,25 @@ public final class HouseCard implements ConfigPart {
     }
 
     @Override
-    public Optional<EngineConfig> applyTo(EngineConfig config) {
-        problems.clear();
+    public Optional<EngineConfig> read(EngineConfig config) {
         if (!isChanged()) {
             return Optional.of(config);
         }
-        baseload.commitTyped();
-        try {
-            var house = new House(baseload.value());
+        return house(_ -> { }).map(house -> {
             var system = config.system();
-            return Optional.of(config.withSystem(system.withHouseAndCar(house, system.car()),
-                    new TypicalValues(typical.appliedTo(config.typical().system()), config.typical().panels())));
-        } catch (InvalidSetting e) {
-            problems.show(e);
-            return Optional.empty();
+            return config.withSystem(system.withHouseAndCar(house, system.car()),
+                    new TypicalValues(typical.appliedTo(config.typical().system()), config.typical().panels()));
+        });
+    }
+
+    @Override
+    public boolean showProblems() {
+        problems.clear();
+        if (!isChanged()) {
+            return false;
         }
+        baseload.commitTyped();
+        return house(problems::show).isEmpty();
     }
 
     @Override
@@ -83,6 +88,16 @@ public final class HouseCard implements ConfigPart {
     @Override
     public boolean isChanged() {
         return typical.isChanged() || baseload.isChanged();
+    }
+
+    /** The house as entered, after its record checked it; a refused value goes to {@code refused}. */
+    private Optional<House> house(Consumer<InvalidSetting> refused) {
+        try {
+            return Optional.of(new House(baseload.value()));
+        } catch (InvalidSetting e) {
+            refused.accept(e);
+            return Optional.empty();
+        }
     }
 
     private void useTypical() {

@@ -21,6 +21,7 @@ import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 /**
  * The car: its usable battery, its consumption and the distance driven per day, with typical values on request.
@@ -91,21 +92,25 @@ public final class CarCard implements ConfigPart {
     }
 
     @Override
-    public Optional<EngineConfig> applyTo(EngineConfig config) {
-        problems.clear();
+    public Optional<EngineConfig> read(EngineConfig config) {
         if (!isChanged()) {
             return Optional.of(config);
         }
-        inputs().forEach(Input::commitTyped);
-        try {
-            var car = new Car(battery.value(), consumption.value(), distance.value());
+        return car(_ -> { }).map(car -> {
             var system = config.system();
-            return Optional.of(config.withSystem(system.withHouseAndCar(system.house(), car),
-                    new TypicalValues(typical.appliedTo(config.typical().system()), config.typical().panels())));
-        } catch (InvalidSetting e) {
-            problems.show(e);
-            return Optional.empty();
+            return config.withSystem(system.withHouseAndCar(system.house(), car),
+                    new TypicalValues(typical.appliedTo(config.typical().system()), config.typical().panels()));
+        });
+    }
+
+    @Override
+    public boolean showProblems() {
+        problems.clear();
+        if (!isChanged()) {
+            return false;
         }
+        inputs().forEach(Input::commitTyped);
+        return car(problems::show).isEmpty();
     }
 
     @Override
@@ -116,6 +121,16 @@ public final class CarCard implements ConfigPart {
     @Override
     public boolean isChanged() {
         return typical.isChanged() || inputs().stream().anyMatch(Input::isChanged);
+    }
+
+    /** The car as entered, after its record checked it; a refused value goes to {@code refused}. */
+    private Optional<Car> car(Consumer<InvalidSetting> refused) {
+        try {
+            return Optional.of(new Car(battery.value(), consumption.value(), distance.value()));
+        } catch (InvalidSetting e) {
+            refused.accept(e);
+            return Optional.empty();
+        }
     }
 
     private void useTypical() {

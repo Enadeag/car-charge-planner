@@ -84,10 +84,10 @@ public final class SolarPage implements ConfigPage {
     }
 
     @Override
-    public Optional<EngineConfig> applyTo(EngineConfig config) {
+    public Optional<EngineConfig> read(EngineConfig config) {
         var panels = new ArrayList<PanelArray>();
         for (var card : cards) {
-            card.value().ifPresent(panels::add);
+            card.read().ifPresent(panels::add);
         }
         if (panels.size() < cards.size()) {
             return Optional.empty();
@@ -97,6 +97,12 @@ public final class SolarPage implements ConfigPage {
         }
         var typical = new TypicalValues(config.typical().system(), cards.stream().map(PanelArrayCard::typical).toList());
         return Optional.of(config.withSystem(config.system().withPanels(panels), typical));
+    }
+
+    /** Every card shows its own problems, also after one that is refused. */
+    @Override
+    public boolean showProblems() {
+        return cards.stream().map(PanelArrayCard::showProblems).toList().contains(true);
     }
 
     /** One more array, with typical values tagged as such until the owner enters their own. */

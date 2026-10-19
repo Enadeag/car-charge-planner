@@ -134,12 +134,19 @@ final class ProviderCard {
      */
     boolean markRefused() {
         rows.values().forEach(FieldRow::clearProblem);
-        var locked = inputs.entrySet().stream()
-                .filter(input -> input.getValue() instanceof SecretInput field && field.isLocked())
-                .map(Map.Entry::getKey).collect(Collectors.toSet());
-        var problems = new ProviderEntry(info, plain(), secret(), locked).problems(messages);
+        var problems = problems();
         problems.forEach((key, problem) -> rows.get(key).showProblem(problem));
         return !problems.isEmpty();
+    }
+
+    /**
+     * Whether a required setting is empty or a value has the wrong form, as {@link #markRefused()} finds; shows
+     * nothing.
+     *
+     * @return true when a setting is refused
+     */
+    boolean isRefused() {
+        return !problems().isEmpty();
     }
 
     /**
@@ -167,6 +174,14 @@ final class ProviderCard {
      */
     Card view() {
         return card;
+    }
+
+    /** Per refused setting its problem, in the owner's language. A locked secret counts as there. */
+    private Map<String, String> problems() {
+        var locked = inputs.entrySet().stream()
+                .filter(input -> input.getValue() instanceof SecretInput field && field.isLocked())
+                .map(Map.Entry::getKey).collect(Collectors.toSet());
+        return new ProviderEntry(info, plain(), secret(), locked).problems(messages);
     }
 
     private Map<String, String> values(boolean secret) {

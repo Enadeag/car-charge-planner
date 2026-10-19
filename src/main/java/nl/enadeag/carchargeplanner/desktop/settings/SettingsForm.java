@@ -137,16 +137,17 @@ final class SettingsForm {
         var config = stored.config();
         if (config.isPresent()) {
             for (var page : configPages) {
-                var applied = page.applyTo(config.get());
-                if (applied.isPresent()) {
-                    config = applied;
-                } else {
+                if (page.showProblems()) {
                     refused.add(page.category());
                 }
             }
         }
         if (!refused.isEmpty()) {
             return new Entered.Refused(refused);
+        }
+        for (var page : configPages) {
+            config = config.map(read -> page.read(read).orElseThrow(
+                    () -> new IllegalStateException(page.category() + " refused a value but showed no problem")));
         }
         var entered = new AllSettings(config, forecast.keys(), app.settings(), Optional.of(app.startsAtLogin()));
         return new Entered.Accepted(SettingsChanges.between(stored, entered));

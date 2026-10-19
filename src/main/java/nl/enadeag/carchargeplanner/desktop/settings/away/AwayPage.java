@@ -59,7 +59,12 @@ public final class AwayPage implements ConfigPage {
     }
 
     @Override
-    public Optional<EngineConfig> applyTo(EngineConfig config) {
-        return away.applyTo(config);
+    public Optional<EngineConfig> read(EngineConfig config) {
+        return away.read(config);
+    }
+
+    @Override
+    public boolean showProblems() {
+        return away.showProblems();
     }
 }

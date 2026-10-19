@@ -23,6 +23,16 @@ public record LocationEntry(double latitude, double longitude, ZoneId timezone) 
     }
 
     /**
+     * The coordinates, after their record checked them.
+     *
+     * @return the place
+     * @throws nl.enadeag.carchargeplanner.engine.setting.InvalidSetting when a coordinate is out of range
+     */
+    public Coordinates coordinates() {
+        return new Coordinates(latitude, longitude);
+    }
+
+    /**
      * A config with this location in it.
      *
      * @param config the config to change
@@ -30,7 +40,6 @@ public record LocationEntry(double latitude, double longitude, ZoneId timezone) 
      * @throws nl.enadeag.carchargeplanner.engine.setting.InvalidSetting when a coordinate is out of range
      */
     public EngineConfig applyTo(EngineConfig config) {
-        return config.withSystem(config.system().withLocation(new Coordinates(latitude, longitude), timezone),
-                config.typical());
+        return config.withSystem(config.system().withLocation(coordinates(), timezone), config.typical());
     }
 }

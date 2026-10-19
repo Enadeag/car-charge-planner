@@ -161,6 +161,22 @@ class SetUpViewTest {
     }
 
     @Test
+    void reachingAStepMarksNoFieldOfALaterOne() throws Exception {
+        var view = atSolar();
+        Fx.run(() -> view.show(SetUpStep.CHARGER));
+        var maximum = Fx.call(() -> {
+            setUp.type(view, TextKey.FIELD_MIN_CURRENT, "10");
+            setUp.type(view, TextKey.FIELD_MAX_CURRENT, "8");
+            return setUp.control(view, TextKey.FIELD_MAX_CURRENT);
+        });
+
+        Fx.run(() -> view.show(SetUpStep.WELCOME));
+
+        assertThat(Fx.call(maximum::getAccessibleHelp))
+                .doesNotContain(setUp.messages.text(TextKey.PROBLEM_BELOW_MINIMUM_CURRENT));
+    }
+
+    @Test
     void iDontKnowFillsInTypicalValuesAgainAndTagsThem() throws Exception {
         var view = atSolar();
         next(view, 1);

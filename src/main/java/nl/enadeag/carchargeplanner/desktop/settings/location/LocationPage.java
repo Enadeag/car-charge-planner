@@ -104,26 +104,42 @@ public final class LocationPage implements ConfigPage {
     }
 
     @Override
-    public Optional<EngineConfig> applyTo(EngineConfig config) {
-        problems.clear();
+    public Optional<EngineConfig> read(EngineConfig config) {
         if (!isChanged()) {
             return Optional.of(config);
         }
         try {
             return Optional.of(entry().applyTo(config));
-        } catch (InvalidSetting e) {
-            problems.show(e);
+        } catch (InvalidSetting _) {
             return Optional.empty();
         }
     }
 
+    @Override
+    public boolean showProblems() {
+        problems.clear();
+        if (!isChanged()) {
+            return false;
+        }
+        inputs().forEach(Input::commitTyped);
+        try {
+            entry().coordinates();
+            return false;
+        } catch (InvalidSetting e) {
+            problems.show(e);
+            return true;
+        }
+    }
+
     /**
-     * Says at the latitude that no place is chosen yet, as set-up needs one before it goes on.
+     * Says at the latitude that no place is chosen yet, as set-up needs one before it goes on. What the owner typed
+     * but did not confirm is confirmed first.
      *
      * @return true when no place is chosen, the coordinates still being {@link Coordinates#NOT_CHOSEN}; false when one
      *     is, and nothing is shown
      */
     public boolean markNotChosen() {
+        inputs().forEach(Input::commitTyped);
         if (entry().isChosen()) {
             return false;
         }
@@ -138,7 +154,6 @@ public final class LocationPage implements ConfigPage {
     }
 
     private LocationEntry entry() {
-        inputs().forEach(Input::commitTyped);
         return new LocationEntry(latitude.value(), longitude.value(), timezone.value());
     }
 

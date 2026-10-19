@@ -25,6 +25,7 @@ import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import javafx.scene.layout.Region;
 
 /** The wall charger, as far as it limits the charge power, with typical values on request. */
@@ -109,19 +110,31 @@ public final class ChargerPage implements ConfigPage {
     }
 
     @Override
-    public Optional<EngineConfig> applyTo(EngineConfig config) {
-        problems.clear();
+    public Optional<EngineConfig> read(EngineConfig config) {
         if (!isChanged()) {
             return Optional.of(config);
         }
+        return charger(_ -> { }).map(charger -> config.withSystem(config.system().withCharger(charger),
+                new TypicalValues(typical.appliedTo(config.typical().system()), config.typical().panels())));
+    }
+
+    @Override
+    public boolean showProblems() {
+        problems.clear();
+        if (!isChanged()) {
+            return false;
+        }
         inputs().forEach(Input::commitTyped);
+        return charger(problems::show).isEmpty();
+    }
+
+    /** The charger as entered, after its record checked it; a refused value goes to {@code refused}. */
+    private Optional<Charger> charger(Consumer<InvalidSetting> refused) {
         try {
-            var charger = new ChargerEntry(phases.value(), minAmps.value(), maxAmps.value(), volts.value(),
-                    efficiency.value()).charger();
-            return Optional.of(config.withSystem(config.system().withCharger(charger),
-                    new TypicalValues(typical.appliedTo(config.typical().system()), config.typical().panels())));
+            return Optional.of(new ChargerEntry(phases.value(), minAmps.value(), maxAmps.value(), volts.value(),
+                    efficiency.value()).charger());
         } catch (InvalidSetting e) {
-            problems.show(e);
+            refused.accept(e);
             return Optional.empty();
         }
     }
