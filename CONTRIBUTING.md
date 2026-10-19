@@ -55,8 +55,8 @@ A change comes with a test that fails without it.
 
 | When | Where | What |
 | --- | --- | --- |
-| Every pull request into `main` and every push to `main` | Linux CI (`ci.yml`) | `./mvnw -B clean verify -Pcoverage` with `CCP_REQUIRE_PLATFORM=1`: every test, the private-bus tests included, then the coverage floors below; the test and coverage reports are kept 7 days. |
-| The same, while the repository is private only for what touches Windows (see [Continuous integration](#continuous-integration)) | Windows CI (`ci.yml`) | `mvnw.cmd -B clean verify`: every test, the Windows-only ones included. |
+| Every pull request and every push to `main` | Linux CI (`ci.yml`) | `./mvnw -B clean verify -Pcoverage` with `CCP_REQUIRE_PLATFORM=1`: every test, the private-bus tests included, then the coverage floors below; the test and coverage reports are kept 7 days. |
+| The same | Windows CI (`ci.yml`) | `mvnw.cmd -B clean verify`: every test, the Windows-only ones included. |
 | A change to `pom.xml`, the test set-up or `platform.windows`, before the pull request | Windows over ssh, by the maintainer | `mvnw.cmd -B clean verify`. Without a logon session the Credential Manager test only checks that this counts as no keychain. |
 | A pull request into `main` that touches the engine or its tests | `mutation.yml` | PIT on the engine; it fails when fewer than 94% of the mutants are killed. |
 | Weekly (early Monday, 03:23 UTC) and by hand | `mutation.yml` | PIT on the engine and on the desktop's logic without JavaFX (threshold 89%), each with its HTML report for 14 days, and the whole build with the test classes in a fresh random order. |
@@ -138,8 +138,8 @@ The app icon's drawings are in `src/packaging/icons/`: `car-charge-planner.svg` 
 
 The workflows are in `.github/workflows/`:
 
-- `ci.yml` runs `./mvnw -B clean verify` for every pull request into `main` and every push to `main`, on Linux (with `dbus-daemon`, GNOME Keyring and `desktop-file-validate`, so the private-bus tests run, with `CCP_REQUIRE_PLATFORM=1` and the coverage floors) and on Windows. It keeps the test reports, and on Linux the coverage report, for 7 days. A change to documentation only (`*.md`, `docs/` except `docs/example-engine.json`, which the tests read) skips both, and GitHub counts a skipped job as passed. While the repository is private, Windows minutes count double, so a pull request builds on Windows only when it touches `platform/windows`, the Windows packaging, `pom.xml`, the Maven wrapper or the workflows; every push to `main` still builds on Windows. A stacked pull request runs once it is retargeted to `main`. The public launch (#31) turns Windows back on for every pull request. The macOS job is switched off until the JavaFX tests run on the macOS runner (#134); the maintainer decides when it comes back.
-- `windows-installer.yml` builds the installer with `tools\package-windows.ps1`, installs it silently, runs the installed `car-charge-planner.exe quit`, uninstalls it and keeps the installer as an artifact for 14 days. While the repository is private it runs only by hand and for a release.
+- `ci.yml` runs `./mvnw -B clean verify` for every pull request and every push to `main`, on Linux (with `dbus-daemon`, GNOME Keyring and `desktop-file-validate`, so the private-bus tests run, with `CCP_REQUIRE_PLATFORM=1` and the coverage floors) and on Windows. It keeps the test reports, and on Linux the coverage report, for 7 days. A change to documentation only (`*.md`, `docs/` except `docs/example-engine.json`, which the tests read) skips both, and GitHub counts a skipped job as passed. The macOS job is switched off until the JavaFX tests run on the macOS runner (#134); the maintainer decides when it comes back.
+- `windows-installer.yml` builds the installer with `tools\package-windows.ps1`, installs it silently, runs the installed `car-charge-planner.exe quit`, uninstalls it and keeps the installer as an artifact for 14 days. It runs when the packaging changes on `main`, by hand, and for a release.
 - `mutation.yml` runs PIT and the tests in a random order, weekly and by hand, and PIT on the engine for a pull request that touches it; see [What is tested where](#what-is-tested-where).
 - `release.yml` makes a release; see below.
 

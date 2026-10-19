@@ -1,9 +1,17 @@
 name: Windows installer
 
-# Windows minutes count double while the repository is private, so the installer is built only by hand and for a
-# release (release.yml calls this on a version tag); #31 brings back a build on main when the packaging changes.
-# It builds with the release's exact Java version and without a Maven cache, as release.yml explains.
+# The installer is built when what goes into it changes on main, by hand, and for a release (release.yml calls this on
+# a version tag). It builds with the release's exact Java version and without a Maven cache, as release.yml explains.
 on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/package-windows.ps1"
+      - "tools/install-wix.ps1"
+      - "src/packaging/windows/**"
+      - "pom.xml"
+      - ".mvn/**"
+      - ".github/workflows/windows-installer.yml"
   workflow_dispatch:
   workflow_call:
 
