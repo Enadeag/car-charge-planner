@@ -22,7 +22,9 @@ or the reverse, try it on JDK 25. `exec:exec` starts the app with the JDK that r
 first `java` on the `PATH`.
 
 `.editorconfig` holds the house style for editors: UTF-8, LF line ends, a final newline, 4 spaces (2 in XML, YAML,
-JSON and scripts), lines of at most 120 characters. There is no formatter.
+JSON and scripts), lines of at most 120 characters. There is no formatter. In IntelliJ IDEA, set Maven home to
+*Bundled* (Settings, Build Tools, Maven): its Maven connector fails on the wrapper's Maven 3.10.0, while `./mvnw` builds
+as usual.
 
 ```bash
 ./mvnw verify                                                           # build and test; nothing touches the network or your desktop
