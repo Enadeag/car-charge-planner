@@ -9,7 +9,8 @@ import nl.enadeag.carchargeplanner.engine.Outlook;
 /**
  * Keeps the tray's menu and tooltip in the language spoken now: it shows each outlook on the tray, and when the owner
  * chooses another language it gives the menu its new labels and shows the latest outlook again in that language.
- * Before the first set-up, the menu's Settings entry says that it sets the app up.
+ * Before the first set-up, the menu's Settings entry says that it sets the app up; with a config file that cannot be
+ * used, it stays Settings.
  *
  * <p>Its methods may be called from any thread; the tray is always told in the order they were called.
  */
@@ -19,7 +20,8 @@ public final class TrayPresenter {
     private final LanguageChoice language;
     /** The latest outlook; null until the engine gives one. */
     private Outlook outlook;
-    private boolean notSetUp;
+    /** True while the latest outlook is {@link Outlook.NotSetUp}; a config file that cannot be used is not that. */
+    private boolean beforeFirstSetUp;
 
     /**
      * Shows that the forecast is being fetched, and follows the language from now on.
@@ -49,9 +51,9 @@ public final class TrayPresenter {
 
     /** Relabels the menu when the outlook moves into or out of the state before the first set-up. */
     private void followSetUpState(Outlook outlook) {
-        var missing = outlook instanceof Outlook.NotSetUp;
-        if (missing != notSetUp) {
-            notSetUp = missing;
+        var notSetUp = outlook instanceof Outlook.NotSetUp;
+        if (notSetUp != beforeFirstSetUp) {
+            beforeFirstSetUp = notSetUp;
             tray.setMenuLabels(currentMenuLabels(language.messages()));
         }
     }
@@ -59,7 +61,7 @@ public final class TrayPresenter {
     /** Before the first set-up, the Settings entry is the way into set-up, and says so. */
     private Tray.MenuLabels currentMenuLabels(Messages messages) {
         var labels = plainMenuLabels(messages);
-        return notSetUp ? new Tray.MenuLabels(labels.open(), messages.text(TextKey.MENU_SET_UP), labels.about(),
+        return beforeFirstSetUp ? new Tray.MenuLabels(labels.open(), messages.text(TextKey.MENU_SET_UP), labels.about(),
                 labels.quit()) : labels;
     }
 

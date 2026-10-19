@@ -10,7 +10,10 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
-/** Why there is no plan to show: still fetching, not set up, or no forecast; before the first set-up, a way into it. */
+/**
+ * Why there is no plan to show: still fetching, not set up, a config file that cannot be used, or no forecast; before
+ * the first set-up, a way into it.
+ */
 final class NoPlanCard extends VBox {
 
     /**

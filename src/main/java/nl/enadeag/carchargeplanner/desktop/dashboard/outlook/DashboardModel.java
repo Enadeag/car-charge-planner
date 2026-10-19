@@ -42,7 +42,7 @@ public sealed interface DashboardModel {
     }
 
     /**
-     * No plan to show (still fetching, not set up, no forecast), and why.
+     * No plan to show (still fetching, not set up, a config file that cannot be used, no forecast), and why.
      *
      * @param headline the situation in a few words, such as "No forecast"
      * @param detail the reason, such as "Could not reach Open-Meteo"; may be empty
