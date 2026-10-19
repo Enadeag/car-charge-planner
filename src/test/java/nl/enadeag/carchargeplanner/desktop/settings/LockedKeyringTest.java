@@ -140,7 +140,7 @@ class LockedKeyringTest {
 
     @Test
     void whenTheOwnerDismissesThePromptTheKeyGoesToTheFileAndThePageSaysSo() throws Exception {
-        keychain.answer = Optional.of(UnlockOutcome.DISMISSED);
+        keychain.answer = UnlockOutcome.DISMISSED;
         var view = open();
 
         assertThat(Fx.call(() -> {
@@ -159,7 +159,7 @@ class LockedKeyringTest {
 
     @Test
     void whenTheKeyringCannotBeUnlockedNothingIsSavedAndTheOwnerIsToldToUnlockItAndSaveAgain() throws Exception {
-        keychain.unlockFails = Optional.of(KeychainException.Kind.REFUSED);
+        keychain.unlockFails = KeychainException.Kind.REFUSED;
         var view = open();
         var before = new ConfigFile(settings.configPath).read();
 
@@ -179,7 +179,7 @@ class LockedKeyringTest {
 
     @Test
     void closingWhileSaveWaitsForTheOwnerStopsTheWaitAndKeepsTheWindowOpen() throws Exception {
-        keychain.answer = Optional.empty();
+        keychain.answer = null;
         var view = open(VirtualThreads.background());
         SettingsFixture.waitFor(() -> !view.isReading());
 

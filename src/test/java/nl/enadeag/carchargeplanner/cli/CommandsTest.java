@@ -59,7 +59,8 @@ class CommandsTest {
     /** Start at login kept in a field, which a test can make fail. */
     private static final class FakeStartAtLogin implements StartAtLogin {
         boolean on;
-        Optional<IOException> failure = Optional.empty();
+        /** Null unless switching fails. */
+        IOException failure;
 
         @Override
         public boolean isOn() {
@@ -68,16 +69,16 @@ class CommandsTest {
 
         @Override
         public void switchOn() throws IOException {
-            if (failure.isPresent()) {
-                throw failure.get();
+            if (failure != null) {
+                throw failure;
             }
             on = true;
         }
 
         @Override
         public void switchOff() throws IOException {
-            if (failure.isPresent()) {
-                throw failure.get();
+            if (failure != null) {
+                throw failure;
             }
             on = false;
         }
@@ -232,7 +233,7 @@ class CommandsTest {
 
     @Test
     void startAtLoginThatCannotBeWrittenFailsWithTheReason() {
-        startAtLogin.failure = Optional.of(new IOException("the folder is read-only"));
+        startAtLogin.failure = new IOException("the folder is read-only");
 
         assertThat(commands().run(Command.START_AT_LOGIN_ON))
                 .isEqualTo(failure(TextKey.CLI_START_AT_LOGIN_FAILED, "the folder is read-only"));

@@ -367,7 +367,7 @@ class ApiKeysTest {
     void whenTheOwnerDismissesThePromptTheKeysGoToTheFileAndMoveIntoTheKeychainOnceItIsUnlocked()
             throws SecretsProblem {
         var lockable = lockedWithTheKeys();
-        lockable.answer = Optional.of(UnlockOutcome.DISMISSED);
+        lockable.answer = UnlockOutcome.DISMISSED;
         var keys = keys(lockable);
         var changed = new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW")));
 
@@ -389,7 +389,7 @@ class ApiKeysTest {
     @Test
     void whenTheKeychainCannotBeUnlockedByTheAppNothingIsSavedAndTheOwnerIsToldItIsLocked() throws SecretsProblem {
         var lockable = lockedWithTheKeys();
-        lockable.unlockFails = Optional.of(KeychainException.Kind.REFUSED);
+        lockable.unlockFails = KeychainException.Kind.REFUSED;
         var before = Map.copyOf(lockable.entries);
 
         assertThatThrownBy(() -> keys(lockable).save(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW")))))
@@ -404,7 +404,7 @@ class ApiKeysTest {
     @Test
     void whenTheSecretServiceTurnsOutToBeGoneAtUnlockingTheKeysGoToTheFile() throws SecretsProblem {
         var lockable = lockedWithTheKeys();
-        lockable.unlockFails = Optional.of(KeychainException.Kind.UNAVAILABLE);
+        lockable.unlockFails = KeychainException.Kind.UNAVAILABLE;
 
         keys(lockable).save(KEYS);
 
@@ -414,7 +414,7 @@ class ApiKeysTest {
     @Test
     void aSaveThatWaitsForTheOwnerHoldsUpNoLoadAndStopsWaitingWhenAsked() throws Exception {
         var lockable = lockedWithTheKeys();
-        lockable.answer = Optional.empty();
+        lockable.answer = null;
         var keys = keys(lockable);
         var outcome = new AtomicReference<Throwable>();
         var saving = Thread.ofVirtual().start(() -> {
@@ -476,7 +476,7 @@ class ApiKeysTest {
     @Test
     void aKeyEnteredWhileLockedGoesAloneToTheFileWhenDismissedAndTheKeychainsOtherKeysStay() throws SecretsProblem {
         var lockable = lockedWithTheKeys();
-        lockable.answer = Optional.of(UnlockOutcome.DISMISSED);
+        lockable.answer = UnlockOutcome.DISMISSED;
         var before = Map.copyOf(lockable.entries);
         var keys = keys(lockable);
 
@@ -747,9 +747,9 @@ class ApiKeysTest {
         try (var log = LogCapture.of(ApiKeys.class)) {
             keys(lockable).save(KEYS);
             lockable.locked = true;
-            lockable.answer = Optional.of(UnlockOutcome.DISMISSED);
+            lockable.answer = UnlockOutcome.DISMISSED;
             keys(lockable).save(KEYS);
-            lockable.unlockFails = Optional.of(KeychainException.Kind.REFUSED);
+            lockable.unlockFails = KeychainException.Kind.REFUSED;
             assertThatThrownBy(() -> keys(lockable).save(KEYS)).isInstanceOf(SecretsProblem.class);
 
             assertThat(log.lines()).containsExactly(

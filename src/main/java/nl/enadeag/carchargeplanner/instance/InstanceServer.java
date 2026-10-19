@@ -29,10 +29,11 @@ final class InstanceServer implements AutoCloseable {
 
     private final ServerSocketChannel channel;
     private final Path socket;
-    private final Optional<UserPrincipal> user;
+    /** The only user whose connections are taken; null where the system cannot name a socket's peer. */
+    private final UserPrincipal user;
     private final Duration timeout;
 
-    private InstanceServer(ServerSocketChannel channel, Path socket, Optional<UserPrincipal> user, Duration timeout) {
+    private InstanceServer(ServerSocketChannel channel, Path socket, UserPrincipal user, Duration timeout) {
         this.channel = channel;
         this.socket = socket;
         this.user = user;
@@ -59,7 +60,7 @@ final class InstanceServer implements AutoCloseable {
             channel.close();
             throw e;
         }
-        var server = new InstanceServer(channel, socket, user, timeout);
+        var server = new InstanceServer(channel, socket, user.orElse(null), timeout);
         if (user.isPresent()) {
             try {
                 Files.setPosixFilePermissions(socket, PosixFilePermissions.fromString("rw-------"));
@@ -113,10 +114,10 @@ final class InstanceServer implements AutoCloseable {
     }
 
     private boolean fromUser(SocketChannel connection) throws IOException {
-        if (user.isEmpty() || !connection.supportedOptions().contains(ExtendedSocketOptions.SO_PEERCRED)) {
+        if (user == null || !connection.supportedOptions().contains(ExtendedSocketOptions.SO_PEERCRED)) {
             return true;
         }
-        return connection.getOption(ExtendedSocketOptions.SO_PEERCRED).user().equals(user.get());
+        return connection.getOption(ExtendedSocketOptions.SO_PEERCRED).user().equals(user);
     }
 
     /** Stops listening and removes the socket, so the next start does not find it left behind. */

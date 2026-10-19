@@ -2,7 +2,6 @@ package nl.enadeag.carchargeplanner.desktop.settings;
 
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import java.util.Optional;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -17,7 +16,8 @@ final class FieldRow extends VBox {
 
     private final Input input;
     private final String name;
-    private final Optional<Label> label;
+    /** The name on screen; left out of the row, and so never seen, when the name is empty. */
+    private final Label label;
     private final Label hint = paragraph("", "note");
     private final Label problem = paragraph("", "field-problem");
     private final Label tag = new Label();
@@ -35,16 +35,13 @@ final class FieldRow extends VBox {
         this.name = name;
         var line = new HBox();
         line.getStyleClass().add("field-line");
-        if (name.isEmpty()) {
-            label = Optional.empty();
-        } else {
-            var shown = paragraph(name, "field-label");
-            shown.setLabelFor(input.focusable());
-            shown.setMaxWidth(Double.MAX_VALUE);
-            HBox.setHgrow(shown, Priority.ALWAYS);
-            line.getChildren().add(shown);
+        label = paragraph(name, "field-label");
+        if (!name.isEmpty()) {
+            label.setLabelFor(input.focusable());
+            label.setMaxWidth(Double.MAX_VALUE);
+            HBox.setHgrow(label, Priority.ALWAYS);
+            line.getChildren().add(label);
             input.focusable().setAccessibleText(name);
-            label = Optional.of(shown);
         }
         tag.getStyleClass().add("field-tag");
         tag.setMinWidth(USE_PREF_SIZE);
@@ -111,7 +108,7 @@ final class FieldRow extends VBox {
      */
     void setSpokenName(String spoken) {
         // a text field or combo box is named after its label, a spinner or check box after its own text
-        label.ifPresent(shown -> shown.setAccessibleText(spoken.equals(name) ? null : spoken));
+        label.setAccessibleText(spoken.equals(name) ? null : spoken);
         input.focusable().setAccessibleText(spoken);
     }
 

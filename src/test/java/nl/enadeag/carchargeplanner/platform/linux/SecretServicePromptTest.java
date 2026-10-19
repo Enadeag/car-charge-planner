@@ -85,7 +85,8 @@ class SecretServicePromptTest {
 
     /** The prompt: shows, and ends as the owner answers, or dismissed when the app takes it away. */
     private final class OwnersPrompt implements SecretService.Prompt {
-        final Optional<Boolean> dismissedByOwner;
+        /** How the owner answers: true to dismiss, false to accept; null to leave the prompt unanswered. */
+        final Boolean dismissedByOwner;
         final CountDownLatch shown = new CountDownLatch(1);
         final CompletableFuture<String> windowId = new CompletableFuture<>();
         final CountDownLatch takenAway = new CountDownLatch(1);
@@ -97,7 +98,7 @@ class SecretServicePromptTest {
         }
 
         OwnersPrompt(Optional<Boolean> dismissedByOwner, CountDownLatch replyHeld) {
-            this.dismissedByOwner = dismissedByOwner;
+            this.dismissedByOwner = dismissedByOwner.orElse(null);
             this.replyHeld = replyHeld;
         }
 
@@ -110,7 +111,9 @@ class SecretServicePromptTest {
             } catch (InterruptedException _) {
                 Thread.currentThread().interrupt();
             }
-            dismissedByOwner.ifPresent(this::complete);
+            if (dismissedByOwner != null) {
+                complete(dismissedByOwner);
+            }
         }
 
         @Override

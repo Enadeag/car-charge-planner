@@ -2,7 +2,6 @@ package nl.enadeag.carchargeplanner.engine;
 
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import java.lang.System.Logger.Level;
-import java.util.Optional;
 
 /**
  * Whether the config file could be planned with the last time, so that a config that becomes unusable, one whose
@@ -13,8 +12,8 @@ final class ConfigHealth {
 
     private static final System.Logger LOG = System.getLogger(ConfigHealth.class.getName());
 
-    /** The problem logged last; empty while the config is usable, as it is taken to be at the start. */
-    private Optional<String> problem = Optional.empty();
+    /** The problem logged last; null while the config is usable, as it is taken to be at the start. */
+    private String problem;
 
     /** Starts taking the config to be usable, which is not logged. */
     ConfigHealth() {
@@ -22,9 +21,9 @@ final class ConfigHealth {
 
     /** A plan was made with the config; logged when it could not be used before. */
     synchronized void usable() {
-        if (problem.isPresent()) {
+        if (problem != null) {
             LOG.log(Level.INFO, "the config file can be used again");
-            problem = Optional.empty();
+            problem = null;
         }
     }
 
@@ -38,10 +37,10 @@ final class ConfigHealth {
     synchronized void unusable(ConfigProblem found) {
         var text = found.kind() == ConfigProblem.Kind.MISSING ? "there is no config file at " + found.file()
                 : "the config file " + found.file() + " cannot be used (" + found.kind() + "): " + found.detail();
-        if (problem.equals(Optional.of(text))) {
+        if (text.equals(problem)) {
             return;
         }
-        problem = Optional.of(text);
+        problem = text;
         LOG.log(found.kind() == ConfigProblem.Kind.MISSING ? Level.INFO : Level.WARNING, text);
     }
 }

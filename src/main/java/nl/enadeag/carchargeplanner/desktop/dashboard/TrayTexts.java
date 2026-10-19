@@ -6,7 +6,6 @@ import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.Outlook;
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
-import java.util.Optional;
 
 /**
  * Keeps the tray's menu and tooltip in the language spoken now: it shows each outlook on the tray, and when the owner
@@ -19,7 +18,8 @@ public final class TrayTexts {
 
     private final Tray tray;
     private final LanguageChoice language;
-    private Optional<Outlook> outlook = Optional.empty();
+    /** The latest outlook; null until the engine gives one. */
+    private Outlook outlook;
     private boolean notSetUp;
 
     /**
@@ -42,7 +42,7 @@ public final class TrayTexts {
      * @param outlook the engine's latest plan, or why there is none; never null
      */
     public synchronized void show(Outlook outlook) {
-        this.outlook = Optional.of(outlook);
+        this.outlook = outlook;
         var missing = outlook instanceof Outlook.NotSetUp none && none.kind() == ConfigProblem.Kind.MISSING;
         if (missing != notSetUp) {
             notSetUp = missing;
@@ -67,6 +67,6 @@ public final class TrayTexts {
     private synchronized void speak(Messages messages) {
         tray.showLabels(labels(messages));
         var mapper = new TrayStatusMapper(messages);
-        tray.showStatus(outlook.map(mapper::map).orElseGet(mapper::loading));
+        tray.showStatus(outlook == null ? mapper.loading() : mapper.map(outlook));
     }
 }

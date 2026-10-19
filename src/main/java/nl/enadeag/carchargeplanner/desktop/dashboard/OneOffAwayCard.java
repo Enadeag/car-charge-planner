@@ -6,7 +6,6 @@ import static nl.enadeag.carchargeplanner.desktop.dashboard.Texts.paragraph;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
-import java.util.Optional;
 import java.util.function.Consumer;
 import javafx.scene.control.Button;
 import javafx.scene.control.Tooltip;
@@ -26,9 +25,12 @@ final class OneOffAwayCard extends VBox {
     private final Button add;
     private final VBox list = new VBox();
     private final AwayEditor editor;
-    private Optional<Consumer<AwayPeriod>> added = Optional.empty();
-    private Optional<Consumer<AwayPeriod>> removed = Optional.empty();
-    private Optional<DayModel> day = Optional.empty();
+    private Consumer<AwayPeriod> added = _ -> { };
+    private Consumer<AwayPeriod> removed = _ -> { };
+    /** True once {@link #onChange} gave somewhere to send the periods. */
+    private boolean changeable;
+    /** The selected day; null until one shows. */
+    private DayModel day;
     private AwayModel model;
 
     /**
@@ -48,7 +50,7 @@ final class OneOffAwayCard extends VBox {
             edit(true);
             resized.run();
         });
-        editor = new AwayEditor(period -> added.ifPresent(handler -> handler.accept(period)), this::closeEntry, resized,
+        editor = new AwayEditor(period -> added.accept(period), this::closeEntry, resized,
                 messages);
         var spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -68,8 +70,8 @@ final class OneOffAwayCard extends VBox {
      * @param away the coming away periods and the time of the plan
      */
     void show(DayModel selected, AwayModel away) {
-        boolean sameDay = day.map(DayModel::date).filter(selected.date()::equals).isPresent();
-        day = Optional.of(selected);
+        boolean sameDay = day != null && day.date().equals(selected.date());
+        day = selected;
         model = away;
         var hint = messages.text(TextKey.ONE_OFF_ADD_HINT, selected.title());
         add.setTooltip(new Tooltip(hint));
@@ -91,8 +93,9 @@ final class OneOffAwayCard extends VBox {
      * @param removedHandler gets a period the owner removed, as the model gave it; called on the JavaFX thread
      */
     void onChange(Consumer<AwayPeriod> addedHandler, Consumer<AwayPeriod> removedHandler) {
-        added = Optional.of(addedHandler);
-        removed = Optional.of(removedHandler);
+        added = addedHandler;
+        removed = removedHandler;
+        changeable = true;
     }
 
     /**
@@ -101,7 +104,7 @@ final class OneOffAwayCard extends VBox {
      * @return true once {@link #onChange} gave somewhere to send them
      */
     boolean usable() {
-        return added.isPresent() && removed.isPresent();
+        return changeable;
     }
 
     /**
@@ -121,7 +124,7 @@ final class OneOffAwayCard extends VBox {
         remove.getStyleClass().addAll("flat", "small");
         remove.setMinWidth(USE_PREF_SIZE);
         remove.setAccessibleText(entry.removeSpoken());
-        remove.setOnAction(_ -> removed.ifPresent(handler -> handler.accept(entry.period())));
+        remove.setOnAction(_ -> removed.accept(entry.period()));
         var row = new HBox(text, remove);
         row.getStyleClass().add("away-row");
         return row;
@@ -135,13 +138,13 @@ final class OneOffAwayCard extends VBox {
     }
 
     private void edit(boolean open) {
-        boolean opens = open && day.isPresent() && usable();
+        boolean opens = open && day != null && usable();
         editor.setVisible(opens);
         editor.setManaged(opens);
         add.setVisible(!opens);
         add.setManaged(!opens);
         if (opens) {
-            editor.start(day.get().date(), model.zone(), model.now());
+            editor.start(day.date(), model.zone(), model.now());
         }
     }
 }

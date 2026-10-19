@@ -68,7 +68,8 @@ final class SettingsView extends BorderPane {
     private final HBox actions;
     private final HBox confirm;
     private final Set<Category> refused = EnumSet.noneOf(Category.class);
-    private Optional<SaveOutcome> outcome = Optional.empty();
+    /** The outcome of the last Save; null before the first, and after the stores were read again. */
+    private SaveOutcome outcome;
     private Runnable afterClose = () -> { };
     private State state = State.READING;
     /** True while a read or a Save runs in the background. */
@@ -213,7 +214,7 @@ final class SettingsView extends BorderPane {
             return;
         }
         refused.clear();
-        outcome = Optional.empty();
+        outcome = null;
         categories.refresh();
         showActions();
         enter(State.READING);
@@ -239,7 +240,9 @@ final class SettingsView extends BorderPane {
     void continueFrom(SettingsView before) {
         show(before.shown());
         reload(() -> {
-            before.outcome.ifPresent(this::showOutcome);
+            if (before.outcome != null) {
+                showOutcome(before.outcome);
+            }
             categories.refresh();
         });
     }
@@ -313,7 +316,7 @@ final class SettingsView extends BorderPane {
      * @return the outcome; empty before the first Save, while one runs, and after the stores were read again
      */
     Optional<SaveOutcome> outcome() {
-        return state == State.SAVING ? Optional.empty() : outcome;
+        return state == State.SAVING ? Optional.empty() : Optional.ofNullable(outcome);
     }
 
     /**
@@ -346,7 +349,7 @@ final class SettingsView extends BorderPane {
 
     /** The status line, and the categories marked, after a Save. */
     private void showOutcome(SaveOutcome result) {
-        outcome = Optional.of(result);
+        outcome = result;
         refused.clear();
         status.getStyleClass().remove("problem");
         switch (result) {

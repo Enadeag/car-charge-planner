@@ -60,7 +60,8 @@ public final class Pictures {
         private final Stage stage = new Stage();
         private final double zoom;
         private final double width;
-        private final Optional<Double> height;
+        /** Null for as tall as the screen asks at its width. */
+        private final Double height;
 
         /**
          * Shows a screen.
@@ -76,7 +77,7 @@ public final class Pictures {
                 Optional<Double> height) {
             this.zoom = zoom;
             this.width = width;
-            this.height = height;
+            this.height = height.orElse(null);
             holder = new StackPane(screen);
             if (frame == Frame.WINDOW) {
                 holder.setStyle("-fx-background-color: -color-bg-default;");
@@ -130,7 +131,7 @@ public final class Pictures {
             }
             // twice: a page that scrolls knows its height only once it is laid out
             for (int i = 0; i < 2; i++) {
-                holder.resize(width, height.orElseGet(() -> holder.prefHeight(width)));
+                holder.resize(width, height != null ? height : holder.prefHeight(width));
                 holder.layout();
             }
         }

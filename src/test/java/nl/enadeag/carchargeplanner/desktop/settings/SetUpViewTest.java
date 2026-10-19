@@ -269,7 +269,7 @@ class SetUpViewTest {
     void finishWhileTheKeyringStaysLockedSavesNothingAndSaysToUnlockItAndFinishAgain() throws Exception {
         var keychain = new LockableKeychain();
         keychain.locked = true;
-        keychain.unlockFails = Optional.of(KeychainException.Kind.REFUSED);
+        keychain.unlockFails = KeychainException.Kind.REFUSED;
         setUp = new SetUpFixture(folder, Language.ENGLISH, keychain, new Background(Runnable::run, Runnable::run));
         var view = atSolar();
         Fx.run(() -> view.show(SetUpStep.FORECAST));

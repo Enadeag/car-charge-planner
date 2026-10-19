@@ -61,14 +61,14 @@ public final class ApiKeys implements SecretsSource {
     /** Held for a whole save, which may wait for the owner without holding the turn, so saves never mix. */
     private final Object saving = new Object();
     // the fields below belong to whoever holds the turn
-    /** The keys as the keychain gave or took them last; empty when they must be read. */
-    private Optional<Secrets> remembered = Optional.empty();
-    /** Until when the keychain is left alone after it could not be used or read; empty when it may be asked. */
-    private Optional<Instant> askAgainAt = Optional.empty();
-    /** Why the keychain could not be read, while it is left alone; empty when it could not be used at all instead. */
-    private Optional<SecretsProblem> unreadable = Optional.empty();
-    /** Where the keys were kept when that was found last; empty until it is first known. */
-    private Optional<KeyStorage> where = Optional.empty();
+    /** The keys as the keychain gave or took them last; null when they must be read. */
+    private Secrets remembered;
+    /** Until when the keychain is left alone after it could not be used or read; null when it may be asked. */
+    private Instant askAgainAt;
+    /** Why the keychain could not be read, while it is left alone; null when it could not be used at all instead. */
+    private SecretsProblem unreadable;
+    /** Where the keys were kept when that was found last; null until it is first known. */
+    private KeyStorage where;
 
     /**
      * Makes the store on the system's clock; nothing is read or written yet.
@@ -111,16 +111,16 @@ public final class ApiKeys implements SecretsSource {
     @Override
     public Secrets load() throws SecretsProblem {
         synchronized (turn) {
-            if (remembered.isPresent()) {
-                return remembered.get();
+            if (remembered != null) {
+                return remembered;
             }
             if (leftAlone()) {
-                if (unreadable.isPresent()) {
-                    throw unreadable.get();
+                if (unreadable != null) {
+                    throw unreadable;
                 }
                 return fromFile();
             }
-            unreadable = Optional.empty();
+            unreadable = null;
             switch (keychain.state()) {
                 case UNUSABLE -> {
                     leaveAlone();
@@ -144,7 +144,7 @@ public final class ApiKeys implements SecretsSource {
             }
             try {
                 var secrets = keychain.read();
-                remembered = Optional.of(secrets);
+                remembered = secrets;
                 keptIn(KeyStorage.KEYCHAIN, "");
                 return secrets;
             } catch (KeychainException e) {
@@ -154,7 +154,7 @@ public final class ApiKeys implements SecretsSource {
                 var problem = new SecretsProblem(
                         "The system keychain could not be read. Unlock it, or enter the keys again.");
                 leaveAlone();
-                unreadable = Optional.of(problem);
+                unreadable = problem;
                 keptIn(KeyStorage.KEYCHAIN, "");
                 throw problem;
             }
@@ -254,7 +254,7 @@ public final class ApiKeys implements SecretsSource {
             } catch (SecretsProblem _) {
                 // where they are kept is known all the same
             }
-            return where.orElse(KeyStorage.FILE);
+            return where == null ? KeyStorage.FILE : where;
         }
     }
 
@@ -274,9 +274,9 @@ public final class ApiKeys implements SecretsSource {
      */
     private Stored intoKeychain(Edit edit) throws SecretsProblem {
         synchronized (turn) {
-            remembered = Optional.empty();
-            askAgainAt = Optional.empty();
-            unreadable = Optional.empty();
+            remembered = null;
+            askAgainAt = null;
+            unreadable = null;
             switch (keychain.state()) {
                 case UNUSABLE -> {
                     intoFile(edit, "the system keychain cannot be used");
@@ -293,7 +293,7 @@ public final class ApiKeys implements SecretsSource {
                 var secrets = edit.apply(edit.replaces() ? Secrets.NONE : storedInKeychain());
                 keychain.write(secrets);
                 file.delete();
-                remembered = Optional.of(secrets);
+                remembered = secrets;
                 keptIn(KeyStorage.KEYCHAIN, "");
                 return Stored.IN_KEYCHAIN;
             } catch (KeychainException e) {
@@ -379,11 +379,11 @@ public final class ApiKeys implements SecretsSource {
     }
 
     private boolean leftAlone() {
-        return askAgainAt.filter(clock.instant()::isBefore).isPresent();
+        return askAgainAt != null && clock.instant().isBefore(askAgainAt);
     }
 
     private void leaveAlone() {
-        askAgainAt = Optional.of(clock.instant().plus(RETRY_AFTER));
+        askAgainAt = clock.instant().plus(RETRY_AFTER);
     }
 
     private Secrets fromFile() throws SecretsProblem {
@@ -395,7 +395,7 @@ public final class ApiKeys implements SecretsSource {
      * keychain is normal.
      */
     private void keptIn(KeyStorage storage, String why) {
-        if (where.equals(Optional.of(storage))) {
+        if (where == storage) {
             return;
         }
         switch (storage) {
@@ -404,9 +404,9 @@ public final class ApiKeys implements SecretsSource {
             case LOCKED_KEYCHAIN -> LOG.log(Level.WARNING, "API keys are kept in the system keychain, which is locked: "
                     + "they can be read once it is unlocked");
             case KEYCHAIN -> LOG.log(Level.INFO, "API keys are kept in the system keychain"
-                    + (where.isPresent() ? " again" : ""));
+                    + (where != null ? " again" : ""));
         }
-        where = Optional.of(storage);
+        where = storage;
     }
 
     /**

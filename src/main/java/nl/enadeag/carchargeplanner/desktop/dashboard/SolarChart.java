@@ -57,7 +57,8 @@ final class SolarChart extends Region {
     private List<Point2D> before = List.of();
     private List<Point2D> target = List.of();
     private List<Point2D> shown = List.of();
-    private Optional<Step> selected = Optional.empty();
+    /** The step read out; null while none is. */
+    private Step selected;
     /** Whether the pointer chose the step read out, rather than the arrow keys. */
     private boolean pointed;
     private PlotArea plot;
@@ -135,7 +136,7 @@ final class SolarChart extends Region {
      * @return the step pointed at or chosen with the arrow keys; empty when none is
      */
     Optional<Step> selected() {
-        return selected;
+        return Optional.ofNullable(selected);
     }
 
     /**
@@ -230,17 +231,17 @@ final class SolarChart extends Region {
     }
 
     private void placeReadout() {
-        readout.setVisible(selected.isPresent());
-        pointer.setVisible(selected.isPresent());
-        selected.ifPresent(step -> {
-            double x = plot.x(step.midHour());
+        readout.setVisible(selected != null);
+        pointer.setVisible(selected != null);
+        if (selected != null) {
+            double x = plot.x(selected.midHour());
             vertical(pointer, x, plot.top(), plot.bottom());
             double width = readout.prefWidth(-1);
             double height = readout.prefHeight(width);
             double left = Math.clamp(x - width / 2, 0, Math.max(0, getWidth() - width));
-            double y = Math.max(0, plot.y(step.kw()) - height - READOUT_GAP);
+            double y = Math.max(0, plot.y(selected.kw()) - height - READOUT_GAP);
             readout.resizeRelocate(left, y, width, height);
-        });
+        }
     }
 
     /**
@@ -282,14 +283,14 @@ final class SolarChart extends Region {
             return;
         }
         var steps = model.steps();
-        int index = selected.map(steps::indexOf).orElse(-1);
+        int index = selected == null ? -1 : steps.indexOf(selected);
         int next = index < 0 ? (direction > 0 ? 0 : steps.size() - 1) : Math.clamp(index + direction, 0, steps.size() - 1);
         select(Optional.of(steps.get(next)), false);
         event.consume();
     }
 
     private void select(Optional<Step> step, boolean byPointer) {
-        selected = step;
+        selected = step.orElse(null);
         pointed = byPointer;
         step.ifPresent(it -> readoutText.setText(it.readout()));
         if (model != null) {

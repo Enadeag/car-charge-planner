@@ -4,7 +4,6 @@ import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import javafx.beans.value.ObservableValue;
@@ -33,9 +32,13 @@ final class DashboardView extends VBox {
     private final BatteryCard battery;
     private final OneOffAwayCard away;
     private List<DayModel> days = List.of();
-    private Optional<GridAdviceModel> advice = Optional.empty();
-    private Optional<AwayModel> awayPeriods = Optional.empty();
-    private Optional<Runnable> setUp = Optional.empty();
+    /** Today's grid advice; null when the plan shown has none, or before one shows. */
+    private GridAdviceModel advice;
+    /** The away periods for specific days; null until a plan shows. */
+    private AwayModel awayPeriods;
+    private Runnable setUp = () -> { };
+    /** True once {@link #onSetUp(Runnable)} was called: only then does a message offer set-up. */
+    private boolean canOpenSetUp;
 
     /**
      * Makes the dashboard, empty until {@link #show(DashboardModel)}.
@@ -87,15 +90,15 @@ final class DashboardView extends VBox {
         switch (model) {
             case DashboardModel.Plan plan -> {
                 days = plan.days();
-                advice = plan.advice();
-                awayPeriods = Optional.of(plan.away());
+                advice = plan.advice().orElse(null);
+                awayPeriods = plan.away();
                 tabs.show(days);
                 showDay(tabs.getSelectionModel().getSelectedIndex());
             }
             case DashboardModel.Message message -> {
                 days = List.of();
                 tabs.show(days);
-                body.show(page(new MessageCard(message, setUp, messages)));
+                body.show(page(new MessageCard(message, canOpenSetUp, setUp, messages)));
                 contentChanged.run();
             }
         }
@@ -181,7 +184,8 @@ final class DashboardView extends VBox {
      * @param action opens set-up; called on the JavaFX thread
      */
     void onSetUp(Runnable action) {
-        setUp = Optional.of(action);
+        setUp = action;
+        canOpenSetUp = true;
     }
 
     /**
@@ -201,16 +205,16 @@ final class DashboardView extends VBox {
         var day = days.get(Math.clamp(index, 0, days.size() - 1));
         var page = page(new MainCard(day));
         if (day == days.getFirst()) {
-            advice.ifPresent(it -> page.getChildren().add(new AdviceCard(it)));
+            if (advice != null) {
+                page.getChildren().add(new AdviceCard(advice));
+            }
         }
         solar.show(day.curve());
         battery.show(day.battery());
         page.getChildren().addAll(solar, battery);
-        if (away.usable()) {
-            awayPeriods.ifPresent(periods -> {
-                away.show(day, periods);
-                page.getChildren().add(away);
-            });
+        if (away.usable() && awayPeriods != null) {
+            away.show(day, awayPeriods);
+            page.getChildren().add(away);
         }
         body.show(page);
         contentChanged.run();

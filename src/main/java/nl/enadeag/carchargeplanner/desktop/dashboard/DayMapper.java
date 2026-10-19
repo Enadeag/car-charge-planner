@@ -11,7 +11,6 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -25,8 +24,11 @@ final class DayMapper {
     private final ZoneId zone;
     private final LocalDate today;
     private final String todaysNote;
-    /** The day that would end below the minimum charge level without a grid charge. */
-    private final Optional<LocalDate> gridDay;
+    /**
+     * The day that would end below the minimum charge level without a grid charge; null when the plan gives no grid
+     * advice.
+     */
+    private final LocalDate gridDay;
     private final ChartMapper charts;
 
     /**
@@ -42,7 +44,7 @@ final class DayMapper {
         this.today = planned.madeAt().atZone(zone).toLocalDate();
         this.todaysNote = planned.batteryAssumed()
                 ? messages.text(TextKey.DAY_BATTERY_ASSUMED, messages.whole(planned.batteryPct().value())) : "";
-        this.gridDay = planned.gridAdvice().map(GridAdvice::day);
+        this.gridDay = planned.gridAdvice().map(GridAdvice::day).orElse(null);
         this.charts = new ChartMapper(planned, messages);
     }
 
@@ -81,7 +83,7 @@ final class DayMapper {
     }
 
     private DayModel withoutWindow(DayPlan day) {
-        if (gridDay.filter(day.date()::equals).isPresent()) {
+        if (day.date().equals(gridDay)) {
             return withoutWindow(day, DayKind.GRID, messages.text(TextKey.DAY_GRID), messages.text(TextKey.DAY_GRID_WHY));
         }
         return withoutWindow(day, DayKind.NONE, messages.text(TextKey.DAY_NONE), messages.text(TextKey.DAY_NONE_WHY));

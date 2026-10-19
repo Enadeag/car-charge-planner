@@ -38,11 +38,13 @@ public final class SingleInstance implements AutoCloseable {
 
     private final Path path;
     private final PrivateFolder folder;
-    private final Optional<UserPrincipal> user;
+    /** The user this app runs as; null where files have no owner and mode. */
+    private final UserPrincipal user;
     private final Duration timeout;
     private FileLock lock;
     private InstanceServer server;
-    private Optional<String> problem = Optional.empty();
+    /** What went wrong in a claim; null until one does. */
+    private String problem;
 
     /**
      * Makes the single-instance guard; nothing is made or sent yet.
@@ -58,7 +60,7 @@ public final class SingleInstance implements AutoCloseable {
     public SingleInstance(Path folder, Optional<UserPrincipal> user, Duration timeout) {
         this.path = folder;
         this.folder = new PrivateFolder(folder, user);
-        this.user = user;
+        this.user = user.orElse(null);
         this.timeout = timeout;
     }
 
@@ -75,10 +77,10 @@ public final class SingleInstance implements AutoCloseable {
         try {
             made = folder.make();
         } catch (NotPrivateException e) {
-            problem = Optional.of(e.getMessage());
+            problem = e.getMessage();
             return Claim.NOT_PRIVATE;
         } catch (IOException e) {
-            problem = Optional.of("the folder " + path + " for the instance lock cannot be made: " + e);
+            problem = "the folder " + path + " for the instance lock cannot be made: " + e;
             return Claim.UNAVAILABLE;
         }
         var socket = made.resolve(SOCKET_NAME);
@@ -103,7 +105,7 @@ public final class SingleInstance implements AutoCloseable {
                 }
             }
         } catch (IOException e) {
-            problem = Optional.of("the instance lock in " + made + " cannot be taken: " + e);
+            problem = "the instance lock in " + made + " cannot be taken: " + e;
             return Claim.UNAVAILABLE;
         }
     }
@@ -121,9 +123,9 @@ public final class SingleInstance implements AutoCloseable {
         }
         try {
             Files.deleteIfExists(socket);
-            server = InstanceServer.bind(socket, user, timeout);
+            server = InstanceServer.bind(socket, Optional.ofNullable(user), timeout);
         } catch (IOException e) {
-            problem = Optional.of("the instance socket " + socket + " cannot be made: " + e);
+            problem = "the instance socket " + socket + " cannot be made: " + e;
             return Claim.FIRST_UNREACHABLE;
         }
         server.serve(handler);
@@ -137,7 +139,7 @@ public final class SingleInstance implements AutoCloseable {
      * @return what went wrong, in English, naming the folder or the socket; empty after any other claim, or before one
      */
     public Optional<String> problem() {
-        return problem;
+        return Optional.ofNullable(problem);
     }
 
     /**
@@ -220,7 +222,7 @@ public final class SingleInstance implements AutoCloseable {
     }
 
     private FileAttribute<?>[] lockFileMode() {
-        return user.isPresent()
+        return user != null
                 ? new FileAttribute<?>[] {PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"))}
                 : new FileAttribute<?>[0];
     }

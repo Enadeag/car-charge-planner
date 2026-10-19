@@ -4,7 +4,6 @@ import static nl.enadeag.carchargeplanner.desktop.dashboard.Texts.label;
 
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import java.util.Optional;
 import java.util.function.IntConsumer;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.Button;
@@ -26,7 +25,9 @@ final class BatteryCard extends VBox {
     private final Label levels = label("", "battery-levels");
     private final Button update;
     private final BatteryEditor editor;
-    private Optional<IntConsumer> entered = Optional.empty();
+    private IntConsumer entered = _ -> { };
+    /** True once {@link #onEntered(IntConsumer)} gave somewhere to send the level. */
+    private boolean enterable;
     private BatteryModel model;
 
     /**
@@ -38,7 +39,7 @@ final class BatteryCard extends VBox {
     BatteryCard(ObservableValue<Boolean> reducedMotion, Messages messages) {
         bar = new BatteryBar(reducedMotion);
         update = new Button(messages.text(TextKey.BATTERY_UPDATE));
-        editor = new BatteryEditor(pct -> entered.ifPresent(handler -> handler.accept(pct)), this::closeEntry,
+        editor = new BatteryEditor(pct -> entered.accept(pct), this::closeEntry,
                 messages);
         update.getStyleClass().addAll("flat", "small");
         var hint = messages.text(TextKey.BATTERY_UPDATE_HINT);
@@ -82,7 +83,8 @@ final class BatteryCard extends VBox {
      * @param handler gets the level the owner saved, in percent from 0 to 100, on the JavaFX thread
      */
     void onEntered(IntConsumer handler) {
-        entered = Optional.of(handler);
+        entered = handler;
+        enterable = true;
         showUpdate();
     }
 
@@ -105,7 +107,7 @@ final class BatteryCard extends VBox {
     }
 
     private boolean canEdit() {
-        return model != null && model.editable() && entered.isPresent();
+        return model != null && model.editable() && enterable;
     }
 
     private void showUpdate() {

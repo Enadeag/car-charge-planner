@@ -8,6 +8,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.SecretsSource;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -152,21 +153,24 @@ public final class ForecastService {
     private static final class Once<T> {
 
         private final Supplier<T> make;
-        private Optional<T> made = Optional.empty();
+        /** Null until it is made. */
+        private T made;
 
         Once(Supplier<T> make) {
             this.make = make;
         }
 
         T get() {
-            if (made.isEmpty()) {
-                made = Optional.of(make.get());
+            if (made == null) {
+                made = Objects.requireNonNull(make.get());
             }
-            return made.get();
+            return made;
         }
 
         void ifMade(Consumer<T> action) {
-            made.ifPresent(action);
+            if (made != null) {
+                action.accept(made);
+            }
         }
     }
 }

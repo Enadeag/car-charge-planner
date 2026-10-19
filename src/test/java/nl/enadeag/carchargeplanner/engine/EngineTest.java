@@ -663,7 +663,7 @@ class EngineTest {
         var engine = engine(clockAt(7));
         engine.saveApiKeys(new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "OLD-KEY"))));
         keychain.locked = true;
-        keychain.answer = Optional.empty();
+        keychain.answer = null;
         var saving = CompletableFuture.runAsync(() -> {
             try {
                 engine.saveApiKeys(new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "NEW-KEY"))));

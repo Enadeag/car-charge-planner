@@ -55,7 +55,8 @@ final class SettingsForm {
     private final ForecastPage forecast;
     private final AppPage app;
     private final AboutPage about;
-    private Optional<AllSettings> stored = Optional.empty();
+    /** What the stores held when they were shown last; null until they are. */
+    private AllSettings stored;
 
     /**
      * Makes the form; nothing is read until {@link #read()}.
@@ -91,7 +92,7 @@ final class SettingsForm {
      */
     void show(SettingsStorage.Stored stored) {
         forecast.loadKeys(stored.keys().keys(), stored.keyStorage(), stored.keys().problem());
-        this.stored = Optional.of(stored.all());
+        this.stored = stored.all();
         if (stored.config().isPresent()) {
             configPages.forEach(page -> page.load(stored.config().get()));
         } else {
@@ -117,9 +118,11 @@ final class SettingsForm {
      * @throws IllegalStateException when nothing was shown yet
      */
     Entered enter() {
-        var before = stored.orElseThrow(() -> new IllegalStateException("nothing is shown yet"));
+        if (stored == null) {
+            throw new IllegalStateException("nothing is shown yet");
+        }
         var refused = new ArrayList<Category>();
-        var config = before.config();
+        var config = stored.config();
         if (config.isPresent()) {
             for (var page : configPages) {
                 var applied = page.applyTo(config.get());
@@ -134,7 +137,7 @@ final class SettingsForm {
             return new Entered.Refused(refused);
         }
         var entered = new AllSettings(config, forecast.keys(), app.settings(), Optional.of(app.startsAtLogin()));
-        return new Entered.Accepted(SettingsChanges.between(before, entered));
+        return new Entered.Accepted(SettingsChanges.between(stored, entered));
     }
 
     /**

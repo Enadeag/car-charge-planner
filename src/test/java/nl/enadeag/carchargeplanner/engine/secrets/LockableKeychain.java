@@ -18,10 +18,10 @@ public class LockableKeychain extends MemoryKeychain {
 
     /** While true, every read, write and delete fails as locked. */
     public volatile boolean locked;
-    /** What the owner answers at the prompt; empty to leave it unanswered. */
-    public volatile Optional<UnlockOutcome> answer = Optional.of(UnlockOutcome.UNLOCKED);
-    /** When present, unlocking fails at once with this kind, as a keychain without a usable prompt. */
-    public volatile Optional<KeychainException.Kind> unlockFails = Optional.empty();
+    /** What the owner answers at the prompt; null to leave it unanswered. */
+    public volatile UnlockOutcome answer = UnlockOutcome.UNLOCKED;
+    /** When not null, unlocking fails at once with this kind, as a keychain without a usable prompt. */
+    public volatile KeychainException.Kind unlockFails;
     /** How often the prompt was asked for. */
     public final AtomicInteger prompts = new AtomicInteger();
     /** Counted down when the prompt shows. */
@@ -48,15 +48,19 @@ public class LockableKeychain extends MemoryKeychain {
 
     @Override
     public UnlockOutcome unlock(Duration wait, Runnable prompting) throws KeychainException {
-        if (unlockFails.isPresent()) {
-            throw new KeychainException(unlockFails.get(), "cannot unlock");
+        var fails = unlockFails;
+        if (fails != null) {
+            throw new KeychainException(fails, "cannot unlock");
         }
         prompts.incrementAndGet();
         var answered = new CompletableFuture<UnlockOutcome>();
         waiting.set(answered);
         prompting.run();
         this.prompting.countDown();
-        answer.ifPresent(answered::complete);
+        var given = answer;
+        if (given != null) {
+            answered.complete(given);
+        }
         UnlockOutcome outcome;
         try {
             outcome = answered.get(wait.toMillis(), TimeUnit.MILLISECONDS);

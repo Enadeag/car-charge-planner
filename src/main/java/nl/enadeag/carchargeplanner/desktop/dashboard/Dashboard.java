@@ -10,7 +10,6 @@ import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import java.time.InstantSource;
 import java.util.List;
-import java.util.Optional;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
@@ -34,7 +33,8 @@ public final class Dashboard {
     // the fields below belong to the JavaFX thread
     private Messages messages;
     private DashboardView view;
-    private Optional<Outlook> outlook = Optional.empty();
+    /** The latest outlook; null until the engine gives one. */
+    private Outlook outlook;
     private List<AwayPeriod> awayPeriods = List.of();
 
     /**
@@ -99,7 +99,7 @@ public final class Dashboard {
     public void show(Outlook outlook, List<AwayPeriod> awayPeriods) {
         var periods = List.copyOf(awayPeriods);
         Platform.runLater(() -> {
-            this.outlook = Optional.of(outlook);
+            this.outlook = outlook;
             this.awayPeriods = periods;
             view.show(new OutlookMapper(messages).map(outlook, periods));
         });
@@ -135,7 +135,7 @@ public final class Dashboard {
         made.onSettings(actions.settings());
         made.onSetUp(actions.setUp());
         var mapper = new OutlookMapper(messages);
-        made.show(outlook.map(shown -> mapper.map(shown, awayPeriods)).orElseGet(mapper::loading));
+        made.show(outlook == null ? mapper.loading() : mapper.map(outlook, awayPeriods));
         return made;
     }
 

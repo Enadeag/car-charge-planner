@@ -25,11 +25,33 @@ import java.util.stream.Collectors;
  */
 public final class Commands {
 
-    private final Os os;
     private final Messages messages;
     private final SingleInstance instance;
-    private final Optional<StartAtLogin> startAtLogin;
-    private final Optional<LinuxMenuEntry> menuEntry;
+    private final LoginSwitch startAtLogin;
+    private final Launcher launcher;
+
+    /** The system's start at login, or why the commands cannot switch it. */
+    private sealed interface LoginSwitch {
+
+        /** The system's own start at login. */
+        record Present(StartAtLogin startAtLogin) implements LoginSwitch { }
+
+        /** Only the installed app, run from its launcher, can start itself at login. */
+        record OnlyFromLauncher() implements LoginSwitch { }
+    }
+
+    /** The Linux menu entry, or why the commands cannot install it. */
+    private sealed interface Launcher {
+
+        /** The menu entry for the program that runs. */
+        record Present(LinuxMenuEntry entry) implements Launcher { }
+
+        /** The menu entry is Linux's only. */
+        record LinuxOnly() implements Launcher { }
+
+        /** Only the installed app, run from its launcher, can put itself in the menu. */
+        record OnlyFromLauncher() implements Launcher { }
+    }
 
     /**
      * Makes the commands; nothing is done yet.
@@ -42,11 +64,12 @@ public final class Commands {
      */
     Commands(Os os, Messages messages, SingleInstance instance, Optional<StartAtLogin> startAtLogin,
             Optional<LinuxMenuEntry> menuEntry) {
-        this.os = os;
         this.messages = messages;
         this.instance = instance;
-        this.startAtLogin = startAtLogin;
-        this.menuEntry = menuEntry;
+        this.startAtLogin = startAtLogin.<LoginSwitch>map(LoginSwitch.Present::new)
+                .orElseGet(LoginSwitch.OnlyFromLauncher::new);
+        this.launcher = os != Os.LINUX ? new Launcher.LinuxOnly()
+                : menuEntry.<Launcher>map(Launcher.Present::new).orElseGet(Launcher.OnlyFromLauncher::new);
     }
 
     /**
@@ -119,15 +142,19 @@ public final class Commands {
     }
 
     private CommandOutcome switchStartAtLogin(boolean on) {
-        if (startAtLogin.isEmpty()) {
-            return failure(messages.text(TextKey.CLI_START_AT_LOGIN_NEEDS_INSTALL));
-        }
+        return switch (startAtLogin) {
+            case LoginSwitch.OnlyFromLauncher _ -> failure(messages.text(TextKey.CLI_START_AT_LOGIN_NEEDS_INSTALL));
+            case LoginSwitch.Present(var system) -> switchStartAtLogin(system, on);
+        };
+    }
+
+    private CommandOutcome switchStartAtLogin(StartAtLogin system, boolean on) {
         try {
             if (on) {
-                startAtLogin.get().switchOn();
+                system.switchOn();
                 return success(messages.text(TextKey.CLI_START_AT_LOGIN_ON, AppName.TITLE));
             }
-            startAtLogin.get().switchOff();
+            system.switchOff();
             return success(messages.text(TextKey.CLI_START_AT_LOGIN_OFF, AppName.TITLE));
         } catch (IOException e) {
             return failure(messages.text(TextKey.CLI_START_AT_LOGIN_FAILED, String.valueOf(e.getMessage())));
@@ -135,18 +162,19 @@ public final class Commands {
     }
 
     private CommandOutcome switchLauncher(boolean install) {
-        if (os != Os.LINUX) {
-            return failure(messages.text(TextKey.CLI_LAUNCHER_LINUX_ONLY, AppName.TITLE));
-        }
-        if (menuEntry.isEmpty()) {
-            return failure(messages.text(TextKey.CLI_LAUNCHER_NEEDS_INSTALL));
-        }
+        return switch (launcher) {
+            case Launcher.LinuxOnly _ -> failure(messages.text(TextKey.CLI_LAUNCHER_LINUX_ONLY, AppName.TITLE));
+            case Launcher.OnlyFromLauncher _ -> failure(messages.text(TextKey.CLI_LAUNCHER_NEEDS_INSTALL));
+            case Launcher.Present(var entry) -> switchLauncher(entry, install);
+        };
+    }
+
+    private CommandOutcome switchLauncher(LinuxMenuEntry entry, boolean install) {
         try {
             if (install) {
-                return success(messages.text(TextKey.CLI_LAUNCHER_INSTALLED, AppName.TITLE,
-                        lines(menuEntry.get().install())));
+                return success(messages.text(TextKey.CLI_LAUNCHER_INSTALLED, AppName.TITLE, lines(entry.install())));
             }
-            var removed = menuEntry.get().uninstall();
+            var removed = entry.uninstall();
             return success(removed.isEmpty() ? messages.text(TextKey.CLI_LAUNCHER_NOT_FOUND, AppName.TITLE)
                     : messages.text(TextKey.CLI_LAUNCHER_REMOVED, AppName.TITLE, lines(removed)));
         } catch (IOException e) {

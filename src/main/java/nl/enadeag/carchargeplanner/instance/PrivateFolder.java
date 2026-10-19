@@ -30,7 +30,8 @@ public final class PrivateFolder {
             Set.of(PosixFilePermission.GROUP_WRITE, PosixFilePermission.OTHERS_WRITE);
 
     private final Path path;
-    private final Optional<UserPrincipal> user;
+    /** The user who must own the folder; null where files have no owner and mode. */
+    private final UserPrincipal user;
     private final ModeChange modeChange;
     private final EntryOwner entryOwner;
 
@@ -87,7 +88,7 @@ public final class PrivateFolder {
      */
     PrivateFolder(Path path, Optional<UserPrincipal> user, ModeChange modeChange, EntryOwner entryOwner) {
         this.path = path;
-        this.user = user;
+        this.user = user.orElse(null);
         this.modeChange = modeChange;
         this.entryOwner = entryOwner;
     }
@@ -120,9 +121,9 @@ public final class PrivateFolder {
         if (!attributes.isDirectory() || attributes.isSymbolicLink() || attributes.isOther()) {
             throw new NotPrivateException(path + " is not a folder but a link or another kind of file");
         }
-        if (user.isPresent()) {
+        if (user != null) {
             var posix = Files.readAttributes(path, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-            if (!posix.owner().equals(user.get())) {
+            if (!posix.owner().equals(user)) {
                 throw new NotPrivateException(path + " belongs to another user");
             }
             if (!posix.permissions().equals(OWNER_ONLY)) {
@@ -160,7 +161,7 @@ public final class PrivateFolder {
         } catch (IOException e) {
             throw new NotPrivateException(path + " is open to other users and cannot be made owner-only: " + e);
         }
-        if (!after.isDirectory() || after.isSymbolicLink() || !after.owner().equals(user.orElseThrow())
+        if (!after.isDirectory() || after.isSymbolicLink() || !after.owner().equals(user)
                 || !after.permissions().equals(OWNER_ONLY) || before.fileKey() == null
                 || !before.fileKey().equals(after.fileKey())) {
             throw new NotPrivateException(path + " is not the same owner-only folder after making it owner-only");
@@ -176,7 +177,7 @@ public final class PrivateFolder {
         }
         var owner = entryOwner.of(parent);
         var root = parent.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByName("root");
-        if (!owner.equals(user.orElseThrow()) && !owner.equals(root)) {
+        if (!owner.equals(user) && !owner.equals(root)) {
             throw new NotPrivateException(path + " is open to other users and lies in " + parent
                     + ", which belongs to another user, so it is not made owner-only");
         }
@@ -189,7 +190,7 @@ public final class PrivateFolder {
     private void refuseOthersFiles() throws IOException {
         try (var entries = Files.list(path)) {
             for (var entry : (Iterable<Path>) entries::iterator) {
-                if (!entryOwner.of(entry).equals(user.orElseThrow())) {
+                if (!entryOwner.of(entry).equals(user)) {
                     throw new NotPrivateException(
                             path + " holds " + entry.getFileName() + ", which belongs to another user");
                 }
@@ -206,7 +207,7 @@ public final class PrivateFolder {
     }
 
     private FileAttribute<?>[] attributes() {
-        return user.isPresent()
+        return user != null
                 ? new FileAttribute<?>[] {PosixFilePermissions.asFileAttribute(OWNER_ONLY)}
                 : new FileAttribute<?>[0];
     }
