@@ -5,7 +5,7 @@ import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 /** The steps of set-up, one subject each, in the order the owner goes through them. */
 enum SetUpStep {
     /** What the app does, what leaves the computer, and that unknown values can be typical values. */
-    WELCOME(TextKey.SETUP_WELCOME),
+    WELCOME(TextKey.SET_UP_WELCOME),
     /** The app's own settings: language, appearance, units, how it shows itself, start at login. */
     APP(TextKey.CATEGORY_APP),
     /** Where the home is, found by the place search or typed as coordinates; it must be chosen. */
@@ -13,17 +13,17 @@ enum SetUpStep {
     /** The panel arrays. */
     SOLAR(TextKey.CATEGORY_SOLAR),
     /** The car. */
-    CAR(TextKey.SETUP_CAR),
+    CAR(TextKey.SET_UP_CAR),
     /** The wall charger. */
     CHARGER(TextKey.CATEGORY_CHARGER),
     /** The forecast providers and their API keys. */
     FORECAST(TextKey.CATEGORY_FORECAST),
     /** What makes the plan better and may be skipped: the house's own use and the weekly away periods. */
-    MORE(TextKey.SETUP_MORE),
+    MORE(TextKey.SET_UP_MORE),
     /** One forecast from the primary provider for the place entered; a failure does not stop set-up. */
-    CHECK(TextKey.SETUP_CHECK),
+    CHECK(TextKey.SET_UP_CHECK),
     /** The owner's dashboard with their own plan, before Finish saves it; always the last. */
-    PREVIEW(TextKey.SETUP_PREVIEW);
+    PREVIEW(TextKey.SET_UP_PREVIEW);
 
     private final TextKey title;
 

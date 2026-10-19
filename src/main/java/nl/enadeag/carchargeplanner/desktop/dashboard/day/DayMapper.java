@@ -76,7 +76,7 @@ public final class DayMapper {
                 messages.text(TextKey.DAY_SET, window.amps(), messages.decimal(window.powerKw())),
                 messages.text(TextKey.DAY_ENERGY, messages.decimal(window.solarKwh() + window.importKwh())));
         var chips = new ArrayList<ChipModel>();
-        chips.add(new ChipModel(EnergySource.SOLAR, messages.text(TextKey.DAY_SUN_SHARE, solarSharePct)));
+        chips.add(new ChipModel(EnergySource.SOLAR, messages.text(TextKey.DAY_SOLAR_SHARE, solarSharePct)));
         chips.add(batteryChip(day));
         if (window.importKwh() >= NO_GRID_KWH) {
             chips.add(new ChipModel(EnergySource.GRID,

@@ -94,7 +94,7 @@ class SetUpViewTest {
         Fx.run(() -> setUp.button(view, TextKey.AWAY_ADD).fire());
         next(view, 1);
         assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.CHECK);
-        waitForText(view, setUp.messages.text(TextKey.SETUP_CHECK_WORKS, setUp.provider.info().name(), 2));
+        waitForText(view, setUp.messages.text(TextKey.SET_UP_CHECK_WORKS, setUp.provider.info().name(), 2));
         next(view, 1);
         waitForText(view, setUp.provider.info().attribution());
 
@@ -157,7 +157,7 @@ class SetUpViewTest {
         assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.CHARGER);
         assertThat(Fx.call(() -> setUp.control(view, TextKey.FIELD_MAX_CURRENT).getAccessibleHelp()))
                 .startsWith(setUp.messages.text(TextKey.PROBLEM_BELOW_MINIMUM_CURRENT));
-        assertThat(Fx.call(() -> SetUpFixture.texts(view))).contains(setUp.messages.text(TextKey.SETUP_REFUSED));
+        assertThat(Fx.call(() -> SetUpFixture.texts(view))).contains(setUp.messages.text(TextKey.SET_UP_REFUSED));
     }
 
     @Test
@@ -198,7 +198,7 @@ class SetUpViewTest {
         Fx.run(() -> setUp.type(view, TextKey.FIELD_PANEL_TILT, "20"));
         next(view, 1);
 
-        Fx.run(() -> setUp.button(view, TextKey.SETUP_BACK).fire());
+        Fx.run(() -> setUp.button(view, TextKey.SET_UP_BACK).fire());
 
         assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.SOLAR);
         assertThat(Fx.call(() -> ((TextField) setUp.field(view, TextKey.FIELD_PANEL_TILT)).getText())).isEqualTo("20");
@@ -211,7 +211,7 @@ class SetUpViewTest {
         Fx.run(view::cancel);
         assertThat(Fx.call(view::isAskingToLeave)).isTrue();
         assertThat(setUp.closed).isZero();
-        Fx.run(() -> setUp.button(view, TextKey.SETUP_LEAVE).fire());
+        Fx.run(() -> setUp.button(view, TextKey.SET_UP_LEAVE).fire());
 
         assertThat(setUp.closed).isEqualTo(1);
         assertThat(setUp.finished).isZero();
@@ -272,7 +272,7 @@ class SetUpViewTest {
             key.setText("TYPED-KEY");
         });
         next(view, 2);
-        waitForText(view, setUp.messages.text(TextKey.SETUP_CHECK_WORKS, setUp.provider.info().name(), 2));
+        waitForText(view, setUp.messages.text(TextKey.SET_UP_CHECK_WORKS, setUp.provider.info().name(), 2));
         next(view, 1);
         setUp.awaitPreview(view);
         next(view, 1);
@@ -312,11 +312,11 @@ class SetUpViewTest {
 
         var progress = Fx.call(() -> Scenes.all(view).stream().filter(ProgressBar.class::isInstance)
                 .map(ProgressBar.class::cast).findFirst().orElseThrow());
-        assertThat(Fx.call(progress::getAccessibleText)).isEqualTo(setUp.messages.text(TextKey.SETUP_PROGRESS,
+        assertThat(Fx.call(progress::getAccessibleText)).isEqualTo(setUp.messages.text(TextKey.SET_UP_PROGRESS,
                 SetUpStep.SOLAR.number(), SetUpStep.count(), setUp.messages.text(TextKey.CATEGORY_SOLAR)));
         assertThat(Fx.call(progress::getProgress)).isEqualTo((double) SetUpStep.SOLAR.number() / SetUpStep.count());
-        assertThat(Fx.call(() -> setUp.button(view, TextKey.SETUP_NEXT).isDefaultButton())).isTrue();
-        assertThat(Fx.call(() -> setUp.button(view, TextKey.SETUP_CANCEL).isCancelButton())).isTrue();
+        assertThat(Fx.call(() -> setUp.button(view, TextKey.SET_UP_NEXT).isDefaultButton())).isTrue();
+        assertThat(Fx.call(() -> setUp.button(view, TextKey.SET_UP_CANCEL).isCancelButton())).isTrue();
         // the focus is on the step's first field, ready to type
         assertThat(Fx.call(() -> view.getScene().getFocusOwner().getAccessibleText()))
                 .isEqualTo(setUp.messages.text(TextKey.FIELD_PANEL_NAME));

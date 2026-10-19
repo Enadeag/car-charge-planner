@@ -131,10 +131,10 @@ public final class AppPage implements Page {
      * @param runSetUp closes Settings, asking first when there are unsaved changes, and opens set-up
      */
     public void offerSetUp(Runnable runSetUp) {
-        var button = new Button(messages.text(TextKey.RUN_SETUP));
+        var button = new Button(messages.text(TextKey.RUN_SET_UP));
         button.setOnAction(_ -> runSetUp.run());
         var all = new ArrayList<Node>(List.of(cards));
-        all.add(new CardView(messages.text(TextKey.CARD_SETUP), messages.text(TextKey.CARD_SETUP_HINT), button));
+        all.add(new CardView(messages.text(TextKey.CARD_SET_UP), messages.text(TextKey.CARD_SET_UP_HINT), button));
         view.show(all.toArray(Node[]::new));
     }
 

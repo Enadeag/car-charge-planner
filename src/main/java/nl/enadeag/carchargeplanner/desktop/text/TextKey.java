@@ -42,7 +42,7 @@ public enum TextKey {
     /** The solar chart in words: {0} the day, {1} the peak power in kW, {2} the peak's time, {3} the house's use in kW. */
     CHART_SPOKEN,
     /** The solar chart in words on a day without sun: {0} the day. */
-    CHART_SPOKEN_NO_SUN,
+    CHART_SPOKEN_NO_SOLAR,
     /** The charge windows in words, after the chart's: {0} one window, or several joined with commas. */
     CHART_SPOKEN_WINDOWS,
     /** One window in words: {0} its start, {1} its end. */
@@ -146,9 +146,9 @@ public enum TextKey {
     /** The tray's tooltip when the forecast has no days. */
     TRAY_NO_DAYS,
     /** The tray's tooltip for a window later today: {0} start, {1} end, {2} the current in A. */
-    TRAY_SUN_LATER,
+    TRAY_SOLAR_LATER,
     /** The tray's tooltip during a window: {0} its end, {1} the current in A. */
-    TRAY_SUN_NOW,
+    TRAY_SOLAR_NOW,
     /** The tray's tooltip with no window today: {0} the day in a sentence, {1} start, {2} end. */
     TRAY_NEXT,
     /** The tray's tooltip with no window in the coming days. */
@@ -172,7 +172,7 @@ public enum TextKey {
     /** A window's energy: {0} kWh. */
     DAY_ENERGY,
     /** A window's share of sun: {0} in %. */
-    DAY_SUN_SHARE,
+    DAY_SOLAR_SHARE,
     /** A window's energy from the grid: {0} kWh. */
     DAY_FROM_GRID,
     /** A day with a window for a screen reader: {0} the day, {1} start, {2} end, {3} the current in A, {4} sun in %. */
@@ -698,81 +698,81 @@ public enum TextKey {
     /** One weekly away period, to tell its fields apart for a screen reader: {0} its number, from 1. */
     AWAY_PERIOD_NUMBER,
     /** The title of the set-up card. */
-    CARD_SETUP,
+    CARD_SET_UP,
     /** What running set-up again does. */
-    CARD_SETUP_HINT,
+    CARD_SET_UP_HINT,
     /** The button that runs set-up again. */
-    RUN_SETUP,
+    RUN_SET_UP,
     /** Said at the latitude while set-up has no place for the home yet. */
     PROBLEM_NO_PLACE,
     /** The dashboard's message before the first set-up. */
     NOT_SET_UP_FIRST,
     /** The button on that message that opens set-up. */
-    START_SETUP,
+    START_SET_UP,
     /** The tray menu's entry that opens set-up, in place of Settings before the first set-up. */
     MENU_SET_UP,
     /** The tray's tooltip before the first set-up. */
     TRAY_NOT_SET_UP_FIRST,
     /** The set-up window's title. */
-    SETUP_TITLE,
+    SET_UP_TITLE,
     /** Above set-up's page: {0} the step's number, {1} how many steps there are. */
-    SETUP_STEP,
+    SET_UP_STEP,
     /** What a screen reader says of set-up's progress bar: {0} the step's number, {1} how many steps there are, {2} the step's name. */
-    SETUP_PROGRESS,
+    SET_UP_PROGRESS,
     /** Set-up's button to the step before. */
-    SETUP_BACK,
+    SET_UP_BACK,
     /** Set-up's button to the step after. */
-    SETUP_NEXT,
+    SET_UP_NEXT,
     /** Set-up's button on its last step, which saves everything. */
-    SETUP_FINISH,
+    SET_UP_FINISH,
     /** Set-up's button that leaves it without saving. */
-    SETUP_CANCEL,
+    SET_UP_CANCEL,
     /** Asked before set-up is left after the owner started. */
-    SETUP_LEAVE_QUESTION,
+    SET_UP_LEAVE_QUESTION,
     /** The answer that stays in set-up. */
-    SETUP_KEEP_GOING,
+    SET_UP_KEEP_GOING,
     /** The answer that leaves set-up without saving. */
-    SETUP_LEAVE,
+    SET_UP_LEAVE,
     /** Said when a step's values are refused: they show their problem at their field. */
-    SETUP_REFUSED,
+    SET_UP_REFUSED,
     /** The first step's name. */
-    SETUP_WELCOME,
+    SET_UP_WELCOME,
     /** What the app does, on the first step. */
-    SETUP_WELCOME_INTRO,
+    SET_UP_WELCOME_INTRO,
     /** The title of the card about what leaves the computer. */
-    SETUP_PRIVACY_TITLE,
+    SET_UP_PRIVACY_TITLE,
     /** What leaves the computer: {0} the forecast provider's name, {1} what it is sent. */
-    SETUP_PRIVACY,
+    SET_UP_PRIVACY,
     /** Added when the provider has a place search: {0} its name. */
-    SETUP_PRIVACY_PLACE,
+    SET_UP_PRIVACY_PLACE,
     /** The title of the card about values the owner does not know. */
-    SETUP_TYPICAL_TITLE,
+    SET_UP_TYPICAL_TITLE,
     /** What to do with a value the owner does not know. */
-    SETUP_TYPICAL,
+    SET_UP_TYPICAL,
     /** The car step's name. */
-    SETUP_CAR,
+    SET_UP_CAR,
     /** The name of the step with the house and the away periods. */
-    SETUP_MORE,
+    SET_UP_MORE,
     /** What that step is for. */
-    SETUP_MORE_HINT,
+    SET_UP_MORE_HINT,
     /** The name of the step that asks for one forecast. */
-    SETUP_CHECK,
+    SET_UP_CHECK,
     /** The title of the card with the check. */
-    SETUP_CHECK_CARD,
+    SET_UP_CHECK_CARD,
     /** What the check does. */
-    SETUP_CHECK_HINT,
+    SET_UP_CHECK_HINT,
     /** Said while the provider is asked: {0} its name. */
-    SETUP_CHECK_ASKING,
+    SET_UP_CHECK_ASKING,
     /** Said when it answered: {0} its name, {1} the days of forecast. */
-    SETUP_CHECK_WORKS,
+    SET_UP_CHECK_WORKS,
     /** Said when it did not: {0} why, in the engine's words, without a full stop at the end. */
-    SETUP_CHECK_FAILED,
+    SET_UP_CHECK_FAILED,
     /** The button that asks again. */
-    SETUP_CHECK_AGAIN,
+    SET_UP_CHECK_AGAIN,
     /** The last step's name. */
-    SETUP_PREVIEW,
+    SET_UP_PREVIEW,
     /** What the last step shows. */
-    SETUP_PREVIEW_HINT,
+    SET_UP_PREVIEW_HINT,
     /** What the display card says in set-up, where the language and the appearance show at once. */
-    SETUP_DISPLAY_HINT
+    SET_UP_DISPLAY_HINT
 }

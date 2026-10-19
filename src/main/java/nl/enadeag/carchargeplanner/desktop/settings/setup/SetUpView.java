@@ -79,7 +79,7 @@ final class SetUpView extends BorderPane {
     private final Consumer<AppSettings> finished;
     private final Background background;
     private final Messages messages;
-    private final Label stepLabel = Labels.paragraph("", "setup-step");
+    private final Label stepLabel = Labels.paragraph("", "set-up-step");
     private final ProgressBar progress = new ProgressBar();
     private final ScrollPane body = new ScrollPane();
     private final Label status = Labels.paragraph("", "status-text");
@@ -113,31 +113,31 @@ final class SetUpView extends BorderPane {
         this.messages = messages;
 
         progress.setMaxWidth(Double.MAX_VALUE);
-        progress.getStyleClass().add("setup-progress");
+        progress.getStyleClass().add("set-up-progress");
         var header = new VBox(stepLabel, progress);
-        header.getStyleClass().add("setup-header");
+        header.getStyleClass().add("set-up-header");
 
         body.setFitToWidth(true);
         body.getStyleClass().add("settings-body");
 
-        var cancel = new Button(messages.text(TextKey.SETUP_CANCEL));
+        var cancel = new Button(messages.text(TextKey.SET_UP_CANCEL));
         cancel.setOnAction(_ -> cancel());
-        back = new Button(messages.text(TextKey.SETUP_BACK));
+        back = new Button(messages.text(TextKey.SET_UP_BACK));
         back.setOnAction(_ -> show(step.previous()));
-        next = new Button(messages.text(TextKey.SETUP_NEXT));
+        next = new Button(messages.text(TextKey.SET_UP_NEXT));
         next.setDefaultButton(true);
         next.setOnAction(_ -> next());
         actions = bar(status, cancel, back, next);
 
-        var keepGoing = new Button(messages.text(TextKey.SETUP_KEEP_GOING));
+        var keepGoing = new Button(messages.text(TextKey.SET_UP_KEEP_GOING));
         keepGoing.setOnAction(_ -> showActions());
-        var leave = new Button(messages.text(TextKey.SETUP_LEAVE));
+        var leave = new Button(messages.text(TextKey.SET_UP_LEAVE));
         leave.getStyleClass().add("danger");
         leave.setOnAction(_ -> {
             showActions();
             close.run();
         });
-        confirm = bar(Labels.paragraph(messages.text(TextKey.SETUP_LEAVE_QUESTION), "field-label"), keepGoing,
+        confirm = bar(Labels.paragraph(messages.text(TextKey.SET_UP_LEAVE_QUESTION), "field-label"), keepGoing,
                 leave);
         // a scene has one Escape: the bar that shows has it, and the other lets go of it first
         cancel.cancelButtonProperty().bind(actions.visibleProperty());
@@ -148,7 +148,7 @@ final class SetUpView extends BorderPane {
         setCenter(body);
         setBottom(new StackPane(actions, confirm));
         showActions();
-        getStyleClass().addAll("settings", "setup");
+        getStyleClass().addAll("settings", "set-up");
         showReading();
     }
 
@@ -171,7 +171,7 @@ final class SetUpView extends BorderPane {
             Background background, Messages messages) {
         var engine = stores.engine();
         var providers = engine.providers();
-        var app = new AppPage(messages, TextKey.SETUP_DISPLAY_HINT);
+        var app = new AppPage(messages, TextKey.SET_UP_DISPLAY_HINT);
         var location = new LocationPage(
                 (provider, text) -> engine.searchPlaces(provider, text, messages.language().code()), background,
                 messages);
@@ -186,7 +186,7 @@ final class SetUpView extends BorderPane {
         var house = new HouseCard(messages);
         var away = new WeeklyAwayCard(messages);
         var more = new PageView(messages.text(SetUpStep.MORE.title()));
-        more.show(Labels.paragraph(messages.text(TextKey.SETUP_MORE_HINT), "field-label"), house.view(),
+        more.show(Labels.paragraph(messages.text(TextKey.SET_UP_MORE_HINT), "field-label"), house.view(),
                 away.view());
         var carPage = new PageView(messages.text(SetUpStep.CAR.title()));
         carPage.show(car.view());
@@ -275,12 +275,12 @@ final class SetUpView extends BorderPane {
      */
     void show(SetUpStep shown) {
         step = shown;
-        stepLabel.setText(messages.text(TextKey.SETUP_STEP, shown.number(), SetUpStep.count()));
+        stepLabel.setText(messages.text(TextKey.SET_UP_STEP, shown.number(), SetUpStep.count()));
         progress.setProgress((double) shown.number() / SetUpStep.count());
-        progress.setAccessibleText(messages.text(TextKey.SETUP_PROGRESS, shown.number(), SetUpStep.count(),
+        progress.setAccessibleText(messages.text(TextKey.SET_UP_PROGRESS, shown.number(), SetUpStep.count(),
                 messages.text(shown.title())));
         back.setDisable(state != State.READY || shown == SetUpStep.WELCOME);
-        next.setText(messages.text(shown.isLast() ? TextKey.SETUP_FINISH : TextKey.SETUP_NEXT));
+        next.setText(messages.text(shown.isLast() ? TextKey.SET_UP_FINISH : TextKey.SET_UP_NEXT));
         var page = pages.get(shown);
         body.setContent(page.view());
         body.setVvalue(0);
@@ -443,7 +443,7 @@ final class SetUpView extends BorderPane {
 
     /** The step's values were refused: the status says so, and the focus goes to the first field with a problem. */
     private void showRefused() {
-        showProblem(messages.text(TextKey.SETUP_REFUSED));
+        showProblem(messages.text(TextKey.SET_UP_REFUSED));
         ScreenReader.focus(firstProblem(pages.get(step).view()).orElse(status));
     }
 

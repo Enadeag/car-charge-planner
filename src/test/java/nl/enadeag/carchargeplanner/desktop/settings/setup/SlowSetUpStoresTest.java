@@ -81,14 +81,14 @@ class SlowSetUpStoresTest {
         var view = (SetUpView) shown(SetUpView.class).getScene().getRoot();
         assertThat(Fx.call(view::isReading)).isTrue();
         assertThat(texts(view)).contains(setUp.messages.text(TextKey.SETTINGS_READING));
-        assertThat(Fx.call(() -> setUp.button(view, TextKey.SETUP_NEXT).isDisabled())).isTrue();
+        assertThat(Fx.call(() -> setUp.button(view, TextKey.SET_UP_NEXT).isDisabled())).isTrue();
         Fx.run(view::next);
 
         keychain.letGo.countDown();
         SettingsFixture.waitFor(() -> !view.isReading());
 
         assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.WELCOME);
-        assertThat(Fx.call(() -> setUp.button(view, TextKey.SETUP_NEXT).isDisabled())).isFalse();
+        assertThat(Fx.call(() -> setUp.button(view, TextKey.SET_UP_NEXT).isDisabled())).isFalse();
         assertThat(texts(view)).doesNotContain(setUp.messages.text(TextKey.SETTINGS_READING));
     }
 

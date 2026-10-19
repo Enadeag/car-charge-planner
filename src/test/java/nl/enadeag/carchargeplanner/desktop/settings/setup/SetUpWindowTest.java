@@ -90,8 +90,8 @@ class SetUpWindowTest {
         var after = view();
         assertThat(after).isNotSameAs(before);
         assertThat(Fx.call(after::step)).isEqualTo(SetUpStep.APP);
-        assertThat(Fx.call(() -> shownStage().getTitle())).isEqualTo(DUTCH.text(TextKey.SETUP_TITLE));
-        assertThat(Fx.call(() -> SetUpFixture.texts(after))).contains(DUTCH.text(TextKey.SETUP_NEXT));
+        assertThat(Fx.call(() -> shownStage().getTitle())).isEqualTo(DUTCH.text(TextKey.SET_UP_TITLE));
+        assertThat(Fx.call(() -> SetUpFixture.texts(after))).contains(DUTCH.text(TextKey.SET_UP_NEXT));
         assertThat(Fx.call(() -> after.draft().app().units())).isEqualTo(Units.IMPERIAL);
         assertThat(language.messages().language()).isEqualTo(Language.ENGLISH); // nothing is saved before Finish
     }
@@ -165,7 +165,7 @@ class SetUpWindowTest {
 
         Fx.run(() -> setUp.button(Window.getWindows().stream()
                 .filter(shown -> shown.isShowing() && !(shown.getScene().getRoot() instanceof SetUpView))
-                .findFirst().orElseThrow().getScene().getRoot(), TextKey.RUN_SETUP).fire());
+                .findFirst().orElseThrow().getScene().getRoot(), TextKey.RUN_SET_UP).fire());
         Fx.settle();
         Fx.settle();
 

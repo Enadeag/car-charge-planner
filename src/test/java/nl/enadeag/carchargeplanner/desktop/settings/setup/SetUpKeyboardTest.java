@@ -63,7 +63,7 @@ class SetUpKeyboardTest {
             switch (step) {
                 case SOLAR -> Fx.run(() -> setUp.button(view, TextKey.PANELS_ADD).fire());
                 case MORE -> Fx.run(() -> setUp.button(view, TextKey.AWAY_ADD).fire());
-                case CHECK -> SettingsFixture.waitFor(() -> !setUp.button(view, TextKey.SETUP_CHECK_AGAIN).isDisabled());
+                case CHECK -> SettingsFixture.waitFor(() -> !setUp.button(view, TextKey.SET_UP_CHECK_AGAIN).isDisabled());
                 case PREVIEW -> setUp.awaitPreview(view);
                 default -> { }
             }

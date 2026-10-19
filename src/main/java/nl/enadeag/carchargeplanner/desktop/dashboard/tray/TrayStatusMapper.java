@@ -75,10 +75,10 @@ final class TrayStatusMapper {
     private String solarText(Window window, Outlook.Planned planned) {
         var zone = planned.zone();
         if (window.start().isAfter(planned.madeAt())) {
-            return messages.text(TextKey.TRAY_SUN_LATER, messages.time(window.start(), zone),
+            return messages.text(TextKey.TRAY_SOLAR_LATER, messages.time(window.start(), zone),
                     messages.time(window.end(), zone), window.amps());
         }
-        return messages.text(TextKey.TRAY_SUN_NOW, messages.time(window.end(), zone), window.amps());
+        return messages.text(TextKey.TRAY_SOLAR_NOW, messages.time(window.end(), zone), window.amps());
     }
 
     /** Nothing today: the next window is on a later day. */

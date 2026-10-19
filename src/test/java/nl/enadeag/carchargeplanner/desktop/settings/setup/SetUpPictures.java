@@ -23,8 +23,8 @@ public final class SetUpPictures {
     private static final Clock CLOCK = Clock.fixed(LocalDate.of(2026, 7, 3).atTime(15, 20)
             .atZone(ZoneId.of("Europe/Amsterdam")).toInstant(), ZoneOffset.UTC);
     /** Set-up's window as the app opens it: 50 by 46 lines. */
-    private static final double SETUP_WIDTH = 50 * 13;
-    private static final double SETUP_HEIGHT = 46 * 13;
+    private static final double SET_UP_WIDTH = 50 * 13;
+    private static final double SET_UP_HEIGHT = 46 * 13;
 
     private SetUpPictures() {
     }
@@ -85,7 +85,7 @@ public final class SetUpPictures {
                 () -> { }, chosen -> { }, setUp.background, setUp.messages));
         var studio = Fx.call(() -> {
             // shown first, so the step's first field, or Next, takes the focus as set-up's window opens
-            var shown = new Studio(view, scheme, Frame.WINDOW, 1, SETUP_WIDTH, Optional.of(SETUP_HEIGHT));
+            var shown = new Studio(view, scheme, Frame.WINDOW, 1, SET_UP_WIDTH, Optional.of(SET_UP_HEIGHT));
             setUp.start(view);
             return shown;
         });

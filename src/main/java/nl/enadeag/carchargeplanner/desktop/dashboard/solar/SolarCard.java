@@ -65,7 +65,7 @@ public final class SolarCard extends VBox {
 
     private static Node area() {
         var swatch = new Rectangle(SWATCH, SWATCH);
-        swatch.getStyleClass().addAll("legend-sun", "chart-fill");
+        swatch.getStyleClass().addAll("legend-solar", "chart-fill");
         return swatch;
     }
 

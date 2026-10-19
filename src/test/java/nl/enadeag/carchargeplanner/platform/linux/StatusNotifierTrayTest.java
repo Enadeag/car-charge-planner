@@ -147,7 +147,7 @@ class StatusNotifierTrayTest {
 
     @Test
     void theIconShowsTheStatusGivenBeforeItAppearedByNameAndInTheTooltip() throws Exception {
-        tray.setStatus(new TrayStatus(StatusDot.SOLAR, "Charge on sun now, until 14:30, at 10 A."));
+        tray.setStatus(new TrayStatus(StatusDot.SOLAR, "Charge on solar now, until 14:30, at 10 A."));
         var properties = properties(showWithAWatcher());
 
         assertThat(themeIcon(properties)).isEqualTo(new StatusIcon().svg(StatusDot.SOLAR, PanelShade.DARK));
@@ -155,7 +155,7 @@ class StatusNotifierTrayTest {
         assertThat((String) properties.get("IconName").getValue()).doesNotContain("-");
         // Plasma looks in IconThemePath only when its last folder is called "icons"
         assertThat(Path.of((String) properties.get("IconThemePath").getValue()).getFileName()).hasToString("icons");
-        assertThat(toolTipText(properties)).isEqualTo("Charge on sun now, until 14:30, at 10 A.");
+        assertThat(toolTipText(properties)).isEqualTo("Charge on solar now, until 14:30, at 10 A.");
     }
 
     @Test

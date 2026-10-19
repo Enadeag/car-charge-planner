@@ -25,8 +25,8 @@ class TrayLookTest {
 
     @Test
     void theStatusSentenceIsTheTooltipsSecondLine() {
-        assertThat(look.tooltip(new TrayStatus(StatusDot.SOLAR, "Charge on sun now, until 14:30, at 10 A.")))
-                .isEqualTo("Car charge planner\nCharge on sun now, until 14:30, at 10 A.");
+        assertThat(look.tooltip(new TrayStatus(StatusDot.SOLAR, "Charge on solar now, until 14:30, at 10 A.")))
+                .isEqualTo("Car charge planner\nCharge on solar now, until 14:30, at 10 A.");
     }
 
     @Test

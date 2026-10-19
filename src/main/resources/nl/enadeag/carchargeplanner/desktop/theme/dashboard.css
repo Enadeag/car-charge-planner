@@ -1,5 +1,5 @@
 /*
- * The dashboard's design tokens and styles. Colour means source: sun amber, grid blue, car and battery green,
+ * The dashboard's design tokens and styles. Colour means source: solar amber, grid blue, car and battery green,
  * always with a glyph or a label beside it. Text colours (-fg, -muted and the *-text colours) reach WCAG AA 4.5:1
  * on every surface they are used on; source colours and -faint reach 3:1 as marks (glyphs, the card's edge).
  * DashboardContrastTest checks both on the rendered dashboard. AtlantaFX styles the controls (tabs, buttons);
@@ -15,9 +15,9 @@
     -muted: #566373;
     -faint: #76849a;
 
-    -sun: #b87300;
-    -sun-text: #8f5a00;
-    -sun-soft: #fbe7c2;
+    -solar: #b87300;
+    -solar-text: #8f5a00;
+    -solar-soft: #fbe7c2;
     -grid: #2f6fd0;
     -grid-text: #2a62b8;
     -grid-soft: #dbe7fa;
@@ -26,7 +26,7 @@
     -car-soft: #d3f0e1;
 
     /* the charts: the solar area and the charge windows' band are see-through fills; their edges are the marks */
-    -sun-area: rgba(184, 115, 0, 0.22);
+    -solar-area: rgba(184, 115, 0, 0.22);
     -car-area: rgba(31, 143, 92, 0.14);
     -car-after: #8fd1b2;
     -house: -muted;
@@ -46,9 +46,9 @@
     -muted: #9aa7b6;
     -faint: #6c7a8a;
 
-    -sun: #f2b33d;
-    -sun-text: #f2b33d;
-    -sun-soft: #3a2c10;
+    -solar: #f2b33d;
+    -solar-text: #f2b33d;
+    -solar-soft: #3a2c10;
     -grid: #6aa2f5;
     -grid-text: #6aa2f5;
     -grid-soft: #17283f;
@@ -56,7 +56,7 @@
     -car-text: #4cc78c;
     -car-soft: #13301f;
 
-    -sun-area: rgba(242, 179, 61, 0.26);
+    -solar-area: rgba(242, 179, 61, 0.26);
     -car-area: rgba(76, 199, 140, 0.16);
     -car-after: #2a6b4c;
     -house: -muted;
@@ -137,8 +137,8 @@
 }
 
 .card.solar {
-    -fx-background-color: -sun-soft;
-    -fx-border-color: -sun;
+    -fx-background-color: -solar-soft;
+    -fx-border-color: -solar;
 }
 
 .card.grid {
@@ -165,7 +165,7 @@
 }
 
 .card.solar:focus-visible {
-    -fx-border-color: -focus, -sun;
+    -fx-border-color: -focus, -solar;
 }
 
 .card.grid:focus-visible {
@@ -251,14 +251,14 @@
 }
 
 .solar-area {
-    -fx-fill: -sun-area;
-    -fx-stroke: -sun;
+    -fx-fill: -solar-area;
+    -fx-stroke: -solar;
     -fx-stroke-width: 1.6;
     -fx-stroke-line-join: round;
 }
 
-.legend-sun {
-    -fx-fill: -sun;
+.legend-solar {
+    -fx-fill: -solar;
 }
 
 .house-line {
@@ -399,8 +399,8 @@
     -fx-font-weight: bold;
 }
 
-.chip.solar { -fx-background-color: -sun-soft; }
-.chip.solar .label { -fx-text-fill: -sun-text; }
+.chip.solar { -fx-background-color: -solar-soft; }
+.chip.solar .label { -fx-text-fill: -solar-text; }
 .chip.grid { -fx-background-color: -grid-soft; }
 .chip.grid .label { -fx-text-fill: -grid-text; }
 .chip.car { -fx-background-color: -car-soft; }
@@ -410,8 +410,8 @@
 .glyph .glyph-fill { -fx-fill: -muted; }
 .glyph .glyph-stroke { -fx-stroke: -muted; }
 .glyph .glyph-outline { -fx-fill: transparent; }
-.glyph.solar .glyph-fill { -fx-fill: -sun; }
-.glyph.solar .glyph-stroke { -fx-stroke: -sun; }
+.glyph.solar .glyph-fill { -fx-fill: -solar; }
+.glyph.solar .glyph-stroke { -fx-stroke: -solar; }
 .glyph.grid .glyph-fill { -fx-fill: -grid; }
 .glyph.grid .glyph-stroke { -fx-stroke: -grid; }
 .glyph.car .glyph-fill { -fx-fill: -car; }
@@ -578,12 +578,12 @@
 
 /* a value set-up or Settings filled in because the owner did not know it, until the owner enters their own */
 .field-tag {
-    -fx-background-color: -sun-soft;
+    -fx-background-color: -solar-soft;
     -fx-background-radius: 999;
     -fx-padding: 0.1em 0.6em 0.1em 0.6em;
     -fx-font-size: 0.85em;
     -fx-font-weight: bold;
-    -fx-text-fill: -sun-text;
+    -fx-text-fill: -solar-text;
 }
 
 .card-buttons {
@@ -625,18 +625,18 @@
 }
 
 /* Set-up: the step and its progress above, the step's page (Settings' cards) in the middle, Back and Next below */
-.setup-header {
+.set-up-header {
     -fx-background-color: -ground;
     -fx-padding: 0.9em 1.4em 0.9em 1.4em;
     -fx-spacing: 0.45em;
 }
 
-.setup-step {
+.set-up-step {
     -fx-text-fill: -muted;
     -fx-font-weight: bold;
 }
 
-.setup-progress > .bar {
+.set-up-progress > .bar {
     -fx-background-color: -grid;
 }
 

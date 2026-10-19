@@ -37,7 +37,7 @@ final class NoPlanCard extends VBox {
         text.getStyleClass().add("message-text");
         getChildren().add(text);
         if (noPlan.offersSetUp() && canOpenSetUp) {
-            var button = new Button(messages.text(TextKey.START_SETUP));
+            var button = new Button(messages.text(TextKey.START_SET_UP));
             button.getStyleClass().add("accent");
             button.setOnAction(_ -> setUp.run());
             var line = new HBox(button);

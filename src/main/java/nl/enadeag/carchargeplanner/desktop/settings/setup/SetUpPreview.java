@@ -42,7 +42,7 @@ final class SetUpPreview implements SetUpStepPage {
         var frame = new StackPane(dashboard.view());
         frame.getStyleClass().add("preview-frame");
         view = new PageView(messages.text(SetUpStep.PREVIEW.title()));
-        view.show(Labels.paragraph(messages.text(TextKey.SETUP_PREVIEW_HINT), "field-label"), frame);
+        view.show(Labels.paragraph(messages.text(TextKey.SET_UP_PREVIEW_HINT), "field-label"), frame);
     }
 
     /**

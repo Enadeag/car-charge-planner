@@ -50,12 +50,12 @@ final class SetUpCheck implements SetUpStepPage {
         this.providers = List.copyOf(providers);
         this.background = background;
         this.messages = messages;
-        again = new Button(messages.text(TextKey.SETUP_CHECK_AGAIN));
+        again = new Button(messages.text(TextKey.SET_UP_CHECK_AGAIN));
         again.setOnAction(_ -> ask());
         var buttons = new HBox(again);
         buttons.getStyleClass().add("card-buttons");
         view = new PageView(messages.text(SetUpStep.CHECK.title()));
-        view.show(new CardView(messages.text(TextKey.SETUP_CHECK_CARD), messages.text(TextKey.SETUP_CHECK_HINT), status,
+        view.show(new CardView(messages.text(TextKey.SET_UP_CHECK_CARD), messages.text(TextKey.SET_UP_CHECK_HINT), status,
                 buttons));
     }
 
@@ -89,7 +89,7 @@ final class SetUpCheck implements SetUpStepPage {
         var askedKeys = keys;
         again.setDisable(true);
         status.getStyleClass().remove("problem");
-        status.setText(messages.text(TextKey.SETUP_CHECK_ASKING, name));
+        status.setText(messages.text(TextKey.SET_UP_CHECK_ASKING, name));
         Consumer<ConnectionResult> answered = result -> {
             if (asking == asked) {
                 show(name, result);
@@ -102,10 +102,10 @@ final class SetUpCheck implements SetUpStepPage {
     private void show(String name, ConnectionResult result) {
         again.setDisable(false);
         if (result.worked()) {
-            status.setText(messages.text(TextKey.SETUP_CHECK_WORKS, name, result.days()));
+            status.setText(messages.text(TextKey.SET_UP_CHECK_WORKS, name, result.days()));
         } else {
             // the engine's words end with a full stop or without one
-            status.setText(messages.text(TextKey.SETUP_CHECK_FAILED, result.message().replaceFirst("\\.$", "")));
+            status.setText(messages.text(TextKey.SET_UP_CHECK_FAILED, result.message().replaceFirst("\\.$", "")));
             status.getStyleClass().add("problem");
         }
     }

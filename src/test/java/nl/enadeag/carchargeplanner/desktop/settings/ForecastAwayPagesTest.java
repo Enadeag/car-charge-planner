@@ -295,7 +295,7 @@ class ForecastAwayPagesTest {
 
         Fx.run(() -> {
             settings.type(view, TextKey.FIELD_TARGET_CHARGE, "90");
-            button(view, TextKey.RUN_SETUP).fire();
+            button(view, TextKey.RUN_SET_UP).fire();
         });
         assertThat(setUps).hasValue(0);
         Fx.run(() -> settings.button(view, TextKey.SETTINGS_DISCARD).fire());

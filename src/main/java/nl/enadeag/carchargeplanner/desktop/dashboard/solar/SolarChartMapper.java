@@ -115,7 +115,7 @@ public final class SolarChartMapper {
         var title = messages.title(day.date(), today);
         var peak = day.forecast().stream().max(Comparator.comparingDouble(ForecastStep::powerKw));
         if (peak.isEmpty() || peak.get().powerKw() <= SUN_KW) {
-            return messages.text(TextKey.CHART_SPOKEN_NO_SUN, title);
+            return messages.text(TextKey.CHART_SPOKEN_NO_SOLAR, title);
         }
         var chart = messages.text(TextKey.CHART_SPOKEN, title, messages.decimal(peak.get().powerKw()),
                 messages.time(peak.get().start(), zone), messages.decimal(planned.baseloadKw()));

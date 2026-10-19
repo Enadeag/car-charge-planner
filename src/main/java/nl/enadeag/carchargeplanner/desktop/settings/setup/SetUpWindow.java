@@ -141,7 +141,7 @@ public final class SetUpWindow {
         var theme = new WindowTheme(Appearance.scheme(appearance, looks.system()));
         theme.style(scene);
         made.setScene(scene);
-        made.setTitle(spoken.text(TextKey.SETUP_TITLE));
+        made.setTitle(spoken.text(TextKey.SET_UP_TITLE));
         made.getIcons().setAll(icon.fxImages());
         var size = WindowSize.on(WIDTH_EM, HEIGHT_EM, Font.getDefault().getSize(),
                 Screen.getPrimary().getVisualBounds());
@@ -186,7 +186,7 @@ public final class SetUpWindow {
             spoken = now;
             view = makeView(now, stage);
             stage.getScene().setRoot(view);
-            stage.setTitle(now.text(TextKey.SETUP_TITLE));
+            stage.setTitle(now.text(TextKey.SET_UP_TITLE));
         }
         view.start(start, draft, step);
     }

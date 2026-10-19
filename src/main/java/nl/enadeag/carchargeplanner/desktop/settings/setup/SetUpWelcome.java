@@ -35,9 +35,9 @@ final class SetUpWelcome implements SetUpStepPage {
         this.searchesPlaces = searchesPlaces;
         privacy = Labels.paragraph("", "note");
         view = new PageView(messages.text(SetUpStep.WELCOME.title()));
-        view.show(Labels.paragraph(messages.text(TextKey.SETUP_WELCOME_INTRO), "field-label"),
-                new CardView(messages.text(TextKey.SETUP_PRIVACY_TITLE), "", privacy),
-                new CardView(messages.text(TextKey.SETUP_TYPICAL_TITLE), messages.text(TextKey.SETUP_TYPICAL)));
+        view.show(Labels.paragraph(messages.text(TextKey.SET_UP_WELCOME_INTRO), "field-label"),
+                new CardView(messages.text(TextKey.SET_UP_PRIVACY_TITLE), "", privacy),
+                new CardView(messages.text(TextKey.SET_UP_TYPICAL_TITLE), messages.text(TextKey.SET_UP_TYPICAL)));
     }
 
     /**
@@ -48,8 +48,8 @@ final class SetUpWelcome implements SetUpStepPage {
     void nameProviderOf(EngineConfig config) {
         var texts = new ProviderTexts(messages);
         var primary = providers.stream().filter(info -> info.id().equals(config.forecast().primary())).findFirst();
-        privacy.setText(primary.map(info -> messages.text(TextKey.SETUP_PRIVACY, info.name(), texts.sends(info))
-                + (searchesPlaces.test(info.id()) ? " " + messages.text(TextKey.SETUP_PRIVACY_PLACE, info.name()) : ""))
+        privacy.setText(primary.map(info -> messages.text(TextKey.SET_UP_PRIVACY, info.name(), texts.sends(info))
+                + (searchesPlaces.test(info.id()) ? " " + messages.text(TextKey.SET_UP_PRIVACY_PLACE, info.name()) : ""))
                 .orElse(""));
     }
 

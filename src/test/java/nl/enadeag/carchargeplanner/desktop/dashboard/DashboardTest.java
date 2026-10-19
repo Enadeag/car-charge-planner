@@ -589,7 +589,7 @@ class DashboardTest {
         var root = popup().orElseThrow().getScene().getRoot();
         Fx.run(() -> Scenes.all(root).stream()
                 .filter(node -> node instanceof Button button && Scenes.reallyVisible(button)
-                        && language.messages().text(TextKey.START_SETUP).equals(button.getText()))
+                        && language.messages().text(TextKey.START_SET_UP).equals(button.getText()))
                 .map(Button.class::cast).findFirst().orElseThrow().fire());
 
         assertThat(setUpOpened).hasValue(1);
@@ -604,6 +604,6 @@ class DashboardTest {
         Fx.settle();
 
         var root = popup().orElseThrow().getScene().getRoot();
-        assertThat(Fx.call(() -> Scenes.visibleTexts(root))).doesNotContain(language.messages().text(TextKey.START_SETUP));
+        assertThat(Fx.call(() -> Scenes.visibleTexts(root))).doesNotContain(language.messages().text(TextKey.START_SET_UP));
     }
 }
