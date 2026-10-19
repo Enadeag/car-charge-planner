@@ -1,6 +1,5 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard;
 
-import java.util.List;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
@@ -128,9 +127,9 @@ final class BatteryBar extends Region {
         double width = getWidth();
         double barHeight = barHeight();
         double barTop = MARK_OVERHANG;
-        bar(track, 0, width, barTop, barHeight);
-        bar(after, 0, x(shownAfter, width), barTop, barHeight);
-        bar(level, 0, x(shownLevel, width), barTop, barHeight);
+        bar(track, width, barTop, barHeight);
+        bar(after, x(shownAfter, width), barTop, barHeight);
+        bar(level, x(shownLevel, width), barTop, barHeight);
         double labelTop = barTop + barHeight + MARK_OVERHANG + GAP;
         mark(minimum, minimumText, x(model.minimumPct(), width), barTop, barHeight, labelTop);
         mark(target, targetText, x(model.targetPct(), width), barTop, barHeight, labelTop);
@@ -149,8 +148,7 @@ final class BatteryBar extends Region {
         text.resizeRelocate(labelX(x, labelWidth, getWidth()), labelTop, labelWidth, text.prefHeight(-1));
     }
 
-    private static void bar(Rectangle rectangle, double left, double width, double top, double height) {
-        rectangle.setX(left);
+    private static void bar(Rectangle rectangle, double width, double top, double height) {
         rectangle.setY(top);
         rectangle.setWidth(width);
         rectangle.setHeight(height);
@@ -168,14 +166,5 @@ final class BatteryBar extends Region {
         node.getStyleClass().addAll(styleClasses);
         node.setManaged(false);
         return node;
-    }
-
-    /**
-     * The bar's parts that are drawn in a colour, for the tests.
-     *
-     * @return the track, the level after charging, the level and the two marks
-     */
-    List<Node> parts() {
-        return List.of(track, after, level, minimum, target);
     }
 }
