@@ -97,6 +97,10 @@ A test that only makes sense on one system says so with JUnit's `@EnabledOnOs`. 
 system, so they use the location classes and not hard-coded folders. `ArchitectureTest` keeps the packages apart:
 the engine knows nothing of the desktop, only the platform packages know their system, and they know only
 `desktop.system` of the desktop.
+What older code still breaks is frozen in `src/test/archunit_store`, which ArchUnit never changes by itself, so a
+frozen violation that is fixed fails the test too. To update the store on purpose, run
+`./mvnw test -Dtest='*ArchitectureTest' -Darchunit.freeze.store.default.allowStoreUpdate=true` once, then review the
+changed store files and commit them.
 
 A change comes with a test that fails without it.
 
