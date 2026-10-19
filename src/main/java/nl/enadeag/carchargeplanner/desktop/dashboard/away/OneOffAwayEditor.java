@@ -33,7 +33,7 @@ import javafx.scene.layout.VBox;
  * Cancel; Enter saves and Escape cancels. A period that is not valid is not saved: the entry says why, stays open and
  * puts the focus where the owner can fix it, where a screen reader reads the reason.
  */
-final class AwayEditor extends VBox {
+final class OneOffAwayEditor extends VBox {
 
     /** Both of the app's languages write a time on a 24-hour clock; a leading zero may be left out. */
     private static final DateTimeFormatter TYPED = DateTimeFormatter.ofPattern("H:mm", Locale.ROOT)
@@ -64,7 +64,7 @@ final class AwayEditor extends VBox {
      * @param resized called when the entry grows or shrinks while open: the times or a problem show or go
      * @param messages the texts, in the owner's language
      */
-    AwayEditor(Consumer<OneOffAwayPeriod> saved, Runnable closed, Runnable resized, Messages messages) {
+    OneOffAwayEditor(Consumer<OneOffAwayPeriod> saved, Runnable closed, Runnable resized, Messages messages) {
         this.messages = messages;
         this.saved = saved;
         this.closed = closed;

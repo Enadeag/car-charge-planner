@@ -26,7 +26,7 @@ public final class OneOffAwayCard extends VBox {
     private final Runnable resized;
     private final Button add;
     private final VBox list = new VBox();
-    private final AwayEditor editor;
+    private final OneOffAwayEditor editor;
     private Consumer<OneOffAwayPeriod> added = _ -> { };
     private Consumer<OneOffAwayPeriod> removed = _ -> { };
     /** Tells the time when the owner saves a period; null until {@link #onChange} gives it. */
@@ -35,10 +35,10 @@ public final class OneOffAwayCard extends VBox {
     private boolean acceptsChanges;
     /** The selected day; null until one shows. */
     private DayModel day;
-    private AwayModel model;
+    private OneOffAwayModel model;
 
     /**
-     * Makes the card, empty until {@link #show(DayModel, AwayModel)}.
+     * Makes the card, empty until {@link #show(DayModel, OneOffAwayModel)}.
      *
      * @param resized called when the entry opens, closes or changes its height, so the popup or window can fit the
      *     card
@@ -54,7 +54,7 @@ public final class OneOffAwayCard extends VBox {
             openEditor();
             resized.run();
         });
-        editor = new AwayEditor(period -> added.accept(period), this::closeEntry, resized,
+        editor = new OneOffAwayEditor(period -> added.accept(period), this::closeEntry, resized,
                 messages);
         var spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -73,7 +73,7 @@ public final class OneOffAwayCard extends VBox {
      * @param selected the selected day, on which Add enters a period
      * @param away the coming away periods and the time of the plan
      */
-    public void show(DayModel selected, AwayModel away) {
+    public void show(DayModel selected, OneOffAwayModel away) {
         boolean sameDay = day != null && day.date().equals(selected.date());
         day = selected;
         model = away;
@@ -119,11 +119,11 @@ public final class OneOffAwayCard extends VBox {
      *
      * @return the card's entry; shown only while the owner enters a period
      */
-    AwayEditor editor() {
+    OneOffAwayEditor editor() {
         return editor;
     }
 
-    private HBox row(AwayModel.Listed entry) {
+    private HBox row(OneOffAwayModel.Listed entry) {
         var text = paragraph(entry.text(), "away-item");
         HBox.setHgrow(text, Priority.ALWAYS);
         text.setMaxWidth(Double.MAX_VALUE);

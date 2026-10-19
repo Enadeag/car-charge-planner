@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.advice.GridAdviceModel;
-import nl.enadeag.carchargeplanner.desktop.dashboard.away.AwayModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
@@ -63,9 +63,10 @@ public final class Models {
             BRUSSELS);
 
     /** Made at 08:12 today, with an away period tomorrow and one on Sunday. */
-    public static final AwayModel AWAY = new AwayModel(BRUSSELS, TODAY.atTime(8, 12).atZone(BRUSSELS).toInstant(), List.of(
-            new AwayModel.Listed(AWAY_TOMORROW, "Tomorrow, all day", "Remove Tomorrow, all day"),
-            new AwayModel.Listed(AWAY_SUNDAY, "Sun 5 Jul, 10:00 – 16:30", "Remove Sun 5 Jul, 10:00 – 16:30")));
+    public static final OneOffAwayModel AWAY = new OneOffAwayModel(BRUSSELS,
+            TODAY.atTime(8, 12).atZone(BRUSSELS).toInstant(), List.of(
+            new OneOffAwayModel.Listed(AWAY_TOMORROW, "Tomorrow, all day", "Remove Tomorrow, all day"),
+            new OneOffAwayModel.Listed(AWAY_SUNDAY, "Sun 5 Jul, 10:00 – 16:30", "Remove Sun 5 Jul, 10:00 – 16:30")));
 
     /** A clock that stays at the moment {@link #AWAY}'s plan was made. */
     public static final InstantSource CLOCK = InstantSource.fixed(AWAY.madeAt());

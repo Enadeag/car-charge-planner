@@ -43,11 +43,11 @@ class OneOffAwayCardTest {
         Fx.run(() -> stage.close());
     }
 
-    private void show(DayModel day, AwayModel away) throws Exception {
+    private void show(DayModel day, OneOffAwayModel away) throws Exception {
         show(day, away, InstantSource.fixed(away.madeAt()));
     }
 
-    private void show(DayModel day, AwayModel away, InstantSource clock) throws Exception {
+    private void show(DayModel day, OneOffAwayModel away, InstantSource clock) throws Exception {
         Fx.run(() -> {
             card = new OneOffAwayCard(() -> { }, ENGLISH);
             card.onChange(added::add, removed::add, clock);
@@ -121,7 +121,7 @@ class OneOffAwayCardTest {
     @Test
     void aPeriodThatHasEndedByTheTimeOfSavingIsRefusedAlthoughThePlanIsOlder() throws Exception {
         var madeAt = Models.TODAY.atTime(10, 0).atZone(Models.BRUSSELS).toInstant();
-        var plan = new AwayModel(Models.BRUSSELS, madeAt, List.of());
+        var plan = new OneOffAwayModel(Models.BRUSSELS, madeAt, List.of());
         show(Models.SUNNY_TODAY, plan, InstantSource.fixed(madeAt.plus(Duration.ofMinutes(10))));
 
         openEntry();
@@ -196,7 +196,7 @@ class OneOffAwayCardTest {
 
     @Test
     void withoutComingPeriodsTheCardSaysThereAreNone() throws Exception {
-        show(Models.SUNNY_TODAY, new AwayModel(Models.BRUSSELS, Models.AWAY.madeAt(), List.of()));
+        show(Models.SUNNY_TODAY, new OneOffAwayModel(Models.BRUSSELS, Models.AWAY.madeAt(), List.of()));
 
         assertThat(Fx.call(() -> Scenes.visibleTexts(card))).contains(ENGLISH.text(TextKey.ONE_OFF_NONE));
     }

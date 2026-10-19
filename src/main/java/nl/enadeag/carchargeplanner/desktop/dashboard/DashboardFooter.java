@@ -21,7 +21,7 @@ final class DashboardFooter extends HBox {
 
     /**
      * Makes the footer, with an empty forecast text, and Away and Settings buttons that do nothing until
-     * {@link #onAway(Runnable)} and {@link #onSettings(Runnable)}.
+     * {@link #onWeeklyAway(Runnable)} and {@link #onSettings(Runnable)}.
      *
      * @param messages the texts, in the owner's language
      */
@@ -69,7 +69,7 @@ final class DashboardFooter extends HBox {
      *
      * @param action what the button does; called on the JavaFX thread
      */
-    void onAway(Runnable action) {
+    void onWeeklyAway(Runnable action) {
         away.setOnAction(_ -> action.run());
     }
 }

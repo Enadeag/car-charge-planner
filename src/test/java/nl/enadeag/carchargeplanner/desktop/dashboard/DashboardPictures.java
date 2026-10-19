@@ -114,7 +114,7 @@ public final class DashboardPictures {
         var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, messages);
         view.setDetachable(frame == Frame.POPUP);
         view.onBatteryEntered(_ -> { });
-        view.onAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
+        view.onOneOffAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
         view.lookup(".day-tabs").setStyle("-fx-open-tab-animation: none;"); // a growing tab is narrow on purpose
         view.show(plan);
         var studio = new Studio(view, scheme, frame, zoom, WIDTH, Optional.empty());

@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.outlook;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.advice.GridAdviceMapper;
-import nl.enadeag.carchargeplanner.desktop.dashboard.away.AwayMapper;
+import nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayMapper;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayMapper;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -105,7 +105,7 @@ public final class OutlookMapper {
     private DashboardModel.Plan plan(Outlook.Planned planned, List<OneOffAwayPeriod> away) {
         var days = new DayMapper(planned, messages).map(planned.days());
         var advice = planned.gridAdvice().map(new GridAdviceMapper(planned, messages)::map);
-        var coming = new AwayMapper(planned.zone(), planned.madeAt(), messages).map(away);
+        var coming = new OneOffAwayMapper(planned.zone(), planned.madeAt(), messages).map(away);
         return new DashboardModel.Plan(days, advice, coming, footer(planned));
     }
 

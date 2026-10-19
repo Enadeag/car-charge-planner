@@ -14,7 +14,7 @@ import java.util.List;
  * @param madeAt the moment the plan was made
  * @param coming the periods that had not ended at {@code madeAt}, in order of their start; may be empty
  */
-public record AwayModel(ZoneId zone, Instant madeAt, List<Listed> coming) {
+public record OneOffAwayModel(ZoneId zone, Instant madeAt, List<Listed> coming) {
 
     /**
      * Keeps a copy of the periods, so the model cannot change afterwards.
@@ -23,7 +23,7 @@ public record AwayModel(ZoneId zone, Instant madeAt, List<Listed> coming) {
      * @param madeAt the moment the plan was made
      * @param coming the periods that had not ended at {@code madeAt}, in order of their start; may be empty
      */
-    public AwayModel {
+    public OneOffAwayModel {
         coming = List.copyOf(coming);
     }
 

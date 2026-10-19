@@ -38,7 +38,7 @@ class DashboardKeyboardTest {
     private DashboardView show(ColorScheme scheme) throws Exception {
         return Fx.call(() -> {
             var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, ENGLISH);
-            view.onAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
+            view.onOneOffAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
             view.onBatteryEntered(_ -> { });
             view.onSetUp(() -> { });
             stage = Scenes.show(view, scheme);
@@ -62,7 +62,7 @@ class DashboardKeyboardTest {
             // both entries open, with the times of part of the day: every control the day can show
             press(view, TextKey.BATTERY_UPDATE);
             press(view, TextKey.ONE_OFF_ADD);
-            AwayEntry.enterTimes(view, "10:00", "12:00");
+            OneOffAwayEntry.enterTimes(view, "10:00", "12:00");
         });
 
         assertThat(Keyboard.problems(stage.getScene(), view)).isEmpty();

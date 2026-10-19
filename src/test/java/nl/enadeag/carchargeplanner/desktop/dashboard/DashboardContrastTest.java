@@ -40,7 +40,7 @@ class DashboardContrastTest {
     private List<String> problems(ColorScheme scheme) throws Exception {
         return Fx.call(() -> {
             var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, new Messages(Language.ENGLISH));
-            view.onAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
+            view.onOneOffAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
             stage = Scenes.show(view, scheme);
             var problems = new ArrayList<String>();
             var plan = Models.plan(Optional.of(Models.ADVICE));
@@ -72,8 +72,8 @@ class DashboardContrastTest {
     private static void openAwayEntryWithAProblem(DashboardView view) {
         view.lookup(".away-card").lookupAll(".button").stream().map(javafx.scene.control.Button.class::cast)
                 .filter(button -> button.getText().equals("Add")).findFirst().orElseThrow().fire();
-        AwayEntry.enterTimes(view, "16:00", "10:00");
-        AwayEntry.save(view);
+        OneOffAwayEntry.enterTimes(view, "16:00", "10:00");
+        OneOffAwayEntry.save(view);
         view.applyCss();
         view.layout();
     }

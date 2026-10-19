@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.outlook;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.advice.GridAdviceModel;
-import nl.enadeag.carchargeplanner.desktop.dashboard.away.AwayModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
 import java.util.List;
 import java.util.Optional;
@@ -25,7 +25,7 @@ public sealed interface DashboardModel {
      * @param away the away periods entered for specific days that have not ended
      * @param footer the forecast's source and freshness
      */
-    record Plan(List<DayModel> days, Optional<GridAdviceModel> advice, AwayModel away, String footer)
+    record Plan(List<DayModel> days, Optional<GridAdviceModel> advice, OneOffAwayModel away, String footer)
             implements DashboardModel {
 
         /**

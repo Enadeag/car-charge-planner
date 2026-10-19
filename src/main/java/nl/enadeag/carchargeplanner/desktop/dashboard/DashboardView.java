@@ -2,7 +2,7 @@ package nl.enadeag.carchargeplanner.desktop.dashboard;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.advice.GridAdviceCard;
 import nl.enadeag.carchargeplanner.desktop.dashboard.advice.GridAdviceModel;
-import nl.enadeag.carchargeplanner.desktop.dashboard.away.AwayModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayCard;
 import nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryCard;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
@@ -48,7 +48,7 @@ final class DashboardView extends VBox {
     /** Today's grid advice; null when the plan shown has none, or before one shows. */
     private GridAdviceModel advice;
     /** The away periods for specific days; null until a plan shows. */
-    private AwayModel awayPeriods;
+    private OneOffAwayModel awayPeriods;
     private Runnable setUp = () -> { };
     /** True once {@link #onSetUp(Runnable)} was called: only then does a card without a plan offer set-up. */
     private boolean canOpenSetUp;
@@ -166,7 +166,7 @@ final class DashboardView extends VBox {
      * @param removed gets a period the owner removed, as the plan listed it, on the JavaFX thread
      * @param clock tells the time when the owner saves a period, which must not have ended by then
      */
-    void onAwayChange(Consumer<OneOffAwayPeriod> added, Consumer<OneOffAwayPeriod> removed, InstantSource clock) {
+    void onOneOffAwayChange(Consumer<OneOffAwayPeriod> added, Consumer<OneOffAwayPeriod> removed, InstantSource clock) {
         away.onChange(added, removed, clock);
         if (!days.isEmpty()) {
             showDay(selectedDay());
@@ -178,8 +178,8 @@ final class DashboardView extends VBox {
      *
      * @param action what the button does; called on the JavaFX thread
      */
-    void onAway(Runnable action) {
-        footer.onAway(action);
+    void onWeeklyAway(Runnable action) {
+        footer.onWeeklyAway(action);
     }
 
     /**

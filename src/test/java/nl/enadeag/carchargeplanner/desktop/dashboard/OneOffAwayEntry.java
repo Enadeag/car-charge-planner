@@ -9,9 +9,9 @@ import javafx.scene.control.TextField;
  * The open away entry of the first away card below a node, used as the owner uses it: by its controls. Call on the
  * JavaFX thread, once Add opened the entry.
  */
-final class AwayEntry {
+final class OneOffAwayEntry {
 
-    private AwayEntry() {
+    private OneOffAwayEntry() {
     }
 
     /**

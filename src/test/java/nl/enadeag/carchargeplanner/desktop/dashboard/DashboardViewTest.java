@@ -257,7 +257,7 @@ class DashboardViewTest {
         var away = new java.util.concurrent.atomic.AtomicInteger();
         var settings = new java.util.concurrent.atomic.AtomicInteger();
         Fx.run(() -> {
-            view.onAway(away::incrementAndGet);
+            view.onWeeklyAway(away::incrementAndGet);
             view.onSettings(settings::incrementAndGet);
         });
 
@@ -276,14 +276,14 @@ class DashboardViewTest {
         var added = new ArrayList<OneOffAwayPeriod>();
 
         Fx.run(() -> {
-            view.onAwayChange(added::add, _ -> { }, Models.CLOCK);
+            view.onOneOffAwayChange(added::add, _ -> { }, Models.CLOCK);
             tabs(view).getSelectionModel().select(2);
         });
         assertThat(Fx.call(() -> Scenes.visibleTexts(view))).contains("Tomorrow, all day", "Sun 5 Jul, 10:00 – 16:30");
         var add = Fx.call(() -> view.lookup(".away-card").lookupAll(".button").stream().map(Button.class::cast)
                 .filter(button -> button.getText().equals("Add")).findFirst().orElseThrow());
         Fx.run(add::fire);
-        Fx.run(() -> AwayEntry.save(view));
+        Fx.run(() -> OneOffAwayEntry.save(view));
 
         assertThat(added).containsExactly(OneOffAwayPeriod.allDay(
                 Models.GRID_SUNDAY.date(), Models.BRUSSELS));

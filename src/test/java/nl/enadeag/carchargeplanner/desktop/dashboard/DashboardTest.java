@@ -200,8 +200,8 @@ class DashboardTest {
 
         double withEntry = Fx.call(window::getHeight);
         Fx.run(() -> {
-            AwayEntry.enterTimes(window.getScene().getRoot(), "16:00", "10:00");
-            AwayEntry.save(window.getScene().getRoot());
+            OneOffAwayEntry.enterTimes(window.getScene().getRoot(), "16:00", "10:00");
+            OneOffAwayEntry.save(window.getScene().getRoot());
         });
         Fx.settle();
         assertThat(Fx.call(window::getHeight)).as("and grows again for the times and the problem").isGreaterThan(withEntry);

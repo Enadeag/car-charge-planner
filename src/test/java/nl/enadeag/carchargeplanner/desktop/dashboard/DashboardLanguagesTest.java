@@ -103,7 +103,7 @@ class DashboardLanguagesTest {
             var mapper = new OutlookMapper(messages);
             var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, messages);
             view.onBatteryEntered(_ -> { });
-            view.onAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
+            view.onOneOffAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
             view.lookup(".day-tabs").setStyle("-fx-open-tab-animation: none;"); // a growing tab is narrow on purpose
             stage = scale.map(larger -> Scenes.show(view, ColorScheme.LIGHT, larger))
                     .orElseGet(() -> Scenes.show(view, ColorScheme.LIGHT));
@@ -123,8 +123,8 @@ class DashboardLanguagesTest {
             // the away entry open at part of the day, refusing an end before the start
             view.lookupAll(".button").stream().map(Button.class::cast)
                     .filter(button -> button.getText().equals(messages.text(TextKey.ONE_OFF_ADD))).findFirst().orElseThrow().fire();
-            AwayEntry.enterTimes(view, "16:00", "10:00");
-            AwayEntry.save(view);
+            OneOffAwayEntry.enterTimes(view, "16:00", "10:00");
+            OneOffAwayEntry.save(view);
             found.addAll(check(view));
             view.show(mapper.map(new Outlook.NotSetUp(Path.of("/home/owner/.config/car-charge-planner/engine.json"))));
             found.addAll(check(view));

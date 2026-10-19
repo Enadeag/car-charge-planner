@@ -13,7 +13,7 @@ import java.util.List;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-class AwayMapperTest {
+class OneOffAwayMapperTest {
 
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");
     /** A Friday. */
@@ -37,10 +37,11 @@ class AwayMapperTest {
         var periods = List.of(ended, part(TODAY, 10, 12), OneOffAwayPeriod.allDay(TODAY.plusDays(1), BRUSSELS),
                 part(TODAY.plusDays(5), 9, 17), overSeveralDays);
 
-        var model = new AwayMapper(BRUSSELS, now, new Messages(language)).map(periods);
+        var model = new OneOffAwayMapper(BRUSSELS, now, new Messages(language)).map(periods);
 
-        assertThat(model.coming()).extracting(AwayModel.Listed::text).containsExactly(today, tomorrow, nextWeek, overDays);
-        assertThat(model.coming()).extracting(AwayModel.Listed::period).doesNotContain(ended);
+        assertThat(model.coming()).extracting(OneOffAwayModel.Listed::text)
+                .containsExactly(today, tomorrow, nextWeek, overDays);
+        assertThat(model.coming()).extracting(OneOffAwayModel.Listed::period).doesNotContain(ended);
         assertThat(model.coming().get(1).removeSpoken())
                 .isEqualTo(new Messages(language).text(TextKey.ONE_OFF_REMOVE_SPOKEN, tomorrow));
     }

@@ -134,8 +134,8 @@ public final class Dashboard {
     private DashboardView newView() {
         var made = new DashboardView(this::detach, this::fitToContent, reducedMotion, messages);
         made.onBatteryEntered(pct -> actions.batteryEntered().accept(new Percent(pct)));
-        made.onAwayChange(actions.awayAdded(), actions.awayRemoved(), clock);
-        made.onAway(actions.away());
+        made.onOneOffAwayChange(actions.oneOffAdded(), actions.oneOffRemoved(), clock);
+        made.onWeeklyAway(actions.openWeeklyAway());
         made.onSettings(actions.settings());
         made.onSetUp(actions.setUp());
         var mapper = new OutlookMapper(messages);
