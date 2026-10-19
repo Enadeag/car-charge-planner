@@ -18,7 +18,7 @@ import java.util.Optional;
  * @param temporary the system's folder for temporary files
  * @param owner who must own the private folders and the instance socket: the user the app runs as where files have
  *     an owner and a mode (Linux); unchecked on other systems, and when the user could not be told
- * @param launcher the program jpackage's launcher started, which start at login and the menu entry start; empty
+ * @param launcher the path of jpackage's launcher executable, which start at login and the menu entry start; empty
  *     when the app does not run from it, such as from Maven
  * @param terminal whether the app runs in a terminal, which shows what it logs; false when it was started from the
  *     desktop, or by Windows' launcher, which has no console

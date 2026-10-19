@@ -68,7 +68,7 @@ public final class Main {
                     appSettingsFile, appSettings, language).run();
             return;
         }
-        var outcome = Commands.of(host, parts, instance, language.messages()).run(commandLine.command());
+        var outcome = Commands.of(host, parts, instance, language.messages()).carryOut(commandLine.command());
         outcome.print(System.out, System.err);
         System.exit(outcome.exit().code());
     }

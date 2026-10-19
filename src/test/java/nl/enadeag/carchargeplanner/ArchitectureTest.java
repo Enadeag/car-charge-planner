@@ -457,15 +457,15 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule nothingPrintsAStackTraceToTheConsole = noClasses()
             .should().callMethodWhere(PRINT_A_STACK_TRACE_TO_THE_CONSOLE)
-            .because("the console is for Main's answers; no class, not even LogLine, writes a trace there "
+            .because("the console is for Main's answers; no class, not even LogLineFormat, writes a trace there "
                     + "(ADR 0005)");
 
     @ArchTest
-    static final ArchRule onlyTheLogLinePrintsAStackTrace = noClasses()
-            .that().doNotHaveFullyQualifiedName(ROOT + ".logging.LogLine")
+    static final ArchRule onlyTheLogLineFormatPrintsAStackTrace = noClasses()
+            .that().doNotHaveFullyQualifiedName(ROOT + ".logging.LogLineFormat")
             .should().callMethodWhere(PRINT_A_STACK_TRACE)
-            .because("a failure goes to the log, which knows what it may show; only LogLine, which writes the log, "
-                    + "prints a trace, to a writer of its own (ADR 0005)");
+            .because("a failure goes to the log, which knows what it may show; only LogLineFormat, which writes the "
+                    + "log, prints a trace, to a writer of its own (ADR 0005)");
 
     @ArchTest
     static final ArchRule onlyTheRootConfiguresJavaUtilLogging = noClasses()

@@ -27,6 +27,7 @@ public final class InstanceLocation {
      *     {@value #DATA_SUBFOLDER} in the app's data folder, such as {@code ~/.local/share/car-charge-planner/run}:
      *     never one in a shared folder such as {@code /tmp}, where another user could make it first. It need not exist
      *     yet.
+     * @throws NullPointerException on Windows, when the environment has no {@code LOCALAPPDATA}
      */
     public static Path folder(Os os, Map<String, String> environment, Path home) {
         if (os == Os.WINDOWS) {

@@ -106,7 +106,7 @@ public final class PrivateFolder {
      *     fails, or it is no longer the same owner-only folder afterwards
      * @throws IOException when it cannot be made
      */
-    public Path make() throws IOException {
+    public Path ensurePrivate() throws IOException {
         var parent = path.toAbsolutePath().getParent();
         if (parent != null && !Files.isDirectory(parent)) {
             Files.createDirectories(parent, attributes());

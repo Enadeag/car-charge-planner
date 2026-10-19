@@ -11,7 +11,8 @@ import java.util.Optional;
  *
  * @param command what to do
  * @param config the config file named with {@code --config=}; empty when none was named
- * @param background {@code --background} was given: the app was started at login and starts hidden in the tray
+ * @param background {@code --background} was given: the app was started at login and starts hidden, as a tray icon
+ *     or as a window that is not shown
  */
 public record CommandLine(Command command, Optional<Path> config, boolean background) {
 

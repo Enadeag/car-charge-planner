@@ -17,6 +17,7 @@ public final class DataLocation {
      *     {@code XDG_DATA_HOME}
      * @param home the user's home folder, for when Linux gives no usable {@code XDG_DATA_HOME}
      * @return the app's own folder inside the user's data folder; it need not exist yet
+     * @throws NullPointerException on Windows, when the environment has no {@code LOCALAPPDATA}
      */
     public static Path defaultFolder(Os os, Map<String, String> environment, Path home) {
         return systemFolder(os, environment, home).resolve(AppName.ID);
@@ -30,6 +31,7 @@ public final class DataLocation {
      *     {@code XDG_DATA_HOME}, which is ignored when empty or relative
      * @param home the user's home folder, for when Linux gives no usable {@code XDG_DATA_HOME}
      * @return the folder; it need not exist yet
+     * @throws NullPointerException on Windows, when the environment has no {@code LOCALAPPDATA}
      */
     public static Path systemFolder(Os os, Map<String, String> environment, Path home) {
         if (os == Os.WINDOWS) {

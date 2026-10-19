@@ -39,7 +39,7 @@ final class DashboardChanges {
      *
      * @param level the level the car shows
      */
-    void enterBatteryLevel(Percent level) {
+    void setBatteryLevel(Percent level) {
         save("the battery level", () -> engine.setBatteryLevel(level));
     }
 

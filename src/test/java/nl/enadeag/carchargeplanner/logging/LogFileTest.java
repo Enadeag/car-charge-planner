@@ -21,7 +21,7 @@ class LogFileTest {
     Path folder;
 
     private static LogFile logFile(Path folder, long limit, int count) throws IOException {
-        return new LogFile(folder, limit, count, new LogLine(ZoneId.of("UTC")));
+        return new LogFile(folder, limit, count, new LogLineFormat(ZoneId.of("UTC")));
     }
 
     private Path file(int number) {

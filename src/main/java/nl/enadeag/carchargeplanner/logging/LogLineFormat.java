@@ -13,9 +13,9 @@ import java.util.logging.LogRecord;
  * {@code 2026-10-17 14:30:00.123 +02:00 WARNING engine.PlanSchedule: planning failed}. The app's own loggers are named
  * without the app's package. An exception follows on the lines after it, with its stack trace.
  */
-final class LogLine extends Formatter {
+final class LogLineFormat extends Formatter {
 
-    private static final String APP_PACKAGE = AppLog.APP_LOGGER + ".";
+    private static final String APP_PACKAGE = AppLog.APP_LOGGER_NAME + ".";
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS xxx", Locale.ROOT);
 
     private final ZoneId zone;
@@ -26,7 +26,7 @@ final class LogLine extends Formatter {
      * @param zone the time zone the times are written in, normally the system's own, so they match the owner's
      *     clock; never null
      */
-    LogLine(ZoneId zone) {
+    LogLineFormat(ZoneId zone) {
         if (zone == null) {
             throw new IllegalArgumentException("the zone must not be null");
         }

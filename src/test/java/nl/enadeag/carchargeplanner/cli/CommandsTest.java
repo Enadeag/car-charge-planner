@@ -121,7 +121,7 @@ class CommandsTest {
         return new Commands(MESSAGES, instance(),
                 login.<Commands.LoginSwitch>map(Commands.LoginSwitch.Present::new)
                         .orElseGet(Commands.LoginSwitch.OnlyFromLauncher::new),
-                menuEntry.map(entry -> Commands.Launcher.of(os, entry)).orElseGet(() -> Commands.Launcher.none(os)));
+                menuEntry.map(entry -> Commands.MenuEntry.of(os, entry)).orElseGet(() -> Commands.MenuEntry.none(os)));
     }
 
     private Commands commands() {
@@ -145,7 +145,7 @@ class CommandsTest {
         var received = new LinkedBlockingQueue<InstanceCommand>();
         assertThat(instance().claim(received::add)).isEqualTo(Claim.FIRST);
 
-        var outcome = commands().run(Command.QUIT);
+        var outcome = commands().carryOut(Command.QUIT);
 
         assertThat(received.poll(5, TimeUnit.SECONDS)).isEqualTo(InstanceCommand.QUIT);
         assertThat(outcome).isEqualTo(success(TextKey.CLI_QUIT_CONFIRMED, AppName.TITLE));
@@ -153,7 +153,7 @@ class CommandsTest {
 
     @Test
     void quitWithoutARunningAppSaysSoAndSucceeds() {
-        assertThat(commands().run(Command.QUIT)).isEqualTo(success(TextKey.CLI_NOT_RUNNING, AppName.TITLE));
+        assertThat(commands().carryOut(Command.QUIT)).isEqualTo(success(TextKey.CLI_NOT_RUNNING, AppName.TITLE));
     }
 
     @Test
@@ -161,7 +161,7 @@ class CommandsTest {
         var received = new LinkedBlockingQueue<InstanceCommand>();
         assertThat(instance().claim(received::add)).isEqualTo(Claim.FIRST);
 
-        var outcome = commands().run(Command.TEST_NOTIFICATION);
+        var outcome = commands().carryOut(Command.TEST_NOTIFICATION);
 
         assertThat(received.poll(5, TimeUnit.SECONDS)).isEqualTo(InstanceCommand.TEST_NOTIFICATION);
         assertThat(outcome).isEqualTo(success(TextKey.CLI_TEST_NOTIFICATION_SHOWN, AppName.TITLE));
@@ -169,7 +169,7 @@ class CommandsTest {
 
     @Test
     void testNotificationWithoutARunningAppSaysSoAndEndsWithTheUnreachableCode() {
-        assertThat(commands().run(Command.TEST_NOTIFICATION)).isEqualTo(new CommandOutcome(ExitCode.UNREACHABLE,
+        assertThat(commands().carryOut(Command.TEST_NOTIFICATION)).isEqualTo(new CommandOutcome(ExitCode.UNREACHABLE,
                 MESSAGES.text(TextKey.CLI_TEST_NOTIFICATION_NOT_RUNNING, AppName.TITLE)));
     }
 
@@ -180,7 +180,7 @@ class CommandsTest {
         ServerSocketChannel.open(StandardProtocolFamily.UNIX)
                 .bind(UnixDomainSocketAddress.of(instanceFolder.resolve("instance.sock"))).close();
 
-        assertThat(commands().run(Command.TEST_NOTIFICATION)).isEqualTo(new CommandOutcome(ExitCode.UNREACHABLE,
+        assertThat(commands().carryOut(Command.TEST_NOTIFICATION)).isEqualTo(new CommandOutcome(ExitCode.UNREACHABLE,
                 MESSAGES.text(TextKey.CLI_TEST_NOTIFICATION_NOT_RUNNING, AppName.TITLE)));
     }
 
@@ -191,7 +191,7 @@ class CommandsTest {
         instanceFolder = temp.resolve("a-folder-with-a-long-name-" + "x".repeat(100));
         assertThat(instance().claim(_ -> { })).isEqualTo(Claim.FIRST_UNREACHABLE);
 
-        assertThat(commands().run(command)).isEqualTo(
+        assertThat(commands().carryOut(command)).isEqualTo(
                 new CommandOutcome(ExitCode.UNREACHABLE, MESSAGES.text(TextKey.CLI_COMMAND_UNREACHABLE, AppName.TITLE)));
     }
 
@@ -204,7 +204,7 @@ class CommandsTest {
                 .bind(UnixDomainSocketAddress.of(instanceFolder.resolve("instance.sock")));
         toClose.add(silent);
 
-        assertThat(commands().run(command)).isEqualTo(failure(TextKey.CLI_COMMAND_SILENT, AppName.TITLE));
+        assertThat(commands().carryOut(command)).isEqualTo(failure(TextKey.CLI_COMMAND_SILENT, AppName.TITLE));
     }
 
     @ParameterizedTest
@@ -217,7 +217,7 @@ class CommandsTest {
             return;
         }
 
-        var outcome = commands().run(command);
+        var outcome = commands().carryOut(command);
 
         // not "not running": a folder in the way may be someone's doing, so the owner is told what is wrong
         var said = MESSAGES.text(TextKey.CLI_COMMAND_NOT_PRIVATE, AppName.TITLE, "%s");
@@ -228,11 +228,11 @@ class CommandsTest {
 
     @Test
     void startAtLoginIsSwitchedOnAndOff() {
-        assertThat(commands().run(Command.START_AT_LOGIN_ON))
+        assertThat(commands().carryOut(Command.START_AT_LOGIN_ON))
                 .isEqualTo(success(TextKey.CLI_START_AT_LOGIN_ON, AppName.TITLE));
         assertThat(startAtLogin.on).isTrue();
 
-        assertThat(commands().run(Command.START_AT_LOGIN_OFF))
+        assertThat(commands().carryOut(Command.START_AT_LOGIN_OFF))
                 .isEqualTo(success(TextKey.CLI_START_AT_LOGIN_OFF, AppName.TITLE));
         assertThat(startAtLogin.on).isFalse();
     }
@@ -241,13 +241,13 @@ class CommandsTest {
     void startAtLoginThatCannotBeWrittenFailsWithTheReason() {
         startAtLogin.failure = new IOException("the folder is read-only");
 
-        assertThat(commands().run(Command.START_AT_LOGIN_ON))
+        assertThat(commands().carryOut(Command.START_AT_LOGIN_ON))
                 .isEqualTo(failure(TextKey.CLI_START_AT_LOGIN_FAILED, "the folder is read-only"));
     }
 
     @Test
     void startAtLoginNeedsTheInstalledApp() {
-        assertThat(commands(Os.LINUX, Optional.empty(), Optional.empty()).run(Command.START_AT_LOGIN_ON))
+        assertThat(commands(Os.LINUX, Optional.empty(), Optional.empty()).carryOut(Command.START_AT_LOGIN_ON))
                 .isEqualTo(failure(TextKey.CLI_START_AT_LOGIN_NEEDS_INSTALL));
     }
 
@@ -257,18 +257,18 @@ class CommandsTest {
         var dataHome = temp.resolve("data");
         var commands = commands(Os.LINUX, Optional.empty(), Optional.of(menuEntry(dataHome)));
 
-        var installed = commands.run(Command.INSTALL_LAUNCHER);
+        var installed = commands.carryOut(Command.INSTALL_LAUNCHER);
         var entry = dataHome.resolve("applications/car-charge-planner.desktop");
         assertThat(entry).exists();
         assertThat(installed.exit()).isEqualTo(ExitCode.SUCCESS);
         assertThat(installed.text()).contains("  " + entry);
 
-        var removed = commands.run(Command.UNINSTALL_LAUNCHER);
+        var removed = commands.carryOut(Command.UNINSTALL_LAUNCHER);
         assertThat(entry).doesNotExist();
         assertThat(removed.exit()).isEqualTo(ExitCode.SUCCESS);
         assertThat(removed.text()).contains("  " + entry);
 
-        assertThat(commands.run(Command.UNINSTALL_LAUNCHER))
+        assertThat(commands.carryOut(Command.UNINSTALL_LAUNCHER))
                 .isEqualTo(success(TextKey.CLI_LAUNCHER_NOT_FOUND, AppName.TITLE));
     }
 
@@ -278,7 +278,7 @@ class CommandsTest {
         // a file where the data folder should be: nothing can be written below it
         var notAFolder = Files.createFile(temp.resolve("not-a-folder"));
         var install = commands(Os.LINUX, Optional.empty(), Optional.of(menuEntry(notAFolder)))
-                .run(Command.INSTALL_LAUNCHER);
+                .carryOut(Command.INSTALL_LAUNCHER);
         assertThat(install.exit()).isEqualTo(ExitCode.FAILURE);
         assertThat(install.text()).startsWith(MESSAGES.text(TextKey.CLI_LAUNCHER_INSTALL_FAILED, ""))
                 .contains(notAFolder.toString());
@@ -287,7 +287,7 @@ class CommandsTest {
         var dataHome = temp.resolve("data");
         Files.createDirectories(dataHome.resolve("applications/car-charge-planner.desktop/inside"));
         var uninstall = commands(Os.LINUX, Optional.empty(), Optional.of(menuEntry(dataHome)))
-                .run(Command.UNINSTALL_LAUNCHER);
+                .carryOut(Command.UNINSTALL_LAUNCHER);
         assertThat(uninstall.exit()).isEqualTo(ExitCode.FAILURE);
         assertThat(uninstall.text()).startsWith(MESSAGES.text(TextKey.CLI_LAUNCHER_REMOVE_FAILED, ""))
                 .contains("car-charge-planner.desktop");
@@ -295,7 +295,8 @@ class CommandsTest {
 
     @Test
     void theLauncherIsLinuxOnly() {
-        assertThat(commands(Os.WINDOWS, Optional.empty(), Optional.of(menuEntry(temp))).run(Command.INSTALL_LAUNCHER))
+        assertThat(commands(Os.WINDOWS, Optional.empty(), Optional.of(menuEntry(temp)))
+                .carryOut(Command.INSTALL_LAUNCHER))
                 .isEqualTo(failure(TextKey.CLI_LAUNCHER_LINUX_ONLY, AppName.TITLE));
     }
 
@@ -306,21 +307,23 @@ class CommandsTest {
         var fromTheBuild = new Host(Os.LINUX, Map.of(), temp, temp, new Owner.Unchecked(), Optional.empty(), false);
         var linux = Commands.of(fromTheBuild, PlatformParts.of(fromTheBuild), instance(), MESSAGES);
 
-        assertThat(Commands.of(windows, PlatformParts.of(windows), instance(), MESSAGES).run(Command.INSTALL_LAUNCHER))
+        assertThat(Commands.of(windows, PlatformParts.of(windows), instance(), MESSAGES)
+                .carryOut(Command.INSTALL_LAUNCHER))
                 .isEqualTo(failure(TextKey.CLI_LAUNCHER_LINUX_ONLY, AppName.TITLE));
-        assertThat(linux.run(Command.INSTALL_LAUNCHER)).isEqualTo(failure(TextKey.CLI_LAUNCHER_NEEDS_INSTALL));
-        assertThat(linux.run(Command.START_AT_LOGIN_ON)).isEqualTo(failure(TextKey.CLI_START_AT_LOGIN_NEEDS_INSTALL));
+        assertThat(linux.carryOut(Command.INSTALL_LAUNCHER)).isEqualTo(failure(TextKey.CLI_LAUNCHER_NEEDS_INSTALL));
+        assertThat(linux.carryOut(Command.START_AT_LOGIN_ON))
+                .isEqualTo(failure(TextKey.CLI_START_AT_LOGIN_NEEDS_INSTALL));
     }
 
     @Test
     void theLauncherNeedsTheInstalledApp() {
-        assertThat(commands(Os.LINUX, Optional.empty(), Optional.empty()).run(Command.INSTALL_LAUNCHER))
+        assertThat(commands(Os.LINUX, Optional.empty(), Optional.empty()).carryOut(Command.INSTALL_LAUNCHER))
                 .isEqualTo(failure(TextKey.CLI_LAUNCHER_NEEDS_INSTALL));
     }
 
     @Test
     void runIsNotACommandThatEnds() {
-        assertThatThrownBy(() -> commands().run(Command.RUN)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> commands().carryOut(Command.RUN)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

@@ -3,12 +3,14 @@ package nl.enadeag.carchargeplanner.desktop.system;
 import java.io.IOException;
 
 /**
- * Start at login: the app launching itself, hidden in the tray, when the user signs in. Each system keeps the choice
+ * Start at login: the app launching itself, hidden as a tray icon or as a window that is not shown, when the user
+ * signs in. Each system keeps the choice
  * in its own place, which is read every time, so a change made outside the app is seen too.
  */
 public interface StartAtLogin {
 
-    /** The argument the app is started with at login, so that it starts hidden in the tray. */
+    /** The argument the app is started with at login, so that it starts hidden: as a tray icon, or as a window
+     * that is not shown. */
     String BACKGROUND = "--background";
 
     /**

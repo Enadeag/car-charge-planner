@@ -10,9 +10,9 @@ import java.util.logging.LogRecord;
 import org.junit.jupiter.api.Test;
 
 /** How a log record is written as a line: the logger part, as the time, level and message are in {@link AppLogTest}. */
-class LogLineTest {
+class LogLineFormatTest {
 
-    private static final LogLine LINE = new LogLine(ZoneId.of("Europe/Amsterdam"));
+    private static final LogLineFormat LINE = new LogLineFormat(ZoneId.of("Europe/Amsterdam"));
 
     private static String line(String logger) {
         var record = new LogRecord(Level.INFO, "planned");

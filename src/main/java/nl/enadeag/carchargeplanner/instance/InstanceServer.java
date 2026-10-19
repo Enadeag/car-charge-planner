@@ -95,7 +95,7 @@ final class InstanceServer implements AutoCloseable {
 
     private void answer(SocketChannel connection, Consumer<InstanceCommand> handler) {
         try (connection) {
-            if (!fromUser(connection)) {
+            if (!peerAllowed(connection)) {
                 LOG.log(Level.WARNING, "refused a connection to the instance socket from another user");
                 return;
             }
@@ -111,7 +111,7 @@ final class InstanceServer implements AutoCloseable {
         }
     }
 
-    private boolean fromUser(SocketChannel connection) throws IOException {
+    private boolean peerAllowed(SocketChannel connection) throws IOException {
         if (!(owner instanceof Owner.User(var user))
                 || !connection.supportedOptions().contains(ExtendedSocketOptions.SO_PEERCRED)) {
             return true;

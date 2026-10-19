@@ -37,9 +37,9 @@ public final class RuntimeFolder {
             // a guessable name in a shared folder could be made by another user first
             var made = Files.createTempDirectory(temporary, prefix,
                     PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
-            return new PrivateFolder(made, owner).make();
+            return new PrivateFolder(made, owner).ensurePrivate();
         }
         var folder = Path.of(runtime).resolve(prefix + ProcessHandle.current().pid());
-        return new PrivateFolder(folder, owner).make();
+        return new PrivateFolder(folder, owner).ensurePrivate();
     }
 }

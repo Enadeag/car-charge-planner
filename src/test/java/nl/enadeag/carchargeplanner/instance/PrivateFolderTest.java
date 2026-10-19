@@ -47,7 +47,8 @@ class PrivateFolderTest {
     }
 
     private void assertRefused(PrivateFolder privateFolder, String reason) throws IOException {
-        assertThatThrownBy(privateFolder::make).isInstanceOf(NotPrivateException.class).hasMessageContaining(reason);
+        assertThatThrownBy(privateFolder::ensurePrivate).isInstanceOf(NotPrivateException.class)
+                .hasMessageContaining(reason);
         assertThat(mode(folder)).isEqualTo("rwxr-xr-x");
     }
 
@@ -56,7 +57,7 @@ class PrivateFolderTest {
         Files.writeString(folder.resolve("instance.lock"), "");
         Files.createDirectory(folder.resolve("icons"));
 
-        assertThat(new PrivateFolder(folder, new Owner.User(user)).make()).isEqualTo(folder);
+        assertThat(new PrivateFolder(folder, new Owner.User(user)).ensurePrivate()).isEqualTo(folder);
         assertThat(mode(folder)).isEqualTo("rwx------");
     }
 
@@ -110,7 +111,7 @@ class PrivateFolderTest {
         var folderThatResists = new PrivateFolder(folder, new Owner.User(user), (_, _) -> {
             throw new IOException("operation not permitted");
         }, PrivateFolderTest::ownerOf);
-        assertThatThrownBy(folderThatResists::make).isInstanceOf(NotPrivateException.class)
+        assertThatThrownBy(folderThatResists::ensurePrivate).isInstanceOf(NotPrivateException.class)
                 .hasMessageContaining("cannot be made owner-only");
         assertThat(mode(folder)).isEqualTo("rwxr-xr-x");
     }
@@ -123,7 +124,7 @@ class PrivateFolderTest {
             Files.move(path, original);
             Files.createDirectory(path, PosixFilePermissions.asFileAttribute(mode));
         }, PrivateFolderTest::ownerOf);
-        assertThatThrownBy(swapped::make).isInstanceOf(NotPrivateException.class)
+        assertThatThrownBy(swapped::ensurePrivate).isInstanceOf(NotPrivateException.class)
                 .hasMessageContaining("not the same owner-only folder");
     }
 }

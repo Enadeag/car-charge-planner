@@ -73,7 +73,7 @@ public final class SingleInstance implements AutoCloseable {
     public Claim claim(Consumer<InstanceCommand> handler) {
         Path made;
         try {
-            made = folder.make();
+            made = folder.ensurePrivate();
         } catch (NotPrivateException e) {
             problem = e.getMessage();
             return Claim.NOT_PRIVATE;
@@ -88,10 +88,15 @@ public final class SingleInstance implements AutoCloseable {
                 var taken = tryLock(made);
                 if (taken.isPresent()) {
                     lock = taken.get();
+                    var oldVersion = handOverToOldVersion(socket);
+                    if (oldVersion.isPresent()) {
+                        releaseLock();
+                        return oldVersion.get();
+                    }
                     return listen(socket, handler);
                 }
                 // another copy holds the lock; it may have started a moment ago and not listen yet
-                var reply = reach(socket, InstanceCommand.SHOW);
+                var reply = ask(socket, InstanceCommand.SHOW);
                 if (reply == Reply.ANSWERED) {
                     return Claim.HANDED_OVER;
                 }
@@ -109,17 +114,30 @@ public final class SingleInstance implements AutoCloseable {
         }
     }
 
-    /** Holding the lock: no copy that takes it runs, so a socket that is there is an older version's or left over. */
-    private Claim listen(Path socket, Consumer<InstanceCommand> handler) {
-        if (Files.exists(socket, LinkOption.NOFOLLOW_LINKS)) {
-            // a version of the app from before the lock does not take it, but may run and listen
-            var reply = reach(socket, InstanceCommand.SHOW);
-            if (reply == Reply.ANSWERED || reply == Reply.SILENT) {
-                releaseLock();
-                return reply == Reply.ANSWERED ? Claim.HANDED_OVER : Claim.NO_ANSWER;
-            }
-            LOG.log(Level.INFO, "removing the instance socket left behind by an app that ended without removing it");
+    /**
+     * Holding the lock: no copy that takes it runs, so a socket that is there is an older version's or left over. A
+     * version of the app from before the lock does not take it, but may run and listen: it is asked to show its
+     * dashboard.
+     *
+     * @return what came of handing over to an older version that runs; empty when none listens on the socket
+     */
+    private Optional<Claim> handOverToOldVersion(Path socket) {
+        if (!Files.exists(socket, LinkOption.NOFOLLOW_LINKS)) {
+            return Optional.empty();
         }
+        var reply = ask(socket, InstanceCommand.SHOW);
+        if (reply == Reply.ANSWERED) {
+            return Optional.of(Claim.HANDED_OVER);
+        }
+        if (reply == Reply.SILENT) {
+            return Optional.of(Claim.NO_ANSWER);
+        }
+        LOG.log(Level.INFO, "removing the instance socket left behind by an app that ended without removing it");
+        return Optional.empty();
+    }
+
+    /** Holding the lock, with no older version on the socket: makes the socket anew and listens on it. */
+    private Claim listen(Path socket, Consumer<InstanceCommand> handler) {
         try {
             Files.deleteIfExists(socket);
             server = InstanceServer.bind(socket, owner, timeout);
@@ -155,11 +173,11 @@ public final class SingleInstance implements AutoCloseable {
         if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) {
             return Reply.NOBODY;
         }
-        var made = folder.make();
+        var made = folder.ensurePrivate();
         var socket = made.resolve(SOCKET_NAME);
         var deadline = System.nanoTime() + timeout.toNanos();
         while (true) {
-            var reply = reach(socket, command);
+            var reply = ask(socket, command);
             if (reply == Reply.ANSWERED || reply == Reply.SILENT) {
                 return reply;
             }
@@ -179,7 +197,7 @@ public final class SingleInstance implements AutoCloseable {
      * @return {@link Reply#UNREACHABLE} when the socket is there but cannot be connected to for another reason than
      *     that nobody listens
      */
-    private Reply reach(Path socket, InstanceCommand command) {
+    private Reply ask(Path socket, InstanceCommand command) {
         if (!Files.exists(socket, LinkOption.NOFOLLOW_LINKS)) {
             return Reply.NOBODY;
         }

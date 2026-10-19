@@ -44,7 +44,8 @@ public final class SecretsLocation {
      *
      * @param os the system the app runs on; nothing moves elsewhere than on Windows
      * @param configPath the engine's config file, beside which the old file is
-     * @param dataFolder the app's data folder; made, private, when it is missing
+     * @param dataFolder the app's data folder; its missing folders are made, private, only when the file is moved
+     *     into it
      * @return where the file is to be used from: the new place, or the old one when it could not be moved
      */
     public static Path moveFromOldPlace(Os os, Path configPath, Path dataFolder) {

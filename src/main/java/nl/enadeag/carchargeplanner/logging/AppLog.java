@@ -25,7 +25,7 @@ public final class AppLog implements AutoCloseable {
      * The name of the parent logger of the app's own loggers: the app's base package, as each logger is named after
      * its class.
      */
-    public static final String APP_LOGGER = "nl.enadeag.carchargeplanner";
+    public static final String APP_LOGGER_NAME = "nl.enadeag.carchargeplanner";
 
     /** The environment variable that sets the level of the app's own loggers, such as {@code DEBUG}. */
     static final String LEVEL_VARIABLE = "CAR_CHARGE_PLANNER_LOG_LEVEL";
@@ -75,7 +75,7 @@ public final class AppLog implements AutoCloseable {
         for (var handler : root.getHandlers()) {
             root.removeHandler(handler); // the JDK's own console handler, without times
         }
-        var format = new LogLine(zone);
+        var format = new LogLineFormat(zone);
         IOException fileProblem = null;
         try {
             add(new LogFile(folder, FILE_LIMIT, FILE_COUNT, format));

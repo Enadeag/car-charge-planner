@@ -52,6 +52,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -90,7 +91,7 @@ public final class DesktopApp {
     private final SimpleObjectProperty<Appearance> appearance;
 
     /** JavaFX's preferences, which it hands out on its own thread only. */
-    private record Looks(ObservableValue<ColorScheme> system, ObservableValue<ColorScheme> windows,
+    private record FxPreferences(ObservableValue<ColorScheme> system, ObservableValue<ColorScheme> windows,
             ObservableValue<Boolean> reducedMotion) {
     }
 
@@ -129,7 +130,11 @@ public final class DesktopApp {
      */
     public void run() throws Exception {
         var commands = new CompletableFuture<Consumer<InstanceCommand>>();
-        if (!claim(commands)) {
+        var end = claim(commands);
+        if (end.isPresent()) {
+            if (end.get() != ExitCode.SUCCESS) {
+                System.exit(end.get().code());
+            }
             return;
         }
         closing.add("the single-instance guard", instance::close);
@@ -137,6 +142,8 @@ public final class DesktopApp {
         var dataFolder = DataLocation.defaultFolder(host.os(), host.environment(), host.home());
         // only now: a second copy that hands over to this one does not write to its log file
         startLog(dataFolder);
+        // a data folder made before the app made its folders private is made private now
+        PrivateFiles.tighten(dataFolder);
         claim.logProblem();
         DBUS_LOG.setLevel(java.util.logging.Level.WARNING); // dbus-java reports every connection at INFO
         var http = JdkHttpGet.newClient();
@@ -145,13 +152,13 @@ public final class DesktopApp {
 
         Platform.setImplicitExit(false);
         Platform.startup(() -> { });
-        var looks = onFx(() -> {
+        var preferences = makeOnFx(() -> {
             var system = Platform.getPreferences().colorSchemeProperty();
             // the windows follow the owner's appearance; the tray icon follows the panel, so the system's scheme
-            return new Looks(system, Appearance.scheme(appearance, system),
+            return new FxPreferences(system, Appearance.scheme(appearance, system),
                     Platform.getPreferences().reducedMotionProperty());
         });
-        var trayParts = parts.trayParts(looks.system(), icon, language);
+        var trayParts = parts.trayParts(preferences.system(), icon, language);
         var tray = trayParts.tray();
         var notifications = trayParts.notifications();
         closing.add("the tray icon", tray::remove);
@@ -185,19 +192,19 @@ public final class DesktopApp {
             saved.accept(chosen);
             dashboardMade.join().openWindow();
         };
-        var setUp = onFx(() -> new SetUpWindow(stores, secretsFile.path(), this::openLink, setUpFinished,
-                ZoneId.systemDefault(), new SetUpWindow.Looks(looks.system(), appearance, looks.reducedMotion()), icon,
-                language, background));
+        var setUp = makeOnFx(() -> new SetUpWindow(stores, secretsFile.path(), this::openLink, setUpFinished,
+                ZoneId.systemDefault(), new SetUpWindow.Looks(preferences.system(), appearance,
+                preferences.reducedMotion()), icon, language, background));
         var facts = new AboutFacts(version(), configPath, appSettingsFile.path(), dataFolder,
                 AppLog.file(dataFolder), secretsFile.path());
-        var settings = onFx(() -> new SettingsWindow(stores, facts, this::openLink, saved, setUp::open,
-                looks.windows(), icon, language, background));
+        var settings = makeOnFx(() -> new SettingsWindow(stores, facts, this::openLink, saved, setUp::open,
+                preferences.windows(), icon, language, background));
         var setUpOffer = new SetUpOffer(setUp::open, settings::open, !commandLine.background());
-        var actions = new DashboardActions(changes::enterBatteryLevel, changes::addAwayPeriod,
+        var actions = new DashboardActions(changes::setBatteryLevel, changes::addAwayPeriod,
                 changes::removeAwayPeriod, () -> setUpOffer.openSettings(Category.AWAY),
                 () -> setUpOffer.openSettings(Category.SOLAR), setUp::open, this::quit);
-        var dashboard = onFx(() -> new Dashboard(icon, looks.windows(), looks.reducedMotion(), Clock.systemUTC(),
-                parts.taskbarHiding(), language, actions));
+        var dashboard = makeOnFx(() -> new Dashboard(icon, preferences.windows(), preferences.reducedMotion(),
+                Clock.systemUTC(), parts.taskbarHiding(), language, actions));
         dashboardMade.complete(dashboard);
         // a click on a notification does not say where the tray icon is, and the popup would close again as soon as
         // the desktop gives the focus elsewhere: the window comes to the front and stays
@@ -225,16 +232,15 @@ public final class DesktopApp {
     }
 
     /**
-     * Sends the log to the file in the data folder from now on, and to the terminal when there is one; the log is
-     * closed last. A data folder made before the app made its folders private is made private now.
+     * Sends the log to the file in the data folder from now on, and to the terminal when there is one; the log closes
+     * after every part made later, so their closing is logged.
      */
     private void startLog(Path dataFolder) {
         var log = new AppLog(java.util.logging.Logger.getLogger(""),
-                java.util.logging.Logger.getLogger(AppLog.APP_LOGGER));
+                java.util.logging.Logger.getLogger(AppLog.APP_LOGGER_NAME));
         log.start(dataFolder, host.environment(), host.terminal(), ZoneId.systemDefault());
         closing.add("the log file", log::close);
         LOG.log(Level.INFO, AppName.TITLE + " " + version() + " starts");
-        PrivateFiles.tighten(dataFolder);
     }
 
     /** Closes every part, in order, then ends the app. */
@@ -245,18 +251,13 @@ public final class DesktopApp {
     }
 
     /**
-     * Becomes the running copy; false when another copy runs and this one ends. Commands that come in while the app
-     * is still starting wait until it can carry them out.
+     * Becomes the running copy, or not. Commands that come in while the app is still starting wait until it can carry
+     * them out.
+     *
+     * @return empty when this copy runs; else the exit code this one ends with
      */
-    private boolean claim(CompletableFuture<Consumer<InstanceCommand>> commands) {
-        var end = claim.claim(command -> commands.thenAccept(handler -> handler.accept(command)));
-        if (end.isEmpty()) {
-            return true;
-        }
-        if (end.get() != ExitCode.SUCCESS) {
-            System.exit(end.get().code());
-        }
-        return false;
+    private Optional<ExitCode> claim(CompletableFuture<Consumer<InstanceCommand>> commands) {
+        return claim.claim(command -> commands.thenAccept(handler -> handler.accept(command)));
     }
 
     private void showTrayOrWindow(StartupDecision decision, Tray tray, Dashboard dashboard, Tray.TrayActions actions)
@@ -315,7 +316,7 @@ public final class DesktopApp {
     }
 
     /** Makes something on the JavaFX thread and waits for it; what it throws is thrown here. */
-    private static <T> T onFx(Supplier<T> make) throws InterruptedException, ExecutionException {
+    private static <T> T makeOnFx(Supplier<T> make) throws InterruptedException, ExecutionException {
         var made = new CompletableFuture<T>();
         Platform.runLater(() -> {
             try {

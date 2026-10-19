@@ -27,7 +27,7 @@ public final class Commands {
     private final Messages messages;
     private final SingleInstance instance;
     private final LoginSwitch startAtLogin;
-    private final Launcher launcher;
+    private final MenuEntry menuEntry;
 
     /** The system's start at login, or why the commands cannot switch it. */
     sealed interface LoginSwitch {
@@ -44,7 +44,7 @@ public final class Commands {
     }
 
     /** The Linux menu entry, or why the commands cannot install it. */
-    sealed interface Launcher {
+    sealed interface MenuEntry {
 
         /**
          * The menu entry for the program that runs from its launcher.
@@ -53,7 +53,7 @@ public final class Commands {
          * @param entry the menu entry for that program
          * @return the entry on Linux; elsewhere, that it is Linux's only
          */
-        static Launcher of(Os os, LinuxMenuEntry entry) {
+        static MenuEntry of(Os os, LinuxMenuEntry entry) {
             return os == Os.LINUX ? new Present(entry) : new LinuxOnly();
         }
 
@@ -64,7 +64,7 @@ public final class Commands {
          * @return that only the installed app can put itself in the menu; elsewhere than on Linux, that the entry is
          *     Linux's only
          */
-        static Launcher none(Os os) {
+        static MenuEntry none(Os os) {
             return os == Os.LINUX ? new OnlyFromLauncher() : new LinuxOnly();
         }
 
@@ -73,13 +73,13 @@ public final class Commands {
          *
          * @param entry what installs and removes it
          */
-        record Present(LinuxMenuEntry entry) implements Launcher { }
+        record Present(LinuxMenuEntry entry) implements MenuEntry { }
 
         /** The menu entry is Linux's only. */
-        record LinuxOnly() implements Launcher { }
+        record LinuxOnly() implements MenuEntry { }
 
         /** Only the installed app, run from its launcher, can put itself in the menu. */
-        record OnlyFromLauncher() implements Launcher { }
+        record OnlyFromLauncher() implements MenuEntry { }
     }
 
     /**
@@ -88,13 +88,13 @@ public final class Commands {
      * @param messages the texts in the owner's language
      * @param instance the single-instance guard, to reach the running app
      * @param startAtLogin the system's start at login, or why it cannot be switched
-     * @param launcher the Linux menu entry, or why it cannot be installed
+     * @param menuEntry the Linux menu entry, or why it cannot be installed
      */
-    Commands(Messages messages, SingleInstance instance, LoginSwitch startAtLogin, Launcher launcher) {
+    Commands(Messages messages, SingleInstance instance, LoginSwitch startAtLogin, MenuEntry menuEntry) {
         this.messages = messages;
         this.instance = instance;
         this.startAtLogin = startAtLogin;
-        this.launcher = launcher;
+        this.menuEntry = menuEntry;
     }
 
     /**
@@ -108,13 +108,13 @@ public final class Commands {
      */
     public static Commands of(Host host, PlatformParts parts, SingleInstance instance, Messages messages) {
         var dataHome = DataLocation.systemFolder(host.os(), host.environment(), host.home());
-        var launcher = host.launcher()
-                .map(program -> Launcher.of(host.os(), new LinuxMenuEntry(dataHome, program, AppName.ID,
+        var menuEntry = host.launcher()
+                .map(program -> MenuEntry.of(host.os(), new LinuxMenuEntry(dataHome, program, AppName.ID,
                         AppName.TITLE, LinuxMenuEntry::refreshCaches)))
-                .orElseGet(() -> Launcher.none(host.os()));
+                .orElseGet(() -> MenuEntry.none(host.os()));
         var startAtLogin = parts.startAtLogin().<LoginSwitch>map(LoginSwitch.Present::new)
                 .orElseGet(LoginSwitch.OnlyFromLauncher::new);
-        return new Commands(messages, instance, startAtLogin, launcher);
+        return new Commands(messages, instance, startAtLogin, menuEntry);
     }
 
     /**
@@ -124,7 +124,7 @@ public final class Commands {
      * @return the exit code and what to tell the owner
      * @throws IllegalArgumentException for {@link CommandLine.Command#RUN}
      */
-    public CommandOutcome run(CommandLine.Command command) {
+    public CommandOutcome carryOut(CommandLine.Command command) {
         return switch (command) {
             case RUN -> throw new IllegalArgumentException("running the app is not a command that ends");
             case QUIT -> quitRunningApp();
@@ -190,10 +190,10 @@ public final class Commands {
     }
 
     private CommandOutcome switchLauncher(boolean install) {
-        return switch (launcher) {
-            case Launcher.LinuxOnly _ -> failure(messages.text(TextKey.CLI_LAUNCHER_LINUX_ONLY, AppName.TITLE));
-            case Launcher.OnlyFromLauncher _ -> failure(messages.text(TextKey.CLI_LAUNCHER_NEEDS_INSTALL));
-            case Launcher.Present(var entry) -> switchLauncher(entry, install);
+        return switch (menuEntry) {
+            case MenuEntry.LinuxOnly _ -> failure(messages.text(TextKey.CLI_LAUNCHER_LINUX_ONLY, AppName.TITLE));
+            case MenuEntry.OnlyFromLauncher _ -> failure(messages.text(TextKey.CLI_LAUNCHER_NEEDS_INSTALL));
+            case MenuEntry.Present(var entry) -> switchLauncher(entry, install);
         };
     }
 

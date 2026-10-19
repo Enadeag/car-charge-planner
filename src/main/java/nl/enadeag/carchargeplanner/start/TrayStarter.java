@@ -46,8 +46,8 @@ final class TrayStarter {
      * @param tray the system's tray
      * @param actions what the icon and its menu do
      * @param wait how long to keep trying; zero for one try
-     * @return true when the icon is in the tray; false when no tray came, which is logged, and the app shows a window
-     *     instead
+     * @return true when the icon is in the tray; false when no tray came, which is logged: the dashboard is then a
+     *     window
      * @throws InterruptedException when the thread was interrupted while it waited
      */
     boolean show(Tray tray, Tray.TrayActions actions, Duration wait) throws InterruptedException {
@@ -58,7 +58,7 @@ final class TrayStarter {
                 return true;
             } catch (Tray.TrayUnavailable e) {
                 if (!clock.instant().isBefore(deadline)) {
-                    LOG.log(Level.WARNING, e.getMessage() + "; showing the dashboard as a window instead",
+                    LOG.log(Level.WARNING, e.getMessage() + "; the dashboard is a window instead",
                             e.getCause());
                     return false;
                 }

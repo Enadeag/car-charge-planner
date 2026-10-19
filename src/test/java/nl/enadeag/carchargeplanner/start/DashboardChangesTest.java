@@ -64,9 +64,9 @@ class DashboardChangesTest {
 
     @Test
     void theChangesAreSavedOnTheSavingThreadInTheOrderTheyWereMade() {
-        changes.enterBatteryLevel(new Percent(60));
+        changes.setBatteryLevel(new Percent(60));
         changes.addAwayPeriod(AWAY);
-        changes.enterBatteryLevel(new Percent(72));
+        changes.setBatteryLevel(new Percent(72));
         changes.removeAwayPeriod(AWAY);
         assertThat(Files.exists(folder.resolve("battery.json"))).isFalse();
 
@@ -83,7 +83,7 @@ class DashboardChangesTest {
         Files.createDirectory(folder.resolve("battery.json"));
 
         try (var log = LogCapture.of(Background.class)) {
-            changes.enterBatteryLevel(new Percent(72));
+            changes.setBatteryLevel(new Percent(72));
             changes.addAwayPeriod(AWAY);
             runTheSavingThread();
 
