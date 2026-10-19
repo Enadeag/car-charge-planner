@@ -328,7 +328,9 @@ public final class ApiKeys implements SecretsSource {
      * Stores the keys in the keychain, or in the file when there is no usable keychain; never while it is locked. The
      * keys stored now, in the keychain and the file, are read first unless the edit replaces them, so the file is
      * moved in with the edit, such as after the owner unlocked the keychain; a damaged index counts as none, as its
-     * entries cannot be found anyway.
+     * entries cannot be found anyway. A file whose keys could not be read is kept, as {@link #moveFileIntoKeychain()}
+     * keeps it, so a save never drops a key it could not read: the keys then still come from the file, and a load says
+     * why it cannot be used.
      */
     private SaveResult intoKeychainElseFile(Edit edit) throws SecretsProblem {
         synchronized (turn) {
@@ -348,8 +350,15 @@ public final class ApiKeys implements SecretsSource {
                 }
             }
             try {
-                var secrets = edit.apply(edit.replaces() ? Secrets.NONE : storedWithFile());
+                var stored = edit.replaces() ? new StoredKeys(Secrets.NONE, true) : storedWithFile();
+                var secrets = edit.apply(stored.secrets());
                 entries.write(secrets);
+                if (!stored.fileFoldedIn()) {
+                    keptIn(KeyStorage.FILE, "the file could not be read, or holds a name that is not allowed");
+                    LOG.log(Level.WARNING, "the API keys were saved in the system keychain, but " + file.path()
+                            + " is kept: its keys could not be read, so they were not moved");
+                    return SaveResult.IN_KEYCHAIN;
+                }
                 file.delete();
                 remembered = secrets;
                 keptIn(KeyStorage.KEYCHAIN, "");
@@ -366,23 +375,32 @@ public final class ApiKeys implements SecretsSource {
     }
 
     /**
+     * What is stored, for a save that changes only some keys.
+     *
+     * @param secrets what the keychain holds, with the file's keys laid over it when they could be read
+     * @param fileFoldedIn false when there is a file whose keys could not be read, or hold a name that is not allowed
+     */
+    private record StoredKeys(Secrets secrets, boolean fileFoldedIn) {
+    }
+
+    /**
      * What is stored, for a save that changes only some keys: what the keychain holds, with the file's keys laid over
      * it, so that no key kept only in the file is lost when the save removes the file. A file that cannot be read, or
-     * holds a name that is not allowed, adds nothing; the save sets an unreadable one aside.
+     * holds a name that is not allowed, adds nothing, and says so, so the save keeps it.
      *
      * @throws KeychainException when the keychain is locked or cannot be used
      */
-    private Secrets storedWithFile() throws KeychainException {
+    private StoredKeys storedWithFile() throws KeychainException {
         var inKeychain = storedInKeychain();
         if (!file.exists()) {
-            return inKeychain;
+            return new StoredKeys(inKeychain, true);
         }
         try {
             var inFile = file.read();
             inFile.checkNames();
-            return KeyChanges.entering(inFile).applyTo(inKeychain);
+            return new StoredKeys(KeyChanges.entering(inFile).applyTo(inKeychain), true);
         } catch (SecretsProblem _) {
-            return inKeychain;
+            return new StoredKeys(inKeychain, false);
         }
     }
 

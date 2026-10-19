@@ -195,23 +195,42 @@ class ApiKeysTest {
         assertThat(file().read()).isEqualTo(KEYS);
     }
 
-    @Test
-    void aChangeSavedOverAFileWithABadNameLeavesThatNameOut() throws IOException, SecretsProblem {
-        Files.writeString(file().path(), "{\"open-meteo\": {\"api key\": \"OM-SECRET-1\"}}");
+    @ParameterizedTest
+    @MethodSource("filesWhoseKeysCannotBeRead")
+    void aChangeSavedOverAFileWhoseKeysCannotBeReadKeepsThatFileAndSaysWhy(String content)
+            throws IOException, SecretsProblem {
+        Files.writeString(file().path(), content);
+        var keys = keys(keychain);
 
-        keys(keychain).applyChanges(NEW_OPEN_METEO_KEY, () -> { });
+        try (var log = LogCapture.of(ApiKeys.class)) {
+            keys.applyChanges(NEW_OPEN_METEO_KEY, () -> { });
 
-        assertThat(keychain.entries).containsOnlyKeys("index", "forecast/open-meteo/api_key");
-        assertThat(file().path()).doesNotExist();
+            assertThat(log.lines()).contains("WARNING the API keys were saved in the system keychain, but "
+                    + file().path() + " is kept: its keys could not be read, so they were not moved");
+        }
+        assertThat(file().path()).hasContent(content);
+        assertThat(keychain.entries).containsEntry("forecast/open-meteo/api_key", "OM-NEW");
+        assertThatThrownBy(keys::load).isInstanceOf(SecretsProblem.class);
+        assertThat(keys.storage()).isEqualTo(KeyStorage.FILE);
+    }
+
+    static Stream<String> filesWhoseKeysCannotBeRead() {
+        return Stream.of("{\"open-meteo\": {\"api key\": \"OM-SECRET-1\"}}", "not JSON");
     }
 
     @Test
-    void aChangeSavedOverAFileThatCannotBeReadKeepsTheChange() throws IOException, SecretsProblem {
-        Files.writeString(file().path(), "not JSON");
+    void aFileKeptAtASaveMovesInOnceItCanBeReadAndTheSavedChangeStays() throws IOException, SecretsProblem {
+        Files.writeString(file().path(), "{\"open-meteo\": {\"api key\": \"OM-SECRET-1\"}}");
+        var keys = keys(keychain);
+        keys.applyChanges(NEW_OPEN_METEO_KEY, () -> { });
 
-        keys(keychain).applyChanges(NEW_OPEN_METEO_KEY, () -> { });
+        Files.writeString(file().path(), "{\"forecast-solar\": {\"api_key\": \"FS-SECRET-2\"}}");
+        keys.moveFileIntoKeychain();
 
-        assertThat(keys(keychain).load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"))));
+        var both = new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"),
+                new ProviderId("forecast-solar"), Map.of("api_key", "FS-SECRET-2")));
+        assertThat(keys.load()).isEqualTo(both);
+        assertThat(keys(keychain).load()).isEqualTo(both);
         assertThat(file().path()).doesNotExist();
     }
 
