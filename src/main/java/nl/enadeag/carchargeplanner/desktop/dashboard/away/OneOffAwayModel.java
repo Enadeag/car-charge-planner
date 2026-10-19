@@ -18,10 +18,6 @@ public record OneOffAwayModel(ZoneId zone, Instant madeAt, List<Listed> coming) 
 
     /**
      * Keeps a copy of the periods, so the model cannot change afterwards.
-     *
-     * @param zone the time zone of the owner's home
-     * @param madeAt the moment the plan was made
-     * @param coming the periods that had not ended at {@code madeAt}, in order of their start; may be empty
      */
     public OneOffAwayModel {
         coming = List.copyOf(coming);

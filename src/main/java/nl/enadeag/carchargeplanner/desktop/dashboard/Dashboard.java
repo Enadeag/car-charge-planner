@@ -47,7 +47,7 @@ public final class Dashboard {
      * @param icon the app icon, for the window's title bar and the taskbar
      * @param appName the app's name, for the header and the window's title bar; the same in every language
      * @param colorScheme light or dark for the windows, followed while the app runs: the owner's appearance over the
-     *     system's ({@link nl.enadeag.carchargeplanner.desktop.app.Appearance#scheme}); never null
+     *     system's ({@link nl.enadeag.carchargeplanner.desktop.app.Appearance#scheme Appearance.scheme}); never null
      * @param reducedMotion true while the system asks for reduced motion
      *     ({@code Platform.getPreferences().reducedMotionProperty()}); the charts then change without moving; never
      *     null

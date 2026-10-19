@@ -26,7 +26,7 @@ public final class WindowTheme {
      * Makes the theme, following the scheme from now on.
      *
      * @param scheme the colour scheme to follow: the owner's appearance over the system's
-     *     ({@link nl.enadeag.carchargeplanner.desktop.app.Appearance#scheme}); never null
+     *     ({@link nl.enadeag.carchargeplanner.desktop.app.Appearance#scheme Appearance.scheme}); never null
      */
     public WindowTheme(ObservableValue<ColorScheme> scheme) {
         this.scheme = scheme;

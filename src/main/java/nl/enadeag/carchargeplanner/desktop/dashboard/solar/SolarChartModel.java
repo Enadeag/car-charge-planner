@@ -5,8 +5,8 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 
 /**
- * One day's expected sun as the solar chart draws it. Times are hours from the start of the day in real time, so a
- * day with a clock change is 23 or 25 hours long; the ticks carry the clock times.
+ * One day's expected solar power as the solar chart draws it. Times are hours from the start of the day in real time,
+ * so a day with a clock change is 23 or 25 hours long; the ticks carry the clock times.
  *
  * @param fromHour the first hour the chart shows, 0 or more
  * @param toHour the last hour the chart shows, after {@code fromHour}
@@ -77,7 +77,7 @@ public record SolarChartModel(
      * @param startHour the hour the step starts
      * @param endHour the hour the step ends, after {@code startHour}
      * @param kw the expected solar power in kW, 0 or more
-     * @param readout the step in words, such as "13:00 – 4.2 kW sun · 0.4 kW house"
+     * @param readout the step in words, such as "13:00: 4.2 kW solar · 0.4 kW house"
      */
     public record Step(double startHour, double endHour, double kw, String readout) {
 

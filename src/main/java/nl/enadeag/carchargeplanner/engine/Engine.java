@@ -29,6 +29,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges;
 import nl.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
+import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
@@ -240,9 +241,8 @@ public final class Engine {
     /**
      * Replaces the config file by this config, at once and whole, so the next plan uses it; a provider that failed
      * before is asked again at the next plan instead of after its wait, as a corrected setting deserves a try. A value
-     * the owner entered is checked as the config's records are made, which refuse it with an {@link
-     * nl.enadeag.carchargeplanner.engine.setting.InvalidSetting} that names the setting. Once started, the
-     * engine plans again soon after.
+     * the owner entered is checked as the config's records are made, which refuse it with an {@link InvalidSetting}
+     * that names the setting. Once started, the engine plans again soon after.
      *
      * @param config the whole config to keep
      * @throws IOException when the file could not be written; it is then left as it was
@@ -417,8 +417,8 @@ public final class Engine {
 
     /**
      * Applies the owner's changes to the stored secret settings: every key they did not enter or empty stays, also one
-     * that could not be read, such as from a locked keychain. Otherwise as {@link #saveApiKeys(Secrets)}, which this
-     * waits for the owner as.
+     * that could not be read, such as from a locked keychain. Otherwise as {@link #saveApiKeys(Secrets)}: it also waits
+     * for the owner to unlock a locked keychain.
      *
      * @param changes what the owner entered and emptied
      * @param prompting runs, on the calling thread, once the system's prompt to unlock the keychain shows

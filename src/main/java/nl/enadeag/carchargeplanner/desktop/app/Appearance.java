@@ -59,7 +59,7 @@ public enum Appearance {
      *
      * @param chosen the appearance the owner chose; changed on the JavaFX thread
      * @param system the system's colour scheme ({@code Platform.getPreferences().colorSchemeProperty()})
-     * @return the scheme to give {@link nl.enadeag.carchargeplanner.desktop.theme.WindowTheme}; it changes
+     * @return the scheme to give {@link nl.enadeag.carchargeplanner.desktop.theme.WindowTheme WindowTheme}; it changes
      *     whenever either of them does
      */
     public static ObservableValue<ColorScheme> scheme(ObservableValue<Appearance> chosen,

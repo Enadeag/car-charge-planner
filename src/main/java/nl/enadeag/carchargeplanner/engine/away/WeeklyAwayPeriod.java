@@ -6,6 +6,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Optional;
 
 /**
@@ -32,7 +33,7 @@ public record WeeklyAwayPeriod(DayOfWeek weekday, LocalTime start, LocalTime end
 
     /**
      * The away period this one makes on a date. A time that a daylight saving switch skips moves on by the length of
-     * the gap, as {@link java.time.ZonedDateTime} does.
+     * the gap, as {@link ZonedDateTime} does.
      *
      * @param date the local date to look at
      * @param zone the home's time zone, in which the start and end are read

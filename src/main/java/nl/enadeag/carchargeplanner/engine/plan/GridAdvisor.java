@@ -122,8 +122,9 @@ public final class GridAdvisor {
     }
 
     /**
-     * The window that takes the least from the grid, so it uses the most leftover surplus. The currents and the start
-     * times are tried from low to early, so on a tie the lowest current and then the earliest start win.
+     * The window that takes the least from the grid, so it uses the most leftover surplus. The currents are tried from
+     * the lowest up and the start times from the earliest on, so on a tie the lowest current wins, and then the
+     * earliest start.
      */
     private Optional<Window> bestPlacement(List<QuarterHour> quarters, double energyKwh) {
         var charger = system.charger();

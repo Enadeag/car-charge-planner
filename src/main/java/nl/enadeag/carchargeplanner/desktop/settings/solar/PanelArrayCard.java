@@ -8,6 +8,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import nl.enadeag.carchargeplanner.desktop.settings.form.PanelArrayEntry;
 import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalTags;
 import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
+import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPart;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ProblemRows;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -112,8 +113,7 @@ final class PanelArrayCard {
     }
 
     /**
-     * The array as the card shows it, after its record checked it; only reads, as
-     * {@link nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPart#read} does.
+     * The array as the card shows it, after its record checked it; only reads, as {@link ConfigPart#read} does.
      *
      * @return the array, or empty when a value is refused
      */

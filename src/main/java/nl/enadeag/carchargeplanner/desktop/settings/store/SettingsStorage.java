@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.settings.store;
 
 import nl.enadeag.carchargeplanner.desktop.app.AppSettings;
+import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.desktop.settings.form.AllSettings;
 import nl.enadeag.carchargeplanner.desktop.settings.form.SettingsChanges;
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
@@ -17,7 +18,7 @@ import java.util.Optional;
  * settings.
  *
  * <p>Reading and writing block: the keychain, the files and the system's start at login may each take a while. Call
- * them away from the JavaFX thread, through {@link nl.enadeag.carchargeplanner.desktop.app.Background}.
+ * them away from the JavaFX thread, through {@link Background}.
  */
 public final class SettingsStorage {
 

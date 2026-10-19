@@ -68,8 +68,9 @@ public final class SingleInstance implements AutoCloseable {
      *
      * @param handler what a command of a later start does, when this becomes the running copy; called on a thread of
      *     its own per command, from now until {@link #close()}
-     * @return what came of it; only with {@link ClaimOutcome#RUNNING} does this copy listen, and only with it,
-     *     {@link ClaimOutcome#RUNNING_UNREACHABLE} and {@link ClaimOutcome#UNAVAILABLE} should this copy run
+     * @return what came of it. This copy listens for later starts only after {@link ClaimOutcome#RUNNING}; it should
+     *     go on running after that, {@link ClaimOutcome#RUNNING_UNREACHABLE} or {@link ClaimOutcome#UNAVAILABLE}, and
+     *     end after any other outcome
      */
     public ClaimOutcome claim(Consumer<InstanceCommand> handler) {
         Path made;

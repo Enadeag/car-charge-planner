@@ -98,7 +98,7 @@ public final class OutlookMapper {
      *
      * @param none the engine's outlook without a forecast
      * @param messages the texts, in the owner's language
-     * @return such as "Unlock your keyring so the app can read your API key."
+     * @return such as "Unlock your keychain so the app can read your API key."
      */
     static String noForecast(Outlook.NoForecast none, Messages messages) {
         return none.keychainLocked() ? messages.text(TextKey.NO_FORECAST_KEYCHAIN_LOCKED)

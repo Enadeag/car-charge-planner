@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.settings;
 
 import nl.enadeag.carchargeplanner.desktop.app.AppSettings;
+import nl.enadeag.carchargeplanner.desktop.app.Appearance;
 import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.desktop.settings.about.AboutFacts;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
@@ -59,7 +60,7 @@ public final class SettingsWindow {
      *     them and plans again; it should hand slow work on
      * @param runSetUp opens set-up once Settings closed
      * @param colorScheme light or dark for the windows, followed while the app runs: the owner's appearance over the
-     *     system's ({@link nl.enadeag.carchargeplanner.desktop.app.Appearance#scheme}); never null
+     *     system's ({@link Appearance#scheme}); never null
      * @param icon the app icon, for the title bar and the taskbar
      * @param appName the app's name, for the title bar
      * @param language the language the texts are in, followed while the app runs; never null

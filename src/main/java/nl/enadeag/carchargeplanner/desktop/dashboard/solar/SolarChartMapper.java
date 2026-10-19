@@ -57,7 +57,7 @@ public final class SolarChartMapper {
     }
 
     /**
-     * A day's expected sun, the house's use and the charge windows.
+     * A day's expected solar power, the house's use and the charge windows.
      *
      * @param day one of the plan's days
      * @return the chart's data, showing the hours with sun and an hour on either side; 06:00 to 20:00 for a day

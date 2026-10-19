@@ -5,6 +5,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.field.Input;
 import nl.enadeag.carchargeplanner.desktop.settings.field.TimeInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
 import nl.enadeag.carchargeplanner.desktop.settings.form.WeeklyAwayEntry;
+import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPart;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
@@ -75,8 +76,7 @@ final class AwayRow extends VBox {
     }
 
     /**
-     * The period as the row shows it, after its record checked it; only reads, as
-     * {@link nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPart#read} does.
+     * The period as the row shows it, after its record checked it; only reads, as {@link ConfigPart#read} does.
      *
      * @return the period, or empty when a time is not a time or the end is not after the start
      */
