@@ -10,9 +10,9 @@ import java.util.TreeMap;
 import tools.jackson.core.JacksonException;
 
 /**
- * The secrets as keychain entries: one per value, named {@code forecast/<provider>/<key>}, so other integrations can
- * add their own prefix. A keychain cannot list its entries, so one more entry, {@code index}, holds the names as a
- * JSON list. It is in the keychain, not the config, so that names and values cannot get out of step when the config is
+ * The secrets as keychain entries: one per value, named {@code forecast/<provider>/<name>} after the setting, so other
+ * integrations can add their own prefix. A keychain cannot list its entries, so one more entry, {@code index}, holds
+ * the names as a JSON list. It is in the keychain, not the config, so that names and values cannot get out of step when the config is
  * copied or deleted; it holds no values.
  */
 final class KeychainEntries {

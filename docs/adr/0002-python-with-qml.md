@@ -1,5 +1,5 @@
 ---
-status: superseded by ADR-0005
+status: superseded by ADR 0005
 ---
 
 # Python for the engine and the desktop app, with QML for the interface

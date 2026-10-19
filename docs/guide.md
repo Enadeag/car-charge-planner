@@ -22,11 +22,11 @@ When the app is started hidden at login, set-up does not open by itself; one not
 
 ## The tray icon and the dashboard
 
-- The tray icon's dot shows the state of the plan, with the plan in its tooltip. Click it for the **dashboard**: a tab per day with that day's charge window, grid advice, the expected sun against the house's use, and the car battery. The dashboard also opens in a window of its own.
+- The tray icon's dot shows the state of the plan, with the plan in its tooltip. Click it for the **dashboard**: a tab per day with that day's charge window, grid advice, the expected solar power against the house's use, and the car battery. The dashboard also opens in a window of its own.
 - **Update** on the battery card is where you enter the level the car shows. Until you do, the plan assumes 50% and says so.
-- **Add** on the Car away card marks the car away on the day you are looking at, all day or from a time to a time; the card lists the coming ones, each with **Remove**. The plan changes at once. Away times that repeat every week are in Settings, which the footer's **Away** button opens.
+- **Add** on the Car away card marks the car away on the day you are looking at, all day or from a time to a time; the card lists the coming ones, each with **Remove**. The plan changes at once. Weekly away periods are in Settings, which the footer's **Away** button opens.
 - Right-click the icon for **Open dashboard**, **Settings…** (**Set up…** until the app is set up), **About…** and **Quit**.
-- A desktop notification comes a few minutes before each window (the lead time is a setting), once per window. Clicking it opens the dashboard. On Linux notifications go straight to the desktop's notification service over D-Bus, so they work with or without a tray; on Windows they come from the tray icon.
+- A desktop notification comes a few minutes before each charge window (the lead time is a setting), once per window. Clicking it opens the dashboard. On Linux notifications go straight to the desktop's notification service over D-Bus, so they work with or without a tray; on Windows they come from the tray icon.
 
 ## Settings
 
@@ -36,11 +36,11 @@ Open **Settings…** from the tray menu or the dashboard. Settings is a window w
 | --- | --- |
 | Solar panels | The panel arrays: size, tilt, direction and losses of each. The forecast is the sum of the arrays. |
 | Location | Latitude, longitude and time zone, or a place search. |
-| Car and house | The car's usable battery, consumption and driving per day; the house's own use. |
-| Charger | One or three phases, minimum and maximum current, voltage, charging efficiency. |
+| Car and house | The car's usable battery capacity, consumption and distance per day; the house's baseload. |
+| Charger | One or three phases, minimum and maximum charge current, voltage, charging efficiency. |
 | Forecast | Which forecast provider to use, an optional fallback, and each one's settings (a server address or an API key, if it takes any), with a **Test** button. API keys are kept in the system keychain. |
-| Away | The weekly times the car is not at home. |
-| Planning | Minimum and target charge level, the planning margin, the import tolerance, the shortest window, the notification lead time. |
+| Away | The weekly away periods: when the car is not at home every week. |
+| Planning | Minimum and target charge level, the planning margin, the import tolerance, the minimum charge window length, the notification lead time. |
 | App | Language, light or dark, units (metric or imperial), whether the app shows a tray icon or a window, and start at login. Set-up can be run again from here. |
 | About | The version, the licence, the source, and where your files are kept. |
 
@@ -49,9 +49,9 @@ Open **Settings…** from the tray menu or the dashboard. Settings is a window w
 ## How it plans, briefly
 
 1. Surplus per step = the forecast provider's expected solar power minus the house's own use, scaled by a planning margin (85% by default) so it errs towards too little power rather than grid draw.
-2. A step counts only if the surplus covers at least your charger's minimum current (6 A by default: about 1.4 kW on a single-phase 230 V charger, about 4.1 kW on a three-phase one).
+2. A step counts only if the surplus covers at least your charger's minimum charge current (6 A by default: about 1.4 kW on a single-phase 230 V charger, about 4.1 kW on a three-phase one).
 3. Within the hours the car is home, it picks the window and power that bring in the most solar for the energy the car needs, up to your target charge level (80% by default).
-4. It projects the battery day by day, subtracting your driving per day. If a day would end under your minimum charge level, it adds grid advice.
+4. It projects the battery day by day, subtracting your distance per day. If a day would end under your minimum charge level, it adds grid advice.
 5. A window you have been notified about is kept as announced while it runs, so the power on screen matches what you set.
 
 ## Limits to know about
@@ -71,10 +71,10 @@ The program also takes a few commands:
 | `car-charge-planner start-at-login off` | Stops starting it at login. |
 | `car-charge-planner install-launcher` | Linux only: adds the app to the application menu, with its icons. Run it again after moving the folder. |
 | `car-charge-planner uninstall-launcher` | Linux only: removes what `install-launcher` wrote. |
-| `--config=path/to/engine.json` | Plans with another config file, such as `docs/example-engine.json`. |
+| `--config=path/to/engine.json` | Plans with another settings file, such as `docs/example-engine.json`. |
 
 ## The files and the log
 
-The app keeps its config, your entries, a forecast cache and a log of what it did in files on your computer; [What is kept, and where](privacy.md#what-is-kept-and-where) lists them per system.
+The app keeps its settings, your entries, a forecast cache and a log of what it did in files on your computer; [What is kept, and where](privacy.md#what-is-kept-and-where) lists them per system.
 
 [`docs/example-engine.json`](example-engine.json) shows every setting of `engine.json`, for a made-up place. The app reads the files when it starts and writes them whole when you save; edit one by hand only while the app is closed. Each file says which version of its shape it holds (`"version": 1`); one without it, from before, is read as version 1, and one written by a newer version of the app is not used. A file the app cannot use, such as a damaged one, is never overwritten: before it saves, the app renames it to `<name>.damaged-<date>-<time>` (UTC) and logs that, so you can still recover what it held. Delete the data folder to reset your entries and the cache.

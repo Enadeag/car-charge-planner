@@ -20,3 +20,7 @@ indent_size = 2
 # cmd.exe can misread labels in a batch file with LF line ends (.gitattributes)
 [*.cmd]
 end_of_line = crlf
+
+# Markdown is not wrapped by hand: a paragraph or a list item is one line
+[*.md]
+max_line_length = off

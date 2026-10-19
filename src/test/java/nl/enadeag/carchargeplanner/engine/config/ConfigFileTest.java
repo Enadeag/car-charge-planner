@@ -301,7 +301,7 @@ class ConfigFileTest {
 
     @Test
     void aFileOfANewerVersionIsRefusedAsWrittenByANewerApp() throws IOException {
-        var file = write(Files.readString(EXAMPLE).replaceFirst("\\{", "{\"version\": 2,"));
+        var file = write(Files.readString(EXAMPLE).replace("\"version\": 1", "\"version\": 2"));
 
         assertThatThrownBy(() -> new ConfigFile(file).read()).isInstanceOfSatisfying(ConfigProblem.class,
                 problem -> {

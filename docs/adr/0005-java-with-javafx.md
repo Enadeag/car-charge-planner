@@ -1,3 +1,7 @@
+---
+status: accepted
+---
+
 # Java with JavaFX, replacing Python and QML
 
 The maintainer is a Java developer with no Python knowledge and has to be able to review every change, so the app is rewritten in Java 25 with JavaFX (and the AtlantaFX theme) instead of continuing in Python with QML. A spike (branch `prototype/java-spike`, `spike/java/FINDINGS.md`) showed the risky parts work: a crisp tray icon with menu and status dot on KDE Wayland through our own StatusNotifierItem over D-Bus, notifications with a click action, a modern dashboard card in light and dark, single instance, the system keychain, and jpackage installers on Linux and Windows. The price is memory: about 150–200 MB at rest on Linux against 90 MB for the Python app, accepted for now and tuned later.

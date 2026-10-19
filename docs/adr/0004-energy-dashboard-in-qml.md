@@ -1,10 +1,10 @@
 ---
-status: superseded in part by ADR-0005 (the dashboard is built in JavaFX; the design stands)
+status: superseded in part by ADR 0005 (the dashboard is built in JavaFX; the design stands)
 ---
 
 # The interface is an energy dashboard in QML
 
-The app is mostly used at a glance from the tray, and the old Qt Widgets screens looked dated. The new interface, written in QML (ADR 0002) against the engine's plain-data interface (ADR 0001), is one **dashboard**: shown as the popup next to the tray icon, as a window in window mode, and detachable from the popup. It holds the next charge window, grid advice when it is needed, today's solar curve, the battery, and the coming days. Colour carries meaning, the same everywhere: sun amber, grid blue, car and battery green, each with an icon or label too. The app has one look on every system and follows the system's light or dark mode and font. Accessibility (WCAG AA contrast, keyboard, screen-reader labels, 150 and 200 % scaling) is a requirement from the start, not a later pass.
+The app is mostly used at a glance from the tray, and the old Qt Widgets screens looked dated. The new interface, written in QML (ADR 0002) against the engine's plain-data interface (ADR 0001), is one **dashboard**: shown as the popup next to the tray icon, as a window in window mode, and detachable from the popup. It holds the next charge window, grid advice when it is needed, today's solar curve, the battery, and the coming days. Colour carries meaning, the same everywhere: sun amber, grid blue, car and battery green, each with an icon or label too. The app has one look on every system and follows the system's light or dark mode and font. Accessibility (WCAG AA contrast, keyboard, screen-reader labels, 150 and 200% scaling) is a requirement from the start, not a later pass.
 
 ## Consequences
 
@@ -21,4 +21,4 @@ The app is mostly used at a glance from the tray, and the old Qt Widgets screens
 
 ## Note, 2026-10-15: the accessibility check of the Java version
 
-Checked for #98 and #41 on the dashboard, Settings and set-up. Keyboard use, WCAG AA contrast (also the focus ring) and 150 and 200 % scaling work on Linux and Windows, and tests keep them: every screen is walked with Tab for reading order, a visible focus ring and a name per control as Windows' UI Automation reads it. Screen readers work through UI Automation on Windows (Narrator, NVDA). On Linux, Orca cannot read the app: JavaFX has no AT-SPI support. The maintainer accepts that limit for now; #132 follows OpenJFX.
+Checked for #98 and #41 on the dashboard, Settings and set-up. Keyboard use, WCAG AA contrast (also the focus ring) and 150 and 200% scaling work on Linux and Windows, and tests keep them: every screen is walked with Tab for reading order, a visible focus ring and a name per control as Windows' UI Automation reads it. Screen readers work through UI Automation on Windows (Narrator, NVDA). On Linux, Orca cannot read the app: JavaFX has no AT-SPI support. The maintainer accepts that limit for now; #132 follows OpenJFX.

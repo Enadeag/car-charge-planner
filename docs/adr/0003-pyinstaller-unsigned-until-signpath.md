@@ -1,5 +1,5 @@
 ---
-status: superseded in part by ADR-0005 (jpackage replaces PyInstaller and Inno Setup; unsigned until SignPath stands)
+status: superseded in part by ADR 0005 (jpackage replaces PyInstaller and Inno Setup; unsigned until SignPath stands)
 ---
 
 # Windows builds with PyInstaller, unsigned until SignPath at the launch

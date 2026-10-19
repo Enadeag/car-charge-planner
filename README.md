@@ -4,13 +4,13 @@
 [![Licence: GPL-3.0-or-later](https://img.shields.io/badge/licence-GPL--3.0--or--later-blue.svg)](LICENSE)
 ![Java 25](https://img.shields.io/badge/java-25-blue.svg)
 
-A tray app for Linux and Windows desktops that tells you when to charge your electric car so that as much of your own solar energy as possible is used and as little as possible is fed back to the grid. It suits a fixed-price energy contract: it does not look at hourly energy prices.
+A desktop app for Linux and Windows that tells you when to charge your electric car so that as much of your own solar energy as possible is used and as little as possible is fed back to the grid. It suits a fixed-price energy contract: it does not look at hourly energy prices.
 
-It is advisory only: it recommends a **charge window** and a **charge power**, and you set the current in your charger's app yourself.
+It is advisory only: it recommends a **charge window** and a **charge power**, and you set the charge current in your charger's app yourself.
 
-It plans from a description of your set-up: your solar panels (size, tilt, direction), your location, your home charger's current limits and your car's battery, entered in set-up and changed in Settings later. Where you do not know a value, the app uses a **typical value** and says so: replace it with yours, or the plan will not fit your home.
+It plans from a description of your set-up: your solar panels (size, tilt, direction), your location, your home charger's charge current limits and your car's battery, entered in set-up and changed in Settings later. Where you do not know a value, the app uses a **typical value** and says so: replace it with yours, or the plan will not fit your home.
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/java/charts-dark.png"><img alt="The dashboard three times: today with grid advice, a day with a charge window and the expected sun, and the battery level being entered." src="docs/screenshots/java/charts-light.png"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/java/charts-dark.png"><img alt="The dashboard three times: today with grid advice, a day with a charge window and the expected solar power, and the battery level being entered." src="docs/screenshots/java/charts-light.png"></picture>
 
 The pictures are of an example home; a real desktop theme looks a little different.
 
@@ -31,7 +31,8 @@ The pictures are of an example home; a real desktop theme looks a little differe
 | **Linux, KDE Plasma** (x64) | Supported. Developed and used under Wayland. |
 | Linux, GNOME | Untested. No tray of its own: the app shows a window, or a tray icon with the AppIndicator extension. |
 | Other Linux desktops (XFCE, Cinnamon, Sway, X11 sessions and so on) | Untested. Without a system tray (StatusNotifierItem) the app shows a window. |
-| **Windows 10 or later** (x64) | Supported, with an installer. |
+| **Windows 11** (x64) | Supported, with an installer. |
+| Windows 10 (x64) | Untested. The same installer, but nobody has confirmed it on Windows 10 yet. |
 | macOS | Not built. |
 
 "Supported" means a person has checked every release on that system. Tried it on your desktop? Please tell us, whether it works or not, with the **Does it work on my desktop?** issue form.
@@ -52,7 +53,7 @@ Download from the [release page](https://github.com/Enadeag/car-charge-planner/r
 
 ## Data and privacy
 
-The app runs on your computer: no account, no telemetry, no update check. It contacts only the forecast provider you chose, for a forecast for your location and panels; your battery level, away times and plan never leave the computer. [Data and privacy](docs/privacy.md) has the details, and the third-party software the app brings.
+The app runs on your computer: no account, no telemetry, no update check. It contacts only the forecast provider you chose, for a forecast for your location and panels; your battery level, away periods and plan never leave the computer. [Data and privacy](docs/privacy.md) has the details, and the third-party software the app brings.
 
 ## Contributing
 
