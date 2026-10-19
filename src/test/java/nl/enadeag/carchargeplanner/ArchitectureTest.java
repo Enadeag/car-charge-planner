@@ -257,6 +257,84 @@ class ArchitectureTest {
             .should().beFreeOfCycles()
             .because("the desktop's parts depend one way, so each can be read and tested alone (ADR 0005)");
 
+    private static final String DASHBOARD = ROOT + ".desktop.dashboard";
+
+    private static final String SETTINGS = ROOT + ".desktop.settings";
+
+    /** Settings' categories, as package names below desktop.settings: a page each. */
+    private static final Set<String> SETTINGS_CATEGORIES =
+            Set.of("location", "solar", "car", "charger", "forecast", "away", "planning", "app", "about");
+
+    @ArchTest
+    static final ArchRule noCyclesBetweenTheDashboardParts = slices()
+            .matching(DASHBOARD + ".(*)..")
+            .should().beFreeOfCycles()
+            .because("the dashboard's parts depend one way, so each can be read and tested alone");
+
+    @ArchTest
+    static final ArchRule dashboardSubPackagesDoNotReachUpIntoTheDashboard = noClasses()
+            .that().resideInAPackage(DASHBOARD + "..")
+            .and().resideOutsideOfPackage(DASHBOARD)
+            .should().dependOnClassesThat().resideInAPackage(DASHBOARD)
+            .because("the dashboard's view and windows put the parts together; a part knowing them would be a cycle");
+
+    @ArchTest
+    static final ArchRule theDashboardsBuildingBlocksUseNoOtherDashboardPart = noClasses()
+            .that().resideInAPackage(DASHBOARD + ".parts..")
+            .should().dependOnClassesThat(resideInAPackage(DASHBOARD + "..")
+                    .and(not(resideInAPackage(DASHBOARD + ".parts.."))))
+            .because("the chips, glyphs, texts and tweens are what every part of the dashboard builds on");
+
+    @ArchTest
+    static final ArchRule noCyclesBetweenTheSettingsParts = slices()
+            .matching(SETTINGS + ".(*)..")
+            .should().beFreeOfCycles()
+            .because("Settings' parts depend one way, so each can be read and tested alone");
+
+    @ArchTest
+    static final ArchRule settingsSubPackagesDoNotReachUpIntoSettings = noClasses()
+            .that().resideInAPackage(SETTINGS + "..")
+            .and().resideOutsideOfPackage(SETTINGS)
+            .should().dependOnClassesThat().resideInAPackage(SETTINGS)
+            .because("the Settings window and its view put the pages together; a part knowing them would be a cycle");
+
+    /** Settings itself, set-up and the categories, as package identifiers: what builds on the fields and pages. */
+    private static final String[] SETTINGS_ABOVE_ITS_BUILDING_BLOCKS = Stream.concat(
+            Stream.of(SETTINGS, SETTINGS + ".setup.."),
+            SETTINGS_CATEGORIES.stream().map(category -> SETTINGS + "." + category + "..")).toArray(String[]::new);
+
+    @ArchTest
+    static final ArchRule settingsBuildingBlocksKnowNothingAboveThem = noClasses()
+            .that().resideInAnyPackage(SETTINGS + ".field..", SETTINGS + ".page..", SETTINGS + ".store..")
+            .should().dependOnClassesThat().resideInAnyPackage(SETTINGS_ABOVE_ITS_BUILDING_BLOCKS)
+            .because("the fields, the pages and the storage are what Settings, set-up and every category build on");
+
+    /** Each of Settings' categories as a slice; every other class is left out. */
+    private static final SliceAssignment SETTINGS_CATEGORY_PACKAGES = new SliceAssignment() {
+        @Override
+        public SliceIdentifier getIdentifierOf(JavaClass type) {
+            var name = type.getPackageName();
+            if (name.startsWith(SETTINGS + ".")) {
+                var part = name.substring(SETTINGS.length() + 1).split("\\.")[0];
+                if (SETTINGS_CATEGORIES.contains(part)) {
+                    return SliceIdentifier.of(part);
+                }
+            }
+            return SliceIdentifier.ignore();
+        }
+
+        @Override
+        public String getDescription() {
+            return "each of Settings' categories";
+        }
+    };
+
+    @ArchTest
+    static final ArchRule noSettingsCategoryUsesAnother = slices()
+            .assignedFrom(SETTINGS_CATEGORY_PACKAGES)
+            .should().notDependOnEachOther()
+            .because("each category is a page of its own, so Settings and set-up can show it alone");
+
     @ArchTest
     static final ArchRule thePlatformsDoNotKnowEachOther = slices()
             .matching(ROOT + ".platform.(*)..")
