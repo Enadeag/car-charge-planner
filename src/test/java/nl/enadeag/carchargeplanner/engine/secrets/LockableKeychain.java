@@ -60,9 +60,9 @@ public class LockableKeychain extends MemoryKeychain {
         UnlockOutcome outcome;
         try {
             outcome = answered.get(wait.toMillis(), TimeUnit.MILLISECONDS);
-        } catch (TimeoutException | ExecutionException e) {
+        } catch (TimeoutException | ExecutionException _) {
             outcome = UnlockOutcome.NOT_ANSWERED;
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             outcome = UnlockOutcome.NOT_ANSWERED;
         }

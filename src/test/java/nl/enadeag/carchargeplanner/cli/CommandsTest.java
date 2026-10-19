@@ -122,7 +122,7 @@ class CommandsTest {
     }
 
     private LinuxMenuEntry menuEntry(Path dataHome) {
-        return new LinuxMenuEntry(dataHome, PROGRAM, AppName.ID, AppName.TITLE, refreshed -> { });
+        return new LinuxMenuEntry(dataHome, PROGRAM, AppName.ID, AppName.TITLE, _ -> { });
     }
 
     private static CommandOutcome success(TextKey key, Object... values) {
@@ -182,7 +182,7 @@ class CommandsTest {
     void aCommandSaysTheAppRunsButCannotBeReachedWhenItHoldsTheLockWithoutASocket(Command command) {
         // longer than a Unix domain socket's path may be, so the running app has the lock but no socket
         instanceFolder = temp.resolve("a-folder-with-a-long-name-" + "x".repeat(100));
-        assertThat(instance().claim(received -> { })).isEqualTo(Claim.FIRST_UNREACHABLE);
+        assertThat(instance().claim(_ -> { })).isEqualTo(Claim.FIRST_UNREACHABLE);
 
         assertThat(commands().run(command)).isEqualTo(
                 new CommandOutcome(ExitCode.UNREACHABLE, MESSAGES.text(TextKey.CLI_COMMAND_UNREACHABLE, AppName.TITLE)));

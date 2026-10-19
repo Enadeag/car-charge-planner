@@ -69,7 +69,7 @@ public final class SettingsWindow {
         this.theme = new SystemTheme(colorScheme);
         this.icon = icon;
         // later, also on the JavaFX thread: a Save chooses the language while its button is still handling the click
-        language.onChange(chosen -> Platform.runLater(this::speak));
+        language.onChange(_ -> Platform.runLater(this::speak));
     }
 
     /**

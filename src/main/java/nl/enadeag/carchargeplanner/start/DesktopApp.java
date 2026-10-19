@@ -311,7 +311,7 @@ public final class DesktopApp {
             var properties = new Properties();
             properties.load(in);
             return properties.getProperty("version", "development");
-        } catch (IOException e) {
+        } catch (IOException _) {
             return "development";
         }
     }

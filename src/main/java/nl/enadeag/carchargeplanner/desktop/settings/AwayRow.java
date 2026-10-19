@@ -39,7 +39,7 @@ final class AwayRow extends VBox {
         start.load(period.start());
         end.load(period.end());
         removeButton = new Button(messages.text(TextKey.AWAY_REMOVE));
-        removeButton.setOnAction(event -> remove.accept(this));
+        removeButton.setOnAction(_ -> remove.accept(this));
         var line = new HBox(weekday.view(), new Label(messages.text(TextKey.AWAY_FROM)), start.view(),
                 new Label(messages.text(TextKey.AWAY_TO)), end.view(), removeButton);
         line.getStyleClass().add("away-line");

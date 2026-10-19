@@ -27,7 +27,7 @@ public final class TaskbarShade {
         try {
             var light = Advapi32.readNumber(KEY, VALUE);
             return light.isPresent() && light.getAsInt() == 1 ? PanelShade.LIGHT : PanelShade.DARK;
-        } catch (IOException e) {
+        } catch (IOException _) {
             // a taskbar we cannot read is most likely the dark one Windows starts with
             return PanelShade.DARK;
         }

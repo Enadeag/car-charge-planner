@@ -48,9 +48,9 @@ final class PanelArrayCard {
         problems = new ProblemRows(messages);
         typical = new TypicalMarks(messages.text(TextKey.TYPICAL_TAG));
         this.useTypical = new Button(messages.text(TextKey.USE_TYPICAL));
-        this.useTypical.setOnAction(event -> useTypical());
+        this.useTypical.setOnAction(_ -> useTypical());
         this.remove = new Button(messages.text(TextKey.PANELS_REMOVE));
-        this.remove.setOnAction(event -> remove.accept(this));
+        this.remove.setOnAction(_ -> remove.accept(this));
         // with larger text the two buttons go below each other rather than being cut short
         var buttons = new FlowPane(this.useTypical, this.remove);
         this.useTypical.setMinWidth(Region.USE_PREF_SIZE);

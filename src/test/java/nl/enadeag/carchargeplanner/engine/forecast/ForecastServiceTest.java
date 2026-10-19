@@ -557,7 +557,7 @@ class ForecastServiceTest {
         main.script(() -> {
             try {
                 release.await(5, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException _) {
                 throw new ProviderError.Unavailable("interrupted");
             }
             return day;

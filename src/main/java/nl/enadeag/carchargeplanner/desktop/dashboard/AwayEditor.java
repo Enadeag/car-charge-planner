@@ -72,7 +72,7 @@ final class AwayEditor extends VBox {
         partOfDay = new RadioButton(messages.text(TextKey.ONE_OFF_PART_OF_DAY));
         wholeDay.setToggleGroup(kind);
         partOfDay.setToggleGroup(kind);
-        kind.selectedToggleProperty().addListener((property, before, chosen) -> showTimes());
+        kind.selectedToggleProperty().addListener((_, _, _) -> showTimes());
         var kinds = new FlowPane(wholeDay, partOfDay);
         kinds.getStyleClass().add("away-kinds");
 
@@ -88,10 +88,10 @@ final class AwayEditor extends VBox {
 
         var save = new Button(messages.text(TextKey.ONE_OFF_SAVE));
         save.getStyleClass().add("accent");
-        save.setOnAction(event -> save());
+        save.setOnAction(_ -> save());
         var cancel = new Button(messages.text(TextKey.ONE_OFF_CANCEL));
         cancel.getStyleClass().add("flat");
-        cancel.setOnAction(event -> closed.run());
+        cancel.setOnAction(_ -> closed.run());
         // the battery's entry above can be open as well, with its own Save and Cancel
         var heading = messages.text(TextKey.ONE_OFF_HEADING);
         save.setAccessibleText(messages.text(TextKey.IN_GROUP, save.getText(), heading));
@@ -179,7 +179,7 @@ final class AwayEditor extends VBox {
         }
         try {
             return notPassed(AwayPeriod.on(day, start.get(), end.get(), zone));
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             // also when the clock is put forward between the two times, so both are the same moment
             return refuse(TextKey.ONE_OFF_END_BEFORE_START);
         }
@@ -202,7 +202,7 @@ final class AwayEditor extends VBox {
     private static Optional<LocalTime> time(TextField field) {
         try {
             return Optional.of(LocalTime.parse(field.getText().strip(), TYPED));
-        } catch (DateTimeParseException e) {
+        } catch (DateTimeParseException _) {
             return Optional.empty();
         }
     }

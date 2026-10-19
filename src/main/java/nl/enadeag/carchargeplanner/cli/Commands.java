@@ -60,7 +60,7 @@ public final class Commands {
      */
     public static Commands of(Host host, PlatformParts parts, SingleInstance instance, Messages messages) {
         var dataHome = DataLocation.systemFolder(host.os(), host.environment(), host.home());
-        var menuEntry = host.launcher().filter(program -> host.os() == Os.LINUX)
+        var menuEntry = host.launcher().filter(_ -> host.os() == Os.LINUX)
                 .map(program -> new LinuxMenuEntry(dataHome, program, AppName.ID, AppName.TITLE,
                         LinuxMenuEntry::refreshCaches));
         return new Commands(host.os(), messages, instance, parts.startAtLogin(), menuEntry);
@@ -105,7 +105,7 @@ public final class Commands {
         } catch (NotPrivateException e) {
             // may be someone's attempt to get in the way, so say what is wrong instead of "not running"
             return failure(messages.text(TextKey.CLI_COMMAND_NOT_PRIVATE, AppName.TITLE, e.getMessage()));
-        } catch (IOException e) {
+        } catch (IOException _) {
             // no private folder for the lock, so no running copy can have taken it there
             return notRunning;
         }

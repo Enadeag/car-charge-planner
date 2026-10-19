@@ -22,7 +22,7 @@ final class TypicalButton {
     static HBox line(Runnable action, String card, Messages messages) {
         var button = new Button(messages.text(TextKey.USE_TYPICAL));
         button.setAccessibleText(messages.text(TextKey.IN_GROUP, button.getText(), card));
-        button.setOnAction(event -> action.run());
+        button.setOnAction(_ -> action.run());
         var line = new HBox(button);
         line.getStyleClass().add("card-buttons");
         return line;

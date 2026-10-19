@@ -95,7 +95,7 @@ public final class AwayFile {
     /** The stored periods, when writing them back loses nothing. */
     private List<AwayPeriod> storedForChange() throws IOException {
         return switch (file.read()) {
-            case Stored.Absent<Entries> absent -> List.of();
+            case Stored.Absent<Entries> _ -> List.of();
             case Stored.Unusable<Entries> unusable -> throw new IOException(
                     file.path() + " could not be read, so it is left as it is: " + unusable.detail());
             case Stored.Found<Entries> found when found.value().damaged() > 0 -> throw new IOException(
@@ -145,7 +145,7 @@ public final class AwayFile {
             }
             try {
                 return Optional.of(new AwayPeriod(Instant.parse(start.stringValue()), Instant.parse(end.stringValue())));
-            } catch (DateTimeException | IllegalArgumentException e) {
+            } catch (DateTimeException | IllegalArgumentException _) {
                 return Optional.empty();
             }
         }

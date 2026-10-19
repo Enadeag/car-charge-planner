@@ -66,6 +66,6 @@ final class SwitchField implements Input {
 
     @Override
     public void onChange(Runnable action) {
-        box.selectedProperty().addListener((property, before, now) -> action.run());
+        box.selectedProperty().addListener((_, _, _) -> action.run());
     }
 }

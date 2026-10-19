@@ -28,7 +28,7 @@ interface SetUpPage {
      * @return the step's page
      */
     static SetUpPage of(Region view) {
-        return of(view, form -> { });
+        return of(view, _ -> { });
     }
 
     /**

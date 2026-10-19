@@ -271,7 +271,7 @@ class DashboardViewTest {
         var added = new ArrayList<AwayPeriod>();
 
         Fx.run(() -> {
-            view.onAwayChange(added::add, period -> { });
+            view.onAwayChange(added::add, _ -> { });
             tabs(view).getSelectionModel().select(2);
         });
         assertThat(Fx.call(() -> Scenes.visibleTexts(view))).contains("Tomorrow, all day", "Sun 5 Jul, 10:00 – 16:30");

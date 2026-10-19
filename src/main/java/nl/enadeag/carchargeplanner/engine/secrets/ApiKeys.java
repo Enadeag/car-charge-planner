@@ -251,7 +251,7 @@ public final class ApiKeys implements SecretsSource {
         synchronized (turn) {
             try {
                 load();
-            } catch (SecretsProblem e) {
+            } catch (SecretsProblem _) {
                 // where they are kept is known all the same
             }
             return where.orElse(KeyStorage.FILE);
@@ -333,7 +333,7 @@ public final class ApiKeys implements SecretsSource {
             if (!edit.replaces() && file.exists()) {
                 try {
                     stored = file.read();
-                } catch (SecretsProblem e) {
+                } catch (SecretsProblem _) {
                     // set aside by the write
                 }
             }
@@ -422,7 +422,7 @@ public final class ApiKeys implements SecretsSource {
             if (!keychain.read().equals(secrets)) {
                 return Optional.of(inFile);
             }
-        } catch (KeychainException e) {
+        } catch (KeychainException _) {
             return Optional.of(inFile);
         }
         file.delete();

@@ -63,7 +63,7 @@ public final class SecretsLocation {
             PrivateFiles.createFolders(now.toAbsolutePath().getParent());
             try {
                 Files.move(old, now, StandardCopyOption.ATOMIC_MOVE);
-            } catch (AtomicMoveNotSupportedException e) {
+            } catch (AtomicMoveNotSupportedException _) {
                 copyAndRemove(old, now);
             }
         } catch (IOException e) {

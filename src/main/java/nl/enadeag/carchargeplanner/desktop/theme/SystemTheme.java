@@ -37,7 +37,7 @@ public final class SystemTheme {
     public void style(Scene scene) {
         scene.getStylesheets().add(STYLESHEET);
         scenes.add(scene);
-        scene.rootProperty().subscribe(root -> apply(scene, scheme.getValue()));
+        scene.rootProperty().subscribe(_ -> apply(scene, scheme.getValue()));
     }
 
     /**

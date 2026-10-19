@@ -168,7 +168,7 @@ class SecretServiceKeychainTest {
         public SecretService.Pair<List<DBusPath>, List<DBusPath>> SearchItems(Map<String, String> attributes) {
             try {
                 letGo.await(30, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException _) {
                 Thread.currentThread().interrupt();
             }
             return new SecretService.Pair<>(List.of(), List.of());

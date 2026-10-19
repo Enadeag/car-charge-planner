@@ -84,7 +84,7 @@ public final class AwtTray implements Tray, Notifications {
             }
             var item = new MenuItem(entry.label(labels));
             var action = entry.action(actions);
-            item.addActionListener(event -> action.run());
+            item.addActionListener(_ -> action.run());
             items.put(entry, item);
             menu.add(item);
         }
@@ -118,7 +118,7 @@ public final class AwtTray implements Tray, Notifications {
         var shown = trayIcon;
         messages.attach((title, body) -> shown.displayMessage(title, body, TrayIcon.MessageType.INFO));
         // JavaFX's properties belong to its thread
-        Platform.runLater(() -> colorScheme.subscribe(scheme -> redraw()));
+        Platform.runLater(() -> colorScheme.subscribe(_ -> redraw()));
     }
 
     @Override

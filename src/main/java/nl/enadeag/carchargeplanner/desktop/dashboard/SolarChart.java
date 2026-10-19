@@ -84,7 +84,7 @@ final class SolarChart extends Region {
         setOnMouseMoved(this::point);
         setOnMousePressed(this::point);
         setOnMouseDragged(this::point);
-        setOnMouseExited(event -> {
+        setOnMouseExited(_ -> {
             if (pointed) {
                 select(Optional.empty(), false);
             }
@@ -293,7 +293,7 @@ final class SolarChart extends Region {
         pointed = byPointer;
         step.ifPresent(it -> readoutText.setText(it.readout()));
         if (model != null) {
-            setAccessibleText(step.filter(it -> !byPointer).map(Step::readout).orElse(model.spoken()));
+            setAccessibleText(step.filter(_ -> !byPointer).map(Step::readout).orElse(model.spoken()));
         }
         if (!byPointer && step.isPresent()) {
             ScreenReader.readAgain(this);

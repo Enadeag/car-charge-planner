@@ -93,7 +93,7 @@ final class AboutPage implements Page {
     private Hyperlink link(TextKey text, URI target) {
         var link = new Hyperlink(messages.text(text));
         link.getStyleClass().add("settings-link");
-        link.setOnAction(event -> openLink.accept(target));
+        link.setOnAction(_ -> openLink.accept(target));
         return link;
     }
 

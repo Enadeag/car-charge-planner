@@ -55,7 +55,7 @@ public record KeyChanges(Secrets entered, Map<ProviderId, Set<String>> removed) 
         var entered = new LinkedHashMap<ProviderId, Map<String, String>>();
         shown.byProvider().forEach((id, values) -> values.forEach((key, value) -> {
             if (!value.equals(stored.of(id).get(key))) {
-                entered.computeIfAbsent(id, provider -> new LinkedHashMap<>()).put(key, value);
+                entered.computeIfAbsent(id, _ -> new LinkedHashMap<>()).put(key, value);
             }
         }));
         var removed = new LinkedHashMap<ProviderId, Set<String>>();
@@ -95,7 +95,7 @@ public record KeyChanges(Secrets entered, Map<ProviderId, Set<String>> removed) 
     public Secrets applyTo(Secrets stored) {
         var result = new HashMap<ProviderId, Map<String, String>>();
         stored.byProvider().forEach((id, values) -> result.put(id, new HashMap<>(values)));
-        entered.byProvider().forEach((id, values) -> result.computeIfAbsent(id, provider -> new HashMap<>())
+        entered.byProvider().forEach((id, values) -> result.computeIfAbsent(id, _ -> new HashMap<>())
                 .putAll(values));
         removed.forEach((id, keys) -> {
             var values = result.get(id);

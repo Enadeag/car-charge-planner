@@ -86,7 +86,7 @@ final class InstanceServer implements AutoCloseable {
             try {
                 var connection = channel.accept();
                 Thread.ofVirtual().name("single-instance-connection").start(() -> answer(connection, handler));
-            } catch (ClosedChannelException e) {
+            } catch (ClosedChannelException _) {
                 return;
             } catch (IOException e) {
                 LOG.log(Level.WARNING, "could not take a connection on the instance socket", e);

@@ -150,7 +150,7 @@ public final class ForecastCache {
     private void write(ProviderId providerId, Entry entry) {
         try {
             file(providerId).write(entry);
-        } catch (IOException e) {
+        } catch (IOException _) {
             // a cache that cannot be written must not stop planning; the forecast is simply asked for again later
         }
     }
@@ -191,7 +191,7 @@ public final class ForecastCache {
     private static Optional<Instant> instant(JsonNode stamp) {
         try {
             return stamp.isString() ? Optional.of(Instant.parse(stamp.stringValue())) : Optional.empty();
-        } catch (DateTimeException e) {
+        } catch (DateTimeException _) {
             return Optional.empty();
         }
     }

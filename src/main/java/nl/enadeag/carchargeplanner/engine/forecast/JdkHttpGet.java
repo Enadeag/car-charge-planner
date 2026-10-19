@@ -66,7 +66,7 @@ public final class JdkHttpGet implements HttpGet {
             // the client's own timeout ends when the headers are in (Java 25), so a server that trickles its body
             // could hold the request for ever; this deadline covers the whole answer, and cancelling aborts it
             response = answer.get(request.timeout().toNanos(), TimeUnit.NANOSECONDS);
-        } catch (TimeoutException e) {
+        } catch (TimeoutException _) {
             answer.cancel(true);
             throw new HttpTimeoutException("no whole answer within " + request.timeout().toMillis() + " ms");
         } catch (InterruptedException e) {

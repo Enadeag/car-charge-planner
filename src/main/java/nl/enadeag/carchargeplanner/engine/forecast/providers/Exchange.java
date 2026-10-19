@@ -41,13 +41,13 @@ final class Exchange {
     static HttpGet.Reply send(HttpGet http, HttpGet.Request request, String service) throws ProviderError.Unavailable {
         try {
             return http.get(request);
-        } catch (HttpGet.TooLarge e) {
+        } catch (HttpGet.TooLarge _) {
             throw new ProviderError.Unavailable(service + " gave an answer larger than " + request.maxBody().bytes()
                     + " bytes");
         } catch (IOException e) {
             // the address may hold an API key, and an IOException's message may hold the address
             throw new ProviderError.Unavailable("could not reach " + service + " (" + e.getClass().getSimpleName() + ")");
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             throw new ProviderError.Unavailable("the request to " + service + " was interrupted");
         }
@@ -63,7 +63,7 @@ final class Exchange {
     static JsonNode json(String body) {
         try {
             return JSON.readTree(body);
-        } catch (JacksonException e) {
+        } catch (JacksonException _) {
             return MissingNode.getInstance();
         }
     }

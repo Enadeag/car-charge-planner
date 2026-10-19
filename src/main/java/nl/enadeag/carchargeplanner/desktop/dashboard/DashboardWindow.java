@@ -110,6 +110,6 @@ final class DashboardWindow {
      */
     void onClose(Runnable action) {
         escapeHides = false;
-        stage.setOnCloseRequest(event -> action.run());
+        stage.setOnCloseRequest(_ -> action.run());
     }
 }

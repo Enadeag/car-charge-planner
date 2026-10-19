@@ -34,7 +34,7 @@ final class MessageCard extends VBox {
         if (message.offersSetUp() && setUp.isPresent()) {
             var button = new Button(messages.text(TextKey.START_SETUP));
             button.getStyleClass().add("accent");
-            button.setOnAction(event -> setUp.get().run());
+            button.setOnAction(_ -> setUp.get().run());
             var line = new HBox(button);
             line.getStyleClass().add("message-actions");
             getChildren().add(line);

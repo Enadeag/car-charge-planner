@@ -75,7 +75,7 @@ public final class SecretsFile {
         makePrivate();
         return switch (file.read()) {
             case Stored.Found<Secrets> found -> found.value();
-            case Stored.Absent<Secrets> absent -> Secrets.NONE;
+            case Stored.Absent<Secrets> _ -> Secrets.NONE;
             case Stored.Unusable<Secrets> unusable when unusable.reason() == Stored.Reason.UNREADABLE ->
                     throw new SecretsProblem("Could not read " + path() + " (" + unusable.detail() + ")");
             case Stored.Unusable<Secrets> unusable -> throw new SecretsProblem(path() + ": " + unusable.detail()
@@ -106,7 +106,7 @@ public final class SecretsFile {
     void delete() {
         try {
             file.delete();
-        } catch (IOException e) {
+        } catch (IOException _) {
             // the file is moved into the keychain again next time
         }
     }

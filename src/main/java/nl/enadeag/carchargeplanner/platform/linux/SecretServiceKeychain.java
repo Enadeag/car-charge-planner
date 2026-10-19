@@ -246,9 +246,9 @@ public final class SecretServiceKeychain implements Keychain {
     private static UnlockOutcome waitFor(CompletableFuture<UnlockOutcome> waiting, Duration wait) {
         try {
             return waiting.get(wait.toMillis(), TimeUnit.MILLISECONDS);
-        } catch (TimeoutException | ExecutionException e) {
+        } catch (TimeoutException | ExecutionException _) {
             return UnlockOutcome.NOT_ANSWERED;
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             return UnlockOutcome.NOT_ANSWERED;
         }
@@ -265,7 +265,7 @@ public final class SecretServiceKeychain implements Keychain {
         }
         try {
             prompt.bus().getRemoteObject(SecretService.BUS_NAME, prompt.path(), SecretService.Prompt.class).Dismiss();
-        } catch (DBusException | RuntimeException e) {
+        } catch (DBusException | RuntimeException _) {
             // the prompt ended or went with the connection
         }
     }
@@ -273,7 +273,7 @@ public final class SecretServiceKeychain implements Keychain {
     private static void stopListening(AutoCloseable listening) {
         try {
             listening.close();
-        } catch (Exception e) {
+        } catch (Exception _) {
             // the handler went with the connection
         }
     }
@@ -312,7 +312,7 @@ public final class SecretServiceKeychain implements Keychain {
             Thread.ofVirtual().name("keychain").start(call);
             try {
                 return call.get(replyTimeout.toMillis(), TimeUnit.MILLISECONDS);
-            } catch (TimeoutException e) {
+            } catch (TimeoutException _) {
                 disconnect();
                 throw new KeychainException(KeychainException.Kind.UNAVAILABLE,
                         "the Secret Service did not answer within " + replyTimeout.toMillis() + " ms");
@@ -388,7 +388,7 @@ public final class SecretServiceKeychain implements Keychain {
     private static void closeQuietly(DBusConnection bus) {
         try {
             bus.close();
-        } catch (IOException e) {
+        } catch (IOException _) {
             // it is not used again either way
         }
     }

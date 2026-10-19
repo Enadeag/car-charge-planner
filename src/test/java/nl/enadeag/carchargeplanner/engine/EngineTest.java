@@ -615,7 +615,7 @@ class EngineTest {
             asked.countDown();
             try {
                 answer.await(10, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException _) {
                 throw new ProviderError.Unavailable("interrupted");
             }
             return days(2, 4.0);

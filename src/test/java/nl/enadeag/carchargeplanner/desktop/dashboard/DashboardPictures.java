@@ -111,8 +111,8 @@ public final class DashboardPictures {
         var messages = new Messages(Language.ENGLISH);
         var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, messages);
         view.setDetachable(frame == Frame.POPUP);
-        view.onBatteryEntered(level -> { });
-        view.onAwayChange(period -> { }, period -> { });
+        view.onBatteryEntered(_ -> { });
+        view.onAwayChange(_ -> { }, _ -> { });
         view.lookup(".day-tabs").setStyle("-fx-open-tab-animation: none;"); // a growing tab is narrow on purpose
         view.show(plan);
         var studio = new Studio(view, scheme, frame, zoom, WIDTH, Optional.empty());
@@ -145,9 +145,9 @@ public final class DashboardPictures {
     private static DashboardModel plan(Path folder) throws IOException {
         var config = folder.resolve("engine.json");
         Files.copy(EXAMPLE, config);
-        var providers = new Providers(List.of(new Played(new OpenMeteo(request -> {
+        var providers = new Providers(List.of(new Played(new OpenMeteo(_ -> {
             throw new IOException("no network");
-        }).info()), new ForecastSolar(request -> {
+        }).info()), new ForecastSolar(_ -> {
             throw new IOException("no network");
         })));
         var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json")));
@@ -155,7 +155,7 @@ public final class DashboardPictures {
         try (var engine = new Engine(new ConfigFile(config),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
                 awayFile, new BatteryFile(folder.resolve("battery.json")), Clock.fixed(NOW, ZoneOffset.UTC),
-                new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), told -> { }),
+                new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), _ -> { }),
                 new ManualScheduler())) {
             return new OutlookMapper(new Messages(Language.ENGLISH)).map(engine.plan(), awayFile.periods());
         }

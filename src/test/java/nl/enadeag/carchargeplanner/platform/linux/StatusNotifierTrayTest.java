@@ -165,9 +165,9 @@ class StatusNotifierTrayTest {
         var newToolTip = new CountDownLatch(1);
         // generic handlers: dbus-java would look for the signals' classes in StatusNotifierItem, by the interface's name
         panel.addGenericSigHandler(signalRule("org.kde.StatusNotifierItem", "NewIcon"),
-                signal -> newIcon.countDown());
+                _ -> newIcon.countDown());
         panel.addGenericSigHandler(signalRule("org.kde.StatusNotifierItem", "NewToolTip"),
-                signal -> newToolTip.countDown());
+                _ -> newToolTip.countDown());
 
         tray.showStatus(new TrayStatus(StatusDot.GRID, "Charge 8.4 kWh from the grid: Sunday 09:00 – 15:10."));
 

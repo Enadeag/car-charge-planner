@@ -50,6 +50,6 @@ final class TextInput implements Input {
 
     @Override
     public void onChange(Runnable action) {
-        field.textProperty().addListener((property, before, now) -> action.run());
+        field.textProperty().addListener((_, _, _) -> action.run());
     }
 }

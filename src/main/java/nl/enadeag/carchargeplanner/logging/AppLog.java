@@ -122,7 +122,7 @@ public final class AppLog implements AutoCloseable {
         try {
             var level = System.Logger.Level.valueOf(name.strip().toUpperCase(Locale.ROOT));
             return Optional.of(Level.parse(Integer.toString(level.getSeverity())));
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             return Optional.empty();
         }
     }

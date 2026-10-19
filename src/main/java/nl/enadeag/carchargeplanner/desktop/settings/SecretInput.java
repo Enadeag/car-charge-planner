@@ -57,7 +57,7 @@ final class SecretInput implements Input {
         replace.accessibleTextProperty().bind(Bindings.createStringBinding(() -> hidden.getAccessibleText() == null
                         ? null : messages.text(TextKey.SECRET_LOCKED_SPOKEN, hidden.getAccessibleText()),
                 hidden.accessibleTextProperty()));
-        replace.setOnAction(event -> {
+        replace.setOnAction(_ -> {
             editable();
             hidden.requestFocus();
         });
@@ -144,6 +144,6 @@ final class SecretInput implements Input {
 
     @Override
     public void onChange(Runnable action) {
-        hidden.textProperty().addListener((property, before, now) -> action.run());
+        hidden.textProperty().addListener((_, _, _) -> action.run());
     }
 }

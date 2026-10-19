@@ -44,8 +44,8 @@ final class BatteryCard extends VBox {
         var hint = messages.text(TextKey.BATTERY_UPDATE_HINT);
         update.setTooltip(new Tooltip(hint));
         update.setAccessibleHelp(hint);
-        update.setOnAction(event -> edit(true));
-        bar.setOnMouseClicked(event -> edit(true));
+        update.setOnAction(_ -> edit(true));
+        bar.setOnMouseClicked(_ -> edit(true));
         bar.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ENTER || event.getCode() == KeyCode.SPACE) {
                 edit(true);

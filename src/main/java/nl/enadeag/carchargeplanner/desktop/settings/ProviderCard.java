@@ -51,7 +51,7 @@ final class ProviderCard {
         this.messages = messages;
         var texts = new ProviderTexts(messages);
         var terms = new Hyperlink(messages.text(TextKey.PROVIDER_TERMS));
-        terms.setOnAction(event -> openLink.accept(URI.create(info.termsUrl())));
+        terms.setOnAction(_ -> openLink.accept(URI.create(info.termsUrl())));
         // the fallback provider's card can show below the first one's: a screen reader names whose each control is
         terms.setAccessibleText(messages.text(TextKey.IN_GROUP, terms.getText(), info.name()));
         var content = new ArrayList<Node>(List.of(
@@ -71,7 +71,7 @@ final class ProviderCard {
             content.add(row);
         }
         test = new Button(messages.text(TextKey.PROVIDER_TEST));
-        test.setOnAction(event -> test(tester));
+        test.setOnAction(_ -> test(tester));
         test.setAccessibleText(messages.text(TextKey.IN_GROUP, test.getText(), info.name()));
         var line = new HBox(test, result);
         line.getStyleClass().add("field-line");

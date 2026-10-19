@@ -68,7 +68,7 @@ final class KeychainEntries {
         for (var name : index()) {
             var parts = name.substring(PREFIX.length()).split("/", 2);
             keychain.read(name).ifPresent(value ->
-                    byProvider.computeIfAbsent(new ProviderId(parts[0]), id -> new HashMap<>()).put(parts[1], value));
+                    byProvider.computeIfAbsent(new ProviderId(parts[0]), _ -> new HashMap<>()).put(parts[1], value));
         }
         return new Secrets(byProvider);
     }
@@ -87,7 +87,7 @@ final class KeychainEntries {
         List<String> old;
         try {
             old = index();
-        } catch (KeychainException e) {
+        } catch (KeychainException _) {
             old = List.of(); // a damaged index: its entries are lost to us, not worth stopping for
         }
         for (var entry : wanted.entrySet()) {
@@ -128,7 +128,7 @@ final class KeychainEntries {
                 }
                 names.add(name.stringValue());
             }
-        } catch (JacksonException e) {
+        } catch (JacksonException _) {
             throw damaged();
         }
         return names;

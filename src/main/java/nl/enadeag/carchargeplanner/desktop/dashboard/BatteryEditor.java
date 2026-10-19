@@ -31,15 +31,15 @@ final class BatteryEditor extends HBox {
         var percent = Texts.label("%", "fact");
         var save = new Button(messages.text(TextKey.BATTERY_SAVE));
         save.getStyleClass().add("accent");
-        save.setOnAction(event -> save());
+        save.setOnAction(_ -> save());
         var cancel = new Button(messages.text(TextKey.BATTERY_CANCEL));
         cancel.getStyleClass().add("flat");
-        cancel.setOnAction(event -> closed.run());
+        cancel.setOnAction(_ -> closed.run());
         // the away entry below can be open as well, with its own Save and Cancel
         var heading = messages.text(TextKey.BATTERY_HEADING);
         save.setAccessibleText(messages.text(TextKey.IN_GROUP, save.getText(), heading));
         cancel.setAccessibleText(messages.text(TextKey.IN_GROUP, cancel.getText(), heading));
-        level.getEditor().setOnAction(event -> save());
+        level.getEditor().setOnAction(_ -> save());
         setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 closed.run();
@@ -67,7 +67,7 @@ final class BatteryEditor extends HBox {
     void save() {
         try {
             level.commitValue();
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException _) {
             level.getEditor().setText(String.valueOf(level.getValue()));
         }
         saved.accept(level.getValue());

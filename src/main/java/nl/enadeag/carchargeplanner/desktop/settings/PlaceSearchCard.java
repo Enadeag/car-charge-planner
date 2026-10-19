@@ -55,7 +55,7 @@ final class PlaceSearchCard {
             search();
         });
         search = new Button(messages.text(TextKey.PLACE_SEARCH));
-        search.setOnAction(event -> search());
+        search.setOnAction(_ -> search());
         HBox.setHgrow(text, Priority.ALWAYS);
         var line = new HBox(text, search);
         line.getStyleClass().add("field-line");
@@ -122,7 +122,7 @@ final class PlaceSearchCard {
         var button = new Button(alike ? place.detailedLabel() : place.label());
         button.getStyleClass().addAll("flat", "place-result");
         button.setMaxWidth(Double.MAX_VALUE);
-        button.setOnAction(event -> {
+        button.setOnAction(_ -> {
             chosen.accept(place);
             results.getChildren().clear();
             status.setText(messages.text(TextKey.PLACE_CHOSEN, button.getText()));

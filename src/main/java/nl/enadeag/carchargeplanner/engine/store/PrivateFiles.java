@@ -136,7 +136,7 @@ public final class PrivateFiles {
     private static void flushFolder(Path folder) {
         try (var channel = FileChannel.open(folder, StandardOpenOption.READ)) {
             channel.force(true);
-        } catch (IOException e) {
+        } catch (IOException _) {
             // the file itself is on the disk already; only the move could be lost in a power cut
         }
     }
@@ -144,7 +144,7 @@ public final class PrivateFiles {
     private static void deleteQuietly(Path file) {
         try {
             Files.deleteIfExists(file);
-        } catch (IOException e) {
+        } catch (IOException _) {
             // a leftover temporary file is removed by the next write
         }
     }

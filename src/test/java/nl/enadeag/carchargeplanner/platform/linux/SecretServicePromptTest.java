@@ -107,7 +107,7 @@ class SecretServicePromptTest {
             shown.countDown();
             try {
                 replyHeld.await(WAIT.toSeconds(), TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException _) {
                 Thread.currentThread().interrupt();
             }
             dismissedByOwner.ifPresent(this::complete);

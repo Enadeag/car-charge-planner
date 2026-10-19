@@ -91,7 +91,7 @@ public abstract class ProviderConformance {
         }
         var counter = new AtomicInteger();
         var secondFails = new ArrayList<Route>();
-        secondFails.add(new Route(request -> counter.getAndIncrement() >= 1, new HttpGet.Reply(503, "Unavailable"), null));
+        secondFails.add(new Route(_ -> counter.getAndIncrement() >= 1, new HttpGet.Reply(503, "Unavailable"), null));
         secondFails.addAll(c.ok());
         var failing = c.provider(secondFails).provider();
         assertThatThrownBy(() -> failing.fetch(system, c.allSettings(), c.now())).isInstanceOf(ProviderError.Unavailable.class);
@@ -205,7 +205,7 @@ public abstract class ProviderConformance {
         var made = c.provider(c.emptyBody());
         try {
             assertThat(Steps.problems(made.provider().fetch(ProviderCase.EXAMPLE_SYSTEM, c.allSettings(), c.now()))).isEmpty();
-        } catch (ProviderError e) {
+        } catch (ProviderError _) {
             // a provider error is a fine answer to nothing
         }
         assertThat(made.http().unexpected).isEmpty();

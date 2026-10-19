@@ -140,7 +140,7 @@ final class SettingsStorage {
         return stores.startAtLogin().map(system -> {
             try {
                 return system.isOn();
-            } catch (IOException e) {
+            } catch (IOException _) {
                 return false;
             }
         });

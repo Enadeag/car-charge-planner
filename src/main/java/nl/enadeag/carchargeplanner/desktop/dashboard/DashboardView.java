@@ -65,7 +65,7 @@ final class DashboardView extends VBox {
         detach.setTooltip(new Tooltip(messages.text(TextKey.DASHBOARD_DETACH)));
         detach.setAccessibleText(messages.text(TextKey.DASHBOARD_DETACH));
         detach.getStyleClass().addAll("flat", "detach");
-        detach.setOnAction(event -> detachAction.run());
+        detach.setOnAction(_ -> detachAction.run());
 
         var header = new HBox(title, spacer, detach);
         header.getStyleClass().add("dashboard-header");

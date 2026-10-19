@@ -127,7 +127,7 @@ public final class Fx {
             var started = new CountDownLatch(1);
             Platform.startup(() -> {
                 // JavaFX hands what an event handler or a pulse throws to the thread's handler, which only prints it
-                Thread.currentThread().setUncaughtExceptionHandler((thread, thrown) -> UNCAUGHT.add(thrown));
+                Thread.currentThread().setUncaughtExceptionHandler((_, thrown) -> UNCAUGHT.add(thrown));
                 started.countDown();
             });
             Platform.setImplicitExit(false);

@@ -54,7 +54,7 @@ public final class AnnouncedWindows {
     public void save(List<Window> windows) {
         try {
             file.write(List.copyOf(windows));
-        } catch (IOException e) {
+        } catch (IOException _) {
             // the windows are kept for this run all the same: the announcer remembers them itself
         }
     }
@@ -99,7 +99,7 @@ public final class AnnouncedWindows {
         private static Optional<Instant> instant(JsonNode stamp) {
             try {
                 return stamp.isString() ? Optional.of(Instant.parse(stamp.stringValue())) : Optional.empty();
-            } catch (DateTimeException e) {
+            } catch (DateTimeException _) {
                 return Optional.empty();
             }
         }

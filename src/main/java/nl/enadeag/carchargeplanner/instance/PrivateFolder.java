@@ -113,7 +113,7 @@ public final class PrivateFolder {
         }
         try {
             Files.createDirectory(path, attributes());
-        } catch (FileAlreadyExistsException e) {
+        } catch (FileAlreadyExistsException _) {
             // checked below like a new one
         }
         var attributes = Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);

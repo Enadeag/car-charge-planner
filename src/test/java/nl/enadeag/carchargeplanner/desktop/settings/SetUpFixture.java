@@ -115,12 +115,12 @@ final class SetUpFixture {
         engine = new Engine(new ConfigFile(configPath),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
                 new AwayFile(folder.resolve("away.json")), new BatteryFile(folder.resolve("battery.json")),
-                clock, new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), told -> { }),
+                clock, new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), _ -> { }),
                 new ManualScheduler());
     }
 
     private static HttpGet offline() {
-        return request -> {
+        return _ -> {
             throw new IOException("no network in the tests");
         };
     }

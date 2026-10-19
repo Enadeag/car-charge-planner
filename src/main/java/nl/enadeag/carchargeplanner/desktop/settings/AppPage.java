@@ -106,7 +106,7 @@ final class AppPage implements Page {
      */
     void offerSetUp(Runnable runSetUp) {
         var button = new Button(messages.text(TextKey.RUN_SETUP));
-        button.setOnAction(event -> runSetUp.run());
+        button.setOnAction(_ -> runSetUp.run());
         var all = new ArrayList<Node>(List.of(cards));
         all.add(new Card(messages.text(TextKey.CARD_SETUP), messages.text(TextKey.CARD_SETUP_HINT), button));
         view.show(all.toArray(Node[]::new));

@@ -96,7 +96,7 @@ final class SettingsView extends BorderPane {
         pages.forEach(page -> page.onChange(this::edited));
 
         categories.getItems().setAll(pages.stream().map(Page::category).toList());
-        categories.setCellFactory(list -> new CategoryCell());
+        categories.setCellFactory(_ -> new CategoryCell());
         categories.setAccessibleText(messages.text(TextKey.SETTINGS_CATEGORIES));
         categories.getStyleClass().add("settings-categories");
         categories.getSelectionModel().selectedItemProperty().subscribe(this::showPage);
@@ -119,19 +119,19 @@ final class SettingsView extends BorderPane {
         body.setFitToWidth(true);
         body.getStyleClass().add("settings-body");
 
-        cancel.setOnAction(event -> cancel());
+        cancel.setOnAction(_ -> cancel());
         save = new Button(messages.text(TextKey.SETTINGS_SAVE));
         save.setDefaultButton(true);
-        save.setOnAction(event -> save(() -> { }));
+        save.setOnAction(_ -> save(() -> { }));
         saveAndClose = new Button(messages.text(TextKey.SETTINGS_SAVE_CLOSE));
-        saveAndClose.setOnAction(event -> save(close));
+        saveAndClose.setOnAction(_ -> save(close));
         actions = bar(status, cancel, save, saveAndClose);
 
         var keepEditing = new Button(messages.text(TextKey.SETTINGS_KEEP_EDITING));
-        keepEditing.setOnAction(event -> showActions());
+        keepEditing.setOnAction(_ -> showActions());
         var discard = new Button(messages.text(TextKey.SETTINGS_DISCARD));
         discard.getStyleClass().add("danger");
-        discard.setOnAction(event -> {
+        discard.setOnAction(_ -> {
             showActions();
             close.run();
             afterClose.run();
@@ -335,11 +335,11 @@ final class SettingsView extends BorderPane {
         showOutcome(result);
         categories.refresh(); // before the focus moves there: the marked category says it has a problem
         switch (result) {
-            case SaveOutcome.Saved ignored -> ScreenReader.focus(status);
+            case SaveOutcome.Saved _ -> ScreenReader.focus(status);
             case SaveOutcome.Refused problems -> show(problems.categories().getFirst());
-            case SaveOutcome.StartAtLoginRefused ignored -> show(Category.APP);
-            case SaveOutcome.KeyringLocked ignored -> ScreenReader.focus(status);
-            case SaveOutcome.Failed ignored -> ScreenReader.focus(status);
+            case SaveOutcome.StartAtLoginRefused _ -> show(Category.APP);
+            case SaveOutcome.KeyringLocked _ -> ScreenReader.focus(status);
+            case SaveOutcome.Failed _ -> ScreenReader.focus(status);
         }
         edited();
     }
@@ -350,16 +350,16 @@ final class SettingsView extends BorderPane {
         refused.clear();
         status.getStyleClass().remove("problem");
         switch (result) {
-            case SaveOutcome.Saved ignored -> status.setText(messages.text(TextKey.SETTINGS_SAVED));
+            case SaveOutcome.Saved _ -> status.setText(messages.text(TextKey.SETTINGS_SAVED));
             case SaveOutcome.Refused problems -> {
                 refused.addAll(problems.categories());
                 showProblem(messages.text(TextKey.SETTINGS_REFUSED));
             }
-            case SaveOutcome.StartAtLoginRefused ignored -> {
+            case SaveOutcome.StartAtLoginRefused _ -> {
                 refused.add(Category.APP);
                 showProblem(messages.text(TextKey.SETTINGS_REFUSED));
             }
-            case SaveOutcome.KeyringLocked ignored -> showProblem(messages.text(TextKey.SETTINGS_KEYRING_LOCKED));
+            case SaveOutcome.KeyringLocked _ -> showProblem(messages.text(TextKey.SETTINGS_KEYRING_LOCKED));
             case SaveOutcome.Failed failure ->
                     showProblem(messages.text(TextKey.SETTINGS_SAVE_FAILED, failure.detail()));
         }

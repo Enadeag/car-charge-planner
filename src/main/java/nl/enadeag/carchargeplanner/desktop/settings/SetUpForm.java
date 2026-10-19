@@ -55,7 +55,7 @@ final class SetUpForm {
         base = draft.config();
         forecast.loadKeys(draft.keys(), start.keyStorage(), start.keysProblem());
         allParts().forEach(part -> part.load(base));
-        app.load(draft.app(), start.startsAtLogin().map(possible -> draft.startAtLogin()));
+        app.load(draft.app(), start.startsAtLogin().map(_ -> draft.startAtLogin()));
     }
 
     /**

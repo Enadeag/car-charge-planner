@@ -28,7 +28,7 @@ public record SettingsChanges(Optional<Boolean> startAtLogin, Optional<KeyChange
     public static SettingsChanges between(AllSettings stored, AllSettings entered) {
         var startAtLogin = stored.startsAtLogin()
                 .flatMap(was -> entered.startsAtLogin().filter(now -> !now.equals(was)));
-        var keys = entered.config().map(config -> KeyChanges.between(stored.keys(), entered.keys()))
+        var keys = entered.config().map(_ -> KeyChanges.between(stored.keys(), entered.keys()))
                 .filter(changed -> !changed.isEmpty());
         var config = entered.config().filter(changed -> !Optional.of(changed).equals(stored.config()));
         var app = Optional.of(entered.app()).filter(changed -> !changed.equals(stored.app()));

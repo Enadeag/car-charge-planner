@@ -108,7 +108,7 @@ class PrivateFolderTest {
 
     @Test
     void whenItsModeCannotBeChangedItIsRefused() throws IOException {
-        var folderThatResists = new PrivateFolder(folder, user, (path, mode) -> {
+        var folderThatResists = new PrivateFolder(folder, user, (_, _) -> {
             throw new IOException("operation not permitted");
         }, PrivateFolderTest::ownerOf);
         assertThatThrownBy(folderThatResists::make).isInstanceOf(NotPrivateException.class)

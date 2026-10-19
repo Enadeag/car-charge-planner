@@ -111,7 +111,7 @@ final class SettingsFixture {
         engine = new Engine(new ConfigFile(configPath),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
                 new AwayFile(folder.resolve("away.json")), new BatteryFile(folder.resolve("battery.json")),
-                clock, new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), told -> { }),
+                clock, new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), _ -> { }),
                 new ManualScheduler());
     }
 
@@ -120,7 +120,7 @@ final class SettingsFixture {
      * fails.
      */
     static List<ForecastProvider> realProviders() {
-        HttpGet offline = request -> {
+        HttpGet offline = _ -> {
             throw new IOException("no network in the tests");
         };
         return List.of(new OpenMeteo(offline), new ForecastSolar(offline));
@@ -293,7 +293,7 @@ final class SettingsFixture {
             switches.incrementAndGet();
             try {
                 slow.await(10, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException _) {
                 throw new IOException("interrupted");
             }
             if (failing) {

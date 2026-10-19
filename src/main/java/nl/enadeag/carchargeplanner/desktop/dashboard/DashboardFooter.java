@@ -55,7 +55,7 @@ final class DashboardFooter extends HBox {
      * @param action what the button does; called on the JavaFX thread
      */
     void onSettings(Runnable action) {
-        settings.setOnAction(event -> action.run());
+        settings.setOnAction(_ -> action.run());
     }
 
     /** Takes the Away and Settings buttons away, leaving the forecast's text. */
@@ -69,6 +69,6 @@ final class DashboardFooter extends HBox {
      * @param action what the button does; called on the JavaFX thread
      */
     void onAway(Runnable action) {
-        away.setOnAction(event -> action.run());
+        away.setOnAction(_ -> action.run());
     }
 }

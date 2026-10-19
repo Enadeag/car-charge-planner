@@ -42,7 +42,7 @@ final class WeeklyAwayCard implements ConfigPart {
         empty = FieldRow.paragraph(messages.text(TextKey.AWAY_NONE), "note");
         rows.getStyleClass().add("away-rows");
         var add = new Button(messages.text(TextKey.AWAY_ADD));
-        add.setOnAction(event -> {
+        add.setOnAction(_ -> {
             addRow(NEW);
             listeners.forEach(Runnable::run);
         });

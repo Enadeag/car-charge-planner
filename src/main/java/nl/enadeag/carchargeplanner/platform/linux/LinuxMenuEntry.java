@@ -112,7 +112,7 @@ public final class LinuxMenuEntry {
             }
         } catch (IOException e) {
             LOG.log(Level.DEBUG, command[0] + " is not available: " + e.getMessage());
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
         }
     }

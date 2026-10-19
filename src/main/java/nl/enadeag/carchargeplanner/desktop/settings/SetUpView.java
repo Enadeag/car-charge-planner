@@ -106,19 +106,19 @@ final class SetUpView extends BorderPane {
         body.getStyleClass().add("settings-body");
 
         var cancel = new Button(messages.text(TextKey.SETUP_CANCEL));
-        cancel.setOnAction(event -> cancel());
+        cancel.setOnAction(_ -> cancel());
         back = new Button(messages.text(TextKey.SETUP_BACK));
-        back.setOnAction(event -> show(step.previous()));
+        back.setOnAction(_ -> show(step.previous()));
         next = new Button(messages.text(TextKey.SETUP_NEXT));
         next.setDefaultButton(true);
-        next.setOnAction(event -> next());
+        next.setOnAction(_ -> next());
         actions = bar(status, cancel, back, next);
 
         var keepGoing = new Button(messages.text(TextKey.SETUP_KEEP_GOING));
-        keepGoing.setOnAction(event -> showActions());
+        keepGoing.setOnAction(_ -> showActions());
         var leave = new Button(messages.text(TextKey.SETUP_LEAVE));
         leave.getStyleClass().add("danger");
-        leave.setOnAction(event -> {
+        leave.setOnAction(_ -> {
             showActions();
             close.run();
         });
@@ -395,7 +395,7 @@ final class SetUpView extends BorderPane {
     /** What Finish came to: closed when saved, otherwise the reason, with the focus on it. */
     private void saved(SaveOutcome outcome, AppSettings chosen) {
         switch (outcome) {
-            case SaveOutcome.Saved ignored -> {
+            case SaveOutcome.Saved _ -> {
                 close.run();
                 finished.accept(chosen);
             }
@@ -404,11 +404,11 @@ final class SetUpView extends BorderPane {
                 show(SetUpStep.APP);
                 showRefused();
             }
-            case SaveOutcome.Refused ignored -> {
+            case SaveOutcome.Refused _ -> {
                 show(SetUpStep.APP);
                 showRefused();
             }
-            case SaveOutcome.KeyringLocked ignored -> {
+            case SaveOutcome.KeyringLocked _ -> {
                 showProblem(messages.text(TextKey.SETTINGS_KEYRING_LOCKED));
                 ScreenReader.focus(status);
             }

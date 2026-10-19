@@ -48,7 +48,7 @@ final class SetUpCheck implements SetUpPage {
         this.background = background;
         this.messages = messages;
         again = new Button(messages.text(TextKey.SETUP_CHECK_AGAIN));
-        again.setOnAction(event -> ask());
+        again.setOnAction(_ -> ask());
         var buttons = new HBox(again);
         buttons.getStyleClass().add("card-buttons");
         view = new PageView(messages.text(SetUpStep.CHECK.title()));

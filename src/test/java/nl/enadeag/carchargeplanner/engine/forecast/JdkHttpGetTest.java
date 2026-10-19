@@ -94,7 +94,7 @@ class JdkHttpGetTest {
                     Thread.sleep(pause);
                 }
             }
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException | InterruptedException _) {
             // the client hung up, or the test is over
         }
     }

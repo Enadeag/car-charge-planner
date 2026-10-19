@@ -96,7 +96,7 @@ class InstanceClaimTest {
     @Test
     void theFirstCopyWithoutASocketRunsSaysSoAndLogsAWarningOnceTheLogFileIsOpen() throws IOException {
         var first = claim();
-        assertThat(first.claim(command -> { })).isEmpty();
+        assertThat(first.claim(_ -> { })).isEmpty();
         assertThat(said()).isEqualTo(MESSAGES.text(TextKey.CLI_RUNS_UNREACHABLE, AppName.TITLE));
 
         var data = temp.resolve("data");
@@ -108,10 +108,10 @@ class InstanceClaimTest {
 
     @Test
     void aSecondCopyThatCannotReachTheFirstEndsWithItsOwnExitCode() {
-        claim().claim(command -> { });
+        claim().claim(_ -> { });
         err.reset();
 
-        assertThat(claim().claim(command -> { })).contains(ExitCode.UNREACHABLE);
+        assertThat(claim().claim(_ -> { })).contains(ExitCode.UNREACHABLE);
         assertThat(said()).isEqualTo(MESSAGES.text(TextKey.CLI_UNREACHABLE, AppName.TITLE));
     }
 
@@ -131,7 +131,7 @@ class InstanceClaimTest {
         assertThat(claim().claim(received::add)).isEmpty();
         assertThat(said()).isEmpty();
 
-        assertThat(claim().claim(command -> { })).contains(ExitCode.SUCCESS);
+        assertThat(claim().claim(_ -> { })).contains(ExitCode.SUCCESS);
         assertThat(received.poll(5, TimeUnit.SECONDS)).isEqualTo(InstanceCommand.SHOW);
         assertThat(said()).isEqualTo(MESSAGES.text(TextKey.CLI_HANDED_OVER, AppName.TITLE));
     }
@@ -143,7 +143,7 @@ class InstanceClaimTest {
         try (var mute = ServerSocketChannel.open(StandardProtocolFamily.UNIX)) {
             mute.bind(UnixDomainSocketAddress.of(made.resolve("instance.sock")));
 
-            assertThat(claim().claim(command -> { })).contains(ExitCode.FAILURE);
+            assertThat(claim().claim(_ -> { })).contains(ExitCode.FAILURE);
             assertThat(said()).isEqualTo(MESSAGES.text(TextKey.CLI_NO_ANSWER, AppName.TITLE));
         }
     }
@@ -159,7 +159,7 @@ class InstanceClaimTest {
         }
 
         var instance = instance();
-        assertThat(claim(instance).claim(command -> { })).contains(ExitCode.FAILURE);
+        assertThat(claim(instance).claim(_ -> { })).contains(ExitCode.FAILURE);
         assertThat(instance.problem()).hasValueSatisfying(problem -> assertThat(problem).contains(folder.toString()));
         assertThat(said()).isEqualTo(MESSAGES.text(TextKey.CLI_INSTANCE_NOT_PRIVATE, AppName.TITLE,
                 instance.problem().orElseThrow()));
@@ -170,7 +170,7 @@ class InstanceClaimTest {
         // a folder that cannot be made, as a file is in the way
         folder = Files.createFile(temp.resolve("a-file")).resolve("instance");
         var first = claim();
-        assertThat(first.claim(command -> { })).isEmpty();
+        assertThat(first.claim(_ -> { })).isEmpty();
         assertThat(said()).isEmpty();
 
         var data = temp.resolve("data");

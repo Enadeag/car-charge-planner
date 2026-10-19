@@ -87,6 +87,6 @@ final class ChoiceField<T> implements Input {
 
     @Override
     public void onChange(Runnable action) {
-        box.valueProperty().addListener((property, before, now) -> action.run());
+        box.valueProperty().addListener((_, _, _) -> action.run());
     }
 }

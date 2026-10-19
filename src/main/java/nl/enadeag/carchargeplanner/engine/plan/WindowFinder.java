@@ -83,7 +83,7 @@ final class WindowFinder {
     static Map<LocalDate, List<Run>> byDay(List<Run> runs, ZoneId zone) {
         var days = new LinkedHashMap<LocalDate, List<Run>>();
         for (var run : runs) {
-            days.computeIfAbsent(run.start().atZone(zone).toLocalDate(), day -> new ArrayList<>()).add(run);
+            days.computeIfAbsent(run.start().atZone(zone).toLocalDate(), _ -> new ArrayList<>()).add(run);
         }
         return days;
     }

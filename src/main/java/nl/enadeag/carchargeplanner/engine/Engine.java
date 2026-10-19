@@ -398,7 +398,7 @@ public final class Engine implements AutoCloseable {
     private Secrets storedSecrets() {
         try {
             return apiKeys.load();
-        } catch (SecretsProblem e) {
+        } catch (SecretsProblem _) {
             return Secrets.NONE; // the check then says which key is missing
         }
     }

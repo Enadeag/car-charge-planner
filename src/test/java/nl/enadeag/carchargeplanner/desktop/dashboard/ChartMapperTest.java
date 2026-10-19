@@ -128,7 +128,7 @@ class ChartMapperTest {
 
     @Test
     void aDayWithoutSunShowsTheDaytimeAndSaysSo() {
-        var dark = planned(at(TODAY, 8, 0), false, day(TODAY, 50, 50, hourly(TODAY, hour -> 0)));
+        var dark = planned(at(TODAY, 8, 0), false, day(TODAY, 50, 50, hourly(TODAY, _ -> 0)));
 
         var curve = curve(dark, 0);
 

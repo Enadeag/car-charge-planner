@@ -91,7 +91,7 @@ class SingleInstanceTest {
     @Test
     void aSecondStartHandsOverAndTheFirstIsAskedToShowItsDashboard() throws Exception {
         first();
-        assertThat(instance().claim(command -> { })).isEqualTo(Claim.HANDED_OVER);
+        assertThat(instance().claim(_ -> { })).isEqualTo(Claim.HANDED_OVER);
         assertThat(nextReceived()).isEqualTo(InstanceCommand.SHOW);
     }
 
@@ -147,7 +147,7 @@ class SingleInstanceTest {
         Files.createDirectory(folder, privateFolder());
         try (var older = InstanceServer.bind(socket(), user, TIMEOUT)) {
             older.serve(received::add);
-            assertThat(instance().claim(command -> { })).isEqualTo(Claim.HANDED_OVER);
+            assertThat(instance().claim(_ -> { })).isEqualTo(Claim.HANDED_OVER);
             assertThat(nextReceived()).isEqualTo(InstanceCommand.SHOW);
         }
         first(); // the lock was let go of again
@@ -158,7 +158,7 @@ class SingleInstanceTest {
         Files.createDirectory(folder, privateFolder());
         try (var mute = ServerSocketChannel.open(StandardProtocolFamily.UNIX)) {
             mute.bind(UnixDomainSocketAddress.of(socket()));
-            assertThat(instance().claim(command -> { })).isEqualTo(Claim.NO_ANSWER);
+            assertThat(instance().claim(_ -> { })).isEqualTo(Claim.NO_ANSWER);
             assertThat(socket()).exists();
         }
     }
@@ -270,7 +270,7 @@ class SingleInstanceTest {
         }
         assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(folder))).isEqualTo("rwx------");
         assertThat(warnings).singleElement().asString().contains("tightened").contains("owner-only");
-        assertThat(instance().claim(command -> { })).isEqualTo(Claim.HANDED_OVER);
+        assertThat(instance().claim(_ -> { })).isEqualTo(Claim.HANDED_OVER);
     }
 
     @ParameterizedTest
@@ -279,8 +279,8 @@ class SingleInstanceTest {
     void theUsersOwnFolderThatOthersMayWriteInIsNotUsedAndNoCopyRuns(String mode) throws Exception {
         Files.createDirectory(folder);
         Files.setPosixFilePermissions(folder, PosixFilePermissions.fromString(mode));
-        assertThat(instance().claim(command -> { })).isEqualTo(Claim.NOT_PRIVATE);
-        assertThat(instance().claim(command -> { })).isEqualTo(Claim.NOT_PRIVATE);
+        assertThat(instance().claim(_ -> { })).isEqualTo(Claim.NOT_PRIVATE);
+        assertThat(instance().claim(_ -> { })).isEqualTo(Claim.NOT_PRIVATE);
         assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(folder))).isEqualTo(mode);
         assertThat(folder).isEmptyDirectory();
     }
@@ -291,9 +291,9 @@ class SingleInstanceTest {
         user = Optional.of(temp.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByName("root"));
         assumeTrue(!user.equals(Optional.of(Files.getOwner(temp))), "the tests run as root");
         var first = instance();
-        assertThat(first.claim(command -> { })).isEqualTo(Claim.NOT_PRIVATE);
+        assertThat(first.claim(_ -> { })).isEqualTo(Claim.NOT_PRIVATE);
         assertThat(first.problem()).hasValueSatisfying(problem -> assertThat(problem).contains("another user"));
-        assertThat(instance().claim(command -> { })).isEqualTo(Claim.NOT_PRIVATE);
+        assertThat(instance().claim(_ -> { })).isEqualTo(Claim.NOT_PRIVATE);
         assertThat(folder).isEmptyDirectory();
     }
 
@@ -305,8 +305,8 @@ class SingleInstanceTest {
         } catch (IOException | UnsupportedOperationException e) {
             assumeTrue(false, "this account may not make links: " + e);
         }
-        assertThat(instance().claim(command -> { })).isEqualTo(Claim.NOT_PRIVATE);
-        assertThat(instance().claim(command -> { })).isEqualTo(Claim.NOT_PRIVATE);
+        assertThat(instance().claim(_ -> { })).isEqualTo(Claim.NOT_PRIVATE);
+        assertThat(instance().claim(_ -> { })).isEqualTo(Claim.NOT_PRIVATE);
         assertThat(elsewhere).isEmptyDirectory();
     }
 
@@ -330,13 +330,13 @@ class SingleInstanceTest {
         assertThat(first.claim(received::add)).isEqualTo(Claim.FIRST_UNREACHABLE);
         assertThat(first.problem()).hasValueSatisfying(problem -> assertThat(problem).contains("instance.sock"));
 
-        assertThat(instance().claim(command -> { })).isEqualTo(Claim.UNREACHABLE);
+        assertThat(instance().claim(_ -> { })).isEqualTo(Claim.UNREACHABLE);
         assertThat(instance().send(InstanceCommand.QUIT)).isEqualTo(Reply.UNREACHABLE);
         assertThat(received).isEmpty();
 
         first.close();
         assertThat(instance().send(InstanceCommand.QUIT)).isEqualTo(Reply.NOBODY);
-        assertThat(instance().claim(command -> { })).isEqualTo(Claim.FIRST_UNREACHABLE);
+        assertThat(instance().claim(_ -> { })).isEqualTo(Claim.FIRST_UNREACHABLE);
     }
 
     @Test
@@ -362,11 +362,11 @@ class SingleInstanceTest {
         useTooLongPath();
         var other = startClaimingProcess();
         assertThat(firstLine(other)).isEqualTo(Claim.FIRST_UNREACHABLE.name());
-        assertThat(instance().claim(command -> { })).isEqualTo(Claim.UNREACHABLE);
+        assertThat(instance().claim(_ -> { })).isEqualTo(Claim.UNREACHABLE);
 
         other.destroyForcibly(); // as in a crash: nothing is closed
         assertThat(other.waitFor(30, TimeUnit.SECONDS)).isTrue();
-        assertThat(patient().claim(command -> { })).isEqualTo(Claim.FIRST_UNREACHABLE);
+        assertThat(patient().claim(_ -> { })).isEqualTo(Claim.FIRST_UNREACHABLE);
     }
 
     @Test

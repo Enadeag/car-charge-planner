@@ -256,7 +256,7 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
         for (var name : names) {
             try {
                 settings.add(Setting.valueOf(name));
-            } catch (IllegalArgumentException e) {
+            } catch (IllegalArgumentException _) {
                 throw new FormatProblem(place + ": '" + name + "' is not a setting such as CAR_BATTERY");
             }
         }

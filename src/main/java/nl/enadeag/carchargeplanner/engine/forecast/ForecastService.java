@@ -127,7 +127,7 @@ public final class ForecastService {
                 () -> provider.info().settingsFrom(plain, stored.get().secrets().of(providerId));
         // a changed key does not make the cached forecast wrong, so the key is left out of what it depends on
         var key = cache.key(system, provider.info().settingsFrom(plain, Map.of()));
-        var lock = asking.computeIfAbsent(providerId, id -> new ReentrantLock());
+        var lock = asking.computeIfAbsent(providerId, _ -> new ReentrantLock());
         lock.lock();
         try {
             return new ProviderAttempt(provider, cache, retryAt, health, now, force).run(system, settings, key,

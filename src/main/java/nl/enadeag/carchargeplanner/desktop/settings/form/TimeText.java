@@ -35,7 +35,7 @@ public final class TimeText {
     public static Optional<LocalTime> read(String text) {
         try {
             return Optional.of(LocalTime.parse(text.strip(), CLOCK));
-        } catch (DateTimeParseException e) {
+        } catch (DateTimeParseException _) {
             return Optional.empty();
         }
     }

@@ -83,8 +83,8 @@ public final class SetUpWindow {
         this.looks = looks;
         this.icon = icon;
         this.background = background;
-        language.onChange(chosen -> Platform.runLater(this::takeOverSaved));
-        looks.saved().addListener((property, before, now) -> takeOverSaved());
+        language.onChange(_ -> Platform.runLater(this::takeOverSaved));
+        looks.saved().addListener((_, _, _) -> takeOverSaved());
     }
 
     /**

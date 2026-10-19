@@ -44,7 +44,7 @@ final class OneOffAwayCard extends VBox {
         add = new Button(messages.text(TextKey.ONE_OFF_ADD));
         add.getStyleClass().addAll("flat", "small");
         add.setMinWidth(USE_PREF_SIZE);
-        add.setOnAction(event -> {
+        add.setOnAction(_ -> {
             edit(true);
             resized.run();
         });
@@ -121,7 +121,7 @@ final class OneOffAwayCard extends VBox {
         remove.getStyleClass().addAll("flat", "small");
         remove.setMinWidth(USE_PREF_SIZE);
         remove.setAccessibleText(entry.removeSpoken());
-        remove.setOnAction(event -> removed.ifPresent(handler -> handler.accept(entry.period())));
+        remove.setOnAction(_ -> removed.ifPresent(handler -> handler.accept(entry.period())));
         var row = new HBox(text, remove);
         row.getStyleClass().add("away-row");
         return row;

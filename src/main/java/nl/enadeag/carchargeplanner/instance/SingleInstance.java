@@ -184,10 +184,10 @@ public final class SingleInstance implements AutoCloseable {
         SocketChannel channel;
         try {
             channel = SocketChannel.open(UnixDomainSocketAddress.of(socket));
-        } catch (ConnectException e) {
+        } catch (ConnectException _) {
             // refused: the socket is there but nobody listens; Windows says the same when it is gone meanwhile
             return Files.exists(socket, LinkOption.NOFOLLOW_LINKS) ? Reply.STALE : Reply.NOBODY;
-        } catch (IOException e) {
+        } catch (IOException _) {
             // such as a socket that may not be opened; or the running copy ended and removed it a moment ago
             return Files.exists(socket, LinkOption.NOFOLLOW_LINKS) ? Reply.UNREACHABLE : Reply.NOBODY;
         }
@@ -195,7 +195,7 @@ public final class SingleInstance implements AutoCloseable {
             Lines.write(channel, command.word());
             return Lines.read(channel, timeout).filter(InstanceServer.OK::equals).isPresent()
                     ? Reply.ANSWERED : Reply.SILENT;
-        } catch (IOException e) {
+        } catch (IOException _) {
             return Reply.SILENT; // it listens, but hung up without confirming
         }
     }
@@ -210,7 +210,7 @@ public final class SingleInstance implements AutoCloseable {
                 channel.close();
             }
             return Optional.ofNullable(taken);
-        } catch (OverlappingFileLockException e) {
+        } catch (OverlappingFileLockException _) {
             channel.close(); // another guard in this JVM holds it
             return Optional.empty();
         } catch (IOException | RuntimeException e) {
@@ -238,7 +238,7 @@ public final class SingleInstance implements AutoCloseable {
             }
             taken.release();
             return false;
-        } catch (OverlappingFileLockException e) {
+        } catch (OverlappingFileLockException _) {
             return true;
         }
     }

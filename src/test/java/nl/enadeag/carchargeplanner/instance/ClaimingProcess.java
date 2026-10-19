@@ -22,7 +22,7 @@ final class ClaimingProcess {
         var user = parent.getFileSystem().supportedFileAttributeViews().contains("posix")
                 ? Optional.of(Files.getOwner(parent)) : Optional.<UserPrincipal>empty();
         var instance = new SingleInstance(folder, user, Duration.ofMillis(500));
-        System.out.println(instance.claim(command -> { }));
+        System.out.println(instance.claim(_ -> { }));
         System.out.flush();
         while (System.in.read() >= 0) {
             // holds the lock until killed

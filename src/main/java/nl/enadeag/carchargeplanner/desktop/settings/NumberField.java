@@ -145,8 +145,8 @@ final class NumberField implements Input {
 
     @Override
     public void onChange(Runnable action) {
-        spinner.valueProperty().addListener((property, before, now) -> action.run());
-        spinner.getEditor().textProperty().addListener((property, before, now) -> action.run());
+        spinner.valueProperty().addListener((_, _, _) -> action.run());
+        spinner.getEditor().textProperty().addListener((_, _, _) -> action.run());
     }
 
     private void commitTyped() {

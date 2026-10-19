@@ -92,7 +92,7 @@ final class ConfigFields {
         if (value.isString()) {
             try {
                 return new BigDecimal(value.stringValue().trim()).doubleValue();
-            } catch (NumberFormatException e) {
+            } catch (NumberFormatException _) {
                 // reported below
             }
         }
@@ -114,7 +114,7 @@ final class ConfigFields {
         if (value.isString()) {
             try {
                 return Integer.parseInt(value.stringValue().trim());
-            } catch (NumberFormatException e) {
+            } catch (NumberFormatException _) {
                 // reported below
             }
         }

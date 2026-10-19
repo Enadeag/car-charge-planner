@@ -35,7 +35,7 @@ final class SolarPage implements ConfigPage {
         this.messages = messages;
         this.view = new PageView(messages.text(Category.SOLAR.title()));
         var button = new Button(messages.text(TextKey.PANELS_ADD));
-        button.setOnAction(event -> addArray());
+        button.setOnAction(_ -> addArray());
         add = new HBox(button);
         add.getStyleClass().add("card-buttons");
     }

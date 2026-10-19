@@ -170,7 +170,7 @@ public final class FreedesktopNotifications implements Notifications {
         var daemon = connection.getRemoteObject("org.freedesktop.DBus", "/org/freedesktop/DBus", DBus.class);
         try {
             return daemon.GetNameOwner(NotificationServer.BUS_NAME);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException _) {
             // the bus answers NameHasNoOwner as an error; NameOwnerChanged tells when a server comes
             return null;
         }
