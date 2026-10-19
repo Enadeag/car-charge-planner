@@ -8,8 +8,8 @@ import nl.enadeag.carchargeplanner.desktop.settings.app.AppPage;
 import nl.enadeag.carchargeplanner.desktop.settings.away.AwayPage;
 import nl.enadeag.carchargeplanner.desktop.settings.car.CarHousePage;
 import nl.enadeag.carchargeplanner.desktop.settings.charger.ChargerPage;
-import nl.enadeag.carchargeplanner.desktop.settings.forecast.ConnectionTest;
 import nl.enadeag.carchargeplanner.desktop.settings.forecast.ForecastPage;
+import nl.enadeag.carchargeplanner.desktop.settings.forecast.ProviderTester;
 import nl.enadeag.carchargeplanner.desktop.settings.location.LocationPage;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPage;
@@ -219,7 +219,7 @@ final class SettingsView extends BorderPane {
         var carHouse = new CarHousePage(messages);
         var charger = new ChargerPage(messages);
         var engine = stores.engine();
-        ConnectionTest tester = (provider, settings) -> {
+        ProviderTester tester = (provider, settings) -> {
             try {
                 return engine.checkConnection(provider, engine.config().system(), settings);
             } catch (ConfigProblem e) {

@@ -10,10 +10,10 @@ import javafx.scene.Node;
  * A number the engine keeps metric, shown in the owner's units. {@link UnitValue} keeps what it stands for when the
  * units change.
  */
-public final class UnitField implements Input {
+public final class UnitInput implements Input {
 
     private final UnitValue value;
-    private final NumberField field;
+    private final NumberInput field;
 
     /**
      * Makes the field, in metric units until {@link #showIn(Units)}.
@@ -21,9 +21,9 @@ public final class UnitField implements Input {
      * @param quantity what the value is, which decides its units and range
      * @param messages writes and reads the numbers in the owner's language
      */
-    public UnitField(Quantity quantity, Messages messages) {
+    public UnitInput(Quantity quantity, Messages messages) {
         this.value = new UnitValue(quantity);
-        this.field = new NumberField(value.range(), value.unit(), messages);
+        this.field = new NumberInput(value.range(), value.unit(), messages);
     }
 
     /**
@@ -72,7 +72,7 @@ public final class UnitField implements Input {
     }
 
     /**
-     * Confirms what the owner typed, as {@link NumberField#commitTyped()} does, and holds what it stands for, so it
+     * Confirms what the owner typed, as {@link NumberInput#commitTyped()} does, and holds what it stands for, so it
      * stays the same when the units change.
      */
     @Override

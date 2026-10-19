@@ -1,13 +1,13 @@
 package nl.enadeag.carchargeplanner.desktop.settings.forecast;
 
 import nl.enadeag.carchargeplanner.desktop.app.Background;
-import nl.enadeag.carchargeplanner.desktop.settings.field.ChoiceField;
+import nl.enadeag.carchargeplanner.desktop.settings.field.ChoiceInput;
 import nl.enadeag.carchargeplanner.desktop.settings.field.FieldRow;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ForecastEntry;
 import nl.enadeag.carchargeplanner.desktop.settings.form.KeysNote;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ProblemTexts;
-import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
+import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPage;
 import nl.enadeag.carchargeplanner.desktop.settings.page.NoConfigCard;
@@ -46,12 +46,12 @@ public final class ForecastPage implements ConfigPage {
     private final PageView view;
     private final Map<ProviderId, ProviderInfo> known = new LinkedHashMap<>();
     private final Map<ProviderId, ProviderCard> cards = new LinkedHashMap<>();
-    private final ChoiceField<ProviderId> primary;
-    private final ChoiceField<Optional<ProviderId>> fallback;
+    private final ChoiceInput<ProviderId> primary;
+    private final ChoiceInput<Optional<ProviderId>> fallback;
     private final FieldRow fallbackRow;
     private final Label keysNote = Labels.paragraph("", "note");
-    private final Card choice;
-    private final Card keysCard;
+    private final CardView choice;
+    private final CardView keysCard;
     private final Path keysFile;
     private ForecastSelection stored;
     private Secrets storedKeys = Secrets.NONE;
@@ -68,7 +68,7 @@ public final class ForecastPage implements ConfigPage {
      * @param background asks the providers away from the JavaFX thread
      * @param messages the texts, in the owner's language
      */
-    public ForecastPage(List<ProviderInfo> providers, ConnectionTest tester, Consumer<URI> openLink, Path keysFile,
+    public ForecastPage(List<ProviderInfo> providers, ProviderTester tester, Consumer<URI> openLink, Path keysFile,
             Background background, Messages messages) {
         this.messages = messages;
         this.keysFile = keysFile;
@@ -80,16 +80,16 @@ public final class ForecastPage implements ConfigPage {
         var ids = List.copyOf(known.keySet());
         var names = new ChoiceNames(messages);
         var infos = List.copyOf(known.values());
-        primary = new ChoiceField<>(ids, id -> names.provider(id, infos));
+        primary = new ChoiceInput<>(ids, id -> names.provider(id, infos));
         var fallbacks = new ArrayList<Optional<ProviderId>>();
         fallbacks.add(Optional.empty());
         ids.forEach(id -> fallbacks.add(Optional.of(id)));
-        fallback = new ChoiceField<>(fallbacks,
+        fallback = new ChoiceInput<>(fallbacks,
                 choice -> choice.map(id -> names.provider(id, infos)).orElseGet(names::noFallback));
         fallbackRow = FieldRow.of(messages, TextKey.FIELD_FALLBACK, TextKey.FIELD_FALLBACK_HINT, fallback);
-        choice = new Card(messages.text(TextKey.CARD_PROVIDERS), messages.text(TextKey.CARD_PROVIDERS_HINT),
+        choice = new CardView(messages.text(TextKey.CARD_PROVIDERS), messages.text(TextKey.CARD_PROVIDERS_HINT),
                 FieldRow.of(messages, TextKey.FIELD_PRIMARY, TextKey.FIELD_PRIMARY_HINT, primary), fallbackRow);
-        keysCard = new Card(messages.text(TextKey.CARD_KEYS), "", keysNote);
+        keysCard = new CardView(messages.text(TextKey.CARD_KEYS), "", keysNote);
         primary.onChange(this::showChosenCards);
         fallback.onChange(this::showChosenCards);
     }

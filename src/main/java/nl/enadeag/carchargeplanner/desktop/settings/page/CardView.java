@@ -7,7 +7,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 
 /** Settings that belong together, under a title and a short explanation. */
-public final class Card extends VBox {
+public final class CardView extends VBox {
 
     private final Label heading = new Label();
 
@@ -18,7 +18,7 @@ public final class Card extends VBox {
      * @param explanation a sentence or two about the settings on it, in the owner's language; empty for none
      * @param content the rows and other nodes on the card, in order
      */
-    public Card(String title, String explanation, Node... content) {
+    public CardView(String title, String explanation, Node... content) {
         heading.setText(title);
         heading.getStyleClass().add("card-title");
         heading.setWrapText(true);

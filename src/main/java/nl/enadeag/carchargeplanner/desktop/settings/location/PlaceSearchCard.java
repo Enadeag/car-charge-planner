@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.settings.location;
 
 import nl.enadeag.carchargeplanner.desktop.app.Background;
-import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
+import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
@@ -25,7 +25,7 @@ import javafx.scene.layout.VBox;
  */
 final class PlaceSearchCard {
 
-    private final PlaceLookup lookup;
+    private final PlaceSearcher searcher;
     private final Consumer<Place> chosen;
     private final Background background;
     private final Messages messages;
@@ -33,19 +33,19 @@ final class PlaceSearchCard {
     private final Button search;
     private final Label status = Labels.paragraph("", "note");
     private final VBox results = new VBox();
-    private final Card card;
+    private final CardView card;
     private ProviderId provider = new ProviderId("open-meteo");
 
     /**
      * Makes the card.
      *
-     * @param lookup asks the provider's place search; called away from the JavaFX thread
+     * @param searcher asks the provider's place search; called away from the JavaFX thread
      * @param chosen gets the place the owner picked from the results, on the JavaFX thread
      * @param background asks the place search away from the JavaFX thread
      * @param messages the texts, in the owner's language
      */
-    PlaceSearchCard(PlaceLookup lookup, Consumer<Place> chosen, Background background, Messages messages) {
-        this.lookup = lookup;
+    PlaceSearchCard(PlaceSearcher searcher, Consumer<Place> chosen, Background background, Messages messages) {
+        this.searcher = searcher;
         this.chosen = chosen;
         this.background = background;
         this.messages = messages;
@@ -64,7 +64,7 @@ final class PlaceSearchCard {
         // nothing to say or show yet: no empty space on the card either
         status.managedProperty().bind(status.textProperty().isNotEmpty());
         results.managedProperty().bind(Bindings.isNotEmpty(results.getChildren()));
-        card = new Card(messages.text(TextKey.CARD_PLACE), messages.text(TextKey.CARD_PLACE_HINT), line, status,
+        card = new CardView(messages.text(TextKey.CARD_PLACE), messages.text(TextKey.CARD_PLACE_HINT), line, status,
                 results);
     }
 
@@ -84,7 +84,7 @@ final class PlaceSearchCard {
      *
      * @return the same card every time
      */
-    Card view() {
+    CardView view() {
         return card;
     }
 
@@ -94,7 +94,7 @@ final class PlaceSearchCard {
         search.setDisable(true);
         results.getChildren().clear();
         status.setText(messages.text(TextKey.PLACE_SEARCHING));
-        background.run("searching for a place", () -> lookup.search(asked, typed),
+        background.run("searching for a place", () -> searcher.search(asked, typed),
                 found -> found.ifPresentOrElse(answer -> show(typed, answer), this::showNoSearch),
                 failure -> show(typed, new PlaceResults.Failed(PlaceResults.Problem.UNAVAILABLE)));
     }

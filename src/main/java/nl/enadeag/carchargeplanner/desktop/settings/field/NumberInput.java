@@ -15,7 +15,7 @@ import javafx.util.StringConverter;
  * value outside the range is brought back into it; a text that is not a number keeps the value shown before. A value
  * that was not edited is given back exactly, not as rounded for showing.
  */
-public final class NumberField implements Input {
+public final class NumberInput implements Input {
 
     private final Spinner<Double> spinner = new Spinner<>();
     private final SpinnerValueFactory.DoubleSpinnerValueFactory values;
@@ -31,7 +31,7 @@ public final class NumberField implements Input {
      * @param unit the unit after the field, such as "kWh"; empty for none
      * @param messages writes and reads the numbers in the owner's language
      */
-    public NumberField(NumberRange range, String unit, Messages messages) {
+    public NumberInput(NumberRange range, String unit, Messages messages) {
         this.range = range;
         this.values = new SpinnerValueFactory.DoubleSpinnerValueFactory(range.min(), range.max(), range.min(),
                 range.step());
@@ -39,12 +39,12 @@ public final class NumberField implements Input {
         values.setConverter(new StringConverter<>() {
             @Override
             public String toString(Double value) {
-                return value == null ? "" : text.write(value, NumberField.this.range.decimals());
+                return value == null ? "" : text.write(value, NumberInput.this.range.decimals());
             }
 
             @Override
             public Double fromString(String typed) {
-                return text.read(typed, values.getValue(), NumberField.this.range.decimals());
+                return text.read(typed, values.getValue(), NumberInput.this.range.decimals());
             }
         });
         spinner.setValueFactory(values);

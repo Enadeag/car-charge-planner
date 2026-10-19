@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.settings.away;
 
-import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
+import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPart;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -30,7 +30,7 @@ public final class WeeklyAwayCard implements ConfigPart {
     private final Messages messages;
     private final VBox rows = new VBox();
     private final Label empty;
-    private final Card card;
+    private final CardView card;
     private final List<AwayRow> shown = new ArrayList<>();
     private final List<Runnable> listeners = new ArrayList<>();
     private List<WeeklyAwayPeriod> loaded = List.of();
@@ -51,7 +51,8 @@ public final class WeeklyAwayCard implements ConfigPart {
         });
         var buttons = new HBox(add);
         buttons.getStyleClass().add("card-buttons");
-        card = new Card(messages.text(TextKey.CARD_AWAY), messages.text(TextKey.CARD_AWAY_HINT), empty, rows, buttons);
+        card = new CardView(messages.text(TextKey.CARD_AWAY), messages.text(TextKey.CARD_AWAY_HINT), empty, rows,
+                buttons);
     }
 
     /**
@@ -59,7 +60,7 @@ public final class WeeklyAwayCard implements ConfigPart {
      *
      * @return the same card every time
      */
-    public Card view() {
+    public CardView view() {
         return card;
     }
 

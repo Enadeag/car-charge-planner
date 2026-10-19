@@ -2,7 +2,7 @@ package nl.enadeag.carchargeplanner.desktop.settings.setup;
 
 import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
-import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
+import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
 import nl.enadeag.carchargeplanner.desktop.settings.page.PageView;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -38,8 +38,8 @@ final class SetUpCheck implements SetUpStepPage {
     /**
      * Makes the step; nothing is asked until {@link #check(EngineConfig, Secrets)}.
      *
-     * @param askProvider asks the config's primary provider for one forecast with these keys, nothing saved; blocks, so it
-     *     is called away from the JavaFX thread
+     * @param askProvider asks the config's primary provider for one forecast with these keys, nothing saved; blocks,
+     *     so it is called away from the JavaFX thread
      * @param providers what the known providers tell about themselves, to name the one asked
      * @param background asks the provider away from the JavaFX thread
      * @param messages the texts, in the language set-up speaks
@@ -55,7 +55,7 @@ final class SetUpCheck implements SetUpStepPage {
         var buttons = new HBox(again);
         buttons.getStyleClass().add("card-buttons");
         view = new PageView(messages.text(SetUpStep.CHECK.title()));
-        view.show(new Card(messages.text(TextKey.SETUP_CHECK_CARD), messages.text(TextKey.SETUP_CHECK_HINT), status,
+        view.show(new CardView(messages.text(TextKey.SETUP_CHECK_CARD), messages.text(TextKey.SETUP_CHECK_HINT), status,
                 buttons));
     }
 

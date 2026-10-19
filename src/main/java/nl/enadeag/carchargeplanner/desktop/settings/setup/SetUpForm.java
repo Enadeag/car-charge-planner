@@ -29,11 +29,11 @@ final class SetUpForm {
     private final LocationPage location;
     private final ForecastPage forecast;
     private final AppPage app;
-    private SetUpStart stored;
+    private SettingsStorage.Stored stored;
     private EngineConfig base;
 
     /**
-     * Makes the form; nothing is shown until {@link #start(SetUpStart, SetUpDraft)}.
+     * Makes the form; nothing is shown until {@link #start(SettingsStorage.Stored, SetUpDraft)}.
      *
      * @param storage writes at Finish
      * @param parts per step the parts of the config it shows; a step without any is left out
@@ -56,10 +56,11 @@ final class SetUpForm {
      * @param start what is stored, which Finish compares with
      * @param draft what to show
      */
-    void start(SetUpStart start, SetUpDraft draft) {
+    void start(SettingsStorage.Stored start, SetUpDraft draft) {
         stored = start;
         base = draft.config();
-        start.keysProblem().ifPresentOrElse(problem -> forecast.loadKeys(draft.keys(), start.keyStorage(), problem),
+        start.keys().problem().ifPresentOrElse(
+                problem -> forecast.loadKeys(draft.keys(), start.keyStorage(), problem),
                 () -> forecast.loadKeys(draft.keys(), start.keyStorage()));
         allParts().forEach(part -> part.load(base));
         start.startsAtLogin().ifPresentOrElse(_ -> app.load(draft.app(), draft.startAtLogin()),

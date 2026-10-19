@@ -4,12 +4,12 @@ import nl.enadeag.carchargeplanner.desktop.app.AppSettings;
 import nl.enadeag.carchargeplanner.desktop.app.Appearance;
 import nl.enadeag.carchargeplanner.desktop.app.DisplayMode;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
-import nl.enadeag.carchargeplanner.desktop.settings.field.ChoiceField;
+import nl.enadeag.carchargeplanner.desktop.settings.field.ChoiceInput;
 import nl.enadeag.carchargeplanner.desktop.settings.field.FieldRow;
 import nl.enadeag.carchargeplanner.desktop.settings.field.Input;
-import nl.enadeag.carchargeplanner.desktop.settings.field.SwitchField;
+import nl.enadeag.carchargeplanner.desktop.settings.field.SwitchInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
-import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
+import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Page;
 import nl.enadeag.carchargeplanner.desktop.settings.page.PageView;
@@ -33,13 +33,13 @@ public final class AppPage implements Page {
 
     private final Messages messages;
     private final PageView view;
-    private final ChoiceField<DisplayMode> mode;
-    private final ChoiceField<Optional<Language>> language;
-    private final ChoiceField<Appearance> appearance;
-    private final ChoiceField<Units> units;
-    private final SwitchField startAtLogin;
+    private final ChoiceInput<DisplayMode> mode;
+    private final ChoiceInput<Optional<Language>> language;
+    private final ChoiceInput<Appearance> appearance;
+    private final ChoiceInput<Units> units;
+    private final SwitchInput startAtLogin;
     private final FieldRow startAtLoginRow;
-    private final Card[] cards;
+    private final CardView[] cards;
 
     /**
      * Makes the page as Settings shows it, showing the first choices until {@link #load(AppSettings, boolean)}.
@@ -61,22 +61,23 @@ public final class AppPage implements Page {
         this.messages = messages;
         this.view = new PageView(messages.text(Category.APP.title()));
         var names = new ChoiceNames(messages);
-        mode = new ChoiceField<>(List.of(DisplayMode.values()), names::mode);
-        language = new ChoiceField<>(languages(), choice -> choice.map(names::language).orElseGet(names::systemLanguage));
-        appearance = new ChoiceField<>(List.of(Appearance.values()), names::appearance);
-        units = new ChoiceField<>(List.of(Units.values()), names::units);
-        startAtLogin = new SwitchField(messages.text(TextKey.FIELD_START_AT_LOGIN));
+        mode = new ChoiceInput<>(List.of(DisplayMode.values()), names::mode);
+        language = new ChoiceInput<>(languages(),
+                choice -> choice.map(names::language).orElseGet(names::systemLanguage));
+        appearance = new ChoiceInput<>(List.of(Appearance.values()), names::appearance);
+        units = new ChoiceInput<>(List.of(Units.values()), names::units);
+        startAtLogin = new SwitchInput(messages.text(TextKey.FIELD_START_AT_LOGIN));
         startAtLoginRow = new FieldRow("", "", startAtLogin);
-        cards = new Card[] {
-                new Card(messages.text(TextKey.CARD_DISPLAY), messages.text(displayHint),
+        cards = new CardView[] {
+                new CardView(messages.text(TextKey.CARD_DISPLAY), messages.text(displayHint),
                         new FieldRow(messages.text(TextKey.FIELD_MODE), messages.text(TextKey.FIELD_MODE_HINT), mode),
                         new FieldRow(messages.text(TextKey.FIELD_LANGUAGE), messages.text(TextKey.FIELD_LANGUAGE_HINT),
                                 language),
                         new FieldRow(messages.text(TextKey.FIELD_APPEARANCE), "", appearance)),
-                new Card(messages.text(TextKey.CARD_UNITS), messages.text(TextKey.CARD_UNITS_HINT),
+                new CardView(messages.text(TextKey.CARD_UNITS), messages.text(TextKey.CARD_UNITS_HINT),
                         new FieldRow(messages.text(TextKey.FIELD_UNITS), "", units)),
-                new Card(messages.text(TextKey.CARD_START_AT_LOGIN), messages.text(TextKey.CARD_START_AT_LOGIN_HINT),
-                        startAtLoginRow)};
+                new CardView(messages.text(TextKey.CARD_START_AT_LOGIN),
+                        messages.text(TextKey.CARD_START_AT_LOGIN_HINT), startAtLoginRow)};
         view.show(cards);
     }
 
@@ -133,7 +134,7 @@ public final class AppPage implements Page {
         var button = new Button(messages.text(TextKey.RUN_SETUP));
         button.setOnAction(_ -> runSetUp.run());
         var all = new ArrayList<Node>(List.of(cards));
-        all.add(new Card(messages.text(TextKey.CARD_SETUP), messages.text(TextKey.CARD_SETUP_HINT), button));
+        all.add(new CardView(messages.text(TextKey.CARD_SETUP), messages.text(TextKey.CARD_SETUP_HINT), button));
         view.show(all.toArray(Node[]::new));
     }
 

@@ -2,12 +2,12 @@ package nl.enadeag.carchargeplanner.desktop.settings.solar;
 
 import nl.enadeag.carchargeplanner.desktop.settings.field.FieldRow;
 import nl.enadeag.carchargeplanner.desktop.settings.field.Input;
-import nl.enadeag.carchargeplanner.desktop.settings.field.NumberField;
+import nl.enadeag.carchargeplanner.desktop.settings.field.NumberInput;
 import nl.enadeag.carchargeplanner.desktop.settings.field.TextInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import nl.enadeag.carchargeplanner.desktop.settings.form.PanelArrayEntry;
 import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalTags;
-import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
+import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ProblemRows;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -28,16 +28,16 @@ final class PanelArrayCard {
 
     private final Messages messages;
     private final TextInput name = new TextInput();
-    private final NumberField size;
-    private final NumberField tilt;
-    private final NumberField direction;
-    private final NumberField losses;
+    private final NumberInput size;
+    private final NumberInput tilt;
+    private final NumberInput direction;
+    private final NumberInput losses;
     private final ProblemRows problems;
     private final TypicalTags typical;
     private final Button useTypical;
     private final Button remove;
     private final List<FieldRow> rows = new ArrayList<>();
-    private final Card card;
+    private final CardView card;
 
     /**
      * Makes the card, empty until {@link #load(PanelArray, Set)}.
@@ -47,10 +47,10 @@ final class PanelArrayCard {
      */
     PanelArrayCard(Consumer<PanelArrayCard> remove, Messages messages) {
         this.messages = messages;
-        size = new NumberField(new NumberRange(0.1, 100, 0.1, 2), "kWp", messages);
-        tilt = new NumberField(new NumberRange(0, 90, 1, 0), "°", messages);
-        direction = new NumberField(new NumberRange(-180, 180, 5, 0), "°", messages);
-        losses = new NumberField(new NumberRange(0, 99, 1, 0), "%", messages);
+        size = new NumberInput(new NumberRange(0.1, 100, 0.1, 2), "kWp", messages);
+        tilt = new NumberInput(new NumberRange(0, 90, 1, 0), "°", messages);
+        direction = new NumberInput(new NumberRange(-180, 180, 5, 0), "°", messages);
+        losses = new NumberInput(new NumberRange(0, 99, 1, 0), "%", messages);
         problems = new ProblemRows(messages);
         typical = new TypicalTags(messages.text(TextKey.TYPICAL_TAG));
         this.useTypical = new Button(messages.text(TextKey.USE_TYPICAL));
@@ -62,7 +62,7 @@ final class PanelArrayCard {
         this.useTypical.setMinWidth(Region.USE_PREF_SIZE);
         this.remove.setMinWidth(Region.USE_PREF_SIZE);
         buttons.getStyleClass().add("card-buttons");
-        card = new Card("", messages.text(TextKey.CARD_PANEL_ARRAY_HINT),
+        card = new CardView("", messages.text(TextKey.CARD_PANEL_ARRAY_HINT),
                 listed(FieldRow.of(messages, TextKey.FIELD_PANEL_NAME, TextKey.FIELD_PANEL_NAME_HINT, name)),
                 row(ConfigSetting.PANEL_SIZE, TextKey.FIELD_PANEL_SIZE, TextKey.FIELD_PANEL_SIZE_HINT, size),
                 row(ConfigSetting.PANEL_TILT, TextKey.FIELD_PANEL_TILT, TextKey.FIELD_PANEL_TILT_HINT, tilt),
@@ -165,7 +165,7 @@ final class PanelArrayCard {
      *
      * @return the same card every time
      */
-    Card view() {
+    CardView view() {
         return card;
     }
 

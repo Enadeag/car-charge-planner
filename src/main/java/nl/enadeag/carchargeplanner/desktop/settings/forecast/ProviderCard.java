@@ -7,7 +7,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.field.SecretInput;
 import nl.enadeag.carchargeplanner.desktop.settings.field.TextInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ProviderEntry;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ProviderTexts;
-import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
+import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
@@ -39,7 +39,7 @@ final class ProviderCard {
     private final Map<String, FieldRow> rows = new LinkedHashMap<>();
     private final Label result = Labels.paragraph("", "note");
     private final Button test;
-    private final Card card;
+    private final CardView card;
 
     /**
      * Makes the card, with empty settings until {@link #load(Map, Map, boolean)}.
@@ -50,7 +50,7 @@ final class ProviderCard {
      * @param background asks the provider away from the JavaFX thread
      * @param messages the texts, in the owner's language
      */
-    ProviderCard(ProviderInfo info, ConnectionTest tester, Consumer<URI> openLink, Background background,
+    ProviderCard(ProviderInfo info, ProviderTester tester, Consumer<URI> openLink, Background background,
             Messages messages) {
         this.info = info;
         this.background = background;
@@ -82,7 +82,7 @@ final class ProviderCard {
         var line = new HBox(test, result);
         line.getStyleClass().add("field-line");
         content.add(line);
-        card = new Card(info.name(), texts.description(info), content.toArray(Node[]::new));
+        card = new CardView(info.name(), texts.description(info), content.toArray(Node[]::new));
     }
 
     /**
@@ -172,7 +172,7 @@ final class ProviderCard {
      *
      * @return the same card every time
      */
-    Card view() {
+    CardView view() {
         return card;
     }
 
@@ -201,12 +201,12 @@ final class ProviderCard {
         return values;
     }
 
-    private void test(ConnectionTest tester) {
+    private void test(ProviderTester tester) {
         var settings = new LinkedHashMap<>(plain());
         settings.putAll(secret());
         test.setDisable(true);
         result.setText(messages.text(TextKey.PROVIDER_TESTING, info.name()));
-        background.run("testing a forecast provider", () -> tester.attempt(info.id(), settings), this::showResult,
+        background.run("testing a forecast provider", () -> tester.test(info.id(), settings), this::showResult,
                 failure -> showResult(new ConnectionResult(false, 0, Background.describe(failure, messages))));
     }
 

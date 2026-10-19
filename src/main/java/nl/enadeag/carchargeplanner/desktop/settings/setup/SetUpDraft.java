@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.settings.setup;
 
 import nl.enadeag.carchargeplanner.desktop.app.AppSettings;
+import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStorage;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 
@@ -13,6 +14,18 @@ import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
  * @param startAtLogin whether the app should start at login
  */
 record SetUpDraft(EngineConfig config, Secrets keys, AppSettings app, boolean startAtLogin) {
+
+    /**
+     * What set-up shows first: what is stored, or a first-run draft in place of a config there is not.
+     *
+     * @param stored what is stored as set-up opens
+     * @param firstRun the config to start from when there is none stored that can be used
+     * @return the draft; start at login off when this copy of the app cannot start at login
+     */
+    static SetUpDraft of(SettingsStorage.Stored stored, EngineConfig firstRun) {
+        return new SetUpDraft(stored.config().orElse(firstRun), stored.keys().keys(), stored.app(),
+                stored.startsAtLogin().orElse(false));
+    }
 
     /**
      * The draft with the language and appearance of other app settings, such as ones saved in Settings meanwhile.

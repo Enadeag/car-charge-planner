@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.settings.away;
 
-import nl.enadeag.carchargeplanner.desktop.settings.field.ChoiceField;
+import nl.enadeag.carchargeplanner.desktop.settings.field.ChoiceInput;
 import nl.enadeag.carchargeplanner.desktop.settings.field.Input;
 import nl.enadeag.carchargeplanner.desktop.settings.field.TimeInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.AwayPeriodEntry;
@@ -23,7 +23,7 @@ import javafx.scene.layout.VBox;
 final class AwayRow extends VBox {
 
     private final Messages messages;
-    private final ChoiceField<DayOfWeek> weekday;
+    private final ChoiceInput<DayOfWeek> weekday;
     private final TimeInput start = new TimeInput();
     private final TimeInput end = new TimeInput();
     private final Button removeButton;
@@ -38,7 +38,7 @@ final class AwayRow extends VBox {
      */
     AwayRow(WeeklyAwayPeriod period, Consumer<AwayRow> remove, Messages messages) {
         this.messages = messages;
-        weekday = new ChoiceField<>(List.of(DayOfWeek.values()), new ChoiceNames(messages)::weekday);
+        weekday = new ChoiceInput<>(List.of(DayOfWeek.values()), new ChoiceNames(messages)::weekday);
         weekday.load(period.weekday());
         start.load(period.start());
         end.load(period.end());

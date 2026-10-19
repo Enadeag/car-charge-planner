@@ -12,7 +12,7 @@ import javafx.util.StringConverter;
  *
  * @param <T> the type of the choices, such as an enum
  */
-public final class ChoiceField<T> implements Input {
+public final class ChoiceInput<T> implements Input {
 
     private final ComboBox<T> box = new ComboBox<>();
     private T loaded;
@@ -24,7 +24,7 @@ public final class ChoiceField<T> implements Input {
      *     what it is loaded with
      * @param name what the owner reads for a choice, in their language
      */
-    public ChoiceField(List<T> choices, Function<T, String> name) {
+    public ChoiceInput(List<T> choices, Function<T, String> name) {
         box.getItems().setAll(choices);
         box.setConverter(new StringConverter<>() {
             @Override

@@ -2,11 +2,11 @@ package nl.enadeag.carchargeplanner.desktop.settings.planning;
 
 import nl.enadeag.carchargeplanner.desktop.settings.field.FieldRow;
 import nl.enadeag.carchargeplanner.desktop.settings.field.Input;
-import nl.enadeag.carchargeplanner.desktop.settings.field.NumberField;
+import nl.enadeag.carchargeplanner.desktop.settings.field.NumberInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import nl.enadeag.carchargeplanner.desktop.settings.form.PlanningEntry;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ProblemTexts;
-import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
+import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPage;
 import nl.enadeag.carchargeplanner.desktop.settings.page.NoConfigCard;
@@ -32,14 +32,14 @@ public final class PlanningPage implements ConfigPage {
 
     private final Messages messages;
     private final PageView view;
-    private final NumberField minimum;
-    private final NumberField target;
-    private final NumberField margin;
-    private final NumberField importTolerance;
-    private final NumberField minWindow;
-    private final NumberField notifyLead;
+    private final NumberInput minimum;
+    private final NumberInput target;
+    private final NumberInput margin;
+    private final NumberInput importTolerance;
+    private final NumberInput minWindow;
+    private final NumberInput notifyLead;
     private final Map<ConfigSetting, FieldRow> rows = new EnumMap<>(ConfigSetting.class);
-    private final Card[] cards;
+    private final CardView[] cards;
 
     /**
      * Makes the page, empty until {@link #load(EngineConfig)}.
@@ -49,25 +49,25 @@ public final class PlanningPage implements ConfigPage {
     public PlanningPage(Messages messages) {
         this.messages = messages;
         this.view = new PageView(messages.text(Category.PLANNING.title()));
-        minimum = new NumberField(PERCENT, "%", messages);
-        target = new NumberField(PERCENT, "%", messages);
-        margin = new NumberField(new NumberRange(1, 100, 5, 0), "%", messages);
-        importTolerance = new NumberField(new NumberRange(0, 100, 0.05, 2), "kWh", messages);
-        minWindow = new NumberField(MINUTES, messages.text(TextKey.UNIT_MINUTES), messages);
-        notifyLead = new NumberField(new NumberRange(0, 1440, 5, 0), messages.text(TextKey.UNIT_MINUTES), messages);
-        cards = new Card[] {
-            new Card(messages.text(TextKey.CARD_CHARGE_LEVELS), messages.text(TextKey.CARD_CHARGE_LEVELS_HINT),
+        minimum = new NumberInput(PERCENT, "%", messages);
+        target = new NumberInput(PERCENT, "%", messages);
+        margin = new NumberInput(new NumberRange(1, 100, 5, 0), "%", messages);
+        importTolerance = new NumberInput(new NumberRange(0, 100, 0.05, 2), "kWh", messages);
+        minWindow = new NumberInput(MINUTES, messages.text(TextKey.UNIT_MINUTES), messages);
+        notifyLead = new NumberInput(new NumberRange(0, 1440, 5, 0), messages.text(TextKey.UNIT_MINUTES), messages);
+        cards = new CardView[] {
+            new CardView(messages.text(TextKey.CARD_CHARGE_LEVELS), messages.text(TextKey.CARD_CHARGE_LEVELS_HINT),
                     row(ConfigSetting.MINIMUM_CHARGE, TextKey.FIELD_MINIMUM_CHARGE, TextKey.FIELD_MINIMUM_CHARGE_HINT,
                             minimum),
                     row(ConfigSetting.TARGET_CHARGE, TextKey.FIELD_TARGET_CHARGE, TextKey.FIELD_TARGET_CHARGE_HINT,
                             target)),
-            new Card(messages.text(TextKey.CARD_PLAN), messages.text(TextKey.CARD_PLAN_HINT),
+            new CardView(messages.text(TextKey.CARD_PLAN), messages.text(TextKey.CARD_PLAN_HINT),
                     row(ConfigSetting.PLANNING_MARGIN, TextKey.FIELD_MARGIN, TextKey.FIELD_MARGIN_HINT, margin),
                     row(ConfigSetting.IMPORT_TOLERANCE, TextKey.FIELD_IMPORT_TOLERANCE,
                             TextKey.FIELD_IMPORT_TOLERANCE_HINT, importTolerance),
                     row(ConfigSetting.MINIMUM_WINDOW, TextKey.FIELD_MIN_WINDOW, TextKey.FIELD_MIN_WINDOW_HINT,
                             minWindow)),
-            new Card(messages.text(TextKey.CARD_NOTIFICATIONS), messages.text(TextKey.CARD_NOTIFICATIONS_HINT),
+            new CardView(messages.text(TextKey.CARD_NOTIFICATIONS), messages.text(TextKey.CARD_NOTIFICATIONS_HINT),
                     row(ConfigSetting.NOTIFY_LEAD, TextKey.FIELD_NOTIFY_LEAD, TextKey.FIELD_NOTIFY_LEAD_HINT,
                             notifyLead))
         };
@@ -90,7 +90,7 @@ public final class PlanningPage implements ConfigPage {
 
     @Override
     public boolean isChanged() {
-        return fields().stream().anyMatch(NumberField::isChanged);
+        return fields().stream().anyMatch(NumberInput::isChanged);
     }
 
     @Override
@@ -125,7 +125,7 @@ public final class PlanningPage implements ConfigPage {
         if (!isChanged()) {
             return false;
         }
-        fields().forEach(NumberField::commitTyped);
+        fields().forEach(NumberInput::commitTyped);
         return planning(e -> rows.get(e.setting()).showProblem(ProblemTexts.of(e.rule(), messages))).isEmpty();
     }
 
@@ -140,7 +140,7 @@ public final class PlanningPage implements ConfigPage {
         }
     }
 
-    private List<NumberField> fields() {
+    private List<NumberInput> fields() {
         return List.of(minimum, target, margin, importTolerance, minWindow, notifyLead);
     }
 

@@ -4,7 +4,7 @@ import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
 
 /** A choice that is on or off, such as starting at login. */
-public final class SwitchField implements Input {
+public final class SwitchInput implements Input {
 
     private final CheckBox box = new CheckBox();
     private boolean loaded;
@@ -14,7 +14,7 @@ public final class SwitchField implements Input {
      *
      * @param text what the box says beside it, in the owner's language, such as "Start the app when I sign in"
      */
-    public SwitchField(String text) {
+    public SwitchInput(String text) {
         box.setText(text);
         box.setAccessibleText(text);
         box.setWrapText(true);

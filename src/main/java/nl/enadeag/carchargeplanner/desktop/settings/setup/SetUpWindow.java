@@ -55,7 +55,7 @@ public final class SetUpWindow {
     // what is stored was read
     private final ObjectProperty<Appearance> appearance = new SimpleObjectProperty<>(Appearance.SYSTEM);
     private Stage stage;
-    private SetUpStart start;
+    private SettingsStorage.Stored start;
     private SetUpView view;
     private Messages spoken;
 
@@ -111,10 +111,10 @@ public final class SetUpWindow {
             if (stage == null) {
                 make();
                 var reading = stage;
-                background.run("reading the settings for set-up", () -> SetUpStart.read(storage), read -> {
+                background.run("reading the settings for set-up", storage::read, read -> {
                     if (stage == reading) {
                         start = read;
-                        show(read.draft(firstRun), SetUpStep.WELCOME);
+                        show(SetUpDraft.of(read, firstRun), SetUpStep.WELCOME);
                     }
                 }, failure -> {
                     if (stage == reading) {

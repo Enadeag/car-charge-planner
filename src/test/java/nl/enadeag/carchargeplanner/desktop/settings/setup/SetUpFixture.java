@@ -157,8 +157,8 @@ final class SetUpFixture {
                     chosen -> finished++, background, messages);
             // as large as the app makes its window for the larger text: so many lines of it
             Scenes.layOut(view, ColorScheme.LIGHT, scale, scale.of(50 * 13), scale.of(46 * 13));
-            var start = SetUpStart.read(new SettingsStorage(stores()));
-            view.start(start, start.draft(EngineConfig.setUpDraft(ZoneId.of("Europe/Amsterdam"),
+            var start = new SettingsStorage(stores()).read();
+            view.start(start, SetUpDraft.of(start, EngineConfig.setUpDraft(ZoneId.of("Europe/Amsterdam"),
                     engine.providers().getFirst().id())), SetUpStep.WELCOME);
             return view;
         });
@@ -176,8 +176,8 @@ final class SetUpFixture {
 
     /** Starts a view made by {@link #openReading(ColorScheme)} with what is stored, as set-up does once it is read. */
     void start(SetUpView view) {
-        var start = SetUpStart.read(new SettingsStorage(stores()));
-        view.start(start, start.draft(EngineConfig.setUpDraft(ZoneId.of("Europe/Amsterdam"),
+        var start = new SettingsStorage(stores()).read();
+        view.start(start, SetUpDraft.of(start, EngineConfig.setUpDraft(ZoneId.of("Europe/Amsterdam"),
                 engine.providers().getFirst().id())), SetUpStep.WELCOME);
     }
 
@@ -185,8 +185,8 @@ final class SetUpFixture {
         return Fx.call(() -> {
             var view = SetUpView.of(stores(), keysFile(), opened::add, Fx.REDUCED_MOTION, () -> closed++,
                     chosen -> finished++, background, messages);
-            var start = SetUpStart.read(new SettingsStorage(stores()));
-            view.start(start, start.draft(EngineConfig.setUpDraft(ZoneId.of("Europe/Amsterdam"),
+            var start = new SettingsStorage(stores()).read();
+            view.start(start, SetUpDraft.of(start, EngineConfig.setUpDraft(ZoneId.of("Europe/Amsterdam"),
                     engine.providers().getFirst().id())), SetUpStep.WELCOME);
             stage = Scenes.show(view, scheme, 50 * 13, 46 * 13);
             return view;

@@ -1,14 +1,14 @@
 package nl.enadeag.carchargeplanner.desktop.settings.charger;
 
-import nl.enadeag.carchargeplanner.desktop.settings.field.ChoiceField;
+import nl.enadeag.carchargeplanner.desktop.settings.field.ChoiceInput;
 import nl.enadeag.carchargeplanner.desktop.settings.field.FieldRow;
 import nl.enadeag.carchargeplanner.desktop.settings.field.Input;
-import nl.enadeag.carchargeplanner.desktop.settings.field.NumberField;
+import nl.enadeag.carchargeplanner.desktop.settings.field.NumberInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ChargerEntry;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalTags;
-import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
+import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPage;
 import nl.enadeag.carchargeplanner.desktop.settings.page.NoConfigCard;
@@ -33,14 +33,14 @@ public final class ChargerPage implements ConfigPage {
 
     private final Messages messages;
     private final PageView view;
-    private final ChoiceField<Phases> phases;
-    private final NumberField minAmps;
-    private final NumberField maxAmps;
-    private final NumberField volts;
-    private final NumberField efficiency;
+    private final ChoiceInput<Phases> phases;
+    private final NumberInput minAmps;
+    private final NumberInput maxAmps;
+    private final NumberInput volts;
+    private final NumberInput efficiency;
     private final ProblemRows problems;
     private final TypicalTags typical;
-    private final Card card;
+    private final CardView card;
 
     /**
      * Makes the page, empty until {@link #load(EngineConfig)}.
@@ -50,15 +50,15 @@ public final class ChargerPage implements ConfigPage {
     public ChargerPage(Messages messages) {
         this.messages = messages;
         this.view = new PageView(messages.text(Category.CHARGER.title()));
-        phases = new ChoiceField<>(List.of(Phases.values()), new ChoiceNames(messages)::phases);
+        phases = new ChoiceInput<>(List.of(Phases.values()), new ChoiceNames(messages)::phases);
         var amps = new NumberRange(1, 80, 1, 0);
-        minAmps = new NumberField(amps, "A", messages);
-        maxAmps = new NumberField(amps, "A", messages);
-        volts = new NumberField(new NumberRange(100, 400, 1, 0), "V", messages);
-        efficiency = new NumberField(new NumberRange(1, 100, 1, 0), "%", messages);
+        minAmps = new NumberInput(amps, "A", messages);
+        maxAmps = new NumberInput(amps, "A", messages);
+        volts = new NumberInput(new NumberRange(100, 400, 1, 0), "V", messages);
+        efficiency = new NumberInput(new NumberRange(1, 100, 1, 0), "%", messages);
         problems = new ProblemRows(messages);
         typical = new TypicalTags(messages.text(TextKey.TYPICAL_TAG));
-        card = new Card(messages.text(TextKey.CARD_CHARGER), messages.text(TextKey.CARD_CHARGER_HINT),
+        card = new CardView(messages.text(TextKey.CARD_CHARGER), messages.text(TextKey.CARD_CHARGER_HINT),
                 row(ConfigSetting.CHARGER_PHASES, TextKey.FIELD_PHASES, TextKey.FIELD_PHASES_HINT, phases),
                 row(ConfigSetting.CHARGER_MIN_CURRENT, TextKey.FIELD_MIN_CURRENT, TextKey.FIELD_MIN_CURRENT_HINT,
                         minAmps),

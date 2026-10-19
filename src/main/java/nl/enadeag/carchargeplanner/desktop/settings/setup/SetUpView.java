@@ -8,8 +8,8 @@ import nl.enadeag.carchargeplanner.desktop.settings.away.WeeklyAwayCard;
 import nl.enadeag.carchargeplanner.desktop.settings.car.CarCard;
 import nl.enadeag.carchargeplanner.desktop.settings.car.HouseCard;
 import nl.enadeag.carchargeplanner.desktop.settings.charger.ChargerPage;
-import nl.enadeag.carchargeplanner.desktop.settings.forecast.ConnectionTest;
 import nl.enadeag.carchargeplanner.desktop.settings.forecast.ForecastPage;
+import nl.enadeag.carchargeplanner.desktop.settings.forecast.ProviderTester;
 import nl.enadeag.carchargeplanner.desktop.settings.location.LocationPage;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPart;
 import nl.enadeag.carchargeplanner.desktop.settings.page.PageView;
@@ -91,7 +91,7 @@ final class SetUpView extends BorderPane {
     private State state = State.READING;
 
     /**
-     * Makes the view; nothing shows until {@link #start(SetUpStart, SetUpDraft, SetUpStep)}.
+     * Makes the view; nothing shows until {@link #start(SettingsStorage.Stored, SetUpDraft, SetUpStep)}.
      *
      * @param form what the steps show against what is stored
      * @param pages every step's page
@@ -164,7 +164,7 @@ final class SetUpView extends BorderPane {
      * @param background does the slow work, such as asking a provider or saving, away from the JavaFX thread
      * @param messages the texts, in the language set-up speaks
      * @return the view, saying that what is stored is being read, until
-     *     {@link #start(SetUpStart, SetUpDraft, SetUpStep)}
+     *     {@link #start(SettingsStorage.Stored, SetUpDraft, SetUpStep)}
      */
     static SetUpView of(SettingsStores stores, Path keysFile, Consumer<URI> openLink,
             ObservableValue<Boolean> reducedMotion, Runnable close, Consumer<AppSettings> finished,
@@ -181,7 +181,7 @@ final class SetUpView extends BorderPane {
         var charger = new ChargerPage(messages);
         // a provider's own Test asks for the system as it was when the owner reached the forecast step
         var system = new AtomicReference<HomeSystem>();
-        ConnectionTest tester = (provider, settings) -> engine.checkConnection(provider, system.get(), settings);
+        ProviderTester tester = (provider, settings) -> engine.checkConnection(provider, system.get(), settings);
         var forecast = new ForecastPage(providers, tester, openLink, keysFile, background, messages);
         var house = new HouseCard(messages);
         var away = new WeeklyAwayCard(messages);
@@ -222,7 +222,7 @@ final class SetUpView extends BorderPane {
 
     /**
      * Says that what is stored is being read: no step can be edited, and Next and Back wait, until
-     * {@link #start(SetUpStart, SetUpDraft, SetUpStep)}.
+     * {@link #start(SettingsStorage.Stored, SetUpDraft, SetUpStep)}.
      */
     void showReading() {
         goTo(State.READING);
@@ -250,7 +250,7 @@ final class SetUpView extends BorderPane {
      * @param draft what the steps show
      * @param first the step to show
      */
-    void start(SetUpStart start, SetUpDraft draft, SetUpStep first) {
+    void start(SettingsStorage.Stored start, SetUpDraft draft, SetUpStep first) {
         goTo(State.READY);
         form.start(start, draft);
         status.setText("");
@@ -262,7 +262,7 @@ final class SetUpView extends BorderPane {
     /**
      * Whether set-up is still reading what is stored.
      *
-     * @return true until {@link #start(SetUpStart, SetUpDraft, SetUpStep)}
+     * @return true until {@link #start(SettingsStorage.Stored, SetUpDraft, SetUpStep)}
      */
     boolean isReading() {
         return state == State.READING;

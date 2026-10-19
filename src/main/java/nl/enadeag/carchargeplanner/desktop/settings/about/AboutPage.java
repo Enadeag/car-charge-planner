@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.settings.about;
 
-import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
+import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Page;
 import nl.enadeag.carchargeplanner.desktop.settings.page.PageView;
@@ -52,13 +52,14 @@ public final class AboutPage implements Page {
      */
     public void show(KeyStorage keyStorage) {
         view.show(
-                new Card(APP_NAME, "", Labels.paragraph(messages.text(TextKey.ABOUT_VERSION, facts.version()), "fact"),
+                new CardView(APP_NAME, "",
+                        Labels.paragraph(messages.text(TextKey.ABOUT_VERSION, facts.version()), "fact"),
                         Labels.paragraph(ATTRIBUTION, "fact"), Labels.paragraph(COPYRIGHT, "note")),
-                new Card(messages.text(TextKey.ABOUT_LICENCE_TITLE), messages.text(TextKey.ABOUT_LICENCE),
+                new CardView(messages.text(TextKey.ABOUT_LICENCE_TITLE), messages.text(TextKey.ABOUT_LICENCE),
                         link(TextKey.ABOUT_LICENCE_LINK, LICENCE)),
-                new Card(messages.text(TextKey.ABOUT_SOURCE_TITLE), messages.text(TextKey.ABOUT_SOURCE),
+                new CardView(messages.text(TextKey.ABOUT_SOURCE_TITLE), messages.text(TextKey.ABOUT_SOURCE),
                         link(TextKey.ABOUT_SOURCE_LINK, SOURCE)),
-                new Card(messages.text(TextKey.ABOUT_FILES_TITLE), messages.text(TextKey.ABOUT_FILES),
+                new CardView(messages.text(TextKey.ABOUT_FILES_TITLE), messages.text(TextKey.ABOUT_FILES),
                         place(TextKey.ABOUT_CONFIG_FILE, facts.configFile().toString()),
                         place(TextKey.ABOUT_APP_FILE, facts.appSettingsFile().toString()),
                         place(TextKey.ABOUT_DATA_FOLDER, facts.dataFolder().toString()),

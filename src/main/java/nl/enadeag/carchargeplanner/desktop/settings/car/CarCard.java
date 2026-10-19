@@ -3,12 +3,12 @@ package nl.enadeag.carchargeplanner.desktop.settings.car;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.settings.field.FieldRow;
 import nl.enadeag.carchargeplanner.desktop.settings.field.Input;
-import nl.enadeag.carchargeplanner.desktop.settings.field.NumberField;
-import nl.enadeag.carchargeplanner.desktop.settings.field.UnitField;
+import nl.enadeag.carchargeplanner.desktop.settings.field.NumberInput;
+import nl.enadeag.carchargeplanner.desktop.settings.field.UnitInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import nl.enadeag.carchargeplanner.desktop.settings.form.Quantity;
 import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalTags;
-import nl.enadeag.carchargeplanner.desktop.settings.page.Card;
+import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPart;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ProblemRows;
 import nl.enadeag.carchargeplanner.desktop.settings.page.TypicalButton;
@@ -31,12 +31,12 @@ import java.util.function.Consumer;
 public final class CarCard implements ConfigPart {
 
     private final Messages messages;
-    private final NumberField battery;
-    private final UnitField consumption;
-    private final UnitField distance;
+    private final NumberInput battery;
+    private final UnitInput consumption;
+    private final UnitInput distance;
     private final ProblemRows problems;
     private final TypicalTags typical;
-    private final Card card;
+    private final CardView card;
 
     /**
      * Makes the card, empty until {@link #load(EngineConfig)}, in metric units until {@link #showIn(Units)}.
@@ -45,12 +45,12 @@ public final class CarCard implements ConfigPart {
      */
     public CarCard(Messages messages) {
         this.messages = messages;
-        battery = new NumberField(new NumberRange(1, 200, 1, 1), "kWh", messages);
-        consumption = new UnitField(Quantity.CONSUMPTION, messages);
-        distance = new UnitField(Quantity.DISTANCE, messages);
+        battery = new NumberInput(new NumberRange(1, 200, 1, 1), "kWh", messages);
+        consumption = new UnitInput(Quantity.CONSUMPTION, messages);
+        distance = new UnitInput(Quantity.DISTANCE, messages);
         problems = new ProblemRows(messages);
         typical = new TypicalTags(messages.text(TextKey.TYPICAL_TAG));
-        card = new Card(messages.text(TextKey.CARD_CAR), messages.text(TextKey.CARD_CAR_HINT),
+        card = new CardView(messages.text(TextKey.CARD_CAR), messages.text(TextKey.CARD_CAR_HINT),
                 row(ConfigSetting.CAR_BATTERY, TextKey.FIELD_CAR_BATTERY, TextKey.FIELD_CAR_BATTERY_HINT, battery),
                 row(ConfigSetting.CAR_CONSUMPTION, TextKey.FIELD_CAR_CONSUMPTION, TextKey.FIELD_CAR_CONSUMPTION_HINT,
                         consumption),
@@ -76,7 +76,7 @@ public final class CarCard implements ConfigPart {
      *
      * @return the same card every time
      */
-    public Card view() {
+    public CardView view() {
         return card;
     }
 

@@ -6,7 +6,7 @@ import java.util.Optional;
 
 /** Finds places for what the owner typed, through a forecast provider's place search. */
 @FunctionalInterface
-public interface PlaceLookup {
+public interface PlaceSearcher {
 
     /**
      * Asks the provider's place search; blocks while it is asked, so call it away from the JavaFX thread.
