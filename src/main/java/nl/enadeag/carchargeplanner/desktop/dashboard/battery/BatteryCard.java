@@ -27,7 +27,7 @@ public final class BatteryCard extends VBox {
     private final BatteryEditor editor;
     private IntConsumer entered = _ -> { };
     /** True once {@link #onEntered(IntConsumer)} gave somewhere to send the level. */
-    private boolean enterable;
+    private boolean acceptsLevel;
     private BatteryModel model;
 
     /**
@@ -45,11 +45,11 @@ public final class BatteryCard extends VBox {
         var hint = messages.text(TextKey.BATTERY_UPDATE_HINT);
         update.setTooltip(new Tooltip(hint));
         update.setAccessibleHelp(hint);
-        update.setOnAction(_ -> edit(true));
-        bar.setOnMouseClicked(_ -> edit(true));
+        update.setOnAction(_ -> openEditor());
+        bar.setOnMouseClicked(_ -> openEditor());
         bar.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ENTER || event.getCode() == KeyCode.SPACE) {
-                edit(true);
+                openEditor();
                 event.consume();
             }
         });
@@ -59,7 +59,7 @@ public final class BatteryCard extends VBox {
         header.getStyleClass().add("chart-header");
         getChildren().setAll(header, bar, editor);
         getStyleClass().addAll("card", "battery-card");
-        edit(false);
+        closeEditor();
     }
 
     /**
@@ -71,9 +71,9 @@ public final class BatteryCard extends VBox {
         model = day;
         levels.setText(day.levels());
         bar.show(day);
-        showUpdate();
-        if (!canEdit()) {
-            edit(false);
+        refreshUpdateButton();
+        if (!canEnterLevel()) {
+            closeEditor();
         }
     }
 
@@ -84,8 +84,8 @@ public final class BatteryCard extends VBox {
      */
     public void onEntered(IntConsumer handler) {
         entered = handler;
-        enterable = true;
-        showUpdate();
+        acceptsLevel = true;
+        refreshUpdateButton();
     }
 
     /**
@@ -106,12 +106,12 @@ public final class BatteryCard extends VBox {
         return editor;
     }
 
-    private boolean canEdit() {
-        return model != null && model.editable() && enterable;
+    private boolean canEnterLevel() {
+        return model != null && model.editable() && acceptsLevel;
     }
 
-    private void showUpdate() {
-        boolean can = canEdit();
+    private void refreshUpdateButton() {
+        boolean can = canEnterLevel();
         update.setVisible(can && !editor.isVisible());
         update.setManaged(update.isVisible());
         bar.setAccessibleHelp(can ? update.getAccessibleHelp() : null);
@@ -119,17 +119,27 @@ public final class BatteryCard extends VBox {
 
     /** After a save or a cancel the focus goes back to Update, where the keyboard was before the entry opened. */
     private void closeEntry() {
-        edit(false);
+        closeEditor();
         update.requestFocus();
     }
 
-    private void edit(boolean open) {
-        boolean opens = open && canEdit();
-        editor.setVisible(opens);
-        editor.setManaged(opens);
-        showUpdate();
-        if (opens) {
-            editor.start(model.levelPct());
+    /** Opens the entry at the day's level when today's level can be entered; otherwise it stays closed. */
+    private void openEditor() {
+        if (canEnterLevel()) {
+            showEditor(true);
+            editor.prepare(model.levelPct());
+        } else {
+            closeEditor();
         }
+    }
+
+    private void closeEditor() {
+        showEditor(false);
+    }
+
+    private void showEditor(boolean shown) {
+        editor.setVisible(shown);
+        editor.setManaged(shown);
+        refreshUpdateButton();
     }
 }

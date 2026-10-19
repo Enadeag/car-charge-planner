@@ -1,10 +1,10 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.day;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryModel;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel.Span;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel.Step;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel.Tick;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.WindowSpan;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Step;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Tick;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.Outlook;
@@ -62,9 +62,10 @@ final class ChartMapper {
      * A day's expected sun, the house's use and the charge windows.
      *
      * @param day one of the plan's days
-     * @return the chart's data, showing the hours with sun and an hour on either side
+     * @return the chart's data, showing the hours with sun and an hour on either side; 06:00 to 20:00 for a day
+     *     without sun
      */
-    SolarCurveModel curve(DayPlan day) {
+    SolarChartModel curve(DayPlan day) {
         var start = day.date().atStartOfDay(zone);
         double dayHours = hoursFrom(start, day.date().plusDays(1).atStartOfDay(zone).toInstant());
         var sunny = day.forecast().stream().filter(step -> step.powerKw() > SUN_KW).toList();
@@ -84,11 +85,11 @@ final class ChartMapper {
                                 messages.decimal(step.powerKw()), messages.decimal(planned.baseloadKw()))))
                 .toList();
         var windows = day.windows().stream()
-                .map(window -> new Span(hoursFrom(start, window.start()), hoursFrom(start, window.end())))
+                .map(window -> new WindowSpan(hoursFrom(start, window.start()), hoursFrom(start, window.end())))
                 .toList();
         double now = hoursFrom(start, planned.madeAt());
         var nowHour = day.date().equals(today) && now >= from && now <= to ? OptionalDouble.of(now) : OptionalDouble.empty();
-        return new SolarCurveModel(from, to, scaleKw, messages.text(TextKey.CHART_SCALE, messages.whole(scaleKw)), steps, planned.baseloadKw(),
+        return new SolarChartModel(from, to, scaleKw, messages.text(TextKey.CHART_SCALE, messages.whole(scaleKw)), steps, planned.baseloadKw(),
                 windows, nowHour, ticks(day.date(), start, from, to), spoken(day, nowHour.isPresent()));
     }
 

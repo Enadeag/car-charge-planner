@@ -9,7 +9,7 @@ import java.util.function.Consumer;
  *
  * @param batteryEntered gets the battery level the owner saved on today's battery card
  * @param awayAdded gets an away period the owner entered for a specific day
- * @param awayRemoved gets an away period the owner removed, as the dashboard was shown it
+ * @param awayRemoved gets an away period the owner removed, as the dashboard showed it
  * @param away opens the weekly away periods, from the footer's Away button
  * @param settings opens Settings, from the footer's Settings button
  * @param setUp opens set-up, from the message shown before the first set-up

@@ -44,7 +44,7 @@ final class DashboardFooter extends HBox {
     /**
      * Shows the forecast's source and freshness.
      *
-     * @param text such as "Forecast: Open-Meteo · 10:51"; never null
+     * @param text such as "Weather data: Open-Meteo.com (CC BY 4.0) · updated 10:51"; may be empty, never null
      */
     void show(String text) {
         forecast.setText(text);

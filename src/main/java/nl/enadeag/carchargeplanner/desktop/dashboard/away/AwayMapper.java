@@ -38,7 +38,7 @@ public final class AwayMapper {
                 .filter(period -> period.end().isAfter(now))
                 .map(period -> {
                     var text = describe(period);
-                    return new AwayModel.Entry(period, text, messages.text(TextKey.ONE_OFF_REMOVE_SPOKEN, text));
+                    return new AwayModel.Listed(period, text, messages.text(TextKey.ONE_OFF_REMOVE_SPOKEN, text));
                 })
                 .toList();
         return new AwayModel(zone, now, coming);

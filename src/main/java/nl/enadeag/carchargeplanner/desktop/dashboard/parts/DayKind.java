@@ -4,7 +4,7 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.parts;
 public enum DayKind {
     /** The day has a charge window in the sun. */
     SUN,
-    /** The day needs a charge from the grid. */
+    /** The day that would end below the minimum charge level without a grid charge. */
     GRID,
     /** The day has no charge window. */
     NONE

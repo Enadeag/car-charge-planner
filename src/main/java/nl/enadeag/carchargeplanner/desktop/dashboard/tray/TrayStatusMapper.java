@@ -67,12 +67,12 @@ final class TrayStatusMapper {
         // the next window has not ended, so one that started before today is running now
         return planned.nextWindow()
                 .map(window -> day(window, planned).isAfter(today)
-                        ? new TrayStatus(StatusDot.NONE, laterDay(window, planned, today))
-                        : new TrayStatus(StatusDot.SUN, sun(window, planned)))
+                        ? new TrayStatus(StatusDot.NONE, laterDayText(window, planned, today))
+                        : new TrayStatus(StatusDot.SUN, solarText(window, planned)))
                 .orElseGet(() -> new TrayStatus(StatusDot.NONE, messages.text(TextKey.TRAY_NOTHING)));
     }
 
-    private String sun(Window window, Outlook.Planned planned) {
+    private String solarText(Window window, Outlook.Planned planned) {
         var zone = planned.zone();
         if (window.start().isAfter(planned.madeAt())) {
             return messages.text(TextKey.TRAY_SUN_LATER, messages.time(window.start(), zone),
@@ -82,7 +82,7 @@ final class TrayStatusMapper {
     }
 
     /** Nothing today: the next window is on a later day. */
-    private String laterDay(Window window, Outlook.Planned planned, LocalDate today) {
+    private String laterDayText(Window window, Outlook.Planned planned, LocalDate today) {
         var zone = planned.zone();
         return messages.text(TextKey.TRAY_NEXT, messages.inSentence(day(window, planned), today),
                 messages.time(window.start(), zone), messages.time(window.end(), zone));

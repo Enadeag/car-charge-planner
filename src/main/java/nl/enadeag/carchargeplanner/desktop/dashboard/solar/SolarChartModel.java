@@ -19,14 +19,14 @@ import java.util.OptionalDouble;
  * @param ticks the hours marked on the time axis, in time order
  * @param spoken the chart in words, for screen readers
  */
-public record SolarCurveModel(
+public record SolarChartModel(
         double fromHour,
         double toHour,
         double scaleKw,
         String scaleText,
         List<Step> steps,
         double houseKw,
-        List<Span> windows,
+        List<WindowSpan> windows,
         OptionalDouble nowHour,
         List<Tick> ticks,
         String spoken) {
@@ -37,7 +37,7 @@ public record SolarCurveModel(
      * @throws IllegalArgumentException when the hours are not in order, or the scale or the house's use is out of
      *     range
      */
-    public SolarCurveModel {
+    public SolarChartModel {
         if (!(fromHour >= 0 && toHour > fromHour)) {
             throw new IllegalArgumentException("the hours shown must run forwards from 0 or later");
         }
@@ -110,14 +110,14 @@ public record SolarCurveModel(
      * @param startHour the hour the window starts
      * @param endHour the hour the window ends, after {@code startHour}
      */
-    public record Span(double startHour, double endHour) {
+    public record WindowSpan(double startHour, double endHour) {
 
         /**
          * Checks the order.
          *
          * @throws IllegalArgumentException when the window does not run forwards
          */
-        public Span {
+        public WindowSpan {
             if (!(endHour > startHour)) {
                 throw new IllegalArgumentException("a window must end after it starts");
             }

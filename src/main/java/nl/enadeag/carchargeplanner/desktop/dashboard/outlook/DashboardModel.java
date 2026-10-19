@@ -12,7 +12,7 @@ public sealed interface DashboardModel {
     /**
      * The forecast's source and freshness.
      *
-     * @return such as "Forecast: Open-Meteo · 10:51"
+     * @return such as "Weather data: Open-Meteo.com (CC BY 4.0) · updated 10:51"; empty without a plan
      */
     String footer();
 

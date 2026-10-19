@@ -9,14 +9,14 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.layout.VBox;
 
 /** Grid advice, below today's main card, when the sun will not keep the car above its minimum. */
-public final class AdviceCard extends VBox {
+public final class GridAdviceCard extends VBox {
 
     /**
      * Makes the card, read by a screen reader as one sentence.
      *
      * @param advice what to charge from the grid and why; never null
      */
-    public AdviceCard(GridAdviceModel advice) {
+    public GridAdviceCard(GridAdviceModel advice) {
         getChildren().setAll(
                 new SourceChip(new Chip(Source.GRID, advice.label())),
                 paragraph(advice.title(), "advice-title"),

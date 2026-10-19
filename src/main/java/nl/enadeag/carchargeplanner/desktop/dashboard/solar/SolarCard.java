@@ -21,7 +21,7 @@ public final class SolarCard extends VBox {
     private final SolarChart chart;
 
     /**
-     * Makes the card, empty until {@link #show(SolarCurveModel)}.
+     * Makes the card, empty until {@link #show(SolarChartModel)}.
      *
      * @param reducedMotion true while the system asks for reduced motion; the chart then changes without moving
      * @param messages the texts, in the owner's language
@@ -44,7 +44,7 @@ public final class SolarCard extends VBox {
      *
      * @param day the day's data; never null
      */
-    public void show(SolarCurveModel day) {
+    public void show(SolarChartModel day) {
         chart.show(day);
     }
 

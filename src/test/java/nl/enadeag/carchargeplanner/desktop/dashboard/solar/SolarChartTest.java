@@ -36,8 +36,8 @@ import org.junit.jupiter.api.Test;
 @FxTest
 class SolarChartTest {
 
-    private static final SolarCurveModel TODAY = Models.SUNNY_TODAY.curve();
-    private static final SolarCurveModel TOMORROW = Models.CLOUDY_TOMORROW.curve();
+    private static final SolarChartModel TODAY = Models.SUNNY_TODAY.curve();
+    private static final SolarChartModel TOMORROW = Models.CLOUDY_TOMORROW.curve();
 
     private Stage stage;
     private SolarChart chart;
@@ -48,7 +48,7 @@ class SolarChartTest {
     }
 
     /** The chart in its card, 400 pixels wide, showing a day. */
-    private void show(SolarCurveModel day, ObservableValue<Boolean> reducedMotion) throws Exception {
+    private void show(SolarChartModel day, ObservableValue<Boolean> reducedMotion) throws Exception {
         Fx.run(() -> {
             var card = new SolarCard(reducedMotion, new Messages(Language.ENGLISH));
             chart = card.chart();
@@ -59,7 +59,7 @@ class SolarChartTest {
         });
     }
 
-    private void show(SolarCurveModel day) throws Exception {
+    private void show(SolarChartModel day) throws Exception {
         show(day, Fx.REDUCED_MOTION);
     }
 
@@ -154,7 +154,7 @@ class SolarChartTest {
         return Fx.call(() -> {
             chart.fireEvent(event);
             stage.getScene().getRoot().layout();
-            return new Readout(chart.selected().map(SolarCurveModel.Step::startHour).orElse(-1.0),
+            return new Readout(chart.selected().map(SolarChartModel.Step::startHour).orElse(-1.0),
                     ((Label) chart.lookup(".chart-readout-text")).getText(), chart.lookup(".chart-readout").isVisible());
         });
     }

@@ -31,7 +31,7 @@ public final class GridAdviceMapper {
      * The advice in words: how much, when, at what current, and why.
      *
      * @param advice the engine's advice; its window may be empty when no day has room for the charge
-     * @return the advice's title and detail
+     * @return the advice's label, its title (how much and when) and its detail (why, and what to set)
      */
     public GridAdviceModel map(GridAdvice advice) {
         var energy = messages.decimal(advice.energyKwh());

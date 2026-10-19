@@ -6,10 +6,10 @@ import static org.assertj.core.api.Assertions.within;
 import nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.OutlookMapper;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel.Span;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel.Step;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel.Tick;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.WindowSpan;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Step;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Tick;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.engine.Outlook;
@@ -76,12 +76,12 @@ class ChartMapperTest {
             day(TODAY, 50, 74, sunny(TODAY, 4.2), WINDOW),
             day(TODAY.plusDays(1), 62, 62, sunny(TODAY.plusDays(1), 5.3)));
 
-    private static SolarCurveModel curve(Outlook.Planned planned, int index) {
+    private static SolarChartModel curve(Outlook.Planned planned, int index) {
         return new ChartMapper(planned, ENGLISH).curve(planned.days().get(index));
     }
 
     /** The step that starts at an hour from the start of the day. */
-    private static Step stepFrom(SolarCurveModel curve, double hour) {
+    private static Step stepFrom(SolarChartModel curve, double hour) {
         return curve.steps().stream().filter(step -> step.startHour() == hour).findFirst().orElseThrow();
     }
 
@@ -91,7 +91,7 @@ class ChartMapperTest {
 
         assertThat(today.fromHour()).isEqualTo(6);
         assertThat(today.toHour()).isEqualTo(20);
-        assertThat(today.steps()).extracting(SolarCurveModel.Step::startHour)
+        assertThat(today.steps()).extracting(SolarChartModel.Step::startHour)
                 .containsExactly(6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0);
         assertThat(today.steps().get(7).kw()).isEqualTo(4.2);
         assertThat(today.ticks()).containsExactly(new Tick(6, "06"), new Tick(9, "09"), new Tick(12, "12"),
@@ -114,7 +114,7 @@ class ChartMapperTest {
     void theWindowsAndNowAreInHoursOfTheDay() {
         var today = curve(TWO_DAYS, 0);
 
-        assertThat(today.windows()).containsExactly(new Span(11.25, 14.5));
+        assertThat(today.windows()).containsExactly(new WindowSpan(11.25, 14.5));
         assertThat(today.nowHour().orElseThrow()).isCloseTo(8.2, within(1e-9));
         assertThat(today.houseKw()).isEqualTo(0.4);
         assertThat(curve(TWO_DAYS, 1).nowHour()).isEmpty();

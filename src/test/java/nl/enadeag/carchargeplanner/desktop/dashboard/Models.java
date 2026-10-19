@@ -8,10 +8,10 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Chip;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Chip.Source;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.DayKind;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel.Span;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel.Step;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel.Tick;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.WindowSpan;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Step;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Tick;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -33,7 +33,7 @@ public final class Models {
             List.of(new Chip(Source.SUN, "92 % sun"), new Chip(Source.CAR, "Battery 50 → 74 %"),
                     new Chip(Source.GRID, "0.6 kWh from the grid")),
             "The plan assumes the battery is at 50 %.", "Today: charge window 11:15 to 14:30, 10 A, 92 % sun.",
-            curve(3.6, List.of(new Span(11.25, 14.5)), OptionalDouble.of(8.2)),
+            curve(3.6, List.of(new WindowSpan(11.25, 14.5)), OptionalDouble.of(8.2)),
             new BatteryModel(50, 74, 30, 80, "50 → 74 %", "min 30", "target 80", true,
                     "Car battery 50 % now, 74 % after charging; minimum 30 %, target 80 %."));
 
@@ -63,14 +63,14 @@ public final class Models {
 
     /** Made at 08:12 today, with an away period tomorrow and one on Sunday. */
     public static final AwayModel AWAY = new AwayModel(BRUSSELS, TODAY.atTime(8, 12).atZone(BRUSSELS).toInstant(), List.of(
-            new AwayModel.Entry(AWAY_TOMORROW, "Tomorrow, all day", "Remove Tomorrow, all day"),
-            new AwayModel.Entry(AWAY_SUNDAY, "Sun 5 Jul, 10:00 – 16:30", "Remove Sun 5 Jul, 10:00 – 16:30")));
+            new AwayModel.Listed(AWAY_TOMORROW, "Tomorrow, all day", "Remove Tomorrow, all day"),
+            new AwayModel.Listed(AWAY_SUNDAY, "Sun 5 Jul, 10:00 – 16:30", "Remove Sun 5 Jul, 10:00 – 16:30")));
 
     private Models() {
     }
 
     /** A bell of sun from 07:00 to 19:00 in hourly steps, peaking at 13:00, with the house at 0.4 kW. */
-    public static SolarCurveModel curve(double peakKw, List<Span> windows, OptionalDouble now) {
+    public static SolarChartModel curve(double peakKw, List<WindowSpan> windows, OptionalDouble now) {
         var steps = new ArrayList<Step>();
         for (int hour = 7; hour < 19; hour++) {
             double kw = peakKw * Math.max(0, Math.sin(Math.PI * (hour + 0.5 - 7) / 12));
@@ -78,7 +78,7 @@ public final class Models {
         }
         var ticks = List.of(new Tick(6, "06"), new Tick(9, "09"), new Tick(12, "12"), new Tick(15, "15"),
                 new Tick(18, "18"));
-        return new SolarCurveModel(6, 20, 4, "4 kW", steps, 0.4, windows, now, ticks,
+        return new SolarChartModel(6, 20, 4, "4 kW", steps, 0.4, windows, now, ticks,
                 "Expected sun: peak %.1f kW around 13:00.".formatted(peakKw));
     }
 

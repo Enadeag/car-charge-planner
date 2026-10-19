@@ -86,7 +86,7 @@ final class PopupPlacement {
      * @param fallback the primary screen's free area
      * @return the reported position, or the bottom right corner of {@code fallback}
      */
-    static Point2D onAScreen(Point2D reported, List<Rectangle2D> screens, Rectangle2D fallback) {
+    static Point2D onScreenOrFallback(Point2D reported, List<Rectangle2D> screens, Rectangle2D fallback) {
         boolean onAScreen = screens.stream().anyMatch(screen -> screen.contains(reported));
         return onAScreen ? reported : new Point2D(fallback.getMaxX(), fallback.getMaxY());
     }

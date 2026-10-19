@@ -86,7 +86,8 @@ final class DashboardPopup {
     }
 
     /**
-     * Opens the popup beside the tray icon; a click on the icon while it is open closes it.
+     * Opens the popup beside the tray icon; a click on the icon while it is open closes it. A request to open that
+     * comes within {@code SAME_CLICK} (400 ms) of the popup closing is the click that closed it, and does nothing.
      *
      * @param view the dashboard to show; taken out of the window if it is there
      * @param reported where the tray says the icon is, in JavaFX's screen coordinates; another process (the panel)
@@ -101,7 +102,7 @@ final class DashboardPopup {
             return;
         }
         var screens = Screen.getScreens().stream().map(Screen::getBounds).toList();
-        iconPosition = PopupPlacement.onAScreen(reported, screens, Screen.getPrimary().getVisualBounds());
+        iconPosition = PopupPlacement.onScreenOrFallback(reported, screens, Screen.getPrimary().getVisualBounds());
         view.setDetachable(true);
         content.getChildren().setAll(view);
         if (owned) {

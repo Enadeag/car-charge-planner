@@ -129,19 +129,19 @@ final class BatteryBar extends Region {
         double width = getWidth();
         double barHeight = barHeight();
         double barTop = MARK_OVERHANG;
-        bar(track, width, barTop, barHeight);
-        bar(after, x(shownAfter, width), barTop, barHeight);
-        bar(level, x(shownLevel, width), barTop, barHeight);
+        placeBar(track, width, barTop, barHeight);
+        placeBar(after, x(shownAfter, width), barTop, barHeight);
+        placeBar(level, x(shownLevel, width), barTop, barHeight);
         double labelTop = barTop + barHeight + MARK_OVERHANG + GAP;
-        mark(minimum, minimumText, x(model.minimumPct(), width), barTop, barHeight, labelTop);
-        mark(target, targetText, x(model.targetPct(), width), barTop, barHeight, labelTop);
+        placeMark(minimum, minimumText, x(model.minimumPct(), width), barTop, barHeight, labelTop);
+        placeMark(target, targetText, x(model.targetPct(), width), barTop, barHeight, labelTop);
     }
 
     private double barHeight() {
         return Math.round(minimumText.prefHeight(-1) * BAR_SHARE_OF_LINE);
     }
 
-    private void mark(Line line, Label text, double x, double barTop, double barHeight, double labelTop) {
+    private void placeMark(Line line, Label text, double x, double barTop, double barHeight, double labelTop) {
         line.setStartX(x);
         line.setEndX(x);
         line.setStartY(barTop - MARK_OVERHANG);
@@ -150,7 +150,7 @@ final class BatteryBar extends Region {
         text.resizeRelocate(labelX(x, labelWidth, getWidth()), labelTop, labelWidth, text.prefHeight(-1));
     }
 
-    private static void bar(Rectangle rectangle, double width, double top, double height) {
+    private static void placeBar(Rectangle rectangle, double width, double top, double height) {
         rectangle.setY(top);
         rectangle.setWidth(width);
         rectangle.setHeight(height);

@@ -73,7 +73,7 @@ public final class DayMapper {
                 messages.text(TextKey.DAY_ENERGY, messages.decimal(window.solarKwh() + window.importKwh())));
         var chips = new ArrayList<Chip>();
         chips.add(new Chip(Source.SUN, messages.text(TextKey.DAY_SUN_SHARE, sunPct)));
-        chips.add(battery(day));
+        chips.add(batteryChip(day));
         if (window.importKwh() >= NO_GRID_KWH) {
             chips.add(new Chip(Source.GRID, messages.text(TextKey.DAY_FROM_GRID, messages.decimal(window.importKwh()))));
         }
@@ -94,11 +94,11 @@ public final class DayMapper {
     private DayModel withoutWindow(DayPlan day, DayKind kind, String heading, String why) {
         var title = messages.title(day.date(), today);
         var spoken = title + ": " + heading.toLowerCase(messages.locale()) + ". " + why;
-        return new DayModel(day.date(), messages.tab(day.date(), today), title, kind, heading, "", List.of(), List.of(battery(day)),
+        return new DayModel(day.date(), messages.tab(day.date(), today), title, kind, heading, "", List.of(), List.of(batteryChip(day)),
                 sentences(why, noteFor(day)), spoken, charts.curve(day), charts.battery(day));
     }
 
-    private Chip battery(DayPlan day) {
+    private Chip batteryChip(DayPlan day) {
         return new Chip(Source.CAR, messages.text(TextKey.DAY_BATTERY, messages.whole(day.startLevelPct().value()),
                 messages.whole(day.levelAfterChargingPct().value())));
     }

@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard;
 
-import nl.enadeag.carchargeplanner.desktop.dashboard.advice.AdviceCard;
+import nl.enadeag.carchargeplanner.desktop.dashboard.advice.GridAdviceCard;
 import nl.enadeag.carchargeplanner.desktop.dashboard.advice.GridAdviceModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.away.AwayModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayCard;
@@ -129,8 +129,8 @@ final class DashboardView extends VBox {
     /**
      * Selects a day tab and shows that day, as a click on its tab does.
      *
-     * @param index the day's index, from 0 for today; one past the last day selects the last day, and without a plan
-     *     nothing happens
+     * @param index the day's index, from 0 for today; an index past the last day selects the last day and one below
+     *     0 selects today, and without a plan nothing happens
      */
     void selectDay(int index) {
         if (!days.isEmpty()) {
@@ -218,13 +218,13 @@ final class DashboardView extends VBox {
         var page = page(new MainCard(day));
         if (day == days.getFirst()) {
             if (advice != null) {
-                page.getChildren().add(new AdviceCard(advice));
+                page.getChildren().add(new GridAdviceCard(advice));
             }
         }
         solar.show(day.curve());
         battery.show(day.battery());
         page.getChildren().addAll(solar, battery);
-        if (away.usable() && awayPeriods != null) {
+        if (away.acceptsChanges() && awayPeriods != null) {
             away.show(day, awayPeriods);
             page.getChildren().add(away);
         }

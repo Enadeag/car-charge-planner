@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.solar;
 
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel.Step;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Step;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.geometry.Point2D;

@@ -52,11 +52,11 @@ final class BatteryEditor extends HBox {
     }
 
     /**
-     * Opens the entry at a level and puts the focus in it.
+     * Fills the entry with a level and puts the focus in it; the card shows the entry.
      *
      * @param pct the level to start from, in percent; rounded to a whole percent
      */
-    void start(double pct) {
+    void prepare(double pct) {
         level.getValueFactory().setValue((int) Math.round(Math.clamp(pct, 0, 100)));
         level.requestFocus();
         level.getEditor().selectAll();

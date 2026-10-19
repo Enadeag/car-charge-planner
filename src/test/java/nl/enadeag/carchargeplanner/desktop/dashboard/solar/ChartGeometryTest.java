@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel.Step;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Step;
 import java.util.List;
 import javafx.geometry.Point2D;
 import org.junit.jupiter.api.Test;

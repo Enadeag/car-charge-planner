@@ -3,7 +3,7 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.day;
 import nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Chip;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.DayKind;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -34,7 +34,7 @@ public record DayModel(
         List<Chip> chips,
         String note,
         String spoken,
-        SolarCurveModel curve,
+        SolarChartModel curve,
         BatteryModel battery) {
 
     /**

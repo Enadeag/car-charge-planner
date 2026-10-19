@@ -39,8 +39,8 @@ class AwayMapperTest {
 
         var model = new AwayMapper(BRUSSELS, now, new Messages(language)).map(periods);
 
-        assertThat(model.coming()).extracting(AwayModel.Entry::text).containsExactly(today, tomorrow, nextWeek, overDays);
-        assertThat(model.coming()).extracting(AwayModel.Entry::period).doesNotContain(ended);
+        assertThat(model.coming()).extracting(AwayModel.Listed::text).containsExactly(today, tomorrow, nextWeek, overDays);
+        assertThat(model.coming()).extracting(AwayModel.Listed::period).doesNotContain(ended);
         assertThat(model.coming().get(1).removeSpoken())
                 .isEqualTo(new Messages(language).text(TextKey.ONE_OFF_REMOVE_SPOKEN, tomorrow));
     }

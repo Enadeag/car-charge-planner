@@ -29,7 +29,7 @@ public final class OneOffAwayCard extends VBox {
     private Consumer<OneOffAwayPeriod> added = _ -> { };
     private Consumer<OneOffAwayPeriod> removed = _ -> { };
     /** True once {@link #onChange} gave somewhere to send the periods. */
-    private boolean changeable;
+    private boolean acceptsChanges;
     /** The selected day; null until one shows. */
     private DayModel day;
     private AwayModel model;
@@ -48,7 +48,7 @@ public final class OneOffAwayCard extends VBox {
         add.getStyleClass().addAll("flat", "small");
         add.setMinWidth(USE_PREF_SIZE);
         add.setOnAction(_ -> {
-            edit(true);
+            openEditor();
             resized.run();
         });
         editor = new AwayEditor(period -> added.accept(period), this::closeEntry, resized,
@@ -60,7 +60,7 @@ public final class OneOffAwayCard extends VBox {
         list.getStyleClass().add("away-list");
         getChildren().setAll(header, list, editor);
         getStyleClass().addAll("card", "away-card");
-        edit(false);
+        closeEditor();
     }
 
     /**
@@ -83,7 +83,7 @@ public final class OneOffAwayCard extends VBox {
         }
         away.coming().forEach(entry -> list.getChildren().add(row(entry)));
         if (!sameDay) {
-            edit(false);
+            closeEditor();
         }
     }
 
@@ -96,7 +96,7 @@ public final class OneOffAwayCard extends VBox {
     public void onChange(Consumer<OneOffAwayPeriod> addedHandler, Consumer<OneOffAwayPeriod> removedHandler) {
         added = addedHandler;
         removed = removedHandler;
-        changeable = true;
+        acceptsChanges = true;
     }
 
     /**
@@ -104,8 +104,8 @@ public final class OneOffAwayCard extends VBox {
      *
      * @return true once {@link #onChange} gave somewhere to send them
      */
-    public boolean usable() {
-        return changeable;
+    public boolean acceptsChanges() {
+        return acceptsChanges;
     }
 
     /**
@@ -117,7 +117,7 @@ public final class OneOffAwayCard extends VBox {
         return editor;
     }
 
-    private HBox row(AwayModel.Entry entry) {
+    private HBox row(AwayModel.Listed entry) {
         var text = paragraph(entry.text(), "away-item");
         HBox.setHgrow(text, Priority.ALWAYS);
         text.setMaxWidth(Double.MAX_VALUE);
@@ -133,19 +133,30 @@ public final class OneOffAwayCard extends VBox {
 
     /** After a save or a cancel the focus goes back to Add, where the keyboard was before the entry opened. */
     private void closeEntry() {
-        edit(false);
+        closeEditor();
         add.requestFocus();
         resized.run();
     }
 
-    private void edit(boolean open) {
-        boolean opens = open && day != null && usable();
-        editor.setVisible(opens);
-        editor.setManaged(opens);
-        add.setVisible(!opens);
-        add.setManaged(!opens);
-        if (opens) {
-            editor.start(day.date(), model.zone(), model.now());
+    /** Opens the entry on the selected day when the card accepts changes; otherwise it stays closed. */
+    private void openEditor() {
+        if (day != null && acceptsChanges()) {
+            showEditor(true);
+            editor.prepare(day.date(), model.zone(), model.now());
+        } else {
+            closeEditor();
         }
+    }
+
+    private void closeEditor() {
+        showEditor(false);
+    }
+
+    /** The entry and Add take turns: Add shows while the entry is closed. */
+    private void showEditor(boolean shown) {
+        editor.setVisible(shown);
+        editor.setManaged(shown);
+        add.setVisible(!shown);
+        add.setManaged(!shown);
     }
 }

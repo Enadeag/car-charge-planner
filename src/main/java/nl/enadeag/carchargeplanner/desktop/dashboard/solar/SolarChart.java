@@ -2,7 +2,7 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.solar;
 
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Tween;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel.Step;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Step;
 import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,7 +55,7 @@ final class SolarChart extends Region {
     private final List<Label> ticks = new ArrayList<>();
     private final Tween tween;
 
-    private SolarCurveModel model;
+    private SolarChartModel model;
     private List<Point2D> before = List.of();
     private List<Point2D> target = List.of();
     private List<Point2D> shown = List.of();
@@ -66,7 +66,7 @@ final class SolarChart extends Region {
     private PlotArea plot;
 
     /**
-     * Makes the chart, empty until {@link #show(SolarCurveModel)}.
+     * Makes the chart, empty until {@link #show(SolarChartModel)}.
      *
      * @param reducedMotion true while the system asks for reduced motion; the curve then changes without moving
      * @param now the label on the line at the current time, such as "now"
@@ -84,15 +84,15 @@ final class SolarChart extends Region {
         setAccessibleRole(AccessibleRole.TEXT);
         setAccessibleHelp(keys);
         setFocusTraversable(true);
-        setOnMouseMoved(this::point);
-        setOnMousePressed(this::point);
-        setOnMouseDragged(this::point);
+        setOnMouseMoved(this::selectStepAtPointer);
+        setOnMousePressed(this::selectStepAtPointer);
+        setOnMouseDragged(this::selectStepAtPointer);
         setOnMouseExited(_ -> {
             if (pointed) {
                 clearSelection();
             }
         });
-        addEventHandler(KeyEvent.KEY_PRESSED, this::step);
+        addEventHandler(KeyEvent.KEY_PRESSED, this::stepWithArrowKey);
         focusedProperty().subscribe(focused -> {
             if (!focused && !pointed) {
                 clearSelection();
@@ -105,7 +105,7 @@ final class SolarChart extends Region {
      *
      * @param day the day's data; never null
      */
-    void show(SolarCurveModel day) {
+    void show(SolarChartModel day) {
         this.model = day;
         scale.setText(day.scaleText());
         nowLabel.setVisible(day.nowHour().isPresent());
@@ -187,9 +187,9 @@ final class SolarChart extends Region {
         placeGrid(labelHeight);
         placeWindows();
         area.getElements().setAll(outline(plot, shown));
-        horizontal(house, plot, plot.y(model.houseKw()));
+        placeHorizontal(house, plot, plot.y(model.houseKw()));
         model.nowHour().ifPresent(hour -> {
-            vertical(now, plot.x(hour), plot.top(), plot.bottom());
+            placeVertical(now, plot.x(hour), plot.top(), plot.bottom());
             nowLabel.resizeRelocate(Math.min(plot.x(hour) + GAP / 2, plot.right() - nowLabel.prefWidth(-1)),
                     plot.top(), nowLabel.prefWidth(-1), labelHeight);
         });
@@ -198,9 +198,9 @@ final class SolarChart extends Region {
     }
 
     private void placeGrid(double labelHeight) {
-        horizontal(top, plot, plot.y(model.scaleKw()));
-        horizontal(middle, plot, plot.y(model.scaleKw() / 2));
-        horizontal(baseline, plot, plot.bottom());
+        placeHorizontal(top, plot, plot.y(model.scaleKw()));
+        placeHorizontal(middle, plot, plot.y(model.scaleKw() / 2));
+        placeHorizontal(baseline, plot, plot.bottom());
         scale.resizeRelocate(0, plot.top() - labelHeight / 2, scale.prefWidth(-1), labelHeight);
         zero.resizeRelocate(0, plot.bottom() - labelHeight / 2, zero.prefWidth(-1), labelHeight);
     }
@@ -237,7 +237,7 @@ final class SolarChart extends Region {
         pointer.setVisible(selected != null);
         if (selected != null) {
             double x = plot.x(selected.midHour());
-            vertical(pointer, x, plot.top(), plot.bottom());
+            placeVertical(pointer, x, plot.top(), plot.bottom());
             double width = readout.prefWidth(-1);
             double height = readout.prefHeight(width);
             double left = Math.clamp(x - width / 2, 0, Math.max(0, getWidth() - width));
@@ -270,13 +270,13 @@ final class SolarChart extends Region {
         requestLayout();
     }
 
-    private void point(MouseEvent event) {
+    private void selectStepAtPointer(MouseEvent event) {
         if (plot != null && model != null) {
             model.stepAt(plot.hourAt(event.getX())).ifPresent(step -> select(step, true));
         }
     }
 
-    private void step(KeyEvent event) {
+    private void stepWithArrowKey(KeyEvent event) {
         if (model == null || model.steps().isEmpty()) {
             return;
         }
@@ -314,14 +314,14 @@ final class SolarChart extends Region {
         requestLayout();
     }
 
-    private static void horizontal(Line line, PlotArea plot, double y) {
+    private static void placeHorizontal(Line line, PlotArea plot, double y) {
         line.setStartX(plot.left());
         line.setEndX(plot.right());
         line.setStartY(y);
         line.setEndY(y);
     }
 
-    private static void vertical(Line line, double x, double from, double to) {
+    private static void placeVertical(Line line, double x, double from, double to) {
         line.setStartX(x);
         line.setEndX(x);
         line.setStartY(from);

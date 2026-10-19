@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.OptionalDouble;
 import org.junit.jupiter.api.Test;
 
-class SolarCurveModelTest {
+class SolarChartModelTest {
 
     @Test
     void theStepAtAnHourIsTheOneThatHoldsIt() {
@@ -22,7 +22,7 @@ class SolarCurveModelTest {
 
         assertThat(today.stepAt(2).orElseThrow()).isEqualTo(today.steps().getFirst());
         assertThat(today.stepAt(23).orElseThrow()).isEqualTo(today.steps().getLast());
-        assertThat(new SolarCurveModel(6, 20, 1, "1 kW", List.of(), 0, List.of(), OptionalDouble.empty(), List.of(), "")
+        assertThat(new SolarChartModel(6, 20, 1, "1 kW", List.of(), 0, List.of(), OptionalDouble.empty(), List.of(), "")
                 .stepAt(10)).isEmpty();
     }
 }

@@ -56,7 +56,7 @@ final class AwayEditor extends VBox {
     private Instant now = Instant.EPOCH;
 
     /**
-     * Makes the entry, closed until {@link #start}.
+     * Makes the entry, empty until {@link #prepare}.
      *
      * @param saved gets the period the owner saved; called on the JavaFX thread
      * @param closed called when the entry should close, after a save or a cancel
@@ -73,7 +73,7 @@ final class AwayEditor extends VBox {
         partOfDay = new RadioButton(messages.text(TextKey.ONE_OFF_PART_OF_DAY));
         wholeDay.setToggleGroup(kind);
         partOfDay.setToggleGroup(kind);
-        kind.selectedToggleProperty().addListener((_, _, _) -> showTimes());
+        kind.selectedToggleProperty().addListener((_, _, _) -> syncTimesToChoice());
         var kinds = new FlowPane(wholeDay, partOfDay);
         kinds.getStyleClass().add("away-kinds");
 
@@ -123,13 +123,13 @@ final class AwayEditor extends VBox {
     }
 
     /**
-     * Opens the entry for a day, at the whole day, and puts the focus in it.
+     * Fills the entry for a day, at the whole day, and puts the focus in it; the card shows the entry.
      *
      * @param day the day the car is away
      * @param zone the time zone of the owner's home, in which the times are read
      * @param now the current moment; a period that ends by then is refused
      */
-    void start(LocalDate day, ZoneId zone, Instant now) {
+    void prepare(LocalDate day, ZoneId zone, Instant now) {
         this.day = day;
         this.zone = zone;
         this.now = now;
@@ -208,7 +208,7 @@ final class AwayEditor extends VBox {
         }
     }
 
-    private void showTimes() {
+    private void syncTimesToChoice() {
         boolean part = partOfDay.isSelected();
         times.setVisible(part);
         times.setManaged(part);

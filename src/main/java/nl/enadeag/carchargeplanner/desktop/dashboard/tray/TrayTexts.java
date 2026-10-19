@@ -30,13 +30,14 @@ public final class TrayTexts {
     public TrayTexts(Tray tray, LanguageChoice language) {
         this.tray = tray;
         this.language = language;
-        tray.setMenuLabels(menuLabels(language.messages()));
+        tray.setMenuLabels(plainMenuLabels(language.messages()));
         tray.setStatus(new TrayStatusMapper(language.messages()).loading());
-        language.onChange(this::speak);
+        language.onChange(this::switchLanguage);
     }
 
     /**
-     * Shows an outlook on the tray icon and in its tooltip.
+     * Shows an outlook on the tray icon and in its tooltip, and relabels the menu's Settings entry when the outlook
+     * moves into or out of the state before the first set-up.
      *
      * @param outlook the engine's latest plan, or why there is none; never null
      */
@@ -45,26 +46,26 @@ public final class TrayTexts {
         var missing = outlook instanceof Outlook.NotSetUp;
         if (missing != notSetUp) {
             notSetUp = missing;
-            tray.setMenuLabels(labels(language.messages()));
+            tray.setMenuLabels(currentMenuLabels(language.messages()));
         }
         tray.setStatus(new TrayStatusMapper(language.messages()).map(outlook));
     }
 
     /** Before the first set-up, the Settings entry is the way into set-up, and says so. */
-    private Tray.MenuLabels labels(Messages messages) {
-        var labels = menuLabels(messages);
+    private Tray.MenuLabels currentMenuLabels(Messages messages) {
+        var labels = plainMenuLabels(messages);
         return notSetUp ? new Tray.MenuLabels(labels.open(), messages.text(TextKey.MENU_SET_UP), labels.about(),
                 labels.quit()) : labels;
     }
 
     /** "Open dashboard", "Settings…", "About…" and "Quit" in the menu's language. */
-    private static Tray.MenuLabels menuLabels(Messages messages) {
+    private static Tray.MenuLabels plainMenuLabels(Messages messages) {
         return new Tray.MenuLabels(messages.text(TextKey.OPEN_DASHBOARD), messages.text(TextKey.MENU_SETTINGS),
                 messages.text(TextKey.MENU_ABOUT), messages.text(TextKey.QUIT));
     }
 
-    private synchronized void speak(Messages messages) {
-        tray.setMenuLabels(labels(messages));
+    private synchronized void switchLanguage(Messages messages) {
+        tray.setMenuLabels(currentMenuLabels(messages));
         var mapper = new TrayStatusMapper(messages);
         tray.setStatus(outlook == null ? mapper.loading() : mapper.map(outlook));
     }

@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/** Turns the engine's outlook into what the dashboard shows. With the day and advice mappers, the only reader of the engine's records. */
+/** Turns the engine's outlook into what the dashboard shows, with the mappers of each part of it. */
 public final class OutlookMapper {
 
     private final Messages messages;
@@ -41,8 +41,8 @@ public final class OutlookMapper {
      * The outlook in words, without away periods entered for specific days, as set-up's preview shows it.
      *
      * @param outlook the engine's plan, or why there is none; never null
-     * @return a plan with its days, or a message when there is no plan or it has no days; only a plan has a footer,
-     *     because only a plan has a forecast to credit
+     * @return a plan with its days, or a message when there is no plan or it has no days; only an outlook with a
+     *     plan has a footer, also when the plan has no days, because only a plan has a forecast to credit
      */
     public DashboardModel map(Outlook outlook) {
         return map(outlook, List.of());
@@ -54,8 +54,8 @@ public final class OutlookMapper {
      * @param outlook the engine's plan, or why there is none; never null
      * @param away the stored away periods entered for specific days, in order of their start; may be empty, and those
      *     that ended before the plan was made are left out
-     * @return a plan with its days, or a message when there is no plan or it has no days; only a plan has a footer,
-     *     because only a plan has a forecast to credit
+     * @return a plan with its days, or a message when there is no plan or it has no days; only an outlook with a
+     *     plan has a footer, also when the plan has no days, because only a plan has a forecast to credit
      */
     public DashboardModel map(Outlook outlook, List<OneOffAwayPeriod> away) {
         return switch (outlook) {
@@ -73,11 +73,12 @@ public final class OutlookMapper {
     }
 
     /**
-     * What is wrong with the config file, in the owner's language; the engine's details stay in English.
+     * What is wrong with the config file, in the owner's language; the engine's details stay in English. A missing
+     * file is never unusable: the engine reports it as {@link Outlook.NotSetUp}, which each caller handles itself.
      *
-     * @param unusable the engine's outlook with a config file that cannot be used
+     * @param unusable the engine's outlook with a config file that cannot be read or is not valid
      * @param messages the texts, in the owner's language
-     * @return such as "Could not read /home/me/.config/car-charge-planner/engine.json: Permission denied."
+     * @return such as "Fix engine.json: system: is required"
      */
     public static String whatToFix(Outlook.ConfigUnusable unusable, Messages messages) {
         return switch (unusable.kind()) {
@@ -122,11 +123,11 @@ public final class OutlookMapper {
         var fetched = messages.time(source.fetchedAt(), planned.zone());
         parts.add(messages.text(source.freshness() == Freshness.STALE ? TextKey.FOOTER_STALE : TextKey.FOOTER_UPDATED,
                 fetched));
-        busyUntil(source, planned).ifPresent(parts::add);
+        busyText(source, planned).ifPresent(parts::add);
         return String.join(" · ", parts);
     }
 
-    private Optional<String> busyUntil(ForecastSource source, Outlook.Planned planned) {
+    private Optional<String> busyText(ForecastSource source, Outlook.Planned planned) {
         return source.cooldownUntil().filter(until -> until.isAfter(planned.madeAt()))
                 .map(until -> messages.text(TextKey.FOOTER_BUSY, messages.time(until, planned.zone())));
     }

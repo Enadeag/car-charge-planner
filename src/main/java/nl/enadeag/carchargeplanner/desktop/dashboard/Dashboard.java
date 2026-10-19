@@ -65,7 +65,7 @@ public final class Dashboard {
         this.window = new DashboardWindow(theme, icon);
         this.messages = language.messages();
         this.view = newView();
-        language.onChange(chosen -> Platform.runLater(() -> speak(chosen)));
+        language.onChange(chosen -> Platform.runLater(() -> switchLanguage(chosen)));
     }
 
     /**
@@ -118,7 +118,7 @@ public final class Dashboard {
      * The same outlook in another language: a new view, made as the first one was, takes the place of the one shown,
      * on the day that was selected.
      */
-    private void speak(Messages chosen) {
+    private void switchLanguage(Messages chosen) {
         messages = chosen;
         var before = view;
         view = newView();
