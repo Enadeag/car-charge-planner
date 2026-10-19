@@ -133,6 +133,34 @@ public final class PrivateFolder {
     }
 
     /**
+     * Checks that the folder is there and private, without making or changing anything: for a part that only uses a
+     * folder another part made, such as a command that looks for the running app.
+     *
+     * @return the folder
+     * @throws java.nio.file.NoSuchFileException when there is no folder
+     * @throws NotPrivateException when it is a link or another kind of file, or, where files have an owner and a mode,
+     *     another user's or not of mode 0700; it is left as it is
+     * @throws IOException when it cannot be read
+     */
+    public Path check() throws IOException {
+        var attributes = Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+        if (!attributes.isDirectory() || attributes.isSymbolicLink() || attributes.isOther()) {
+            throw new NotPrivateException(path + " is not a folder but a link or another kind of file");
+        }
+        if (owner instanceof Owner.User(var user)) {
+            var posix = Files.readAttributes(path, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+            if (!posix.owner().equals(user)) {
+                throw new NotPrivateException(path + " belongs to another user");
+            }
+            if (!posix.permissions().equals(OWNER_ONLY)) {
+                throw new NotPrivateException(path + " is open to other users: its mode is "
+                        + PosixFilePermissions.toString(posix.permissions()) + ", not 0700");
+            }
+        }
+        return path;
+    }
+
+    /**
      * The user's own folder with a wider mode: their own mistake, or an older version's, put right when it is safe.
      * Java cannot change the mode of a folder it holds open, so another folder could take this one's place between
      * the checks and the change. That needs write access to the parent folder, so a parent others may write in is

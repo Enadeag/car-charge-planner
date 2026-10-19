@@ -156,9 +156,9 @@ public final class Commands {
         } catch (NotPrivateException e) {
             // may be someone's attempt to get in the way, so say what is wrong instead of "not running"
             return failure(messages.text(TextKey.CLI_COMMAND_NOT_PRIVATE, AppName.TITLE, e.getMessage()));
-        } catch (IOException _) {
-            // no private folder for the lock, so no running copy can have taken it there
-            return notRunning;
+        } catch (IOException e) {
+            // only a missing folder means that no copy runs, and that is a reply; this is something else in the way
+            return failure(messages.text(TextKey.CLI_COMMAND_FAILED, AppName.TITLE, e.toString()));
         }
         return switch (reply) {
             case ANSWERED -> success(confirmed);

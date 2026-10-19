@@ -226,6 +226,35 @@ class CommandsTest {
                 .contains(instanceFolder.getFileName().toString());
     }
 
+    @ParameterizedTest
+    @EnumSource(names = {"QUIT", "TEST_NOTIFICATION"})
+    void aCommandFailsWithTheReasonWhenWhetherTheAppRunsCannotBeTold(Command command) throws IOException {
+        makeInstanceFolder();
+        Files.createDirectory(instanceFolder.resolve("instance.lock")); // a lock file that cannot be opened
+
+        var outcome = commands().carryOut(command);
+
+        var said = MESSAGES.text(TextKey.CLI_COMMAND_FAILED, AppName.TITLE, "%s");
+        assertThat(outcome.exit()).isEqualTo(ExitCode.FAILURE);
+        assertThat(outcome.text()).startsWith(said.substring(0, said.indexOf("%s")))
+                .contains("instance.lock");
+    }
+
+    @Test
+    @EnabledOnOs(OS.LINUX)
+    void aCommandLeavesAnInstanceFolderOthersMayReadAsItIsAndSaysWhatIsWrong() throws IOException {
+        Files.createDirectory(instanceFolder);
+        Files.setPosixFilePermissions(instanceFolder, PosixFilePermissions.fromString("rwxr-x---"));
+
+        var outcome = commands().carryOut(Command.QUIT);
+
+        var said = MESSAGES.text(TextKey.CLI_COMMAND_NOT_PRIVATE, AppName.TITLE, "%s");
+        assertThat(outcome.exit()).isEqualTo(ExitCode.FAILURE);
+        assertThat(outcome.text()).startsWith(said.substring(0, said.indexOf("%s")));
+        assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(instanceFolder)))
+                .isEqualTo("rwxr-x---");
+    }
+
     @Test
     void startAtLoginIsSwitchedOnAndOff() {
         assertThat(commands().carryOut(Command.START_AT_LOGIN_ON))

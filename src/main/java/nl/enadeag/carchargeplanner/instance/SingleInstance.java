@@ -10,6 +10,7 @@ import java.nio.channels.OverlappingFileLockException;
 import java.nio.channels.SocketChannel;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -161,27 +162,31 @@ public final class SingleInstance implements AutoCloseable {
 
     /**
      * Sends a command to the running copy and waits for its confirmation, such as {@link InstanceCommand#QUIT} from
-     * the command line. When a copy holds the lock but its socket cannot be reached, it looks again until the timeout,
-     * as the copy may just be starting.
+     * the command line. Only looks: the private folder is neither made nor changed, as the running copy made it. When
+     * a copy holds the lock but its socket cannot be reached, it looks again until the timeout, as the copy may just be
+     * starting.
      *
      * @param command what to ask
-     * @return what came of it: {@link Reply#NOBODY} or {@link Reply#STALE} when no copy holds the lock and none answers
-     * @throws NotPrivateException when the private folder is another user's, a link, or one others may write in
-     * @throws IOException when the private folder cannot be made, or whether a copy holds the lock cannot be told
+     * @return what came of it: {@link Reply#NOBODY} when there is no private folder, or no copy holds the lock and
+     *     none answers; {@link Reply#STALE} when no copy holds the lock and a socket is left that nothing listens on
+     * @throws NotPrivateException when the private folder is another user's, a link, or not of mode 0700
+     * @throws IOException when the private folder cannot be read, or whether a copy holds the lock cannot be told
      */
     public Reply send(InstanceCommand command) throws IOException {
-        if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) {
+        Path checked;
+        try {
+            checked = folder.check();
+        } catch (NoSuchFileException _) {
             return Reply.NOBODY;
         }
-        var made = folder.ensurePrivate();
-        var socket = made.resolve(SOCKET_NAME);
+        var socket = checked.resolve(SOCKET_NAME);
         var deadline = System.nanoTime() + timeout.toNanos();
         while (true) {
             var reply = ask(socket, command);
             if (reply == Reply.ANSWERED || reply == Reply.SILENT) {
                 return reply;
             }
-            if (!lockHeld(made)) {
+            if (!lockHeld(checked)) {
                 return reply == Reply.UNREACHABLE ? Reply.STALE : reply;
             }
             if (deadlinePassed(deadline)) {

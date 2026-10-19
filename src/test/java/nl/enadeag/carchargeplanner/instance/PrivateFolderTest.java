@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipal;
@@ -50,6 +51,24 @@ class PrivateFolderTest {
         assertThatThrownBy(privateFolder::ensurePrivate).isInstanceOf(NotPrivateException.class)
                 .hasMessageContaining(reason);
         assertThat(mode(folder)).isEqualTo("rwxr-xr-x");
+    }
+
+    @Test
+    void aCheckRefusesAFolderOthersMayReadAndLeavesItAsItIs() throws IOException {
+        assertThatThrownBy(new PrivateFolder(folder, new Owner.User(user))::check)
+                .isInstanceOf(NotPrivateException.class).hasMessageContaining("rwxr-xr-x");
+        assertThat(mode(folder)).isEqualTo("rwxr-xr-x");
+    }
+
+    @Test
+    void aCheckPassesAnOwnerOnlyFolderAndMakesNoMissingOne() throws IOException {
+        Files.setPosixFilePermissions(folder, PosixFilePermissions.fromString("rwx------"));
+        var missing = temp.resolve("missing");
+
+        assertThat(new PrivateFolder(folder, new Owner.User(user)).check()).isEqualTo(folder);
+        assertThatThrownBy(new PrivateFolder(missing, new Owner.User(user))::check)
+                .isInstanceOf(NoSuchFileException.class);
+        assertThat(missing).doesNotExist();
     }
 
     @Test

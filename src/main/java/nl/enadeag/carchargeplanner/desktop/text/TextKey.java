@@ -231,6 +231,11 @@ public enum TextKey {
      * what is wrong with which folder, in English.
      */
     CLI_COMMAND_NOT_PRIVATE,
+    /**
+     * A command was not sent, as the single-instance guard's folder or lock could not be read: {0} the app's name,
+     * {1} the system's error, in English.
+     */
+    CLI_COMMAND_FAILED,
     /** No app was running to quit: {0} the app's name. */
     CLI_NOT_RUNNING,
     /** The running app confirmed it shows a test notification: {0} the app's name. */
