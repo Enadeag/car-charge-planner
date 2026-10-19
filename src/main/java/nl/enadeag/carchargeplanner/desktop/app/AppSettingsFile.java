@@ -62,7 +62,7 @@ public final class AppSettingsFile {
      *     is missing, not JSON or of a newer version, the setting that follows the system
      */
     public AppSettings read() {
-        return file.read() instanceof Stored.Found<AppSettings> found ? found.value() : system;
+        return file.read() instanceof Stored.Found<AppSettings>(var value) ? value : system;
     }
 
     /**

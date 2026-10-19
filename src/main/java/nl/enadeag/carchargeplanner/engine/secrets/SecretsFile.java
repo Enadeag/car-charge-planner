@@ -74,7 +74,7 @@ public final class SecretsFile {
     Secrets read() throws SecretsProblem {
         makePrivate();
         return switch (file.read()) {
-            case Stored.Found<Secrets> found -> found.value();
+            case Stored.Found<Secrets>(var secrets) -> secrets;
             case Stored.Absent<Secrets> _ -> Secrets.NONE;
             case Stored.Unusable<Secrets> unusable when unusable.reason() == Stored.Reason.UNREADABLE ->
                     throw new SecretsProblem("Could not read " + path() + " (" + unusable.detail() + ")");

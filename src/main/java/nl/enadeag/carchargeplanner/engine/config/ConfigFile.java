@@ -43,7 +43,7 @@ public final class ConfigFile {
      */
     public EngineConfig read() throws ConfigProblem {
         return switch (file.read()) {
-            case Stored.Found<EngineConfig> found -> found.value();
+            case Stored.Found<EngineConfig>(var config) -> config;
             case Stored.Absent<EngineConfig> _ -> throw new ConfigProblem(ConfigProblem.Kind.MISSING, path(), "");
             case Stored.Unusable<EngineConfig> unusable -> throw new ConfigProblem(
                     unusable.reason() == Stored.Reason.UNREADABLE ? ConfigProblem.Kind.UNREADABLE

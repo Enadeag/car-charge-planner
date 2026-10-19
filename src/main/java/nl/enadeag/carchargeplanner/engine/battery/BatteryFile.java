@@ -45,7 +45,7 @@ public final class BatteryFile {
      * @return the reading, or empty when none was entered or the file cannot be used
      */
     public Optional<BatteryReading> reading() {
-        return file.read() instanceof Stored.Found<BatteryReading> found ? Optional.of(found.value())
+        return file.read() instanceof Stored.Found<BatteryReading>(var reading) ? Optional.of(reading)
                 : Optional.empty();
     }
 

@@ -43,7 +43,7 @@ public final class AnnouncedWindows {
      */
     public List<Window> load() {
         // a missing or damaged file: at worst a window is announced once more
-        return file.read() instanceof Stored.Found<List<Window>> found ? found.value() : List.of();
+        return file.read() instanceof Stored.Found<List<Window>>(var windows) ? windows : List.of();
     }
 
     /**

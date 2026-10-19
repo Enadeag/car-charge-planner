@@ -144,7 +144,7 @@ public final class ForecastCache {
     }
 
     private Entry read(ProviderId providerId) {
-        return file(providerId).read() instanceof Stored.Found<Entry> found ? found.value() : Entry.NONE;
+        return file(providerId).read() instanceof Stored.Found<Entry>(var entry) ? entry : Entry.NONE;
     }
 
     private void write(ProviderId providerId, Entry entry) {

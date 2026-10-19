@@ -54,7 +54,7 @@ public final class AwayFile {
      * @return the periods in order of their start, each once; empty when the file is missing or cannot be used
      */
     public List<AwayPeriod> periods() {
-        return file.read() instanceof Stored.Found<Entries> found ? found.value().periods() : List.of();
+        return file.read() instanceof Stored.Found<Entries>(var entries) ? entries.periods() : List.of();
     }
 
     /**
@@ -98,9 +98,9 @@ public final class AwayFile {
             case Stored.Absent<Entries> _ -> List.of();
             case Stored.Unusable<Entries> unusable -> throw new IOException(
                     file.path() + " could not be read, so it is left as it is: " + unusable.detail());
-            case Stored.Found<Entries> found when found.value().damaged() > 0 -> throw new IOException(
-                    file.path() + " holds " + found.value().damaged() + " damaged entries, so it is left as it is");
-            case Stored.Found<Entries> found -> found.value().periods();
+            case Stored.Found<Entries>(var entries) when entries.damaged() > 0 -> throw new IOException(
+                    file.path() + " holds " + entries.damaged() + " damaged entries, so it is left as it is");
+            case Stored.Found<Entries>(var entries) -> entries.periods();
         };
     }
 
