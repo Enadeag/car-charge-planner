@@ -183,7 +183,7 @@ class ForecastSolarTest extends ProviderConformance {
     void aKeyThatIsNotOnlyLettersAndDigitsIsRefusedBeforeAnythingIsSent(String key) {
         var http = ReplayHttp.always(new Reply(200, RECORDED));
         assertThatThrownBy(() -> new ForecastSolar(http).fetch(EXAMPLE_SYSTEM, Map.of("api_key", key), NOW))
-                .isInstanceOf(ProviderError.NotConfigured.class).hasMessageContaining("letters and digits")
+                .isInstanceOf(ProviderError.MissingSetting.class).hasMessageContaining("letters and digits")
                 .message().doesNotContain(key);
         assertThat(http.requests).isEmpty();
     }

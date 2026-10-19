@@ -2,7 +2,7 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.away;
 
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
@@ -33,7 +33,7 @@ public final class AwayMapper {
      * @param periods the stored periods, in order of their start; may be empty
      * @return the model with those that end after now, in the same order
      */
-    public AwayModel map(List<AwayPeriod> periods) {
+    public AwayModel map(List<OneOffAwayPeriod> periods) {
         var coming = periods.stream()
                 .filter(period -> period.end().isAfter(now))
                 .map(period -> {
@@ -44,12 +44,12 @@ public final class AwayMapper {
         return new AwayModel(zone, now, coming);
     }
 
-    private String describe(AwayPeriod period) {
+    private String describe(OneOffAwayPeriod period) {
         var today = now.atZone(zone).toLocalDate();
         var start = period.start().atZone(zone);
         var end = period.end().atZone(zone);
         var day = messages.date(start.toLocalDate(), today);
-        if (period.equals(AwayPeriod.allDay(start.toLocalDate(), zone))) {
+        if (period.equals(OneOffAwayPeriod.allDay(start.toLocalDate(), zone))) {
             return messages.text(TextKey.ONE_OFF_ALL_DAY, day);
         }
         if (start.toLocalDate().equals(end.toLocalDate())) {

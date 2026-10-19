@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.engine.config;
 
-import nl.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.store.FileFormat;
 import nl.enadeag.carchargeplanner.engine.store.FileVersion;
@@ -61,7 +61,7 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
         var system = system(file.object("system"));
         var planning = planning(file.object("planning"));
         var forecast = forecast(file.object("forecast"));
-        var away = file.has("away") ? away(file.object("away")) : AwaySchedule.NONE;
+        var away = file.has("away") ? away(file.object("away")) : WeeklyAwaySchedule.NONE;
         var typical = file.has("typical") ? typical(file.object("typical")) : TypicalValues.NONE;
         return file.make(() -> new EngineConfig(system, planning, forecast, away, typical));
     }
@@ -85,8 +85,8 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
                 .put("minWindowMinutes", planning.minWindow().toMinutes())
                 .put("notifyLeadMinutes", planning.notifyLead().toMinutes());
         writeForecast(file.putObject("forecast"), config.forecast());
-        var recurring = file.putObject("away").putArray("recurring");
-        config.away().recurring().forEach(period -> recurring.addObject()
+        var weekly = file.putObject("away").putArray("recurring");
+        config.away().weekly().forEach(period -> weekly.addObject()
                 .put("weekday", period.weekday().name())
                 .put("start", TIME.format(period.start()))
                 .put("end", TIME.format(period.end())));
@@ -199,25 +199,25 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
             }
             var values = settings.object(id);
             var texts = new LinkedHashMap<String, String>();
-            for (var key : values.names()) {
-                texts.put(key, values.text(key));
+            for (var name : values.names()) {
+                texts.put(name, values.text(name));
             }
             byProvider.put(new ProviderId(id), texts);
         }
         return forecast.make(() -> new ForecastSelection(primary, fallback, byProvider));
     }
 
-    private static AwaySchedule away(ConfigFields away) throws FormatProblem {
+    private static WeeklyAwaySchedule away(ConfigFields away) throws FormatProblem {
         away.only("recurring");
-        var recurring = new ArrayList<RecurringAwayPeriod>();
+        var weekly = new ArrayList<WeeklyAwayPeriod>();
         for (var period : away.objects("recurring")) {
             period.only("weekday", "start", "end");
             var weekday = weekday(period);
             var start = time(period, "start");
             var end = time(period, "end");
-            recurring.add(period.make(() -> new RecurringAwayPeriod(weekday, start, end)));
+            weekly.add(period.make(() -> new WeeklyAwayPeriod(weekday, start, end)));
         }
-        return away.make(() -> new AwaySchedule(recurring));
+        return away.make(() -> new WeeklyAwaySchedule(weekly));
     }
 
     private static DayOfWeek weekday(ConfigFields period) throws FormatProblem {

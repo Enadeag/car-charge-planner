@@ -42,14 +42,14 @@ public record ProviderInfo(
      *
      * @param plain settings from the config file; a secret setting found here is not used
      * @param secret settings as stored with the API keys or as the owner typed them; only the secret ones are used
-     * @return per declared setting key, its value; empty values are left out
+     * @return per declared setting name, its value; empty values are left out
      */
     public Map<String, String> settingsFrom(Map<String, String> plain, Map<String, String> secret) {
         var values = new LinkedHashMap<String, String>();
         for (var spec : settings) {
-            var value = (spec.secret() ? secret : plain).getOrDefault(spec.key(), "");
+            var value = (spec.secret() ? secret : plain).getOrDefault(spec.name(), "");
             if (!value.isEmpty()) {
-                values.put(spec.key(), value);
+                values.put(spec.name(), value);
             }
         }
         return values;
@@ -63,7 +63,7 @@ public record ProviderInfo(
      */
     public List<String> missingRequired(Map<String, String> values) {
         return settings.stream()
-                .filter(spec -> !spec.optional() && values.getOrDefault(spec.key(), "").isEmpty())
+                .filter(spec -> !spec.optional() && values.getOrDefault(spec.name(), "").isEmpty())
                 .map(SettingSpec::label)
                 .toList();
     }
@@ -77,7 +77,7 @@ public record ProviderInfo(
     public List<String> secretValues(Map<String, String> values) {
         return settings.stream()
                 .filter(SettingSpec::secret)
-                .map(spec -> values.getOrDefault(spec.key(), ""))
+                .map(spec -> values.getOrDefault(spec.name(), ""))
                 .filter(value -> !value.isBlank())
                 .toList();
     }

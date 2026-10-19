@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import nl.enadeag.carchargeplanner.LogCapture;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
@@ -179,7 +179,7 @@ class EngineTest {
 
         assertThat(planned.zone()).isEqualTo(BRUSSELS);
         assertThat(planned.days()).extracting(day -> day.date()).containsExactly(DAY, DAY.plusDays(1));
-        assertThat(planned.batteryPct()).isEqualTo(Engine.ASSUMED_BATTERY_PCT);
+        assertThat(planned.batteryLevelPct()).isEqualTo(Engine.ASSUMED_BATTERY_PCT);
         // 4 kW less the 0.5 kW house, times the 0.85 margin: 2.975 kW. 13 A (2.99 kW) on one phase takes a little
         // from the grid, within the 0.2 kWh the example allows
         var window = planned.nextWindow().orElseThrow();
@@ -209,9 +209,9 @@ class EngineTest {
 
         var planned = planned(engine(clockAt(8)));
 
-        assertThat(planned.batteryPct()).isEqualTo(new Percent(72));
+        assertThat(planned.batteryLevelPct()).isEqualTo(new Percent(72));
         assertThat(planned.batteryAssumed()).isFalse();
-        assertThat(planned.days().getFirst().socStartPct()).isEqualTo(new Percent(72));
+        assertThat(planned.days().getFirst().startLevelPct()).isEqualTo(new Percent(72));
     }
 
     @Test
@@ -219,7 +219,7 @@ class EngineTest {
         var planned = planned(engine(clockAt(7)));
 
         assertThat(planned.batteryAssumed()).isTrue();
-        assertThat(planned.days().getFirst().socStartPct()).isEqualTo(Engine.ASSUMED_BATTERY_PCT);
+        assertThat(planned.days().getFirst().startLevelPct()).isEqualTo(Engine.ASSUMED_BATTERY_PCT);
     }
 
     @Test
@@ -227,7 +227,7 @@ class EngineTest {
         var planned = planned(engine(clockAt(7)));
 
         // the example's house, minimum and target
-        assertThat(planned.houseKw()).isEqualTo(0.5);
+        assertThat(planned.baseloadKw()).isEqualTo(0.5);
         assertThat(planned.minimumPct()).isEqualTo(new Percent(30));
         assertThat(planned.targetPct()).isEqualTo(new Percent(80));
         var today = planned.days().getFirst().forecast();
@@ -243,7 +243,7 @@ class EngineTest {
     void anAwayPeriodIsStoredAndTheNextPlanKeepsItFree() throws IOException {
         var engine = engine(clockAt(7));
         var atHome = planned(engine).days();
-        var away = new AwayPeriod(DAY.atTime(8, 0).atZone(BRUSSELS).toInstant(),
+        var away = new OneOffAwayPeriod(DAY.atTime(8, 0).atZone(BRUSSELS).toInstant(),
                 DAY.atTime(18, 0).atZone(BRUSSELS).toInstant());
 
         assertThat(engine.addAwayPeriod(away)).containsExactly(away);
@@ -292,7 +292,7 @@ class EngineTest {
         // below the minimum of 30 %
         var advice = planned.gridAdvice().orElseThrow();
         assertThat(advice.day()).isEqualTo(DAY.plusDays(2));
-        assertThat(advice.socEndPct()).isCloseTo(17.5, within(1e-9));
+        assertThat(advice.endLevelPct()).isCloseTo(17.5, within(1e-9));
         assertThat(advice.window()).isPresent();
     }
 
@@ -308,6 +308,24 @@ class EngineTest {
         assertThat(engine(clockAt(7)).outlook()).isInstanceOfSatisfying(Outlook.NotSetUp.class,
                 notSetUp -> assertThat(notSetUp.file()).isEqualTo(config));
         assertThat(main.callCount()).isZero(); // nothing leaves the computer before there is a location
+    }
+
+    @Test
+    void aConfigFileThatIsNotValidCannotBeUsedAndTheOutlookSaysWhy() throws IOException {
+        Files.writeString(config, "{\"version\": 1}");
+
+        assertThat(engine(clockAt(7)).outlook()).isInstanceOfSatisfying(Outlook.ConfigUnusable.class, unusable -> {
+            assertThat(unusable.kind()).isEqualTo(ConfigProblem.Kind.INVALID);
+            assertThat(unusable.file()).isEqualTo(config);
+            assertThat(unusable.detail()).contains("system");
+        });
+        assertThat(main.callCount()).isZero();
+    }
+
+    @Test
+    void aMissingConfigFileIsNotSetUpRatherThanUnusable() {
+        assertThatThrownBy(() -> new Outlook.ConfigUnusable(ConfigProblem.Kind.MISSING, config, ""))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -574,7 +592,7 @@ class EngineTest {
     void theOwnerIsToldOnceAheadOfTheWindowWhatToSet() {
         startedAt(clockAt(9, 50));
         var announcement = told.getFirst();
-        assertThat(announcement.kind()).isEqualTo(AnnouncementKind.CHARGE_WINDOW);
+        assertThat(announcement.kind()).isEqualTo(AnnouncementKind.SOLAR_WINDOW);
         assertThat(announcement.window().start()).isEqualTo(DAY.atTime(10, 0).atZone(BRUSSELS).toInstant());
         assertThat(announcement.window().amps()).isEqualTo(13);
 
@@ -769,9 +787,9 @@ class EngineTest {
     @Test
     void removingAnAwayPeriodGivesTheOnesThatAreLeft() throws IOException {
         var engine = engine(clockAt(7));
-        var morning = new AwayPeriod(DAY.atTime(8, 0).atZone(BRUSSELS).toInstant(),
+        var morning = new OneOffAwayPeriod(DAY.atTime(8, 0).atZone(BRUSSELS).toInstant(),
                 DAY.atTime(9, 0).atZone(BRUSSELS).toInstant());
-        var evening = new AwayPeriod(DAY.atTime(18, 0).atZone(BRUSSELS).toInstant(),
+        var evening = new OneOffAwayPeriod(DAY.atTime(18, 0).atZone(BRUSSELS).toInstant(),
                 DAY.atTime(20, 0).atZone(BRUSSELS).toInstant());
         engine.addAwayPeriod(evening);
         engine.addAwayPeriod(morning);

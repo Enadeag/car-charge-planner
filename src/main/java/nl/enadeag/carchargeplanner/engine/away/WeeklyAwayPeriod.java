@@ -16,17 +16,17 @@ import java.util.Optional;
  * @param start the local time it starts at
  * @param end the local time it ends at, after the start on the same day
  */
-public record RecurringAwayPeriod(DayOfWeek weekday, LocalTime start, LocalTime end) {
+public record WeeklyAwayPeriod(DayOfWeek weekday, LocalTime start, LocalTime end) {
 
     /**
      * Checks that the period stays within its day.
      *
      * @throws InvalidSetting when the end is not after the start
      */
-    public RecurringAwayPeriod {
+    public WeeklyAwayPeriod {
         if (!start.isBefore(end)) {
-            throw new InvalidSetting(ConfigSetting.AWAY_PERIOD, InvalidSetting.Rule.NOT_AFTER_START,
-                    "a recurring away period must end after it starts on the same day (no periods over midnight)");
+            throw new InvalidSetting(ConfigSetting.WEEKLY_AWAY_PERIOD, InvalidSetting.Rule.NOT_AFTER_START,
+                    "a weekly away period must end after it starts on the same day (no periods over midnight)");
         }
     }
 
@@ -39,12 +39,12 @@ public record RecurringAwayPeriod(DayOfWeek weekday, LocalTime start, LocalTime 
      * @return the period from the start to the end on that date; empty when the date is another day of the week, or
      *     when the switch to summer time leaves the period no time at all
      */
-    public Optional<AwayPeriod> on(LocalDate date, ZoneId zone) {
+    public Optional<OneOffAwayPeriod> on(LocalDate date, ZoneId zone) {
         var from = date.atTime(start).atZone(zone).toInstant();
         var to = date.atTime(end).atZone(zone).toInstant();
         if (date.getDayOfWeek() != weekday || !from.isBefore(to)) {
             return Optional.empty();
         }
-        return Optional.of(new AwayPeriod(from, to));
+        return Optional.of(new OneOffAwayPeriod(from, to));
     }
 }

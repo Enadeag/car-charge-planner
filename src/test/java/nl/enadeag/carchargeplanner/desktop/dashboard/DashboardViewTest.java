@@ -11,7 +11,7 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.DayKind;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -273,7 +273,7 @@ class DashboardViewTest {
     void theAwayPeriodsShowOnEveryDayOnceTheyCanBeChangedAndAreAddedOnTheSelectedDay() throws Exception {
         var view = shown(Models.plan(Optional.empty()));
         assertThat(Fx.call(() -> view.lookup(".away-card"))).as("nowhere to send a change yet").isNull();
-        var added = new ArrayList<AwayPeriod>();
+        var added = new ArrayList<OneOffAwayPeriod>();
 
         Fx.run(() -> {
             view.onAwayChange(added::add, _ -> { });
@@ -285,7 +285,7 @@ class DashboardViewTest {
         Fx.run(add::fire);
         Fx.run(() -> AwayEntry.save(view));
 
-        assertThat(added).containsExactly(AwayPeriod.allDay(
+        assertThat(added).containsExactly(OneOffAwayPeriod.allDay(
                 Models.GRID_SUNDAY.date(), Models.BRUSSELS));
     }
 

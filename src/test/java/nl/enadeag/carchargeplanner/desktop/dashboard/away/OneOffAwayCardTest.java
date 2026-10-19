@@ -12,7 +12,7 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,8 +31,8 @@ class OneOffAwayCardTest {
 
     private static final Messages ENGLISH = new Messages(Language.ENGLISH);
 
-    private final List<AwayPeriod> added = new ArrayList<>();
-    private final List<AwayPeriod> removed = new ArrayList<>();
+    private final List<OneOffAwayPeriod> added = new ArrayList<>();
+    private final List<OneOffAwayPeriod> removed = new ArrayList<>();
     private Stage stage;
     private OneOffAwayCard card;
 
@@ -72,7 +72,7 @@ class OneOffAwayCardTest {
         openEntry();
         Fx.run(() -> card.editor().save());
 
-        assertThat(added).containsExactly(AwayPeriod.allDay(Models.TODAY.plusDays(1), Models.BRUSSELS));
+        assertThat(added).containsExactly(OneOffAwayPeriod.allDay(Models.TODAY.plusDays(1), Models.BRUSSELS));
         assertThat(entering()).isFalse();
     }
 
@@ -86,7 +86,7 @@ class OneOffAwayCardTest {
             card.editor().save();
         });
 
-        assertThat(added).containsExactly(AwayPeriod.on(Models.TODAY.plusDays(2), LocalTime.of(9, 15),
+        assertThat(added).containsExactly(OneOffAwayPeriod.on(Models.TODAY.plusDays(2), LocalTime.of(9, 15),
                 LocalTime.of(17, 45), Models.BRUSSELS));
     }
 
@@ -119,7 +119,7 @@ class OneOffAwayCardTest {
 
         Keyboard.press(KeyCode.ENTER);
 
-        assertThat(added).containsExactly(AwayPeriod.allDay(Models.TODAY.plusDays(1), Models.BRUSSELS));
+        assertThat(added).containsExactly(OneOffAwayPeriod.allDay(Models.TODAY.plusDays(1), Models.BRUSSELS));
     }
 
     @Test

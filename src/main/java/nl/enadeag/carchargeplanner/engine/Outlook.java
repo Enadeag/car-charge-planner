@@ -21,11 +21,11 @@ public sealed interface Outlook {
      * @param madeAt when the plan was made
      * @param zone the time zone of the owner's home, in which the days and times are meant
      * @param days the plan of each day, today first
-     * @param batteryPct the battery level the plan starts from
+     * @param batteryLevelPct the battery level the plan starts from
      * @param batteryAssumed true while the battery level is a placeholder, not a reading
      * @param gridAdvice present when the battery would end a day below the minimum charge level
      * @param forecastSource where the forecast came from
-     * @param houseKw the power the house uses on its own in kW, 0 or more
+     * @param baseloadKw the power the house uses on its own in kW, 0 or more, as an average over the whole day
      * @param minimumPct the minimum charge level of the battery
      * @param targetPct the target charge level of the battery
      */
@@ -33,22 +33,22 @@ public sealed interface Outlook {
             Instant madeAt,
             ZoneId zone,
             List<DayPlan> days,
-            Percent batteryPct,
+            Percent batteryLevelPct,
             boolean batteryAssumed,
             Optional<GridAdvice> gridAdvice,
             ForecastSource forecastSource,
-            double houseKw,
+            double baseloadKw,
             Percent minimumPct,
             Percent targetPct) implements Outlook {
 
         /**
-         * Copies the days and checks the house's use.
+         * Copies the days and checks the baseload.
          *
-         * @throws IllegalArgumentException when the house's use is negative or not a number
+         * @throws IllegalArgumentException when the baseload is negative or not a number
          */
         public Planned {
-            if (!(houseKw >= 0)) {
-                throw new IllegalArgumentException("houseKw must not be negative, not " + houseKw);
+            if (!(baseloadKw >= 0)) {
+                throw new IllegalArgumentException("baseloadKw must not be negative, not " + baseloadKw);
             }
             days = List.copyOf(days);
         }
@@ -67,13 +67,34 @@ public sealed interface Outlook {
     }
 
     /**
-     * The config file is missing or wrong.
+     * There is no config file yet: the owner has not finished set-up.
      *
-     * @param kind what is wrong with the file
-     * @param file the config file's path
-     * @param detail in English: the system's error, or the setting and what is wrong with it; empty for a missing file
+     * @param file where the config file is looked for
      */
-    record NotSetUp(ConfigProblem.Kind kind, Path file, String detail) implements Outlook {
+    record NotSetUp(Path file) implements Outlook {
+    }
+
+    /**
+     * The config file is there, but cannot be used: it could not be read, or it is not valid.
+     *
+     * @param kind what is wrong with the file: {@link ConfigProblem.Kind#UNREADABLE} or
+     *     {@link ConfigProblem.Kind#INVALID}
+     * @param file the config file's path
+     * @param detail in English: the system's error, or the setting and what is wrong with it
+     */
+    record ConfigUnusable(ConfigProblem.Kind kind, Path file, String detail) implements Outlook {
+
+        /**
+         * Checks the kind.
+         *
+         * @throws IllegalArgumentException when the kind is {@link ConfigProblem.Kind#MISSING}, which is
+         *     {@link NotSetUp}
+         */
+        public ConfigUnusable {
+            if (kind == ConfigProblem.Kind.MISSING) {
+                throw new IllegalArgumentException("a missing config file is not set up, not unusable");
+            }
+        }
     }
 
     /**

@@ -32,8 +32,8 @@ class AwayFileTest {
 
     @Test
     void periodsAreKeptInOrderOfTheirStartAndEachOnce() throws IOException {
-        var later = AwayPeriod.allDay(LocalDate.of(2026, 7, 5), TZ);
-        var sooner = AwayPeriod.on(LocalDate.of(2026, 7, 4), LocalTime.of(10, 0), LocalTime.of(16, 0), TZ);
+        var later = OneOffAwayPeriod.allDay(LocalDate.of(2026, 7, 5), TZ);
+        var sooner = OneOffAwayPeriod.on(LocalDate.of(2026, 7, 4), LocalTime.of(10, 0), LocalTime.of(16, 0), TZ);
         file().add(later, NOW);
         file().add(sooner, NOW);
         file().add(sooner, NOW);
@@ -43,7 +43,7 @@ class AwayFileTest {
 
     @Test
     void aRemovedPeriodIsGone() throws IOException {
-        var period = AwayPeriod.allDay(LocalDate.of(2026, 7, 4), TZ);
+        var period = OneOffAwayPeriod.allDay(LocalDate.of(2026, 7, 4), TZ);
         file().add(period, NOW);
 
         assertThat(file().remove(period)).isEmpty();
@@ -52,11 +52,11 @@ class AwayFileTest {
 
     @Test
     void periodsThatEndedMoreThanADayAgoAreDroppedWhenOneIsAdded() throws IOException {
-        var old = AwayPeriod.allDay(LocalDate.of(2026, 6, 20), TZ);
+        var old = OneOffAwayPeriod.allDay(LocalDate.of(2026, 6, 20), TZ);
         file().add(old, LocalDate.of(2026, 6, 19).atTime(7, 0).atZone(TZ).toInstant());
-        var yesterday = AwayPeriod.on(DAY.minusDays(1), LocalTime.of(9, 0), LocalTime.of(17, 0), TZ);
+        var yesterday = OneOffAwayPeriod.on(DAY.minusDays(1), LocalTime.of(9, 0), LocalTime.of(17, 0), TZ);
         file().add(yesterday, NOW);
-        var next = AwayPeriod.allDay(LocalDate.of(2026, 7, 4), TZ);
+        var next = OneOffAwayPeriod.allDay(LocalDate.of(2026, 7, 4), TZ);
 
         assertThat(file().add(next, NOW)).containsExactly(yesterday, next);
     }
@@ -76,13 +76,13 @@ class AwayFileTest {
                   {"start": "2026-07-04T06:00:00Z", "end": "2026-07-04T08:00:00Z"}]}
                 """);
         assertThat(new AwayFile(path).periods()).containsExactly(
-                new AwayPeriod(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z")));
+                new OneOffAwayPeriod(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z")));
     }
 
     @Test
     void aPeriodThatCannotBeSavedIsReported() throws IOException {
         Files.writeString(folder.resolve("data"), "a file where the folder should be");
-        var period = AwayPeriod.allDay(DAY, TZ);
+        var period = OneOffAwayPeriod.allDay(DAY, TZ);
 
         assertThatThrownBy(() -> file().add(period, NOW)).isInstanceOf(IOException.class);
     }
@@ -92,7 +92,7 @@ class AwayFileTest {
         "{\"periods\": [{\"start\": 1}, {\"start\": \"2026-07-04T06:00:00Z\", \"end\": \"2026-07-04T08:00:00Z\"}]}"})
     void aFileThatCannotBeReadWholeIsNeverOverwritten(String content) throws IOException {
         var path = Files.writeString(folder.resolve("away.json"), content);
-        var period = AwayPeriod.allDay(DAY, TZ);
+        var period = OneOffAwayPeriod.allDay(DAY, TZ);
 
         assertThatThrownBy(() -> new AwayFile(path).add(period, NOW)).isInstanceOf(IOException.class)
                 .hasMessageContaining("left as it is");
@@ -104,10 +104,10 @@ class AwayFileTest {
     void aFileWithoutAVersionIsReadAndAWrittenOneHasVersionOne() throws IOException {
         var path = Files.writeString(folder.resolve("away.json"),
                 "{\"periods\": [{\"start\": \"2026-07-04T06:00:00Z\", \"end\": \"2026-07-04T08:00:00Z\"}]}");
-        var stored = new AwayPeriod(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z"));
+        var stored = new OneOffAwayPeriod(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z"));
         assertThat(new AwayFile(path).periods()).containsExactly(stored);
 
-        var added = AwayPeriod.allDay(LocalDate.of(2026, 7, 5), TZ);
+        var added = OneOffAwayPeriod.allDay(LocalDate.of(2026, 7, 5), TZ);
         new AwayFile(path).add(added, NOW);
 
         assertThat(StoredJson.parse(Files.readString(path)).path("version").intValue()).isEqualTo(1);
@@ -116,8 +116,8 @@ class AwayFileTest {
 
     @Test
     void addingGivesThePeriodsInOrderOfTheirStart() throws IOException {
-        var later = AwayPeriod.allDay(LocalDate.of(2026, 7, 5), TZ);
-        var sooner = AwayPeriod.allDay(LocalDate.of(2026, 7, 4), TZ);
+        var later = OneOffAwayPeriod.allDay(LocalDate.of(2026, 7, 5), TZ);
+        var sooner = OneOffAwayPeriod.allDay(LocalDate.of(2026, 7, 4), TZ);
         file().add(later, NOW);
 
         assertThat(file().add(sooner, NOW)).containsExactly(sooner, later);
@@ -131,14 +131,14 @@ class AwayFileTest {
                 """);
 
         assertThat(new AwayFile(path).periods()).containsExactly(
-                new AwayPeriod(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z")),
-                new AwayPeriod(Instant.parse("2026-07-05T06:00:00Z"), Instant.parse("2026-07-05T08:00:00Z")));
+                new OneOffAwayPeriod(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z")),
+                new OneOffAwayPeriod(Instant.parse("2026-07-05T06:00:00Z"), Instant.parse("2026-07-05T08:00:00Z")));
     }
 
     @Test
     void removingGivesThePeriodsThatAreLeftAndAnUnknownOneChangesNothing() throws IOException {
-        var first = AwayPeriod.allDay(LocalDate.of(2026, 7, 4), TZ);
-        var second = AwayPeriod.allDay(LocalDate.of(2026, 7, 5), TZ);
+        var first = OneOffAwayPeriod.allDay(LocalDate.of(2026, 7, 4), TZ);
+        var second = OneOffAwayPeriod.allDay(LocalDate.of(2026, 7, 5), TZ);
         file().add(first, NOW);
         file().add(second, NOW);
 
@@ -150,10 +150,10 @@ class AwayFileTest {
     @ParameterizedTest
     @ValueSource(longs = {-1, 0})
     void aPeriodIsKeptUntilItEndedADayAgo(long secondsLater) throws IOException {
-        var period = AwayPeriod.on(DAY.minusDays(1), LocalTime.of(9, 0), LocalTime.of(17, 0), TZ);
+        var period = OneOffAwayPeriod.on(DAY.minusDays(1), LocalTime.of(9, 0), LocalTime.of(17, 0), TZ);
         file().add(period, NOW);
         var now = period.end().plus(AwayFile.KEEP_AFTER_END).plusSeconds(secondsLater);
-        var next = AwayPeriod.allDay(DAY.plusDays(1), TZ);
+        var next = OneOffAwayPeriod.allDay(DAY.plusDays(1), TZ);
 
         assertThat(file().add(next, now)).isEqualTo(secondsLater < 0 ? List.of(period, next) : List.of(next));
     }

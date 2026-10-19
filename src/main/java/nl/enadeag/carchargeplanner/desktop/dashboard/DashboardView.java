@@ -14,7 +14,7 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Glyphs;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCard;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
@@ -164,7 +164,7 @@ final class DashboardView extends VBox {
      * @param added gets a period the owner entered, on the JavaFX thread
      * @param removed gets a period the owner removed, as the plan listed it, on the JavaFX thread
      */
-    void onAwayChange(Consumer<AwayPeriod> added, Consumer<AwayPeriod> removed) {
+    void onAwayChange(Consumer<OneOffAwayPeriod> added, Consumer<OneOffAwayPeriod> removed) {
         away.onChange(added, removed);
         if (!days.isEmpty()) {
             showDay(selectedDay());

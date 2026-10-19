@@ -178,7 +178,7 @@ class OpenMeteoTest extends ProviderConformance {
     void anAddressAKeyMayNotBeSentToIsRefusedBeforeAnythingIsSent(String address) {
         var http = ReplayHttp.always(new Reply(200, RECORDED));
         assertThatThrownBy(() -> new OpenMeteo(http).fetch(EXAMPLE_SYSTEM, Map.of("base_url", address), NOW))
-                .isInstanceOf(ProviderError.NotConfigured.class).hasMessageContaining("https");
+                .isInstanceOf(ProviderError.MissingSetting.class).hasMessageContaining("https");
         assertThat(http.requests).isEmpty();
     }
 
@@ -215,13 +215,13 @@ class OpenMeteoTest extends ProviderConformance {
         var http = ReplayHttp.always(new Reply(200, RECORDED));
         var system = withArrays(new PanelArray("", 3.0, 30, -90, 0.14), new PanelArray("", 2.0, 10, 90, 0.0));
         assertThatThrownBy(() -> new OpenMeteo(http).fetch(system, Map.of("base_url", "http://example.org"), NOW))
-                .isInstanceOf(ProviderError.NotConfigured.class);
+                .isInstanceOf(ProviderError.MissingSetting.class);
         assertThat(http.requests).isEmpty();
     }
 
     @Test
     void itDeclaresAServerAddressAndASecretApiKey() {
-        assertThat(OpenMeteo.INFO.settings()).extracting(SettingSpec::key, SettingSpec::secret)
+        assertThat(OpenMeteo.INFO.settings()).extracting(SettingSpec::name, SettingSpec::secret)
                 .containsExactly(tuple("base_url", false),
                         tuple("api_key", true));
     }

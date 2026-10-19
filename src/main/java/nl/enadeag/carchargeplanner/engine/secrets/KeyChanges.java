@@ -8,12 +8,12 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * What the owner changed in the API keys: the values they entered and the ones they emptied, by name. A save applies
- * them to what is stored, so every other stored key stays as it is, also one the app could not read, such as from a
- * locked keyring.
+ * What the owner changed in the API keys: the values they entered and the ones they emptied, by setting name. A save
+ * applies them to what is stored, so every other stored key stays as it is, also one the app could not read, such as
+ * from a locked keychain.
  *
  * @param entered the values entered, new or changed; empty values are left out
- * @param removed per provider, the setting keys whose stored value the owner emptied
+ * @param removed per provider, the setting names whose stored value the owner emptied
  */
 public record KeyChanges(Secrets entered, Map<ProviderId, Set<String>> removed) {
 
@@ -23,20 +23,20 @@ public record KeyChanges(Secrets entered, Map<ProviderId, Set<String>> removed) 
     /**
      * Copies the removals, without providers that remove nothing.
      *
-     * @throws IllegalArgumentException when a key is both entered and removed
+     * @throws IllegalArgumentException when a setting is both entered and removed
      */
     public KeyChanges {
         var kept = new LinkedHashMap<ProviderId, Set<String>>();
-        removed.forEach((id, keys) -> {
-            if (!keys.isEmpty()) {
-                kept.put(id, Set.copyOf(keys));
+        removed.forEach((id, names) -> {
+            if (!names.isEmpty()) {
+                kept.put(id, Set.copyOf(names));
             }
         });
         for (var provider : kept.entrySet()) {
-            for (var key : provider.getValue()) {
-                if (entered.of(provider.getKey()).containsKey(key)) {
-                    throw new IllegalArgumentException("a key cannot be both entered and removed: "
-                            + provider.getKey().value() + "/" + key);
+            for (var name : provider.getValue()) {
+                if (entered.of(provider.getKey()).containsKey(name)) {
+                    throw new IllegalArgumentException("a setting cannot be both entered and removed: "
+                            + provider.getKey().value() + "/" + name);
                 }
             }
         }
@@ -53,9 +53,9 @@ public record KeyChanges(Secrets entered, Map<ProviderId, Set<String>> removed) 
      */
     public static KeyChanges between(Secrets stored, Secrets shown) {
         var entered = new LinkedHashMap<ProviderId, Map<String, String>>();
-        shown.byProvider().forEach((id, values) -> values.forEach((key, value) -> {
-            if (!value.equals(stored.of(id).get(key))) {
-                entered.computeIfAbsent(id, _ -> new LinkedHashMap<>()).put(key, value);
+        shown.byProvider().forEach((id, values) -> values.forEach((name, value) -> {
+            if (!value.equals(stored.of(id).get(name))) {
+                entered.computeIfAbsent(id, _ -> new LinkedHashMap<>()).put(name, value);
             }
         }));
         var removed = new LinkedHashMap<ProviderId, Set<String>>();
@@ -97,10 +97,10 @@ public record KeyChanges(Secrets entered, Map<ProviderId, Set<String>> removed) 
         stored.byProvider().forEach((id, values) -> result.put(id, new HashMap<>(values)));
         entered.byProvider().forEach((id, values) -> result.computeIfAbsent(id, _ -> new HashMap<>())
                 .putAll(values));
-        removed.forEach((id, keys) -> {
+        removed.forEach((id, names) -> {
             var values = result.get(id);
             if (values != null) {
-                values.keySet().removeAll(keys);
+                values.keySet().removeAll(names);
             }
         });
         return new Secrets(result);

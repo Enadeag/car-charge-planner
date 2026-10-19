@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -19,8 +19,8 @@ class AwayMapperTest {
     /** A Friday. */
     private static final LocalDate TODAY = LocalDate.of(2026, 7, 3);
 
-    private static AwayPeriod part(LocalDate day, int startHour, int endHour) {
-        return AwayPeriod.on(day, LocalTime.of(startHour, 0), LocalTime.of(endHour, 30), BRUSSELS);
+    private static OneOffAwayPeriod part(LocalDate day, int startHour, int endHour) {
+        return OneOffAwayPeriod.on(day, LocalTime.of(startHour, 0), LocalTime.of(endHour, 30), BRUSSELS);
     }
 
     @ParameterizedTest
@@ -32,9 +32,9 @@ class AwayMapperTest {
             String tomorrow, String nextWeek, String overDays) {
         var now = TODAY.atTime(11, 0).atZone(BRUSSELS).toInstant();
         var ended = part(TODAY, 6, 8);
-        var overSeveralDays = new AwayPeriod(TODAY.plusDays(6).atTime(18, 0).atZone(BRUSSELS).toInstant(),
+        var overSeveralDays = new OneOffAwayPeriod(TODAY.plusDays(6).atTime(18, 0).atZone(BRUSSELS).toInstant(),
                 TODAY.plusDays(8).atTime(12, 0).atZone(BRUSSELS).toInstant());
-        var periods = List.of(ended, part(TODAY, 10, 12), AwayPeriod.allDay(TODAY.plusDays(1), BRUSSELS),
+        var periods = List.of(ended, part(TODAY, 10, 12), OneOffAwayPeriod.allDay(TODAY.plusDays(1), BRUSSELS),
                 part(TODAY.plusDays(5), 9, 17), overSeveralDays);
 
         var model = new AwayMapper(BRUSSELS, now, new Messages(language)).map(periods);

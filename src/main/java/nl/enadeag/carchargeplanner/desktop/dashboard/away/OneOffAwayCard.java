@@ -6,7 +6,7 @@ import static nl.enadeag.carchargeplanner.desktop.theme.Texts.paragraph;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import java.util.function.Consumer;
 import javafx.scene.control.Button;
 import javafx.scene.control.Tooltip;
@@ -26,8 +26,8 @@ public final class OneOffAwayCard extends VBox {
     private final Button add;
     private final VBox list = new VBox();
     private final AwayEditor editor;
-    private Consumer<AwayPeriod> added = _ -> { };
-    private Consumer<AwayPeriod> removed = _ -> { };
+    private Consumer<OneOffAwayPeriod> added = _ -> { };
+    private Consumer<OneOffAwayPeriod> removed = _ -> { };
     /** True once {@link #onChange} gave somewhere to send the periods. */
     private boolean changeable;
     /** The selected day; null until one shows. */
@@ -93,7 +93,7 @@ public final class OneOffAwayCard extends VBox {
      * @param addedHandler gets a period the owner entered; called on the JavaFX thread
      * @param removedHandler gets a period the owner removed, as the model gave it; called on the JavaFX thread
      */
-    public void onChange(Consumer<AwayPeriod> addedHandler, Consumer<AwayPeriod> removedHandler) {
+    public void onChange(Consumer<OneOffAwayPeriod> addedHandler, Consumer<OneOffAwayPeriod> removedHandler) {
         added = addedHandler;
         removed = removedHandler;
         changeable = true;

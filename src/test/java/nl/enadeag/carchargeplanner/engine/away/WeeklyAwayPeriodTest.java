@@ -9,21 +9,21 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import org.junit.jupiter.api.Test;
 
-class RecurringAwayPeriodTest {
+class WeeklyAwayPeriodTest {
 
     private static final ZoneId TZ = ZoneId.of("Europe/Amsterdam");
     private static final LocalDate THURSDAY = LocalDate.of(2026, 7, 2);
     /** 02:00 winter time becomes 03:00 summer time. */
     private static final LocalDate SPRING_FORWARD = LocalDate.of(2026, 3, 29);
 
-    private static RecurringAwayPeriod weekly(DayOfWeek weekday, int startHour, int startMinute, int endHour) {
-        return new RecurringAwayPeriod(weekday, LocalTime.of(startHour, startMinute), LocalTime.of(endHour, 0));
+    private static WeeklyAwayPeriod weekly(DayOfWeek weekday, int startHour, int startMinute, int endHour) {
+        return new WeeklyAwayPeriod(weekday, LocalTime.of(startHour, startMinute), LocalTime.of(endHour, 0));
     }
 
     @Test
     void onItsWeekdayItIsAwayFromTheStartToTheEnd() {
         assertThat(weekly(DayOfWeek.THURSDAY, 6, 0, 19).on(THURSDAY, TZ))
-                .contains(AwayPeriod.on(THURSDAY, LocalTime.of(6, 0), LocalTime.of(19, 0), TZ));
+                .contains(OneOffAwayPeriod.on(THURSDAY, LocalTime.of(6, 0), LocalTime.of(19, 0), TZ));
     }
 
     @Test

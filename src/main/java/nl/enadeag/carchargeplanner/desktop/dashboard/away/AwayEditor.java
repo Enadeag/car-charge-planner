@@ -1,10 +1,10 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.away;
 
-import nl.enadeag.carchargeplanner.desktop.theme.Texts;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import nl.enadeag.carchargeplanner.desktop.theme.Texts;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -42,7 +42,7 @@ final class AwayEditor extends VBox {
     private static final LocalTime FIRST_END = LocalTime.of(17, 0);
 
     private final Messages messages;
-    private final Consumer<AwayPeriod> saved;
+    private final Consumer<OneOffAwayPeriod> saved;
     private final Runnable closed;
     private final Runnable resized;
     private final RadioButton wholeDay;
@@ -63,7 +63,7 @@ final class AwayEditor extends VBox {
      * @param resized called when the entry grows or shrinks while open: the times or a problem show or go
      * @param messages the texts, in the owner's language
      */
-    AwayEditor(Consumer<AwayPeriod> saved, Runnable closed, Runnable resized, Messages messages) {
+    AwayEditor(Consumer<OneOffAwayPeriod> saved, Runnable closed, Runnable resized, Messages messages) {
         this.messages = messages;
         this.saved = saved;
         this.closed = closed;
@@ -169,9 +169,9 @@ final class AwayEditor extends VBox {
         return problem.isVisible() ? problem.getText() : "";
     }
 
-    private Optional<AwayPeriod> period() {
+    private Optional<OneOffAwayPeriod> period() {
         if (wholeDay.isSelected()) {
-            return notPassed(AwayPeriod.allDay(day, zone));
+            return notPassed(OneOffAwayPeriod.allDay(day, zone));
         }
         var start = time(from);
         var end = time(to);
@@ -179,14 +179,14 @@ final class AwayEditor extends VBox {
             return refuse(TextKey.PROBLEM_NOT_A_TIME);
         }
         try {
-            return notPassed(AwayPeriod.on(day, start.get(), end.get(), zone));
+            return notPassed(OneOffAwayPeriod.on(day, start.get(), end.get(), zone));
         } catch (IllegalArgumentException _) {
             // also when the clock is put forward between the two times, so both are the same moment
             return refuse(TextKey.ONE_OFF_END_BEFORE_START);
         }
     }
 
-    private Optional<AwayPeriod> notPassed(AwayPeriod period) {
+    private Optional<OneOffAwayPeriod> notPassed(OneOffAwayPeriod period) {
         if (!period.end().isAfter(now)) {
             return refuse(TextKey.ONE_OFF_PASSED);
         }
@@ -194,7 +194,7 @@ final class AwayEditor extends VBox {
         return Optional.of(period);
     }
 
-    private Optional<AwayPeriod> refuse(TextKey why) {
+    private Optional<OneOffAwayPeriod> refuse(TextKey why) {
         showProblem(messages.text(why));
         ScreenReader.focus(partOfDay.isSelected() ? from : wholeDay);
         return Optional.empty();

@@ -55,7 +55,7 @@ class TrayStatusMapperTest {
 
     @Test
     void withoutASetUpTheOwnerMustActAndIsToldWhatToFix() {
-        var status = MAPPER.map(new Outlook.NotSetUp(ConfigProblem.Kind.INVALID, Path.of("engine.json"),
+        var status = MAPPER.map(new Outlook.ConfigUnusable(ConfigProblem.Kind.INVALID, Path.of("engine.json"),
                 "system.location: is required"));
 
         assertThat(status.dot()).isEqualTo(StatusDot.ACTION);

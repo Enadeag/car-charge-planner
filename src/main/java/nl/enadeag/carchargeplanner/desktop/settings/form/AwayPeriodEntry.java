@@ -2,7 +2,7 @@ package nl.enadeag.carchargeplanner.desktop.settings.form;
 
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import java.time.DayOfWeek;
 
@@ -23,7 +23,7 @@ public record AwayPeriodEntry(DayOfWeek weekday, String start, String end) {
          *
          * @param period the period
          */
-        record Accepted(RecurringAwayPeriod period) implements Checked {
+        record Accepted(WeeklyAwayPeriod period) implements Checked {
         }
 
         /**
@@ -48,7 +48,7 @@ public record AwayPeriodEntry(DayOfWeek weekday, String start, String end) {
             return new Checked.Refused(messages.text(TextKey.PROBLEM_NOT_A_TIME));
         }
         try {
-            return new Checked.Accepted(new RecurringAwayPeriod(weekday, from.get(), to.get()));
+            return new Checked.Accepted(new WeeklyAwayPeriod(weekday, from.get(), to.get()));
         } catch (InvalidSetting e) {
             return new Checked.Refused(ProblemTexts.of(e.rule(), messages));
         }

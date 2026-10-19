@@ -45,7 +45,7 @@ public final class DayMapper {
         this.zone = planned.zone();
         this.today = planned.madeAt().atZone(zone).toLocalDate();
         this.todaysNote = planned.batteryAssumed()
-                ? messages.text(TextKey.DAY_BATTERY_ASSUMED, messages.whole(planned.batteryPct().value())) : "";
+                ? messages.text(TextKey.DAY_BATTERY_ASSUMED, messages.whole(planned.batteryLevelPct().value())) : "";
         this.gridDay = planned.gridAdvice().map(GridAdvice::day).orElse(null);
         this.charts = new ChartMapper(planned, messages);
     }
@@ -99,8 +99,8 @@ public final class DayMapper {
     }
 
     private Chip battery(DayPlan day) {
-        return new Chip(Source.CAR, messages.text(TextKey.DAY_BATTERY, messages.whole(day.socStartPct().value()),
-                messages.whole(day.socAfterChargingPct().value())));
+        return new Chip(Source.CAR, messages.text(TextKey.DAY_BATTERY, messages.whole(day.startLevelPct().value()),
+                messages.whole(day.levelAfterChargingPct().value())));
     }
 
     private String laterWindows(DayPlan day) {

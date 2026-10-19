@@ -12,7 +12,7 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel.Span;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel.Step;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCurveModel.Tick;
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -57,8 +57,8 @@ public final class Models {
 
     public static final String FOOTER = "Forecast: Open-Meteo · 08:12";
 
-    public static final AwayPeriod AWAY_TOMORROW = AwayPeriod.allDay(TODAY.plusDays(1), BRUSSELS);
-    public static final AwayPeriod AWAY_SUNDAY = AwayPeriod.on(TODAY.plusDays(2), LocalTime.of(10, 0), LocalTime.of(16, 30),
+    public static final OneOffAwayPeriod AWAY_TOMORROW = OneOffAwayPeriod.allDay(TODAY.plusDays(1), BRUSSELS);
+    public static final OneOffAwayPeriod AWAY_SUNDAY = OneOffAwayPeriod.on(TODAY.plusDays(2), LocalTime.of(10, 0), LocalTime.of(16, 30),
             BRUSSELS);
 
     /** Made at 08:12 today, with an away period tomorrow and one on Sunday. */

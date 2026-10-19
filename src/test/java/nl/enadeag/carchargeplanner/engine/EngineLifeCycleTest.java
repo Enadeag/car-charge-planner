@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import nl.enadeag.carchargeplanner.LogCapture;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
@@ -48,7 +48,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 class EngineLifeCycleTest {
 
     private static final Instant NOW = Instant.parse("2026-07-03T06:00:00Z");
-    private static final AwayPeriod AWAY = new AwayPeriod(NOW.plus(Duration.ofHours(2)), NOW.plus(Duration.ofHours(12)));
+    private static final OneOffAwayPeriod AWAY = new OneOffAwayPeriod(NOW.plus(Duration.ofHours(2)), NOW.plus(Duration.ofHours(12)));
 
     @TempDir
     Path folder;
@@ -89,7 +89,7 @@ class EngineLifeCycleTest {
     }
 
     private static Percent battery(Outlook outlook) {
-        return ((Outlook.Planned) outlook).batteryPct();
+        return ((Outlook.Planned) outlook).batteryLevelPct();
     }
 
     @Test

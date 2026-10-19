@@ -58,7 +58,7 @@ public final class ProviderTexts {
      * @return such as "API key"
      */
     public String label(SettingSpec setting) {
-        return text(switch (setting.key()) {
+        return text(switch (setting.name()) {
             case "api_key" -> TextKey.PROVIDER_API_KEY;
             case "base_url" -> TextKey.PROVIDER_BASE_URL;
             default -> null;
@@ -73,7 +73,7 @@ public final class ProviderTexts {
      * @return what to fill in
      */
     public String hint(ProviderInfo info, SettingSpec setting) {
-        return text(switch (info.id().value() + "/" + setting.key()) {
+        return text(switch (info.id().value() + "/" + setting.name()) {
             case "open-meteo/api_key" -> TextKey.PROVIDER_OPEN_METEO_API_KEY_HINT;
             case "open-meteo/base_url" -> TextKey.PROVIDER_OPEN_METEO_BASE_URL_HINT;
             case "forecast-solar/api_key" -> TextKey.PROVIDER_FORECAST_SOLAR_API_KEY_HINT;

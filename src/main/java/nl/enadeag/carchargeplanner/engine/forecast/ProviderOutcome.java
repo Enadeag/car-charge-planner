@@ -13,7 +13,7 @@ sealed interface ProviderOutcome {
      * @param steps the forecast's steps
      * @param fetchedAt when it was fetched
      * @param freshness whether it was fetched just now or comes from the cache, and then whether a refresh was due
-     * @param cooldownUntil the end of the provider's rate limit, when it has one
+     * @param cooldownUntil the end of the provider's cool-down, when it has one
      */
     record Usable(List<ForecastStep> steps, Instant fetchedAt, Freshness freshness,
             Optional<Instant> cooldownUntil) implements ProviderOutcome {

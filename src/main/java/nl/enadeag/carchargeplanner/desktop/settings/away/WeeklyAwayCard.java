@@ -5,9 +5,9 @@ import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPart;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.Texts;
-import nl.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
-import nl.enadeag.carchargeplanner.engine.config.AwaySchedule;
+import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
+import nl.enadeag.carchargeplanner.engine.config.WeeklyAwaySchedule;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -24,7 +24,7 @@ import javafx.scene.layout.VBox;
  */
 public final class WeeklyAwayCard implements ConfigPart {
 
-    private static final RecurringAwayPeriod NEW = new RecurringAwayPeriod(DayOfWeek.MONDAY, LocalTime.of(8, 0),
+    private static final WeeklyAwayPeriod NEW = new WeeklyAwayPeriod(DayOfWeek.MONDAY, LocalTime.of(8, 0),
             LocalTime.of(17, 0));
 
     private final Messages messages;
@@ -33,7 +33,7 @@ public final class WeeklyAwayCard implements ConfigPart {
     private final Card card;
     private final List<AwayRow> shown = new ArrayList<>();
     private final List<Runnable> listeners = new ArrayList<>();
-    private List<RecurringAwayPeriod> loaded = List.of();
+    private List<WeeklyAwayPeriod> loaded = List.of();
 
     /**
      * Makes the card, empty until {@link #load(EngineConfig)}.
@@ -76,7 +76,7 @@ public final class WeeklyAwayCard implements ConfigPart {
 
     @Override
     public void load(EngineConfig config) {
-        loaded = config.away().recurring();
+        loaded = config.away().weekly();
         shown.clear();
         rows.getChildren().clear();
         loaded.forEach(this::addRow);
@@ -84,15 +84,15 @@ public final class WeeklyAwayCard implements ConfigPart {
 
     @Override
     public Optional<EngineConfig> applyTo(EngineConfig config) {
-        var periods = new ArrayList<RecurringAwayPeriod>();
+        var periods = new ArrayList<WeeklyAwayPeriod>();
         shown.forEach(row -> row.value().ifPresent(periods::add));
         if (periods.size() < shown.size()) {
             return Optional.empty();
         }
-        return Optional.of(isChanged() ? config.withAway(new AwaySchedule(periods)) : config);
+        return Optional.of(isChanged() ? config.withAway(new WeeklyAwaySchedule(periods)) : config);
     }
 
-    private void addRow(RecurringAwayPeriod period) {
+    private void addRow(WeeklyAwayPeriod period) {
         var row = new AwayRow(period, this::remove, messages);
         listeners.forEach(row::onChange);
         shown.add(row);

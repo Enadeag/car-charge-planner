@@ -11,8 +11,7 @@ import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.Outlook;
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
-import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
@@ -91,10 +90,10 @@ class DashboardLanguagesTest {
     }
 
     /** One of each kind: a whole day, part of a day, and a period over several days. */
-    private static List<AwayPeriod> awayPeriods() {
-        return List.of(AwayPeriod.allDay(TODAY.plusDays(1), BRUSSELS),
-                AwayPeriod.on(TODAY.plusDays(2), LocalTime.of(10, 0), LocalTime.of(16, 30), BRUSSELS),
-                new AwayPeriod(at(TODAY.plusDays(4), 18), at(TODAY.plusDays(6), 12)));
+    private static List<OneOffAwayPeriod> awayPeriods() {
+        return List.of(OneOffAwayPeriod.allDay(TODAY.plusDays(1), BRUSSELS),
+                OneOffAwayPeriod.on(TODAY.plusDays(2), LocalTime.of(10, 0), LocalTime.of(16, 30), BRUSSELS),
+                new OneOffAwayPeriod(at(TODAY.plusDays(4), 18), at(TODAY.plusDays(6), 12)));
     }
 
     /** Every day, the readout and both entries open, a refused away period and the message without a config. */
@@ -127,8 +126,7 @@ class DashboardLanguagesTest {
             AwayEntry.enterTimes(view, "16:00", "10:00");
             AwayEntry.save(view);
             found.addAll(check(view));
-            view.show(mapper.map(new Outlook.NotSetUp(ConfigProblem.Kind.MISSING,
-                    Path.of("/home/owner/.config/car-charge-planner/engine.json"), "")));
+            view.show(mapper.map(new Outlook.NotSetUp(Path.of("/home/owner/.config/car-charge-planner/engine.json"))));
             found.addAll(check(view));
             return found;
         });

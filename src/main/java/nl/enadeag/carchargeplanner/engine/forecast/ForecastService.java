@@ -34,7 +34,7 @@ public final class ForecastService {
      * Makes the service.
      *
      * @param providers the providers it may ask, found by the ids the selection names
-     * @param cache where each provider's last good forecast and rate limit are kept
+     * @param cache where each provider's last good forecast and cool-down are kept
      * @param secrets where the providers' secret settings come from; read at most once per request, and only when the
      *     cache cannot answer by itself
      */
@@ -53,7 +53,7 @@ public final class ForecastService {
      *
      * @param system the system to forecast; the cache is used only when it was made for the same one
      * @param selection the providers to ask and their settings that are not secret
-     * @param now the current moment, by which the cache's age, waits and rate limits are measured
+     * @param now the current moment, by which the cache's age, waits and cool-downs are measured
      * @return the forecast and where it came from
      * @throws ForecastUnavailable with the reason of each provider asked, when none has a usable forecast
      */
@@ -64,11 +64,11 @@ public final class ForecastService {
     /**
      * A forecast for the system that the owner asked to refresh: as {@link #get(SolarSite, ForecastSelection,
      * Instant)}, but a provider is asked also before its minimum refresh interval has passed, and after a failure
-     * without its wait; never during its rate limit.
+     * without its wait; never during its cool-down.
      *
      * @param system the system to forecast; the cache is used only when it was made for the same one
      * @param selection the providers to ask and their settings that are not secret
-     * @param now the current moment, by which the cache's age and rate limits are measured
+     * @param now the current moment, by which the cache's age and cool-downs are measured
      * @return the forecast and where it came from
      * @throws ForecastUnavailable with the reason of each provider asked, when none has a usable forecast
      */
@@ -84,7 +84,7 @@ public final class ForecastService {
      * @param system the system to forecast; the cache is used only when it was made for the same one
      * @param selection the providers to ask and their settings that are not secret
      * @param secrets every provider's secret settings to ask with, in place of the stored ones; may be none
-     * @param now the current moment, by which the cache's age, waits and rate limits are measured
+     * @param now the current moment, by which the cache's age, waits and cool-downs are measured
      * @return the forecast and where it came from
      * @throws ForecastUnavailable with the reason of each provider asked, when none has a usable forecast
      */
@@ -115,7 +115,7 @@ public final class ForecastService {
     }
 
     /**
-     * The settings changed: what failed before may work now, so the waits after failures are forgotten. A rate limit
+     * The settings changed: what failed before may work now, so the waits after failures are forgotten. A cool-down
      * stays: that is the provider's word, not ours. Never waits for a provider that is being asked.
      */
     public void forgetFailures() {

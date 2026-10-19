@@ -17,12 +17,12 @@ import java.time.InstantSource;
  * left alone for {@link #RETRY_AFTER}; the keys then come from the file, which is read again only when it changed. A
  * save always tries the keychain. Loads, moves and saves take turns, so a save never mixes with another of them.
  *
- * <p>A locked keychain, such as a desktop keyring that was not unlocked at login, is not a missing one: the keys in it
- * are not available yet. A load says so, with {@link SecretsProblem.Kind#LOCKED}, and the keychain is asked again at
- * the next load and the next move, so the unlocking is noticed soon. A save into a locked keychain has the system ask the owner to unlock
- * it, and waits up to {@link #UNLOCK_WAIT} for their answer without holding up the loads. The keys go to the file only
- * when the owner dismisses that prompt or there turns out to be no keychain; when the app cannot have it unlocked, or
- * nobody answers, nothing is saved and the owner is told to unlock it and save again.
+ * <p>A locked keychain, such as a desktop's keychain that was not unlocked at login, is not a missing one: the keys in
+ * it are not available yet. A load says so, with {@link SecretsProblem.Kind#LOCKED}, and the keychain is asked again at
+ * the next load and the next move, so the unlocking is noticed soon. A save into a locked keychain has the system ask
+ * the owner to unlock it, and waits up to {@link #UNLOCK_WAIT} for their answer without holding up the loads. The keys
+ * go to the file only when the owner dismisses that prompt or there turns out to be no keychain; when the app cannot
+ * have it unlocked, or nobody answers, nothing is saved and the owner is told to unlock it and save again.
  */
 public final class ApiKeys implements SecretsSource {
 
@@ -242,7 +242,7 @@ public final class ApiKeys implements SecretsSource {
 
     /**
      * Applies the owner's changes to the stored keys, in the keychain when it works and else in the file: every key
-     * they did not enter or empty stays as it is, also one that could not be read, such as from a locked keyring.
+     * they did not enter or empty stays as it is, also one that could not be read, such as from a locked keychain.
      * Tries the keychain also while it is left alone after a failure: the owner asked for this. When the keychain is
      * locked, the system asks the owner to unlock it and this waits up to {@link #UNLOCK_WAIT} for their answer, while
      * loads go on. Blocks: call it away from the user interface's thread.
@@ -356,7 +356,7 @@ public final class ApiKeys implements SecretsSource {
                 return SaveResult.IN_KEYCHAIN;
             } catch (KeychainException e) {
                 if (e.kind() == KeychainException.Kind.LOCKED) {
-                    return SaveResult.LOCKED; // locked since it was asked, or the keyring holds none of our items yet
+                    return SaveResult.LOCKED; // locked since it was asked, or the keychain holds none of our items yet
                 }
                 // such as Windows error 1312 over ssh: no keychain after all, so the file it is
                 intoFile(edit, "the system keychain cannot be used");

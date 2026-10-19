@@ -15,7 +15,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 /** Without a config the app leads into set-up: once by itself, and from the ways into Settings until there is one. */
 class SetUpOfferTest {
 
-    private static final Outlook MISSING = new Outlook.NotSetUp(ConfigProblem.Kind.MISSING, Path.of("engine.json"), "");
+    private static final Outlook MISSING = new Outlook.NotSetUp(Path.of("engine.json"));
 
     private final List<String> opened = new ArrayList<>();
 
@@ -59,7 +59,7 @@ class SetUpOfferTest {
     void aConfigThatIsThereButWrongIsLeftToSettings(ConfigProblem.Kind kind) {
         var offer = offer(true);
 
-        offer.show(new Outlook.NotSetUp(kind, Path.of("engine.json"), "detail"));
+        offer.show(new Outlook.ConfigUnusable(kind, Path.of("engine.json"), "detail"));
         offer.openSettings(Category.SOLAR);
 
         assertThat(opened).containsExactly("SOLAR");

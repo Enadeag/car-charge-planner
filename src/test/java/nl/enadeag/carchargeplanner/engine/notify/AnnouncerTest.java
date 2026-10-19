@@ -172,7 +172,7 @@ class AnnouncerTest {
 
         assertThat(told).extracting(Announcement::kind, Announcement::window).containsExactly(
                 tuple(AnnouncementKind.GRID_CHARGE, grid),
-                tuple(AnnouncementKind.CHARGE_WINDOW, solar));
+                tuple(AnnouncementKind.SOLAR_WINDOW, solar));
     }
 
     @Test
@@ -210,7 +210,7 @@ class AnnouncerTest {
         try (var log = LogCapture.of(Announcer.class)) {
             check(dayWith(window(10, 15)), at(DAY, 9, 50));
 
-            assertThat(log.lines()).containsExactly("INFO announced a CHARGE_WINDOW starting at 2026-07-03T10:00+02:00");
+            assertThat(log.lines()).containsExactly("INFO announced a SOLAR_WINDOW starting at 2026-07-03T10:00+02:00");
         }
     }
 

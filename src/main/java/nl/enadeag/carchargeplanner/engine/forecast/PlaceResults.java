@@ -24,7 +24,7 @@ public sealed interface PlaceResults {
      * The search did not work.
      *
      * @param problem why
-     * @param retryAfter what the service said about when to ask again, after a rate limit
+     * @param retryAfter what the service said about when to ask again, after it said it was asked too often
      */
     record Failed(Problem problem, Optional<Duration> retryAfter) implements PlaceResults {
 

@@ -10,7 +10,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStorage;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
@@ -203,9 +203,9 @@ class ForecastAwayPagesTest {
             return SettingsFixture.save(view);
         });
 
-        assertThat(stored().away().recurring()).containsExactly(
-                new RecurringAwayPeriod(DayOfWeek.THURSDAY, LocalTime.of(6, 0), LocalTime.of(19, 0)),
-                new RecurringAwayPeriod(DayOfWeek.WEDNESDAY, LocalTime.of(7, 30), LocalTime.of(18, 0)));
+        assertThat(stored().away().weekly()).containsExactly(
+                new WeeklyAwayPeriod(DayOfWeek.THURSDAY, LocalTime.of(6, 0), LocalTime.of(19, 0)),
+                new WeeklyAwayPeriod(DayOfWeek.WEDNESDAY, LocalTime.of(7, 30), LocalTime.of(18, 0)));
     }
 
     @Test
@@ -248,7 +248,7 @@ class ForecastAwayPagesTest {
             return SettingsFixture.save(view);
         });
 
-        assertThat(stored().away().recurring()).isEmpty();
+        assertThat(stored().away().weekly()).isEmpty();
     }
 
     @Test

@@ -12,12 +12,13 @@ import java.util.Optional;
  * @param system the owner's home and equipment
  * @param planning the owner's planning preferences
  * @param forecast the chosen forecast providers and their settings that are not secret
- * @param away the away periods that come back every week; {@link AwaySchedule#NONE} when the file has no such section
+ * @param away the away periods that come back every week; {@link WeeklyAwaySchedule#NONE} when the file has no such
+ *     section
  * @param typical the system's values that are typical values; {@link TypicalValues#NONE} when the file has no such
  *     section
  */
 public record EngineConfig(HomeSystem system, PlanningPreferences planning, ForecastSelection forecast,
-        AwaySchedule away, TypicalValues typical) {
+        WeeklyAwaySchedule away, TypicalValues typical) {
 
     /**
      * Checks that the typical values are about panel arrays the system has.
@@ -44,7 +45,7 @@ public record EngineConfig(HomeSystem system, PlanningPreferences planning, Fore
         var system = new HomeSystem(Coordinates.NOT_CHOSEN, timezone, List.of(PanelArray.TYPICAL), House.TYPICAL,
                 Car.TYPICAL, Charger.TYPICAL);
         return new EngineConfig(system, PlanningPreferences.RECOMMENDED,
-                new ForecastSelection(primary, Optional.empty(), Map.of()), AwaySchedule.NONE,
+                new ForecastSelection(primary, Optional.empty(), Map.of()), WeeklyAwaySchedule.NONE,
                 new TypicalValues(TypicalValues.SYSTEM_SETTINGS, List.of(TypicalValues.PANEL_SETTINGS)));
     }
 
@@ -85,7 +86,7 @@ public record EngineConfig(HomeSystem system, PlanningPreferences planning, Fore
      * @param newAway the away periods that come back every week
      * @return a config with everything else the same
      */
-    public EngineConfig withAway(AwaySchedule newAway) {
+    public EngineConfig withAway(WeeklyAwaySchedule newAway) {
         return new EngineConfig(system, planning, forecast, newAway, typical);
     }
 }

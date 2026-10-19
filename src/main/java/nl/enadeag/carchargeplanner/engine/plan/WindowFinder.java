@@ -94,7 +94,7 @@ final class WindowFinder {
      * @param runs the runs of one day
      * @param neededKwh the wall-side energy to take from the solar surplus in kWh; import within the tolerance is not
      *     counted toward it
-     * @return the chosen windows in time order; they may fall short when the runs hold too little sun
+     * @return the chosen windows in time order; they may fall short when the runs hold too little surplus
      */
     List<Window> windows(List<SurplusRun> runs, double neededKwh) {
         double remaining = neededKwh;
@@ -109,7 +109,7 @@ final class WindowFinder {
                     continue;
                 }
                 var window = window(run, candidate, remaining);
-                // the most sun first; on a tie the earlier window
+                // the most solar energy first; on a tie the earlier window
                 if (best == null || window.solarKwh() > best.solarKwh()
                         || window.solarKwh() == best.solarKwh() && window.start().isBefore(best.start())) {
                     best = window;
@@ -131,7 +131,10 @@ final class WindowFinder {
     private record Candidate(int amps, int first, int last) {
     }
 
-    /** The values a candidate is judged on, best first: sun used, then least import, the earliest start, the most amps. */
+    /**
+     * The values a candidate is judged on, best first: solar energy used, then least import, the earliest start, the
+     * most amps.
+     */
     private record Score(double solar, double imported, Instant start, int amps) implements Comparable<Score> {
 
         private static final Comparator<Score> ORDER = Comparator.comparingDouble(Score::solar)

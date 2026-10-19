@@ -68,13 +68,13 @@ public final class ExampleSolar implements ForecastProvider {
      * The key, checked again although Settings checked it when it was saved: the config file and the keychain can be
      * changed by hand, and the key goes into a header.
      */
-    private static String apiKey(Map<String, String> settings) throws ProviderError.NotConfigured {
+    private static String apiKey(Map<String, String> settings) throws ProviderError.MissingSetting {
         var key = settings.getOrDefault("api_key", "").strip();
         if (key.isEmpty()) {
-            throw new ProviderError.NotConfigured("Example Solar needs an API key");
+            throw new ProviderError.MissingSetting("Example Solar needs an API key");
         }
         if (!SettingFormat.LETTERS_AND_DIGITS.accepts(key)) {
-            throw new ProviderError.NotConfigured("the API key may hold only letters and digits");
+            throw new ProviderError.MissingSetting("the API key may hold only letters and digits");
         }
         return key;
     }

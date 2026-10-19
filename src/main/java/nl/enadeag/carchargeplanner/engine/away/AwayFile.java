@@ -34,7 +34,7 @@ public final class AwayFile {
     private static final FileVersion VERSION = new FileVersion(1, List.of());
 
     /** The periods in the file, and how many entries were left out as damaged. */
-    private record Entries(List<AwayPeriod> periods, int damaged) {
+    private record Entries(List<OneOffAwayPeriod> periods, int damaged) {
     }
 
     private final StoredFile<Entries> file;
@@ -53,7 +53,7 @@ public final class AwayFile {
      *
      * @return the periods in order of their start, each once; empty when the file is missing or cannot be used
      */
-    public List<AwayPeriod> periods() {
+    public List<OneOffAwayPeriod> periods() {
         return file.read() instanceof Stored.Found<Entries>(var entries) ? entries.periods() : List.of();
     }
 
@@ -67,13 +67,13 @@ public final class AwayFile {
      * @throws IOException when the file could not be written, or it exists but could not be read whole; it is then
      *     left as it was
      */
-    public List<AwayPeriod> add(AwayPeriod period, Instant now) throws IOException {
+    public List<OneOffAwayPeriod> add(OneOffAwayPeriod period, Instant now) throws IOException {
         var keepFrom = now.minus(KEEP_AFTER_END);
         var periods = new ArrayList<>(storedForChange().stream()
                 .filter(stored -> stored.end().isAfter(keepFrom) && !stored.equals(period))
                 .toList());
         periods.add(period);
-        periods.sort(Comparator.comparing(AwayPeriod::start));
+        periods.sort(Comparator.comparing(OneOffAwayPeriod::start));
         file.write(new Entries(List.copyOf(periods), 0));
         return List.copyOf(periods);
     }
@@ -86,14 +86,14 @@ public final class AwayFile {
      * @throws IOException when the file could not be written, or it exists but could not be read whole; it is then
      *     left as it was
      */
-    public List<AwayPeriod> remove(AwayPeriod period) throws IOException {
+    public List<OneOffAwayPeriod> remove(OneOffAwayPeriod period) throws IOException {
         var periods = storedForChange().stream().filter(stored -> !stored.equals(period)).toList();
         file.write(new Entries(periods, 0));
         return periods;
     }
 
     /** The stored periods, when writing them back loses nothing. */
-    private List<AwayPeriod> storedForChange() throws IOException {
+    private List<OneOffAwayPeriod> storedForChange() throws IOException {
         return switch (file.read()) {
             case Stored.Absent<Entries> _ -> List.of();
             case Stored.Unusable<Entries> unusable -> throw new IOException(
@@ -113,7 +113,7 @@ public final class AwayFile {
             if (!rows.isArray()) {
                 throw new FormatProblem("periods: must be a list");
             }
-            var periods = new ArrayList<AwayPeriod>();
+            var periods = new ArrayList<OneOffAwayPeriod>();
             int damaged = 0;
             for (var row : rows.values()) {
                 var found = period(row);
@@ -123,7 +123,7 @@ public final class AwayFile {
                     periods.add(found.get());
                 }
             }
-            periods.sort(Comparator.comparing(AwayPeriod::start));
+            periods.sort(Comparator.comparing(OneOffAwayPeriod::start));
             return new Entries(List.copyOf(periods), damaged);
         }
 
@@ -137,14 +137,15 @@ public final class AwayFile {
             return VERSION.stamped(body);
         }
 
-        private static Optional<AwayPeriod> period(JsonNode row) {
+        private static Optional<OneOffAwayPeriod> period(JsonNode row) {
             var start = row.path("start");
             var end = row.path("end");
             if (!start.isString() || !end.isString()) {
                 return Optional.empty();
             }
             try {
-                return Optional.of(new AwayPeriod(Instant.parse(start.stringValue()), Instant.parse(end.stringValue())));
+                return Optional.of(new OneOffAwayPeriod(Instant.parse(start.stringValue()),
+                        Instant.parse(end.stringValue())));
             } catch (DateTimeException | IllegalArgumentException _) {
                 return Optional.empty();
             }

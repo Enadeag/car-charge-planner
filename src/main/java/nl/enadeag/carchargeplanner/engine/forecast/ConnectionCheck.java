@@ -82,7 +82,7 @@ public final class ConnectionCheck {
                     .orElse(info.name() + " says there were too many requests. Try again later.");
             case ProviderError.Unavailable unavailable ->
                     "Could not get a forecast from " + info.name() + ": " + unavailable.getMessage();
-            case ProviderError.NotConfigured notConfigured ->
+            case ProviderError.MissingSetting notConfigured ->
                     info.name() + " is not set up completely: " + notConfigured.getMessage();
             case ProviderError.BadResponse bad ->
                     info.name() + " gave an answer the app does not understand: " + bad.getMessage();

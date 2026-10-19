@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.engine.plan;
 
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
-import nl.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -11,10 +11,10 @@ import java.util.List;
 /**
  * All the times the car is not at home: the weekly away periods and the ones entered by hand.
  *
- * @param recurring the away periods that come back every week, possibly none
+ * @param weekly the away periods that come back every week, possibly none
  * @param oneOff the away periods entered by hand for specific days, possibly none; they may overlap the weekly ones
  */
-public record AwayTimes(List<RecurringAwayPeriod> recurring, List<AwayPeriod> oneOff) {
+public record AwayTimes(List<WeeklyAwayPeriod> weekly, List<OneOffAwayPeriod> oneOff) {
 
     /** The car is always at home. */
     public static final AwayTimes NONE = new AwayTimes(List.of(), List.of());
@@ -25,7 +25,7 @@ public record AwayTimes(List<RecurringAwayPeriod> recurring, List<AwayPeriod> on
      * @throws NullPointerException when a list is null or holds null
      */
     public AwayTimes {
-        recurring = List.copyOf(recurring);
+        weekly = List.copyOf(weekly);
         oneOff = List.copyOf(oneOff);
     }
 
@@ -46,8 +46,8 @@ public record AwayTimes(List<RecurringAwayPeriod> recurring, List<AwayPeriod> on
         var last = forecast.stream().map(ForecastStep::end).max(Comparator.naturalOrder()).orElseThrow();
         var lastDate = last.atZone(zone).toLocalDate();
         for (var date = first.atZone(zone).toLocalDate(); !date.isAfter(lastDate); date = date.plusDays(1)) {
-            for (var weekly : recurring) {
-                weekly.on(date, zone).ifPresent(period -> times.add(new BlockedTime(period.start(), period.end())));
+            for (var period : weekly) {
+                period.on(date, zone).ifPresent(away -> times.add(new BlockedTime(away.start(), away.end())));
             }
         }
         return times;

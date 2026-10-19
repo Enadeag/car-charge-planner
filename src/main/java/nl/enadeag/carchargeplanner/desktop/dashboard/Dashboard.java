@@ -7,7 +7,7 @@ import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.theme.SystemTheme;
 import nl.enadeag.carchargeplanner.engine.Outlook;
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import java.time.InstantSource;
 import java.util.List;
@@ -36,7 +36,7 @@ public final class Dashboard {
     private DashboardView view;
     /** The latest outlook; null until the engine gives one. */
     private Outlook outlook;
-    private List<AwayPeriod> awayPeriods = List.of();
+    private List<OneOffAwayPeriod> awayPeriods = List.of();
 
     /**
      * Makes the dashboard, hidden, showing that the forecast is being fetched until {@link #show(Outlook, List)} is
@@ -97,7 +97,7 @@ public final class Dashboard {
      * @param awayPeriods the away periods the owner entered for specific days, as the engine stores them, in order of
      *     their start; may be empty, and those that ended before the plan was made are not listed
      */
-    public void show(Outlook outlook, List<AwayPeriod> awayPeriods) {
+    public void show(Outlook outlook, List<OneOffAwayPeriod> awayPeriods) {
         var periods = List.copyOf(awayPeriods);
         Platform.runLater(() -> {
             this.outlook = outlook;

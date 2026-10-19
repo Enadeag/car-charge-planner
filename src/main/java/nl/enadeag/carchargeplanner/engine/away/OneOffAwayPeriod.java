@@ -11,14 +11,14 @@ import java.time.ZoneId;
  * @param start the first moment the car is away
  * @param end the moment the car is back, after the start
  */
-public record AwayPeriod(Instant start, Instant end) {
+public record OneOffAwayPeriod(Instant start, Instant end) {
 
     /**
      * Checks that the period has some length.
      *
      * @throws IllegalArgumentException when the end is not after the start
      */
-    public AwayPeriod {
+    public OneOffAwayPeriod {
         if (!start.isBefore(end)) {
             throw new IllegalArgumentException("an away period must end after it starts");
         }
@@ -31,8 +31,9 @@ public record AwayPeriod(Instant start, Instant end) {
      * @param zone the home's time zone, which decides when the day starts and ends
      * @return the period of that day
      */
-    public static AwayPeriod allDay(LocalDate date, ZoneId zone) {
-        return new AwayPeriod(date.atStartOfDay(zone).toInstant(), date.plusDays(1).atStartOfDay(zone).toInstant());
+    public static OneOffAwayPeriod allDay(LocalDate date, ZoneId zone) {
+        return new OneOffAwayPeriod(date.atStartOfDay(zone).toInstant(),
+                date.plusDays(1).atStartOfDay(zone).toInstant());
     }
 
     /**
@@ -45,10 +46,11 @@ public record AwayPeriod(Instant start, Instant end) {
      * @return the period from the start to the end on that day
      * @throws IllegalArgumentException when the end is not after the start
      */
-    public static AwayPeriod on(LocalDate date, LocalTime start, LocalTime end, ZoneId zone) {
+    public static OneOffAwayPeriod on(LocalDate date, LocalTime start, LocalTime end, ZoneId zone) {
         if (!start.isBefore(end)) {
             throw new IllegalArgumentException("the end time must be after the start time");
         }
-        return new AwayPeriod(date.atTime(start).atZone(zone).toInstant(), date.atTime(end).atZone(zone).toInstant());
+        return new OneOffAwayPeriod(date.atTime(start).atZone(zone).toInstant(),
+                date.atTime(end).atZone(zone).toInstant());
     }
 }

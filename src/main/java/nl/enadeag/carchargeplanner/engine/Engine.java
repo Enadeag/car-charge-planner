@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.engine;
 
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryReading;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
@@ -77,12 +77,12 @@ public final class Engine {
      * @param clock the time plans are made at, and that decides which away periods are old
      * @param announcer tells the owner about the plan's windows shortly before they start, and keeps the ones it told
      *     about as they were told
-     * @param planner the engine's own thread, where it plans once {@linkplain #start(Consumer) started}; {@link
+     * @param executor the engine's own thread, where it plans once {@linkplain #start(Consumer) started}; {@link
      *     #stop()} shuts it down. Nothing runs on it before the start; never null.
      */
     public Engine(ConfigFile configFile, ForecastService forecasts, Providers providers, ApiKeys apiKeys,
             AwayFile awayFile, BatteryFile batteryFile, Clock clock, Announcer announcer,
-            ScheduledExecutorService planner) {
+            ScheduledExecutorService executor) {
         this.configFile = configFile;
         this.forecasts = forecasts;
         this.providers = providers;
@@ -91,7 +91,7 @@ public final class Engine {
         this.batteryFile = batteryFile;
         this.clock = clock;
         this.announcer = announcer;
-        this.schedule = new PlanSchedule(planner);
+        this.schedule = new PlanSchedule(executor);
     }
 
     /**
@@ -124,13 +124,13 @@ public final class Engine {
      * Makes a plan from the config file and a forecast; nobody is told about a window, which only the rounds of
      * {@link #start(Consumer)} do. Blocks while the forecast is fetched.
      *
-     * @return the plan, or why there is none: the config file is not usable, or no forecast is
+     * @return the plan, or why there is none: not set up, a config file that cannot be used, or no forecast
      */
     public Outlook outlook() {
         try {
             return outlook(readConfig());
         } catch (ConfigProblem e) {
-            return new Outlook.NotSetUp(e.kind(), e.file(), e.detail());
+            return withoutConfig(e);
         }
     }
 
@@ -144,13 +144,19 @@ public final class Engine {
         try {
             config = readConfig();
         } catch (ConfigProblem e) {
-            return new Outlook.NotSetUp(e.kind(), e.file(), e.detail());
+            return withoutConfig(e);
         }
         var outlook = outlook(config);
         if (outlook instanceof Outlook.Planned planned) {
             announce(planned, config);
         }
         return outlook;
+    }
+
+    /** Why there is no plan when the config file cannot be read: not set up yet, or a file that cannot be used. */
+    private static Outlook withoutConfig(ConfigProblem problem) {
+        return problem.kind() == ConfigProblem.Kind.MISSING ? new Outlook.NotSetUp(problem.file())
+                : new Outlook.ConfigUnusable(problem.kind(), problem.file(), problem.detail());
     }
 
     /** The config file's config; whether it could be used is noted, and logged when that changed. */
@@ -193,7 +199,8 @@ public final class Engine {
      * @param config the whole config to plan with, as the owner entered it
      * @param keys every provider's secret settings as the owner entered them, in place of the stored ones; may be
      *     none
-     * @return the plan, or why there is none: no forecast; never {@link Outlook.NotSetUp}
+     * @return the plan, or why there is none: no forecast; never {@link Outlook.NotSetUp} or
+     *     {@link Outlook.ConfigUnusable}
      */
     public Outlook preview(EngineConfig config, Secrets keys) {
         var now = clock.instant();
@@ -208,7 +215,7 @@ public final class Engine {
     /** The plan for a config and a forecast, from the stored away periods and battery level. */
     private Outlook.Planned planned(EngineConfig config, ForecastResult forecast, Instant now) {
         var system = config.system();
-        var away = new AwayTimes(config.away().recurring(), awayFile.periods());
+        var away = new AwayTimes(config.away().weekly(), awayFile.periods());
         var entered = batteryFile.reading();
         var battery = entered.map(BatteryReading::level).orElse(ASSUMED_BATTERY_PCT);
         var days = new Planner(system, config.planning(), away)
@@ -269,7 +276,7 @@ public final class Engine {
      *
      * @return the stored periods in order of their start, including any that ended in the last day
      */
-    public List<AwayPeriod> awayPeriods() {
+    public List<OneOffAwayPeriod> awayPeriods() {
         return awayFile.periods();
     }
 
@@ -282,7 +289,7 @@ public final class Engine {
      * @throws IOException when the periods could not be saved, or the stored ones could not be read whole and are
      *     left as they are; the stored ones are then unchanged
      */
-    public List<AwayPeriod> addAwayPeriod(AwayPeriod period) throws IOException {
+    public List<OneOffAwayPeriod> addAwayPeriod(OneOffAwayPeriod period) throws IOException {
         try {
             return awayFile.add(period, clock.instant());
         } finally {
@@ -299,7 +306,7 @@ public final class Engine {
      * @throws IOException when the periods could not be saved, or the stored ones could not be read whole and are
      *     left as they are; the stored ones are then unchanged
      */
-    public List<AwayPeriod> removeAwayPeriod(AwayPeriod period) throws IOException {
+    public List<OneOffAwayPeriod> removeAwayPeriod(OneOffAwayPeriod period) throws IOException {
         try {
             return awayFile.remove(period);
         } finally {
@@ -410,7 +417,7 @@ public final class Engine {
 
     /**
      * Applies the owner's changes to the stored secret settings: every key they did not enter or empty stays, also one
-     * that could not be read, such as from a locked keyring. Otherwise as {@link #saveApiKeys(Secrets)}, which this
+     * that could not be read, such as from a locked keychain. Otherwise as {@link #saveApiKeys(Secrets)}, which this
      * waits for the owner as.
      *
      * @param changes what the owner entered and emptied

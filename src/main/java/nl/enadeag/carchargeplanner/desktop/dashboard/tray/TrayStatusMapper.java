@@ -7,7 +7,6 @@ import nl.enadeag.carchargeplanner.desktop.system.TrayStatus;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.Outlook;
-import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import java.time.LocalDate;
 
@@ -45,10 +44,10 @@ final class TrayStatusMapper {
      */
     TrayStatus map(Outlook outlook) {
         return switch (outlook) {
-            case Outlook.NotSetUp notSetUp when notSetUp.kind() == ConfigProblem.Kind.MISSING ->
+            case Outlook.NotSetUp _ ->
                     new TrayStatus(StatusDot.ACTION, messages.text(TextKey.TRAY_NOT_SET_UP_FIRST));
-            case Outlook.NotSetUp notSetUp -> new TrayStatus(StatusDot.ACTION,
-                    messages.text(TextKey.TRAY_NOT_SET_UP, OutlookMapper.whatToFix(notSetUp, messages)));
+            case Outlook.ConfigUnusable unusable -> new TrayStatus(StatusDot.ACTION,
+                    messages.text(TextKey.TRAY_NOT_SET_UP, OutlookMapper.whatToFix(unusable, messages)));
             case Outlook.NoForecast none when none.keychainLocked() -> new TrayStatus(StatusDot.ACTION,
                     messages.text(TextKey.TRAY_NO_FORECAST, messages.text(TextKey.NO_FORECAST_KEYRING_LOCKED)));
             case Outlook.NoForecast none ->

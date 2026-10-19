@@ -17,7 +17,7 @@ All of it is in the package `engine.forecast` ([`src/main/java/nl/enadeag/carcha
 | --- | --- |
 | `ForecastProvider` | The interface: `info()`, `fetch(system, settings, now)`, and optionally `placeSearch()`. |
 | `ProviderInfo` | What a provider tells about itself: a `ProviderId` (lower-case letters, digits and hyphens, used in the config and in cache file names), the name, a description, an `https` terms link, the credit its terms ask for, in plain words what is sent, the shortest time between two requests (`minRefresh`), how far ahead it forecasts (`horizon`), how long a forecast stays worth keeping when it cannot be refreshed (`maxUsefulAge`), and its settings. |
-| `SettingSpec` | One setting, such as a server address or an API key: a key, a label, a hint, whether it is optional, whether it is secret, and its `SettingFormat`: any text, a `SERVER_ADDRESS` a key may be sent to (`ServerAddress`: https, or plain http only to localhost, 127.0.0.1 or [::1]; no user name, query or fragment), or `LETTERS_AND_DIGITS`. Settings and set-up refuse a value of the wrong format when it is saved; check it again before you send, as a config file can be edited by hand. Any value a provider puts into an address's path or query or into a header must carry a format (`TEXT` refuses line breaks and other control characters; take a narrower one where the service allows) and is checked again before sending, as `ExampleSolar.apiKey` below does; a value in a query is encoded besides. |
+| `SettingSpec` | One setting, such as a server address or an API key: a name, a label, a hint, whether it is optional, whether it is secret, and its `SettingFormat`: any text, a `SERVER_ADDRESS` a key may be sent to (`ServerAddress`: https, or plain http only to localhost, 127.0.0.1 or [::1]; no user name, query or fragment), or `LETTERS_AND_DIGITS`. Settings and set-up refuse a value of the wrong format when it is saved; check it again before you send, as a config file can be edited by hand. Any value a provider puts into an address's path or query or into a header must carry a format (`TEXT` refuses line breaks and other control characters; take a narrower one where the service allows) and is checked again before sending, as `ExampleSolar.apiKey` below does; a value in a query is encoded besides. |
 | `SolarSite` | What a provider is told: the coordinates, the time zone, and the panel arrays (`PanelArray`: size in kWp, tilt, azimuth with 0 south, -90 east and 90 west, and the system losses as a share, 0.14 for 14 %). |
 | `ForecastStep` | What it returns, a list of them: `start` (inclusive), `end` (exclusive), both `Instant`s, and `powerKw`, the expected AC power of the whole system over the step. |
 | `HttpGet` | The only way a provider reaches the network (below). |
@@ -47,7 +47,7 @@ so in the description.
 | `Unavailable` | no network, a timeout, a 5xx | tries again in five minutes |
 | `RateLimited(message, retryAfter)` | the service refuses more requests; `retryAfter` is a `Duration` if it says when, else `null` | leaves the provider alone until then, or for its `minRefresh` |
 | `BadResponse` | an answer that is not what the service documents, a refused key (401, 403), a bad request, steps that break the contract | waits the `minRefresh` |
-| `NotConfigured` | a setting is missing or unusable (checked before anything is sent) | reports it |
+| `MissingSetting` | a setting is missing or unusable (checked before anything is sent) | reports it |
 
 A `RuntimeException` is treated as a bug: the app carries on without that provider and logs only the kind of error.
 Error messages are shown to the user: **never put the URL (it may hold a key) or a setting's value in one.** Text
@@ -147,13 +147,13 @@ public final class ExampleSolar implements ForecastProvider {
      * The key, checked again although Settings checked it when it was saved: the config file and the keychain can be
      * changed by hand, and the key goes into a header.
      */
-    private static String apiKey(Map<String, String> settings) throws ProviderError.NotConfigured {
+    private static String apiKey(Map<String, String> settings) throws ProviderError.MissingSetting {
         var key = settings.getOrDefault("api_key", "").strip();
         if (key.isEmpty()) {
-            throw new ProviderError.NotConfigured("Example Solar needs an API key");
+            throw new ProviderError.MissingSetting("Example Solar needs an API key");
         }
         if (!SettingFormat.LETTERS_AND_DIGITS.accepts(key)) {
-            throw new ProviderError.NotConfigured("the API key may hold only letters and digits");
+            throw new ProviderError.MissingSetting("the API key may hold only letters and digits");
         }
         return key;
     }
@@ -314,8 +314,8 @@ What it checks:
 | Server error, no network | A 5xx and a failed connection (refused, timeout, reset, an answer too large) throw `Unavailable`. |
 | Limits | Every request reads at most `HttpGet.DEFAULT_MAX_BODY` and waits at most `HttpGet.DEFAULT_TIMEOUT`. |
 | Not as documented | A 200 with the wrong content throws `BadResponse`; an empty answer throws a `ProviderError` or gives valid steps, and never anything else. |
-| Required settings | A missing required setting throws `NotConfigured` before anything is sent. |
-| Setting formats | Every setting, holding a value with a line break that its format refuses: `NotConfigured` before anything is sent, or the value never reaches a request's address or headers unencoded. |
+| Required settings | A missing required setting throws `MissingSetting` before anything is sent. |
+| Setting formats | Every setting, holding a value with a line break that its format refuses: `MissingSetting` before anything is sent, or the value never reaches a request's address or headers unencoded. |
 | Secrets | A secret setting never appears in a log line or an error message, not even when the server echoes it; nor does another provider's stored key. |
 | The server's words | An error text from the server is shown as "<provider> says: ...", without the key (also where it is cut short), control or direction characters, and at most 200 characters. |
 

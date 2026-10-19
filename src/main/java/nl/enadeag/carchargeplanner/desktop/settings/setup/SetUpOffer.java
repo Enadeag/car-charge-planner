@@ -2,7 +2,6 @@ package nl.enadeag.carchargeplanner.desktop.settings.setup;
 
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.engine.Outlook;
-import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -42,7 +41,7 @@ public final class SetUpOffer {
      * @param outlook the engine's latest plan, or why there is none; never null
      */
     public void show(Outlook outlook) {
-        missing = outlook instanceof Outlook.NotSetUp none && none.kind() == ConfigProblem.Kind.MISSING;
+        missing = outlook instanceof Outlook.NotSetUp;
         if (missing && openFirst && opened.compareAndSet(false, true)) {
             setUp.run();
         }

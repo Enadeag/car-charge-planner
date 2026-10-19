@@ -3,7 +3,7 @@ package nl.enadeag.carchargeplanner.engine.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import nl.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
@@ -136,8 +136,8 @@ class ConfigFileTest {
 
     @Test
     void theAwaySectionGivesTheWeeklyAwayPeriods() throws ConfigProblem {
-        assertThat(new ConfigFile(EXAMPLE).read().away().recurring())
-                .containsExactly(new RecurringAwayPeriod(DayOfWeek.THURSDAY, LocalTime.of(6, 0), LocalTime.of(19, 0)));
+        assertThat(new ConfigFile(EXAMPLE).read().away().weekly())
+                .containsExactly(new WeeklyAwayPeriod(DayOfWeek.THURSDAY, LocalTime.of(6, 0), LocalTime.of(19, 0)));
     }
 
     @Test
@@ -148,17 +148,17 @@ class ConfigFileTest {
                         + "{\"weekday\": \"Thursday\", \"start\": \"06:00\", \"end\": \"19:00\"},"
                         + "{\"weekday\": \"SUNDAY\", \"start\": \"00:00\", \"end\": \"12:15\"}"));
 
-        assertThat(new ConfigFile(file).read().away().recurring()).containsExactly(
-                new RecurringAwayPeriod(DayOfWeek.MONDAY, LocalTime.of(7, 30), LocalTime.of(17, 45)),
-                new RecurringAwayPeriod(DayOfWeek.THURSDAY, LocalTime.of(6, 0), LocalTime.of(19, 0)),
-                new RecurringAwayPeriod(DayOfWeek.SUNDAY, LocalTime.of(0, 0), LocalTime.of(12, 15)));
+        assertThat(new ConfigFile(file).read().away().weekly()).containsExactly(
+                new WeeklyAwayPeriod(DayOfWeek.MONDAY, LocalTime.of(7, 30), LocalTime.of(17, 45)),
+                new WeeklyAwayPeriod(DayOfWeek.THURSDAY, LocalTime.of(6, 0), LocalTime.of(19, 0)),
+                new WeeklyAwayPeriod(DayOfWeek.SUNDAY, LocalTime.of(0, 0), LocalTime.of(12, 15)));
     }
 
     @Test
     void anEmptyListMeansNoWeeklyAwayPeriods() throws IOException, ConfigProblem {
         var example = Files.readString(EXAMPLE);
         var file = write(example.substring(0, example.indexOf("\"recurring\"")) + "\"recurring\": []}}");
-        assertThat(new ConfigFile(file).read().away()).isEqualTo(AwaySchedule.NONE);
+        assertThat(new ConfigFile(file).read().away()).isEqualTo(WeeklyAwaySchedule.NONE);
     }
 
     /** A config file from before away periods existed must keep working. */
@@ -166,7 +166,7 @@ class ConfigFileTest {
     void aFileWithoutTheAwaySectionHasNoWeeklyAwayPeriods() throws IOException, ConfigProblem {
         var example = Files.readString(EXAMPLE);
         var file = write(example.substring(0, example.indexOf(",\n  \"away\"")) + "\n}");
-        assertThat(new ConfigFile(file).read().away()).isEqualTo(AwaySchedule.NONE);
+        assertThat(new ConfigFile(file).read().away()).isEqualTo(WeeklyAwaySchedule.NONE);
     }
 
     @Test
@@ -237,7 +237,7 @@ class ConfigFileTest {
         var fewer = new EngineConfig(example.system(),
                 new PlanningPreferences(new Percent(20), new Percent(90), 0.7, 0.1,
                         Duration.ofMinutes(30), Duration.ofMinutes(0)),
-                new ForecastSelection(new ProviderId("forecast-solar"), Optional.empty(), Map.of()), AwaySchedule.NONE,
+                new ForecastSelection(new ProviderId("forecast-solar"), Optional.empty(), Map.of()), WeeklyAwaySchedule.NONE,
                 TypicalValues.NONE);
 
         file.write(fewer);

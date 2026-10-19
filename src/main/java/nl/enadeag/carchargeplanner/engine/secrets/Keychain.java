@@ -38,9 +38,9 @@ public interface Keychain extends AutoCloseable {
 
     /**
      * Asks the owner to unlock the keychain with the system's own prompt, and waits for their answer. Only a keychain
-     * that can be locked, such as a desktop keyring, can do this; the others refuse. Blocks for as long as the prompt
-     * shows, up to {@code wait}: call it away from the user interface's thread, and never while holding a lock that
-     * reading the keychain needs.
+     * that can be locked, such as a desktop's keychain, can do this; the others refuse. Blocks for as long as the
+     * prompt shows, up to {@code wait}: call it away from the user interface's thread, and never while holding a lock
+     * that reading the keychain needs.
      *
      * @param wait how long to wait for the owner's answer, more than zero; then the prompt is dismissed
      * @param prompting runs once the prompt shows, before the wait, so the app can tell the owner; not when the
@@ -55,8 +55,8 @@ public interface Keychain extends AutoCloseable {
     }
 
     /**
-     * Stops waiting for the owner's answer to {@link #unlock(Duration, Runnable)}, which then ends as not answered and dismisses
-     * its prompt; nothing happens when it is not waiting. Never blocks for long and never throws.
+     * Stops waiting for the owner's answer to {@link #unlock(Duration, Runnable)}, which then ends as not answered and
+     * dismisses its prompt; nothing happens when it is not waiting. Never blocks for long and never throws.
      */
     default void stopUnlocking() {
         // nothing waits for an answer

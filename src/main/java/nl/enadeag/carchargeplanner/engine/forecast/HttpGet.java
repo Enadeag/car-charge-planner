@@ -16,7 +16,7 @@ public interface HttpGet {
     /** How long a provider waits for the whole answer, body included, unless it asks otherwise. */
     Duration DEFAULT_TIMEOUT = Duration.ofSeconds(15);
 
-    /** The largest forecast answer read; a week of hourly values for one plane is some tens of kilobytes. */
+    /** The largest forecast answer read; a week of hourly values for one panel array is some tens of kilobytes. */
     ByteSize DEFAULT_MAX_BODY = ByteSize.ofMegabytes(2);
 
     /**

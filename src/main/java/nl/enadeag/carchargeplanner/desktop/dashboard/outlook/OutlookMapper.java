@@ -6,8 +6,7 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayMapper;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.Outlook;
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
-import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
@@ -58,34 +57,34 @@ public final class OutlookMapper {
      * @return a plan with its days, or a message when there is no plan or it has no days; only a plan has a footer,
      *     because only a plan has a forecast to credit
      */
-    public DashboardModel map(Outlook outlook, List<AwayPeriod> away) {
+    public DashboardModel map(Outlook outlook, List<OneOffAwayPeriod> away) {
         return switch (outlook) {
             case Outlook.Planned planned when planned.days().isEmpty() -> new DashboardModel.Message(
                     messages.text(TextKey.NO_FORECAST), messages.text(TextKey.NO_FORECAST_NO_DAYS), footer(planned));
             case Outlook.Planned planned -> plan(planned, away);
             case Outlook.NoForecast none -> new DashboardModel.Message(messages.text(TextKey.NO_FORECAST),
                     noForecast(none, messages), "");
-            case Outlook.NotSetUp notSetUp when notSetUp.kind() == ConfigProblem.Kind.MISSING ->
+            case Outlook.NotSetUp _ ->
                     new DashboardModel.Message(messages.text(TextKey.NOT_SET_UP), messages.text(TextKey.NOT_SET_UP_FIRST),
                             "", true);
-            case Outlook.NotSetUp notSetUp ->
-                    new DashboardModel.Message(messages.text(TextKey.NOT_SET_UP), whatToFix(notSetUp, messages), "");
+            case Outlook.ConfigUnusable unusable ->
+                    new DashboardModel.Message(messages.text(TextKey.NOT_SET_UP), whatToFix(unusable, messages), "");
         };
     }
 
     /**
      * What is wrong with the config file, in the owner's language; the engine's details stay in English.
      *
-     * @param notSetUp the engine's outlook without a usable config file
+     * @param unusable the engine's outlook with a config file that cannot be used
      * @param messages the texts, in the owner's language
-     * @return such as "There is no config file at /home/me/.config/car-charge-planner/engine.json."
+     * @return such as "Could not read /home/me/.config/car-charge-planner/engine.json: Permission denied."
      */
-    public static String whatToFix(Outlook.NotSetUp notSetUp, Messages messages) {
-        return switch (notSetUp.kind()) {
-            case MISSING -> messages.text(TextKey.NOT_SET_UP_MISSING, notSetUp.file().toString());
-            case UNREADABLE -> messages.text(TextKey.NOT_SET_UP_UNREADABLE, notSetUp.file().toString(), notSetUp.detail());
-            case INVALID -> messages.text(TextKey.NOT_SET_UP_INVALID, String.valueOf(notSetUp.file().getFileName()),
-                    notSetUp.detail());
+    public static String whatToFix(Outlook.ConfigUnusable unusable, Messages messages) {
+        return switch (unusable.kind()) {
+            case MISSING -> messages.text(TextKey.NOT_SET_UP_MISSING, unusable.file().toString());
+            case UNREADABLE -> messages.text(TextKey.NOT_SET_UP_UNREADABLE, unusable.file().toString(), unusable.detail());
+            case INVALID -> messages.text(TextKey.NOT_SET_UP_INVALID, String.valueOf(unusable.file().getFileName()),
+                    unusable.detail());
         };
     }
 
@@ -102,7 +101,7 @@ public final class OutlookMapper {
                 : messages.text(TextKey.NO_FORECAST_DETAIL, none.reason());
     }
 
-    private DashboardModel.Plan plan(Outlook.Planned planned, List<AwayPeriod> away) {
+    private DashboardModel.Plan plan(Outlook.Planned planned, List<OneOffAwayPeriod> away) {
         var days = new DayMapper(planned, messages).map(planned.days());
         var advice = planned.gridAdvice().map(new GridAdviceMapper(planned, messages)::map);
         var coming = new AwayMapper(planned.zone(), planned.madeAt(), messages).map(away);

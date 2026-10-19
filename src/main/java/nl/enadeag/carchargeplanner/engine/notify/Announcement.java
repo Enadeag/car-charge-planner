@@ -8,7 +8,7 @@ import java.time.ZoneId;
 /**
  * A charge window the owner is told about shortly before it starts.
  *
- * @param kind whether it is a window on the sun or the grid charge of the grid advice
+ * @param kind whether it is a solar window or the grid charge of the grid advice
  * @param window the window, with the current to set and the energy it brings
  * @param zone the time zone of the owner's home, in which the window's times are meant
  * @param phases the phases the charger charges on

@@ -39,13 +39,13 @@ public record ProviderEntry(ProviderInfo info, Map<String, String> plain, Map<St
         var entered = info.settingsFrom(plain, secret);
         var missing = info.missingRequired(entered);
         for (var setting : info.settings()) {
-            if (missing.contains(setting.label()) && !locked.contains(setting.key())) {
-                problems.put(setting.key(), messages.text(TextKey.PROBLEM_REQUIRED));
+            if (missing.contains(setting.label()) && !locked.contains(setting.name())) {
+                problems.put(setting.name(), messages.text(TextKey.PROBLEM_REQUIRED));
             }
         }
         for (var setting : info.settings()) {
-            if (!setting.format().accepts(entered.getOrDefault(setting.key(), ""))) {
-                problems.put(setting.key(), messages.text(problem(setting.format())));
+            if (!setting.format().accepts(entered.getOrDefault(setting.name(), ""))) {
+                problems.put(setting.name(), messages.text(problem(setting.format())));
             }
         }
         return problems;

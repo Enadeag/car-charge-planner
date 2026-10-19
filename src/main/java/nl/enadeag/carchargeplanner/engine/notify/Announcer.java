@@ -110,11 +110,11 @@ public final class Announcer {
                 && Duration.between(source.fetchedAt(), now).compareTo(MAX_FORECAST_AGE) <= 0;
     }
 
-    /** The plan's windows on the sun, as announcements. */
+    /** The plan's solar windows, as announcements. */
     private static List<Announcement> candidates(List<DayPlan> days, EngineConfig config) {
         var found = new ArrayList<Announcement>();
         days.forEach(day -> day.windows().forEach(window ->
-                found.add(announcement(AnnouncementKind.CHARGE_WINDOW, window, config))));
+                found.add(announcement(AnnouncementKind.SOLAR_WINDOW, window, config))));
         return found;
     }
 

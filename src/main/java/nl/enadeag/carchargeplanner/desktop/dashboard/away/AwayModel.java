@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.away;
 
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -43,6 +43,6 @@ public record AwayModel(ZoneId zone, Instant now, List<Entry> coming) {
      * @param text the period, such as "Tomorrow, all day" or "Sat 17 Oct, 10:00 – 16:30"
      * @param removeSpoken what a screen reader calls its remove button, such as "Remove Tomorrow, all day"
      */
-    public record Entry(AwayPeriod period, String text, String removeSpoken) {
+    public record Entry(OneOffAwayPeriod period, String text, String removeSpoken) {
     }
 }

@@ -46,8 +46,8 @@ public abstract class ProviderConformance {
         assertThat(info.minRefresh()).isPositive();
         assertThat(info.horizon()).isPositive();
         assertThat(info.maxUsefulAge()).as("useful for at least the refresh interval").isGreaterThanOrEqualTo(info.minRefresh());
-        assertThat(info.settings()).extracting(SettingSpec::key).doesNotHaveDuplicates();
-        assertThat(info.settings()).allMatch(s -> !s.key().isBlank() && !s.label().isBlank() && !s.hint().isBlank());
+        assertThat(info.settings()).extracting(SettingSpec::name).doesNotHaveDuplicates();
+        assertThat(info.settings()).allMatch(s -> !s.name().isBlank() && !s.label().isBlank() && !s.hint().isBlank());
     }
 
     @Test
@@ -215,13 +215,13 @@ public abstract class ProviderConformance {
     void missingRequiredSettingsAreReportedBeforeAnythingIsSent() {
         var c = providerCase();
         var made = c.provider(c.ok());
-        var required = made.provider().info().settings().stream().filter(s -> !s.optional()).map(SettingSpec::key).toList();
+        var required = made.provider().info().settings().stream().filter(s -> !s.optional()).map(SettingSpec::name).toList();
         assumeFalse(required.isEmpty(), "this provider has no required settings");
         for (var key : required) {
             var settings = new HashMap<>(c.allSettings());
             settings.remove(key);
             assertThatThrownBy(() -> made.provider().fetch(ProviderCase.EXAMPLE_SYSTEM, settings, c.now()))
-                    .isInstanceOf(ProviderError.NotConfigured.class);
+                    .isInstanceOf(ProviderError.MissingSetting.class);
         }
         assertThat(made.http().requests).isEmpty();
     }
@@ -235,17 +235,17 @@ public abstract class ProviderConformance {
         var c = providerCase();
         var wrong = "ftp://x y/?a=1&b=2#\r\nX-Injected: 1";
         for (var spec : c.provider(c.ok()).provider().info().settings()) {
-            assertThat(spec.format().accepts(wrong)).as("%s refuses the value", spec.key()).isFalse();
+            assertThat(spec.format().accepts(wrong)).as("%s refuses the value", spec.name()).isFalse();
             var made = c.provider(c.ok());
             var settings = new HashMap<>(c.allSettings());
-            settings.put(spec.key(), wrong);
+            settings.put(spec.name(), wrong);
             var thrown = catchThrowable(() -> made.provider().fetch(ProviderCase.EXAMPLE_SYSTEM, settings, c.now()));
-            if (thrown instanceof ProviderError.NotConfigured) {
-                assertThat(made.http().requests).as("%s: nothing sent", spec.key()).isEmpty();
+            if (thrown instanceof ProviderError.MissingSetting) {
+                assertThat(made.http().requests).as("%s: nothing sent", spec.name()).isEmpty();
             }
             assertThat(made.http().requests).allSatisfy(request -> {
-                assertThat(request.uri().toString()).as("%s: address", spec.key()).doesNotContainPattern("[\\r\\n]");
-                assertThat(request.headers().values()).as("%s: headers", spec.key())
+                assertThat(request.uri().toString()).as("%s: address", spec.name()).doesNotContainPattern("[\\r\\n]");
+                assertThat(request.headers().values()).as("%s: headers", spec.name())
                         .noneMatch(value -> value.contains("\r") || value.contains("\n"));
             });
         }

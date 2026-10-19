@@ -7,7 +7,7 @@ import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.engine.Engine;
 import nl.enadeag.carchargeplanner.engine.ManualScheduler;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryReading;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
@@ -35,7 +35,7 @@ import org.junit.jupiter.api.io.TempDir;
 class DashboardChangesTest {
 
     private static final Instant NOW = Instant.parse("2026-07-03T06:00:00Z");
-    private static final AwayPeriod AWAY = new AwayPeriod(NOW.plus(Duration.ofHours(2)), NOW.plus(Duration.ofHours(12)));
+    private static final OneOffAwayPeriod AWAY = new OneOffAwayPeriod(NOW.plus(Duration.ofHours(2)), NOW.plus(Duration.ofHours(12)));
 
     @TempDir
     Path folder;

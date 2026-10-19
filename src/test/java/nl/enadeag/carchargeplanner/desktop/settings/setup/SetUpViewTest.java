@@ -10,7 +10,7 @@ import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.settings.SettingsFixture;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.Car;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
@@ -111,8 +111,8 @@ class SetUpViewTest {
         assertThat(config.typical().system()).contains(ConfigSetting.CAR_CONSUMPTION, ConfigSetting.HOUSE_BASELOAD,
                 ConfigSetting.CHARGER_MAX_CURRENT).doesNotContain(ConfigSetting.CAR_BATTERY);
         assertThat(config.typical().ofPanel(0)).contains(ConfigSetting.PANEL_TILT).doesNotContain(ConfigSetting.PANEL_SIZE);
-        assertThat(config.away().recurring()).containsExactly(
-                new RecurringAwayPeriod(DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(17, 0)));
+        assertThat(config.away().weekly()).containsExactly(
+                new WeeklyAwayPeriod(DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(17, 0)));
         assertThat(setUp.appSettings.read().units()).isEqualTo(Units.IMPERIAL);
     }
 
@@ -333,7 +333,7 @@ class SetUpViewTest {
         var config = stored();
         assertThat(config.system().house().baseloadKw()).isEqualTo(0.35);
         assertThat(config.typical().system()).doesNotContain(ConfigSetting.HOUSE_BASELOAD);
-        assertThat(config.away().recurring()).isEmpty();
+        assertThat(config.away().weekly()).isEmpty();
         assertThat(config.typical().panels()).containsExactly(TypicalValues.PANEL_SETTINGS);
     }
 

@@ -56,7 +56,7 @@ class ConnectionCheckTest {
                         "Main says there were too many requests. Try again later."),
                 Arguments.of(new ProviderError.Unavailable("could not reach Main (ConnectException)"),
                         "Could not get a forecast from Main: could not reach Main (ConnectException)"),
-                Arguments.of(new ProviderError.NotConfigured("the server address must start with https://"),
+                Arguments.of(new ProviderError.MissingSetting("the server address must start with https://"),
                         "Main is not set up completely: the server address must start with https://"),
                 Arguments.of(new ProviderError.BadResponse("odd"), "Main gave an answer the app does not understand: odd"));
     }

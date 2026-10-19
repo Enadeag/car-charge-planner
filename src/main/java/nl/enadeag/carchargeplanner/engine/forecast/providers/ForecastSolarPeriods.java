@@ -113,7 +113,7 @@ final class ForecastSolarPeriods {
     }
 
     /**
-     * When it may be asked again after a rate limit: the header, else the body.
+     * When it may be asked again after it said it was asked too often: the header, else the body.
      *
      * @param reply the refusal
      * @param now the moment of the refusal

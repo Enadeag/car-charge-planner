@@ -5,7 +5,7 @@ import java.util.Optional;
 
 /**
  * A provider could not give a forecast. The kind says why, so the forecast service can react: try again soon, wait out
- * a rate limit, or wait the full refresh interval. A message never holds a secret setting such as an API key.
+ * a cool-down, or wait the full refresh interval. A message never holds a secret setting such as an API key.
  */
 public abstract sealed class ProviderError extends Exception {
 
@@ -63,13 +63,13 @@ public abstract sealed class ProviderError extends Exception {
     }
 
     /** A setting is missing or wrong; nothing was sent. */
-    public static final class NotConfigured extends ProviderError {
+    public static final class MissingSetting extends ProviderError {
         /**
          * Makes the error.
          *
          * @param message why, in words for the owner; never a secret setting
          */
-        public NotConfigured(String message) {
+        public MissingSetting(String message) {
             super(message);
         }
     }

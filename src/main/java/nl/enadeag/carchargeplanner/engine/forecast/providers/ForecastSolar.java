@@ -21,9 +21,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Forecast.Solar (https://forecast.solar); the free public plan needs no key. The public plan forecasts one plane per
- * request, and a paid plan's limit on planes cannot be seen from the key, so each panel array is asked for separately
- * and the answers are added up; a rate limit on any request is one for the whole forecast.
+ * Forecast.Solar (https://forecast.solar); the free public plan needs no key. The public plan forecasts one panel array
+ * per request, and a paid plan's limit on arrays cannot be seen from the key, so each panel array is asked for
+ * separately and the answers are added up; a cool-down after any request is one for the whole forecast.
  */
 public final class ForecastSolar implements ForecastProvider {
 
@@ -72,16 +72,16 @@ public final class ForecastSolar implements ForecastProvider {
      * @param array the panel array to ask for
      * @param settings the provider's settings; a blank "api_key" means the public plan
      * @return the request's address
-     * @throws ProviderError.NotConfigured when the key has other characters than letters and digits: it goes into the
+     * @throws ProviderError.MissingSetting when the key has other characters than letters and digits: it goes into the
      *     path, where a "/" or "?" would change what is asked
      */
     static URI requestUri(SolarSite system, PanelArray array, Map<String, String> settings)
-            throws ProviderError.NotConfigured {
+            throws ProviderError.MissingSetting {
         var parts = new ArrayList<String>();
         parts.add(SERVER);
         var key = settings.getOrDefault("api_key", "").strip();
         if (!SettingFormat.LETTERS_AND_DIGITS.accepts(key)) {
-            throw new ProviderError.NotConfigured("the API key may hold only letters and digits");
+            throw new ProviderError.MissingSetting("the API key may hold only letters and digits");
         }
         if (!key.isEmpty()) {
             parts.add(key);

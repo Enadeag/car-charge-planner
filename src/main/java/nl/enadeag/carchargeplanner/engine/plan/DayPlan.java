@@ -9,10 +9,10 @@ import java.util.List;
  * One day of the plan, assuming the owner follows it.
  *
  * @param date the local date
- * @param socStartPct the battery level at the start of the day
+ * @param startLevelPct the battery level at the start of the day
  * @param windows the charge windows of the day in time order, possibly none
- * @param socAfterChargingPct the battery level once the windows are done
- * @param socEndOfDayPct the battery level at the end of the day; 0 when driving takes more than is left
+ * @param levelAfterChargingPct the battery level once the windows are done
+ * @param endLevelPct the battery level at the end of the day; 0 when driving takes more than is left
  * @param drivingPct the part of the battery driving takes off the day in percent, 0 or more; more than 100 when the
  *     driving needs more than the battery holds
  * @param forecast the forecast steps that start on the day in the home's time zone, in time order; empty when the
@@ -20,10 +20,10 @@ import java.util.List;
  */
 public record DayPlan(
         LocalDate date,
-        Percent socStartPct,
+        Percent startLevelPct,
         List<Window> windows,
-        Percent socAfterChargingPct,
-        Percent socEndOfDayPct,
+        Percent levelAfterChargingPct,
+        Percent endLevelPct,
         double drivingPct,
         List<ForecastStep> forecast) {
 

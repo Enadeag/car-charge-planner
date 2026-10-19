@@ -5,7 +5,6 @@ import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.Outlook;
-import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 
 /**
  * Keeps the tray's menu and tooltip in the language spoken now: it shows each outlook on the tray, and when the owner
@@ -43,7 +42,7 @@ public final class TrayTexts {
      */
     public synchronized void show(Outlook outlook) {
         this.outlook = outlook;
-        var missing = outlook instanceof Outlook.NotSetUp none && none.kind() == ConfigProblem.Kind.MISSING;
+        var missing = outlook instanceof Outlook.NotSetUp;
         if (missing != notSetUp) {
             notSetUp = missing;
             tray.showLabels(labels(language.messages()));

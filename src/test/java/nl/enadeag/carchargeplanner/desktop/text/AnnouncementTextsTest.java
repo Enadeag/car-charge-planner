@@ -29,7 +29,7 @@ class AnnouncementTextsTest {
 
     @Test
     void aChargeWindowSaysWhenWhatToSetAndHowMuchIsSolar() {
-        var text = text(AnnouncementKind.CHARGE_WINDOW, window(10, 15, 7, 1.6, 7.5, 0.1), Phases.ONE);
+        var text = text(AnnouncementKind.SOLAR_WINDOW, window(10, 15, 7, 1.6, 7.5, 0.1), Phases.ONE);
 
         assertThat(text.title()).isEqualTo("Charge window 10:00 – 15:00");
         assertThat(text.body()).isEqualTo("Set the current to 7 A (1.6 kW) in your charger's app. About 7.6 kWh, 99 % solar.");
@@ -37,7 +37,7 @@ class AnnouncementTextsTest {
 
     @Test
     void inDutchTheNotificationSaysTheSameWithADecimalComma() {
-        var announcement = new Announcement(AnnouncementKind.CHARGE_WINDOW, window(10, 15, 7, 1.6, 7.5, 0.1), BRUSSELS,
+        var announcement = new Announcement(AnnouncementKind.SOLAR_WINDOW, window(10, 15, 7, 1.6, 7.5, 0.1), BRUSSELS,
                 Phases.ONE, new Percent(30));
 
         var text = new AnnouncementTexts(new LanguageChoice(Language.DUTCH)).notification(announcement);
@@ -50,7 +50,7 @@ class AnnouncementTextsTest {
     void theNextNotificationSpeaksTheLanguageChosenSince() {
         var language = new LanguageChoice(Language.ENGLISH);
         var texts = new AnnouncementTexts(language);
-        var announcement = new Announcement(AnnouncementKind.CHARGE_WINDOW, window(10, 15, 7, 1.6, 7.5, 0.1), BRUSSELS,
+        var announcement = new Announcement(AnnouncementKind.SOLAR_WINDOW, window(10, 15, 7, 1.6, 7.5, 0.1), BRUSSELS,
                 Phases.ONE, new Percent(30));
         assertThat(texts.notification(announcement).title()).isEqualTo("Charge window 10:00 – 15:00");
 
@@ -61,7 +61,7 @@ class AnnouncementTextsTest {
 
     @Test
     void onThreePhasesTheCurrentIsPerPhase() {
-        var text = text(AnnouncementKind.CHARGE_WINDOW, window(10, 15, 7, 4.8, 20, 0), Phases.THREE);
+        var text = text(AnnouncementKind.SOLAR_WINDOW, window(10, 15, 7, 4.8, 20, 0), Phases.THREE);
 
         assertThat(text.body()).startsWith("Set the current to 7 A per phase (4.8 kW) in your charger's app.");
     }

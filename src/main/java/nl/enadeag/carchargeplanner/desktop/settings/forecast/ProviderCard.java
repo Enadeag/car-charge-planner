@@ -72,8 +72,8 @@ final class ProviderCard {
             if (!setting.optional()) {
                 row.showTag(messages.text(TextKey.PROVIDER_REQUIRED));
             }
-            inputs.put(setting.key(), input);
-            rows.put(setting.key(), row);
+            inputs.put(setting.name(), input);
+            rows.put(setting.name(), row);
             content.add(row);
         }
         test = new Button(messages.text(TextKey.PROVIDER_TEST));
@@ -95,8 +95,8 @@ final class ProviderCard {
      */
     void load(Map<String, String> plain, Map<String, String> secret, boolean keysLocked) {
         for (var setting : info.settings()) {
-            var stored = (setting.secret() ? secret : plain).getOrDefault(setting.key(), "");
-            switch (inputs.get(setting.key())) {
+            var stored = (setting.secret() ? secret : plain).getOrDefault(setting.name(), "");
+            switch (inputs.get(setting.name())) {
                 case SecretInput field when keysLocked && stored.isEmpty() -> field.lock();
                 case SecretInput field -> field.load(stored);
                 case TextInput field -> field.load(stored);
@@ -173,13 +173,13 @@ final class ProviderCard {
         var values = new LinkedHashMap<String, String>();
         for (var setting : info.settings()) {
             if (setting.secret() == secret) {
-                var value = switch (inputs.get(setting.key())) {
+                var value = switch (inputs.get(setting.name())) {
                     case SecretInput field -> field.value();
                     case TextInput field -> field.value();
                     default -> "";
                 };
                 if (!value.isEmpty()) {
-                    values.put(setting.key(), value);
+                    values.put(setting.name(), value);
                 }
             }
         }

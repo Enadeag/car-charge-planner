@@ -9,7 +9,7 @@ import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
 import nl.enadeag.carchargeplanner.desktop.theme.Texts;
-import nl.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import java.time.DayOfWeek;
 import java.util.List;
 import java.util.Optional;
@@ -36,7 +36,7 @@ final class AwayRow extends VBox {
      * @param remove what the row's Remove button does; given this row
      * @param messages the texts and day names, in the owner's language
      */
-    AwayRow(RecurringAwayPeriod period, Consumer<AwayRow> remove, Messages messages) {
+    AwayRow(WeeklyAwayPeriod period, Consumer<AwayRow> remove, Messages messages) {
         this.messages = messages;
         weekday = new ChoiceField<>(List.of(DayOfWeek.values()), new ChoiceNames(messages)::weekday);
         weekday.load(period.weekday());
@@ -79,7 +79,7 @@ final class AwayRow extends VBox {
      *
      * @return the period, or empty when a time is not a time or the end is not after the start
      */
-    Optional<RecurringAwayPeriod> value() {
+    Optional<WeeklyAwayPeriod> value() {
         return switch (new AwayPeriodEntry(weekday.value(), start.text(), end.text()).check(messages)) {
             case AwayPeriodEntry.Checked.Accepted accepted -> {
                 showProblem("");

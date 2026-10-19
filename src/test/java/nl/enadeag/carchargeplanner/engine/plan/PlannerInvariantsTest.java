@@ -3,8 +3,8 @@ package nl.enadeag.carchargeplanner.engine.plan;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
-import nl.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.Car;
 import nl.enadeag.carchargeplanner.engine.config.Charger;
 import nl.enadeag.carchargeplanner.engine.config.Coordinates;
@@ -79,14 +79,14 @@ class PlannerInvariantsTest {
         double minimum = input.preferences().minimumPct().value();
         if (advice.isEmpty()) {
             assertThat(days).as("no advice: every day ends at most a point under the minimum")
-                    .allSatisfy(day -> assertThat(day.socAfterChargingPct().value() - day.drivingPct())
+                    .allSatisfy(day -> assertThat(day.levelAfterChargingPct().value() - day.drivingPct())
                             .isGreaterThanOrEqualTo(minimum - 1 - EPS));
             return;
         }
         var given = advice.get();
         double addedPct = given.energyKwh() * input.system().charger().efficiency()
                 / input.system().car().usableBatteryKwh() * 100;
-        assertThat(given.socEndPct() + addedPct).as("the grid charge brings the day up to the minimum")
+        assertThat(given.endLevelPct() + addedPct).as("the grid charge brings the day up to the minimum")
                 .isCloseTo(minimum, within(EPS));
         given.window().ifPresent(window -> {
             assertThat(window.start()).isAfterOrEqualTo(input.now());
@@ -136,16 +136,16 @@ class PlannerInvariantsTest {
             forecast.add(new ForecastStep(from, from.plus(step), 0));
         }
 
-        var recurring = new ArrayList<RecurringAwayPeriod>();
+        var recurring = new ArrayList<WeeklyAwayPeriod>();
         if (random.nextBoolean()) {
             int fromHour = 5 + random.nextInt(8);
-            recurring.add(new RecurringAwayPeriod(DayOfWeek.of(1 + random.nextInt(7)), LocalTime.of(fromHour, 0),
+            recurring.add(new WeeklyAwayPeriod(DayOfWeek.of(1 + random.nextInt(7)), LocalTime.of(fromHour, 0),
                     LocalTime.of(fromHour + 1 + random.nextInt(8), 30)));
         }
-        var oneOff = new ArrayList<AwayPeriod>();
+        var oneOff = new ArrayList<OneOffAwayPeriod>();
         if (random.nextBoolean()) {
             var awayFrom = from.plus(Duration.ofMinutes(5L * random.nextInt(12 * 24 * days)));
-            oneOff.add(new AwayPeriod(awayFrom, awayFrom.plus(Duration.ofMinutes(5L + 5L * random.nextInt(12 * 12)))));
+            oneOff.add(new OneOffAwayPeriod(awayFrom, awayFrom.plus(Duration.ofMinutes(5L + 5L * random.nextInt(12 * 12)))));
         }
 
         var now = from.plus(Duration.ofMinutes(random.nextInt(24 * 60)));

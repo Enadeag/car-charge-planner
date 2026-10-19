@@ -16,7 +16,7 @@ import tools.jackson.databind.JsonNode;
 
 /**
  * Asking one provider for a forecast, cache first: within the minimum refresh interval the cache answers, without the
- * secret settings being read; while the provider is rate limited, or waiting after a failure, its last forecast is
+ * secret settings being read; while the provider is in a cool-down, or waiting after a failure, its last forecast is
  * used for as long as it is still useful; otherwise the provider is asked.
  */
 final class ProviderAttempt {
@@ -39,13 +39,13 @@ final class ProviderAttempt {
      * Prepares one attempt; nothing is read or asked yet.
      *
      * @param provider the provider to ask
-     * @param cache where its last good forecast and rate limit are kept; written after an answer
+     * @param cache where its last good forecast and cool-down are kept; written after an answer
      * @param retryAt per provider, when it may be asked again after a failure; updated here, so a map that is safe
      *     for several threads when other providers are asked at the same time
      * @param health whether each provider gave a forecast when it was last asked; updated here
-     * @param now the current moment, by which ages, waits and rate limits are measured
+     * @param now the current moment, by which ages, waits and cool-downs are measured
      * @param force the owner asked for a refresh: skip the minimum refresh interval and the wait after a failure,
-     *     never a rate limit
+     *     never a cool-down
      */
     ProviderAttempt(ForecastProvider provider, ForecastCache cache, Map<ProviderId, Instant> retryAt,
             ProviderHealth health, Instant now, boolean force) {
@@ -100,7 +100,7 @@ final class ProviderAttempt {
      * @param settings the provider's settings with values, secret ones included
      * @param key what the forecast depends on, under which an answer is cached
      * @param secrets the secret values to keep out of a reason
-     * @param held what the cache held before the provider was asked; it has no rate limit, or the provider would
+     * @param held what the cache held before the provider was asked; it has no cool-down, or the provider would
      *     not be asked
      * @return the provider's forecast, else as {@link #afterFailure} tells it
      */
@@ -115,7 +115,7 @@ final class ProviderAttempt {
         } catch (ProviderError.RateLimited e) {
             var until = now.plus(e.retryAfter().orElse(info.minRefresh()));
             cache.saveCooldown(info.id(), until);
-            return afterFailure(e.getMessage(), secrets, held.rateLimitedUntil(until));
+            return afterFailure(e.getMessage(), secrets, held.inCooldownUntil(until));
         } catch (ProviderError.Unavailable e) {
             retryAt.put(info.id(), now.plus(RETRY_AFTER_UNAVAILABLE));
             return afterFailure(e.getMessage(), secrets, held);
@@ -137,7 +137,7 @@ final class ProviderAttempt {
      *
      * @param given the reason as the failure gave it, which may hold a secret value
      * @param secrets the secret values to keep out of the reason
-     * @param held what the cache holds now, the rate limit just told included
+     * @param held what the cache holds now, the cool-down just told included
      * @return the last forecast as a stale one, or the failure with its redacted reason
      */
     private ProviderOutcome afterFailure(String given, List<String> secrets, CacheState held) {
@@ -159,20 +159,20 @@ final class ProviderAttempt {
      * attempt.
      *
      * @param usable the last forecast while it is still useful, for when the provider gives none
-     * @param cooldownUntil the end of the provider's rate limit, told along with a cached forecast
+     * @param cooldownUntil the end of the provider's cool-down, told along with a cached forecast
      */
     private record CacheState(Optional<ForecastCache.Cached> usable, Optional<Instant> cooldownUntil) {
 
-        /** Nothing to fall back on and nothing to tell: no useful forecast, no rate limit. */
+        /** Nothing to fall back on and nothing to tell: no useful forecast, no cool-down. */
         static final CacheState NONE = new CacheState(Optional.empty(), Optional.empty());
 
         /**
-         * The same, now that the provider said it is rate limited.
+         * The same, now that the provider said it was asked too often.
          *
-         * @param until the end of the rate limit
-         * @return this state with that rate limit
+         * @param until the end of the cool-down
+         * @return this state with that cool-down
          */
-        CacheState rateLimitedUntil(Instant until) {
+        CacheState inCooldownUntil(Instant until) {
             return new CacheState(usable, Optional.of(until));
         }
 
@@ -186,7 +186,7 @@ final class ProviderAttempt {
         }
 
         /**
-         * A cached forecast, with the provider's rate limit when it has one.
+         * A cached forecast, with the provider's cool-down when it has one.
          *
          * @param forecast the cached forecast to give
          * @param freshness how fresh it is told to be

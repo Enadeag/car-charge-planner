@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import nl.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import java.time.DayOfWeek;
@@ -119,7 +119,7 @@ class RecordEdgeValuesTest {
     private static final HomeSystem SYSTEM = new HomeSystem(new Coordinates(51.0, 5.0), ZoneId.of("Europe/Brussels"),
             List.of(PanelArray.TYPICAL), House.TYPICAL, Car.TYPICAL, Charger.TYPICAL);
     private static final EngineConfig CONFIG = new EngineConfig(SYSTEM, PlanningPreferences.RECOMMENDED,
-            new ForecastSelection(new ProviderId("open-meteo"), Optional.empty(), Map.of()), AwaySchedule.NONE,
+            new ForecastSelection(new ProviderId("open-meteo"), Optional.empty(), Map.of()), WeeklyAwaySchedule.NONE,
             TypicalValues.NONE);
 
     @Test
@@ -138,9 +138,9 @@ class RecordEdgeValuesTest {
 
         var forecast = new ForecastSelection(new ProviderId("forecast-solar"), Optional.of(new ProviderId("open-meteo")),
                 Map.of());
-        var away = new AwaySchedule(List.of(new RecurringAwayPeriod(DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(17, 0))));
+        var away = new WeeklyAwaySchedule(List.of(new WeeklyAwayPeriod(DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(17, 0))));
         assertThat(CONFIG.withForecast(forecast)).isEqualTo(new EngineConfig(SYSTEM, CONFIG.planning(), forecast,
-                AwaySchedule.NONE, TypicalValues.NONE));
+                WeeklyAwaySchedule.NONE, TypicalValues.NONE));
         assertThat(CONFIG.withAway(away)).isEqualTo(new EngineConfig(SYSTEM, CONFIG.planning(), CONFIG.forecast(), away,
                 TypicalValues.NONE));
     }

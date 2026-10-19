@@ -24,7 +24,7 @@ public record PlanningPreferences(
 
     /**
      * What a new owner starts with: charge to 80 % and never below 30 %, count on 85 % of the surplus, take up to
-     * 0.2 kWh from the grid per window, windows of at least 45 minutes, and a notice 15 minutes ahead.
+     * 0.2 kWh from the grid per window, windows of at least 45 minutes, and an announcement 15 minutes ahead.
      */
     public static final PlanningPreferences RECOMMENDED = new PlanningPreferences(new Percent(30), new Percent(80),
             0.85, 0.2, Duration.ofMinutes(45), Duration.ofMinutes(15));

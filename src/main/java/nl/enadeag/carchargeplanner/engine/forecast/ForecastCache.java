@@ -22,7 +22,7 @@ import tools.jackson.databind.node.MissingNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * The last good forecast of each provider and the end of its rate limit, in a file per provider, so both survive a
+ * The last good forecast of each provider and the end of its cool-down, in a file per provider, so both survive a
  * restart. A file that cannot be read, or holds a forecast for another system, is not used; a folder that cannot be
  * written does not stop planning. Each file is kept in memory until it changes on disk.
  */
@@ -106,7 +106,7 @@ public final class ForecastCache {
     }
 
     /**
-     * When the provider's last rate limit ends, which may have passed already.
+     * When the provider's last cool-down ends, which may have passed already.
      *
      * @param providerId the provider whose cache to read
      * @return the end, or empty when there is none or the file cannot be read
@@ -116,7 +116,7 @@ public final class ForecastCache {
     }
 
     /**
-     * Keeps a new forecast, replacing the provider's last one. Also ends a rate limit: the provider answered.
+     * Keeps a new forecast, replacing the provider's last one. Also ends a cool-down: the provider answered.
      *
      * @param providerId the provider that made it
      * @param key what it was made for, as {@link #key} makes it
@@ -128,7 +128,7 @@ public final class ForecastCache {
     }
 
     /**
-     * Notes a rate limit, keeping the cached forecast: it stays usable while the provider refuses.
+     * Notes a cool-down, keeping the cached forecast: it stays usable while the provider refuses.
      *
      * @param providerId the provider that refused
      * @param until when it may be asked again
@@ -155,7 +155,7 @@ public final class ForecastCache {
         }
     }
 
-    /** The JSON shape of one provider's file: the key, the forecast's moment and steps, and the rate limit. */
+    /** The JSON shape of one provider's file: the key, the forecast's moment and steps, and the cool-down. */
     private static final class Format implements FileFormat<Entry> {
 
         @Override

@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import nl.enadeag.carchargeplanner.desktop.settings.form.AwayPeriodEntry.Checked;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
-import nl.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import org.junit.jupiter.api.Test;
@@ -17,7 +17,7 @@ class AwayPeriodEntryTest {
     @Test
     void twoTimesWithTheEndAfterTheStartAreAPeriod() {
         assertThat(new AwayPeriodEntry(DayOfWeek.TUESDAY, "08:00", " 17:30").check(ENGLISH))
-                .isEqualTo(new Checked.Accepted(new RecurringAwayPeriod(DayOfWeek.TUESDAY, LocalTime.of(8, 0),
+                .isEqualTo(new Checked.Accepted(new WeeklyAwayPeriod(DayOfWeek.TUESDAY, LocalTime.of(8, 0),
                         LocalTime.of(17, 30))));
     }
 

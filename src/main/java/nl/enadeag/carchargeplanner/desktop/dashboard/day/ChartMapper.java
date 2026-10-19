@@ -55,7 +55,7 @@ final class ChartMapper {
         this.today = planned.madeAt().atZone(zone).toLocalDate();
         double peak = planned.days().stream().flatMap(day -> day.forecast().stream())
                 .mapToDouble(ForecastStep::powerKw).max().orElse(0);
-        this.scaleKw = Math.max(1, Math.ceil(Math.max(peak, planned.houseKw())));
+        this.scaleKw = Math.max(1, Math.ceil(Math.max(peak, planned.baseloadKw())));
     }
 
     /**
@@ -81,14 +81,14 @@ final class ChartMapper {
                 .filter(step -> hoursFrom(start, step.end()) > from && hoursFrom(start, step.start()) < to)
                 .map(step -> new Step(hoursFrom(start, step.start()), hoursFrom(start, step.end()), step.powerKw(),
                         messages.text(TextKey.CHART_READOUT, messages.time(step.start(), zone),
-                                messages.decimal(step.powerKw()), messages.decimal(planned.houseKw()))))
+                                messages.decimal(step.powerKw()), messages.decimal(planned.baseloadKw()))))
                 .toList();
         var windows = day.windows().stream()
                 .map(window -> new Span(hoursFrom(start, window.start()), hoursFrom(start, window.end())))
                 .toList();
         double now = hoursFrom(start, planned.madeAt());
         var nowHour = day.date().equals(today) && now >= from && now <= to ? OptionalDouble.of(now) : OptionalDouble.empty();
-        return new SolarCurveModel(from, to, scaleKw, messages.text(TextKey.CHART_SCALE, messages.whole(scaleKw)), steps, planned.houseKw(),
+        return new SolarCurveModel(from, to, scaleKw, messages.text(TextKey.CHART_SCALE, messages.whole(scaleKw)), steps, planned.baseloadKw(),
                 windows, nowHour, ticks(day.date(), start, from, to), spoken(day, nowHour.isPresent()));
     }
 
@@ -99,8 +99,8 @@ final class ChartMapper {
      * @return the bar's data; only today's level can be entered
      */
     BatteryModel battery(DayPlan day) {
-        double level = day.socStartPct().value();
-        double after = day.socAfterChargingPct().value();
+        double level = day.startLevelPct().value();
+        double after = day.levelAfterChargingPct().value();
         double minimum = planned.minimumPct().value();
         double target = planned.targetPct().value();
         boolean isToday = day.date().equals(today);
@@ -135,7 +135,7 @@ final class ChartMapper {
             return messages.text(TextKey.CHART_SPOKEN_NO_SUN, title);
         }
         var chart = messages.text(TextKey.CHART_SPOKEN, title, messages.decimal(peak.get().powerKw()),
-                messages.time(peak.get().start(), zone), messages.decimal(planned.houseKw()));
+                messages.time(peak.get().start(), zone), messages.decimal(planned.baseloadKw()));
         var windows = day.windows().isEmpty() ? "" : messages.text(TextKey.CHART_SPOKEN_WINDOWS, day.windows().stream()
                 .map(window -> messages.text(TextKey.CHART_SPOKEN_SPAN, messages.time(window.start(), zone),
                         messages.time(window.end(), zone)))

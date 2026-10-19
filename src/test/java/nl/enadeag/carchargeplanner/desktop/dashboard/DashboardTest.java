@@ -14,7 +14,7 @@ import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.Outlook;
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
@@ -58,7 +58,7 @@ class DashboardTest {
     private final AtomicReference<Instant> now = new AtomicReference<>(Instant.parse("2026-10-15T08:00:00Z"));
     private final InstantSource clock = now::get;
     private final LanguageChoice language = new LanguageChoice(Language.ENGLISH);
-    private final List<AwayPeriod> removed = new ArrayList<>();
+    private final List<OneOffAwayPeriod> removed = new ArrayList<>();
     private final AtomicInteger settingsOpened = new AtomicInteger();
     private final AtomicInteger setUpOpened = new AtomicInteger();
     private final AtomicInteger quit = new AtomicInteger();
@@ -524,7 +524,7 @@ class DashboardTest {
 
     @Test
     void anotherLanguageListsTheAwayPeriodsInItAndTheirRemoveButtonsStillWork() throws Exception {
-        var tomorrow = AwayPeriod.allDay(LocalDate.of(2026, 10, 16), ZoneId.of("Europe/Brussels"));
+        var tomorrow = OneOffAwayPeriod.allDay(LocalDate.of(2026, 10, 16), ZoneId.of("Europe/Brussels"));
         clickTheIcon();
         dashboard.show(planWithTwoDays(), List.of(tomorrow));
         Fx.settle();
@@ -571,7 +571,7 @@ class DashboardTest {
     void theDashboardShowsTheLatestOutlook() throws Exception {
         clickTheIcon();
 
-        dashboard.show(new Outlook.NotSetUp(ConfigProblem.Kind.INVALID, Path.of("/home/owner/engine.json"),
+        dashboard.show(new Outlook.ConfigUnusable(ConfigProblem.Kind.INVALID, Path.of("/home/owner/engine.json"),
                 "system.car: is required"), List.of());
         Fx.settle();
 
@@ -584,7 +584,7 @@ class DashboardTest {
     void beforeTheFirstSetUpTheMessageOpensSetUp() throws Exception {
         clickTheIcon();
 
-        dashboard.show(new Outlook.NotSetUp(ConfigProblem.Kind.MISSING, Path.of("/home/owner/engine.json"), ""), List.of());
+        dashboard.show(new Outlook.NotSetUp(Path.of("/home/owner/engine.json")), List.of());
         Fx.settle();
         var root = popup().orElseThrow().getScene().getRoot();
         Fx.run(() -> Scenes.all(root).stream()
@@ -599,7 +599,7 @@ class DashboardTest {
     void aConfigThatCannotBeReadOffersNoSetUpThatWouldWriteOverIt() throws Exception {
         clickTheIcon();
 
-        dashboard.show(new Outlook.NotSetUp(ConfigProblem.Kind.UNREADABLE, Path.of("/home/owner/engine.json"),
+        dashboard.show(new Outlook.ConfigUnusable(ConfigProblem.Kind.UNREADABLE, Path.of("/home/owner/engine.json"),
                 "access denied"), List.of());
         Fx.settle();
 

@@ -14,13 +14,13 @@ import java.util.regex.Pattern;
  *
  * @param primary the primary forecast provider
  * @param fallback the fallback provider, different from the primary, or empty for none
- * @param settings per provider, setting key to value; secret settings are not here
+ * @param settings per provider, setting name to value; secret settings are not here
  */
 public record ForecastSelection(
         ProviderId primary, Optional<ProviderId> fallback, Map<ProviderId, Map<String, String>> settings) {
 
-    /** What a setting key looks like: lower case letters, digits, hyphens and underscores. */
-    public static final Pattern SETTING_KEY = Pattern.compile("[a-z0-9][a-z0-9_-]*");
+    /** What a setting name looks like: lower case letters, digits, hyphens and underscores. */
+    public static final Pattern SETTING_NAME = Pattern.compile("[a-z0-9][a-z0-9_-]*");
 
     /**
      * Checks the setting names, and copies the settings.
@@ -39,9 +39,9 @@ public record ForecastSelection(
     private static Map<ProviderId, Map<String, String>> checkedCopy(Map<ProviderId, Map<String, String>> settings) {
         var copy = new LinkedHashMap<ProviderId, Map<String, String>>();
         settings.forEach((id, values) -> {
-            for (var key : values.keySet()) {
-                if (!SETTING_KEY.matcher(key).matches()) {
-                    throw new IllegalArgumentException("settings." + id + ": '" + key + "' is not a setting name");
+            for (var name : values.keySet()) {
+                if (!SETTING_NAME.matcher(name).matches()) {
+                    throw new IllegalArgumentException("settings." + id + ": '" + name + "' is not a setting name");
                 }
             }
             copy.put(id, Map.copyOf(values));

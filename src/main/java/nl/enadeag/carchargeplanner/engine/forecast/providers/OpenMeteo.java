@@ -27,8 +27,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Open-Meteo (https://open-meteo.com), free for non-commercial use. It forecasts the sunlight on a tilted plane, which
- * is turned into power, so each panel array is one request and the arrays' power is added up.
+ * Open-Meteo (https://open-meteo.com), free for non-commercial use. It forecasts the sunlight on a tilted surface,
+ * which is turned into power, so each panel array is one request and the arrays' power is added up.
  */
 public final class OpenMeteo implements ForecastProvider {
 
@@ -82,7 +82,7 @@ public final class OpenMeteo implements ForecastProvider {
     /**
      * AC power of panels from the sunlight on them.
      *
-     * @param irradianceWm2 the sunlight on the panels' plane, in W/m², 0 or more
+     * @param irradianceWm2 the sunlight on the panels' surface, in W/m², 0 or more
      * @param kwp the panels' size in kWp
      * @param systemLosses the share lost in cables, inverter and dirt, from 0 up to 1
      * @return the power in kW
@@ -99,10 +99,10 @@ public final class OpenMeteo implements ForecastProvider {
      * @param settings the provider's settings: "base_url" (blank for the public service) and "api_key" (blank for
      *     none)
      * @return the request's address
-     * @throws ProviderError.NotConfigured when the server address is not one {@link ServerAddress#parse} accepts
+     * @throws ProviderError.MissingSetting when the server address is not one {@link ServerAddress#parse} accepts
      */
     static URI requestUri(SolarSite system, PanelArray array, Map<String, String> settings)
-            throws ProviderError.NotConfigured {
+            throws ProviderError.MissingSetting {
         var server = server(settings);
         Map<String, String> query = new LinkedHashMap<>();
         query.put("latitude", Decimals.plain(system.location().latitude()));
@@ -115,7 +115,8 @@ public final class OpenMeteo implements ForecastProvider {
         query.put("timeformat", "unixtime");
         var key = settings.getOrDefault("api_key", "").strip();
         if (!SettingFormat.TEXT.accepts(key)) {
-            throw new ProviderError.NotConfigured("the API key must not hold a line break or another control character");
+            throw new ProviderError.MissingSetting(
+                    "the API key must not hold a line break or another control character");
         }
         if (!key.isEmpty()) {
             query.put("apikey", key); // the way Open-Meteo documents it for its customer servers
@@ -125,16 +126,16 @@ public final class OpenMeteo implements ForecastProvider {
                     .map(e -> e.getKey() + "=" + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
                     .collect(Collectors.joining("&")));
         } catch (IllegalArgumentException _) {
-            throw new ProviderError.NotConfigured("the server address is not a web address");
+            throw new ProviderError.MissingSetting("the server address is not a web address");
         }
     }
 
-    private static ServerAddress server(Map<String, String> settings) throws ProviderError.NotConfigured {
+    private static ServerAddress server(Map<String, String> settings) throws ProviderError.MissingSetting {
         var server = settings.getOrDefault("base_url", "");
         if (server.isBlank()) {
             return PUBLIC_SERVER;
         }
-        return ServerAddress.parse(server).orElseThrow(() -> new ProviderError.NotConfigured("the server address must "
+        return ServerAddress.parse(server).orElseThrow(() -> new ProviderError.MissingSetting("the server address must "
                 + "start with https://, or http:// for localhost, 127.0.0.1 or [::1], with no user name, \"?\" or \"#\""));
     }
 

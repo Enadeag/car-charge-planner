@@ -2,7 +2,7 @@ package nl.enadeag.carchargeplanner.start;
 
 import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.engine.Engine;
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -48,7 +48,7 @@ final class DashboardChanges {
      *
      * @param period the time the car is away
      */
-    void addAwayPeriod(AwayPeriod period) {
+    void addAwayPeriod(OneOffAwayPeriod period) {
         save("the away period", () -> engine.addAwayPeriod(period));
     }
 
@@ -57,7 +57,7 @@ final class DashboardChanges {
      *
      * @param period the period as the dashboard showed it
      */
-    void removeAwayPeriod(AwayPeriod period) {
+    void removeAwayPeriod(OneOffAwayPeriod period) {
         save("the removal of the away period", () -> engine.removeAwayPeriod(period));
     }
 

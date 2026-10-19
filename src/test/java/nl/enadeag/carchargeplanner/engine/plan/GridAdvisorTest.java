@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.within;
 
-import nl.enadeag.carchargeplanner.engine.away.AwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.HomeSystem;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.Phases;
@@ -55,8 +55,8 @@ class GridAdvisorTest {
     }
 
     /** The example's weekly away period, and this one entered by hand. */
-    private static Advised adviseAway(List<ForecastStep> forecast, double soc, Instant now, AwayPeriod oneOff) {
-        var away = new AwayTimes(WEEKLY_AWAY.recurring(), List.of(oneOff));
+    private static Advised adviseAway(List<ForecastStep> forecast, double soc, Instant now, OneOffAwayPeriod oneOff) {
+        var away = new AwayTimes(WEEKLY_AWAY.weekly(), List.of(oneOff));
         return advise(Forecasts.example(), forecast, soc, now, away);
     }
 
@@ -100,9 +100,9 @@ class GridAdvisorTest {
         // today loses 17 of its 24 hours of driving, tomorrow a whole day's
         double today = 55 - DAILY_DRIVING_PCT * 17 / 24;
         double tomorrow = today - DAILY_DRIVING_PCT;
-        assertThat(advised.days().getFirst().socEndOfDayPct().value()).isCloseTo(today, CLOSE);
+        assertThat(advised.days().getFirst().endLevelPct().value()).isCloseTo(today, CLOSE);
         assertThat(advised.advice().day()).isEqualTo(SAT);
-        assertThat(advised.advice().socEndPct()).isCloseTo(tomorrow, CLOSE);
+        assertThat(advised.advice().endLevelPct()).isCloseTo(tomorrow, CLOSE);
         assertThat(advised.advice().deficitPct()).isCloseTo(30 - tomorrow, CLOSE);
     }
 
@@ -117,7 +117,7 @@ class GridAdvisorTest {
     @Test
     void theTrueShortfallIsKeptWhenTheDrivingNeedsMoreThanTheBattery() {
         var advice = advise(dull(1), 5, fridayAt(0)).advice();
-        assertThat(advice.socEndPct()).isCloseTo(5 - DAILY_DRIVING_PCT, CLOSE);
+        assertThat(advice.endLevelPct()).isCloseTo(5 - DAILY_DRIVING_PCT, CLOSE);
         assertThat(advice.deficitPct()).isCloseTo(30 - (5 - DAILY_DRIVING_PCT), CLOSE);
     }
 
@@ -172,7 +172,7 @@ class GridAdvisorTest {
 
     @Test
     void theWindowNeverOverlapsAnAwayPeriod() {
-        var away = AwayPeriod.on(FRI, LocalTime.of(0, 0), LocalTime.of(20, 0), TZ);
+        var away = OneOffAwayPeriod.on(FRI, LocalTime.of(0, 0), LocalTime.of(20, 0), TZ);
         var window = adviseAway(dull(2), 30, fridayAt(0), away).window();
         assertThat(!window.end().isAfter(away.start()) || !window.start().isBefore(away.end()))
                 .as("%s overlaps %s", window, away).isTrue();
@@ -180,7 +180,7 @@ class GridAdvisorTest {
 
     @Test
     void theWindowFallsBackToAnEarlierDayWhenTheDipDayHasNoTimeAtHome() {
-        var away = AwayPeriod.allDay(SAT, TZ);
+        var away = OneOffAwayPeriod.allDay(SAT, TZ);
         // Friday ends at 33 %, Saturday at 10.9 %: 14.84 kWh, which the car can take only on Friday
         var advice = adviseAway(dull(3), 55, fridayAt(0), away).advice();
         assertThat(advice.day()).isEqualTo(SAT);
@@ -191,7 +191,7 @@ class GridAdvisorTest {
 
     @Test
     void noWindowWhenTheCarIsAwayEveryDay() {
-        var away = new AwayPeriod(fridayAt(0), at(LocalDate.of(2026, 7, 10), 0));
+        var away = new OneOffAwayPeriod(fridayAt(0), at(LocalDate.of(2026, 7, 10), 0));
         var advice = adviseAway(dull(2), 20, fridayAt(0), away).advice();
         assertThat(advice.day()).isEqualTo(FRI);
         assertThat(advice.energyKwh()).isCloseTo((30 - (20 - DAILY_DRIVING_PCT)) / 100 * 70 / 0.9, CLOSE);
@@ -214,7 +214,7 @@ class GridAdvisorTest {
         var advice = advise(Forecasts.golden(), forecast, 57, at(saturday, 0)).advice();
         // 57 % - 18 % - 18 % = 21 % on Sunday: 9 % of 70 kWh / 0.9 = 7 kWh
         assertThat(advice.day()).isEqualTo(sunday);
-        assertThat(advice.socEndPct()).isCloseTo(21, CLOSE);
+        assertThat(advice.endLevelPct()).isCloseTo(21, CLOSE);
         assertThat(advice.deficitPct()).isCloseTo(9, CLOSE);
         assertThat(advice.energyKwh()).isCloseTo(7, CLOSE);
         // no sun: the lowest current from the earliest free slot; 7 / 1.38 = 5.07 real hours, so 06:05 summer time
@@ -239,7 +239,7 @@ class GridAdvisorTest {
         // 6.44 kWh * 0.9 / 70 kWh = 8.28 %: 38 + 8.28 - 18 = 28.28 %, 1.72 % short: 1.204 kWh / 0.9
         var advice = advised.advice();
         assertThat(advice.day()).isEqualTo(FRI);
-        assertThat(advice.socEndPct()).isCloseTo(28.28, CLOSE);
+        assertThat(advice.endLevelPct()).isCloseTo(28.28, CLOSE);
         assertThat(advice.deficitPct()).isCloseTo(1.72, CLOSE);
         assertThat(advice.energyKwh()).isCloseTo(1.204 / 0.9, CLOSE);
         // 6 A right after the solar window, in the leftover sun: 1.3378 / 1.38 h = 58.2 min, rounded up to 13:00
@@ -257,7 +257,7 @@ class GridAdvisorTest {
     void theAdviceIsForTheFirstDipOnly() {
         var advised = advise(dull(4), 40, fridayAt(7));
         var firstDip = advised.days().stream()
-                .filter(day -> day.socAfterChargingPct().value() - day.drivingPct() < PREFERENCES.minimumPct().value() - 1)
+                .filter(day -> day.levelAfterChargingPct().value() - day.drivingPct() < PREFERENCES.minimumPct().value() - 1)
                 .findFirst().orElseThrow();
         assertThat(advised.advice().day()).isEqualTo(firstDip.date());
     }
@@ -267,7 +267,7 @@ class GridAdvisorTest {
         // the first day ends about 0.5 points under the minimum
         double soc = PREFERENCES.minimumPct().value() - 0.5 + DAILY_DRIVING_PCT;
         var advised = advise(dull(1), soc, fridayAt(0));
-        assertThat(PREFERENCES.minimumPct().value() - advised.days().getFirst().socEndOfDayPct().value()).isCloseTo(0.5, CLOSE);
+        assertThat(PREFERENCES.minimumPct().value() - advised.days().getFirst().endLevelPct().value()).isCloseTo(0.5, CLOSE);
         assertThat(advised.advice()).isNull();
     }
 
@@ -330,7 +330,7 @@ class GridAdvisorTest {
     void aDayThatEndsExactlyOnePointBelowTheMinimumGivesNoAdvice() {
         // 47 % - 18 % = 29 %: just not more than the one point of noise under 30 %
         var advised = advise(Forecasts.golden(), hourly(FRI, Map.of()), 47, fridayAt(0));
-        assertThat(advised.days().getFirst().socEndOfDayPct().value()).isEqualTo(29.0);
+        assertThat(advised.days().getFirst().endLevelPct().value()).isEqualTo(29.0);
         assertThat(advised.advice()).isNull();
     }
 
@@ -349,7 +349,7 @@ class GridAdvisorTest {
     @Test
     void anEnergyOfWholeQuartersFitsTheLastFreeHourOfTheDay() {
         // 1.38 kWh: exactly one hour at 6 A, and the car is home only from 23:00
-        var away = new AwayTimes(List.of(), List.of(new AwayPeriod(fridayAt(0), fridayAt(23))));
+        var away = new AwayTimes(List.of(), List.of(new OneOffAwayPeriod(fridayAt(0), fridayAt(23))));
         double soc = 48 - 1.38 * 0.9 / 70 * 100;
         var advice = advise(Forecasts.golden(), hourly(FRI, Map.of()), soc, fridayAt(0), away).advice();
         assertThat(advice.energyKwh()).isCloseTo(1.38, CLOSE);

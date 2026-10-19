@@ -46,11 +46,11 @@ public final class GridAdviceMapper {
     }
 
     private String why(GridAdvice advice) {
-        var minimum = messages.whole(advice.socEndPct() + advice.deficitPct());
-        if (advice.socEndPct() <= 0) {
+        var minimum = messages.whole(advice.endLevelPct() + advice.deficitPct());
+        if (advice.endLevelPct() <= 0) {
             return messages.text(TextKey.ADVICE_RUNS_EMPTY, dipDay(advice), minimum);
         }
-        return messages.text(TextKey.ADVICE_ENDS_LOW, dipDay(advice), messages.whole(advice.socEndPct()), minimum);
+        return messages.text(TextKey.ADVICE_ENDS_LOW, dipDay(advice), messages.whole(advice.endLevelPct()), minimum);
     }
 
     private String dipDay(GridAdvice advice) {

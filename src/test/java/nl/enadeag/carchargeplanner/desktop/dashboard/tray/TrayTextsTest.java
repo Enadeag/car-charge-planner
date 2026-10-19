@@ -89,7 +89,7 @@ class TrayTextsTest {
 
     @Test
     void beforeTheFirstSetUpTheSettingsEntryLeadsIntoSetUpInEveryLanguageUntilThereIsAConfig() {
-        texts.show(new Outlook.NotSetUp(ConfigProblem.Kind.MISSING, Path.of("engine.json"), ""));
+        texts.show(new Outlook.NotSetUp(Path.of("engine.json")));
         language.choose(Language.DUTCH);
         var dutch = tray.labels.getLast();
         texts.show(new Outlook.NoForecast("Open-Meteo: no connection."));
@@ -102,7 +102,7 @@ class TrayTextsTest {
 
     @Test
     void aConfigThatCannotBeReadKeepsTheSettingsEntry() {
-        texts.show(new Outlook.NotSetUp(ConfigProblem.Kind.INVALID, Path.of("engine.json"), "system: is required"));
+        texts.show(new Outlook.ConfigUnusable(ConfigProblem.Kind.INVALID, Path.of("engine.json"), "system: is required"));
 
         assertThat(tray.labels).extracting(Tray.MenuLabels::settings).containsOnly("Settings…");
     }

@@ -6,7 +6,8 @@ import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 /**
  * The home's own use of power.
  *
- * @param baseloadKw the average power the house uses on its own while the sun shines in kW, 0 or more
+ * @param baseloadKw the power the house uses on its own in kW, 0 or more: the average over the whole day, night
+ *     included, such as its kWh in a month divided by 730, the hours of an average month
  */
 public record House(double baseloadKw) {
 

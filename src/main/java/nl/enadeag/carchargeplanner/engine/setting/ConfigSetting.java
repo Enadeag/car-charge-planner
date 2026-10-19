@@ -40,7 +40,7 @@ public enum ConfigSetting {
     /** The fallback forecast provider. */
     FALLBACK_PROVIDER,
     /** A weekly away period. */
-    AWAY_PERIOD,
+    WEEKLY_AWAY_PERIOD,
     /** The minimum charge level of the battery. */
     MINIMUM_CHARGE,
     /** The target charge level of the battery. */

@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.engine.plan;
 
-import nl.enadeag.carchargeplanner.engine.away.RecurringAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.Car;
 import nl.enadeag.carchargeplanner.engine.config.Charger;
 import nl.enadeag.carchargeplanner.engine.config.Coordinates;
@@ -32,7 +32,7 @@ final class Forecasts {
             Duration.ofMinutes(45), Duration.ofMinutes(15));
     /** The example's weekly away period: Thursdays from 06:00 to 19:00. */
     static final AwayTimes WEEKLY_AWAY = new AwayTimes(
-            List.of(new RecurringAwayPeriod(DayOfWeek.THURSDAY, LocalTime.of(6, 0), LocalTime.of(19, 0))), List.of());
+            List.of(new WeeklyAwayPeriod(DayOfWeek.THURSDAY, LocalTime.of(6, 0), LocalTime.of(19, 0))), List.of());
 
     private Forecasts() {
     }
