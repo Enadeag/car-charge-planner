@@ -68,7 +68,7 @@ final class TrayStatusMapper {
         return planned.nextWindow()
                 .map(window -> day(window, planned).isAfter(today)
                         ? new TrayStatus(StatusDot.NONE, laterDayText(window, planned, today))
-                        : new TrayStatus(StatusDot.SUN, solarText(window, planned)))
+                        : new TrayStatus(StatusDot.SOLAR, solarText(window, planned)))
                 .orElseGet(() -> new TrayStatus(StatusDot.NONE, messages.text(TextKey.TRAY_NOTHING)));
     }
 

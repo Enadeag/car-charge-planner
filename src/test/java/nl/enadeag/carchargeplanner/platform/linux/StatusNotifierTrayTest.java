@@ -147,10 +147,10 @@ class StatusNotifierTrayTest {
 
     @Test
     void theIconShowsTheStatusGivenBeforeItAppearedByNameAndInTheTooltip() throws Exception {
-        tray.setStatus(new TrayStatus(StatusDot.SUN, "Charge on sun now, until 14:30, at 10 A."));
+        tray.setStatus(new TrayStatus(StatusDot.SOLAR, "Charge on sun now, until 14:30, at 10 A."));
         var properties = properties(showWithAWatcher());
 
-        assertThat(themeIcon(properties)).isEqualTo(new StatusIcon().svg(StatusDot.SUN, PanelShade.DARK));
+        assertThat(themeIcon(properties)).isEqualTo(new StatusIcon().svg(StatusDot.SOLAR, PanelShade.DARK));
         // icon themes shorten an unknown name at its dashes: Plasma showed the system's "car" icon instead of ours
         assertThat((String) properties.get("IconName").getValue()).doesNotContain("-");
         // Plasma looks in IconThemePath only when its last folder is called "icons"

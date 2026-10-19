@@ -71,21 +71,21 @@ public final class DayMapper {
     private DayModel withWindow(DayPlan day) {
         var window = day.windows().getFirst();
         var title = messages.title(day.date(), today);
-        var sunPct = messages.whole(window.solarShare() * 100);
+        var solarSharePct = messages.whole(window.solarShare() * 100);
         var facts = List.of(
                 messages.text(TextKey.DAY_SET, window.amps(), messages.decimal(window.powerKw())),
                 messages.text(TextKey.DAY_ENERGY, messages.decimal(window.solarKwh() + window.importKwh())));
         var chips = new ArrayList<ChipModel>();
-        chips.add(new ChipModel(EnergySource.SUN, messages.text(TextKey.DAY_SUN_SHARE, sunPct)));
+        chips.add(new ChipModel(EnergySource.SOLAR, messages.text(TextKey.DAY_SUN_SHARE, solarSharePct)));
         chips.add(batteryChip(day));
         if (window.importKwh() >= NO_GRID_KWH) {
             chips.add(new ChipModel(EnergySource.GRID,
                     messages.text(TextKey.DAY_FROM_GRID, messages.decimal(window.importKwh()))));
         }
         var spoken = messages.text(TextKey.DAY_SPOKEN, title, messages.time(window.start(), zone),
-                messages.time(window.end(), zone), window.amps(), sunPct);
+                messages.time(window.end(), zone), window.amps(), solarSharePct);
         var note = sentences(laterWindows(day), noteFor(day));
-        return new DayModel(day.date(), messages.tab(day.date(), today), title, DayKind.SUN, messages.text(TextKey.DAY_WINDOW),
+        return new DayModel(day.date(), messages.tab(day.date(), today), title, DayKind.SOLAR, messages.text(TextKey.DAY_WINDOW),
                 span(window), facts, chips, note, spoken, charts.map(day), batteries.map(day));
     }
 

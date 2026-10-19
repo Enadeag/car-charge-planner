@@ -58,7 +58,7 @@ class StatusIconTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = StatusDot.class, names = {"SUN", "GRID", "ACTION"})
+    @EnumSource(value = StatusDot.class, names = {"SOLAR", "GRID", "ACTION"})
     void theDotIsSetApartFromTheShapesByAClearRing(StatusDot dot) {
         var image = ICON.image(dot, PanelShade.DARK, 64);
 
@@ -71,7 +71,7 @@ class StatusIconTest {
 
     @Test
     void eachDotHasAColourOfItsOwnAndNoDotLeavesTheCornerEmpty() {
-        var sun = pixel(ICON.image(StatusDot.SUN, PanelShade.DARK, 32), 52, 52);
+        var sun = pixel(ICON.image(StatusDot.SOLAR, PanelShade.DARK, 32), 52, 52);
         var grid = pixel(ICON.image(StatusDot.GRID, PanelShade.DARK, 32), 52, 52);
         var action = pixel(ICON.image(StatusDot.ACTION, PanelShade.DARK, 32), 52, 52);
 
@@ -82,7 +82,7 @@ class StatusIconTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = StatusDot.class, names = {"SUN", "GRID", "ACTION"})
+    @EnumSource(value = StatusDot.class, names = {"SOLAR", "GRID", "ACTION"})
     void theSvgShowsTheSameDotAsThePixels(StatusDot dot) throws Exception {
         var drawn = pixel(ICON.image(dot, PanelShade.DARK, 64), 52, 52);
 
@@ -101,14 +101,14 @@ class StatusIconTest {
     @Test
     void theSvgLetsKdeColourTheShapesAsItsPanelsText() {
         // Plasma swaps the colour in the style with this id for its panel's text colour
-        assertThat(ICON.svg(StatusDot.SUN, PanelShade.DARK))
+        assertThat(ICON.svg(StatusDot.SOLAR, PanelShade.DARK))
                 .contains("<style id=\"current-color-scheme\">")
                 .contains("class=\"ColorScheme-Text\" fill=\"currentColor\"");
     }
 
     @Test
     void anIconTooSmallForItsDotIsRefused() {
-        assertThatThrownBy(() -> ICON.image(StatusDot.SUN, PanelShade.DARK, 12))
+        assertThatThrownBy(() -> ICON.image(StatusDot.SOLAR, PanelShade.DARK, 12))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

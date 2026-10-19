@@ -29,9 +29,9 @@ public final class Models {
     /** A Friday. */
     public static final LocalDate TODAY = LocalDate.of(2026, 7, 3);
 
-    public static final DayModel SUNNY_TODAY = new DayModel(TODAY, "Today", "Today", DayKind.SUN, "Charge window", "11:15 – 14:30",
+    public static final DayModel SUNNY_TODAY = new DayModel(TODAY, "Today", "Today", DayKind.SOLAR, "Charge window", "11:15 – 14:30",
             List.of("Set 10 A (2.3 kW)", "about 7.9 kWh"),
-            List.of(new ChipModel(EnergySource.SUN, "92 % sun"), new ChipModel(EnergySource.CAR, "Battery 50 → 74 %"),
+            List.of(new ChipModel(EnergySource.SOLAR, "92 % sun"), new ChipModel(EnergySource.CAR, "Battery 50 → 74 %"),
                     new ChipModel(EnergySource.GRID, "0.6 kWh from the grid")),
             "The plan assumes the battery is at 50 %.", "Today: charge window 11:15 to 14:30, 10 A, 92 % sun.",
             curve(3.6, List.of(new WindowSpan(11.25, 14.5)), OptionalDouble.of(8.2)),

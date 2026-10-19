@@ -87,21 +87,21 @@ class TrayStatusMapperTest {
     void aWindowRunningNowIsChargingOnSunUntilItsEnd() {
         var status = at(12, day(TODAY, window(TODAY, 11, 14)));
 
-        assertThat(status).isEqualTo(new TrayStatus(StatusDot.SUN, "Charge on sun now, until 14:30, at 10 A."));
+        assertThat(status).isEqualTo(new TrayStatus(StatusDot.SOLAR, "Charge on sun now, until 14:30, at 10 A."));
     }
 
     @Test
     void aWindowLaterTodayIsChargingOnSunSoon() {
         var status = at(8, day(TODAY, window(TODAY, 11, 14)));
 
-        assertThat(status).isEqualTo(new TrayStatus(StatusDot.SUN, "Charge on sun today 11:15 – 14:30, at 10 A."));
+        assertThat(status).isEqualTo(new TrayStatus(StatusDot.SOLAR, "Charge on sun today 11:15 – 14:30, at 10 A."));
     }
 
     @Test
     void aWindowThatStartedYesterdayAndStillRunsIsChargingOnSunNow() {
         var overnight = new Window(at(TODAY.minusDays(1), 22, 0), at(TODAY, 2, 0), 10, 2.3, 7.3, 0);
 
-        assertThat(at(1, day(TODAY, overnight)).dot()).isEqualTo(StatusDot.SUN);
+        assertThat(at(1, day(TODAY, overnight)).dot()).isEqualTo(StatusDot.SOLAR);
     }
 
     @Test

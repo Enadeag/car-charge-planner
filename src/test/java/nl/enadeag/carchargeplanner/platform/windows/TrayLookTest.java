@@ -25,7 +25,7 @@ class TrayLookTest {
 
     @Test
     void theStatusSentenceIsTheTooltipsSecondLine() {
-        assertThat(look.tooltip(new TrayStatus(StatusDot.SUN, "Charge on sun now, until 14:30, at 10 A.")))
+        assertThat(look.tooltip(new TrayStatus(StatusDot.SOLAR, "Charge on sun now, until 14:30, at 10 A.")))
                 .isEqualTo("Car charge planner\nCharge on sun now, until 14:30, at 10 A.");
     }
 
@@ -39,7 +39,7 @@ class TrayLookTest {
 
     @Test
     void theIconComesInEveryNotificationAreaSize() {
-        var images = look.images(new TrayStatus(StatusDot.SUN, ""));
+        var images = look.images(new TrayStatus(StatusDot.SOLAR, ""));
 
         assertThat(images).extracting(BufferedImage::getWidth).containsExactlyElementsOf(TrayLook.SIZES);
         assertThat(images).extracting(BufferedImage::getHeight).containsExactlyElementsOf(TrayLook.SIZES);

@@ -101,7 +101,7 @@ public final class StatusIcon {
     /** One amber, blue and red for both shades: bright enough on a dark panel, saturated enough on a light one. */
     private static Optional<String> dotColour(StatusDot dot) {
         return switch (dot) {
-            case SUN -> Optional.of("#e39a0b");
+            case SOLAR -> Optional.of("#e39a0b");
             case GRID -> Optional.of("#3b82f6");
             case ACTION -> Optional.of("#e5484d");
             case NONE -> Optional.empty();

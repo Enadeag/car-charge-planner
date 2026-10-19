@@ -81,7 +81,7 @@ class OutlookMapperTest {
     void aDayWithAWindowShowsItInTheHomesTimeZoneWithWhatToSet() {
         var today = plan(day(TODAY, window(TODAY, 11, 14, 0))).days().getFirst();
 
-        assertThat(today.kind()).isEqualTo(DayKind.SUN);
+        assertThat(today.kind()).isEqualTo(DayKind.SOLAR);
         assertThat(today.hero()).isEqualTo("11:15 – 14:30");
         assertThat(today.facts()).containsExactly("Set 10 A (2.3 kW)", "about 7.3 kWh");
     }
@@ -108,9 +108,9 @@ class OutlookMapperTest {
         var withoutGrid = plan(day(TODAY, window(TODAY, 11, 14, 0.04))).days().getFirst().chips();
         var withGrid = plan(day(TODAY, window(TODAY, 11, 14, 0.6))).days().getFirst().chips();
 
-        assertThat(withoutGrid).extracting(ChipModel::source).containsExactly(EnergySource.SUN, EnergySource.CAR);
+        assertThat(withoutGrid).extracting(ChipModel::source).containsExactly(EnergySource.SOLAR, EnergySource.CAR);
         assertThat(withGrid).containsExactly(
-                new ChipModel(EnergySource.SUN, "92 % sun"), new ChipModel(EnergySource.CAR, "Battery 50 → 74 %"),
+                new ChipModel(EnergySource.SOLAR, "92 % sun"), new ChipModel(EnergySource.CAR, "Battery 50 → 74 %"),
                 new ChipModel(EnergySource.GRID, "0.6 kWh from the grid"));
     }
 

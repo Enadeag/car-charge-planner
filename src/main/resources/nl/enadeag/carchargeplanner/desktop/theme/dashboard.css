@@ -129,14 +129,14 @@
     -fx-spacing: 0.5em;
 }
 
-.card.sun,
+.card.solar,
 .card.grid {
     -fx-border-width: 0 0 0 4;
     -fx-border-insets: 0.6em 0 0.6em 0;
     -fx-padding: 0.85em 1em 0.85em 0.85em;
 }
 
-.card.sun {
+.card.solar {
     -fx-background-color: -sun-soft;
     -fx-border-color: -sun;
 }
@@ -157,14 +157,14 @@
     -fx-border-insets: -4;
 }
 
-.card.sun:focus-visible,
+.card.solar:focus-visible,
 .card.grid:focus-visible {
     -fx-border-width: 2, 0 0 0 4;
     -fx-border-radius: 16, 0;
     -fx-border-insets: -4, 0.6em 0 0.6em 0;
 }
 
-.card.sun:focus-visible {
+.card.solar:focus-visible {
     -fx-border-color: -focus, -sun;
 }
 
@@ -399,8 +399,8 @@
     -fx-font-weight: bold;
 }
 
-.chip.sun { -fx-background-color: -sun-soft; }
-.chip.sun .label { -fx-text-fill: -sun-text; }
+.chip.solar { -fx-background-color: -sun-soft; }
+.chip.solar .label { -fx-text-fill: -sun-text; }
 .chip.grid { -fx-background-color: -grid-soft; }
 .chip.grid .label { -fx-text-fill: -grid-text; }
 .chip.car { -fx-background-color: -car-soft; }
@@ -410,8 +410,8 @@
 .glyph .glyph-fill { -fx-fill: -muted; }
 .glyph .glyph-stroke { -fx-stroke: -muted; }
 .glyph .glyph-outline { -fx-fill: transparent; }
-.glyph.sun .glyph-fill { -fx-fill: -sun; }
-.glyph.sun .glyph-stroke { -fx-stroke: -sun; }
+.glyph.solar .glyph-fill { -fx-fill: -sun; }
+.glyph.solar .glyph-stroke { -fx-stroke: -sun; }
 .glyph.grid .glyph-fill { -fx-fill: -grid; }
 .glyph.grid .glyph-stroke { -fx-stroke: -grid; }
 .glyph.car .glyph-fill { -fx-fill: -car; }

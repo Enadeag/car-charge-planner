@@ -19,14 +19,14 @@ public final class Glyphs {
     }
 
     /**
-     * The glyph of a source: a sun, a bolt for the grid, a battery for the car.
+     * The glyph of a source: a sun for solar energy, a bolt for the grid, a battery for the car.
      *
      * @param source the source to draw
      * @return a new 16 px glyph, coloured by dashboard.css
      */
     static Node of(EnergySource source) {
         return switch (source) {
-            case SUN -> glyph("sun", sun());
+            case SOLAR -> glyph("solar", sun());
             case GRID -> glyph("grid", bolt());
             case CAR -> glyph("car", battery());
         };
@@ -40,7 +40,7 @@ public final class Glyphs {
      */
     public static Node of(DayKind kind) {
         return switch (kind) {
-            case SUN -> of(EnergySource.SUN);
+            case SOLAR -> of(EnergySource.SOLAR);
             case GRID -> of(EnergySource.GRID);
             case NONE -> glyph("none", ring());
         };
@@ -62,7 +62,7 @@ public final class Glyphs {
      * The CSS class of a source or a kind of day.
      *
      * @param kind a {@link EnergySource} or a {@link DayKind}
-     * @return its name in lower case: "sun", "grid", "car", "none"
+     * @return its name in lower case: "solar", "grid", "car", "none"
      */
     public static String styleClass(Enum<?> kind) {
         return kind.name().toLowerCase(Locale.ROOT);
