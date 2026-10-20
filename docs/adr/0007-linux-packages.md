@@ -27,3 +27,4 @@ The tar.gz stays for other distributions and for people who want no package.
 - `install-launcher` in a package install says the package provides the menu entry and writes nothing; `uninstall-launcher` still removes an entry of the user's own, such as one left from the tar.gz. Start at login works unchanged: it starts `/opt/car-charge-planner/bin/car-charge-planner`, which stays the same across updates.
 - The packages are not signed, like the other downloads (ADR 0003); users check them with `SHA256SUMS` and the attestation.
 - Users update by hand until Flathub is there; the install guide and the release notes say so.
+- How the app runs in the Flatpak sandbox is [ADR 0008](0008-flatpak.md).
