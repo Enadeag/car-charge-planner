@@ -40,7 +40,8 @@ desktop-file-validate "$entry"
 icon=$(sed -n "s/^Icon=//p" "$entry")
 echo "icon: $icon, $(od -An -tu1 -j16 -N8 "$icon" | awk "{print \$3*256+\$4 \"x\" \$7*256+\$8}") pixels"
 [ -f "$icon" ]
-[ -f /opt/car-charge-planner/legal/LICENSE ]
+echo "licences: $(ls /opt/car-charge-planner/lib/legal | tr "\n" " ")"
+[ -f /opt/car-charge-planner/lib/legal/LICENSE ]
 
 out=$("$app" start-at-login on); echo "start-at-login on: $out"
 autostart="$HOME/.config/autostart/car-charge-planner.desktop"

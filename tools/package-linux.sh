@@ -4,7 +4,7 @@
 # - car-charge-planner-<version>-linux.tar.gz of it, with its SBOM car-charge-planner-<version>-linux.cdx.json;
 # - car-charge-planner_<version>_amd64.deb and car-charge-planner-<version>-1.x86_64.rpm of the same app image, which
 #   install it in /opt/car-charge-planner with a menu entry (docs/adr/0007-linux-packages.md). They hold the same
-#   libraries and runtime as the tar.gz, so its SBOM describes them too.
+#   libraries and runtime as the tar.gz, so its SBOM describes them too; only the licences are in lib/legal.
 # Needs a JDK 25 or newer with jlink and jpackage, curl, unzip, GNU tar and git; for the .deb dpkg-deb and fakeroot,
 # for the .rpm rpmbuild. "sh tools/package-linux.sh --tar-only" makes the app image and the tar.gz only.
 set -eu
@@ -80,7 +80,11 @@ if [ "$packages" = yes ]; then
   mkdir target/linux-resources
   cp src/packaging/linux/car-charge-planner.desktop src/packaging/linux/control target/linux-resources/
   cp "$icon" target/linux-resources/car-charge-planner.png
-  set -- --dest target/dist --app-image target/dist/car-charge-planner \
+  # jpackage puts only bin/ and lib/ of an app image in a package, so there the licences go in lib/legal.
+  mkdir target/package-image
+  cp -a target/dist/car-charge-planner target/package-image/
+  mv target/package-image/car-charge-planner/legal target/package-image/car-charge-planner/lib/legal
+  set -- --dest target/dist --app-image target/package-image/car-charge-planner \
     --name car-charge-planner --app-version "$version" --vendor "Car charge planner" \
     --description "Tells you when to charge your electric car on your own solar power" \
     --about-url https://github.com/Enadeag/car-charge-planner \

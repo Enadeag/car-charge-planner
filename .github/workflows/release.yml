@@ -159,7 +159,7 @@ jobs:
           rpm -qip "$rpm"
           files=$(rpm -qlp "$rpm")
           for file in bin/car-charge-planner lib/app/car-charge-planner.jar lib/car-charge-planner.png \
-              lib/car-charge-planner-car-charge-planner.desktop legal/LICENSE; do
+              lib/car-charge-planner-car-charge-planner.desktop lib/legal/LICENSE; do
             if ! printf '%s\n' "$files" | grep -qx "/opt/car-charge-planner/$file"; then
               echo "::error::the .rpm has no /opt/car-charge-planner/$file"; exit 1
             fi
