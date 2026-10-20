@@ -8,7 +8,7 @@ The downloads are on the [release page](https://github.com/Enadeag/car-charge-pl
 
 Download `car-charge-planner-<version>.exe` and `SHA256SUMS`, and [check the download](#check-a-download). The installer needs no administrator rights. It installs for you only, in `%LOCALAPPDATA%\Programs\car-charge-planner`, and adds a Start menu entry and a desktop shortcut. The first start opens set-up.
 
-**"Windows protected your PC".** The installer is not code-signed yet (that waits for SignPath), so Microsoft Defender SmartScreen warns about a new download from an unknown publisher. Once the checksum matches, click **More info**, then **Run anyway**.
+**"Windows protected your PC".** The installer is not code-signed (see [ADR 0003](adr/0003-pyinstaller-unsigned-until-signpath.md)), so Microsoft Defender SmartScreen warns about a new download from an unknown publisher. Once the checksum matches, click **More info**, then **Run anyway**.
 
 **Update:** quit the app (tray icon, **Quit**), then run the new installer. It replaces the old version and keeps your settings.
 

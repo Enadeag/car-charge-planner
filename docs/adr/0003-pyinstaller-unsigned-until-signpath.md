@@ -1,5 +1,5 @@
 ---
-status: superseded in part by ADR 0005 (jpackage replaces PyInstaller and Inno Setup; unsigned until SignPath stands)
+status: superseded in part by ADR 0005 (jpackage replaces PyInstaller and Inno Setup); the installer stays unsigned, see the 2026-10-20 note
 ---
 
 # Windows builds with PyInstaller, unsigned until SignPath at the launch
@@ -13,3 +13,7 @@ Until the public launch the installer is not code-signed: Windows shows "Windows
 - **Azure Trusted Signing**: open to individuals only in the US and Canada.
 - **A Certum open-source certificate**: €49 a year, but every signature needs a code from a phone app, which does not fit signing in CI.
 - No certificate gives instant trust: SmartScreen reputation still has to grow with downloads.
+
+## Note, 2026-10-20
+
+After the public launch the project applied to SignPath Foundation, which declined: it signs only larger, well-known projects for now (#135). The Windows installer stays unsigned, so Windows shows "Windows protected your PC"; users check a download with `SHA256SUMS` and GitHub's build attestation, as [Installing](../install.md#check-a-download) explains. A paid certificate (such as the Certum or Azure options above) can be reconsidered later.

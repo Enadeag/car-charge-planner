@@ -50,7 +50,6 @@ Download from the [release page](https://github.com/Enadeag/car-charge-planner/r
 
 - [Guide](docs/guide.md): set-up, the dashboard, Settings, how it plans, the command line.
 - [Accessibility](docs/accessibility.md): keyboard, screen readers (not Orca on Linux, yet), contrast and scaling.
-- [Code signing policy](docs/code-signing.md): how the Windows installer is signed, and by whom.
 
 ## Data and privacy
 
