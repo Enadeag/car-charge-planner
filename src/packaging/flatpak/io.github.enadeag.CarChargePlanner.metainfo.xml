@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The app's AppStream metadata for Flathub and the software centres (docs/adr/0008-flatpak.md). Each release adds
+     a <release> on top, with the version and date of its CHANGELOG.md section (PackagingTest checks them). -->
+<component type="desktop-application">
+  <id>io.github.enadeag.CarChargePlanner</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>Car charge planner</name>
+  <summary>Charge your car on your solar power</summary>
+  <summary xml:lang="nl">Laad je auto op je eigen zonnestroom</summary>
+
+  <developer id="io.github.enadeag">
+    <name>Enadeag</name>
+  </developer>
+
+  <description>
+    <p>
+      Car charge planner tells you when to charge your electric car so that as much of your own solar power as
+      possible goes into the car and as little as possible is fed back to the grid. It suits a fixed-price energy
+      contract: it does not look at hourly energy prices.
+    </p>
+    <p>
+      It is advisory only: it recommends a charge window and a charge power, and you set the charge current in your
+      charger's app yourself. It plans from a description of your home: your solar panels, your location, your
+      charger and your car's battery.
+    </p>
+    <ul>
+      <li>Turns a solar forecast from Open-Meteo or Forecast.Solar, both free and without an account, into the power
+        your home has to spare</li>
+      <li>Recommends charge windows within the hours the car is at home, each with one constant power in amps and
+        kilowatts</li>
+      <li>Says how much to charge from the grid, and when, if the battery would end a day too low</li>
+      <li>Shows the plan in the tray and on its dashboard, and notifies you before each charge window</li>
+      <li>Keeps everything on your computer: no account, no telemetry, and the API keys in the system keychain</li>
+    </ul>
+    <p>
+      The app reads nothing from the car: you enter the battery level yourself.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.enadeag.CarChargePlanner.desktop</launchable>
+  <provides>
+    <binary>car-charge-planner</binary>
+  </provides>
+
+  <url type="homepage">https://github.com/Enadeag/car-charge-planner</url>
+  <url type="bugtracker">https://github.com/Enadeag/car-charge-planner/issues</url>
+  <url type="vcs-browser">https://github.com/Enadeag/car-charge-planner</url>
+  <url type="help">https://github.com/Enadeag/car-charge-planner/blob/main/docs/guide.md</url>
+
+  <recommends>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </recommends>
+
+  <content_rating type="oars-1.1"/>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>The dashboard: grid advice, a charge window and the expected solar power, and the battery level</caption>
+      <image>https://raw.githubusercontent.com/Enadeag/car-charge-planner/v0.4.0/docs/screenshots/java/charts-light.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The dashboard with the next charge window and the coming days</caption>
+      <image>https://raw.githubusercontent.com/Enadeag/car-charge-planner/v0.4.0/docs/screenshots/java/dashboard-200-light.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Settings</caption>
+      <image>https://raw.githubusercontent.com/Enadeag/car-charge-planner/v0.4.0/docs/screenshots/java/settings-200-light.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Set-up, which asks for your home step by step</caption>
+      <image>https://raw.githubusercontent.com/Enadeag/car-charge-planner/v0.4.0/docs/screenshots/java/setup-welcome-english-light.png</image>
+    </screenshot>
+  </screenshots>
+
+  <releases>
+    <release version="0.4.0" date="2026-10-20">
+      <url type="details">https://github.com/Enadeag/car-charge-planner/releases/tag/v0.4.0</url>
+      <description>
+        <p>The first public release: the repository is open, and every download comes with its checksums, an SBOM
+          and a build attestation.</p>
+      </description>
+    </release>
+  </releases>
+</component>

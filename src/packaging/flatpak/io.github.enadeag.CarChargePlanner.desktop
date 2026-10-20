@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Car charge planner
+Comment=Tells you when to charge your electric car on your own solar power
+Comment[nl]=Zegt wanneer je je elektrische auto op je eigen zonnestroom laadt
+Exec=car-charge-planner
+Icon=io.github.enadeag.CarChargePlanner
+Terminal=false
+Categories=Utility;
+Keywords=electric car;EV;solar;charging;
+Keywords[nl]=elektrische auto;zonnepanelen;zonnestroom;laden;
