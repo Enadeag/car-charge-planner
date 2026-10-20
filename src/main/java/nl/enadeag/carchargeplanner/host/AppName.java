@@ -7,6 +7,11 @@ public final class AppName {
     public static final String TITLE = "Car charge planner";
     /** The name other programs see, such as on the keychain's entries and the desktop entry. */
     public static final String ID = "car-charge-planner";
+    /**
+     * The app's ID as a Flatpak (ADR 0008), which names its menu entry there, so the notifications are tied to it.
+     * Provisional until the app is on Flathub; CONTRIBUTING lists every place it appears.
+     */
+    public static final String FLATPAK_ID = "io.github.enadeag.CarChargePlanner";
 
     private AppName() {
     }

@@ -333,8 +333,9 @@ class CommandsTest {
     @Test
     void theCommandsForASystemOfferTheMenuEntryOnLinuxOnlyAndBothSwitchesOnlyFromTheLauncher() {
         var windows = new Host(Os.WINDOWS, Map.of("LOCALAPPDATA", temp.toString()), temp, temp, new Owner.Unchecked(),
-                Optional.of(PROGRAM), false);
-        var fromTheBuild = new Host(Os.LINUX, Map.of(), temp, temp, new Owner.Unchecked(), Optional.empty(), false);
+                Optional.of(PROGRAM), false, false);
+        var fromTheBuild = new Host(Os.LINUX, Map.of(), temp, temp, new Owner.Unchecked(), Optional.empty(), false,
+                false);
         var linux = Commands.of(fromTheBuild, PlatformParts.of(fromTheBuild), instance(), MESSAGES);
 
         assertThat(Commands.of(windows, PlatformParts.of(windows), instance(), MESSAGES)
@@ -355,7 +356,7 @@ class CommandsTest {
         var dataHome = temp.resolve("data");
         var host = new Host(Os.LINUX, Map.of("XDG_DATA_HOME", dataHome.toString(), "XDG_CONFIG_HOME",
                 temp.resolve("config").toString()), temp, temp, new Owner.Unchecked(),
-                Optional.of(app.resolve("bin/car-charge-planner")), false);
+                Optional.of(app.resolve("bin/car-charge-planner")), false, false);
         var commands = Commands.of(host, PlatformParts.of(host), instance(), MESSAGES);
 
         assertThat(commands.carryOut(Command.INSTALL_LAUNCHER))
@@ -378,12 +379,28 @@ class CommandsTest {
         Files.writeString(app.resolve("lib/car-charge-planner-car-charge-planner.desktop"), "[Desktop Entry]\n");
         var config = temp.resolve("config");
         var host = new Host(Os.LINUX, Map.of("XDG_CONFIG_HOME", config.toString()), temp, temp,
-                new Owner.Unchecked(), Optional.of(app.resolve("bin/car-charge-planner")), false);
+                new Owner.Unchecked(), Optional.of(app.resolve("bin/car-charge-planner")), false, false);
 
         assertThat(Commands.of(host, PlatformParts.of(host), instance(), MESSAGES).carryOut(Command.START_AT_LOGIN_ON))
                 .isEqualTo(success(TextKey.CLI_START_AT_LOGIN_ON, AppName.TITLE));
         assertThat(Files.readString(config.resolve("autostart/car-charge-planner.desktop")))
                 .contains("Exec=\"" + app.resolve("bin/car-charge-planner") + "\" --background\n");
+    }
+
+    @Test
+    @EnabledOnOs(OS.LINUX)
+    void inAFlatpakTheMenuEntryCommandsSayTheFlatpakProvidesItAndTouchNothing() throws Exception {
+        var dataHome = temp.resolve("data");
+        var ownEntry = menuEntry(dataHome).install().getFirst();
+        var host = new Host(Os.LINUX, Map.of("XDG_DATA_HOME", dataHome.toString()), temp, temp, new Owner.Unchecked(),
+                Optional.of(Path.of("/app/bin/car-charge-planner")), false, true);
+        var commands = Commands.of(host, PlatformParts.of(host), instance(), MESSAGES);
+
+        assertThat(commands.carryOut(Command.INSTALL_LAUNCHER))
+                .isEqualTo(success(TextKey.CLI_LAUNCHER_FROM_FLATPAK, AppName.TITLE));
+        assertThat(commands.carryOut(Command.UNINSTALL_LAUNCHER))
+                .isEqualTo(success(TextKey.CLI_LAUNCHER_FROM_FLATPAK, AppName.TITLE));
+        assertThat(ownEntry).exists();
     }
 
     @Test
