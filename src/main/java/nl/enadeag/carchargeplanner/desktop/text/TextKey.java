@@ -259,6 +259,8 @@ public enum TextKey {
     CLI_LAUNCHER_NEEDS_INSTALL,
     /** The menu entry is for Linux only: {0} the app's name. */
     CLI_LAUNCHER_LINUX_ONLY,
+    /** The .deb or .rpm that installed the app put it in the menu already: {0} the app's name. */
+    CLI_LAUNCHER_FROM_PACKAGE,
     /** The menu entry was written: {0} the app's name, {1} the files written, one per line. */
     CLI_LAUNCHER_INSTALLED,
     /** The menu entry could not be written: {0} the system's error. */

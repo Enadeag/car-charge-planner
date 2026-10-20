@@ -124,4 +124,27 @@ class ApplicationMenuEntryTest {
         ApplicationMenuEntry.refreshCaches(data);
         assertThat(entry()).exists();
     }
+
+    @Test
+    void aProgramFromTheDebOrRpmHasThePackagesMenuEntry() throws Exception {
+        // jpackage's layout in /opt/car-charge-planner: the launcher in bin, a copy of the package's entry in lib
+        var app = data.resolve("opt/car-charge-planner");
+        Files.createDirectories(app.resolve("lib"));
+        Files.writeString(app.resolve("lib/car-charge-planner-car-charge-planner.desktop"), "[Desktop Entry]\n");
+
+        assertThat(ApplicationMenuEntry.packageEntry(app.resolve("bin/car-charge-planner"), "car-charge-planner"))
+                .contains("car-charge-planner-car-charge-planner");
+    }
+
+    @Test
+    void aProgramFromTheTarGzHasNoPackageMenuEntry() throws Exception {
+        // the unpacked app image has the icon in lib, but no menu entry
+        var app = data.resolve("car-charge-planner");
+        Files.createDirectories(app.resolve("lib"));
+        Files.writeString(app.resolve("lib/car-charge-planner.png"), "png");
+
+        assertThat(ApplicationMenuEntry.packageEntry(app.resolve("bin/car-charge-planner"), "car-charge-planner"))
+                .isEmpty();
+        assertThat(ApplicationMenuEntry.packageEntry(Path.of("/car-charge-planner"), "car-charge-planner")).isEmpty();
+    }
 }

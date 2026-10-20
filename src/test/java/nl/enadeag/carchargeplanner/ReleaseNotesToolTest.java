@@ -56,6 +56,9 @@ class ReleaseNotesToolTest {
         assertThat(run.out()).startsWith("The Java version.\n\n### Changed\n- Everything.\n\n### Installing\n");
         assertThat(run.out()).doesNotContain("Something new", "A candidate", "Windows.\n")
                 .contains("`car-charge-planner-0.3.0.exe`", "`car-charge-planner-0.3.0-linux.tar.gz`",
+                        "`sudo apt install ./car-charge-planner_0.3.0_amd64.deb`",
+                        "`sudo dnf install ./car-charge-planner-0.3.0-1.x86_64.rpm`",
+                        "`sha256sum --ignore-missing -c SHA256SUMS`",
                         "`car-charge-planner-0.3.0-linux.cdx.json`", "`car-charge-planner-0.3.0-windows.cdx.json`",
                         "/blob/v0.3.0/CHANGELOG.md", "/blob/v0.3.0/docs/install.md");
     }

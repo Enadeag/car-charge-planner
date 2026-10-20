@@ -1,0 +1,54 @@
+name: Linux packages
+
+# The .deb and .rpm are built and installed in fresh Debian and Fedora containers (tools/test-linux-packages.sh) when
+# what goes into them changes, on a pull request and on main, and by hand. A release builds them in release.yml. The
+# tests are skipped in the build here: ci.yml runs them.
+on:
+  pull_request:
+    paths:
+      - "tools/package-linux.sh"
+      - "tools/test-linux-packages.sh"
+      - "src/packaging/**"
+      - "pom.xml"
+      - ".mvn/**"
+      - ".github/workflows/linux-packages.yml"
+  push:
+    branches: [main]
+    paths:
+      - "tools/package-linux.sh"
+      - "tools/test-linux-packages.sh"
+      - "src/packaging/**"
+      - "pom.xml"
+      - ".mvn/**"
+      - ".github/workflows/linux-packages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-packages-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  packages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25.0.4.1+1"
+      - name: The packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fakeroot rpm
+      - name: Build the tar.gz, the .deb and the .rpm
+        env:
+          MAVEN_ARGS: -DskipTests
+        run: sh tools/package-linux.sh
+      - name: Install, run and remove them in debian:stable and fedora:latest
+        run: sh tools/test-linux-packages.sh target/dist

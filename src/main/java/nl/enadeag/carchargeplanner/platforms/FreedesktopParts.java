@@ -13,6 +13,7 @@ import nl.enadeag.carchargeplanner.host.ConfigLocation;
 import nl.enadeag.carchargeplanner.host.Host;
 import nl.enadeag.carchargeplanner.host.Os;
 import nl.enadeag.carchargeplanner.host.RuntimeFolder;
+import nl.enadeag.carchargeplanner.platform.linux.ApplicationMenuEntry;
 import nl.enadeag.carchargeplanner.platform.linux.BusConnector;
 import nl.enadeag.carchargeplanner.platform.linux.FreedesktopNotifications;
 import nl.enadeag.carchargeplanner.platform.linux.LinuxStartAtLogin;
@@ -50,7 +51,7 @@ final class FreedesktopParts implements PlatformParts {
         var tray = new StatusNotifierTray(sessionBus, new StatusIcon(), runtimeFolder("tray"), AppName.ID,
                 AppName.TITLE);
         // a notification server is there also without a tray
-        var notifications = new FreedesktopNotifications(sessionBus, AppName.TITLE, AppName.ID, icon,
+        var notifications = new FreedesktopNotifications(sessionBus, AppName.TITLE, desktopEntry(), icon,
                 runtimeFolder("notify"), () -> language.messages().text(TextKey.OPEN_DASHBOARD));
         return new TrayParts(tray, notifications, false);
     }
@@ -75,6 +76,17 @@ final class FreedesktopParts implements PlatformParts {
     @Override
     public void browse(URI link) throws IOException {
         new ProcessBuilder("xdg-open", link.toString()).inheritIO().start();
+    }
+
+    /**
+     * The menu entry the notifications are tied to: the one the app's .deb or .rpm installed when the app runs from
+     * there, otherwise the one {@code install-launcher} writes.
+     *
+     * @return the entry's name without ".desktop"
+     */
+    String desktopEntry() {
+        return host.launcher().flatMap(program -> ApplicationMenuEntry.packageEntry(program, AppName.ID))
+                .orElse(AppName.ID);
     }
 
     /** A private folder of this process's own; see {@link RuntimeFolder}. */

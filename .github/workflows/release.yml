@@ -1,7 +1,7 @@
 name: Release
 
-# A tag vX.Y.Z builds and tests the app, packages the Linux tar.gz and the Windows installer with an SBOM each, checks
-# the SBOMs for known vulnerabilities, attests where the files were built, and attaches them, with SHA256SUMS, to a
+# A tag vX.Y.Z builds and tests the app, packages the Linux tar.gz, .deb and .rpm and the Windows installer with an SBOM
+# for Linux and one for Windows, checks the SBOMs for known vulnerabilities, attests where the files were built, and attaches them, with SHA256SUMS, to a
 # DRAFT GitHub Release; it also creates the branch release/X.Y.Z at the tag. Nothing is ever published
 # here: the maintainer reads the draft and publishes it by hand. The tag must be "v" plus the version in pom.xml, which
 # has no -SNAPSHOT at a release (CONTRIBUTING.md, Releasing).
@@ -106,10 +106,13 @@ jobs:
         with:
           distribution: temurin
           java-version: "25.0.4.1+1"
-      - name: D-Bus and GNOME Keyring, for the tests on a private bus
+      # fakeroot and rpm (with rpmbuild) for the .deb and .rpm; xdg-utils, which the .deb depends on, and
+      # desktop-file-validate for its smoke test
+      - name: D-Bus and GNOME Keyring for the tests on a private bus, and the packaging tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends dbus-daemon gnome-keyring
+          sudo apt-get install -y --no-install-recommends dbus-daemon gnome-keyring fakeroot rpm xdg-utils \
+            desktop-file-utils
       - name: Build and test
         run: ./mvnw -B clean verify
       - name: Package
@@ -131,11 +134,43 @@ jobs:
           "$app" quit
           status=0; "$app" no-such-command || status=$?
           if [ "$status" -ne 2 ]; then echo "::error::unknown command: exit code $status, expected 2"; exit 1; fi
+      - name: Smoke test the .deb, installed on this runner
+        run: |
+          sudo dpkg -i target/dist/car-charge-planner_*_amd64.deb
+          app=/opt/car-charge-planner/bin/car-charge-planner
+          status=0; "$app" bogus || status=$?
+          if [ "$status" -ne 2 ]; then echo "::error::installed .deb, unknown command: exit code $status, expected 2"; exit 1; fi
+          out=$("$app" quit)
+          echo "$out"
+          if [ "$out" != "Car charge planner is not running." ]; then echo "::error::installed .deb, quit said: $out"; exit 1; fi
+          entry=$(find /usr -name car-charge-planner-car-charge-planner.desktop)
+          if [ -z "$entry" ]; then echo "::error::the .deb installed no menu entry"; exit 1; fi
+          desktop-file-validate "$entry"
+          sudo dpkg -r car-charge-planner
+          if [ -e /opt/car-charge-planner ] || [ -e "$entry" ]; then
+            echo "::error::removing the .deb left files behind"; exit 1
+          fi
+      - name: Check the files in the .rpm
+        run: |
+          rpm=$(ls target/dist/car-charge-planner-*.x86_64.rpm)
+          rpm -qip "$rpm"
+          files=$(rpm -qlp "$rpm")
+          for file in bin/car-charge-planner lib/app/car-charge-planner.jar lib/car-charge-planner.png \
+              lib/car-charge-planner-car-charge-planner.desktop legal/LICENSE; do
+            if ! printf '%s\n' "$files" | grep -qx "/opt/car-charge-planner/$file"; then
+              echo "::error::the .rpm has no /opt/car-charge-planner/$file"; exit 1
+            fi
+          done
+          if ! rpm -qp --scripts "$rpm" | grep -q "xdg-desktop-menu install /opt/car-charge-planner/lib/car-charge-planner-car-charge-planner.desktop"; then
+            echo "::error::the .rpm does not install its menu entry"; exit 1
+          fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: linux-download
           path: |
             target/dist/car-charge-planner-*-linux.tar.gz
+            target/dist/car-charge-planner_*_amd64.deb
+            target/dist/car-charge-planner-*.x86_64.rpm
             target/dist/car-charge-planner-*-linux.cdx.json
           if-no-files-found: error
           retention-days: 14
@@ -211,10 +246,10 @@ jobs:
       - name: Checksums
         run: |
           cd release
-          ls car-charge-planner-*-linux.tar.gz car-charge-planner-*.exe \
-            car-charge-planner-*-linux.cdx.json car-charge-planner-*-windows.cdx.json
-          if [ "$(ls | wc -l)" -ne 4 ]; then
-            echo "::error::expected the tar.gz, the installer and their SBOMs only"; ls -l; exit 1
+          ls car-charge-planner-*-linux.tar.gz car-charge-planner_*_amd64.deb car-charge-planner-*.x86_64.rpm \
+            car-charge-planner-*.exe car-charge-planner-*-linux.cdx.json car-charge-planner-*-windows.cdx.json
+          if [ "$(ls | wc -l)" -ne 6 ]; then
+            echo "::error::expected the tar.gz, the .deb, the .rpm, the installer and the two SBOMs only"; ls -l; exit 1
           fi
           sha256sum -- * > SHA256SUMS
           cat SHA256SUMS
@@ -225,6 +260,8 @@ jobs:
         with:
           subject-path: |
             release/car-charge-planner-*-linux.tar.gz
+            release/car-charge-planner_*_amd64.deb
+            release/car-charge-planner-*.x86_64.rpm
             release/car-charge-planner-*.exe
             release/car-charge-planner-*.cdx.json
       - name: Create the release branch
