@@ -4,6 +4,9 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Added
+- A [code signing policy](docs/code-signing.md): the Windows installer is to be signed through SignPath Foundation, and the release notes link the policy.
+
 ## [0.4.0] - 2026-10-20
 
 The first public release: the repository is open, and every download comes with its checksums, an SBOM and a build attestation.

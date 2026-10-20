@@ -28,7 +28,7 @@ public final class ReleaseNotes {
 
             Both bring their own Java runtime: %3$s. `car-charge-planner-%1$s-linux.cdx.json` and `car-charge-planner-%1$s-windows.cdx.json` list what each download holds (CycloneDX SBOM), and GitHub attests that every file was built here from tag `v%1$s`: check one with `gh attestation verify <file> -R Enadeag/car-charge-planner`.
 
-            Full details: [CHANGELOG.md](%2$s/blob/v%1$s/CHANGELOG.md).
+            Full details: [CHANGELOG.md](%2$s/blob/v%1$s/CHANGELOG.md). [Code signing policy](%2$s/blob/v%1$s/docs/code-signing.md).
             """;
 
     private ReleaseNotes() {
