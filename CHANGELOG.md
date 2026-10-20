@@ -2,7 +2,9 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.4.0] - 2026-10-20
+
+The first public release: the repository is open, and every download comes with its checksums, an SBOM and a build attestation.
 
 ### Added
 - `car-charge-planner test-notification` asks the running app to show a test notification in your language, with the app's name, icon and "Open dashboard" button; clicking it opens the dashboard. Nothing is planned or recorded for it. When the app does not run, it says so and ends with exit code 4; when it runs but cannot be reached, with exit code 3.
@@ -109,7 +111,8 @@ First version, for Linux.
 - Installation with `pipx` as the command `car-charge-planner`.
 - `config.toml` and `state.json` say which file format they are in, so later versions can upgrade them. A config file from a newer version of the app is refused with a clear message, and a newer state file is left alone. A config file written before this release, with a single `[panels]` table, is read as one panel array.
 
-[Unreleased]: https://github.com/Enadeag/car-charge-planner/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Enadeag/car-charge-planner/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Enadeag/car-charge-planner/releases/tag/v0.1.0
