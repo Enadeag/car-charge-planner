@@ -56,7 +56,8 @@ docker run --rm -v "$copy:/packages:ro" debian:stable sh -euc '
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq
   apt-get install -y -qq desktop-file-utils > /dev/null
-  apt-get install -y -qq /packages/car-charge-planner_*_amd64.deb > /dev/null
+  apt-get install -y -qq /packages/car-charge-planner_*_amd64.deb 2>&1 | grep -v "^\(Selecting\|Preparing\|Unpacking\|Setting up\) " || true
+  dpkg -s car-charge-planner | grep -qx "Status: install ok installed"
   dpkg -s car-charge-planner | grep -E "^(Package|Version|Maintainer|Depends|Homepage):"
   sh -c "$1" checks "apt-get remove -y -qq"
 ' sh "$checks"
@@ -64,7 +65,7 @@ docker run --rm -v "$copy:/packages:ro" debian:stable sh -euc '
 echo "== fedora:latest, .rpm"
 docker run --rm -v "$copy:/packages:ro" fedora:latest sh -euc '
   dnf install -y -q desktop-file-utils > /dev/null
-  dnf install -y -q /packages/car-charge-planner-*.x86_64.rpm > /dev/null
+  dnf install -y -q /packages/car-charge-planner-*.x86_64.rpm
   rpm -qi car-charge-planner | grep -E "^(Name|Version|Release|License|URL|Vendor)"
   sh -c "$1" checks "dnf remove -y -q"
 ' sh "$checks"
