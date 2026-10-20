@@ -69,7 +69,7 @@ The program also takes a few commands:
 | `car-charge-planner test-notification` | Asks the running app to show a test notification, to check that notifications reach you and that clicking one opens the dashboard. Nothing is planned or recorded for it. It ends with exit code 4 when the app does not run, and with exit code 3 when it runs but cannot be reached. |
 | `car-charge-planner start-at-login on` | Starts the app at login, hidden in the tray. The same as the switch in Settings, App. |
 | `car-charge-planner start-at-login off` | Stops starting it at login. |
-| `car-charge-planner install-launcher` | Linux only: adds the app to the application menu, with its icons. Run it again after moving the folder. |
+| `car-charge-planner install-launcher` | Linux only: adds the app to the application menu, with its icons. Run it again after moving the folder. Installed from the `.deb` or `.rpm`, the app is in the menu already, and this says so. |
 | `car-charge-planner uninstall-launcher` | Linux only: removes what `install-launcher` wrote. |
 | `--config=path/to/engine.json` | Plans with another settings file, such as `docs/example-engine.json`. |
 

@@ -24,9 +24,11 @@ public final class ReleaseNotes {
             ### Installing
 
             - **Windows:** download `car-charge-planner-%1$s.exe` and `SHA256SUMS`. Check the download in PowerShell with `(Get-FileHash .\\car-charge-planner-%1$s.exe -Algorithm SHA256).Hash` against the line in `SHA256SUMS`. The installer is not code-signed yet, so Windows shows "Windows protected your PC": choose **More info**, then **Run anyway**.
-            - **Linux:** download `car-charge-planner-%1$s-linux.tar.gz` and `SHA256SUMS`, check it with `sha256sum --ignore-missing -c SHA256SUMS`, unpack it and start `bin/car-charge-planner`; see [Installing](%2$s/blob/v%1$s/docs/install.md).
+            - **Debian, Ubuntu:** download `car-charge-planner_%1$s_amd64.deb` and `SHA256SUMS`, check it with `sha256sum --ignore-missing -c SHA256SUMS` and install it with `sudo apt install ./car-charge-planner_%1$s_amd64.deb`. It puts the app in `/opt/car-charge-planner` and in the application menu.
+            - **Fedora, openSUSE:** download `car-charge-planner-%1$s-1.x86_64.rpm` and `SHA256SUMS`, check it with `sha256sum --ignore-missing -c SHA256SUMS` and install it with `sudo dnf install ./car-charge-planner-%1$s-1.x86_64.rpm` (openSUSE: `sudo zypper install ./car-charge-planner-%1$s-1.x86_64.rpm`).
+            - **Other Linux:** download `car-charge-planner-%1$s-linux.tar.gz` and `SHA256SUMS`, check it with `sha256sum --ignore-missing -c SHA256SUMS`, unpack it and start `bin/car-charge-planner`.
 
-            Both bring their own Java runtime: %3$s. `car-charge-planner-%1$s-linux.cdx.json` and `car-charge-planner-%1$s-windows.cdx.json` list what each download holds (CycloneDX SBOM), and GitHub attests that every file was built here from tag `v%1$s`: check one with `gh attestation verify <file> -R Enadeag/car-charge-planner`.
+            The .deb and .rpm do not update themselves: install the next release's over this one. [Installing](%2$s/blob/v%1$s/docs/install.md) has updating and uninstalling. Every download brings its own Java runtime: %3$s. `car-charge-planner-%1$s-linux.cdx.json` and `car-charge-planner-%1$s-windows.cdx.json` list what the downloads hold (CycloneDX SBOM; the Linux one covers the tar.gz, the .deb and the .rpm, which hold the same app), and GitHub attests that every file was built here from tag `v%1$s`: check one with `gh attestation verify <file> -R Enadeag/car-charge-planner`.
 
             Full details: [CHANGELOG.md](%2$s/blob/v%1$s/CHANGELOG.md).
             """;

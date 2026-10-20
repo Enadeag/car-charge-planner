@@ -10,13 +10,15 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
  * The app in the user's application menu: a desktop entry in {@code $XDG_DATA_HOME/applications} and the app icon in
  * {@code $XDG_DATA_HOME/icons/hicolor}, in every size of the icon theme specification the app has. No root is
- * needed, and the desktop's menu and notifications find the app by this entry.
+ * needed, and the desktop's menu and notifications find the app by this entry. The app's .deb and .rpm install a
+ * menu entry of their own for the whole system instead; see {@link #packageEntry(Path, String)}.
  */
 public final class ApplicationMenuEntry {
 
@@ -86,6 +88,26 @@ public final class ApplicationMenuEntry {
             cachesChanged.accept(dataHome);
         }
         return List.copyOf(removed);
+    }
+
+    /**
+     * The menu entry that the app's .deb or .rpm installed for the whole system, if the program comes from one. jpackage
+     * names that entry after the package and the launcher, both the app's ID, and keeps a copy of it in the app's
+     * {@code lib} folder, which the app image in the tar.gz does not have.
+     *
+     * @param program the app's launcher, an absolute path: {@code bin/<id>} in the app's folder
+     * @param id the app's ID, which is both the package's name and the launcher's
+     * @return the entry's name without ".desktop", such as "car-charge-planner-car-charge-planner"; empty when the
+     *     program was not installed by a package
+     */
+    public static Optional<String> packageEntry(Path program, String id) {
+        var bin = program.getParent();
+        var folder = bin == null ? null : bin.getParent();
+        var name = id + "-" + id;
+        if (folder == null || !Files.isRegularFile(folder.resolve("lib").resolve(name + ".desktop"))) {
+            return Optional.empty();
+        }
+        return Optional.of(name);
     }
 
     /**

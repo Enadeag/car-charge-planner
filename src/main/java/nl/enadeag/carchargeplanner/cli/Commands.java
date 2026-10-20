@@ -50,11 +50,16 @@ public final class Commands {
          * The menu entry for the program that runs from its launcher.
          *
          * @param os the system, as the menu entry is Linux's only
-         * @param entry the menu entry for that program
-         * @return the entry on Linux; elsewhere, that it is Linux's only
+         * @param entry the user's own menu entry for that program
+         * @param fromPackage whether the program was installed by the app's .deb or .rpm, which put it in the menu
+         *     already
+         * @return the entry on Linux, or that the package provides it; elsewhere, that it is Linux's only
          */
-        static MenuEntry of(Os os, ApplicationMenuEntry entry) {
-            return os == Os.LINUX ? new Present(entry) : new LinuxOnly();
+        static MenuEntry of(Os os, ApplicationMenuEntry entry, boolean fromPackage) {
+            if (os != Os.LINUX) {
+                return new LinuxOnly();
+            }
+            return fromPackage ? new FromPackage(entry) : new Present(entry);
         }
 
         /**
@@ -74,6 +79,14 @@ public final class Commands {
          * @param entry what installs and removes it
          */
         record Present(ApplicationMenuEntry entry) implements MenuEntry { }
+
+        /**
+         * The package that installed the program put it in the menu for everyone, so the user needs no entry of
+         * their own; one written before, such as for a tar.gz, can still be removed.
+         *
+         * @param entry the user's own menu entry, to remove
+         */
+        record FromPackage(ApplicationMenuEntry entry) implements MenuEntry { }
 
         /** The menu entry is Linux's only. */
         record LinuxOnly() implements MenuEntry { }
@@ -110,7 +123,8 @@ public final class Commands {
         var dataHome = DataLocation.systemFolder(host.os(), host.environment(), host.home());
         var menuEntry = host.launcher()
                 .map(program -> MenuEntry.of(host.os(), new ApplicationMenuEntry(dataHome, program, AppName.ID,
-                        AppName.TITLE, ApplicationMenuEntry::refreshCaches)))
+                        AppName.TITLE, ApplicationMenuEntry::refreshCaches),
+                        ApplicationMenuEntry.packageEntry(program, AppName.ID).isPresent()))
                 .orElseGet(() -> MenuEntry.none(host.os()));
         var startAtLogin = parts.startAtLogin().<LoginSwitch>map(LoginSwitch.Present::new)
                 .orElseGet(LoginSwitch.OnlyFromLauncher::new);
@@ -194,6 +208,9 @@ public final class Commands {
             case MenuEntry.LinuxOnly _ -> failure(messages.text(TextKey.CLI_LAUNCHER_LINUX_ONLY, AppName.TITLE));
             case MenuEntry.OnlyFromLauncher _ -> failure(messages.text(TextKey.CLI_LAUNCHER_NEEDS_INSTALL));
             case MenuEntry.Present(var entry) -> switchLauncher(entry, install);
+            case MenuEntry.FromPackage(var entry) -> install
+                    ? success(messages.text(TextKey.CLI_LAUNCHER_FROM_PACKAGE, AppName.TITLE))
+                    : switchLauncher(entry, false);
         };
     }
 

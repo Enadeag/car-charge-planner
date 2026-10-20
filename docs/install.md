@@ -16,6 +16,43 @@ Download `car-charge-planner-<version>.exe` and `SHA256SUMS`, and [check the dow
 
 ## Linux
 
+There are three Linux downloads with the same app: a `.deb` for Debian and Ubuntu, an `.rpm` for Fedora and openSUSE, and a `tar.gz` for any other distribution. They are for 64-bit Intel and AMD processors (x86-64). None of them updates itself: install the next release yourself, as below. A Flathub version with automatic updates is planned ([ADR 0007](adr/0007-linux-packages.md), #217).
+
+### Debian and Ubuntu
+
+Download `car-charge-planner_<version>_amd64.deb` and `SHA256SUMS`, [check the download](#check-a-download) and install it:
+
+```bash
+sudo apt install ./car-charge-planner_<version>_amd64.deb
+```
+
+It installs the app in `/opt/car-charge-planner` and puts it in the application menu for every user; start it from there, or run `/opt/car-charge-planner/bin/car-charge-planner`. The first start opens set-up. `install-launcher` is not needed: it says the package puts the app in the menu already.
+
+**Coming from the tar.gz:** run `/opt/car-charge-planner/bin/car-charge-planner uninstall-launcher` once if you had added the unpacked app to the menu, so it is not there twice, and switch start at login off and on again (Settings, App) so it starts the installed app. Then delete the old folder.
+
+**"No writable system menu directory found".** The package adds its menu entry with `xdg-desktop-menu`, which needs the system's menu folders, `/etc/xdg/menus` and `/usr/share/desktop-directories`. Desktops with an application menu (KDE Plasma, GNOME, Xfce and others) have them; if yours does not, create them with `sudo mkdir -p /etc/xdg/menus /usr/share/desktop-directories` and install again. The same goes for the `.rpm`.
+
+**Update:** quit the app (tray icon, **Quit**), then install the new `.deb` the same way, over the old one. Your settings and start at login stay.
+
+**Uninstall:** switch off start at login (Settings, App), quit the app, then `sudo apt remove car-charge-planner`. This removes the program and its menu entry. Your settings and data stay where they are, listed under [What is kept, and where](privacy.md#what-is-kept-and-where); delete them if you want them gone.
+
+### Fedora and openSUSE
+
+Download `car-charge-planner-<version>-1.x86_64.rpm` and `SHA256SUMS`, [check the download](#check-a-download) and install it:
+
+```bash
+sudo dnf install ./car-charge-planner-<version>-1.x86_64.rpm      # Fedora
+sudo zypper install ./car-charge-planner-<version>-1.x86_64.rpm   # openSUSE
+```
+
+It installs the app in `/opt/car-charge-planner` and puts it in the application menu for every user, as the `.deb` does; coming from the tar.gz works the same too. Each release is tested on Fedora; openSUSE should work the same, but is not tested.
+
+**Update:** quit the app, then install the new `.rpm` the same way: it replaces the old version and keeps your settings and start at login.
+
+**Uninstall:** switch off start at login (Settings, App), quit the app, then `sudo dnf remove car-charge-planner` (openSUSE: `sudo zypper remove car-charge-planner`). Your settings and data stay, as above.
+
+### Other distributions: the tar.gz
+
 Download `car-charge-planner-<version>-linux.tar.gz` and `SHA256SUMS`, [check the download](#check-a-download) and unpack it where you keep programs:
 
 ```bash
@@ -47,7 +84,7 @@ sha256sum --ignore-missing -c SHA256SUMS
 
 GitHub attests each download of a release: a signed record that it was built by this repository's release workflow from the release's tag. With the [GitHub CLI](https://cli.github.com), check a download with `gh attestation verify <file> -R Enadeag/car-charge-planner`; it says which workflow run built it, or fails.
 
-Each release also has an SBOM per download (`car-charge-planner-<version>-linux.cdx.json` and `-windows.cdx.json`, CycloneDX), which lists every library and the Java runtime it holds, with their versions.
+Each release also has an SBOM (CycloneDX) for Linux, `car-charge-planner-<version>-linux.cdx.json`, and one for Windows, `-windows.cdx.json`, which list every library and the Java runtime the downloads hold, with their versions. The Linux one covers the `tar.gz`, the `.deb` and the `.rpm`: they hold the same app.
 
 ## Coming from 0.2.0
 

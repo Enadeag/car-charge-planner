@@ -42,7 +42,11 @@ The pictures are of an example home; a real desktop theme looks a little differe
 Download from the [release page](https://github.com/Enadeag/car-charge-planner/releases); each download brings its own Java runtime.
 
 - **Windows:** run `car-charge-planner-<version>.exe`, which needs no administrator rights. It is not code-signed yet: [check the download](docs/install.md#check-a-download) first.
-- **Linux:** unpack `car-charge-planner-<version>-linux.tar.gz` and start `bin/car-charge-planner`; `install-launcher` adds it to the menu.
+- **Debian, Ubuntu:** `sudo apt install ./car-charge-planner_<version>_amd64.deb`.
+- **Fedora, openSUSE:** `sudo dnf install ./car-charge-planner-<version>-1.x86_64.rpm` (or `zypper install`).
+- **Other Linux:** unpack `car-charge-planner-<version>-linux.tar.gz` and start `bin/car-charge-planner`; `install-launcher` adds it to the menu.
+
+The `.deb` and `.rpm` put the app in `/opt/car-charge-planner` and in the application menu. No download updates itself yet: install a new release over the old one.
 
 [Installing](docs/install.md) has the details, updates and uninstalling.
 

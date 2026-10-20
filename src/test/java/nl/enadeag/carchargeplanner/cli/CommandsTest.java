@@ -121,7 +121,8 @@ class CommandsTest {
         return new Commands(MESSAGES, instance(),
                 login.<Commands.LoginSwitch>map(Commands.LoginSwitch.Present::new)
                         .orElseGet(Commands.LoginSwitch.OnlyFromLauncher::new),
-                menuEntry.map(entry -> Commands.MenuEntry.of(os, entry)).orElseGet(() -> Commands.MenuEntry.none(os)));
+                menuEntry.map(entry -> Commands.MenuEntry.of(os, entry, false))
+                        .orElseGet(() -> Commands.MenuEntry.none(os)));
     }
 
     private Commands commands() {
@@ -342,6 +343,47 @@ class CommandsTest {
         assertThat(linux.carryOut(Command.INSTALL_LAUNCHER)).isEqualTo(failure(TextKey.CLI_LAUNCHER_NEEDS_INSTALL));
         assertThat(linux.carryOut(Command.START_AT_LOGIN_ON))
                 .isEqualTo(failure(TextKey.CLI_START_AT_LOGIN_NEEDS_INSTALL));
+    }
+
+    @Test
+    @EnabledOnOs(OS.LINUX)
+    void fromTheDebOrRpmTheLauncherIsThePackagesAndAnEntryOfTheUsersOwnCanStillBeRemoved() throws Exception {
+        // the .deb and .rpm install the app in /opt/car-charge-planner, with a copy of their menu entry in lib
+        var app = temp.resolve("opt/car-charge-planner");
+        Files.createDirectories(app.resolve("lib"));
+        Files.writeString(app.resolve("lib/car-charge-planner-car-charge-planner.desktop"), "[Desktop Entry]\n");
+        var dataHome = temp.resolve("data");
+        var host = new Host(Os.LINUX, Map.of("XDG_DATA_HOME", dataHome.toString(), "XDG_CONFIG_HOME",
+                temp.resolve("config").toString()), temp, temp, new Owner.Unchecked(),
+                Optional.of(app.resolve("bin/car-charge-planner")), false);
+        var commands = Commands.of(host, PlatformParts.of(host), instance(), MESSAGES);
+
+        assertThat(commands.carryOut(Command.INSTALL_LAUNCHER))
+                .isEqualTo(success(TextKey.CLI_LAUNCHER_FROM_PACKAGE, AppName.TITLE));
+        assertThat(dataHome).doesNotExist();
+
+        // an entry written before, such as from the tar.gz
+        var ownEntry = menuEntry(dataHome).install().getFirst();
+        var removed = commands.carryOut(Command.UNINSTALL_LAUNCHER);
+        assertThat(ownEntry).doesNotExist();
+        assertThat(removed.exit()).isEqualTo(ExitCode.SUCCESS);
+        assertThat(removed.text()).contains("  " + ownEntry);
+    }
+
+    @Test
+    @EnabledOnOs(OS.LINUX)
+    void fromTheDebOrRpmStartAtLoginStartsTheInstalledLauncher() throws Exception {
+        var app = temp.resolve("opt/car-charge-planner");
+        Files.createDirectories(app.resolve("lib"));
+        Files.writeString(app.resolve("lib/car-charge-planner-car-charge-planner.desktop"), "[Desktop Entry]\n");
+        var config = temp.resolve("config");
+        var host = new Host(Os.LINUX, Map.of("XDG_CONFIG_HOME", config.toString()), temp, temp,
+                new Owner.Unchecked(), Optional.of(app.resolve("bin/car-charge-planner")), false);
+
+        assertThat(Commands.of(host, PlatformParts.of(host), instance(), MESSAGES).carryOut(Command.START_AT_LOGIN_ON))
+                .isEqualTo(success(TextKey.CLI_START_AT_LOGIN_ON, AppName.TITLE));
+        assertThat(Files.readString(config.resolve("autostart/car-charge-planner.desktop")))
+                .contains("Exec=\"" + app.resolve("bin/car-charge-planner") + "\" --background\n");
     }
 
     @Test

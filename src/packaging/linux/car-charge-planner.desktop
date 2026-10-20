@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Car charge planner
+Comment=APPLICATION_DESCRIPTION
+Exec=APPLICATION_LAUNCHER
+Icon=APPLICATION_ICON
+Terminal=false
+Categories=Utility;
