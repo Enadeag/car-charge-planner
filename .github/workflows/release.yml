@@ -135,6 +135,8 @@ jobs:
           if [ "$status" -ne 2 ]; then echo "::error::unknown command: exit code $status, expected 2"; exit 1; fi
       - name: Smoke test the .deb, installed on this runner
         run: |
+          # the menu folders a desktop has, which xdg-desktop-menu needs (tools/test-linux-packages.sh explains)
+          sudo mkdir -p /etc/xdg/menus /usr/share/desktop-directories
           # dpkg does not fetch what the .deb depends on; apt-get -f installs what is missing and finishes the install
           sudo dpkg -i target/dist/car-charge-planner_*_amd64.deb || sudo apt-get install -f -y --no-install-recommends
           dpkg -s car-charge-planner | grep -qx "Status: install ok installed"

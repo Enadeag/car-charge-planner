@@ -30,7 +30,7 @@ It installs the app in `/opt/car-charge-planner` and puts it in the application 
 
 **Coming from the tar.gz:** run `/opt/car-charge-planner/bin/car-charge-planner uninstall-launcher` once if you had added the unpacked app to the menu, so it is not there twice, and switch start at login off and on again (Settings, App) so it starts the installed app. Then delete the old folder.
 
-**"No writable system menu directory found".** The package adds its menu entry with `xdg-desktop-menu`, which needs the system's menu folder, `/etc/xdg/menus`. Desktops with an application menu (KDE Plasma, GNOME, Xfce and others) have it; if yours does not, create it with `sudo mkdir -p /etc/xdg/menus` and install again. The same goes for the `.rpm`.
+**"No writable system menu directory found".** The package adds its menu entry with `xdg-desktop-menu`, which needs the system's menu folders, `/etc/xdg/menus` and `/usr/share/desktop-directories`. Desktops with an application menu (KDE Plasma, GNOME, Xfce and others) have them; if yours does not, create them with `sudo mkdir -p /etc/xdg/menus /usr/share/desktop-directories` and install again. The same goes for the `.rpm`.
 
 **Update:** quit the app (tray icon, **Quit**), then install the new `.deb` the same way, over the old one. Your settings and start at login stay.
 
