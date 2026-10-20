@@ -2,6 +2,9 @@
 # Installs the .deb in a fresh debian:stable container and the .rpm in a fresh fedora:latest one, runs the installed
 # app's commands there (no desktop, no D-Bus), checks the menu entry, its icon and start at login, removes the package
 # again and checks that nothing is left in /opt.
+# The packages add their menu entry with xdg-desktop-menu, which fails, and with it the install and the removal, when
+# the system has no menu folder (/etc/xdg/menus). Every desktop with an application menu has one, a bare container
+# not, so the containers get an empty one, as a desktop would have.
 # Usage: sh tools/test-linux-packages.sh target/dist. Needs Docker; the containers get a read-only copy of the two
 # packages and are removed when they end.
 set -eu
@@ -56,6 +59,7 @@ docker run --rm -v "$copy:/packages:ro" debian:stable sh -euc '
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq
   apt-get install -y -qq desktop-file-utils > /dev/null
+  mkdir -p /etc/xdg/menus  # as on a desktop; see the comment at the top
   apt-get install -y -qq /packages/car-charge-planner_*_amd64.deb 2>&1 | grep -v "^\(Selecting\|Preparing\|Unpacking\|Setting up\) " || true
   dpkg -s car-charge-planner | grep -qx "Status: install ok installed"
   dpkg -s car-charge-planner | grep -E "^(Package|Version|Maintainer|Depends|Homepage):"
@@ -65,6 +69,7 @@ docker run --rm -v "$copy:/packages:ro" debian:stable sh -euc '
 echo "== fedora:latest, .rpm"
 docker run --rm -v "$copy:/packages:ro" fedora:latest sh -euc '
   dnf install -y -q desktop-file-utils > /dev/null
+  mkdir -p /etc/xdg/menus
   dnf install -y -q /packages/car-charge-planner-*.x86_64.rpm
   rpm -qi car-charge-planner | grep -E "^(Name|Version|Release|License|URL|Vendor)"
   sh -c "$1" checks "dnf remove -y -q"
