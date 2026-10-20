@@ -6,6 +6,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 /** How the host tells a Flatpak sandbox, and the runtime folder the app uses there. */
@@ -25,6 +27,7 @@ class HostTest {
     }
 
     @Test
+    @EnabledOnOs(OS.LINUX) // a Flatpak's paths are Linux paths
     void inAFlatpakTheRuntimeFolderIsTheOneEveryRunOfTheAppShares() {
         var shared = Host.sharedRuntimeFolder(Map.of("XDG_RUNTIME_DIR", "/run/user/1000", "HOME", "/home/me"));
 
