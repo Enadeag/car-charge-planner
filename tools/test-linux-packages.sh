@@ -20,9 +20,10 @@ chmod -R a+rX "$copy"
 checks='
 set -eu
 app=/opt/car-charge-planner/bin/car-charge-planner
-# a home and a runtime folder of its own, as a user has
-HOME=$(mktemp -d); XDG_RUNTIME_DIR=$(mktemp -d); export HOME XDG_RUNTIME_DIR
-unset XDG_DATA_HOME XDG_CONFIG_HOME
+# folders of its own, as a user has; Java takes the home folder from the user account, not from $HOME
+home=$(mktemp -d); XDG_RUNTIME_DIR=$(mktemp -d)
+XDG_CONFIG_HOME=$home/.config; XDG_DATA_HOME=$home/.local/share
+export XDG_RUNTIME_DIR XDG_CONFIG_HOME XDG_DATA_HOME
 
 status=0; "$app" bogus > /dev/null 2>&1 || status=$?
 echo "bogus: exit code $status"; [ "$status" -eq 2 ]
@@ -31,7 +32,7 @@ out=$("$app" quit); echo "quit: $out"
 
 out=$("$app" install-launcher); echo "install-launcher: $out"
 case "$out" in *"puts it in the application menu already"*) ;; *) exit 1 ;; esac
-[ ! -e "$HOME/.local/share/applications" ]
+[ ! -e "$XDG_DATA_HOME/applications" ]
 
 entry=$(find /usr -name car-charge-planner-car-charge-planner.desktop)
 echo "menu entry: $entry"; [ -n "$entry" ]
@@ -44,7 +45,7 @@ echo "licences: $(ls /opt/car-charge-planner/lib/legal | tr "\n" " ")"
 [ -f /opt/car-charge-planner/lib/legal/LICENSE ]
 
 out=$("$app" start-at-login on); echo "start-at-login on: $out"
-autostart="$HOME/.config/autostart/car-charge-planner.desktop"
+autostart="$XDG_CONFIG_HOME/autostart/car-charge-planner.desktop"
 grep -qx "Exec=\"$app\" --background" "$autostart"
 desktop-file-validate "$autostart"
 "$app" start-at-login off > /dev/null; [ ! -e "$autostart" ]
