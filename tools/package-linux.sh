@@ -72,10 +72,13 @@ tar -C target/dist --sort=name --mtime="@$epoch" --owner=0 --group=0 --numeric-o
 gzip -9n "target/dist/car-charge-planner-$version-linux.tar"
 
 if [ "$packages" = yes ]; then
-  # jpackage's menu entry, from the template in src/packaging/linux; without car-charge-planner.png in the resource
-  # folder it would put its own default icon in place of the app's in lib/.
+  # From src/packaging/linux: jpackage's menu entry, and the .deb's control file with the libraries the app links
+  # (readelf -d on the app image), by their Debian and Ubuntu names. jpackage would take those names from the build
+  # machine's own packages, so a .deb built on Ubuntu would ask for packages Debian does not have. The .rpm names
+  # them by their file names (sonames), which Fedora and openSUSE both resolve. Without car-charge-planner.png in
+  # the resource folder, jpackage would put its own default icon in place of the app's in lib/.
   mkdir target/linux-resources
-  cp src/packaging/linux/car-charge-planner.desktop target/linux-resources/
+  cp src/packaging/linux/car-charge-planner.desktop src/packaging/linux/control target/linux-resources/
   cp "$icon" target/linux-resources/car-charge-planner.png
   set -- --dest target/dist --app-image target/dist/car-charge-planner \
     --name car-charge-planner --app-version "$version" --vendor "Car charge planner" \
@@ -88,7 +91,10 @@ if [ "$packages" = yes ]; then
     --linux-menu-group Utility \
     --linux-shortcut
   jpackage --type deb "$@" --linux-deb-maintainer 670644+Enadeag@users.noreply.github.com
-  jpackage --type rpm "$@" --linux-rpm-license-type GPL-3.0-or-later
+  rpm_deps="libasound.so.2()(64bit), libfontconfig.so.1()(64bit), libfreetype.so.6()(64bit), libGL.so.1()(64bit)"
+  rpm_deps="$rpm_deps, libgtk-3.so.0()(64bit), libX11.so.6()(64bit), libXext.so.6()(64bit), libXi.so.6()(64bit)"
+  rpm_deps="$rpm_deps, libXrender.so.1()(64bit), libXtst.so.6()(64bit), libXxf86vm.so.1()(64bit)"
+  jpackage --type rpm "$@" --linux-rpm-license-type GPL-3.0-or-later --linux-package-deps "$rpm_deps"
 fi
 du -sh target/dist/car-charge-planner target/dist/car-charge-planner*.tar.gz \
   $(ls target/dist/*.deb target/dist/*.rpm 2>/dev/null)
