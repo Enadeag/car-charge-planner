@@ -40,8 +40,8 @@ public final class RegistryTextSize implements TextSizeSetting {
      */
     @Override
     public void follow(Consumer<TextSize> changed) {
-        MemorySegment handle;
-        MemorySegment event;
+        var handle = MemorySegment.NULL;
+        var event = MemorySegment.NULL;
         try {
             var opened = Advapi32.openKey(key);
             if (opened.isEmpty()) {
@@ -54,12 +54,15 @@ public final class RegistryTextSize implements TextSizeSetting {
             Advapi32.signalOnChange(handle, event, key);
         } catch (IOException e) {
             LOG.log(Level.WARNING, "cannot follow Windows' text size; the windows keep the size they open with", e);
+            release(handle, event);
             changed.accept(read());
             return;
         }
         var size = read();
         changed.accept(size);
-        Thread.ofPlatform().daemon().name("text-size").start(() -> watch(handle, event, size, changed));
+        var open = handle;
+        var signal = event;
+        Thread.ofPlatform().daemon().name("text-size").start(() -> watch(open, signal, size, changed));
     }
 
     /** Waits for each change and gives the new size, until the key is deleted or Windows refuses. */
@@ -77,10 +80,34 @@ public final class RegistryTextSize implements TextSizeSetting {
                     changed.accept(now);
                 }
             }
-            Advapi32.closeKey(handle, key);
-            Kernel32.close(event);
         } catch (IOException e) {
             LOG.log(Level.WARNING, "stopped following Windows' text size", e);
+        } finally {
+            release(handle, event);
+        }
+    }
+
+    /**
+     * Closes the key and the event once they are no longer followed; one that was not opened, or that cannot be
+     * closed, is left as it is.
+     *
+     * @param handle the open key, or {@link MemorySegment#NULL} when it was not opened
+     * @param event the event, or {@link MemorySegment#NULL} when it was not made
+     */
+    private void release(MemorySegment handle, MemorySegment event) {
+        try {
+            if (!handle.equals(MemorySegment.NULL)) {
+                Advapi32.closeKey(handle, key);
+            }
+        } catch (IOException e) {
+            LOG.log(Level.WARNING, "cannot close the key of Windows' text size", e);
+        }
+        try {
+            if (!event.equals(MemorySegment.NULL)) {
+                Kernel32.close(event);
+            }
+        } catch (IOException e) {
+            LOG.log(Level.WARNING, "cannot close the event that follows Windows' text size", e);
         }
     }
 
