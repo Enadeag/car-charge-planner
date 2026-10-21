@@ -28,6 +28,7 @@ import nl.enadeag.carchargeplanner.engine.notify.Announcer;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import nl.enadeag.carchargeplanner.host.AppName;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -157,7 +158,8 @@ public final class DashboardPictures {
         var awayFile = new AwayFile(folder.resolve("away.json"));
         var engine = new Engine(new ConfigFile(config),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
-                awayFile, new BatteryFile(folder.resolve("battery.json")), Clock.fixed(NOW, ZoneOffset.UTC),
+                awayFile, new TripFile(folder.resolve("trips.json")), new BatteryFile(folder.resolve("battery.json")),
+                Clock.fixed(NOW, ZoneOffset.UTC),
                 new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), _ -> { }),
                 new ManualScheduler());
         try {

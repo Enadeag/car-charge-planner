@@ -60,7 +60,7 @@ class PlannerTest {
 
     /** The example system, with its weekly away period and this one entered by hand. */
     private static List<DayPlan> planAway(List<ForecastStep> forecast, double soc, Instant now, OneOffAwayPeriod oneOff) {
-        var away = new AwayTimes(WEEKLY_AWAY.weekly(), List.of(oneOff));
+        var away = new AwayTimes(WEEKLY_AWAY.weekly(), List.of(oneOff), List.of());
         return new Planner(Forecasts.example(), PREFERENCES, away).plan(forecast, new Percent(soc), now, List.of());
     }
 
@@ -566,7 +566,7 @@ class PlannerTest {
     @Test
     void withoutAForecastTheAwayTimeIsTheOneOffPeriods() {
         var oneOff = new OneOffAwayPeriod(at(SUMMER_FRI, 8), at(SUMMER_FRI, 12));
-        assertThat(new AwayTimes(WEEKLY_AWAY.weekly(), List.of(oneOff)).during(List.of(), Forecasts.TZ))
+        assertThat(new AwayTimes(WEEKLY_AWAY.weekly(), List.of(oneOff), List.of()).during(List.of(), Forecasts.TZ))
                 .containsExactly(new BlockedTime(oneOff.start(), oneOff.end()));
     }
 

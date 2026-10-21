@@ -56,7 +56,7 @@ class GridAdvisorTest {
 
     /** The example's weekly away period, and this one entered by hand. */
     private static Advised adviseAway(List<ForecastStep> forecast, double soc, Instant now, OneOffAwayPeriod oneOff) {
-        var away = new AwayTimes(WEEKLY_AWAY.weekly(), List.of(oneOff));
+        var away = new AwayTimes(WEEKLY_AWAY.weekly(), List.of(oneOff), List.of());
         return advise(Forecasts.example(), forecast, soc, now, away);
     }
 
@@ -349,7 +349,7 @@ class GridAdvisorTest {
     @Test
     void anEnergyOfWholeQuartersFitsTheLastFreeHourOfTheDay() {
         // 1.38 kWh: exactly one hour at 6 A, and the car is home only from 23:00
-        var away = new AwayTimes(List.of(), List.of(new OneOffAwayPeriod(fridayAt(0), fridayAt(23))));
+        var away = new AwayTimes(List.of(), List.of(new OneOffAwayPeriod(fridayAt(0), fridayAt(23))), List.of());
         double soc = 48 - 1.38 * 0.9 / 70 * 100;
         var advice = advise(Forecasts.golden(), hourly(FRI, Map.of()), soc, fridayAt(0), away).advice();
         assertThat(advice.energyKwh()).isCloseTo(1.38, CLOSE);

@@ -14,7 +14,7 @@ Only the **forecast provider** you chose (and the fallback, if you set one) is c
 - **Commercial use.** The free plans are for personal use. If you use the app for a business, take the provider's own commercial plan or run your own server (Open-Meteo can be self-hosted or taken as a paid plan, with its own server address and key: both go in Settings, on the Forecast page). Forecast.Solar's pages do not say whether the public plan may be used commercially; ask them.
 - **Credit.** The credit above is shown on the dashboard next to the age of the forecast, because both providers ask for it (Open-Meteo's data is CC BY 4.0). It is shown for whichever provider made the forecast on screen.
 - **Place search.** The place you type in the search box of set-up's or Settings' Location page is sent to the place search of the forecast provider you have chosen (Open-Meteo by default), which answers with matching places and their coordinates. The page says so. A provider without a place search is never sent it: you type coordinates instead. The place names come from [GeoNames](https://www.geonames.org) (CC BY 4.0), via Open-Meteo.
-- **Nothing else.** The battery level, your away periods, your panels' size (except to Forecast.Solar, which needs it), the house and car settings and the plan itself never leave the computer.
+- **Nothing else.** The battery level, your away periods and trips, your panels' size (except to Forecast.Solar, which needs it), the house and car settings and the plan itself never leave the computer.
 - **Local only.** Notifications go through your desktop's own notification service. A second start finds the running app through a lock file and a socket in a folder only you can open. Nothing listens on the network.
 
 ## What is kept, and where
@@ -27,6 +27,7 @@ Everything the app keeps is on your computer. Delete any of it to start over.
 | The app's own settings (language, appearance, units, tray or window) | `~/.config/car-charge-planner/app.json` | `%APPDATA%\car-charge-planner\app.json` |
 | The battery level you entered last | `~/.local/share/car-charge-planner/battery.json` | `%LOCALAPPDATA%\car-charge-planner\battery.json` |
 | Away periods for a specific day | `~/.local/share/car-charge-planner/away.json` | `%LOCALAPPDATA%\car-charge-planner\away.json` |
+| Your trips: when you leave and are back, the distance and whether you can charge there | `~/.local/share/car-charge-planner/trips.json` | `%LOCALAPPDATA%\car-charge-planner\trips.json` |
 | The windows you were notified about | `~/.local/share/car-charge-planner/announced.json` | `%LOCALAPPDATA%\car-charge-planner\announced.json` |
 | Forecast cache: the last forecast of each provider, one file per provider | `~/.local/share/car-charge-planner/forecasts/` | `%LOCALAPPDATA%\car-charge-planner\forecasts\` |
 | Log: what the app did, the newest in `.0.log` and two older ones of up to 1 MB | `~/.local/share/car-charge-planner/car-charge-planner.0.log` | `%LOCALAPPDATA%\car-charge-planner\car-charge-planner.0.log` |

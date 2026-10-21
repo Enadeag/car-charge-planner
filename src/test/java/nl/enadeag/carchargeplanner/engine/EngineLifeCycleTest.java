@@ -22,6 +22,8 @@ import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges;
 import nl.enadeag.carchargeplanner.engine.secrets.MemoryKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
+import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -49,6 +51,7 @@ class EngineLifeCycleTest {
 
     private static final Instant NOW = Instant.parse("2026-07-03T06:00:00Z");
     private static final OneOffAwayPeriod AWAY = new OneOffAwayPeriod(NOW.plus(Duration.ofHours(2)), NOW.plus(Duration.ofHours(12)));
+    private static final Trip TRIP = new Trip(NOW.plus(Duration.ofHours(2)), NOW.plus(Duration.ofHours(12)), 300, false);
 
     @TempDir
     Path folder;
@@ -76,8 +79,8 @@ class EngineLifeCycleTest {
         var apiKeys = new ApiKeys(new MemoryKeychain(), new SecretsFile(folder.resolve("secrets.json")));
         return new Engine(new ConfigFile(config),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
-                new AwayFile(folder.resolve("away.json")), new BatteryFile(folder.resolve("battery.json")),
-                Clock.fixed(NOW, ZoneOffset.UTC),
+                new AwayFile(folder.resolve("away.json")), new TripFile(folder.resolve("trips.json")),
+                new BatteryFile(folder.resolve("battery.json")), Clock.fixed(NOW, ZoneOffset.UTC),
                 new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), _ -> { }), on);
     }
 
@@ -110,6 +113,9 @@ class EngineLifeCycleTest {
                 Arguments.of("battery level", (Change) engine -> engine.setBatteryLevel(new Percent(72))),
                 Arguments.of("away period added", (Change) engine -> engine.addAwayPeriod(AWAY)),
                 Arguments.of("away period removed", (Change) engine -> engine.removeAwayPeriod(AWAY)),
+                Arguments.of("trip added", (Change) engine -> engine.addTrip(TRIP)),
+                Arguments.of("trip changed", (Change) engine -> engine.changeTrip(TRIP, TRIP)),
+                Arguments.of("trip removed", (Change) engine -> engine.removeTrip(TRIP)),
                 Arguments.of("config", (Change) engine -> engine.saveConfig(engine.config())),
                 Arguments.of("API keys", (Change) engine -> engine.saveApiKeys(new Secrets(Map.of()))),
                 Arguments.of("API key changes", (Change) engine -> engine.applyKeyChanges(KeyChanges.entering(Secrets.NONE), () -> { })));

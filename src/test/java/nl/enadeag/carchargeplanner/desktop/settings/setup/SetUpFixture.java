@@ -44,6 +44,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import nl.enadeag.carchargeplanner.host.AppName;
 import java.io.IOException;
 import java.net.URI;
@@ -119,8 +120,9 @@ final class SetUpFixture {
         var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
         engine = new Engine(new ConfigFile(configPath),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
-                new AwayFile(folder.resolve("away.json")), new BatteryFile(folder.resolve("battery.json")),
-                clock, new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), _ -> { }),
+                new AwayFile(folder.resolve("away.json")), new TripFile(folder.resolve("trips.json")),
+                new BatteryFile(folder.resolve("battery.json")), clock,
+                new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), _ -> { }),
                 new ManualScheduler());
     }
 
