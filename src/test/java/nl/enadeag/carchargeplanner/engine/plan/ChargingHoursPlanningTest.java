@@ -152,6 +152,26 @@ class ChargingHoursPlanningTest {
     }
 
     @Test
+    void theChargeLimitStartsFromTheLevelOfTheDayOfTheWindow() {
+        // 60 % - 18 % on Friday, 42 % - 18 % on Saturday: 6 % short, charged on Saturday from 07:00
+        var forecast = new ArrayList<>(hourly(FRI, Map.of()));
+        forecast.addAll(hourly(SAT, Map.of()));
+        var advice = gridAdvice(Forecasts.golden(), PREFERENCES, forecast, 60, at(FRI, 0), AwayTimes.NONE);
+        assertThat(advice.window().orElseThrow().start()).isEqualTo(at(SAT, 7));
+        assertThat(advice.chargeLimitPct()).contains(new Percent(48));
+    }
+
+    @Test
+    void aSolarWindowAfterTheGridChargeDoesNotCountForItsChargeLimit() {
+        // the solar window from 14:00 brings 8.28 %, which leaves Friday 1.72 % short: charged from 07:00, before it
+        var advice = gridAdvice(Forecasts.golden(), PREFERENCES, hourly(FRI, Map.of(14, 4.4, 15, 4.4)), 38,
+                at(FRI, 0), AwayTimes.NONE);
+        assertThat(advice.deficitPct()).isCloseTo(1.72, CLOSE);
+        assertThat(advice.window().orElseThrow().start()).isEqualTo(at(FRI, 7));
+        assertThat(advice.chargeLimitPct()).contains(new Percent(40));
+    }
+
+    @Test
     void theChargeLimitIsRoundedUpToAWholePercentage() {
         // 75 km take 19.29 %: from 40 % the day ends 9.29 % short, so the grid charge brings the battery to 49.29 %
         var system = Forecasts.withCar(new Car(70, 18, 75), Phases.ONE);
