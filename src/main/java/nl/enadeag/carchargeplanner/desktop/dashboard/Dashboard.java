@@ -4,6 +4,7 @@ import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.OutlookMapper;
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
+import nl.enadeag.carchargeplanner.desktop.system.NotificationTarget;
 import nl.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
@@ -102,6 +103,21 @@ public final class Dashboard {
     /** Shows the dashboard as a window, taking it out of the popup if it is open there. */
     public void openWindow() {
         Platform.runLater(this::detach);
+    }
+
+    /**
+     * A click on one of the app's notifications: shows the dashboard as a window, as {@link #openWindow()} does, and
+     * for the battery check opens the entry of today's battery level with the focus in it.
+     *
+     * @param target what the clicked notification opens
+     */
+    public void notificationClicked(NotificationTarget target) {
+        Platform.runLater(() -> {
+            detach();
+            if (target == NotificationTarget.BATTERY_LEVEL) {
+                view.enterBatteryLevel();
+            }
+        });
     }
 
     /**

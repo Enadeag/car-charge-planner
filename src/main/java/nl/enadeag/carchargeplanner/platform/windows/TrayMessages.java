@@ -1,7 +1,9 @@
 package nl.enadeag.carchargeplanner.platform.windows;
 
+import nl.enadeag.carchargeplanner.desktop.system.NotificationTarget;
 import nl.enadeag.carchargeplanner.desktop.system.NotificationText;
 import java.lang.System.Logger.Level;
+import java.util.function.Consumer;
 
 /**
  * Notifications as messages of the tray icon, which Windows shows as toasts. A click names no message, so it counts
@@ -26,8 +28,9 @@ final class TrayMessages {
     }
 
     private Display display;
-    private Runnable clicked = () -> { };
-    private boolean waiting;
+    private Consumer<NotificationTarget> clicked = _ -> { };
+    /** What the latest message opens while it waits for a click; null when none waits. */
+    private NotificationTarget waiting;
     private boolean warned;
 
     /** Makes the messages; none can be shown until {@link #attach(Display)}. */
@@ -37,9 +40,9 @@ final class TrayMessages {
     /**
      * Sets what a click on a message does.
      *
-     * @param clicked the action, run on the thread that reports the click
+     * @param clicked the action, given what the message opens; run on the thread that reports the click
      */
-    synchronized void onClick(Runnable clicked) {
+    synchronized void onClick(Consumer<NotificationTarget> clicked) {
         this.clicked = clicked;
     }
 
@@ -54,13 +57,13 @@ final class TrayMessages {
 
     /** Stops passing clicks on: a click on a message that is still shown does nothing from now on. */
     synchronized void stopPassingClicks() {
-        clicked = () -> { };
+        clicked = _ -> { };
     }
 
     /** The icon left the tray: messages are no longer shown. */
     synchronized void detach() {
         display = null;
-        waiting = false;
+        waiting = null;
     }
 
     /**
@@ -77,24 +80,27 @@ final class TrayMessages {
             return;
         }
         display.show(text.title(), text.body());
-        waiting = true;
+        waiting = text.opens();
     }
 
     /**
-     * Windows reported a click on the icon's message: runs the action when a message was waiting for one.
+     * Windows reported a click on the icon's message: runs the action, with what the latest message opens, when a
+     * message was waiting for one.
      *
      * @return true when the click was a message's, false when none was waiting, such as for a double click
      */
     boolean claimClick() {
-        Runnable action;
+        Consumer<NotificationTarget> action;
+        NotificationTarget target;
         synchronized (this) {
-            if (!waiting) {
+            if (waiting == null) {
                 return false;
             }
-            waiting = false;
+            target = waiting;
+            waiting = null;
             action = clicked;
         }
-        action.run();
+        action.accept(target);
         return true;
     }
 }

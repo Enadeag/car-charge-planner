@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.platform.windows;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import nl.enadeag.carchargeplanner.desktop.system.NotificationTarget;
 import nl.enadeag.carchargeplanner.desktop.system.NotificationText;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +21,7 @@ class TrayMessagesTest {
 
     private void attached() {
         messages.attach((title, body) -> shown.add(title + " | " + body));
-        messages.onClick(opened::incrementAndGet);
+        messages.onClick(_ -> opened.incrementAndGet());
     }
 
     @Test
@@ -39,6 +40,22 @@ class TrayMessagesTest {
         messages.claimClick();
 
         assertThat(opened).hasValue(1);
+    }
+
+    @Test
+    void aClickPassesOnWhatTheLatestMessageOpens() {
+        var clicked = new ArrayList<NotificationTarget>();
+        messages.attach((title, body) -> shown.add(title));
+        messages.onClick(clicked::add);
+
+        messages.show(new NotificationText("a", "b"));
+        messages.show(new NotificationText("Check the battery level", "Is the battery at about 50%?",
+                NotificationTarget.BATTERY_LEVEL));
+        messages.claimClick();
+        messages.show(new NotificationText("c", "d"));
+        messages.claimClick();
+
+        assertThat(clicked).containsExactly(NotificationTarget.BATTERY_LEVEL, NotificationTarget.DASHBOARD);
     }
 
     @Test
@@ -83,7 +100,7 @@ class TrayMessagesTest {
         };
         logger.addHandler(handler);
         try {
-            messages.onClick(opened::incrementAndGet);
+            messages.onClick(_ -> opened.incrementAndGet());
             for (int i = 0; i < 3; i++) {
                 messages.show(new NotificationText("a", "b"));
             }

@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.platform.windows;
 
+import nl.enadeag.carchargeplanner.desktop.system.NotificationTarget;
 import nl.enadeag.carchargeplanner.desktop.system.NotificationText;
 import nl.enadeag.carchargeplanner.desktop.system.Notifications;
 import nl.enadeag.carchargeplanner.desktop.system.StatusDot;
@@ -21,6 +22,7 @@ import java.awt.image.BaseMultiResolutionImage;
 import java.time.Duration;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.function.Consumer;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
@@ -148,7 +150,7 @@ public final class AwtTray implements Tray, Notifications {
      * <p>The action runs on AWT's event thread.
      */
     @Override
-    public void onClick(Runnable clicked) {
+    public void onClick(Consumer<NotificationTarget> clicked) {
         messages.onClick(clicked);
     }
 

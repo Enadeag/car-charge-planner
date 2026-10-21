@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.platform.linux;
 
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
+import nl.enadeag.carchargeplanner.desktop.system.NotificationTarget;
 import nl.enadeag.carchargeplanner.desktop.system.NotificationText;
 import nl.enadeag.carchargeplanner.desktop.system.Notifications;
 import java.io.IOException;
@@ -9,12 +10,12 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.imageio.ImageIO;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
@@ -25,9 +26,10 @@ import org.freedesktop.dbus.types.Variant;
 
 /**
  * Notifications on Linux, through the desktop's notification server over D-Bus: the same on KDE Plasma and GNOME,
- * also without a tray. A click on the notification or on its button "Open dashboard" is passed on; a click on another
- * app's notification is not, for all apps share the server's ids. A click counts only when it comes from the
- * program that owns the server's name: any program on the session bus can send the signal.
+ * also without a tray. A click on the notification or on its button "Open dashboard" is passed on, with what that
+ * notification opens; a click on another app's notification is not, for all apps share the server's ids. A click
+ * counts only when it comes from the program that owns the server's name: any program on the session bus can send
+ * the signal.
  */
 public final class FreedesktopNotifications implements Notifications {
 
@@ -52,8 +54,9 @@ public final class FreedesktopNotifications implements Notifications {
     private final Path iconFolder;
     private final Supplier<String> openLabel;
     private final Executor clickRunner;
-    private final Deque<Long> sent = new ArrayDeque<>();
-    private Runnable clicked = () -> { };
+    /** The latest notifications' ids, oldest first, with what each opens. */
+    private final LinkedHashMap<Long, NotificationTarget> sent = new LinkedHashMap<>();
+    private Consumer<NotificationTarget> clicked = _ -> { };
     private DBusConnection bus;
     /** The unique bus name of the notification server; null while no program serves it. */
     private String serverOwner;
@@ -104,7 +107,7 @@ public final class FreedesktopNotifications implements Notifications {
     }
 
     @Override
-    public synchronized void onClick(Runnable clicked) {
+    public synchronized void onClick(Consumer<NotificationTarget> clicked) {
         this.clicked = clicked;
         ensureConnection();
     }
@@ -122,9 +125,9 @@ public final class FreedesktopNotifications implements Notifications {
             var id = server.Notify(appName, new UInt32(0), writeIconOnce(), text.title(), text.body(),
                     List.of(DEFAULT_ACTION, open, OPEN_ACTION, open),
                     Map.of("desktop-entry", new Variant<>(desktopEntry)), EXPIRE_MS);
-            sent.addLast(id.longValue());
+            sent.put(id.longValue(), text.opens());
             if (sent.size() > REMEMBERED_IDS) {
-                sent.removeFirst();
+                sent.pollFirstEntry();
             }
         } catch (DBusException | RuntimeException e) {
             // dbus-java reports a server that is not there or answers with an error as a runtime exception
@@ -188,10 +191,12 @@ public final class FreedesktopNotifications implements Notifications {
             if (serverOwner == null || !serverOwner.equals(signal.getSource())) {
                 return;
             }
-            if (!Set.of(DEFAULT_ACTION, OPEN_ACTION).contains(signal.actionKey) || !sent.contains(signal.id.longValue())) {
+            var target = sent.get(signal.id.longValue());
+            if (!Set.of(DEFAULT_ACTION, OPEN_ACTION).contains(signal.actionKey) || target == null) {
                 return;
             }
-            action = clicked;
+            var chosen = clicked;
+            action = () -> chosen.accept(target);
         }
         clickRunner.execute(action);
     }

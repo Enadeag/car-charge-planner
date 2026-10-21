@@ -10,6 +10,7 @@ import nl.enadeag.carchargeplanner.desktop.Keyboard;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
+import nl.enadeag.carchargeplanner.desktop.system.NotificationTarget;
 import nl.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
@@ -43,6 +44,7 @@ import javafx.geometry.Point2D;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Spinner;
 import javafx.scene.control.TabPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.robot.Robot;
@@ -502,6 +504,36 @@ class DashboardTest {
         Fx.settle();
 
         assertThat(window()).isPresent();
+    }
+
+    @Test
+    void aClickOnTheBatteryCheckOpensTheWindowOnTodayWithTheLevelsEntryInFocus() throws Exception {
+        dashboard.show(planWithTwoDays(), List.of(), List.of());
+        clickTheIcon();
+        selectDay(popup().orElseThrow(), 1);
+
+        dashboard.notificationClicked(NotificationTarget.BATTERY_LEVEL);
+        Fx.settle();
+
+        assertThat(popup()).isEmpty();
+        var window = window().orElseThrow();
+        var tabs = Fx.call(() -> (TabPane) window.getScene().lookup(".day-tabs"));
+        assertThat(Fx.call(() -> tabs.getSelectionModel().getSelectedIndex())).isZero();
+        var field = Fx.call(() -> (Spinner<?>) window.getScene().lookup(".battery-level-field"));
+        assertThat(Fx.call(() -> Scenes.reallyVisible(field))).isTrue();
+        assertThat(Fx.call(() -> window.getScene().getFocusOwner())).isIn(field, field.getEditor());
+    }
+
+    @Test
+    void aClickOnAnotherNotificationOpensTheWindowWithoutTheLevelsEntry() throws Exception {
+        dashboard.show(planWithTwoDays(), List.of(), List.of());
+
+        dashboard.notificationClicked(NotificationTarget.DASHBOARD);
+        Fx.settle();
+
+        var window = window().orElseThrow();
+        var field = Fx.call(() -> window.getScene().lookup(".battery-level-field"));
+        assertThat(Fx.call(() -> Scenes.reallyVisible(field))).isFalse();
     }
 
     @Test

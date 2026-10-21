@@ -200,7 +200,7 @@ public final class DesktopApp {
         var dashboard = windows.dashboard();
         // a click on a notification does not say where the tray icon is, and the popup would close again as soon as
         // the desktop gives the focus elsewhere: the window comes to the front and stays
-        notifications.onClick(dashboard::openWindow);
+        notifications.onClick(dashboard::notificationClicked);
         commands.complete(commandHandler(dashboard, notifications, texts));
 
         var decision = new StartupDecision(appSettings.mode(), commandLine.atLogin(),

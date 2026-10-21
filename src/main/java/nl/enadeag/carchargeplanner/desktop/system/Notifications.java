@@ -1,5 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.system;
 
+import java.util.function.Consumer;
+
 /**
  * The system's notifications: sends the app's own to the system, and reports a click on one. Each system has its
  * own.
@@ -10,10 +12,10 @@ public interface Notifications {
      * Sets what a click on one of the app's notifications does. Call it before the first {@link #send}; clicks on
      * other apps' notifications are never passed on.
      *
-     * @param clicked the action for a click on a notification or its button; called on a thread of the notifications',
-     *     not the JavaFX thread
+     * @param clicked the action for a click on a notification or its button, given what the notification
+     *     {@linkplain NotificationText#opens() opens}; called on a thread of the notifications', not the JavaFX thread
      */
-    void onClick(Runnable clicked);
+    void onClick(Consumer<NotificationTarget> clicked);
 
     /**
      * Sends a notification, which the system shows. Never throws: when the system cannot show it, that is logged

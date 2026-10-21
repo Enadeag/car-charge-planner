@@ -285,12 +285,18 @@ final class DashboardView extends VBox {
     private TripAdviceCard tripAdviceCard(TripAdviceModel trip, TripAdviceModel.Wording wording) {
         var card = new TripAdviceCard(trip, wording, messages);
         if (battery.acceptsLevel()) {
-            card.onAdjust(() -> {
-                selectDay(0);
-                battery.enterLevel();
-            });
+            card.onAdjust(this::enterBatteryLevel);
         }
         return card;
+    }
+
+    /**
+     * Shows today with the entry of the battery level open and the focus in it; only today, as the level is today's.
+     * Nothing opens while the dashboard cannot send the level anywhere, or shows no plan.
+     */
+    void enterBatteryLevel() {
+        selectDay(0);
+        battery.enterLevel();
     }
 
     private static VBox page(Region card) {
