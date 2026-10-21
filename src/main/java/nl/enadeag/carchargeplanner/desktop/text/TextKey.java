@@ -333,6 +333,37 @@ public enum TextKey {
      * or the charger in %.
      */
     NOTIFY_GRID_BODY,
+    /**
+     * The rest of the notification of a trip's grid charge that starts as planned: {0} the time to start, {1} the
+     * weekday of the departure, {2} its time, {3} the charge limit to set in %.
+     */
+    NOTIFY_TRIP_START_BODY,
+    /** The title of the notification of a trip's grid charge that has to start now. */
+    NOTIFY_TRIP_NOW_TITLE,
+    /**
+     * The rest of the notification of a trip's grid charge that has to start now, as little time is left: {0} the
+     * weekday of the departure, {1} its time, {2} the charge limit to set in %.
+     */
+    NOTIFY_TRIP_NOW_BODY,
+    /**
+     * The rest of the notification of a trip's grid charge that has to start now, outside the charging hours: {0} the
+     * weekday of the departure, {1} its time, {2} the charge limit to set in %.
+     */
+    NOTIFY_TRIP_NOW_OUTSIDE_BODY,
+    /** The title of the notification that asks whether the assumed battery level is right. */
+    NOTIFY_LEVEL_TITLE,
+    /**
+     * The rest of the notification that asks whether the assumed battery level is right: {0} the weekday of the trip's
+     * departure, {1} its time, {2} the battery level the plan starts from in %.
+     */
+    NOTIFY_LEVEL_BODY,
+    /** The title of the notification of a trip that even the plan leaves short. */
+    NOTIFY_SHORT_TITLE,
+    /**
+     * The rest of the notification of a trip that even the plan leaves short: {0} the weekday of the departure, {1} its
+     * time, {2} the distance the battery lacks, rounded up, {3} its unit.
+     */
+    NOTIFY_SHORT_BODY,
     /** The title of the test notification, which the command line asks for. */
     NOTIFY_TEST_TITLE,
     /** The rest of the test notification: {0} the app's name. */

@@ -26,6 +26,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.providers.ForecastSolar;
 import nl.enadeag.carchargeplanner.engine.forecast.providers.OpenMeteo;
 import nl.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
 import nl.enadeag.carchargeplanner.engine.notify.Announcer;
+import nl.enadeag.carchargeplanner.engine.notify.ToldTrips;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
@@ -213,7 +214,8 @@ public final class DashboardPictures {
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
                 awayFile, new TripFile(folder.resolve("trips.json")), new BatteryFile(folder.resolve("battery.json")),
                 Clock.fixed(NOW, ZoneOffset.UTC),
-                new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), _ -> { }),
+                new Announcer(new AnnouncedWindows(folder.resolve("announced.json")),
+                        new ToldTrips(folder.resolve("trip-notices.json")), _ -> { }),
                 new ManualScheduler());
         try {
             for (var trip : trips) {

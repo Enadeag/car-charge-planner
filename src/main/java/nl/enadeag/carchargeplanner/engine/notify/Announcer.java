@@ -5,6 +5,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
+import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import java.lang.System.Logger.Level;
 import java.time.Duration;
@@ -15,8 +16,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Decides when the owner is told about a charge window: once, within the notification lead time before it starts.
- * Each announcement is logged, with its kind and the window's start.
+ * Decides when the owner is told about a charge window: once, within the notification lead time before it starts;
+ * and what the owner is told about the trips. Each announcement is logged, with its kind and the window's start, and
+ * each notice about a trip with the trip's departure.
  *
  * <p>Only windows that have not started are announced. A window that overlaps one announced before counts as
  * announced, for a newer forecast can move a start by a few minutes. Nothing is announced while the forecast could
@@ -33,17 +35,21 @@ public final class Announcer {
 
     private final AnnouncedWindows store;
     private final Notifier notifier;
+    private final TripNotices trips;
     private List<Window> announced;
 
     /**
-     * Makes the announcer and reads the windows announced before the app was last stopped.
+     * Makes the announcer and reads the windows announced, and what was told about the trips, before the app was last
+     * stopped.
      *
      * @param store where the announced windows are kept between runs
+     * @param toldTrips where what the owner was told about each trip is kept between runs
      * @param notifier what tells the owner
      */
-    public Announcer(AnnouncedWindows store, Notifier notifier) {
+    public Announcer(AnnouncedWindows store, ToldTrips toldTrips, Notifier notifier) {
         this.store = store;
         this.notifier = notifier;
+        this.trips = new TripNotices(toldTrips, notifier);
         this.announced = store.load();
     }
 
@@ -88,6 +94,27 @@ public final class Announcer {
                 config.system().timezone(), config.system().charger().phases(), config.planning().minimumPct(),
                 advice.chargeLimitPct())));
         announce(candidates, source, now, config);
+    }
+
+    /**
+     * Tells the owner what is due about the trips: the battery check, the start of a trip's grid charge and a trip that
+     * even the plan leaves short, each once per trip, within the charging hours unless the grid charge must start now
+     * outside them. A trip's grid charge is not one of the
+     * {@linkplain #announced() announced windows}, which the planner keeps as they were announced.
+     *
+     * @param advice the plan's advice per trip, in order of departure; possibly none. A trip the owner makes without
+     *     this car has none.
+     * @param level the battery level the plan starts from, and whether and when the owner entered it
+     * @param source where the plan's forecast came from; nothing is told while it is stale or too old
+     * @param now the current moment
+     * @param config the system and preferences the plan was made for: the lead time, the charging hours, the target
+     *     charge level, the time zone and the phases
+     */
+    public synchronized void announceTripsDue(List<TripAdvice> advice, PlanLevel level, ForecastSource source,
+            Instant now, EngineConfig config) {
+        if (fitToAnnounceOn(source, now)) {
+            trips.tellDue(advice, level, now, config);
+        }
     }
 
     /** Announces the candidates that are due, in the order they start. */

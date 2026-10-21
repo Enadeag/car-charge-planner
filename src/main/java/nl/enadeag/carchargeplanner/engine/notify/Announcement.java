@@ -17,7 +17,7 @@ import java.util.Optional;
  * @param chargeLimitPct the charge limit to set in the car or the charger, present exactly for a grid charge
  */
 public record Announcement(AnnouncementKind kind, Window window, ZoneId zone, Phases phases, Percent minimumPct,
-        Optional<Percent> chargeLimitPct) {
+        Optional<Percent> chargeLimitPct) implements Notice {
 
     /**
      * Checks that a grid charge, and only a grid charge, has a charge limit.

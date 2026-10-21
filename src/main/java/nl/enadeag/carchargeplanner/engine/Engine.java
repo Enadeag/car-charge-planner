@@ -21,6 +21,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.forecast.Providers;
 import nl.enadeag.carchargeplanner.engine.forecast.SolarSite;
 import nl.enadeag.carchargeplanner.engine.notify.Announcer;
+import nl.enadeag.carchargeplanner.engine.notify.PlanLevel;
 import nl.enadeag.carchargeplanner.engine.plan.AwayTimes;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvisor;
 import nl.enadeag.carchargeplanner.engine.plan.Planner;
@@ -187,12 +188,18 @@ public final class Engine {
         }
     }
 
-    /** Tells the owner about each window of the plan that is due, the grid advice's among them. */
+    /**
+     * Tells the owner about each window of the plan that is due, the grid advice's among them, and what is due about
+     * the trips.
+     */
     private void announce(Outlook.Planned planned, EngineConfig config) {
         planned.gridAdvice().ifPresentOrElse(
                 advice -> announcer.announceDue(planned.days(), advice, planned.forecastSource(), planned.madeAt(),
                         config),
                 () -> announcer.announceDue(planned.days(), planned.forecastSource(), planned.madeAt(), config));
+        // a level entered since the plan was made counts as entered: it is planned with in the next round
+        var level = new PlanLevel(planned.batteryLevelPct(), batteryFile.reading().map(BatteryReading::enteredAt));
+        announcer.announceTripsDue(planned.tripAdvice(), level, planned.forecastSource(), planned.madeAt(), config);
     }
 
     /**

@@ -81,7 +81,8 @@ class AnnouncerTest {
     }
 
     private Announcer announcer() {
-        return new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), told::add);
+        return new Announcer(new AnnouncedWindows(folder.resolve("announced.json")),
+                new ToldTrips(folder.resolve("trip-notices.json")), notice -> told.add((Announcement) notice));
     }
 
     /** Announces with a forecast fetched five minutes ago and the given lead time. */
@@ -94,7 +95,9 @@ class AnnouncerTest {
 
     /** With an announcer that has announced nothing yet. */
     private List<Window> check(List<DayPlan> days, Instant now) {
-        var fresh = new Announcer(new AnnouncedWindows(folder.resolve("fresh-" + now.getEpochSecond() + ".json")), told::add);
+        var fresh = new Announcer(new AnnouncedWindows(folder.resolve("fresh-" + now.getEpochSecond() + ".json")),
+                new ToldTrips(folder.resolve("trips-" + now.getEpochSecond() + ".json")),
+                notice -> told.add((Announcement) notice));
         return check(fresh, days, now, 15);
     }
 

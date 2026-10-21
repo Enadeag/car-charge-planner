@@ -17,6 +17,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import nl.enadeag.carchargeplanner.engine.forecast.Providers;
 import nl.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
 import nl.enadeag.carchargeplanner.engine.notify.Announcer;
+import nl.enadeag.carchargeplanner.engine.notify.ToldTrips;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges;
 import nl.enadeag.carchargeplanner.engine.secrets.MemoryKeychain;
@@ -81,7 +82,8 @@ class EngineLifeCycleTest {
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
                 new AwayFile(folder.resolve("away.json")), new TripFile(folder.resolve("trips.json")),
                 new BatteryFile(folder.resolve("battery.json")), Clock.fixed(NOW, ZoneOffset.UTC),
-                new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), _ -> { }), on);
+                new Announcer(new AnnouncedWindows(folder.resolve("announced.json")),
+                        new ToldTrips(folder.resolve("trip-notices.json")), _ -> { }), on);
     }
 
     private Engine started() throws Exception {
