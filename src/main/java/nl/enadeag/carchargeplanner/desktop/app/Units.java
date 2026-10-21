@@ -14,6 +14,9 @@ public enum Units {
     /** Miles, and miles per kWh. */
     IMPERIAL("imperial");
 
+    /** The length of a mile in km. */
+    public static final double KM_PER_MILE = 1.609344;
+
     /** The countries that still measure road distances in miles. */
     private static final Set<String> MILES = Set.of("US", "GB", "LR", "MM");
 
@@ -40,6 +43,35 @@ public enum Units {
      */
     public static Optional<Units> ofCode(String code) {
         return Arrays.stream(values()).filter(units -> units.code.equalsIgnoreCase(code)).findFirst();
+    }
+
+    /**
+     * A distance as the owner sees it.
+     *
+     * @param km the distance as the engine keeps it, in km
+     * @return the distance in these units: km or miles
+     */
+    public double distance(double km) {
+        return this == METRIC ? km : km / KM_PER_MILE;
+    }
+
+    /**
+     * A distance as the engine keeps it.
+     *
+     * @param distance a distance in these units, such as one the owner typed
+     * @return the distance in km
+     */
+    public double km(double distance) {
+        return this == METRIC ? distance : distance * KM_PER_MILE;
+    }
+
+    /**
+     * The symbol of a distance in these units, the same in every language.
+     *
+     * @return "km" or "mi"
+     */
+    public String distanceUnit() {
+        return this == METRIC ? "km" : "mi";
     }
 
     /**
