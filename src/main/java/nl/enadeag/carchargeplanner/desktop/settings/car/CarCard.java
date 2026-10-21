@@ -20,14 +20,17 @@ import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
+import javafx.scene.Node;
 
 /**
- * The car: its usable battery, its consumption and the distance driven per day, with typical values on request.
- * Distances and consumption show in the units the owner chose, also before they are saved; a typical value stays
- * tagged in other units.
+ * The car: its usable battery, its consumption, the distance of the other driving per day and, in Settings, the trip
+ * surcharge, with typical values on request. Distances and consumption show in the units the owner chose, also before
+ * they are saved; a typical value stays tagged in other units. Set-up leaves the trip surcharge out, and the card then
+ * keeps the one stored.
  */
 public final class CarCard implements ConfigPart {
 
@@ -35,6 +38,8 @@ public final class CarCard implements ConfigPart {
     private final NumberInput battery;
     private final UnitInput consumption;
     private final UnitInput distance;
+    private final NumberInput surcharge;
+    private final boolean showsSurcharge;
     private final ProblemRows problems;
     private final TypicalTags typical;
     private final CardView card;
@@ -43,21 +48,31 @@ public final class CarCard implements ConfigPart {
      * Makes the card, empty until {@link #load(EngineConfig)}, in metric units until {@link #showIn(Units)}.
      *
      * @param messages the texts, in the owner's language
+     * @param showsSurcharge whether the card has the trip surcharge field; without it the stored surcharge is kept
      */
-    public CarCard(Messages messages) {
+    public CarCard(Messages messages, boolean showsSurcharge) {
         this.messages = messages;
+        this.showsSurcharge = showsSurcharge;
         battery = new NumberInput(new NumberRange(1, 200, 1, 1), "kWh", messages);
         consumption = new UnitInput(Quantity.CONSUMPTION, messages);
         distance = new UnitInput(Quantity.DISTANCE, messages);
+        surcharge = new NumberInput(new NumberRange(0, 100, 1, 0), "%", messages);
         problems = new ProblemRows(messages);
         typical = new TypicalTags(messages.text(TextKey.TYPICAL_TAG));
-        card = new CardView(messages.text(TextKey.CARD_CAR), messages.text(TextKey.CARD_CAR_HINT),
+        var rows = new ArrayList<Node>(List.of(
                 row(ConfigSetting.CAR_BATTERY, TextKey.FIELD_CAR_BATTERY, TextKey.FIELD_CAR_BATTERY_HINT, battery),
                 row(ConfigSetting.CAR_CONSUMPTION, TextKey.FIELD_CAR_CONSUMPTION, TextKey.FIELD_CAR_CONSUMPTION_HINT,
                         consumption),
-                row(ConfigSetting.CAR_DAILY_DISTANCE, TextKey.FIELD_CAR_DISTANCE, TextKey.FIELD_CAR_DISTANCE_HINT,
-                        distance),
-                TypicalButton.line(this::useTypical, messages.text(TextKey.CARD_CAR), messages));
+                row(ConfigSetting.CAR_DAILY_DISTANCE, TextKey.FIELD_CAR_OTHER_DRIVING,
+                        TextKey.FIELD_CAR_OTHER_DRIVING_HINT, distance)));
+        if (showsSurcharge) {
+            // no typical value, so no tag, and no problem row: the range keeps the value valid
+            rows.add(FieldRow.of(messages, TextKey.FIELD_CAR_TRIP_SURCHARGE, TextKey.FIELD_CAR_TRIP_SURCHARGE_HINT,
+                    surcharge));
+        }
+        rows.add(TypicalButton.line(this::useTypical, messages.text(TextKey.CARD_CAR), messages));
+        card = new CardView(messages.text(TextKey.CARD_CAR), messages.text(TextKey.CARD_CAR_HINT),
+                rows.toArray(Node[]::new));
     }
 
     /**
@@ -89,6 +104,7 @@ public final class CarCard implements ConfigPart {
             consumption.load(car.consumptionKwhPer100km());
             distance.load(car.kmPerDay());
         });
+        surcharge.load(car.tripSurcharge().value());
         problems.clear();
     }
 
@@ -125,11 +141,13 @@ public final class CarCard implements ConfigPart {
     }
 
     /**
-     * The car as entered, with a trip surcharge this card does not show, after its record checked it; a refused value
-     * goes to {@code refused}.
+     * The car as entered, after its record checked it; a refused value goes to {@code refused}.
+     *
+     * @param stored the trip surcharge to keep when the card does not show the field
      */
-    private Optional<Car> car(Percent tripSurcharge, Consumer<InvalidSetting> refused) {
+    private Optional<Car> car(Percent stored, Consumer<InvalidSetting> refused) {
         try {
+            var tripSurcharge = showsSurcharge ? new Percent(surcharge.value()) : stored;
             return Optional.of(new Car(battery.value(), consumption.value(), distance.value(), tripSurcharge));
         } catch (InvalidSetting e) {
             refused.accept(e);
@@ -146,7 +164,8 @@ public final class CarCard implements ConfigPart {
     }
 
     private List<Input> inputs() {
-        return List.of(battery, consumption, distance);
+        return showsSurcharge ? List.of(battery, consumption, distance, surcharge)
+                : List.of(battery, consumption, distance);
     }
 
     private FieldRow row(ConfigSetting setting, TextKey name, TextKey hint, Input input) {

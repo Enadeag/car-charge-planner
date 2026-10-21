@@ -36,7 +36,7 @@ Open **Settings…** from the tray menu or the dashboard. Settings is a window w
 | --- | --- |
 | Solar panels | The panel arrays: size, tilt, direction and losses of each. The forecast is the sum of the arrays. |
 | Location | Latitude, longitude and time zone, or a place search. |
-| Car and house | The car's usable battery capacity, consumption and distance per day; the house's baseload. |
+| Car and house | The car's usable battery capacity, consumption, other driving per day and trip surcharge; the house's baseload. |
 | Charger | One or three phases, minimum and maximum charge current, voltage, charging efficiency. |
 | Forecast | Which forecast provider to use, an optional fallback, and each one's settings (a server address or an API key, if it takes any), with a **Test** button. API keys are kept in the system keychain. |
 | Away | The weekly away periods: when the car is not at home every week. |
@@ -51,7 +51,7 @@ Open **Settings…** from the tray menu or the dashboard. Settings is a window w
 1. Surplus per step = the forecast provider's expected solar power minus the house's own use, scaled by a planning margin (85% by default) so it errs towards too little power rather than grid draw.
 2. A step counts only if the surplus covers at least your charger's minimum charge current (6 A by default: about 1.4 kW on a single-phase 230 V charger, about 4.1 kW on a three-phase one).
 3. Within the hours the car is home, it picks the window and power that bring in the most solar for the energy the car needs, up to your target charge level (80% by default).
-4. It projects the battery day by day, subtracting your distance per day. If a day would end under your minimum charge level, it adds grid advice.
+4. It projects the battery day by day, subtracting your other driving per day (the short drives that are not trips). If a day would end under your minimum charge level, it adds grid advice.
 5. A window you have been notified about is kept as announced while it runs, so the power on screen matches what you set.
 
 ## Limits to know about

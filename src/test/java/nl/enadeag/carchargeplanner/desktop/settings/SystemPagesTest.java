@@ -156,6 +156,73 @@ class SystemPagesTest {
     }
 
     @Test
+    void theTripSurchargeShowsTheStoredOneAndSavesAnother() throws Exception {
+        var view = openWith(config -> withSurcharge(config, new Percent(20)));
+        assertThat(Fx.call(() -> ((TextField) settings.field(view, TextKey.FIELD_CAR_TRIP_SURCHARGE)).getText()))
+                .isEqualTo("20");
+
+        Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_CAR_TRIP_SURCHARGE, "25");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(stored().system().car()).isEqualTo(new Car(60, 18, 40, new Percent(25)));
+        assertThat(settings.configPath).content().containsPattern("\"tripSurchargePct\"\\s*:\\s*25");
+    }
+
+    @Test
+    void aTripSurchargeOutsideZeroToHundredIsBroughtIntoThatRange() throws Exception {
+        var view = open();
+
+        Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_CAR_TRIP_SURCHARGE, "150");
+            return SettingsFixture.save(view);
+        });
+        assertThat(stored().system().car().tripSurcharge()).isEqualTo(new Percent(100));
+
+        Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_CAR_TRIP_SURCHARGE, "-5");
+            return SettingsFixture.save(view);
+        });
+        assertThat(stored().system().car().tripSurcharge()).isEqualTo(new Percent(0));
+    }
+
+    @Test
+    void theStandardTripSurchargeStaysOutOfTheFileWhenAnotherValueIsSaved() throws Exception {
+        var view = open();
+        assertThat(Fx.call(() -> ((TextField) settings.field(view, TextKey.FIELD_CAR_TRIP_SURCHARGE)).getText()))
+                .isEqualTo("15");
+
+        Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_CAR_BATTERY, "75");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(stored().system().car()).isEqualTo(new Car(75, 18, 40));
+        assertThat(settings.configPath).content().doesNotContain("tripSurcharge");
+    }
+
+    @Test
+    void changingTheTripSurchargeBackToTheStandardTakesItOutOfTheFile() throws Exception {
+        var view = openWith(config -> withSurcharge(config, new Percent(20)));
+
+        Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_CAR_TRIP_SURCHARGE, "15");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(settings.configPath).content().doesNotContain("tripSurcharge");
+    }
+
+    private static EngineConfig withSurcharge(EngineConfig config, Percent surcharge) {
+        var system = config.system();
+        var car = system.car();
+        return config.withSystem(system.withHouseAndCar(system.house(),
+                new Car(car.usableBatteryKwh(), car.consumptionKwhPer100km(), car.kmPerDay(), surcharge)),
+                config.typical());
+    }
+
+    @Test
     void iDontKnowFillsTheCardWithTypicalValuesTaggedAsSuch() throws Exception {
         var view = openWith(config -> config.withSystem(config.system().withCharger(
                 new Charger(Phases.THREE, 8, 32, 400, 0.95)),
@@ -208,10 +275,10 @@ class SystemPagesTest {
         var view = open();
 
         Fx.run(() -> settings.choose(view, TextKey.FIELD_UNITS, Units.IMPERIAL));
-        assertThat(Fx.call(() -> ((TextField) settings.field(view, TextKey.FIELD_CAR_DISTANCE)).getText()))
+        assertThat(Fx.call(() -> ((TextField) settings.field(view, TextKey.FIELD_CAR_OTHER_DRIVING)).getText()))
                 .isEqualTo("25"); // 40 km
         Fx.call(() -> {
-            settings.type(view, TextKey.FIELD_CAR_DISTANCE, "50");
+            settings.type(view, TextKey.FIELD_CAR_OTHER_DRIVING, "50");
             return SettingsFixture.save(view);
         });
 
