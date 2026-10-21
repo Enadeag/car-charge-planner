@@ -52,6 +52,8 @@ import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
+import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -134,7 +136,8 @@ class EngineTest {
         var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
         var service = new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys);
         return new Engine(new ConfigFile(config), service, known, apiKeys, new AwayFile(folder.resolve("away.json")),
-                new BatteryFile(folder.resolve("battery.json")), clock, announcer(), scheduler);
+                new TripFile(folder.resolve("trips.json")), new BatteryFile(folder.resolve("battery.json")), clock,
+                announcer(), scheduler);
     }
 
     /** Starts the engine and runs its first round, which announces what is due; its outlooks go to {@link #rounds}. */
@@ -521,7 +524,8 @@ class EngineTest {
         var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json")));
         var withoutKeychain = new Engine(new ConfigFile(config),
                 new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys), known, apiKeys,
-                new AwayFile(folder.resolve("away.json")), new BatteryFile(folder.resolve("battery.json")), clockAt(7),
+                new AwayFile(folder.resolve("away.json")), new TripFile(folder.resolve("trips.json")),
+                new BatteryFile(folder.resolve("battery.json")), clockAt(7),
                 announcer(), new ManualScheduler());
         withoutKeychain.saveApiKeys(new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "x"))));
         assertThat(withoutKeychain.keyStorage()).isEqualTo(KeyStorage.FILE);
@@ -806,6 +810,62 @@ class EngineTest {
 
         assertThat(engine.removeAwayPeriod(morning)).containsExactly(evening);
         assertThat(engine.awayPeriods()).containsExactly(evening);
+    }
+
+    @Test
+    void aTripIsStoredAndTheNextPlanKeepsItsTimeFree() throws IOException {
+        var engine = engine(clockAt(7));
+        var atHome = planned(engine).days();
+        var trip = new Trip(DAY.atTime(9, 0).atZone(BRUSSELS).toInstant(),
+                DAY.plusDays(1).atTime(17, 0).atZone(BRUSSELS).toInstant(), 300, false);
+
+        assertThat(engine.addTrip(trip)).containsExactly(trip);
+        assertThat(engine(clockAt(7)).trips()).containsExactly(trip);
+        var away = planned(engine).days(); // the sun shines from 10:00 to 16:00
+        assertThat(away.getFirst().windows()).isEmpty();
+        assertThat(away.get(1).windows()).isEmpty();
+
+        assertThat(engine.removeTrip(trip)).isEmpty();
+        assertThat(planned(engine).days()).isEqualTo(atHome);
+    }
+
+    @Test
+    void aChangedTripTakesThePlaceOfTheOldOne() throws IOException {
+        var engine = engine(clockAt(7));
+        var atHome = planned(engine).days();
+        var trip = new Trip(DAY.atTime(9, 0).atZone(BRUSSELS).toInstant(),
+                DAY.plusDays(1).atTime(17, 0).atZone(BRUSSELS).toInstant(), 300, false);
+        var evening = new Trip(DAY.atTime(18, 0).atZone(BRUSSELS).toInstant(),
+                DAY.atTime(22, 0).atZone(BRUSSELS).toInstant(), 40, true);
+        engine.addTrip(trip);
+
+        assertThat(engine.changeTrip(trip, evening)).containsExactly(evening);
+        assertThat(engine.trips()).containsExactly(evening);
+        assertThat(planned(engine).days()).isEqualTo(atHome); // the evening leaves the sunny hours free
+    }
+
+    @Test
+    void removingATripGivesTheOnesThatAreLeft() throws IOException {
+        var engine = engine(clockAt(7));
+        var morning = new Trip(DAY.atTime(8, 0).atZone(BRUSSELS).toInstant(),
+                DAY.atTime(9, 0).atZone(BRUSSELS).toInstant(), 30, false);
+        var evening = new Trip(DAY.atTime(18, 0).atZone(BRUSSELS).toInstant(),
+                DAY.atTime(20, 0).atZone(BRUSSELS).toInstant(), 60, false);
+        engine.addTrip(evening);
+        engine.addTrip(morning);
+
+        assertThat(engine.removeTrip(morning)).containsExactly(evening);
+        assertThat(engine.trips()).containsExactly(evening);
+    }
+
+    @Test
+    void aTripIsForgottenADayAfterItsReturn() throws IOException {
+        var trip = new Trip(DAY.atTime(8, 0).atZone(BRUSSELS).toInstant(),
+                DAY.atTime(9, 0).atZone(BRUSSELS).toInstant(), 30, false);
+        engine(clockAt(7)).addTrip(trip);
+
+        assertThat(engine(clockAt(7)).trips()).containsExactly(trip);
+        assertThat(engine(Clock.offset(clockAt(9), Duration.ofDays(1))).trips()).isEmpty();
     }
 
     @Test

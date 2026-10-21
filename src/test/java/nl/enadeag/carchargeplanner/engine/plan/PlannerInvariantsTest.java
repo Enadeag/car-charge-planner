@@ -149,7 +149,7 @@ class PlannerInvariantsTest {
         }
 
         var now = from.plus(Duration.ofMinutes(random.nextInt(24 * 60)));
-        return new Case(system, preferences, new AwayTimes(recurring, oneOff), List.copyOf(forecast),
+        return new Case(system, preferences, new AwayTimes(recurring, oneOff, List.of()), List.copyOf(forecast),
                 new Percent(random.nextInt(101)), now);
     }
 

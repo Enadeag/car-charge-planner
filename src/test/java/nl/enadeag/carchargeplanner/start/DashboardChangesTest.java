@@ -20,6 +20,7 @@ import nl.enadeag.carchargeplanner.engine.notify.Announcer;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -50,8 +51,8 @@ class DashboardChangesTest {
         var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json")));
         var engine = new Engine(new ConfigFile(folder.resolve("engine.json")),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
-                new AwayFile(folder.resolve("away.json")), new BatteryFile(folder.resolve("battery.json")),
-                Clock.fixed(NOW, ZoneOffset.UTC),
+                new AwayFile(folder.resolve("away.json")), new TripFile(folder.resolve("trips.json")),
+                new BatteryFile(folder.resolve("battery.json")), Clock.fixed(NOW, ZoneOffset.UTC),
                 new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), _ -> { }),
                 new ManualScheduler());
         changes = new DashboardChanges(engine, new Background(handedOn::add, Runnable::run));

@@ -39,6 +39,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
+import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import nl.enadeag.carchargeplanner.host.AppName;
 import nl.enadeag.carchargeplanner.host.DataLocation;
 import nl.enadeag.carchargeplanner.host.Host;
@@ -316,7 +317,7 @@ public final class DesktopApp {
         var cache = new ForecastCache(dataFolder.resolve("forecasts"));
         var announcer = new Announcer(new AnnouncedWindows(dataFolder.resolve("announced.json")), notifier);
         return new Engine(new ConfigFile(configPath), new ForecastService(providers, cache, apiKeys), providers,
-                apiKeys, new AwayFile(dataFolder.resolve("away.json")),
+                apiKeys, new AwayFile(dataFolder.resolve("away.json")), new TripFile(dataFolder.resolve("trips.json")),
                 new BatteryFile(dataFolder.resolve("battery.json")), Clock.systemUTC(), announcer,
                 Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("planner").daemon().factory()));
     }

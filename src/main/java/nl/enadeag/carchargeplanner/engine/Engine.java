@@ -30,6 +30,8 @@ import nl.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
+import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
@@ -44,9 +46,9 @@ import java.util.function.Consumer;
  * Plans, fetches forecasts and owns the stored data, without any user interface. Clients get plain records back.
  *
  * <p>Once {@linkplain #start(Consumer) started}, the engine plans on its own thread every minute, and again after
- * each change to its config, keys, battery level or away periods, and tells its listener each new outlook. Each plan
- * uses the stored files as they are on disk, reading one again only when it changed; the forecast service decides
- * whether a provider is asked or its cache answers.
+ * each change to its config, keys, battery level, away periods or trips, and tells its listener each new outlook.
+ * Each plan uses the stored files as they are on disk, reading one again only when it changed; the forecast service
+ * decides whether a provider is asked or its cache answers.
  */
 public final class Engine {
 
@@ -58,6 +60,7 @@ public final class Engine {
     private final Providers providers;
     private final ApiKeys apiKeys;
     private final AwayFile awayFile;
+    private final TripFile tripFile;
     private final BatteryFile batteryFile;
     private final Clock clock;
     private final Announcer announcer;
@@ -73,22 +76,24 @@ public final class Engine {
      * @param apiKeys where the providers' secret settings are kept
      * @param awayFile where the away periods the owner enters by hand are kept, read again for a plan when it
      *     changed on disk
+     * @param tripFile where the trips the owner enters are kept, read again for a plan when it changed on disk
      * @param batteryFile where the battery level the owner entered last is kept, read again for a plan when it
      *     changed on disk
-     * @param clock the time plans are made at, and that decides which away periods are old
+     * @param clock the time plans are made at, and that decides which away periods and trips are old
      * @param announcer tells the owner about the plan's windows shortly before they start, and keeps the ones it told
      *     about as they were told
      * @param executor the engine's own thread, where it plans once {@linkplain #start(Consumer) started}; {@link
      *     #stop()} shuts it down. Nothing runs on it before the start; never null.
      */
     public Engine(ConfigFile configFile, ForecastService forecasts, Providers providers, ApiKeys apiKeys,
-            AwayFile awayFile, BatteryFile batteryFile, Clock clock, Announcer announcer,
+            AwayFile awayFile, TripFile tripFile, BatteryFile batteryFile, Clock clock, Announcer announcer,
             ScheduledExecutorService executor) {
         this.configFile = configFile;
         this.forecasts = forecasts;
         this.providers = providers;
         this.apiKeys = apiKeys;
         this.awayFile = awayFile;
+        this.tripFile = tripFile;
         this.batteryFile = batteryFile;
         this.clock = clock;
         this.announcer = announcer;
@@ -213,10 +218,10 @@ public final class Engine {
         }
     }
 
-    /** The plan for a config and a forecast, from the stored away periods and battery level. */
+    /** The plan for a config and a forecast, from the stored away periods, trips and battery level. */
     private Outlook.Planned planned(EngineConfig config, ForecastResult forecast, Instant now) {
         var system = config.system();
-        var away = new AwayTimes(config.away().weekly(), awayFile.periods());
+        var away = new AwayTimes(config.away().weekly(), awayFile.periods(), tripFile.trips(now));
         var entered = batteryFile.reading();
         var battery = entered.map(BatteryReading::level).orElse(ASSUMED_BATTERY_PCT);
         var days = new Planner(system, config.planning(), away)
@@ -309,6 +314,66 @@ public final class Engine {
     public List<OneOffAwayPeriod> removeAwayPeriod(OneOffAwayPeriod period) throws IOException {
         try {
             return awayFile.remove(period);
+        } finally {
+            schedule.runSoon();
+        }
+    }
+
+    /**
+     * The trips the owner entered.
+     *
+     * @return the stored trips in order of their departure, including any that returned in the last day
+     */
+    public List<Trip> trips() {
+        return tripFile.trips(clock.instant());
+    }
+
+    /**
+     * Stores a trip, so the next plan leaves the time it takes free. Trips that returned more than a day ago are
+     * forgotten at the same time. Once started, the engine plans again soon after.
+     *
+     * @param trip the trip; one that is stored already is kept once
+     * @return the stored trips after the change, as {@link #trips()} gives them
+     * @throws IOException when the trips could not be saved, or the stored ones could not be read whole and are left
+     *     as they are; the stored ones are then unchanged
+     */
+    public List<Trip> addTrip(Trip trip) throws IOException {
+        try {
+            return tripFile.add(trip, clock.instant());
+        } finally {
+            schedule.runSoon();
+        }
+    }
+
+    /**
+     * Replaces a stored trip by the owner's changed version of it. Trips that returned more than a day ago are
+     * forgotten at the same time. Once started, the engine plans again soon after.
+     *
+     * @param trip the trip as {@link #trips()} gave it; when it is no longer stored, the changed one is added
+     * @param changed the trip as the owner changed it
+     * @return the stored trips after the change, as {@link #trips()} gives them
+     * @throws IOException when the trips could not be saved, or the stored ones could not be read whole and are left
+     *     as they are; the stored ones are then unchanged
+     */
+    public List<Trip> changeTrip(Trip trip, Trip changed) throws IOException {
+        try {
+            return tripFile.change(trip, changed, clock.instant());
+        } finally {
+            schedule.runSoon();
+        }
+    }
+
+    /**
+     * Forgets a trip, so the next plan may use its time again. Once started, the engine plans again soon after.
+     *
+     * @param trip the trip as {@link #trips()} gave it; one that is not stored changes nothing
+     * @return the stored trips after the change, as {@link #trips()} gives them
+     * @throws IOException when the trips could not be saved, or the stored ones could not be read whole and are left
+     *     as they are; the stored ones are then unchanged
+     */
+    public List<Trip> removeTrip(Trip trip) throws IOException {
+        try {
+            return tripFile.remove(trip, clock.instant());
         } finally {
             schedule.runSoon();
         }
