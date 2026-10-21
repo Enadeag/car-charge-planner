@@ -77,8 +77,9 @@ public final class Planner {
      * <p>At a departure the battery must hold the trip's energy, the other driving of the days the trip lasts, and the
      * minimum charge level. Solar power before the departure comes first, above the target level when the trip needs
      * it, from the latest days that give the most; only the shortfall comes from the grid, as late as possible and done
-     * an hour before the departure, or at once when there is less time. A trip that departs while the car is on the one
-     * before it is planned from the level that trip leaves.
+     * an hour before the departure, or at once when there is less time. When the time between two trips cannot charge
+     * enough for the later one, the earlier one charges for both, up to a full battery; working back over the trips, so
+     * a chain of them charges as early as it must. Only what cannot fit at all leaves the later trip short.
      *
      * <p>An announced window that is running now is kept as it was announced, with the same power and end, so the
      * advice does not change while the owner charges at the power they set. Only its remaining energy counts.
@@ -100,12 +101,37 @@ public final class Planner {
                 .toList();
         var input = new Input(forecast, levelPct.value(), now, running,
                 WindowFinder.byDay(runsBeside(forecast, now, running), zone), stepsByDay(forecast), lastDay(forecast));
-        var charges = new ArrayList<TripCharge>();
-        for (var trip : tripsAhead(forecast, now)) {
-            charges.add(chargeFor(trip, charges, input));
-        }
+        var trips = tripsAhead(forecast, now);
+        var forNextTrips = new double[trips.size()];
+        var charges = settle(trips, forNextTrips, input);
         var projection = project(input, charges);
+        // from the last trip back, so what a trip passes on to the one before it is known when that one is settled
+        for (int i = trips.size() - 1; i > 0; i--) {
+            double shortPct = charges.get(i).neededPct() - projection.departures().get(i).departurePct();
+            // the trip before must leave with this much more than it does now, which may be more than it needs
+            double forNextPct = projection.departures().get(i - 1).departurePct() + shortPct
+                    - charges.get(i - 1).requiredPct();
+            if (shortPct > MIN_SHORTFALL_PCT && forNextPct > 0) {
+                forNextTrips[i - 1] = forNextPct;
+                charges = settle(trips, forNextTrips, input);
+                projection = project(input, charges);
+            }
+        }
         return new Plan(projection.days(), advice(projection, charges, now));
+    }
+
+    /**
+     * The charging for each trip in turn, each one after the trips before it are settled.
+     *
+     * @param forNextTrips per trip, the part of the battery it also charges for the trips after it, as their own legs
+     *     cannot
+     */
+    private List<TripCharge> settle(List<Trip> trips, double[] forNextTrips, Input input) {
+        var charges = new ArrayList<TripCharge>();
+        for (int i = 0; i < trips.size(); i++) {
+            charges.add(chargeFor(trips.get(i), forNextTrips[i], charges, input));
+        }
+        return charges;
     }
 
     /** What every projection of one plan shares. */
@@ -120,14 +146,15 @@ public final class Planner {
      * @param trip the trip
      * @param tripPct the part of the battery the trip takes, there and back or only there
      * @param requiredPct the level the trip needs at its departure; above 100 when even a full battery is not enough
+     * @param forNextTripsPct the part of the battery charged on top for the trips after it, whose legs cannot
      * @param boostFrom the first day whose solar power may charge above the target level for the trip
      * @param grid the grid charge, none or one
      */
-    private record TripCharge(Trip trip, double tripPct, double requiredPct, LocalDate boostFrom,
-            List<TripGridCharge> grid) {
+    private record TripCharge(Trip trip, double tripPct, double requiredPct, double forNextTripsPct,
+            LocalDate boostFrom, List<TripGridCharge> grid) {
 
         double neededPct() {
-            return Math.min(100, requiredPct);
+            return Math.min(100, requiredPct + forNextTripsPct);
         }
     }
 
@@ -152,13 +179,14 @@ public final class Planner {
      * The charging for one trip, after the trips before it are settled: first the days of solar power above the
      * target, then the grid charge for what they leave short.
      */
-    private TripCharge chargeFor(Trip trip, List<TripCharge> before, Input input) {
+    private TripCharge chargeFor(Trip trip, double forNextTripsPct, List<TripCharge> before, Input input) {
         double tripPct = tripPct(trip);
         double requiredPct = preferences.minimumPct().value() + tripPct + otherDrivingPct(trip, input.now());
         var departureDay = trip.departure().atZone(zone).toLocalDate();
-        var charge = new TripCharge(trip, tripPct, requiredPct, departureDay, List.of());
+        var charge = new TripCharge(trip, tripPct, requiredPct, forNextTripsPct, departureDay, List.of());
         if (charge.neededPct() > preferences.targetPct().value()) {
-            charge = new TripCharge(trip, tripPct, requiredPct, latestBoost(charge, before, input), List.of());
+            charge = new TripCharge(trip, tripPct, requiredPct, forNextTripsPct, latestBoost(charge, before, input),
+                    List.of());
         }
         var departure = project(input, with(before, charge)).departures().getLast();
         double shortPct = charge.neededPct() - departure.solarPct();
@@ -166,7 +194,7 @@ public final class Planner {
             return charge;
         }
         var grid = gridCharge(charge, before, input, shortPct);
-        return new TripCharge(trip, tripPct, requiredPct, charge.boostFrom(), grid);
+        return new TripCharge(trip, tripPct, requiredPct, forNextTripsPct, charge.boostFrom(), grid);
     }
 
     /**
@@ -180,7 +208,8 @@ public final class Planner {
         double bestPct = Double.NEGATIVE_INFINITY;
         for (var day = departureDay; !day.isBefore(firstDay) && bestPct < charge.neededPct() - EPS;
                 day = day.minusDays(1)) {
-            var boosted = new TripCharge(charge.trip(), charge.tripPct(), charge.requiredPct(), day, List.of());
+            var boosted = new TripCharge(charge.trip(), charge.tripPct(), charge.requiredPct(),
+                    charge.forNextTripsPct(), day, List.of());
             double pct = project(input, with(before, boosted)).departures().getLast().solarPct();
             if (pct > bestPct + EPS) {
                 best = day;

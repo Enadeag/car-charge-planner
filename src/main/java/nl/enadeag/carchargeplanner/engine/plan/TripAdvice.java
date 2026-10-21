@@ -11,8 +11,9 @@ import java.util.Optional;
  * What the plan does so the car can make a trip: solar power before the departure first, the grid for the rest.
  *
  * @param trip the trip
- * @param neededPct the battery level the trip needs at its departure, at most 100: the minimum charge level, the trip's
- *     energy with the trip surcharge, and the other driving of the days from the departure to the return
+ * @param neededPct the battery level to charge to by the departure, at most 100: the minimum charge level, the trip's
+ *     energy with the trip surcharge, the other driving of the days from the departure to the return, and what the
+ *     trips after it need that the time between them cannot charge
  * @param solarWindows the charge windows on solar power from now or the return of the trip before, up to the departure,
  *     in time order; possibly none
  * @param solarLevelPct the battery level at the departure on solar power alone

@@ -328,6 +328,59 @@ class TripPlanningTest {
     }
 
     @Test
+    void withoutRoomBetweenTwoTripsTheFirstChargesForBoth() {
+        // 150 km is 31.05 %; home for half an hour on Sunday, charging at once: 3.68 kWh or 3.312 %
+        var first = new Trip(at(SAT, 8), at(SUN, 7, 30), 150, false);
+        var second = new Trip(at(SUN, 8), at(SUN, 18), 150, false);
+        var planned = plan(dark(4), 50, at(FRI, 0), first, second);
+        var advice = planned.plan().trips();
+        assertThat(advice.get(0).neededPct().value()).isCloseTo(61.05 + 31.05 - 3.312, CLOSE);
+        assertThat(advice.get(0).departureLevelPct().value()).isCloseTo(61.05 + 31.05 - 3.312, CLOSE);
+        assertThat(advice.get(0).grid().orElseThrow().window().end()).isBeforeOrEqualTo(at(SAT, 7));
+        var charge = advice.get(1).grid().orElseThrow();
+        assertThat(charge.now()).isTrue();
+        assertThat(List.of(charge.window().start(), charge.window().end())).containsExactly(at(SUN, 7, 30), at(SUN, 8));
+        assertThat(advice.get(1).departureLevelPct().value()).isCloseTo(61.05, CLOSE);
+        assertThat(advice.get(1).kmShort()).isZero();
+    }
+
+    @Test
+    void withRoomBetweenTwoTripsEachChargesOnlyForItself() {
+        var planned = plan(dark(4), 50, at(FRI, 0), trip(SAT, 8, 18, 150), trip(SUN, 8, 18, 150));
+        assertThat(planned.plan().trips()).hasSize(2).allSatisfy(
+                advice -> assertThat(advice.neededPct().value()).isCloseTo(61.05, CLOSE));
+        assertThat(planned.plan().trips().get(1).grid().orElseThrow().now()).isFalse();
+    }
+
+    @Test
+    void threeTripsInARowAreChargedForBeforeTheFirst() {
+        // back to back, 100 km each: 20.7 %, three times on top of the minimum
+        var a = new Trip(at(FRI, 8), at(FRI, 20), 100, false);
+        var b = new Trip(at(FRI, 20), at(SAT, 20), 100, false);
+        var c = new Trip(at(SAT, 20), at(SUN, 18), 100, false);
+        var advice = plan(dark(4), 50, at(THU, 0), a, b, c).plan().trips();
+        var levels = List.of(92.1, 71.4, 50.7);
+        for (int i = 0; i < 3; i++) {
+            assertThat(advice.get(i).neededPct().value()).isCloseTo(levels.get(i), CLOSE);
+            assertThat(advice.get(i).departureLevelPct().value()).isCloseTo(levels.get(i), CLOSE);
+        }
+        assertThat(advice.get(0).grid().orElseThrow().window().end()).isBeforeOrEqualTo(at(FRI, 7));
+        assertThat(advice).allSatisfy(trip -> assertThat(trip.kmShort()).isZero());
+    }
+
+    @Test
+    void whatCannotFitEvenAtAFullBatteryLeavesTheLaterTripShort() {
+        var first = new Trip(at(SAT, 8), at(SUN, 8), 300, false);
+        var second = new Trip(at(SUN, 8), at(SUN, 18), 300, false);
+        var advice = plan(dark(4), 50, at(FRI, 0), first, second).plan().trips();
+        // 30 % + 2 × 62.1 % does not fit: the first leaves full and makes it, the second leaves at 37.9 %
+        assertThat(advice.get(0).departureLevelPct().value()).isCloseTo(100, CLOSE);
+        assertThat(advice.get(0).kmShort()).isZero();
+        assertThat(advice.get(1).departureLevelPct().value()).isCloseTo(37.9, CLOSE);
+        assertThat(advice.get(1).kmShort()).isCloseTo((92.1 - 37.9) / 0.207, CLOSE);
+    }
+
+    @Test
     void aGridAdviceAfterATripIsPlacedAfterItsReturn() {
         // 70 % - 9 % reaches the trip's 59.7 % without the grid; Sunday then ends at 22.3 %, and the car is away all
         // Sunday, so the grid charge goes on Saturday, after the return
