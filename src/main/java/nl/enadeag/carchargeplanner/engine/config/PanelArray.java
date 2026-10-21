@@ -23,19 +23,19 @@ public record PanelArray(String name, double kwp, double tiltDeg, double azimuth
      * @throws InvalidSetting when a value is outside the range given for it
      */
     public PanelArray {
-        if (kwp <= 0 || Double.isNaN(kwp)) {
+        if (kwp <= 0 || !Double.isFinite(kwp)) {
             throw new InvalidSetting(ConfigSetting.PANEL_SIZE, InvalidSetting.Rule.OUT_OF_RANGE,
                     "kwp must be more than 0");
         }
-        if (tiltDeg < 0 || tiltDeg > 90 || Double.isNaN(tiltDeg)) {
+        if (tiltDeg < 0 || tiltDeg > 90 || !Double.isFinite(tiltDeg)) {
             throw new InvalidSetting(ConfigSetting.PANEL_TILT, InvalidSetting.Rule.OUT_OF_RANGE,
                     "tiltDeg must be between 0 and 90");
         }
-        if (azimuthDeg < -180 || azimuthDeg > 180 || Double.isNaN(azimuthDeg)) {
+        if (azimuthDeg < -180 || azimuthDeg > 180 || !Double.isFinite(azimuthDeg)) {
             throw new InvalidSetting(ConfigSetting.PANEL_DIRECTION, InvalidSetting.Rule.OUT_OF_RANGE,
                     "azimuthDeg must be between -180 and 180");
         }
-        if (systemLosses < 0 || systemLosses >= 1 || Double.isNaN(systemLosses)) {
+        if (systemLosses < 0 || systemLosses >= 1 || !Double.isFinite(systemLosses)) {
             throw new InvalidSetting(ConfigSetting.PANEL_LOSSES, InvalidSetting.Rule.OUT_OF_RANGE,
                     "systemLosses must be at least 0 and less than 1");
         }

@@ -20,10 +20,10 @@ public final class WindowSize {
      * @throws IllegalArgumentException when a size is not more than 0
      */
     public static Dimension2D on(double widthEm, double heightEm, double em, Rectangle2D screen) {
-        if (widthEm <= 0 || Double.isNaN(widthEm) || heightEm <= 0 || Double.isNaN(heightEm)) {
+        if (widthEm <= 0 || !Double.isFinite(widthEm) || heightEm <= 0 || !Double.isFinite(heightEm)) {
             throw new IllegalArgumentException("a window's size in lines must be more than 0");
         }
-        if (em <= 0 || Double.isNaN(em)) {
+        if (em <= 0 || !Double.isFinite(em)) {
             throw new IllegalArgumentException("the text size must be more than 0");
         }
         return new Dimension2D(Math.min(widthEm * em, screen.getWidth()), Math.min(heightEm * em, screen.getHeight()));

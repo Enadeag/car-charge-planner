@@ -20,7 +20,7 @@ public record House(double baseloadKw) {
      * @throws InvalidSetting when the baseload is negative
      */
     public House {
-        if (baseloadKw < 0 || Double.isNaN(baseloadKw)) {
+        if (baseloadKw < 0 || !Double.isFinite(baseloadKw)) {
             throw new InvalidSetting(ConfigSetting.HOUSE_BASELOAD, InvalidSetting.Rule.OUT_OF_RANGE,
                     "baseloadKw must not be negative");
         }

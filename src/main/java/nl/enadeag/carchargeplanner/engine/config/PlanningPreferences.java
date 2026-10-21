@@ -44,11 +44,11 @@ public record PlanningPreferences(
             throw new InvalidSetting(ConfigSetting.MINIMUM_CHARGE, InvalidSetting.Rule.NOT_BELOW_TARGET,
                     "minimumPct and targetPct must satisfy 0 <= minimumPct < targetPct <= 100");
         }
-        if (margin <= 0 || margin > 1 || Double.isNaN(margin)) {
+        if (margin <= 0 || margin > 1 || !Double.isFinite(margin)) {
             throw new InvalidSetting(ConfigSetting.PLANNING_MARGIN, InvalidSetting.Rule.OUT_OF_RANGE,
                     "margin must be more than 0 and at most 1");
         }
-        if (importToleranceKwh < 0 || Double.isNaN(importToleranceKwh)) {
+        if (importToleranceKwh < 0 || !Double.isFinite(importToleranceKwh)) {
             throw new InvalidSetting(ConfigSetting.IMPORT_TOLERANCE, InvalidSetting.Rule.OUT_OF_RANGE,
                     "importToleranceKwh must not be negative");
         }

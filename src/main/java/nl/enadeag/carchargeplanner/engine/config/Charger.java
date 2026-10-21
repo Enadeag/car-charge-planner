@@ -32,11 +32,11 @@ public record Charger(Phases phases, int minAmps, int maxAmps, double volts, dou
             throw new InvalidSetting(ConfigSetting.CHARGER_MAX_CURRENT, InvalidSetting.Rule.BELOW_MINIMUM_CURRENT,
                     "maxAmps must be at least minAmps");
         }
-        if (volts <= 0 || Double.isNaN(volts)) {
+        if (volts <= 0 || !Double.isFinite(volts)) {
             throw new InvalidSetting(ConfigSetting.CHARGER_VOLTAGE, InvalidSetting.Rule.OUT_OF_RANGE,
                     "volts must be more than 0");
         }
-        if (efficiency <= 0 || efficiency > 1 || Double.isNaN(efficiency)) {
+        if (efficiency <= 0 || efficiency > 1 || !Double.isFinite(efficiency)) {
             throw new InvalidSetting(ConfigSetting.CHARGER_EFFICIENCY, InvalidSetting.Rule.OUT_OF_RANGE,
                     "efficiency must be more than 0 and at most 1");
         }

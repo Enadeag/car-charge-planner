@@ -26,15 +26,15 @@ public record Car(double usableBatteryKwh, double consumptionKwhPer100km, double
      * @throws InvalidSetting when a value is outside the range given for it
      */
     public Car {
-        if (usableBatteryKwh <= 0 || Double.isNaN(usableBatteryKwh)) {
+        if (usableBatteryKwh <= 0 || !Double.isFinite(usableBatteryKwh)) {
             throw new InvalidSetting(ConfigSetting.CAR_BATTERY, InvalidSetting.Rule.OUT_OF_RANGE,
                     "usableBatteryKwh must be more than 0");
         }
-        if (consumptionKwhPer100km <= 0 || Double.isNaN(consumptionKwhPer100km)) {
+        if (consumptionKwhPer100km <= 0 || !Double.isFinite(consumptionKwhPer100km)) {
             throw new InvalidSetting(ConfigSetting.CAR_CONSUMPTION, InvalidSetting.Rule.OUT_OF_RANGE,
                     "consumptionKwhPer100km must be more than 0");
         }
-        if (kmPerDay < 0 || Double.isNaN(kmPerDay)) {
+        if (kmPerDay < 0 || !Double.isFinite(kmPerDay)) {
             throw new InvalidSetting(ConfigSetting.CAR_DAILY_DISTANCE, InvalidSetting.Rule.OUT_OF_RANGE,
                     "kmPerDay must not be negative");
         }
