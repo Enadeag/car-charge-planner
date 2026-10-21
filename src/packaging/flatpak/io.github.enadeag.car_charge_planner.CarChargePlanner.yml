@@ -1,0 +1,61 @@
+# The Flatpak of Car charge planner (docs/adr/0008-flatpak.md). Build and run it locally (CONTRIBUTING.md, Flatpak):
+#   flatpak-builder --user --install --force-clean build-dir src/packaging/flatpak/io.github.enadeag.car_charge_planner.CarChargePlanner.yml
+#   flatpak run io.github.enadeag.car_charge_planner.CarChargePlanner
+# CONTRIBUTING.md lists every place the app ID appears.
+id: io.github.enadeag.car_charge_planner.CarChargePlanner
+runtime: org.freedesktop.Platform
+runtime-version: '26.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.openjdk25
+command: car-charge-planner
+
+# Only what the app uses; PackagingTest fails on any other. Its settings and data stay in ~/.var/app/<app ID>/.
+finish-args:
+  # JavaFX draws its windows through X11 only, as it has no Wayland backend: on a Wayland desktop through XWayland.
+  # Not fallback-x11, which takes X11 away on a Wayland desktop, and with it every window of the app.
+  - --socket=x11
+  # X11's shared memory, which JavaFX's drawing uses
+  - --share=ipc
+  # the graphics card, for JavaFX's OpenGL drawing; without it Mesa draws in software
+  - --device=dri
+  # the forecast providers and the place search, over HTTPS (docs/privacy.md)
+  - --share=network
+  # the tray icon: registered with the panel's StatusNotifierWatcher by the connection's own unique name, so the app
+  # owns no bus name (StatusNotifierTray.ItemName.CONNECTION)
+  - --talk-name=org.kde.StatusNotifierWatcher
+  # the notification before each charge window, with its "Open dashboard" button
+  - --talk-name=org.freedesktop.Notifications
+  # the API keys in the system keychain (Secret Service): the same entries as outside the Flatpak, so they carry over
+  - --talk-name=org.freedesktop.secrets
+  # Start at login goes through the Background portal and links open through the OpenURI portal: portals need no
+  # permission.
+
+modules:
+  - name: car-charge-planner
+    buildsystem: simple
+    build-options:
+      append-path: /usr/lib/sdk/openjdk25/bin
+      env:
+        JAVA_HOME: /usr/lib/sdk/openjdk25/jvm/openjdk-25
+    build-commands:
+      - sh tools/package-flatpak.sh
+    sources:
+      # this working copy; the Flathub copy of this manifest names a git tag and its commit instead
+      - type: dir
+        path: ../../..
+        skip:
+          - .git
+          - target
+      # the Maven of .mvn/wrapper/maven-wrapper.properties (PackagingTest checks the address and checksum)
+      - type: archive
+        url: https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.10.0/apache-maven-3.10.0-bin.zip
+        sha256: 1f6d9909266510f039f59aa0e13dcd2c66da85f043e56276e41f2918f8bddaff
+        dest: maven
+      # JavaFX's jmods, as tools/package-linux.sh downloads them (PackagingTest checks the address and checksum)
+      - type: archive
+        url: https://download2.gluonhq.com/openjfx/27/openjfx-27_linux-x64_bin-jmods.zip
+        sha256: ea169b02460a38a2b44acf595e28c7abd3d1ab23075e4b03f324ebaf33920c5b
+        dest: javafx-jmods
+      # every file the Maven build needs, from Maven Central; made by tools/flatpak-maven-sources.sh
+      - maven-sources.json

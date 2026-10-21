@@ -76,9 +76,14 @@ class StatusNotifierTrayTest {
         bus = IsolatedSessionBus.start(folder);
         address = bus.address();
         panel = DBusConnectionBuilder.forAddress(address).withShared(false).build();
-        tray = new StatusNotifierTray(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),
-                new StatusIcon(), folder.resolve("tray"), "car-charge-planner", "Car charge planner");
-        tray.setMenuLabels(new Tray.MenuLabels("Open dashboard", "Settings…", "About…", "Quit"));
+        tray = tray(StatusNotifierTray.ItemName.PER_PROCESS);
+    }
+
+    private StatusNotifierTray tray(StatusNotifierTray.ItemName itemName) {
+        var made = new StatusNotifierTray(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),
+                new StatusIcon(), folder.resolve("tray"), "car-charge-planner", "Car charge planner", itemName);
+        made.setMenuLabels(new Tray.MenuLabels("Open dashboard", "Settings…", "About…", "Quit"));
+        return made;
     }
 
     @AfterEach
@@ -274,6 +279,25 @@ class StatusNotifierTrayTest {
         panel.requestBusName(StatusNotifierWatcher.BUS_NAME);
 
         assertThat(restarted.registered.poll(TIMEOUT_S, TimeUnit.SECONDS)).isEqualTo(name);
+    }
+
+    @Test
+    void itRegistersByANameOfItsOwnForThisProcess() throws Exception {
+        assertThat(showWithAWatcher()).isEqualTo("org.kde.StatusNotifierItem-" + ProcessHandle.current().pid() + "-1");
+    }
+
+    @Test
+    void inAFlatpakItRegistersByItsConnectionsNameAndThePanelReachesItThere() throws Exception {
+        tray.remove();
+        tray = tray(StatusNotifierTray.ItemName.CONNECTION);
+
+        var name = showWithAWatcher();
+
+        assertThat(name).startsWith(":");
+        assertThat(panel.getRemoteObject("org.freedesktop.DBus", "/org/freedesktop/DBus", DBus.class)
+                .ListNames()).noneMatch(owned -> owned.startsWith("org.kde.StatusNotifierItem-"));
+        panel.getRemoteObject(name, TrayItem.OBJECT_PATH, StatusNotifierItem.class).Activate(10, 20);
+        assertThat(clicks.poll(TIMEOUT_S, TimeUnit.SECONDS)).isEqualTo(new Point2D(10, 20));
     }
 
     @Test

@@ -88,6 +88,12 @@ public final class Commands {
          */
         record FromPackage(ApplicationMenuEntry entry) implements MenuEntry { }
 
+        /**
+         * The Flatpak puts the program in the menu itself, and its sandbox cannot reach the user's own menu entries,
+         * so there is nothing to install or remove.
+         */
+        record FromFlatpak() implements MenuEntry { }
+
         /** The menu entry is Linux's only. */
         record LinuxOnly() implements MenuEntry { }
 
@@ -121,7 +127,7 @@ public final class Commands {
      */
     public static Commands of(Host host, PlatformParts parts, SingleInstance instance, Messages messages) {
         var dataHome = DataLocation.systemFolder(host.os(), host.environment(), host.home());
-        var menuEntry = host.launcher()
+        var menuEntry = host.flatpak() ? new MenuEntry.FromFlatpak() : host.launcher()
                 .map(program -> MenuEntry.of(host.os(), new ApplicationMenuEntry(dataHome, program, AppName.ID,
                         AppName.TITLE, ApplicationMenuEntry::refreshCaches),
                         ApplicationMenuEntry.packageEntry(program, AppName.ID).isPresent()))
@@ -207,6 +213,7 @@ public final class Commands {
         return switch (menuEntry) {
             case MenuEntry.LinuxOnly _ -> failure(messages.text(TextKey.CLI_LAUNCHER_LINUX_ONLY, AppName.TITLE));
             case MenuEntry.OnlyFromLauncher _ -> failure(messages.text(TextKey.CLI_LAUNCHER_NEEDS_INSTALL));
+            case MenuEntry.FromFlatpak _ -> success(messages.text(TextKey.CLI_LAUNCHER_FROM_FLATPAK, AppName.TITLE));
             case MenuEntry.Present(var entry) -> switchLauncher(entry, install);
             case MenuEntry.FromPackage(var entry) -> install
                     ? success(messages.text(TextKey.CLI_LAUNCHER_FROM_PACKAGE, AppName.TITLE))

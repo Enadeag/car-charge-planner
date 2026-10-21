@@ -19,6 +19,8 @@ import org.freedesktop.dbus.interfaces.DBus;
  * <p>The icon goes to the panel twice: by name from an {@link IconThemeFolder}, which KDE Plasma colours to suit its
  * panel, and as pixels in several sizes for panels that cannot find it by name.
  *
+ * <p>The panel finds the item by a bus name, see {@link ItemName}.
+ *
  * <p>When the panel restarts, such as after a crash of Plasma's shell, its new StatusNotifierWatcher knows no items:
  * the tray registers again as soon as the watcher's name has a new owner.
  */
@@ -34,14 +36,25 @@ public final class StatusNotifierTray implements Tray {
     private final IconThemeFolder theme;
     private final String id;
     private final String title;
-    // the name the specification asks for: one per process and item
-    private final String busName = "org.kde.StatusNotifierItem-" + ProcessHandle.current().pid() + "-1";
+    private final ItemName itemName;
+    private String busName;
 
     private TrayStatus status = new TrayStatus(StatusDot.NONE, "");
     private MenuLabels labels;
     private DBusConnection bus;
     private TrayItem item;
     private TrayMenu menu;
+
+    /** The bus name the item is registered with the panel by. */
+    public enum ItemName {
+        /** A name of its own, {@code org.kde.StatusNotifierItem-<process id>-1}, as the specification suggests. */
+        PER_PROCESS,
+        /**
+         * The connection's unique name, which the panels accept as well: in a Flatpak sandbox, where the app may own
+         * no name it was not given, and where the process ids of all sandboxed apps are alike.
+         */
+        CONNECTION
+    }
 
     /**
      * Makes the tray; nothing appears until {@link #add(Actions)}, and its menu needs
@@ -53,13 +66,16 @@ public final class StatusNotifierTray implements Tray {
      *     panel; {@link #remove()} removes it again
      * @param id the app's ID, by which the panel knows the icon from one run to the next, such as to keep its place
      * @param title the name the panel shows for the icon, such as in its tooltip
+     * @param itemName which bus name the panel finds the item by
      */
-    public StatusNotifierTray(BusConnector connector, StatusIcon icon, Path iconFolder, String id, String title) {
+    public StatusNotifierTray(BusConnector connector, StatusIcon icon, Path iconFolder, String id, String title,
+            ItemName itemName) {
         this.connector = connector;
         this.icon = icon;
         this.theme = new IconThemeFolder(iconFolder);
         this.id = id;
         this.title = title;
+        this.itemName = itemName;
     }
 
     /**
@@ -80,7 +96,13 @@ public final class StatusNotifierTray implements Tray {
             bus = connector.connect();
             bus.exportObject(item);
             bus.exportObject(menu);
-            bus.requestBusName(busName);
+            busName = switch (itemName) {
+                case PER_PROCESS -> "org.kde.StatusNotifierItem-" + ProcessHandle.current().pid() + "-1";
+                case CONNECTION -> bus.getUniqueName();
+            };
+            if (itemName == ItemName.PER_PROCESS) {
+                bus.requestBusName(busName);
+            }
             bus.addSigHandler(DBus.NameOwnerChanged.class, this::watcherChanged);
             register(bus);
         } catch (DBusException | RuntimeException e) {

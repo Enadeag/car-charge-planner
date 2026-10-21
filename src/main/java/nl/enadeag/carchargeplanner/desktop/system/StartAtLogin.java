@@ -5,7 +5,8 @@ import java.io.IOException;
 /**
  * Start at login: the app launching itself, hidden as a tray icon or as a window that is not shown, when the user
  * signs in. Each system keeps the choice
- * in its own place, which is read every time, so a change made outside the app is seen too.
+ * in its own place, which is read every time, so a change made outside the app is seen too; only in a Flatpak
+ * sandbox, whose Background portal cannot be asked, the app remembers its own last choice.
  */
 public interface StartAtLogin {
 

@@ -17,20 +17,22 @@ import nl.enadeag.carchargeplanner.platform.linux.ApplicationMenuEntry;
 import nl.enadeag.carchargeplanner.platform.linux.BusConnector;
 import nl.enadeag.carchargeplanner.platform.linux.FreedesktopNotifications;
 import nl.enadeag.carchargeplanner.platform.linux.LinuxStartAtLogin;
+import nl.enadeag.carchargeplanner.platform.linux.PortalStartAtLogin;
 import nl.enadeag.carchargeplanner.platform.linux.SecretServiceKeychain;
 import nl.enadeag.carchargeplanner.platform.linux.StatusNotifierTray;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 import javafx.application.ColorScheme;
 import javafx.beans.value.ObservableValue;
 
 /**
  * The freedesktop.org parts, over the session bus: a StatusNotifierItem, the notification server, the Secret Service
- * and a desktop entry in the autostart folder. Also used on systems that are neither Linux nor Windows, without a
- * keychain there.
+ * and a desktop entry in the autostart folder, or in a Flatpak sandbox the Background portal. Also used on systems
+ * that are neither Linux nor Windows, without a keychain there.
  */
 final class FreedesktopParts implements PlatformParts {
 
@@ -49,7 +51,8 @@ final class FreedesktopParts implements PlatformParts {
     @Override
     public TrayParts trayParts(ObservableValue<ColorScheme> colorScheme, AppIcon icon, LanguageChoice language) {
         var tray = new StatusNotifierTray(sessionBus, new StatusIcon(), runtimeFolder("tray"), AppName.ID,
-                AppName.TITLE);
+                AppName.TITLE, host.flatpak() ? StatusNotifierTray.ItemName.CONNECTION
+                        : StatusNotifierTray.ItemName.PER_PROCESS);
         // a notification server is there also without a tray
         var notifications = new FreedesktopNotifications(sessionBus, AppName.TITLE, desktopEntry(), icon,
                 runtimeFolder("notify"), () -> language.messages().text(TextKey.OPEN_DASHBOARD));
@@ -63,9 +66,15 @@ final class FreedesktopParts implements PlatformParts {
 
     @Override
     public Optional<StartAtLogin> startAtLogin() {
-        var autostart = ConfigLocation.systemFolder(host.os(), host.environment(), host.home()).resolve("autostart");
-        return host.launcher().map(program -> new LinuxStartAtLogin(autostart, AppName.ID + ".desktop", program,
-                AppName.TITLE));
+        var config = ConfigLocation.systemFolder(host.os(), host.environment(), host.home());
+        if (host.flatpak()) {
+            // the Flatpak's command, which the portal starts inside the sandbox
+            return host.launcher().map(_ -> new PortalStartAtLogin(sessionBus,
+                    config.resolve(AppName.ID).resolve("start-at-login"),
+                    List.of(AppName.ID, StartAtLogin.AT_LOGIN_FLAG), PortalStartAtLogin.ANSWER_WAIT));
+        }
+        return host.launcher().map(program -> new LinuxStartAtLogin(config.resolve("autostart"),
+                AppName.ID + ".desktop", program, AppName.TITLE));
     }
 
     @Override
@@ -79,12 +88,15 @@ final class FreedesktopParts implements PlatformParts {
     }
 
     /**
-     * The menu entry the notifications are tied to: the one the app's .deb or .rpm installed when the app runs from
-     * there, otherwise the one {@code install-launcher} writes.
+     * The menu entry the notifications are tied to: the Flatpak's in its sandbox, the one the app's .deb or .rpm
+     * installed when the app runs from there, otherwise the one {@code install-launcher} writes.
      *
      * @return the entry's name without ".desktop"
      */
     String desktopEntry() {
+        if (host.flatpak()) {
+            return AppName.FLATPAK_ID;
+        }
         return host.launcher().flatMap(program -> ApplicationMenuEntry.packageEntry(program, AppName.ID))
                 .orElse(AppName.ID);
     }

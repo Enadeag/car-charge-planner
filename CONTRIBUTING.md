@@ -100,6 +100,7 @@ On a real desktop, with the packaged app (see [Packaging](#packaging)):
 - [ ] Keychain: in a desktop session the API key is kept in the keychain; without one (on Linux, no Secret Service) it falls back to `secrets.json` (the log says where the API keys are kept).
 - [ ] Start at login: switch it on, log out and in again, and the app starts; switch it off, and it does not.
 - [ ] Install, start, quit and uninstall: the Linux tar.gz with `install-launcher` and `uninstall-launcher`, and the Windows installer.
+- [ ] Once the app is on Flathub: the Flatpak's tray icon, notifications, keychain and start at login, on KDE Plasma and GNOME.
 - [ ] The dashboard, set-up and Settings read well with Narrator on Windows (Orca on Linux cannot read it yet, #132).
 - [ ] At 150% and 200% scaling nothing is cut off.
 - [ ] Switching the system between light and dark while the app runs switches the app.
@@ -134,6 +135,32 @@ Each package brings a runtime made by jlink, so users need no Java of their own,
 
 The app icon's drawings are in `src/packaging/icons/`: `car-charge-planner.svg` is the icon the PNGs in `src/main/resources/.../desktop/system/icons/` and `src/packaging/windows/car-charge-planner.ico` show, and `car-charge-planner-symbolic.svg` has the shapes the tray icon draws (`StatusIcon`).
 
+### Flatpak
+
+The Flatpak ([ADR 0008](docs/adr/0008-flatpak.md)) is built from source by flatpak-builder, offline, from the files in `src/packaging/flatpak/`: the manifest `<app ID>.yml`, the AppStream metadata `<app ID>.metainfo.xml`, the menu entry `<app ID>.desktop`, `maven-sources.json` and `flathub.json`. The manifest runs `tools/package-flatpak.sh`, which builds the same app image as `tools/package-linux.sh` with the JDK 25 of the `org.freedesktop.Sdk.Extension.openjdk25` extension and installs it in `/app`, with the menu entry, the metadata, the icons and the licences. It is not on Flathub yet (#217), so the install guide does not mention it.
+
+To build and try it, with `flatpak-builder` installed and Flathub added as a remote:
+
+```bash
+flatpak install --user flathub org.freedesktop.Platform//26.08 org.freedesktop.Sdk//26.08 org.freedesktop.Sdk.Extension.openjdk25//26.08
+flatpak-builder --user --install --force-clean build-dir src/packaging/flatpak/io.github.enadeag.car_charge_planner.CarChargePlanner.yml
+flatpak run io.github.enadeag.car_charge_planner.CarChargePlanner
+```
+
+`flatpak run --command=car-charge-planner io.github.enadeag.car_charge_planner.CarChargePlanner quit` runs a command in the sandbox. In the sandbox the settings and data are in `~/.var/app/io.github.enadeag.car_charge_planner.CarChargePlanner/`, not in `~/.config` and `~/.local/share`.
+
+**The Maven sources.** flatpak-builder cannot download during the build, so `maven-sources.json` lists every file the Maven build needs (the libraries, the plugins and what they need) with its address on Maven Central and its SHA-256. After a change to `pom.xml`, the Maven version in `.mvn/wrapper/maven-wrapper.properties` or the Maven build in `tools/package-flatpak.sh`, make it again and commit it: `sh tools/flatpak-maven-sources.sh` (it builds the app once, online, into an empty Maven repository, and fails on a file whose SHA-1 is not the one Maven Central publishes). A new Maven or JavaFX version needs its address and checksum in the manifest too; `FlatpakPackagingTest` checks them against the wrapper and `tools/package-linux.sh`.
+
+**The permissions** (`finish-args`) are only what the app uses, each with its reason in the manifest; `FlatpakPackagingTest` fails on any other, so a new one is a deliberate change to the test, the manifest and ADR 0008.
+
+**The app ID** `io.github.enadeag.car_charge_planner.CarChargePlanner` is Flathub's form for an app on GitHub: `io.github.<user>.<repository>.<name>`, with the repository's dashes as underscores; Flathub checks that the repository exists. Changing it changes:
+
+- `AppName.FLATPAK_ID` in `src/main/java/nl/enadeag/carchargeplanner/host/AppName.java`: the notifications' menu entry and the shared runtime folder in the sandbox;
+- the names of the manifest, the metadata and the menu entry in `src/packaging/flatpak/`, and inside them the manifest's `id:` and its comment, the metadata's `<id>` and `<launchable>`, and the menu entry's `Icon=`;
+- the commands above, and the ID in ADR 0008.
+
+`tools/package-flatpak.sh` takes the ID from flatpak-builder (`FLATPAK_ID`), and `FlatpakPackagingTest` checks that the files agree with `AppName.FLATPAK_ID`. The keychain entries, the launcher and the data folders inside `~/.var/app/<app ID>/` keep the name `car-charge-planner`.
+
 ## Continuous integration
 
 The workflows are in `.github/workflows/`:
@@ -151,7 +178,7 @@ The actions are pinned to a full commit SHA, with the version in a comment besid
 Between releases the version in `pom.xml` is the next one with `-SNAPSHOT`, such as `0.3.0-SNAPSHOT`. The tagged commit carries the exact version, because the app shows it in About and the download names carry it. To release X.Y.Z:
 
 1. Go through [Before a release](#before-a-release).
-2. In a pull request, set `<version>X.Y.Z</version>` in `pom.xml` and turn `## [Unreleased]` in `CHANGELOG.md` into `## [X.Y.Z] - YYYY-MM-DD`.
+2. In a pull request, set `<version>X.Y.Z</version>` in `pom.xml`, turn `## [Unreleased]` in `CHANGELOG.md` into `## [X.Y.Z] - YYYY-MM-DD`, and add `<release version="X.Y.Z" date="YYYY-MM-DD">` with a short description at the top of `<releases>` in `src/packaging/flatpak/<app ID>.metainfo.xml` (`FlatpakPackagingTest` checks that it matches the changelog).
 3. After the merge, tag that commit `vX.Y.Z` and push the tag. The release workflow stops when the tag is not `v` plus the version in `pom.xml`, when that version still ends in `-SNAPSHOT`, when `CHANGELOG.md` has no section for it, or when `release/X.Y.Z` exists at another commit. Otherwise it builds and tests, packages the Linux tar.gz, `.deb` and `.rpm` and the Windows installer with an SBOM for Linux and one for Windows, smoke-tests the tar.gz, the `.deb` (installed on the runner and removed again) and the installer, checks the files in the `.rpm`, stops when OSV-Scanner finds a known vulnerability in an SBOM, writes `SHA256SUMS` over the six files, attests where they were built (`actions/attest-build-provenance`), creates the branch `release/X.Y.Z` at the tag, and makes a draft release with the changelog section, install notes and the Java runtime (`java tools/ReleaseNotes.java X.Y.Z CHANGELOG.md`, made before the job that can write to the repository).
 4. Read the draft and publish it by hand.
 5. In a pull request, set the version to the next `-SNAPSHOT` and add an empty `## [Unreleased]`.
@@ -175,7 +202,7 @@ Everything is in the package `nl.enadeag.carchargeplanner`, under `src/main/java
 | `engine` | Plans, fetches forecasts and owns the stored data, without user interface; clients get plain records. `engine.config` the settings file (`engine.json`), `engine.setting` the names of its settings and what is wrong with one, `engine.store` how every stored file is read, written, versioned and kept private, `engine.away` the away periods (weekly, and the ones entered for a specific day and kept in `away.json`), `engine.battery` the battery level the owner entered last (kept in `battery.json`), `engine.forecast` the provider contract and the forecast service (fallback, cache, rate limits), `engine.forecast.providers` Open-Meteo and Forecast.Solar, `engine.secrets` the API keys, `engine.plan` the planner, `engine.notify` when the owner is told about a window (the notifier port, and the announced windows kept in `announced.json`). |
 | `desktop` | The client on the desktop, in parts that depend one way: `desktop.system` the ports each platform implements (tray, notifications, start at login, keeping the popup out of the taskbar) and the icons they show, without any other desktop part; `desktop.text` every text in each language (`Messages`, with the bundles beside it in `src/main/resources`) and the notifications' texts; `desktop.app` the app settings (`app.json`: language, appearance, units and display mode) and `Background`, which every window uses for slow work; `desktop.theme` light or dark and the stylesheet the windows share (`WindowTheme`), the labels they build their texts with (`Labels`), and what a screen reader needs beyond JavaFX (`ScreenReader`); `desktop.dashboard` the JavaFX dashboard and the tray icon's status, mapped from the engine's outlook: the window and the popup in the package itself, and a sub-package for each part of it (`outlook`, `day`, `away`, `battery`, `solar`, `advice`, `tray`), built on the shared pieces in `dashboard.parts`. `desktop.settings` is the Settings window (a page per category, cards of fields, saved through the engine and `app.json`) and the first-run set-up, whose steps show the same cards and save through the same storage: the window in the package itself, set-up in `setup`, the storage in `store`, a sub-package per category (`location`, `solar`, `car`, `charger`, `forecast`, `away`, `planning`, `app`, `about`) that knows no other, built on the page and card pieces in `page` and the fields in `field`, and `form` the logic without JavaFX that they all use. |
 | `instance` | One running copy per user: the running copy holds a lock file in a private folder, and a second start asks it, over a private Unix domain socket beside it, to show its dashboard. |
-| `platform.linux`, `platform.windows` | The tray icon, notifications, the keychain and start at login on each system: our own StatusNotifierItem, notification and Secret Service clients over D-Bus, and a desktop entry in the autostart folder; AWT's `SystemTray` and its icon's messages, the Credential Manager and the Run key. |
+| `platform.linux`, `platform.windows` | The tray icon, notifications, the keychain and start at login on each system: our own StatusNotifierItem, notification and Secret Service clients over D-Bus, and a desktop entry in the autostart folder (in a Flatpak, the Background portal); AWT's `SystemTray` and its icon's messages, the Credential Manager and the Run key. |
 | `Main` | The composition root: the one place where the parts are made and handed to each other. `Main`, the root package's only class, reads the system once (`host`) and runs a command (`cli`) or the app (`start`); the five packages below are the composition root's own, and depend one way: `start` on `cli`, both on `platforms`, `logging` and `host`, and `platforms` and `logging` on `host` alone. |
 | `start` | The app as it runs (`DesktopApp`): startup order, tray or window (`StartupDecision`, `TrayStarter`), and one `ClosingOrder` for Quit and the shutdown hook. |
 | `platforms` | `PlatformParts`, with `FreedesktopParts` and `WindowsParts`, which make each system's own parts from `platform.linux` or `platform.windows`, for the app and the commands. |
