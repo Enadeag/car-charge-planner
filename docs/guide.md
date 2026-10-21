@@ -25,8 +25,11 @@ When the app is started hidden at login, set-up does not open by itself; one not
 - The tray icon's dot shows the state of the plan, with the plan in its tooltip. Click it for the **dashboard**: a tab per day with that day's charge window, grid advice, the expected solar power against the house's use, and the car battery. The dashboard also opens in a window of its own.
 - **Update** on the battery card is where you enter the level the car shows. Until you do, the plan assumes 50% and says so.
 - **Add** on the Car away card marks the car away on the day you are looking at, all day or from a time to a time; the card lists the coming ones, each with **Remove**. The plan changes at once. Weekly away periods are in Settings, which the footer's **Away** button opens.
+- **Add trip** on the Trips card enters a drive from home and back that leaves on the day you are looking at: the day and time of departure and of return, the distance there and back, and whether you can charge at the destination. Each day's tab shows the trips the car is away for that day, with **Not with this car** (the trip does not count, and the car stays home), **I can charge at the destination**, **Change** and **Remove**.
 - Right-click the icon for **Open dashboard**, **Settings…** (**Set up…** until the app is set up), **About…** and **Quit**.
 - A desktop notification comes a few minutes before each charge window (the lead time is a setting), once per window. Clicking it opens the dashboard. On Linux notifications go straight to the desktop's notification service over D-Bus, so they work with or without a tray; on Windows they come from the tray icon.
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/java/dashboard-trip-dark.png"><img alt="Two dashboards on a day with a trip: the trip with its choices, and a new trip being entered." src="screenshots/java/dashboard-trip-light.png" width="600"></picture>
 
 ## Settings
 
