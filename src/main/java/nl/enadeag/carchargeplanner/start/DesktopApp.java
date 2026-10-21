@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.start;
 import nl.enadeag.carchargeplanner.cli.CommandLine;
 import nl.enadeag.carchargeplanner.cli.ExitCode;
 import nl.enadeag.carchargeplanner.desktop.app.AppSettings;
+import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.app.AppSettingsFile;
 import nl.enadeag.carchargeplanner.desktop.app.Appearance;
 import nl.enadeag.carchargeplanner.desktop.app.Background;
@@ -93,6 +94,8 @@ public final class DesktopApp {
             new Background(task -> Thread.ofVirtual().name("background").start(task), Platform::runLater);
     // set on the JavaFX thread only, as JavaFX's bindings on it are read there
     private final SimpleObjectProperty<Appearance> appearance;
+    // the units distances are shown in, which the dashboard follows after a Save; set on the JavaFX thread only
+    private final SimpleObjectProperty<Units> units;
 
     /** The windows the app makes once, and what opens set-up or Settings for the owner. */
     private record Windows(Dashboard dashboard, SettingsWindow settings, SetUpOffer setUpOffer) {
@@ -129,6 +132,7 @@ public final class DesktopApp {
         this.appSettings = appSettings;
         this.language = language;
         this.appearance = new SimpleObjectProperty<>(appSettings.appearance());
+        this.units = new SimpleObjectProperty<>(appSettings.units());
         this.claimReport = new ClaimReport(instance, language.messages(), System.err, LOG);
     }
 
@@ -206,7 +210,7 @@ public final class DesktopApp {
                         () -> windows.settings().open(Category.ABOUT), this::quit));
         // only now: on Windows the first announcement needs the tray icon to show it
         engine.start(outlook -> {
-            dashboard.show(outlook, engine.awayPeriods());
+            dashboard.show(outlook, engine.awayPeriods(), engine.trips());
             trayPresenter.show(outlook);
             windows.setUpOffer().follow(outlook);
         });
@@ -220,11 +224,12 @@ public final class DesktopApp {
             AppIcon icon, FxPreferences preferences) throws InterruptedException, ExecutionException {
         var dashboardMade = new CompletableFuture<Dashboard>();
         var stores = new SettingsStores(engine, appSettingsFile, parts.startAtLogin());
-        // a Save may have chosen another language or appearance: every part follows at once; the engine plans again
-        // by itself after a save of its config. This runs on the JavaFX thread.
+        // a Save may have chosen another language, appearance or units: every part follows at once; the engine plans
+        // again by itself after a save of its config. This runs on the JavaFX thread.
         Consumer<AppSettings> saved = chosen -> {
             chosen.language().ifPresentOrElse(language::choose, language::followSystem);
             appearance.set(chosen.appearance());
+            units.set(chosen.units());
         };
         // after Finish the app plans with what set-up saved, in the language and appearance it chose; the dashboard
         // is made after set-up, as it opens set-up
@@ -242,11 +247,12 @@ public final class DesktopApp {
                 background));
         var setUpOffer = new SetUpOffer(setUp::open, settings::open, !commandLine.atLogin());
         var actions = new DashboardActions(changes::setBatteryLevel, changes::addAwayPeriod,
-                changes::removeAwayPeriod, () -> setUpOffer.openSettingsOrSetUp(Category.AWAY),
+                changes::removeAwayPeriod, changes::addTrip, changes::changeTrip, changes::removeTrip,
+                () -> setUpOffer.openSettingsOrSetUp(Category.AWAY),
                 () -> setUpOffer.openSettingsOrSetUp(Category.SOLAR), setUp::open, this::quit);
         var dashboard = makeOnFx(() -> new Dashboard(icon, AppName.TITLE,
                 new WindowTheme(preferences.windows(), preferences.textSize()),
-                preferences.reducedMotion(), Clock.systemUTC(), parts.taskbarHiding(), language, actions));
+                preferences.reducedMotion(), units, Clock.systemUTC(), parts.taskbarHiding(), language, actions));
         dashboardMade.complete(dashboard);
         return new Windows(dashboard, settings, setUpOffer);
     }

@@ -4,6 +4,7 @@ import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.Pictures;
 import nl.enadeag.carchargeplanner.desktop.Pictures.Frame;
 import nl.enadeag.carchargeplanner.desktop.Pictures.Studio;
+import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.OutlookMapper;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
@@ -28,6 +29,7 @@ import nl.enadeag.carchargeplanner.engine.notify.Announcer;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import nl.enadeag.carchargeplanner.host.AppName;
 import java.io.IOException;
@@ -96,6 +98,43 @@ public final class DashboardPictures {
     }
 
     /**
+     * Two dashboards side by side on Saturday, the day of a trip: the trip with its choices, and a new trip being
+     * entered.
+     *
+     * @param scheme light or dark
+     * @param folder an empty folder for the engine's files
+     * @return the picture
+     * @throws Exception when the plan or the picture cannot be made
+     */
+    public static WritableImage trip(ColorScheme scheme, Path folder) throws Exception {
+        return trip(scheme, folder, Language.ENGLISH, 1);
+    }
+
+    /**
+     * The picture of {@link #trip(ColorScheme, Path)} in a language and at a display scaling.
+     *
+     * @param scheme light or dark
+     * @param folder an empty folder for the engine's files
+     * @param language the language of the texts
+     * @param zoom the system's display scaling: 1 for 100 %, 2 for 200 %
+     * @return the picture
+     * @throws Exception when the plan or the picture cannot be made
+     */
+    static WritableImage trip(ColorScheme scheme, Path folder, Language language, double zoom) throws Exception {
+        var saturday = TODAY.plusDays(1);
+        var trip = new Trip(saturday.atTime(8, 30).atZone(BRUSSELS).toInstant(),
+                saturday.atTime(19, 0).atZone(BRUSSELS).toInstant(), 240, false);
+        var plan = plan(folder, language, List.of(trip));
+        var messages = new Messages(language);
+        return Fx.call(() -> Pictures.sideBySide(GAP,
+                dashboard(plan, scheme, Frame.POPUP, zoom, messages, view -> clickDay(view, 1)),
+                dashboard(plan, scheme, Frame.POPUP, zoom, messages, view -> {
+                    view.selectDay(1);
+                    button(view, messages, TextKey.TRIP_ADD).fire();
+                })));
+    }
+
+    /**
      * Today's dashboard in its window at 200 % display scaling, the focus ring on the battery's Update.
      *
      * @param scheme light or dark
@@ -112,11 +151,17 @@ public final class DashboardPictures {
     /** One dashboard, in English, as wide as the app makes it, and as tall as its day asks. */
     private static WritableImage dashboard(DashboardModel plan, ColorScheme scheme, Frame frame,
             double zoom, Consumer<DashboardView> ready) {
-        var messages = new Messages(Language.ENGLISH);
+        return dashboard(plan, scheme, frame, zoom, new Messages(Language.ENGLISH), ready);
+    }
+
+    /** One dashboard, as wide as the app makes it, and as tall as its day asks. */
+    private static WritableImage dashboard(DashboardModel plan, ColorScheme scheme, Frame frame,
+            double zoom, Messages messages, Consumer<DashboardView> ready) {
         var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, AppName.TITLE, messages);
         view.setDetachable(frame == Frame.POPUP);
         view.onBatteryEntered(_ -> { });
         view.onOneOffAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
+        view.onTripChange(_ -> { }, (_, _) -> { }, _ -> { }, Models.CLOCK);
         view.lookup(".day-tabs").setStyle("-fx-open-tab-animation: none;"); // a growing tab is narrow on purpose
         view.show(plan);
         var studio = new Studio(view, scheme, frame, zoom, WIDTH, Optional.empty());
@@ -139,7 +184,10 @@ public final class DashboardPictures {
     }
 
     private static Button button(DashboardView view, TextKey text) {
-        var messages = new Messages(Language.ENGLISH);
+        return button(view, new Messages(Language.ENGLISH), text);
+    }
+
+    private static Button button(DashboardView view, Messages messages, TextKey text) {
         return view.lookupAll(".button").stream().map(Button.class::cast)
                 .filter(button -> button.getText().equals(messages.text(text)))
                 .findFirst().orElseThrow(() -> new AssertionError("no button " + text));
@@ -147,6 +195,11 @@ public final class DashboardPictures {
 
     /** The example home's plan as the dashboard shows it, made by the engine at a fixed time. */
     private static DashboardModel plan(Path folder) throws IOException {
+        return plan(folder, Language.ENGLISH, List.of());
+    }
+
+    /** The same with trips, in a language. */
+    private static DashboardModel plan(Path folder, Language language, List<Trip> trips) throws IOException {
         var config = folder.resolve("engine.json");
         Files.copy(EXAMPLE, config);
         var providers = new Providers(List.of(new Played(new OpenMeteo(_ -> {
@@ -163,7 +216,11 @@ public final class DashboardPictures {
                 new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), _ -> { }),
                 new ManualScheduler());
         try {
-            return new OutlookMapper(new Messages(Language.ENGLISH)).map(engine.outlook(), awayFile.periods());
+            for (var trip : trips) {
+                engine.addTrip(trip);
+            }
+            return new OutlookMapper(new Messages(language)).map(engine.outlook(), awayFile.periods(), engine.trips(),
+                    Units.METRIC);
         } finally {
             engine.stop();
         }

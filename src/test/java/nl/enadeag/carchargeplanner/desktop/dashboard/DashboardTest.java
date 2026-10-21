@@ -8,6 +8,7 @@ import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Keyboard;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
+import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
@@ -22,6 +23,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import nl.enadeag.carchargeplanner.host.AppName;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -39,6 +41,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TabPane;
 import javafx.scene.input.KeyCode;
@@ -60,6 +63,10 @@ class DashboardTest {
     private final InstantSource clock = now::get;
     private final LanguageChoice language = new LanguageChoice(Language.ENGLISH);
     private final List<OneOffAwayPeriod> removed = new ArrayList<>();
+    private final List<Trip> tripsAdded = new ArrayList<>();
+    private final List<List<Trip>> tripsChanged = new ArrayList<>();
+    private final List<Trip> tripsRemoved = new ArrayList<>();
+    private final SimpleObjectProperty<Units> units = new SimpleObjectProperty<>(Units.METRIC);
     private final AtomicInteger settingsOpened = new AtomicInteger();
     private final AtomicInteger setUpOpened = new AtomicInteger();
     private final AtomicInteger quit = new AtomicInteger();
@@ -72,8 +79,9 @@ class DashboardTest {
 
     private Dashboard dashboard(TaskbarHiding taskbarHiding) throws Exception {
         return Fx.call(() -> new Dashboard(new AppIcon(), AppName.TITLE, Scenes.theme(new SimpleObjectProperty<>(ColorScheme.LIGHT)),
-                new SimpleObjectProperty<>(true), clock, taskbarHiding, language,
-                new DashboardActions(level -> { }, period -> { }, removed::add, () -> { },
+                new SimpleObjectProperty<>(true), units, clock, taskbarHiding, language,
+                new DashboardActions(level -> { }, period -> { }, removed::add, tripsAdded::add,
+                        (trip, changed) -> tripsChanged.add(List.of(trip, changed)), tripsRemoved::add, () -> { },
                         settingsOpened::incrementAndGet, setUpOpened::incrementAndGet, quit::incrementAndGet)));
     }
 
@@ -124,7 +132,7 @@ class DashboardTest {
     void aPlanThatCameWhileThePopupWasClosedFitsWhenItOpensAgain() throws Exception {
         clickTheIcon();
         clickTheIcon();
-        dashboard.show(planWithTwoDays(), List.of());
+        dashboard.show(planWithTwoDays(), List.of(), List.of());
         later(Duration.ofSeconds(2));
 
         clickTheIcon();
@@ -142,7 +150,7 @@ class DashboardTest {
     /** Detaches the popup with the plan into the window, and returns the window. */
     private Stage detachedWith(Outlook outlook) throws Exception {
         clickTheIcon();
-        dashboard.show(outlook, List.of());
+        dashboard.show(outlook, List.of(), List.of());
         Fx.settle();
         var detach = (Button) popup().orElseThrow().getScene().lookup(".detach");
         Fx.run(detach::fire);
@@ -221,7 +229,7 @@ class DashboardTest {
     @Test
     void thePopupAlsoStaysOnTheScreenWithADayTallerThanIt() throws Exception {
         clickTheIcon();
-        dashboard.show(planWithABusyTomorrow(200), List.of());
+        dashboard.show(planWithABusyTomorrow(200), List.of(), List.of());
         Fx.settle();
         var popup = popup().orElseThrow();
 
@@ -235,7 +243,7 @@ class DashboardTest {
     @Test
     void thePopupStaysOnTheScreenWhenTheDayChangesTwiceBeforeTheNextFrame() throws Exception {
         clickTheIcon();
-        dashboard.show(planWithABusyTomorrow(20), List.of());
+        dashboard.show(planWithABusyTomorrow(20), List.of(), List.of());
         Fx.settle();
         var popup = popup().orElseThrow();
         var tabs = Fx.call(() -> (TabPane) popup.getScene().lookup(".day-tabs"));
@@ -262,7 +270,7 @@ class DashboardTest {
         try (var css = new CssWarnings()) {
             clickTheIcon();
             clickTheIcon();
-            dashboard.show(planWithTwoDays(), List.of());
+            dashboard.show(planWithTwoDays(), List.of(), List.of());
             later(Duration.ofSeconds(2));
 
             clickTheIcon();
@@ -286,7 +294,7 @@ class DashboardTest {
 
     @Test
     void escapeInTheBatteryEntryClosesOnlyTheEntryAndAgainThePopup() throws Exception {
-        dashboard.show(planWithTwoDays(), List.of());
+        dashboard.show(planWithTwoDays(), List.of(), List.of());
         clickTheIcon();
         var root = popup().orElseThrow().getScene().getRoot();
         Fx.run(() -> Scenes.all(root).stream()
@@ -383,7 +391,7 @@ class DashboardTest {
     @Test
     void theKeyboardReachesThePopup() throws Exception {
         clickTheIcon();
-        dashboard.show(planWithTwoDays(), List.of());
+        dashboard.show(planWithTwoDays(), List.of(), List.of());
         Fx.settle();
         var tabs = (TabPane) popup().orElseThrow().getScene().lookup(".day-tabs");
 
@@ -499,7 +507,7 @@ class DashboardTest {
     @Test
     void anotherLanguageRendersTheOpenPopupAgainOnTheSameDayWithItsChartsAndAccessibleTexts() throws Exception {
         clickTheIcon();
-        dashboard.show(planWithTwoDays(), List.of());
+        dashboard.show(planWithTwoDays(), List.of(), List.of());
         Fx.settle();
         selectDay(popup().orElseThrow(), 1);
 
@@ -524,10 +532,43 @@ class DashboardTest {
     }
 
     @Test
+    void aTripShowsOnItsDayInTheOwnersUnitsAndItsControlsReachTheActions() throws Exception {
+        var zone = ZoneId.of("Europe/Brussels");
+        var tomorrow = LocalDate.of(2026, 10, 16);
+        var trip = new Trip(tomorrow.atTime(9, 0).atZone(zone).toInstant(), tomorrow.atTime(17, 0).atZone(zone).toInstant(),
+                160.9344, false);
+        clickTheIcon();
+        dashboard.show(planWithTwoDays(), List.of(), List.of(trip));
+        Fx.settle();
+        selectDay(popup().orElseThrow(), 1);
+        var root = popup().orElseThrow().getScene().getRoot();
+        assertThat(Fx.call(() -> Scenes.visibleTexts(root))).contains("Away 09:00 – 17:00 · 161 km there and back");
+
+        Fx.run(() -> units.set(Units.IMPERIAL));
+        Fx.settle();
+
+        var shown = popup().orElseThrow().getScene().getRoot();
+        assertThat(Fx.call(() -> Scenes.visibleTexts(shown))).contains("Away 09:00 – 17:00 · 100 mi there and back");
+        var notWithThisCar = Fx.call(() -> Scenes.all(shown).stream()
+                .filter(node -> node instanceof CheckBox box
+                        && box.getAccessibleText().startsWith("Not with this car"))
+                .map(CheckBox.class::cast).findFirst().orElseThrow());
+        Fx.run(notWithThisCar::fire);
+        assertThat(tripsChanged).containsExactly(List.of(trip, new Trip(trip.departure(), trip.returnTime(),
+                trip.distanceKm(), false, true)));
+        var remove = Fx.call(() -> Scenes.all(shown).stream()
+                .filter(node -> node instanceof Button button && button.getAccessibleText() != null
+                        && button.getAccessibleText().startsWith("Remove the trip"))
+                .map(Button.class::cast).findFirst().orElseThrow());
+        Fx.run(remove::fire);
+        assertThat(tripsRemoved).containsExactly(trip);
+    }
+
+    @Test
     void anotherLanguageListsTheAwayPeriodsInItAndTheirRemoveButtonsStillWork() throws Exception {
         var tomorrow = OneOffAwayPeriod.allDay(LocalDate.of(2026, 10, 16), ZoneId.of("Europe/Brussels"));
         clickTheIcon();
-        dashboard.show(planWithTwoDays(), List.of(tomorrow));
+        dashboard.show(planWithTwoDays(), List.of(tomorrow), List.of());
         Fx.settle();
 
         language.choose(Language.DUTCH);
@@ -548,7 +589,7 @@ class DashboardTest {
 
         language.choose(Language.DUTCH);
         Fx.settle();
-        dashboard.show(new Outlook.NoForecast("Open-Meteo: no connection."), List.of());
+        dashboard.show(new Outlook.NoForecast("Open-Meteo: no connection."), List.of(), List.of());
         Fx.settle();
 
         assertThat(window()).containsSame(window);
@@ -573,7 +614,7 @@ class DashboardTest {
         clickTheIcon();
 
         dashboard.show(new Outlook.ConfigUnusable(ConfigProblem.Kind.INVALID, Path.of("/home/owner/engine.json"),
-                "system.car: is required"), List.of());
+                "system.car: is required"), List.of(), List.of());
         Fx.settle();
 
         var popup = popup().orElseThrow();
@@ -585,7 +626,7 @@ class DashboardTest {
     void beforeTheFirstSetUpTheMessageOpensSetUp() throws Exception {
         clickTheIcon();
 
-        dashboard.show(new Outlook.NotSetUp(Path.of("/home/owner/engine.json")), List.of());
+        dashboard.show(new Outlook.NotSetUp(Path.of("/home/owner/engine.json")), List.of(), List.of());
         Fx.settle();
         var root = popup().orElseThrow().getScene().getRoot();
         Fx.run(() -> Scenes.all(root).stream()
@@ -601,7 +642,7 @@ class DashboardTest {
         clickTheIcon();
 
         dashboard.show(new Outlook.ConfigUnusable(ConfigProblem.Kind.UNREADABLE, Path.of("/home/owner/engine.json"),
-                "access denied"), List.of());
+                "access denied"), List.of(), List.of());
         Fx.settle();
 
         var root = popup().orElseThrow().getScene().getRoot();

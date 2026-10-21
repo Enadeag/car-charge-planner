@@ -386,6 +386,57 @@
     -fx-pref-width: 4.5em;
 }
 
+/* the trips of the selected day, and their entry */
+.trip-list {
+    -fx-spacing: 0.75em;
+}
+
+.trip-row {
+    -fx-spacing: 0.3em;
+}
+
+.trip-item {
+    -fx-text-fill: -fg;
+    -fx-font-weight: bold;
+}
+
+.trip-choices,
+.trip-fields {
+    -fx-hgap: 0.75em;
+    -fx-vgap: 0.4em;
+    -fx-alignment: center-left;
+}
+
+.trip-editor {
+    -fx-spacing: 0.5em;
+}
+
+.trip-when {
+    -fx-hgap: 0.75em;
+    -fx-vgap: 0.4em;
+    -fx-alignment: center-left;
+}
+
+.trip-far,
+.trip-buttons,
+.trip-entry-buttons {
+    -fx-alignment: center-left;
+    -fx-spacing: 0.4em;
+}
+
+/* AtlantaFX gives a check box the page's background, which shows as a box on a card */
+.trip-card .check-box {
+    -fx-background-color: transparent;
+}
+
+.text-input.trip-time {
+    -fx-pref-width: 4.5em;
+}
+
+.text-input.trip-distance {
+    -fx-pref-width: 5em;
+}
+
 /* chips: a figure with its source's glyph on its source's soft background */
 .chip {
     -fx-background-radius: 999;

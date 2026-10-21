@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard;
 
+import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.dashboard.advice.GridAdviceModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryModel;
@@ -12,7 +13,10 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.WindowSpan;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Step;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Tick;
+import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripOrigin;
+import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripsModel;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.InstantSource;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -68,6 +72,23 @@ public final class Models {
             new OneOffAwayModel.Listed(AWAY_TOMORROW, "Tomorrow, all day", "Remove Tomorrow, all day"),
             new OneOffAwayModel.Listed(AWAY_SUNDAY, "Sun 5 Jul, 10:00 – 16:30", "Remove Sun 5 Jul, 10:00 – 16:30")));
 
+    public static final Trip TRIP_SATURDAY = new Trip(TODAY.plusDays(1).atTime(7, 30).atZone(BRUSSELS).toInstant(),
+            TODAY.plusDays(1).atTime(18, 0).atZone(BRUSSELS).toInstant(), 300, false);
+    public static final Trip TRIP_SUNDAY_NIGHT = new Trip(TODAY.plusDays(2).atTime(17, 0).atZone(BRUSSELS).toInstant(),
+            TODAY.plusDays(3).atTime(9, 30).atZone(BRUSSELS).toInstant(), 120, true);
+
+    /** Made at 08:12 today, with a trip on Saturday and one from Sunday to Monday. */
+    public static final TripsModel TRIPS = new TripsModel(BRUSSELS, TODAY.atTime(8, 12).atZone(BRUSSELS).toInstant(),
+            Units.METRIC, List.of(
+            new TripsModel.Listed(TRIP_SATURDAY, TODAY.plusDays(1), TODAY.plusDays(1), TripOrigin.BY_HAND,
+                    "Away 07:30 – 18:00 · 300 km there and back", "Entered by hand",
+                    "Change the trip Away 07:30 – 18:00 · 300 km there and back",
+                    "Remove the trip Away 07:30 – 18:00 · 300 km there and back"),
+            new TripsModel.Listed(TRIP_SUNDAY_NIGHT, TODAY.plusDays(2), TODAY.plusDays(3), TripOrigin.BY_HAND,
+                    "Away Sun 5 Jul 17:00 – Mon 6 Jul 09:30 · 120 km there and back", "Entered by hand",
+                    "Change the trip Away Sun 5 Jul 17:00 – Mon 6 Jul 09:30 · 120 km there and back",
+                    "Remove the trip Away Sun 5 Jul 17:00 – Mon 6 Jul 09:30 · 120 km there and back")));
+
     /** A clock that stays at the moment {@link #AWAY}'s plan was made. */
     public static final InstantSource CLOCK = InstantSource.fixed(AWAY.madeAt());
 
@@ -88,6 +109,6 @@ public final class Models {
     }
 
     public static DashboardModel.Plan plan(Optional<GridAdviceModel> advice) {
-        return new DashboardModel.Plan(List.of(SUNNY_TODAY, CLOUDY_TOMORROW, GRID_SUNDAY), advice, AWAY, FOOTER);
+        return new DashboardModel.Plan(List.of(SUNNY_TODAY, CLOUDY_TOMORROW, GRID_SUNDAY), advice, AWAY, TRIPS, FOOTER);
     }
 }

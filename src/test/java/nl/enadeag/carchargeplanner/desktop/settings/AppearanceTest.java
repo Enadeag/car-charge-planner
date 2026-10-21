@@ -6,6 +6,7 @@ import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.app.Appearance;
+import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.dashboard.Dashboard;
 import nl.enadeag.carchargeplanner.desktop.dashboard.DashboardActions;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
@@ -46,8 +47,9 @@ class AppearanceTest {
         settings = new SettingsFixture(folder, Language.ENGLISH);
         settingsWindow = settings.window(language, appearance, system);
         dashboard = Fx.call(() -> new Dashboard(new AppIcon(), AppName.TITLE, Scenes.theme(Appearance.scheme(appearance, system)),
-                Fx.REDUCED_MOTION, () -> Instant.parse("2026-10-15T08:00:00Z"), TaskbarHiding.NONE, language,
-                new DashboardActions(level -> { }, period -> { }, period -> { }, () -> { }, () -> { }, () -> { }, () -> { })));
+                Fx.REDUCED_MOTION, new SimpleObjectProperty<>(Units.METRIC), () -> Instant.parse("2026-10-15T08:00:00Z"),
+                TaskbarHiding.NONE, language, new DashboardActions(level -> { }, period -> { }, period -> { }, trip -> { },
+                        (trip, changed) -> { }, trip -> { }, () -> { }, () -> { }, () -> { }, () -> { })));
         dashboard.openWindow();
         settingsWindow.open(Category.APP);
         Fx.settle();
