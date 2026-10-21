@@ -4,6 +4,8 @@ import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.system.StartAtLogin;
 import nl.enadeag.carchargeplanner.desktop.system.StatusIcon;
 import nl.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
+import nl.enadeag.carchargeplanner.desktop.system.TextSize;
+import nl.enadeag.carchargeplanner.desktop.system.TextSizeSetting;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
@@ -75,6 +77,16 @@ final class FreedesktopParts implements PlatformParts {
         }
         return host.launcher().map(program -> new LinuxStartAtLogin(config.resolve("autostart"),
                 AppName.ID + ".desktop", program, AppName.TITLE));
+    }
+
+    /**
+     * Always normal: GNOME's text scaling factor and KDE's font DPI reach X11 programs as the screen's DPI, from which
+     * JavaFX's GTK toolkit scales the whole window, text and all, as it does for display scaling. Larger text on top
+     * of that would count the setting twice.
+     */
+    @Override
+    public TextSizeSetting textSize() {
+        return changed -> changed.accept(TextSize.NORMAL);
     }
 
     @Override

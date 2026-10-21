@@ -639,7 +639,7 @@
                 <configuration>
                   <!-- the classes that the tests without JavaFX (no @FxTest) cover: the mappers to the dashboard's
                        models, chart and popup geometry, the app settings, the logic of the Settings and set-up forms,
-                       the tray icon's drawing and the texts -->
+                       the tray icon's drawing, the text size and the texts -->
                   <targetClasses>
                     <param>nl.enadeag.carchargeplanner.desktop.app.AppSettings*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.app.Background*</param>
@@ -663,6 +663,7 @@
                     <param>nl.enadeag.carchargeplanner.desktop.settings.page.WindowSize*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.settings.setup.SetUpOffer*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.system.StatusIcon*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.system.TextSize</param>
                     <param>nl.enadeag.carchargeplanner.desktop.text.*</param>
                   </targetClasses>
                   <targetTests>

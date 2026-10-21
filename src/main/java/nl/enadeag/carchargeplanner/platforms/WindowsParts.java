@@ -4,6 +4,7 @@ import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.system.StartAtLogin;
 import nl.enadeag.carchargeplanner.desktop.system.StatusIcon;
 import nl.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
+import nl.enadeag.carchargeplanner.desktop.system.TextSizeSetting;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
 import nl.enadeag.carchargeplanner.host.AppName;
@@ -11,6 +12,7 @@ import nl.enadeag.carchargeplanner.host.Host;
 import nl.enadeag.carchargeplanner.platform.windows.AwtTray;
 import nl.enadeag.carchargeplanner.platform.windows.CredentialManagerKeychain;
 import nl.enadeag.carchargeplanner.platform.windows.RegistryRunKey;
+import nl.enadeag.carchargeplanner.platform.windows.RegistryTextSize;
 import nl.enadeag.carchargeplanner.platform.windows.TaskbarShade;
 import nl.enadeag.carchargeplanner.platform.windows.WindowsStartAtLogin;
 import java.awt.Desktop;
@@ -20,7 +22,7 @@ import java.util.Optional;
 import javafx.application.ColorScheme;
 import javafx.beans.value.ObservableValue;
 
-/** Windows' parts: AWT's tray icon and its messages, the Credential Manager and the Run key. */
+/** Windows' parts: AWT's tray icon and its messages, the Credential Manager, the Run key and the text size. */
 final class WindowsParts implements PlatformParts {
 
     private final Host host;
@@ -50,6 +52,11 @@ final class WindowsParts implements PlatformParts {
     public Optional<StartAtLogin> startAtLogin() {
         return host.launcher().map(program -> new WindowsStartAtLogin(new RegistryRunKey(RegistryRunKey.RUN_KEY_PATH),
                 AppName.TITLE, program));
+    }
+
+    @Override
+    public TextSizeSetting textSize() {
+        return new RegistryTextSize(RegistryTextSize.ACCESSIBILITY_KEY);
     }
 
     @Override
