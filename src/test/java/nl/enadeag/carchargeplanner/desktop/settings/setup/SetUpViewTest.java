@@ -12,6 +12,7 @@ import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.Car;
+import nl.enadeag.carchargeplanner.engine.config.ChargingHours;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
@@ -114,6 +115,8 @@ class SetUpViewTest {
         assertThat(config.away().weekly()).containsExactly(
                 new WeeklyAwayPeriod(DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(17, 0)));
         assertThat(setUp.appSettings.read().units()).isEqualTo(Units.IMPERIAL);
+        assertThat(config.planning().chargingHours()).isEqualTo(ChargingHours.STANDARD);
+        assertThat(setUp.configPath).content().doesNotContain("chargingHours");
     }
 
     @Test

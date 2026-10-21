@@ -25,8 +25,8 @@ public final class AnnouncementTexts {
      * The notification for an announcement.
      *
      * @param announcement the window the engine announces, with its kind
-     * @return a title with the window's times, and a body with the current, the power and the energy, in the language
-     *     spoken now
+     * @return a title with the window's times, and a body with the current, the power and the energy, and for a grid
+     *     charge the charge limit, in the language spoken now
      */
     public NotificationText notification(Announcement announcement) {
         var messages = language.messages();
@@ -40,7 +40,8 @@ public final class AnnouncementTexts {
             case SOLAR_WINDOW -> new NotificationText(messages.text(TextKey.NOTIFY_WINDOW_TITLE, span), setting + " "
                     + messages.text(TextKey.NOTIFY_WINDOW_BODY, energy, messages.whole(window.solarShare() * 100)));
             case GRID_CHARGE -> new NotificationText(messages.text(TextKey.NOTIFY_GRID_TITLE, span), setting + " "
-                    + messages.text(TextKey.NOTIFY_GRID_BODY, energy, messages.whole(announcement.minimumPct().value())));
+                    + messages.text(TextKey.NOTIFY_GRID_BODY, energy, messages.whole(announcement.minimumPct().value()),
+                    messages.whole(announcement.chargeLimitPct().orElseThrow().value())));
         };
     }
 

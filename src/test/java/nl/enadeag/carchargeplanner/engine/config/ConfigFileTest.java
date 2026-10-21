@@ -78,6 +78,13 @@ class ConfigFileTest {
         "\"kmPerDay\": 40      | \"kmPerDay\": 40, \"tripSurchargePct\": -1 | system.car.tripSurchargePct",
         "\"kmPerDay\": 40      | \"kmPerDay\": 40, \"tripSurchargePct\": \"15%\" | system.car.tripSurchargePct",
         "\"notifyLeadMinutes\": 15 | \"notifyLeadMinutes\": -5 | notifyLeadMinutes",
+        "\"notifyLeadMinutes\": 15 | \"notifyLeadMinutes\": 15, \"chargingHours\": {\"start\": \"07:00\", \"end\": \"07:00\"} | planning.chargingHours: chargingHours must end at another time",
+        "\"notifyLeadMinutes\": 15 | \"notifyLeadMinutes\": 15, \"chargingHours\": {\"start\": \"7am\", \"end\": \"22:00\"} | planning.chargingHours.start",
+        "\"notifyLeadMinutes\": 15 | \"notifyLeadMinutes\": 15, \"chargingHours\": {\"start\": \"07:00\", \"end\": \"24:00\"} | planning.chargingHours.end",
+        "\"notifyLeadMinutes\": 15 | \"notifyLeadMinutes\": 15, \"chargingHours\": {\"start\": \"07:00\"} | planning.chargingHours: 'end' is missing",
+        "\"notifyLeadMinutes\": 15 | \"notifyLeadMinutes\": 15, \"chargingHours\": {\"start\": 7, \"end\": \"22:00\"} | planning.chargingHours.start",
+        "\"notifyLeadMinutes\": 15 | \"notifyLeadMinutes\": 15, \"chargingHours\": {\"from\": \"07:00\", \"end\": \"22:00\"} | unknown setting 'from'",
+        "\"notifyLeadMinutes\": 15 | \"notifyLeadMinutes\": 15, \"chargingHours\": \"07:00-22:00\" | planning.chargingHours: must be a JSON object",
         "\"volts\": 230,        | \"volts\": null,       | volts",
         "\"primary\": \"open-meteo\" | \"primary\": \"\"  | primary",
         "\"primary\": \"open-meteo\" | \"primary\": \"Open Meteo\" | primary",
@@ -137,6 +144,35 @@ class ConfigFileTest {
     }
 
     private static final String CAR = "\"kmPerDay\": 40";
+
+    private static final String PLANNING = "\"notifyLeadMinutes\": 15";
+
+    @Test
+    void otherChargingHoursAreReadAndWrittenBack() throws IOException, ConfigProblem {
+        var file = write(Files.readString(EXAMPLE).replace(PLANNING,
+                PLANNING + ", \"chargingHours\": {\"start\": \"20:30\", \"end\": \"01:00\"}"));
+        var config = new ConfigFile(file).read();
+        var hours = new ChargingHours(LocalTime.of(20, 30), LocalTime.of(1, 0));
+        assertThat(config.planning()).isEqualTo(PlanningPreferences.RECOMMENDED.withChargingHours(hours));
+
+        var copy = new ConfigFile(folder.resolve("copy.json"));
+        copy.write(config);
+        assertThat(Files.readString(folder.resolve("copy.json")))
+                .contains("\"chargingHours\" : {", "\"start\" : \"20:30\"", "\"end\" : \"01:00\"");
+        assertThat(copy.read().planning().chargingHours()).isEqualTo(hours);
+    }
+
+    /** A config file from before charging hours existed must keep working, and the app versions from then read ours. */
+    @Test
+    void theStandardChargingHoursAreLeftOutOfTheFile() throws IOException, ConfigProblem {
+        var config = new ConfigFile(EXAMPLE).read();
+        assertThat(config.planning().chargingHours()).isEqualTo(ChargingHours.STANDARD);
+
+        var copy = new ConfigFile(folder.resolve("copy.json"));
+        copy.write(config);
+        assertThat(Files.readString(folder.resolve("copy.json"))).doesNotContain("chargingHours");
+        assertThat(copy.read().planning().chargingHours()).isEqualTo(ChargingHours.STANDARD);
+    }
 
     @Test
     void anotherTripSurchargeIsReadAndWrittenBack() throws IOException, ConfigProblem {

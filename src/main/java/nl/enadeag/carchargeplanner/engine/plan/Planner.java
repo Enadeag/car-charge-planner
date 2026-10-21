@@ -76,10 +76,11 @@ public final class Planner {
      *
      * <p>At a departure the battery must hold the trip's energy, the other driving of the days the trip lasts, and the
      * minimum charge level. Solar power before the departure comes first, above the target level when the trip needs
-     * it, from the latest days that give the most; only the shortfall comes from the grid, as late as possible and done
-     * an hour before the departure, or at once when there is less time. When the time between two trips cannot charge
-     * enough for the later one, the earlier one charges for both, up to a full battery; working back over the trips, so
-     * a chain of them charges as early as it must. Only what cannot fit at all leaves the later trip short.
+     * it, from the latest days that give the most; only the shortfall comes from the grid, starting within the charging
+     * hours as late as possible and done an hour before the departure, or at once when there is less time. When the
+     * time between two trips cannot charge enough for the later one, the earlier one charges for both, up to a full
+     * battery; working back over the trips, so a chain of them charges as early as it must. Only what cannot fit at all
+     * leaves the later trip short.
      *
      * <p>An announced window that is running now is kept as it was announced, with the same power and end, so the
      * advice does not change while the owner charges at the power they set. Only its remaining energy counts.
@@ -220,9 +221,9 @@ public final class Planner {
     }
 
     /**
-     * The grid charge for a trip's shortfall: the stretch that takes the least from the grid and starts the latest,
-     * done an hour before the departure and not before the day of the last solar window, whose charging it does not
-     * change; when no stretch is done in time, at the full current from now.
+     * The grid charge for a trip's shortfall: the stretch that takes the least from the grid and starts the latest
+     * within the charging hours, done an hour before the departure and not before the day of the last solar window,
+     * whose charging it does not change; when no stretch is done in time, at the full current from now.
      */
     private List<TripGridCharge> gridCharge(TripCharge charge, List<TripCharge> before, Input input,
             double shortPct) {
@@ -253,11 +254,9 @@ public final class Planner {
             }
         }
         if (best != null) {
-            return List.of(new TripGridCharge(best, false));
+            return List.of(new TripGridCharge(best, TripGridCharge.Start.PLANNED));
         }
-        return placements.fromNow(quarters, energyKwh, charger.maxAmps(), legStart, departure)
-                .map(window -> List.of(new TripGridCharge(window, true)))
-                .orElse(List.of());
+        return placements.now(quarters, energyKwh, charger.maxAmps(), legStart, departure).stream().toList();
     }
 
     /** Less from the grid first, as earlier solar power counts first; then the later start. */

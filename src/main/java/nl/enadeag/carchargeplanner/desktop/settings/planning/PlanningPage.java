@@ -3,9 +3,9 @@ package nl.enadeag.carchargeplanner.desktop.settings.planning;
 import nl.enadeag.carchargeplanner.desktop.settings.field.FieldRow;
 import nl.enadeag.carchargeplanner.desktop.settings.field.Input;
 import nl.enadeag.carchargeplanner.desktop.settings.field.NumberInput;
+import nl.enadeag.carchargeplanner.desktop.settings.field.TimeSpanInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import nl.enadeag.carchargeplanner.desktop.settings.form.PlanningEntry;
-import nl.enadeag.carchargeplanner.desktop.settings.form.ProblemTexts;
 import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPage;
@@ -16,7 +16,6 @@ import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
-import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +23,10 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import javafx.scene.layout.Region;
 
-/** The planning preferences: the charge levels, how cautious the plan is, and when the owner is told. */
+/**
+ * The planning preferences: the charge levels, how cautious the plan is, when the owner can start a charge, and when the
+ * owner is told.
+ */
 public final class PlanningPage implements ConfigPage {
 
     private static final NumberRange PERCENT = new NumberRange(0, 100, 5, 0);
@@ -38,6 +40,7 @@ public final class PlanningPage implements ConfigPage {
     private final NumberInput importTolerance;
     private final NumberInput minWindow;
     private final NumberInput notifyLead;
+    private final TimeSpanInput chargingHours;
     private final Map<ConfigSetting, FieldRow> rows = new EnumMap<>(ConfigSetting.class);
     private final CardView[] cards;
 
@@ -55,6 +58,8 @@ public final class PlanningPage implements ConfigPage {
         importTolerance = new NumberInput(new NumberRange(0, 100, 0.05, 2), "kWh", messages);
         minWindow = new NumberInput(MINUTES, messages.text(TextKey.UNIT_MINUTES), messages);
         notifyLead = new NumberInput(new NumberRange(0, 1440, 5, 0), messages.text(TextKey.UNIT_MINUTES), messages);
+        chargingHours = new TimeSpanInput(messages.text(TextKey.CHARGING_HOURS_AND),
+                messages.text(TextKey.CHARGING_HOURS_END_FIELD));
         cards = new CardView[] {
             new CardView(messages.text(TextKey.CARD_CHARGE_LEVELS), messages.text(TextKey.CARD_CHARGE_LEVELS_HINT),
                     row(ConfigSetting.MINIMUM_CHARGE, TextKey.FIELD_MINIMUM_CHARGE, TextKey.FIELD_MINIMUM_CHARGE_HINT,
@@ -66,7 +71,9 @@ public final class PlanningPage implements ConfigPage {
                     row(ConfigSetting.IMPORT_TOLERANCE, TextKey.FIELD_IMPORT_TOLERANCE,
                             TextKey.FIELD_IMPORT_TOLERANCE_HINT, importTolerance),
                     row(ConfigSetting.MINIMUM_WINDOW, TextKey.FIELD_MIN_WINDOW, TextKey.FIELD_MIN_WINDOW_HINT,
-                            minWindow)),
+                            minWindow),
+                    row(ConfigSetting.CHARGING_HOURS, TextKey.FIELD_CHARGING_HOURS, TextKey.FIELD_CHARGING_HOURS_HINT,
+                            chargingHours)),
             new CardView(messages.text(TextKey.CARD_NOTIFICATIONS), messages.text(TextKey.CARD_NOTIFICATIONS_HINT),
                     row(ConfigSetting.NOTIFY_LEAD, TextKey.FIELD_NOTIFY_LEAD, TextKey.FIELD_NOTIFY_LEAD_HINT,
                             notifyLead))
@@ -86,11 +93,12 @@ public final class PlanningPage implements ConfigPage {
     @Override
     public void onChange(Runnable action) {
         fields().forEach(field -> field.onChange(action));
+        chargingHours.onChange(action);
     }
 
     @Override
     public boolean isChanged() {
-        return fields().stream().anyMatch(NumberInput::isChanged);
+        return fields().stream().anyMatch(NumberInput::isChanged) || chargingHours.isChanged();
     }
 
     @Override
@@ -102,6 +110,7 @@ public final class PlanningPage implements ConfigPage {
         importTolerance.load(shown.importToleranceKwh());
         minWindow.load(shown.minWindowMinutes());
         notifyLead.load(shown.notifyLeadMinutes());
+        chargingHours.load(config.planning().chargingHours().start(), config.planning().chargingHours().end());
         rows.values().forEach(FieldRow::clearProblem);
         view.show(cards);
     }
@@ -126,18 +135,20 @@ public final class PlanningPage implements ConfigPage {
             return false;
         }
         fields().forEach(NumberInput::commitTyped);
-        return planning(e -> rows.get(e.setting()).showProblem(ProblemTexts.of(e.rule(), messages))).isEmpty();
+        return planning(refused -> rows.get(refused.setting()).showProblem(refused.problem())).isEmpty();
     }
 
-    /** The preferences as entered, after their record checked them; a refused value goes to {@code refused}. */
-    private Optional<PlanningPreferences> planning(Consumer<InvalidSetting> refused) {
-        try {
-            return Optional.of(new PlanningEntry(minimum.value(), target.value(), margin.value(),
-                    importTolerance.value(), minWindow.value(), notifyLead.value()).planning());
-        } catch (InvalidSetting e) {
-            refused.accept(e);
-            return Optional.empty();
-        }
+    /** The preferences as entered, after their records checked them; a refused value goes to {@code refused}. */
+    private Optional<PlanningPreferences> planning(Consumer<PlanningEntry.Checked.Refused> refused) {
+        var entry = new PlanningEntry(minimum.value(), target.value(), margin.value(), importTolerance.value(),
+                minWindow.value(), notifyLead.value(), chargingHours.startText(), chargingHours.endText());
+        return switch (entry.check(messages)) {
+            case PlanningEntry.Checked.Accepted accepted -> Optional.of(accepted.planning());
+            case PlanningEntry.Checked.Refused problem -> {
+                refused.accept(problem);
+                yield Optional.empty();
+            }
+        };
     }
 
     private List<NumberInput> fields() {

@@ -113,7 +113,10 @@ public enum TextKey {
     ADVICE_TITLE_WINDOW,
     /** The grid advice's title without a window: {0} kWh, {1} the day in a sentence. */
     ADVICE_TITLE_NO_WINDOW,
-    /** The grid advice's setting: {0} the current in A, {1} the power in kW. */
+    /**
+     * The grid advice's setting: {0} the current in A, {1} the power in kW, {2} the charge limit to set in the car or
+     * the charger in %.
+     */
     ADVICE_SET,
     /** The grid advice when no day has room for a grid charge. */
     ADVICE_NO_ROOM,
@@ -206,7 +209,10 @@ public enum TextKey {
     NOTIFY_WINDOW_BODY,
     /** The title of a grid charge's notification: {0} the window's times. */
     NOTIFY_GRID_TITLE,
-    /** The rest of a grid charge's notification: {0} kWh, {1} the minimum in %. */
+    /**
+     * The rest of a grid charge's notification: {0} kWh, {1} the minimum in %, {2} the charge limit to set in the car
+     * or the charger in %.
+     */
     NOTIFY_GRID_BODY,
     /** The title of the test notification, which the command line asks for. */
     NOTIFY_TEST_TITLE,
@@ -363,6 +369,14 @@ public enum TextKey {
     FIELD_MIN_WINDOW,
     /** What the minimum window length does. */
     FIELD_MIN_WINDOW_HINT,
+    /** The charging hours' name, which their first time completes. */
+    FIELD_CHARGING_HOURS,
+    /** What the charging hours do. */
+    FIELD_CHARGING_HOURS_HINT,
+    /** The word between the two times of the charging hours. */
+    CHARGING_HOURS_AND,
+    /** What a screen reader calls the end of the charging hours. */
+    CHARGING_HOURS_END_FIELD,
     /** The title of the card with the notification lead time. */
     CARD_NOTIFICATIONS,
     /** What notifications do. */
@@ -604,6 +618,8 @@ public enum TextKey {
     PROBLEM_SAME_AS_PRIMARY,
     /** An away period that does not end after it starts. */
     PROBLEM_NOT_AFTER_START,
+    /** Charging hours that end at the time they start. */
+    PROBLEM_SAME_AS_START,
     /** A time that is not a time. */
     PROBLEM_NOT_A_TIME,
     /** A required provider setting that is empty. */

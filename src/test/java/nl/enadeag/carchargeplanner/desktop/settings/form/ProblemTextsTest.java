@@ -22,6 +22,7 @@ class ProblemTextsTest {
                 .isEqualTo("Choose a different provider from the first one.");
         assertThat(ProblemTexts.of(Rule.NOT_AFTER_START, ENGLISH))
                 .isEqualTo("Must end after it starts, on the same day.");
+        assertThat(ProblemTexts.of(Rule.SAME_AS_START, ENGLISH)).isEqualTo("Choose two different times.");
         assertThat(Arrays.stream(Rule.values()).map(rule -> ProblemTexts.of(rule, ENGLISH)).distinct())
                 .hasSize(Rule.values().length);
     }

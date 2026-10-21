@@ -627,18 +627,19 @@ class EngineTest {
 
     @Test
     void theOwnerIsToldAheadOfTheGridAdvicesWindowToo() throws IOException {
-        // without sun, 35 % falls below the minimum of 30 % the next day: the grid charge starts at midnight
+        // without sun, 35 % falls below the minimum of 30 % that day: the grid charge starts at 07:00, the start of
+        // the charging hours
         main.script(steps(days(3, 0)));
-        var midnight = DAY.plusDays(1).atStartOfDay(BRUSSELS).toInstant();
+        var seven = DAY.plusDays(1).atTime(7, 0).atZone(BRUSSELS).toInstant();
         var scheduler = new ManualScheduler();
-        var engine = engine(Clock.fixed(midnight.minus(Duration.ofMinutes(10)), ZoneOffset.UTC), scheduler, main,
+        var engine = engine(Clock.fixed(seven.minus(Duration.ofMinutes(10)), ZoneOffset.UTC), scheduler, main,
                 backup);
         engine.setBatteryLevel(new Percent(35));
 
         start(engine, scheduler);
 
         assertThat(told).extracting(Announcement::kind, announcement -> announcement.window().start())
-                .containsExactly(tuple(AnnouncementKind.GRID_CHARGE, midnight));
+                .containsExactly(tuple(AnnouncementKind.GRID_CHARGE, seven));
     }
 
     @Test

@@ -13,6 +13,7 @@ import java.time.Duration;
  * @param importToleranceKwh the grid energy in kWh a charge window may take, 0 or more
  * @param minWindow the shortest charge window, in whole minutes, more than 0
  * @param notifyLead how long before a charge window the owner is told, in whole minutes, 0 or more
+ * @param chargingHours the hours in which the owner can start a charge
  */
 public record PlanningPreferences(
         Percent minimumPct,
@@ -20,11 +21,13 @@ public record PlanningPreferences(
         double margin,
         double importToleranceKwh,
         Duration minWindow,
-        Duration notifyLead) {
+        Duration notifyLead,
+        ChargingHours chargingHours) {
 
     /**
      * What a new owner starts with: charge to 80 % and never below 30 %, count on 85 % of the surplus, take up to
-     * 0.2 kWh from the grid per window, windows of at least 45 minutes, and an announcement 15 minutes ahead.
+     * 0.2 kWh from the grid per window, windows of at least 45 minutes, an announcement 15 minutes ahead, and the
+     * {@link ChargingHours#STANDARD} charging hours.
      */
     public static final PlanningPreferences RECOMMENDED = new PlanningPreferences(new Percent(30), new Percent(80),
             0.85, 0.2, Duration.ofMinutes(45), Duration.ofMinutes(15));
@@ -63,5 +66,32 @@ public record PlanningPreferences(
         if (notifyLead.toSecondsPart() != 0 || notifyLead.toNanosPart() != 0) {
             throw new IllegalArgumentException("notifyLead must be whole minutes, not " + notifyLead);
         }
+    }
+
+    /**
+     * Preferences with the {@link ChargingHours#STANDARD} charging hours.
+     *
+     * @param minimumPct the minimum charge level of the battery, below {@code targetPct}
+     * @param targetPct the target charge level of the battery, above {@code minimumPct}
+     * @param margin the share of the forecast surplus to count on, more than 0 and at most 1
+     * @param importToleranceKwh the grid energy in kWh a charge window may take, 0 or more
+     * @param minWindow the shortest charge window, in whole minutes, more than 0
+     * @param notifyLead how long before a charge window the owner is told, in whole minutes, 0 or more
+     * @throws InvalidSetting when a value is outside the range given for it, or the minimum is not below the target
+     * @throws IllegalArgumentException when a duration is not a whole number of minutes
+     */
+    public PlanningPreferences(Percent minimumPct, Percent targetPct, double margin, double importToleranceKwh,
+            Duration minWindow, Duration notifyLead) {
+        this(minimumPct, targetPct, margin, importToleranceKwh, minWindow, notifyLead, ChargingHours.STANDARD);
+    }
+
+    /**
+     * The same preferences with other charging hours.
+     *
+     * @param hours the hours in which the owner can start a charge from now on
+     * @return a copy with those hours
+     */
+    public PlanningPreferences withChargingHours(ChargingHours hours) {
+        return new PlanningPreferences(minimumPct, targetPct, margin, importToleranceKwh, minWindow, notifyLead, hours);
     }
 }

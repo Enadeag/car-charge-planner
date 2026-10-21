@@ -18,7 +18,9 @@ public class InvalidSetting extends IllegalArgumentException {
         /** The fallback provider is the primary provider. */
         SAME_AS_PRIMARY,
         /** An away period does not end after it starts on the same day. */
-        NOT_AFTER_START
+        NOT_AFTER_START,
+        /** The charging hours end at the time they start. */
+        SAME_AS_START
     }
 
     private final ConfigSetting setting;

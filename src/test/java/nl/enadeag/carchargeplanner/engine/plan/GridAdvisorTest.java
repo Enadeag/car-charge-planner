@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.engine.plan;
 
+import static nl.enadeag.carchargeplanner.engine.plan.Forecasts.NIGHT_CHARGING;
 import static nl.enadeag.carchargeplanner.engine.plan.Forecasts.PREFERENCES;
 import static nl.enadeag.carchargeplanner.engine.plan.Forecasts.TZ;
 import static nl.enadeag.carchargeplanner.engine.plan.Forecasts.WEEKLY_AWAY;
@@ -14,6 +15,7 @@ import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.HomeSystem;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.Phases;
+import nl.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -43,11 +45,22 @@ class GridAdvisorTest {
         }
     }
 
+    private static Advised advise(HomeSystem system, PlanningPreferences preferences, List<ForecastStep> forecast,
+            double soc, Instant now, AwayTimes away) {
+        var days = new Planner(system, preferences, away).plan(forecast, new Percent(soc), now, List.of());
+        var advice = new GridAdvisor(system, preferences, away).advise(days, forecast, now).orElse(null);
+        return new Advised(days, advice);
+    }
+
     private static Advised advise(HomeSystem system, List<ForecastStep> forecast, double soc, Instant now,
             AwayTimes away) {
-        var days = new Planner(system, PREFERENCES, away).plan(forecast, new Percent(soc), now, List.of());
-        var advice = new GridAdvisor(system, PREFERENCES, away).advise(days, forecast, now).orElse(null);
-        return new Advised(days, advice);
+        return advise(system, PREFERENCES, forecast, soc, now, away);
+    }
+
+    /** With charging hours from 20:00 to 06:00, so a grid charge may start in the night. */
+    private static Advised adviseAtNight(HomeSystem system, List<ForecastStep> forecast, double soc, Instant now,
+            AwayTimes away) {
+        return advise(system, NIGHT_CHARGING, forecast, soc, now, away);
     }
 
     private static Advised advise(HomeSystem system, List<ForecastStep> forecast, double soc, Instant now) {
@@ -122,13 +135,13 @@ class GridAdvisorTest {
     }
 
     @Test
-    void withoutSunTheLowestCurrentFromTheEarliestFreeTime() {
+    void withoutSunTheLowestCurrentFromTheStartOfTheChargingHours() {
         var advised = advise(days(0, 0), 35, fridayAt(0));
         var window = advised.window();
-        // 13.25 kWh at 1.38 kW: 9 h 36 min, rounded up to 09:40
+        // 13.25 kWh at 1.38 kW: 9 h 36 min from 07:00, rounded up to 16:40
         assertThat(window.amps()).isEqualTo(6);
-        assertThat(window.start()).isEqualTo(fridayAt(0));
-        assertThat(window.end()).isEqualTo(at(FRI, 9, 40));
+        assertThat(window.start()).isEqualTo(fridayAt(7));
+        assertThat(window.end()).isEqualTo(at(FRI, 16, 40));
         assertThat(window.solarKwh()).isZero();
         assertThat(window.importKwh()).isCloseTo(advised.advice().energyKwh(), CLOSE);
     }
@@ -181,11 +194,11 @@ class GridAdvisorTest {
     @Test
     void theWindowFallsBackToAnEarlierDayWhenTheDipDayHasNoTimeAtHome() {
         var away = OneOffAwayPeriod.allDay(SAT, TZ);
-        // Friday ends at 33 %, Saturday at 10.9 %: 14.84 kWh, which the car can take only on Friday
+        // Friday ends at 33 %, Saturday at 10.9 %: 14.84 kWh, which the car can take only on Friday, from 07:00
         var advice = adviseAway(dull(3), 55, fridayAt(0), away).advice();
         assertThat(advice.day()).isEqualTo(SAT);
         var window = advice.window().orElseThrow();
-        assertThat(List.of(window.start(), window.end())).containsExactly(fridayAt(0), at(FRI, 10, 50));
+        assertThat(List.of(window.start(), window.end())).containsExactly(fridayAt(7), at(FRI, 17, 50));
         assertThat(window.amps()).isEqualTo(6);
     }
 
@@ -211,7 +224,7 @@ class GridAdvisorTest {
         var sunday = LocalDate.of(2026, 3, 29); // 23 hours
         var forecast = new ArrayList<>(hourly(saturday, Map.of()));
         forecast.addAll(hourly(sunday, Map.of()));
-        var advice = advise(Forecasts.golden(), forecast, 57, at(saturday, 0)).advice();
+        var advice = adviseAtNight(Forecasts.golden(), forecast, 57, at(saturday, 0), WEEKLY_AWAY).advice();
         // 57 % - 18 % - 18 % = 21 % on Sunday: 9 % of 70 kWh / 0.9 = 7 kWh
         assertThat(advice.day()).isEqualTo(sunday);
         assertThat(advice.endLevelPct()).isCloseTo(21, CLOSE);
@@ -251,6 +264,8 @@ class GridAdvisorTest {
         double hours = 1.204 / 0.9 / 1.38;
         assertThat(window.solarKwh()).isCloseTo(0.85 * hours, CLOSE);
         assertThat(window.importKwh()).isCloseTo(0.53 * hours, CLOSE);
+        // after the solar window's 8.28 %: 38 % + 8.28 % + 1.72 %
+        assertThat(advice.chargeLimitPct()).contains(new Percent(48));
     }
 
     @Test
@@ -286,7 +301,7 @@ class GridAdvisorTest {
         var day = LocalDate.of(2026, 10, 25);
         // 3 h 25 min at 6 A (1.38 kW) from 00:00 summer time (22:00 UTC) ends at 02:25 winter time (01:25 UTC)
         double soc = 30 + 18 - 1.38 * 41 / 12 * 0.9 / 70 * 100;
-        var window = advise(Forecasts.golden(), hourly(day, Map.of()), soc, at(day, 0)).window();
+        var window = adviseAtNight(Forecasts.golden(), hourly(day, Map.of()), soc, at(day, 0), WEEKLY_AWAY).window();
         assertThat(window.start()).isEqualTo(Instant.parse("2026-10-24T22:00:00Z"));
         assertThat(window.end()).isEqualTo(Instant.parse("2026-10-25T01:25:00Z"));
         assertThat(window.amps()).isEqualTo(6);
@@ -351,7 +366,7 @@ class GridAdvisorTest {
         // 1.38 kWh: exactly one hour at 6 A, and the car is home only from 23:00
         var away = new AwayTimes(List.of(), List.of(new OneOffAwayPeriod(fridayAt(0), fridayAt(23))), List.of());
         double soc = 48 - 1.38 * 0.9 / 70 * 100;
-        var advice = advise(Forecasts.golden(), hourly(FRI, Map.of()), soc, fridayAt(0), away).advice();
+        var advice = adviseAtNight(Forecasts.golden(), hourly(FRI, Map.of()), soc, fridayAt(0), away).advice();
         assertThat(advice.energyKwh()).isCloseTo(1.38, CLOSE);
         var window = advice.window().orElseThrow();
         assertThat(window.amps()).isEqualTo(6);

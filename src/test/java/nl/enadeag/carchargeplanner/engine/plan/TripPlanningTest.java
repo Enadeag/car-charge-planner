@@ -100,14 +100,15 @@ class TripPlanningTest {
     void theBatteryHoldsTheTripsEnergyAndTheMinimumAtTheDepartureWithTheRestFromTheGridAsLateAsPossible() {
         var planned = plan(dark(3), 50, at(FRI, 0), trip(SAT, 8, 18, 300));
         var advice = planned.trip();
-        // 30 % + 300 km at 0.207 kWh = 92.1 %; no sun, so 42.1 % from the grid: 46.78 kWh, 6.36 h at 32 A
+        // 30 % + 300 km at 0.207 kWh = 92.1 %; no sun, so 42.1 % from the grid: 46.78 kWh; the latest start in the
+        // charging hours is 22:00 the evening before, and 23 A (5.29 kW, 8.84 h) is the lowest current done by 07:00
         assertThat(advice.neededPct().value()).isCloseTo(92.1, CLOSE);
         assertThat(advice.solarWindows()).isEmpty();
         assertThat(advice.solarLevelPct().value()).isCloseTo(50, CLOSE);
-        assertThat(advice.grid().orElseThrow().now()).isFalse();
+        assertThat(advice.grid().orElseThrow().start()).isEqualTo(TripGridCharge.Start.PLANNED);
         var grid = planned.grid();
-        assertThat(grid.amps()).isEqualTo(32);
-        assertThat(List.of(grid.start(), grid.end())).containsExactly(at(SAT, 0, 30), at(SAT, 6, 55));
+        assertThat(grid.amps()).isEqualTo(23);
+        assertThat(List.of(grid.start(), grid.end())).containsExactly(at(FRI, 22), at(SAT, 6, 55));
         assertThat(grid.importKwh()).isCloseTo(42.1 / 0.9, CLOSE);
         assertThat(advice.departureLevelPct().value()).isCloseTo(92.1, CLOSE);
         assertThat(advice.kmShort()).isZero();
@@ -118,7 +119,9 @@ class TripPlanningTest {
     void thePlanGoesOnFromTheLevelLeftOnReturn() {
         var planned = plan(dark(4), 50, at(FRI, 0), trip(SAT, 8, 18, 300));
         var saturday = planned.day(SAT);
-        assertThat(saturday.startLevelPct().value()).isCloseTo(50, CLOSE);
+        // the grid charge starts on Friday evening, so it counts on Friday
+        assertThat(planned.day(FRI).endLevelPct().value()).isCloseTo(92.1, CLOSE);
+        assertThat(saturday.startLevelPct().value()).isCloseTo(92.1, CLOSE);
         assertThat(saturday.levelAfterChargingPct().value()).isCloseTo(92.1, CLOSE);
         assertThat(saturday.drivingPct()).isCloseTo(62.1, CLOSE);
         assertThat(saturday.endLevelPct().value()).isCloseTo(30, CLOSE);
@@ -179,9 +182,9 @@ class TripPlanningTest {
         assertThat(advice.solarLevelPct().value()).isCloseTo(solarPct, CLOSE);
         var grid = planned.grid();
         assertThat(grid.solarKwh() + grid.importKwh()).isCloseTo((92.1 - solarPct) / 0.9, CLOSE);
-        // 41 kWh: 5.57 h at 32 A, the latest start that is done by 07:00
-        assertThat(List.of(grid.start(), grid.end())).containsExactly(at(SAT, 1, 15), at(SAT, 6, 50));
-        assertThat(grid.amps()).isEqualTo(32);
+        // 41 kWh from 22:00, the latest start in the charging hours: 20 A (4.6 kW, 8.91 h) is done by 07:00
+        assertThat(List.of(grid.start(), grid.end())).containsExactly(at(FRI, 22), at(SAT, 6, 55));
+        assertThat(grid.amps()).isEqualTo(20);
         assertThat(advice.departureLevelPct().value()).isCloseTo(92.1, CLOSE);
     }
 
@@ -192,7 +195,7 @@ class TripPlanningTest {
         var planned = plan(days(List.of(thursday, Map.of(10, 4.0, 11, 4.0), Map.of())), 50, at(THU, 0),
                 trip(SAT, 8, 18, 300));
         var grid = planned.grid();
-        assertThat(List.of(grid.start(), grid.end())).containsExactly(at(SAT, 1, 15), at(SAT, 6, 50));
+        assertThat(List.of(grid.start(), grid.end())).containsExactly(at(FRI, 22), at(SAT, 6, 55));
         assertThat(planned.trip().departureLevelPct().value()).isCloseTo(92.1, CLOSE);
     }
 
@@ -212,7 +215,7 @@ class TripPlanningTest {
         // 100 km: 50.7 %, 10.7 % short: 11.89 kWh, 1.62 h at 32 A, which cannot be done by 21:00
         var advice = plan(dark(2), 40, at(FRI, 20), trip(FRI, 22, 23, 100)).trip();
         var grid = advice.grid().orElseThrow();
-        assertThat(grid.now()).isTrue();
+        assertThat(grid.start()).isEqualTo(TripGridCharge.Start.NOW);
         assertThat(List.of(grid.window().start(), grid.window().end())).containsExactly(at(FRI, 20), at(FRI, 21, 40));
         assertThat(grid.window().amps()).isEqualTo(32);
         assertThat(advice.departureLevelPct().value()).isCloseTo(50.7, CLOSE);
@@ -257,7 +260,8 @@ class TripPlanningTest {
         assertThat(advice.kmShort()).isCloseTo(23.15 / 0.207, CLOSE);
         assertThat(advice.returnLevelPct().value()).isCloseTo(6.85, CLOSE);
         var grid = planned.grid();
-        assertThat(List.of(grid.start(), grid.end())).containsExactly(at(SAT, 3, 15), at(SAT, 10, 50));
+        // a start at 07:00 is too late to be done by 11:00, so it starts at 22:00 the evening before
+        assertThat(List.of(grid.start(), grid.end())).containsExactly(at(FRI, 22), at(SAT, 10, 45));
         assertThat(planned.gridAdvice()).isEmpty(); // the trip's own day is left to its advice
     }
 
@@ -277,7 +281,8 @@ class TripPlanningTest {
         var trip = new Trip(at(SAT, 8), at(SUN, 18), 200, false);
         var planned = plan(system(50), dark(4), 95, at(FRI, 0), trip);
         assertThat(planned.trip().neededPct().value()).isCloseTo(30 + 41.4 + 18, CLOSE);
-        assertThat(planned.day(FRI).endLevelPct().value()).isCloseTo(86, CLOSE);
+        // 95 % - 9 % on Friday, and the 3.4 % short from the grid in the evening
+        assertThat(planned.day(FRI).endLevelPct().value()).isCloseTo(89.4, CLOSE);
         assertThat(planned.day(SAT).drivingPct()).isCloseTo(9 + 41.4, CLOSE);
         assertThat(planned.day(SUN).endLevelPct().value()).isCloseTo(30, CLOSE);
     }
@@ -307,10 +312,12 @@ class TripPlanningTest {
         var forecast = new ArrayList<>(hourly(day.minusDays(1), Map.of()));
         forecast.addAll(hourly(day, Map.of()));
         var grid = plan(forecast, 50, at(day.minusDays(1), 12), trip(day, 8, 18, 300)).grid();
-        // 08:00 winter time is 07:00 UTC; 6.36 real hours at 32 A from 01:30 summer time end at 06:55 winter time
-        assertThat(grid.start()).isEqualTo(Instant.parse("2026-10-24T23:30:00Z"));
-        assertThat(grid.end()).isEqualTo(Instant.parse("2026-10-25T05:55:00Z"));
-        assertThat(grid.end()).isEqualTo(at(day, 6, 55));
+        // 08:00 winter time is 07:00 UTC; from 22:00 summer time there are 10 real hours to 07:00 winter time, and
+        // 21 A (4.83 kW) takes 9.68 of them, up to 06:45 winter time
+        assertThat(grid.start()).isEqualTo(Instant.parse("2026-10-24T20:00:00Z"));
+        assertThat(grid.amps()).isEqualTo(21);
+        assertThat(grid.end()).isEqualTo(Instant.parse("2026-10-25T05:45:00Z"));
+        assertThat(grid.end()).isEqualTo(at(day, 6, 45));
     }
 
     @Test
@@ -338,7 +345,7 @@ class TripPlanningTest {
         assertThat(advice.get(0).departureLevelPct().value()).isCloseTo(61.05 + 31.05 - 3.312, CLOSE);
         assertThat(advice.get(0).grid().orElseThrow().window().end()).isBeforeOrEqualTo(at(SAT, 7));
         var charge = advice.get(1).grid().orElseThrow();
-        assertThat(charge.now()).isTrue();
+        assertThat(charge.start()).isEqualTo(TripGridCharge.Start.NOW);
         assertThat(List.of(charge.window().start(), charge.window().end())).containsExactly(at(SUN, 7, 30), at(SUN, 8));
         assertThat(advice.get(1).departureLevelPct().value()).isCloseTo(61.05, CLOSE);
         assertThat(advice.get(1).kmShort()).isZero();
@@ -349,7 +356,7 @@ class TripPlanningTest {
         var planned = plan(dark(4), 50, at(FRI, 0), trip(SAT, 8, 18, 150), trip(SUN, 8, 18, 150));
         assertThat(planned.plan().trips()).hasSize(2).allSatisfy(
                 advice -> assertThat(advice.neededPct().value()).isCloseTo(61.05, CLOSE));
-        assertThat(planned.plan().trips().get(1).grid().orElseThrow().now()).isFalse();
+        assertThat(planned.plan().trips().get(1).grid().orElseThrow().start()).isEqualTo(TripGridCharge.Start.PLANNED);
     }
 
     @Test
@@ -390,6 +397,9 @@ class TripPlanningTest {
         var advice = planned.gridAdvice().orElseThrow();
         assertThat(advice.day()).isEqualTo(SUN);
         assertThat(advice.window().orElseThrow().start()).isEqualTo(at(SAT, 14));
+        // back with 40.3 %, and the 7.7 % Sunday falls short
+        assertThat(planned.trip().returnLevelPct().value()).isCloseTo(40.3, CLOSE);
+        assertThat(advice.chargeLimitPct()).contains(new Percent(48));
     }
 
     @Test
@@ -409,15 +419,17 @@ class TripPlanningTest {
         var forecast = dark(3);
         var days = new Planner(system(50), PREFERENCES, AwayTimes.NONE).plan(forecast, new Percent(35), at(FRI, 0),
                 List.of());
-        var tripGrid = new Window(at(FRI, 0), at(FRI, 2), 32, 7.36, 0, 14.72);
+        var tripGrid = new Window(at(FRI, 7), at(FRI, 9), 32, 7.36, 0, 14.72);
         var trip = new TripAdvice(trip(SAT, 8, 18, 100), new Percent(59.7), List.of(), new Percent(17),
-                Optional.of(new TripGridCharge(tripGrid, false)), new Percent(59.7), 0, new Percent(39));
+                Optional.of(new TripGridCharge(tripGrid, TripGridCharge.Start.PLANNED)), new Percent(59.7), 0, new Percent(39));
         var advice = new GridAdvisor(system(50), PREFERENCES, AwayTimes.NONE)
                 .advise(new Plan(days, List.of(trip)), forecast, at(FRI, 0)).orElseThrow();
         // Friday ends at 26 %: 4.44 kWh, 3.22 h at 6 A, from the end of the trip's grid charge
         assertThat(advice.day()).isEqualTo(FRI);
         var window = advice.window().orElseThrow();
-        assertThat(List.of(window.start(), window.end())).containsExactly(at(FRI, 2), at(FRI, 5, 15));
+        assertThat(List.of(window.start(), window.end())).containsExactly(at(FRI, 9), at(FRI, 12, 15));
+        // 35 % and the trip's 13.25 % before it, and its own 4 %
+        assertThat(advice.chargeLimitPct()).contains(new Percent(53));
     }
 
     @Test
@@ -460,7 +472,7 @@ class TripPlanningTest {
         assertThat(planned.trip().solarWindows()).isEmpty();
         assertThat(planned.day(SUN).windows()).isNotEmpty();
         var grid = planned.grid();
-        assertThat(List.of(grid.start(), grid.end())).containsExactly(at(SAT, 0, 30), at(SAT, 6, 55));
+        assertThat(List.of(grid.start(), grid.end())).containsExactly(at(FRI, 22), at(SAT, 6, 55));
     }
 
     @Test

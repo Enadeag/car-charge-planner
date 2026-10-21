@@ -24,6 +24,7 @@ public final class ProblemTexts {
             case BELOW_MINIMUM_CURRENT -> TextKey.PROBLEM_BELOW_MINIMUM_CURRENT;
             case SAME_AS_PRIMARY -> TextKey.PROBLEM_SAME_AS_PRIMARY;
             case NOT_AFTER_START -> TextKey.PROBLEM_NOT_AFTER_START;
+            case SAME_AS_START -> TextKey.PROBLEM_SAME_AS_START;
         });
     }
 }
