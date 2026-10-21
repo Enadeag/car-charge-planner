@@ -6,6 +6,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ### Added
 - Linux: a `.deb` for Debian and Ubuntu and an `.rpm` for Fedora and openSUSE, next to the tar.gz. They install the app in `/opt/car-charge-planner` with a menu entry for every user; `sudo apt install ./car-charge-planner_<version>_amd64.deb` or `sudo dnf install ./car-charge-planner-<version>-1.x86_64.rpm`, and a new version installs over the old one. `install-launcher` in a package install says the package puts the app in the menu already, instead of adding a second entry, and notifications are tied to the package's menu entry (ADR 0007).
+- Windows: the app follows **Text size** (Settings, Accessibility), on top of display scaling: the text in the dashboard, Settings and set-up grows by as much, also when you change it while the app runs.
 - Ready for a Flatpak (not on Flathub yet, #217): in the Flatpak's sandbox, start at login goes through the desktop's Background portal, `install-launcher` and `uninstall-launcher` say the Flatpak puts the app in the menu itself, and the tray icon, notifications, keychain and second start work as outside it (ADR 0008).
 
 ## [0.4.0] - 2026-10-20
