@@ -98,8 +98,8 @@ public final class DashboardPictures {
     }
 
     /**
-     * Two dashboards side by side on Saturday, the day of a trip: the trip with its choices, and a new trip being
-     * entered.
+     * Two dashboards side by side on Sunday, the day of a trip: the advice for the trip, which charges on Saturday's
+     * sun and then from the grid, and the trip with its choices; and a new trip being entered.
      *
      * @param scheme light or dark
      * @param folder an empty folder for the engine's files
@@ -121,15 +121,15 @@ public final class DashboardPictures {
      * @throws Exception when the plan or the picture cannot be made
      */
     static WritableImage trip(ColorScheme scheme, Path folder, Language language, double zoom) throws Exception {
-        var saturday = TODAY.plusDays(1);
-        var trip = new Trip(saturday.atTime(8, 30).atZone(BRUSSELS).toInstant(),
-                saturday.atTime(19, 0).atZone(BRUSSELS).toInstant(), 240, false);
+        var sunday = TODAY.plusDays(2);
+        var trip = new Trip(sunday.atTime(8, 30).atZone(BRUSSELS).toInstant(),
+                sunday.atTime(19, 0).atZone(BRUSSELS).toInstant(), 150, false);
         var plan = plan(folder, language, List.of(trip));
         var messages = new Messages(language);
         return Fx.call(() -> Pictures.sideBySide(GAP,
-                dashboard(plan, scheme, Frame.POPUP, zoom, messages, view -> clickDay(view, 1)),
+                dashboard(plan, scheme, Frame.POPUP, zoom, messages, view -> clickDay(view, 2)),
                 dashboard(plan, scheme, Frame.POPUP, zoom, messages, view -> {
-                    view.selectDay(1);
+                    view.selectDay(2);
                     button(view, messages, TextKey.TRIP_ADD).fire();
                 })));
     }
