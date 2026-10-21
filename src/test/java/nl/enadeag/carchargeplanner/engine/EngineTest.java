@@ -43,6 +43,7 @@ import nl.enadeag.carchargeplanner.engine.notify.Announcement;
 import nl.enadeag.carchargeplanner.engine.notify.AnnouncementKind;
 import nl.enadeag.carchargeplanner.engine.notify.Announcer;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
+import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges;
@@ -389,7 +390,7 @@ class EngineTest {
         var madeAt = Instant.parse("2026-07-03T05:00:00Z");
         var source = new ForecastSource(new ProviderId("main"), "Main", "Forecast by Main", madeAt, Freshness.FRESH, ProviderRole.PRIMARY,
                 "", Optional.empty());
-        var planned = new Outlook.Planned(madeAt, BRUSSELS, List.of(), new Percent(50), true, Optional.empty(), source, 0.4,
+        var planned = new Outlook.Planned(madeAt, BRUSSELS, List.of(), new Percent(50), true, Optional.empty(), List.of(), source, 0.4,
                 new Percent(30), new Percent(80));
         assertThat(planned.nextWindow()).isEmpty();
     }
@@ -405,7 +406,7 @@ class EngineTest {
                 madeAt.plus(Duration.ofHours(3)), 10, 2.3, 4.6, 0);
         var day = new DayPlan(DAY, new Percent(50), List.of(ended, next),
                 new Percent(60), new Percent(50), 10, List.of());
-        var planned = new Outlook.Planned(madeAt, BRUSSELS, List.of(day), new Percent(50), true, Optional.empty(), source,
+        var planned = new Outlook.Planned(madeAt, BRUSSELS, List.of(day), new Percent(50), true, Optional.empty(), List.of(), source,
                 0, new Percent(30), new Percent(80));
 
         assertThat(planned.nextWindow()).contains(next);
@@ -830,6 +831,19 @@ class EngineTest {
     }
 
     @Test
+    void thePlanSaysWhatItDoesForATrip() throws IOException {
+        var engine = engine(clockAt(7));
+        var trip = new Trip(DAY.plusDays(1).atTime(9, 0).atZone(BRUSSELS).toInstant(),
+                DAY.plusDays(1).atTime(17, 0).atZone(BRUSSELS).toInstant(), 100, false);
+        engine.addTrip(trip);
+
+        var advice = planned(engine).tripAdvice();
+        assertThat(advice).extracting(TripAdvice::trip).containsExactly(trip);
+        // 30 % + 100 km at 0.207 kWh of the 60 kWh battery + the day's 40 km at 0.18 kWh
+        assertThat(advice.getFirst().neededPct().value()).isCloseTo(30 + 34.5 + 12, within(1e-9));
+    }
+
+    @Test
     void aChangedTripTakesThePlaceOfTheOldOne() throws IOException {
         var engine = engine(clockAt(7));
         var atHome = planned(engine).days();
@@ -841,7 +855,8 @@ class EngineTest {
 
         assertThat(engine.changeTrip(trip, evening)).containsExactly(evening);
         assertThat(engine.trips()).containsExactly(evening);
-        assertThat(planned(engine).days()).isEqualTo(atHome); // the evening leaves the sunny hours free
+        // the evening leaves the sunny hours free
+        assertThat(planned(engine).days().getFirst().windows()).isEqualTo(atHome.getFirst().windows());
     }
 
     @Test

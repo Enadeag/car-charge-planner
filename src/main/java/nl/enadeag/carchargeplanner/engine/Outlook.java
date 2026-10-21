@@ -5,6 +5,7 @@ import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
+import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -24,6 +25,8 @@ public sealed interface Outlook {
      * @param batteryLevelPct the battery level the plan starts from
      * @param batteryAssumed true while the battery level is a placeholder, not a reading
      * @param gridAdvice present when the battery would end a day below the minimum charge level
+     * @param tripAdvice what the plan does for each trip that departs before the forecast ends, in order of departure;
+     *     possibly none
      * @param forecastSource where the forecast came from
      * @param baseloadKw the power the house uses on its own in kW, 0 or more, as an average over the whole day
      * @param minimumPct the minimum charge level of the battery
@@ -36,13 +39,14 @@ public sealed interface Outlook {
             Percent batteryLevelPct,
             boolean batteryAssumed,
             Optional<GridAdvice> gridAdvice,
+            List<TripAdvice> tripAdvice,
             ForecastSource forecastSource,
             double baseloadKw,
             Percent minimumPct,
             Percent targetPct) implements Outlook {
 
         /**
-         * Copies the days and checks the baseload.
+         * Copies the days and the trip advice, and checks the baseload.
          *
          * @throws IllegalArgumentException when the baseload is negative or not a number
          */
@@ -51,6 +55,7 @@ public sealed interface Outlook {
                 throw new IllegalArgumentException("baseloadKw must not be negative, not " + baseloadKw);
             }
             days = List.copyOf(days);
+            tripAdvice = List.copyOf(tripAdvice);
         }
 
         /**

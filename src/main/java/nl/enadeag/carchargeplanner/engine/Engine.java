@@ -224,12 +224,13 @@ public final class Engine {
         var away = new AwayTimes(config.away().weekly(), awayFile.periods(), tripFile.trips(now));
         var entered = batteryFile.reading();
         var battery = entered.map(BatteryReading::level).orElse(ASSUMED_BATTERY_PCT);
-        var days = new Planner(system, config.planning(), away)
-                .plan(forecast.steps(), battery, now, announcer.announced());
-        var advice = new GridAdvisor(system, config.planning(), away).advise(days, forecast.steps(), now);
+        var plan = new Planner(system, config.planning(), away)
+                .planWithTrips(forecast.steps(), battery, now, announcer.announced());
+        var advice = new GridAdvisor(system, config.planning(), away).advise(plan, forecast.steps(), now);
         var planning = config.planning();
-        return new Outlook.Planned(now, system.timezone(), days, battery, entered.isEmpty(), advice, forecast.source(),
-                system.house().baseloadKw(), planning.minimumPct(), planning.targetPct());
+        return new Outlook.Planned(now, system.timezone(), plan.days(), battery, entered.isEmpty(), advice,
+                plan.trips(), forecast.source(), system.house().baseloadKw(), planning.minimumPct(),
+                planning.targetPct());
     }
 
     /**
