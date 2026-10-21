@@ -177,7 +177,7 @@ final class SetUpView extends BorderPane {
                 (provider, text) -> engine.searchPlaces(provider, text, messages.language().code()), background,
                 messages);
         var solar = new SolarPage(messages);
-        var car = new CarCard(messages);
+        var car = new CarCard(messages, false);
         app.onUnitsChanged(car::showIn);
         var charger = new ChargerPage(messages);
         // a provider's own Test asks for the system as it was when the owner reached the forecast step

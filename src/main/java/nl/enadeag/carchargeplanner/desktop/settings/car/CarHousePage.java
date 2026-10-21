@@ -29,7 +29,7 @@ public final class CarHousePage implements ConfigPage {
     public CarHousePage(Messages messages) {
         this.messages = messages;
         this.view = new PageView(messages.text(Category.CAR_HOUSE.title()));
-        car = new CarCard(messages);
+        car = new CarCard(messages, true);
         house = new HouseCard(messages);
     }
 

@@ -570,10 +570,14 @@ public enum TextKey {
     FIELD_CAR_CONSUMPTION,
     /** What the consumption is. */
     FIELD_CAR_CONSUMPTION_HINT,
-    /** The distance a day. */
-    FIELD_CAR_DISTANCE,
-    /** What the distance is. */
-    FIELD_CAR_DISTANCE_HINT,
+    /** The distance a day of the other driving. */
+    FIELD_CAR_OTHER_DRIVING,
+    /** What the other driving is. */
+    FIELD_CAR_OTHER_DRIVING_HINT,
+    /** The trip surcharge. */
+    FIELD_CAR_TRIP_SURCHARGE,
+    /** What the trip surcharge is. */
+    FIELD_CAR_TRIP_SURCHARGE_HINT,
     /** The title of the house's card. */
     CARD_HOUSE,
     /** What the house's value is for. */

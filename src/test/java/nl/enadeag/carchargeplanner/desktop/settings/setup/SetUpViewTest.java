@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.settings.setup;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
@@ -91,6 +92,10 @@ class SetUpViewTest {
         Fx.run(() -> setUp.type(view, TextKey.FIELD_PANEL_SIZE, "6.2"));
         next(view, 1);
         Fx.run(() -> setUp.type(view, TextKey.FIELD_CAR_BATTERY, "75"));
+        assertThat(Fx.call(() -> SetUpFixture.field(view, setUp.messages.text(TextKey.FIELD_CAR_OTHER_DRIVING))))
+                .as("set-up asks for the other driving").isNotNull();
+        assertThatThrownBy(() -> Fx.call(() -> setUp.field(view, TextKey.FIELD_CAR_TRIP_SURCHARGE)))
+                .as("set-up keeps the standard trip surcharge").hasMessageContaining("no field");
         next(view, 3);
         Fx.run(() -> setUp.button(view, TextKey.AWAY_ADD).fire());
         next(view, 1);
@@ -116,7 +121,8 @@ class SetUpViewTest {
                 new WeeklyAwayPeriod(DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(17, 0)));
         assertThat(setUp.appSettings.read().units()).isEqualTo(Units.IMPERIAL);
         assertThat(config.planning().chargingHours()).isEqualTo(ChargingHours.STANDARD);
-        assertThat(setUp.configPath).content().doesNotContain("chargingHours");
+        assertThat(setUp.configPath).content().doesNotContain("chargingHours").doesNotContain("tripSurcharge");
+        assertThat(config.system().car().tripSurcharge()).isEqualTo(Car.STANDARD_TRIP_SURCHARGE);
     }
 
     @Test

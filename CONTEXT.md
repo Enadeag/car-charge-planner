@@ -78,7 +78,7 @@ _Dutch_: ritopslag
 
 **Other driving**:
 The short drives that are not trips, such as shopping, as a distance per day; trips come on top of it.
-_Avoid_: Daily distance, average distance
+_Avoid_: Distance per day, daily distance, average distance
 _Dutch_: overige rijafstand
 
 **Charging hours**:
