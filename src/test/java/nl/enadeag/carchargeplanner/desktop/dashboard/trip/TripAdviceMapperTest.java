@@ -76,10 +76,32 @@ class TripAdviceMapperTest {
         var model = map(advice(84.2, List.of(SOLAR), 60, Optional.of(grid(at(TODAY, 21, 0), Start.PLANNED)), 84.2, 0));
 
         assertThat(model).isEqualTo(new TripAdviceModel(TOMORROW, true, EnergySource.GRID, "Trip advice",
-                "Trip tomorrow at 08:15, 150 km there and back.",
-                "Charge to 85%: on solar power today 12:00\u00A0–\u00A015:00, then from the grid. "
-                        + "Start tonight at 21:00. Set 16 A (3.7 kW), and a charge limit of 85% in the car or the charger.",
+                new TripAdviceModel.Wording("Trip tomorrow at 08:15, 150 km there and back.",
+                        "Charge to 85%: on solar power today 12:00\u00A0–\u00A015:00, then from the grid. "
+                                + "Start tonight at 21:00. Set 16 A (3.7 kW), and a charge limit of 85% in the car or "
+                                + "the charger."),
+                new TripAdviceModel.Wording("Trip Saturday at 08:15, 150 km there and back.",
+                        "Charge to 85%: on solar power Friday 12:00\u00A0–\u00A015:00, then from the grid. "
+                                + "Start Friday at 21:00. Set 16 A (3.7 kW), and a charge limit of 85% in the car or "
+                                + "the charger."),
                 "Assuming a battery level of 45%."));
+    }
+
+    @Test
+    void anotherDaysTabNamesEveryDayByItsWeekdayInTheOwnersLanguage() {
+        var tomorrowNight = new Window(at(TOMORROW, 6, 0), at(TOMORROW, 7, 0), 6, 1.4, 0.3, 0.2);
+        var model = map(Language.DUTCH, Units.METRIC, advice(90, List.of(SOLAR, tomorrowNight), 60,
+                Optional.of(grid(at(TODAY, 16, 0), Start.NOW)), 90, 0));
+
+        var saturday = model.on(TOMORROW, TODAY);
+        var today = model.on(TODAY, TODAY);
+
+        assertThat(saturday.title()).isEqualTo("Rit zaterdag om 08:15, 150 km heen en terug.");
+        assertThat(saturday.plan()).startsWith("Laad tot 90%: op zonnestroom vrijdag 12:00\u00A0–\u00A015:00, "
+                + "zaterdag 06:00\u00A0–\u00A007:00, daarna uit het net. Start het laden vrijdag om 16:00: ");
+        assertThat(today.title()).isEqualTo("Rit morgen om 08:15, 150 km heen en terug.");
+        assertThat(today.plan()).startsWith("Laad tot 90%: op zonnestroom vandaag 12:00\u00A0–\u00A015:00, "
+                + "morgen 06:00\u00A0–\u00A007:00, daarna uit het net. Start het laden vandaag om 16:00: ");
     }
 
     @Test
@@ -88,8 +110,8 @@ class TripAdviceMapperTest {
                 advice(84.2, List.of(SOLAR), 60, Optional.of(grid(at(TODAY, 21, 0), Start.PLANNED)), 84.2, 0));
 
         assertThat(model.label()).isEqualTo("Advies voor de rit");
-        assertThat(model.title()).isEqualTo("Rit morgen om 08:15, 150 km heen en terug.");
-        assertThat(model.plan()).isEqualTo("Laad tot 85%: op zonnestroom vandaag 12:00\u00A0–\u00A015:00, "
+        assertThat(model.onToday().title()).isEqualTo("Rit morgen om 08:15, 150 km heen en terug.");
+        assertThat(model.onToday().plan()).isEqualTo("Laad tot 85%: op zonnestroom vandaag 12:00\u00A0–\u00A015:00, "
                 + "daarna uit het net. Start het laden vanavond om 21:00. Stel 16 A in (3,7 kW), en een laadlimiet van 85% in de "
                 + "auto of de laadpaal.");
         assertThat(model.level()).isEqualTo("Uitgaande van een accuniveau van 45%.");
@@ -99,7 +121,7 @@ class TripAdviceMapperTest {
     void aTripChargedFromTheGridAloneSaysSoAndNamesTheDayOfTheStart() {
         var model = map(advice(90, List.of(), 45, Optional.of(grid(at(TOMORROW, 7, 0), Start.PLANNED)), 90, 0));
 
-        assertThat(model.plan()).isEqualTo("Charge to 90% from the grid. Start tomorrow at 07:00. "
+        assertThat(model.onToday().plan()).isEqualTo("Charge to 90% from the grid. Start tomorrow at 07:00. "
                 + "Set 16 A (3.7 kW), and a charge limit of 90% in the car or the charger.");
         assertThat(model.source()).isEqualTo(EnergySource.GRID);
     }
@@ -121,7 +143,7 @@ class TripAdviceMapperTest {
     void aGridChargeThatCannotWaitHasItsOwnWording(Instant start, Start when, String sentence) {
         var model = map(advice(90, List.of(), 45, Optional.of(grid(start, when)), 90, 0));
 
-        assertThat(model.plan()).isEqualTo("Charge to 90% from the grid. " + sentence
+        assertThat(model.onToday().plan()).isEqualTo("Charge to 90% from the grid. " + sentence
                 + " Set 16 A (3.7 kW), and a charge limit of 90% in the car or the charger.");
     }
 
@@ -132,12 +154,12 @@ class TripAdviceMapperTest {
         var metric = map(advice);
         var imperial = map(Language.ENGLISH, Units.IMPERIAL, advice);
 
-        assertThat(metric.plan())
+        assertThat(metric.onToday().plan())
                 .startsWith("Charge to 100%: on solar power today 12:00\u00A0–\u00A015:00, then from the grid.")
                 .endsWith("a charge limit of 100% in the car or the charger. "
                         + "The battery is 41 km short for the trip: plan a charging stop.");
-        assertThat(imperial.plan()).endsWith("The battery is 25 mi short for the trip: plan a charging stop.");
-        assertThat(imperial.title()).isEqualTo("Trip tomorrow at 08:15, 93 mi there and back.");
+        assertThat(imperial.onToday().plan()).endsWith("The battery is 25 mi short for the trip: plan a charging stop.");
+        assertThat(imperial.onToday().title()).isEqualTo("Trip tomorrow at 08:15, 93 mi there and back.");
         assertThat(metric.source()).isEqualTo(EnergySource.GRID);
         assertThat(metric.asksAction()).isTrue();
     }
@@ -146,7 +168,7 @@ class TripAdviceMapperTest {
     void aTripTheCarCannotChargeForBeforeItLeavesSaysTheLevelItLeavesWithAndHowFarItFallsShort() {
         var model = map(Language.DUTCH, Units.METRIC, advice(95, List.of(), 60, Optional.empty(), 60, 120));
 
-        assertThat(model.plan()).isEqualTo("Bij vertrek staat de accu op 60%. "
+        assertThat(model.onToday().plan()).isEqualTo("Bij vertrek staat de accu op 60%. "
                 + "De accu komt 120 km tekort voor de rit: plan een laadstop.");
         assertThat(model.source()).isEqualTo(EnergySource.GRID);
         assertThat(model.asksAction()).isTrue();
@@ -159,7 +181,7 @@ class TripAdviceMapperTest {
 
         var model = map(advice(93.6, List.of(SOLAR, later, tomorrow), 94, Optional.empty(), 94, 0));
 
-        assertThat(model.plan()).isEqualTo("Charge to 94% on solar power: today 12:00\u00A0–\u00A015:00, "
+        assertThat(model.onToday().plan()).isEqualTo("Charge to 94% on solar power: today 12:00\u00A0–\u00A015:00, "
                 + "16:00\u00A0–\u00A017:30, tomorrow 06:30\u00A0–\u00A007:15.");
         assertThat(model.source()).isEqualTo(EnergySource.SOLAR);
         assertThat(model.asksAction()).isTrue();
@@ -180,7 +202,7 @@ class TripAdviceMapperTest {
     void aTripThatNeedsNothingExtraSaysSoBriefly(TripAdvice advice) {
         var model = map(advice);
 
-        assertThat(model.plan()).isEqualTo("The plan charges enough for it: the battery is at "
+        assertThat(model.onToday().plan()).isEqualTo("The plan charges enough for it: the battery is at "
                 + Math.round(advice.departureLevelPct().value()) + "% when you leave.");
         assertThat(model.source()).isEqualTo(EnergySource.CAR);
         assertThat(model.asksAction()).isFalse();
@@ -203,7 +225,7 @@ class TripAdviceMapperTest {
     void aLevelOnlyAFractionAboveAWholePercentageIsNotRoundedUpToTheNext() {
         var model = map(advice(85 + 1e-9, List.of(), 45, Optional.of(grid(at(TODAY, 21, 0), Start.PLANNED)), 85, 0));
 
-        assertThat(model.plan()).startsWith("Charge to 85% from the grid.").contains("a charge limit of 85%");
+        assertThat(model.onToday().plan()).startsWith("Charge to 85% from the grid.").contains("a charge limit of 85%");
     }
 
     @Test
@@ -216,7 +238,7 @@ class TripAdviceMapperTest {
         var models = new TripAdviceMapper(planned, Units.METRIC, new Messages(Language.ENGLISH))
                 .map(planned.tripAdvice());
 
-        assertThat(models).extracting(TripAdviceModel::title).containsExactly(
+        assertThat(models).extracting(model -> model.onToday().title()).containsExactly(
                 "Trip tomorrow at 08:15, 150 km there and back.", "Trip Sunday at 09:00, 40 km there and back.");
     }
 
@@ -236,7 +258,7 @@ class TripAdviceMapperTest {
     void aScreenReaderReadsTheWholeAdvice() {
         var model = map(advice(70, List.of(), 75, Optional.empty(), 75, 0));
 
-        assertThat(model.spoken()).isEqualTo("Trip advice: Trip tomorrow at 08:15, 150 km there and back. "
+        assertThat(model.spoken(model.onToday())).isEqualTo("Trip advice: Trip tomorrow at 08:15, 150 km there and back. "
                 + "The plan charges enough for it: the battery is at 75% when you leave. "
                 + "Assuming a battery level of 45%.");
     }

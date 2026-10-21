@@ -92,14 +92,21 @@ public final class Models {
 
     /** Saturday's trip, which needs a grid charge tonight. */
     public static final TripAdviceModel ADVICE_SATURDAY = new TripAdviceModel(TODAY.plusDays(1), true,
-            EnergySource.GRID, "Trip advice", "Trip tomorrow at 07:30, 300 km there and back.",
-            "Charge to 95% from the grid. Start tonight at 21:00. Set 16 A (3.7 kW), and a charge limit of 95% in the "
-                    + "car or the charger.", "Assuming a battery level of 50%.");
+            EnergySource.GRID, "Trip advice",
+            new TripAdviceModel.Wording("Trip tomorrow at 07:30, 300 km there and back.",
+                    "Charge to 95% from the grid. Start tonight at 21:00. Set 16 A (3.7 kW), and a charge limit of "
+                            + "95% in the car or the charger."),
+            new TripAdviceModel.Wording("Trip Saturday at 07:30, 300 km there and back.",
+                    "Charge to 95% from the grid. Start Friday at 21:00. Set 16 A (3.7 kW), and a charge limit of "
+                            + "95% in the car or the charger."),
+            "Assuming a battery level of 50%.");
 
     /** Sunday's trip, for which the plan charges enough. */
     public static final TripAdviceModel ADVICE_SUNDAY = new TripAdviceModel(TODAY.plusDays(2), false, EnergySource.CAR,
-            "Trip advice", "Trip Sunday at 17:00, 120 km there and back.",
-            "The plan charges enough for it: the battery is at 62% when you leave.",
+            "Trip advice", new TripAdviceModel.Wording("Trip Sunday at 17:00, 120 km there and back.",
+                    "The plan charges enough for it: the battery is at 62% when you leave."),
+            new TripAdviceModel.Wording("Trip Sunday at 17:00, 120 km there and back.",
+                    "The plan charges enough for it: the battery is at 62% when you leave."),
             "Assuming a battery level of 50%.");
 
     /** A clock that stays at the moment {@link #AWAY}'s plan was made. */

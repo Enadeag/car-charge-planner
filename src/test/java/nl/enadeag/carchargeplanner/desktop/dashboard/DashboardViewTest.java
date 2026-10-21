@@ -149,7 +149,8 @@ class DashboardViewTest {
         });
 
         assertThat(saturday).hasSize(2);
-        assertThat(saturday.get(1)).startsWith("Trip advice: Trip tomorrow at 07:30");
+        assertThat(saturday.get(1)).as("named by its weekday off today's tab")
+                .startsWith("Trip advice: Trip Saturday at 07:30").contains("Start Friday at 21:00.");
         assertThat(sunday).hasSize(2);
         assertThat(sunday.get(1)).isEqualTo("Trip advice: Trip Sunday at 17:00, 120 km there and back. The plan "
                 + "charges enough for it: the battery is at 62% when you leave. Assuming a battery level of 50%.");

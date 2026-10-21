@@ -245,7 +245,7 @@ class OutlookMapperTest {
 
         var plan = (DashboardModel.Plan) MAPPER.map(planned, List.of(), List.of(trip), Units.IMPERIAL);
 
-        assertThat(plan.tripAdvice()).extracting(model -> model.title())
+        assertThat(plan.tripAdvice()).extracting(model -> model.onToday().title())
                 .containsExactly("Trip tomorrow at 08:15, 100 mi there and back.");
     }
 

@@ -255,7 +255,7 @@ final class DashboardView extends VBox {
         var today = days.getFirst().date();
         for (var trip : tripAdvice) {
             if (trip.shownOn(day.date(), today)) {
-                page.getChildren().add(tripAdviceCard(trip));
+                page.getChildren().add(tripAdviceCard(trip, trip.on(day.date(), today)));
             }
         }
         if (day == days.getFirst()) {
@@ -278,9 +278,12 @@ final class DashboardView extends VBox {
         contentChanged.run();
     }
 
-    /** A trip's advice, whose Adjust opens the battery level's entry on today's tab, where it can be entered. */
-    private TripAdviceCard tripAdviceCard(TripAdviceModel trip) {
-        var card = new TripAdviceCard(trip, messages);
+    /**
+     * A trip's advice in the words of the tab it shows on, whose Adjust opens the battery level's entry on today's tab,
+     * where it can be entered.
+     */
+    private TripAdviceCard tripAdviceCard(TripAdviceModel trip, TripAdviceModel.Wording wording) {
+        var card = new TripAdviceCard(trip, wording, messages);
         if (battery.acceptsLevel()) {
             card.onAdjust(() -> {
                 selectDay(0);
