@@ -28,8 +28,9 @@ import tools.jackson.databind.node.ObjectNode;
 
 /**
  * The JSON shape of {@code engine.json}, read and written side by side, as {@code docs/example-engine.json} shows it.
- * Every value must be given, except the {@code away} and {@code typical} sections; a name the shape does not have is
- * refused. Percentages, charger phases and provider ids are plain numbers and texts; an empty fallback means none; a
+ * Every value must be given, except the {@code away} and {@code typical} sections and the car's
+ * {@code tripSurchargePct}, which is the {@link Car#STANDARD_TRIP_SURCHARGE} when it is not and is written only when it
+ * differs; a name the shape does not have is refused. Percentages, charger phases and provider ids are plain numbers and texts; an empty fallback means none; a
  * weekday is its English name in any case and a time is {@code "HH:mm"}; a typical value is its {@link ConfigSetting}'s
  * name. The file's {@code version} is 1; a file without one is read as version 1.
  */
@@ -124,11 +125,12 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
     }
 
     private static Car car(ConfigFields car) throws FormatProblem {
-        car.only("usableBatteryKwh", "consumptionKwhPer100km", "kmPerDay");
+        car.only("usableBatteryKwh", "consumptionKwhPer100km", "kmPerDay", "tripSurchargePct");
         double battery = car.number("usableBatteryKwh");
         double consumption = car.number("consumptionKwhPer100km");
         double distance = car.number("kmPerDay");
-        return car.make(() -> new Car(battery, consumption, distance));
+        var surcharge = car.has("tripSurchargePct") ? percent(car, "tripSurchargePct") : Car.STANDARD_TRIP_SURCHARGE;
+        return car.make(() -> new Car(battery, consumption, distance, surcharge));
     }
 
     private static ZoneId zone(ConfigFields system) throws FormatProblem {
@@ -276,10 +278,14 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
                 .put("systemLosses", array.systemLosses()));
         node.putObject("house").put("baseloadKw", system.house().baseloadKw());
         var car = system.car();
-        node.putObject("car")
+        var carNode = node.putObject("car")
                 .put("usableBatteryKwh", car.usableBatteryKwh())
                 .put("consumptionKwhPer100km", car.consumptionKwhPer100km())
                 .put("kmPerDay", car.kmPerDay());
+        // left out at the standard, so the app versions from before trips can still read the file
+        if (!car.tripSurcharge().equals(Car.STANDARD_TRIP_SURCHARGE)) {
+            carNode.put("tripSurchargePct", car.tripSurcharge().value());
+        }
         var charger = system.charger();
         node.putObject("charger")
                 .put("phases", charger.phases().count())

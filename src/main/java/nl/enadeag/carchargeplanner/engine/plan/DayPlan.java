@@ -11,10 +11,11 @@ import java.util.List;
  * @param date the local date
  * @param startLevelPct the battery level at the start of the day
  * @param windows the charge windows of the day in time order, possibly none
- * @param levelAfterChargingPct the battery level once the windows are done
+ * @param levelAfterChargingPct the battery level once the windows and the trips' grid charges of the day are done, as if
+ *     no trip had left; at most 100
  * @param endLevelPct the battery level at the end of the day; 0 when driving takes more than is left
- * @param drivingPct the part of the battery driving takes off the day in percent, 0 or more; more than 100 when the
- *     driving needs more than the battery holds
+ * @param drivingPct the part of the battery driving takes off the day in percent, 0 or more: the other driving, and the
+ *     trips that depart on the day; more than 100 when the driving needs more than the battery holds
  * @param forecast the forecast steps that start on the day in the home's time zone, in time order; empty when the
  *     forecast does not reach the day
  */

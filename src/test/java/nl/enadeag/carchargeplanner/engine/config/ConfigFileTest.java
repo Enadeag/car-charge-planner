@@ -75,6 +75,8 @@ class ConfigFileTest {
         "\"minimumPct\": 30,    | \"minimumPct\": null,  | minimumPct",
         "\"minimumPct\": 30,    | \"minimumPct\": \"thirty\", | minimumPct",
         "\"targetPct\": 80,     | \"targetPct\": 100.5,  | targetPct",
+        "\"kmPerDay\": 40      | \"kmPerDay\": 40, \"tripSurchargePct\": -1 | system.car.tripSurchargePct",
+        "\"kmPerDay\": 40      | \"kmPerDay\": 40, \"tripSurchargePct\": \"15%\" | system.car.tripSurchargePct",
         "\"notifyLeadMinutes\": 15 | \"notifyLeadMinutes\": -5 | notifyLeadMinutes",
         "\"volts\": 230,        | \"volts\": null,       | volts",
         "\"primary\": \"open-meteo\" | \"primary\": \"\"  | primary",
@@ -131,7 +133,33 @@ class ConfigFileTest {
 
         assertThatThrownBy(() -> new ConfigFile(file).read()).isInstanceOf(ConfigProblem.class)
                 .hasMessage("engine.json: system.car: unknown setting 'kmPerWeek'; allowed are 'usableBatteryKwh', "
-                        + "'consumptionKwhPer100km', 'kmPerDay'");
+                        + "'consumptionKwhPer100km', 'kmPerDay', 'tripSurchargePct'");
+    }
+
+    private static final String CAR = "\"kmPerDay\": 40";
+
+    @Test
+    void anotherTripSurchargeIsReadAndWrittenBack() throws IOException, ConfigProblem {
+        var file = write(Files.readString(EXAMPLE).replace(CAR, CAR + ", \"tripSurchargePct\": 22.5"));
+        var config = new ConfigFile(file).read();
+        assertThat(config.system().car()).isEqualTo(new Car(60, 18, 40, new Percent(22.5)));
+
+        var copy = new ConfigFile(folder.resolve("copy.json"));
+        copy.write(config);
+        assertThat(Files.readString(folder.resolve("copy.json"))).contains("\"tripSurchargePct\"");
+        assertThat(copy.read().system().car().tripSurcharge()).isEqualTo(new Percent(22.5));
+    }
+
+    /** A config file from before trips existed must keep working, and the app versions from then read ours. */
+    @Test
+    void theStandardTripSurchargeIsLeftOutOfTheFile() throws IOException, ConfigProblem {
+        var config = new ConfigFile(EXAMPLE).read();
+        assertThat(config.system().car().tripSurcharge()).isEqualTo(new Percent(15));
+
+        var copy = new ConfigFile(folder.resolve("copy.json"));
+        copy.write(config);
+        assertThat(Files.readString(folder.resolve("copy.json"))).doesNotContain("tripSurcharge");
+        assertThat(copy.read().system().car().tripSurcharge()).isEqualTo(new Percent(15));
     }
 
     @Test

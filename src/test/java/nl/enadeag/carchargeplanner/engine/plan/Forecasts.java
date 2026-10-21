@@ -57,8 +57,13 @@ final class Forecasts {
     }
 
     private static HomeSystem system(double kmPerDay, Phases phases) {
-        return new HomeSystem(new Coordinates(51.0, 5.0), TZ, List.of(PANELS), new House(0.6),
-                new Car(70, 18, kmPerDay), new Charger(phases, 6, 32, 230, 0.90));
+        return withCar(new Car(70, 18, kmPerDay), phases);
+    }
+
+    /** The example's roof, house and charger with another car. */
+    static HomeSystem withCar(Car car, Phases phases) {
+        return new HomeSystem(new Coordinates(51.0, 5.0), TZ, List.of(PANELS), new House(0.6), car,
+                new Charger(phases, 6, 32, 230, 0.90));
     }
 
     static Instant at(LocalDate day, int hour) {
