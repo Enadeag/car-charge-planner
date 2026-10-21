@@ -61,6 +61,31 @@ A span of time on specific days, entered on the dashboard, when the car is not a
 _Avoid_: Away day, absence, trip
 _Dutch_: afwezig
 
+**Trip**:
+A drive from home and back, with a departure, a return and a distance, for which the battery must hold enough energy before the departure. The car is away from the departure to the return. Entered by hand on the dashboard or read from the calendar.
+_Avoid_: Journey, ride, away period (which has no distance)
+_Dutch_: rit
+
+**Departure**:
+The moment the car leaves on a trip; the energy for the trip must be in the battery by then.
+_Avoid_: Deadline, start
+_Dutch_: vertrek
+
+**Trip surcharge**:
+The share added to the average consumption for the energy of a trip, as long drives use more (15% unless the owner changes it).
+_Avoid_: Margin, buffer
+_Dutch_: ritopslag
+
+**Other driving**:
+The short drives that are not trips, such as shopping, as a distance per day; trips come on top of it.
+_Avoid_: Daily distance, average distance
+_Dutch_: overige rijafstand
+
+**Charging hours**:
+The hours in which the owner can start a charge (07:00–22:00 unless the owner changes it). A grid charge starts within them and may run on after them.
+_Avoid_: Awake hours, charge times
+_Dutch_: laaduren
+
 **Battery level**:
 How full the car's battery is, in percent, as the car shows it.
 _Avoid_: State of charge, SoC, charge
