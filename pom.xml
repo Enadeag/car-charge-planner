@@ -647,6 +647,7 @@
                     <param>nl.enadeag.carchargeplanner.desktop.app.Units*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.dashboard.PopupPlacement*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.dashboard.advice.GridAdviceMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayCheck*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayMapper*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryMapper*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryModel*</param>

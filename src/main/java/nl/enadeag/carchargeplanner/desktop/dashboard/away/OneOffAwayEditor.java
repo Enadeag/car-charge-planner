@@ -11,11 +11,8 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.time.format.ResolverStyle;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import java.util.function.Consumer;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -35,9 +32,6 @@ import javafx.scene.layout.VBox;
  */
 final class OneOffAwayEditor extends VBox {
 
-    /** Both of the app's languages write a time on a 24-hour clock; a leading zero may be left out. */
-    private static final DateTimeFormatter TYPED = DateTimeFormatter.ofPattern("H:mm", Locale.ROOT)
-            .withResolverStyle(ResolverStyle.STRICT);
     private static final DateTimeFormatter SHOWN = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
     private static final LocalTime FIRST_START = LocalTime.of(9, 0);
     private static final LocalTime FIRST_END = LocalTime.of(17, 0);
@@ -52,9 +46,8 @@ final class OneOffAwayEditor extends VBox {
     private final TextField to = new TextField();
     private final HBox times;
     private final Label problem = Labels.paragraph("", "field-problem");
-    private LocalDate day = LocalDate.EPOCH;
-    private ZoneId zone = ZoneId.of("UTC");
-    private InstantSource clock = InstantSource.fixed(Instant.EPOCH);
+    private OneOffAwayCheck check = new OneOffAwayCheck(LocalDate.EPOCH, ZoneId.of("UTC"),
+            InstantSource.fixed(Instant.EPOCH));
 
     /**
      * Makes the entry, empty until {@link #prepare}.
@@ -132,9 +125,7 @@ final class OneOffAwayEditor extends VBox {
      *     plan shown was made earlier
      */
     void prepare(LocalDate day, ZoneId zone, InstantSource clock) {
-        this.day = day;
-        this.zone = zone;
-        this.clock = clock;
+        check = new OneOffAwayCheck(day, zone, clock);
         wholeDay.setSelected(true);
         from.setText(SHOWN.format(FIRST_START));
         to.setText(SHOWN.format(FIRST_END));
@@ -144,13 +135,13 @@ final class OneOffAwayEditor extends VBox {
 
     /** Saves the period as entered, or says why it cannot be saved. */
     void save() {
-        switch (check()) {
-            case Checked.Valid(var period) -> {
+        switch (checked()) {
+            case OneOffAwayCheck.Checked.Valid(var period) -> {
                 showProblem("");
                 saved.accept(period);
                 closed.run();
             }
-            case Checked.Refused(var why) -> {
+            case OneOffAwayCheck.Checked.Refused(var why) -> {
                 showProblem(messages.text(why));
                 ScreenReader.focus(partOfDay.isSelected() ? from : wholeDay);
             }
@@ -179,36 +170,8 @@ final class OneOffAwayEditor extends VBox {
     }
 
     /** The period as entered, or why it cannot be saved; changes nothing on screen. */
-    private Checked check() {
-        if (wholeDay.isSelected()) {
-            return notPassed(OneOffAwayPeriod.allDay(day, zone));
-        }
-        var start = time(from);
-        var end = time(to);
-        if (start.isEmpty() || end.isEmpty()) {
-            return new Checked.Refused(TextKey.PROBLEM_NOT_A_TIME);
-        }
-        OneOffAwayPeriod period;
-        try {
-            period = OneOffAwayPeriod.on(day, start.get(), end.get(), zone);
-        } catch (IllegalArgumentException _) {
-            // also when the clock is put forward between the two times, so both are the same moment
-            return new Checked.Refused(TextKey.ONE_OFF_END_BEFORE_START);
-        }
-        return notPassed(period);
-    }
-
-    private Checked notPassed(OneOffAwayPeriod period) {
-        return period.end().isAfter(clock.instant()) ? new Checked.Valid(period)
-                : new Checked.Refused(TextKey.ONE_OFF_PASSED);
-    }
-
-    private static Optional<LocalTime> time(TextField field) {
-        try {
-            return Optional.of(LocalTime.parse(field.getText().strip(), TYPED));
-        } catch (DateTimeParseException _) {
-            return Optional.empty();
-        }
+    private OneOffAwayCheck.Checked checked() {
+        return wholeDay.isSelected() ? check.wholeDay() : check.partOfDay(from.getText(), to.getText());
     }
 
     private void syncTimesToChoice() {
@@ -224,17 +187,5 @@ final class OneOffAwayEditor extends VBox {
         problem.setManaged(!text.isEmpty());
         List.of(from, to, wholeDay, partOfDay).forEach(node -> node.setAccessibleHelp(text));
         resized.run();
-    }
-
-    /** What the entry holds: a period that can be saved, or why it cannot. */
-    private sealed interface Checked {
-
-        /** A period that can be saved. */
-        record Valid(OneOffAwayPeriod period) implements Checked {
-        }
-
-        /** Why the entered period cannot be saved. */
-        record Refused(TextKey why) implements Checked {
-        }
     }
 }
