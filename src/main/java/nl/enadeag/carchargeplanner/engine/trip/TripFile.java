@@ -21,7 +21,8 @@ import tools.jackson.databind.node.ObjectNode;
 /**
  * The trips the owner entered, in a JSON file the engine keeps:
  * {@code {"version": 1, "trips": [{"departure": "2026-07-04T06:00:00Z", "return": "2026-07-04T18:00:00Z",
- * "distanceKm": 300, "canChargeAtDestination": false}]}}, where a file without a version is version 1. A trip is
+ * "distanceKm": 300, "canChargeAtDestination": false}]}}, where a file without a version is version 1, and a trip the
+ * owner makes without this car has {@code "notWithThisCar": true}, which is left out otherwise. A trip is
  * kept until a day after its return; an older one is left out when the file is read, and dropped from it at the next
  * change. A file that is missing or cannot be used holds none, and a damaged entry is left out, so a bad file never
  * stops planning. But nothing is added to, changed in or removed from such a file: that would lose what it holds, so
@@ -157,11 +158,16 @@ public final class TripFile {
         public ObjectNode write(Entries entries) {
             var body = StoredJson.object();
             var rows = body.putArray("trips");
-            entries.trips().forEach(trip -> rows.addObject()
-                    .put("departure", trip.departure().toString())
-                    .put("return", trip.returnTime().toString())
-                    .put("distanceKm", trip.distanceKm())
-                    .put("canChargeAtDestination", trip.canChargeAtDestination()));
+            entries.trips().forEach(trip -> {
+                var row = rows.addObject()
+                        .put("departure", trip.departure().toString())
+                        .put("return", trip.returnTime().toString())
+                        .put("distanceKm", trip.distanceKm())
+                        .put("canChargeAtDestination", trip.canChargeAtDestination());
+                if (trip.notWithThisCar()) {
+                    row.put("notWithThisCar", true);
+                }
+            });
             return VERSION.stamped(body);
         }
 
@@ -170,12 +176,14 @@ public final class TripFile {
             var back = row.path("return");
             var distance = row.path("distanceKm");
             var canCharge = row.path("canChargeAtDestination");
-            if (!departure.isString() || !back.isString() || !distance.isNumber() || !canCharge.isBoolean()) {
+            var notWithThisCar = row.path("notWithThisCar");
+            if (!departure.isString() || !back.isString() || !distance.isNumber() || !canCharge.isBoolean()
+                    || !(notWithThisCar.isMissingNode() || notWithThisCar.isBoolean())) {
                 return Optional.empty();
             }
             try {
                 return Optional.of(new Trip(Instant.parse(departure.stringValue()), Instant.parse(back.stringValue()),
-                        distance.doubleValue(), canCharge.booleanValue()));
+                        distance.doubleValue(), canCharge.booleanValue(), notWithThisCar.asBoolean(false)));
             } catch (DateTimeException | IllegalArgumentException _) {
                 return Optional.empty();
             }

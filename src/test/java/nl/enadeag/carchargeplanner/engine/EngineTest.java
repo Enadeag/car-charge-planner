@@ -845,6 +845,20 @@ class EngineTest {
     }
 
     @Test
+    void aTripNotWithThisCarIsKeptButLeavesThePlanAsAtHome() throws IOException {
+        var engine = engine(clockAt(7));
+        var atHome = planned(engine);
+        var trip = new Trip(DAY.atTime(9, 0).atZone(BRUSSELS).toInstant(),
+                DAY.plusDays(1).atTime(17, 0).atZone(BRUSSELS).toInstant(), 300, false, true);
+
+        assertThat(engine.addTrip(trip)).containsExactly(trip);
+
+        var planned = planned(engine);
+        assertThat(planned.days()).isEqualTo(atHome.days());
+        assertThat(planned.tripAdvice()).isEmpty();
+    }
+
+    @Test
     void aChangedTripTakesThePlaceOfTheOldOne() throws IOException {
         var engine = engine(clockAt(7));
         var atHome = planned(engine).days();
