@@ -249,6 +249,71 @@ class OutlookMapperTest {
                 .containsExactly("Trip tomorrow at 08:15, 100 mi there and back.");
     }
 
+    /** Saturday from 08:30 to Monday 19:00, 300 km; and one the owner makes without this car on Tuesday. */
+    private static final Trip LONG_TRIP = new Trip(at(TODAY.plusDays(1), 8, 30), at(TODAY.plusDays(3), 19, 0), 300,
+            false);
+    private static final Trip OTHER_CAR = new Trip(at(TODAY.plusDays(4), 8, 0), at(TODAY.plusDays(4), 18, 0), 200,
+            false, true);
+
+    /** Today with a window, Saturday the trip leaves after charging or not, Sunday to Tuesday without windows. */
+    private static DashboardModel.Plan withTrip(Messages messages, double saturdayAfterPct) {
+        var saturday = new DayPlan(TODAY.plusDays(1), new Percent(94), List.of(), new Percent(saturdayAfterPct),
+                new Percent(32), 70, List.of());
+        var days = List.of(day(TODAY, window(TODAY, 11, 14, 0)), saturday,
+                new DayPlan(TODAY.plusDays(2), new Percent(32), List.of(), new Percent(32), new Percent(32), 0,
+                        List.of()),
+                new DayPlan(TODAY.plusDays(3), new Percent(32), List.of(), new Percent(32), new Percent(32), 0,
+                        List.of()),
+                new DayPlan(TODAY.plusDays(4), new Percent(32), List.of(), new Percent(32), new Percent(20), 12,
+                        List.of()));
+        var advice = new TripAdvice(LONG_TRIP, new Percent(94), List.of(), new Percent(94), Optional.empty(),
+                new Percent(94), 0, new Percent(42));
+        var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, days, new Percent(50), false, Optional.empty(),
+                List.of(advice), fresh(), 0.4, new Percent(30), new Percent(80));
+        return (DashboardModel.Plan) new OutlookMapper(messages).map(planned, List.of(), List.of(LONG_TRIP, OTHER_CAR),
+                Units.METRIC);
+    }
+
+    @Test
+    void theDayATripLeavesShowsTheLevelItLeavesAndDoesNotSayTheCarNeedsNoCharging() {
+        var saturday = withTrip(new Messages(Language.ENGLISH), 94).days().get(1);
+
+        assertThat(saturday.chips()).containsExactly(
+                new ChipModel(EnergySource.CAR, "Battery 94 → 32% after the trip"));
+        assertThat(saturday.note()).isEmpty();
+        assertThat(saturday.spoken()).isEqualTo("Tomorrow: no charge window.");
+        assertThat(saturday.battery().levels()).isEqualTo("94 → 32% after the trip");
+        assertThat(saturday.battery().spoken())
+                .endsWith("After the trip the battery is at 32% at the end of the day.");
+    }
+
+    @Test
+    void theDayATripLeavesAfterACharge() {
+        var english = withTrip(new Messages(Language.ENGLISH), 100).days().get(1);
+        var dutch = withTrip(new Messages(Language.DUTCH), 100).days().get(1);
+
+        assertThat(english.chips()).extracting(ChipModel::text).containsExactly("Battery 94 → 100%, 32% after the trip");
+        assertThat(english.battery().levels()).isEqualTo("94 → 100%, 32% after the trip");
+        assertThat(dutch.chips()).extracting(ChipModel::text).containsExactly("Accu 94 → 100%, 32% na de rit");
+        assertThat(dutch.battery().levels()).isEqualTo("94 → 100%, 32% na de rit");
+        assertThat(dutch.battery().spoken()).endsWith("Na de rit staat de accu aan het eind van de dag op 32%.");
+    }
+
+    @Test
+    void theDaysTheCarIsAwayOnATripSaySoAndATripWithoutThisCarDoesNot() {
+        var english = withTrip(new Messages(Language.ENGLISH), 94).days();
+        var dutch = withTrip(new Messages(Language.DUTCH), 94).days();
+
+        assertThat(english.subList(2, 4)).extracting(DayModel::note).containsOnly(
+                "The car is away on a trip, or there is too little solar power while it is home.");
+        assertThat(dutch.get(2).note())
+                .isEqualTo("De auto is weg voor een rit, of er is te weinig zonnestroom terwijl hij thuis is.");
+        assertThat(english.get(4).note()).isEqualTo("The car needs no charging, or there is too little solar power "
+                + "for it.");
+        assertThat(english.get(4).chips()).extracting(ChipModel::text).containsExactly("Battery 32 → 32%");
+        assertThat(english.get(0).chips()).extracting(ChipModel::text).contains("Battery 50 → 74%");
+    }
+
     @Test
     void withoutGridAdviceThereIsNone() {
         assertThat(plan(day(TODAY)).advice()).isEmpty();

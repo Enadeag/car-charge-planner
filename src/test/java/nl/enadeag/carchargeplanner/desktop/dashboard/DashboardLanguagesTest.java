@@ -81,14 +81,17 @@ class DashboardLanguagesTest {
     }
 
     /**
-     * Every kind of day: one with two windows and grid energy, one that needs the grid charge, one without a window;
+     * Every kind of day: one with two windows and grid energy, one that needs the grid charge and that a trip leaves on
+     * after a charge, one without a window;
      * and the advice for tomorrow's trip with its longest texts: solar power, a grid charge outside the charging hours
      * and a charging stop.
      */
     private static Outlook.Planned planned() {
         var today = new DayPlan(TODAY, new Percent(50), List.of(new Window(at(TODAY, 10), at(TODAY, 13), 10, 2.3, 7.3, 0.6),
                 new Window(at(TODAY, 14), at(TODAY, 15), 8, 1.8, 1.8, 0)), new Percent(74), new Percent(62), 12, sunny(TODAY));
-        var tomorrow = new DayPlan(TODAY.plusDays(1), new Percent(62), List.of(), new Percent(62), new Percent(22), 12, sunny(TODAY.plusDays(1)));
+        // tomorrow a trip leaves after a charge: the longest battery chip and levels
+        var tomorrow = new DayPlan(TODAY.plusDays(1), new Percent(62), List.of(), new Percent(100), new Percent(22), 12,
+                sunny(TODAY.plusDays(1)));
         var friday = new DayPlan(TODAY.plusDays(2), new Percent(22), List.of(), new Percent(22), new Percent(10), 12, List.of());
         var night = new Window(at(TODAY, 22), at(TODAY.plusDays(1), 4), 16, 3.7, 0, 11.0);
         var source = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)",

@@ -55,6 +55,13 @@ public enum TextKey {
     BATTERY_HEADING,
     /** The battery's levels: {0} at the start, {1} after charging, in %. */
     BATTERY_LEVELS,
+    /** The battery's levels on a day a trip leaves without charging first: {0} at the start, {1} at the end, in %. */
+    BATTERY_LEVELS_TRIP,
+    /**
+     * The battery's levels on a day a trip leaves: {0} at the start, {1} after charging, {2} at the end after the
+     * trip, in %.
+     */
+    BATTERY_LEVELS_CHARGE_TRIP,
     /** The label of the minimum charge level's mark: {0} the minimum, a number of percent without the sign. */
     BATTERY_MINIMUM,
     /** The label of the target charge level's mark: {0} the target, a number of percent without the sign. */
@@ -63,6 +70,8 @@ public enum TextKey {
     BATTERY_SPOKEN_TODAY,
     /** Another day's battery in words: {0} at its start, {1} the day, {2} after charging, {3} the minimum, {4} the target. */
     BATTERY_SPOKEN_DAY,
+    /** Added to the battery in words on a day a trip leaves: {0} the level at the end of the day, in %. */
+    BATTERY_SPOKEN_AFTER_TRIP,
     /** Added to today's battery in words while its level is assumed. */
     BATTERY_ASSUMED,
     /** The button that opens the battery level's entry. */
@@ -294,8 +303,17 @@ public enum TextKey {
     DAY_NONE,
     /** Why a day has no window. */
     DAY_NONE_WHY,
+    /** Why a day the car is away on a trip, but does not leave on one, has no window. */
+    DAY_NONE_TRIP,
     /** The battery chip: {0} the level at the start of the day, {1} after charging, both in %. */
     DAY_BATTERY,
+    /** The battery chip on a day a trip leaves without charging first: {0} the level at its start, {1} at its end. */
+    DAY_BATTERY_TRIP,
+    /**
+     * The battery chip on a day a trip leaves: {0} the level at its start, {1} after charging, {2} at its end after
+     * the trip, all in %.
+     */
+    DAY_BATTERY_CHARGE_TRIP,
     /** A later window of the same day: {0} its times, {1} the current in A. */
     DAY_LATER_WINDOW,
     /** The later windows of the same day: {0} the windows, separated by commas. */
