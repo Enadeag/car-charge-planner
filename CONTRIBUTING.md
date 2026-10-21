@@ -142,18 +142,18 @@ The Flatpak ([ADR 0008](docs/adr/0008-flatpak.md)) is built from source by flatp
 To build and try it, with `flatpak-builder` installed and Flathub added as a remote:
 
 ```bash
-flatpak install --user flathub org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08 org.freedesktop.Sdk.Extension.openjdk25//25.08
-flatpak-builder --user --install --force-clean build-dir src/packaging/flatpak/io.github.enadeag.CarChargePlanner.yml
-flatpak run io.github.enadeag.CarChargePlanner
+flatpak install --user flathub org.freedesktop.Platform//26.08 org.freedesktop.Sdk//26.08 org.freedesktop.Sdk.Extension.openjdk25//26.08
+flatpak-builder --user --install --force-clean build-dir src/packaging/flatpak/io.github.enadeag.car_charge_planner.CarChargePlanner.yml
+flatpak run io.github.enadeag.car_charge_planner.CarChargePlanner
 ```
 
-`flatpak run --command=car-charge-planner io.github.enadeag.CarChargePlanner quit` runs a command in the sandbox. In the sandbox the settings and data are in `~/.var/app/io.github.enadeag.CarChargePlanner/`, not in `~/.config` and `~/.local/share`.
+`flatpak run --command=car-charge-planner io.github.enadeag.car_charge_planner.CarChargePlanner quit` runs a command in the sandbox. In the sandbox the settings and data are in `~/.var/app/io.github.enadeag.car_charge_planner.CarChargePlanner/`, not in `~/.config` and `~/.local/share`.
 
 **The Maven sources.** flatpak-builder cannot download during the build, so `maven-sources.json` lists every file the Maven build needs (the libraries, the plugins and what they need) with its address on Maven Central and its SHA-256. After a change to `pom.xml`, the Maven version in `.mvn/wrapper/maven-wrapper.properties` or the Maven build in `tools/package-flatpak.sh`, make it again and commit it: `sh tools/flatpak-maven-sources.sh` (it builds the app once, online, into an empty Maven repository, and fails on a file whose SHA-1 is not the one Maven Central publishes). A new Maven or JavaFX version needs its address and checksum in the manifest too; `FlatpakPackagingTest` checks them against the wrapper and `tools/package-linux.sh`.
 
 **The permissions** (`finish-args`) are only what the app uses, each with its reason in the manifest; `FlatpakPackagingTest` fails on any other, so a new one is a deliberate change to the test, the manifest and ADR 0008.
 
-**The app ID** `io.github.enadeag.CarChargePlanner` is provisional. Changing it changes:
+**The app ID** `io.github.enadeag.car_charge_planner.CarChargePlanner` is Flathub's form for an app on GitHub: `io.github.<user>.<repository>.<name>`, with the repository's dashes as underscores; Flathub checks that the repository exists. Changing it changes:
 
 - `AppName.FLATPAK_ID` in `src/main/java/nl/enadeag/carchargeplanner/host/AppName.java`: the notifications' menu entry and the shared runtime folder in the sandbox;
 - the names of the manifest, the metadata and the menu entry in `src/packaging/flatpak/`, and inside them the manifest's `id:` and its comment, the metadata's `<id>` and `<launchable>`, and the menu entry's `Icon=`;

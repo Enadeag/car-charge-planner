@@ -2,7 +2,7 @@
 <!-- The app's AppStream metadata for Flathub and the software centres (docs/adr/0008-flatpak.md). Each release adds
      a <release> on top, with the version and date of its CHANGELOG.md section (PackagingTest checks them). -->
 <component type="desktop-application">
-  <id>io.github.enadeag.CarChargePlanner</id>
+  <id>io.github.enadeag.car_charge_planner.CarChargePlanner</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
 
@@ -39,7 +39,7 @@
     </p>
   </description>
 
-  <launchable type="desktop-id">io.github.enadeag.CarChargePlanner.desktop</launchable>
+  <launchable type="desktop-id">io.github.enadeag.car_charge_planner.CarChargePlanner.desktop</launchable>
   <provides>
     <binary>car-charge-planner</binary>
   </provides>

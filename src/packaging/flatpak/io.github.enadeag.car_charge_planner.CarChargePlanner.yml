@@ -1,8 +1,8 @@
 # The Flatpak of Car charge planner (docs/adr/0008-flatpak.md). Build and run it locally (CONTRIBUTING.md, Flatpak):
-#   flatpak-builder --user --install --force-clean build-dir src/packaging/flatpak/io.github.enadeag.CarChargePlanner.yml
-#   flatpak run io.github.enadeag.CarChargePlanner
-# The app ID is provisional until the app is on Flathub; CONTRIBUTING.md lists every place it appears.
-id: io.github.enadeag.CarChargePlanner
+#   flatpak-builder --user --install --force-clean build-dir src/packaging/flatpak/io.github.enadeag.car_charge_planner.CarChargePlanner.yml
+#   flatpak run io.github.enadeag.car_charge_planner.CarChargePlanner
+# CONTRIBUTING.md lists every place the app ID appears.
+id: io.github.enadeag.car_charge_planner.CarChargePlanner
 runtime: org.freedesktop.Platform
 runtime-version: '26.08'
 sdk: org.freedesktop.Sdk
