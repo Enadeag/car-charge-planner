@@ -174,7 +174,13 @@ public final class Messages {
         return language.locale();
     }
 
-    private String weekday(LocalDate day) {
+    /**
+     * A day's weekday as it goes in the middle of a sentence, also for today and tomorrow.
+     *
+     * @param day the day to name
+     * @return the weekday as the language writes it there: "Sunday" in English, "zondag" in Dutch
+     */
+    public String weekday(LocalDate day) {
         return day.getDayOfWeek().getDisplayName(TextStyle.FULL, locale());
     }
 

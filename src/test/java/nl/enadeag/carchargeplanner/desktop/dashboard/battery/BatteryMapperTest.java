@@ -39,7 +39,8 @@ class BatteryMapperTest {
     void anEnteredLevelIsNotCalledAssumed() {
         var entered = planned(at(TODAY, 8, 12), false, day(TODAY, 50, 74, sunny(TODAY, 4.2)));
 
-        assertThat(new BatteryMapper(entered, ENGLISH).map(entered.days().getFirst()).spoken()).doesNotContain("assumed");
+        assertThat(new BatteryMapper(entered, ENGLISH).map(entered.days().getFirst()).spoken())
+                .isEqualTo("Car battery 50% now, 74% after charging; minimum 30%, target 80%.");
     }
 
     @Test

@@ -4,6 +4,7 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.advice.GridAdviceMapper;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayMapper;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayMapper;
+import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripAdviceMapper;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripMapper;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -58,7 +59,7 @@ public final class OutlookMapper {
      * @param away the stored away periods entered for specific days, in order of their start; may be empty, and those
      *     that ended before the plan was made are left out
      * @param trips the stored trips, in order of their departure; may be empty
-     * @param units the units the trips' distances are told in
+     * @param units the units the trips' distances are told in, in their list and their advice
      * @return a plan with its days, or why there is none when there is no plan or it has no days; only an outlook
      *     with a plan has a footer, also when the plan has no days, because only a plan has a forecast to credit
      */
@@ -112,11 +113,12 @@ public final class OutlookMapper {
 
     private DashboardModel.Plan plan(Outlook.Planned planned, List<OneOffAwayPeriod> away, List<Trip> trips,
             Units units) {
-        var days = new DayMapper(planned, messages).map(planned.days());
+        var days = new DayMapper(planned, trips, messages).map(planned.days());
+        var tripAdvice = new TripAdviceMapper(planned, units, messages).map(planned.tripAdvice());
         var advice = planned.gridAdvice().map(new GridAdviceMapper(planned, messages)::map);
         var coming = new OneOffAwayMapper(planned.zone(), planned.madeAt(), messages).map(away);
         var entered = new TripMapper(planned.zone(), planned.madeAt(), units, messages).map(trips);
-        return new DashboardModel.Plan(days, advice, coming, entered, footer(planned));
+        return new DashboardModel.Plan(days, tripAdvice, advice, coming, entered, footer(planned));
     }
 
     /**

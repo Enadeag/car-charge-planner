@@ -29,7 +29,7 @@ When the app is started hidden at login, set-up does not open by itself; one not
 - Right-click the icon for **Open dashboard**, **Settings…** (**Set up…** until the app is set up), **About…** and **Quit**.
 - A desktop notification comes a few minutes before each charge window (the lead time is a setting), once per window. Clicking it opens the dashboard. On Linux notifications go straight to the desktop's notification service over D-Bus, so they work with or without a tray; on Windows they come from the tray icon.
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/java/dashboard-trip-dark.png"><img alt="Two dashboards on a day with a trip: the trip with its choices, and a new trip being entered." src="screenshots/java/dashboard-trip-light.png" width="600"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/java/dashboard-trip-dark.png"><img alt="Two dashboards on a day with a trip: the advice for the trip, with its solar and grid parts, the start and the charge limit, and the trip with its choices; and a new trip being entered." src="screenshots/java/dashboard-trip-light.png" width="600"></picture>
 
 ## Settings
 
