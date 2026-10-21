@@ -624,6 +624,18 @@
     -fx-min-width: 4.5em;
 }
 
+/* as wide as a number field with its unit, so the first time lines up with the numbers above it */
+.time-span-input {
+    -fx-alignment: center-left;
+    -fx-spacing: 0.5em;
+    -fx-min-width: 14.4em;
+    -fx-pref-width: 14.4em;
+}
+
+.time-span-word {
+    -fx-text-fill: -fg;
+}
+
 /* Set-up: the step and its progress above, the step's page (Settings' cards) in the middle, Back and Next below */
 .set-up-header {
     -fx-background-color: -ground;

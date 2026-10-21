@@ -28,11 +28,13 @@ import tools.jackson.databind.node.ObjectNode;
 
 /**
  * The JSON shape of {@code engine.json}, read and written side by side, as {@code docs/example-engine.json} shows it.
- * Every value must be given, except the {@code away} and {@code typical} sections and the car's
- * {@code tripSurchargePct}, which is the {@link Car#STANDARD_TRIP_SURCHARGE} when it is not and is written only when it
- * differs; a name the shape does not have is refused. Percentages, charger phases and provider ids are plain numbers and texts; an empty fallback means none; a
- * weekday is its English name in any case and a time is {@code "HH:mm"}; a typical value is its {@link ConfigSetting}'s
- * name. The file's {@code version} is 1; a file without one is read as version 1.
+ * Every value must be given, except the {@code away} and {@code typical} sections, the car's {@code tripSurchargePct},
+ * which is the {@link Car#STANDARD_TRIP_SURCHARGE} when it is not, and the planning's {@code chargingHours}, such as
+ * {@code {"start": "06:30", "end": "23:00"}}, which are the {@link ChargingHours#STANDARD} when they are not; these two
+ * are written only when they differ from the standard, so the app versions from before them still read the file. A
+ * name the shape does not have is refused. Percentages, charger phases and provider ids are plain numbers and texts;
+ * an empty fallback means none; a weekday is its English name in any case and a time is {@code "HH:mm"}; a typical
+ * value is its {@link ConfigSetting}'s name. The file's {@code version} is 1; a file without one is read as version 1.
  */
 final class ConfigFormat implements FileFormat<EngineConfig> {
 
@@ -78,13 +80,19 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
         var file = StoredJson.object();
         writeSystem(file.putObject("system"), config.system());
         var planning = config.planning();
-        file.putObject("planning")
+        var planningNode = file.putObject("planning")
                 .put("minimumPct", planning.minimumPct().value())
                 .put("targetPct", planning.targetPct().value())
                 .put("margin", planning.margin())
                 .put("importToleranceKwh", planning.importToleranceKwh())
                 .put("minWindowMinutes", planning.minWindow().toMinutes())
                 .put("notifyLeadMinutes", planning.notifyLead().toMinutes());
+        // left out at the standard, so the app versions from before charging hours can still read the file
+        if (!planning.chargingHours().equals(ChargingHours.STANDARD)) {
+            planningNode.putObject("chargingHours")
+                    .put("start", TIME.format(planning.chargingHours().start()))
+                    .put("end", TIME.format(planning.chargingHours().end()));
+        }
         writeForecast(file.putObject("forecast"), config.forecast());
         var weekly = file.putObject("away").putArray("recurring");
         config.away().weekly().forEach(period -> weekly.addObject()
@@ -167,15 +175,24 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
 
     private static PlanningPreferences planning(ConfigFields planning) throws FormatProblem {
         planning.only("minimumPct", "targetPct", "margin", "importToleranceKwh", "minWindowMinutes",
-                "notifyLeadMinutes");
+                "notifyLeadMinutes", "chargingHours");
         var minimum = percent(planning, "minimumPct");
         var target = percent(planning, "targetPct");
         double margin = planning.number("margin");
         double importTolerance = planning.number("importToleranceKwh");
         var minWindow = Duration.ofMinutes(planning.wholeNumber("minWindowMinutes"));
         var notifyLead = Duration.ofMinutes(planning.wholeNumber("notifyLeadMinutes"));
+        var hours = planning.has("chargingHours") ? chargingHours(planning.object("chargingHours"))
+                : ChargingHours.STANDARD;
         return planning.make(() -> new PlanningPreferences(minimum, target, margin, importTolerance, minWindow,
-                notifyLead));
+                notifyLead, hours));
+    }
+
+    private static ChargingHours chargingHours(ConfigFields hours) throws FormatProblem {
+        hours.only("start", "end");
+        var start = time(hours, "start");
+        var end = time(hours, "end");
+        return hours.make(() -> new ChargingHours(start, end));
     }
 
     private static Percent percent(ConfigFields fields, String name) throws FormatProblem {

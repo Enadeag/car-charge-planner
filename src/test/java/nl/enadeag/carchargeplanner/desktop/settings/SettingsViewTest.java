@@ -13,6 +13,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SaveOutcome;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.engine.config.ChargingHours;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.PlanningPreferences;
@@ -24,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import javafx.scene.control.CheckBox;
@@ -114,6 +116,66 @@ class SettingsViewTest {
         assertThat(storedPlanning().margin()).isEqualTo(0.8571428);
         assertThat(storedPlanning().importToleranceKwh()).isEqualTo(0.123456);
         assertThat(storedPlanning().notifyLead()).isEqualTo(Duration.ofMinutes(30));
+    }
+
+    @Test
+    void chargingHoursThatSpanMidnightAreSaved() throws Exception {
+        var view = settings.open();
+
+        boolean saved = Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_CHARGING_HOURS, "20:30");
+            settings.type(view, TextKey.CHARGING_HOURS_END_FIELD, " 01:00");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(saved).isTrue();
+        assertThat(storedPlanning()).isEqualTo(PlanningPreferences.RECOMMENDED
+                .withChargingHours(new ChargingHours(LocalTime.of(20, 30), LocalTime.of(1, 0))));
+    }
+
+    @Test
+    void theChargingHoursShowWhatTheFileHolds() throws Exception {
+        Files.writeString(settings.configPath, Files.readString(settings.configPath).replace(
+                "\"notifyLeadMinutes\": 15", "\"notifyLeadMinutes\": 15, \"chargingHours\": {\"start\": \"06:15\", \"end\": \"23:00\"}"));
+        var view = settings.open();
+
+        assertThat(Fx.call(() -> ((TextInputControl) settings.field(view, TextKey.FIELD_CHARGING_HOURS)).getText()))
+                .isEqualTo("06:15");
+        assertThat(Fx.call(() -> ((TextInputControl) settings.field(view, TextKey.CHARGING_HOURS_END_FIELD))
+                .getText())).isEqualTo("23:00");
+        assertThat(Fx.call(view::isChanged)).isFalse();
+    }
+
+    @Test
+    void aChargingHourThatIsNotATimeIsShownAtTheChargingHoursAndNothingIsWritten() throws Exception {
+        var original = Files.readString(settings.configPath);
+        var view = settings.open();
+
+        var outcome = Fx.call(() -> {
+            settings.type(view, TextKey.CHARGING_HOURS_END_FIELD, "10 pm");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(outcome).isFalse();
+        assertThat(settings.configPath).hasContent(original);
+        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_CHARGING_HOURS).getAccessibleHelp()))
+                .startsWith(settings.messages.text(TextKey.PROBLEM_NOT_A_TIME));
+    }
+
+    @Test
+    void chargingHoursThatEndAtTheirStartAreShownAtTheChargingHoursAndNothingIsWritten() throws Exception {
+        var original = Files.readString(settings.configPath);
+        var view = settings.open();
+
+        var outcome = Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_CHARGING_HOURS, "22:00");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(outcome).isFalse();
+        assertThat(settings.configPath).hasContent(original);
+        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_CHARGING_HOURS).getAccessibleHelp()))
+                .startsWith(settings.messages.text(TextKey.PROBLEM_SAME_AS_START));
     }
 
     @Test

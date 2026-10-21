@@ -52,5 +52,7 @@ public enum ConfigSetting {
     /** The shortest charge window. */
     MINIMUM_WINDOW,
     /** How long before a charge window the owner is told. */
-    NOTIFY_LEAD
+    NOTIFY_LEAD,
+    /** The hours in which the owner can start a charge. */
+    CHARGING_HOURS
 }

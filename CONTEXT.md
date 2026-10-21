@@ -82,7 +82,7 @@ _Avoid_: Daily distance, average distance
 _Dutch_: overige rijafstand
 
 **Charging hours**:
-The hours in which the owner can start a charge (07:00–22:00 unless the owner changes it). A grid charge starts within them and may run on after them.
+The hours in which the owner can start a charge (07:00–22:00 unless the owner changes it), both ends included; they may span midnight, such as 20:00–02:00. A grid charge starts within them and may run on after them.
 _Avoid_: Awake hours, charge times
 _Dutch_: laaduren
 
@@ -159,7 +159,7 @@ _Avoid_: Default, assumed value, guess
 _Dutch_: gangbare waarde
 
 **Planning preferences**:
-The owner's choices about how the plan is made: the minimum and target charge level, the planning margin, the import tolerance, the minimum window length and the notification lead time. Kept by the engine beside the description of the system; never a typical value.
+The owner's choices about how the plan is made: the minimum and target charge level, the planning margin, the import tolerance, the minimum window length, the notification lead time and the charging hours. Kept by the engine beside the description of the system; never a typical value.
 _Avoid_: Planning settings, options
 _Dutch_: planning
 

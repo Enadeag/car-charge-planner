@@ -363,6 +363,14 @@ public enum TextKey {
     FIELD_MIN_WINDOW,
     /** What the minimum window length does. */
     FIELD_MIN_WINDOW_HINT,
+    /** The charging hours' name, which their first time completes. */
+    FIELD_CHARGING_HOURS,
+    /** What the charging hours do. */
+    FIELD_CHARGING_HOURS_HINT,
+    /** The word between the two times of the charging hours. */
+    CHARGING_HOURS_AND,
+    /** What a screen reader calls the end of the charging hours. */
+    CHARGING_HOURS_END_FIELD,
     /** The title of the card with the notification lead time. */
     CARD_NOTIFICATIONS,
     /** What notifications do. */
@@ -604,6 +612,8 @@ public enum TextKey {
     PROBLEM_SAME_AS_PRIMARY,
     /** An away period that does not end after it starts. */
     PROBLEM_NOT_AFTER_START,
+    /** Charging hours that end at the time they start. */
+    PROBLEM_SAME_AS_START,
     /** A time that is not a time. */
     PROBLEM_NOT_A_TIME,
     /** A required provider setting that is empty. */
