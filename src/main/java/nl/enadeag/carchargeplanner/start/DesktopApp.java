@@ -17,9 +17,11 @@ import nl.enadeag.carchargeplanner.desktop.settings.setup.SetUpWindow;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStores;
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.system.Notifications;
+import nl.enadeag.carchargeplanner.desktop.system.TextSize;
 import nl.enadeag.carchargeplanner.desktop.system.Tray;
 import nl.enadeag.carchargeplanner.desktop.text.AnnouncementTexts;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
+import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import nl.enadeag.carchargeplanner.engine.Engine;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
@@ -95,9 +97,12 @@ public final class DesktopApp {
     private record Windows(Dashboard dashboard, SettingsWindow settings, SetUpOffer setUpOffer) {
     }
 
-    /** JavaFX's preferences, which it hands out on its own thread only. */
+    /**
+     * JavaFX's preferences, which it hands out on its own thread only, and the system's text size, which JavaFX does
+     * not know.
+     */
     private record FxPreferences(ObservableValue<ColorScheme> system, ObservableValue<ColorScheme> windows,
-            ObservableValue<Boolean> reducedMotion) {
+            ObservableValue<Boolean> reducedMotion, ObservableValue<TextSize> textSize) {
     }
 
     /**
@@ -157,12 +162,15 @@ public final class DesktopApp {
 
         Platform.setImplicitExit(false);
         Platform.startup(() -> { });
+        var textSize = new SimpleObjectProperty<>(TextSize.NORMAL);
         var preferences = makeOnFx(() -> {
             var system = Platform.getPreferences().colorSchemeProperty();
             // the windows follow the owner's appearance; the tray icon follows the panel, so the system's scheme
             return new FxPreferences(system, Appearance.scheme(appearance, system),
-                    Platform.getPreferences().reducedMotionProperty());
+                    Platform.getPreferences().reducedMotionProperty(), textSize);
         });
+        // the size now reaches the JavaFX thread before the windows are made there
+        parts.textSize().follow(size -> Platform.runLater(() -> textSize.set(size)));
         var trayParts = parts.trayParts(preferences.system(), icon, language);
         var tray = trayParts.tray();
         var notifications = trayParts.notifications();
@@ -225,16 +233,18 @@ public final class DesktopApp {
         };
         var setUp = makeOnFx(() -> new SetUpWindow(stores, secretsPath, this::openLink, setUpFinished,
                 ZoneId.systemDefault(), new SetUpWindow.Looks(preferences.system(), appearance,
-                preferences.reducedMotion()), icon, AppName.TITLE, language, background));
+                preferences.reducedMotion(), preferences.textSize()), icon, AppName.TITLE, language, background));
         var facts = new AboutFacts(version(), configPath, appSettingsFile.path(), dataFolder,
                 AppLog.file(dataFolder), secretsPath);
         var settings = makeOnFx(() -> new SettingsWindow(stores, facts, this::openLink, saved, setUp::open,
-                preferences.windows(), icon, AppName.TITLE, language, background));
+                new WindowTheme(preferences.windows(), preferences.textSize()), icon, AppName.TITLE, language,
+                background));
         var setUpOffer = new SetUpOffer(setUp::open, settings::open, !commandLine.atLogin());
         var actions = new DashboardActions(changes::setBatteryLevel, changes::addAwayPeriod,
                 changes::removeAwayPeriod, () -> setUpOffer.openSettingsOrSetUp(Category.AWAY),
                 () -> setUpOffer.openSettingsOrSetUp(Category.SOLAR), setUp::open, this::quit);
-        var dashboard = makeOnFx(() -> new Dashboard(icon, AppName.TITLE, preferences.windows(),
+        var dashboard = makeOnFx(() -> new Dashboard(icon, AppName.TITLE,
+                new WindowTheme(preferences.windows(), preferences.textSize()),
                 preferences.reducedMotion(), Clock.systemUTC(), parts.taskbarHiding(), language, actions));
         dashboardMade.complete(dashboard);
         return new Windows(dashboard, settings, setUpOffer);

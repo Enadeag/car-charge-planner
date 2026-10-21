@@ -12,10 +12,12 @@ import nl.enadeag.carchargeplanner.desktop.settings.store.SaveOutcome;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStores;
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.system.StartAtLogin;
+import nl.enadeag.carchargeplanner.desktop.system.TextSize;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import nl.enadeag.carchargeplanner.engine.Engine;
 import nl.enadeag.carchargeplanner.engine.ManualScheduler;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
@@ -175,12 +177,19 @@ public final class SettingsFixture {
             saved++;
             chosen.language().ifPresentOrElse(language::choose, language::followSystem);
             appearance.set(chosen.appearance());
-        }, () -> { }, Appearance.scheme(appearance, system), new AppIcon(), AppName.TITLE, language, background));
+        }, () -> { }, Scenes.theme(Appearance.scheme(appearance, system)), new AppIcon(), AppName.TITLE, language, background));
     }
 
     /** The Settings window, hidden, light, following a language as {@link #window(LanguageChoice, ObjectProperty, ObservableValue)}. */
     SettingsWindow window(LanguageChoice language) throws Exception {
         return window(language, new SimpleObjectProperty<>(Appearance.SYSTEM), new SimpleObjectProperty<>(ColorScheme.LIGHT));
+    }
+
+    /** The Settings window, hidden, in English, light, with the system's text this large; made on the JavaFX thread. */
+    SettingsWindow window(ObservableValue<TextSize> textSize) throws Exception {
+        return Fx.call(() -> new SettingsWindow(stores(true), facts(), opened::add, chosen -> saved++, () -> { },
+                new WindowTheme(new SimpleObjectProperty<>(ColorScheme.LIGHT), textSize), new AppIcon(),
+                AppName.TITLE, new LanguageChoice(Language.ENGLISH), background));
     }
 
     SettingsView open() throws Exception {

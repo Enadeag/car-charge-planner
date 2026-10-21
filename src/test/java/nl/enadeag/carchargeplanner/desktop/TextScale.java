@@ -1,28 +1,30 @@
 package nl.enadeag.carchargeplanner.desktop;
 
+import nl.enadeag.carchargeplanner.desktop.system.TextSize;
+
 /** The system's text made larger, as the owner can ask for on Windows and Linux, against the app's own 14 px. */
 public enum TextScale {
     /** Text half as large again. */
-    PERCENT_150(1.5),
+    PERCENT_150(150),
     /** Text twice as large. */
-    PERCENT_200(2.0);
+    PERCENT_200(200);
 
     /** The headless screen's size, which a window cannot outgrow. */
     public static final double SCREEN = 1000;
 
-    private final double factor;
+    private final TextSize size;
 
-    TextScale(double factor) {
-        this.factor = factor;
+    TextScale(int percent) {
+        this.size = new TextSize(percent);
     }
 
     /** A size in pixels at this scale. */
     public double of(double pixels) {
-        return pixels * factor;
+        return size.of(pixels);
     }
 
-    /** The root style that makes every text this much larger: AtlantaFX sets 14 px, and the app sizes in em. */
-    public String rootStyle() {
-        return "-fx-font-size: %.1fpx;".formatted(14 * factor);
+    /** The system's text size this scale stands for, as the windows' theme follows it. */
+    public TextSize size() {
+        return size;
     }
 }

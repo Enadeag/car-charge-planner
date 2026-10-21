@@ -17,7 +17,7 @@ import java.util.function.Function;
 
 /**
  * The functions of {@code advapi32.dll} the app calls, through Java's own foreign function API: the registry below
- * HKEY_CURRENT_USER and the Credential Manager. Each function is looked up once, when this class is first used, which
+ * HKEY_CURRENT_USER, its change notifications, and the Credential Manager. Each function is looked up once, when this class is first used, which
  * is only on Windows. No library such as JNA: it would add jars and unpack a native library into the temp folder.
  */
 final class Advapi32 {
@@ -29,6 +29,12 @@ final class Advapi32 {
     private static final int RRF_RT_REG_DWORD = 0x10;
     private static final int ERROR_SUCCESS = 0;
     private static final int ERROR_FILE_NOT_FOUND = 2;
+    private static final int ERROR_KEY_DELETED = 1018;
+    private static final int KEY_QUERY_VALUE = 0x1;
+    private static final int KEY_NOTIFY = 0x10;
+    private static final int REG_NOTIFY_CHANGE_LAST_SET = 0x4;
+    /** Keeps a registration for changes when the thread that made it ends; Windows 8 and later. */
+    private static final int REG_NOTIFY_THREAD_AGNOSTIC = 0x1000_0000;
 
     private static final Linker LINKER = Linker.nativeLinker();
     private static final SymbolLookup LIBRARY = SymbolLookup.libraryLookup("Advapi32", Arena.global());
@@ -40,6 +46,11 @@ final class Advapi32 {
             FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, ADDRESS, JAVA_INT, ADDRESS, JAVA_INT));
     private static final MethodHandle REG_DELETE_KEY_VALUE = function("RegDeleteKeyValueW",
             FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, ADDRESS));
+    private static final MethodHandle REG_OPEN_KEY_EX = function("RegOpenKeyExW",
+            FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, JAVA_INT, JAVA_INT, ADDRESS));
+    private static final MethodHandle REG_NOTIFY_CHANGE_KEY_VALUE = function("RegNotifyChangeKeyValue",
+            FunctionDescriptor.of(JAVA_INT, ADDRESS, JAVA_INT, JAVA_INT, ADDRESS, JAVA_INT));
+    private static final MethodHandle REG_CLOSE_KEY = function("RegCloseKey", FunctionDescriptor.of(JAVA_INT, ADDRESS));
 
     /**
      * {@code CredWriteW(error state, CREDENTIALW*, flags)}: writes a credential; returns 0 on failure, with the error
@@ -200,6 +211,59 @@ final class Advapi32 {
                 check(status, "remove", key);
             }
         }
+    }
+
+    /**
+     * Opens a key below HKEY_CURRENT_USER to read its values and to be told when they change; {@link #closeKey}
+     * closes it again.
+     *
+     * @param key the key's path below HKEY_CURRENT_USER
+     * @return the key's handle; empty when the key does not exist
+     * @throws IOException when Windows refuses
+     */
+    static Optional<MemorySegment> openKey(String key) throws IOException {
+        try (var arena = Arena.ofConfined()) {
+            var path = wide(arena, key);
+            var handle = arena.allocate(ADDRESS);
+            int status = call(() -> (int) REG_OPEN_KEY_EX.invokeExact(CURRENT_USER, path, 0,
+                    KEY_QUERY_VALUE | KEY_NOTIFY, handle), e -> failed("open", key, e));
+            if (status == ERROR_FILE_NOT_FOUND) {
+                return Optional.empty();
+            }
+            check(status, "open", key);
+            return Optional.of(handle.get(ADDRESS, 0));
+        }
+    }
+
+    /**
+     * Asks Windows to signal an event at the next change to a value of an open key, or of the key itself. Each
+     * request is for one change only; the thread that asks may end before it.
+     *
+     * @param handle a key's handle from {@link #openKey}
+     * @param event the event to signal, from {@link Kernel32#newEvent()}
+     * @param key the key's path, for the message of a failure
+     * @return false when the key has been deleted, so nothing will change any more
+     * @throws IOException when Windows refuses
+     */
+    static boolean signalOnChange(MemorySegment handle, MemorySegment event, String key) throws IOException {
+        int status = call(() -> (int) REG_NOTIFY_CHANGE_KEY_VALUE.invokeExact(handle, 0,
+                REG_NOTIFY_CHANGE_LAST_SET | REG_NOTIFY_THREAD_AGNOSTIC, event, 1), e -> failed("watch", key, e));
+        if (status == ERROR_KEY_DELETED) {
+            return false;
+        }
+        check(status, "watch", key);
+        return true;
+    }
+
+    /**
+     * Closes a key that {@link #openKey} opened.
+     *
+     * @param handle the key's handle
+     * @param key the key's path, for the message of a failure
+     * @throws IOException when Windows refuses
+     */
+    static void closeKey(MemorySegment handle, String key) throws IOException {
+        check(call(() -> (int) REG_CLOSE_KEY.invokeExact(handle), e -> failed("close", key, e)), "close", key);
     }
 
     private static MethodHandle function(String name, FunctionDescriptor descriptor, Linker.Option... options) {

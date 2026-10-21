@@ -11,6 +11,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.SettingsFixture;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStorage;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStores;
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
+import nl.enadeag.carchargeplanner.desktop.system.TextSize;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
@@ -198,7 +199,7 @@ final class SetUpFixture {
     SetUpWindow window(LanguageChoice language, SimpleObjectProperty<Appearance> saved) throws Exception {
         return Fx.call(() -> new SetUpWindow(stores(), keysFile(), opened::add, chosen -> finished++,
                 ZoneId.of("Europe/Amsterdam"), new SetUpWindow.Looks(new SimpleObjectProperty<>(ColorScheme.LIGHT),
-                        saved, Fx.REDUCED_MOTION), new AppIcon(), AppName.TITLE, language, background));
+                        saved, Fx.REDUCED_MOTION, new SimpleObjectProperty<>(TextSize.NORMAL)), new AppIcon(), AppName.TITLE, language, background));
     }
 
     void close() throws Exception {

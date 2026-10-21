@@ -11,7 +11,6 @@ import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import java.time.InstantSource;
 import java.util.List;
-import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Point2D;
@@ -46,8 +45,8 @@ public final class Dashboard {
      *
      * @param icon the app icon, for the window's title bar and the taskbar
      * @param appName the app's name, for the header and the window's title bar; the same in every language
-     * @param colorScheme light or dark for the windows, followed while the app runs: the owner's appearance over the
-     *     system's ({@link nl.enadeag.carchargeplanner.desktop.app.Appearance#scheme Appearance.scheme}); never null
+     * @param theme light or dark and the text size for the popup and the window, followed while the app runs; never
+     *     null
      * @param reducedMotion true while the system asks for reduced motion
      *     ({@code Platform.getPreferences().reducedMotionProperty()}); the charts then change without moving; never
      *     null
@@ -57,13 +56,12 @@ public final class Dashboard {
      * @param language the language the texts are in, followed while the app runs; never null
      * @param actions what the dashboard's controls do; never null
      */
-    public Dashboard(AppIcon icon, String appName, ObservableValue<ColorScheme> colorScheme,
+    public Dashboard(AppIcon icon, String appName, WindowTheme theme,
             ObservableValue<Boolean> reducedMotion, InstantSource clock, TaskbarHiding taskbarHiding,
             LanguageChoice language, DashboardActions actions) {
         if (actions == null) {
             throw new IllegalArgumentException("the dashboard's actions must not be null");
         }
-        var theme = new WindowTheme(colorScheme);
         this.reducedMotion = reducedMotion;
         this.clock = clock;
         this.actions = actions;

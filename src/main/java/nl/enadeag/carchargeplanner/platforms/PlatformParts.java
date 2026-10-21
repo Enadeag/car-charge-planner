@@ -4,6 +4,7 @@ import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.system.Notifications;
 import nl.enadeag.carchargeplanner.desktop.system.StartAtLogin;
 import nl.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
+import nl.enadeag.carchargeplanner.desktop.system.TextSizeSetting;
 import nl.enadeag.carchargeplanner.desktop.system.Tray;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
@@ -15,7 +16,9 @@ import java.util.Optional;
 import javafx.application.ColorScheme;
 import javafx.beans.value.ObservableValue;
 
-/** The parts each operating system brings itself: the tray, notifications, keychain and start at login. */
+/**
+ * The parts each operating system brings itself: the tray, notifications, keychain, start at login and the text size.
+ */
 public sealed interface PlatformParts permits FreedesktopParts, WindowsParts {
 
     /**
@@ -63,6 +66,13 @@ public sealed interface PlatformParts permits FreedesktopParts, WindowsParts {
      * @return empty when the app does not run from jpackage's launcher: there is nothing to start then
      */
     Optional<StartAtLogin> startAtLogin();
+
+    /**
+     * The system's setting for larger text, which the windows follow on top of the display's scaling.
+     *
+     * @return the setting; one that stays at normal size on a system whose toolkit scales the text itself
+     */
+    TextSizeSetting textSize();
 
     /**
      * How this system keeps the dashboard's popup out of its taskbar.

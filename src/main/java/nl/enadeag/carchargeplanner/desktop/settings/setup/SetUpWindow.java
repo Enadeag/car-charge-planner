@@ -7,6 +7,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.page.WindowSize;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStorage;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStores;
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
+import nl.enadeag.carchargeplanner.desktop.system.TextSize;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -52,10 +53,11 @@ public final class SetUpWindow {
     private final AppIcon icon;
     private final String appName;
     private final Background background;
-    // the fields below belong to the JavaFX thread; stage and view are null while the window is closed, start until
-    // what is stored was read
+    // the fields below belong to the JavaFX thread; stage, theme and view are null while the window is closed, start
+    // until what is stored was read
     private final ObjectProperty<Appearance> appearance = new SimpleObjectProperty<>(Appearance.SYSTEM);
     private Stage stage;
+    private WindowTheme theme;
     private SettingsStorage.Stored start;
     private SetUpView view;
     private Messages spoken;
@@ -71,8 +73,8 @@ public final class SetUpWindow {
      *     them, plans with what was saved and shows the dashboard; it should hand slow work on
      * @param timezone the time zone the home is assumed to be in until the owner chooses a place, such as the
      *     computer's own
-     * @param looks the system's colour scheme and reduced motion, and the owner's saved appearance, followed while the
-     *     app runs
+     * @param looks the system's colour scheme, reduced motion and text size, and the owner's saved appearance,
+     *     followed while the app runs
      * @param icon the app icon, for the title bar and the taskbar
      * @param appName the app's name, for the title bar and the dashboard's preview
      * @param language the language the app speaks, followed while the app runs; never null
@@ -95,15 +97,16 @@ public final class SetUpWindow {
     }
 
     /**
-     * The colours and motion the window follows.
+     * The colours, motion and text size the window follows.
      *
      * @param system the system's colour scheme ({@code Platform.getPreferences().colorSchemeProperty()}); never null
      * @param saved the appearance the owner saved, changed on the JavaFX thread; never null
      * @param reducedMotion true while the system asks for reduced motion
      *     ({@code Platform.getPreferences().reducedMotionProperty()}); never null
+     * @param textSize the system's text size, changed on the JavaFX thread; never null
      */
     public record Looks(ObservableValue<ColorScheme> system, ObservableValue<Appearance> saved,
-            ObservableValue<Boolean> reducedMotion) {
+            ObservableValue<Boolean> reducedMotion, ObservableValue<TextSize> textSize) {
     }
 
     /**
@@ -142,12 +145,12 @@ public final class SetUpWindow {
         spoken = language.messages();
         view = makeView(spoken, made);
         var scene = new Scene(view);
-        var theme = new WindowTheme(Appearance.scheme(appearance, looks.system()));
+        theme = new WindowTheme(Appearance.scheme(appearance, looks.system()), looks.textSize());
         theme.style(scene);
         made.setScene(scene);
         made.setTitle(spoken.text(TextKey.SET_UP_TITLE, appName));
         made.getIcons().setAll(icon.fxImages());
-        var size = WindowSize.on(WIDTH_EM, HEIGHT_EM, Font.getDefault().getSize(),
+        var size = WindowSize.on(WIDTH_EM, HEIGHT_EM, theme.atTextSize(Font.getDefault().getSize()),
                 Screen.getPrimary().getVisualBounds());
         made.setWidth(size.getWidth());
         made.setHeight(size.getHeight());
@@ -162,8 +165,10 @@ public final class SetUpWindow {
         if (closing != stage) {
             return;
         }
+        theme.forget(closing.getScene());
         closing.close();
         stage = null;
+        theme = null;
         view = null;
         start = null;
         spoken = null;

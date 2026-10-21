@@ -15,9 +15,7 @@ import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import java.net.URI;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import javafx.application.ColorScheme;
 import javafx.application.Platform;
-import javafx.beans.value.ObservableValue;
 import javafx.scene.Scene;
 import javafx.scene.text.Font;
 import javafx.stage.Screen;
@@ -59,20 +57,20 @@ public final class SettingsWindow {
      * @param saved gets the app settings as stored, on the JavaFX thread, after something was saved, so the app follows
      *     them and plans again; it should hand slow work on
      * @param runSetUp opens set-up once Settings closed
-     * @param colorScheme light or dark for the windows, followed while the app runs: the owner's appearance over the
-     *     system's ({@link Appearance#scheme}); never null
+     * @param theme light or dark and the text size for the window, followed while the app runs: the owner's appearance
+     *     over the system's ({@link Appearance#scheme}) and the system's text size; never null
      * @param icon the app icon, for the title bar and the taskbar
      * @param appName the app's name, for the title bar
      * @param language the language the texts are in, followed while the app runs; never null
      * @param background reads and writes the stores away from the JavaFX thread
      */
     public SettingsWindow(SettingsStores stores, AboutFacts facts, Consumer<URI> openLink,
-            Consumer<AppSettings> saved, Runnable runSetUp, ObservableValue<ColorScheme> colorScheme,
+            Consumer<AppSettings> saved, Runnable runSetUp, WindowTheme theme,
             AppIcon icon, String appName, LanguageChoice language, Background background) {
         this.views = (messages, close) -> SettingsView.of(stores, facts, openLink, close, saved, runSetUp, background,
                 messages);
         this.language = language;
-        this.theme = new WindowTheme(colorScheme);
+        this.theme = theme;
         this.icon = icon;
         this.appName = appName;
         // later, also on the JavaFX thread: a Save chooses the language while its button is still handling the click
@@ -110,7 +108,7 @@ public final class SettingsWindow {
         made.setScene(scene);
         made.setTitle(spoken.text(TextKey.SETTINGS_TITLE, appName));
         made.getIcons().setAll(icon.fxImages());
-        var size = WindowSize.on(WIDTH_EM, HEIGHT_EM, Font.getDefault().getSize(),
+        var size = WindowSize.on(WIDTH_EM, HEIGHT_EM, theme.atTextSize(Font.getDefault().getSize()),
                 Screen.getPrimary().getVisualBounds());
         made.setWidth(size.getWidth());
         made.setHeight(size.getHeight());

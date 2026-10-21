@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
+import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.app.AppSettings;
 import nl.enadeag.carchargeplanner.desktop.app.Appearance;
 import nl.enadeag.carchargeplanner.desktop.app.Background;
@@ -159,7 +160,7 @@ class SetUpWindowTest {
         var settings = Fx.call(() -> new SettingsWindow(setUp.stores(), new AboutFacts("1.2.3", setUp.configPath,
                 setUp.appSettings.path(), folder.resolve("data"), folder.resolve("data").resolve("app.0.log"),
                 setUp.keysFile()), setUp.opened::add, chosen -> { }, window::open,
-                new SimpleObjectProperty<>(ColorScheme.LIGHT), new AppIcon(), AppName.TITLE, language,
+                Scenes.theme(new SimpleObjectProperty<>(ColorScheme.LIGHT)), new AppIcon(), AppName.TITLE, language,
                 new Background(Runnable::run, Runnable::run)));
         settings.open(Category.APP);
         Fx.settle();
