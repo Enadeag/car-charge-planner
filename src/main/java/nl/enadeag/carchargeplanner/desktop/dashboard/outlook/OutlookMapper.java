@@ -1,8 +1,10 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.outlook;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.advice.GridAdviceMapper;
+import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayMapper;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayMapper;
+import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripMapper;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.Outlook;
@@ -10,6 +12,7 @@ import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -38,30 +41,32 @@ public final class OutlookMapper {
     }
 
     /**
-     * The outlook in words, without away periods entered for specific days, as set-up's preview shows it.
+     * The outlook in words, without away periods entered for specific days or trips, as set-up's preview shows it.
      *
      * @param outlook the engine's plan, or why there is none; never null
      * @return a plan with its days, or why there is none when there is no plan or it has no days; only an outlook
      *     with a plan has a footer, also when the plan has no days, because only a plan has a forecast to credit
      */
     public DashboardModel map(Outlook outlook) {
-        return map(outlook, List.of());
+        return map(outlook, List.of(), List.of(), Units.METRIC);
     }
 
     /**
-     * The outlook in words, with the away periods the owner entered for specific days.
+     * The outlook in words, with the away periods the owner entered for specific days and the trips.
      *
      * @param outlook the engine's plan, or why there is none; never null
      * @param away the stored away periods entered for specific days, in order of their start; may be empty, and those
      *     that ended before the plan was made are left out
+     * @param trips the stored trips, in order of their departure; may be empty
+     * @param units the units the trips' distances are told in
      * @return a plan with its days, or why there is none when there is no plan or it has no days; only an outlook
      *     with a plan has a footer, also when the plan has no days, because only a plan has a forecast to credit
      */
-    public DashboardModel map(Outlook outlook, List<OneOffAwayPeriod> away) {
+    public DashboardModel map(Outlook outlook, List<OneOffAwayPeriod> away, List<Trip> trips, Units units) {
         return switch (outlook) {
             case Outlook.Planned planned when planned.days().isEmpty() -> new DashboardModel.NoPlan(
                     messages.text(TextKey.NO_FORECAST), messages.text(TextKey.NO_FORECAST_NO_DAYS), footer(planned));
-            case Outlook.Planned planned -> plan(planned, away);
+            case Outlook.Planned planned -> plan(planned, away, trips, units);
             case Outlook.NoForecast none -> new DashboardModel.NoPlan(messages.text(TextKey.NO_FORECAST),
                     noForecast(none, messages), "");
             case Outlook.NotSetUp _ ->
@@ -105,11 +110,13 @@ public final class OutlookMapper {
                 : messages.text(TextKey.NO_FORECAST_DETAIL, none.reason());
     }
 
-    private DashboardModel.Plan plan(Outlook.Planned planned, List<OneOffAwayPeriod> away) {
+    private DashboardModel.Plan plan(Outlook.Planned planned, List<OneOffAwayPeriod> away, List<Trip> trips,
+            Units units) {
         var days = new DayMapper(planned, messages).map(planned.days());
         var advice = planned.gridAdvice().map(new GridAdviceMapper(planned, messages)::map);
         var coming = new OneOffAwayMapper(planned.zone(), planned.madeAt(), messages).map(away);
-        return new DashboardModel.Plan(days, advice, coming, footer(planned));
+        var entered = new TripMapper(planned.zone(), planned.madeAt(), units, messages).map(trips);
+        return new DashboardModel.Plan(days, advice, coming, entered, footer(planned));
     }
 
     /**

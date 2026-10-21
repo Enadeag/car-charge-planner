@@ -194,7 +194,8 @@ class DashboardViewTest {
     void aPlanWithoutDaysShowsNoTabsAndDoesNotFail() throws Exception {
         var view = shown(Models.plan(Optional.empty()));
 
-        Fx.run(() -> view.show(new DashboardModel.Plan(List.of(), Optional.empty(), Models.AWAY, Models.FOOTER)));
+        Fx.run(() -> view.show(new DashboardModel.Plan(List.of(), Optional.empty(), Models.AWAY, Models.TRIPS,
+                Models.FOOTER)));
 
         assertThat(Fx.call(() -> tabs(view).getTabs())).isEmpty();
         assertThat(Fx.call(() -> view.lookup(".main-card"))).isNull();
@@ -207,7 +208,7 @@ class DashboardViewTest {
                 Models.SUNNY_TODAY.facts(), Models.SUNNY_TODAY.chips(), "Also 06:15 – 06:25 at 6 A. ".repeat(80), "",
                 Models.SUNNY_TODAY.curve(), Models.CLOUDY_TOMORROW.battery());
         var plan = new DashboardModel.Plan(List.of(Models.CLOUDY_TOMORROW, busy), Optional.empty(), Models.AWAY,
-                Models.FOOTER);
+                Models.TRIPS, Models.FOOTER);
         var view = Fx.call(() -> {
             var it = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION,
                     AppName.TITLE, new Messages(Language.ENGLISH));

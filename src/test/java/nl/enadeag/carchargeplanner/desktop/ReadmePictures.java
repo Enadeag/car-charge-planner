@@ -35,6 +35,7 @@ public final class ReadmePictures {
             "setup-location-english", SetUpPictures::setUpLocation,
             "setup-preview-english", SetUpPictures::setUpPreview,
             "dashboard-200", DashboardPictures::at200,
+            "dashboard-trip", DashboardPictures::trip,
             "settings-200", SettingsPictures::settingsAt200);
 
     private ReadmePictures() {

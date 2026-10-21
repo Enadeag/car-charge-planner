@@ -107,6 +107,65 @@ public enum TextKey {
     ONE_OFF_REMOVE,
     /** What a screen reader calls the remove button: {0} the period, such as "Tomorrow, all day". */
     ONE_OFF_REMOVE_SPOKEN,
+    /** The heading of the card with the trips of the selected day. */
+    TRIP_HEADING,
+    /** The button that opens the entry of a trip that leaves on the selected day. */
+    TRIP_ADD,
+    /** What the add button does: {0} the selected day as a title, such as "Tomorrow" or "Sunday". */
+    TRIP_ADD_HINT,
+    /** Said when no trip is entered for the selected day. */
+    TRIP_NONE,
+    /** When the car is away for a trip: {0} its times, such as "07:30 – 18:00". */
+    TRIP_AWAY,
+    /** A trip's times over more days: {0} the day of departure, {1} its time, {2} the day of return, {3} its time. */
+    TRIP_DAYS,
+    /** A trip's distance: {0} the number, {1} the unit's symbol, "km" or "mi". */
+    TRIP_DISTANCE,
+    /** Where a trip comes from: the owner entered it on the dashboard. */
+    TRIP_BY_HAND,
+    /** The choice that the owner makes a trip without this car, so it does not count for the plan. */
+    TRIP_NOT_WITH_THIS_CAR,
+    /** The choice that the owner can charge the car where a trip goes. */
+    TRIP_CAN_CHARGE,
+    /** The button that opens the entry of a trip to change it. */
+    TRIP_CHANGE,
+    /**
+     * What a screen reader calls the change button: {0} the trip, such as "Away 07:30 – 18:00 · 300 km there and
+     * back".
+     */
+    TRIP_CHANGE_SPOKEN,
+    /** The button that removes a trip. */
+    TRIP_REMOVE,
+    /** What a screen reader calls the remove button: {0} the trip, as for {@link #TRIP_CHANGE_SPOKEN}. */
+    TRIP_REMOVE_SPOKEN,
+    /** The label before a trip's day and time of departure. */
+    TRIP_DEPARTURE,
+    /** The label before a trip's day and time of return. */
+    TRIP_RETURN,
+    /** What a screen reader calls the field of the day of departure. */
+    TRIP_DEPARTURE_DAY,
+    /** What a screen reader calls the field of the time of departure. */
+    TRIP_DEPARTURE_TIME,
+    /** What a screen reader calls the field of the day of return. */
+    TRIP_RETURN_DAY,
+    /** What a screen reader calls the field of the time of return. */
+    TRIP_RETURN_TIME,
+    /** The label before a trip's distance, there and back. */
+    TRIP_DISTANCE_FIELD,
+    /** What a screen reader calls the distance field: {0} the unit's symbol, "km" or "mi". */
+    TRIP_DISTANCE_SPOKEN,
+    /** The button that saves the entered trip. */
+    TRIP_SAVE,
+    /** The button that closes the trip's entry without saving. */
+    TRIP_CANCEL,
+    /** Said when the entered return is not after the departure. */
+    TRIP_RETURN_BEFORE_DEPARTURE,
+    /** Said when the entered trip has returned already. */
+    TRIP_PASSED,
+    /** Said when the entered distance is not a number. */
+    TRIP_DISTANCE_NOT_A_NUMBER,
+    /** Said when the entered distance is 0 or less. */
+    TRIP_DISTANCE_NOT_POSITIVE,
     /** The chip above the grid advice. */
     ADVICE_LABEL,
     /** The grid advice's title with a window: {0} kWh, {1} the day in a sentence, {2} the window's times. */

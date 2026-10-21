@@ -218,10 +218,14 @@ public final class Engine {
         }
     }
 
-    /** The plan for a config and a forecast, from the stored away periods, trips and battery level. */
+    /**
+     * The plan for a config and a forecast, from the stored away periods, the trips made with this car and the battery
+     * level.
+     */
     private Outlook.Planned planned(EngineConfig config, ForecastResult forecast, Instant now) {
         var system = config.system();
-        var away = new AwayTimes(config.away().weekly(), awayFile.periods(), tripFile.trips(now));
+        var trips = tripFile.trips(now).stream().filter(trip -> !trip.notWithThisCar()).toList();
+        var away = new AwayTimes(config.away().weekly(), awayFile.periods(), trips);
         var entered = batteryFile.reading();
         var battery = entered.map(BatteryReading::level).orElse(ASSUMED_BATTERY_PCT);
         var plan = new Planner(system, config.planning(), away)

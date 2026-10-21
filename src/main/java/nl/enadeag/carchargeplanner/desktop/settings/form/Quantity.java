@@ -12,8 +12,6 @@ public enum Quantity {
     /** The car's use of energy: kept in kWh per 100 km, shown so or in miles per kWh. */
     CONSUMPTION(new NumberRange(5, 60, 0.5, 1), new NumberRange(1, 12.5, 0.1, 2));
 
-    private static final double KM_PER_MILE = 1.609344;
-
     private final NumberRange metric;
     private final NumberRange imperial;
 
@@ -34,8 +32,8 @@ public enum Quantity {
             return kept;
         }
         return switch (this) {
-            case DISTANCE -> kept / KM_PER_MILE;
-            case CONSUMPTION -> 100 / (kept * KM_PER_MILE);
+            case DISTANCE -> units.distance(kept);
+            case CONSUMPTION -> 100 / (kept * Units.KM_PER_MILE);
         };
     }
 
@@ -51,8 +49,8 @@ public enum Quantity {
             return shown;
         }
         return switch (this) {
-            case DISTANCE -> shown * KM_PER_MILE;
-            case CONSUMPTION -> 100 / (shown * KM_PER_MILE);
+            case DISTANCE -> units.km(shown);
+            case CONSUMPTION -> 100 / (shown * Units.KM_PER_MILE);
         };
     }
 
@@ -74,7 +72,7 @@ public enum Quantity {
      */
     public String unit(Units units) {
         return switch (this) {
-            case DISTANCE -> units == Units.METRIC ? "km" : "mi";
+            case DISTANCE -> units.distanceUnit();
             case CONSUMPTION -> units == Units.METRIC ? "kWh/100 km" : "mi/kWh";
         };
     }

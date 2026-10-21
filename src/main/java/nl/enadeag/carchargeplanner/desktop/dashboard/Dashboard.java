@@ -1,5 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard;
 
+import nl.enadeag.carchargeplanner.desktop.app.Units;
+import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.OutlookMapper;
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
@@ -9,6 +11,7 @@ import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import nl.enadeag.carchargeplanner.engine.Outlook;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.InstantSource;
 import java.util.List;
 import javafx.application.Platform;
@@ -28,6 +31,7 @@ public final class Dashboard {
 
     private final String appName;
     private final ObservableValue<Boolean> reducedMotion;
+    private final ObservableValue<Units> units;
     private final InstantSource clock;
     private final DashboardPopup popup;
     private final DashboardWindow window;
@@ -38,10 +42,11 @@ public final class Dashboard {
     /** The latest outlook; null until the engine gives one. */
     private Outlook outlook;
     private List<OneOffAwayPeriod> awayPeriods = List.of();
+    private List<Trip> trips = List.of();
 
     /**
-     * Makes the dashboard, hidden, showing that the forecast is being fetched until {@link #show(Outlook, List)} is
-     * called.
+     * Makes the dashboard, hidden, showing that the forecast is being fetched until
+     * {@link #show(Outlook, List, List)} is called.
      *
      * @param icon the app icon, for the window's title bar and the taskbar
      * @param appName the app's name, for the header and the window's title bar; the same in every language
@@ -50,19 +55,22 @@ public final class Dashboard {
      * @param reducedMotion true while the system asks for reduced motion
      *     ({@code Platform.getPreferences().reducedMotionProperty()}); the charts then change without moving; never
      *     null
+     * @param units the units distances are shown and typed in, followed while the app runs; never null
      * @param clock tells when the popup closed, so the click on the tray icon that closed it does not open it again,
-     *     and when the owner saves an away period, which must not have ended by then
+     *     and when the owner saves an away period or a trip, which must not have ended by then
      * @param taskbarHiding how this system keeps the popup out of its taskbar
      * @param language the language the texts are in, followed while the app runs; never null
      * @param actions what the dashboard's controls do; never null
      */
     public Dashboard(AppIcon icon, String appName, WindowTheme theme,
-            ObservableValue<Boolean> reducedMotion, InstantSource clock, TaskbarHiding taskbarHiding,
+            ObservableValue<Boolean> reducedMotion, ObservableValue<Units> units, InstantSource clock,
+            TaskbarHiding taskbarHiding,
             LanguageChoice language, DashboardActions actions) {
         if (actions == null) {
             throw new IllegalArgumentException("the dashboard's actions must not be null");
         }
         this.reducedMotion = reducedMotion;
+        this.units = units;
         this.clock = clock;
         this.actions = actions;
         this.appName = appName;
@@ -71,6 +79,7 @@ public final class Dashboard {
         this.messages = language.messages();
         this.view = newView();
         language.onChange(chosen -> Platform.runLater(() -> switchLanguage(chosen)));
+        units.subscribe((_, _) -> Platform.runLater(this::showAgain));
     }
 
     /**
@@ -101,13 +110,16 @@ public final class Dashboard {
      * @param outlook the engine's latest plan, or why there is none; never null
      * @param awayPeriods the away periods the owner entered for specific days, as the engine stores them, in order of
      *     their start; may be empty, and those that ended before the plan was made are not listed
+     * @param trips the trips the owner entered, as the engine stores them, in order of their departure; may be empty
      */
-    public void show(Outlook outlook, List<OneOffAwayPeriod> awayPeriods) {
+    public void show(Outlook outlook, List<OneOffAwayPeriod> awayPeriods, List<Trip> trips) {
         var periods = List.copyOf(awayPeriods);
+        var entered = List.copyOf(trips);
         Platform.runLater(() -> {
             this.outlook = outlook;
             this.awayPeriods = periods;
-            view.show(new OutlookMapper(messages).map(outlook, periods));
+            this.trips = entered;
+            showAgain();
         });
     }
 
@@ -132,16 +144,25 @@ public final class Dashboard {
         window.replace(before, view);
     }
 
+    /** The latest outlook, in the language and units chosen now. */
+    private void showAgain() {
+        view.show(model(new OutlookMapper(messages)));
+    }
+
+    private DashboardModel model(OutlookMapper mapper) {
+        return outlook == null ? mapper.loading() : mapper.map(outlook, awayPeriods, trips, units.getValue());
+    }
+
     /** A view in the language spoken now, with the dashboard's actions, showing the latest outlook. */
     private DashboardView newView() {
         var made = new DashboardView(this::detach, this::fitToContent, reducedMotion, appName, messages);
         made.onBatteryEntered(pct -> actions.batteryEntered().accept(new Percent(pct)));
         made.onOneOffAwayChange(actions.oneOffAdded(), actions.oneOffRemoved(), clock);
+        made.onTripChange(actions.tripAdded(), actions.tripChanged(), actions.tripRemoved(), clock);
         made.onWeeklyAway(actions.openWeeklyAway());
         made.onSettings(actions.settings());
         made.onSetUp(actions.setUp());
-        var mapper = new OutlookMapper(messages);
-        made.show(outlook == null ? mapper.loading() : mapper.map(outlook, awayPeriods));
+        made.show(model(new OutlookMapper(messages)));
         return made;
     }
 

@@ -50,9 +50,27 @@ class TripFileTest {
     @Test
     void everyPartOfATripIsKept() throws IOException {
         var trip = new Trip(Instant.parse("2026-07-04T06:15:00Z"), Instant.parse("2026-07-05T21:45:30Z"), 412.5, true);
+        var withoutTheCar = new Trip(Instant.parse("2026-07-06T06:15:00Z"), Instant.parse("2026-07-06T21:45:30Z"), 80,
+                false, true);
         file().add(trip, NOW);
+        file().add(withoutTheCar, NOW);
 
-        assertThat(file().trips(NOW)).containsExactly(trip);
+        assertThat(file().trips(NOW)).containsExactly(trip, withoutTheCar);
+    }
+
+    @Test
+    void onlyATripWithoutThisCarSaysSoInTheFile() throws IOException {
+        var path = folder.resolve("trips.json");
+        var withTheCar = trip(1, 300);
+        var withoutTheCar = new Trip(withTheCar.departure().plusSeconds(86_400),
+                withTheCar.returnTime().plusSeconds(86_400), 80, false, true);
+        new TripFile(path).add(withTheCar, NOW);
+        new TripFile(path).add(withoutTheCar, NOW);
+
+        var rows = StoredJson.parse(Files.readString(path)).path("trips");
+        assertThat(rows.get(0).has("notWithThisCar")).isFalse();
+        assertThat(rows.get(1).path("notWithThisCar").isBoolean()).isTrue();
+        assertThat(rows.get(1).path("notWithThisCar").booleanValue()).isTrue();
     }
 
     @Test
@@ -162,6 +180,8 @@ class TripFileTest {
                   {"departure": "2026-07-04T06:00:00Z", "return": "2026-07-04T08:00:00Z", "distanceKm": 30,
                    "canChargeAtDestination": "no"},
                   {"departure": "2026-07-04T06:00:00Z", "return": "2026-07-04T08:00:00Z", "distanceKm": 30},
+                  {"departure": "2026-07-04T06:00:00Z", "return": "2026-07-04T08:00:00Z", "distanceKm": 30,
+                   "canChargeAtDestination": false, "notWithThisCar": "yes"},
                   {"departure": "2026-07-04T06:00:00Z", "return": "4 July", "distanceKm": 30,
                    "canChargeAtDestination": false},
                   {"departure": "2026-07-04T06:00:00Z", "distanceKm": 30, "canChargeAtDestination": false},

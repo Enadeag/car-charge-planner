@@ -12,11 +12,15 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayCard;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Glyphs;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCard;
+import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripCard;
+import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripsModel;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.InstantSource;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import javafx.beans.value.ObservableValue;
@@ -44,11 +48,14 @@ final class DashboardView extends VBox {
     private final SolarCard solar;
     private final BatteryCard battery;
     private final OneOffAwayCard away;
+    private final TripCard trips;
     private List<DayModel> days = List.of();
     /** Today's grid advice; null when the plan shown has none, or before one shows. */
     private GridAdviceModel advice;
     /** The away periods for specific days; null until a plan shows. */
     private OneOffAwayModel awayPeriods;
+    /** The trips; null until a plan shows. */
+    private TripsModel enteredTrips;
     private Runnable setUp = () -> { };
     /** True once {@link #onSetUp(Runnable)} was called: only then does a card without a plan offer set-up. */
     private boolean canOpenSetUp;
@@ -72,6 +79,7 @@ final class DashboardView extends VBox {
         this.solar = new SolarCard(reducedMotion, messages);
         this.battery = new BatteryCard(reducedMotion, messages);
         this.away = new OneOffAwayCard(contentChanged, messages);
+        this.trips = new TripCard(contentChanged, messages);
         var title = new Label(appName);
         title.getStyleClass().add("app-title");
         title.setAccessibleRole(AccessibleRole.TEXT);
@@ -106,6 +114,7 @@ final class DashboardView extends VBox {
                 days = plan.days();
                 advice = plan.advice().orElse(null);
                 awayPeriods = plan.away();
+                enteredTrips = plan.trips();
                 tabs.show(days);
                 showDay(tabs.getSelectionModel().getSelectedIndex());
             }
@@ -175,6 +184,22 @@ final class DashboardView extends VBox {
     }
 
     /**
+     * Lets the owner add, change and remove trips, on the trip card of each day; without this the card is not shown.
+     *
+     * @param added gets a trip the owner entered, on the JavaFX thread
+     * @param changed gets a trip as the plan listed it and the owner's changed version of it, on the JavaFX thread
+     * @param removed gets a trip the owner removed, as the plan listed it, on the JavaFX thread
+     * @param clock tells the time when the owner saves a trip, which must not have returned by then
+     */
+    void onTripChange(Consumer<Trip> added, BiConsumer<Trip, Trip> changed, Consumer<Trip> removed,
+            InstantSource clock) {
+        trips.onChange(added, changed, removed, clock);
+        if (!days.isEmpty()) {
+            showDay(selectedDay());
+        }
+    }
+
+    /**
      * Lets the footer's Away button open the weekly away periods.
      *
      * @param action what the button does; called on the JavaFX thread
@@ -210,7 +235,10 @@ final class DashboardView extends VBox {
         footer.hideButtons();
     }
 
-    /** Grid advice goes on today's tab, below its day card; the charts follow, and the away periods last. */
+    /**
+     * Grid advice goes on today's tab, below its day card; the charts follow, then the day's trips, and the away
+     * periods last.
+     */
     private void showDay(int index) {
         if (days.isEmpty()) {
             body.show(null);
@@ -227,6 +255,10 @@ final class DashboardView extends VBox {
         solar.show(day.curve());
         battery.show(day.battery());
         page.getChildren().addAll(solar, battery);
+        if (trips.acceptsChanges() && enteredTrips != null) {
+            trips.show(day, enteredTrips);
+            page.getChildren().add(trips);
+        }
         if (away.acceptsChanges() && awayPeriods != null) {
             away.show(day, awayPeriods);
             page.getChildren().add(away);

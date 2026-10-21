@@ -43,6 +43,7 @@ class DashboardContrastTest {
             var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION,
                     AppName.TITLE, new Messages(Language.ENGLISH));
             view.onOneOffAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
+            view.onTripChange(_ -> { }, (_, _) -> { }, _ -> { }, Models.CLOCK);
             stage = Scenes.show(view, scheme);
             var problems = new ArrayList<String>();
             var plan = Models.plan(Optional.of(Models.ADVICE));
@@ -54,6 +55,8 @@ class DashboardContrastTest {
                 problems.addAll(Contrast.problemsIn(view));
             }
             openAwayEntryWithAProblem(view);
+            problems.addAll(Contrast.problemsIn(view));
+            openTripEntryWithAProblem(view);
             problems.addAll(Contrast.problemsIn(view));
             view.show(new DashboardModel.NoPlan("No forecast", "Could not reach Open-Meteo", "Forecast: Open-Meteo", false));
             view.applyCss();
@@ -76,6 +79,16 @@ class DashboardContrastTest {
                 .filter(button -> button.getText().equals("Add")).findFirst().orElseThrow().fire();
         OneOffAwayEntry.enterTimes(view, "16:00", "10:00");
         OneOffAwayEntry.save(view);
+        view.applyCss();
+        view.layout();
+    }
+
+    /** The trip entry, saying why a distance that is not a number cannot be saved. */
+    private static void openTripEntryWithAProblem(DashboardView view) {
+        view.lookup(".trip-card").lookupAll(".button").stream().map(javafx.scene.control.Button.class::cast)
+                .filter(button -> button.getText().equals("Add trip")).findFirst().orElseThrow().fire();
+        TripEntry.distance(view, "far");
+        TripEntry.save(view);
         view.applyCss();
         view.layout();
     }

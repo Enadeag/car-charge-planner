@@ -20,6 +20,7 @@ import nl.enadeag.carchargeplanner.engine.notify.Announcer;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -77,6 +78,22 @@ class DashboardChangesTest {
                 .contains(new Percent(72));
         assertThat(Files.exists(folder.resolve("away.json"))).isTrue();
         assertThat(new AwayFile(folder.resolve("away.json")).periods()).isEmpty();
+    }
+
+    @Test
+    void tripsAreAddedChangedAndRemovedOnTheSavingThreadInOrder() {
+        var trip = new Trip(NOW.plus(Duration.ofHours(2)), NOW.plus(Duration.ofHours(12)), 300, false);
+        var changed = new Trip(trip.departure(), trip.returnTime(), 300, true, true);
+        var other = new Trip(NOW.plus(Duration.ofDays(1)), NOW.plus(Duration.ofDays(2)), 80, false);
+        changes.addTrip(trip);
+        changes.addTrip(other);
+        changes.changeTrip(trip, changed);
+        changes.removeTrip(other);
+        assertThat(Files.exists(folder.resolve("trips.json"))).isFalse();
+
+        runTheSavingThread();
+
+        assertThat(new TripFile(folder.resolve("trips.json")).trips(NOW)).containsExactly(changed);
     }
 
     @Test

@@ -6,6 +6,7 @@ import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.TextScale;
+import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.OutlookMapper;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
@@ -21,6 +22,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import nl.enadeag.carchargeplanner.host.AppName;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -98,7 +100,16 @@ class DashboardLanguagesTest {
                 new OneOffAwayPeriod(at(TODAY.plusDays(4), 18), at(TODAY.plusDays(6), 12)));
     }
 
-    /** Every day, the readout and both entries open, a refused away period and the message without a config. */
+    /** A trip on one day, and one over two days that the owner makes without this car. */
+    private static List<Trip> trips() {
+        return List.of(new Trip(at(TODAY.plusDays(1), 7), at(TODAY.plusDays(1), 18), 312, false),
+                new Trip(at(TODAY.plusDays(1), 19), at(TODAY.plusDays(2), 21), 1250, true, true));
+    }
+
+    /**
+     * Every day, the readout and the entries open, a refused away period, a refused trip and the message without a
+     * config.
+     */
     private List<String> problems(Language language, Optional<TextScale> scale) throws Exception {
         return Fx.call(() -> {
             var messages = new Messages(language);
@@ -106,11 +117,12 @@ class DashboardLanguagesTest {
             var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, AppName.TITLE, messages);
             view.onBatteryEntered(_ -> { });
             view.onOneOffAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
+            view.onTripChange(_ -> { }, (_, _) -> { }, _ -> { }, Models.CLOCK);
             view.lookup(".day-tabs").setStyle("-fx-open-tab-animation: none;"); // a growing tab is narrow on purpose
             stage = scale.map(larger -> Scenes.show(view, ColorScheme.LIGHT, larger))
                     .orElseGet(() -> Scenes.show(view, ColorScheme.LIGHT));
             var found = new ArrayList<String>();
-            var plan = mapper.map(planned(), awayPeriods());
+            var plan = mapper.map(planned(), awayPeriods(), trips(), Units.METRIC);
             for (int day = 0; day < 3; day++) {
                 view.show(plan);
                 ((TabPane) view.lookup(".day-tabs")).getSelectionModel().select(day);
@@ -127,6 +139,13 @@ class DashboardLanguagesTest {
                     .filter(button -> button.getText().equals(messages.text(TextKey.ONE_OFF_ADD))).findFirst().orElseThrow().fire();
             OneOffAwayEntry.enterTimes(view, "16:00", "10:00");
             OneOffAwayEntry.save(view);
+            found.addAll(check(view));
+            // tomorrow's trips, and the trip entry refusing a distance that is not a number
+            ((TabPane) view.lookup(".day-tabs")).getSelectionModel().select(1);
+            view.lookupAll(".button").stream().map(Button.class::cast)
+                    .filter(button -> button.getText().equals(messages.text(TextKey.TRIP_ADD))).findFirst().orElseThrow().fire();
+            TripEntry.distance(view, "far");
+            TripEntry.save(view);
             found.addAll(check(view));
             view.show(mapper.map(new Outlook.NotSetUp(Path.of("/home/owner/.config/car-charge-planner/engine.json"))));
             found.addAll(check(view));

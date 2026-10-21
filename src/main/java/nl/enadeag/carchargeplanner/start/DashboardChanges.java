@@ -4,6 +4,7 @@ import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.engine.Engine;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
@@ -59,6 +60,34 @@ final class DashboardChanges {
      */
     void removeAwayPeriod(OneOffAwayPeriod period) {
         save("the removal of the away period", () -> engine.removeAwayPeriod(period));
+    }
+
+    /**
+     * Saves a trip the owner entered.
+     *
+     * @param trip the trip
+     */
+    void addTrip(Trip trip) {
+        save("the trip", () -> engine.addTrip(trip));
+    }
+
+    /**
+     * Saves the owner's change to a trip.
+     *
+     * @param trip the trip as the dashboard showed it
+     * @param changed the trip as the owner changed it
+     */
+    void changeTrip(Trip trip, Trip changed) {
+        save("the change to the trip", () -> engine.changeTrip(trip, changed));
+    }
+
+    /**
+     * Forgets a trip the owner removed.
+     *
+     * @param trip the trip as the dashboard showed it
+     */
+    void removeTrip(Trip trip) {
+        save("the removal of the trip", () -> engine.removeTrip(trip));
     }
 
     private void save(String what, Change change) {

@@ -40,6 +40,7 @@ class DashboardKeyboardTest {
         return Fx.call(() -> {
             var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, AppName.TITLE, ENGLISH);
             view.onOneOffAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
+            view.onTripChange(_ -> { }, (_, _) -> { }, _ -> { }, Models.CLOCK);
             view.onBatteryEntered(_ -> { });
             view.onSetUp(() -> { });
             stage = Scenes.show(view, scheme);
@@ -64,6 +65,20 @@ class DashboardKeyboardTest {
             press(view, TextKey.BATTERY_UPDATE);
             press(view, TextKey.ONE_OFF_ADD);
             OneOffAwayEntry.enterTimes(view, "10:00", "12:00");
+        });
+
+        assertThat(Keyboard.problems(stage.getScene(), view)).isEmpty();
+    }
+
+    @ParameterizedTest
+    @EnumSource(ColorScheme.class)
+    void everyControlOfADayWithATripIsReachedTheSameWay(ColorScheme scheme) throws Exception {
+        var view = show(scheme);
+        Fx.run(() -> {
+            view.show(Models.plan(Optional.empty()));
+            view.selectDay(1);
+            // the trip with its choices, Change and Remove, and the entry of a new trip
+            press(view, TextKey.TRIP_ADD);
         });
 
         assertThat(Keyboard.problems(stage.getScene(), view)).isEmpty();
