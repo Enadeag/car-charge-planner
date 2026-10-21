@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Decides when the owner is told about a charge window: once, within the notification lead time before it starts.
@@ -73,7 +74,8 @@ public final class Announcer {
      * Tells the owner about each window of the plan that is due, the grid advice's among them, and remembers it.
      *
      * @param days the plan's days, whose charge windows are announced
-     * @param advice the grid advice, whose window, when it has one, is announced as a grid charge
+     * @param advice the grid advice, whose window, when it has one, is announced as a grid charge with its charge
+     *     limit
      * @param source where the plan's forecast came from; announcements wait while it is stale or too old
      * @param now the current moment
      * @param config the system and preferences the plan was made for: the lead time, the time zone, the phases and
@@ -82,7 +84,9 @@ public final class Announcer {
     public void announceDue(List<DayPlan> days, GridAdvice advice, ForecastSource source, Instant now,
             EngineConfig config) {
         var candidates = candidates(days, config);
-        advice.window().ifPresent(window -> candidates.add(announcement(AnnouncementKind.GRID_CHARGE, window, config)));
+        advice.window().ifPresent(window -> candidates.add(new Announcement(AnnouncementKind.GRID_CHARGE, window,
+                config.system().timezone(), config.system().charger().phases(), config.planning().minimumPct(),
+                advice.chargeLimitPct())));
         announce(candidates, source, now, config);
     }
 
@@ -114,13 +118,9 @@ public final class Announcer {
     private static List<Announcement> candidates(List<DayPlan> days, EngineConfig config) {
         var found = new ArrayList<Announcement>();
         days.forEach(day -> day.windows().forEach(window ->
-                found.add(announcement(AnnouncementKind.SOLAR_WINDOW, window, config))));
+                found.add(new Announcement(AnnouncementKind.SOLAR_WINDOW, window, config.system().timezone(),
+                        config.system().charger().phases(), config.planning().minimumPct(), Optional.empty()))));
         return found;
-    }
-
-    private static Announcement announcement(AnnouncementKind kind, Window window, EngineConfig config) {
-        return new Announcement(kind, window, config.system().timezone(), config.system().charger().phases(),
-                config.planning().minimumPct());
     }
 
     private boolean wasAnnounced(Window window) {

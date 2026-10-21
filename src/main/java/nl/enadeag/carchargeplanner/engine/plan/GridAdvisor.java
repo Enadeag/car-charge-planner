@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.engine.plan;
 
 import nl.enadeag.carchargeplanner.engine.config.HomeSystem;
+import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
@@ -17,6 +18,8 @@ public final class GridAdvisor {
 
     /** A shortfall smaller than this is forecast noise, not worth advice. */
     private static final double MIN_DEFICIT_PCT = 1.0;
+    /** Floating-point noise in a battery level, so a level of exactly 48 % is not rounded up to 49 %. */
+    private static final double LEVEL_NOISE_PCT = 1e-6;
 
     private final HomeSystem system;
     private final PlanningPreferences preferences;
@@ -28,7 +31,7 @@ public final class GridAdvisor {
      * Makes an advisor for one home, one set of preferences and the times the car is away.
      *
      * @param system the home and equipment
-     * @param preferences the planning preferences, for the minimum charge level and the margin
+     * @param preferences the planning preferences, for the minimum charge level, the margin and the charging hours
      * @param away when the car is not at home; no grid charge is advised in that time, {@link AwayTimes#NONE} for
      *     none. The same times the {@link Planner} was given.
      */
@@ -70,7 +73,7 @@ public final class GridAdvisor {
                 .flatMap(trip -> trip.grid().stream())
                 .map(grid -> new BlockedTime(grid.window().start(), grid.window().end()))
                 .toList();
-        return Optional.of(advice(days, dip.get(), forecast, notBefore, tripGrid));
+        return Optional.of(advice(days, plan.trips(), dip.get(), forecast, notBefore, tripGrid));
     }
 
     /**
@@ -94,13 +97,63 @@ public final class GridAdvisor {
         return day.levelAfterChargingPct().value() - day.drivingPct();
     }
 
-    private GridAdvice advice(List<DayPlan> days, DayPlan dip, List<ForecastStep> forecast, Instant notBefore,
-            List<BlockedTime> tripGrid) {
+    private GridAdvice advice(List<DayPlan> days, List<TripAdvice> trips, DayPlan dip, List<ForecastStep> forecast,
+            Instant notBefore, List<BlockedTime> tripGrid) {
         double deficitPct = preferences.minimumPct().value() - endLevelPct(dip);
         double energyKwh = deficitPct / 100 * system.car().usableBatteryKwh() / system.charger().efficiency();
         var daysUpToDip = days.subList(0, days.indexOf(dip) + 1);
-        return new GridAdvice(dip.date(), endLevelPct(dip), deficitPct, energyKwh,
-                latestPlacement(daysUpToDip, energyKwh, forecast, notBefore, tripGrid));
+        var window = latestPlacement(daysUpToDip, energyKwh, forecast, notBefore, tripGrid);
+        var limit = window.map(found -> chargeLimit(days, trips, found));
+        return new GridAdvice(dip.date(), endLevelPct(dip), deficitPct, energyKwh, window, limit);
+    }
+
+    /**
+     * The battery level the window brings the battery to, rounded up to a whole percentage, so a charge limit set to it
+     * stops the charge only once the window's energy is in; at most 100.
+     */
+    private Percent chargeLimit(List<DayPlan> days, List<TripAdvice> trips, Window window) {
+        double afterPct = levelAtPct(days, trips, window.start()) + percentOf(window.solarKwh() + window.importKwh());
+        return new Percent(Math.min(100, Math.ceil(afterPct - LEVEL_NOISE_PCT)));
+    }
+
+    /**
+     * The battery level at a moment of the plan: the level at the start of its day, or on the return of a trip that
+     * day, with the charging done since.
+     */
+    private double levelAtPct(List<DayPlan> days, List<TripAdvice> trips, Instant moment) {
+        var date = moment.atZone(zone).toLocalDate();
+        var day = days.stream().filter(planned -> planned.date().equals(date)).findFirst().orElseThrow();
+        var from = date.atStartOfDay(zone).toInstant();
+        double level = day.startLevelPct().value();
+        for (var trip : trips) {
+            var returned = trip.trip().returnTime();
+            if (!returned.isBefore(from) && !returned.isAfter(moment)) {
+                from = returned;
+                level = trip.returnLevelPct().value();
+            }
+        }
+        // as the plan counts them: a solar window for its solar energy, a trip's grid charge for all of it
+        for (var solar : day.windows()) {
+            if (within(solar, from, moment)) {
+                level += percentOf(solar.solarKwh());
+            }
+        }
+        for (var trip : trips) {
+            var grid = trip.grid().map(TripGridCharge::window);
+            if (grid.isPresent() && within(grid.get(), from, moment)) {
+                level += percentOf(grid.get().solarKwh() + grid.get().importKwh());
+            }
+        }
+        return level;
+    }
+
+    private static boolean within(Window window, Instant from, Instant to) {
+        return !window.start().isBefore(from) && !window.end().isAfter(to);
+    }
+
+    /** The share of the battery an energy from the wall fills. */
+    private double percentOf(double wallKwh) {
+        return wallKwh * system.charger().efficiency() / system.car().usableBatteryKwh() * 100;
     }
 
     /** The best window on the last of the days that has room for it. A window does not cross midnight. */

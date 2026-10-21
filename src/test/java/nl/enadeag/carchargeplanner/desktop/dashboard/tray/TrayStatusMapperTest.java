@@ -124,7 +124,8 @@ class TrayStatusMapperTest {
     @Test
     void gridAdviceComesBeforeAWindowOnSunBecauseTheCarWouldDropBelowItsMinimum() {
         var sunday = TODAY.plusDays(2);
-        var advice = new GridAdvice(sunday, 17, 13, 8.4, Optional.of(window(sunday, 9, 15)));
+        var advice = new GridAdvice(sunday, 17, 13, 8.4, Optional.of(window(sunday, 9, 15)),
+                Optional.of(new Percent(52)));
 
         var status = MAPPER.map(plannedAt(8, Optional.of(advice), day(TODAY, window(TODAY, 11, 14))));
 

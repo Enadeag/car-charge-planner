@@ -165,14 +165,15 @@ class AnnouncerTest {
     void theGridAdvicesWindowIsAnnouncedAsAGridChargeBesideTheSolarWindowsInTheOrderTheyStart() {
         var solar = window(6, 9);
         var grid = new Window(at(DAY, 5, 30), at(DAY, 6, 0), 13, 3.0, 0, 1.5);
-        var advice = new GridAdvice(DAY, 8, 22, 1.5, Optional.of(grid));
+        var advice = new GridAdvice(DAY, 8, 22, 1.5, Optional.of(grid), Optional.of(new Percent(32)));
         var now = at(DAY, 5, 20);
 
         announcer().announceDue(dayWith(solar), advice, forecast(now, Freshness.FRESH), now, config(60));
 
-        assertThat(told).extracting(Announcement::kind, Announcement::window).containsExactly(
-                tuple(AnnouncementKind.GRID_CHARGE, grid),
-                tuple(AnnouncementKind.SOLAR_WINDOW, solar));
+        assertThat(told).extracting(Announcement::kind, Announcement::window, Announcement::chargeLimitPct)
+                .containsExactly(
+                        tuple(AnnouncementKind.GRID_CHARGE, grid, Optional.of(new Percent(32))),
+                        tuple(AnnouncementKind.SOLAR_WINDOW, solar, Optional.empty()));
     }
 
     @Test

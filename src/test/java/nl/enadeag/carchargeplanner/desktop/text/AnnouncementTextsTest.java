@@ -10,6 +10,7 @@ import nl.enadeag.carchargeplanner.engine.notify.AnnouncementKind;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 /** What a notification says: what to set on the charger, and when. */
@@ -24,7 +25,9 @@ class AnnouncementTextsTest {
     }
 
     private static NotificationText text(AnnouncementKind kind, Window window, Phases phases) {
-        return new AnnouncementTexts(new LanguageChoice(Language.ENGLISH)).notification(new Announcement(kind, window, BRUSSELS, phases, new Percent(30)));
+        var limit = kind == AnnouncementKind.GRID_CHARGE ? Optional.of(new Percent(65)) : Optional.<Percent>empty();
+        return new AnnouncementTexts(new LanguageChoice(Language.ENGLISH))
+                .notification(new Announcement(kind, window, BRUSSELS, phases, new Percent(30), limit));
     }
 
     @Test
@@ -39,7 +42,7 @@ class AnnouncementTextsTest {
     @Test
     void inDutchTheNotificationSaysTheSameWithADecimalComma() {
         var announcement = new Announcement(AnnouncementKind.SOLAR_WINDOW, window(10, 15, 7, 1.6, 7.5, 0.1), BRUSSELS,
-                Phases.ONE, new Percent(30));
+                Phases.ONE, new Percent(30), Optional.empty());
 
         var text = new AnnouncementTexts(new LanguageChoice(Language.DUTCH)).notification(announcement);
 
@@ -53,7 +56,7 @@ class AnnouncementTextsTest {
         var language = new LanguageChoice(Language.ENGLISH);
         var texts = new AnnouncementTexts(language);
         var announcement = new Announcement(AnnouncementKind.SOLAR_WINDOW, window(10, 15, 7, 1.6, 7.5, 0.1), BRUSSELS,
-                Phases.ONE, new Percent(30));
+                Phases.ONE, new Percent(30), Optional.empty());
         assertThat(texts.notification(announcement).title()).isEqualTo("Charge window 10:00 – 15:00");
 
         language.choose(Language.DUTCH);
@@ -69,13 +72,24 @@ class AnnouncementTextsTest {
     }
 
     @Test
-    void aGridChargeSaysItKeepsTheBatteryAboveTheMinimum() {
-        var text = text(AnnouncementKind.GRID_CHARGE, window(0, 6, 13, 3.0, 0, 17.9), Phases.ONE);
+    void aGridChargeSaysItKeepsTheBatteryAboveTheMinimumAndTheChargeLimitToSet() {
+        var text = text(AnnouncementKind.GRID_CHARGE, window(21, 23, 13, 3.0, 0, 6.0), Phases.ONE);
 
-        assertThat(text.title()).isEqualTo("Grid charge window 00:00 – 06:00");
+        assertThat(text.title()).isEqualTo("Grid charge window 21:00 – 23:00");
         assertThat(text.body()).isEqualTo(
-                "Set the charge current to 13 A (3.0 kW) in your charger's app. About 17.9 kWh, needed to stay above "
-                        + "30%.");
+                "Set the charge current to 13 A (3.0 kW) in your charger's app. About 6.0 kWh, needed to stay above "
+                        + "30%. Set the charge limit in the car or the charger to 65%.");
+    }
+
+    @Test
+    void inDutchAGridChargeNamesTheLaadlimiet() {
+        var announcement = new Announcement(AnnouncementKind.GRID_CHARGE, window(21, 23, 13, 3.0, 0, 6.0), BRUSSELS,
+                Phases.ONE, new Percent(30), Optional.of(new Percent(65)));
+
+        var text = new AnnouncementTexts(new LanguageChoice(Language.DUTCH)).notification(announcement);
+
+        assertThat(text.body()).isEqualTo("Stel in de app van je laadpaal de laadstroom in op 13 A (3,0 kW). Ongeveer "
+                + "6,0 kWh, nodig om boven 30% te blijven. Stel de laadlimiet in de auto of de laadpaal in op 65%.");
     }
 
     @Test

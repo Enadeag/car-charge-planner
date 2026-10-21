@@ -28,7 +28,7 @@ public final class GridAdviceMapper {
     }
 
     /**
-     * The advice in words: how much, when, at what current, and why.
+     * The advice in words: how much, when, at what current and charge limit, and why.
      *
      * @param advice the engine's advice; its window may be empty when no day has room for the charge
      * @return the advice's label, its title (how much and when) and its detail (why, and what to set)
@@ -40,7 +40,8 @@ public final class GridAdviceMapper {
                         messages.span(window.start(), window.end(), zone)))
                 .orElseGet(() -> messages.text(TextKey.ADVICE_TITLE_NO_WINDOW, energy, dipDay(advice)));
         var settings = advice.window()
-                .map(window -> messages.text(TextKey.ADVICE_SET, window.amps(), messages.decimal(window.powerKw())))
+                .map(window -> messages.text(TextKey.ADVICE_SET, window.amps(), messages.decimal(window.powerKw()),
+                        messages.whole(advice.chargeLimitPct().orElseThrow().value())))
                 .orElseGet(() -> messages.text(TextKey.ADVICE_NO_ROOM));
         return new GridAdviceModel(messages.text(TextKey.ADVICE_LABEL), title, why(advice) + " " + settings);
     }

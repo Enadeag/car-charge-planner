@@ -86,6 +86,11 @@ The hours in which the owner can start a charge (07:00–22:00 unless the owner 
 _Avoid_: Awake hours, charge times
 _Dutch_: laaduren
 
+**Charge limit**:
+The battery level the owner sets in the car or the charger for a grid charge, at which charging stops: the level the grid charge brings the battery to, in whole percent. Not a setting of the app.
+_Avoid_: Target, maximum (the target charge level is the app's setting)
+_Dutch_: laadlimiet
+
 **Battery level**:
 How full the car's battery is, in percent, as the car shows it.
 _Avoid_: State of charge, SoC, charge

@@ -13,7 +13,8 @@ import java.util.Optional;
 
 /**
  * Where a grid charge can go: the free quarters of an hour, and every stretch of them that delivers an energy at one
- * current. The grid advice and a trip's grid charge each pick their own from these.
+ * current and starts within the charging hours, as the owner starts it. The grid advice and a trip's grid charge each
+ * pick their own from these.
  */
 final class GridPlacements {
 
@@ -29,7 +30,7 @@ final class GridPlacements {
      * Makes the placements for one home and one set of preferences.
      *
      * @param system the home and equipment, for the charger and the house's own use
-     * @param preferences the planning preferences, for the margin on the surplus
+     * @param preferences the planning preferences, for the margin on the surplus and the charging hours
      */
     GridPlacements(HomeSystem system, PlanningPreferences preferences) {
         this.system = system;
@@ -78,7 +79,8 @@ final class GridPlacements {
     }
 
     /**
-     * Every stretch of free quarters of an hour that delivers the energy at this current, as a window.
+     * Every stretch of free quarters of an hour that delivers the energy at this current and starts within the charging
+     * hours, as a window. It may run on after them.
      *
      * @param quarters the quarters to look in, in time order, without gaps
      * @param energyKwh the wall-side energy to deliver in kWh, more than 0
@@ -93,7 +95,9 @@ final class GridPlacements {
         var placements = new ArrayList<Window>();
         for (int first = 0; first + count <= quarters.size(); first++) {
             var stretch = quarters.subList(first, first + count);
-            if (!stretch.getFirst().start().isBefore(notBefore) && stretch.stream().allMatch(QuarterHour::free)) {
+            var start = stretch.getFirst().start();
+            if (!start.isBefore(notBefore) && preferences.chargingHours().allowStart(start, zone)
+                    && stretch.stream().allMatch(QuarterHour::free)) {
                 placements.add(window(stretch, amps, powerKw, hours));
             }
         }
@@ -101,17 +105,44 @@ final class GridPlacements {
     }
 
     /**
-     * Charging at once: from a moment on, at a current, until the energy is in or the car cannot charge any more.
+     * Charging at once, for a trip whose grid charge cannot wait: from a moment on, within the charging hours unless
+     * waiting for them would deliver less before the departure.
      *
      * @param quarters the quarters to charge in, in time order, without gaps
      * @param energyKwh the wall-side energy to deliver in kWh, more than 0
      * @param amps the current per phase in A
      * @param from the moment to start, or the first free moment after it
-     * @param until the moment the charging must have stopped, such as a departure
-     * @return the window, which ends early when a time that is not free comes first; empty when the car has no free
-     *     time from {@code from} to {@code until}
+     * @param until the moment the charging must have stopped, the departure
+     * @return the grid charge, {@link TripGridCharge.Start#NOW} when it starts within the charging hours, at their next
+     *     start when that is soon enough, and {@link TripGridCharge.Start#NOW_OUTSIDE_CHARGING_HOURS} when it is not;
+     *     empty when the car has no free time from {@code from} to {@code until}
      */
-    Optional<Window> fromNow(List<QuarterHour> quarters, double energyKwh, int amps, Instant from, Instant until) {
+    Optional<TripGridCharge> now(List<QuarterHour> quarters, double energyKwh, int amps, Instant from,
+            Instant until) {
+        var hours = preferences.chargingHours();
+        var atOnce = fromNow(quarters, energyKwh, amps, from, until);
+        if (atOnce.isEmpty() || hours.allowStart(atOnce.get().start(), zone)) {
+            return atOnce.map(window -> new TripGridCharge(window, TripGridCharge.Start.NOW));
+        }
+        var outside = atOnce.get();
+        return fromNow(quarters, energyKwh, amps, hours.nextStart(outside.start(), zone), until)
+                .filter(waiting -> hours.allowStart(waiting.start(), zone)
+                        && delivered(waiting) >= delivered(outside) - EPS)
+                .map(waiting -> new TripGridCharge(waiting, TripGridCharge.Start.NOW))
+                .or(() -> Optional.of(new TripGridCharge(outside, TripGridCharge.Start.NOW_OUTSIDE_CHARGING_HOURS)));
+    }
+
+    private static double delivered(Window window) {
+        return window.solarKwh() + window.importKwh();
+    }
+
+    /**
+     * Charging at once: from a moment on, at a current, until the energy is in or the car cannot charge any more. The
+     * window ends early when a time that is not free comes first; empty when the car has no free time from
+     * {@code from} to {@code until}.
+     */
+    private Optional<Window> fromNow(List<QuarterHour> quarters, double energyKwh, int amps, Instant from,
+            Instant until) {
         double powerKw = Charging.powerKw(amps, system.charger());
         Instant start = null;
         Instant end = null;

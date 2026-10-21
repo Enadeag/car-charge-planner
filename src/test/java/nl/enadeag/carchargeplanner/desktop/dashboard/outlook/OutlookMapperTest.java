@@ -191,7 +191,7 @@ class OutlookMapperTest {
     @Test
     void inDutchGridAdviceNamesTheDayInLowerCaseInsideTheSentence() {
         var sunday = TODAY.plusDays(2);
-        var advice = new GridAdvice(sunday, 22, 8, 11.0, Optional.empty());
+        var advice = new GridAdvice(sunday, 22, 8, 11.0, Optional.empty(), Optional.empty());
         var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(day(TODAY), day(sunday)), new Percent(50),
                 false, Optional.of(advice), List.of(), fresh(), 0.4, new Percent(30), new Percent(80));
 
@@ -203,19 +203,19 @@ class OutlookMapperTest {
     @Test
     void gridAdviceSaysHowMuchWhenAndWhy() {
         var sunday = TODAY.plusDays(2);
-        var night = new Window(at(TODAY.plusDays(1), 1, 0), at(TODAY.plusDays(1), 4, 0), 16, 3.7, 0, 11.0);
-        var advice = new GridAdvice(sunday, 22, 8, 11.0, Optional.of(night));
+        var evening = new Window(at(TODAY.plusDays(1), 21, 0), at(TODAY.plusDays(2), 0, 0), 16, 3.7, 0, 11.0);
+        var advice = new GridAdvice(sunday, 22, 8, 11.0, Optional.of(evening), Optional.of(new Percent(57)));
 
         var model = advised(advice, day(TODAY), day(TODAY.plusDays(1)), day(sunday)).advice().orElseThrow();
 
-        assertThat(model.title()).isEqualTo("Charge 11.0 kWh from the grid: tomorrow 01:00 – 04:00.");
-        assertThat(model.detail())
-                .isEqualTo("Without it the battery ends Sunday at 22%, below the minimum of 30%. Set 16 A (3.7 kW).");
+        assertThat(model.title()).isEqualTo("Charge 11.0 kWh from the grid: tomorrow 21:00 – 00:00.");
+        assertThat(model.detail()).isEqualTo("Without it the battery ends Sunday at 22%, below the minimum of 30%. "
+                + "Set 16 A (3.7 kW), and a charge limit of 57% in the car or the charger.");
     }
 
     @Test
     void gridAdviceWithoutRoomForAChargeSaysSo() {
-        var advice = new GridAdvice(TODAY.plusDays(1), -5, 35, 23.3, Optional.empty());
+        var advice = new GridAdvice(TODAY.plusDays(1), -5, 35, 23.3, Optional.empty(), Optional.empty());
 
         var model = advised(advice, day(TODAY), day(TODAY.plusDays(1))).advice().orElseThrow();
 
@@ -225,7 +225,7 @@ class OutlookMapperTest {
 
     @Test
     void theDayThatNeedsTheGridChargeShowsItOnItsTab() {
-        var advice = new GridAdvice(TODAY.plusDays(1), 22, 8, 11.0, Optional.empty());
+        var advice = new GridAdvice(TODAY.plusDays(1), 22, 8, 11.0, Optional.empty(), Optional.empty());
 
         var days = advised(advice, day(TODAY), day(TODAY.plusDays(1)), day(TODAY.plusDays(2))).days();
 
