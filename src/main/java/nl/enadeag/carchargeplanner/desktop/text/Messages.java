@@ -203,7 +203,7 @@ public final class Messages {
      * so that "0.5" typed in Dutch is not read as 5.
      *
      * @param text what the owner typed; may be empty, and spaces around it are ignored
-     * @return the number, or empty when the text is not wholly a number in this language
+     * @return the number, or empty when the text is not wholly a finite number in this language
      */
     public OptionalDouble parseNumber(String text) {
         var format = NumberFormat.getNumberInstance(locale());
@@ -211,7 +211,9 @@ public final class Messages {
         var trimmed = text.strip();
         var position = new ParsePosition(0);
         var number = format.parse(trimmed, position);
-        if (number == null || trimmed.isEmpty() || position.getIndex() != trimmed.length()) {
+        // the format also reads its own signs for not a number and infinity, which no field can use
+        if (number == null || trimmed.isEmpty() || position.getIndex() != trimmed.length()
+                || !Double.isFinite(number.doubleValue())) {
             return OptionalDouble.empty();
         }
         return OptionalDouble.of(number.doubleValue());

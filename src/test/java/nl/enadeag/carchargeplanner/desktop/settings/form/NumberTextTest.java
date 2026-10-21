@@ -37,6 +37,9 @@ class NumberTextTest {
         assertThat(english.read("", 4.2, 1)).isEqualTo(4.2);
         assertThat(english.read("four", 4.2, 1)).isEqualTo(4.2);
         assertThat(dutch.read("2.5", 4.2, 1)).as("a point is not the Dutch decimal sign").isEqualTo(4.2);
+        assertThat(english.read("NaN", 4.2, 1)).as("the format's own sign for not a number").isEqualTo(4.2);
+        assertThat(dutch.read("NaN", 4.2, 1)).isEqualTo(4.2);
+        assertThat(english.read("∞", 4.2, 1)).as("the format's sign for infinity").isEqualTo(4.2);
     }
 
     @Test
