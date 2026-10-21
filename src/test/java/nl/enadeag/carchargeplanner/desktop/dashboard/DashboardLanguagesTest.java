@@ -21,6 +21,8 @@ import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
+import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
+import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import nl.enadeag.carchargeplanner.host.AppName;
@@ -78,7 +80,11 @@ class DashboardLanguagesTest {
         return steps;
     }
 
-    /** Every kind of day: one with two windows and grid energy, one that needs the grid charge, one without a window. */
+    /**
+     * Every kind of day: one with two windows and grid energy, one that needs the grid charge, one without a window;
+     * and the advice for tomorrow's trip with its longest texts: solar power, a grid charge outside the charging hours
+     * and a charging stop.
+     */
     private static Outlook.Planned planned() {
         var today = new DayPlan(TODAY, new Percent(50), List.of(new Window(at(TODAY, 10), at(TODAY, 13), 10, 2.3, 7.3, 0.6),
                 new Window(at(TODAY, 14), at(TODAY, 15), 8, 1.8, 1.8, 0)), new Percent(74), new Percent(62), 12, sunny(TODAY));
@@ -89,8 +95,15 @@ class DashboardLanguagesTest {
                 at(TODAY, 7), Freshness.STALE, ProviderRole.FALLBACK, "Forecast.Solar", Optional.of(at(TODAY, 9)));
         return new Outlook.Planned(at(TODAY, 8), BRUSSELS, List.of(today, tomorrow, friday), new Percent(50), true,
                 Optional.of(new GridAdvice(TODAY.plusDays(1), 22, 8, 11.0, Optional.of(night),
-                        Optional.of(new Percent(67)))), List.of(), source, 0.45,
+                        Optional.of(new Percent(67)))), List.of(tripAdvice(today.windows())), source, 0.45,
                 new Percent(30), new Percent(80));
+    }
+
+    private static TripAdvice tripAdvice(List<Window> solar) {
+        var grid = new TripGridCharge(new Window(at(TODAY, 23), at(TODAY.plusDays(1), 5), 16, 3.7, 0, 22.2),
+                TripGridCharge.Start.NOW_OUTSIDE_CHARGING_HOURS);
+        return new TripAdvice(trips().getFirst(), new Percent(100), solar, new Percent(74), Optional.of(grid),
+                new Percent(100), 87.4, new Percent(0));
     }
 
     /** One of each kind: a whole day, part of a day, and a period over several days. */

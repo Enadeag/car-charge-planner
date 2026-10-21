@@ -659,6 +659,8 @@
                     <param>nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.dashboard.tray.TrayStatusMapper*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.dashboard.tray.TrayPresenter*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripAdviceMapper*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripAdviceModel*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripCheck*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripMapper*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripOrigin*</param>

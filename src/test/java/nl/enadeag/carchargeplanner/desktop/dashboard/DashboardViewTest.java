@@ -113,6 +113,82 @@ class DashboardViewTest {
         assertThat(cards).containsExactly("main-card", "advice-card", "solar-card", "battery-card");
     }
 
+    /** What a screen reader reads of each card of the selected day above the charts. */
+    private static List<String> cardsAboveTheCharts(DashboardView view) {
+        return Scenes.all(selectedPage(view)).stream()
+                .filter(node -> node.getStyleClass().contains("card"))
+                .takeWhile(node -> !node.getStyleClass().contains("solar-card"))
+                .map(Node::getAccessibleText)
+                .toList();
+    }
+
+    @Test
+    void tripAdviceThatAsksSomethingComesBelowTodaysDayCardAboveTheGridAdvice() throws Exception {
+        var view = shown(Models.plan(List.of(Models.ADVICE_SATURDAY, Models.ADVICE_SUNDAY),
+                Optional.of(Models.ADVICE)));
+
+        var today = Fx.call(() -> cardsAboveTheCharts(view));
+
+        assertThat(today).hasSize(3);
+        assertThat(today.get(1)).startsWith("Trip advice: Trip tomorrow at 07:30");
+        assertThat(today.get(2)).startsWith("Grid advice:");
+    }
+
+    @Test
+    void eachTripsAdviceShowsOnTheDayOfItsDeparture() throws Exception {
+        var view = shown(Models.plan(List.of(Models.ADVICE_SATURDAY, Models.ADVICE_SUNDAY),
+                Optional.of(Models.ADVICE)));
+
+        var saturday = Fx.call(() -> {
+            tabs(view).getSelectionModel().select(1);
+            return cardsAboveTheCharts(view);
+        });
+        var sunday = Fx.call(() -> {
+            tabs(view).getSelectionModel().select(2);
+            return cardsAboveTheCharts(view);
+        });
+
+        assertThat(saturday).hasSize(2);
+        assertThat(saturday.get(1)).startsWith("Trip advice: Trip tomorrow at 07:30");
+        assertThat(sunday).hasSize(2);
+        assertThat(sunday.get(1)).isEqualTo("Trip advice: Trip Sunday at 17:00, 120 km there and back. The plan "
+                + "charges enough for it: the battery is at 62% when you leave. Assuming a battery level of 50%.");
+    }
+
+    @Test
+    void adjustOnATripsAdviceOpensTodaysBatteryEntryAndItsLevelReachesTheHandler() throws Exception {
+        var view = shown(Models.plan(List.of(Models.ADVICE_SATURDAY), Optional.empty()));
+        var levels = new ArrayList<Integer>();
+        Fx.run(() -> {
+            view.onBatteryEntered(levels::add);
+            tabs(view).getSelectionModel().select(1);
+        });
+        var adjust = Fx.call(() -> (Button) selectedPage(view).lookup(".trip-advice").lookupAll(".button").stream()
+                .filter(node -> "Adjust".equals(((Button) node).getText())).findFirst().orElseThrow());
+
+        Fx.run(adjust::fire);
+        var field = Fx.call(() -> (Spinner<?>) selectedPage(view).lookup(".battery-level-field"));
+        assertThat(Fx.call(() -> tabs(view).getSelectionModel().getSelectedIndex())).isZero();
+        assertThat(Fx.call(() -> Scenes.reallyVisible(field))).isTrue();
+        assertThat(Fx.call(() -> view.getScene().getFocusOwner())).isIn(field, field.getEditor());
+        Fx.run(() -> {
+            field.getEditor().setText("63");
+            selectedPage(view).lookup(".battery-editor").lookupAll(".button").stream().map(Button.class::cast)
+                    .filter(button -> "Save".equals(button.getText())).findFirst().orElseThrow().fire();
+        });
+
+        assertThat(levels).containsExactly(63);
+    }
+
+    @Test
+    void withoutAPlaceToSendTheLevelATripsAdviceHasNoAdjust() throws Exception {
+        var view = shown(Models.plan(List.of(Models.ADVICE_SATURDAY), Optional.empty()));
+
+        var texts = Fx.call(() -> Scenes.visibleTexts(selectedPage(view).lookup(".trip-advice")));
+
+        assertThat(texts).contains("Assuming a battery level of 50%.").doesNotContain("Adjust");
+    }
+
     @Test
     void theChartsFollowTheSelectedDay() throws Exception {
         var view = shown(Models.plan(Optional.empty()));
@@ -194,8 +270,8 @@ class DashboardViewTest {
     void aPlanWithoutDaysShowsNoTabsAndDoesNotFail() throws Exception {
         var view = shown(Models.plan(Optional.empty()));
 
-        Fx.run(() -> view.show(new DashboardModel.Plan(List.of(), Optional.empty(), Models.AWAY, Models.TRIPS,
-                Models.FOOTER)));
+        Fx.run(() -> view.show(new DashboardModel.Plan(List.of(), List.of(), Optional.empty(), Models.AWAY,
+                Models.TRIPS, Models.FOOTER)));
 
         assertThat(Fx.call(() -> tabs(view).getTabs())).isEmpty();
         assertThat(Fx.call(() -> view.lookup(".main-card"))).isNull();
@@ -207,8 +283,8 @@ class DashboardViewTest {
         var busy = new DayModel(Models.TODAY.plusDays(1), "Sat", "Tomorrow", DayKind.SOLAR, "Charge window", "06:00 – 06:10",
                 Models.SUNNY_TODAY.facts(), Models.SUNNY_TODAY.chips(), "Also 06:15 – 06:25 at 6 A. ".repeat(80), "",
                 Models.SUNNY_TODAY.curve(), Models.CLOUDY_TOMORROW.battery());
-        var plan = new DashboardModel.Plan(List.of(Models.CLOUDY_TOMORROW, busy), Optional.empty(), Models.AWAY,
-                Models.TRIPS, Models.FOOTER);
+        var plan = new DashboardModel.Plan(List.of(Models.CLOUDY_TOMORROW, busy), List.of(), Optional.empty(),
+                Models.AWAY, Models.TRIPS, Models.FOOTER);
         var view = Fx.call(() -> {
             var it = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION,
                     AppName.TITLE, new Messages(Language.ENGLISH));

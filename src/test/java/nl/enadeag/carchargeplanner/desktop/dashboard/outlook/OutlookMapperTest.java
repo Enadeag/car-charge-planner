@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.outlook;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.PlannedDays;
+import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.ChipModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.EnergySource;
@@ -17,7 +18,9 @@ import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
+import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -230,6 +233,20 @@ class OutlookMapperTest {
         var days = advised(advice, day(TODAY), day(TODAY.plusDays(1)), day(TODAY.plusDays(2))).days();
 
         assertThat(days).extracting(DayModel::kind).containsExactly(DayKind.NONE, DayKind.GRID, DayKind.NONE);
+    }
+
+    @Test
+    void thePlanCarriesTheAdviceForEachTripInTheOwnersUnits() {
+        var trip = new Trip(at(TODAY.plusDays(1), 8, 15), at(TODAY.plusDays(1), 19, 0), 160.9344, false);
+        var advice = new TripAdvice(trip, new Percent(70), List.of(), new Percent(75), Optional.empty(),
+                new Percent(75), 0, new Percent(40));
+        var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(day(TODAY)), new Percent(50), false,
+                Optional.empty(), List.of(advice), fresh(), 0.4, new Percent(30), new Percent(80));
+
+        var plan = (DashboardModel.Plan) MAPPER.map(planned, List.of(), List.of(trip), Units.IMPERIAL);
+
+        assertThat(plan.tripAdvice()).extracting(model -> model.title())
+                .containsExactly("Trip tomorrow at 08:15, 100 mi there and back.");
     }
 
     @Test

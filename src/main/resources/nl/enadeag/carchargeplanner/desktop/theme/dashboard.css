@@ -429,6 +429,12 @@
     -fx-background-color: transparent;
 }
 
+/* a trip's advice: the battery level it starts from, with Adjust beside it */
+.trip-advice-level {
+    -fx-alignment: center-left;
+    -fx-spacing: 0.6em;
+}
+
 .text-input.trip-time {
     -fx-pref-width: 4.5em;
 }

@@ -166,6 +166,48 @@ public enum TextKey {
     TRIP_DISTANCE_NOT_A_NUMBER,
     /** Said when the entered distance is 0 or less. */
     TRIP_DISTANCE_NOT_POSITIVE,
+    /** The chip above a trip's advice. */
+    TRIP_ADVICE_LABEL,
+    /** A trip advice's title: {0} the day of departure in a sentence, {1} its time, {2} the distance, {3} its unit. */
+    TRIP_ADVICE_TITLE,
+    /** A trip for which the plan charges enough already: {0} the battery level at the departure in %. */
+    TRIP_ADVICE_ENOUGH,
+    /** A trip charged on solar power alone: {0} the level to charge to in %, {1} the solar windows with their days. */
+    TRIP_ADVICE_SOLAR,
+    /** A trip charged on solar power, then from the grid: {0} the level to charge to in %, {1} the solar windows. */
+    TRIP_ADVICE_SOLAR_GRID,
+    /** A trip charged from the grid alone: {0} the level to charge to in %. */
+    TRIP_ADVICE_GRID,
+    /** A trip that cannot be charged for before its departure: {0} the battery level at the departure in %. */
+    TRIP_ADVICE_LEAVES,
+    /** When to start a trip's grid charge, as late as it can: {0} the start, from {@link #TRIP_ADVICE_AT}. */
+    TRIP_ADVICE_START_PLANNED,
+    /**
+     * When to start a trip's grid charge that cannot wait: {0} {@link #TRIP_ADVICE_NOW}, or the start from
+     * {@link #TRIP_ADVICE_AT} when the car is home or the charging hours begin only then.
+     */
+    TRIP_ADVICE_START_NOW,
+    /**
+     * When to start a trip's grid charge that cannot wait for the charging hours: {0} as for
+     * {@link #TRIP_ADVICE_START_NOW}.
+     */
+    TRIP_ADVICE_START_OUTSIDE,
+    /** The start of a trip's grid charge when that is now. */
+    TRIP_ADVICE_NOW,
+    /** The start of a trip's grid charge: {0} the day in a sentence or {@link #TRIP_ADVICE_TONIGHT}, {1} the time. */
+    TRIP_ADVICE_AT,
+    /** The evening of today, in a sentence. */
+    TRIP_ADVICE_TONIGHT,
+    /** A trip the battery cannot hold: {0} the distance it lacks, rounded up, {1} its unit. */
+    TRIP_ADVICE_SHORT,
+    /** The battery level a trip's advice starts from, while it is assumed: {0} the level in %. */
+    TRIP_ADVICE_ASSUMED,
+    /** The battery level a trip's advice starts from, as the owner entered it: {0} the level in %. */
+    TRIP_ADVICE_ENTERED,
+    /** The button on a trip's advice that opens the entry of the battery level. */
+    TRIP_ADVICE_ADJUST,
+    /** What the adjust button does, for its tooltip and a screen reader. */
+    TRIP_ADVICE_ADJUST_HINT,
     /** The chip above the grid advice. */
     ADVICE_LABEL,
     /** The grid advice's title with a window: {0} kWh, {1} the day in a sentence, {2} the window's times. */

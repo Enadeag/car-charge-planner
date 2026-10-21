@@ -13,6 +13,7 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.WindowSpan;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Step;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Tick;
+import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripAdviceModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripOrigin;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripsModel;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
@@ -89,6 +90,18 @@ public final class Models {
                     "Change the trip Away Sun 5 Jul 17:00 – Mon 6 Jul 09:30 · 120 km there and back",
                     "Remove the trip Away Sun 5 Jul 17:00 – Mon 6 Jul 09:30 · 120 km there and back")));
 
+    /** Saturday's trip, which needs a grid charge tonight. */
+    public static final TripAdviceModel ADVICE_SATURDAY = new TripAdviceModel(TODAY.plusDays(1), true,
+            EnergySource.GRID, "Trip advice", "Trip tomorrow at 07:30, 300 km there and back.",
+            "Charge to 95% from the grid. Start tonight at 21:00. Set 16 A (3.7 kW), and a charge limit of 95% in the "
+                    + "car or the charger.", "Assuming a battery level of 50%.");
+
+    /** Sunday's trip, for which the plan charges enough. */
+    public static final TripAdviceModel ADVICE_SUNDAY = new TripAdviceModel(TODAY.plusDays(2), false, EnergySource.CAR,
+            "Trip advice", "Trip Sunday at 17:00, 120 km there and back.",
+            "The plan charges enough for it: the battery is at 62% when you leave.",
+            "Assuming a battery level of 50%.");
+
     /** A clock that stays at the moment {@link #AWAY}'s plan was made. */
     public static final InstantSource CLOCK = InstantSource.fixed(AWAY.madeAt());
 
@@ -109,6 +122,11 @@ public final class Models {
     }
 
     public static DashboardModel.Plan plan(Optional<GridAdviceModel> advice) {
-        return new DashboardModel.Plan(List.of(SUNNY_TODAY, CLOUDY_TOMORROW, GRID_SUNDAY), advice, AWAY, TRIPS, FOOTER);
+        return plan(List.of(), advice);
+    }
+
+    public static DashboardModel.Plan plan(List<TripAdviceModel> tripAdvice, Optional<GridAdviceModel> advice) {
+        return new DashboardModel.Plan(List.of(SUNNY_TODAY, CLOUDY_TOMORROW, GRID_SUNDAY), tripAdvice, advice, AWAY,
+                TRIPS, FOOTER);
     }
 }

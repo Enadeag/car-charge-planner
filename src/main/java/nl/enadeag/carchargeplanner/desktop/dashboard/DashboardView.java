@@ -12,6 +12,8 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayCard;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Glyphs;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarCard;
+import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripAdviceCard;
+import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripAdviceModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripCard;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripsModel;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
@@ -50,6 +52,7 @@ final class DashboardView extends VBox {
     private final OneOffAwayCard away;
     private final TripCard trips;
     private List<DayModel> days = List.of();
+    private List<TripAdviceModel> tripAdvice = List.of();
     /** Today's grid advice; null when the plan shown has none, or before one shows. */
     private GridAdviceModel advice;
     /** The away periods for specific days; null until a plan shows. */
@@ -112,6 +115,7 @@ final class DashboardView extends VBox {
         switch (model) {
             case DashboardModel.Plan plan -> {
                 days = plan.days();
+                tripAdvice = plan.tripAdvice();
                 advice = plan.advice().orElse(null);
                 awayPeriods = plan.away();
                 enteredTrips = plan.trips();
@@ -236,8 +240,9 @@ final class DashboardView extends VBox {
     }
 
     /**
-     * Grid advice goes on today's tab, below its day card; the charts follow, then the day's trips, and the away
-     * periods last.
+     * Below the day card comes the advice for the trips that depart that day, and on today's tab also for those that
+     * ask the owner to do something now; grid advice goes on today's tab, below them. The charts follow, then the
+     * day's trips, and the away periods last.
      */
     private void showDay(int index) {
         if (days.isEmpty()) {
@@ -247,6 +252,12 @@ final class DashboardView extends VBox {
         }
         var day = days.get(Math.clamp(index, 0, days.size() - 1));
         var page = page(new DayCard(day));
+        var today = days.getFirst().date();
+        for (var trip : tripAdvice) {
+            if (trip.shownOn(day.date(), today)) {
+                page.getChildren().add(tripAdviceCard(trip));
+            }
+        }
         if (day == days.getFirst()) {
             if (advice != null) {
                 page.getChildren().add(new GridAdviceCard(advice));
@@ -265,6 +276,18 @@ final class DashboardView extends VBox {
         }
         body.show(page);
         contentChanged.run();
+    }
+
+    /** A trip's advice, whose Adjust opens the battery level's entry on today's tab, where it can be entered. */
+    private TripAdviceCard tripAdviceCard(TripAdviceModel trip) {
+        var card = new TripAdviceCard(trip, messages);
+        if (battery.acceptsLevel()) {
+            card.onAdjust(() -> {
+                selectDay(0);
+                battery.enterLevel();
+            });
+        }
+        return card;
     }
 
     private static VBox page(Region card) {

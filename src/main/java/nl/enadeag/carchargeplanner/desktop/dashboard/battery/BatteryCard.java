@@ -89,6 +89,25 @@ public final class BatteryCard extends VBox {
     }
 
     /**
+     * Whether the owner can enter today's level here.
+     *
+     * @return true once {@link #onEntered(IntConsumer)} gave somewhere to send the level
+     */
+    public boolean acceptsLevel() {
+        return acceptsLevel;
+    }
+
+    /**
+     * Opens the entry of the level, as Update does, with the focus in it; nothing happens while the card shows a day
+     * other than today or cannot send the level anywhere.
+     */
+    public void enterLevel() {
+        if (canEnterLevel()) {
+            openEditor();
+        }
+    }
+
+    /**
      * The bar, for the tests.
      *
      * @return the card's bar
