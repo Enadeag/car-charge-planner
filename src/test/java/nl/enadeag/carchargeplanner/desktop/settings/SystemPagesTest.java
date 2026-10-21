@@ -12,11 +12,13 @@ import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.engine.config.Car;
 import nl.enadeag.carchargeplanner.engine.config.Charger;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.Coordinates;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
+import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.Phases;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
@@ -134,6 +136,23 @@ class SystemPagesTest {
         var config = stored();
         assertThat(config.system().car().usableBatteryKwh()).isEqualTo(75);
         assertThat(config.typical().system()).containsExactly(ConfigSetting.CAR_CONSUMPTION);
+    }
+
+    @Test
+    void aChangedCarKeepsTheTripSurchargeTheCardDoesNotShow() throws Exception {
+        var view = openWith(config -> {
+            var system = config.system();
+            var car = system.car();
+            var surcharged = new Car(car.usableBatteryKwh(), car.consumptionKwhPer100km(), car.kmPerDay(), new Percent(20));
+            return config.withSystem(system.withHouseAndCar(system.house(), surcharged), config.typical());
+        });
+
+        Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_CAR_BATTERY, "75");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(stored().system().car()).isEqualTo(new Car(75, 18, 40, new Percent(20)));
     }
 
     @Test

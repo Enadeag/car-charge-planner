@@ -75,6 +75,8 @@ class ConfigFileTest {
         "\"minimumPct\": 30,    | \"minimumPct\": null,  | minimumPct",
         "\"minimumPct\": 30,    | \"minimumPct\": \"thirty\", | minimumPct",
         "\"targetPct\": 80,     | \"targetPct\": 100.5,  | targetPct",
+        "\"tripSurchargePct\": 15 | \"tripSurchargePct\": -1 | system.car.tripSurchargePct",
+        "\"tripSurchargePct\": 15 | \"tripSurchargePct\": \"15%\" | system.car.tripSurchargePct",
         "\"notifyLeadMinutes\": 15 | \"notifyLeadMinutes\": -5 | notifyLeadMinutes",
         "\"volts\": 230,        | \"volts\": null,       | volts",
         "\"primary\": \"open-meteo\" | \"primary\": \"\"  | primary",
@@ -131,7 +133,25 @@ class ConfigFileTest {
 
         assertThatThrownBy(() -> new ConfigFile(file).read()).isInstanceOf(ConfigProblem.class)
                 .hasMessage("engine.json: system.car: unknown setting 'kmPerWeek'; allowed are 'usableBatteryKwh', "
-                        + "'consumptionKwhPer100km', 'kmPerDay'");
+                        + "'consumptionKwhPer100km', 'kmPerDay', 'tripSurchargePct'");
+    }
+
+    @Test
+    void theCarsTripSurchargeIsReadAndWrittenBack() throws IOException, ConfigProblem {
+        var file = write(Files.readString(EXAMPLE).replace("\"tripSurchargePct\": 15", "\"tripSurchargePct\": 22.5"));
+        var config = new ConfigFile(file).read();
+        assertThat(config.system().car()).isEqualTo(new Car(60, 18, 40, new Percent(22.5)));
+
+        var copy = new ConfigFile(folder.resolve("copy.json"));
+        copy.write(config);
+        assertThat(copy.read().system().car().tripSurcharge()).isEqualTo(new Percent(22.5));
+    }
+
+    /** A config file from before trips existed must keep working. */
+    @Test
+    void aCarWithoutATripSurchargeHasTheStandardOne() throws IOException, ConfigProblem {
+        var file = write(Files.readString(EXAMPLE).replace(", \"tripSurchargePct\": 15", ""));
+        assertThat(new ConfigFile(file).read().system().car().tripSurcharge()).isEqualTo(new Percent(15));
     }
 
     @Test

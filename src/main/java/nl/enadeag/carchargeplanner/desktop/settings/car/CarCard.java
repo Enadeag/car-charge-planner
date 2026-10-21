@@ -16,6 +16,7 @@ import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.Car;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
+import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
@@ -96,8 +97,8 @@ public final class CarCard implements ConfigPart {
         if (!isChanged()) {
             return Optional.of(config);
         }
-        return car(_ -> { }).map(car -> {
-            var system = config.system();
+        var system = config.system();
+        return car(system.car().tripSurcharge(), _ -> { }).map(car -> {
             return config.withSystem(system.withHouseAndCar(system.house(), car),
                     new TypicalValues(typical.appliedTo(config.typical().system()), config.typical().panels()));
         });
@@ -110,7 +111,7 @@ public final class CarCard implements ConfigPart {
             return false;
         }
         inputs().forEach(Input::commitTyped);
-        return car(problems::show).isEmpty();
+        return car(Car.STANDARD_TRIP_SURCHARGE, problems::show).isEmpty();
     }
 
     @Override
@@ -123,10 +124,13 @@ public final class CarCard implements ConfigPart {
         return typical.isChanged() || inputs().stream().anyMatch(Input::isChanged);
     }
 
-    /** The car as entered, after its record checked it; a refused value goes to {@code refused}. */
-    private Optional<Car> car(Consumer<InvalidSetting> refused) {
+    /**
+     * The car as entered, with a trip surcharge this card does not show, after its record checked it; a refused value
+     * goes to {@code refused}.
+     */
+    private Optional<Car> car(Percent tripSurcharge, Consumer<InvalidSetting> refused) {
         try {
-            return Optional.of(new Car(battery.value(), consumption.value(), distance.value()));
+            return Optional.of(new Car(battery.value(), consumption.value(), distance.value(), tripSurcharge));
         } catch (InvalidSetting e) {
             refused.accept(e);
             return Optional.empty();
