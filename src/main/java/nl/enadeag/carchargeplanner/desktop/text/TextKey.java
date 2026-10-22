@@ -268,6 +268,8 @@ public enum TextKey {
     TRAY_NOTHING,
     /** The tray menu's entry and the notifications' button that open the dashboard. */
     OPEN_DASHBOARD,
+    /** The button of the notification that asks whether the assumed battery level is right, on Linux. */
+    ENTER_BATTERY_LEVEL,
     /** The tray menu's entry that quits the app. */
     QUIT,
     /** Today, as a tab and a title. */

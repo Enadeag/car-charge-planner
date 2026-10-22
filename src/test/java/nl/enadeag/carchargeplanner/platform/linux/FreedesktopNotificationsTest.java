@@ -83,7 +83,8 @@ class FreedesktopNotificationsTest {
         desktop = DBusConnectionBuilder.forAddress(address).withShared(false).build();
         notifications = new FreedesktopNotifications(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),
                 "Car charge planner", "car-charge-planner", new AppIcon(), Files.createDirectory(folder.resolve("notify")),
-                openLabel::get, Runnable::run);
+                target -> target == NotificationTarget.BATTERY_LEVEL ? "Enter battery level" : openLabel.get(),
+                Runnable::run);
     }
 
     @AfterEach
@@ -257,11 +258,22 @@ class FreedesktopNotificationsTest {
     }
 
     @Test
+    void theBatteryChecksButtonSaysItOpensTheBatteryLevelsEntry() throws Exception {
+        serve();
+        notifications.send(new NotificationText("Check the battery level", "Is the battery at about 50%?",
+                NotificationTarget.BATTERY_LEVEL));
+
+        var call = server.calls.poll(TIMEOUT_S, TimeUnit.SECONDS);
+        assertThat(call).isNotNull();
+        assertThat(call.actions()).containsExactly("default", "Enter battery level", "open", "Enter battery level");
+    }
+
+    @Test
     void withoutASessionBusTheAppGoesOnAndTheLogSaysSoOnce() throws IOException {
         var offline = new FreedesktopNotifications(() -> {
             throw new DBusException("no session bus");
         }, "Car charge planner", "car-charge-planner", new AppIcon(), Files.createDirectory(folder.resolve("offline")),
-                () -> "Open dashboard");
+                _ -> "Open dashboard");
 
         var warnings = warningsWhile(() -> {
             offline.onClick(_ -> opened.release());
