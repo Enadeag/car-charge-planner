@@ -23,13 +23,14 @@ Everything the app keeps is on your computer. Delete any of it to start over.
 
 | What | Linux | Windows |
 | --- | --- | --- |
-| Settings file: your system, planning preferences, forecast providers and weekly away periods | `~/.config/car-charge-planner/engine.json` | `%APPDATA%\car-charge-planner\engine.json` |
+| Settings file: your system, planning preferences, forecast providers, weekly away periods and the calendar's settings | `~/.config/car-charge-planner/engine.json` | `%APPDATA%\car-charge-planner\engine.json` |
 | The app's own settings (language, appearance, units, tray or window) | `~/.config/car-charge-planner/app.json` | `%APPDATA%\car-charge-planner\app.json` |
 | The battery level you entered last | `~/.local/share/car-charge-planner/battery.json` | `%LOCALAPPDATA%\car-charge-planner\battery.json` |
 | Away periods for a specific day | `~/.local/share/car-charge-planner/away.json` | `%LOCALAPPDATA%\car-charge-planner\away.json` |
 | Your trips: when you leave and are back, the distance and whether you can charge there | `~/.local/share/car-charge-planner/trips.json` | `%LOCALAPPDATA%\car-charge-planner\trips.json` |
 | The windows you were notified about | `~/.local/share/car-charge-planner/announced.json` | `%LOCALAPPDATA%\car-charge-planner\announced.json` |
 | What you were notified about each trip, by its departure | `~/.local/share/car-charge-planner/trip-notices.json` | `%LOCALAPPDATA%\car-charge-planner\trip-notices.json` |
+| Your consents for the calendar, each with its date and the version of its text (removed when you withdraw them) | `~/.local/share/car-charge-planner/calendar-consents.json` | `%LOCALAPPDATA%\car-charge-planner\calendar-consents.json` |
 | Forecast cache: the last forecast of each provider, one file per provider | `~/.local/share/car-charge-planner/forecasts/` | `%LOCALAPPDATA%\car-charge-planner\forecasts\` |
 | Log: what the app did, the newest in `.0.log` and two older ones of up to 1 MB | `~/.local/share/car-charge-planner/car-charge-planner.0.log` | `%LOCALAPPDATA%\car-charge-planner\car-charge-planner.0.log` |
 | API keys, if you use a paid plan (never in the settings file) | The system keychain; `~/.config/car-charge-planner/secrets.json` only where there is none (see [API keys](#api-keys)) | Credential Manager; `%LOCALAPPDATA%\car-charge-planner\secrets.json` only where it cannot be used |

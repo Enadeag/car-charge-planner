@@ -76,6 +76,26 @@ The share added to the average consumption for the energy of a trip, as long dri
 _Avoid_: Margin, buffer
 _Dutch_: ritopslag
 
+**Calendar**:
+The owner's own calendar, read from its secret iCal address or an `.ics` file, as a source of trips: an event at a physical place becomes a trip there and back. Read only while both consents are given.
+_Avoid_: Agenda (in English), schedule, events feed
+_Dutch_: agenda
+
+**Consent**:
+The owner's agreement, given by ticking a box under a text that says in plain words what happens, to one thing the calendar needs: reading the calendar on this computer, or sending the events' locations and the home location to the route service. Kept with its date and the version of its text; a consent to an older text no longer counts. Withdrawing one wipes what the calendar brought in.
+_Avoid_: Permission, opt-in, approval
+_Dutch_: akkoord
+
+**Route service**:
+The outside service that finds the place of a calendar event's location and the distance and travel time from home: OpenRouteService, with the owner's own API key.
+_Avoid_: Geocoder, maps API, routing engine
+_Dutch_: routedienst
+
+**Travel margin**:
+The time added before and after each calendar event's travel time, for parking and walking (15 minutes unless the owner changes it).
+_Avoid_: Buffer, slack, margin (on its own: that is the planning margin)
+_Dutch_: reismarge
+
 **Other driving**:
 The short drives that are not trips, such as shopping, as a distance per day; trips come on top of it.
 _Avoid_: Distance per day, daily distance, average distance
