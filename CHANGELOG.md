@@ -22,7 +22,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ### Fixed
 - The number fields in Settings and set-up no longer take "NaN" or "∞" as a value.
-- A settings file with a number too large for a number, such as `1e400`, is refused like any other value out of range, instead of being planned with as infinity.
+- A settings file with a number too large to hold, such as `1e400`, is refused like any other value out of range, instead of being planned with as infinity.
 - Windows: the text size watcher closes its registry key and event also when following the text size fails (#223).
 
 ## [0.4.0] - 2026-10-20
