@@ -263,7 +263,7 @@ class ArchitectureTest {
 
     /** Settings' categories, as package names below desktop.settings: a page each. */
     private static final Set<String> SETTINGS_CATEGORIES =
-            Set.of("location", "solar", "car", "charger", "forecast", "away", "planning", "app", "about");
+            Set.of("location", "solar", "car", "charger", "forecast", "away", "planning", "calendar", "app", "about");
 
     @ArchTest
     static final ArchRule noCyclesBetweenTheDashboardParts = slices()

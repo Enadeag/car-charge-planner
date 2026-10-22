@@ -4,6 +4,7 @@ import nl.enadeag.carchargeplanner.desktop.app.AppSettings;
 import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.desktop.settings.form.AllSettings;
 import nl.enadeag.carchargeplanner.desktop.settings.form.SettingsChanges;
+import nl.enadeag.carchargeplanner.engine.calendar.Consents;
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.secrets.KeyStorage;
@@ -14,8 +15,8 @@ import java.util.Optional;
 
 /**
  * Reads what Settings and set-up show from the stores, and writes what the owner chose back to them in the one order
- * both use: start at login first, as the system may refuse it; then the API keys, the engine's config and the app's
- * settings.
+ * both use: start at login first, as the system may refuse it; then the calendar's consents, so a withdrawn one stops
+ * the calendar even when what follows fails; then the API keys, the engine's config and the app's settings.
  *
  * <p>Reading and writing block: the keychain, the files and the system's start at login may each take a while. Call
  * them away from the JavaFX thread, through {@link Background}.
@@ -43,9 +44,10 @@ public final class SettingsStorage {
      * @param keyStorage where the API keys are kept
      * @param app the app's own settings
      * @param startsAtLogin whether the system starts the app at login; empty when this copy of the app cannot
+     * @param consents the calendar's consents, also those given to an older text
      */
     public record Stored(Optional<EngineConfig> config, Optional<String> configProblem, StoredKeys keys,
-            KeyStorage keyStorage, AppSettings app, Optional<Boolean> startsAtLogin) {
+            KeyStorage keyStorage, AppSettings app, Optional<Boolean> startsAtLogin, Consents consents) {
 
         /**
          * Checks that there is a config or a reason why not.
@@ -62,10 +64,11 @@ public final class SettingsStorage {
         /**
          * What is stored, to compare what is entered with.
          *
-         * @return the config, the API keys, the app's own settings and start at login
+         * @return the config, the API keys, the app's own settings, start at login and the calendar's consents that
+         *     count
          */
         public AllSettings all() {
-            return new AllSettings(config, keys.keys(), app, startsAtLogin);
+            return new AllSettings(config, keys.keys(), app, startsAtLogin, consents.counting());
         }
     }
 
@@ -96,7 +99,8 @@ public final class SettingsStorage {
             config = Optional.empty();
             problem = Optional.of(e.getMessage());
         }
-        return new Stored(config, problem, keys, keyStorage(), readApp(), startsAtLogin());
+        return new Stored(config, problem, keys, keyStorage(), readApp(), startsAtLogin(),
+                stores.engine().consents());
     }
 
     /**
@@ -179,6 +183,9 @@ public final class SettingsStorage {
             }
         }
         try {
+            if (changes.consents().isPresent()) {
+                stores.engine().saveConsents(changes.consents().get());
+            }
             if (changes.keys().isPresent()) {
                 stores.engine().applyKeyChanges(changes.keys().get(), prompting);
             }

@@ -149,8 +149,10 @@ final class SetUpForm {
      * @return the changes for {@link #write}
      */
     SettingsChanges changes() {
-        var entered = new AllSettings(Optional.of(config()), keys(), app.settings(), Optional.of(app.startsAtLogin()));
-        return SettingsChanges.between(stored.all(), entered);
+        var all = stored.all();
+        var entered = new AllSettings(Optional.of(config()), keys(), app.settings(), Optional.of(app.startsAtLogin()),
+                all.consents());
+        return SettingsChanges.between(all, entered);
     }
 
     /**
