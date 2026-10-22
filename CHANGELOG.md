@@ -2,7 +2,9 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.5.0] - 2026-10-22
+
+Trips: enter a drive, and the plan makes sure the battery holds enough when you leave, with advice and notifications for when to charge and the charge limit to set. Grid charges now start within your charging hours. On Linux the app also comes as a .deb and an .rpm.
 
 ### Added
 - Trips: **Add trip** on the dashboard's Trips card enters a drive from home and back, with its departure, return, the distance there and back and whether you can charge at the destination. Each day's tab lists its trips, with **Not with this car** (the plan ignores the trip and the car stays home), **Change** and **Remove**. The trips are kept in `trips.json` in the data folder until a day after their return.
@@ -134,7 +136,7 @@ First version, for Linux.
 - Installation with `pipx` as the command `car-charge-planner`.
 - `config.toml` and `state.json` say which file format they are in, so later versions can upgrade them. A config file from a newer version of the app is refused with a clear message, and a newer state file is left alone. A config file written before this release, with a single `[panels]` table, is read as one panel array.
 
-[Unreleased]: https://github.com/Enadeag/car-charge-planner/compare/v0.4.0...HEAD
+[0.5.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.1.0...v0.2.0
