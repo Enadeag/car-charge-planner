@@ -76,6 +76,14 @@
   </screenshots>
 
   <releases>
+    <release version="0.5.0" date="2026-10-22">
+      <url type="details">https://github.com/Enadeag/car-charge-planner/releases/tag/v0.5.0</url>
+      <description>
+        <p>Trips: enter a drive, and the plan makes sure the battery holds enough when you leave, with advice and
+          notifications for when to charge and the charge limit to set. Grid charges now start within your charging
+          hours.</p>
+      </description>
+    </release>
     <release version="0.4.0" date="2026-10-20">
       <url type="details">https://github.com/Enadeag/car-charge-planner/releases/tag/v0.4.0</url>
       <description>
