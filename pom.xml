@@ -6,7 +6,7 @@
 
   <groupId>nl.enadeag</groupId>
   <artifactId>car-charge-planner</artifactId>
-  <version>0.5.0</version>
+  <version>0.5.1-SNAPSHOT</version>
   <name>Car charge planner</name>
 
   <properties>
