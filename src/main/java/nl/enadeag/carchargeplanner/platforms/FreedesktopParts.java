@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.platforms;
 
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
+import nl.enadeag.carchargeplanner.desktop.system.NotificationTarget;
 import nl.enadeag.carchargeplanner.desktop.system.StartAtLogin;
 import nl.enadeag.carchargeplanner.desktop.system.StatusIcon;
 import nl.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
@@ -57,7 +58,8 @@ final class FreedesktopParts implements PlatformParts {
                         : StatusNotifierTray.ItemName.PER_PROCESS);
         // a notification server is there also without a tray
         var notifications = new FreedesktopNotifications(sessionBus, AppName.TITLE, desktopEntry(), icon,
-                runtimeFolder("notify"), () -> language.messages().text(TextKey.OPEN_DASHBOARD));
+                runtimeFolder("notify"), target -> language.messages().text(
+                        target == NotificationTarget.BATTERY_LEVEL ? TextKey.ENTER_BATTERY_LEVEL : TextKey.OPEN_DASHBOARD));
         return new TrayParts(tray, notifications, false);
     }
 

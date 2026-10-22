@@ -42,6 +42,9 @@ import nl.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
 import nl.enadeag.carchargeplanner.engine.notify.Announcement;
 import nl.enadeag.carchargeplanner.engine.notify.AnnouncementKind;
 import nl.enadeag.carchargeplanner.engine.notify.Announcer;
+import nl.enadeag.carchargeplanner.engine.notify.BatteryCheck;
+import nl.enadeag.carchargeplanner.engine.notify.Notice;
+import nl.enadeag.carchargeplanner.engine.notify.ToldTrips;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
@@ -87,6 +90,7 @@ class EngineTest {
 
     private final LockableKeychain keychain = new LockableKeychain();
     private final List<Announcement> told = new ArrayList<>();
+    private final List<Notice> toldAboutTrips = new ArrayList<>();
     private final List<Outlook> rounds = new ArrayList<>();
     private FakeProvider main;
     private FakeProvider backup;
@@ -156,7 +160,14 @@ class EngineTest {
 
     /** Kept in the test's folder, so a new engine is like the app after a restart. */
     private Announcer announcer() {
-        return new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), told::add);
+        return new Announcer(new AnnouncedWindows(folder.resolve("announced.json")),
+                new ToldTrips(folder.resolve("trip-notices.json")), notice -> {
+                    if (notice instanceof Announcement announcement) {
+                        told.add(announcement);
+                    } else {
+                        toldAboutTrips.add(notice);
+                    }
+                });
     }
 
     private Engine engine(Clock clock) {
@@ -670,6 +681,43 @@ class EngineTest {
         scheduler.advance(PlanSchedule.EVERY);
 
         assertThat(told).hasSize(1);
+    }
+
+    /** Tomorrow from 09:00 to 17:00, longer than a full battery reaches. */
+    private static Trip longTripTomorrow(boolean notWithThisCar) {
+        return new Trip(DAY.plusDays(1).atTime(9, 0).atZone(BRUSSELS).toInstant(),
+                DAY.plusDays(1).atTime(17, 0).atZone(BRUSSELS).toInstant(), 300, false, notWithThisCar);
+    }
+
+    @Test
+    void aRoundAsksWhetherTheAssumedLevelIsRightForATripThatDependsOnIt() throws IOException {
+        var trip = longTripTomorrow(false);
+        engine(clockAt(8)).addTrip(trip);
+
+        startedAt(clockAt(8));
+
+        assertThat(toldAboutTrips).contains(new BatteryCheck(trip, new Percent(50), BRUSSELS));
+    }
+
+    @Test
+    void aLevelTheOwnerJustEnteredIsNotQuestioned() throws IOException {
+        var engine = engine(clockAt(8));
+        engine.addTrip(longTripTomorrow(false));
+        engine.setBatteryLevel(new Percent(50));
+
+        startedAt(clockAt(8));
+
+        assertThat(toldAboutTrips).noneMatch(BatteryCheck.class::isInstance);
+    }
+
+    @Test
+    void aTripNotWithThisCarIsNotToldAbout() throws IOException {
+        engine(clockAt(8)).addTrip(longTripTomorrow(true));
+
+        startedAt(clockAt(8));
+        startedAt(clockAt(19));
+
+        assertThat(toldAboutTrips).isEmpty();
     }
 
     @Test

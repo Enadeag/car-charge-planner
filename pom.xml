@@ -665,6 +665,7 @@
                     <param>nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripMapper*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripOrigin*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripsModel*</param>
+                    <param>nl.enadeag.carchargeplanner.desktop.notify.*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.settings.form.*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.settings.page.WindowSize*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.settings.setup.SetUpOffer*</param>

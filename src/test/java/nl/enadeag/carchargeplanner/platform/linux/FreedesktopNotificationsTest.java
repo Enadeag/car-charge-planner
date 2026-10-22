@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.platform.linux;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
+import nl.enadeag.carchargeplanner.desktop.system.NotificationTarget;
 import nl.enadeag.carchargeplanner.desktop.system.NotificationText;
 import java.io.IOException;
 import java.net.URI;
@@ -82,7 +83,8 @@ class FreedesktopNotificationsTest {
         desktop = DBusConnectionBuilder.forAddress(address).withShared(false).build();
         notifications = new FreedesktopNotifications(() -> DBusConnectionBuilder.forAddress(address).withShared(false).build(),
                 "Car charge planner", "car-charge-planner", new AppIcon(), Files.createDirectory(folder.resolve("notify")),
-                openLabel::get, Runnable::run);
+                target -> target == NotificationTarget.BATTERY_LEVEL ? "Enter battery level" : openLabel.get(),
+                Runnable::run);
     }
 
     @AfterEach
@@ -146,7 +148,7 @@ class FreedesktopNotificationsTest {
     @Test
     void aClickOnOurNotificationOrItsButtonOpensTheDashboard() throws Exception {
         serve();
-        notifications.onClick(opened::release);
+        notifications.onClick(_ -> opened.release());
         var id = show();
 
         click(id, "default");
@@ -156,9 +158,27 @@ class FreedesktopNotificationsTest {
     }
 
     @Test
+    void aClickPassesOnWhatThatNotificationOpens() throws Exception {
+        serve();
+        var clicked = new LinkedBlockingQueue<NotificationTarget>();
+        notifications.onClick(clicked::add);
+        notifications.send(new NotificationText("Check the battery level", "Is the battery at about 50%?",
+                NotificationTarget.BATTERY_LEVEL));
+        assertThat(server.calls.poll(TIMEOUT_S, TimeUnit.SECONDS)).isNotNull();
+        var check = server.nextId;
+        var window = show();
+
+        click(check, "default");
+        click(window, "open");
+
+        assertThat(clicked.poll(TIMEOUT_S, TimeUnit.SECONDS)).isEqualTo(NotificationTarget.BATTERY_LEVEL);
+        assertThat(clicked.poll(TIMEOUT_S, TimeUnit.SECONDS)).isEqualTo(NotificationTarget.DASHBOARD);
+    }
+
+    @Test
     void clicksOnOtherAppsNotificationsAndOtherActionsAreIgnored() throws Exception {
         serve();
-        notifications.onClick(opened::release);
+        notifications.onClick(_ -> opened.release());
         var id = show();
 
         click(999_999, "default");
@@ -172,7 +192,7 @@ class FreedesktopNotificationsTest {
     @Test
     void aClickSignalFromAnotherProgramThanTheServerIsIgnored() throws Exception {
         serve();
-        notifications.onClick(opened::release);
+        notifications.onClick(_ -> opened.release());
         var id = show();
 
         var other = DBusConnectionBuilder.forAddress(address).withShared(false).build();
@@ -189,7 +209,7 @@ class FreedesktopNotificationsTest {
 
     @Test
     void aServerThatStartsAfterTheAppIsHeard() throws Exception {
-        notifications.onClick(opened::release);
+        notifications.onClick(_ -> opened.release());
         serve();
         var id = show();
 
@@ -201,7 +221,7 @@ class FreedesktopNotificationsTest {
     @Test
     void onlyTheLatestNotificationsAreRecognised() throws Exception {
         serve();
-        notifications.onClick(opened::release);
+        notifications.onClick(_ -> opened.release());
         var first = show();
         for (int i = 0; i < FreedesktopNotifications.REMEMBERED_IDS; i++) {
             show();
@@ -215,7 +235,7 @@ class FreedesktopNotificationsTest {
     @Test
     void withoutANotificationServerTheAppGoesOnAndTheLogSaysSoOnce() {
         var warnings = warningsWhile(() -> {
-            notifications.onClick(opened::release);
+            notifications.onClick(_ -> opened.release());
             for (int i = 0; i < 3; i++) {
                 notifications.send(new NotificationText("a", "b"));
             }
@@ -238,14 +258,25 @@ class FreedesktopNotificationsTest {
     }
 
     @Test
+    void theBatteryChecksButtonSaysItOpensTheBatteryLevelsEntry() throws Exception {
+        serve();
+        notifications.send(new NotificationText("Check the battery level", "Is the battery at about 50%?",
+                NotificationTarget.BATTERY_LEVEL));
+
+        var call = server.calls.poll(TIMEOUT_S, TimeUnit.SECONDS);
+        assertThat(call).isNotNull();
+        assertThat(call.actions()).containsExactly("default", "Enter battery level", "open", "Enter battery level");
+    }
+
+    @Test
     void withoutASessionBusTheAppGoesOnAndTheLogSaysSoOnce() throws IOException {
         var offline = new FreedesktopNotifications(() -> {
             throw new DBusException("no session bus");
         }, "Car charge planner", "car-charge-planner", new AppIcon(), Files.createDirectory(folder.resolve("offline")),
-                () -> "Open dashboard");
+                _ -> "Open dashboard");
 
         var warnings = warningsWhile(() -> {
-            offline.onClick(opened::release);
+            offline.onClick(_ -> opened.release());
             offline.send(new NotificationText("a", "b"));
             offline.send(new NotificationText("a", "b"));
         });

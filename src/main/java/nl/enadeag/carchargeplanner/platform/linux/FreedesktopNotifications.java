@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.platform.linux;
 
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
+import nl.enadeag.carchargeplanner.desktop.system.NotificationTarget;
 import nl.enadeag.carchargeplanner.desktop.system.NotificationText;
 import nl.enadeag.carchargeplanner.desktop.system.Notifications;
 import java.io.IOException;
@@ -9,13 +10,13 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
-import java.util.function.Supplier;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import javax.imageio.ImageIO;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
 import org.freedesktop.dbus.exceptions.DBusException;
@@ -25,16 +26,17 @@ import org.freedesktop.dbus.types.Variant;
 
 /**
  * Notifications on Linux, through the desktop's notification server over D-Bus: the same on KDE Plasma and GNOME,
- * also without a tray. A click on the notification or on its button "Open dashboard" is passed on; a click on another
- * app's notification is not, for all apps share the server's ids. A click counts only when it comes from the
- * program that owns the server's name: any program on the session bus can send the signal.
+ * also without a tray. A click on the notification or on its button, such as "Open dashboard", is passed on, with what that
+ * notification opens; a click on another app's notification is not, for all apps share the server's ids. A click
+ * counts only when it comes from the program that owns the server's name: any program on the session bus can send
+ * the signal.
  */
 public final class FreedesktopNotifications implements Notifications {
 
     private static final System.Logger LOG = System.getLogger(FreedesktopNotifications.class.getName());
     /** The key of a click on the notification itself. */
     static final String DEFAULT_ACTION = "default";
-    /** The key of the button "Open dashboard". */
+    /** The key of the button that opens what the notification is for, such as "Open dashboard". */
     static final String OPEN_ACTION = "open";
     /** How long a notification stays on screen, in milliseconds, before it goes to the desktop's history. */
     static final int EXPIRE_MS = 20_000;
@@ -50,10 +52,11 @@ public final class FreedesktopNotifications implements Notifications {
     private final String desktopEntry;
     private final AppIcon icon;
     private final Path iconFolder;
-    private final Supplier<String> openLabel;
+    private final Function<NotificationTarget, String> openLabel;
     private final Executor clickRunner;
-    private final Deque<Long> sent = new ArrayDeque<>();
-    private Runnable clicked = () -> { };
+    /** The latest notifications' ids, oldest first, with what each opens. */
+    private final LinkedHashMap<Long, NotificationTarget> sent = new LinkedHashMap<>();
+    private Consumer<NotificationTarget> clicked = _ -> { };
     private DBusConnection bus;
     /** The unique bus name of the notification server; null while no program serves it. */
     private String serverOwner;
@@ -70,11 +73,11 @@ public final class FreedesktopNotifications implements Notifications {
      * @param icon the app icon, shown on each notification
      * @param iconFolder an existing folder of the notifications' own that only this user may use, where the icon is
      *     written for the server to read; {@link #close()} removes it again
-     * @param openLabel what the notifications' button that opens the dashboard says, in the language spoken now, such
-     *     as "Open dashboard"; asked anew for each notification, never empty
+     * @param openLabel what a notification's button says for what it opens, in the language spoken now, such as
+     *     "Open dashboard"; asked anew for each notification, never empty
      */
     public FreedesktopNotifications(BusConnector connector, String appName, String desktopEntry, AppIcon icon,
-            Path iconFolder, Supplier<String> openLabel) {
+            Path iconFolder, Function<NotificationTarget, String> openLabel) {
         // on a thread of its own: D-Bus hands a click over on the connection's thread, which must not be held up
         this(connector, appName, desktopEntry, icon, iconFolder, openLabel,
                 action -> Thread.ofVirtual().name("notification-click").start(action));
@@ -88,12 +91,12 @@ public final class FreedesktopNotifications implements Notifications {
      * @param desktopEntry the name of the app's launcher entry without ".desktop", which also names the icon's file
      * @param icon the app icon, shown on each notification
      * @param iconFolder an existing folder of the notifications' own, where the icon is written for the server
-     * @param openLabel what the button that opens the dashboard says, asked anew for each notification
+     * @param openLabel what a notification's button says for what it opens, asked anew for each notification
      * @param clickRunner runs the action of each click that is passed on, given on the connection's thread in the
      *     order the clicks came, such as a new thread for each
      */
     FreedesktopNotifications(BusConnector connector, String appName, String desktopEntry, AppIcon icon,
-            Path iconFolder, Supplier<String> openLabel, Executor clickRunner) {
+            Path iconFolder, Function<NotificationTarget, String> openLabel, Executor clickRunner) {
         this.connector = connector;
         this.appName = appName;
         this.desktopEntry = desktopEntry;
@@ -104,7 +107,7 @@ public final class FreedesktopNotifications implements Notifications {
     }
 
     @Override
-    public synchronized void onClick(Runnable clicked) {
+    public synchronized void onClick(Consumer<NotificationTarget> clicked) {
         this.clicked = clicked;
         ensureConnection();
     }
@@ -118,13 +121,13 @@ public final class FreedesktopNotifications implements Notifications {
         try {
             var server = connection.getRemoteObject(NotificationServer.BUS_NAME, NotificationServer.OBJECT_PATH,
                     NotificationServer.class);
-            var open = openLabel.get();
+            var open = openLabel.apply(text.opens());
             var id = server.Notify(appName, new UInt32(0), writeIconOnce(), text.title(), text.body(),
                     List.of(DEFAULT_ACTION, open, OPEN_ACTION, open),
                     Map.of("desktop-entry", new Variant<>(desktopEntry)), EXPIRE_MS);
-            sent.addLast(id.longValue());
+            sent.put(id.longValue(), text.opens());
             if (sent.size() > REMEMBERED_IDS) {
-                sent.removeFirst();
+                sent.pollFirstEntry();
             }
         } catch (DBusException | RuntimeException e) {
             // dbus-java reports a server that is not there or answers with an error as a runtime exception
@@ -188,10 +191,12 @@ public final class FreedesktopNotifications implements Notifications {
             if (serverOwner == null || !serverOwner.equals(signal.getSource())) {
                 return;
             }
-            if (!Set.of(DEFAULT_ACTION, OPEN_ACTION).contains(signal.actionKey) || !sent.contains(signal.id.longValue())) {
+            var target = sent.get(signal.id.longValue());
+            if (!Set.of(DEFAULT_ACTION, OPEN_ACTION).contains(signal.actionKey) || target == null) {
                 return;
             }
-            action = clicked;
+            var chosen = clicked;
+            action = () -> chosen.accept(target);
         }
         clickRunner.execute(action);
     }

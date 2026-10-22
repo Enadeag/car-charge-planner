@@ -122,9 +122,14 @@ _Avoid_: Grid allowance, import limit
 _Dutch_: toegestane netstroom
 
 **Announcement**:
-A notification that tells the owner, the notification lead time before a charge window starts, what to set in the charger's app; also for the window of a grid charge. Each window is announced once, and not while the forecast could not be refreshed or is more than 6 hours old. A click on it opens the dashboard.
+A notification that tells the owner, the notification lead time before a charge window starts, what to set in the charger's app; also for the window of a grid charge, and for a trip's grid charge, which is announced once per trip and at once when it has to start now. Each window is announced once, and not while the forecast could not be refreshed or is more than 6 hours old. A click on it opens the dashboard.
 _Avoid_: Reminder, alert
 _Dutch_: melding
+
+**Battery check**:
+A notification that asks whether the assumed battery level is right, once per trip and again when the trip comes to need much more from the grid, when a trip needs a grid charge or is tight and the owner has not entered a level in the last 12 hours; a click opens the entry of today's battery level. Asked within the charging hours, from the day before the departure. Like an announcement, not while the forecast could not be refreshed or is more than 6 hours old.
+_Avoid_: Battery question, level reminder
+_Dutch_: controle van het accuniveau ("Controleer het accuniveau")
 
 **Grid advice**:
 The advice to charge from the grid, because on solar power alone the battery would end a day below the minimum charge level: how much energy, and the charge window to take it in, on that day or the latest day before it with room. The charging it asks for is a **grid charge**, announced like any charge window.

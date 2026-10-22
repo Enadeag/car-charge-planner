@@ -10,6 +10,7 @@ import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.desktop.dashboard.Dashboard;
 import nl.enadeag.carchargeplanner.desktop.dashboard.DashboardActions;
 import nl.enadeag.carchargeplanner.desktop.dashboard.tray.TrayPresenter;
+import nl.enadeag.carchargeplanner.desktop.notify.AnnouncementTexts;
 import nl.enadeag.carchargeplanner.desktop.settings.SettingsWindow;
 import nl.enadeag.carchargeplanner.desktop.settings.about.AboutFacts;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
@@ -20,7 +21,6 @@ import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
 import nl.enadeag.carchargeplanner.desktop.system.Notifications;
 import nl.enadeag.carchargeplanner.desktop.system.TextSize;
 import nl.enadeag.carchargeplanner.desktop.system.Tray;
-import nl.enadeag.carchargeplanner.desktop.text.AnnouncementTexts;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import nl.enadeag.carchargeplanner.engine.Engine;
@@ -36,6 +36,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.providers.OpenMeteo;
 import nl.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
 import nl.enadeag.carchargeplanner.engine.notify.Announcer;
 import nl.enadeag.carchargeplanner.engine.notify.Notifier;
+import nl.enadeag.carchargeplanner.engine.notify.ToldTrips;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
@@ -186,11 +187,12 @@ public final class DesktopApp {
         var secretsFile = new SecretsFile(SecretsLocation.moveFromOldPlace(host.os(), configPath, dataFolder));
         // folders made before the app made its folders private; a folder named with --config= stays as it is
         PrivateFiles.tighten(appSettingsFile.path().toAbsolutePath().getParent());
-        var texts = new AnnouncementTexts(language);
+        // the engine's thread reads the units the JavaFX thread sets: a notice just after a Save may keep the old ones
+        var texts = new AnnouncementTexts(language, units::get);
         var keychain = parts.keychain();
         closing.add("the keychain", keychain::close);
         var engine = engine(http, keychain, secretsFile, dataFolder,
-                announcement -> notifications.send(texts.notification(announcement)));
+                notice -> notifications.send(texts.notification(notice)));
         closing.add("the engine", engine::stop);
         var saving = Executors.newSingleThreadExecutor(Thread.ofVirtual().name("dashboard-changes").factory());
         closing.add("the dashboard's saving", saving::close);
@@ -200,7 +202,7 @@ public final class DesktopApp {
         var dashboard = windows.dashboard();
         // a click on a notification does not say where the tray icon is, and the popup would close again as soon as
         // the desktop gives the focus elsewhere: the window comes to the front and stays
-        notifications.onClick(dashboard::openWindow);
+        notifications.onClick(dashboard::notificationClicked);
         commands.complete(commandHandler(dashboard, notifications, texts));
 
         var decision = new StartupDecision(appSettings.mode(), commandLine.atLogin(),
@@ -321,7 +323,8 @@ public final class DesktopApp {
         var providers = new Providers(List.of(new OpenMeteo(get), new ForecastSolar(get)));
         var apiKeys = new ApiKeys(keychain, secretsFile, Clock.systemUTC());
         var cache = new ForecastCache(dataFolder.resolve("forecasts"));
-        var announcer = new Announcer(new AnnouncedWindows(dataFolder.resolve("announced.json")), notifier);
+        var announcer = new Announcer(new AnnouncedWindows(dataFolder.resolve("announced.json")),
+                new ToldTrips(dataFolder.resolve("trip-notices.json")), notifier);
         return new Engine(new ConfigFile(configPath), new ForecastService(providers, cache, apiKeys), providers,
                 apiKeys, new AwayFile(dataFolder.resolve("away.json")), new TripFile(dataFolder.resolve("trips.json")),
                 new BatteryFile(dataFolder.resolve("battery.json")), Clock.systemUTC(), announcer,

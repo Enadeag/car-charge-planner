@@ -40,6 +40,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.providers.ForecastSolar;
 import nl.enadeag.carchargeplanner.engine.forecast.providers.OpenMeteo;
 import nl.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
 import nl.enadeag.carchargeplanner.engine.notify.Announcer;
+import nl.enadeag.carchargeplanner.engine.notify.ToldTrips;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
@@ -122,7 +123,8 @@ final class SetUpFixture {
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
                 new AwayFile(folder.resolve("away.json")), new TripFile(folder.resolve("trips.json")),
                 new BatteryFile(folder.resolve("battery.json")), clock,
-                new Announcer(new AnnouncedWindows(folder.resolve("announced.json")), _ -> { }),
+                new Announcer(new AnnouncedWindows(folder.resolve("announced.json")),
+                        new ToldTrips(folder.resolve("trip-notices.json")), _ -> { }),
                 new ManualScheduler());
     }
 
