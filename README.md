@@ -19,6 +19,7 @@ The pictures are of an example home; a real desktop theme looks a little differe
 - Turns a solar forecast ([Open-Meteo](https://open-meteo.com) by default, or [Forecast.Solar](https://forecast.solar); both free, no account; a second can be a fallback) into expected surplus: panel output minus the house's own use.
 - Recommends charge windows within the hours the car is at home, with one constant power per window (in amps and kW), aiming for almost no grid draw.
 - **Grid advice:** if the battery would end a day below your minimum charge level, it says how much to charge from the grid and when.
+- **Trips:** enter a drive with its departure, return and distance, and the plan makes sure the battery holds enough at the departure, with advice and notifications for the charge and the charge limit to set.
 - Shows the plan in a tray icon and on the **dashboard**, and notifies you a few minutes before each window.
 - Reads nothing from the car: you enter the battery level by hand. Reading it from the car is not planned for now; [ADR 0006](docs/adr/0006-integrations-built-in.md) records which car makers offer their owners an official route.
 

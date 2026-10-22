@@ -5,9 +5,25 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ## [Unreleased]
 
 ### Added
+- Trips: **Add trip** on the dashboard's Trips card enters a drive from home and back, with its departure, return, the distance there and back and whether you can charge at the destination. Each day's tab lists its trips, with **Not with this car** (the plan ignores the trip and the car stays home), **Change** and **Remove**. The trips are kept in `trips.json` in the data folder until a day after their return.
+- The plan makes sure the car can make each trip: the trip first, then solar power, and the grid only for what is still missing. For a trip it charges above your target level, up to 100%, as late as possible; the grid part is done an hour before the departure. Trips close together are charged for together, and when even a full battery is not enough, the advice says how many kilometres it is short and to plan a charging stop.
+- A trip advice card on the dashboard says what to do before each trip: the level to charge to, the solar and grid parts, when to start, and the charge limit to set. It shows the battery level it assumes, with **Adjust** to enter the one the car shows. The day a trip leaves shows the battery level after the trip, and a day away on a trip no longer says the car needs no charging.
+- Charging hours: **Start charging between** (Settings, Planning; 07:00 to 22:00 by default, and may span midnight) sets when a grid charge may start. A charge may run on after them.
+- Trip surcharge (Settings, Car and house; 15% by default): the share added to the consumption for the energy of a trip, as long drives and drives in winter use more.
+- Notifications for trips: when to start charging for a trip's grid charge, a battery check that asks whether the assumed level is right when a trip needs a grid charge or has little to spare (a click, or the **Enter battery level** button on Linux, opens the entry of the level), and "Plan a charging stop" when the battery cannot make a trip. They come within the charging hours and once per trip. Their state is kept in `trip-notices.json` in the data folder.
 - Linux: a `.deb` for Debian and Ubuntu and an `.rpm` for Fedora and openSUSE, next to the tar.gz. They install the app in `/opt/car-charge-planner` with a menu entry for every user; `sudo apt install ./car-charge-planner_<version>_amd64.deb` or `sudo dnf install ./car-charge-planner-<version>-1.x86_64.rpm`, and a new version installs over the old one. `install-launcher` in a package install says the package puts the app in the menu already, instead of adding a second entry, and notifications are tied to the package's menu entry (ADR 0007).
 - Windows: the app follows **Text size** (Settings, Accessibility), on top of display scaling: the text in the dashboard, Settings and set-up grows by as much, also when you change it while the app runs.
 - Ready for a Flatpak (not on Flathub yet, #217): in the Flatpak's sandbox, start at login goes through the desktop's Background portal, `install-launcher` and `uninstall-launcher` say the Flatpak puts the app in the menu itself, and the tray icon, notifications, keychain and second start work as outside it (ADR 0008).
+
+### Changed
+- Grid advice now starts within the charging hours, at 07:00 by default instead of in the middle of the night, and, like its notification, names the charge limit to set in the car or the charger, such as "Set 6 A (1.4 kW), and a charge limit of 42% in the car or the charger."
+- Settings, Car and house: "Distance per day" is now **Other driving per day**, the short drives that are not trips; trips come on top of it. The setting keeps its place in the settings file.
+- A notification's click opens what it is about: the battery check opens the entry of the battery level.
+
+### Fixed
+- The number fields in Settings and set-up no longer take "NaN" or "∞" as a value.
+- A settings file with a number too large to hold, such as `1e400`, is refused like any other value out of range, instead of being planned with as infinity.
+- Windows: the text size watcher closes its registry key and event also when following the text size fails (#223).
 
 ## [0.4.0] - 2026-10-20
 
