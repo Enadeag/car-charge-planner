@@ -32,6 +32,15 @@ public final class SwitchInput implements Input {
     }
 
     /**
+     * Ticks the box or not, as the owner would; the state it was loaded with stays the one not edited.
+     *
+     * @param on whether the box is ticked
+     */
+    public void select(boolean on) {
+        box.setSelected(on);
+    }
+
+    /**
      * Whether the box is ticked now.
      *
      * @return true when ticked

@@ -20,7 +20,11 @@ public class InvalidSetting extends IllegalArgumentException {
         /** An away period does not end after it starts on the same day. */
         NOT_AFTER_START,
         /** The charging hours end at the time they start. */
-        SAME_AS_START
+        SAME_AS_START,
+        /** The return from an all-day event is not after the departure. */
+        NOT_AFTER_DEPARTURE,
+        /** A file is not named by its whole path, from the top of the disk. */
+        NOT_A_FULL_PATH
     }
 
     private final ConfigSetting setting;

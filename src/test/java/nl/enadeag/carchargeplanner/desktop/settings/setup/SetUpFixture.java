@@ -20,6 +20,7 @@ import nl.enadeag.carchargeplanner.engine.Engine;
 import nl.enadeag.carchargeplanner.engine.ManualScheduler;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
+import nl.enadeag.carchargeplanner.engine.calendar.ConsentFile;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.Coordinates;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
@@ -122,7 +123,8 @@ final class SetUpFixture {
         engine = new Engine(new ConfigFile(configPath),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
                 new AwayFile(folder.resolve("away.json")), new TripFile(folder.resolve("trips.json")),
-                new BatteryFile(folder.resolve("battery.json")), clock,
+                new BatteryFile(folder.resolve("battery.json")),
+                new ConsentFile(folder.resolve("calendar-consents.json")), clock,
                 new Announcer(new AnnouncedWindows(folder.resolve("announced.json")),
                         new ToldTrips(folder.resolve("trip-notices.json")), _ -> { }),
                 new ManualScheduler());

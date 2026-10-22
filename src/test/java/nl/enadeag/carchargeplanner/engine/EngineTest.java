@@ -12,6 +12,8 @@ import nl.enadeag.carchargeplanner.LogCapture;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
+import nl.enadeag.carchargeplanner.engine.calendar.Consent;
+import nl.enadeag.carchargeplanner.engine.calendar.ConsentFile;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import nl.enadeag.carchargeplanner.engine.config.Coordinates;
@@ -71,6 +73,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
@@ -141,7 +144,8 @@ class EngineTest {
         var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
         var service = new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys);
         return new Engine(new ConfigFile(config), service, known, apiKeys, new AwayFile(folder.resolve("away.json")),
-                new TripFile(folder.resolve("trips.json")), new BatteryFile(folder.resolve("battery.json")), clock,
+                new TripFile(folder.resolve("trips.json")), new BatteryFile(folder.resolve("battery.json")),
+                new ConsentFile(folder.resolve("calendar-consents.json")), clock,
                 announcer(), scheduler);
     }
 
@@ -227,6 +231,21 @@ class EngineTest {
         assertThat(planned.batteryLevelPct()).isEqualTo(new Percent(72));
         assertThat(planned.batteryAssumed()).isFalse();
         assertThat(planned.days().getFirst().startLevelPct()).isEqualTo(new Percent(72));
+    }
+
+    @Test
+    void consentsAreKeptWithTheEnginesTimeAndWithdrawnByLeavingThemOut() throws IOException {
+        engine(clockAt(7)).saveConsents(Set.of(Consent.READ_CALENDAR, Consent.SEND_LOCATIONS));
+        engine(clockAt(8)).saveConsents(Set.of(Consent.READ_CALENDAR, Consent.SEND_LOCATIONS));
+
+        var consents = engine(clockAt(9)).consents();
+        assertThat(consents.allCount()).isTrue();
+        assertThat(consents.record(Consent.READ_CALENDAR).orElseThrow().givenAt()).isEqualTo(clockAt(7).instant());
+
+        engine(clockAt(9)).saveConsents(Set.of(Consent.READ_CALENDAR));
+        assertThat(engine(clockAt(9)).consents().counting()).containsExactly(Consent.READ_CALENDAR);
+        engine(clockAt(9)).saveConsents(Set.of());
+        assertThat(folder.resolve("calendar-consents.json")).doesNotExist();
     }
 
     @Test
@@ -537,7 +556,8 @@ class EngineTest {
         var withoutKeychain = new Engine(new ConfigFile(config),
                 new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys), known, apiKeys,
                 new AwayFile(folder.resolve("away.json")), new TripFile(folder.resolve("trips.json")),
-                new BatteryFile(folder.resolve("battery.json")), clockAt(7),
+                new BatteryFile(folder.resolve("battery.json")),
+                new ConsentFile(folder.resolve("calendar-consents.json")), clockAt(7),
                 announcer(), new ManualScheduler());
         withoutKeychain.saveApiKeys(new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "x"))));
         assertThat(withoutKeychain.keyStorage()).isEqualTo(KeyStorage.FILE);

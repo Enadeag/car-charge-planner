@@ -4,6 +4,9 @@ import nl.enadeag.carchargeplanner.engine.away.AwayFile;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryReading;
+import nl.enadeag.carchargeplanner.engine.calendar.Consent;
+import nl.enadeag.carchargeplanner.engine.calendar.ConsentFile;
+import nl.enadeag.carchargeplanner.engine.calendar.Consents;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
@@ -40,6 +43,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 
@@ -63,6 +67,7 @@ public final class Engine {
     private final AwayFile awayFile;
     private final TripFile tripFile;
     private final BatteryFile batteryFile;
+    private final ConsentFile consentFile;
     private final Clock clock;
     private final Announcer announcer;
     private final PlanSchedule schedule;
@@ -80,6 +85,7 @@ public final class Engine {
      * @param tripFile where the trips the owner enters are kept, read again for a plan when it changed on disk
      * @param batteryFile where the battery level the owner entered last is kept, read again for a plan when it
      *     changed on disk
+     * @param consentFile where the calendar's consents are kept
      * @param clock the time plans are made at, and that decides which away periods and trips are old
      * @param announcer tells the owner about the plan's windows shortly before they start, and keeps the ones it told
      *     about as they were told
@@ -87,8 +93,8 @@ public final class Engine {
      *     #stop()} shuts it down. Nothing runs on it before the start; never null.
      */
     public Engine(ConfigFile configFile, ForecastService forecasts, Providers providers, ApiKeys apiKeys,
-            AwayFile awayFile, TripFile tripFile, BatteryFile batteryFile, Clock clock, Announcer announcer,
-            ScheduledExecutorService executor) {
+            AwayFile awayFile, TripFile tripFile, BatteryFile batteryFile, ConsentFile consentFile, Clock clock,
+            Announcer announcer, ScheduledExecutorService executor) {
         this.configFile = configFile;
         this.forecasts = forecasts;
         this.providers = providers;
@@ -96,6 +102,7 @@ public final class Engine {
         this.awayFile = awayFile;
         this.tripFile = tripFile;
         this.batteryFile = batteryFile;
+        this.consentFile = consentFile;
         this.clock = clock;
         this.announcer = announcer;
         this.schedule = new PlanSchedule(executor);
@@ -271,6 +278,28 @@ public final class Engine {
         } finally {
             schedule.runSoon();
         }
+    }
+
+    /**
+     * The calendar's consents the owner gave, also those given to an older text, which no longer count.
+     *
+     * @return the stored consents; none when there is no file or it cannot be used
+     */
+    public Consents consents() {
+        return consentFile.consents();
+    }
+
+    /**
+     * Stores which of the calendar's consents the owner gives, as {@link Consents#given(Set, Instant)} says: one given
+     * now is stored with the time on the engine's clock and the version of its text, and one left out that counts is
+     * withdrawn; with none left their file is removed. What else the calendar brought in, such as its iCal link, the
+     * client removes in the same save.
+     *
+     * @param given the consents the owner gives
+     * @throws IOException when they could not be stored; the stored ones are then unchanged
+     */
+    public void saveConsents(Set<Consent> given) throws IOException {
+        consentFile.save(consentFile.consents().given(given, clock.instant()));
     }
 
     /**
