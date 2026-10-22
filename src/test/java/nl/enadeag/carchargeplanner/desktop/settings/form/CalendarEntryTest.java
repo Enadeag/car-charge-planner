@@ -57,7 +57,7 @@ class CalendarEntryTest {
         "https:///secret.ics",
         "https://calendar.example/my calendar.ics",
         "https://calendar.example/\u0007",
-        "https://calendar example/",
+        "https://calendar.example/%zz",
         "ftp://calendar.example/secret.ics",
     })
     void anotherAddressIsRefused(String link) {

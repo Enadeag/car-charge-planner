@@ -222,9 +222,8 @@ class ConfigFileTest {
                 LocalTime.of(19, 30));
         assertThat(config.calendar()).isEqualTo(calendar);
 
-        var copy = new ConfigFile(folder.resolve("copy.json"));
-        copy.write(config);
-        assertThat(copy.read().calendar()).isEqualTo(calendar);
+        new ConfigFile(folder.resolve("copy.json")).write(config);
+        assertThat(new ConfigFile(folder.resolve("copy.json")).read().calendar()).isEqualTo(calendar);
     }
 
     /** A config file from before the calendar must keep working, and the app versions from then read ours. */
@@ -241,16 +240,36 @@ class ConfigFileTest {
 
     @Test
     void ofTheCalendarSettingsOnlyThoseThatDifferAreWritten() throws IOException, ConfigProblem {
-        var config = new ConfigFile(withCalendar("{\"travelMarginMinutes\": 30, \"allDay\": {\"return\": \"17:00\"}}"))
-                .read();
-        assertThat(config.calendar()).isEqualTo(new CalendarSettings(Optional.empty(), Duration.ofMinutes(30),
-                LocalTime.of(9, 0), LocalTime.of(17, 0)));
+        var calendar = new CalendarSettings(Optional.empty(), Duration.ofMinutes(30), LocalTime.of(9, 0),
+                LocalTime.of(17, 0));
+        var config = new ConfigFile(EXAMPLE).read().withCalendar(calendar);
 
-        var copy = new ConfigFile(folder.resolve("copy.json"));
-        copy.write(config);
+        new ConfigFile(folder.resolve("copy.json")).write(config);
+
         var written = StoredJson.parse(Files.readString(folder.resolve("copy.json"))).path("calendar");
         assertThat(written.propertyNames()).containsExactly("travelMarginMinutes", "allDay");
         assertThat(written.path("allDay").propertyNames()).containsExactly("return");
+        assertThat(new ConfigFile(folder.resolve("copy.json")).read()).isEqualTo(config);
+    }
+
+    @Test
+    void aCalendarWithOnlyAFileOrOnlyADepartureWritesOnlyThat() throws IOException, ConfigProblem {
+        var ics = folder.resolve("calendar.ics");
+        var example = new ConfigFile(EXAMPLE).read();
+        var withFile = example.withCalendar(new CalendarSettings(Optional.of(ics), Duration.ofMinutes(15),
+                LocalTime.of(9, 0), LocalTime.of(18, 0)));
+        var earlier = example.withCalendar(new CalendarSettings(Optional.empty(), Duration.ofMinutes(15),
+                LocalTime.of(7, 0), LocalTime.of(18, 0)));
+
+        new ConfigFile(folder.resolve("file.json")).write(withFile);
+        new ConfigFile(folder.resolve("earlier.json")).write(earlier);
+
+        assertThat(StoredJson.parse(Files.readString(folder.resolve("file.json"))).path("calendar").propertyNames())
+                .containsExactly("icsFile");
+        assertThat(StoredJson.parse(Files.readString(folder.resolve("earlier.json"))).path("calendar")
+                .path("allDay").propertyNames()).containsExactly("departure");
+        assertThat(new ConfigFile(folder.resolve("file.json")).read()).isEqualTo(withFile);
+        assertThat(new ConfigFile(folder.resolve("earlier.json")).read()).isEqualTo(earlier);
     }
 
     @ParameterizedTest
