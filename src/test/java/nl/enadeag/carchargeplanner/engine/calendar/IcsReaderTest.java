@@ -15,6 +15,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class IcsReaderTest {
 
@@ -171,6 +173,76 @@ class IcsReaderTest {
 
         assertThat(read.events()).extracting(CalendarEvent::uid).containsExactly("with-uid");
         assertThat(read.unreadable()).isEqualTo(1);
+    }
+
+    @Test
+    void anEventThatEndsBeforeItStartsIsCountedAndLeftOut() throws CalendarProblem {
+        var text = calendar("""
+                BEGIN:VEVENT
+                UID:backwards
+                DTSTART:20261021T090000Z
+                DTEND:20261021T080000Z
+                END:VEVENT
+                """);
+
+        var read = reader.read(text, OCTOBER);
+
+        assertThat(read.events()).isEmpty();
+        assertThat(read.unreadable()).isEqualTo(1);
+    }
+
+    @Test
+    void anAllDayEventWithoutAnEndLastsItsDay() throws CalendarProblem {
+        var text = calendar("""
+                BEGIN:VEVENT
+                UID:one-day
+                DTSTART;VALUE=DATE:20261021
+                END:VEVENT
+                """);
+
+        assertThat(reader.read(text, OCTOBER).events()).extracting(CalendarEvent::time)
+                .containsExactly(allDay("2026-10-21", "2026-10-21"));
+    }
+
+    @Test
+    void eventsThatEndAsTheDaysBeginAreLeftOut() throws CalendarProblem {
+        // the covered days begin on 12 October at midnight in Amsterdam: 22:00 UTC the day before
+        var text = calendar("""
+                BEGIN:VEVENT
+                UID:ends-at-midnight
+                DTSTART:20261011T210000Z
+                DTEND:20261011T220000Z
+                END:VEVENT
+                BEGIN:VEVENT
+                UID:the-day-before
+                DTSTART;VALUE=DATE:20261011
+                DTEND;VALUE=DATE:20261012
+                END:VEVENT
+                BEGIN:VEVENT
+                UID:the-first-minute
+                DTSTART:20261011T220000Z
+                DTEND:20261011T220100Z
+                END:VEVENT
+                """);
+
+        assertThat(reader.read(text, OCTOBER).events()).extracting(CalendarEvent::uid)
+                .containsExactly("the-first-minute");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"geo:51.1102", "geo:north,east", "geo:95.0,4.9318", "https://maps.example/station"})
+    void anAppleLocationWithoutCoordinatesOnTheMapGivesNone(String value) throws CalendarProblem {
+        var text = calendar("""
+                BEGIN:VEVENT
+                UID:somewhere
+                DTSTART:20261021T080000Z
+                DTEND:20261021T090000Z
+                X-APPLE-STRUCTURED-LOCATION;VALUE=URI;X-TITLE=Station:%s
+                END:VEVENT
+                """.formatted(value));
+
+        assertThat(reader.read(text, OCTOBER).events()).extracting(CalendarEvent::coordinates)
+                .containsExactly(Optional.empty());
     }
 
     @Test

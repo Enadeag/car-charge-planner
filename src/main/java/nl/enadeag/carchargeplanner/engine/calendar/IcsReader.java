@@ -47,7 +47,8 @@ public final class IcsReader {
      * The events of a calendar.
      *
      * @param text the whole calendar, in the iCalendar format
-     * @param days the days whose events to give; an event counts when any part of it falls on one of them
+     * @param days the days whose events to give; an event counts when any part of it falls on one of them, so not one
+     *     that ends as the first day begins
      * @return the occurrences of the events on those days, in order of their start, and how many events could not
      *     be read, such as one without a UID or with a repeat rule that cannot be followed
      * @throws CalendarProblem when the text is not a calendar in the iCalendar format; the message holds nothing of
@@ -69,7 +70,7 @@ public final class IcsReader {
         var occurrences = new ArrayList<CalendarEvent>();
         for (var entry : byUid.entrySet()) {
             try {
-                occurrences.addAll(occurrences(entry.getKey(), entry.getValue(), window, days));
+                occurrences.addAll(occurrences(entry.getKey(), entry.getValue(), window, days.zone()));
             } catch (DateTimeException | IllegalArgumentException _) {
                 unreadable++;
             }
@@ -82,12 +83,10 @@ public final class IcsReader {
     private static Calendar parse(String text) throws CalendarProblem {
         try {
             return new CalendarBuilder().build(new StringReader(text));
-        } catch (ParserException e) {
-            // its message may quote the calendar's text
-            throw new CalendarProblem(CalendarProblem.Kind.NOT_A_CALENDAR,
-                    "not a calendar in the iCalendar format (line " + e.getLineNo() + ")");
-        } catch (IOException _) {
-            throw new CalendarProblem(CalendarProblem.Kind.NOT_A_CALENDAR, "not a calendar in the iCalendar format");
+        } catch (ParserException | IOException e) {
+            // a ParserException's message may quote the calendar's text
+            throw new CalendarProblem(CalendarProblem.Kind.NOT_A_CALENDAR, "not a calendar in the iCalendar format"
+                    + (e instanceof ParserException parsing ? " (line " + parsing.getLineNo() + ")" : ""));
         }
     }
 
@@ -97,16 +96,11 @@ public final class IcsReader {
      * it keeps only those that start at their {@code RECURRENCE-ID}, so the replacing is done here.
      */
     private static List<CalendarEvent> occurrences(String uid, List<VEvent> versions, Period<?> window,
-            CoveredDays days) {
-        var zone = days.zone();
+            ZoneId zone) {
         var replaced = new HashSet<Temporal>();
-        var changed = new ArrayList<VEvent>();
         for (var version : versions) {
             Optional<RecurrenceId<Temporal>> recurrenceId = version.getProperty(Property.RECURRENCE_ID);
-            if (recurrenceId.isPresent()) {
-                replaced.add(key(recurrenceId.get().getDate(), zone));
-                changed.add(version);
-            }
+            recurrenceId.ifPresent(id -> replaced.add(key(id.getDate(), zone)));
         }
         var found = new ArrayList<CalendarEvent>();
         for (var version : versions) {
@@ -119,12 +113,8 @@ public final class IcsReader {
                 if (recurrenceId.isEmpty() && replaced.contains(planned)) {
                     continue;
                 }
-                var time = time(period, zone);
-                if (falls(time, days)) {
-                    found.add(new CalendarEvent(uid, date(planned, zone), time, location(version),
-                            coordinates(version), text(version, Property.SUMMARY),
-                            text(version, Property.DESCRIPTION)));
-                }
+                found.add(new CalendarEvent(uid, date(planned, zone), time(period, zone), location(version),
+                        coordinates(version), text(version, Property.SUMMARY), text(version, Property.DESCRIPTION)));
             }
         }
         return found;
@@ -140,33 +130,19 @@ public final class IcsReader {
     }
 
     private static Instant instant(Temporal moment, ZoneId zone) {
-        return switch (moment) {
-            case LocalDate date -> date.atStartOfDay(zone).toInstant();
-            case LocalDateTime floating -> floating.atZone(zone).toInstant();
-            default -> Instant.from(moment);
-        };
+        return moment instanceof LocalDateTime floating ? floating.atZone(zone).toInstant() : Instant.from(moment);
     }
 
-    /** An all-day event's end is the day after its last day; one that ends on its first day lasts that day. */
+    /**
+     * An all-day event's end is the day after its last day; one that ends on its first day lasts that day. An event
+     * that ends before it starts cannot be read.
+     */
     private static EventTime time(Period<Temporal> period, ZoneId zone) {
         if (period.getStart() instanceof LocalDate first) {
-            var end = period.getEnd() instanceof LocalDate date ? date : first.plusDays(1);
-            var last = end.isAfter(first) ? end.minus(1, ChronoUnit.DAYS) : first;
-            return new EventTime.AllDay(first, last);
+            var end = LocalDate.from(period.getEnd());
+            return new EventTime.AllDay(first, end.isAfter(first) ? end.minus(1, ChronoUnit.DAYS) : first);
         }
-        var start = instant(period.getStart(), zone);
-        var end = instant(period.getEnd(), zone);
-        return new EventTime.Timed(start, end.isBefore(start) ? start : end);
-    }
-
-    /** Whether any part of the occurrence falls on the days; one without length counts at its start. */
-    private static boolean falls(EventTime time, CoveredDays days) {
-        return switch (time) {
-            case EventTime.AllDay allDay -> !allDay.first().isAfter(days.last())
-                    && !allDay.last().isBefore(days.first());
-            case EventTime.Timed timed -> timed.start().isBefore(days.end())
-                    && (timed.end().isAfter(days.start()) || timed.start().equals(days.start()));
-        };
+        return new EventTime.Timed(instant(period.getStart(), zone), instant(period.getEnd(), zone));
     }
 
     private static Instant start(EventTime time, ZoneId zone) {

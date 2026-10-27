@@ -5,8 +5,7 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 /**
- * One occurrence of an event in the calendar: an event that does not repeat, or one repeat of an event that does. The
- * title and the description are held in memory only, never written to a file or the log.
+ * One occurrence of an event in the calendar: an event that does not repeat, or one repeat of an event that does.
  *
  * @param uid the event's UID, which all its occurrences share; not blank
  * @param occurrence the date the occurrence was planned on by the event's repeat, also when it was moved to another

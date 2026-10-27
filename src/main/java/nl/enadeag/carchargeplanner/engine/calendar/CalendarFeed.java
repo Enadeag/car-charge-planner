@@ -14,12 +14,12 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * The calendar's events on the days the plan covers, held in memory only, and when the calendar is read again: with a
- * new plan once {@link #EVERY} has passed since the last reading, at once when the {@code .ics} file changed or the
- * days changed, when {@linkplain #readSoon() asked} after a change to the source, and on {@link #readNow}. Nothing is
- * read while the consents do not both count, and then nothing is kept. A calendar that cannot be read keeps the events
- * read before from the same source; that it cannot be read, and that it can be read again, is logged once each,
- * without the iCal address.
+ * The calendar's events on the days the plan covers, held in memory only, titles and descriptions included, so they
+ * never reach a file or the log; and when the calendar is read again: with a new plan once {@link #EVERY} has passed
+ * since the last reading, at once when the {@code .ics} file changed or the days changed, when {@linkplain #readSoon()
+ * asked} after a change to the source, and on {@link #readNow}. Nothing is read while the consents do not both count,
+ * and then nothing is kept. A calendar that cannot be read keeps the events read before from the same source; that it
+ * cannot be read, and that it can be read again, is logged once each, without the iCal address.
  *
  * <p>Its methods may be called from any thread; one reading at a time.
  */

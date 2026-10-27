@@ -1,8 +1,10 @@
 package nl.enadeag.carchargeplanner.engine.calendar;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -35,6 +37,19 @@ class CalendarSourceTest {
     void anIcalLinkNeverShowsItsAddressInText() {
         var link = CalendarSource.IcalLink.parse("https://calendar.example/private-abc/basic.ics").orElseThrow();
 
-        assertThat(link.toString()).doesNotContain("calendar.example").doesNotContain("private-abc");
+        assertThat(link.toString()).startsWith("IcalLink").doesNotContain("calendar.example")
+                .doesNotContain("private-abc");
+    }
+
+    @Test
+    void anIcalLinkRefusesAnAddressThatIsNotHttpsWithoutNamingIt() {
+        assertThatThrownBy(() -> new CalendarSource.IcalLink(URI.create("http://calendar.example/private-abc")))
+                .isInstanceOf(IllegalArgumentException.class).message().doesNotContain("private-abc");
+    }
+
+    @Test
+    void anIcsFileNeedsAWholePath() {
+        assertThatThrownBy(() -> new CalendarSource.IcsFile(Path.of("calendar.ics")))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

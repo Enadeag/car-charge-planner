@@ -83,6 +83,15 @@ class CalendarFeedTest {
     }
 
     @Test
+    void aCalendarWithoutEventsOnTheDaysIsReadAsNone() {
+        var feed = feed();
+        var december = new CoveredDays(LocalDate.of(2026, 12, 2), LocalDate.of(2026, 12, 3), OCTOBER.zone());
+
+        assertThat(feed.refresh(BOTH, NO_FILE, this::link, december, NOW)).isEqualTo(new CalendarRead.Read(NOW, 0, 0));
+        assertThat(feed.events()).isEmpty();
+    }
+
+    @Test
     void itIsReadAgainOnlyOnceFifteenMinutesHavePassed() {
         var feed = feed();
         refresh(feed, NOW);

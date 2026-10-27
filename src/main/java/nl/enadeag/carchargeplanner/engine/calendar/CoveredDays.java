@@ -5,8 +5,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 
 /**
- * The days the plan covers, from today to the last day of the forecast, in the home's time zone: the only days whose
- * events the calendar gives.
+ * The days a plan covers, from today to the last day of the forecast, in the home's time zone.
  *
  * @param first the first day, today
  * @param last the last day, the same as or after {@code first}

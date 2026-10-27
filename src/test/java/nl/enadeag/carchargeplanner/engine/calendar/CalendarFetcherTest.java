@@ -84,14 +84,46 @@ class CalendarFetcherTest {
     }
 
     @Test
-    void aFileLargerThanTheLimitIsNotRead() throws IOException {
+    void anInterruptedReadingKeepsTheInterruption() {
+        HttpGet interrupted = _ -> {
+            throw new InterruptedException();
+        };
+
+        var thrown = catchThrowableOfType(CalendarProblem.class, () -> new CalendarFetcher(interrupted).fetch(LINK));
+
+        assertThat(thrown.kind()).isEqualTo(CalendarProblem.Kind.UNREACHABLE);
+        assertThat(Thread.interrupted()).isTrue();
+    }
+
+    @Test
+    void aFolderIsNoFileToRead() throws IOException {
+        var folderAsFile = new CalendarSource.IcsFile(Files.createDirectory(folder.resolve("calendar.ics")));
+
+        assertThat(problem(new ReplayHttp(List.of()), folderAsFile).kind())
+                .isEqualTo(CalendarProblem.Kind.FILE_UNREADABLE);
+    }
+
+    private Path fileOf(long bytes) throws IOException {
         var path = folder.resolve("huge.ics");
         try (var file = new RandomAccessFile(path.toFile(), "rw")) {
-            file.setLength(CalendarFetcher.MAX_SIZE.bytes() + 1);
+            file.setLength(bytes);
         }
+        return path;
+    }
 
-        assertThat(problem(new ReplayHttp(List.of()), new CalendarSource.IcsFile(path)).kind())
-                .isEqualTo(CalendarProblem.Kind.TOO_LARGE);
+    @Test
+    void aFileOfTheLimitIsRead() throws IOException, CalendarProblem {
+        var file = new CalendarSource.IcsFile(fileOf(CalendarFetcher.MAX_SIZE.bytes()));
+
+        assertThat(new CalendarFetcher(new ReplayHttp(List.of())).fetch(file))
+                .hasSize((int) CalendarFetcher.MAX_SIZE.bytes());
+    }
+
+    @Test
+    void aFileLargerThanTheLimitIsNotRead() throws IOException {
+        var file = new CalendarSource.IcsFile(fileOf(CalendarFetcher.MAX_SIZE.bytes() + 1));
+
+        assertThat(problem(new ReplayHttp(List.of()), file).kind()).isEqualTo(CalendarProblem.Kind.TOO_LARGE);
     }
 
     @Test
