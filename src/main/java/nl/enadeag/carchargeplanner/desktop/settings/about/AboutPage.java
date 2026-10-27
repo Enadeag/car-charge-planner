@@ -16,11 +16,15 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
-/** The version, the author, the licence, the source code and where the app keeps its files. */
+/**
+ * The version, the author, the route service's credit, the licence, the source code and where the app keeps its files.
+ */
 public final class AboutPage implements Page {
 
     /** The attribution ADDITIONAL-TERMS.md requires, in these words in every language. */
     static final String ATTRIBUTION = "Car charge planner, originally by Kelvin Vroegop";
+    /** The credit the route service's free plan asks for, in these words in every language. */
+    static final String ROUTE_SERVICE_CREDIT = "Powered by Geoapify · © OpenStreetMap contributors";
     private static final String APP_NAME = "Car charge planner";
     private static final String COPYRIGHT = "Copyright © 2026 Kelvin Vroegop";
     private static final URI LICENCE = URI.create("https://www.gnu.org/licenses/gpl-3.0.html");
@@ -55,6 +59,9 @@ public final class AboutPage implements Page {
                 new CardView(APP_NAME, "",
                         Labels.paragraph(messages.text(TextKey.ABOUT_VERSION, facts.version()), "fact"),
                         Labels.paragraph(ATTRIBUTION, "fact"), Labels.paragraph(COPYRIGHT, "note")),
+                new CardView(messages.text(TextKey.ABOUT_ROUTE_SERVICE_TITLE),
+                        messages.text(TextKey.ABOUT_ROUTE_SERVICE),
+                        Labels.paragraph(ROUTE_SERVICE_CREDIT, "fact")),
                 new CardView(messages.text(TextKey.ABOUT_LICENCE_TITLE), messages.text(TextKey.ABOUT_LICENCE),
                         link(TextKey.ABOUT_LICENCE_LINK, LICENCE)),
                 new CardView(messages.text(TextKey.ABOUT_SOURCE_TITLE), messages.text(TextKey.ABOUT_SOURCE),
