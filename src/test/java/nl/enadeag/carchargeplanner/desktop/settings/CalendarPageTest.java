@@ -9,11 +9,14 @@ import nl.enadeag.carchargeplanner.desktop.TextScale;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.engine.calendar.CalendarEvent;
 import nl.enadeag.carchargeplanner.engine.calendar.CalendarSecrets;
 import nl.enadeag.carchargeplanner.engine.calendar.Consent;
 import nl.enadeag.carchargeplanner.engine.calendar.ConsentRecord;
 import nl.enadeag.carchargeplanner.engine.config.CalendarSettings;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
+import nl.enadeag.carchargeplanner.engine.forecast.FakeProvider;
+import nl.enadeag.carchargeplanner.engine.forecast.SunnyDays;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import java.net.URI;
 import java.nio.file.Files;
@@ -21,9 +24,12 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -31,6 +37,7 @@ import java.util.stream.Stream;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Hyperlink;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -242,6 +249,51 @@ class CalendarPageTest {
                 .map(Hyperlink.class::cast).findFirst().orElseThrow().fire());
 
         assertThat(settings.opened).containsExactly(URI.create("https://www.geoapify.com/privacy-policy/"));
+    }
+
+    /** Settings with a forecast from today, so there is a plan, both consents and an .ics file with the calendar. */
+    private SettingsView openWithCalendarFile(String calendar) throws Exception {
+        var forecast = new FakeProvider(FakeProvider.info("open-meteo", "Open-Meteo", List.of()),
+                FakeProvider.steps(SunnyDays.days(LocalDate.now(SunnyDays.TZ), 3, 4.0)));
+        settings = new SettingsFixture(folder, Language.ENGLISH, List.of(forecast));
+        settings.engine.saveConsents(Set.of(Consent.READ_CALENDAR, Consent.SEND_LOCATIONS));
+        Files.writeString(icsFile(), calendar);
+        var config = new ConfigFile(settings.configPath);
+        config.write(config.read().withCalendar(new CalendarSettings(Optional.of(icsFile()), Duration.ofMinutes(15),
+                LocalTime.of(9, 0), LocalTime.of(18, 0))));
+        return settings.open();
+    }
+
+    private static boolean shows(SettingsView view, String text) {
+        return Scenes.all(view).stream().anyMatch(node -> node instanceof Label label && label.getText().equals(text));
+    }
+
+    @Test
+    void readingTheCalendarNowSaysHowManyEventsFallOnTheDaysOfThePlan() throws Exception {
+        var tomorrow = LocalDate.now(SunnyDays.TZ).plusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE);
+        var view = openWithCalendarFile(String.join("\r\n", "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Test//EN",
+                "BEGIN:VEVENT", "UID:tomorrow", "DTSTART;VALUE=DATE:" + tomorrow, "SUMMARY:Open day", "END:VEVENT",
+                "END:VCALENDAR", ""));
+
+        Fx.run(() -> {
+            view.show(Category.CALENDAR);
+            settings.button(view, TextKey.CALENDAR_READ_NOW).fire();
+            assertThat(shows(view, settings.messages.text(TextKey.CALENDAR_READ, 1, 0))).isTrue();
+        });
+        assertThat(settings.engine.calendarEvents()).extracting(CalendarEvent::uid).containsExactly("tomorrow");
+    }
+
+    @Test
+    void withChangesOnThePageTheCalendarIsReadOnlyAfterTheyAreSaved() throws Exception {
+        var view = openWithCalendarFile("not read");
+
+        Fx.run(() -> {
+            view.show(Category.CALENDAR);
+            text(view, TextKey.FIELD_ICS_FILE).setText(folder.resolve("other.ics").toAbsolutePath().toString());
+            settings.button(view, TextKey.CALENDAR_READ_NOW).fire();
+            assertThat(shows(view, settings.messages.text(TextKey.CALENDAR_SAVE_FIRST))).isTrue();
+        });
+        assertThat(settings.engine.calendarEvents()).isEmpty();
     }
 
     static Stream<Arguments> languagesAndScales() {

@@ -65,7 +65,10 @@ The downloads bring these with them:
 | [AtlantaFX](https://github.com/mkpaz/atlantafx) | The look of the windows, light and dark | MIT |
 | [dbus-java](https://github.com/hypfvieh/dbus-java) | The tray icon, notifications and the keychain on Linux | MIT |
 | [Jackson](https://github.com/FasterXML/jackson) | Reading and writing the JSON files and the providers' answers | Apache-2.0 |
-| [SLF4J](https://www.slf4j.org) | dbus-java's log, passed on to the app's | MIT |
+| [SLF4J](https://www.slf4j.org) | dbus-java's and iCal4j's log, passed on to the app's | MIT |
+| [iCal4j](https://github.com/ical4j/ical4j) | Reading the calendar, its repeating events and its time zones | BSD-3-Clause |
+| [Apache Commons Lang](https://commons.apache.org/proper/commons-lang/) and [Commons Codec](https://commons.apache.org/proper/commons-codec/) | Used by iCal4j | Apache-2.0 |
+| [ThreeTen-Extra](https://www.threeten.org/threeten-extra/) | Used by iCal4j | BSD-3-Clause |
 
 Their licence texts are in the `legal` folder of the Linux folder and of the Windows install folder, one file per library; the runtime's own notices, for OpenJDK and JavaFX, are in `lib/runtime/legal` of the Linux folder (`runtime\legal` in the Windows install folder). For development only: [JUnit](https://junit.org) (EPL-2.0), [AssertJ](https://assertj.github.io/doc/) and [ArchUnit](https://www.archunit.org) (both Apache-2.0).
 
