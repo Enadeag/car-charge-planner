@@ -54,5 +54,11 @@ public enum ConfigSetting {
     /** How long before a charge window the owner is told. */
     NOTIFY_LEAD,
     /** The hours in which the owner can start a charge. */
-    CHARGING_HOURS
+    CHARGING_HOURS,
+    /** The calendar file the trips are read from. */
+    CALENDAR_FILE,
+    /** The time added before and after each calendar event for the trip. */
+    TRAVEL_MARGIN,
+    /** When the car leaves for an all-day event and is back from it. */
+    ALL_DAY_TIMES
 }

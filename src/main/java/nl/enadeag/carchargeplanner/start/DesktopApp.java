@@ -26,6 +26,7 @@ import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import nl.enadeag.carchargeplanner.engine.Engine;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
+import nl.enadeag.carchargeplanner.engine.calendar.ConsentFile;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastCache;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastService;
@@ -327,7 +328,8 @@ public final class DesktopApp {
                 new ToldTrips(dataFolder.resolve("trip-notices.json")), notifier);
         return new Engine(new ConfigFile(configPath), new ForecastService(providers, cache, apiKeys), providers,
                 apiKeys, new AwayFile(dataFolder.resolve("away.json")), new TripFile(dataFolder.resolve("trips.json")),
-                new BatteryFile(dataFolder.resolve("battery.json")), Clock.systemUTC(), announcer,
+                new BatteryFile(dataFolder.resolve("battery.json")),
+                new ConsentFile(dataFolder.resolve("calendar-consents.json")), Clock.systemUTC(), announcer,
                 Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("planner").daemon().factory()));
     }
 

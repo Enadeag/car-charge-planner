@@ -955,5 +955,81 @@ public enum TextKey {
     /** What the last step shows. */
     SET_UP_PREVIEW_HINT,
     /** What the display card says in set-up, where the language and the appearance show at once. */
-    SET_UP_DISPLAY_HINT
+    SET_UP_DISPLAY_HINT,
+    /** The Calendar page's name: the trips read from the calendar, and the consents they need. */
+    CATEGORY_CALENDAR,
+    /** The title of the card with the calendar's two consents. */
+    CARD_CALENDAR_CONSENT,
+    /** What the consents are for, and that withdrawing one wipes what the calendar brought in. */
+    CARD_CALENDAR_CONSENT_HINT,
+    /** The box of the consent to read the calendar on this computer, in plain words. */
+    CONSENT_READ_CALENDAR,
+    /** The box of the consent to send the events' locations and the home location to the route service. */
+    CONSENT_SEND_LOCATIONS,
+    /** The link to the route service's privacy policy. */
+    CONSENT_PRIVACY_POLICY,
+    /** Below a consent that counts: {0} the date it was given. */
+    CONSENT_GIVEN,
+    /** Below a consent given to an older text: {0} the date it was given. */
+    CONSENT_OUTDATED,
+    /** The question before a consent is withdrawn. */
+    CONSENT_WITHDRAW_QUESTION,
+    /** The button that withdraws the consent. */
+    CONSENT_WITHDRAW,
+    /** The button that keeps the consent. */
+    CONSENT_KEEP,
+    /** The title of the card with the calendar's source. */
+    CARD_CALENDAR_SOURCE,
+    /** What a calendar's source can be. */
+    CARD_CALENDAR_SOURCE_HINT,
+    /** Why the source cannot be filled in yet. */
+    CALENDAR_SOURCE_LOCKED,
+    /** The field of the calendar's secret iCal address. */
+    FIELD_ICAL_LINK,
+    /** Where the address is kept, and why. */
+    FIELD_ICAL_LINK_HINT,
+    /** The field of the calendar's .ics file. */
+    FIELD_ICS_FILE,
+    /** What to type in the .ics file's field. */
+    FIELD_ICS_FILE_HINT,
+    /** The button that chooses the .ics file in the system's file dialogue. */
+    ICS_FILE_CHOOSE,
+    /** The title of that dialogue. */
+    ICS_FILE_TITLE,
+    /** The title of the card with the route service's API key. */
+    CARD_ROUTE_SERVICE,
+    /** What the route service does, and where its API key comes from. */
+    CARD_ROUTE_SERVICE_HINT,
+    /** Why the API key cannot be filled in yet. */
+    ROUTE_SERVICE_LOCKED,
+    /** The field of the route service's API key. */
+    FIELD_ROUTE_KEY,
+    /** Where the route service's API key is kept. */
+    FIELD_ROUTE_KEY_HINT,
+    /** The title of the card with how events become trips. */
+    CARD_CALENDAR_TRIPS,
+    /** What that card is about. */
+    CARD_CALENDAR_TRIPS_HINT,
+    /** Why those settings cannot be changed yet. */
+    CALENDAR_TRIPS_LOCKED,
+    /** The field of the travel margin. */
+    FIELD_TRAVEL_MARGIN,
+    /** What the travel margin is for. */
+    FIELD_TRAVEL_MARGIN_HINT,
+    /** The field of when the car leaves for an all-day event. */
+    FIELD_ALL_DAY,
+    /** What that time is. */
+    FIELD_ALL_DAY_HINT,
+    /** The field of when the car is back from an all-day event. */
+    FIELD_ALL_DAY_RETURN,
+    /** What that time is. */
+    FIELD_ALL_DAY_RETURN_HINT,
+    /** A calendar address that is not an https or webcal address. */
+    PROBLEM_CALENDAR_LINK,
+    /** Both a calendar address and a file were filled in. */
+    PROBLEM_BOTH_SOURCES,
+    /** A file that is not given by its whole path. */
+    PROBLEM_NOT_A_FULL_PATH,
+    /** An all-day return that is not after the departure. */
+    PROBLEM_NOT_AFTER_DEPARTURE
 }

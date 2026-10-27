@@ -11,6 +11,8 @@ import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
@@ -29,9 +31,12 @@ import tools.jackson.databind.node.ObjectNode;
 /**
  * The JSON shape of {@code engine.json}, read and written side by side, as {@code docs/example-engine.json} shows it.
  * Every value must be given, except the {@code away} and {@code typical} sections, the car's {@code tripSurchargePct},
- * which is the {@link Car#STANDARD_TRIP_SURCHARGE} when it is not, and the planning's {@code chargingHours}, such as
- * {@code {"start": "06:30", "end": "23:00"}}, which are the {@link ChargingHours#STANDARD} when they are not; these two
- * are written only when they differ from the standard, so the app versions from before them still read the file. A
+ * which is the {@link Car#STANDARD_TRIP_SURCHARGE} when it is not, the planning's {@code chargingHours}, such as
+ * {@code {"start": "06:30", "end": "23:00"}}, which are the {@link ChargingHours#STANDARD} when they are not, and the
+ * {@code calendar} section, such as {@code {"icsFile": "/home/me/calendar.ics", "travelMarginMinutes": 20, "allDay":
+ * {"departure": "08:00", "return": "19:00"}}}, each of whose values is the {@link CalendarSettings#STANDARD} one when it
+ * is not given; these are written only when they differ from the standard, so the app versions from before them still
+ * read the file. A
  * name the shape does not have is refused. Percentages, charger phases and provider ids are plain numbers and texts;
  * an empty fallback means none; a weekday is its English name in any case and a time is {@code "HH:mm"}; a typical
  * value is its {@link ConfigSetting}'s name. The file's {@code version} is 1; a file without one is read as version 1.
@@ -60,13 +65,15 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
      */
     @Override
     public EngineConfig read(JsonNode root) throws FormatProblem {
-        var file = ConfigFields.of(VERSION.upToDate(root), "").only("system", "planning", "forecast", "away", "typical");
+        var file = ConfigFields.of(VERSION.upToDate(root), "").only("system", "planning", "forecast", "away", "typical",
+                "calendar");
         var system = system(file.object("system"));
         var planning = planning(file.object("planning"));
         var forecast = forecast(file.object("forecast"));
         var away = file.has("away") ? away(file.object("away")) : WeeklyAwaySchedule.NONE;
         var typical = file.has("typical") ? typical(file.object("typical")) : TypicalValues.NONE;
-        return file.make(() -> new EngineConfig(system, planning, forecast, away, typical));
+        var calendar = file.has("calendar") ? calendar(file.object("calendar")) : CalendarSettings.STANDARD;
+        return file.make(() -> new EngineConfig(system, planning, forecast, away, typical, calendar));
     }
 
     /**
@@ -107,6 +114,10 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
             var settings = panels.addArray();
             array.stream().sorted().forEach(setting -> settings.add(setting.name()));
         });
+        // left out at the standard, so the app versions from before the calendar can still read the file
+        if (!config.calendar().equals(CalendarSettings.STANDARD)) {
+            writeCalendar(file.putObject("calendar"), config.calendar());
+        }
         return VERSION.stamped(file);
     }
 
@@ -193,6 +204,53 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
         var start = time(hours, "start");
         var end = time(hours, "end");
         return hours.make(() -> new ChargingHours(start, end));
+    }
+
+    private static CalendarSettings calendar(ConfigFields calendar) throws FormatProblem {
+        calendar.only("icsFile", "travelMarginMinutes", "allDay");
+        var standard = CalendarSettings.STANDARD;
+        var file = standard.icsFile();
+        if (calendar.has("icsFile")) {
+            var text = calendar.text("icsFile");
+            file = Optional.of(calendar.make("icsFile", () -> {
+                try {
+                    return Path.of(text);
+                } catch (InvalidPathException e) {
+                    throw new IllegalArgumentException("'" + text + "' is not a path on this computer", e);
+                }
+            }));
+        }
+        var margin = calendar.has("travelMarginMinutes")
+                ? Duration.ofMinutes(calendar.wholeNumber("travelMarginMinutes")) : standard.travelMargin();
+        var departure = standard.allDayDeparture();
+        var back = standard.allDayReturn();
+        if (calendar.has("allDay")) {
+            var allDay = calendar.object("allDay").only("departure", "return");
+            departure = allDay.has("departure") ? time(allDay, "departure") : departure;
+            back = allDay.has("return") ? time(allDay, "return") : back;
+        }
+        var icsFile = file;
+        var leave = departure;
+        var home = back;
+        return calendar.make(() -> new CalendarSettings(icsFile, margin, leave, home));
+    }
+
+    private static void writeCalendar(ObjectNode node, CalendarSettings calendar) {
+        var standard = CalendarSettings.STANDARD;
+        calendar.icsFile().ifPresent(file -> node.put("icsFile", file.toString()));
+        if (!calendar.travelMargin().equals(standard.travelMargin())) {
+            node.put("travelMarginMinutes", calendar.travelMargin().toMinutes());
+        }
+        if (!calendar.allDayDeparture().equals(standard.allDayDeparture())
+                || !calendar.allDayReturn().equals(standard.allDayReturn())) {
+            var allDay = node.putObject("allDay");
+            if (!calendar.allDayDeparture().equals(standard.allDayDeparture())) {
+                allDay.put("departure", TIME.format(calendar.allDayDeparture()));
+            }
+            if (!calendar.allDayReturn().equals(standard.allDayReturn())) {
+                allDay.put("return", TIME.format(calendar.allDayReturn()));
+            }
+        }
     }
 
     private static Percent percent(ConfigFields fields, String name) throws FormatProblem {
