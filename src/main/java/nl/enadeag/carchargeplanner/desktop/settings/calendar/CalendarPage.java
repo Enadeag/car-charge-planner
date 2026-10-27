@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.settings.calendar;
 
+import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.desktop.settings.field.FieldRow;
 import nl.enadeag.carchargeplanner.desktop.settings.field.FileInput;
 import nl.enadeag.carchargeplanner.desktop.settings.field.Input;
@@ -8,6 +9,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.field.SecretInput;
 import nl.enadeag.carchargeplanner.desktop.settings.field.SwitchInput;
 import nl.enadeag.carchargeplanner.desktop.settings.field.TimeInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.CalendarEntry;
+import nl.enadeag.carchargeplanner.desktop.settings.form.CalendarReadText;
 import nl.enadeag.carchargeplanner.desktop.settings.form.CalendarStep;
 import nl.enadeag.carchargeplanner.desktop.settings.form.CalendarSteps;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
@@ -52,7 +54,8 @@ import javafx.scene.layout.VBox;
  * service's API key, and how events become trips. Each later step opens once the one before it is done. The consents
  * are stored with their date and the version of their text; unticking one that counts asks first, and on Save
  * withdraws it and wipes what the calendar brought in. The calendar's iCal link and the API key are secret settings,
- * kept with the API keys; the rest goes to the config file.
+ * kept with the API keys; the rest goes to the config file. "Read calendar now" reads the calendar as saved and says
+ * how it went.
  */
 public final class CalendarPage implements ConfigPage {
 
@@ -73,6 +76,8 @@ public final class CalendarPage implements ConfigPage {
     private final TimeInput back;
     private final Map<CalendarEntry.Field, FieldRow> rows = new EnumMap<>(CalendarEntry.Field.class);
     private final Label withdrawQuestion = Labels.paragraph("", "field-label");
+    private final Button readNow;
+    private final Label readResult = Labels.paragraph("", "note");
     private final Button keep;
     private final HBox withdrawBar;
     private final Map<CalendarStep, Label> lockNotes = new EnumMap<>(CalendarStep.class);
@@ -86,9 +91,11 @@ public final class CalendarPage implements ConfigPage {
      * Makes the page, empty until {@link #load(EngineConfig)}.
      *
      * @param openLink opens a web page in the owner's browser
+     * @param reading reads the calendar as saved; called away from the JavaFX thread
+     * @param background reads the calendar away from the JavaFX thread
      * @param messages the texts, in the owner's language
      */
-    public CalendarPage(Consumer<URI> openLink, Messages messages) {
+    public CalendarPage(Consumer<URI> openLink, CalendarReading reading, Background background, Messages messages) {
         this.messages = messages;
         this.view = new PageView(messages.text(Category.CALENDAR.title()));
         for (var consent : Consent.values()) {
@@ -121,6 +128,11 @@ public final class CalendarPage implements ConfigPage {
         margin = new NumberInput(MARGIN, messages.text(TextKey.UNIT_MINUTES), messages);
         departure = new TimeInput();
         back = new TimeInput();
+        readNow = new Button(messages.text(TextKey.CALENDAR_READ_NOW));
+        readNow.setOnAction(_ -> read(reading, background));
+        readNow.setMinWidth(Region.USE_PREF_SIZE);
+        var readLine = new HBox(readNow, readResult);
+        readLine.getStyleClass().add("field-line");
 
         cards = new CardView[] {
             new CardView(messages.text(TextKey.CARD_CALENDAR_CONSENT),
@@ -129,7 +141,8 @@ public final class CalendarPage implements ConfigPage {
             step(CalendarStep.SOURCE, TextKey.CARD_CALENDAR_SOURCE, TextKey.CARD_CALENDAR_SOURCE_HINT,
                     TextKey.CALENDAR_SOURCE_LOCKED,
                     row(CalendarEntry.Field.ICAL_LINK, TextKey.FIELD_ICAL_LINK, TextKey.FIELD_ICAL_LINK_HINT, link),
-                    row(CalendarEntry.Field.ICS_FILE, TextKey.FIELD_ICS_FILE, TextKey.FIELD_ICS_FILE_HINT, file)),
+                    row(CalendarEntry.Field.ICS_FILE, TextKey.FIELD_ICS_FILE, TextKey.FIELD_ICS_FILE_HINT, file),
+                    readLine),
             step(CalendarStep.API_KEY, TextKey.CARD_ROUTE_SERVICE, TextKey.CARD_ROUTE_SERVICE_HINT,
                     TextKey.ROUTE_SERVICE_LOCKED,
                     FieldRow.of(messages, TextKey.FIELD_ROUTE_KEY, TextKey.FIELD_ROUTE_KEY_HINT, apiKey)),
@@ -196,6 +209,7 @@ public final class CalendarPage implements ConfigPage {
         departure.load(config.calendar().allDayDeparture());
         back.load(config.calendar().allDayReturn());
         rows.values().forEach(FieldRow::clearProblem);
+        readResult.setText("");
         openSteps();
         view.show(cards);
     }
@@ -258,6 +272,23 @@ public final class CalendarPage implements ConfigPage {
         all.put(CalendarSecrets.ROUTE_SERVICE, laid(keys.of(CalendarSecrets.ROUTE_SERVICE), CalendarSecrets.API_KEY,
                 apiKey.value()));
         return new Secrets(all);
+    }
+
+    /** Reads the calendar as saved; with changes on the page, which would not be read, asks to save them first. */
+    private void read(CalendarReading reading, Background background) {
+        if (isChanged()) {
+            readResult.setText(messages.text(TextKey.CALENDAR_SAVE_FIRST));
+            return;
+        }
+        readNow.setDisable(true);
+        readResult.setText(messages.text(TextKey.CALENDAR_READING));
+        background.run("reading the calendar", reading::readNow, read -> {
+            readNow.setDisable(false);
+            readResult.setText(CalendarReadText.of(read, messages));
+        }, failure -> {
+            readNow.setDisable(false);
+            readResult.setText(messages.text(TextKey.CALENDAR_READ_FAILED, Background.describe(failure, messages)));
+        });
     }
 
     private static Map<String, String> laid(Map<String, String> values, String name, String value) {

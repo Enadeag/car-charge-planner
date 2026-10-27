@@ -4,9 +4,16 @@ import nl.enadeag.carchargeplanner.engine.away.AwayFile;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryReading;
+import nl.enadeag.carchargeplanner.engine.calendar.CalendarEvent;
+import nl.enadeag.carchargeplanner.engine.calendar.CalendarFeed;
+import nl.enadeag.carchargeplanner.engine.calendar.CalendarProblem;
+import nl.enadeag.carchargeplanner.engine.calendar.CalendarRead;
+import nl.enadeag.carchargeplanner.engine.calendar.CalendarSecrets;
+import nl.enadeag.carchargeplanner.engine.calendar.CalendarSource;
 import nl.enadeag.carchargeplanner.engine.calendar.Consent;
 import nl.enadeag.carchargeplanner.engine.calendar.ConsentFile;
 import nl.enadeag.carchargeplanner.engine.calendar.Consents;
+import nl.enadeag.carchargeplanner.engine.calendar.CoveredDays;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
@@ -53,7 +60,8 @@ import java.util.function.Consumer;
  * <p>Once {@linkplain #start(Consumer) started}, the engine plans on its own thread every minute, and again after
  * each change to its config, keys, battery level, away periods or trips, and tells its listener each new outlook.
  * Each plan uses the stored files as they are on disk, reading one again only when it changed; the forecast service
- * decides whether a provider is asked or its cache answers.
+ * decides whether a provider is asked or its cache answers. After each plan the calendar is read for the days the
+ * plan covers, when that is due and both consents count ({@link CalendarFeed}).
  */
 public final class Engine {
 
@@ -68,6 +76,7 @@ public final class Engine {
     private final TripFile tripFile;
     private final BatteryFile batteryFile;
     private final ConsentFile consentFile;
+    private final CalendarFeed calendar;
     private final Clock clock;
     private final Announcer announcer;
     private final PlanSchedule schedule;
@@ -86,6 +95,7 @@ public final class Engine {
      * @param batteryFile where the battery level the owner entered last is kept, read again for a plan when it
      *     changed on disk
      * @param consentFile where the calendar's consents are kept
+     * @param calendar reads the calendar when that is due, and holds its events in memory
      * @param clock the time plans are made at, and that decides which away periods and trips are old
      * @param announcer tells the owner about the plan's windows shortly before they start, and keeps the ones it told
      *     about as they were told
@@ -93,8 +103,8 @@ public final class Engine {
      *     #stop()} shuts it down. Nothing runs on it before the start; never null.
      */
     public Engine(ConfigFile configFile, ForecastService forecasts, Providers providers, ApiKeys apiKeys,
-            AwayFile awayFile, TripFile tripFile, BatteryFile batteryFile, ConsentFile consentFile, Clock clock,
-            Announcer announcer, ScheduledExecutorService executor) {
+            AwayFile awayFile, TripFile tripFile, BatteryFile batteryFile, ConsentFile consentFile,
+            CalendarFeed calendar, Clock clock, Announcer announcer, ScheduledExecutorService executor) {
         this.configFile = configFile;
         this.forecasts = forecasts;
         this.providers = providers;
@@ -103,6 +113,7 @@ public final class Engine {
         this.tripFile = tripFile;
         this.batteryFile = batteryFile;
         this.consentFile = consentFile;
+        this.calendar = calendar;
         this.clock = clock;
         this.announcer = announcer;
         this.schedule = new PlanSchedule(executor);
@@ -113,8 +124,9 @@ public final class Engine {
      * the engine, also one that could not be saved, so the listener sees what is stored. Each round moves API keys
      * kept in their file into the keychain once it can be used ({@link ApiKeys#moveFileIntoKeychain()}), makes the
      * {@linkplain #outlook() outlook}, then tells the owner about a window that starts within the notification lead
-     * time; the rounds come often enough for that. A round that fails, even with an {@link Error}, is logged, and the
-     * next one is made as planned.
+     * time; the rounds come often enough for that. Once the listener has the outlook, the calendar is read for the
+     * days a plan covers when that is due. A round that fails, even with an {@link Error}, is logged, and the next one
+     * is made as planned.
      *
      * @param listener gets each new outlook, on the engine's thread, so it should hand slow work on; never null
      * @throws IllegalStateException when the engine was started before
@@ -123,7 +135,7 @@ public final class Engine {
         if (listener == null) {
             throw new IllegalArgumentException("the listener must not be null");
         }
-        schedule.start(() -> listener.accept(round()));
+        schedule.start(() -> round(listener));
     }
 
     /**
@@ -150,21 +162,93 @@ public final class Engine {
 
     /**
      * One scheduled round: first the API keys move from their file into the keychain when they can, so the move
-     * follows the keychain's unlocking within a round; then the outlook, and the announcements that are due on it.
+     * follows the keychain's unlocking within a round; then the outlook, and the announcements that are due on it;
+     * last, once the listener has the outlook, the calendar when it is due, so a slow calendar never holds up a plan.
      */
-    private Outlook round() {
+    private void round(Consumer<Outlook> listener) {
         apiKeys.moveFileIntoKeychain();
         EngineConfig config;
         try {
             config = readConfig();
         } catch (ConfigProblem e) {
-            return withoutConfig(e);
+            listener.accept(withoutConfig(e));
+            calendar.withoutPlan(consentFile.consents());
+            return;
         }
         var outlook = outlook(config);
         if (outlook instanceof Outlook.Planned planned) {
             announce(planned, config);
         }
-        return outlook;
+        listener.accept(outlook);
+        readCalendar(config, outlook, false);
+    }
+
+    /**
+     * Reads the calendar for the days a plan covers: when it is due, or at once.
+     *
+     * @param config the config the plan was made with, which names the calendar's file
+     * @param outlook the plan; without one, nothing is read
+     * @param now true to read whenever it was read last
+     */
+    private CalendarRead readCalendar(EngineConfig config, Outlook outlook, boolean now) {
+        var consents = consentFile.consents();
+        if (!(outlook instanceof Outlook.Planned planned) || planned.days().isEmpty()) {
+            return calendar.withoutPlan(consents);
+        }
+        var days = new CoveredDays(planned.days().getFirst().date(), planned.days().getLast().date(), planned.zone());
+        return now ? calendar.readNow(consents, config.calendar(), this::icalLink, days, clock.instant())
+                : calendar.refresh(consents, config.calendar(), this::icalLink, days, clock.instant());
+    }
+
+    /** The calendar's iCal address as stored with the API keys; asks the keychain. */
+    private Optional<CalendarSource.IcalLink> icalLink() throws CalendarProblem {
+        String stored;
+        try {
+            stored = apiKeys.load().of(CalendarSecrets.CALENDAR).getOrDefault(CalendarSecrets.ICAL_LINK, "");
+        } catch (SecretsProblem e) {
+            throw e.kind() == SecretsProblem.Kind.LOCKED
+                    ? new CalendarProblem(CalendarProblem.Kind.KEYCHAIN_LOCKED,
+                            "the keychain that holds the calendar's address is locked")
+                    : new CalendarProblem(CalendarProblem.Kind.ADDRESS_UNREADABLE,
+                            "the calendar's address could not be read: " + e.getMessage());
+        }
+        if (stored.isBlank()) {
+            return Optional.empty();
+        }
+        var link = CalendarSource.IcalLink.parse(stored);
+        if (link.isEmpty()) {
+            throw new CalendarProblem(CalendarProblem.Kind.NOT_HTTPS,
+                    "the calendar's address is not an https or webcal address");
+        }
+        return link;
+    }
+
+    /**
+     * Reads the calendar now, as the owner asked, for the days the plan covers, whenever it was read last; the plan is
+     * made for it as the rounds make it, and nobody is told about a window. Nothing is read while the consents do not
+     * both count. Blocks while the forecast and the calendar are fetched: call it away from the user interface's
+     * thread.
+     *
+     * @return how it went: how many events were read, why the calendar could not be read, or why it was not read
+     */
+    public CalendarRead readCalendarNow() {
+        EngineConfig config;
+        try {
+            config = readConfig();
+        } catch (ConfigProblem _) {
+            return calendar.withoutPlan(consentFile.consents());
+        }
+        return readCalendar(config, outlook(config), true);
+    }
+
+    /**
+     * The calendar's events from its last reading, held in memory only.
+     *
+     * @return the occurrences of events on the days the plan covered then, in order of their start; empty before the
+     *     calendar was read, and while the consents do not both count
+     */
+    public List<CalendarEvent> calendarEvents() {
+        return calendar.events();
     }
 
     /** Why there is no plan when the config file cannot be read: not set up yet, or a file that cannot be used. */
@@ -266,7 +350,8 @@ public final class Engine {
      * Replaces the config file by this config, at once and whole, so the next plan uses it; a provider that failed
      * before is asked again at the next plan instead of after its wait, as a corrected setting deserves a try. A value
      * the owner entered is checked as the config's records are made, which refuse it with an {@link InvalidSetting}
-     * that names the setting. Once started, the engine plans again soon after.
+     * that names the setting. The calendar, whose file may have changed, is read again with the next plan. Once
+     * started, the engine plans again soon after.
      *
      * @param config the whole config to keep
      * @throws IOException when the file could not be written; it is then left as it was
@@ -275,6 +360,7 @@ public final class Engine {
         try {
             configFile.write(config);
             forecasts.forgetFailures();
+            calendar.readSoon();
         } finally {
             schedule.runSoon();
         }
@@ -292,14 +378,19 @@ public final class Engine {
     /**
      * Stores which of the calendar's consents the owner gives, as {@link Consents#given(Set, Instant)} says: one given
      * now is stored with the time on the engine's clock and the version of its text, and one left out that counts is
-     * withdrawn; with none left their file is removed. What else the calendar brought in, such as its iCal link, the
-     * client removes in the same save.
+     * withdrawn; with none left their file is removed. Once they do not both count, the calendar's events are dropped
+     * at once; once they do again, it is read with the next plan. What else the calendar brought in, such as its iCal link,
+     * the client removes in the same save.
      *
      * @param given the consents the owner gives
      * @throws IOException when they could not be stored; the stored ones are then unchanged
      */
     public void saveConsents(Set<Consent> given) throws IOException {
-        consentFile.save(consentFile.consents().given(given, clock.instant()));
+        var consents = consentFile.consents().given(given, clock.instant());
+        consentFile.save(consents);
+        if (!consents.allCount()) {
+            calendar.withoutPlan(consents);
+        }
     }
 
     /**
@@ -504,7 +595,8 @@ public final class Engine {
 
     /**
      * Stores the providers' secret settings, replacing all of them; a provider that failed before is asked again at
-     * the next plan instead of after its wait. Once started, the engine plans again soon after. When the system
+     * the next plan instead of after its wait, and the calendar, whose iCal address may have changed, is read again
+     * with it. Once started, the engine plans again soon after. When the system
      * keychain is locked, the system asks the owner to unlock it, and this waits for their answer, up to
      * {@link ApiKeys#UNLOCK_WAIT}: call it away from the user interface's thread.
      *
@@ -516,6 +608,7 @@ public final class Engine {
         try {
             apiKeys.save(secrets);
             forecasts.forgetFailures();
+            calendar.readSoon();
         } finally {
             schedule.runSoon();
         }
@@ -534,6 +627,7 @@ public final class Engine {
         try {
             apiKeys.applyChanges(changes, prompting);
             forecasts.forgetFailures();
+            calendar.readSoon();
         } finally {
             schedule.runSoon();
         }

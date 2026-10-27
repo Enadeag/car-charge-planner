@@ -234,7 +234,7 @@ final class SettingsView extends BorderPane {
         var forecast = new ForecastPage(engine.providers(), tester, openLink, facts.keysFile(), background, messages);
         var away = new AwayPage(messages);
         var planning = new PlanningPage(messages);
-        var calendar = new CalendarPage(openLink, messages);
+        var calendar = new CalendarPage(openLink, engine::readCalendarNow, background, messages);
         app.onUnitsChanged(carHouse::showIn);
         var about = new AboutPage(facts, openLink, messages);
         List<ConfigPage> configPages = List.of(solar, location, carHouse, charger, forecast, away, planning,

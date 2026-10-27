@@ -12,8 +12,15 @@ import nl.enadeag.carchargeplanner.LogCapture;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
+import nl.enadeag.carchargeplanner.engine.calendar.CalendarEvent;
+import nl.enadeag.carchargeplanner.engine.calendar.CalendarFeed;
+import nl.enadeag.carchargeplanner.engine.calendar.CalendarFetcher;
+import nl.enadeag.carchargeplanner.engine.calendar.CalendarProblem;
+import nl.enadeag.carchargeplanner.engine.calendar.CalendarRead;
+import nl.enadeag.carchargeplanner.engine.calendar.CalendarSecrets;
 import nl.enadeag.carchargeplanner.engine.calendar.Consent;
 import nl.enadeag.carchargeplanner.engine.calendar.ConsentFile;
+import nl.enadeag.carchargeplanner.engine.calendar.IcsReader;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import nl.enadeag.carchargeplanner.engine.config.Coordinates;
@@ -81,12 +88,21 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class EngineTest {
 
     private static final Path EXAMPLE = Path.of("docs", "example-engine.json");
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");
     private static final LocalDate DAY = LocalDate.of(2026, 7, 3);
+    /** A calendar with an event on the first day of the plan and one after its last day. */
+    private static final String CALENDAR = String.join("\r\n", "BEGIN:VCALENDAR", "VERSION:2.0",
+            "PRODID:-//Test//EN", "BEGIN:VEVENT", "UID:on-the-first-day", "DTSTART:20260703T120000Z",
+            "DTEND:20260703T130000Z", "SUMMARY:Visit", "LOCATION:Marktplein 3, Zonnedorp", "END:VEVENT",
+            "BEGIN:VEVENT", "UID:after-the-plan", "DTSTART:20260710T120000Z", "DTEND:20260710T130000Z", "END:VEVENT",
+            "END:VCALENDAR", "");
+    private static final String ICAL_LINK = "webcal://calendar.example/private-abc/basic.ics";
 
     @TempDir
     Path folder;
@@ -98,6 +114,8 @@ class EngineTest {
     private FakeProvider main;
     private FakeProvider backup;
     private Path config;
+    /** Where the calendar's iCal address is fetched; it answers nothing until a test records an answer. */
+    private ReplayHttp calendarHttp = new ReplayHttp(List.of());
 
     /** Days with 4 kW (or the given power) from 10:00 to 16:00 local time, nothing the rest of the day. */
     private static List<ForecastStep> days(int count, double powerFrom10To16Kw) {
@@ -145,8 +163,8 @@ class EngineTest {
         var service = new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys);
         return new Engine(new ConfigFile(config), service, known, apiKeys, new AwayFile(folder.resolve("away.json")),
                 new TripFile(folder.resolve("trips.json")), new BatteryFile(folder.resolve("battery.json")),
-                new ConsentFile(folder.resolve("calendar-consents.json")), clock,
-                announcer(), scheduler);
+                new ConsentFile(folder.resolve("calendar-consents.json")),
+                new CalendarFeed(new CalendarFetcher(calendarHttp), new IcsReader()), clock, announcer(), scheduler);
     }
 
     /** Starts the engine and runs its first round, which announces what is due; its outlooks go to {@link #rounds}. */
@@ -557,7 +575,8 @@ class EngineTest {
                 new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys), known, apiKeys,
                 new AwayFile(folder.resolve("away.json")), new TripFile(folder.resolve("trips.json")),
                 new BatteryFile(folder.resolve("battery.json")),
-                new ConsentFile(folder.resolve("calendar-consents.json")), clockAt(7),
+                new ConsentFile(folder.resolve("calendar-consents.json")),
+                new CalendarFeed(new CalendarFetcher(calendarHttp), new IcsReader()), clockAt(7),
                 announcer(), new ManualScheduler());
         withoutKeychain.saveApiKeys(new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "x"))));
         assertThat(withoutKeychain.keyStorage()).isEqualTo(KeyStorage.FILE);
@@ -964,6 +983,115 @@ class EngineTest {
 
         assertThat(engine(clockAt(7)).trips()).containsExactly(trip);
         assertThat(engine(Clock.offset(clockAt(9), Duration.ofDays(1))).trips()).isEmpty();
+    }
+
+    /** Both consents given, and the calendar's iCal address stored with the API keys. */
+    private Engine withCalendar(Clock clock, ManualScheduler scheduler, String link) throws IOException,
+            SecretsProblem {
+        calendarHttp = ReplayHttp.always(new Reply(200, CALENDAR));
+        var engine = engine(clock, scheduler, main, backup);
+        engine.saveConsents(Set.of(Consent.READ_CALENDAR, Consent.SEND_LOCATIONS));
+        engine.saveApiKeys(new Secrets(Map.of(CalendarSecrets.CALENDAR, Map.of(CalendarSecrets.ICAL_LINK, link))));
+        return engine;
+    }
+
+    @Test
+    void aStartedEngineReadsTheCalendarForTheDaysOfItsPlan() throws Exception {
+        var scheduler = new ManualScheduler();
+        var engine = withCalendar(clockAt(7), scheduler, ICAL_LINK);
+
+        start(engine, scheduler);
+
+        assertThat(calendarHttp.requests).extracting(request -> request.uri().toString())
+                .containsExactly("https://calendar.example/private-abc/basic.ics");
+        assertThat(engine.calendarEvents()).extracting(CalendarEvent::uid).containsExactly("on-the-first-day");
+    }
+
+    /** Stored whole, or as the owner's changes, as Settings stores it. */
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void theCalendarIsReadAgainWithThePlanAfterItsAddressChanged(boolean asChanges) throws Exception {
+        var scheduler = new ManualScheduler();
+        var engine = withCalendar(clockAt(7), scheduler, ICAL_LINK);
+        start(engine, scheduler);
+
+        var keys = new Secrets(Map.of(CalendarSecrets.CALENDAR,
+                Map.of(CalendarSecrets.ICAL_LINK, "https://calendar.example/other/basic.ics")));
+        if (asChanges) {
+            engine.applyKeyChanges(KeyChanges.entering(keys), () -> { });
+        } else {
+            engine.saveApiKeys(keys);
+        }
+        scheduler.runPending();
+
+        assertThat(calendarHttp.requests).extracting(request -> request.uri().toString()).containsExactly(
+                "https://calendar.example/private-abc/basic.ics", "https://calendar.example/other/basic.ics");
+    }
+
+    @Test
+    void theCalendarIsReadAgainWithThePlanAfterTheConfigChanged() throws Exception {
+        var scheduler = new ManualScheduler();
+        var engine = withCalendar(clockAt(7), scheduler, ICAL_LINK);
+        start(engine, scheduler);
+
+        engine.saveConfig(engine.config());
+        scheduler.runPending();
+
+        assertThat(calendarHttp.requests).hasSize(2);
+    }
+
+    @Test
+    void readingTheCalendarNowReadsItWheneverItWasReadLast() throws Exception {
+        var scheduler = new ManualScheduler();
+        var engine = withCalendar(clockAt(7), scheduler, ICAL_LINK);
+        start(engine, scheduler);
+
+        assertThat(engine.readCalendarNow()).isEqualTo(new CalendarRead.Read(clockAt(7).instant(), 1, 0));
+        assertThat(calendarHttp.requests).hasSize(2);
+    }
+
+    @Test
+    void withdrawingAConsentDropsTheCalendarsEventsAtOnce() throws Exception {
+        var engine = withCalendar(clockAt(7), new ManualScheduler(), ICAL_LINK);
+        engine.readCalendarNow();
+
+        engine.saveConsents(Set.of(Consent.READ_CALENDAR));
+
+        assertThat(engine.calendarEvents()).isEmpty();
+        assertThat(engine.readCalendarNow()).isEqualTo(new CalendarRead.NotRead(CalendarRead.Reason.NO_CONSENT));
+        assertThat(calendarHttp.requests).hasSize(1);
+    }
+
+    @Test
+    void withoutAPlanTheCalendarIsNotRead() throws Exception {
+        var engine = withCalendar(clockAt(7), new ManualScheduler(), ICAL_LINK);
+        Files.delete(config);
+
+        assertThat(engine.readCalendarNow()).isEqualTo(new CalendarRead.NotRead(CalendarRead.Reason.NO_PLAN));
+        assertThat(calendarHttp.requests).isEmpty();
+    }
+
+    @Test
+    void aStoredAddressThatIsNotHttpsIsNotFetched() throws Exception {
+        var engine = withCalendar(clockAt(7), new ManualScheduler(), "http://calendar.example/private-abc/basic.ics");
+
+        var read = engine.readCalendarNow();
+
+        assertThat(read).isInstanceOfSatisfying(CalendarRead.Failed.class,
+                failed -> assertThat(failed.kind()).isEqualTo(CalendarProblem.Kind.NOT_HTTPS));
+        assertThat(calendarHttp.requests).isEmpty();
+    }
+
+    @Test
+    void aLockedKeychainLeavesTheCalendarUnreadAndSaysWhy() throws Exception {
+        withCalendar(clockAt(7), new ManualScheduler(), ICAL_LINK);
+        keychain.locked = true;
+
+        var read = engine(clockAt(7)).readCalendarNow(); // as after a login that left the keychain locked
+
+        assertThat(read).isInstanceOfSatisfying(CalendarRead.Failed.class,
+                failed -> assertThat(failed.kind()).isEqualTo(CalendarProblem.Kind.KEYCHAIN_LOCKED));
+        assertThat(calendarHttp.requests).isEmpty();
     }
 
     @Test

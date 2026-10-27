@@ -1000,6 +1000,22 @@ public enum TextKey {
     ICS_FILE_CHOOSE,
     /** The title of that dialogue. */
     ICS_FILE_TITLE,
+    /** The button that reads the calendar as saved, at once. */
+    CALENDAR_READ_NOW,
+    /** Said while the calendar is read. */
+    CALENDAR_READING,
+    /** The calendar was read: {0} the events on the days the plan covers, {1} the events that could not be read. */
+    CALENDAR_READ,
+    /** The calendar could not be read: {0} the engine's words, in English. */
+    CALENDAR_READ_FAILED,
+    /** The calendar was not read, as the consents are not both given. */
+    CALENDAR_NO_CONSENT,
+    /** The calendar was not read, as neither its address nor its file is filled in. */
+    CALENDAR_NO_SOURCE,
+    /** The calendar was not read, as there is no plan and so no days to read it for. */
+    CALENDAR_NO_PLAN,
+    /** The calendar is read as saved, so the changes on the page must be saved first. */
+    CALENDAR_SAVE_FIRST,
     /** The title of the card with the route service's API key. */
     CARD_ROUTE_SERVICE,
     /** What the route service does, and where its API key comes from. */

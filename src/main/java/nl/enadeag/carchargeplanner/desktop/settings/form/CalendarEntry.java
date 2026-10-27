@@ -2,14 +2,12 @@ package nl.enadeag.carchargeplanner.desktop.settings.form;
 
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.engine.calendar.CalendarSource;
 import nl.enadeag.carchargeplanner.engine.config.CalendarSettings;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -82,7 +80,7 @@ public record CalendarEntry(String icalLink, String icsFile, double marginMinute
      */
     public Checked check(Messages messages) {
         var link = icalLink.strip();
-        if (!link.isEmpty() && !isCalendarLink(link)) {
+        if (!link.isEmpty() && CalendarSource.IcalLink.parse(link).isEmpty()) {
             return new Checked.Refused(Field.ICAL_LINK, messages.text(TextKey.PROBLEM_CALENDAR_LINK));
         }
         var fileText = icsFile.strip();
@@ -116,20 +114,6 @@ public record CalendarEntry(String icalLink, String icsFile, double marginMinute
                 default -> Field.ALL_DAY_RETURN; // the only other setting the record refuses: before the departure
             };
             return new Checked.Refused(field, ProblemTexts.of(e.rule(), messages));
-        }
-    }
-
-    /** An https or webcal address with a host, as calendars give their secret address; webcal is https underneath. */
-    private static boolean isCalendarLink(String text) {
-        if (text.chars().anyMatch(c -> Character.isWhitespace(c) || Character.isISOControl(c))) {
-            return false;
-        }
-        try {
-            var uri = new URI(text);
-            var scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
-            return (scheme.equals("https") || scheme.equals("webcal")) && uri.getHost() != null;
-        } catch (URISyntaxException _) {
-            return false;
         }
     }
 }

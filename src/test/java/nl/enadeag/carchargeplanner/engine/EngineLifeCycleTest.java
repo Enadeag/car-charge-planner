@@ -8,7 +8,10 @@ import nl.enadeag.carchargeplanner.LogCapture;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
+import nl.enadeag.carchargeplanner.engine.calendar.CalendarFeed;
+import nl.enadeag.carchargeplanner.engine.calendar.CalendarFetcher;
 import nl.enadeag.carchargeplanner.engine.calendar.ConsentFile;
+import nl.enadeag.carchargeplanner.engine.calendar.IcsReader;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.forecast.FakeProvider;
@@ -16,6 +19,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ForecastCache;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastService;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import nl.enadeag.carchargeplanner.engine.forecast.Providers;
+import nl.enadeag.carchargeplanner.engine.forecast.ReplayHttp;
 import nl.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
 import nl.enadeag.carchargeplanner.engine.notify.Announcer;
 import nl.enadeag.carchargeplanner.engine.notify.ToldTrips;
@@ -83,7 +87,9 @@ class EngineLifeCycleTest {
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
                 new AwayFile(folder.resolve("away.json")), new TripFile(folder.resolve("trips.json")),
                 new BatteryFile(folder.resolve("battery.json")),
-                new ConsentFile(folder.resolve("calendar-consents.json")), Clock.fixed(NOW, ZoneOffset.UTC),
+                new ConsentFile(folder.resolve("calendar-consents.json")),
+                new CalendarFeed(new CalendarFetcher(new ReplayHttp(List.of())), new IcsReader()),
+                Clock.fixed(NOW, ZoneOffset.UTC),
                 new Announcer(new AnnouncedWindows(folder.resolve("announced.json")),
                         new ToldTrips(folder.resolve("trip-notices.json")), _ -> { }), on);
     }
