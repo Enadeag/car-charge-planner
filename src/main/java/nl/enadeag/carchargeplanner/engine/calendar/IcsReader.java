@@ -56,7 +56,10 @@ public final class IcsReader {
      */
     public EventList read(String text, CoveredDays days) throws CalendarProblem {
         var calendar = parse(text);
-        var window = new Period<>(days.start().atZone(days.zone()), days.end().atZone(days.zone()));
+        // ical4j places an all-day event in the JVM's time zone, not the home's, so it gets a day more on each side
+        // and the home's days decide here
+        var window = new Period<>(days.start().atZone(days.zone()).minusDays(1),
+                days.end().atZone(days.zone()).plusDays(1));
         var byUid = new LinkedHashMap<String, List<VEvent>>();
         int unreadable = 0;
         for (VEvent event : calendar.<VEvent>getComponents(Component.VEVENT)) {
@@ -75,6 +78,7 @@ public final class IcsReader {
                 unreadable++;
             }
         }
+        occurrences.removeIf(event -> !fallsOn(event.time(), days));
         occurrences.sort(Comparator.comparing((CalendarEvent event) -> start(event.time(), days.zone()))
                 .thenComparing(CalendarEvent::uid));
         return new EventList(occurrences, unreadable);
@@ -150,6 +154,15 @@ public final class IcsReader {
             case EventTime.AllDay allDay -> allDay.first().atStartOfDay(zone).toInstant();
             case EventTime.Timed timed -> timed.start();
         };
+    }
+
+    private static boolean fallsOn(EventTime time, CoveredDays days) {
+        var start = start(time, days.zone());
+        var end = switch (time) {
+            case EventTime.AllDay allDay -> allDay.last().plusDays(1).atStartOfDay(days.zone()).toInstant();
+            case EventTime.Timed timed -> timed.end();
+        };
+        return start.isBefore(days.end()) && (end.isAfter(days.start()) || !start.isBefore(days.start()));
     }
 
     private static boolean isCancelled(VEvent event) {
