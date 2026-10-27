@@ -379,7 +379,7 @@ public final class Engine {
      * Stores which of the calendar's consents the owner gives, as {@link Consents#given(Set, Instant)} says: one given
      * now is stored with the time on the engine's clock and the version of its text, and one left out that counts is
      * withdrawn; with none left their file is removed. Once they do not both count, the calendar's events are dropped
-     * at once; once they do, it is read with the next plan. What else the calendar brought in, such as its iCal link,
+     * at once; once they do again, it is read with the next plan. What else the calendar brought in, such as its iCal link,
      * the client removes in the same save.
      *
      * @param given the consents the owner gives
@@ -391,7 +391,6 @@ public final class Engine {
         if (!consents.allCount()) {
             calendar.withoutPlan(consents);
         }
-        calendar.readSoon();
     }
 
     /**

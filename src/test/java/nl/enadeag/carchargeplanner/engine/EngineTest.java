@@ -88,6 +88,8 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class EngineTest {
 
@@ -1005,14 +1007,21 @@ class EngineTest {
         assertThat(engine.calendarEvents()).extracting(CalendarEvent::uid).containsExactly("on-the-first-day");
     }
 
-    @Test
-    void theCalendarIsReadAgainWithThePlanAfterItsAddressChanged() throws Exception {
+    /** Stored whole, or as the owner's changes, as Settings stores it. */
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void theCalendarIsReadAgainWithThePlanAfterItsAddressChanged(boolean asChanges) throws Exception {
         var scheduler = new ManualScheduler();
         var engine = withCalendar(clockAt(7), scheduler, ICAL_LINK);
         start(engine, scheduler);
 
-        engine.saveApiKeys(new Secrets(Map.of(CalendarSecrets.CALENDAR,
-                Map.of(CalendarSecrets.ICAL_LINK, "https://calendar.example/other/basic.ics"))));
+        var keys = new Secrets(Map.of(CalendarSecrets.CALENDAR,
+                Map.of(CalendarSecrets.ICAL_LINK, "https://calendar.example/other/basic.ics")));
+        if (asChanges) {
+            engine.applyKeyChanges(KeyChanges.entering(keys), () -> { });
+        } else {
+            engine.saveApiKeys(keys);
+        }
         scheduler.runPending();
 
         assertThat(calendarHttp.requests).extracting(request -> request.uri().toString()).containsExactly(
@@ -1020,10 +1029,25 @@ class EngineTest {
     }
 
     @Test
-    void readingTheCalendarNowGivesHowManyEventsFallOnTheDaysOfThePlan() throws Exception {
-        var engine = withCalendar(clockAt(7), new ManualScheduler(), ICAL_LINK);
+    void theCalendarIsReadAgainWithThePlanAfterTheConfigChanged() throws Exception {
+        var scheduler = new ManualScheduler();
+        var engine = withCalendar(clockAt(7), scheduler, ICAL_LINK);
+        start(engine, scheduler);
+
+        engine.saveConfig(engine.config());
+        scheduler.runPending();
+
+        assertThat(calendarHttp.requests).hasSize(2);
+    }
+
+    @Test
+    void readingTheCalendarNowReadsItWheneverItWasReadLast() throws Exception {
+        var scheduler = new ManualScheduler();
+        var engine = withCalendar(clockAt(7), scheduler, ICAL_LINK);
+        start(engine, scheduler);
 
         assertThat(engine.readCalendarNow()).isEqualTo(new CalendarRead.Read(clockAt(7).instant(), 1, 0));
+        assertThat(calendarHttp.requests).hasSize(2);
     }
 
     @Test
