@@ -1,0 +1,53 @@
+{
+  "results": [
+    {
+      "distance": 63250,
+      "distance_units": "meters",
+      "time": 2712.4,
+      "legs": [
+        {
+          "distance": 63250,
+          "time": 2712.4,
+          "steps": [
+            {
+              "from_index": 0,
+              "to_index": 2,
+              "distance": 63250,
+              "time": 2712.4,
+              "instruction": {
+                "text": "Drive north."
+              }
+            }
+          ]
+        }
+      ],
+      "mode": "drive",
+      "waypoints": [
+        {
+          "location": [5.67891, 51.23456],
+          "original_index": 0
+        },
+        {
+          "location": [5.67891, 51.73456],
+          "original_index": 1
+        }
+      ],
+      "units": "metric",
+      "geometry": [
+        [
+          {"lat": 51.23456, "lon": 5.67891},
+          {"lat": 51.5, "lon": 5.7},
+          {"lat": 51.73456, "lon": 5.67891}
+        ]
+      ]
+    }
+  ],
+  "properties": {
+    "mode": "drive",
+    "waypoints": [
+      {"lat": 51.23456, "lon": 5.67891},
+      {"lat": 51.73456, "lon": 5.67891}
+    ],
+    "units": "metric"
+  }
+}

@@ -599,6 +599,10 @@ public enum TextKey {
     ABOUT_SOURCE,
     /** The link to the project. */
     ABOUT_SOURCE_LINK,
+    /** The title of the card on the route service's credit. */
+    ABOUT_ROUTE_SERVICE_TITLE,
+    /** What the route service does for the app, above its credit. */
+    ABOUT_ROUTE_SERVICE,
     /** The title of the files' card. */
     ABOUT_FILES_TITLE,
     /** What the files' card shows. */

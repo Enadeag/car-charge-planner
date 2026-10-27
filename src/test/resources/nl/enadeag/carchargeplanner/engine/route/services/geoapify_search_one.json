@@ -1,0 +1,39 @@
+{
+  "results": [
+    {
+      "datasource": {
+        "sourcename": "openstreetmap",
+        "attribution": "© OpenStreetMap contributors",
+        "license": "Open Database License",
+        "url": "https://www.openstreetmap.org/copyright"
+      },
+      "name": "Zeedorp",
+      "city": "Zeedorp",
+      "country": "Nowhere",
+      "country_code": "zz",
+      "lon": 5.67891,
+      "lat": 51.73456,
+      "formatted": "Zeedorp, Nowhere",
+      "address_line1": "Zeedorp",
+      "address_line2": "Nowhere",
+      "category": "populated_place",
+      "result_type": "city",
+      "distance": 55597,
+      "rank": {
+        "importance": 0.41,
+        "popularity": 2.5,
+        "confidence": 1,
+        "confidence_city_level": 1,
+        "match_type": "full_match"
+      },
+      "place_id": "made-up-place-zeedorp"
+    }
+  ],
+  "query": {
+    "text": "Zeedorp",
+    "parsed": {
+      "city": "zeedorp",
+      "expected_type": "city"
+    }
+  }
+}

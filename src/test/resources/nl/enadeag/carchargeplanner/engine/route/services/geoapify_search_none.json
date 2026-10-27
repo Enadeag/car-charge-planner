@@ -1,0 +1,11 @@
+{
+  "results": [],
+  "query": {
+    "text": "Nergenshuizen 99",
+    "parsed": {
+      "street": "nergenshuizen",
+      "housenumber": "99",
+      "expected_type": "building"
+    }
+  }
+}

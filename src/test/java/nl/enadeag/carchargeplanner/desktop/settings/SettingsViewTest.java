@@ -368,11 +368,12 @@ class SettingsViewTest {
     }
 
     @Test
-    void aboutShowsTheRequiredAttributionAndTheVersion() throws Exception {
+    void aboutShowsTheRequiredAttributionsAndTheVersion() throws Exception {
         var view = settings.open();
         Fx.run(() -> view.show(Category.ABOUT));
 
         assertThat(Fx.call(() -> Scenes.visibleTexts(view))).contains("Car charge planner, originally by Kelvin Vroegop",
+                "Powered by Geoapify · © OpenStreetMap contributors",
                 settings.messages.text(TextKey.ABOUT_VERSION, "1.2.3"));
     }
 
