@@ -48,7 +48,7 @@ class CalendarPageTest {
 
     private static final Instant NOW = Instant.parse("2026-10-22T08:00:00Z");
     private static final String LINK = "https://calendar.example/private-abc/basic.ics";
-    private static final String KEY = "ors-key-123";
+    private static final String KEY = "route-key-123";
 
     @TempDir
     Path folder;
@@ -241,7 +241,7 @@ class CalendarPageTest {
                         && link.getText().equals(settings.messages.text(TextKey.CONSENT_PRIVACY_POLICY)))
                 .map(Hyperlink.class::cast).findFirst().orElseThrow().fire());
 
-        assertThat(settings.opened).containsExactly(URI.create("https://heigit.org/privacy-policy/"));
+        assertThat(settings.opened).containsExactly(URI.create("https://www.geoapify.com/privacy-policy/"));
     }
 
     static Stream<Arguments> languagesAndScales() {

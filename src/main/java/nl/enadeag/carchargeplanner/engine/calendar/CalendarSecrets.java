@@ -12,8 +12,8 @@ public final class CalendarSecrets {
     public static final ProviderId CALENDAR = new ProviderId("calendar");
     /** The setting name of the iCal link. */
     public static final String ICAL_LINK = "ical-link";
-    /** What the route service's API key is kept under: OpenRouteService. */
-    public static final ProviderId ROUTE_SERVICE = new ProviderId("openrouteservice");
+    /** What the route service's API key is kept under: Geoapify. */
+    public static final ProviderId ROUTE_SERVICE = new ProviderId("geoapify");
     /** The setting name of the route service's API key. */
     public static final String API_KEY = "api-key";
 

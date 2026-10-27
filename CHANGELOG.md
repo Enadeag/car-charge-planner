@@ -5,7 +5,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ## [Unreleased]
 
 ### Added
-- A **Calendar** page in Settings, the first part of trips from your calendar (#36): the two consents it needs, to read your calendar on this computer and to send the events' locations and your home location to OpenRouteService, each a box that starts unticked and is kept with its date and the version of its text in `calendar-consents.json` in the data folder. The steps after them open in order: the calendar's secret iCal address (kept in the keychain) or an `.ics` file, the OpenRouteService API key (in the keychain), and the travel margin (15 minutes) and the times for all-day events (09:00 and 18:00). Unticking a consent asks first; on Save it is withdrawn, and the calendar's address and file are removed. Nothing reads the calendar yet.
+- A **Calendar** page in Settings, the first part of trips from your calendar (#36): the two consents it needs, to read your calendar on this computer and to send the events' locations and your home location to Geoapify, each a box that starts unticked and is kept with its date and the version of its text in `calendar-consents.json` in the data folder. The steps after them open in order: the calendar's secret iCal address (kept in the keychain) or an `.ics` file, the Geoapify API key (in the keychain), and the travel margin (15 minutes) and the times for all-day events (09:00 and 18:00). Unticking a consent asks first; on Save it is withdrawn, and the calendar's address and file are removed. Nothing reads the calendar yet.
 
 ## [0.5.0] - 2026-10-22
 

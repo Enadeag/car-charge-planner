@@ -57,7 +57,7 @@ import javafx.scene.layout.VBox;
 public final class CalendarPage implements ConfigPage {
 
     /** The route service's privacy policy, which its own website links to. */
-    static final URI PRIVACY_POLICY = URI.create("https://heigit.org/privacy-policy/");
+    static final URI PRIVACY_POLICY = URI.create("https://www.geoapify.com/privacy-policy/");
 
     private static final NumberRange MARGIN = new NumberRange(0, CalendarSettings.MAX_TRAVEL_MARGIN.toMinutes(), 5, 0);
 

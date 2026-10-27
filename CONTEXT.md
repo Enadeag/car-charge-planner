@@ -87,7 +87,7 @@ _Avoid_: Permission, opt-in, approval
 _Dutch_: akkoord
 
 **Route service**:
-The outside service that finds the place of a calendar event's location and the distance and travel time from home: OpenRouteService, with the owner's own API key.
+The outside service that finds the place of a calendar event's location and the distance and travel time from home: Geoapify, with the owner's own API key.
 _Avoid_: Geocoder, maps API, routing engine
 _Dutch_: routedienst
 
