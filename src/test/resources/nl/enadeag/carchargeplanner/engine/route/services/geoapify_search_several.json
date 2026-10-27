@@ -1,0 +1,65 @@
+{
+  "results": [
+    {
+      "name": "Zeedorp",
+      "city": "Zeedorp",
+      "state": "Far Province",
+      "country_code": "zz",
+      "lon": 6.4,
+      "lat": 53.2,
+      "formatted": "Zeedorp, Far Province, Nowhere",
+      "result_type": "city",
+      "rank": {
+        "importance": 0.52,
+        "confidence": 0.9,
+        "confidence_city_level": 0.9,
+        "match_type": "full_match"
+      },
+      "place_id": "made-up-place-zeedorp-far"
+    },
+    {
+      "name": "Zeedorp",
+      "street": "Havenkade",
+      "housenumber": "7",
+      "city": "Zeedorp",
+      "state": "Near Province",
+      "country_code": "zz",
+      "lon": 5.7,
+      "lat": 51.3,
+      "formatted": "Havenkade 7, Zeedorp, Near Province, Nowhere",
+      "result_type": "building",
+      "rank": {
+        "importance": 0.31,
+        "confidence": 0.8,
+        "confidence_city_level": 1,
+        "confidence_street_level": 0.8,
+        "match_type": "match_by_building"
+      },
+      "place_id": "made-up-place-zeedorp-near"
+    },
+    {
+      "name": "Zeedorp",
+      "city": "Zeedorp",
+      "state": "Middle Province",
+      "country_code": "zz",
+      "lon": 5.5,
+      "lat": 52.0,
+      "formatted": "Zeedorp, Middle Province, Nowhere",
+      "result_type": "city",
+      "rank": {
+        "importance": 0.47,
+        "confidence": 1,
+        "confidence_city_level": 1,
+        "match_type": "full_match"
+      },
+      "place_id": "made-up-place-zeedorp-middle"
+    }
+  ],
+  "query": {
+    "text": "Zeedorp",
+    "parsed": {
+      "city": "zeedorp",
+      "expected_type": "city"
+    }
+  }
+}

@@ -34,6 +34,7 @@ import nl.enadeag.carchargeplanner.desktop.system.Tray;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import nl.enadeag.carchargeplanner.engine.forecast.JdkHttpGet;
+import nl.enadeag.carchargeplanner.engine.route.RouteService;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.host.Host;
@@ -374,6 +375,12 @@ class ArchitectureTest {
             .because("a provider is chosen by engine.forecast; the plan and the clients know only the forecast");
 
     @ArchTest
+    static final ArchRule routeServicesAreOnlyReachedThroughTheLookup = noClasses()
+            .that().resideOutsideOfPackages(ENGINE + ".route..", ROOT, START)
+            .should().dependOnClassesThat().resideInAPackage(ENGINE + ".route.services..")
+            .because("a route service is asked through engine.route's lookup, which filters what is sent");
+
+    @ArchTest
     static final ArchRule thePlanDoesNotKnowWhereItsInputsComeFrom = noClasses()
             .that().resideInAPackage(ENGINE + ".plan..")
             .should().dependOnClassesThat().resideInAnyPackage(
@@ -683,6 +690,13 @@ class ArchitectureTest {
             .and().areNotInterfaces()
             .should().resideInAPackage(ENGINE + ".forecast.providers..")
             .because("a provider is one class beside the others, so adding one is adding a file (ADR 0001)");
+
+    @ArchTest
+    static final ArchRule routeServicesAreInTheirPackage = classes()
+            .that().implement(RouteService.class)
+            .and().areNotInterfaces()
+            .should().resideInAPackage(ENGINE + ".route.services..")
+            .because("a route service is one class beside the others, so adding one is adding a file (ADR 0009)");
 
     @ArchTest
     static final ArchRule portsAreImplementedInThePlatforms = classes()
