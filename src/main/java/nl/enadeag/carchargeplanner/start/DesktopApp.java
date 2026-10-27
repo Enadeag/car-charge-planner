@@ -26,7 +26,10 @@ import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import nl.enadeag.carchargeplanner.engine.Engine;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
+import nl.enadeag.carchargeplanner.engine.calendar.CalendarFeed;
+import nl.enadeag.carchargeplanner.engine.calendar.CalendarFetcher;
 import nl.enadeag.carchargeplanner.engine.calendar.ConsentFile;
+import nl.enadeag.carchargeplanner.engine.calendar.IcsReader;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastCache;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastService;
@@ -329,7 +332,8 @@ public final class DesktopApp {
         return new Engine(new ConfigFile(configPath), new ForecastService(providers, cache, apiKeys), providers,
                 apiKeys, new AwayFile(dataFolder.resolve("away.json")), new TripFile(dataFolder.resolve("trips.json")),
                 new BatteryFile(dataFolder.resolve("battery.json")),
-                new ConsentFile(dataFolder.resolve("calendar-consents.json")), Clock.systemUTC(), announcer,
+                new ConsentFile(dataFolder.resolve("calendar-consents.json")),
+                new CalendarFeed(new CalendarFetcher(get), new IcsReader()), Clock.systemUTC(), announcer,
                 Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("planner").daemon().factory()));
     }
 
