@@ -41,7 +41,7 @@ jobs:
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
-          java-version: "25.0.4.1+1"
+          java-version: "25.0.5+8"
       - name: Read the version and compare it with the tag
         id: version
         run: |
@@ -105,7 +105,7 @@ jobs:
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
-          java-version: "25.0.4.1+1"
+          java-version: "25.0.5+8"
       # fakeroot and rpm (with rpmbuild) for the .deb and .rpm, and desktop-file-validate for the .deb's smoke test
       - name: D-Bus and GNOME Keyring for the tests on a private bus, and the packaging tools
         run: |
