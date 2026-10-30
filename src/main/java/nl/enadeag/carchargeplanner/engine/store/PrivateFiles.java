@@ -123,6 +123,18 @@ public final class PrivateFiles {
         }
     }
 
+    /**
+     * Removes a file the app no longer uses, such as one an older build left behind. A link is removed itself, not
+     * what it points to.
+     *
+     * @param file the file to remove; it need not exist
+     * @return true when it was there and is removed now; false when there was none
+     * @throws IOException when it is there and could not be removed, such as a folder that is not empty
+     */
+    public static boolean remove(Path file) throws IOException {
+        return Files.deleteIfExists(file);
+    }
+
     private static boolean hasModes(Path path) {
         return path.getFileSystem().supportedFileAttributeViews().contains("posix");
     }

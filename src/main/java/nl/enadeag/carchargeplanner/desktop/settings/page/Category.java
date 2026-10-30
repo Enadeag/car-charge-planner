@@ -18,8 +18,6 @@ public enum Category {
     AWAY(TextKey.CATEGORY_AWAY),
     /** The planning preferences: charge levels, how cautious the plan is, and notifications. */
     PLANNING(TextKey.CATEGORY_PLANNING),
-    /** The trips read from the calendar: the consents, the calendar, the route service and how events become trips. */
-    CALENDAR(TextKey.CATEGORY_CALENDAR),
     /** The desktop app's own settings: how it shows itself, its language, the units, and start at login. */
     APP(TextKey.CATEGORY_APP),
     /** The version, the author, the licence, the source and where the files are kept; always the last. */

@@ -5,7 +5,6 @@ import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.desktop.settings.about.AboutFacts;
 import nl.enadeag.carchargeplanner.desktop.settings.about.AboutPage;
 import nl.enadeag.carchargeplanner.desktop.settings.app.AppPage;
-import nl.enadeag.carchargeplanner.desktop.settings.calendar.CalendarPage;
 import nl.enadeag.carchargeplanner.desktop.settings.away.AwayPage;
 import nl.enadeag.carchargeplanner.desktop.settings.car.CarHousePage;
 import nl.enadeag.carchargeplanner.desktop.settings.charger.ChargerPage;
@@ -234,12 +233,10 @@ final class SettingsView extends BorderPane {
         var forecast = new ForecastPage(engine.providers(), tester, openLink, facts.keysFile(), background, messages);
         var away = new AwayPage(messages);
         var planning = new PlanningPage(messages);
-        var calendar = new CalendarPage(openLink, engine::readCalendarNow, background, messages);
         app.onUnitsChanged(carHouse::showIn);
         var about = new AboutPage(facts, openLink, messages);
-        List<ConfigPage> configPages = List.of(solar, location, carHouse, charger, forecast, away, planning,
-                calendar);
-        var form = new SettingsForm(stores, configPages, forecast, calendar, app, about);
+        List<ConfigPage> configPages = List.of(solar, location, carHouse, charger, forecast, away, planning);
+        var form = new SettingsForm(stores, configPages, forecast, app, about);
         var pages = new ArrayList<Page>(configPages);
         pages.add(app);
         pages.add(about);

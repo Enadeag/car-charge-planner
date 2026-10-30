@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.engine.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import nl.enadeag.carchargeplanner.LogCapture;
 import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
@@ -205,88 +206,33 @@ class ConfigFileTest {
         assertThat(copy.read().system().car().tripSurcharge()).isEqualTo(new Percent(15));
     }
 
-    private Path withCalendar(String section) throws IOException {
-        return write(Files.readString(EXAMPLE).replace("\"typical\": {", "\"calendar\": " + section + ", \"typical\": {"));
-    }
-
-    private static String json(Path path) {
-        return "\"" + path.toString().replace("\\", "\\\\") + "\"";
-    }
-
+    /** Builds of main between v0.5.0 and the removal of calendar trips wrote this section. */
     @Test
-    void theCalendarSettingsAreReadAndWrittenBack() throws IOException, ConfigProblem {
+    void aCalendarSectionIsSkippedWithAWarningAndLeftOutAtTheNextSave() throws IOException, ConfigProblem {
         var ics = folder.resolve("calendar.ics");
-        var config = new ConfigFile(withCalendar("{\"icsFile\": " + json(ics) + ", \"travelMarginMinutes\": 20, "
-                + "\"allDay\": {\"departure\": \"08:00\", \"return\": \"19:30\"}}")).read();
-        var calendar = new CalendarSettings(Optional.of(ics), Duration.ofMinutes(20), LocalTime.of(8, 0),
-                LocalTime.of(19, 30));
-        assertThat(config.calendar()).isEqualTo(calendar);
-
-        new ConfigFile(folder.resolve("copy.json")).write(config);
-        assertThat(new ConfigFile(folder.resolve("copy.json")).read().calendar()).isEqualTo(calendar);
-    }
-
-    /** A config file from before the calendar must keep working, and the app versions from then read ours. */
-    @Test
-    void theStandardCalendarSettingsAreLeftOutOfTheFile() throws IOException, ConfigProblem {
-        var config = new ConfigFile(EXAMPLE).read();
-        assertThat(config.calendar()).isEqualTo(CalendarSettings.STANDARD);
-
+        var file = write(Files.readString(EXAMPLE).replace("\"typical\": {", "\"calendar\": {\"icsFile\": \""
+                + ics.toString().replace("\\", "\\\\") + "\", \"travelMarginMinutes\": 20, "
+                + "\"allDay\": {\"departure\": \"08:00\", \"return\": \"19:30\"}}, \"typical\": {"));
         var copy = new ConfigFile(folder.resolve("copy.json"));
-        copy.write(config);
-        assertThat(Files.readString(folder.resolve("copy.json"))).doesNotContain("calendar");
-        assertThat(copy.read().calendar()).isEqualTo(CalendarSettings.STANDARD);
-    }
+        EngineConfig withoutCalendar;
+        try (var log = LogCapture.of(ConfigFormat.class)) {
+            withoutCalendar = new ConfigFile(EXAMPLE).read();
+            assertThat(log.lines()).isEmpty();
+        }
 
-    @Test
-    void ofTheCalendarSettingsOnlyThoseThatDifferAreWritten() throws IOException, ConfigProblem {
-        var calendar = new CalendarSettings(Optional.empty(), Duration.ofMinutes(30), LocalTime.of(9, 0),
-                LocalTime.of(17, 0));
-        var config = new ConfigFile(EXAMPLE).read().withCalendar(calendar);
+        try (var log = LogCapture.of(ConfigFormat.class)) {
+            var config = new ConfigFile(file).read();
+            assertThat(config).isEqualTo(withoutCalendar);
+            assertThat(log.lines()).singleElement().asString().startsWith("WARNING ").contains("calendar")
+                    .doesNotContain(ics.toString(), "20", "08:00", "19:30");
 
-        new ConfigFile(folder.resolve("copy.json")).write(config);
-
-        var written = StoredJson.parse(Files.readString(folder.resolve("copy.json"))).path("calendar");
-        assertThat(written.propertyNames()).containsExactly("travelMarginMinutes", "allDay");
-        assertThat(written.path("allDay").propertyNames()).containsExactly("return");
-        assertThat(new ConfigFile(folder.resolve("copy.json")).read()).isEqualTo(config);
-    }
-
-    @Test
-    void aCalendarWithOnlyAFileOrOnlyADepartureWritesOnlyThat() throws IOException, ConfigProblem {
-        var ics = folder.resolve("calendar.ics");
-        var example = new ConfigFile(EXAMPLE).read();
-        var withFile = example.withCalendar(new CalendarSettings(Optional.of(ics), Duration.ofMinutes(15),
-                LocalTime.of(9, 0), LocalTime.of(18, 0)));
-        var earlier = example.withCalendar(new CalendarSettings(Optional.empty(), Duration.ofMinutes(15),
-                LocalTime.of(7, 0), LocalTime.of(18, 0)));
-
-        new ConfigFile(folder.resolve("file.json")).write(withFile);
-        new ConfigFile(folder.resolve("earlier.json")).write(earlier);
-
-        assertThat(StoredJson.parse(Files.readString(folder.resolve("file.json"))).path("calendar").propertyNames())
-                .containsExactly("icsFile");
-        assertThat(StoredJson.parse(Files.readString(folder.resolve("earlier.json"))).path("calendar")
-                .path("allDay").propertyNames()).containsExactly("departure");
-        assertThat(new ConfigFile(folder.resolve("file.json")).read()).isEqualTo(withFile);
-        assertThat(new ConfigFile(folder.resolve("earlier.json")).read()).isEqualTo(earlier);
-    }
-
-    @ParameterizedTest
-    @CsvSource(delimiter = '|', value = {
-        "{\"icsFile\": \"calendar.ics\"} | calendar: icsFile must be a whole path",
-        "{\"travelMarginMinutes\": 241} | travelMarginMinutes must be from 0 to 240",
-        "{\"travelMarginMinutes\": -1} | travelMarginMinutes must be from 0 to 240",
-        "{\"allDay\": {\"departure\": \"18:00\"}} | allDay return must be after the departure",
-        "{\"allDay\": {\"return\": \"9am\"}} | calendar.allDay.return",
-        "{\"allDay\": {\"leave\": \"08:00\"}} | unknown setting 'leave'",
-        "{\"link\": \"https://x\"} | unknown setting 'link'",
-    })
-    void aWrongCalendarSettingIsRejectedWithAMessageThatNamesIt(String section, String named) throws IOException {
-        var file = withCalendar(section);
-
-        assertThatThrownBy(() -> new ConfigFile(file).read()).isInstanceOf(ConfigProblem.class)
-                .hasMessageContaining(named);
+            copy.write(config);
+            assertThat(copy.read()).isEqualTo(config);
+            assertThat(log.lines()).hasSize(1);
+        }
+        var written = StoredJson.parse(Files.readString(folder.resolve("copy.json")));
+        assertThat(written.has("calendar")).isFalse();
+        assertThat(written.path("version").intValue()).isEqualTo(1);
     }
 
     @Test

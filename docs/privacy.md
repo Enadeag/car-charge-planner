@@ -23,14 +23,13 @@ Everything the app keeps is on your computer. Delete any of it to start over.
 
 | What | Linux | Windows |
 | --- | --- | --- |
-| Settings file: your system, planning preferences, forecast providers, weekly away periods and the calendar's settings | `~/.config/car-charge-planner/engine.json` | `%APPDATA%\car-charge-planner\engine.json` |
+| Settings file: your system, planning preferences, forecast providers and weekly away periods | `~/.config/car-charge-planner/engine.json` | `%APPDATA%\car-charge-planner\engine.json` |
 | The app's own settings (language, appearance, units, tray or window) | `~/.config/car-charge-planner/app.json` | `%APPDATA%\car-charge-planner\app.json` |
 | The battery level you entered last | `~/.local/share/car-charge-planner/battery.json` | `%LOCALAPPDATA%\car-charge-planner\battery.json` |
 | Away periods for a specific day | `~/.local/share/car-charge-planner/away.json` | `%LOCALAPPDATA%\car-charge-planner\away.json` |
 | Your trips: when you leave and are back, the distance and whether you can charge there | `~/.local/share/car-charge-planner/trips.json` | `%LOCALAPPDATA%\car-charge-planner\trips.json` |
 | The windows you were notified about | `~/.local/share/car-charge-planner/announced.json` | `%LOCALAPPDATA%\car-charge-planner\announced.json` |
 | What you were notified about each trip, by its departure | `~/.local/share/car-charge-planner/trip-notices.json` | `%LOCALAPPDATA%\car-charge-planner\trip-notices.json` |
-| Your consents for the calendar, each with its date and the version of its text (removed when you withdraw them) | `~/.local/share/car-charge-planner/calendar-consents.json` | `%LOCALAPPDATA%\car-charge-planner\calendar-consents.json` |
 | Forecast cache: the last forecast of each provider, one file per provider | `~/.local/share/car-charge-planner/forecasts/` | `%LOCALAPPDATA%\car-charge-planner\forecasts\` |
 | Log: what the app did, the newest in `.0.log` and two older ones of up to 1 MB | `~/.local/share/car-charge-planner/car-charge-planner.0.log` | `%LOCALAPPDATA%\car-charge-planner\car-charge-planner.0.log` |
 | API keys, if you use a paid plan (never in the settings file) | The system keychain; `~/.config/car-charge-planner/secrets.json` only where there is none (see [API keys](#api-keys)) | Credential Manager; `%LOCALAPPDATA%\car-charge-planner\secrets.json` only where it cannot be used |
@@ -65,10 +64,7 @@ The downloads bring these with them:
 | [AtlantaFX](https://github.com/mkpaz/atlantafx) | The look of the windows, light and dark | MIT |
 | [dbus-java](https://github.com/hypfvieh/dbus-java) | The tray icon, notifications and the keychain on Linux | MIT |
 | [Jackson](https://github.com/FasterXML/jackson) | Reading and writing the JSON files and the providers' answers | Apache-2.0 |
-| [SLF4J](https://www.slf4j.org) | dbus-java's and iCal4j's log, passed on to the app's | MIT |
-| [iCal4j](https://github.com/ical4j/ical4j) | Reading the calendar, its repeating events and its time zones | BSD-3-Clause |
-| [Apache Commons Lang](https://commons.apache.org/proper/commons-lang/) and [Commons Codec](https://commons.apache.org/proper/commons-codec/) | Used by iCal4j | Apache-2.0 |
-| [ThreeTen-Extra](https://www.threeten.org/threeten-extra/) | Used by iCal4j | BSD-3-Clause |
+| [SLF4J](https://www.slf4j.org) | dbus-java's log, passed on to the app's | MIT |
 
 Their licence texts are in the `legal` folder of the Linux folder and of the Windows install folder, one file per library; the runtime's own notices, for OpenJDK and JavaFX, are in `lib/runtime/legal` of the Linux folder (`runtime\legal` in the Windows install folder). For development only: [JUnit](https://junit.org) (EPL-2.0), [AssertJ](https://assertj.github.io/doc/) and [ArchUnit](https://www.archunit.org) (both Apache-2.0).
 

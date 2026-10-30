@@ -2,7 +2,6 @@ package nl.enadeag.carchargeplanner.desktop.settings;
 
 import nl.enadeag.carchargeplanner.desktop.settings.about.AboutPage;
 import nl.enadeag.carchargeplanner.desktop.settings.app.AppPage;
-import nl.enadeag.carchargeplanner.desktop.settings.calendar.CalendarPage;
 import nl.enadeag.carchargeplanner.desktop.settings.forecast.ForecastPage;
 import nl.enadeag.carchargeplanner.desktop.settings.form.AllSettings;
 import nl.enadeag.carchargeplanner.desktop.settings.form.SettingsChanges;
@@ -12,7 +11,6 @@ import nl.enadeag.carchargeplanner.desktop.settings.page.Page;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SaveOutcome;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStorage;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStores;
-import nl.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -39,7 +37,6 @@ final class SettingsForm {
     private final SettingsStorage storage;
     private final List<ConfigPage> configPages;
     private final ForecastPage forecast;
-    private final CalendarPage calendar;
     private final AppPage app;
     private final AboutPage about;
     /** What the stores held when they were shown last; null until they are. */
@@ -51,17 +48,14 @@ final class SettingsForm {
      * @param stores where the settings are kept
      * @param configPages the pages whose settings the engine keeps, in the sidebar's order
      * @param forecast the forecast page, one of the config pages, which also holds the API keys
-     * @param calendar the calendar page, one of the config pages, which also holds the calendar's consents and its
-     *     secret settings
      * @param app the page of the app's own settings
      * @param about the About page, which shows where the API keys are kept
      */
-    SettingsForm(SettingsStores stores, List<ConfigPage> configPages, ForecastPage forecast, CalendarPage calendar,
-            AppPage app, AboutPage about) {
+    SettingsForm(SettingsStores stores, List<ConfigPage> configPages, ForecastPage forecast, AppPage app,
+            AboutPage about) {
         this.storage = new SettingsStorage(stores);
         this.configPages = List.copyOf(configPages);
         this.forecast = forecast;
-        this.calendar = calendar;
         this.app = app;
         this.about = about;
     }
@@ -84,7 +78,6 @@ final class SettingsForm {
         var keys = stored.keys().keys();
         stored.keys().problem().ifPresentOrElse(problem -> forecast.loadKeys(keys, stored.keyStorage(), problem),
                 () -> forecast.loadKeys(keys, stored.keyStorage()));
-        calendar.loadStored(stored.consents(), keys, stored.keyStorage() == KeyStorage.LOCKED_KEYCHAIN);
         this.stored = stored.all();
         if (stored.config().isPresent()) {
             configPages.forEach(page -> page.load(stored.config().get()));
@@ -143,8 +136,7 @@ final class SettingsForm {
             config = config.map(entered -> page.read(entered).orElseThrow(
                     () -> new IllegalStateException(page.category() + " refuses a value; mark it first")));
         }
-        var entered = new AllSettings(config, calendar.keys(forecast.keys()), app.settings(),
-                Optional.of(app.startsAtLogin()), calendar.consents());
+        var entered = new AllSettings(config, forecast.keys(), app.settings(), Optional.of(app.startsAtLogin()));
         return SettingsChanges.between(stored, entered);
     }
 

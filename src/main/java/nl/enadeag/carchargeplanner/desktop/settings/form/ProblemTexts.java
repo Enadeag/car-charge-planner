@@ -25,8 +25,6 @@ public final class ProblemTexts {
             case SAME_AS_PRIMARY -> TextKey.PROBLEM_SAME_AS_PRIMARY;
             case NOT_AFTER_START -> TextKey.PROBLEM_NOT_AFTER_START;
             case SAME_AS_START -> TextKey.PROBLEM_SAME_AS_START;
-            case NOT_AFTER_DEPARTURE -> TextKey.PROBLEM_NOT_AFTER_DEPARTURE;
-            case NOT_A_FULL_PATH -> TextKey.PROBLEM_NOT_A_FULL_PATH;
         });
     }
 }

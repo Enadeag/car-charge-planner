@@ -26,10 +26,6 @@ import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import nl.enadeag.carchargeplanner.engine.Engine;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
-import nl.enadeag.carchargeplanner.engine.calendar.CalendarFeed;
-import nl.enadeag.carchargeplanner.engine.calendar.CalendarFetcher;
-import nl.enadeag.carchargeplanner.engine.calendar.ConsentFile;
-import nl.enadeag.carchargeplanner.engine.calendar.IcsReader;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastCache;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastService;
@@ -42,7 +38,7 @@ import nl.enadeag.carchargeplanner.engine.notify.Announcer;
 import nl.enadeag.carchargeplanner.engine.notify.Notifier;
 import nl.enadeag.carchargeplanner.engine.notify.ToldTrips;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
-import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
+import nl.enadeag.carchargeplanner.engine.secrets.CalendarLeftovers;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.trip.TripFile;
@@ -195,8 +191,12 @@ public final class DesktopApp {
         var texts = new AnnouncementTexts(language, units::get);
         var keychain = parts.keychain();
         closing.add("the keychain", keychain::close);
-        var engine = engine(http, keychain, secretsFile, dataFolder,
-                notice -> notifications.send(texts.notification(notice)));
+        var apiKeys = new ApiKeys(keychain, secretsFile, Clock.systemUTC());
+        background.run("removing what the calendar trips left", () -> {
+            CalendarLeftovers.remove(apiKeys, dataFolder);
+            return null;
+        }, done -> { }, failed -> { });
+        var engine = engine(http, apiKeys, dataFolder, notice -> notifications.send(texts.notification(notice)));
         closing.add("the engine", engine::stop);
         var saving = Executors.newSingleThreadExecutor(Thread.ofVirtual().name("dashboard-changes").factory());
         closing.add("the dashboard's saving", saving::close);
@@ -321,19 +321,15 @@ public final class DesktopApp {
         }
     }
 
-    private Engine engine(HttpClient http, Keychain keychain, SecretsFile secretsFile, Path dataFolder,
-            Notifier notifier) {
+    private Engine engine(HttpClient http, ApiKeys apiKeys, Path dataFolder, Notifier notifier) {
         var get = new JdkHttpGet(http);
         var providers = new Providers(List.of(new OpenMeteo(get), new ForecastSolar(get)));
-        var apiKeys = new ApiKeys(keychain, secretsFile, Clock.systemUTC());
         var cache = new ForecastCache(dataFolder.resolve("forecasts"));
         var announcer = new Announcer(new AnnouncedWindows(dataFolder.resolve("announced.json")),
                 new ToldTrips(dataFolder.resolve("trip-notices.json")), notifier);
         return new Engine(new ConfigFile(configPath), new ForecastService(providers, cache, apiKeys), providers,
                 apiKeys, new AwayFile(dataFolder.resolve("away.json")), new TripFile(dataFolder.resolve("trips.json")),
-                new BatteryFile(dataFolder.resolve("battery.json")),
-                new ConsentFile(dataFolder.resolve("calendar-consents.json")),
-                new CalendarFeed(new CalendarFetcher(get), new IcsReader()), Clock.systemUTC(), announcer,
+                new BatteryFile(dataFolder.resolve("battery.json")), Clock.systemUTC(), announcer,
                 Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("planner").daemon().factory()));
     }
 

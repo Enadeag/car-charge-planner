@@ -29,7 +29,6 @@
     <dbus-java.version>5.2.2</dbus-java.version>
     <jackson.version>3.2.3</jackson.version>
     <slf4j.version>2.0.20</slf4j.version>
-    <ical4j.version>4.4.0</ical4j.version>
 
     <junit.version>6.1.3</junit.version>
     <assertj.version>3.27.7</assertj.version>
@@ -109,13 +108,6 @@
     <dependency>
       <groupId>tools.jackson.core</groupId>
       <artifactId>jackson-core</artifactId>
-    </dependency>
-    <!-- reads the calendar's events, their repeats and their time zones; its cache, filter expressions and Groovy
-         builders are optional, so they stay out -->
-    <dependency>
-      <groupId>org.mnode.ical4j</groupId>
-      <artifactId>ical4j</artifactId>
-      <version>${ical4j.version}</version>
     </dependency>
     <!-- dbus-java logs through SLF4J; this sends it to java.util.logging, where the app's own messages go -->
     <dependency>
