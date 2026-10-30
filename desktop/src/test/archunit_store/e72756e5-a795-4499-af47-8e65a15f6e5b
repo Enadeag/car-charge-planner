@@ -1,2 +1,1 @@
-Method <nl.enadeag.carchargeplanner.engine.forecast.JdkHttpGetTest.stream(com.sun.net.httpserver.HttpExchange, int, java.time.Duration)> calls method <java.lang.Thread.sleep(java.time.Duration)> in (JdkHttpGetTest.java:89)
 Method <nl.enadeag.carchargeplanner.platform.linux.SecretServiceKeychainTest.startAThrowawayKeyring()> calls method <java.lang.Thread.sleep(long)> in (SecretServiceKeychainTest.java:111)

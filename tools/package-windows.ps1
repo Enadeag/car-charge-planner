@@ -15,12 +15,14 @@ if (-not $epoch) {
 }
 cmd /c "mvnw.cmd -B -q clean package -Dproject.build.outputTimestamp=$epoch"
 if ($LASTEXITCODE) { exit 1 }
-$version = (cmd /c "mvnw.cmd -B -q help:evaluate -Dexpression=project.version -DforceStdout") -replace "-SNAPSHOT", ""
+$version = (cmd /c "mvnw.cmd -B -q -N help:evaluate -Dexpression=project.version -DforceStdout") -replace "-SNAPSHOT", ""
 if ($LASTEXITCODE) { exit 1 }
+# the packaging's own work, beside the modules' builds (the desktop module's is in desktop\target); clean empties it
+New-Item -ItemType Directory -Force target | Out-Null
 
 # JavaFX comes from the official jmods, not from its Maven jars: jlink then puts JavaFX's native libraries in the
 # runtime, where JavaFX loads them, instead of JavaFX unpacking them from a jar into the user's .openjfx folder at every
-# start. The version is javafx.version in pom.xml (PackagingTest checks it); a new version needs its checksum from the
+# start. The version is javafx.version in the parent pom.xml (PackagingTest checks it); a new version needs its checksum from the
 # same folder of the download site.
 $jmods = "openjfx-27_windows-x64_bin-jmods.zip"
 $sha256 = "0ad5830f31608363e1e239b84bb1ce875f5edf834f0ceda67feead9cfbaf2b41"
@@ -32,10 +34,10 @@ if ((Get-FileHash "target\$jmods" -Algorithm SHA256).Hash -ne $sha256) {
 Expand-Archive "target\$jmods" target\javafx
 Move-Item target\javafx\*\*.jmod target\javafx
 
-# The app's jar and its libraries; JavaFX is in the runtime.
+# The app's jar and its libraries, the engine among them; JavaFX is in the runtime.
 New-Item -ItemType Directory target\input | Out-Null
-Remove-Item target\lib\javafx-*.jar
-Copy-Item target\lib\*.jar, target\car-charge-planner.jar target\input\
+Remove-Item desktop\target\lib\javafx-*.jar
+Copy-Item desktop\target\lib\*.jar, desktop\target\car-charge-planner.jar target\input\
 
 jlink --module-path target\javafx "@src\packaging\jlink.args" --output target\runtime
 if ($LASTEXITCODE) { exit 1 }
@@ -63,7 +65,7 @@ jpackage --type $Type --dest target\dist `
   --icon src\packaging\windows\car-charge-planner.ico `
   --java-options "--enable-native-access=javafx.graphics,ALL-UNNAMED" @installer
 if ($LASTEXITCODE) { exit 1 }
-java -cp "target\lib\*" tools\SbomRuntime.java target\car-charge-planner.cdx.json target\runtime `
+java -cp "desktop\target\lib\*" tools\SbomRuntime.java desktop\target\car-charge-planner.cdx.json target\runtime `
   "target\dist\car-charge-planner-$version-windows.cdx.json"
 if ($LASTEXITCODE) { exit 1 }
 Get-ChildItem target\dist

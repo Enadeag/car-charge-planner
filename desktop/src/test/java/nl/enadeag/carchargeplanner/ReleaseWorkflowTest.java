@@ -10,9 +10,14 @@ import java.util.List;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
-/** The release workflows build every package with the same, exact Java version, which the packages bring along. */
+/**
+ * The release workflows build every package with the same, exact Java version, which the packages bring along, and
+ * take the release's version from the parent pom, where the one version of every module is set.
+ */
 class ReleaseWorkflowTest {
 
+    private static final Pattern READ_VERSION =
+            Pattern.compile("^.*help:evaluate.*-Dexpression=project\\.version.*$", Pattern.MULTILINE);
     private static final Pattern JAVA_VERSION =
             Pattern.compile("^\\s+java-version:\\s*\"?([^\"\\s]+)\"?", Pattern.MULTILINE);
 
@@ -27,5 +32,16 @@ class ReleaseWorkflowTest {
         assertThat(versions).isNotEmpty().allMatch(version -> version.matches("\\d+(\\.\\d+){2,}\\+\\d+"),
                 "an exact version with its build number, such as 25.0.4.1+1");
         assertThat(versions).containsOnly(versions.getFirst());
+    }
+
+    @Test
+    void theVersionIsReadFromTheParentAlone() throws IOException {
+        for (var file : List.of(Path.of(".github", "workflows", "release.yml"), Path.of("tools", "package-linux.sh"),
+                Path.of("tools", "package-windows.ps1"))) {
+            var reads = READ_VERSION.matcher(Files.readString(file)).results().map(match -> match.group()).toList();
+
+            assertThat(reads).as("where %s reads the version", file).isNotEmpty()
+                    .allMatch(read -> read.contains(" -N "), "with -N, so only the parent pom is read");
+        }
     }
 }

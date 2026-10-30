@@ -23,6 +23,8 @@ class FlatpakPackagingTest {
     private static final Pattern FINISH_ARG = Pattern.compile("^  - (--\\S+)$", Pattern.MULTILINE);
     private static final Pattern RELEASE = Pattern.compile("^## \\[(\\d+\\.\\d+\\.\\d+)] - (\\d{4}-\\d{2}-\\d{2})$",
             Pattern.MULTILINE);
+    private static final Pattern SKIPPED = Pattern.compile("\\G          - (\\S+)\\n");
+    private static final Pattern MODULE = Pattern.compile("<module>([^<]+)</module>");
     private static final Pattern METAINFO_RELEASE =
             Pattern.compile("<release version=\"([^\"]+)\" date=\"([^\"]+)\"");
 
@@ -98,6 +100,18 @@ class FlatpakPackagingTest {
                 .isEqualTo(Pattern.compile("\"sha256\": \"[0-9a-f]{64}\"").matcher(sources).results().count());
         assertThat(sources).contains("/org/openjfx/javafx-controls/", "/com/github/hypfvieh/dbus-java-core/",
                 "/org/apache/maven/plugins/maven-compiler-plugin/");
+    }
+
+    @Test
+    void theSourceFolderLeavesOutEveryBuildsOutput() throws IOException {
+        var manifest = read(MANIFEST);
+        var skip = "        skip:\n";
+        var skipped = SKIPPED.matcher(manifest.substring(manifest.indexOf(skip) + skip.length())).results()
+                .map(match -> match.group(1)).toList();
+        var modules = MODULE.matcher(read(Path.of("pom.xml"))).results().map(match -> match.group(1) + "/target");
+
+        assertThat(skipped).as("the skip list of the manifest's own folder")
+                .contains("target").containsAll(modules.toList());
     }
 
     private static String value(String text, String pattern) {

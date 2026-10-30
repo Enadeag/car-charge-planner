@@ -16,17 +16,19 @@ import org.junit.jupiter.api.Test;
  */
 class CatchClausesTest {
 
-    private static final Path MAIN = Path.of("src/main/java");
+    private static final List<Path> MAIN = List.of(Path.of("engine/src/main/java"), Path.of("desktop/src/main/java"));
     private static final Pattern CATCH_THROWABLE = Pattern.compile("catch\\s*\\([^)]*\\bThrowable\\b");
     private static final Path ALLOWED = Path.of("nl/enadeag/carchargeplanner/platform/windows/Advapi32.java");
 
     @Test
     void onlyTheCallsIntoWindowsCatchThrowable() throws IOException {
         var catching = new ArrayList<Path>();
-        try (var files = Files.walk(MAIN)) {
-            for (var file : files.filter(path -> path.toString().endsWith(".java")).toList()) {
-                if (CATCH_THROWABLE.matcher(Files.readString(file)).find()) {
-                    catching.add(MAIN.relativize(file));
+        for (var root : MAIN) {
+            try (var files = Files.walk(root)) {
+                for (var file : files.filter(path -> path.toString().endsWith(".java")).toList()) {
+                    if (CATCH_THROWABLE.matcher(Files.readString(file)).find()) {
+                        catching.add(root.relativize(file));
+                    }
                 }
             }
         }

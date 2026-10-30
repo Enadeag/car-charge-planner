@@ -47,6 +47,8 @@ modules:
         skip:
           - .git
           - target
+          - engine/target
+          - desktop/target
       # the Maven of .mvn/wrapper/maven-wrapper.properties (PackagingTest checks the address and checksum)
       - type: archive
         url: https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.10.0/apache-maven-3.10.0-bin.zip

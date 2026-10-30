@@ -12,8 +12,8 @@ import org.junit.jupiter.api.Test;
 class ProvidersGuideTest {
 
     private static final Pattern BLOCK = Pattern.compile("```(?:java|json)\\n(.*?)```", Pattern.DOTALL);
-    private static final Path HERE = Path.of("src/test/java/nl/enadeag/carchargeplanner/engine/forecast/providers");
-    private static final Path RECORDED = Path.of("src/test/resources/nl/enadeag/carchargeplanner/engine/forecast/providers");
+    private static final Path HERE = Path.of("engine/src/test/java/nl/enadeag/carchargeplanner/engine/forecast/providers");
+    private static final Path RECORDED = Path.of("engine/src/test/resources/nl/enadeag/carchargeplanner/engine/forecast/providers");
 
     @Test
     void theGuidesSkeletonIsTheTestedExampleProvider() throws IOException {

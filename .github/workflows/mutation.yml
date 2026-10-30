@@ -1,6 +1,6 @@
 name: Mutation testing
 
-# Weekly and by hand: PIT on the engine and on the desktop's logic that needs no JavaFX (the pit profile in pom.xml),
+# Weekly and by hand: PIT on the engine and on the desktop's logic that needs no JavaFX (the pit profiles in the poms),
 # each failing below its threshold and keeping its HTML report for 14 days, and the whole build with the test classes
 # in a fresh random order, which shows a test that depends on the ones before it. A pull request into main that
 # touches the engine or its tests runs PIT on the engine only. (CONTRIBUTING.md, What is tested where)
@@ -11,8 +11,8 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - src/main/java/nl/enadeag/carchargeplanner/engine/**
-      - src/test/java/nl/enadeag/carchargeplanner/engine/**
+      - engine/src/main/java/**
+      - engine/src/test/java/**
 
 permissions:
   contents: read
@@ -35,12 +35,12 @@ jobs:
           java-version: "25"
           cache: maven
       - name: PIT on the engine
-        run: ./mvnw -B -Ppit test-compile pitest:mutationCoverage@engine
+        run: ./mvnw -B -Ppit -pl :car-charge-planner-engine -am test-compile pitest:mutationCoverage@engine
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: pit-report-engine
-          path: target/pit-reports/engine/
+          path: engine/target/pit-reports/engine/
           retention-days: 14
 
   desktop:
@@ -57,12 +57,12 @@ jobs:
           java-version: "25"
           cache: maven
       - name: PIT on the desktop's logic
-        run: ./mvnw -B -Ppit test-compile pitest:mutationCoverage@desktop
+        run: ./mvnw -B -Ppit -pl :car-charge-planner-desktop -am test-compile pitest:mutationCoverage@desktop
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: pit-report-desktop
-          path: target/pit-reports/desktop/
+          path: desktop/target/pit-reports/desktop/
           retention-days: 14
 
   random-order:
@@ -91,5 +91,7 @@ jobs:
         if: always()
         with:
           name: surefire-reports-random-order
-          path: target/surefire-reports/
+          path: |
+            engine/target/surefire-reports/
+            desktop/target/surefire-reports/
           retention-days: 7

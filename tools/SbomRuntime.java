@@ -18,14 +18,14 @@ import tools.jackson.databind.node.ObjectNode;
  * as the {@code org.openjfx} jars of the same version as the jmods it is linked from.
  *
  * <pre>
- * java -cp 'target/lib/*' tools/SbomRuntime.java target/car-charge-planner.cdx.json target/runtime \
+ * java -cp 'desktop/target/lib/*' tools/SbomRuntime.java desktop/target/car-charge-planner.cdx.json target/runtime \
  *     target/dist/car-charge-planner-1.0.0-linux.cdx.json
  * </pre>
  *
  * <p>Run it with the JDK whose jlink made the runtime: the runtime's {@code release} file only says the Java version
  * and the modules, so the vendor and the full version come from the JDK that runs this, and it exits with code 1 when
  * that JDK has another version than the runtime. It needs Jackson on the class path, which the build copies to
- * target/lib.
+ * desktop/target/lib.
  */
 public final class SbomRuntime {
 

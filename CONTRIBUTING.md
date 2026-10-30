@@ -15,9 +15,12 @@ CI uses the latest JDK 25; the release build uses one exact Java 25 version (see
 `.editorconfig` holds the house style for editors: UTF-8, LF line ends, a final newline, 4 spaces (2 in XML, YAML, JSON and scripts), lines of at most 120 characters, except in Markdown, where a paragraph is one line. There is no formatter. In IntelliJ IDEA, set Maven home to *Bundled* (Settings, Build Tools, Maven): its Maven connector fails on the wrapper's Maven 3.10.0, while `./mvnw` builds as usual.
 
 ```bash
-./mvnw verify                                                           # build and test; nothing touches the network or your desktop
-./mvnw compile exec:exec -Dapp.args="--config=docs/example-engine.json"  # run it with the example system
+./mvnw verify                                                                    # build and test; nothing touches the network or your desktop
+./mvnw -pl :car-charge-planner-desktop -am compile exec:exec \
+    -Dapp.args="--config=docs/example-engine.json"                               # run it with the example system
 ```
+
+Run Maven from the repository's root: it builds the modules in `engine/` and `desktop/` (see [Code layout](#code-layout)), and `-pl :car-charge-planner-desktop -am` picks the desktop app and what it needs. The tests of every module run in the repository's root, where they find `docs/`, `tools/` and `src/packaging/`; an IDE that runs a test itself needs the same working directory (in IntelliJ IDEA: Run, Edit Configurations, Edit configuration templates, JUnit, Working directory `$PROJECT_DIR$`, with the project opened from the root `pom.xml`). `./mvnw` sets it for you.
 
 Without `--config=` the app uses your own `engine.json` (see [What is kept, and where](docs/privacy.md#what-is-kept-and-where)), and without one it opens set-up. `docs/example-engine.json` shows every setting, for a made-up place; its `forecast` section names the forecast provider and the fallback provider, and an optional `typical` section lists the values that are typical values, such as `"system": ["CAR_BATTERY"]`.
 
@@ -27,7 +30,7 @@ The app also takes the commands `quit` (asks the running app to quit), `test-not
 
 The app writes its log to `car-charge-planner.0.log` in its data folder (`~/.local/share/car-charge-planner` on Linux, `%LOCALAPPDATA%\car-charge-planner` on Windows; Settings, About shows the file), one line per record with the time, level, logger and message, and an exception's stack trace on the lines after it. At 1 MB the file becomes `.1.log` and the one before `.2.log`; older ones are dropped. The files and their folder are readable only by you. When the app runs in a terminal it shows the log there too; otherwise follow the file, for example with `tail -F ~/.local/share/car-charge-planner/car-charge-planner.0.log`.
 
-It logs from INFO. For more of the app's own records, set `CAR_CHARGE_PLANNER_LOG_LEVEL` to `DEBUG` or `TRACE` (one of `System.Logger.Level`'s names) before you start it, such as `CAR_CHARGE_PLANNER_LOG_LEVEL=DEBUG ./mvnw compile exec:exec`; the libraries stay at INFO. Logging is set up once, in `DesktopApp` (`AppLog`); what a thread throws and nothing catches is logged as an error (`UncaughtLogging`).
+It logs from INFO. For more of the app's own records, set `CAR_CHARGE_PLANNER_LOG_LEVEL` to `DEBUG` or `TRACE` (one of `System.Logger.Level`'s names) before you start it, such as `CAR_CHARGE_PLANNER_LOG_LEVEL=DEBUG ./mvnw -pl :car-charge-planner-desktop -am compile exec:exec`; the libraries stay at INFO. Logging is set up once, in `DesktopApp` (`AppLog`); what a thread throws and nothing catches is logged as an error (`UncaughtLogging`).
 
 In the code, log through `System.Logger`. Log a change of state, such as a provider that starts failing, not what happens every minute. Never log an API key, a request's address (it can hold a key) or the home's coordinates; a path is fine, although it shows the user name. `ArchitectureTest` keeps every class that makes or reads a request's address from logging at all, and the provider conformance kit checks that no address, key or coordinate reaches a log line or the reason the owner is shown.
 
@@ -35,9 +38,9 @@ The engine logs these changes of state, each once: a provider that gives no fore
 
 ## Tests
 
-`./mvnw verify` compiles, runs every test and checks the Javadoc; it must pass on Linux and on Windows. The tests never touch the network, your keychain or your desktop:
+`./mvnw verify` compiles every module, runs every test and checks the Javadoc; it must pass on Linux and on Windows. The engine's tests are in `engine/src/test/java/` and the desktop app's in `desktop/src/test/java/`. The test helpers the desktop's tests share with the engine's (`LogCapture`, `ManualScheduler`, `FakeProvider`, `SunnyDays`, `MemoryKeychain`, `LockableKeychain`) are among the engine's tests, which the engine module also packs as a test-jar that the desktop uses in test scope. `./mvnw -pl :car-charge-planner-engine verify` builds and tests the engine alone. The tests never touch the network, your keychain or your desktop:
 
-- the providers replay recorded answers (`src/test/resources/.../engine/forecast/providers/`);
+- the providers replay recorded answers (`engine/src/test/resources/.../engine/forecast/providers/`);
 - the Linux keychain test runs a throwaway GNOME Keyring on a private D-Bus; it has no prompter there, so the unlock prompt's outcomes are tested against a fake Secret Service on a private D-Bus, and the notification tests run against a fake notification server on a private D-Bus that cannot start a real one;
 - the Windows keychain test uses an entry of its own that it removes again (over ssh, where Windows has no logon session for the Credential Manager, it checks only that this counts as no keychain);
 - `DesktopAppSmokeTest` (Linux) starts the app in a JVM of its own with the example config, on a private D-Bus with a fake tray host, headless JavaFX, private XDG folders and a proxy that refuses every connection, waits for the tray icon, sends `quit` and checks that both end cleanly; and, with a fake notification server, sends `test-notification` and checks the notification it shows;
@@ -47,7 +50,7 @@ The Linux tests that need a program of the system (`dbus-daemon`, `gnome-keyring
 
 All JavaFX tests share one headless platform in one JVM, so a test class that uses it is marked `@FxTest` (`Fx` refuses to run without it): each test then starts without a window, and fails when the JavaFX thread threw an exception that nothing caught. Its allow-list takes only OpenJFX bugs, each with a link. The test classes run in alphabetical order; [What is tested where](#what-is-tested-where) says how to run them in a random one.
 
-A test that only makes sense on one system says so with JUnit's `@EnabledOnOs`. Tests without one must pass on every system, so they use the location classes and not hard-coded folders. `ArchitectureTest` keeps the packages apart: the engine knows nothing of the desktop, only the platform packages know their system, and they know only `desktop.system` of the desktop. What older code still breaks is frozen in `src/test/archunit_store`, which ArchUnit never changes by itself, so a frozen violation that is fixed fails the test too. To update the store on purpose, run `./mvnw test -Dtest='*ArchitectureTest' -Darchunit.freeze.store.default.allowStoreUpdate=true` once, then review the changed store files and commit them.
+A test that only makes sense on one system says so with JUnit's `@EnabledOnOs`. Tests without one must pass on every system, so they use the location classes and not hard-coded folders. `ArchitectureTest` (in `desktop`, which sees the engine's classes too) keeps the packages apart: the engine knows nothing of the desktop, only the platform packages know their system, and they know only `desktop.system` of the desktop. `EngineArchitectureTest` (in `engine`) holds the rules about the engine's own parts, so they run when the engine is built alone, and `TestCodeArchitectureTest` and `EngineTestCodeArchitectureTest` hold the rules for each module's tests. What older code still breaks is frozen in each module's `src/test/archunit_store` (`engine/src/test/archunit_store`, `desktop/src/test/archunit_store`), which ArchUnit never changes by itself, so a frozen violation that is fixed fails the test too. To update a store on purpose, run `./mvnw test -Dtest='*ArchitectureTest' -Dsurefire.failIfNoSpecifiedTests=false -Darchunit.freeze.store.default.allowStoreUpdate=true` once, then review the changed store files and commit them.
 
 A change comes with a test that fails without it.
 
@@ -57,29 +60,29 @@ A change comes with a test that fails without it.
 | --- | --- | --- |
 | Every pull request and every push to `main` | Linux CI (`ci.yml`) | `./mvnw -B clean verify -Pcoverage` with `CCP_REQUIRE_PLATFORM=1`: every test, the private-bus tests included, then the coverage floors below; the test and coverage reports are kept 7 days. |
 | The same | Windows CI (`ci.yml`) | `mvnw.cmd -B clean verify`: every test, the Windows-only ones included. |
-| A change to `pom.xml`, the test set-up or `platform.windows`, before the pull request | Windows over ssh, by the maintainer | `mvnw.cmd -B clean verify`. Without a logon session the Credential Manager test only checks that this counts as no keychain. |
+| A change to a `pom.xml`, the test set-up or `platform.windows`, before the pull request | Windows over ssh, by the maintainer | `mvnw.cmd -B clean verify`. Without a logon session the Credential Manager test only checks that this counts as no keychain. |
 | A pull request into `main` that touches the engine or its tests | `mutation.yml` | PIT on the engine; it fails when fewer than 94% of the mutants are killed. |
 | Weekly (early Monday, 03:23 UTC) and by hand | `mutation.yml` | PIT on the engine and on the desktop's logic without JavaFX (threshold 89%), each with its HTML report for 14 days, and the whole build with the test classes in a fresh random order. |
 | Before each release, by hand | The maintainer's machine and real desktops | `./mvnw test -Plive` and the checklist below. |
 | Not yet | macOS | The CI job is off until the JavaFX tests run on the macOS runner (#134); a person checks a release on a Mac (#29). |
 
-**Coverage.** `./mvnw verify -Pcoverage` (Linux only) writes JaCoCo's report to `target/site/jacoco/` and fails when a part's share of covered lines or branches drops below its floor:
+**Coverage.** `./mvnw verify -Pcoverage` (Linux only) writes JaCoCo's report of each module to its `target/site/jacoco/` (`engine/target/site/jacoco/`, `desktop/target/site/jacoco/`) and fails when a part's share of covered lines or branches drops below its floor. Each module counts only what its own tests cover: the engine's floor is met by the engine's tests alone.
 
-| Part | Lines | Branches |
-| --- | --- | --- |
-| `engine` | 96% | 90% |
-| `desktop` | 95% | 82% |
-| `instance` | 88% | 74% |
-| `platform.linux` | 86% | 75% |
-| `start`, `cli`, `platforms`, `logging` and `host`, without the wiring | 93% | 94% |
+| Module | Part | Lines | Branches |
+| --- | --- | --- | --- |
+| `engine` | `engine` | 96% | 90% |
+| `desktop` | `desktop` | 95% | 82% |
+| `desktop` | `instance` | 88% | 74% |
+| `desktop` | `platform.linux` | 86% | 75% |
+| `desktop` | `start`, `cli`, `platforms`, `logging` and `host`, without the wiring | 93% | 94% |
 
 The classes that wire the app (`Main`, `start.DesktopApp`, `host.Host` and the `*Parts` classes in `platforms`) are left out: `DesktopAppSmokeTest` runs them in a JVM of its own, which JaCoCo does not see. `platform.windows` is not checked either, because its tests run on Windows only. The floors are a point or two below what was measured when they were set; raise them when the tests grow, rather than writing tests for the number.
 
-**Mutation testing.** PIT changes the code in small ways (a `<` for a `<=`, a dropped call) and checks that a test fails for each change. It runs from the `pit` profile, two test JVMs at a time (`-Dpit.threads=4` for more):
+**Mutation testing.** PIT changes the code in small ways (a `<` for a `<=`, a dropped call) and checks that a test fails for each change. It runs from the `pit` profile, two test JVMs at a time (`-Dpit.threads=4` for more); the `engine` run is in the engine module and the `desktop` run in the desktop module, and the other module skips it:
 
 ```bash
-./mvnw -Ppit test-compile pitest:mutationCoverage@engine    # report: target/pit-reports/engine/index.html
-./mvnw -Ppit test-compile pitest:mutationCoverage@desktop   # report: target/pit-reports/desktop/index.html
+./mvnw -Ppit -pl :car-charge-planner-engine -am test-compile pitest:mutationCoverage@engine     # report: engine/target/pit-reports/engine/index.html
+./mvnw -Ppit -pl :car-charge-planner-desktop -am test-compile pitest:mutationCoverage@desktop   # report: desktop/target/pit-reports/desktop/index.html
 ```
 
 The desktop run covers what the tests without JavaFX test: the mappers to the dashboard's models, the chart and popup geometry, the app settings, the logic of the Settings and set-up forms, the tray icon's drawing, the text size and the texts. The `@FxTest` classes carry the tag `fx` and are left out, because PIT does not run the JavaFX platform. That is why a form's logic (what a field shows, how a value converts, which problem applies, how the entered values become the config) lives in `desktop.settings.form`, which `ArchitectureTest` keeps free of JavaFX, and the pages only bind their controls to it. A mutant that survives is a missing test or code that does nothing; look at it before you raise or lower a threshold.
@@ -120,20 +123,20 @@ The text is drawn in JavaFX's system font, which differs per system (Noto Sans o
 
 ## Dependencies
 
-Declare every library the code uses directly in `pom.xml`, also one that already comes in through another library: `./mvnw verify` runs `dependency:analyze` and fails on a library that is used but not declared, or declared but not used. A library that is only found at run time and never named in the code (such as the SLF4J binding) goes in the list of ignored ones there, with the reason. Keep the third-party table in [docs/privacy.md](docs/privacy.md#third-party-software) up to date.
+Each module declares every library its code uses directly in its own `pom.xml`, also one that already comes in through another library or module, without a version: the versions are in the parent `pom.xml` (`dependencyManagement`, and the plugins' in `pluginManagement`). `./mvnw verify` runs `dependency:analyze` in every module and fails on a library that is used but not declared, or declared but not used. A library that is only found at run time and never named in the code (such as the SLF4J binding) goes in the list of ignored ones in the parent, with the reason. Keep the third-party table in [docs/privacy.md](docs/privacy.md#third-party-software) up to date.
 
-Each library the app brings at run time, also one that comes in through another library, needs its licence text in `src/packaging/legal/`, which the packages carry in their `legal` folder: one file per component, starting with its name, an `Artifact: groupId:artifactId` line per jar it covers, its source and its licence, then the licence and notice texts as the jar's `META-INF` has them (or the project's own `LICENSE` at that release when the jar has none). `PackagingTest` fails when a runtime library has no file there, or a file names a library the app no longer brings.
+Each library the app brings at run time, also one that comes in through another library, needs its licence text in `src/packaging/legal/`, which the packages carry in their `legal` folder: one file per component, starting with its name, an `Artifact: groupId:artifactId` line per jar it covers, its source and its licence, then the licence and notice texts as the jar's `META-INF` has them (or the project's own `LICENSE` at that release when the jar has none). `PackagingTest` fails when a runtime library has no file there, or a file names a library the app no longer brings. The app's own modules (`nl.enadeag:*`, such as the engine's jar) are under the app's own licence and need no file.
 
 ## Packaging
 
-Each package brings a runtime made by jlink, so users need no Java of their own, and comes with an SBOM (CycloneDX JSON) of what it holds: `cyclonedx-maven-plugin` lists the libraries in `target/car-charge-planner.cdx.json` at `package`, and `tools/SbomRuntime.java` adds the runtime, from the JDK that ran jlink. The jar, the SBOM and the Linux tar.gz take the time of the last commit (or `SOURCE_DATE_EPOCH`), and the tar.gz holds its files in name order, owned by root and not writable by group or others, so the same commit and JDK give the same tar.gz. The packages are not code-signed (ADR 0003); users check them with `SHA256SUMS` and the attestation. Both scripts take jlink's options, such as the modules and locales, from `src/packaging/jlink.args`, and link JavaFX from the official jmods, downloaded from a pinned address and checked against a pinned SHA-256; they need `curl` and `git` (and `unzip` and GNU tar on Linux). A new JavaFX version in `pom.xml` needs the new address and checksum in both scripts (`PackagingTest` checks the version). Each package has a `legal` folder (in the `.deb` and `.rpm` `lib/legal`, as jpackage packages only `bin` and `lib`) with `LICENSE`, `NOTICE`, `ADDITIONAL-TERMS.md` and the files of `src/packaging/legal/`, and the Windows installer shows the GPL.
+Each package brings a runtime made by jlink, so users need no Java of their own, and comes with an SBOM (CycloneDX JSON) of what it holds: `cyclonedx-maven-plugin` lists the libraries, the engine among them, in `desktop/target/car-charge-planner.cdx.json` at `package`, and `tools/SbomRuntime.java` adds the runtime, from the JDK that ran jlink. The jar, the SBOM and the Linux tar.gz take the time of the last commit (or `SOURCE_DATE_EPOCH`), and the tar.gz holds its files in name order, owned by root and not writable by group or others, so the same commit and JDK give the same tar.gz. The packages are not code-signed (ADR 0003); users check them with `SHA256SUMS` and the attestation. Both scripts take jlink's options, such as the modules and locales, from `src/packaging/jlink.args`, and link JavaFX from the official jmods, downloaded from a pinned address and checked against a pinned SHA-256; they need `curl` and `git` (and `unzip` and GNU tar on Linux). The scripts take the app's jar and its libraries from `desktop/target/` (`car-charge-planner.jar` and `lib/`), do their own work in `target/` at the root and put the products in `target/dist/`. A new JavaFX version in the parent `pom.xml` needs the new address and checksum in both scripts (`PackagingTest` checks the version). Each package has a `legal` folder (in the `.deb` and `.rpm` `lib/legal`, as jpackage packages only `bin` and `lib`) with `LICENSE`, `NOTICE`, `ADDITIONAL-TERMS.md` and the files of `src/packaging/legal/`, and the Windows installer shows the GPL.
 
 - **Linux:** `sh tools/package-linux.sh` makes `target/dist/car-charge-planner/` (start `bin/car-charge-planner`), `target/dist/car-charge-planner-<version>-linux.tar.gz` and its SBOM `car-charge-planner-<version>-linux.cdx.json`, and from the same app image `car-charge-planner_<version>_amd64.deb` and `car-charge-planner-<version>-1.x86_64.rpm` (jpackage's own names; ADR 0007). The packages install the app in `/opt/car-charge-planner` and a menu entry for every user, `car-charge-planner-car-charge-planner.desktop` (jpackage names it after the package and the launcher), made from `src/packaging/linux/car-charge-planner.desktop`; its icon is the 256-pixel PNG in the app's `lib` folder, not an icon theme. The system libraries they depend on are listed by hand, as jpackage would take the build machine's package names: in `src/packaging/linux/control` for the `.deb` (Debian and Ubuntu names) and in the script for the `.rpm` (by soname); a JavaFX or Java update that links another library needs it in both (`readelf -d` on the app image shows them). The tar.gz's SBOM describes the packages too, as they hold the same libraries and runtime. They need `dpkg-deb` and `fakeroot` for the `.deb` and `rpmbuild` for the `.rpm` (Ubuntu: `apt install fakeroot rpm`); the script stops before the build when one is missing, and `--tar-only` skips the packages. `sh tools/test-linux-packages.sh target/dist` installs them in fresh `debian:stable` and `fedora:latest` Docker containers, runs the app's commands there and removes them again.
 - **Windows:** `powershell -ExecutionPolicy Bypass -File tools\package-windows.ps1` makes a per-user installer, `target\dist\car-charge-planner-<version>.exe`, and its SBOM `car-charge-planner-<version>-windows.cdx.json`; `-Type app-image` makes the program folder only. The installer needs WiX 5: install the .NET SDK 8, then run `powershell -ExecutionPolicy Bypass -File tools\install-wix.ps1`, which installs WiX 5.0.2 and its Util and UI extensions for you from packages checked against pinned SHA-256 sums. WiX 6 and later ask to accept a maintenance fee agreement first.
 
 `sh tools/scan-sbom.sh target/dist/*.cdx.json` checks SBOMs against the [OSV](https://osv.dev) vulnerability database with a pinned, checksum-checked OSV-Scanner, and fails on any known vulnerability; the release workflow runs it on both SBOMs, the Linux one and the Windows one. A finding that was looked at and does not reach the app goes in `osv-scanner.toml` at the repository root, with the reason and a date it expires. OSV knows the libraries, not the Java runtime: that is what [Java updates](#java-updates) is for.
 
-The app icon's drawings are in `src/packaging/icons/`: `car-charge-planner.svg` is the icon the PNGs in `src/main/resources/.../desktop/system/icons/` and `src/packaging/windows/car-charge-planner.ico` show, and `car-charge-planner-symbolic.svg` has the shapes the tray icon draws (`StatusIcon`).
+The app icon's drawings are in `src/packaging/icons/`: `car-charge-planner.svg` is the icon the PNGs in `desktop/src/main/resources/.../desktop/system/icons/` and `src/packaging/windows/car-charge-planner.ico` show, and `car-charge-planner-symbolic.svg` has the shapes the tray icon draws (`StatusIcon`).
 
 ### Flatpak
 
@@ -149,13 +152,13 @@ flatpak run io.github.enadeag.car_charge_planner.CarChargePlanner
 
 `flatpak run --command=car-charge-planner io.github.enadeag.car_charge_planner.CarChargePlanner quit` runs a command in the sandbox. In the sandbox the settings and data are in `~/.var/app/io.github.enadeag.car_charge_planner.CarChargePlanner/`, not in `~/.config` and `~/.local/share`.
 
-**The Maven sources.** flatpak-builder cannot download during the build, so `maven-sources.json` lists every file the Maven build needs (the libraries, the plugins and what they need) with its address on Maven Central and its SHA-256. After a change to `pom.xml`, the Maven version in `.mvn/wrapper/maven-wrapper.properties` or the Maven build in `tools/package-flatpak.sh`, make it again and commit it: `sh tools/flatpak-maven-sources.sh` (it builds the app once, online, into an empty Maven repository, and fails on a file whose SHA-1 is not the one Maven Central publishes). A new Maven or JavaFX version needs its address and checksum in the manifest too; `FlatpakPackagingTest` checks them against the wrapper and `tools/package-linux.sh`.
+**The Maven sources.** flatpak-builder cannot download during the build, so `maven-sources.json` lists every file the Maven build needs (the libraries, the plugins and what they need) with its address on Maven Central and its SHA-256. After a change to a `pom.xml`, the Maven version in `.mvn/wrapper/maven-wrapper.properties` or the Maven build in `tools/package-flatpak.sh`, make it again and commit it: `sh tools/flatpak-maven-sources.sh` (it builds the app once, online, into an empty Maven repository, and fails on a file whose SHA-1 is not the one Maven Central publishes). A new Maven or JavaFX version needs its address and checksum in the manifest too; `FlatpakPackagingTest` checks them against the wrapper and `tools/package-linux.sh`, and checks that the manifest's source folder leaves out the root's `target` and each module's.
 
 **The permissions** (`finish-args`) are only what the app uses, each with its reason in the manifest; `FlatpakPackagingTest` fails on any other, so a new one is a deliberate change to the test, the manifest and ADR 0008.
 
 **The app ID** `io.github.enadeag.car_charge_planner.CarChargePlanner` is Flathub's form for an app on GitHub: `io.github.<user>.<repository>.<name>`, with the repository's dashes as underscores; Flathub checks that the repository exists. Changing it changes:
 
-- `AppName.FLATPAK_ID` in `src/main/java/nl/enadeag/carchargeplanner/host/AppName.java`: the notifications' menu entry and the shared runtime folder in the sandbox;
+- `AppName.FLATPAK_ID` in `desktop/src/main/java/nl/enadeag/carchargeplanner/host/AppName.java`: the notifications' menu entry and the shared runtime folder in the sandbox;
 - the names of the manifest, the metadata and the menu entry in `src/packaging/flatpak/`, and inside them the manifest's `id:` and its comment, the metadata's `<id>` and `<launchable>`, and the menu entry's `Icon=`;
 - the commands above, and the ID in ADR 0008.
 
@@ -165,23 +168,23 @@ flatpak run io.github.enadeag.car_charge_planner.CarChargePlanner
 
 The workflows are in `.github/workflows/`:
 
-- `ci.yml` runs `./mvnw -B clean verify` for every pull request and every push to `main`, on Linux (with `dbus-daemon`, GNOME Keyring and `desktop-file-validate`, so the private-bus tests run, with `CCP_REQUIRE_PLATFORM=1` and the coverage floors) and on Windows. It keeps the test reports, and on Linux the coverage report, for 7 days. A change to documentation only (`*.md`, `docs/` except `docs/example-engine.json`, which the tests read) skips both, and GitHub counts a skipped job as passed. The macOS job is switched off until the JavaFX tests run on the macOS runner (#134); the maintainer decides when it comes back.
-- `linux-packages.yml` builds the `.deb` and `.rpm` and runs `tools/test-linux-packages.sh` on them, for a pull request or a push to `main` that changes the packaging, and by hand.
+- `ci.yml` runs `./mvnw -B clean verify` for every pull request and every push to `main`, on Linux (with `dbus-daemon`, GNOME Keyring and `desktop-file-validate`, so the private-bus tests run, with `CCP_REQUIRE_PLATFORM=1` and the coverage floors) and on Windows. It keeps each module's test reports, and on Linux each module's coverage report, for 7 days. A change to documentation only (`*.md`, `docs/` except `docs/example-engine.json`, which the tests read) skips both, and GitHub counts a skipped job as passed. The macOS job is switched off until the JavaFX tests run on the macOS runner (#134); the maintainer decides when it comes back.
+- `linux-packages.yml` builds the `.deb` and `.rpm` and runs `tools/test-linux-packages.sh` on them, for a pull request or a push to `main` that changes the packaging or any `pom.xml`, and by hand.
 - `windows-installer.yml` builds the installer with `tools\package-windows.ps1`, installs it silently, runs the installed `car-charge-planner.exe quit`, uninstalls it and keeps the installer as an artifact for 14 days. It runs when the packaging changes on `main`, by hand, and for a release.
 - `mutation.yml` runs PIT and the tests in a random order, weekly and by hand, and PIT on the engine for a pull request that touches it; see [What is tested where](#what-is-tested-where).
 - `release.yml` makes a release; see below.
 
-The actions are pinned to a full commit SHA, with the version in a comment beside it: update both together. Dependabot (`.github/dependabot.yml`) proposes new versions of the actions and of what `pom.xml` names, weekly and a week after their release, as pull requests that CI builds like any other.
+The actions are pinned to a full commit SHA, with the version in a comment beside it: update both together. Dependabot (`.github/dependabot.yml`) proposes new versions of the actions and of what the poms name (from the root, which reaches the modules), weekly and a week after their release, as pull requests that CI builds like any other.
 
 ## Releasing
 
-Between releases the version in `pom.xml` is the next one with `-SNAPSHOT`, such as `0.3.0-SNAPSHOT`. The tagged commit carries the exact version, because the app shows it in About and the download names carry it. To release X.Y.Z:
+The app has one version, `<revision>` in the parent `pom.xml` at the root; every module inherits it (its `<parent>` names it as `${revision}`), and the scripts read it from the parent alone (`./mvnw -N help:evaluate -Dexpression=project.version`). Between releases it is the next one with `-SNAPSHOT`, such as `0.3.0-SNAPSHOT`. The tagged commit carries the exact version, because the app shows it in About and the download names carry it. To release X.Y.Z:
 
 1. Go through [Before a release](#before-a-release).
-2. In a pull request, set `<version>X.Y.Z</version>` in `pom.xml`, turn `## [Unreleased]` in `CHANGELOG.md` into `## [X.Y.Z] - YYYY-MM-DD`, and add `<release version="X.Y.Z" date="YYYY-MM-DD">` with a short description at the top of `<releases>` in `src/packaging/flatpak/<app ID>.metainfo.xml` (`FlatpakPackagingTest` checks that it matches the changelog).
-3. After the merge, tag that commit `vX.Y.Z` and push the tag. The release workflow stops when the tag is not `v` plus the version in `pom.xml`, when that version still ends in `-SNAPSHOT`, when `CHANGELOG.md` has no section for it, or when `release/X.Y.Z` exists at another commit. Otherwise it builds and tests, packages the Linux tar.gz, `.deb` and `.rpm` and the Windows installer with an SBOM for Linux and one for Windows, smoke-tests the tar.gz, the `.deb` (installed on the runner and removed again) and the installer, checks the files in the `.rpm`, stops when OSV-Scanner finds a known vulnerability in an SBOM, writes `SHA256SUMS` over the six files, attests where they were built (`actions/attest-build-provenance`), creates the branch `release/X.Y.Z` at the tag, and makes a draft release with the changelog section, install notes and the Java runtime (`java tools/ReleaseNotes.java X.Y.Z CHANGELOG.md`, made before the job that can write to the repository).
+2. In a pull request, set `<revision>X.Y.Z</revision>` in the parent `pom.xml`, turn `## [Unreleased]` in `CHANGELOG.md` into `## [X.Y.Z] - YYYY-MM-DD`, and add `<release version="X.Y.Z" date="YYYY-MM-DD">` with a short description at the top of `<releases>` in `src/packaging/flatpak/<app ID>.metainfo.xml` (`FlatpakPackagingTest` checks that it matches the changelog).
+3. After the merge, tag that commit `vX.Y.Z` and push the tag. The release workflow stops when the tag is not `v` plus the version in the parent `pom.xml` (`ReleaseWorkflowTest` checks that it reads it with `-N`), when that version still ends in `-SNAPSHOT`, when `CHANGELOG.md` has no section for it, or when `release/X.Y.Z` exists at another commit. Otherwise it builds and tests, packages the Linux tar.gz, `.deb` and `.rpm` and the Windows installer with an SBOM for Linux and one for Windows, smoke-tests the tar.gz, the `.deb` (installed on the runner and removed again) and the installer, checks the files in the `.rpm`, stops when OSV-Scanner finds a known vulnerability in an SBOM, writes `SHA256SUMS` over the six files, attests where they were built (`actions/attest-build-provenance`), creates the branch `release/X.Y.Z` at the tag, and makes a draft release with the changelog section, install notes and the Java runtime (`java tools/ReleaseNotes.java X.Y.Z CHANGELOG.md`, made before the job that can write to the repository).
 4. Read the draft and publish it by hand.
-5. In a pull request, set the version to the next `-SNAPSHOT` and add an empty `## [Unreleased]`.
+5. In a pull request, set the version to the next `-SNAPSHOT` the same way and add an empty `## [Unreleased]`.
 
 To try the workflow without releasing, start it by hand on `main`: it builds everything and makes a draft called "dry run" (delete it afterwards), without the tag check, the attestations or the release branch.
 
@@ -195,7 +198,14 @@ The release builds use one exact Java version, the `java-version` of each `setup
 
 ## Code layout
 
-Everything is in the package `nl.enadeag.carchargeplanner`, under `src/main/java/`; the tests are in `src/test/java/`, in the same packages.
+Everything is in the package `nl.enadeag.carchargeplanner`, in two Maven modules under one parent `pom.xml` ([ADR 0010](docs/adr/0010-android-app.md)):
+
+| Module | Folder | What it holds |
+| --- | --- | --- |
+| `car-charge-planner-engine` | `engine/` | The package `engine` and its tests: no user interface, desktop or platform, so the Android app can share it. Its test classes, with the test helpers the desktop's tests use, also go in a test-jar. |
+| `car-charge-planner-desktop` | `desktop/` | Every other package below and their tests, the texts, icons and version file; it builds `car-charge-planner.jar`, its libraries in `desktop/target/lib` and the SBOM. |
+
+In each module the code is in `src/main/java/` and the tests in `src/test/java/`, in the same packages. The packaging (`src/packaging/`), `tools/` and `docs/` stay at the root.
 
 | Package | What it holds |
 | --- | --- |

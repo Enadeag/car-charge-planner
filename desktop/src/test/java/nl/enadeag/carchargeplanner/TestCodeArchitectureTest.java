@@ -11,10 +11,11 @@ import com.tngtech.archunit.library.freeze.FreezingArchRule;
 
 /**
  * The house rules of CONTRIBUTING.md for the tests themselves: no sleeping, and no reading of the real home folder
- * or environment. The sleeps that are still there are frozen in {@code src/test/archunit_store}: they may be removed,
- * and none may be added.
+ * or environment. The sleeps that are still there are frozen in {@code desktop/src/test/archunit_store}: they may be
+ * removed, and none may be added. The engine's tests, the shared test helpers among them, have the same rules in the
+ * engine module's {@code EngineTestCodeArchitectureTest}.
  */
-@AnalyzeClasses(packages = "nl.enadeag.carchargeplanner", importOptions = ImportOption.OnlyIncludeTests.class)
+@AnalyzeClasses(packages = "nl.enadeag.carchargeplanner", importOptions = {ImportOption.OnlyIncludeTests.class, NotTheEngineTests.class})
 class TestCodeArchitectureTest {
 
     @ArchTest

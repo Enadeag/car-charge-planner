@@ -13,11 +13,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-/** What the packaging scripts put in the packages: the licence files and the JavaFX the runtime is linked from. */
+/**
+ * What the packaging scripts put in the packages: the licence files and the JavaFX the runtime is linked from. The
+ * app's own modules ({@code nl.enadeag:*}) are under the app's licence, so they need no file of their own.
+ */
 class PackagingTest {
 
     private static final Path LEGAL = Path.of("src", "packaging", "legal");
     private static final Pattern RESOLVED = Pattern.compile("^\\s+([^:\\s]+:[^:\\s]+):", Pattern.MULTILINE);
+    private static final String OWN_GROUP = "nl.enadeag:";
     private static final Pattern NAMED = Pattern.compile("^Artifact: (\\S+)$", Pattern.MULTILINE);
     private static final Pattern JAVAFX_VERSION = Pattern.compile("<javafx\\.version>([^<]+)</javafx\\.version>");
     private static final Pattern JMODS_FOLDER = Pattern.compile("gluonhq\\.com/openjfx/([^/]+)/");
@@ -25,8 +29,9 @@ class PackagingTest {
 
     @Test
     void theLegalFilesNameExactlyTheRuntimeLibraries() throws IOException {
-        // written by dependency:list in the build (pom.xml, list-runtime-libraries) before the tests run
-        var runtime = groups(Files.readString(Path.of("target", "runtime-libraries.txt")), RESOLVED);
+        // written by dependency:list in the build (desktop/pom.xml, list-runtime-libraries) before the tests run
+        var runtime = groups(Files.readString(Path.of("desktop", "target", "runtime-libraries.txt")), RESOLVED).stream()
+                .filter(library -> !library.startsWith(OWN_GROUP)).collect(Collectors.toSet());
         var named = new HashSet<String>();
         try (var files = Files.newDirectoryStream(LEGAL)) {
             for (var file : files) {
@@ -41,6 +46,7 @@ class PackagingTest {
     @ParameterizedTest
     @ValueSource(strings = {"tools/package-linux.sh", "tools/package-windows.ps1"})
     void linksTheJavaFxVersionThePomBuildsAgainst(String script) throws IOException {
+        // javafx.version is the parent's, which the desktop module builds against
         var pom = JAVAFX_VERSION.matcher(Files.readString(Path.of("pom.xml"))).results().findFirst().orElseThrow();
         var text = Files.readString(Path.of(script));
 

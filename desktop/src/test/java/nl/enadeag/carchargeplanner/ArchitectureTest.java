@@ -52,10 +52,15 @@ import java.util.stream.Stream;
 /**
  * The rules of ADR 0001 and ADR 0005: an engine without user interface, platforms that do not know each other, one
  * composition root that wires everything, and no global state, clocks, threads or system reads outside the places
- * that own them. A rule that older code still breaks is frozen in {@code src/test/archunit_store}: what is stored
- * there may be fixed, and nothing new may join it.
+ * that own them. A rule that older code still breaks is frozen in {@code desktop/src/test/archunit_store}: what is
+ * stored there may be fixed, and nothing new may join it.
+ *
+ * <p>The engine's classes are on this module's class path, so the rules about the boundary between the modules and
+ * the rules for every class see both sides; the rules about the engine's own parts are in the engine module's
+ * {@code EngineArchitectureTest}, which runs when the engine is built alone.
  */
-@AnalyzeClasses(packages = "nl.enadeag.carchargeplanner", importOptions = ImportOption.DoNotIncludeTests.class)
+@AnalyzeClasses(packages = "nl.enadeag.carchargeplanner",
+        importOptions = {ImportOption.DoNotIncludeTests.class, NotTheEngineTests.class})
 class ArchitectureTest {
 
     /** The dashboard, the texts, the app settings, the theme and Settings: what no platform may reach. */
@@ -108,12 +113,6 @@ class ArchitectureTest {
             .because("the composition root wires the single-instance guard to the app; it runs before anything else");
 
     @ArchTest
-    static final ArchRule engineHasNoTranslations = noClasses()
-            .that().resideInAPackage("..engine..")
-            .should().dependOnClassesThat().haveFullyQualifiedName("java.util.ResourceBundle")
-            .because("the engine reports kinds and details; a client says them in the owner's language");
-
-    @ArchTest
     static final ArchRule onlyTheCompositionRootReadsTheSystemLocale = noClasses()
             .that().doNotHaveFullyQualifiedName(Main.class.getName())
             .should().callMethod(Locale.class, "getDefault")
@@ -131,18 +130,6 @@ class ArchitectureTest {
             .orShould().callMethod(System.class, "getenv")
             .orShould().callMethod(System.class, "getenv", String.class)
             .because("the system and its user are read once, as the app starts, and handed on");
-
-    private static final DescribedPredicate<JavaClass> DOMAIN_MODEL = DescribedPredicate.describe(
-            "are the domain model: the planner, the settings, and the engine's public records and enums",
-            type -> type.getPackageName().endsWith(".engine.plan") || type.getPackageName().endsWith(".engine.setting")
-                    || type.getPackageName().contains(".engine") && !type.getPackageName().endsWith(".engine.store")
-                    && (type.isRecord() || type.isEnum()) && type.getModifiers().contains(JavaModifier.PUBLIC));
-
-    @ArchTest
-    static final ArchRule theDomainModelDoesNotKnowItsFileFormat = noClasses()
-            .that(DOMAIN_MODEL)
-            .should().dependOnClassesThat().resideInAnyPackage("tools.jackson..", "com.fasterxml.jackson..")
-            .because("each stored file reads and writes its own JSON by hand, beside the store that keeps it");
 
     /** The call names the exception's own class, a subclass of Throwable, whichever overload is called. */
     private static final DescribedPredicate<JavaMethodCall> PRINT_A_STACK_TRACE = DescribedPredicate.describe(
@@ -244,12 +231,6 @@ class ArchitectureTest {
             .because("Main starts the app or runs a command; the app uses the command line's exit codes; both build "
                     + "on each system's parts, the log and the host, and the host, which those build on, knows none of "
                     + "them");
-
-    @ArchTest
-    static final ArchRule noCyclesBetweenTheEngineParts = slices()
-            .matching(ENGINE + ".(*)..")
-            .should().beFreeOfCycles()
-            .because("the engine's parts depend one way, so each can be read and tested alone (ADR 0001)");
 
     @ArchTest
     static final ArchRule noCyclesBetweenTheDesktopParts = slices()
@@ -355,13 +336,6 @@ class ArchitectureTest {
             .because("calls into Windows are the one place native memory is touched (ADR 0005)");
 
     @ArchTest
-    static final ArchRule engineSubPackagesDoNotReachUpIntoTheEngine = noClasses()
-            .that().resideInAPackage(ENGINE + "..")
-            .and().resideOutsideOfPackage(ENGINE)
-            .should().dependOnClassesThat().resideInAPackage(ENGINE)
-            .because("Engine and Outlook put the parts together; a part knowing them would be a cycle (ADR 0001)");
-
-    @ArchTest
     static final ArchRule engineAndDesktopDoNotKnowTheCompositionRoot = noClasses()
             .that().resideInAnyPackage("..engine..", "..desktop..")
             .should().dependOnClassesThat().resideInAnyPackage(OUTER)
@@ -372,13 +346,6 @@ class ArchitectureTest {
             .that().resideOutsideOfPackages(ENGINE + ".forecast..", ROOT, START)
             .should().dependOnClassesThat().resideInAPackage(ENGINE + ".forecast.providers..")
             .because("a provider is chosen by engine.forecast; the plan and the clients know only the forecast");
-
-    @ArchTest
-    static final ArchRule thePlanDoesNotKnowWhereItsInputsComeFrom = noClasses()
-            .that().resideInAPackage(ENGINE + ".plan..")
-            .should().dependOnClassesThat().resideInAnyPackage(
-                    ENGINE + ".forecast.providers..", ENGINE + ".secrets..", ENGINE + ".notify..")
-            .because("the planner is pure: a forecast goes in and windows come out (ADR 0001)");
 
     @ArchTest
     static final ArchRule theLayersOnlyPointDownwards = layeredArchitecture()
@@ -527,29 +494,6 @@ class ArchitectureTest {
             .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.RandomAccessFile")
             .orShould().dependOnClassesThat().resideInAPackage("java.nio.channels..")
             .because("no client writes the engine's files; the desktop keeps its own app settings (ADR 0001)");
-
-    private static final DescribedPredicate<JavaMethodCall> CHANGE_FILES = DescribedPredicate.describe(
-            "write, move or delete a file",
-            call -> call.getTargetOwner().isEquivalentTo(java.nio.file.Files.class)
-                    && Set.of("write", "writeString", "newOutputStream", "newBufferedWriter", "createFile",
-                            "createTempFile", "createTempDirectory", "createDirectory", "createDirectories", "move",
-                            "copy", "delete", "deleteIfExists", "newByteChannel", "setPosixFilePermissions",
-                            "setOwner", "setAttribute", "getFileAttributeView", "createSymbolicLink",
-                            "createLink").contains(call.getName()));
-
-    @ArchTest
-    static final ArchRule theEngineWritesFilesOnlyInItsStore = noClasses()
-            .that().resideInAPackage(ENGINE + "..")
-            .and().resideOutsideOfPackage(ENGINE + ".store..")
-            // SecretsFile.makePrivate() tightens the permissions of the fallback secrets file, nothing more
-            .and().doNotHaveFullyQualifiedName(ENGINE + ".secrets.SecretsFile")
-            .should().callMethodWhere(CHANGE_FILES)
-            .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileOutputStream")
-            .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileWriter")
-            .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.RandomAccessFile")
-            .orShould().dependOnClassesThat().resideInAPackage("java.nio.channels..")
-            .because("the engine owns its files and keeps each written in one safe way, by StoredFile and "
-                    + "PrivateFiles (ADR 0001)");
 
     // texts, numbers and times are written in a chosen language
 

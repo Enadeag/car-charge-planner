@@ -9,7 +9,7 @@ on:
       - "tools/package-windows.ps1"
       - "tools/install-wix.ps1"
       - "src/packaging/windows/**"
-      - "pom.xml"
+      - "**/pom.xml"
       - ".mvn/**"
       - ".github/workflows/windows-installer.yml"
   workflow_dispatch:

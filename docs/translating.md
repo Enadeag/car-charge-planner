@@ -77,7 +77,7 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 
 ## Desktop texts
 
-Every text the app shows is translatable, and a language is one file. The texts are in `src/main/resources/nl/enadeag/carchargeplanner/desktop/text/`, one file per language: `messages_en.properties` for English, `messages_nl.properties` for Dutch. They are Java resource bundles in UTF-8 (type `é` and `ü` as they are, no `\u00e9` escapes). Each line is a key, the same in every language, and its text:
+Every text the app shows is translatable, and a language is one file. The texts are in `desktop/src/main/resources/nl/enadeag/carchargeplanner/desktop/text/`, one file per language: `messages_en.properties` for English, `messages_nl.properties` for Dutch. They are Java resource bundles in UTF-8 (type `é` and `ü` as they are, no `\u00e9` escapes). Each line is a key, the same in every language, and its text:
 
 ```properties
 DAY_SET = Set {0} A ({1} kW)
@@ -100,7 +100,7 @@ An apostrophe is written twice, also in a text without `{0}`: `charger''s app` s
 4. **Try it.** The app follows the system's language: on Linux `LANGUAGE`, then `LC_ALL`, `LC_MESSAGES` and `LANG` (the plain `C` locale means English); on Windows the language of the user's display. To choose one, write `{"language": "de"}` to `app.json` beside `engine.json` (`~/.config/car-charge-planner/`, Windows `%APPDATA%\car-charge-planner\`); `"system"` follows the system again. The file is read when the app starts; choosing a language in Settings (App) and saving switches the running app at once.
 
    ```bash
-   LANGUAGE=nl ./mvnw compile exec:exec -Dapp.args="--config=docs/example-engine.json"
+   LANGUAGE=nl ./mvnw -pl :car-charge-planner-desktop -am compile exec:exec -Dapp.args="--config=docs/example-engine.json"
    ```
 
    Look at the dashboard, set-up, Settings, the tray icon's tooltip and menu, and a notification: long words are the usual trouble.
