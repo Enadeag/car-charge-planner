@@ -4,15 +4,25 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+  <!-- The parent of the two modules (ADR 0010, issue #263): the engine, which Android will share; the desktop app,
+       which builds car-charge-planner.jar. The one version of the app
+       is revision below; every module names it as ${revision} in its <parent> and inherits it, so a release sets it
+       here alone (CONTRIBUTING.md, Releasing). -->
   <groupId>nl.enadeag</groupId>
-  <artifactId>car-charge-planner</artifactId>
-  <version>0.5.1-SNAPSHOT</version>
+  <artifactId>car-charge-planner-parent</artifactId>
+  <version>${revision}</version>
+  <packaging>pom</packaging>
   <name>Car charge planner</name>
 
+  <modules>
+    <module>engine</module>
+    <module>desktop</module>
+  </modules>
+
   <properties>
+    <revision>0.5.1-SNAPSHOT</revision>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>25</maven.compiler.release>
-    <main.class>nl.enadeag.carchargeplanner.Main</main.class>
     <!-- surefire's test class order; see the surefire plugin below -->
     <surefire.runOrder>alphabetical</surefire.runOrder>
     <!-- left out of every build: the tests that reach the network, which the live profile runs, and the one that
@@ -20,7 +30,6 @@
     <test.excludedGroups>live,screenshots</test.excludedGroups>
     <!-- the coverage profile sets it to JaCoCo's agent -->
     <argLine></argLine>
-    <app.args></app.args>
 
     <javafx.version>27</javafx.version>
     <!-- the classifier of JavaFX's per-system jars; the profiles below set it for Windows and macOS -->
@@ -43,10 +52,61 @@
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>nl.enadeag</groupId>
+        <artifactId>car-charge-planner-engine</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <!-- the engine's test classes, with the helpers the desktop's tests share (LogCapture, FakeProvider, ...) -->
+      <dependency>
+        <groupId>nl.enadeag</groupId>
+        <artifactId>car-charge-planner-engine</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <!-- JavaFX's jars with the classes are the ones with the system's classifier; the unclassified ones are empty -->
+      <dependency>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-base</artifactId>
+        <version>${javafx.version}</version>
+        <classifier>${javafx.platform}</classifier>
+      </dependency>
+      <dependency>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-graphics</artifactId>
+        <version>${javafx.version}</version>
+        <classifier>${javafx.platform}</classifier>
+      </dependency>
+      <dependency>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-controls</artifactId>
+        <version>${javafx.version}</version>
+        <classifier>${javafx.platform}</classifier>
+      </dependency>
+      <dependency>
+        <groupId>io.github.mkpaz</groupId>
+        <artifactId>atlantafx-base</artifactId>
+        <version>${atlantafx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.hypfvieh</groupId>
+        <artifactId>dbus-java-core</artifactId>
+        <version>${dbus-java.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.hypfvieh</groupId>
+        <artifactId>dbus-java-transport-native-unixsocket</artifactId>
+        <version>${dbus-java.version}</version>
+      </dependency>
       <!-- dbus-java brings an older 2.0.x; one version for the API and its binding -->
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-jdk14</artifactId>
         <version>${slf4j.version}</version>
       </dependency>
       <dependency>
@@ -63,121 +123,74 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <dependency>
+        <groupId>org.assertj</groupId>
+        <artifactId>assertj-core</artifactId>
+        <version>${assertj.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.tngtech.archunit</groupId>
+        <artifactId>archunit</artifactId>
+        <version>${archunit.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.tngtech.archunit</groupId>
+        <artifactId>archunit-junit5-api</artifactId>
+        <version>${archunit.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.tngtech.archunit</groupId>
+        <artifactId>archunit-junit5-engine</artifactId>
+        <version>${archunit.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
-  <dependencies>
-    <!-- JavaFX's jars with the classes are the ones with the system's classifier; the unclassified ones are empty -->
-    <dependency>
-      <groupId>org.openjfx</groupId>
-      <artifactId>javafx-base</artifactId>
-      <version>${javafx.version}</version>
-      <classifier>${javafx.platform}</classifier>
-    </dependency>
-    <dependency>
-      <groupId>org.openjfx</groupId>
-      <artifactId>javafx-graphics</artifactId>
-      <version>${javafx.version}</version>
-      <classifier>${javafx.platform}</classifier>
-    </dependency>
-    <dependency>
-      <groupId>org.openjfx</groupId>
-      <artifactId>javafx-controls</artifactId>
-      <version>${javafx.version}</version>
-      <classifier>${javafx.platform}</classifier>
-    </dependency>
-    <dependency>
-      <groupId>io.github.mkpaz</groupId>
-      <artifactId>atlantafx-base</artifactId>
-      <version>${atlantafx.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.github.hypfvieh</groupId>
-      <artifactId>dbus-java-core</artifactId>
-      <version>${dbus-java.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.github.hypfvieh</groupId>
-      <artifactId>dbus-java-transport-native-unixsocket</artifactId>
-      <version>${dbus-java.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>tools.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>tools.jackson.core</groupId>
-      <artifactId>jackson-core</artifactId>
-    </dependency>
-    <!-- dbus-java logs through SLF4J; this sends it to java.util.logging, where the app's own messages go -->
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-jdk14</artifactId>
-      <version>${slf4j.version}</version>
-      <scope>runtime</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-api</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-params</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-engine</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.assertj</groupId>
-      <artifactId>assertj-core</artifactId>
-      <version>${assertj.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.tngtech.archunit</groupId>
-      <artifactId>archunit</artifactId>
-      <version>${archunit.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.tngtech.archunit</groupId>
-      <artifactId>archunit-junit5-api</artifactId>
-      <version>${archunit.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.tngtech.archunit</groupId>
-      <artifactId>archunit-junit5-engine</artifactId>
-      <version>${archunit.version}</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
-
   <build>
-    <finalName>car-charge-planner</finalName>
-    <!-- only the version file is filtered: the text bundles hold {0}-style places of their own -->
-    <resources>
-      <resource>
-        <directory>src/main/resources</directory>
-      </resource>
-      <resource>
-        <directory>src/main/resources-filtered</directory>
-        <filtering>true</filtering>
-      </resource>
-      <!-- the app icon's drawing, which the menu entry installs as the scalable icon -->
-      <resource>
-        <directory>src/packaging/icons</directory>
-        <includes>
-          <include>car-charge-planner.svg</include>
-        </includes>
-        <targetPath>nl/enadeag/carchargeplanner/desktop/system/icons</targetPath>
-      </resource>
-    </resources>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.16.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.6.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.5.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>3.11.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.cyclonedx</groupId>
+          <artifactId>cyclonedx-maven-plugin</artifactId>
+          <version>2.9.3</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>3.6.4</version>
+        </plugin>
+        <plugin>
+          <groupId>org.jacoco</groupId>
+          <artifactId>jacoco-maven-plugin</artifactId>
+          <version>${jacoco.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.pitest</groupId>
+          <artifactId>pitest-maven</artifactId>
+          <version>${pitest.version}</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
     <plugins>
       <!-- jpackage makes the Windows launcher read-only; without force, clean cannot remove it -->
       <plugin>
@@ -191,7 +204,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.16.0</version>
         <configuration>
           <compilerArgs>
             <arg>-Xlint:all,-serial</arg>
@@ -226,19 +238,16 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.6.0</version>
         <configuration>
-          <!-- the Credential Manager is reached through Java's foreign function API -->
-          <argLine>@{argLine} --enable-native-access=ALL-UNNAMED</argLine>
+          <!-- every module's tests run in the repository's root, where they find docs/, tools/ and src/packaging/;
+               an IDE needs the same working directory (CONTRIBUTING.md, Set up) -->
+          <workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
           <!-- the same order on every system and every run; -Dsurefire.runOrder=random shows what depends on it -->
           <runOrder>${surefire.runOrder}</runOrder>
           <excludedGroups>${test.excludedGroups}</excludedGroups>
           <systemPropertyVariables>
             <!-- no test may put an AWT window or tray icon on the developer's desktop -->
             <java.awt.headless>true</java.awt.headless>
-            <!-- nor a JavaFX one: whichever test touches JavaFX first, it starts headless -->
-            <glass.platform>Headless</glass.platform>
-            <prism.order>sw</prism.order>
             <java.util.logging.config.file>${project.basedir}/src/test/resources/logging.properties</java.util.logging.config.file>
           </systemPropertyVariables>
           <!-- and the test JVM cannot reach the developer's display at all -->
@@ -250,21 +259,7 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <version>3.5.1</version>
-        <configuration>
-          <archive>
-            <manifest>
-              <mainClass>${main.class}</mainClass>
-            </manifest>
-          </archive>
-        </configuration>
-      </plugin>
-      <!-- the packaging scripts take the runtime libraries from target/lib -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
-        <version>3.11.0</version>
         <executions>
           <!-- fails on a library the code uses but does not declare, or declares but does not use -->
           <execution>
@@ -285,66 +280,14 @@
               </ignoredUnusedDeclaredDependencies>
             </configuration>
           </execution>
-          <!-- the list of runtime libraries PackagingTest checks against src/packaging/legal -->
-          <execution>
-            <id>list-runtime-libraries</id>
-            <phase>generate-test-resources</phase>
-            <goals>
-              <goal>list</goal>
-            </goals>
-            <configuration>
-              <includeScope>runtime</includeScope>
-              <outputFile>${project.build.directory}/runtime-libraries.txt</outputFile>
-            </configuration>
-          </execution>
-          <execution>
-            <id>copy-runtime-libraries</id>
-            <phase>package</phase>
-            <goals>
-              <goal>copy-dependencies</goal>
-            </goals>
-            <configuration>
-              <includeScope>runtime</includeScope>
-              <outputDirectory>${project.build.directory}/lib</outputDirectory>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
-      <!-- target/car-charge-planner.cdx.json, an SBOM of the libraries the app brings at run time, which the packaging
-           scripts complete with the runtime (tools/SbomRuntime.java). With project.build.outputTimestamp, which the
-           packaging scripts set to the commit's time, it is reproducible: no timestamp, a serial number from its
-           content. -->
-      <plugin>
-        <groupId>org.cyclonedx</groupId>
-        <artifactId>cyclonedx-maven-plugin</artifactId>
-        <version>2.9.3</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>makeBom</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <projectType>application</projectType>
-          <schemaVersion>1.6</schemaVersion>
-          <outputFormat>json</outputFormat>
-          <outputName>car-charge-planner.cdx</outputName>
-          <includeTestScope>false</includeTestScope>
-          <includeProvidedScope>false</includeProvidedScope>
-          <includeSystemScope>false</includeSystemScope>
-        </configuration>
-      </plugin>
-      <!-- ./mvnw compile exec:exec runs the app from the build; -Dapp.args="..." passes it arguments -->
+      <!-- only the desktop module runs the app; the others skip exec:exec when it is run with -am -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
-        <version>3.6.4</version>
         <configuration>
-          <!-- the JDK that runs Maven, not whichever java comes first on the PATH -->
-          <executable>${java.home}/bin/java</executable>
-          <commandlineArgs>--enable-native-access=ALL-UNNAMED -classpath %classpath ${main.class} ${app.args}</commandlineArgs>
+          <skip>true</skip>
         </configuration>
       </plugin>
     </plugins>
@@ -392,12 +335,9 @@
         <groups>screenshots</groups>
       </properties>
     </profile>
-    <!-- ./mvnw verify -Pcoverage: JaCoCo's report in target/site/jacoco/, and the build fails when a part's line or
-         branch coverage drops below its floor (CONTRIBUTING.md, What is tested where). Linux only: the platform.linux
-         tests need dbus-daemon and GNOME Keyring, and Windows runs none of them. Not checked: the classes that wire
-         the app (Main, start.DesktopApp, host.Host and the *Parts classes in platforms), which DesktopAppSmokeTest tests in
-         a JVM of its own, and platform.windows. Each floor is a point or two below what was measured when it was set:
-         raise it when the tests grow, never lower it to let a change through. -->
+    <!-- ./mvnw verify -Pcoverage: JaCoCo's report in each module's target/site/jacoco/, and the build fails when a
+         part's line or branch coverage drops below its floor (CONTRIBUTING.md, What is tested where). Each module
+         checks its own classes from its own tests; the floors are in the modules' coverage profiles. -->
     <profile>
       <id>coverage</id>
       <build>
@@ -405,7 +345,6 @@
           <plugin>
             <groupId>org.jacoco</groupId>
             <artifactId>jacoco-maven-plugin</artifactId>
-            <version>${jacoco.version}</version>
             <executions>
               <execution>
                 <id>coverage-agent</id>
@@ -419,159 +358,6 @@
                   <goal>report</goal>
                 </goals>
               </execution>
-              <execution>
-                <id>coverage-engine</id>
-                <goals>
-                  <goal>check</goal>
-                </goals>
-                <configuration>
-                  <includes>
-                    <include>nl/enadeag/carchargeplanner/engine/**</include>
-                  </includes>
-                  <rules>
-                    <rule>
-                      <element>BUNDLE</element>
-                      <limits>
-                        <limit>
-                          <counter>LINE</counter>
-                          <value>COVEREDRATIO</value>
-                          <minimum>0.96</minimum>
-                        </limit>
-                        <limit>
-                          <counter>BRANCH</counter>
-                          <value>COVEREDRATIO</value>
-                          <minimum>0.90</minimum>
-                        </limit>
-                      </limits>
-                    </rule>
-                  </rules>
-                </configuration>
-              </execution>
-              <execution>
-                <id>coverage-desktop</id>
-                <goals>
-                  <goal>check</goal>
-                </goals>
-                <configuration>
-                  <includes>
-                    <include>nl/enadeag/carchargeplanner/desktop/**</include>
-                  </includes>
-                  <rules>
-                    <rule>
-                      <element>BUNDLE</element>
-                      <limits>
-                        <limit>
-                          <counter>LINE</counter>
-                          <value>COVEREDRATIO</value>
-                          <minimum>0.95</minimum>
-                        </limit>
-                        <limit>
-                          <counter>BRANCH</counter>
-                          <value>COVEREDRATIO</value>
-                          <minimum>0.82</minimum>
-                        </limit>
-                      </limits>
-                    </rule>
-                  </rules>
-                </configuration>
-              </execution>
-              <execution>
-                <id>coverage-instance</id>
-                <goals>
-                  <goal>check</goal>
-                </goals>
-                <configuration>
-                  <includes>
-                    <include>nl/enadeag/carchargeplanner/instance/**</include>
-                  </includes>
-                  <rules>
-                    <rule>
-                      <element>BUNDLE</element>
-                      <limits>
-                        <limit>
-                          <counter>LINE</counter>
-                          <value>COVEREDRATIO</value>
-                          <minimum>0.88</minimum>
-                        </limit>
-                        <limit>
-                          <counter>BRANCH</counter>
-                          <value>COVEREDRATIO</value>
-                          <minimum>0.74</minimum>
-                        </limit>
-                      </limits>
-                    </rule>
-                  </rules>
-                </configuration>
-              </execution>
-              <execution>
-                <id>coverage-root</id>
-                <goals>
-                  <goal>check</goal>
-                </goals>
-                <configuration>
-                  <!-- the composition root's packages (the root package and start, cli, platforms, logging and
-                       host), without the classes that wire the app -->
-                  <includes>
-                    <include>nl/enadeag/carchargeplanner/*.class</include>
-                    <include>nl/enadeag/carchargeplanner/start/**</include>
-                    <include>nl/enadeag/carchargeplanner/cli/**</include>
-                    <include>nl/enadeag/carchargeplanner/platforms/**</include>
-                    <include>nl/enadeag/carchargeplanner/logging/**</include>
-                    <include>nl/enadeag/carchargeplanner/host/**</include>
-                  </includes>
-                  <excludes>
-                    <exclude>nl/enadeag/carchargeplanner/Main*.class</exclude>
-                    <exclude>nl/enadeag/carchargeplanner/start/DesktopApp*.class</exclude>
-                    <exclude>nl/enadeag/carchargeplanner/host/Host*.class</exclude>
-                    <exclude>nl/enadeag/carchargeplanner/platforms/*Parts*.class</exclude>
-                  </excludes>
-                  <rules>
-                    <rule>
-                      <element>BUNDLE</element>
-                      <limits>
-                        <limit>
-                          <counter>LINE</counter>
-                          <value>COVEREDRATIO</value>
-                          <minimum>0.93</minimum>
-                        </limit>
-                        <limit>
-                          <counter>BRANCH</counter>
-                          <value>COVEREDRATIO</value>
-                          <minimum>0.94</minimum>
-                        </limit>
-                      </limits>
-                    </rule>
-                  </rules>
-                </configuration>
-              </execution>
-              <execution>
-                <id>coverage-platform-linux</id>
-                <goals>
-                  <goal>check</goal>
-                </goals>
-                <configuration>
-                  <includes>
-                    <include>nl/enadeag/carchargeplanner/platform/linux/**</include>
-                  </includes>
-                  <rules>
-                    <rule>
-                      <element>BUNDLE</element>
-                      <limits>
-                        <limit>
-                          <counter>LINE</counter>
-                          <value>COVEREDRATIO</value>
-                          <minimum>0.86</minimum>
-                        </limit>
-                        <limit>
-                          <counter>BRANCH</counter>
-                          <value>COVEREDRATIO</value>
-                          <minimum>0.75</minimum>
-                        </limit>
-                      </limits>
-                    </rule>
-                  </rules>
-                </configuration>
-              </execution>
             </executions>
           </plugin>
         </plugins>
@@ -579,10 +365,10 @@
     </profile>
     <!-- Mutation testing with PIT (CONTRIBUTING.md, What is tested where), for the engine and for the desktop's logic
          that needs no JavaFX:
-           ./mvnw -Ppit test-compile pitest:mutationCoverage@engine    report in target/pit-reports/engine/
-           ./mvnw -Ppit test-compile pitest:mutationCoverage@desktop   report in target/pit-reports/desktop/
-         It fails when fewer mutants than the threshold are killed. -Dpit.threads=4 runs more test JVMs at once; each
-         takes a heap of pit.heap. -->
+           ./mvnw -Ppit test-compile pitest:mutationCoverage@engine    report in engine/target/pit-reports/engine/
+           ./mvnw -Ppit test-compile pitest:mutationCoverage@desktop   report in desktop/target/pit-reports/desktop/
+         Each execution is in its own module, and the other module skips it. It fails when fewer mutants than the
+         threshold are killed. -Dpit.threads=4 runs more test JVMs at once; each takes a heap of pit.heap. -->
     <profile>
       <id>pit</id>
       <build>
@@ -590,7 +376,6 @@
           <plugin>
             <groupId>org.pitest</groupId>
             <artifactId>pitest-maven</artifactId>
-            <version>${pitest.version}</version>
             <dependencies>
               <dependency>
                 <groupId>org.pitest</groupId>
@@ -599,19 +384,19 @@
               </dependency>
             </dependencies>
             <configuration>
+              <skip>true</skip>
               <threads>${pit.threads}</threads>
               <timestampedReports>false</timestampedReports>
               <outputFormats>
                 <param>HTML</param>
                 <param>XML</param>
               </outputFormats>
-              <!-- PIT runs the tests in JVMs of its own, without surefire's settings: the same headless set-up here -->
+              <!-- PIT runs the tests in JVMs of its own, without surefire's settings: the same headless set-up here, and
+                   the repository's root as the working directory, which PIT sets to the module's own folder -->
               <jvmArgs>
                 <value>-Xmx${pit.heap}</value>
-                <value>--enable-native-access=ALL-UNNAMED</value>
+                <value>-Duser.dir=${maven.multiModuleProjectDirectory}</value>
                 <value>-Djava.awt.headless=true</value>
-                <value>-Dglass.platform=Headless</value>
-                <value>-Dprism.order=sw</value>
                 <value>-Djava.util.logging.config.file=${project.basedir}/src/test/resources/logging.properties</value>
               </jvmArgs>
               <excludedGroups>
@@ -619,69 +404,6 @@
                 <param>fx</param>
               </excludedGroups>
             </configuration>
-            <executions>
-              <execution>
-                <id>engine</id>
-                <configuration>
-                  <targetClasses>
-                    <param>nl.enadeag.carchargeplanner.engine.*</param>
-                  </targetClasses>
-                  <targetTests>
-                    <param>nl.enadeag.carchargeplanner.engine.*</param>
-                  </targetTests>
-                  <reportsDirectory>${project.build.directory}/pit-reports/engine</reportsDirectory>
-                  <!-- a few points below the share of mutants killed when it was set (97 %) -->
-                  <mutationThreshold>94</mutationThreshold>
-                </configuration>
-              </execution>
-              <execution>
-                <id>desktop</id>
-                <configuration>
-                  <!-- the classes that the tests without JavaFX (no @FxTest) cover: the mappers to the dashboard's
-                       models, chart and popup geometry, the app settings, the logic of the Settings and set-up forms,
-                       the tray icon's drawing, the text size and the texts -->
-                  <targetClasses>
-                    <param>nl.enadeag.carchargeplanner.desktop.app.AppSettings*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.app.Background*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.app.DisplayMode*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.app.Units*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.PopupPlacement*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.advice.GridAdviceMapper*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayCheck*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayMapper*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryMapper*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryModel*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.day.DayMapper*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.outlook.OutlookMapper*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.solar.CurvePoints*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.solar.PlotArea*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartMapper*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.tray.TrayStatusMapper*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.tray.TrayPresenter*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripAdviceMapper*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripAdviceModel*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripCheck*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripMapper*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripOrigin*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripsModel*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.notify.*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.settings.form.*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.settings.page.WindowSize*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.settings.setup.SetUpOffer*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.system.StatusIcon*</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.system.TextSize</param>
-                    <param>nl.enadeag.carchargeplanner.desktop.text.*</param>
-                  </targetClasses>
-                  <targetTests>
-                    <param>nl.enadeag.carchargeplanner.desktop.*</param>
-                  </targetTests>
-                  <reportsDirectory>${project.build.directory}/pit-reports/desktop</reportsDirectory>
-                  <!-- a few points below the share of mutants killed when it was set (92 %) -->
-                  <mutationThreshold>89</mutationThreshold>
-                </configuration>
-              </execution>
-            </executions>
           </plugin>
         </plugins>
       </build>

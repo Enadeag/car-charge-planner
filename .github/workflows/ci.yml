@@ -75,13 +75,17 @@ jobs:
         if: always()
         with:
           name: surefire-reports-linux
-          path: target/surefire-reports/
+          path: |
+            engine/target/surefire-reports/
+            desktop/target/surefire-reports/
           retention-days: 7
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: coverage-report
-          path: target/site/jacoco/
+          path: |
+            engine/target/site/jacoco/
+            desktop/target/site/jacoco/
           retention-days: 7
 
   windows:
@@ -106,7 +110,9 @@ jobs:
         if: always()
         with:
           name: surefire-reports-windows
-          path: target/surefire-reports/
+          path: |
+            engine/target/surefire-reports/
+            desktop/target/surefire-reports/
           retention-days: 7
 
   macos:
@@ -130,5 +136,7 @@ jobs:
         if: failure()
         with:
           name: surefire-reports-macos
-          path: target/surefire-reports/
+          path: |
+            engine/target/surefire-reports/
+            desktop/target/surefire-reports/
           retention-days: 14

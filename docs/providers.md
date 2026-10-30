@@ -2,11 +2,11 @@
 
 A **forecast provider** tells the app how much power the user's solar system is expected to produce over the next days. The app hands it a description of the system (one or more panel arrays) and gets back one number per time step: the expected power of all arrays together, in kW. Everything else (when to ask, what to keep, what to do when it fails, the Settings page) is done for every provider by the app's forecast service.
 
-Two providers are built in, [Open-Meteo](../src/main/java/nl/enadeag/carchargeplanner/engine/forecast/providers/OpenMeteo.java) and [Forecast.Solar](../src/main/java/nl/enadeag/carchargeplanner/engine/forecast/providers/ForecastSolar.java). Adding one is a pull request: one class, one test class, a recorded answer. This guide is everything a contributor needs.
+Two providers are built in, [Open-Meteo](../engine/src/main/java/nl/enadeag/carchargeplanner/engine/forecast/providers/OpenMeteo.java) and [Forecast.Solar](../engine/src/main/java/nl/enadeag/carchargeplanner/engine/forecast/providers/ForecastSolar.java). Adding one is a pull request: one class, one test class, a recorded answer. This guide is everything a contributor needs.
 
 ## The contract
 
-All of it is in the package `engine.forecast` ([`src/main/java/nl/enadeag/carchargeplanner/engine/forecast/`](../src/main/java/nl/enadeag/carchargeplanner/engine/forecast/)), except `PanelArray` and `ProviderId`, which are in `engine.config`:
+All of it is in the package `engine.forecast` ([`engine/src/main/java/nl/enadeag/carchargeplanner/engine/forecast/`](../engine/src/main/java/nl/enadeag/carchargeplanner/engine/forecast/)), except `PanelArray` and `ProviderId`, which are in `engine.config`:
 
 | Type | What it is |
 | --- | --- |
@@ -40,7 +40,7 @@ A provider never opens a connection itself. It takes an `HttpGet` when it is mad
 
 ## A skeleton
 
-This is a complete provider for an imaginary service, and it passes the conformance kit. It is also real code: the three blocks below are `ExampleSolar.java`, `ExampleSolarTest.java` and `example_solar.json` in the test tree (`src/test/.../engine/forecast/providers/`), where the build runs the kit on it, and `ProvidersGuideTest` fails when a block here and its file differ.
+This is a complete provider for an imaginary service, and it passes the conformance kit. It is also real code: the three blocks below are `ExampleSolar.java`, `ExampleSolarTest.java` and `example_solar.json` in the engine's test tree (`engine/src/test/.../engine/forecast/providers/`), where the build runs the kit on it, and `ProvidersGuideTest` fails when a block here and its file differ.
 
 ```java
 package nl.enadeag.carchargeplanner.engine.forecast.providers;
@@ -221,11 +221,11 @@ and the recorded answer the test replays, `example_solar.json` beside the other 
 
 ## Adding yours
 
-1. **The class**: `src/main/java/nl/enadeag/carchargeplanner/engine/forecast/providers/<YourService>.java`, as above.
+1. **The class**: `engine/src/main/java/nl/enadeag/carchargeplanner/engine/forecast/providers/<YourService>.java`, as above.
 2. **Register it**: add it to the list of providers in `DesktopApp.engine`, in the package `start` (`new Providers(List.of(new OpenMeteo(get), new ForecastSolar(get), ...))`).
 3. **Translate its texts**: the name and the attribution are shown as they are, but the description, what is sent, and each setting's label and hint are translated. Add keys to `TextKey.java` and every `messages_*.properties`, and map them in `desktop/settings/form/ProviderTexts.java`; a provider without texts there is shown in the engine's English.
 4. **Check the service's live documentation** before you write a line: the URL shape, the azimuth convention, the time zone of the answer (Forecast.Solar answers in the place's local time), what a timestamp means (the start or the end of a period: Open-Meteo's value covers the hour *before* its stamp), and what the free plan allows. Write what you found in the class's Javadoc with the date.
-5. **Record an answer** from the real service for a neutral place (a city centre, not your home) and keep it under `src/test/resources/nl/enadeag/carchargeplanner/engine/forecast/providers/`. Scrub anything personal (your address in a rate-limit zone, a request id). Add a line to `NOTICE.md` there that credits the service and its licence, and says which answers are made by hand (a rate-limit answer you cannot easily provoke, a daylight saving day).
+5. **Record an answer** from the real service for a neutral place (a city centre, not your home) and keep it under `engine/src/test/resources/nl/enadeag/carchargeplanner/engine/forecast/providers/`. Scrub anything personal (your address in a rate-limit zone, a request id). Add a line to `NOTICE.md` there that credits the service and its licence, and says which answers are made by hand (a rate-limit answer you cannot easily provoke, a daylight saving day).
 6. **The test class**: `<YourService>Test` extends `ProviderConformance` (below), then tests what is particular to your service: the request it builds, each error, the time-zone and daylight saving handling, that a key never shows up in an error message. When its free plan needs no key, add it to `LiveProvidersTest` as well, which asks the real services before each release (CONTRIBUTING.md, What is tested where).
 7. **The documents**: add your provider's "what is sent", terms link, free-plan limits and whether commercial use is allowed to [What is sent, and to whom](privacy.md#what-is-sent-and-to-whom) in `docs/privacy.md`.
 
@@ -239,7 +239,7 @@ Declare a setting secret (the argument of `SettingSpec` just before its `format`
 
 ## Testing a provider: the conformance kit
 
-Every provider is run through the same checks, against recorded answers and without touching the network. The kit is [`ProviderConformance`](../src/test/java/nl/enadeag/carchargeplanner/engine/forecast/ProviderConformance.java); a provider's test class extends it and describes the provider in a `ProviderCase`: how to make it from an `HttpGet`, the recorded routes for a good answer, a server error, a body that is not as documented, an empty body and a rate limit (`ReplayHttp.Route.answer(part, reply)` matches a request whose address contains `part`), the retry time the rate-limit answer gives, working plain settings, secret settings with recognisable values (to find leaks), the moment the answer was recorded, and an error answer in which the server says a given text.
+Every provider is run through the same checks, against recorded answers and without touching the network. The kit is [`ProviderConformance`](../engine/src/test/java/nl/enadeag/carchargeplanner/engine/forecast/ProviderConformance.java); a provider's test class extends it and describes the provider in a `ProviderCase`: how to make it from an `HttpGet`, the recorded routes for a good answer, a server error, a body that is not as documented, an empty body and a rate limit (`ReplayHttp.Route.answer(part, reply)` matches a request whose address contains `part`), the retry time the rate-limit answer gives, working plain settings, secret settings with recognisable values (to find leaks), the moment the answer was recorded, and an error answer in which the server says a given text.
 
 What it checks:
 
@@ -258,11 +258,11 @@ What it checks:
 | Secrets | A secret setting never appears in a log line or an error message, not even when the server echoes it; nor does another provider's stored key. |
 | The server's words | An error text from the server is shown as "<provider> says: ...", without the key (also where it is cut short), control or direction characters, and at most 200 characters. |
 
-For tests of the code that *uses* providers (the forecast service, the Settings page) there is a scripted [`FakeProvider`](../src/test/java/nl/enadeag/carchargeplanner/engine/forecast/FakeProvider.java): steps, errors and crashes in the order a test gives them, with the calls it got.
+For tests of the code that *uses* providers (the forecast service, the Settings page) there is a scripted [`FakeProvider`](../engine/src/test/java/nl/enadeag/carchargeplanner/engine/forecast/FakeProvider.java): steps, errors and crashes in the order a test gives them, with the calls it got.
 
 ## Place search (optional)
 
-A provider may also offer to turn what a person typed ("Utrecht", a postcode) into places with coordinates and a time zone; the Location page of set-up and Settings uses the **primary** provider's. Return a `PlaceSearch` from `placeSearch()`, or leave the default, which returns none: the page then asks for coordinates only and says why. Open-Meteo has one ([`OpenMeteoPlaces`](../src/main/java/nl/enadeag/carchargeplanner/engine/forecast/providers/OpenMeteoPlaces.java)); Forecast.Solar does not.
+A provider may also offer to turn what a person typed ("Utrecht", a postcode) into places with coordinates and a time zone; the Location page of set-up and Settings uses the **primary** provider's. Return a `PlaceSearch` from `placeSearch()`, or leave the default, which returns none: the page then asks for coordinates only and says why. Open-Meteo has one ([`OpenMeteoPlaces`](../engine/src/main/java/nl/enadeag/carchargeplanner/engine/forecast/providers/OpenMeteoPlaces.java)); Forecast.Solar does not.
 
 - `search(text, language)` returns `PlaceResults`: `Found` with the places (each a `Place`: name, coordinates, time zone, and the optional region, country and finer area for telling two places that read alike apart), or `Failed` with a problem: `TOO_SHORT` (fewer than two characters: nothing may be sent), `UNAVAILABLE` (no network, a timeout, a 5xx), `RATE_LIMITED` (with the retry time when the service says) or `BAD_RESPONSE`. Matching nothing is not a problem: it is `Found` with no places.
 - It **never throws**, and uses a short timeout (a person is waiting at a search box) and a small largest body (Open-Meteo's is 256 kB): set them in the `Request`.

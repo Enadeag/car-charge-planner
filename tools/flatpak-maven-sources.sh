@@ -1,7 +1,7 @@
 #!/bin/sh
 # Writes src/packaging/flatpak/maven-sources.json: every file the Flatpak's Maven build downloads (the libraries, the
 # plugins and what they need), with its address on Maven Central and its SHA-256, for flatpak-builder's offline build.
-# Run it after a change to pom.xml, the Maven version in .mvn/wrapper or tools/package-flatpak.sh's Maven build, and
+# Run it after a change to a pom.xml, the Maven version in .mvn/wrapper or tools/package-flatpak.sh's Maven build, and
 # commit the result. Needs a JDK 25 or newer and the network; it builds the app once, into an empty Maven repository.
 set -eu
 cd "$(dirname "$0")/.."

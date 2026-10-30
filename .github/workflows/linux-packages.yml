@@ -9,7 +9,7 @@ on:
       - "tools/package-linux.sh"
       - "tools/test-linux-packages.sh"
       - "src/packaging/**"
-      - "pom.xml"
+      - "**/pom.xml"
       - ".mvn/**"
       - ".github/workflows/linux-packages.yml"
   push:
@@ -18,7 +18,7 @@ on:
       - "tools/package-linux.sh"
       - "tools/test-linux-packages.sh"
       - "src/packaging/**"
-      - "pom.xml"
+      - "**/pom.xml"
       - ".mvn/**"
       - ".github/workflows/linux-packages.yml"
   workflow_dispatch:

@@ -45,7 +45,7 @@ jobs:
       - name: Read the version and compare it with the tag
         id: version
         run: |
-          version=$(./mvnw -B -q help:evaluate -Dexpression=project.version -DforceStdout)
+          version=$(./mvnw -B -q -N help:evaluate -Dexpression=project.version -DforceStdout)
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "pom.xml version: $version"
           [ "$GITHUB_EVENT_NAME" = "push" ] || exit 0
@@ -181,7 +181,9 @@ jobs:
         if: failure()
         with:
           name: surefire-reports-linux
-          path: target/surefire-reports/
+          path: |
+            engine/target/surefire-reports/
+            desktop/target/surefire-reports/
           retention-days: 14
 
   installer:

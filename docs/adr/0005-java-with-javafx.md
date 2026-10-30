@@ -25,3 +25,7 @@ The engine stays as ADR 0001 describes it. The dashboard design of ADR 0004 stay
 - **Swing with FlatLaf**: mature, but a dated model for a dashboard.
 - **A server framework (Spring Boot, Quarkus, Micronaut)**: built for servers; adds start-up time and memory and fights JavaFX's own life cycle, for dependency injection that constructors already give.
 - **GraalVM native-image**: less memory, but fragile with JavaFX; kept as a later option.
+
+## Note, 2026-10-30
+
+The build is no longer one Maven module: a parent with the modules `engine` and `desktop` (ADR 0010, #263). The engine module holds only the engine and builds without JavaFX; the desktop module holds the rest and still builds `car-charge-planner.jar`.
