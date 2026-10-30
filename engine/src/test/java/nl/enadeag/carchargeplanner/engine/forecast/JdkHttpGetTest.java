@@ -94,7 +94,7 @@ class JdkHttpGetTest {
                 exchange.getResponseBody().write(part);
                 exchange.getResponseBody().flush();
                 sent.addAndGet(partSize);
-                if (!pause.isZero()) {
+                if (pause.toMillis() > 0) {
                     Thread.sleep(pause.toMillis());
                 }
             }
