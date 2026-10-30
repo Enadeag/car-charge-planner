@@ -266,32 +266,4 @@ The app shows a test notification, the same as an announcement but for its text.
 
 ## Adding a language
 
-Every text the app shows is translatable, and a language is one file. The texts are in `src/main/resources/nl/enadeag/carchargeplanner/desktop/text/`, one file per language: `messages_en.properties` for English, `messages_nl.properties` for Dutch. They are Java resource bundles in UTF-8 (type `é` and `ü` as they are, no `\u00e9` escapes). Each line is a key, the same in every language, and its text:
-
-```properties
-DAY_SET = Set {0} A ({1} kW)
-```
-
-1. **Add the language to the app.** In `desktop/text/Language.java`, add a constant with the language's ISO 639 code, the locale whose numbers, times and day names it uses, and its name in itself, which the language list shows, such as `GERMAN("de", Locale.GERMANY, "Deutsch")`. Language codes are two letters: `de`, `fr`, `pt`. Add the code to `--include-locales` in `src/packaging/jlink.args` too, so the packaged app has the language's day names and numbers.
-
-2. **Start the file.** Copy `messages_en.properties` to `messages_<code>.properties` and translate every text after the `=`. Things to know:
-   - `{0}`, `{1}` are filled in by the app. Keep each one, but put it wherever your language wants it: word order is yours. `TextKey.java` says, per key, what each number holds.
-   - An apostrophe is written twice, also in a text without `{0}`: `charger''s app` shows as "charger's app". A single one would hide the text after it (the texts are `java.text.MessageFormat` patterns).
-   - Numbers, times and day names come in already written your language's way (the locale of step 1): a decimal comma or point, a 24- or 12-hour clock, "zondag" or "Sunday". Only the words around them are yours, including the unit and the space before it (`{0} kW`, but `{0}%` without one, as English and Dutch write it).
-   - A text with a count has one form per plural with a `choice` place: `{0,choice,1#{0} day|1<{0} days}`. That covers languages with a singular and a plural, such as English and Dutch; a language with more plural forms (Polish, Russian) would need ICU4J, which the app does not use yet.
-   - Product and provider names (Open-Meteo, Forecast.Solar, "Car charge planner") and the provider's credit stay as they are.
-   - What the engine says about a settings file or a provider (the "details") stays English, like its log messages; the sentence around it is translated, and says that they are in English, such as "Details (in het Engels): {0}".
-
-3. **Check it.** `./mvnw verify` runs `MessagesBundleTest`, which fails when a language misses a key or has one too many, when a text has other `{n}` places than the English one, or when it has a single apostrophe.
-
-4. **Try it.** The app follows the system's language: on Linux `LANGUAGE`, then `LC_ALL`, `LC_MESSAGES` and `LANG` (the plain `C` locale means English); on Windows the language of the user's display. To choose one, write `{"language": "de"}` to `app.json` beside `engine.json` (`~/.config/car-charge-planner/`, Windows `%APPDATA%\car-charge-planner\`); `"system"` follows the system again. The file is read when the app starts; choosing a language in Settings (App) and saving switches the running app at once.
-
-   ```bash
-   LANGUAGE=nl ./mvnw compile exec:exec -Dapp.args="--config=docs/example-engine.json"
-   ```
-
-   Look at the dashboard, set-up, Settings, the tray icon's tooltip and menu, and a notification: long words are the usual trouble.
-
-5. **Send it.** Commit the `.properties` file and the line in `Language.java`, and open a pull request.
-
-When the English texts change, a new text gets a constant in `TextKey.java` and a key in every language's file in the same pull request; a text you cannot translate yourself may stay English there for a translator to pick up, but the key must be in every file.
+Every text the app shows is translatable, and a language is one file. How the texts are written, the words for the terms and the steps to add a language are in [docs/translating.md](docs/translating.md).
