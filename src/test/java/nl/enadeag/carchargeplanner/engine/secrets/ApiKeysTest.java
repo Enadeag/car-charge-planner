@@ -938,6 +938,65 @@ class ApiKeysTest {
     }
 
     @Test
+    void removingTakesOnlyTheNamedSettingsOutOfTheKeychain() throws SecretsProblem {
+        var keys = keys(keychain);
+        keys.save(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-SECRET-1", "other", "OM-OTHER"),
+                FORECAST_SOLAR, Map.of("api_key", "FS-SECRET-2"))));
+
+        assertThat(keys.remove(Map.of(OPEN_METEO, Set.of("other"), FORECAST_SOLAR, Set.of("api_key", "absent"))))
+                .isTrue();
+
+        assertThat(keys(keychain).load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-SECRET-1"))));
+        assertThat(keychain.entries).containsOnlyKeys("index", "forecast/open-meteo/api_key");
+    }
+
+    @Test
+    void removingWhatIsNotStoredWritesNothing() throws SecretsProblem {
+        var failing = new FailingWrites();
+        failing.entries.put(KeychainEntries.INDEX, "[]");
+
+        assertThat(keys(failing).remove(Map.of(OPEN_METEO, Set.of("api_key")))).isFalse();
+        assertThat(file().path()).doesNotExist();
+    }
+
+    @Test
+    void withoutAKeychainRemovingTakesTheSettingsOutOfTheFile() throws SecretsProblem {
+        file().write(KEYS);
+
+        assertThat(keys(new NoKeychain()).remove(Map.of(FORECAST_SOLAR, Set.of("api_key")))).isTrue();
+
+        assertThat(file().read()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-SECRET-1"))));
+    }
+
+    @Test
+    void removingFromALockedKeychainNeverPromptsAndRemovesNothing() throws SecretsProblem {
+        var lockable = lockedWithTheKeys();
+
+        assertThatThrownBy(() -> keys(lockable).remove(Map.of(OPEN_METEO, Set.of("api_key"))))
+                .isInstanceOfSatisfying(SecretsProblem.class,
+                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.LOCKED));
+
+        assertThat(lockable.prompts).hasValue(0);
+        lockable.locked = false;
+        assertThat(keys(lockable).load()).isEqualTo(KEYS);
+    }
+
+    /** Locked after it said it holds the keys, so only the save finds it locked. */
+    @Test
+    void aKeychainThatLocksBeforeTheRemovalIsWrittenNeverPromptsEither() throws SecretsProblem {
+        var lockable = new LockableKeychain();
+        var keys = keys(lockable);
+        keys.save(KEYS);
+        keys.load();
+        lockable.locked = true;
+
+        assertThatThrownBy(() -> keys.remove(Map.of(OPEN_METEO, Set.of("api_key"))))
+                .isInstanceOfSatisfying(SecretsProblem.class,
+                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.LOCKED));
+        assertThat(lockable.prompts).hasValue(0);
+    }
+
+    @Test
     void theFileWithoutAKeychainIsTheOneItWasGiven() {
         var file = file();
         assertThat(new ApiKeys(new NoKeychain(), file).file()).isSameAs(file);

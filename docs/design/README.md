@@ -15,6 +15,7 @@ Each folder is one feature and holds a **spec** (what and why, with the decision
 | `setup-screen/` | The first-run set-up wizard, typical values, units, and the translation machinery |
 | `forecast-providers/` | The forecast provider contract, the service, Open-Meteo and Forecast.Solar |
 | `multi-platform/` | The plan for Windows and macOS (Windows was built; macOS was not) |
+| `secrets/` | Decisions about keeping and removing API keys and links (`decisions.md`, from the Java version on) |
 
 ## Reading them
 

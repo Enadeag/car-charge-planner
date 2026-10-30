@@ -24,8 +24,3 @@ end_of_line = crlf
 # Markdown is not wrapped by hand: a paragraph or a list item is one line
 [*.md]
 max_line_length = off
-
-# calendars in the iCalendar format end their lines with CRLF (.gitattributes)
-[*.ics]
-end_of_line = crlf
-max_line_length = 75

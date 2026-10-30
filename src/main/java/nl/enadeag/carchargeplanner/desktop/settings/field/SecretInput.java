@@ -95,15 +95,6 @@ public final class SecretInput implements Input {
     }
 
     /**
-     * Empties the field, as the owner would, also one that shows as locked; the stored secret stays the one not
-     * edited.
-     */
-    public void clear() {
-        makeEditable();
-        hidden.setText("");
-    }
-
-    /**
      * Whether the field shows a secret that could not be read, and the owner has not chosen to enter a new one.
      *
      * @return true while it is locked

@@ -7,7 +7,7 @@ import java.util.Optional;
 
 /**
  * What the engine's config file holds: the description of the system, the planning preferences, the chosen forecast
- * providers, the weekly away periods, which of the system's values are typical values, and the calendar's settings.
+ * providers, the weekly away periods, and which of the system's values are typical values.
  *
  * @param system the owner's home and equipment
  * @param planning the owner's planning preferences
@@ -16,11 +16,9 @@ import java.util.Optional;
  *     section
  * @param typical the system's values that are typical values; {@link TypicalValues#NONE} when the file has no such
  *     section
- * @param calendar the settings for the trips read from the calendar that are not secret; {@link
- *     CalendarSettings#STANDARD} when the file has no such section
  */
 public record EngineConfig(HomeSystem system, PlanningPreferences planning, ForecastSelection forecast,
-        WeeklyAwaySchedule away, TypicalValues typical, CalendarSettings calendar) {
+        WeeklyAwaySchedule away, TypicalValues typical) {
 
     /**
      * Checks that the typical values are about panel arrays the system has.
@@ -31,21 +29,6 @@ public record EngineConfig(HomeSystem system, PlanningPreferences planning, Fore
         if (typical.panels().size() > system.panels().size()) {
             throw new IllegalArgumentException("typical.panels lists more panel arrays than system.panels has");
         }
-    }
-
-    /**
-     * A config with the {@link CalendarSettings#STANDARD} calendar settings.
-     *
-     * @param system the owner's home and equipment
-     * @param planning the owner's planning preferences
-     * @param forecast the chosen forecast providers and their settings that are not secret
-     * @param away the away periods that come back every week
-     * @param typical the system's values that are typical values
-     * @throws IllegalArgumentException when the typical values list more panel arrays than the system has
-     */
-    public EngineConfig(HomeSystem system, PlanningPreferences planning, ForecastSelection forecast,
-            WeeklyAwaySchedule away, TypicalValues typical) {
-        this(system, planning, forecast, away, typical, CalendarSettings.STANDARD);
     }
 
     /**
@@ -71,10 +54,10 @@ public record EngineConfig(HomeSystem system, PlanningPreferences planning, Fore
      *
      * @param newSystem the system to keep
      * @param newTypical which of its values are typical values
-     * @return a config with the same planning, forecast, away periods and calendar settings
+     * @return a config with the same planning, forecast and away periods
      */
     public EngineConfig withSystem(HomeSystem newSystem, TypicalValues newTypical) {
-        return new EngineConfig(newSystem, planning, forecast, away, newTypical, calendar);
+        return new EngineConfig(newSystem, planning, forecast, away, newTypical);
     }
 
     /**
@@ -84,7 +67,7 @@ public record EngineConfig(HomeSystem system, PlanningPreferences planning, Fore
      * @return a config with everything else the same
      */
     public EngineConfig withPlanning(PlanningPreferences newPlanning) {
-        return new EngineConfig(system, newPlanning, forecast, away, typical, calendar);
+        return new EngineConfig(system, newPlanning, forecast, away, typical);
     }
 
     /**
@@ -94,7 +77,7 @@ public record EngineConfig(HomeSystem system, PlanningPreferences planning, Fore
      * @return a config with everything else the same
      */
     public EngineConfig withForecast(ForecastSelection newForecast) {
-        return new EngineConfig(system, planning, newForecast, away, typical, calendar);
+        return new EngineConfig(system, planning, newForecast, away, typical);
     }
 
     /**
@@ -104,16 +87,6 @@ public record EngineConfig(HomeSystem system, PlanningPreferences planning, Fore
      * @return a config with everything else the same
      */
     public EngineConfig withAway(WeeklyAwaySchedule newAway) {
-        return new EngineConfig(system, planning, forecast, newAway, typical, calendar);
-    }
-
-    /**
-     * The config with other calendar settings.
-     *
-     * @param newCalendar the calendar's settings that are not secret
-     * @return a config with everything else the same
-     */
-    public EngineConfig withCalendar(CalendarSettings newCalendar) {
-        return new EngineConfig(system, planning, forecast, away, typical, newCalendar);
+        return new EngineConfig(system, planning, forecast, newAway, typical);
     }
 }

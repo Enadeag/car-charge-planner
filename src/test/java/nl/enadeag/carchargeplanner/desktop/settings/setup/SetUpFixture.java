@@ -20,10 +20,6 @@ import nl.enadeag.carchargeplanner.engine.Engine;
 import nl.enadeag.carchargeplanner.engine.ManualScheduler;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
-import nl.enadeag.carchargeplanner.engine.calendar.CalendarFeed;
-import nl.enadeag.carchargeplanner.engine.calendar.CalendarFetcher;
-import nl.enadeag.carchargeplanner.engine.calendar.ConsentFile;
-import nl.enadeag.carchargeplanner.engine.calendar.IcsReader;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.Coordinates;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
@@ -38,7 +34,6 @@ import nl.enadeag.carchargeplanner.engine.forecast.PlaceSearch;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderError;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.forecast.Providers;
-import nl.enadeag.carchargeplanner.engine.forecast.ReplayHttp;
 import nl.enadeag.carchargeplanner.engine.forecast.SolarSite;
 import nl.enadeag.carchargeplanner.engine.forecast.SunnyDays;
 import nl.enadeag.carchargeplanner.engine.forecast.providers.ForecastSolar;
@@ -127,9 +122,7 @@ final class SetUpFixture {
         engine = new Engine(new ConfigFile(configPath),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
                 new AwayFile(folder.resolve("away.json")), new TripFile(folder.resolve("trips.json")),
-                new BatteryFile(folder.resolve("battery.json")),
-                new ConsentFile(folder.resolve("calendar-consents.json")),
-                new CalendarFeed(new CalendarFetcher(new ReplayHttp(List.of())), new IcsReader()), clock,
+                new BatteryFile(folder.resolve("battery.json")), clock,
                 new Announcer(new AnnouncedWindows(folder.resolve("announced.json")),
                         new ToldTrips(folder.resolve("trip-notices.json")), _ -> { }),
                 new ManualScheduler());

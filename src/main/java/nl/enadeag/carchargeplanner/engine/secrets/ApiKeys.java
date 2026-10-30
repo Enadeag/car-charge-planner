@@ -1,10 +1,13 @@
 package nl.enadeag.carchargeplanner.engine.secrets;
 
+import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import java.lang.System.Logger.Level;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Where the API keys are kept: in the system keychain, or in a private file when there is no usable keychain. While
@@ -257,7 +260,44 @@ public final class ApiKeys implements SecretsSource {
      */
     public void applyChanges(KeyChanges changes, Runnable prompting) throws SecretsProblem {
         changes.entered().checkNames();
-        store(new Edit() {
+        store(changing(changes), prompting);
+    }
+
+    /**
+     * Removes these settings from where the keys are kept, without asking the owner anything: unlike
+     * {@link #applyChanges(KeyChanges, Runnable)} it never has the system ask to unlock the keychain, so it can run
+     * unasked, such as at start-up. Writes only when one of them is stored; it then saves as
+     * {@link #applyChanges(KeyChanges, Runnable)} does, so keys kept in the file move into a keychain that can be used.
+     * While the keychain is locked they are still removed from the file, which needs no keychain, so a secret kept
+     * there does not stay behind for as long as the owner leaves the keychain locked. Blocks while the keychain
+     * answers: call it away from the user interface's thread.
+     *
+     * @param names per provider, the setting names to remove; one that is not stored is passed over
+     * @return true when one of them was stored and is removed now; false when none was stored
+     * @throws SecretsProblem of the kind {@link SecretsProblem.Kind#LOCKED} while the keychain is locked: the keychain
+     *     may still hold an older copy, so the caller should try again once it can be read, while the file, when there
+     *     is one, no longer holds them; of the kind {@link SecretsProblem.Kind#FAILED} when the keychain or the file
+     *     could not be read, or the file not written
+     */
+    public boolean remove(Map<ProviderId, Set<String>> names) throws SecretsProblem {
+        var changes = new KeyChanges(Secrets.NONE, names);
+        synchronized (saving) {
+            var stored = load();
+            if (changes.applyTo(stored).equals(stored)) {
+                return false;
+            }
+            if (intoKeychainElseFile(changing(changes)) == SaveResult.LOCKED) {
+                if (file.exists()) {
+                    intoFile(changing(changes), "they have not been moved into the system keychain");
+                }
+                throw new SecretsProblem(SecretsProblem.Kind.LOCKED, "The system keychain is locked.");
+            }
+            return true;
+        }
+    }
+
+    private static Edit changing(KeyChanges changes) {
+        return new Edit() {
             @Override
             public Secrets apply(Secrets stored) {
                 return changes.applyTo(stored);
@@ -267,7 +307,7 @@ public final class ApiKeys implements SecretsSource {
             public boolean replaces() {
                 return false;
             }
-        }, prompting);
+        };
     }
 
     private void store(Edit edit, Runnable prompting) throws SecretsProblem {

@@ -400,20 +400,6 @@
   },
   {
     "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/commons-codec/commons-codec/1.17.0/commons-codec-1.17.0.jar",
-    "sha256": "f700de80ac270d0344fdea7468201d8b9c805e5c648331c3619f2ee067ccfc59",
-    "dest": "maven-local/commons-codec/commons-codec/1.17.0",
-    "dest-filename": "commons-codec-1.17.0.jar"
-  },
-  {
-    "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/commons-codec/commons-codec/1.17.0/commons-codec-1.17.0.pom",
-    "sha256": "c01c4cda5e408f41ed1d83e4a0a170cf53801b6338aba49f0f904786bc1214fc",
-    "dest": "maven-local/commons-codec/commons-codec/1.17.0",
-    "dest-filename": "commons-codec-1.17.0.pom"
-  },
-  {
-    "type": "file",
     "url": "https://repo.maven.apache.org/maven2/commons-codec/commons-codec/1.17.1/commons-codec-1.17.1.pom",
     "sha256": "7fa0db4d8150daf932958b8aea89ee24abb4d18e2316a5de535278fc131512a0",
     "dest": "maven-local/commons-codec/commons-codec/1.17.1",
@@ -2696,20 +2682,6 @@
   },
   {
     "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/org/mnode/ical4j/ical4j/4.4.0/ical4j-4.4.0.jar",
-    "sha256": "f4cac5c4a16d8c0f2228ad0e3221b90d069ae0efea73402b51888468e86405f9",
-    "dest": "maven-local/org/mnode/ical4j/ical4j/4.4.0",
-    "dest-filename": "ical4j-4.4.0.jar"
-  },
-  {
-    "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/org/mnode/ical4j/ical4j/4.4.0/ical4j-4.4.0.pom",
-    "sha256": "779a777bc89a2992645db9eea5ce0c902c08ad73a5e1ea241e1b4d8bd6b6ca2b",
-    "dest": "maven-local/org/mnode/ical4j/ical4j/4.4.0",
-    "dest-filename": "ical4j-4.4.0.pom"
-  },
-  {
-    "type": "file",
     "url": "https://repo.maven.apache.org/maven2/org/mockito/mockito-bom/4.11.0/mockito-bom-4.11.0.pom",
     "sha256": "d8531a746c988f7f68ed5f188cdea945006aea993ec5df9e524e0d27d61491da",
     "dest": "maven-local/org/mockito/mockito-bom/4.11.0",
@@ -2987,20 +2959,6 @@
     "sha256": "13d15ddfe9946b8427bb7b4b081ab63962285eed0bf6fa5142aea25a46e15814",
     "dest": "maven-local/org/sonatype/spice/spice-parent/15",
     "dest-filename": "spice-parent-15.pom"
-  },
-  {
-    "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/org/threeten/threeten-extra/1.8.0/threeten-extra-1.8.0.jar",
-    "sha256": "51e4d21edc4e9447f7760c050e0baee75d7d973f387ba605a17abdc4d24fd6d8",
-    "dest": "maven-local/org/threeten/threeten-extra/1.8.0",
-    "dest-filename": "threeten-extra-1.8.0.jar"
-  },
-  {
-    "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/org/threeten/threeten-extra/1.8.0/threeten-extra-1.8.0.pom",
-    "sha256": "a5d8cdf2592bda1ef405965883db2da431b267c76de300d075821e20f6dc0c7d",
-    "dest": "maven-local/org/threeten/threeten-extra/1.8.0",
-    "dest-filename": "threeten-extra-1.8.0.pom"
   },
   {
     "type": "file",
