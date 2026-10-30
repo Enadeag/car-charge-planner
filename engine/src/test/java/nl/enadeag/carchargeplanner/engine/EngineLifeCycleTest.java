@@ -83,7 +83,7 @@ class EngineLifeCycleTest {
                 new AwayFile(folder.resolve("away.json")), new TripFile(folder.resolve("trips.json")),
                 new BatteryFile(folder.resolve("battery.json")), Clock.fixed(NOW, ZoneOffset.UTC),
                 new Announcer(new AnnouncedWindows(folder.resolve("announced.json")),
-                        new ToldTrips(folder.resolve("trip-notices.json")), _ -> { }), on);
+                        new ToldTrips(folder.resolve("trip-notices.json")), ignored -> { }), on);
     }
 
     private Engine started() throws Exception {
@@ -141,7 +141,7 @@ class EngineLifeCycleTest {
         engine.setBatteryLevel(new Percent(72));
         planner.runPending();
 
-        assertThat(battery(told.getLast())).isEqualTo(new Percent(72));
+        assertThat(battery(told.get(told.size() - 1))).isEqualTo(new Percent(72));
     }
 
     @Test
@@ -165,7 +165,7 @@ class EngineLifeCycleTest {
         planner.runPending();
 
         assertThat(told).hasSize(1);
-        assertThat(battery(told.getFirst())).isEqualTo(new Percent(72));
+        assertThat(battery(told.get(0))).isEqualTo(new Percent(72));
     }
 
     @Test

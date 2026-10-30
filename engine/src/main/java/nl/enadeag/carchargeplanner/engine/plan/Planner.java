@@ -189,7 +189,8 @@ public final class Planner {
             charge = new TripCharge(trip, tripPct, requiredPct, forNextTripsPct, latestBoost(charge, before, input),
                     List.of());
         }
-        var departure = project(input, with(before, charge)).departures().getLast();
+        var departures = project(input, with(before, charge)).departures();
+        var departure = departures.get(departures.size() - 1);
         double shortPct = charge.neededPct() - departure.solarPct();
         if (shortPct <= MIN_SHORTFALL_PCT) {
             return charge;
@@ -211,7 +212,8 @@ public final class Planner {
                 day = day.minusDays(1)) {
             var boosted = new TripCharge(charge.trip(), charge.tripPct(), charge.requiredPct(),
                     charge.forNextTripsPct(), day, List.of());
-            double pct = project(input, with(before, boosted)).departures().getLast().solarPct();
+            var departures = project(input, with(before, boosted)).departures();
+            double pct = departures.get(departures.size() - 1).solarPct();
             if (pct > bestPct + EPS) {
                 best = day;
                 bestPct = pct;
@@ -391,7 +393,7 @@ public final class Planner {
         chosen.addAll(finder.windows(runs, neededKwh));
         windows.addAll(chosen);
         double gainedPct = solarKwh(chosen) * system.charger().efficiency() / system.car().usableBatteryKwh() * 100;
-        return Math.clamp(levelPct + gainedPct, levelPct, Math.max(levelPct, capPct));
+        return Math.min(Math.max(levelPct + gainedPct, levelPct), Math.max(levelPct, capPct));
     }
 
     private static boolean within(Instant moment, Instant from, Instant to) {
@@ -490,6 +492,6 @@ public final class Planner {
         var today = today(now);
         var start = today.atStartOfDay(zone).toInstant();
         var end = today.plusDays(1).atStartOfDay(zone).toInstant();
-        return Math.clamp(Hours.between(now, end) / Hours.between(start, end), 0.0, 1.0);
+        return Math.min(Math.max(Hours.between(now, end) / Hours.between(start, end), 0.0), 1.0);
     }
 }

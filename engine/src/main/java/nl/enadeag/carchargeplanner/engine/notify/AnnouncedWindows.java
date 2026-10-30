@@ -43,7 +43,7 @@ public final class AnnouncedWindows {
      */
     public List<Window> load() {
         // a missing or damaged file: at worst a window is announced once more
-        return file.read() instanceof Stored.Found<List<Window>>(var windows) ? windows : List.of();
+        return file.read().orElse(List.of());
     }
 
     /**
@@ -55,7 +55,7 @@ public final class AnnouncedWindows {
     public void save(List<Window> windows) {
         try {
             file.write(List.copyOf(windows));
-        } catch (IOException _) {
+        } catch (IOException ignored) {
             // the windows are kept for this run all the same: the announcer remembers them itself
         }
     }
@@ -100,7 +100,7 @@ public final class AnnouncedWindows {
         private static Optional<Instant> instant(JsonNode stamp) {
             try {
                 return stamp.isString() ? Optional.of(Instant.parse(stamp.stringValue())) : Optional.empty();
-            } catch (DateTimeException _) {
+            } catch (DateTimeException ignored) {
                 return Optional.empty();
             }
         }

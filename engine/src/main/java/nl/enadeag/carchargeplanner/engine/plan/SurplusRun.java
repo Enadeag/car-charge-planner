@@ -25,7 +25,7 @@ record SurplusRun(List<Segment> segments) {
      * @return the start of the first segment
      */
     Instant start() {
-        return segments.getFirst().start();
+        return segments.get(0).start();
     }
 
     /**
@@ -34,7 +34,7 @@ record SurplusRun(List<Segment> segments) {
      * @return the end of the last segment
      */
     Instant end() {
-        return segments.getLast().end();
+        return segments.get(segments.size() - 1).end();
     }
 
     /**

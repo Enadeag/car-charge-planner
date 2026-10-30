@@ -195,7 +195,7 @@ public final class ApiKeys implements SecretsSource {
             try {
                 inFile = file.read();
                 inFile.checkNames();
-            } catch (SecretsProblem _) {
+            } catch (SecretsProblem ignored) {
                 waitBeforeAskingKeychain();
                 keptIn(KeyStorage.FILE, "the file could not be read, or holds a name that is not allowed");
                 return;
@@ -348,7 +348,7 @@ public final class ApiKeys implements SecretsSource {
         synchronized (turn) {
             try {
                 load();
-            } catch (SecretsProblem _) {
+            } catch (SecretsProblem ignored) {
                 // where they are kept is known all the same
             }
             return where == null ? KeyStorage.FILE : where;
@@ -439,7 +439,7 @@ public final class ApiKeys implements SecretsSource {
             var inFile = file.read();
             inFile.checkNames();
             return new StoredKeys(KeyChanges.entering(inFile).applyTo(inKeychain), true);
-        } catch (SecretsProblem _) {
+        } catch (SecretsProblem ignored) {
             return new StoredKeys(inKeychain, false);
         }
     }
@@ -470,7 +470,7 @@ public final class ApiKeys implements SecretsSource {
             if (!edit.replaces() && file.exists()) {
                 try {
                     stored = file.read();
-                } catch (SecretsProblem _) {
+                } catch (SecretsProblem ignored) {
                     // set aside by the write
                 }
             }

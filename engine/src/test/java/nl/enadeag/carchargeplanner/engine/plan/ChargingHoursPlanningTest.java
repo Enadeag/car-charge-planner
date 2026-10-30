@@ -50,7 +50,7 @@ class ChargingHoursPlanningTest {
     private static TripAdvice tripAdvice(PlanningPreferences preferences, double levelPct, Instant now, Trip trip) {
         var away = new AwayTimes(List.of(), List.of(), List.of(trip));
         return new Planner(CAR, preferences, away).planWithTrips(dark(3), new Percent(levelPct), now, List.of())
-                .trips().getFirst();
+                .trips().get(0);
     }
 
     private static GridAdvice gridAdvice(HomeSystem system, PlanningPreferences preferences,
@@ -105,7 +105,7 @@ class ChargingHoursPlanningTest {
         var away = new AwayTimes(List.of(), List.of(new OneOffAwayPeriod(at(SAT, 6, 30), at(SAT, 7, 30))),
                 List.of(trip(SAT, 11, 0, 100)));
         var advice = new Planner(CAR, hours, away).planWithTrips(dark(3), new Percent(40), at(FRI, 23), List.of())
-                .trips().getFirst();
+                .trips().get(0);
         var grid = advice.grid().orElseThrow();
         assertThat(grid.start()).isEqualTo(TripGridCharge.Start.NOW_OUTSIDE_CHARGING_HOURS);
         assertThat(grid.window().start()).isEqualTo(at(FRI, 23));

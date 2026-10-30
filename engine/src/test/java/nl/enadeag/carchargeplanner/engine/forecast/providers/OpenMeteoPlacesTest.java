@@ -45,7 +45,7 @@ class OpenMeteoPlacesTest {
     }
 
     private Map<String, String> query() {
-        return Arrays.stream(http.requests.getFirst().uri().getRawQuery().split("&")).map(pair -> pair.split("=", 2))
+        return Arrays.stream(http.requests.get(0).uri().getRawQuery().split("&")).map(pair -> pair.split("=", 2))
                 .collect(Collectors.toMap(pair -> pair[0], pair -> URLDecoder.decode(pair[1], StandardCharsets.UTF_8)));
     }
 
@@ -54,8 +54,8 @@ class OpenMeteoPlacesTest {
         var places = found(AMSTERDAM);
 
         assertThat(places).hasSize(8);
-        assertThat(places.getFirst().label()).isEqualTo("Amsterdam, North Holland, The Netherlands");
-        assertThat(places.getFirst()).extracting(Place::location, Place::timezone)
+        assertThat(places.get(0).label()).isEqualTo("Amsterdam, North Holland, The Netherlands");
+        assertThat(places).first().extracting(Place::location, Place::timezone)
                 .containsExactly(new Coordinates(52.37403, 4.88969), ZoneId.of("Europe/Amsterdam"));
         assertThat(places.get(4).label()).isEqualTo("eMvelo, Mpumalanga, South Africa");
         assertThat(http.requests).allMatch(r -> r.timeout().compareTo(Duration.ofSeconds(10)) <= 0);
@@ -68,7 +68,7 @@ class OpenMeteoPlacesTest {
 
         assertThat(new OpenMeteoPlaces(tooLarge).search("Amsterdam", "en"))
                 .isEqualTo(new PlaceResults.Failed(PlaceResults.Problem.UNAVAILABLE));
-        assertThat(tooLarge.requests.getFirst().maxBody()).isEqualTo(ByteSize.ofKilobytes(256));
+        assertThat(tooLarge.requests.get(0).maxBody()).isEqualTo(ByteSize.ofKilobytes(256));
     }
 
     @Test
@@ -89,12 +89,12 @@ class OpenMeteoPlacesTest {
     @Test
     void theRequestNamesTheTextTheCountTheLanguageAndAShortTimeout() {
         search("  New   York ", "nl_NL", new Reply(200, AMSTERDAM));
-        var uri = http.requests.getFirst().uri();
+        var uri = http.requests.get(0).uri();
 
         assertThat(uri.getScheme() + "://" + uri.getHost() + uri.getPath())
                 .isEqualTo("https://geocoding-api.open-meteo.com/v1/search");
         assertThat(query()).isEqualTo(Map.of("name", "New York", "count", "8", "language", "nl", "format", "json"));
-        assertThat(http.requests.getFirst().timeout()).isEqualTo(Duration.ofSeconds(6));
+        assertThat(http.requests.get(0).timeout()).isEqualTo(Duration.ofSeconds(6));
     }
 
     @Test
@@ -136,7 +136,7 @@ class OpenMeteoPlacesTest {
     void theCountryCodeStandsInForAMissingCountryName() {
         var row = "{\"results\": [{\"name\": \"Place\", \"latitude\": 1.0, \"longitude\": 2.0, \"timezone\": \"UTC\", "
                 + "\"country_code\": \"NL\"}]}";
-        assertThat(found(row).getFirst().label()).isEqualTo("Place, NL");
+        assertThat(found(row).get(0).label()).isEqualTo("Place, NL");
     }
 
     @ParameterizedTest

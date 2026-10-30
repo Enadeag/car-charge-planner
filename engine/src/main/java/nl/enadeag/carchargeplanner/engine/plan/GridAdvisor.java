@@ -8,6 +8,7 @@ import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -160,7 +161,9 @@ public final class GridAdvisor {
     private Optional<Window> latestPlacement(List<DayPlan> days, double energyKwh, List<ForecastStep> forecast,
             Instant notBefore, List<BlockedTime> tripGrid) {
         var awayTime = away.during(forecast, zone);
-        for (var day : days.reversed()) {
+        var latestFirst = new ArrayList<>(days);
+        Collections.reverse(latestFirst);
+        for (var day : latestFirst) {
             var unavailable = new ArrayList<>(awayTime);
             unavailable.addAll(tripGrid);
             day.windows().forEach(window -> unavailable.add(new BlockedTime(window.start(), window.end())));

@@ -61,7 +61,7 @@ public final class TripFile {
      *     empty when the file is missing or cannot be used
      */
     public List<Trip> trips(Instant now) {
-        return file.read() instanceof Stored.Found<Entries>(var entries) ? notPast(entries.trips(), now) : List.of();
+        return notPast(file.read().orElse(new Entries(List.of(), 0)).trips(), now);
     }
 
     /**
@@ -122,14 +122,20 @@ public final class TripFile {
 
     /** The stored trips, when writing them back loses nothing. */
     private List<Trip> storedForChange() throws IOException {
-        return switch (file.read()) {
-            case Stored.Absent<Entries> _ -> List.of();
-            case Stored.Unusable<Entries> unusable -> throw new IOException(
+        var stored = file.read();
+        if (stored instanceof Stored.Absent<?>) {
+            return List.of();
+        } else if (stored instanceof Stored.Unusable<Entries> unusable) {
+            throw new IOException(
                     file.path() + " could not be read, so it is left as it is: " + unusable.detail());
-            case Stored.Found<Entries>(var entries) when entries.damaged() > 0 -> throw new IOException(
-                    file.path() + " holds " + entries.damaged() + " damaged entries, so it is left as it is");
-            case Stored.Found<Entries>(var entries) -> entries.trips();
-        };
+        } else if (stored instanceof Stored.Found<Entries> found && found.value().damaged() > 0) {
+            throw new IOException(
+                    file.path() + " holds " + found.value().damaged() + " damaged entries, so it is left as it is");
+        } else if (stored instanceof Stored.Found<Entries> found) {
+            return found.value().trips();
+        } else {
+            throw new IllegalStateException("unknown kind of stored value: " + stored);
+        }
     }
 
     /** The JSON shape of the trips. */
@@ -184,7 +190,7 @@ public final class TripFile {
             try {
                 return Optional.of(new Trip(Instant.parse(departure.stringValue()), Instant.parse(back.stringValue()),
                         distance.doubleValue(), canCharge.booleanValue(), notWithThisCar.asBoolean(false)));
-            } catch (DateTimeException | IllegalArgumentException _) {
+            } catch (DateTimeException | IllegalArgumentException ignored) {
                 return Optional.empty();
             }
         }

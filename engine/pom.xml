@@ -15,6 +15,12 @@
   <artifactId>car-charge-planner-engine</artifactId>
   <name>Car charge planner engine</name>
 
+  <properties>
+    <!-- Java 17, not the desktop's 25, so the Android app can compile the engine (ADR 0010): the compiler then
+         refuses a newer language feature or API -->
+    <maven.compiler.release>17</maven.compiler.release>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>tools.jackson.core</groupId>

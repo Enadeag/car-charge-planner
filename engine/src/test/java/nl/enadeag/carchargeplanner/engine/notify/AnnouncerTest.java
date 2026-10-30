@@ -183,7 +183,7 @@ class AnnouncerTest {
     void anAnnouncementCarriesWhatTheMessageNeeds() {
         check(dayWith(window(10, 15)), at(DAY, 9, 50));
 
-        var announcement = told.getFirst();
+        var announcement = told.get(0);
         assertThat(announcement.zone()).isEqualTo(BRUSSELS);
         assertThat(announcement.phases().count()).isEqualTo(1);
         assertThat(announcement.minimumPct().value()).isEqualTo(30);

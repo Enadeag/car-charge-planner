@@ -48,7 +48,7 @@ class TripPlanningTest {
     private record Planned(Plan plan, Optional<GridAdvice> gridAdvice) {
 
         TripAdvice trip() {
-            return plan.trips().getFirst();
+            return plan.trips().get(0);
         }
 
         DayPlan day(LocalDate date) {
@@ -166,7 +166,7 @@ class TripPlanningTest {
         // 30 % + 20.7 %: the Thursday's 80 % is enough
         assertThat(planned.trip().neededPct().value()).isCloseTo(50.7, CLOSE);
         assertThat(planned.trip().grid()).isEmpty();
-        assertThat(planned.day(THU)).isEqualTo(without.getFirst());
+        assertThat(planned.day(THU)).isEqualTo(without.get(0));
         assertThat(planned.trip().returnLevelPct().value()).isCloseTo(80 - 20.7, CLOSE);
     }
 

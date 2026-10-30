@@ -38,7 +38,11 @@ class JdkHttpGetTest {
     @BeforeEach
     void startServer() throws IOException {
         server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
-        handlers = Executors.newCachedThreadPool(Thread.ofPlatform().daemon().factory());
+        handlers = Executors.newCachedThreadPool(runnable -> {
+            var thread = new Thread(runnable);
+            thread.setDaemon(true);
+            return thread;
+        });
         server.setExecutor(handlers);
         server.createContext("/refusal", exchange -> {
             received.set(exchange.getRequestHeaders());
@@ -69,7 +73,7 @@ class JdkHttpGetTest {
 
     @AfterEach
     void stopServer() {
-        client.close();
+        // no client.close(): Java 17's HttpClient has none, and it stops once nothing refers to it
         server.stop(0);
         handlers.shutdownNow();
     }
@@ -90,11 +94,11 @@ class JdkHttpGetTest {
                 exchange.getResponseBody().write(part);
                 exchange.getResponseBody().flush();
                 sent.addAndGet(partSize);
-                if (pause.isPositive()) {
-                    Thread.sleep(pause);
+                if (!pause.isZero()) {
+                    Thread.sleep(pause.toMillis());
                 }
             }
-        } catch (IOException | InterruptedException _) {
+        } catch (IOException | InterruptedException ignored) {
             // the client hung up, or the test is over
         }
     }

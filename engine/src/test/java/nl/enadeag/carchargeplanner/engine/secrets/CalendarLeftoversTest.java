@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.engine.secrets;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
 import nl.enadeag.carchargeplanner.LogCapture;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
@@ -91,7 +92,7 @@ class CalendarLeftoversTest {
             CalendarLeftovers.remove(keys(), folder);
 
             assertThat(log.lines()).hasSize(2);
-            assertThat(log.lines().getLast()).startsWith("WARNING ").contains("next start");
+            assertThat(log.lines()).last(STRING).startsWith("WARNING ").contains("next start");
         }
         assertThat(keychain.prompts).hasValue(0);
         assertThat(consents()).doesNotExist();
@@ -124,7 +125,7 @@ class CalendarLeftoversTest {
         try (var log = LogCapture.of(CalendarLeftovers.class)) {
             CalendarLeftovers.remove(keys(), folder);
 
-            assertThat(log.lines().getFirst()).startsWith("WARNING ").contains(consents().toString());
+            assertThat(log.lines()).first(STRING).startsWith("WARNING ").contains(consents().toString());
         }
         assertThat(keys().load()).isEqualTo(FORECAST_KEYS);
     }

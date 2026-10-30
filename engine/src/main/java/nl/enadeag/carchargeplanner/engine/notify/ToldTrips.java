@@ -46,7 +46,7 @@ public final class ToldTrips {
      */
     public List<ToldTrip> load() {
         // a missing or damaged file: at worst a notice is told once more
-        return file.read() instanceof Stored.Found<List<ToldTrip>>(var trips) ? trips : List.of();
+        return file.read().orElse(List.of());
     }
 
     /**
@@ -58,7 +58,7 @@ public final class ToldTrips {
     public void save(List<ToldTrip> trips) {
         try {
             file.write(List.copyOf(trips));
-        } catch (IOException _) {
+        } catch (IOException ignored) {
             // the trips are kept for this run all the same: the announcer remembers them itself
         }
     }
@@ -104,7 +104,7 @@ public final class ToldTrips {
         private static Optional<Instant> departure(JsonNode stamp) {
             try {
                 return stamp.isString() ? Optional.of(Instant.parse(stamp.stringValue())) : Optional.empty();
-            } catch (DateTimeException _) {
+            } catch (DateTimeException ignored) {
                 return Optional.empty();
             }
         }

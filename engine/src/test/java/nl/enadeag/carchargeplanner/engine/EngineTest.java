@@ -226,7 +226,7 @@ class EngineTest {
 
         assertThat(planned.batteryLevelPct()).isEqualTo(new Percent(72));
         assertThat(planned.batteryAssumed()).isFalse();
-        assertThat(planned.days().getFirst().startLevelPct()).isEqualTo(new Percent(72));
+        assertThat(planned.days().get(0).startLevelPct()).isEqualTo(new Percent(72));
     }
 
     @Test
@@ -234,7 +234,7 @@ class EngineTest {
         var planned = planned(engine(clockAt(7)));
 
         assertThat(planned.batteryAssumed()).isTrue();
-        assertThat(planned.days().getFirst().startLevelPct()).isEqualTo(Engine.ASSUMED_BATTERY_PCT);
+        assertThat(planned.days().get(0).startLevelPct()).isEqualTo(Engine.ASSUMED_BATTERY_PCT);
     }
 
     @Test
@@ -245,12 +245,12 @@ class EngineTest {
         assertThat(planned.baseloadKw()).isEqualTo(0.5);
         assertThat(planned.minimumPct()).isEqualTo(new Percent(30));
         assertThat(planned.targetPct()).isEqualTo(new Percent(80));
-        var today = planned.days().getFirst().forecast();
+        var today = planned.days().get(0).forecast();
         assertThat(today).hasSize(24);
-        assertThat(today.getFirst().start()).isEqualTo(DAY.atStartOfDay(BRUSSELS).toInstant());
+        assertThat(today.get(0).start()).isEqualTo(DAY.atStartOfDay(BRUSSELS).toInstant());
         assertThat(today).filteredOn(step -> step.powerKw() > 0).hasSize(6)
                 .allSatisfy(step -> assertThat(step.powerKw()).isEqualTo(4.0));
-        assertThat(planned.days().get(1).forecast().getFirst().start())
+        assertThat(planned.days().get(1).forecast().get(0).start())
                 .isEqualTo(DAY.plusDays(1).atStartOfDay(BRUSSELS).toInstant());
     }
 
@@ -263,7 +263,7 @@ class EngineTest {
 
         assertThat(engine.addAwayPeriod(away)).containsExactly(away);
         assertThat(engine(clockAt(7)).awayPeriods()).containsExactly(away);
-        assertThat(planned(engine).days().getFirst().windows()).isEmpty(); // the sun shines from 10:00 to 16:00
+        assertThat(planned(engine).days().get(0).windows()).isEmpty(); // the sun shines from 10:00 to 16:00
 
         assertThat(engine.removeAwayPeriod(away)).isEmpty();
         assertThat(planned(engine).days()).isEqualTo(atHome);
@@ -276,7 +276,7 @@ class EngineTest {
                 ", \"away\": {\"recurring\": [{\"weekday\": \"" + friday + "\", \"start\": \"08:00\", \"end\": \"18:00\"}]}}"));
 
         var days = planned(engine(clockAt(7))).days();
-        assertThat(days.getFirst().windows()).isEmpty();
+        assertThat(days.get(0).windows()).isEmpty();
         assertThat(days.get(1).windows()).isNotEmpty();
     }
 
@@ -617,7 +617,7 @@ class EngineTest {
     @Test
     void theOwnerIsToldOnceAheadOfTheWindowWhatToSet() {
         startedAt(clockAt(9, 50));
-        var announcement = told.getFirst();
+        var announcement = told.get(0);
         assertThat(announcement.kind()).isEqualTo(AnnouncementKind.SOLAR_WINDOW);
         assertThat(announcement.window().start()).isEqualTo(DAY.atTime(10, 0).atZone(BRUSSELS).toInstant());
         assertThat(announcement.window().amps()).isEqualTo(13);
@@ -668,7 +668,7 @@ class EngineTest {
 
         startedAt(clockAt(9, 50));
 
-        assertThat(((Outlook.Planned) rounds.getFirst()).forecastSource().freshness()).isEqualTo(Freshness.STALE);
+        assertThat(((Outlook.Planned) rounds.get(0)).forecastSource().freshness()).isEqualTo(Freshness.STALE);
         assertThat(told).isEmpty();
     }
 
@@ -727,7 +727,7 @@ class EngineTest {
 
         var window = planned(engine(clockAt(11))).nextWindow().orElseThrow();
 
-        assertThat(window).extracting(w -> w.start(), w -> w.amps()).containsExactly(told.getFirst().window().start(), 13);
+        assertThat(window).extracting(w -> w.start(), w -> w.amps()).containsExactly(told.get(0).window().start(), 13);
     }
 
     private static nl.enadeag.carchargeplanner.engine.config.HomeSystem exampleSystem() {
@@ -770,7 +770,7 @@ class EngineTest {
             asked.countDown();
             try {
                 answer.await(10, TimeUnit.SECONDS);
-            } catch (InterruptedException _) {
+            } catch (InterruptedException ignored) {
                 throw new ProviderError.Unavailable("interrupted");
             }
             return days(2, 4.0);
@@ -872,7 +872,7 @@ class EngineTest {
         assertThat(engine.addTrip(trip)).containsExactly(trip);
         assertThat(engine(clockAt(7)).trips()).containsExactly(trip);
         var away = planned(engine).days(); // the sun shines from 10:00 to 16:00
-        assertThat(away.getFirst().windows()).isEmpty();
+        assertThat(away.get(0).windows()).isEmpty();
         assertThat(away.get(1).windows()).isEmpty();
 
         assertThat(engine.removeTrip(trip)).isEmpty();
@@ -889,7 +889,7 @@ class EngineTest {
         var advice = planned(engine).tripAdvice();
         assertThat(advice).extracting(TripAdvice::trip).containsExactly(trip);
         // 30 % + 100 km at 0.207 kWh of the 60 kWh battery + the day's 40 km at 0.18 kWh
-        assertThat(advice.getFirst().neededPct().value()).isCloseTo(30 + 34.5 + 12, within(1e-9));
+        assertThat(advice.get(0).neededPct().value()).isCloseTo(30 + 34.5 + 12, within(1e-9));
     }
 
     @Test
@@ -919,7 +919,7 @@ class EngineTest {
         assertThat(engine.changeTrip(trip, evening)).containsExactly(evening);
         assertThat(engine.trips()).containsExactly(evening);
         // the evening leaves the sunny hours free
-        assertThat(planned(engine).days().getFirst().windows()).isEqualTo(atHome.getFirst().windows());
+        assertThat(planned(engine).days().get(0).windows()).isEqualTo(atHome.get(0).windows());
     }
 
     @Test

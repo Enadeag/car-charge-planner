@@ -52,7 +52,7 @@ final class WindowFinder {
             }
             var segment = new Segment(start, step.end(), Charging.usableSurplusKw(step, system, preferences));
             if (canCharge(segment, unavailable)) {
-                if (!current.isEmpty() && !current.getLast().end().equals(segment.start())) {
+                if (!current.isEmpty() && !current.get(current.size() - 1).end().equals(segment.start())) {
                     runs.add(new SurplusRun(current));
                     current.clear();
                 }
@@ -83,7 +83,7 @@ final class WindowFinder {
     static Map<LocalDate, List<SurplusRun>> byDay(List<SurplusRun> runs, ZoneId zone) {
         var days = new LinkedHashMap<LocalDate, List<SurplusRun>>();
         for (var run : runs) {
-            days.computeIfAbsent(run.start().atZone(zone).toLocalDate(), _ -> new ArrayList<>()).add(run);
+            days.computeIfAbsent(run.start().atZone(zone).toLocalDate(), ignored -> new ArrayList<>()).add(run);
         }
         return days;
     }
@@ -183,8 +183,8 @@ final class WindowFinder {
     private Window window(SurplusRun run, Candidate candidate, double remaining) {
         double power = Charging.powerKw(candidate.amps(), system.charger());
         var segments = run.segments().subList(candidate.first(), candidate.last() + 1);
-        var start = segments.getFirst().start();
-        var end = segments.getLast().end();
+        var start = segments.get(0).start();
+        var end = segments.get(segments.size() - 1).end();
 
         var trimmedEnd = end;
         double delivered = 0;

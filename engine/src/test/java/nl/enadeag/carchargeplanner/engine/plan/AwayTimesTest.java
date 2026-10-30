@@ -99,7 +99,7 @@ class AwayTimesTest {
         var times = away.during(forecast(saturday, WINTER_TIME), TZ);
 
         assertThat(times).containsExactly(new BlockedTime(departure, at(WINTER_TIME, 9)));
-        assertThat(Duration.between(times.getFirst().start(), times.getFirst().end())).isEqualTo(Duration.ofHours(12));
+        assertThat(Duration.between(times.get(0).start(), times.get(0).end())).isEqualTo(Duration.ofHours(12));
     }
 
     @Test

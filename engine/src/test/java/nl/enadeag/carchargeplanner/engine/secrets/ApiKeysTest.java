@@ -577,18 +577,21 @@ class ApiKeysTest {
         lockable.answer = null;
         var keys = keys(lockable);
         var outcome = new AtomicReference<Throwable>();
-        var saving = Thread.ofVirtual().start(() -> {
+        var saving = new Thread(() -> {
             try {
                 keys.save(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"))));
             } catch (SecretsProblem | RuntimeException e) {
                 outcome.set(e);
             }
         });
+        saving.setDaemon(true);
+        saving.start();
         assertThat(lockable.prompting.await(10, TimeUnit.SECONDS)).as("the prompt shows").isTrue();
 
         assertThatThrownBy(keys::load).isInstanceOf(SecretsProblem.class); // answers at once: the keychain is locked
         keys.stopUnlocking();
-        assertThat(saving.join(Duration.ofSeconds(10))).as("the save ended").isTrue();
+        saving.join(10_000);
+        assertThat(saving.isAlive()).as("the save ended").isFalse();
 
         assertThat(outcome.get()).isInstanceOfSatisfying(SecretsProblem.class,
                 problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.LOCKED));

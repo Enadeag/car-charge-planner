@@ -146,7 +146,7 @@ class OpenMeteoTest extends ProviderConformance {
 
     @Test
     void theRequestDescribesTheSystemAndAsksOnlyForIrradiance() throws ProviderError {
-        var uri = asked(Map.of()).requests.getFirst().uri();
+        var uri = asked(Map.of()).requests.get(0).uri();
 
         assertThat(uri.getScheme() + "://" + uri.getHost() + uri.getPath()).isEqualTo("https://api.open-meteo.com/v1/forecast");
         assertThat(query(uri)).isEqualTo(Map.of("latitude", "52.37", "longitude", "4.9",
@@ -156,7 +156,7 @@ class OpenMeteoTest extends ProviderConformance {
 
     @Test
     void aServerAddressReplacesThePublicOneAndAKeyIsSentAsApikey() throws ProviderError {
-        var uri = asked(Map.of("base_url", "https://customer-api.open-meteo.com/", "api_key", SECRET)).requests.getFirst().uri();
+        var uri = asked(Map.of("base_url", "https://customer-api.open-meteo.com/", "api_key", SECRET)).requests.get(0).uri();
 
         assertThat(uri.toString()).startsWith("https://customer-api.open-meteo.com/v1/forecast?");
         assertThat(query(uri)).containsEntry("apikey", SECRET);
@@ -164,7 +164,7 @@ class OpenMeteoTest extends ProviderConformance {
 
     @Test
     void blankSettingsMeanThePublicServiceWithoutAKey() throws ProviderError {
-        var uri = asked(Map.of("base_url", "  ", "api_key", "")).requests.getFirst().uri();
+        var uri = asked(Map.of("base_url", "  ", "api_key", "")).requests.get(0).uri();
 
         assertThat(uri.toString()).startsWith("https://api.open-meteo.com/");
         assertThat(query(uri)).doesNotContainKey("apikey");
@@ -186,13 +186,13 @@ class OpenMeteoTest extends ProviderConformance {
     @ValueSource(strings = {"http://localhost:8080", "http://127.0.0.1:8080", "http://[::1]:8080", "http://LOCALHOST",
             "http://localhost:8080/open-meteo"})
     void aServerOfYourOwnOnThisComputerMayUsePlainHttp(String address) throws ProviderError {
-        assertThat(asked(Map.of("base_url", address)).requests.getFirst().uri().toString())
+        assertThat(asked(Map.of("base_url", address)).requests.get(0).uri().toString())
                 .startsWith(address + "/v1/forecast?");
     }
 
     @Test
     void itsServerAddressIsCheckedWhenEntered() {
-        assertThat(OpenMeteo.INFO.settings().getFirst().format()).isEqualTo(SettingFormat.SERVER_ADDRESS);
+        assertThat(OpenMeteo.INFO.settings().get(0).format()).isEqualTo(SettingFormat.SERVER_ADDRESS);
     }
 
     @Test

@@ -45,8 +45,7 @@ public final class BatteryFile {
      * @return the reading, or empty when none was entered or the file cannot be used
      */
     public Optional<BatteryReading> reading() {
-        return file.read() instanceof Stored.Found<BatteryReading>(var reading) ? Optional.of(reading)
-                : Optional.empty();
+        return Optional.ofNullable(file.read().orElse(null));
     }
 
     /**
@@ -73,7 +72,7 @@ public final class BatteryFile {
             }
             try {
                 return new BatteryReading(new Percent(level.doubleValue()), Instant.parse(enteredAt.stringValue()));
-            } catch (DateTimeException | IllegalArgumentException _) {
+            } catch (DateTimeException | IllegalArgumentException ignored) {
                 throw new FormatProblem("levelPct must be from 0 to 100 and enteredAt a moment such as "
                         + "2026-07-03T07:00:00Z");
             }

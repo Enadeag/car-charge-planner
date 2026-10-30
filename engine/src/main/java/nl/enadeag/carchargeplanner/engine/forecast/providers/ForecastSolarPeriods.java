@@ -69,7 +69,7 @@ final class ForecastSolarPeriods {
         var name = text(message.path("info"), "timezone");
         try {
             return name.isPresent() ? ZoneId.of(name.get()) : systemZone;
-        } catch (DateTimeException _) {
+        } catch (DateTimeException ignored) {
             throw notAsDocumented();
         }
     }
@@ -80,7 +80,7 @@ final class ForecastSolarPeriods {
             LocalDateTime local;
             try {
                 local = LocalDateTime.parse(entry.getKey(), KEY);
-            } catch (DateTimeException _) {
+            } catch (DateTimeException ignored) {
                 throw notAsDocumented();
             }
             // a time in the repeated autumn hour could be either of two instants; atZone takes the earlier one
@@ -125,7 +125,7 @@ final class ForecastSolarPeriods {
         try {
             var retryAt = OffsetDateTime.parse(stamp.orElse("")).toInstant();
             return Optional.of(retryAt.isAfter(now) ? Duration.between(now, retryAt) : Duration.ZERO);
-        } catch (DateTimeException _) {
+        } catch (DateTimeException ignored) {
             return Optional.empty();
         }
     }

@@ -61,7 +61,7 @@ public abstract class ProviderConformance {
         assertThat(made.http().unexpected).isEmpty();
         // a day of slack: a provider may give the rest of the last day
         var latest = c.now().plus(made.provider().info().horizon()).plus(java.time.Duration.ofDays(1));
-        assertThat(steps.getLast().end()).as("within the declared horizon").isBeforeOrEqualTo(latest);
+        assertThat(steps.get(steps.size() - 1).end()).as("within the declared horizon").isBeforeOrEqualTo(latest);
     }
 
     /**
@@ -71,7 +71,7 @@ public abstract class ProviderConformance {
     @Test
     void severalPanelArraysGiveOneForecastOfTheirSum() throws ProviderError {
         var c = providerCase();
-        var arrays = List.of(ProviderCase.EXAMPLE_SYSTEM.arrays().getFirst(), ProviderCase.SECOND_ARRAY);
+        var arrays = List.of(ProviderCase.EXAMPLE_SYSTEM.arrays().get(0), ProviderCase.SECOND_ARRAY);
         var system = ProviderCase.EXAMPLE_SYSTEM.withArrays(arrays);
         var made = c.provider(c.ok());
         var total = made.provider().fetch(system, c.allSettings(), c.now());
@@ -91,7 +91,8 @@ public abstract class ProviderConformance {
         }
         var counter = new AtomicInteger();
         var secondFails = new ArrayList<Route>();
-        secondFails.add(new Route(_ -> counter.getAndIncrement() >= 1, new HttpGet.Reply(503, "Unavailable"), null));
+        secondFails.add(new Route(ignored -> counter.getAndIncrement() >= 1, new HttpGet.Reply(503, "Unavailable"),
+                null));
         secondFails.addAll(c.ok());
         var failing = c.provider(secondFails).provider();
         assertThatThrownBy(() -> failing.fetch(system, c.allSettings(), c.now())).isInstanceOf(ProviderError.Unavailable.class);
@@ -205,7 +206,7 @@ public abstract class ProviderConformance {
         var made = c.provider(c.emptyBody());
         try {
             assertThat(StepRules.problems(made.provider().fetch(ProviderCase.EXAMPLE_SYSTEM, c.allSettings(), c.now()))).isEmpty();
-        } catch (ProviderError _) {
+        } catch (ProviderError ignored) {
             // a provider error is a fine answer to nothing
         }
         assertThat(made.http().unexpected).isEmpty();

@@ -495,7 +495,7 @@ class ForecastServiceTest {
 
         get(T0);
 
-        assertThat(main.calls.getFirst().settings()).isEqualTo(Map.of("api_key", SECRET));
+        assertThat(main.calls.get(0).settings()).isEqualTo(Map.of("api_key", SECRET));
     }
 
     @Test
@@ -557,7 +557,7 @@ class ForecastServiceTest {
         main.script(() -> {
             try {
                 release.await(5, TimeUnit.SECONDS);
-            } catch (InterruptedException _) {
+            } catch (InterruptedException ignored) {
                 throw new ProviderError.Unavailable("interrupted");
             }
             return day;
@@ -565,13 +565,15 @@ class ForecastServiceTest {
         var results = new CopyOnWriteArrayList<ForecastResult>();
         var workers = new ArrayList<Thread>();
         for (int i = 0; i < 2; i++) {
-            workers.add(Thread.ofPlatform().start(() -> {
+            var worker = new Thread(() -> {
                 try {
                     results.add(get(T0));
                 } catch (ForecastUnavailable e) {
                     throw new AssertionError(e);
                 }
-            }));
+            });
+            worker.start();
+            workers.add(worker);
         }
         release.countDown();
         for (var worker : workers) {
