@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: accepted; layer 2 withdrawn by ADR 0010
 ---
 
 # Trips: the plan makes sure the car can make them, and the calendar can supply them
@@ -57,3 +57,7 @@ The app's rule has been that nothing about the owner leaves the computer except 
 ## Note, 2026-10-27
 
 Two parts of layer 2 changed before it was built (#234, #235). **Geoapify replaces OpenRouteService.** HeiGIT's terms of use list sending personal data as prohibited conduct, without an exception for an owner who sends their own data with their own key, and the event locations and the home location are personal data. TomTom forbids storing its results beyond the caching its answers allow, and Mapbox, Google, LocationIQ, Stadia Maps, GraphHopper and Jawg fail on a credit card, a short storage limit or a free plan that excludes desktop apps. Geoapify's terms have neither ban, its servers are in the EU, and it keeps a request for at most 24 hours against HeiGIT's 7 days. **The results are kept per event, not per location text for 90 days:** a distance and a travel time that go once the event has passed keep far less about the owner, for a handful of extra lookups that stay well within the free plan.
+
+## Note, 2026-10-30
+
+**Layer 2 is withdrawn** by [ADR 0010](0010-android-app.md). The calendar trips as built are not what they should be, and the feature needs a new design before it comes back; none of it was released, so the calendar reader, the route service and ical4j are removed (#261). Layer 1, trips entered by hand, still holds.
