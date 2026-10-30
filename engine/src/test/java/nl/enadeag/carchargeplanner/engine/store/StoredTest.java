@@ -24,4 +24,13 @@ class StoredTest {
     void aMissingOrUnusableFileGivesTheFallback(Stored<String> stored) {
         assertThat(stored.orElse("fallback")).isEqualTo("fallback");
     }
+
+    /** On Java 17 the compiler no longer checks that the readers' if/else chains handle every kind; this does. */
+    @Test
+    void theKindsAreTheThreeTheReadersHandle() {
+        assertThat(Stored.class.getPermittedSubclasses())
+                .as("a new kind needs a branch in ConfigFile.read, SecretsFile.read and "
+                        + "AwayFile/TripFile.storedForChange")
+                .containsExactlyInAnyOrder(Stored.Absent.class, Stored.Found.class, Stored.Unusable.class);
+    }
 }
