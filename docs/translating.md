@@ -4,67 +4,67 @@ This is for everyone who writes or changes the app's texts: developers, and tran
 
 ## The words
 
-Each term in `CONTEXT.md` has one word per language, used everywhere the app shows it. The terms are not translated two ways. The last column is the English wording to avoid, as in `CONTEXT.md`. Notes in the Dutch column say how the word is used.
+Each term in `CONTEXT.md` has one word per language, used everywhere the app shows it. The terms are not translated two ways. The Note column says how the word is used; the last column is the English wording to avoid, as in `CONTEXT.md`.
 
-| English term | Dutch | English words to avoid |
-| --- | --- | --- |
-| Owner | je (the texts speak to the owner) | User, customer, driver |
-| Feed-in | teruglevering | Return, export |
-| Self-consumption | eigen verbruik | Own use, direct use |
-| Charge window | laadvenster (never a bare venster) | Slot, charge time, window (on its own) |
-| Charge current | laadstroom | Amps, charge speed |
-| Charge power | laadvermogen | Charge speed, charge rate |
-| Surplus | overschot | Excess, spare solar |
-| Solar share | zonnestroom (as in "92% zonnestroom") | Sun share, sun (for solar power) |
-| Baseload | basisverbruik | House use, standby use |
-| Weekly away period | wekelijkse afwezigheid | Recurring away time, absence, trip |
-| One-off away period | afwezig | Away day, absence, trip |
-| Trip | rit | Journey, ride, away period (which has no distance) |
-| Departure | vertrek | Deadline, start |
-| Trip surcharge | ritopslag | Margin, buffer |
-| Other driving | overige rijafstand | Distance per day, daily distance, average distance |
-| Charging hours | laaduren | Awake hours, charge times |
-| Charge limit | laadlimiet | Target, maximum (the target charge level is the app's setting) |
-| Battery level | accuniveau | State of charge, SoC, charge |
-| Assumed battery level | aangenomen accuniveau | Default level, estimated level, state of charge |
-| Minimum charge level | minimaal laadniveau | Floor, reserve |
-| Target charge level | doelniveau | Maximum, limit, goal |
-| Planning margin | planningsmarge | Safety factor, buffer |
-| Import tolerance | toegestane netstroom | Grid allowance, import limit |
-| Announcement | melding | Reminder, alert |
-| Battery check | controle van het accuniveau ("Controleer het accuniveau") | Battery question, level reminder |
-| Grid advice | advies: laden uit het net; a grid charge is laden uit het net | Grid warning, top-up, emergency charge |
-| Set-up | instelhulp | Onboarding, configuration, wizard (the wizard is only the form set-up takes) |
-| Not set up | niet ingesteld | Unconfigured, first run (first run is the moment, not the state) |
-| Unusable config | niet ingesteld, with what to fix | Broken config, not set up (that is the state without a file) |
-| Settings file | instellingenbestand | Config file, configuration, engine config |
-| Panel array | panelengroep | Plane (the forecast services' word), string (an electrical term), roof |
-| Typical value | gangbare waarde | Default, assumed value, guess |
-| Planning preferences | planning | Planning settings, options |
-| App settings | app-instellingen | Preferences, interface config |
-| Place search | zoeken (de zoekdienst) | Geocoding, location lookup, address search |
-| Charger phases | fasen | Single/three-phase connection (the home connection can have three phases while the charger uses one) |
-| Forecast provider | voorspellingsdienst | Weather source, weather service, API |
-| Primary provider | voorspellingsdienst | Main provider, default provider |
-| Fallback provider | reservedienst | Backup provider, secondary source |
-| Forecast step | stap | Slot, interval, sample |
-| Forecast freshness | bijgewerkt, niet vernieuwd | Age, outdated, expired |
-| Cool-down | dienst weer beschikbaar om | Rate limit (the provider's rule, not the wait), back-off, cooldown period |
-| API key | API-sleutel | Secret, token, password, key (on its own) |
-| Secret setting | API-sleutel | Secret (on its own), password field |
-| Keychain | sleutelbos | Keyring (only the Secret Service's own word), wallet, vault |
-| Start at login | starten bij aanmelden | Autostart, run at boot, startup item |
-| Supported / Beta / Untested | ondersteund, bèta, niet getest | Experimental, unofficial, verified |
-| Dashboard | dashboard | Popup (only one of the places it appears), plan window, main screen |
-| Engine | (not shown in the app) | Backend, server, daemon, core |
-| Client | (not shown in the app) | Frontend, UI (a client is more than its screens) |
-| Outlook | (not shown in the app) | Status, result, plan (a plan is only one kind of outlook) |
-| Desktop app | de app | Tray app, the application (too vague) |
-| Integration | koppeling | Plugin, connector, driver, recipe (a recipe is a deferred idea, not an integration) |
-| Ability | (not shown in the app) | Capability, feature, sensor |
-| Official route | (not shown in the app) | Official API (a maker can have an API that owners may not use), unofficial route |
-| Local network (not encrypted) | lokaal netwerk (niet versleuteld) | LAN, insecure, http mode |
-| Home Assistant | Home Assistant | HA, the hub |
+| English term | Dutch | Note | English words to avoid |
+| --- | --- | --- | --- |
+| Owner | je | the texts speak to the owner | User, customer, driver |
+| Feed-in | teruglevering |  | Return, export |
+| Self-consumption | eigen verbruik |  | Own use, direct use |
+| Charge window | laadvenster | never a bare venster | Slot, charge time, window (on its own) |
+| Charge current | laadstroom |  | Amps, charge speed |
+| Charge power | laadvermogen |  | Charge speed, charge rate |
+| Surplus | overschot |  | Excess, spare solar |
+| Solar share | zonnestroom | as in "92% zonnestroom" | Sun share, sun (for solar power) |
+| Baseload | basisverbruik |  | House use, standby use |
+| Weekly away period | wekelijkse afwezigheid |  | Recurring away time, absence, trip |
+| One-off away period | afwezig |  | Away day, absence, trip |
+| Trip | rit |  | Journey, ride, away period (which has no distance) |
+| Departure | vertrek |  | Deadline, start |
+| Trip surcharge | ritopslag |  | Margin, buffer |
+| Other driving | overige rijafstand |  | Distance per day, daily distance, average distance |
+| Charging hours | laaduren |  | Awake hours, charge times |
+| Charge limit | laadlimiet |  | Target, maximum (the target charge level is the app's setting) |
+| Battery level | accuniveau |  | State of charge, SoC, charge |
+| Assumed battery level | aangenomen accuniveau |  | Default level, estimated level, state of charge |
+| Minimum charge level | minimaal laadniveau |  | Floor, reserve |
+| Target charge level | doelniveau |  | Maximum, limit, goal |
+| Planning margin | planningsmarge |  | Safety factor, buffer |
+| Import tolerance | toegestane netstroom |  | Grid allowance, import limit |
+| Announcement | melding |  | Reminder, alert |
+| Battery check | controle van het accuniveau | as in "Controleer het accuniveau" | Battery question, level reminder |
+| Grid advice | advies: laden uit het net | a grid charge is laden uit het net | Grid warning, top-up, emergency charge |
+| Set-up | instelhulp |  | Onboarding, configuration, wizard (the wizard is only the form set-up takes) |
+| Not set up | niet ingesteld |  | Unconfigured, first run (first run is the moment, not the state) |
+| Unusable config | niet ingesteld | with what to fix | Broken config, not set up (that is the state without a file) |
+| Settings file | instellingenbestand |  | Config file, configuration, engine config |
+| Panel array | panelengroep |  | Plane (the forecast services' word), string (an electrical term), roof |
+| Typical value | gangbare waarde |  | Default, assumed value, guess |
+| Planning preferences | planning |  | Planning settings, options |
+| App settings | app-instellingen |  | Preferences, interface config |
+| Place search | zoeken (de zoekdienst) |  | Geocoding, location lookup, address search |
+| Charger phases | fasen |  | Single/three-phase connection (the home connection can have three phases while the charger uses one) |
+| Forecast provider | voorspellingsdienst |  | Weather source, weather service, API |
+| Primary provider | voorspellingsdienst |  | Main provider, default provider |
+| Fallback provider | reservedienst |  | Backup provider, secondary source |
+| Forecast step | stap |  | Slot, interval, sample |
+| Forecast freshness | bijgewerkt, niet vernieuwd |  | Age, outdated, expired |
+| Cool-down | dienst weer beschikbaar om |  | Rate limit (the provider's rule, not the wait), back-off, cooldown period |
+| API key | API-sleutel |  | Secret, token, password, key (on its own) |
+| Secret setting | API-sleutel |  | Secret (on its own), password field |
+| Keychain | sleutelbos |  | Keyring (only the Secret Service's own word), wallet, vault |
+| Start at login | starten bij aanmelden |  | Autostart, run at boot, startup item |
+| Supported / Beta / Untested | ondersteund, bèta, niet getest |  | Experimental, unofficial, verified |
+| Dashboard | dashboard |  | Popup (only one of the places it appears), plan window, main screen |
+| Engine | – | not shown in the app | Backend, server, daemon, core |
+| Client | – | not shown in the app | Frontend, UI (a client is more than its screens) |
+| Outlook | – | not shown in the app | Status, result, plan (a plan is only one kind of outlook) |
+| Desktop app | de app |  | Tray app, the application (too vague) |
+| Integration | koppeling |  | Plugin, connector, driver, recipe (a recipe is a deferred idea, not an integration) |
+| Ability | – | not shown in the app | Capability, feature, sensor |
+| Official route | – | not shown in the app | Official API (a maker can have an API that owners may not use), unofficial route |
+| Local network (not encrypted) | lokaal netwerk (niet versleuteld) |  | LAN, insecure, http mode |
+| Home Assistant | Home Assistant |  | HA, the hub |
 
 ## How the texts are written
 
