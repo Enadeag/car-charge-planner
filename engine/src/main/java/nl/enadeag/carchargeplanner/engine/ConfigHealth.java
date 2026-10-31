@@ -1,7 +1,8 @@
 package nl.enadeag.carchargeplanner.engine;
 
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
-import java.lang.System.Logger.Level;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Whether the config file could be planned with the last time, so that a config that becomes unusable, one whose
@@ -10,7 +11,7 @@ import java.lang.System.Logger.Level;
  */
 final class ConfigHealth {
 
-    private static final System.Logger LOG = System.getLogger(ConfigHealth.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(ConfigHealth.class);
 
     /** The problem logged last; null while the config is usable, as it is taken to be at the start. */
     private String problem;
@@ -22,7 +23,7 @@ final class ConfigHealth {
     /** A plan was made with the config; logged when it could not be used before. */
     synchronized void markUsable() {
         if (problem != null) {
-            LOG.log(Level.INFO, "the config file can be used again");
+            LOG.info("the config file can be used again");
             problem = null;
         }
     }
@@ -41,6 +42,10 @@ final class ConfigHealth {
             return;
         }
         problem = text;
-        LOG.log(found.kind() == ConfigProblem.Kind.MISSING ? Level.INFO : Level.WARNING, text);
+        if (found.kind() == ConfigProblem.Kind.MISSING) {
+            LOG.info(text);
+        } else {
+            LOG.warn(text);
+        }
     }
 }

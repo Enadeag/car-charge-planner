@@ -188,6 +188,7 @@ class EngineLifeCycleTest {
             assertThat(told).hasSize(1);
             assertThat(log.records()).singleElement().satisfies(record -> {
                 assertThat(record.getMessage()).isEqualTo("planning failed; trying again at the next round");
+                assertThat(record.getLevel()).isEqualTo(java.util.logging.Level.SEVERE);
                 assertThat(record.getThrown()).isInstanceOf(StackOverflowError.class);
             });
         }

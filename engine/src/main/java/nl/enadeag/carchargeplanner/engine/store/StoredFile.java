@@ -1,7 +1,6 @@
 package nl.enadeag.carchargeplanner.engine.store;
 
 import java.io.IOException;
-import java.lang.System.Logger.Level;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
@@ -12,6 +11,8 @@ import java.time.Clock;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tools.jackson.core.JacksonException;
 
 /**
@@ -27,7 +28,7 @@ import tools.jackson.core.JacksonException;
  */
 public final class StoredFile<T> {
 
-    private static final System.Logger LOG = System.getLogger(StoredFile.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(StoredFile.class);
     private static final DateTimeFormatter ASIDE_TIME =
             DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss", Locale.ROOT).withZone(ZoneOffset.UTC);
 
@@ -95,7 +96,7 @@ public final class StoredFile<T> {
             remembered = parsed();
             seen = now;
             if (remembered instanceof Stored.Unusable<T> unusable) {
-                LOG.log(Level.WARNING, path + " cannot be used: " + unusable.detail());
+                LOG.warn(path + " cannot be used: " + unusable.detail());
             }
         }
         return remembered;
@@ -142,7 +143,7 @@ public final class StoredFile<T> {
             aside = path.resolveSibling(name + "-" + count);
         }
         Files.move(path, aside);
-        LOG.log(Level.WARNING, path + " could not be used (" + unusable.detail() + "), so it is kept as " + aside
+        LOG.warn(path + " could not be used (" + unusable.detail() + "), so it is kept as " + aside
                 + " before a new one is written");
         seen = null;
         remembered = new Stored.Absent<>();

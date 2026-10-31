@@ -2,7 +2,6 @@ package nl.enadeag.carchargeplanner.engine.store;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.System.Logger.Level;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
@@ -16,6 +15,8 @@ import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Writes the app's files so that no reader sees half a file, a crash leaves the old file or the new one, and only the
@@ -25,7 +26,7 @@ import java.util.Set;
  */
 public final class PrivateFiles {
 
-    private static final System.Logger LOG = System.getLogger(PrivateFiles.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(PrivateFiles.class);
     private static final Set<PosixFilePermission> PRIVATE_FOLDER = PosixFilePermissions.fromString("rwx------");
     private static final Set<PosixFilePermission> PRIVATE_FILE = PosixFilePermissions.fromString("rw-------");
 
@@ -116,10 +117,10 @@ public final class PrivateFiles {
         try {
             if (!Files.getPosixFilePermissions(folder).equals(PRIVATE_FOLDER)) {
                 Files.setPosixFilePermissions(folder, PRIVATE_FOLDER);
-                LOG.log(Level.INFO, "made " + folder + " readable only by you");
+                LOG.info("made " + folder + " readable only by you");
             }
         } catch (IOException e) {
-            LOG.log(Level.WARNING, "could not make " + folder + " readable only by you: " + e.getMessage());
+            LOG.warn("could not make " + folder + " readable only by you: " + e.getMessage());
         }
     }
 

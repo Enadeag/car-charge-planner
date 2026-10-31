@@ -31,9 +31,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Handler;
-import java.util.logging.LogRecord;
-import java.util.logging.Logger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -315,36 +312,16 @@ class ForecastServiceTest {
 
     @Test
     void aBugInAProviderDoesNotStopTheAppAndItsMessageIsNeitherLoggedNorShown() throws ForecastUnavailable {
-        var logged = new CopyOnWriteArrayList<String>();
-        var capture = new Handler() {
-            @Override
-            public void publish(LogRecord record) {
-                logged.add(record.getMessage());
-            }
-
-            @Override
-            public void flush() {
-            }
-
-            @Override
-            public void close() {
-            }
-        };
-        var logger = Logger.getLogger(ProviderAttempt.class.getName());
-        logger.addHandler(capture);
-        logger.setUseParentHandlers(false); // the test's output stays clean
-        try {
+        try (var log = LogCapture.of(ProviderAttempt.class)) {
             main.script(crash(new IllegalStateException("oops with " + SECRET)));
             assertThat(get(T0).source().providerRole()).isEqualTo(ProviderRole.FALLBACK);
             withoutFallback();
             assertThatThrownBy(() -> get(later(120))).isInstanceOf(ForecastUnavailable.class)
                     .hasMessageContaining("IllegalStateException").hasMessageNotContaining(SECRET);
-        } finally {
-            logger.removeHandler(capture);
-            logger.setUseParentHandlers(true);
+            assertThat(log.lines()).containsExactly(
+                    "SEVERE forecast provider main failed unexpectedly (IllegalStateException)",
+                    "SEVERE forecast provider main failed unexpectedly (IllegalStateException)");
         }
-        assertThat(logged).containsExactly("forecast provider main failed unexpectedly (IllegalStateException)",
-                "forecast provider main failed unexpectedly (IllegalStateException)");
     }
 
     @Test

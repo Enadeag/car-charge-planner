@@ -64,7 +64,7 @@ The downloads bring these with them:
 | [AtlantaFX](https://github.com/mkpaz/atlantafx) | The look of the windows, light and dark | MIT |
 | [dbus-java](https://github.com/hypfvieh/dbus-java) | The tray icon, notifications and the keychain on Linux | MIT |
 | [Jackson](https://github.com/FasterXML/jackson) | Reading and writing the JSON files and the providers' answers | Apache-2.0 |
-| [SLF4J](https://www.slf4j.org) | dbus-java's log, passed on to the app's | MIT |
+| [SLF4J](https://www.slf4j.org) | the log of dbus-java and of the engine, passed on to the app's | MIT |
 
 Their licence texts are in the `legal` folder of the Linux folder and of the Windows install folder, one file per library; the runtime's own notices, for OpenJDK and JavaFX, are in `lib/runtime/legal` of the Linux folder (`runtime\legal` in the Windows install folder). For development only: [JUnit](https://junit.org) (EPL-2.0), [AssertJ](https://assertj.github.io/doc/) and [ArchUnit](https://www.archunit.org) (both Apache-2.0).
 

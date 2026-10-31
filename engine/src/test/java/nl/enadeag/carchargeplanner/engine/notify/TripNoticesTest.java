@@ -336,7 +336,7 @@ class TripNoticesTest {
 
     @Test
     void eachNoticeIsLoggedWithTheTripsDeparture() {
-        try (var log = LogCapture.of(Announcer.class)) {
+        try (var log = LogCapture.of(TripNotices.class)) {
             check(announcer(), withoutGrid(70, 72, 0), at(SATURDAY, 8, 0));
 
             assertThat(log.lines()).containsExactly("INFO told a BatteryCheck for the trip leaving at "

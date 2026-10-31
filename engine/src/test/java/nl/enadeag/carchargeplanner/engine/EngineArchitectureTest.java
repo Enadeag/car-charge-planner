@@ -16,9 +16,9 @@ import java.util.Set;
 /**
  * The rules of ADR 0001 about the engine's own parts: parts that depend one way, a pure planner, a domain model
  * without its file format, files written in one place, and no translations; and the rules of ADR 0010 that the engine
- * uses no {@code java.net.http}, which Android lacks, and opens no connection of its own beside its HttpGet. They run
- * when the engine is built alone; the rules about the boundary with its clients, and those for every class, are in the
- * desktop module's {@code ArchitectureTest}, which sees both sides.
+ * uses no {@code java.net.http}, which Android lacks, opens no connection of its own beside its HttpGet, and logs
+ * through slf4j. They run when the engine is built alone; the rules about the boundary with its clients, and those for
+ * every class, are in the desktop module's {@code ArchitectureTest}, which sees both sides.
  */
 @AnalyzeClasses(packages = "nl.enadeag.carchargeplanner.engine", importOptions = ImportOption.DoNotIncludeTests.class)
 class EngineArchitectureTest {
@@ -48,6 +48,16 @@ class EngineArchitectureTest {
             .orShould().callMethod("java.net.URL", "openStream")
             .because("every request goes through the HttpGet the platform hands in, which keeps its contract on "
                     + "redirects, timeouts and size (ADR 0010)");
+
+    @ArchTest
+    static final ArchRule theEngineLogsThroughSlf4j = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .should().dependOnClassesThat().haveFullyQualifiedName("java.lang.System$Logger")
+            .orShould().dependOnClassesThat().haveFullyQualifiedName("java.lang.System$Logger$Level")
+            .orShould().callMethod(System.class, "getLogger", String.class)
+            .orShould().callMethod(System.class, "getLogger", String.class, java.util.ResourceBundle.class)
+            .because("the engine logs through slf4j, which each platform binds to its own log, instead of "
+                    + "System.Logger (ADR 0010)");
 
     private static final DescribedPredicate<JavaClass> DOMAIN_MODEL = DescribedPredicate.describe(
             "are the domain model: the planner, the settings, and the engine's public records and enums",

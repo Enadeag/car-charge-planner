@@ -1,11 +1,12 @@
 package nl.enadeag.carchargeplanner.engine;
 
-import java.lang.System.Logger.Level;
 import java.time.Duration;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Runs the engine's planning round on the engine's own thread: once at the start, then every {@link #EVERY}, and once
@@ -24,7 +25,7 @@ final class PlanSchedule {
     /** How long {@link #stop()} lets a round that is running finish, such as one waiting for a provider. */
     static final Duration STOP_WAIT = Duration.ofSeconds(3);
 
-    private static final System.Logger LOG = System.getLogger(PlanSchedule.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(PlanSchedule.class);
 
     private final ScheduledExecutorService executor;
     private final AtomicReference<Runnable> round = new AtomicReference<>();
@@ -79,7 +80,7 @@ final class PlanSchedule {
         executor.shutdown();
         try {
             if (!executor.awaitTermination(STOP_WAIT.toMillis(), TimeUnit.MILLISECONDS)) {
-                LOG.log(Level.WARNING, "a planning round did not finish in " + STOP_WAIT + "; interrupting it");
+                LOG.warn("a planning round did not finish in " + STOP_WAIT + "; interrupting it");
                 executor.shutdownNow();
             }
         } catch (InterruptedException ignored) {
@@ -93,7 +94,7 @@ final class PlanSchedule {
         try {
             round.run();
         } catch (RuntimeException | Error e) {
-            LOG.log(Level.ERROR, "planning failed; trying again at the next round", e);
+            LOG.error("planning failed; trying again at the next round", e);
         }
     }
 }
