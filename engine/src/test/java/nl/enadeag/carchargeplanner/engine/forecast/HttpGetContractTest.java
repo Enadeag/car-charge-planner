@@ -36,7 +36,8 @@ import org.junit.jupiter.params.provider.ValueSource;
  * What every {@link HttpGet} must do, as its Javadoc lists it: a platform's implementation passes when its test
  * extends this class and hands it a fresh instance per test. Against a small server on this computer's loopback
  * address, so nothing leaves the machine. Connecting is part of the timeout too, but no server here can be slow to
- * accept, so only the answer's part of it is checked.
+ * accept, so only the answer's part of it is checked. The server is the JDK's {@code com.sun.net.httpserver} and the
+ * tests are JUnit 5, so a subclass runs on a JVM: on Android as a local unit test, not on a device or in Robolectric.
  */
 public abstract class HttpGetContractTest {
 
