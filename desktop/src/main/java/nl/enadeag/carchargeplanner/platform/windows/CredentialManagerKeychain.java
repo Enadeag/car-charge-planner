@@ -23,8 +23,9 @@ import java.util.Optional;
  * ({@link KeychainException.Kind#UNAVAILABLE}); the engine then keeps the API keys in its private file. Other errors
  * are refusals. The Credential Manager is never locked while its user is logged on, so it has no unlocking.
  *
- * <p>One call at a time: when one process writes from several threads at once, Windows can lose a write it reported
- * as done, so a read straight after it finds nothing.
+ * <p>One call at a time: with one process writing from several threads at once, Windows was seen to lose a write it
+ * reported as done, so a read straight after it found nothing. The lock covers this object only; the app makes one,
+ * and a second instance never runs.
  */
 public final class CredentialManagerKeychain implements Keychain {
 
