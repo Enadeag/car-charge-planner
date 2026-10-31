@@ -11,6 +11,7 @@ import nl.enadeag.carchargeplanner.desktop.app.DisplayMode;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SaveOutcome;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.ChargingHours;
@@ -20,6 +21,7 @@ import nl.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import nl.enadeag.carchargeplanner.engine.forecast.FakeProvider;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import nl.enadeag.carchargeplanner.engine.forecast.SunnyDays;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,6 +41,8 @@ import org.junit.jupiter.api.io.TempDir;
 @FxTest
 class SettingsViewTest {
 
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
+
     @TempDir
     Path folder;
 
@@ -55,12 +59,12 @@ class SettingsViewTest {
     }
 
     private PlanningPreferences storedPlanning() throws Exception {
-        return new ConfigFile(settings.configPath).read().planning();
+        return new ConfigFile(settings.configPath, FILES).read().planning();
     }
 
     @Test
     void savingAChangedPreferenceWritesItAndKeepsTheRestOfTheConfig() throws Exception {
-        var before = new ConfigFile(settings.configPath).read();
+        var before = new ConfigFile(settings.configPath, FILES).read();
         var view = settings.open();
 
         boolean saved = Fx.call(() -> {
@@ -69,7 +73,7 @@ class SettingsViewTest {
             return SettingsFixture.save(view);
         });
 
-        var after = new ConfigFile(settings.configPath).read();
+        var after = new ConfigFile(settings.configPath, FILES).read();
         assertThat(saved).isTrue();
         assertThat(after.planning()).isEqualTo(new PlanningPreferences(new Percent(30), new Percent(90), 0.7, 0.2,
                 Duration.ofMinutes(45), Duration.ofMinutes(15)));

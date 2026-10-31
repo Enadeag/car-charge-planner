@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +27,8 @@ import org.junit.jupiter.api.io.TempDir;
  * logging stays as it is.
  */
 class AppLogTest {
+
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
     private static final ZoneId ZONE = ZoneId.of("Europe/Amsterdam");
 
@@ -44,7 +47,7 @@ class AppLogTest {
         root.setUseParentHandlers(false); // the test's output stays clean
         app = Logger.getLogger(name + ".app");
         library = Logger.getLogger(name + ".library");
-        log = new AppLog(root, app);
+        log = new AppLog(root, app, FILES);
     }
 
     @AfterEach
@@ -108,13 +111,13 @@ class AppLogTest {
         var rootHandlers = List.of(jvmRoot.getHandlers());
         var rootLevel = jvmRoot.getLevel();
         var appLevel = jvmApp.getLevel();
-        var real = new AppLog(jvmRoot, jvmApp);
+        var real = new AppLog(jvmRoot, jvmApp, FILES);
         var open = Files.createDirectory(folder.resolve("open"));
         Files.setPosixFilePermissions(open, PosixFilePermissions.fromString("rwxr-xr-x"));
         try {
             real.start(data(), Map.of(), false, ZONE);
 
-            PrivateFiles.tighten(open);
+            FILES.tighten(open);
 
             assertThat(lines()).singleElement().asString()
                     .contains(" INFO engine.store.PrivateFiles: made " + open + " readable only by you");

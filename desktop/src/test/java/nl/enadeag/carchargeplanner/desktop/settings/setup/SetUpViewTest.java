@@ -9,6 +9,7 @@ import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.settings.SettingsFixture;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
@@ -22,6 +23,7 @@ import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
 import nl.enadeag.carchargeplanner.engine.secrets.KeychainException;
 import nl.enadeag.carchargeplanner.engine.secrets.LockableKeychain;
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
@@ -43,6 +45,8 @@ import org.junit.jupiter.api.io.TempDir;
 @FxTest
 class SetUpViewTest {
 
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
+
     @TempDir
     Path folder;
 
@@ -59,7 +63,7 @@ class SetUpViewTest {
     }
 
     private EngineConfig stored() throws Exception {
-        return new ConfigFile(setUp.configPath).read();
+        return new ConfigFile(setUp.configPath, FILES).read();
     }
 
     private void next(SetUpView view, int times) throws Exception {

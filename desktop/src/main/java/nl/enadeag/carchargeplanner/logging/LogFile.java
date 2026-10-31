@@ -20,9 +20,9 @@ import java.util.logging.StreamHandler;
  * limit it becomes {@code .1.log}, the {@code .1.log} becomes {@code .2.log} and so on, the oldest is dropped, and a
  * new {@code .0.log} is started.
  *
- * <p>Every file is made through {@link PrivateFiles}, so only the owner can read it from the moment it exists; Java's
- * own {@code FileHandler} makes them with the system's default mode, which lets others read them. Only one copy of the
- * app runs at a time, so no lock file is needed either. Safe to use from several threads.
+ * <p>Every file is made through the {@link PrivateFiles} it is given, so only the owner can read it from the moment it
+ * exists; Java's own {@code FileHandler} makes them with the system's default mode, which lets others read them. Only
+ * one copy of the app runs at a time, so no lock file is needed either. Safe to use from several threads.
  */
 final class LogFile extends StreamHandler {
 
@@ -32,6 +32,7 @@ final class LogFile extends StreamHandler {
     private final Path folder;
     private final long limit;
     private final int count;
+    private final PrivateFiles files;
     private long written;
 
     /**
@@ -42,16 +43,18 @@ final class LogFile extends StreamHandler {
      *     little past it; at least 1
      * @param count how many files are kept, the newest included; at least 1
      * @param formatter how each record is written
+     * @param files how the folder and the files are made, private, on this system
      * @throws IOException when the folder or the file could not be made or opened
      * @throws IllegalArgumentException when the limit or the count is less than 1
      */
-    LogFile(Path folder, long limit, int count, Formatter formatter) throws IOException {
+    LogFile(Path folder, long limit, int count, Formatter formatter, PrivateFiles files) throws IOException {
         if (limit < 1 || count < 1) {
             throw new IllegalArgumentException("a log file needs a size limit and a count of at least 1");
         }
         this.folder = folder;
         this.limit = limit;
         this.count = count;
+        this.files = files;
         setFormatter(formatter);
         setEncoding(StandardCharsets.UTF_8.name());
         setLevel(Level.ALL);
@@ -90,7 +93,7 @@ final class LogFile extends StreamHandler {
     private void open() throws IOException {
         var file = newest(folder);
         written = Files.exists(file) ? Files.size(file) : 0;
-        setOutputStream(new Counting(PrivateFiles.append(file)));
+        setOutputStream(new Counting(files.append(file)));
     }
 
     /** Like FileHandler: a file that cannot be rotated is reported to the error manager, and records may be lost. */

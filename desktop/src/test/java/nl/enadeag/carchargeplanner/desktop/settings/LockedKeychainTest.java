@@ -8,6 +8,7 @@ import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SaveOutcome;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
@@ -21,6 +22,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.LockableKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import nl.enadeag.carchargeplanner.engine.secrets.UnlockOutcome;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
@@ -43,6 +45,8 @@ import org.junit.jupiter.api.io.TempDir;
 @FxTest
 class LockedKeychainTest {
 
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
+
     private static final ProviderId OPEN_METEO = new ProviderId("open-meteo");
     private static final ProviderId FORECAST_SOLAR = new ProviderId("forecast-solar");
 
@@ -58,7 +62,7 @@ class LockedKeychainTest {
 
     @BeforeEach
     void storeKeysAndLockTheKeychain() throws Exception {
-        new ApiKeys(keychain, new SecretsFile(folder.resolve("unused.json"))).save(STORED);
+        new ApiKeys(keychain, new SecretsFile(folder.resolve("unused.json"), FILES)).save(STORED);
         keychain.locked = true;
     }
 
@@ -102,7 +106,7 @@ class LockedKeychainTest {
     /** The keys as stored, read once the keychain is unlocked again. */
     private Secrets storedAfterUnlocking() throws Exception {
         keychain.locked = false;
-        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
+        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES));
         keys.moveFileIntoKeychain(); // as the engine's next round does
         return keys.load();
     }
@@ -152,7 +156,7 @@ class LockedKeychainTest {
             return SettingsFixture.save(view);
         })).isTrue();
 
-        assertThat(new SecretsFile(folder.resolve("secrets.json")).path()).exists();
+        assertThat(new SecretsFile(folder.resolve("secrets.json"), FILES).path()).exists();
         assertThat(storedAfterUnlocking()).as("moved in over the keychain's other key").isEqualTo(new Secrets(Map.of(
                 OPEN_METEO, Map.of("api_key", "NEW-KEY"), FORECAST_SOLAR, Map.of("api_key", "FS-STORED"))));
         keychain.locked = true;
@@ -165,7 +169,7 @@ class LockedKeychainTest {
     void whenTheKeychainCannotBeUnlockedNothingIsSavedAndTheOwnerIsToldToUnlockItAndSaveAgain() throws Exception {
         keychain.unlockFails = KeychainException.Kind.REFUSED;
         var view = open();
-        var before = new ConfigFile(settings.configPath).read();
+        var before = new ConfigFile(settings.configPath, FILES).read();
 
         Fx.run(() -> {
             typeAKey(view);
@@ -175,7 +179,7 @@ class LockedKeychainTest {
 
         assertThat(Fx.call(view::outcome)).contains(new SaveOutcome.KeychainLocked());
         assertThat(texts(view)).contains(settings.messages.text(TextKey.SETTINGS_KEYCHAIN_LOCKED));
-        assertThat(new ConfigFile(settings.configPath).read()).as("nothing after the keys").isEqualTo(before);
+        assertThat(new ConfigFile(settings.configPath, FILES).read()).as("nothing after the keys").isEqualTo(before);
         assertThat(folder.resolve("secrets.json")).doesNotExist();
         assertThat(storedAfterUnlocking()).isEqualTo(STORED);
         assertThat(Fx.call(view::isChanged)).as("the edits stay, to save again").isTrue();

@@ -4,6 +4,7 @@ import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.store.FileFormat;
 import nl.enadeag.carchargeplanner.engine.store.FileVersion;
 import nl.enadeag.carchargeplanner.engine.store.FormatProblem;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.store.Stored;
 import nl.enadeag.carchargeplanner.engine.store.StoredFile;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
@@ -34,9 +35,10 @@ public final class BatteryFile {
      * Makes the store for one file; nothing is read or written yet.
      *
      * @param path where the file is, or should be; it and its folder are made when the first level is saved
+     * @param files how the file and its folders are written privately on this platform
      */
-    public BatteryFile(Path path) {
-        this.file = new StoredFile<>(path, new Format());
+    public BatteryFile(Path path, PrivateFiles files) {
+        this.file = new StoredFile<>(path, new Format(), files);
     }
 
     /**

@@ -3,6 +3,8 @@ package nl.enadeag.carchargeplanner.logging;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,11 +19,13 @@ import org.junit.jupiter.api.io.TempDir;
 
 class LogFileTest {
 
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
+
     @TempDir
     Path folder;
 
     private static LogFile logFile(Path folder, long limit, int count) throws IOException {
-        return new LogFile(folder, limit, count, new LogLineFormat(ZoneId.of("UTC")));
+        return new LogFile(folder, limit, count, new LogLineFormat(ZoneId.of("UTC")), FILES);
     }
 
     private Path file(int number) {

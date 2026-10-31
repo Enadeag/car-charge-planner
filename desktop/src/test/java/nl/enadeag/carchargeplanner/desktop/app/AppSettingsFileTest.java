@@ -3,7 +3,9 @@ package nl.enadeag.carchargeplanner.desktop.app;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,13 +18,15 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class AppSettingsFileTest {
 
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
+
     private static final AppSettings FOLLOWING = AppSettings.following(Units.IMPERIAL);
 
     @TempDir
     Path folder;
 
     private AppSettingsFile file() {
-        return new AppSettingsFile(folder.resolve("app.json"), Units.IMPERIAL);
+        return new AppSettingsFile(folder.resolve("app.json"), Units.IMPERIAL, FILES);
     }
 
     private AppSettings read(String content) throws IOException {
@@ -63,7 +67,7 @@ class AppSettingsFileTest {
     @Test
     void writtenSettingsAreReadBack() throws IOException {
         var chosen = new AppSettings(Optional.of(Language.ENGLISH), Units.METRIC, DisplayMode.WINDOW, Appearance.DARK);
-        var file = new AppSettingsFile(folder.resolve("new", "app.json"), Units.IMPERIAL);
+        var file = new AppSettingsFile(folder.resolve("new", "app.json"), Units.IMPERIAL, FILES);
 
         file.write(chosen);
 
@@ -74,7 +78,7 @@ class AppSettingsFileTest {
     void followingTheSystemsLanguageIsReadBackAsSuch() throws IOException {
         file().write(new AppSettings(Optional.empty(), Units.METRIC, DisplayMode.TRAY, Appearance.SYSTEM));
 
-        assertThat(new AppSettingsFile(folder.resolve("app.json"), Units.METRIC).read().language()).isEmpty();
+        assertThat(new AppSettingsFile(folder.resolve("app.json"), Units.METRIC, FILES).read().language()).isEmpty();
     }
 
     @Test

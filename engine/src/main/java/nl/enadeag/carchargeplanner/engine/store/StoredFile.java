@@ -22,7 +22,8 @@ import tools.jackson.core.JacksonException;
  *
  * <p>A file this version cannot use is never overwritten as it is: a write first renames it to
  * {@code <name>.damaged-<time>}, such as {@code engine.json.damaged-20261017-143000}, and logs that, so the owner can
- * still find what it held. Writes go through {@link PrivateFiles}. Safe to use from several threads.
+ * still find what it held. Writes go through the {@link PrivateFiles} it is made with, so the file is private on
+ * every platform. Safe to use from several threads.
  *
  * @param <T> the kind of value the file keeps
  */
@@ -38,6 +39,7 @@ public final class StoredFile<T> {
 
     private final Path path;
     private final FileFormat<T> format;
+    private final PrivateFiles files;
     private final Clock clock;
     private Stamp seen;
     private Stored<T> remembered = new Stored.Absent<>();
@@ -48,9 +50,10 @@ public final class StoredFile<T> {
      *
      * @param path where the file is, or will be made; its folder is made when needed
      * @param format how the file is read and written
+     * @param files how the file and its folders are written privately on this platform
      */
-    public StoredFile(Path path, FileFormat<T> format) {
-        this(path, format, Clock.systemUTC());
+    public StoredFile(Path path, FileFormat<T> format, PrivateFiles files) {
+        this(path, format, files, Clock.systemUTC());
     }
 
     /**
@@ -58,11 +61,13 @@ public final class StoredFile<T> {
      *
      * @param path where the file is, or will be made; its folder is made when needed
      * @param format how the file is read and written
+     * @param files how the file and its folders are written privately on this platform
      * @param clock the time a file that cannot be used is renamed with
      */
-    public StoredFile(Path path, FileFormat<T> format, Clock clock) {
+    public StoredFile(Path path, FileFormat<T> format, PrivateFiles files, Clock clock) {
         this.path = path;
         this.format = format;
+        this.files = files;
         this.clock = clock;
     }
 
@@ -110,7 +115,7 @@ public final class StoredFile<T> {
      */
     public synchronized void write(T value) throws IOException {
         moveAsideWhenUnusable();
-        PrivateFiles.write(path, StoredJson.pretty(format.write(value)));
+        files.write(path, StoredJson.pretty(format.write(value)));
         remembered = new Stored.Found<>(value);
         try {
             seen = stamp();

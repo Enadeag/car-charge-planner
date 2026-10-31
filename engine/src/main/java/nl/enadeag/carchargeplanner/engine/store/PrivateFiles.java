@@ -6,44 +6,58 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileAttribute;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
+import java.util.List;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Writes the app's files so that no reader sees half a file, a crash leaves the old file or the new one, and only the
- * owner can read them. Where files have modes (Linux, macOS) a folder the app makes is {@code rwx------} and every file
- * it writes {@code rw-------}, both made with that mode, so there is no moment when others could read them; on Windows
- * the user's own profile folders already keep them from other users.
+ * owner can read them. Every folder and file it makes is made with the attributes of the platform's
+ * {@link FilePrivacy}, so there is no moment when others could read them; how private that is, is the platform's
+ * part: on the desktop a folder is {@code rwx------} and a file {@code rw-------} where files have modes (Linux,
+ * macOS), and on Windows the user's own profile folders keep them from other users. The rest, the temporary file, the
+ * flush to the disk and the move in one step, is the same on every platform. Safe to use from several threads, as
+ * long as no two write the same file at once.
  */
 public final class PrivateFiles {
 
     private static final Logger LOG = LoggerFactory.getLogger(PrivateFiles.class);
-    private static final Set<PosixFilePermission> PRIVATE_FOLDER = PosixFilePermissions.fromString("rwx------");
-    private static final Set<PosixFilePermission> PRIVATE_FILE = PosixFilePermissions.fromString("rw-------");
 
-    private PrivateFiles() {
+    private final FilePrivacy privacy;
+
+    /**
+     * Makes the writer for one platform.
+     *
+     * @param privacy how the platform makes a file or folder private; never null, {@link FilePrivacy#NONE} where its
+     *     app storage is private already
+     */
+    public PrivateFiles(FilePrivacy privacy) {
+        this.privacy = privacy;
     }
 
     /**
      * Replaces a file by this text, in UTF-8. The text goes to {@code <name>.tmp} beside the file, made private, and
      * is flushed to the disk before it is moved over the file in one step; then the folder is flushed where the
-     * system allows it, so the move survives a power cut too. Missing folders are made private; a folder that exists
-     * is left as it is.
+     * system allows it, so the move survives a power cut too. On a file system that cannot move in one step the file
+     * is replaced by a plain move, which is logged: a crash during that move may leave the file missing or half
+     * written, with the whole text still in the temporary file. Missing folders are made private; a folder that
+     * exists is left as it is.
      *
      * @param file the file to replace or make; its folder need not exist
      * @param text the whole new content
-     * @throws IOException when a folder, the temporary file or the move failed; the file is then left as it was
+     * @throws IOException when a folder, the temporary file or the move failed; the file is then left as it was, except
+     *     when the plain move failed after the file was gone: then the file is missing and the whole text is kept in
+     *     {@code <name>.tmp}
      */
-    public static void write(Path file, String text) throws IOException {
+    public void write(Path file, String text) throws IOException {
         var target = file.toAbsolutePath();
         var folder = target.getParent();
         createFolders(folder);
@@ -52,7 +66,7 @@ public final class PrivateFiles {
             Files.deleteIfExists(temporary); // a leftover may be open to others; one made now is private
         }
         try (var channel = FileChannel.open(temporary, Set.of(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE),
-                privateMode(folder, PRIVATE_FILE))) {
+                attributes(privacy.newFileAttributes(temporary)))) {
             var bytes = ByteBuffer.wrap(text.getBytes(StandardCharsets.UTF_8));
             while (bytes.hasRemaining()) {
                 channel.write(bytes);
@@ -64,12 +78,7 @@ public final class PrivateFiles {
             }
             throw e;
         }
-        try {
-            Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
-            deleteQuietly(temporary);
-            throw e;
-        }
+        replace(temporary, target);
         flushFolder(folder);
     }
 
@@ -81,13 +90,13 @@ public final class PrivateFiles {
      * @return the stream that writes at the file's end; the caller closes it
      * @throws IOException when a folder or the file could not be made or opened
      */
-    public static OutputStream append(Path file) throws IOException {
+    public OutputStream append(Path file) throws IOException {
         var target = file.toAbsolutePath();
         var folder = target.getParent();
         createFolders(folder);
         return Channels.newOutputStream(FileChannel.open(target,
                 Set.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND),
-                privateMode(folder, PRIVATE_FILE)));
+                attributes(privacy.newFileAttributes(target))));
     }
 
     /**
@@ -97,31 +106,42 @@ public final class PrivateFiles {
      * @param folder the folder that must exist
      * @throws IOException when a folder could not be made, or a file is in the way
      */
-    public static void createFolders(Path folder) throws IOException {
+    public void createFolders(Path folder) throws IOException {
         if (!Files.isDirectory(folder)) {
-            Files.createDirectories(folder, privateMode(folder, PRIVATE_FOLDER));
+            Files.createDirectories(folder, attributes(privacy.newFolderAttributes(folder)));
         }
     }
 
     /**
-     * Makes an existing folder of the app private, where folders have modes, for folders made before the app made
-     * them private. A folder that is missing, or whose mode cannot be changed, is left as it is; the latter is
-     * logged.
+     * Makes an existing folder of the app private through the platform, for folders made before the app made them
+     * private; a change is logged. A folder that is missing, or that the platform cannot change, is left as it is;
+     * the latter is logged.
      *
      * @param folder one of the app's own folders, never one the owner named, such as with {@code --config=}
      */
-    public static void tighten(Path folder) {
-        if (!hasModes(folder) || !Files.isDirectory(folder, LinkOption.NOFOLLOW_LINKS)) {
+    public void tighten(Path folder) {
+        if (!Files.isDirectory(folder, LinkOption.NOFOLLOW_LINKS)) {
             return;
         }
         try {
-            if (!Files.getPosixFilePermissions(folder).equals(PRIVATE_FOLDER)) {
-                Files.setPosixFilePermissions(folder, PRIVATE_FOLDER);
+            if (privacy.tighten(folder)) {
                 LOG.info("made " + folder + " readable only by you");
             }
         } catch (IOException e) {
             LOG.warn("could not make " + folder + " readable only by you: " + e.getMessage());
         }
+    }
+
+    /**
+     * Makes an existing file private through the platform, for a file whose privacy matters enough to refuse it
+     * otherwise, such as the API keys' file. Nothing is logged.
+     *
+     * @param file the file; it must exist
+     * @return true when it had to be changed; false when it was private already, or the platform has nothing to change
+     * @throws IOException when it is missing, or the platform could not read or change it
+     */
+    public boolean tightenFile(Path file) throws IOException {
+        return privacy.tighten(file);
     }
 
     /**
@@ -132,17 +152,40 @@ public final class PrivateFiles {
      * @return true when it was there and is removed now; false when there was none
      * @throws IOException when it is there and could not be removed, such as a folder that is not empty
      */
-    public static boolean remove(Path file) throws IOException {
+    public boolean remove(Path file) throws IOException {
         return Files.deleteIfExists(file);
     }
 
-    private static boolean hasModes(Path path) {
-        return path.getFileSystem().supportedFileAttributeViews().contains("posix");
+    private static FileAttribute<?>[] attributes(List<FileAttribute<?>> attributes) {
+        return attributes.toArray(new FileAttribute<?>[0]);
     }
 
-    private static FileAttribute<?>[] privateMode(Path path, Set<PosixFilePermission> mode) {
-        return hasModes(path) ? new FileAttribute<?>[] {PosixFilePermissions.asFileAttribute(mode)}
-                : new FileAttribute<?>[0];
+    /**
+     * In one step where the file system can, and by a plain move that replaces the file where it cannot. A move that
+     * fails removes the temporary file, unless it holds the only copy of the text.
+     */
+    private static void replace(Path temporary, Path target) throws IOException {
+        try {
+            Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        } catch (AtomicMoveNotSupportedException e) {
+            LOG.warn("could not replace " + target + " in one step, so it is replaced by a plain move: "
+                    + e.getMessage());
+            movePlainly(temporary, target);
+        } catch (IOException e) {
+            deleteQuietly(temporary);
+            throw e;
+        }
+    }
+
+    private static void movePlainly(Path temporary, Path target) throws IOException {
+        try {
+            Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
+                deleteQuietly(temporary);
+            }
+            throw e;
+        }
     }
 
     /** Where a folder can be opened, as on Linux; Windows refuses to, and keeps its own journal of the move. */

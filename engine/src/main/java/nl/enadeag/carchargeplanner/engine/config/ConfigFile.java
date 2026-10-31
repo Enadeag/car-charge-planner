@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.engine.config;
 
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.store.Stored;
 import nl.enadeag.carchargeplanner.engine.store.StoredFile;
 import java.io.IOException;
@@ -20,9 +21,10 @@ public final class ConfigFile {
      * Makes the reader and writer for one config file; nothing is read yet.
      *
      * @param path where the file is, or should be; it need not exist, a missing file is reported when it is read
+     * @param files how the file and its folders are written privately on this platform
      */
-    public ConfigFile(Path path) {
-        this.file = new StoredFile<>(path, new ConfigFormat());
+    public ConfigFile(Path path, PrivateFiles files) {
+        this.file = new StoredFile<>(path, new ConfigFormat(), files);
     }
 
     /**

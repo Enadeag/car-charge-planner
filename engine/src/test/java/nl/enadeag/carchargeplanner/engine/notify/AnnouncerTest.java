@@ -16,6 +16,8 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
+import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,6 +35,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 /** When the owner is told about a window, and when not. */
 class AnnouncerTest {
+
+    private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
 
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");
     private static final LocalDate DAY = LocalDate.of(2026, 7, 3);
@@ -65,7 +69,7 @@ class AnnouncerTest {
     /** The example system, which charges on one phase and keeps a minimum of 30 %, with this lead time. */
     private static EngineConfig config(int leadMinutes) {
         try {
-            var example = new ConfigFile(Path.of("docs", "example-engine.json")).read();
+            var example = new ConfigFile(Path.of("docs", "example-engine.json"), FILES).read();
             var planning = example.planning();
             return example.withPlanning(new PlanningPreferences(planning.minimumPct(), planning.targetPct(),
                     planning.margin(), planning.importToleranceKwh(), planning.minWindow(),
@@ -81,8 +85,8 @@ class AnnouncerTest {
     }
 
     private Announcer announcer() {
-        return new Announcer(new AnnouncedWindows(folder.resolve("announced.json")),
-                new ToldTrips(folder.resolve("trip-notices.json")), notice -> told.add((Announcement) notice));
+        return new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES),
+                new ToldTrips(folder.resolve("trip-notices.json"), FILES), notice -> told.add((Announcement) notice));
     }
 
     /** Announces with a forecast fetched five minutes ago and the given lead time. */
@@ -95,8 +99,9 @@ class AnnouncerTest {
 
     /** With an announcer that has announced nothing yet. */
     private List<Window> check(List<DayPlan> days, Instant now) {
-        var fresh = new Announcer(new AnnouncedWindows(folder.resolve("fresh-" + now.getEpochSecond() + ".json")),
-                new ToldTrips(folder.resolve("trips-" + now.getEpochSecond() + ".json")),
+        var fresh = new Announcer(
+                new AnnouncedWindows(folder.resolve("fresh-" + now.getEpochSecond() + ".json"), FILES),
+                new ToldTrips(folder.resolve("trips-" + now.getEpochSecond() + ".json"), FILES),
                 notice -> told.add((Announcement) notice));
         return check(fresh, days, now, 15);
     }

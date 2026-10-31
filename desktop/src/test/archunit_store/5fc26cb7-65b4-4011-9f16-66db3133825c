@@ -1,2 +1,2 @@
 Constructor <nl.enadeag.carchargeplanner.engine.secrets.ApiKeys.<init>(nl.enadeag.carchargeplanner.engine.secrets.Keychain, nl.enadeag.carchargeplanner.engine.secrets.SecretsFile)> calls method <java.time.Clock.systemUTC()> in (ApiKeys.java:80)
-Constructor <nl.enadeag.carchargeplanner.engine.store.StoredFile.<init>(java.nio.file.Path, nl.enadeag.carchargeplanner.engine.store.FileFormat)> calls method <java.time.Clock.systemUTC()> in (StoredFile.java:52)
+Constructor <nl.enadeag.carchargeplanner.engine.store.StoredFile.<init>(java.nio.file.Path, nl.enadeag.carchargeplanner.engine.store.FileFormat, nl.enadeag.carchargeplanner.engine.store.PrivateFiles)> calls method <java.time.Clock.systemUTC()> in (StoredFile.java:56)

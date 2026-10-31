@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.engine.forecast;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.store.FileFormat;
 import nl.enadeag.carchargeplanner.engine.store.FormatProblem;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.store.Stored;
 import nl.enadeag.carchargeplanner.engine.store.StoredFile;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
@@ -54,15 +55,18 @@ public final class ForecastCache {
     }
 
     private final Path folder;
+    private final PrivateFiles privateFiles;
     private final Map<ProviderId, StoredFile<Entry>> files = new ConcurrentHashMap<>();
 
     /**
      * Makes the cache; nothing is read or written yet.
      *
      * @param folder where the files go; made when the first one is written
+     * @param privateFiles how the files and the folder are written privately on this platform
      */
-    public ForecastCache(Path folder) {
+    public ForecastCache(Path folder, PrivateFiles privateFiles) {
         this.folder = folder;
+        this.privateFiles = privateFiles;
     }
 
     /**
@@ -140,7 +144,7 @@ public final class ForecastCache {
 
     private StoredFile<Entry> file(ProviderId providerId) {
         return files.computeIfAbsent(providerId,
-                id -> new StoredFile<>(folder.resolve("forecast-" + id.value() + ".json"), new Format()));
+                id -> new StoredFile<>(folder.resolve("forecast-" + id.value() + ".json"), new Format(), privateFiles));
     }
 
     private Entry read(ProviderId providerId) {

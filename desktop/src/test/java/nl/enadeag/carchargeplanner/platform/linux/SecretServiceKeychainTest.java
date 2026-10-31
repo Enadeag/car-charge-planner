@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.platform.linux;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.KeyStorage;
@@ -11,6 +12,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
 import nl.enadeag.carchargeplanner.engine.secrets.UnlockOutcome;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -47,6 +49,8 @@ import org.junit.jupiter.api.io.TempDir;
  */
 @EnabledOnOs(OS.LINUX)
 class SecretServiceKeychainTest {
+
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
@@ -222,7 +226,7 @@ class SecretServiceKeychainTest {
     @Test
     void theKeysAreKeptInTheKeyring() throws Exception {
         startAThrowawayKeyring();
-        var keys = new ApiKeys(keychain("car-charge-planner"), new SecretsFile(folder.resolve("secrets.json")));
+        var keys = new ApiKeys(keychain("car-charge-planner"), new SecretsFile(folder.resolve("secrets.json"), FILES));
         var secrets = new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1")));
 
         keys.save(secrets);
@@ -253,7 +257,7 @@ class SecretServiceKeychainTest {
                 e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.LOCKED));
         assertThatThrownBy(() -> keychain.delete("index")).isInstanceOfSatisfying(KeychainException.class,
                 e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.LOCKED));
-        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
+        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES));
         assertThatThrownBy(keys::load).isInstanceOfSatisfying(SecretsProblem.class,
                 problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.LOCKED));
         assertThat(keys.storage()).isEqualTo(KeyStorage.LOCKED_KEYCHAIN);
@@ -278,7 +282,7 @@ class SecretServiceKeychainTest {
         assertThat(keychain.unlock(TIMEOUT, () -> { })).isEqualTo(UnlockOutcome.DISMISSED);
         assertThatThrownBy(() -> keychain.read("index")).isInstanceOfSatisfying(KeychainException.class,
                 e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.LOCKED));
-        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
+        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES));
         keys.save(new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1"))));
         assertThat(keys.storage()).as("dismissed: the owner chose the file").isEqualTo(KeyStorage.FILE);
         keychain.close();
@@ -288,11 +292,12 @@ class SecretServiceKeychainTest {
     void oneConnectionServesEveryCallAndClosingTheKeychainClosesIt() throws Exception {
         startAThrowawayKeyring();
         var keychain = counted();
-        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
+        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES));
         var secrets = new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1")));
 
         keys.save(secrets);
-        assertThat(new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"))).load()).isEqualTo(secrets);
+        assertThat(new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES)).load())
+                .isEqualTo(secrets);
         keychain.delete("index");
 
         assertThat(made).hasSize(1);
@@ -332,7 +337,8 @@ class SecretServiceKeychainTest {
     void withoutASecretServiceOnTheBusThereIsNoKeychain() {
         assertThatThrownBy(() -> keychain("car-charge-planner").read("index")).isInstanceOf(KeychainException.class)
                 .hasMessageContaining("no Secret Service");
-        assertThat(new ApiKeys(keychain("car-charge-planner"), new SecretsFile(folder.resolve("secrets.json"))).storage())
+        assertThat(new ApiKeys(keychain("car-charge-planner"), new SecretsFile(folder.resolve("secrets.json"), FILES))
+                .storage())
                 .isEqualTo(KeyStorage.FILE);
     }
 }

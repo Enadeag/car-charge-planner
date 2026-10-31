@@ -87,6 +87,7 @@ public final class DesktopApp {
     private final AppSettingsFile appSettingsFile;
     private final AppSettings appSettings;
     private final LanguageChoice language;
+    private final PrivateFiles files;
     private final ClosingOrder closing = new ClosingOrder();
     private final ClaimReport claimReport;
     /** Runs the windows' slow work, such as reading the keychain, away from the JavaFX thread. */
@@ -120,9 +121,10 @@ public final class DesktopApp {
      * @param appSettingsFile the desktop app's own settings file
      * @param appSettings the app settings as the app starts; the display mode is read only now
      * @param language the language the texts are in, followed while the app runs
+     * @param files how the app's files and folders are written, and made private, on this system
      */
     public DesktopApp(CommandLine commandLine, Host host, PlatformParts parts, SingleInstance instance, Path configPath,
-            AppSettingsFile appSettingsFile, AppSettings appSettings, LanguageChoice language) {
+            AppSettingsFile appSettingsFile, AppSettings appSettings, LanguageChoice language, PrivateFiles files) {
         this.commandLine = commandLine;
         this.host = host;
         this.parts = parts;
@@ -131,6 +133,7 @@ public final class DesktopApp {
         this.appSettingsFile = appSettingsFile;
         this.appSettings = appSettings;
         this.language = language;
+        this.files = files;
         this.appearance = new SimpleObjectProperty<>(appSettings.appearance());
         this.units = new SimpleObjectProperty<>(appSettings.units());
         this.claimReport = new ClaimReport(instance, language.messages(), System.err, LOG);
@@ -158,7 +161,7 @@ public final class DesktopApp {
         // only now: a second copy that hands over to this one does not write to its log file
         startLog(dataFolder);
         // a data folder made before the app made its folders private is made private now
-        PrivateFiles.tighten(dataFolder);
+        files.tighten(dataFolder);
         claimReport.logProblem();
         DBUS_LOG.setLevel(java.util.logging.Level.WARNING); // dbus-java reports every connection at INFO
         var http = new JdkHttpGet();
@@ -183,16 +186,17 @@ public final class DesktopApp {
         closing.add("the notifications", notifications::close);
         var trayPresenter = new TrayPresenter(tray, language);
 
-        var secretsFile = new SecretsFile(SecretsLocation.moveFromOldPlace(host.os(), configPath, dataFolder));
+        var secretsFile = new SecretsFile(SecretsLocation.moveFromOldPlace(host.os(), configPath, dataFolder, files),
+                files);
         // folders made before the app made its folders private; a folder named with --config= stays as it is
-        PrivateFiles.tighten(appSettingsFile.path().toAbsolutePath().getParent());
+        files.tighten(appSettingsFile.path().toAbsolutePath().getParent());
         // the engine's thread reads the units the JavaFX thread sets: a notice just after a Save may keep the old ones
         var texts = new AnnouncementTexts(language, units::get);
         var keychain = parts.keychain();
         closing.add("the keychain", keychain::close);
         var apiKeys = new ApiKeys(keychain, secretsFile, Clock.systemUTC());
         background.run("removing what the calendar trips left", () -> {
-            CalendarLeftovers.remove(apiKeys, dataFolder);
+            CalendarLeftovers.remove(apiKeys, dataFolder, files);
             return null;
         }, done -> { }, failed -> { });
         var engine = engine(http, apiKeys, dataFolder, notice -> notifications.send(texts.notification(notice)));
@@ -281,7 +285,7 @@ public final class DesktopApp {
      */
     private void startLog(Path dataFolder) {
         var log = new AppLog(java.util.logging.Logger.getLogger(""),
-                java.util.logging.Logger.getLogger(AppLog.APP_LOGGER_NAME));
+                java.util.logging.Logger.getLogger(AppLog.APP_LOGGER_NAME), files);
         log.start(dataFolder, host.environment(), host.terminal(), ZoneId.systemDefault());
         closing.add("the log file", log::close);
         LOG.log(Level.INFO, AppName.TITLE + " " + version() + " starts");
@@ -322,12 +326,13 @@ public final class DesktopApp {
 
     private Engine engine(HttpGet http, ApiKeys apiKeys, Path dataFolder, Notifier notifier) {
         var providers = new Providers(List.of(new OpenMeteo(http), new ForecastSolar(http)));
-        var cache = new ForecastCache(dataFolder.resolve("forecasts"));
-        var announcer = new Announcer(new AnnouncedWindows(dataFolder.resolve("announced.json")),
-                new ToldTrips(dataFolder.resolve("trip-notices.json")), notifier);
-        return new Engine(new ConfigFile(configPath), new ForecastService(providers, cache, apiKeys), providers,
-                apiKeys, new AwayFile(dataFolder.resolve("away.json")), new TripFile(dataFolder.resolve("trips.json")),
-                new BatteryFile(dataFolder.resolve("battery.json")), Clock.systemUTC(), announcer,
+        var cache = new ForecastCache(dataFolder.resolve("forecasts"), files);
+        var announcer = new Announcer(new AnnouncedWindows(dataFolder.resolve("announced.json"), files),
+                new ToldTrips(dataFolder.resolve("trip-notices.json"), files), notifier);
+        return new Engine(new ConfigFile(configPath, files), new ForecastService(providers, cache, apiKeys), providers,
+                apiKeys, new AwayFile(dataFolder.resolve("away.json"), files),
+                new TripFile(dataFolder.resolve("trips.json"), files),
+                new BatteryFile(dataFolder.resolve("battery.json"), files), Clock.systemUTC(), announcer,
                 Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("planner").daemon().factory()));
     }
 

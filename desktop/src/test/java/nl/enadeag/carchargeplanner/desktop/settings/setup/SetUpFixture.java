@@ -11,6 +11,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.SettingsFixture;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStorage;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStores;
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.system.TextSize;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
@@ -45,6 +46,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import nl.enadeag.carchargeplanner.host.AppName;
 import java.io.IOException;
@@ -75,6 +77,8 @@ import javafx.stage.Stage;
  * the owner's files, keychain or autostart.
  */
 final class SetUpFixture {
+
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
     /** A made-up place the search finds for any text. */
     static final Place PLACE = new Place("Zonnedorp", new Coordinates(52.1, 5.1), ZoneId.of("Europe/Amsterdam"),
@@ -116,15 +120,16 @@ final class SetUpFixture {
         this.background = background;
         this.messages = new Messages(language);
         configPath = folder.resolve("engine.json");
-        appSettings = new AppSettingsFile(folder.resolve("app.json"), Units.METRIC);
+        appSettings = new AppSettingsFile(folder.resolve("app.json"), Units.METRIC, FILES);
         var providers = new Providers(List.of(provider, new ForecastSolar(offline())));
-        var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
-        engine = new Engine(new ConfigFile(configPath),
-                new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
-                new AwayFile(folder.resolve("away.json")), new TripFile(folder.resolve("trips.json")),
-                new BatteryFile(folder.resolve("battery.json")), clock,
-                new Announcer(new AnnouncedWindows(folder.resolve("announced.json")),
-                        new ToldTrips(folder.resolve("trip-notices.json")), _ -> { }),
+        var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES));
+        engine = new Engine(new ConfigFile(configPath, FILES),
+                new ForecastService(providers, new ForecastCache(folder.resolve("cache"), FILES), apiKeys), providers,
+                apiKeys,
+                new AwayFile(folder.resolve("away.json"), FILES), new TripFile(folder.resolve("trips.json"), FILES),
+                new BatteryFile(folder.resolve("battery.json"), FILES), clock,
+                new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES),
+                        new ToldTrips(folder.resolve("trip-notices.json"), FILES), _ -> { }),
                 new ManualScheduler());
     }
 

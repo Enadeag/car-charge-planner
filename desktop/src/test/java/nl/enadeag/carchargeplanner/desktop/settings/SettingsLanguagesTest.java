@@ -7,11 +7,13 @@ import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.TextScale;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -33,6 +35,8 @@ import org.junit.jupiter.params.provider.MethodSource;
  */
 @FxTest
 class SettingsLanguagesTest {
+
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
     @TempDir
     Path folder;
@@ -60,7 +64,7 @@ class SettingsLanguagesTest {
     @EnumSource(Language.class)
     void noTextIsCutOff(Language language) throws Exception {
         settings = new SettingsFixture(folder, language, SettingsFixture.realProviders());
-        var file = new ConfigFile(settings.configPath);
+        var file = new ConfigFile(settings.configPath, FILES);
         var example = file.read();
         file.write(example.withSystem(example.system().withPanels(List.of(PanelArray.TYPICAL, PanelArray.TYPICAL)),
                 new TypicalValues(TypicalValues.SYSTEM_SETTINGS, List.of(TypicalValues.PANEL_SETTINGS))));
@@ -88,7 +92,7 @@ class SettingsLanguagesTest {
     @MethodSource("languagesAndScales")
     void withLargerTextNoTextIsCutOffOrOverlapsEither(Language language, TextScale scale) throws Exception {
         settings = new SettingsFixture(folder, language, SettingsFixture.realProviders());
-        var file = new ConfigFile(settings.configPath);
+        var file = new ConfigFile(settings.configPath, FILES);
         var example = file.read();
         file.write(example.withSystem(example.system().withPanels(List.of(PanelArray.TYPICAL, PanelArray.TYPICAL)),
                 new TypicalValues(TypicalValues.SYSTEM_SETTINGS, List.of(TypicalValues.PANEL_SETTINGS))));

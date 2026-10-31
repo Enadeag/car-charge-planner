@@ -3,6 +3,8 @@ package nl.enadeag.carchargeplanner.engine.away;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -19,6 +21,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class AwayFileTest {
 
+    private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
+
     private static final ZoneId TZ = ZoneId.of("Europe/Amsterdam");
     private static final LocalDate DAY = LocalDate.of(2026, 7, 3);
     private static final Instant NOW = DAY.atTime(7, 0).atZone(TZ).toInstant();
@@ -27,7 +31,7 @@ class AwayFileTest {
     Path folder;
 
     private AwayFile file() {
-        return new AwayFile(folder.resolve("data").resolve("away.json"));
+        return new AwayFile(folder.resolve("data").resolve("away.json"), FILES);
     }
 
     @Test
@@ -65,7 +69,7 @@ class AwayFileTest {
     void aMissingOrDamagedFileHoldsNoPeriods() throws IOException {
         assertThat(file().periods()).isEmpty();
         var damaged = Files.writeString(folder.resolve("damaged.json"), "{oops");
-        assertThat(new AwayFile(damaged).periods()).isEmpty();
+        assertThat(new AwayFile(damaged, FILES).periods()).isEmpty();
     }
 
     @Test
@@ -75,7 +79,7 @@ class AwayFileTest {
                   {"start": "2026-07-04T08:00:00Z", "end": "2026-07-04T06:00:00Z"},
                   {"start": "2026-07-04T06:00:00Z", "end": "2026-07-04T08:00:00Z"}]}
                 """);
-        assertThat(new AwayFile(path).periods()).containsExactly(
+        assertThat(new AwayFile(path, FILES).periods()).containsExactly(
                 new OneOffAwayPeriod(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z")));
     }
 
@@ -94,9 +98,9 @@ class AwayFileTest {
         var path = Files.writeString(folder.resolve("away.json"), content);
         var period = OneOffAwayPeriod.allDay(DAY, TZ);
 
-        assertThatThrownBy(() -> new AwayFile(path).add(period, NOW)).isInstanceOf(IOException.class)
+        assertThatThrownBy(() -> new AwayFile(path, FILES).add(period, NOW)).isInstanceOf(IOException.class)
                 .hasMessageContaining("left as it is");
-        assertThatThrownBy(() -> new AwayFile(path).remove(period)).isInstanceOf(IOException.class);
+        assertThatThrownBy(() -> new AwayFile(path, FILES).remove(period)).isInstanceOf(IOException.class);
         assertThat(path).hasContent(content);
     }
 
@@ -105,13 +109,13 @@ class AwayFileTest {
         var path = Files.writeString(folder.resolve("away.json"),
                 "{\"periods\": [{\"start\": \"2026-07-04T06:00:00Z\", \"end\": \"2026-07-04T08:00:00Z\"}]}");
         var stored = new OneOffAwayPeriod(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z"));
-        assertThat(new AwayFile(path).periods()).containsExactly(stored);
+        assertThat(new AwayFile(path, FILES).periods()).containsExactly(stored);
 
         var added = OneOffAwayPeriod.allDay(LocalDate.of(2026, 7, 5), TZ);
-        new AwayFile(path).add(added, NOW);
+        new AwayFile(path, FILES).add(added, NOW);
 
         assertThat(StoredJson.parse(Files.readString(path)).path("version").intValue()).isEqualTo(1);
-        assertThat(new AwayFile(path).periods()).containsExactly(stored, added);
+        assertThat(new AwayFile(path, FILES).periods()).containsExactly(stored, added);
     }
 
     @Test
@@ -130,7 +134,7 @@ class AwayFileTest {
                   {"start": "2026-07-04T06:00:00Z", "end": "2026-07-04T08:00:00Z"}]}
                 """);
 
-        assertThat(new AwayFile(path).periods()).containsExactly(
+        assertThat(new AwayFile(path, FILES).periods()).containsExactly(
                 new OneOffAwayPeriod(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z")),
                 new OneOffAwayPeriod(Instant.parse("2026-07-05T06:00:00Z"), Instant.parse("2026-07-05T08:00:00Z")));
     }

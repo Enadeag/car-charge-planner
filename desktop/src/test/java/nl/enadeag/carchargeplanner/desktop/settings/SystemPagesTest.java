@@ -10,6 +10,7 @@ import nl.enadeag.carchargeplanner.desktop.app.Appearance;
 import nl.enadeag.carchargeplanner.desktop.app.DisplayMode;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.Car;
@@ -30,6 +31,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.PlaceSearch;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.forecast.SolarSite;
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -49,6 +51,8 @@ import org.junit.jupiter.api.io.TempDir;
 @FxTest
 class SystemPagesTest {
 
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
+
     @TempDir
     Path folder;
 
@@ -65,13 +69,13 @@ class SystemPagesTest {
     }
 
     private EngineConfig stored() throws Exception {
-        return new ConfigFile(settings.configPath).read();
+        return new ConfigFile(settings.configPath, FILES).read();
     }
 
     /** The example config, changed and written back before Settings opens. */
     private SettingsView openWith(java.util.function.UnaryOperator<EngineConfig> change) throws Exception {
         settings = new SettingsFixture(folder, Language.ENGLISH);
-        var file = new ConfigFile(settings.configPath);
+        var file = new ConfigFile(settings.configPath, FILES);
         file.write(change.apply(file.read()));
         return settings.open();
     }
@@ -356,7 +360,7 @@ class SystemPagesTest {
     @Test
     void typicalValuesStayTaggedInImperialUnits() throws Exception {
         settings = new SettingsFixture(folder, Language.ENGLISH);
-        var file = new ConfigFile(settings.configPath);
+        var file = new ConfigFile(settings.configPath, FILES);
         var example = file.read();
         file.write(example.withSystem(example.system(), new TypicalValues(Set.of(ConfigSetting.CAR_CONSUMPTION), List.of())));
         settings.appSettings.write(new AppSettings(Optional.empty(), Units.IMPERIAL, DisplayMode.AUTOMATIC, Appearance.SYSTEM));

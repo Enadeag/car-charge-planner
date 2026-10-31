@@ -38,11 +38,12 @@ public final class CalendarLeftovers {
      *
      * @param keys where the API keys are kept
      * @param dataFolder the app's data folder, which held the consents file
+     * @param files how the app's files are removed on this platform
      */
-    public static void remove(ApiKeys keys, Path dataFolder) {
+    public static void remove(ApiKeys keys, Path dataFolder, PrivateFiles files) {
         var consents = dataFolder.resolve(CONSENT_FILE);
         try {
-            if (PrivateFiles.remove(consents)) {
+            if (files.remove(consents)) {
                 LOG.info("removed " + consents + ", left by the withdrawn calendar trips");
             }
         } catch (IOException e) {

@@ -7,11 +7,13 @@ import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SaveOutcome;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.secrets.MemoryKeychain;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.lang.ref.WeakReference;
 import java.nio.file.Path;
 import java.util.List;
@@ -33,6 +35,8 @@ import org.junit.jupiter.api.io.TempDir;
  */
 @FxTest
 class SlowStoresTest {
+
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
     @TempDir
     Path folder;
@@ -90,7 +94,7 @@ class SlowStoresTest {
         keychain.letGo.countDown();
         SettingsFixture.waitFor(() -> !view.isReading());
 
-        var target = new ConfigFile(settings.configPath).read().planning().targetPct().value();
+        var target = new ConfigFile(settings.configPath, FILES).read().planning().targetPct().value();
         assertThat(Fx.call(() -> ((TextField) settings.field(view, TextKey.FIELD_TARGET_CHARGE)).getText()))
                 .isEqualTo(settings.messages.number(target, 0));
         assertThat(Fx.call(() -> planningPage(view).isDisabled())).isFalse();

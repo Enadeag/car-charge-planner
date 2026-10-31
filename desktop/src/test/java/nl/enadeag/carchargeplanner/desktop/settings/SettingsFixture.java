@@ -11,6 +11,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.about.AboutFacts;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SaveOutcome;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStores;
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.system.StartAtLogin;
 import nl.enadeag.carchargeplanner.desktop.system.TextSize;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
@@ -37,6 +38,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import nl.enadeag.carchargeplanner.host.AppName;
 import java.io.IOException;
@@ -67,6 +69,8 @@ import javafx.stage.Stage;
  * only remembers. Nothing touches the owner's files, keychain or autostart.
  */
 public final class SettingsFixture {
+
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
     public static final Path EXAMPLE = Path.of("docs", "example-engine.json");
 
@@ -113,15 +117,16 @@ public final class SettingsFixture {
         this.messages = new Messages(language);
         configPath = folder.resolve("engine.json");
         Files.copy(EXAMPLE, configPath);
-        appSettings = new AppSettingsFile(folder.resolve("app.json"), Units.METRIC);
+        appSettings = new AppSettingsFile(folder.resolve("app.json"), Units.METRIC, FILES);
         var providers = new Providers(known);
-        var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
-        engine = new Engine(new ConfigFile(configPath),
-                new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
-                new AwayFile(folder.resolve("away.json")), new TripFile(folder.resolve("trips.json")),
-                new BatteryFile(folder.resolve("battery.json")), clock,
-                new Announcer(new AnnouncedWindows(folder.resolve("announced.json")),
-                        new ToldTrips(folder.resolve("trip-notices.json")), _ -> { }),
+        var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES));
+        engine = new Engine(new ConfigFile(configPath, FILES),
+                new ForecastService(providers, new ForecastCache(folder.resolve("cache"), FILES), apiKeys), providers,
+                apiKeys,
+                new AwayFile(folder.resolve("away.json"), FILES), new TripFile(folder.resolve("trips.json"), FILES),
+                new BatteryFile(folder.resolve("battery.json"), FILES), clock,
+                new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES),
+                        new ToldTrips(folder.resolve("trip-notices.json"), FILES), _ -> { }),
                 new ManualScheduler());
     }
 

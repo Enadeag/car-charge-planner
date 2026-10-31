@@ -4,6 +4,7 @@ import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.engine.store.FileFormat;
 import nl.enadeag.carchargeplanner.engine.store.FileVersion;
 import nl.enadeag.carchargeplanner.engine.store.FormatProblem;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.store.Stored;
 import nl.enadeag.carchargeplanner.engine.store.StoredFile;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
@@ -40,9 +41,10 @@ public final class AppSettingsFile {
      *
      * @param path where the file is, or would be; it need not exist
      * @param systemUnits the units of the owner's country, for a file that does not choose any
+     * @param files how the file and its folder are written, private, on this system
      */
-    public AppSettingsFile(Path path, Units systemUnits) {
-        this.file = new StoredFile<>(path, new Format());
+    public AppSettingsFile(Path path, Units systemUnits, PrivateFiles files) {
+        this.file = new StoredFile<>(path, new Format(), files);
         this.system = AppSettings.following(systemUnits);
     }
 

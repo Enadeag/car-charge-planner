@@ -5,12 +5,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import nl.enadeag.carchargeplanner.engine.secrets.KeychainException;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +30,8 @@ import org.junit.jupiter.api.io.TempDir;
  */
 @EnabledOnOs(OS.WINDOWS)
 class CredentialManagerKeychainTest {
+
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
     private static final List<String> NAMES = List.of("probe", "forecast/open-meteo/api_key", "index");
 
@@ -75,7 +79,7 @@ class CredentialManagerKeychainTest {
     @Test
     void theKeysAreKeptInTheCredentialManager() throws Exception {
         assumeTrue(loggedOn, "no logon session, as over ssh");
-        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
+        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES));
         var secrets = new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1")));
 
         keys.save(secrets);
@@ -90,7 +94,7 @@ class CredentialManagerKeychainTest {
         assumeFalse(loggedOn, "a logon session, so the Credential Manager works");
         assertThatThrownBy(() -> keychain.write("probe", "x")).isInstanceOfSatisfying(KeychainException.class,
                 e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.UNAVAILABLE));
-        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
+        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES));
         var secrets = new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1")));
 
         keys.save(secrets);

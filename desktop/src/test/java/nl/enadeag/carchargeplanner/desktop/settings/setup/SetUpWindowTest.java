@@ -14,11 +14,13 @@ import nl.enadeag.carchargeplanner.desktop.settings.SettingsWindow;
 import nl.enadeag.carchargeplanner.desktop.settings.about.AboutFacts;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.host.AppName;
 import java.nio.file.Path;
 import java.util.List;
@@ -39,6 +41,8 @@ import org.junit.jupiter.api.io.TempDir;
  */
 @FxTest
 class SetUpWindowTest {
+
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
     private static final Messages DUTCH = new Messages(Language.DUTCH);
 
@@ -173,7 +177,7 @@ class SetUpWindowTest {
 
         var view = view();
         Fx.run(() -> view.show(SetUpStep.LOCATION));
-        var stored = new ConfigFile(setUp.configPath).read();
+        var stored = new ConfigFile(setUp.configPath, FILES).read();
         assertThat(Fx.call(() -> ((TextField) setUp.field(view, TextKey.FIELD_LATITUDE)).getText()))
                 .isEqualTo(setUp.messages.number(stored.system().location().latitude(), 4));
         assertThat(Fx.call(() -> view.draft().config())).isEqualTo(stored);

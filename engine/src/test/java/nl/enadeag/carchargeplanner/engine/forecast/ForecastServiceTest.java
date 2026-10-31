@@ -17,6 +17,8 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderError.Unavailable;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsSource;
+import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,6 +44,8 @@ import tools.jackson.databind.node.ObjectNode;
 
 /** The forecast service over fake providers named Main (the primary) and Backup (the fallback provider). */
 class ForecastServiceTest {
+
+    private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
 
     private static final LocalDate DAY = LocalDate.of(2026, 7, 3);
     private static final Instant T0 = DAY.atTime(7, 0).atZone(SunnyDays.TZ).toInstant();
@@ -69,7 +73,7 @@ class ForecastServiceTest {
     }
 
     private void restart() {
-        service = new ForecastService(new Providers(List.of(main, backup)), new ForecastCache(cacheFolder()),
+        service = new ForecastService(new Providers(List.of(main, backup)), new ForecastCache(cacheFolder(), FILES),
                 () -> secrets.load());
     }
 
@@ -300,8 +304,8 @@ class ForecastServiceTest {
         };
         secrets = () -> new Secrets(Map.of(MAIN, Map.of("api_key", SECRET), BACKUP, Map.of("api_key", otherKey)));
         withoutFallback();
-        var echoed = new ForecastService(new Providers(List.of(echoing, backup)), new ForecastCache(cacheFolder()),
-                () -> secrets.load());
+        var echoed = new ForecastService(new Providers(List.of(echoing, backup)),
+                new ForecastCache(cacheFolder(), FILES), () -> secrets.load());
 
         try (var log = LogCapture.of("nl.enadeag.carchargeplanner")) {
             assertThatThrownBy(() -> echoed.get(SYSTEM, selection, T0)).isInstanceOf(ForecastUnavailable.class)
@@ -651,7 +655,7 @@ class ForecastServiceTest {
 
     @Test
     void thePlainSettingsArePartOfTheCacheKeyInNameOrder() {
-        var key = new ForecastCache(cacheFolder()).key(SYSTEM, Map.of("b", "2", "a", "1"));
+        var key = new ForecastCache(cacheFolder(), FILES).key(SYSTEM, Map.of("b", "2", "a", "1"));
         assertThat(key.path("settings").propertyNames()).containsExactly("a", "b");
         assertThat(key.path("settings").path("a").stringValue()).isEqualTo("1");
         assertThat(key.path("settings").path("b").stringValue()).isEqualTo("2");

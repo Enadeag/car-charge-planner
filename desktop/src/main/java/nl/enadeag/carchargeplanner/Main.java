@@ -5,8 +5,10 @@ import nl.enadeag.carchargeplanner.cli.Commands;
 import nl.enadeag.carchargeplanner.cli.ExitCode;
 import nl.enadeag.carchargeplanner.desktop.app.AppSettingsFile;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.host.ConfigLocation;
 import nl.enadeag.carchargeplanner.host.Host;
 import nl.enadeag.carchargeplanner.host.InstanceLocation;
@@ -54,8 +56,9 @@ public final class Main {
         var host = Host.current();
         var parts = PlatformParts.of(host);
         var defaultConfig = ConfigLocation.defaultPath(host.os(), host.environment(), host.home());
+        var files = new PrivateFiles(new PosixFilePrivacy());
         var appSettingsFile = new AppSettingsFile(defaultConfig.resolveSibling(APP_SETTINGS_FILE),
-                Units.ofCountry(Locale.getDefault(Locale.Category.FORMAT).getCountry()));
+                Units.ofCountry(Locale.getDefault(Locale.Category.FORMAT).getCountry()), files);
         // the mode is read once, as the app starts, and applies at the next start; language and appearance follow Settings
         var appSettings = appSettingsFile.read();
         var language = new LanguageChoice(Language.ofSystem(host.environment(), Locale.getDefault(Locale.Category.DISPLAY)));
@@ -65,7 +68,7 @@ public final class Main {
 
         if (commandLine.command() == CommandLine.Command.RUN) {
             new DesktopApp(commandLine, host, parts, instance, commandLine.config().orElse(defaultConfig),
-                    appSettingsFile, appSettings, language).run();
+                    appSettingsFile, appSettings, language, files).run();
             return;
         }
         var outcome = Commands.of(host, parts, instance, language.messages()).carryOut(commandLine.command());

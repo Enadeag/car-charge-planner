@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.engine.notify;
 import nl.enadeag.carchargeplanner.engine.store.FileFormat;
 import nl.enadeag.carchargeplanner.engine.store.FileVersion;
 import nl.enadeag.carchargeplanner.engine.store.FormatProblem;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.store.Stored;
 import nl.enadeag.carchargeplanner.engine.store.StoredFile;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
@@ -34,9 +35,10 @@ public final class ToldTrips {
      * Makes the store; nothing is read or written yet.
      *
      * @param file the file the trips are kept in; it and its folder are made when the first trip is saved
+     * @param files how the file and its folders are written privately on this platform
      */
-    public ToldTrips(Path file) {
-        this.file = new StoredFile<>(file, new Format());
+    public ToldTrips(Path file, PrivateFiles files) {
+        this.file = new StoredFile<>(file, new Format(), files);
     }
 
     /**
