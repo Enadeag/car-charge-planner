@@ -7,9 +7,28 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Fetches a web address: the one way the forecast providers reach the network, so tests can answer instead. A
- * server's refusal (a 429, a 503) is a {@link Reply} with that status; only "could not talk to the server at all",
- * an answer that took too long and one that was too large throw.
+ * Fetches a web address: the one way the forecast providers reach the network, so tests can answer instead, and so
+ * the engine brings no HTTP client of its own: each platform hands in one, as Java's own HTTP client is not
+ * there on Android (ADR 0010). A server's refusal (a 429, a 503) is a {@link Reply} with that status; only "could not
+ * talk to the server at all", an answer that took too long and one that was too large throw.
+ *
+ * <p>What every implementation must do, which {@code HttpGetContractTest} among the engine's tests checks:
+ * <ul>
+ *   <li>send the request's headers, and a User-Agent that names the app (its exact text is the implementation's);</li>
+ *   <li>throw an {@link IOException} when nothing answers at the address, or the server could not be reached at
+ *       all;</li>
+ *   <li>return a redirect (3xx) as the {@link Reply} it is, without following it;</li>
+ *   <li>end the request when the request's timeout has passed without the whole answer, connecting and the body
+ *       included, so a server that trickles its body cannot hold it; the timeout is an {@link IOException} of no
+ *       fixed type;</li>
+ *   <li>refuse a body larger than the request allows with {@link TooLarge}, without reading the rest of it, and
+ *       before reading any of it when its {@code Content-Length} already says so;</li>
+ *   <li>read the body as UTF-8, which is what JSON is sent in;</li>
+ *   <li>keep the first value of a header the server sent more than once;</li>
+ *   <li>abort the request when the waiting thread is interrupted, and throw {@link InterruptedException};</li>
+ *   <li>be safe to use from several threads at once: the providers share one, and are asked from the planner's
+ *       thread and from a client's background work alike.</li>
+ * </ul>
  */
 public interface HttpGet {
 

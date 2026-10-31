@@ -29,7 +29,7 @@ import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastCache;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastService;
-import nl.enadeag.carchargeplanner.engine.forecast.JdkHttpGet;
+import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import nl.enadeag.carchargeplanner.engine.forecast.Providers;
 import nl.enadeag.carchargeplanner.engine.forecast.providers.ForecastSolar;
 import nl.enadeag.carchargeplanner.engine.forecast.providers.OpenMeteo;
@@ -53,7 +53,6 @@ import nl.enadeag.carchargeplanner.platforms.PlatformParts;
 import java.io.IOException;
 import java.lang.System.Logger.Level;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.ZoneId;
@@ -162,7 +161,7 @@ public final class DesktopApp {
         PrivateFiles.tighten(dataFolder);
         claimReport.logProblem();
         DBUS_LOG.setLevel(java.util.logging.Level.WARNING); // dbus-java reports every connection at INFO
-        var http = JdkHttpGet.newClient();
+        var http = new JdkHttpGet();
         closing.add("the HTTP client", http::close);
         var icon = new AppIcon();
 
@@ -321,9 +320,8 @@ public final class DesktopApp {
         }
     }
 
-    private Engine engine(HttpClient http, ApiKeys apiKeys, Path dataFolder, Notifier notifier) {
-        var get = new JdkHttpGet(http);
-        var providers = new Providers(List.of(new OpenMeteo(get), new ForecastSolar(get)));
+    private Engine engine(HttpGet http, ApiKeys apiKeys, Path dataFolder, Notifier notifier) {
+        var providers = new Providers(List.of(new OpenMeteo(http), new ForecastSolar(http)));
         var cache = new ForecastCache(dataFolder.resolve("forecasts"));
         var announcer = new Announcer(new AnnouncedWindows(dataFolder.resolve("announced.json")),
                 new ToldTrips(dataFolder.resolve("trip-notices.json")), notifier);

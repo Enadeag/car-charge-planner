@@ -7,24 +7,28 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
-import com.tngtech.archunit.library.freeze.FreezingArchRule;
 
 /**
  * The house rules of CONTRIBUTING.md for the engine's tests, the test helpers the desktop shares among them: no
- * sleeping, and no reading of the real home folder or environment. The same rules as the desktop module's
- * {@code TestCodeArchitectureTest}; the sleeps that are still there are frozen in {@code engine/src/test/archunit_store}:
- * they may be removed, and none may be added.
+ * sleeping, and no reading of the real home folder or environment, the same rules as the desktop module's
+ * {@code TestCodeArchitectureTest} but with nothing frozen; and, as in {@code EngineArchitectureTest}, no
+ * {@code java.net.http}.
  */
 @AnalyzeClasses(packages = "nl.enadeag.carchargeplanner", importOptions = ImportOption.OnlyIncludeTests.class)
 class EngineTestCodeArchitectureTest {
 
     @ArchTest
-    static final ArchRule testsDoNotSleep = FreezingArchRule.freeze(noClasses()
+    static final ArchRule testsDoNotSleep = noClasses()
             .should().callMethod(Thread.class, "sleep", long.class)
             .orShould().callMethod(Thread.class, "sleep", long.class, int.class)
             .orShould().callMethod(Thread.class, "sleep", java.time.Duration.class)
             .because("a test waits for a signal or sets the clock; a sleep is slow when it is long and flaky when it "
-                    + "is short (CONTRIBUTING.md, ADR 0005)"));
+                    + "is short (CONTRIBUTING.md, ADR 0005)");
+
+    @ArchTest
+    static final ArchRule theEngineTestsDoNotUseJavasHttpClient = noClasses()
+            .should().dependOnClassesThat().resideInAPackage("java.net.http..")
+            .because("the engine's tests run on Android's Java too, which has no java.net.http (ADR 0010)");
 
     @ArchTest
     static final ArchRule testsDoNotReadTheRealHomeOrEnvironment = noClasses()

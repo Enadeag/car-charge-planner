@@ -388,7 +388,7 @@
                   <skip>false</skip>
                   <!-- the classes that the tests without JavaFX (no @FxTest) cover: the mappers to the dashboard's
                        models, chart and popup geometry, the app settings, the logic of the Settings and set-up forms,
-                       the tray icon's drawing, the text size and the texts -->
+                       the tray icon's drawing, the text size, the texts and the HTTP client -->
                   <targetClasses>
                     <param>nl.enadeag.carchargeplanner.desktop.app.AppSettings*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.app.Background*</param>
@@ -421,9 +421,11 @@
                     <param>nl.enadeag.carchargeplanner.desktop.system.StatusIcon*</param>
                     <param>nl.enadeag.carchargeplanner.desktop.system.TextSize</param>
                     <param>nl.enadeag.carchargeplanner.desktop.text.*</param>
+                    <param>nl.enadeag.carchargeplanner.start.JdkHttpGet*</param>
                   </targetClasses>
                   <targetTests>
                     <param>nl.enadeag.carchargeplanner.desktop.*</param>
+                    <param>nl.enadeag.carchargeplanner.start.JdkHttpGetTest</param>
                   </targetTests>
                   <reportsDirectory>${project.build.directory}/pit-reports/desktop</reportsDirectory>
                   <!-- a few points below the share of mutants killed when it was set (92 %) -->

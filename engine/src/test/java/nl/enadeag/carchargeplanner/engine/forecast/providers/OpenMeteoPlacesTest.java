@@ -13,8 +13,8 @@ import nl.enadeag.carchargeplanner.engine.forecast.Recorded;
 import nl.enadeag.carchargeplanner.engine.forecast.ReplayHttp;
 import java.io.IOException;
 import java.net.ConnectException;
+import java.net.SocketTimeoutException;
 import java.net.URLDecoder;
-import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.ZoneId;
@@ -163,7 +163,7 @@ class OpenMeteoPlacesTest {
     }
 
     @ParameterizedTest
-    @ValueSource(classes = {ConnectException.class, HttpTimeoutException.class})
+    @ValueSource(classes = {ConnectException.class, SocketTimeoutException.class})
     void noNetworkIsUnavailable(Class<? extends IOException> kind) throws ReflectiveOperationException {
         http = new ReplayHttp(List.of(ReplayHttp.Route.failure(kind.getConstructor(String.class).newInstance("down"))));
         assertThat(new OpenMeteoPlaces(http).search("Amsterdam", "en")).isEqualTo(new PlaceResults.Failed(Problem.UNAVAILABLE));
