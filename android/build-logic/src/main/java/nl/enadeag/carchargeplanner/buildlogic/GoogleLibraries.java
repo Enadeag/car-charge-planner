@@ -32,7 +32,7 @@ public final class GoogleLibraries {
         modulesByConfiguration.forEach((configuration, modules) -> {
             for (var module : modules) {
                 var group = module.substring(0, Math.max(0, module.indexOf(':')));
-                if (GROUPS.stream().anyMatch(refused -> MavenPoms.inGroup(group, refused))) {
+                if (GROUPS.stream().anyMatch(refused -> Groups.isIn(group, refused))) {
                     found.computeIfAbsent(module, ignored -> new ArrayList<>()).add(configuration);
                 }
             }

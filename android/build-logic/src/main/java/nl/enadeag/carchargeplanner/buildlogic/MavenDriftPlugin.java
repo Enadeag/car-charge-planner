@@ -58,7 +58,7 @@ public final class MavenDriftPlugin implements Plugin<Project> {
             boolean bom = category != null && (Category.REGULAR_PLATFORM.equals(category.getName())
                     || Category.ENFORCED_PLATFORM.equals(category.getName()));
             if (onlyTestGroups && !bom
-                    && TEST_GROUPS.stream().noneMatch(group -> MavenPoms.inGroup(dependency.getGroup(), group))) {
+                    && TEST_GROUPS.stream().noneMatch(group -> Groups.isIn(dependency.getGroup(), group))) {
                 continue;
             }
             // a catalog library without a version has none here, or an empty one

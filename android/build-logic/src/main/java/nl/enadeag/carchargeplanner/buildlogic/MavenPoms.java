@@ -63,24 +63,13 @@ public final class MavenPoms {
         for (var dependency : dependencies(parse(modulePom).getDocumentElement(), null)) {
             var library = library(dependency, properties);
             boolean ofTests = "test".equals(text(dependency, "scope"));
-            if (ofTests && testGroups.stream().noneMatch(group -> inGroup(library.group(), group))) {
+            if (ofTests && testGroups.stream().noneMatch(group -> Groups.isIn(library.group(), group))) {
                 continue;
             }
             var version = library.version() != null ? library.version() : managed.get(library.module());
             declared.add(new Declared(library.group(), library.artifact(), version, false));
         }
         return declared;
-    }
-
-    /**
-     * Whether a group is the given one or a subgroup of it.
-     *
-     * @param group the library's group
-     * @param parent the group it may be in
-     * @return true when {@code group} is {@code parent} or starts with {@code parent.}
-     */
-    static boolean inGroup(String group, String parent) {
-        return group.equals(parent) || group.startsWith(parent + ".");
     }
 
     private static Declared library(Element dependency, Map<String, String> properties) {

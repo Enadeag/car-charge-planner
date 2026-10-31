@@ -42,7 +42,7 @@ public final class Pins {
 
     private static Optional<Declared> bomOf(Declared library, List<Declared> boms) {
         return boms.stream()
-                .filter(bom -> library.group().equals(bom.group()) || library.group().startsWith(bom.group() + "."))
+                .filter(bom -> Groups.isIn(library.group(), bom.group()))
                 .max(Comparator.comparingInt(bom -> bom.group().length()));
     }
 
