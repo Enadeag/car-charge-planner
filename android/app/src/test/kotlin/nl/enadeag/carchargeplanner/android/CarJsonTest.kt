@@ -17,6 +17,13 @@ class CarJsonTest {
     }
 
     @Test
+    fun aCarIsWrittenWithTheNamesOfTheSettingsFile() {
+        assertThat(CarJson.write(Car.TYPICAL)).isEqualTo(
+            """{"usableBatteryKwh":60.0,"consumptionKwhPer100km":18.0,"kmPerDay":40.0,"tripSurchargePct":15.0}""",
+        )
+    }
+
+    @Test
     fun aCarWithAMissingValueIsRefused() {
         assertThatThrownBy { CarJson.read("""{"usableBatteryKwh": 60}""") }.isInstanceOf(JacksonException::class.java)
     }
