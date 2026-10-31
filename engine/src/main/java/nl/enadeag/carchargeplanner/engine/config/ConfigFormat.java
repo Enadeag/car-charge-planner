@@ -6,7 +6,6 @@ import nl.enadeag.carchargeplanner.engine.store.FileFormat;
 import nl.enadeag.carchargeplanner.engine.store.FileVersion;
 import nl.enadeag.carchargeplanner.engine.store.FormatProblem;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
-import java.lang.System.Logger.Level;
 import java.time.DateTimeException;
 import java.time.DayOfWeek;
 import java.time.Duration;
@@ -24,6 +23,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -43,7 +44,7 @@ import tools.jackson.databind.node.ObjectNode;
  */
 final class ConfigFormat implements FileFormat<EngineConfig> {
 
-    private static final System.Logger LOG = System.getLogger(ConfigFormat.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(ConfigFormat.class);
 
     /** The section of the withdrawn calendar trips, skipped when read. */
     private static final String OLD_CALENDAR = "calendar";
@@ -73,7 +74,7 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
         var file = ConfigFields.of(VERSION.upToDate(root), "").only("system", "planning", "forecast", "away", "typical",
                 OLD_CALENDAR);
         if (file.has(OLD_CALENDAR)) {
-            LOG.log(Level.WARNING, "the settings file has a calendar section, which this version does not "
+            LOG.warn("the settings file has a calendar section, which this version does not "
                     + "use: it is skipped, and left out at the next save");
         }
         var system = system(file.object("system"));

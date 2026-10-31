@@ -5,7 +5,6 @@ import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
-import java.lang.System.Logger.Level;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -15,6 +14,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Decides what the owner is told about the trips, each notice once per trip.
@@ -46,7 +47,7 @@ final class TripNotices {
     /** A level this little above a whole percentage is the plan's rounding, not a percent more to charge. */
     private static final double LEVEL_NOISE_PCT = 1e-6;
 
-    private static final System.Logger LOG = System.getLogger(Announcer.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(TripNotices.class);
 
     private final ToldTrips store;
     private final Notifier notifier;
@@ -164,7 +165,7 @@ final class TripNotices {
 
     private void tell(Notice notice, Trip trip) {
         notifier.announce(notice);
-        LOG.log(Level.INFO, "told a " + notice.getClass().getSimpleName() + " for the trip leaving at "
+        LOG.info("told a " + notice.getClass().getSimpleName() + " for the trip leaving at "
                 + trip.departure().atZone(notice.zone()).toOffsetDateTime());
     }
 }

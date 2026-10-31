@@ -1,13 +1,14 @@
 package nl.enadeag.carchargeplanner.engine.secrets;
 
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
-import java.lang.System.Logger.Level;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
 import java.util.Map;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Where the API keys are kept: in the system keychain, or in a private file when there is no usable keychain. While
@@ -34,7 +35,7 @@ public final class ApiKeys implements SecretsSource {
     /** How long a save waits for the owner to answer the system's prompt to unlock the keychain. */
     public static final Duration UNLOCK_WAIT = Duration.ofMinutes(2);
 
-    private static final System.Logger LOG = System.getLogger(ApiKeys.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(ApiKeys.class);
 
     /** What an attempt to store the keys in the keychain came to. */
     private enum SaveResult {
@@ -206,7 +207,7 @@ public final class ApiKeys implements SecretsSource {
                 if (entries.read().equals(secrets)) {
                     file.delete();
                     remembered = secrets;
-                    LOG.log(Level.INFO, "moved the API keys from " + file.path() + " into the system keychain");
+                    LOG.info("moved the API keys from " + file.path() + " into the system keychain");
                     keptIn(KeyStorage.KEYCHAIN, "");
                     return;
                 }
@@ -395,7 +396,7 @@ public final class ApiKeys implements SecretsSource {
                 entries.write(secrets);
                 if (!stored.fileFoldedIn()) {
                     keptIn(KeyStorage.FILE, "the file could not be read, or holds a name that is not allowed");
-                    LOG.log(Level.WARNING, "the API keys were saved in the system keychain, but " + file.path()
+                    LOG.warn("the API keys were saved in the system keychain, but " + file.path()
                             + " is kept: its keys could not be read, so they were not moved");
                     return SaveResult.IN_KEYCHAIN;
                 }
@@ -486,17 +487,17 @@ public final class ApiKeys implements SecretsSource {
      * have unlocked counts as not answered, so nothing is saved.
      */
     private UnlockOutcome unlock(Runnable prompting) {
-        LOG.log(Level.INFO, "the system keychain is locked: asking to unlock it to save the API keys");
+        LOG.info("the system keychain is locked: asking to unlock it to save the API keys");
         try {
             var outcome = keychain.unlock(UNLOCK_WAIT, prompting);
-            LOG.log(Level.INFO, switch (outcome) {
+            LOG.info(switch (outcome) {
                 case UNLOCKED -> "the system keychain was unlocked";
                 case DISMISSED -> "the system keychain was not unlocked: the prompt was dismissed";
                 case NOT_ANSWERED -> "the system keychain was not unlocked: no answer, or no longer waited for";
             });
             return outcome;
         } catch (KeychainException e) {
-            LOG.log(Level.WARNING, "the system keychain could not be unlocked: " + e.getMessage());
+            LOG.warn("the system keychain could not be unlocked: " + e.getMessage());
             return e.kind() == KeychainException.Kind.UNAVAILABLE ? UnlockOutcome.DISMISSED : UnlockOutcome.NOT_ANSWERED;
         }
     }
@@ -525,11 +526,11 @@ public final class ApiKeys implements SecretsSource {
             return;
         }
         switch (storage) {
-            case FILE -> LOG.log(Level.WARNING, "API keys are kept in " + file.path() + ", readable only by you: "
+            case FILE -> LOG.warn("API keys are kept in " + file.path() + ", readable only by you: "
                     + why);
-            case LOCKED_KEYCHAIN -> LOG.log(Level.WARNING, "API keys are kept in the system keychain, which is locked: "
+            case LOCKED_KEYCHAIN -> LOG.warn("API keys are kept in the system keychain, which is locked: "
                     + "they can be read once it is unlocked");
-            case KEYCHAIN -> LOG.log(Level.INFO, "API keys are kept in the system keychain"
+            case KEYCHAIN -> LOG.info("API keys are kept in the system keychain"
                     + (where != null ? " again" : ""));
         }
         where = storage;

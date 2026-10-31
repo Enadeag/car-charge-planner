@@ -3,10 +3,11 @@ package nl.enadeag.carchargeplanner.engine.secrets;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
-import java.lang.System.Logger.Level;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Removes what the withdrawn calendar trips left on disk: the consents file in the data folder, and the calendar's
@@ -23,7 +24,7 @@ public final class CalendarLeftovers {
             new ProviderId("calendar"), Set.of("ical-link"),
             new ProviderId("geoapify"), Set.of("api-key"));
 
-    private static final System.Logger LOG = System.getLogger(CalendarLeftovers.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(CalendarLeftovers.class);
 
     private CalendarLeftovers() {
     }
@@ -42,19 +43,19 @@ public final class CalendarLeftovers {
         var consents = dataFolder.resolve(CONSENT_FILE);
         try {
             if (PrivateFiles.remove(consents)) {
-                LOG.log(Level.INFO, "removed " + consents + ", left by the withdrawn calendar trips");
+                LOG.info("removed " + consents + ", left by the withdrawn calendar trips");
             }
         } catch (IOException e) {
-            LOG.log(Level.WARNING, "could not remove " + consents + ", left by the withdrawn calendar trips: "
+            LOG.warn("could not remove " + consents + ", left by the withdrawn calendar trips: "
                     + e.getMessage());
         }
         try {
             if (keys.remove(SECRETS)) {
-                LOG.log(Level.INFO, "removed the calendar's address and the route service's API key, left by the "
+                LOG.info("removed the calendar's address and the route service's API key, left by the "
                         + "withdrawn calendar trips");
             }
         } catch (SecretsProblem e) {
-            LOG.log(Level.WARNING, "could not check for the calendar's address and the route service's API key, left "
+            LOG.warn("could not check for the calendar's address and the route service's API key, left "
                     + "by the withdrawn calendar trips; tried again at the next start: " + e.getMessage());
         }
     }

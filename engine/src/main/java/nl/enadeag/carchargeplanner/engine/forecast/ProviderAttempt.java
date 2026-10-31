@@ -1,7 +1,6 @@
 package nl.enadeag.carchargeplanner.engine.forecast;
 
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
-import java.lang.System.Logger.Level;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -12,6 +11,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
 
 /**
@@ -24,7 +25,7 @@ final class ProviderAttempt {
     /** A request that never got an answer did not use the provider's allowance, so it is tried again soon. */
     static final Duration RETRY_AFTER_UNAVAILABLE = Duration.ofMinutes(5);
 
-    private static final System.Logger LOG = System.getLogger(ProviderAttempt.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(ProviderAttempt.class);
     private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
 
     private final ForecastProvider provider;
@@ -125,7 +126,7 @@ final class ProviderAttempt {
         } catch (RuntimeException e) {
             // a bug in a provider must not stop the app; its message may hold a secret, so only its kind is told
             var kind = e.getClass().getSimpleName();
-            LOG.log(Level.ERROR, "forecast provider " + info.id() + " failed unexpectedly (" + kind + ")");
+            LOG.error("forecast provider " + info.id() + " failed unexpectedly (" + kind + ")");
             retryAt.put(info.id(), now.plus(info.minRefresh()));
             return afterFailure("an unexpected error (" + kind + ")", secrets, held);
         }

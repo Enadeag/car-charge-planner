@@ -1,9 +1,10 @@
 package nl.enadeag.carchargeplanner.engine.forecast;
 
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
-import java.lang.System.Logger.Level;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Whether each provider gave a forecast the last time it was asked, so that a provider that starts failing, and one
@@ -13,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 final class ProviderHealth {
 
-    private static final System.Logger LOG = System.getLogger(ProviderHealth.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(ProviderHealth.class);
 
     private final Map<ProviderId, Boolean> answering = new ConcurrentHashMap<>();
 
@@ -29,9 +30,9 @@ final class ProviderHealth {
     void recordAnswer(ProviderInfo info) {
         var before = answering.put(info.id(), true);
         if (before == null) {
-            LOG.log(Level.INFO, info.name() + " gives forecasts");
+            LOG.info(info.name() + " gives forecasts");
         } else if (!before) {
-            LOG.log(Level.INFO, info.name() + " gives forecasts again");
+            LOG.info(info.name() + " gives forecasts again");
         }
     }
 
@@ -44,7 +45,7 @@ final class ProviderHealth {
     void recordFailure(ProviderInfo info, String reason) {
         var before = answering.put(info.id(), false);
         if (before == null || before) {
-            LOG.log(Level.WARNING, info.name() + " gives no forecast: " + reason);
+            LOG.warn(info.name() + " gives no forecast: " + reason);
         }
     }
 }

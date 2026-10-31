@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -96,6 +97,32 @@ class AppLogTest {
         assertThat(mode(AppLog.file(data()))).isEqualTo("rw-------");
         try (var files = Files.list(data())) {
             assertThat(files).containsExactly(AppLog.file(data())); // no lock file beside it
+        }
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    void aRecordOfAnEngineClassThroughSlf4jLandsInTheLogFileInTheAppsFormat() throws IOException {
+        var jvmRoot = Logger.getLogger("");
+        var jvmApp = Logger.getLogger(AppLog.APP_LOGGER_NAME); // the engine's loggers are below this one
+        var rootHandlers = List.of(jvmRoot.getHandlers());
+        var rootLevel = jvmRoot.getLevel();
+        var appLevel = jvmApp.getLevel();
+        var real = new AppLog(jvmRoot, jvmApp);
+        var open = Files.createDirectory(folder.resolve("open"));
+        Files.setPosixFilePermissions(open, PosixFilePermissions.fromString("rwxr-xr-x"));
+        try {
+            real.start(data(), Map.of(), false, ZONE);
+
+            PrivateFiles.tighten(open);
+
+            assertThat(lines()).singleElement().asString()
+                    .contains(" INFO engine.store.PrivateFiles: made " + open + " readable only by you");
+        } finally {
+            real.close();
+            rootHandlers.forEach(jvmRoot::addHandler);
+            jvmRoot.setLevel(rootLevel);
+            jvmApp.setLevel(appLevel);
         }
     }
 

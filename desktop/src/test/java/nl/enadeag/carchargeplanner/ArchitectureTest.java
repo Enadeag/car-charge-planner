@@ -438,7 +438,8 @@ class ArchitectureTest {
     static final ArchRule onlyTheRootConfiguresJavaUtilLogging = noClasses()
             .that().resideOutsideOfPackages(ROOT, START, LOGGING)
             .should().dependOnClassesThat().resideInAPackage("java.util.logging..")
-            .because("the app's log is set up once, by AppLog; everything else logs through System.Logger (ADR 0005)");
+            .because("the app's log is set up once, by AppLog; the desktop's own classes log through System.Logger, "
+                    + "the engine's through slf4j (ADR 0005, ADR 0010)");
 
     @ArchTest
     static final ArchRule onlyTheLogHandlesAndFormatsRecords = noClasses()
