@@ -187,7 +187,7 @@ A provider's setting whose value is kept like an API key, in the keychain and ne
 _Avoid_: Secret (on its own), password field
 
 **Keychain**:
-The system's safe store for passwords: Secret Service on Linux, Credential Manager on Windows. It can be locked, and then the app asks the owner to unlock it.
+The system's safe store for passwords: Secret Service on Linux, Credential Manager on Windows; on Android, a store encrypted with a key from the Android Keystore. Only the Secret Service can be locked, and then the app asks the owner to unlock it; the Credential Manager and Android's store have no locked state.
 _Avoid_: Keyring (only the Secret Service's own word), wallet, vault
 
 ## Running on a computer
