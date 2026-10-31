@@ -122,7 +122,7 @@ public final class SecretsFile {
      * Corrects a file that others can read, through the platform.
      *
      * @return true when it had to be corrected; false when it was private, or the platform has nothing to correct
-     * @throws SecretsProblem when the platform could not check or correct it, such as when the file is missing
+     * @throws SecretsProblem when the platform could not check or correct it
      */
     boolean makePrivate() throws SecretsProblem {
         try {

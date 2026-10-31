@@ -136,9 +136,10 @@ public final class PrivateFiles {
      * Makes an existing file private through the platform, for a file whose privacy matters enough to refuse it
      * otherwise, such as the API keys' file. Nothing is logged.
      *
-     * @param file the file; it must exist
+     * @param file the file; when it is missing, the platform refuses it or reports that nothing changed (see
+     *     {@link FilePrivacy#tighten})
      * @return true when it had to be changed; false when it was private already, or the platform has nothing to change
-     * @throws IOException when it is missing, or the platform could not read or change it
+     * @throws IOException when the platform could not read or change it
      */
     public boolean tightenFile(Path file) throws IOException {
         return privacy.tighten(file);

@@ -47,10 +47,12 @@ public interface FilePrivacy {
     /**
      * Makes an existing file or folder private, for one made before the app made its files private, or by hand.
      *
-     * @param path the file or folder; never null; a missing one is never made, and may be refused with an
-     *     {@link IOException}
+     * <p>A missing path is never made: an implementation either refuses it with an {@link IOException} or reports
+     * that nothing changed, depending on whether it looks at the file at all.
+     *
+     * @param path the file or folder; never null
      * @return true when it had to be changed; false when it was private already, or the platform has nothing to change
-     * @throws IOException when it could not be read or changed, such as when it is missing
+     * @throws IOException when the platform could not read or change it
      */
     boolean tighten(Path path) throws IOException;
 }
