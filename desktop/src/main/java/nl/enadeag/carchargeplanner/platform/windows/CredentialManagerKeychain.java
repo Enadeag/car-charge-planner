@@ -22,6 +22,10 @@ import java.util.Optional;
  * <p>Over ssh, without an interactive logon session, Windows refuses with error 1312, which counts as no keychain
  * ({@link KeychainException.Kind#UNAVAILABLE}); the engine then keeps the API keys in its private file. Other errors
  * are refusals. The Credential Manager is never locked while its user is logged on, so it has no unlocking.
+ *
+ * <p>One call at a time: with one process writing from several threads at once, Windows was seen to lose a write it
+ * reported as done, so a read straight after it found nothing. The lock covers this object only; the app makes one,
+ * and a second instance never runs.
  */
 public final class CredentialManagerKeychain implements Keychain {
 
@@ -55,6 +59,7 @@ public final class CredentialManagerKeychain implements Keychain {
             .varHandle(MemoryLayout.PathElement.groupElement("GetLastError"));
 
     private final String prefix;
+    private final Object turn = new Object();
 
     /**
      * Makes the keychain; nothing is read or written yet. Only for Windows.
@@ -68,55 +73,61 @@ public final class CredentialManagerKeychain implements Keychain {
 
     @Override
     public Optional<String> read(String name) throws KeychainException {
-        try (var arena = Arena.ofConfined()) {
-            var error = arena.allocate(Linker.Option.captureStateLayout());
-            var found = arena.allocate(ADDRESS);
-            var target = target(arena, name);
-            int ok = call(() -> (int) Advapi32.CRED_READ.invokeExact(error, target, CRED_TYPE_GENERIC, 0, found));
-            if (ok == 0) {
-                return notFoundOrFail(error, "read");
-            }
-            var credential = found.get(ADDRESS, 0).reinterpret(CREDENTIAL.byteSize());
-            try {
-                int size = (int) BLOB_SIZE.get(credential, 0L);
-                var blob = ((MemorySegment) BLOB.get(credential, 0L)).reinterpret(size);
-                return Optional.of(new String(blob.toArray(JAVA_BYTE), StandardCharsets.UTF_8));
-            } finally {
-                call(() -> {
-                    Advapi32.CRED_FREE.invokeExact(credential);
-                    return null;
-                });
+        synchronized (turn) {
+            try (var arena = Arena.ofConfined()) {
+                var error = arena.allocate(Linker.Option.captureStateLayout());
+                var found = arena.allocate(ADDRESS);
+                var target = target(arena, name);
+                int ok = call(() -> (int) Advapi32.CRED_READ.invokeExact(error, target, CRED_TYPE_GENERIC, 0, found));
+                if (ok == 0) {
+                    return notFoundOrFail(error, "read");
+                }
+                var credential = found.get(ADDRESS, 0).reinterpret(CREDENTIAL.byteSize());
+                try {
+                    int size = (int) BLOB_SIZE.get(credential, 0L);
+                    var blob = ((MemorySegment) BLOB.get(credential, 0L)).reinterpret(size);
+                    return Optional.of(new String(blob.toArray(JAVA_BYTE), StandardCharsets.UTF_8));
+                } finally {
+                    call(() -> {
+                        Advapi32.CRED_FREE.invokeExact(credential);
+                        return null;
+                    });
+                }
             }
         }
     }
 
     @Override
     public void write(String name, String value) throws KeychainException {
-        try (var arena = Arena.ofConfined()) {
-            var blob = arena.allocateFrom(JAVA_BYTE, value.getBytes(StandardCharsets.UTF_8));
-            var credential = arena.allocate(CREDENTIAL);
-            TYPE.set(credential, 0L, CRED_TYPE_GENERIC);
-            TARGET_NAME.set(credential, 0L, target(arena, name));
-            BLOB_SIZE.set(credential, 0L, (int) blob.byteSize());
-            BLOB.set(credential, 0L, blob);
-            PERSIST.set(credential, 0L, CRED_PERSIST_LOCAL_MACHINE);
-            USER_NAME.set(credential, 0L, arena.allocateFrom(name, StandardCharsets.UTF_16LE));
-            var error = arena.allocate(Linker.Option.captureStateLayout());
-            int ok = call(() -> (int) Advapi32.CRED_WRITE.invokeExact(error, credential, 0));
-            if (ok == 0) {
-                throw failed("write", error);
+        synchronized (turn) {
+            try (var arena = Arena.ofConfined()) {
+                var blob = arena.allocateFrom(JAVA_BYTE, value.getBytes(StandardCharsets.UTF_8));
+                var credential = arena.allocate(CREDENTIAL);
+                TYPE.set(credential, 0L, CRED_TYPE_GENERIC);
+                TARGET_NAME.set(credential, 0L, target(arena, name));
+                BLOB_SIZE.set(credential, 0L, (int) blob.byteSize());
+                BLOB.set(credential, 0L, blob);
+                PERSIST.set(credential, 0L, CRED_PERSIST_LOCAL_MACHINE);
+                USER_NAME.set(credential, 0L, arena.allocateFrom(name, StandardCharsets.UTF_16LE));
+                var error = arena.allocate(Linker.Option.captureStateLayout());
+                int ok = call(() -> (int) Advapi32.CRED_WRITE.invokeExact(error, credential, 0));
+                if (ok == 0) {
+                    throw failed("write", error);
+                }
             }
         }
     }
 
     @Override
     public void delete(String name) throws KeychainException {
-        try (var arena = Arena.ofConfined()) {
-            var error = arena.allocate(Linker.Option.captureStateLayout());
-            var target = target(arena, name);
-            int ok = call(() -> (int) Advapi32.CRED_DELETE.invokeExact(error, target, CRED_TYPE_GENERIC, 0));
-            if (ok == 0) {
-                notFoundOrFail(error, "delete");
+        synchronized (turn) {
+            try (var arena = Arena.ofConfined()) {
+                var error = arena.allocate(Linker.Option.captureStateLayout());
+                var target = target(arena, name);
+                int ok = call(() -> (int) Advapi32.CRED_DELETE.invokeExact(error, target, CRED_TYPE_GENERIC, 0));
+                if (ok == 0) {
+                    notFoundOrFail(error, "delete");
+                }
             }
         }
     }

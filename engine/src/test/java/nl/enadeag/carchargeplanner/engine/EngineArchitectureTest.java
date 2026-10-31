@@ -1,9 +1,11 @@
 package nl.enadeag.carchargeplanner.engine;
 
+import static com.tngtech.archunit.lang.conditions.ArchConditions.have;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
 import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.domain.JavaModifier;
@@ -17,9 +19,11 @@ import java.util.Set;
  * The rules of ADR 0001 about the engine's own parts: parts that depend one way, a pure planner, a domain model
  * without its file format, files written in one place, and no translations; and the rules of ADR 0010 that the engine
  * uses no {@code java.net.http}, which Android lacks, opens no connection of its own beside its HttpGet, logs
- * through slf4j, and sets no POSIX file modes, which it leaves to the platform's FilePrivacy. They run when the engine
- * is built alone; the rules about the boundary with its clients, and those for every class, are in the desktop
- * module's {@code ArchitectureTest}, which sees both sides.
+ * through slf4j, sets no POSIX file modes, which it leaves to the platform's FilePrivacy, reaches no keychain
+ * through D-Bus or native calls, which it leaves to the platform's Keychain, and starts no programs and declares no
+ * native methods, which each platform does for itself. They run when the engine is built alone;
+ * the rules about the boundary with its clients, and those for every class, are in the desktop module's
+ * {@code ArchitectureTest}, which sees both sides.
  */
 @AnalyzeClasses(packages = "nl.enadeag.carchargeplanner.engine", importOptions = ImportOption.DoNotIncludeTests.class)
 class EngineArchitectureTest {
@@ -77,6 +81,34 @@ class EngineArchitectureTest {
             .orShould().callMethodWhere(USE_POSIX_FILES_METHODS)
             .because("Android may have no POSIX file attributes and keeps its app storage private already; each "
                     + "platform makes a file private through the FilePrivacy it hands in (ADR 0010)");
+
+    // the engine's pom has no such library and compiles with --release 17, which has no java.lang.foreign: this rule
+    // is the fence behind those, for a dependency or a release that would let one in
+    @ArchTest
+    static final ArchRule theEngineReachesNoKeychainOfItsOwn = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "org.freedesktop..", "java.lang.foreign..", "com.sun.jna..", "com.github.hypfvieh..")
+            .because("each platform reaches its own keychain (D-Bus, native calls, the Android Keystore) and hands "
+                    + "the engine a Keychain; the engine keeps its secrets only through that (ADR 0010)");
+
+    // an access, not only a call, so a method reference such as Runtime.getRuntime()::exec is caught as well
+    private static final DescribedPredicate<JavaAccess<?>> RUN_A_PROGRAM = DescribedPredicate.describe(
+            "start a program through Runtime.exec",
+            access -> access.getTargetOwner().isEquivalentTo(Runtime.class) && access.getName().equals("exec"));
+
+    private static final DescribedPredicate<JavaClass> NATIVE_METHODS = DescribedPredicate.describe(
+            "native methods",
+            type -> type.getMethods().stream().anyMatch(method -> method.getModifiers().contains(JavaModifier.NATIVE)));
+
+    @ArchTest
+    static final ArchRule theEngineStartsNoProgramsAndCallsNoNativeCode = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .should().dependOnClassesThat().haveFullyQualifiedName("java.lang.ProcessBuilder")
+            .orShould().accessTargetWhere(RUN_A_PROGRAM)
+            .orShould(have(NATIVE_METHODS))
+            .because("the engine starts no programs and calls no native code, which Android does otherwise or "
+                    + "not at all; each platform does that for itself, behind a seam it hands in (ADR 0010)");
 
     private static final DescribedPredicate<JavaClass> DOMAIN_MODEL = DescribedPredicate.describe(
             "are the domain model: the planner, the settings, and the engine's public records and enums",

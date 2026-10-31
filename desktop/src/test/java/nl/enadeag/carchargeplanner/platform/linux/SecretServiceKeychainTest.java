@@ -2,11 +2,14 @@ package nl.enadeag.carchargeplanner.platform.linux;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.KeyStorage;
+import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
+import nl.enadeag.carchargeplanner.engine.secrets.KeychainContractTest;
 import nl.enadeag.carchargeplanner.engine.secrets.KeychainException;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
@@ -26,7 +29,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.freedesktop.dbus.DBusPath;
 import org.freedesktop.dbus.annotations.DBusInterfaceName;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
@@ -45,10 +50,11 @@ import org.junit.jupiter.api.io.TempDir;
 /**
  * Against a throwaway GNOME Keyring on a private D-Bus of its own, never the developer's login keyring: both daemons
  * run with an environment that holds only folders inside the test's own, and the bus has no service folders, so
- * nothing can start the real keyring daemon either.
+ * nothing can start the real keyring daemon either. The contract every keychain keeps is checked there too; the tests
+ * here add what only the Secret Service has: other applications' items, locking, its connection and its absence.
  */
 @EnabledOnOs(OS.LINUX)
-class SecretServiceKeychainTest {
+class SecretServiceKeychainTest extends KeychainContractTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
@@ -60,6 +66,8 @@ class SecretServiceKeychainTest {
     private Process bus;
     private Process keyring;
     private String address;
+    /** The keychain the contract's tests use, once one asked for it. */
+    private SecretServiceKeychain forTheContract;
 
     /** Only for the test: locking the throwaway keyring, and asking to unlock it on a connection of the test's own. */
     @DBusInterfaceName("org.freedesktop.Secret.Service")
@@ -130,8 +138,20 @@ class SecretServiceKeychainTest {
         return builder;
     }
 
+    @Override
+    protected Keychain keychain() throws Exception {
+        if (forTheContract == null) {
+            startAThrowawayKeyring();
+            forTheContract = keychain("car-charge-planner");
+        }
+        return forTheContract;
+    }
+
     @AfterEach
     void stopTheDaemons() throws InterruptedException {
+        if (forTheContract != null) {
+            forTheContract.close();
+        }
         for (var daemon : new Process[] {keyring, bus}) {
             if (daemon != null) {
                 daemon.destroy();
@@ -159,9 +179,68 @@ class SecretServiceKeychainTest {
         }, "car-charge-planner");
     }
 
+    /** How long a call may take in the tests of a call given up on: short, as they wait for it, yet room to connect. */
+    private static final Duration SHORT = Duration.ofSeconds(1);
+
+    /**
+     * Connects to the private bus, but holds the first connect until it is let go, ignoring interrupts as a D-Bus
+     * handshake may; counts how many connect at once.
+     */
+    private final class HeldFirstConnect implements BusConnector {
+        final CountDownLatch entered = new CountDownLatch(1);
+        final CountDownLatch letGo = new CountDownLatch(1);
+        final CountDownLatch firstEnded = new CountDownLatch(1);
+        final AtomicInteger connects = new AtomicInteger();
+        final AtomicInteger inside = new AtomicInteger();
+        final AtomicInteger mostAtOnce = new AtomicInteger();
+
+        @Override
+        public DBusConnection connect() throws DBusException {
+            mostAtOnce.accumulateAndGet(inside.incrementAndGet(), Math::max);
+            var first = connects.getAndIncrement() == 0;
+            try {
+                if (first) {
+                    entered.countDown();
+                    awaitIgnoringInterrupts(letGo);
+                }
+                var connection = SecretServiceKeychainTest.this.connect();
+                made.add(connection);
+                return connection;
+            } finally {
+                inside.decrementAndGet();
+                if (first) {
+                    firstEnded.countDown();
+                }
+            }
+        }
+
+        private static void awaitIgnoringInterrupts(CountDownLatch latch) {
+            while (true) {
+                try {
+                    if (latch.await(30, TimeUnit.SECONDS)) {
+                        return;
+                    }
+                } catch (InterruptedException _) {
+                    // a handshake that is under way goes on
+                }
+            }
+        }
+
+        /** Waits until the first connect, let go, has ended. */
+        void awaitTheFirstConnectsEnd() throws InterruptedException {
+            assertThat(firstEnded.await(10, TimeUnit.SECONDS)).as("the first connect ended").isTrue();
+        }
+
+        /** Waits until the first connect is held, as the call that gave up started it. */
+        void awaitTheFirstConnect() throws InterruptedException {
+            assertThat(entered.await(10, TimeUnit.SECONDS)).as("the first connect started").isTrue();
+        }
+    }
+
     /** A Secret Service that takes the name and then never answers a search, until it is let go. */
     private static final class Silent implements SecretService.Service {
         final CountDownLatch letGo = new CountDownLatch(1);
+        final CountDownLatch firstEnded = new CountDownLatch(1);
 
         @Override
         public SecretService.Pair<Variant<?>, DBusPath> OpenSession(String algorithm, Variant<?> input) {
@@ -197,20 +276,6 @@ class SecretServiceKeychainTest {
         public String getObjectPath() {
             return SecretService.SERVICE_PATH;
         }
-    }
-
-    @Test
-    void aValueIsWrittenReadBackReplacedAndDeleted() throws Exception {
-        startAThrowawayKeyring();
-        var keychain = keychain("car-charge-planner");
-
-        assertThat(keychain.read("forecast/open-meteo/api_key")).isEmpty();
-        keychain.write("forecast/open-meteo/api_key", "FIRST-KEY");
-        keychain.write("forecast/open-meteo/api_key", "SECOND-KEY-ëß");
-        assertThat(keychain.read("forecast/open-meteo/api_key")).contains("SECOND-KEY-ëß");
-        keychain.delete("forecast/open-meteo/api_key");
-        keychain.delete("forecast/open-meteo/api_key"); // already gone: nothing happens
-        assertThat(keychain.read("forecast/open-meteo/api_key")).isEmpty();
     }
 
     @Test
@@ -316,6 +381,72 @@ class SecretServiceKeychainTest {
         assertThat(keychain.read("index")).contains("[]");
         assertThat(made).hasSize(2);
         keychain.close();
+    }
+
+    @Test
+    void aCallNeverConnectsWhileAStepItsCallerGaveUpOnIsStillConnecting() throws Exception {
+        startAThrowawayKeyring();
+        var connector = new HeldFirstConnect();
+        var keychain = new SecretServiceKeychain(connector, "car-charge-planner", SHORT);
+        try {
+            assertThatThrownBy(() -> keychain.read("index")).isInstanceOf(KeychainException.class);
+            connector.awaitTheFirstConnect();
+
+            // either outcome is allowed: its step may only wait for the first connect to end
+            catchThrowable(() -> keychain.read("index"));
+            connector.letGo.countDown();
+            connector.awaitTheFirstConnectsEnd();
+
+            assertThat(connector.connects).as("connects, the given-up first one only").hasValue(1);
+            assertThat(connector.mostAtOnce).as("connects at the same time").hasValue(1);
+        } finally {
+            connector.letGo.countDown();
+            keychain.close();
+        }
+    }
+
+    @Test
+    void aWriteWhoseCallerGaveUpWhileItConnectedDoesNotLandAfterwards() throws Exception {
+        startAThrowawayKeyring();
+        var connector = new HeldFirstConnect();
+        var keychain = new SecretServiceKeychain(connector, "car-charge-planner", SHORT);
+        try {
+            assertThatThrownBy(() -> keychain.write("index", "late")).isInstanceOf(KeychainException.class);
+            connector.awaitTheFirstConnect();
+
+            connector.letGo.countDown();
+            // its step takes the connecting lock after the first one let go of it
+            var next = keychain.read("index");
+
+            assertThat(made.getFirst().isConnected()).as("the connection made for the given-up write").isFalse();
+            assertThat(next).as("read on the next connection").isEmpty();
+            assertThat(keychain("car-charge-planner").read("index")).as("read on a connection of its own").isEmpty();
+        } finally {
+            connector.letGo.countDown();
+            keychain.close();
+        }
+    }
+
+    @Test
+    void aConnectionMadeAfterTheKeychainClosedIsNotLeftOpen() throws Exception {
+        startAThrowawayKeyring();
+        var connector = new HeldFirstConnect();
+        var keychain = new SecretServiceKeychain(connector, "car-charge-planner", TIMEOUT);
+        var reading = new FutureTask<>(() -> keychain.read("index"));
+        Thread.ofVirtual().start(reading);
+        try {
+            connector.awaitTheFirstConnect();
+
+            keychain.close();
+            connector.letGo.countDown();
+            catchThrowable(() -> reading.get(10, TimeUnit.SECONDS)); // a call that meets close() may fail
+
+            assertThat(made).hasSize(1);
+            assertThat(made.getFirst().isConnected()).as("the connection made after close()").isFalse();
+        } finally {
+            connector.letGo.countDown();
+            keychain.close();
+        }
     }
 
     @Test

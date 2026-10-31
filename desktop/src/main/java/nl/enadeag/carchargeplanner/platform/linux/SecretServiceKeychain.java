@@ -15,7 +15,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 import org.freedesktop.dbus.DBusPath;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
 import org.freedesktop.dbus.errors.NoReply;
@@ -42,7 +44,11 @@ import org.freedesktop.dbus.types.Variant;
  * failed. A new connection first asks the bus whether a Secret Service is there or can be started, so a desktop
  * without one costs no wait. Each call gets {@link #REPLY_TIMEOUT} to answer: dbus-java's own wait is 20 seconds per
  * message, for the whole process, and a call here sends several. Calls take turns; the wait for the owner's answer to
- * a prompt is not a call, so reads go on meanwhile.
+ * a prompt is not a call, so reads go on meanwhile. A call that gives up, by its timeout or an interrupt, stops its
+ * step: one that has not started never runs, one waiting to connect leaves, and a connection it makes after all is
+ * closed instead of kept, so a step given up on before it sent anything never sends it. A message already sent may
+ * still be carried out by the service, so a write reported as failed may have landed. {@link #close()} stops a step
+ * the same way.
  */
 public final class SecretServiceKeychain implements Keychain {
 
@@ -71,7 +77,19 @@ public final class SecretServiceKeychain implements Keychain {
     private final String application;
     private final Duration replyTimeout;
     private final Object turn = new Object();
-    /** The connection, once made; set by the call that made it, which may finish after its caller gave up. */
+    /**
+     * Held while a connection is made: a step its caller gave up on may still be making one, and two steps that each
+     * made one would close the other's while it is in use. Taken interruptibly, so a step given up on stops waiting.
+     * dbus-java bounds neither the socket's connect nor its authentication, so that interrupt is what ends a connect
+     * that hangs, after the reply timeout.
+     */
+    private final ReentrantLock connecting = new ReentrantLock();
+    /**
+     * Counts the calls given up on and the closings; a step whose count changed while it connected closes what it
+     * made instead of keeping it, as nothing waits for it any more.
+     */
+    private final AtomicLong givenUp = new AtomicLong();
+    /** The connection, once made; set by the step that made it, and kept only while its call was not given up on. */
     private final AtomicReference<DBusConnection> connection = new AtomicReference<>();
     /** The owner's answer an unlock waits for; null while none waits. */
     private final AtomicReference<CompletableFuture<UnlockOutcome>> answer = new AtomicReference<>();
@@ -211,10 +229,14 @@ public final class SecretServiceKeychain implements Keychain {
         }
     }
 
-    /** Stops waiting for an unlock, and closes the connection, when there is one; a later call makes a new one. */
+    /**
+     * Stops waiting for an unlock, stops a call's step that is still connecting, and closes the connection, when there
+     * is one; a later call makes a new one.
+     */
     @Override
     public void close() {
         stopUnlocking();
+        givenUp.incrementAndGet();
         disconnect();
     }
 
@@ -312,20 +334,21 @@ public final class SecretServiceKeychain implements Keychain {
 
     /**
      * Runs a step over the connection, in time. The step runs on a thread of its own, as dbus-java's calls block:
-     * when it takes too long, the connection is closed, which ends the step's wait for its answer.
+     * when it takes too long, the step is given up on and the connection is closed, which ends its wait for an answer.
      */
     private <T> T callTimed(Step<T> step) throws KeychainException {
         synchronized (turn) {
-            var call = new FutureTask<T>(() -> step.run(ensureConnection()));
+            var asked = givenUp.get();
+            var call = new FutureTask<T>(() -> step.run(ensureConnection(asked)));
             Thread.ofVirtual().name("keychain").start(call);
             try {
                 return call.get(replyTimeout.toMillis(), TimeUnit.MILLISECONDS);
             } catch (TimeoutException _) {
-                disconnect();
+                giveUp(call);
                 throw new KeychainException(KeychainException.Kind.UNAVAILABLE,
                         "the Secret Service did not answer within " + replyTimeout.toMillis() + " ms");
             } catch (InterruptedException e) {
-                disconnect();
+                giveUp(call);
                 Thread.currentThread().interrupt();
                 throw new KeychainException(KeychainException.Kind.UNAVAILABLE,
                         "interrupted while waiting for the Secret Service", e);
@@ -343,6 +366,17 @@ public final class SecretServiceKeychain implements Keychain {
     }
 
     /**
+     * Stops a step nothing waits for any more: one not started never runs, one waiting to connect leaves, and a
+     * connection it is making is closed once made; the open connection is closed, ending a message's wait. What the
+     * step had not sent yet is never sent; a message already sent may still be carried out by the service.
+     */
+    private void giveUp(FutureTask<?> call) {
+        givenUp.incrementAndGet();
+        disconnect();
+        call.cancel(true);
+    }
+
+    /**
      * No bus, no service or no answer is unavailable; another error the service answered with is a refusal. dbus-java
      * gives the bus's own errors as classes of their own, and the service's as a plain DBusExecutionException.
      */
@@ -354,24 +388,50 @@ public final class SecretServiceKeychain implements Keychain {
                 : KeychainException.Kind.UNAVAILABLE;
     }
 
-    /** The open connection, or a new one to a bus that has a Secret Service. */
-    private DBusConnection ensureConnection() throws DBusException, KeychainException {
-        var open = connection.get();
-        if (open != null && open.isConnected()) {
-            return open;
-        }
-        var made = connector.connect();
+    /**
+     * The open connection, or a new one to a bus that has a Secret Service, for a step whose call was asked when
+     * {@link #givenUp} stood at {@code asked}.
+     *
+     * @throws InterruptedException when the step was given up on while it waited for another step's connecting
+     */
+    private DBusConnection ensureConnection(long asked)
+            throws DBusException, KeychainException, InterruptedException {
+        connecting.lockInterruptibly();
         try {
-            requireSecretService(made);
-        } catch (DBusException | KeychainException | RuntimeException e) {
-            closeQuietly(made);
-            throw e;
+            if (givenUp.get() != asked) {
+                throw givenUpOn();
+            }
+            var open = connection.get();
+            if (open != null && open.isConnected()) {
+                return open;
+            }
+            var made = connector.connect();
+            try {
+                requireSecretService(made);
+            } catch (DBusException | KeychainException | RuntimeException e) {
+                closeQuietly(made);
+                throw e;
+            }
+            var before = connection.getAndSet(made);
+            if (before != null) {
+                closeQuietly(before);
+            }
+            // checked after it is set, so a give-up or close() that this check misses finds it and closes it itself
+            if (givenUp.get() != asked) {
+                if (connection.compareAndSet(made, null)) {
+                    closeQuietly(made);
+                }
+                throw givenUpOn();
+            }
+            return made;
+        } finally {
+            connecting.unlock();
         }
-        var before = connection.getAndSet(made);
-        if (before != null) {
-            closeQuietly(before);
-        }
-        return made;
+    }
+
+    private static KeychainException givenUpOn() {
+        return new KeychainException(KeychainException.Kind.UNAVAILABLE,
+                "the call was given up on, or the keychain closed, while it connected");
     }
 
     /** Asks the bus itself, which always answers, so a call is never sent to a name nobody owns or can start. */

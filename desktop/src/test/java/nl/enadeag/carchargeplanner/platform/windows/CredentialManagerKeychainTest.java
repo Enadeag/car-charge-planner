@@ -9,12 +9,13 @@ import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.KeyStorage;
+import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
+import nl.enadeag.carchargeplanner.engine.secrets.KeychainContractTest;
 import nl.enadeag.carchargeplanner.engine.secrets.KeychainException;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -25,15 +26,14 @@ import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Against the real Credential Manager, under a name of its own that it removes again. Over ssh there is no logon
- * session (error 1312): the tests that need one are skipped then, and the one about its absence runs instead.
+ * Against the real Credential Manager, under a name of its own that it removes again; the contract every keychain
+ * keeps is checked there too. Over ssh there is no logon session (error 1312): the tests that need one, the
+ * contract's among them, are skipped then, and the one about its absence runs instead.
  */
 @EnabledOnOs(OS.WINDOWS)
-class CredentialManagerKeychainTest {
+class CredentialManagerKeychainTest extends KeychainContractTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
-
-    private static final List<String> NAMES = List.of("probe", "forecast/open-meteo/api_key", "index");
 
     @TempDir
     Path folder;
@@ -59,21 +59,16 @@ class CredentialManagerKeychainTest {
         if (!loggedOn) {
             return;
         }
+        keychain.delete("probe");
         for (var name : NAMES) {
             keychain.delete(name);
         }
     }
 
-    @Test
-    void aValueIsWrittenReadBackReplacedAndDeleted() throws KeychainException {
+    @Override
+    protected Keychain keychain() {
         assumeTrue(loggedOn, "no logon session, as over ssh");
-        assertThat(keychain.read("forecast/open-meteo/api_key")).isEmpty();
-        keychain.write("forecast/open-meteo/api_key", "FIRST-KEY");
-        keychain.write("forecast/open-meteo/api_key", "SECOND-KEY-ëß");
-        assertThat(keychain.read("forecast/open-meteo/api_key")).contains("SECOND-KEY-ëß");
-        keychain.delete("forecast/open-meteo/api_key");
-        keychain.delete("forecast/open-meteo/api_key"); // already gone: nothing happens
-        assertThat(keychain.read("forecast/open-meteo/api_key")).isEmpty();
+        return keychain;
     }
 
     @Test
