@@ -21,9 +21,9 @@ import nl.enadeag.carchargeplanner.engine.plan.Planner
 import nl.enadeag.carchargeplanner.engine.plan.Window
 
 /**
- * The plan the skeleton shows: the engine's [Planner], run on the phone with typical values and a sunny day made up
- * here, as the app has no forecast provider yet. It shows that the engine plans on Android, not what the owner's home
- * would do.
+ * The plan the skeleton shows: the engine's [Planner], run on the phone for a made-up home (the engine's `TYPICAL`
+ * car, charger, house and panels) and a sunny day made up here, as the app has no settings or forecast provider yet.
+ * It shows that the engine plans on Android, not what the owner's home would do.
  */
 internal object SunnyDayPlan {
 
