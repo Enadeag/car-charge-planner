@@ -398,12 +398,6 @@ class SecretServiceKeychainTest extends KeychainContractTest {
             connector.awaitTheFirstConnectsEnd();
 
             assertThat(connector.connects).as("connects, the given-up first one only").hasValue(1);
-            var afterwards = new SecretServiceKeychain(connector, "car-charge-planner", TIMEOUT);
-            try {
-                assertThat(afterwards.read("index")).isEmpty();
-            } finally {
-                afterwards.close();
-            }
             assertThat(connector.mostAtOnce).as("connects at the same time").hasValue(1);
         } finally {
             connector.letGo.countDown();

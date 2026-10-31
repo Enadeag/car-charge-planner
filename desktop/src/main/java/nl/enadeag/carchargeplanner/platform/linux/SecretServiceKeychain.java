@@ -80,6 +80,8 @@ public final class SecretServiceKeychain implements Keychain {
     /**
      * Held while a connection is made: a step its caller gave up on may still be making one, and two steps that each
      * made one would close the other's while it is in use. Taken interruptibly, so a step given up on stops waiting.
+     * dbus-java bounds neither the socket's connect nor its authentication, so that interrupt is what ends a connect
+     * that hangs, after the reply timeout.
      */
     private final ReentrantLock connecting = new ReentrantLock();
     /**
@@ -370,8 +372,8 @@ public final class SecretServiceKeychain implements Keychain {
      */
     private void giveUp(FutureTask<?> call) {
         givenUp.incrementAndGet();
-        call.cancel(true);
         disconnect();
+        call.cancel(true);
     }
 
     /**
