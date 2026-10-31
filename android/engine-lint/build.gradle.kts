@@ -45,6 +45,9 @@ dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs.nio)
 }
 
+// Lint's NewApi reads the compiled classes, so they are compiled, but against the JDK 17 API: AGP compiles against
+// android.jar's JDK image, which lacks calls that desugaring adds, such as Files.readString.
 tasks.withType<JavaCompile>().configureEach {
-    enabled = false
+    options.compilerArgs.add("--release")
+    options.compilerArgs.add("17")
 }
