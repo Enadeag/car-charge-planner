@@ -1,6 +1,9 @@
-// The engine's sources once more, as an Android library that nothing uses, only so that lint's NewApi checks them at
-// the app's minSdk with core library desugaring: lint skips that check in a plain Java module such as :engine. The
-// build fails on a call that Android 8 lacks and desugaring does not add (ADR 0010).
+import nl.enadeag.carchargeplanner.buildlogic.AndroidApiClassesCheck
+
+// The engine's sources once more, as an Android library that nothing uses, for two checks at the app's minSdk with
+// core library desugaring (ADR 0010). Lint's NewApi fails on a class or method that some Android version has but
+// Android 8 lacks and desugaring does not add; lint skips that check in a plain Java module such as :engine.
+// checkAndroidApiClasses fails on a JDK class that no Android version has, which NewApi does not see.
 plugins {
     alias(libs.plugins.android.library)
     id("ccp.no-google-libraries")
@@ -43,9 +46,18 @@ dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs.nio)
 }
 
-// Lint's NewApi reads the compiled classes, so they are compiled, but against the JDK 17 API: AGP compiles against
-// android.jar's JDK image, which lacks calls that desugaring adds, such as Files.readString.
+// Lint needs the module's classes compiled, and so does checkAndroidApiClasses. They are compiled against the JDK 17
+// API: AGP compiles against android.jar's JDK image, which lacks calls that desugaring adds, such as Files.readString.
 tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.add("--release")
     options.compilerArgs.add("17")
+}
+
+val checkAndroidApiClasses = tasks.register<AndroidApiClassesCheck>("checkAndroidApiClasses") {
+    classes.from(tasks.named<JavaCompile>("compileDebugJavaWithJavac").flatMap { it.destinationDirectory })
+    androidApi.from(androidComponents.sdkComponents.bootClasspath)
+}
+
+tasks.check {
+    dependsOn(checkAndroidApiClasses)
 }
