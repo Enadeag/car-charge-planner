@@ -28,6 +28,23 @@ Without `--config=` the app uses your own `engine.json` (see [What is kept, and 
 
 The app also takes the commands `quit` (asks the running app to quit), `test-notification` (asks the running app to show a test notification), `start-at-login on` and `start-at-login off`, and, on Linux, `install-launcher` and `uninstall-launcher` (the menu entry and icons), for example `-Dapp.args="quit"`. Start at login and the menu entry need the packaged app, whose launcher is what they start. Try `install-launcher` with `XDG_DATA_HOME` pointing at a scratch folder, not your real one.
 
+### The Android app
+
+The Android app ([ADR 0010](docs/adr/0010-android-app.md)) is built with Gradle in `android/`, apart from Maven. Gradle runs on a JDK 21 (`JAVA_HOME`); the engine is still compiled with `--release 17`. It also needs the Android SDK with platform 36 and its build-tools, which Android Studio installs: name its folder in `sdk.dir` in `android/local.properties` (git ignores the file) or in `ANDROID_HOME`. The Gradle wrapper checks the Gradle it downloads against `distributionSha256Sum` in `android/gradle/wrapper/gradle-wrapper.properties`, and every version the build uses is in `android/gradle/libs.versions.toml`.
+
+```bash
+cd android && ./gradlew check assembleDebug    # build, lint and test; the APK is app/build/outputs/apk/debug/app-debug.apk
+```
+
+`check` runs the app's tests on the JVM, lint, and the build's own checks:
+
+- `:engine` compiles `engine/src/main/java` as it is, and the contract tests `HttpGetContractTest`, `KeychainContractTest` and `FilePrivacyContractTest` from `engine/src/test/java`, by name, as test fixtures that the app's tests extend. They are compiled there, against the JDK, because `HttpGetContractTest`'s server is not in Android's API; the tests run on the JVM. A contract test that comes to need a helper gets it added to the list in `android/engine/build.gradle.kts`, and the build fails until it is. Its `checkMavenDrift` fails when the engine's libraries (Jackson and slf4j, and JUnit and AssertJ for the contract tests) differ from the poms, in artifact or in version (see [Dependencies](#dependencies)).
+- `:engine-lint` has lint's `NewApi` check the engine's sources at the app's minimum, Android 8 (API 26), with core library desugaring: a call that Android 8 lacks and desugaring does not add, such as `java.time.InstantSource`, fails the build. Lint skips that check in a plain Java module, hence this Android library that nothing uses and that compiles nothing. Lint does not see a method that no Android version has, such as `Files.readString`, which desugaring adds; `EngineArchitectureTest` keeps out the larger gaps, such as `java.net.http`.
+- `checkNoGoogleLibraries`, in each module, fails when a configuration resolves to Play Services, Firebase or the Play libraries (the groups `com.google.android.gms`, `com.google.firebase` and `com.google.android.play`), which F-Droid does not allow.
+- `android/build-logic/` holds these checks, with the tests that show they fail when they should.
+
+To try the app, open `android/` in Android Studio and run it on an emulator from its Device Manager (any system image from API 26) or on a phone; or start an emulator and run `adb install app/build/outputs/apk/debug/app-debug.apk` from `android/`. For now it shows today's charge windows for a made-up sunny day and a car written to JSON and read back, without network, keychain or files.
+
 ## Logging
 
 The app writes its log to `car-charge-planner.0.log` in its data folder (`~/.local/share/car-charge-planner` on Linux, `%LOCALAPPDATA%\car-charge-planner` on Windows; Settings, About shows the file), one line per record with the time, level, logger and message, and an exception's stack trace on the lines after it. At 1 MB the file becomes `.1.log` and the one before `.2.log`; older ones are dropped. The files and their folder are readable only by you. When the app runs in a terminal it shows the log there too; otherwise follow the file, for example with `tail -F ~/.local/share/car-charge-planner/car-charge-planner.0.log`.
@@ -40,7 +57,7 @@ The engine logs these changes of state, each once: a provider that gives no fore
 
 ## Tests
 
-`./mvnw verify` compiles every module, runs every test and checks the Javadoc; it must pass on Linux and on Windows. The engine's tests are in `engine/src/test/java/` and the desktop app's in `desktop/src/test/java/`. The test helpers the desktop's tests share with the engine's (`LogCapture`, `ManualScheduler`, `FakeProvider`, `SunnyDays`, `MemoryKeychain`, `LockableKeychain`) are among the engine's tests, which the engine module also packs as a test-jar that the desktop uses in test scope. The contract tests are there too, each checking what every implementation of an engine seam must do. `HttpGetContractTest` checks every `HttpGet` against a server on the loopback address: the desktop's `JdkHttpGetTest` extends it, as the Android app's will. `FilePrivacyContractTest` checks with plain files what every `FilePrivacy` must do on any platform: the desktop's `PosixFilePrivacyTest` extends it and also checks the file modes, which the contract cannot see without POSIX types. `KeychainContractTest` checks what every `Keychain` must keep (exact values, the engine's names, deleting, threads, closing): the engine's `MemoryKeychainTest` and the desktop's `SecretServiceKeychainTest` and `CredentialManagerKeychainTest` extend it, and add what only their system has, such as locking and the failure paths. `./mvnw -pl :car-charge-planner-engine verify` builds and tests the engine alone, but a change to the engine still needs the full `./mvnw verify`: the rules that hold for every class (the clock, threads, static state, logging, the one HTTP class) live in the desktop's `ArchitectureTest`, which checks the engine's classes too. The tests never touch the network, your keychain or your desktop:
+`./mvnw verify` compiles every Maven module, runs every test and checks the Javadoc; it must pass on Linux and on Windows. The Android app is built and tested apart, with `cd android && ./gradlew check assembleDebug` (see [The Android app](#the-android-app)); a change to the engine needs both, as the Android build compiles the engine's sources too. The engine's tests are in `engine/src/test/java/` and the desktop app's in `desktop/src/test/java/`. The test helpers the desktop's tests share with the engine's (`LogCapture`, `ManualScheduler`, `FakeProvider`, `SunnyDays`, `MemoryKeychain`, `LockableKeychain`) are among the engine's tests, which the engine module also packs as a test-jar that the desktop uses in test scope. The contract tests are there too, each checking what every implementation of an engine seam must do. `HttpGetContractTest` checks every `HttpGet` against a server on the loopback address: the desktop's `JdkHttpGetTest` extends it, as the Android app's will. `FilePrivacyContractTest` checks with plain files what every `FilePrivacy` must do on any platform: the desktop's `PosixFilePrivacyTest` extends it and also checks the file modes, which the contract cannot see without POSIX types. `KeychainContractTest` checks what every `Keychain` must keep (exact values, the engine's names, deleting, threads, closing): the engine's `MemoryKeychainTest` and the desktop's `SecretServiceKeychainTest` and `CredentialManagerKeychainTest` extend it, and add what only their system has, such as locking and the failure paths. `./mvnw -pl :car-charge-planner-engine verify` builds and tests the engine alone, but a change to the engine still needs the full `./mvnw verify`: the rules that hold for every class (the clock, threads, static state, logging, the one HTTP class) live in the desktop's `ArchitectureTest`, which checks the engine's classes too. The tests never touch the network, your keychain or your desktop:
 
 - the providers replay recorded answers (`engine/src/test/resources/.../engine/forecast/providers/`);
 - the Linux keychain test runs a throwaway GNOME Keyring on a private D-Bus; it has no prompter there, so the unlock prompt's outcomes are tested against a fake Secret Service on a private D-Bus, and the notification tests run against a fake notification server on a private D-Bus that cannot start a real one;
@@ -127,6 +144,8 @@ The text is drawn in JavaFX's system font, which differs per system (Noto Sans o
 
 Each module declares every library its code uses directly in its own `pom.xml`, also one that already comes in through another library or module, without a version: the versions are in the parent `pom.xml` (`dependencyManagement`, and the plugins' in `pluginManagement`). `./mvnw verify` runs `dependency:analyze` in every module and fails on a library that is used but not declared, or declared but not used. A library that is only found at run time and never named in the code (such as the SLF4J binding) goes in the list of ignored ones in the parent, with the reason. Keep the third-party table in [docs/privacy.md](docs/privacy.md#third-party-software) up to date.
 
+The Android build declares the engine's libraries again, with their versions in `android/gradle/libs.versions.toml`. A pull request that changes the version of Jackson, slf4j, JUnit or AssertJ in the poms, or the engine's libraries, changes the catalog (and `android/engine/build.gradle.kts`) in the same pull request: `checkMavenDrift` fails until the two builds agree. Dependabot leaves those four out of its Android updates for that reason.
+
 Each library the app brings at run time, also one that comes in through another library, needs its licence text in `src/packaging/legal/`, which the packages carry in their `legal` folder: one file per component, starting with its name, an `Artifact: groupId:artifactId` line per jar it covers, its source and its licence, then the licence and notice texts as the jar's `META-INF` has them (or the project's own `LICENSE` at that release when the jar has none). `PackagingTest` fails when a runtime library has no file there, or a file names a library the app no longer brings. The app's own modules (`nl.enadeag:*`, such as the engine's jar) are under the app's own licence and need no file.
 
 ## Packaging
@@ -176,7 +195,7 @@ The workflows are in `.github/workflows/`:
 - `mutation.yml` runs PIT and the tests in a random order, weekly and by hand, and PIT on the engine for a pull request that touches it; see [What is tested where](#what-is-tested-where).
 - `release.yml` makes a release; see below.
 
-The actions are pinned to a full commit SHA, with the version in a comment beside it: update both together. Dependabot (`.github/dependabot.yml`) proposes new versions of the actions and of what the poms name (from the root, which reaches the modules), weekly and a week after their release, as pull requests that CI builds like any other.
+The actions are pinned to a full commit SHA, with the version in a comment beside it: update both together. Dependabot (`.github/dependabot.yml`) proposes new versions of the actions, of what the poms name (from the root, which reaches the modules) and of what the Android build's catalog names, weekly and a week after their release, as pull requests that CI builds like any other.
 
 ## Releasing
 
@@ -200,14 +219,15 @@ The release builds use one exact Java version, the `java-version` of each `setup
 
 ## Code layout
 
-Everything is in the package `nl.enadeag.carchargeplanner`, in two Maven modules under one parent `pom.xml` ([ADR 0010](docs/adr/0010-android-app.md)):
+Everything is in the package `nl.enadeag.carchargeplanner`, in two Maven modules under one parent `pom.xml`, and the Android app's Gradle build in `android/` ([ADR 0010](docs/adr/0010-android-app.md)):
 
 | Module | Folder | What it holds |
 | --- | --- | --- |
 | `car-charge-planner-engine` | `engine/` | The package `engine` and its tests: no user interface, desktop or platform, so the Android app can share it. Its test classes, with the test helpers the desktop's tests use, also go in a test-jar. |
 | `car-charge-planner-desktop` | `desktop/` | Every other package below and their tests, the texts, icons and version file; it builds `car-charge-planner.jar`, its libraries in `desktop/target/lib` and the SBOM. |
+| `:app`, `:engine`, `:engine-lint` (Gradle) | `android/` | The Android app in `nl.enadeag.carchargeplanner.android` (`app/`, Kotlin with Compose), the engine's sources and contract tests compiled for it (`engine/`, `engine-lint/`, which hold only build files), and the build's own checks (`build-logic/`); see [The Android app](#the-android-app). |
 
-In each module the code is in `src/main/java/` and the tests in `src/test/java/`, in the same packages. The packaging (`src/packaging/`), `tools/` and `docs/` stay at the root.
+In each Maven module the code is in `src/main/java/` and the tests in `src/test/java/`, in the same packages; in the Android app, in `src/main/kotlin/` and `src/test/kotlin/`. The packaging (`src/packaging/`), `tools/` and `docs/` stay at the root.
 
 | Package | What it holds |
 | --- | --- |
