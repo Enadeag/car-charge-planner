@@ -133,6 +133,24 @@ class PrivateFilesTest {
     }
 
     @Test
+    void aFileThatIsReplacedByAPlainMoveAgainAndAgainIsLoggedOnce() throws IOException {
+        var fileSystem = new NoAtomicMoveFileSystem();
+        var file = fileSystem.wrap(folder.resolve("data.json"));
+        var other = fileSystem.wrap(folder.resolve("other.json"));
+
+        try (var log = LogCapture.of(PrivateFiles.class)) {
+            files.write(file, "first");
+            files.write(file, "second");
+            files.write(other, "first");
+
+            assertThat(log.lines()).hasSize(2)
+                    .anySatisfy(line -> assertThat(line).contains(file.toAbsolutePath() + " in one step"))
+                    .anySatisfy(line -> assertThat(line).contains(other.toAbsolutePath() + " in one step"));
+        }
+        assertThat(folder.resolve("data.json")).hasContent("second");
+    }
+
+    @Test
     void whenThePlainMoveFailsAfterTheFileIsGoneTheTextIsKeptInTheTemporaryFile() throws IOException {
         var file = NoAtomicMoveFileSystem.whosePlainMoveLosesTheFile().wrap(folder.resolve("data.json"));
         Files.writeString(folder.resolve("data.json"), "old");

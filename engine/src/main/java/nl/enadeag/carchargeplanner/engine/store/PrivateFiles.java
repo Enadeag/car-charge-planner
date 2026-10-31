@@ -15,6 +15,7 @@ import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileAttribute;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +33,8 @@ public final class PrivateFiles {
     private static final Logger LOG = LoggerFactory.getLogger(PrivateFiles.class);
 
     private final FilePrivacy privacy;
+    /** The files already reported as replaced by a plain move, so each is logged once. */
+    private final Set<Path> movedPlainly = ConcurrentHashMap.newKeySet();
 
     /**
      * Makes the writer for one platform.
@@ -165,12 +168,14 @@ public final class PrivateFiles {
      * In one step where the file system can, and by a plain move that replaces the file where it cannot. A move that
      * fails removes the temporary file, unless it holds the only copy of the text.
      */
-    private static void replace(Path temporary, Path target) throws IOException {
+    private void replace(Path temporary, Path target) throws IOException {
         try {
             Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
         } catch (AtomicMoveNotSupportedException e) {
-            LOG.warn("could not replace " + target + " in one step, so it is replaced by a plain move: "
-                    + e.getMessage());
+            if (movedPlainly.add(target.toAbsolutePath())) {
+                LOG.warn("could not replace " + target + " in one step, so it is replaced by a plain move: "
+                        + e.getMessage());
+            }
             movePlainly(temporary, target);
         } catch (IOException e) {
             deleteQuietly(temporary);
