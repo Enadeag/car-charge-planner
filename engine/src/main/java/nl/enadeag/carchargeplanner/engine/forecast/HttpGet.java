@@ -14,7 +14,8 @@ import java.util.Optional;
  *
  * <p>What every implementation must do, which {@code HttpGetContractTest} among the engine's tests checks:
  * <ul>
- *   <li>send the request's headers, and a User-Agent that names the app (its exact text is the implementation's);</li>
+ *   <li>send the request's headers, and a User-Agent that names the app with {@code car-charge-planner} (the rest
+ *   of its text is the implementation's);</li>
  *   <li>throw an {@link IOException} when nothing answers at the address, or the server could not be reached at
  *       all;</li>
  *   <li>return a redirect (3xx) as the {@link Reply} it is, without following it;</li>
