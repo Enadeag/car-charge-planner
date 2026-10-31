@@ -3,13 +3,20 @@ package nl.enadeag.carchargeplanner.engine.secrets;
 /** The keychain is missing, locked or failed; {@link #kind()} says which. The message never holds a value. */
 public class KeychainException extends Exception {
 
-    /** What kind of failure it is, which decides what the app does next. */
+    /**
+     * What kind of failure it is. Only {@link #LOCKED}, or a refused unlock, makes the app wait for the owner. After
+     * either other kind a save sends the API keys to the private file ({@code secrets.json}), and so does a load whose
+     * first read of the index fails; a later failure in a load is reported as keys that could not be read.
+     */
     public enum Kind {
-        /** There is no keychain the app can use, or it does not answer: the keys go to the private file. */
+        /** There is no keychain the app can use at all, or it does not answer. */
         UNAVAILABLE,
-        /** The keychain is there but locked: the keys are not available yet, and the owner can unlock it. */
+        /**
+         * The keychain is there but locked: the keys are not available yet, and the owner can unlock it. Only a
+         * keychain that can be locked reports it.
+         */
         LOCKED,
-        /** The keychain answered and refused, or did not keep what was written to it. */
+        /** The keychain answered and refused, did not keep what was written to it, or cannot decrypt a value. */
         REFUSED
     }
 
