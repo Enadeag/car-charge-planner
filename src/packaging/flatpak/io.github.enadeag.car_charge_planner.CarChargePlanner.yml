@@ -44,11 +44,13 @@ modules:
       # this working copy; the Flathub copy of this manifest names a git tag and its commit instead
       - type: dir
         path: ../../..
+        # left out: git, the Maven builds' output, and the Android app (Gradle's, with its output and local.properties)
         skip:
           - .git
           - target
           - engine/target
           - desktop/target
+          - android
       # the Maven of .mvn/wrapper/maven-wrapper.properties (PackagingTest checks the address and checksum)
       - type: archive
         url: https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.10.0/apache-maven-3.10.0-bin.zip
