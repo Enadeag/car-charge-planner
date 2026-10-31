@@ -65,10 +65,16 @@ class EngineArchitectureTest {
             type -> type.getPackageName().equals("java.nio.file.attribute")
                     && type.getSimpleName().startsWith("Posix"));
 
+    // a call such as Files.setPosixFilePermissions(p, Files.getPosixFilePermissions(q)) names no Posix type
+    private static final DescribedPredicate<JavaMethodCall> USE_POSIX_FILES_METHODS = DescribedPredicate.describe(
+            "read or set POSIX permissions through Files",
+            call -> call.getTargetOwner().getName().equals("java.nio.file.Files") && call.getName().contains("Posix"));
+
     @ArchTest
     static final ArchRule theEngineLeavesFilePrivacyToThePlatform = noClasses()
             .that().resideInAPackage(ENGINE + "..")
             .should().dependOnClassesThat(POSIX_FILE_ATTRIBUTES)
+            .orShould().callMethodWhere(USE_POSIX_FILES_METHODS)
             .because("Android may have no POSIX file attributes and keeps its app storage private already; each "
                     + "platform makes a file private through the FilePrivacy it hands in (ADR 0010)");
 
