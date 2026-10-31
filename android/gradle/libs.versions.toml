@@ -2,6 +2,9 @@
 # (pom.xml): a Maven bump of one of them updates this file in the same pull request, and the engine's
 # checkMavenDrift task fails when the two differ.
 [versions]
+# the oldest Android the app runs on (Android 8) and the API it is compiled against, for :app and :engine-lint
+android-min-sdk = "26"
+android-compile-sdk = "36"
 agp = "9.4.1"
 kotlin = "2.4.21"
 compose-bom = "2026.06.01"

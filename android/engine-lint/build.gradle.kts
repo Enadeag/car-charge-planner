@@ -11,10 +11,10 @@ plugins {
 
 android {
     namespace = "nl.enadeag.carchargeplanner.engine.lint"
-    compileSdk = 36
+    compileSdk = libs.versions.android.compile.sdk.get().toInt()
 
     defaultConfig {
-        minSdk = 26
+        minSdk = libs.versions.android.min.sdk.get().toInt()
     }
 
     compileOptions {

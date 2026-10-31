@@ -8,11 +8,11 @@ plugins {
 
 android {
     namespace = "nl.enadeag.carchargeplanner.android"
-    compileSdk = 36
+    compileSdk = libs.versions.android.compile.sdk.get().toInt()
 
     defaultConfig {
         applicationId = "io.github.enadeag.car_charge_planner"
-        minSdk = 26
+        minSdk = libs.versions.android.min.sdk.get().toInt()
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0-SNAPSHOT"
