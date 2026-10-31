@@ -16,3 +16,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "car-charge-planner-android"
+
+include(":engine", ":engine-lint")
