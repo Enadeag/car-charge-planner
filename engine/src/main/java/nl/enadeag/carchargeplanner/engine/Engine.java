@@ -521,7 +521,7 @@ public final class Engine {
     private Secrets storedSecrets() {
         try {
             return apiKeys.load();
-        } catch (SecretsProblem _) {
+        } catch (SecretsProblem ignored) {
             return Secrets.NONE; // the check then says which key is missing
         }
     }

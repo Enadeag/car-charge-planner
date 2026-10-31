@@ -8,6 +8,18 @@ package nl.enadeag.carchargeplanner.engine.store;
 public sealed interface Stored<T> {
 
     /**
+     * The value the file holds, for a reader to whom a missing file and one it cannot use mean the same: that
+     * nothing is there. One method here rather than a record pattern at each reader, as the engine is held to Java 17,
+     * which has none (ADR 0010).
+     *
+     * @param fallback what to use when the file is missing or cannot be used; may be null
+     * @return the value of a {@link Found}, otherwise the fallback
+     */
+    default T orElse(T fallback) {
+        return this instanceof Found<T> found ? found.value() : fallback;
+    }
+
+    /**
      * There is no file: nothing was stored yet.
      *
      * @param <T> the kind of value the file keeps

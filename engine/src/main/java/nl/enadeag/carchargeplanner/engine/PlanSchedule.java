@@ -66,7 +66,7 @@ final class PlanSchedule {
         }
         try {
             executor.execute(guarded);
-        } catch (RejectedExecutionException _) {
+        } catch (RejectedExecutionException ignored) {
             // stopped between the check and now: the change is saved, and no one waits for a plan any more
         }
     }
@@ -82,7 +82,7 @@ final class PlanSchedule {
                 LOG.log(Level.WARNING, "a planning round did not finish in " + STOP_WAIT + "; interrupting it");
                 executor.shutdownNow();
             }
-        } catch (InterruptedException _) {
+        } catch (InterruptedException ignored) {
             executor.shutdownNow();
             Thread.currentThread().interrupt();
         }

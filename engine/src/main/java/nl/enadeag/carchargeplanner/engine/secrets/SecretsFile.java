@@ -74,14 +74,20 @@ public final class SecretsFile {
      */
     Secrets read() throws SecretsProblem {
         makePrivate();
-        return switch (file.read()) {
-            case Stored.Found<Secrets>(var secrets) -> secrets;
-            case Stored.Absent<Secrets> _ -> Secrets.NONE;
-            case Stored.Unusable<Secrets> unusable when unusable.reason() == Stored.Reason.UNREADABLE ->
-                    throw new SecretsProblem("Could not read " + path() + " (" + unusable.detail() + ")");
-            case Stored.Unusable<Secrets> unusable -> throw new SecretsProblem(path() + ": " + unusable.detail()
+        var stored = file.read();
+        if (stored instanceof Stored.Found<Secrets> found) {
+            return found.value();
+        } else if (stored instanceof Stored.Absent<?>) {
+            return Secrets.NONE;
+        } else if (stored instanceof Stored.Unusable<Secrets> unusable
+                && unusable.reason() == Stored.Reason.UNREADABLE) {
+            throw new SecretsProblem("Could not read " + path() + " (" + unusable.detail() + ")");
+        } else if (stored instanceof Stored.Unusable<Secrets> unusable) {
+            throw new SecretsProblem(path() + ": " + unusable.detail()
                     + ". Fix it or delete it and enter the keys again.");
-        };
+        } else {
+            throw new IllegalStateException("unknown kind of stored value: " + stored);
+        }
     }
 
     /**
@@ -107,7 +113,7 @@ public final class SecretsFile {
     void delete() {
         try {
             file.delete();
-        } catch (IOException _) {
+        } catch (IOException ignored) {
             // the file is moved into the keychain again next time
         }
     }

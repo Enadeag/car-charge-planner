@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.engine.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import nl.enadeag.carchargeplanner.LogCapture;
 import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
@@ -10,6 +11,7 @@ import nl.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalTime;
@@ -20,6 +22,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -320,9 +324,24 @@ class ConfigFileTest {
     }
 
     @Test
+    @DisabledOnOs(OS.WINDOWS)
+    void aFileTheSystemRefusesToReadIsAnUnreadableProblemThatNamesTheFile() throws IOException {
+        var file = folder.resolve("engine.json");
+        Files.copy(EXAMPLE, file);
+        Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("-w-------"));
+        assumeFalse(Files.isReadable(file), "root reads any file");
+
+        assertThatThrownBy(() -> new ConfigFile(file).read()).isInstanceOfSatisfying(ConfigProblem.class,
+                problem -> {
+                    assertThat(problem.kind()).isEqualTo(ConfigProblem.Kind.UNREADABLE);
+                    assertThat(problem.getMessage()).contains(file.toString());
+                });
+    }
+
+    @Test
     void aWrittenConfigIsReadBackTheSame() throws IOException, ConfigProblem {
         var example = new ConfigFile(EXAMPLE).read();
-        var file = new ConfigFile(folder.resolve("new", "engine.json"));
+        var file = new ConfigFile(folder.resolve("new").resolve("engine.json"));
 
         file.write(example);
 

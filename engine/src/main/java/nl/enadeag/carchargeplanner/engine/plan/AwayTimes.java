@@ -63,8 +63,8 @@ public record AwayTimes(List<WeeklyAwayPeriod> weekly, List<OneOffAwayPeriod> on
         var sorted = times.stream().sorted(Comparator.comparing(BlockedTime::start)).toList();
         var merged = new ArrayList<BlockedTime>();
         for (var time : sorted) {
-            if (!merged.isEmpty() && !merged.getLast().end().isBefore(time.start())) {
-                var last = merged.removeLast();
+            if (!merged.isEmpty() && !merged.get(merged.size() - 1).end().isBefore(time.start())) {
+                var last = merged.remove(merged.size() - 1);
                 merged.add(new BlockedTime(last.start(), last.end().isAfter(time.end()) ? last.end() : time.end()));
             } else {
                 merged.add(time);

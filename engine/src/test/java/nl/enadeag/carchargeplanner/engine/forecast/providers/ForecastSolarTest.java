@@ -74,7 +74,7 @@ class ForecastSolarTest extends ProviderConformance {
     private static String requested(SolarSite system, Map<String, String> settings) throws ProviderError {
         var http = ReplayHttp.always(new Reply(200, RECORDED));
         new ForecastSolar(http).fetch(system, settings, NOW);
-        return http.requests.getFirst().uri().toString();
+        return http.requests.get(0).uri().toString();
     }
 
     private static String local(Instant moment) {
@@ -86,7 +86,7 @@ class ForecastSolarTest extends ProviderConformance {
         var steps = fetch(RECORDED, EXAMPLE_SYSTEM);
 
         assertThat(steps).hasSize(26); // two days of 14 keys; the sunrise key of each has nothing before it
-        var first = steps.getFirst();
+        var first = steps.get(0);
         assertThat(local(first.start()) + "-" + local(first.end())).isEqualTo("07:51:52-08:00");
         assertThat(first.powerKw()).isCloseTo(0.010 / (488 / 3600.0), within(1e-9)); // 10 Wh in 8 min 8 s
         var nine = steps.stream().filter(s -> s.end().equals(Instant.parse("2026-10-07T07:00:00Z"))).findFirst().orElseThrow();
@@ -129,7 +129,7 @@ class ForecastSolarTest extends ProviderConformance {
         var body = RECORDED.replace("\"timezone\": \"Europe/Amsterdam\"", "\"timezone\": \"America/New_York\"");
         assertThat(body).isNotEqualTo(RECORDED);
         // 07:51 in New York (summer time) is 11:51 UTC
-        assertThat(fetch(body, EXAMPLE_SYSTEM).getFirst().start()).isEqualTo(Instant.parse("2026-10-07T11:51:52Z"));
+        assertThat(fetch(body, EXAMPLE_SYSTEM).get(0).start()).isEqualTo(Instant.parse("2026-10-07T11:51:52Z"));
     }
 
     @Test
@@ -142,7 +142,7 @@ class ForecastSolarTest extends ProviderConformance {
     void acrossTheMissingHourAPeriodIsTheRealElapsedTime() throws ProviderError {
         var steps = fetch(Recorded.answer("forecast_solar_dst_spring.json"), EXAMPLE_SYSTEM);
         assertThat(StepRules.problems(steps)).isEmpty();
-        var across = steps.getFirst(); // 01:30 (CET) to 03:30 (CEST) on 2026-03-29: one hour has gone, not two
+        var across = steps.get(0); // 01:30 (CET) to 03:30 (CEST) on 2026-03-29: one hour has gone, not two
         assertThat(across.start()).isEqualTo(Instant.parse("2026-03-29T00:30:00Z"));
         assertThat(across.end()).isEqualTo(Instant.parse("2026-03-29T01:30:00Z"));
         assertThat(across.powerKw()).isCloseTo(0.120, within(1e-9)); // 120 Wh in that hour
@@ -166,7 +166,7 @@ class ForecastSolarTest extends ProviderConformance {
     void thePublicRequestHasTheDocumentedShape() throws ProviderError {
         var http = ReplayHttp.always(new Reply(200, RECORDED));
         new ForecastSolar(http).fetch(EXAMPLE_SYSTEM, Map.of(), NOW);
-        var request = http.requests.getFirst();
+        var request = http.requests.get(0);
         assertThat(request.uri()).hasToString("https://api.forecast.solar/estimate/watthours/period/52.37/4.9/35/-45/4.8");
         assertThat(request.headers()).containsEntry("Accept", "application/json");
     }
@@ -190,7 +190,7 @@ class ForecastSolarTest extends ProviderConformance {
 
     @Test
     void itsKeyIsCheckedForLettersAndDigitsWhenEntered() {
-        assertThat(ForecastSolar.INFO.settings().getFirst().format()).isEqualTo(SettingFormat.LETTERS_AND_DIGITS);
+        assertThat(ForecastSolar.INFO.settings().get(0).format()).isEqualTo(SettingFormat.LETTERS_AND_DIGITS);
     }
 
     @Test
@@ -203,7 +203,7 @@ class ForecastSolarTest extends ProviderConformance {
     @ValueSource(ints = {0, -90, 90, 180, -180, -45})
     void ourAzimuthIsTheirs(int azimuth) throws ProviderError {
         var system = EXAMPLE_SYSTEM.withArrays(List.of(new PanelArray("", 4.8, 35, azimuth, 0.14)));
-        var parts = ForecastSolar.requestUri(system, system.arrays().getFirst(), Map.of()).toString().split("/");
+        var parts = ForecastSolar.requestUri(system, system.arrays().get(0), Map.of()).toString().split("/");
         assertThat(parts[parts.length - 2]).isEqualTo(String.valueOf(azimuth));
     }
 
@@ -216,7 +216,7 @@ class ForecastSolarTest extends ProviderConformance {
     void numbersAreWholeDegreesAndShortDecimals(double lat, double lon, double kwp, double tilt, double azimuth,
             String end) throws ProviderError {
         var system = new SolarSite(new Coordinates(lat, lon), AMSTERDAM, List.of(new PanelArray("", kwp, tilt, azimuth, 0.14)));
-        assertThat(ForecastSolar.requestUri(system, system.arrays().getFirst(), Map.of()).toString()).endsWith(end);
+        assertThat(ForecastSolar.requestUri(system, system.arrays().get(0), Map.of()).toString()).endsWith(end);
     }
 
     private static Duration rateLimit(Map<String, String> headers, String body, Instant now) {

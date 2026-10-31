@@ -26,7 +26,7 @@ public final class ReplayHttp implements HttpGet {
         }
 
         public static Route failure(IOException failure) {
-            return new Route(_ -> true, null, failure);
+            return new Route(ignored -> true, null, failure);
         }
     }
 

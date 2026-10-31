@@ -79,7 +79,7 @@ final class OpenMeteoSeries {
         }
         try {
             return Instant.ofEpochSecond(stamp.longValue());
-        } catch (DateTimeException _) {
+        } catch (DateTimeException ignored) {
             throw notAsDocumented();
         }
     }

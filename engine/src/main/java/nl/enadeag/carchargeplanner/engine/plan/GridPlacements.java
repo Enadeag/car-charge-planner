@@ -95,7 +95,7 @@ final class GridPlacements {
         var placements = new ArrayList<Window>();
         for (int first = 0; first + count <= quarters.size(); first++) {
             var stretch = quarters.subList(first, first + count);
-            var start = stretch.getFirst().start();
+            var start = stretch.get(0).start();
             if (!start.isBefore(notBefore) && preferences.chargingHours().allowStart(start, zone)
                     && stretch.stream().allMatch(QuarterHour::free)) {
                 placements.add(window(stretch, amps, powerKw, hours));
@@ -192,8 +192,9 @@ final class GridPlacements {
             solar += Math.min(powerKw, usableKw) * quarterHours;
             imported += Math.max(0, powerKw - usableKw) * quarterHours;
         }
-        var start = stretch.getFirst().start();
-        var end = Hours.earliest(Hours.ceilToFiveMinutes(Hours.plus(start, hours), zone), stretch.getLast().end());
+        var start = stretch.get(0).start();
+        var end = Hours.earliest(Hours.ceilToFiveMinutes(Hours.plus(start, hours), zone),
+                stretch.get(stretch.size() - 1).end());
         return new Window(start, end, amps, powerKw, solar, imported);
     }
 }

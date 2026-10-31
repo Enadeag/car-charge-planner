@@ -125,7 +125,7 @@ public final class OpenMeteo implements ForecastProvider {
             return URI.create(server.withPath(PATH) + "?" + query.entrySet().stream()
                     .map(e -> e.getKey() + "=" + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
                     .collect(Collectors.joining("&")));
-        } catch (IllegalArgumentException _) {
+        } catch (IllegalArgumentException ignored) {
             throw new ProviderError.MissingSetting("the server address is not a web address");
         }
     }

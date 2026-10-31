@@ -84,7 +84,7 @@ public final class StoredFile<T> {
         Stamp now;
         try {
             now = stamp();
-        } catch (NoSuchFileException _) {
+        } catch (NoSuchFileException ignored) {
             seen = null;
             remembered = new Stored.Absent<>();
             return remembered;
@@ -113,7 +113,7 @@ public final class StoredFile<T> {
         remembered = new Stored.Found<>(value);
         try {
             seen = stamp();
-        } catch (IOException _) {
+        } catch (IOException ignored) {
             seen = null; // read again next time
         }
     }

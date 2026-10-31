@@ -54,7 +54,7 @@ public final class AwayFile {
      * @return the periods in order of their start, each once; empty when the file is missing or cannot be used
      */
     public List<OneOffAwayPeriod> periods() {
-        return file.read() instanceof Stored.Found<Entries>(var entries) ? entries.periods() : List.of();
+        return file.read().orElse(new Entries(List.of(), 0)).periods();
     }
 
     /**
@@ -94,14 +94,20 @@ public final class AwayFile {
 
     /** The stored periods, when writing them back loses nothing. */
     private List<OneOffAwayPeriod> storedForChange() throws IOException {
-        return switch (file.read()) {
-            case Stored.Absent<Entries> _ -> List.of();
-            case Stored.Unusable<Entries> unusable -> throw new IOException(
+        var stored = file.read();
+        if (stored instanceof Stored.Absent<?>) {
+            return List.of();
+        } else if (stored instanceof Stored.Unusable<Entries> unusable) {
+            throw new IOException(
                     file.path() + " could not be read, so it is left as it is: " + unusable.detail());
-            case Stored.Found<Entries>(var entries) when entries.damaged() > 0 -> throw new IOException(
-                    file.path() + " holds " + entries.damaged() + " damaged entries, so it is left as it is");
-            case Stored.Found<Entries>(var entries) -> entries.periods();
-        };
+        } else if (stored instanceof Stored.Found<Entries> found && found.value().damaged() > 0) {
+            throw new IOException(
+                    file.path() + " holds " + found.value().damaged() + " damaged entries, so it is left as it is");
+        } else if (stored instanceof Stored.Found<Entries> found) {
+            return found.value().periods();
+        } else {
+            throw new IllegalStateException("unknown kind of stored value: " + stored);
+        }
     }
 
     /** The JSON shape of the periods. */
@@ -146,7 +152,7 @@ public final class AwayFile {
             try {
                 return Optional.of(new OneOffAwayPeriod(Instant.parse(start.stringValue()),
                         Instant.parse(end.stringValue())));
-            } catch (DateTimeException | IllegalArgumentException _) {
+            } catch (DateTimeException | IllegalArgumentException ignored) {
                 return Optional.empty();
             }
         }

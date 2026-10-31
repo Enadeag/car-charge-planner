@@ -113,7 +113,7 @@ class GridAdvisorTest {
         // today loses 17 of its 24 hours of driving, tomorrow a whole day's
         double today = 55 - DAILY_DRIVING_PCT * 17 / 24;
         double tomorrow = today - DAILY_DRIVING_PCT;
-        assertThat(advised.days().getFirst().endLevelPct().value()).isCloseTo(today, CLOSE);
+        assertThat(advised.days().get(0).endLevelPct().value()).isCloseTo(today, CLOSE);
         assertThat(advised.advice().day()).isEqualTo(SAT);
         assertThat(advised.advice().endLevelPct()).isCloseTo(tomorrow, CLOSE);
         assertThat(advised.advice().deficitPct()).isCloseTo(30 - tomorrow, CLOSE);
@@ -171,7 +171,7 @@ class GridAdvisorTest {
     void theWindowStaysClearOfThePlannedSolarWindows() {
         // a sunny day that cannot make up for a very low battery
         var advised = advise(days(900, 120), 8, fridayAt(0));
-        assertThat(advised.days().getFirst().windows()).extracting(Window::start, Window::end, Window::amps)
+        assertThat(advised.days().get(0).windows()).extracting(Window::start, Window::end, Window::amps)
                 .containsExactly(tuple(fridayAt(9), fridayAt(15), 9));
         var window = advised.window();
         assertThat(List.of(window.start(), window.end())).containsExactly(fridayAt(15), at(FRI, 23, 45));
@@ -215,7 +215,7 @@ class GridAdvisorTest {
     void lateInTheEveningTodayOnlyLosesTheRestOfTheDaysDriving() {
         var advised = advise(dull(1), 33, fridayAt(22));
         assertThat(advised.advice()).isNull(); // 2 hours of the day left: about 1.8 % of the battery, still above 30 %
-        assertThat(advised.days().getFirst().drivingPct()).isCloseTo(DAILY_DRIVING_PCT * 2 / 24, CLOSE);
+        assertThat(advised.days().get(0).drivingPct()).isCloseTo(DAILY_DRIVING_PCT * 2 / 24, CLOSE);
     }
 
     @Test
@@ -246,7 +246,7 @@ class GridAdvisorTest {
         // 4.4 kW leaves 3.23 kW (a 14 A window); 1.6 kW leaves 0.85 kW, below the 6 A minimum but it offsets grid draw
         var forecast = hourly(FRI, Map.of(10, 4.4, 11, 4.4, 12, 1.6, 13, 1.6, 14, 1.6, 15, 1.6));
         var advised = advise(Forecasts.golden(), forecast, 38, fridayAt(0));
-        assertThat(advised.days().getFirst().windows())
+        assertThat(advised.days().get(0).windows())
                 .extracting(Window::start, Window::end, Window::amps)
                 .containsExactly(tuple(fridayAt(10), fridayAt(12), 14));
         // 6.44 kWh * 0.9 / 70 kWh = 8.28 %: 38 + 8.28 - 18 = 28.28 %, 1.72 % short: 1.204 kWh / 0.9
@@ -282,7 +282,7 @@ class GridAdvisorTest {
         // the first day ends about 0.5 points under the minimum
         double soc = PREFERENCES.minimumPct().value() - 0.5 + DAILY_DRIVING_PCT;
         var advised = advise(dull(1), soc, fridayAt(0));
-        assertThat(PREFERENCES.minimumPct().value() - advised.days().getFirst().endLevelPct().value()).isCloseTo(0.5, CLOSE);
+        assertThat(PREFERENCES.minimumPct().value() - advised.days().get(0).endLevelPct().value()).isCloseTo(0.5, CLOSE);
         assertThat(advised.advice()).isNull();
     }
 
@@ -345,7 +345,7 @@ class GridAdvisorTest {
     void aDayThatEndsExactlyOnePointBelowTheMinimumGivesNoAdvice() {
         // 47 % - 18 % = 29 %: just not more than the one point of noise under 30 %
         var advised = advise(Forecasts.golden(), hourly(FRI, Map.of()), 47, fridayAt(0));
-        assertThat(advised.days().getFirst().endLevelPct().value()).isEqualTo(29.0);
+        assertThat(advised.days().get(0).endLevelPct().value()).isEqualTo(29.0);
         assertThat(advised.advice()).isNull();
     }
 

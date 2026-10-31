@@ -27,6 +27,15 @@ class ConnectionCheckTest {
                 List.of());
     }
 
+    /** Java 17's compiler no longer checks that describe covers every error; this does. */
+    @Test
+    void theErrorsAreTheFourTheCheckDescribes() {
+        assertThat(ProviderError.class.getPermittedSubclasses())
+                .as("a new error needs a branch in ConnectionCheck.describe")
+                .containsExactlyInAnyOrder(ProviderError.Unavailable.class, ProviderError.RateLimited.class,
+                        ProviderError.BadResponse.class, ProviderError.MissingSetting.class);
+    }
+
     @Test
     void aWorkingProviderSaysHowManyDaysItForecasts() {
         assertThat(attempt(steps(SunnyDays.days(DAY, 4, 3.0)))).isEqualTo(new ConnectionResult(true, 4, "OK: 4 days of forecast"));

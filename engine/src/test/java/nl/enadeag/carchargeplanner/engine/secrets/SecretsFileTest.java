@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -82,6 +83,15 @@ class SecretsFileTest {
     @Test
     void noFileMeansNoSecrets() throws SecretsProblem {
         assertThat(withoutKeychain().load()).isEqualTo(Secrets.NONE);
+    }
+
+    @Test
+    void withoutFileModesAMissingFileIsNoSecrets() throws Exception {
+        // a zip file system has no file modes, as on Windows; where files have modes, making the file private fails
+        // on a missing file before it is read
+        try (var modeless = FileSystems.newFileSystem(folder.resolve("modeless.zip"), Map.of("create", "true"))) {
+            assertThat(new SecretsFile(modeless.getPath("secrets.json")).read()).isEqualTo(Secrets.NONE);
+        }
     }
 
     @Test

@@ -76,17 +76,19 @@ public final class ConnectionCheck {
      * @return one or two sentences naming the provider and the problem
      */
     static String describe(ProviderInfo info, ProviderError error) {
-        return switch (error) {
-            case ProviderError.RateLimited limited -> limited.retryAfter()
+        if (error instanceof ProviderError.RateLimited limited) {
+            return limited.retryAfter()
                     .map(wait -> info.name() + " says there were too many requests. Try again in " + minutes(wait) + ".")
                     .orElse(info.name() + " says there were too many requests. Try again later.");
-            case ProviderError.Unavailable unavailable ->
-                    "Could not get a forecast from " + info.name() + ": " + unavailable.getMessage();
-            case ProviderError.MissingSetting notConfigured ->
-                    info.name() + " is not set up completely: " + notConfigured.getMessage();
-            case ProviderError.BadResponse bad ->
-                    info.name() + " gave an answer the app does not understand: " + bad.getMessage();
-        };
+        } else if (error instanceof ProviderError.Unavailable unavailable) {
+            return "Could not get a forecast from " + info.name() + ": " + unavailable.getMessage();
+        } else if (error instanceof ProviderError.MissingSetting notConfigured) {
+            return info.name() + " is not set up completely: " + notConfigured.getMessage();
+        } else if (error instanceof ProviderError.BadResponse bad) {
+            return info.name() + " gave an answer the app does not understand: " + bad.getMessage();
+        } else {
+            throw new IllegalStateException("unknown kind of provider error: " + error);
+        }
     }
 
     private static String minutes(Duration wait) {

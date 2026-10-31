@@ -55,7 +55,7 @@ public final class OpenMeteoPlaces implements PlaceSearch {
         HttpGet.Reply reply;
         try {
             reply = Exchange.send(http, new HttpGet.Request(requestUri(name, language), Map.of(), TIMEOUT, MAX_BODY), "Open-Meteo");
-        } catch (ProviderError.Unavailable _) {
+        } catch (ProviderError.Unavailable ignored) {
             return new PlaceResults.Failed(Problem.UNAVAILABLE);
         }
         return results(reply);
@@ -112,7 +112,7 @@ public final class OpenMeteoPlaces implements PlaceSearch {
     private static Optional<ZoneId> zone(String id) {
         try {
             return Optional.of(ZoneId.of(id));
-        } catch (DateTimeException _) {
+        } catch (DateTimeException ignored) {
             return Optional.empty();
         }
     }

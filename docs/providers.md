@@ -155,7 +155,7 @@ public final class ExampleSolar implements ForecastProvider {
                 steps.add(new ForecastStep(Instant.parse(row.path("start").asString()),
                         Instant.parse(row.path("end").asString()), row.path("kw").asDouble()));
             }
-        } catch (DateTimeException | IllegalArgumentException | JacksonException _) {
+        } catch (DateTimeException | IllegalArgumentException | JacksonException ignored) {
             throw new ProviderError.BadResponse("Example Solar gave an answer that is not what it documents");
         }
         if (steps.isEmpty()) {

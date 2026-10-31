@@ -42,14 +42,19 @@ public final class ConfigFile {
      *     value is missing or wrong; the problem names the file and the setting
      */
     public EngineConfig read() throws ConfigProblem {
-        return switch (file.read()) {
-            case Stored.Found<EngineConfig>(var config) -> config;
-            case Stored.Absent<EngineConfig> _ -> throw new ConfigProblem(ConfigProblem.Kind.MISSING, path(), "");
-            case Stored.Unusable<EngineConfig> unusable -> throw new ConfigProblem(
+        var stored = file.read();
+        if (stored instanceof Stored.Found<EngineConfig> found) {
+            return found.value();
+        } else if (stored instanceof Stored.Absent<?>) {
+            throw new ConfigProblem(ConfigProblem.Kind.MISSING, path(), "");
+        } else if (stored instanceof Stored.Unusable<EngineConfig> unusable) {
+            throw new ConfigProblem(
                     unusable.reason() == Stored.Reason.UNREADABLE ? ConfigProblem.Kind.UNREADABLE
                             : ConfigProblem.Kind.INVALID,
                     path(), unusable.detail());
-        };
+        } else {
+            throw new IllegalStateException("unknown kind of stored value: " + stored);
+        }
     }
 
     /**

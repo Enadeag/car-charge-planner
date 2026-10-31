@@ -56,7 +56,7 @@ public final class ArraySum {
      */
     public static List<ForecastStep> addUp(List<List<ForecastStep>> forecasts) {
         if (forecasts.size() == 1) {
-            return forecasts.getFirst();
+            return forecasts.get(0);
         }
         if (forecasts.isEmpty() || forecasts.stream().anyMatch(List::isEmpty)) {
             return List.of();
@@ -73,8 +73,9 @@ public final class ArraySum {
     }
 
     private static TreeSet<Instant> cuts(List<List<ForecastStep>> forecasts) {
-        var first = forecasts.stream().map(steps -> steps.getFirst().start()).max(Comparator.naturalOrder()).orElseThrow();
-        var last = forecasts.stream().map(steps -> steps.getLast().end()).min(Comparator.naturalOrder()).orElseThrow();
+        var first = forecasts.stream().map(steps -> steps.get(0).start()).max(Comparator.naturalOrder()).orElseThrow();
+        var last = forecasts.stream().map(steps -> steps.get(steps.size() - 1).end()).min(Comparator.naturalOrder())
+                .orElseThrow();
         var cuts = new TreeSet<Instant>();
         for (var steps : forecasts) {
             for (var step : steps) {

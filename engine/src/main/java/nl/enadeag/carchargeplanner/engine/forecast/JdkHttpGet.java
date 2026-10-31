@@ -66,7 +66,7 @@ public final class JdkHttpGet implements HttpGet {
             // the client's own timeout ends when the headers are in (Java 25), so a server that trickles its body
             // could hold the request for ever; this deadline covers the whole answer, and cancelling aborts it
             response = answer.get(request.timeout().toNanos(), TimeUnit.NANOSECONDS);
-        } catch (TimeoutException _) {
+        } catch (TimeoutException ignored) {
             answer.cancel(true);
             throw new HttpTimeoutException("no whole answer within " + request.timeout().toMillis() + " ms");
         } catch (InterruptedException e) {
@@ -76,7 +76,7 @@ public final class JdkHttpGet implements HttpGet {
             throw failure(e.getCause());
         }
         var headers = new HashMap<String, String>();
-        response.headers().map().forEach((name, values) -> headers.put(name, values.getFirst()));
+        response.headers().map().forEach((name, values) -> headers.put(name, values.get(0)));
         return new Reply(response.statusCode(), new String(response.body(), StandardCharsets.UTF_8), headers);
     }
 

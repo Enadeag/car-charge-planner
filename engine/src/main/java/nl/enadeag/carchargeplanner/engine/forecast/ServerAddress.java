@@ -42,7 +42,7 @@ public record ServerAddress(URI uri) {
         try {
             var uri = new URI(trimmed);
             return isAllowed(uri) ? Optional.of(new ServerAddress(uri)) : Optional.empty();
-        } catch (URISyntaxException _) {
+        } catch (URISyntaxException ignored) {
             return Optional.empty();
         }
     }
