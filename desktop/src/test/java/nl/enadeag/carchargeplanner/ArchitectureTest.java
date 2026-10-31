@@ -502,6 +502,22 @@ class ArchitectureTest {
             .because("no client writes the engine's files; the desktop keeps its own app settings, and makes the "
                     + "engine's files private through the FilePrivacy it hands the engine (ADR 0001, ADR 0010)");
 
+    private static final DescribedPredicate<JavaMethodCall> USE_FILES_BEYOND_THEIR_MODES = DescribedPredicate.describe(
+            "use Files for more than reading and setting file modes",
+            call -> call.getTargetOwner().getName().equals("java.nio.file.Files")
+                    && !Set.of("readAttributes", "setPosixFilePermissions").contains(call.getName()));
+
+    @ArchTest
+    static final ArchRule thePlatformsFilePrivacyOnlyReadsAndSetsModes = noClasses()
+            .that().haveFullyQualifiedName(PosixFilePrivacy.class.getName())
+            .should().callMethodWhere(USE_FILES_BEYOND_THEIR_MODES)
+            .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileOutputStream")
+            .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileWriter")
+            .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.RandomAccessFile")
+            .orShould().dependOnClassesThat().resideInAPackage("java.nio.channels..")
+            .because("it is exempt from the rule above only to read and set modes; writing stays with the engine's "
+                    + "PrivateFiles (ADR 0010)");
+
     // texts, numbers and times are written in a chosen language
 
     private static boolean hasLocale(java.util.List<JavaClass> types) {
