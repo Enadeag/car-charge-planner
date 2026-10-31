@@ -60,7 +60,7 @@ internal fun SkeletonScreen(windows: List<Window>, zone: ZoneId, json: String, r
             windows.forEach { window ->
                 Text(
                     stringResource(
-                        R.string.window,
+                        R.string.charge_window,
                         time.format(window.start()),
                         time.format(window.end()),
                         window.powerKw(),
