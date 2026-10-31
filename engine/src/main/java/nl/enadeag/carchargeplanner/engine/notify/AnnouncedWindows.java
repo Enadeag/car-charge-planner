@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.engine.notify;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import nl.enadeag.carchargeplanner.engine.store.FileFormat;
 import nl.enadeag.carchargeplanner.engine.store.FormatProblem;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.store.Stored;
 import nl.enadeag.carchargeplanner.engine.store.StoredFile;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
@@ -31,9 +32,10 @@ public final class AnnouncedWindows {
      * Makes the store; nothing is read or written yet.
      *
      * @param file the file the windows are kept in; it and its folder are made when the first window is saved
+     * @param files how the file and its folders are written privately on this platform
      */
-    public AnnouncedWindows(Path file) {
-        this.file = new StoredFile<>(file, new Format());
+    public AnnouncedWindows(Path file, PrivateFiles files) {
+        this.file = new StoredFile<>(file, new Format(), files);
     }
 
     /**

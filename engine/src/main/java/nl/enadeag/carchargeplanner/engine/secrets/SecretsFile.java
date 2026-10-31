@@ -4,46 +4,46 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.store.FileFormat;
 import nl.enadeag.carchargeplanner.engine.store.FileVersion;
 import nl.enadeag.carchargeplanner.engine.store.FormatProblem;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.store.Stored;
 import nl.enadeag.carchargeplanner.engine.store.StoredFile;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
  * The keys in a JSON file beside the config, for when there is no usable keychain:
- * {@code {"version": 1, "open-meteo": {"api_key": "..."}}}, where a file without a version is version 1. Where files
- * have modes (Linux, macOS) it is readable and writable by its owner only: it is written so, and one that others can
- * read is made so before it is read ({@link #makePrivate()}). On Windows the user's own application data folder
- * already keeps it from other users. A file that cannot be used is kept as {@code secrets.json.damaged-<time>},
- * as private as it was, before new keys are written; no message quotes it.
+ * {@code {"version": 1, "open-meteo": {"api_key": "..."}}}, where a file without a version is version 1. It is kept
+ * private by the platform, through the {@link PrivateFiles} it is made with: it is written private, and one that was
+ * not is made private before it is read ({@link #makePrivate()}), or refused when that fails. On the desktop that is
+ * readable and writable by its owner only where files have modes (Linux, macOS); on Windows the user's own
+ * application data folder keeps it from other users. A file that cannot be used is kept as
+ * {@code secrets.json.damaged-<time>}, as private as it was, before new keys are written; no message quotes it.
  */
 public final class SecretsFile {
-
-    private static final Set<PosixFilePermission> OWNER_ONLY = PosixFilePermissions.fromString("rw-------");
 
     /** The shape this app writes, and where the migrations from older shapes go: none yet, 1 is the first. */
     private static final FileVersion VERSION = new FileVersion(1, List.of());
 
     private final StoredFile<Secrets> file;
+    private final PrivateFiles files;
 
     /**
      * Makes the file's reader and writer; nothing is read or written yet.
      *
      * @param path where the file is, or will be made; its folder is made when needed
+     * @param files how the file and its folder are written, and made private, on this platform
      */
-    public SecretsFile(Path path) {
-        this.file = new StoredFile<>(path, new Format());
+    public SecretsFile(Path path, PrivateFiles files) {
+        this.file = new StoredFile<>(path, new Format(), files);
+        this.files = files;
     }
 
     /**
@@ -119,29 +119,18 @@ public final class SecretsFile {
     }
 
     /**
-     * Corrects a file that others can read, where files have modes.
+     * Corrects a file that others can read, through the platform.
      *
-     * @return true when its mode had to be corrected
-     * @throws SecretsProblem when others can read it and its mode cannot be changed
+     * @return true when it had to be corrected; false when it was private, or the platform has nothing to correct
+     * @throws SecretsProblem when the platform could not check or correct it
      */
     boolean makePrivate() throws SecretsProblem {
-        if (!hasFileModes()) {
-            return false;
-        }
         try {
-            if (Files.getPosixFilePermissions(path()).equals(OWNER_ONLY)) {
-                return false;
-            }
-            Files.setPosixFilePermissions(path(), OWNER_ONLY);
-            return true;
+            return files.tightenFile(path());
         } catch (IOException e) {
             throw new SecretsProblem(path() + " is readable by other users and could not be made private ("
                     + e.getClass().getSimpleName() + ")");
         }
-    }
-
-    private boolean hasFileModes() {
-        return path().getFileSystem().supportedFileAttributeViews().contains("posix");
     }
 
     /** The JSON shape of the keys: an object per provider, of texts only. */

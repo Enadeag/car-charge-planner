@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import nl.enadeag.carchargeplanner.LogCapture;
 import nl.enadeag.carchargeplanner.engine.forecast.ReplayHttp.Route;
+import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
@@ -31,6 +33,8 @@ import org.junit.jupiter.params.provider.MethodSource;
  * extends it and describes the provider in {@link #providerCase()}; nothing here touches the network.
  */
 public abstract class ProviderConformance {
+
+    private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
 
     /** Where the forecast cache of {@link #addressesCoordinatesAndSecretsNeverReachLogsOrReasons()} goes. */
     @TempDir
@@ -174,7 +178,7 @@ public abstract class ProviderConformance {
         var c = providerCase();
         var otherKey = "OtherProviderKey31";
         var made = c.provider(c.errorSaying().apply("we also know " + otherKey));
-        var cache = new ForecastCache(cacheFolder);
+        var cache = new ForecastCache(cacheFolder, FILES);
         try (var log = LogCapture.of("nl.enadeag.carchargeplanner")) {
             var outcome = new ProviderAttempt(made.provider(), cache, new HashMap<>(), new ProviderHealth(), c.now(), true)
                     .forecastOrReason(ProviderCase.EXAMPLE_SYSTEM, c::allSettings,
@@ -260,7 +264,7 @@ public abstract class ProviderConformance {
         try (var log = LogCapture.of("nl.enadeag.carchargeplanner")) {
             for (var routes : scenarios(c)) {
                 var made = c.provider(routes);
-                var cache = new ForecastCache(cacheFolder);
+                var cache = new ForecastCache(cacheFolder, FILES);
                 // as the forecast service asks, so the lines it logs about a provider failing are made too
                 var outcome = new ProviderAttempt(made.provider(), cache, new HashMap<>(), new ProviderHealth(), c.now(),
                         true).forecastOrReason(ProviderCase.EXAMPLE_SYSTEM, c::allSettings,

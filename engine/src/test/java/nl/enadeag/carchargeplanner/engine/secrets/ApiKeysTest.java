@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import nl.enadeag.carchargeplanner.LogCapture;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
+import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,6 +26,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import tools.jackson.databind.json.JsonMapper;
 
 class ApiKeysTest {
+
+    private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
 
     private static final ProviderId OPEN_METEO = new ProviderId("open-meteo");
     private static final Secrets KEYS = new Secrets(Map.of(
@@ -60,7 +64,7 @@ class ApiKeysTest {
     }
 
     private SecretsFile file() {
-        return new SecretsFile(folder.resolve("secrets.json"));
+        return new SecretsFile(folder.resolve("secrets.json"), FILES);
     }
 
     private ApiKeys keys(Keychain keychain) {

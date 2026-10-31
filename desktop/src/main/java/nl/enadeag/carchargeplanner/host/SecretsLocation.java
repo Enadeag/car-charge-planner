@@ -46,9 +46,10 @@ public final class SecretsLocation {
      * @param configPath the engine's config file, beside which the old file is
      * @param dataFolder the app's data folder; its missing folders are made, private, only when the file is moved
      *     into it
+     * @param files how those folders are made private on this system
      * @return where the file is to be used from: the new place, or the old one when it could not be moved
      */
-    public static Path moveFromOldPlace(Os os, Path configPath, Path dataFolder) {
+    public static Path moveFromOldPlace(Os os, Path configPath, Path dataFolder, PrivateFiles files) {
         var now = file(os, configPath, dataFolder);
         var old = configPath.resolveSibling(FILE_NAME);
         if (os != Os.WINDOWS || old.toAbsolutePath().equals(now.toAbsolutePath())
@@ -61,7 +62,7 @@ public final class SecretsLocation {
             return now;
         }
         try {
-            PrivateFiles.createFolders(now.toAbsolutePath().getParent());
+            files.createFolders(now.toAbsolutePath().getParent());
             try {
                 Files.move(old, now, StandardCopyOption.ATOMIC_MOVE);
             } catch (AtomicMoveNotSupportedException _) {

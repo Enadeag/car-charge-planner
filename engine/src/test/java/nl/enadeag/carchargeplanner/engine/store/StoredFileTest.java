@@ -19,6 +19,8 @@ import tools.jackson.databind.JsonNode;
 
 class StoredFileTest {
 
+    private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
+
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-17T14:30:00Z"), ZoneOffset.UTC);
 
     /** A file that holds one text, {@code {"text": "..."}}, and refuses anything else. */
@@ -46,7 +48,7 @@ class StoredFileTest {
     }
 
     private StoredFile<String> file() {
-        return new StoredFile<>(path(), new TextFormat(), CLOCK);
+        return new StoredFile<>(path(), new TextFormat(), FILES, CLOCK);
     }
 
     @Test
@@ -207,7 +209,7 @@ class StoredFileTest {
         Files.setPosixFilePermissions(locked, PosixFilePermissions.fromString("---------"));
         try {
             assumeFalse(Files.isReadable(locked), "root enters any folder");
-            var file = new StoredFile<>(locked.resolve("data.json"), new TextFormat(), CLOCK);
+            var file = new StoredFile<>(locked.resolve("data.json"), new TextFormat(), FILES, CLOCK);
 
             assertThat(file.read()).isInstanceOfSatisfying(Stored.Unusable.class,
                     unusable -> assertThat(unusable.reason()).isEqualTo(Stored.Reason.UNREADABLE));

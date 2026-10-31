@@ -17,6 +17,8 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
+import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -34,6 +36,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 /** What the owner is told about a trip, and when not. */
 class TripNoticesTest {
+
+    private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
 
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");
     private static final LocalDate FRIDAY = LocalDate.of(2026, 7, 3);
@@ -59,7 +63,7 @@ class TripNoticesTest {
     /** The example system, which charges on one phase to a target of 80 %, with a lead time of 15 minutes. */
     private EngineConfig config() {
         try {
-            var example = new ConfigFile(Path.of("docs", "example-engine.json")).read();
+            var example = new ConfigFile(Path.of("docs", "example-engine.json"), FILES).read();
             var planning = example.planning();
             return example.withPlanning(new PlanningPreferences(planning.minimumPct(), planning.targetPct(),
                     planning.margin(), planning.importToleranceKwh(), planning.minWindow(), Duration.ofMinutes(15),
@@ -76,8 +80,8 @@ class TripNoticesTest {
 
     /** Kept in the test's folder, so a new announcer is like the app after a restart. */
     private Announcer announcer() {
-        return new Announcer(new AnnouncedWindows(folder.resolve("announced.json")),
-                new ToldTrips(folder.resolve("trip-notices.json")), told::add);
+        return new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES),
+                new ToldTrips(folder.resolve("trip-notices.json"), FILES), told::add);
     }
 
     /** The trip needs 93.2 %, solar power brings it to 60 %, and the grid charge does the rest. */
@@ -330,7 +334,7 @@ class TripNoticesTest {
 
         check(announcer, laterAdvice, now);
 
-        assertThat(new ToldTrips(folder.resolve("trip-notices.json")).load()).extracting(ToldTrip::departure)
+        assertThat(new ToldTrips(folder.resolve("trip-notices.json"), FILES).load()).extracting(ToldTrip::departure)
                 .isEqualTo(kept ? List.of(TRIP.departure(), later.departure()) : List.of(later.departure()));
     }
 

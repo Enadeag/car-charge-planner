@@ -3,6 +3,8 @@ package nl.enadeag.carchargeplanner.engine.trip;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,6 +20,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class TripFileTest {
 
+    private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
+
     private static final ZoneId TZ = ZoneId.of("Europe/Amsterdam");
     private static final LocalDate DAY = LocalDate.of(2026, 7, 3);
     private static final Instant NOW = DAY.atTime(7, 0).atZone(TZ).toInstant();
@@ -26,7 +30,7 @@ class TripFileTest {
     Path folder;
 
     private TripFile file() {
-        return new TripFile(folder.resolve("data").resolve("trips.json"));
+        return new TripFile(folder.resolve("data").resolve("trips.json"), FILES);
     }
 
     /** A trip on a day after the test's day, from 08:00 to 18:00. */
@@ -64,8 +68,8 @@ class TripFileTest {
         var withTheCar = trip(1, 300);
         var withoutTheCar = new Trip(withTheCar.departure().plusSeconds(86_400),
                 withTheCar.returnTime().plusSeconds(86_400), 80, false, true);
-        new TripFile(path).add(withTheCar, NOW);
-        new TripFile(path).add(withoutTheCar, NOW);
+        new TripFile(path, FILES).add(withTheCar, NOW);
+        new TripFile(path, FILES).add(withoutTheCar, NOW);
 
         var rows = StoredJson.parse(Files.readString(path)).path("trips");
         assertThat(rows.get(0).has("notWithThisCar")).isFalse();
@@ -81,7 +85,7 @@ class TripFileTest {
                 """);
         var stored = new Trip(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T18:00:00Z"), 300, false);
 
-        assertThat(new TripFile(path).trips(NOW)).containsExactly(stored);
+        assertThat(new TripFile(path, FILES).trips(NOW)).containsExactly(stored);
     }
 
     @Test
@@ -164,7 +168,7 @@ class TripFileTest {
     void aMissingOrDamagedFileHoldsNoTrips() throws IOException {
         assertThat(file().trips(NOW)).isEmpty();
         var damaged = Files.writeString(folder.resolve("damaged.json"), "{oops");
-        assertThat(new TripFile(damaged).trips(NOW)).isEmpty();
+        assertThat(new TripFile(damaged, FILES).trips(NOW)).isEmpty();
     }
 
     @Test
@@ -189,7 +193,7 @@ class TripFileTest {
                    "canChargeAtDestination": true}]}
                 """);
 
-        assertThat(new TripFile(path).trips(NOW)).containsExactly(
+        assertThat(new TripFile(path, FILES).trips(NOW)).containsExactly(
                 new Trip(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z"), 30, true));
     }
 
@@ -208,10 +212,10 @@ class TripFileTest {
         var path = Files.writeString(folder.resolve("trips.json"), content);
         var trip = trip(1, 300);
 
-        assertThatThrownBy(() -> new TripFile(path).add(trip, NOW)).isInstanceOf(IOException.class)
+        assertThatThrownBy(() -> new TripFile(path, FILES).add(trip, NOW)).isInstanceOf(IOException.class)
                 .hasMessageContaining("left as it is");
-        assertThatThrownBy(() -> new TripFile(path).change(trip, trip, NOW)).isInstanceOf(IOException.class);
-        assertThatThrownBy(() -> new TripFile(path).remove(trip, NOW)).isInstanceOf(IOException.class);
+        assertThatThrownBy(() -> new TripFile(path, FILES).change(trip, trip, NOW)).isInstanceOf(IOException.class);
+        assertThatThrownBy(() -> new TripFile(path, FILES).remove(trip, NOW)).isInstanceOf(IOException.class);
         assertThat(path).hasContent(content);
     }
 
@@ -222,13 +226,13 @@ class TripFileTest {
                   "canChargeAtDestination": false}]}
                 """);
         var stored = new Trip(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z"), 30, false);
-        assertThat(new TripFile(path).trips(NOW)).containsExactly(stored);
+        assertThat(new TripFile(path, FILES).trips(NOW)).containsExactly(stored);
 
         var added = trip(2, 120);
-        new TripFile(path).add(added, NOW);
+        new TripFile(path, FILES).add(added, NOW);
 
         assertThat(StoredJson.parse(Files.readString(path)).path("version").intValue()).isEqualTo(1);
-        assertThat(new TripFile(path).trips(NOW)).containsExactly(stored, added);
+        assertThat(new TripFile(path, FILES).trips(NOW)).containsExactly(stored, added);
     }
 
     @Test
@@ -240,6 +244,6 @@ class TripFileTest {
                   "canChargeAtDestination": false}]}
                 """);
 
-        assertThat(new TripFile(path).trips(NOW)).extracting(Trip::distanceKm).containsExactly(40.0, 30.0);
+        assertThat(new TripFile(path, FILES).trips(NOW)).extracting(Trip::distanceKm).containsExactly(40.0, 30.0);
     }
 }

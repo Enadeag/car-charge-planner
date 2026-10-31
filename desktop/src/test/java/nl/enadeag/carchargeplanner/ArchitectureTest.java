@@ -29,12 +29,14 @@ import com.tngtech.archunit.library.dependencies.SliceIdentifier;
 import com.tngtech.archunit.library.freeze.FreezingArchRule;
 import nl.enadeag.carchargeplanner.desktop.app.AppSettingsFile;
 import nl.enadeag.carchargeplanner.desktop.system.Notifications;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.system.StartAtLogin;
 import nl.enadeag.carchargeplanner.desktop.system.Tray;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
+import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
 import nl.enadeag.carchargeplanner.host.Host;
 import nl.enadeag.carchargeplanner.host.Os;
 import nl.enadeag.carchargeplanner.start.JdkHttpGet;
@@ -362,6 +364,8 @@ class ArchitectureTest {
             .whereLayer("Desktop system").mayOnlyBeAccessedByLayers("Root", "Platform", "Desktop")
             .whereLayer("Instance").mayOnlyBeAccessedByLayers("Root")
             .whereLayer("Engine").mayOnlyBeAccessedByLayers("Root", "Platform", "Desktop")
+            // desktop.system fills one port of the engine: how the platform makes the engine's files private
+            .ignoreDependency(PosixFilePrivacy.class, FilePrivacy.class)
             .because("the composition root sits on the platforms, which implement the ports of desktop.system; the "
                     + "rest of the desktop sits on those ports and on the engine; the single-instance guard is used by "
                     + "the root alone (ADR 0001, ADR 0005)");
@@ -488,12 +492,31 @@ class ArchitectureTest {
     static final ArchRule theDesktopWritesFilesOnlyForItsAppSettings = noClasses()
             .that().resideInAPackage("..desktop..")
             .and().doNotHaveFullyQualifiedName(AppSettingsFile.class.getName())
+            // the platform's half of the engine's FilePrivacy seam reads and sets file modes, nothing more
+            .and().doNotHaveFullyQualifiedName(PosixFilePrivacy.class.getName())
             .should().dependOnClassesThat().haveFullyQualifiedName("java.nio.file.Files")
             .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileOutputStream")
             .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileWriter")
             .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.RandomAccessFile")
             .orShould().dependOnClassesThat().resideInAPackage("java.nio.channels..")
-            .because("no client writes the engine's files; the desktop keeps its own app settings (ADR 0001)");
+            .because("no client writes the engine's files; the desktop keeps its own app settings, and makes the "
+                    + "engine's files private through the FilePrivacy it hands the engine (ADR 0001, ADR 0010)");
+
+    private static final DescribedPredicate<JavaMethodCall> USE_FILES_BEYOND_THEIR_MODES = DescribedPredicate.describe(
+            "use Files for more than reading and setting file modes",
+            call -> call.getTargetOwner().getName().equals("java.nio.file.Files")
+                    && !Set.of("readAttributes", "setPosixFilePermissions").contains(call.getName()));
+
+    @ArchTest
+    static final ArchRule thePlatformsFilePrivacyOnlyReadsAndSetsModes = noClasses()
+            .that().haveFullyQualifiedName(PosixFilePrivacy.class.getName())
+            .should().callMethodWhere(USE_FILES_BEYOND_THEIR_MODES)
+            .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileOutputStream")
+            .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileWriter")
+            .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.RandomAccessFile")
+            .orShould().dependOnClassesThat().resideInAPackage("java.nio.channels..")
+            .because("it is exempt from the rule above only to read and set modes; writing stays with the engine's "
+                    + "PrivateFiles (ADR 0010)");
 
     // texts, numbers and times are written in a chosen language
 

@@ -1,12 +1,13 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard;
 
 import nl.enadeag.carchargeplanner.desktop.Fx;
-import nl.enadeag.carchargeplanner.desktop.Pictures;
 import nl.enadeag.carchargeplanner.desktop.Pictures.Frame;
 import nl.enadeag.carchargeplanner.desktop.Pictures.Studio;
+import nl.enadeag.carchargeplanner.desktop.Pictures;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.OutlookMapper;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -30,6 +31,7 @@ import nl.enadeag.carchargeplanner.engine.notify.ToldTrips;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import nl.enadeag.carchargeplanner.host.AppName;
@@ -57,6 +59,8 @@ import javafx.scene.input.KeyEvent;
  * time that never change, so the pictures are the same on every run.
  */
 public final class DashboardPictures {
+
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
     private static final Path EXAMPLE = Path.of("docs", "example-engine.json");
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");
@@ -208,14 +212,15 @@ public final class DashboardPictures {
         }).info()), new ForecastSolar(_ -> {
             throw new IOException("no network");
         })));
-        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json")));
-        var awayFile = new AwayFile(folder.resolve("away.json"));
-        var engine = new Engine(new ConfigFile(config),
-                new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
-                awayFile, new TripFile(folder.resolve("trips.json")), new BatteryFile(folder.resolve("battery.json")),
+        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES));
+        var awayFile = new AwayFile(folder.resolve("away.json"), FILES);
+        var engine = new Engine(new ConfigFile(config, FILES),
+                new ForecastService(providers, new ForecastCache(folder.resolve("cache"), FILES), apiKeys), providers,
+                apiKeys, awayFile, new TripFile(folder.resolve("trips.json"), FILES),
+                new BatteryFile(folder.resolve("battery.json"), FILES),
                 Clock.fixed(NOW, ZoneOffset.UTC),
-                new Announcer(new AnnouncedWindows(folder.resolve("announced.json")),
-                        new ToldTrips(folder.resolve("trip-notices.json")), _ -> { }),
+                new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES),
+                        new ToldTrips(folder.resolve("trip-notices.json"), FILES), _ -> { }),
                 new ManualScheduler());
         try {
             for (var trip : trips) {

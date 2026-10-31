@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.logging;
 
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.ZoneId;
@@ -37,6 +38,7 @@ public final class AppLog implements AutoCloseable {
     // held here, as java.util.logging forgets a logger's level and handlers once nothing refers to the logger
     private final Logger root;
     private final Logger app;
+    private final PrivateFiles files;
     private final List<Handler> handlers = new ArrayList<>();
 
     /**
@@ -45,10 +47,12 @@ public final class AppLog implements AutoCloseable {
      * @param root the logger every record reaches, normally java.util.logging's root logger; its handlers are
      *     replaced
      * @param app the parent logger of the app's own loggers, whose level the owner may lower
+     * @param files how the log's folder and files are made, private, on this system
      */
-    public AppLog(Logger root, Logger app) {
+    public AppLog(Logger root, Logger app, PrivateFiles files) {
         this.root = root;
         this.app = app;
+        this.files = files;
     }
 
     /**
@@ -78,7 +82,7 @@ public final class AppLog implements AutoCloseable {
         var format = new LogLineFormat(zone);
         IOException fileProblem = null;
         try {
-            add(new LogFile(folder, FILE_LIMIT, FILE_COUNT, format));
+            add(new LogFile(folder, FILE_LIMIT, FILE_COUNT, format, files));
         } catch (IOException e) {
             fileProblem = e;
         }

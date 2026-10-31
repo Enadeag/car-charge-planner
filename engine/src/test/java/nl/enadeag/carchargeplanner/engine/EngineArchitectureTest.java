@@ -16,9 +16,10 @@ import java.util.Set;
 /**
  * The rules of ADR 0001 about the engine's own parts: parts that depend one way, a pure planner, a domain model
  * without its file format, files written in one place, and no translations; and the rules of ADR 0010 that the engine
- * uses no {@code java.net.http}, which Android lacks, opens no connection of its own beside its HttpGet, and logs
- * through slf4j. They run when the engine is built alone; the rules about the boundary with its clients, and those for
- * every class, are in the desktop module's {@code ArchitectureTest}, which sees both sides.
+ * uses no {@code java.net.http}, which Android lacks, opens no connection of its own beside its HttpGet, logs
+ * through slf4j, and sets no POSIX file modes, which it leaves to the platform's FilePrivacy. They run when the engine
+ * is built alone; the rules about the boundary with its clients, and those for every class, are in the desktop
+ * module's {@code ArchitectureTest}, which sees both sides.
  */
 @AnalyzeClasses(packages = "nl.enadeag.carchargeplanner.engine", importOptions = ImportOption.DoNotIncludeTests.class)
 class EngineArchitectureTest {
@@ -59,6 +60,24 @@ class EngineArchitectureTest {
             .because("the engine logs through slf4j, which each platform binds to its own log, instead of "
                     + "System.Logger (ADR 0010)");
 
+    private static final DescribedPredicate<JavaClass> POSIX_FILE_ATTRIBUTES = DescribedPredicate.describe(
+            "are POSIX file attributes, permissions or views (java.nio.file.attribute.Posix*)",
+            type -> type.getPackageName().equals("java.nio.file.attribute")
+                    && type.getSimpleName().startsWith("Posix"));
+
+    // a call such as Files.setPosixFilePermissions(p, Files.getPosixFilePermissions(q)) names no Posix type
+    private static final DescribedPredicate<JavaMethodCall> USE_POSIX_FILES_METHODS = DescribedPredicate.describe(
+            "read or set POSIX permissions through Files",
+            call -> call.getTargetOwner().getName().equals("java.nio.file.Files") && call.getName().contains("Posix"));
+
+    @ArchTest
+    static final ArchRule theEngineLeavesFilePrivacyToThePlatform = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .should().dependOnClassesThat(POSIX_FILE_ATTRIBUTES)
+            .orShould().callMethodWhere(USE_POSIX_FILES_METHODS)
+            .because("Android may have no POSIX file attributes and keeps its app storage private already; each "
+                    + "platform makes a file private through the FilePrivacy it hands in (ADR 0010)");
+
     private static final DescribedPredicate<JavaClass> DOMAIN_MODEL = DescribedPredicate.describe(
             "are the domain model: the planner, the settings, and the engine's public records and enums",
             type -> type.getPackageName().endsWith(".engine.plan") || type.getPackageName().endsWith(".engine.setting")
@@ -96,16 +115,13 @@ class EngineArchitectureTest {
             call -> call.getTargetOwner().isEquivalentTo(java.nio.file.Files.class)
                     && Set.of("write", "writeString", "newOutputStream", "newBufferedWriter", "createFile",
                             "createTempFile", "createTempDirectory", "createDirectory", "createDirectories", "move",
-                            "copy", "delete", "deleteIfExists", "newByteChannel", "setPosixFilePermissions",
-                            "setOwner", "setAttribute", "getFileAttributeView", "createSymbolicLink",
-                            "createLink").contains(call.getName()));
+                            "copy", "delete", "deleteIfExists", "newByteChannel", "setOwner", "setAttribute",
+                            "getFileAttributeView", "createSymbolicLink", "createLink").contains(call.getName()));
 
     @ArchTest
     static final ArchRule theEngineWritesFilesOnlyInItsStore = noClasses()
             .that().resideInAPackage(ENGINE + "..")
             .and().resideOutsideOfPackage(ENGINE + ".store..")
-            // SecretsFile.makePrivate() tightens the permissions of the fallback secrets file, nothing more
-            .and().doNotHaveFullyQualifiedName(ENGINE + ".secrets.SecretsFile")
             .should().callMethodWhere(CHANGE_FILES)
             .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileOutputStream")
             .orShould().dependOnClassesThat().haveFullyQualifiedName("java.io.FileWriter")

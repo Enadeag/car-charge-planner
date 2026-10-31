@@ -8,9 +8,11 @@ import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Keyboard;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import javafx.application.ColorScheme;
@@ -29,6 +31,8 @@ import org.junit.jupiter.params.provider.EnumSource;
  */
 @FxTest
 class SettingsKeyboardTest {
+
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
     @TempDir
     Path folder;
@@ -96,7 +100,7 @@ class SettingsKeyboardTest {
 
         Keyboard.press(view.getScene(), KeyCode.ENTER);
 
-        assertThat(new ConfigFile(settings.configPath).read().planning().targetPct().value()).isEqualTo(90.0);
+        assertThat(new ConfigFile(settings.configPath, FILES).read().planning().targetPct().value()).isEqualTo(90.0);
         assertThat(focusedName(view)).isEqualTo(settings.messages.text(TextKey.SETTINGS_SAVED));
     }
 

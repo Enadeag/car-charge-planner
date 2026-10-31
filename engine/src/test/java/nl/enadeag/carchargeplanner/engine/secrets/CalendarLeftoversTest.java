@@ -5,6 +5,8 @@ import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
 import nl.enadeag.carchargeplanner.LogCapture;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
+import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class CalendarLeftoversTest {
+
+    private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
 
     private static final String ICAL_LINK = "https://calendar.example/private-0123456789abcdef/basic.ics";
     private static final String ROUTE_KEY = "GEO-SECRET-3";
@@ -32,7 +36,7 @@ class CalendarLeftoversTest {
     private final LockableKeychain keychain = new LockableKeychain();
 
     private ApiKeys keys() {
-        return new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
+        return new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES));
     }
 
     private Path consents() {
@@ -45,7 +49,7 @@ class CalendarLeftoversTest {
         keys().save(WITH_LEFTOVERS);
 
         try (var log = LogCapture.of(CalendarLeftovers.class)) {
-            CalendarLeftovers.remove(keys(), folder);
+            CalendarLeftovers.remove(keys(), folder, FILES);
 
             assertThat(log.lines()).hasSize(2).allMatch(line -> line.startsWith("INFO "))
                     .noneMatch(line -> line.contains(ICAL_LINK) || line.contains(ROUTE_KEY));
@@ -57,10 +61,10 @@ class CalendarLeftoversTest {
 
     @Test
     void theSecretsKeptInTheFileWithoutAKeychainAreRemovedToo() throws Exception {
-        var file = new SecretsFile(folder.resolve("secrets.json"));
+        var file = new SecretsFile(folder.resolve("secrets.json"), FILES);
         file.write(WITH_LEFTOVERS);
 
-        CalendarLeftovers.remove(new ApiKeys(new NoKeychain(), file), folder);
+        CalendarLeftovers.remove(new ApiKeys(new NoKeychain(), file), folder, FILES);
 
         assertThat(file.read()).isEqualTo(FORECAST_KEYS);
     }
@@ -71,7 +75,7 @@ class CalendarLeftoversTest {
         var index = keychain.entries.get(KeychainEntries.INDEX);
 
         try (var log = LogCapture.of(CalendarLeftovers.class)) {
-            CalendarLeftovers.remove(keys(), folder);
+            CalendarLeftovers.remove(keys(), folder, FILES);
 
             assertThat(log.lines()).isEmpty();
         }
@@ -89,7 +93,7 @@ class CalendarLeftoversTest {
         keychain.locked = true;
 
         try (var log = LogCapture.of(CalendarLeftovers.class)) {
-            CalendarLeftovers.remove(keys(), folder);
+            CalendarLeftovers.remove(keys(), folder, FILES);
 
             assertThat(log.lines()).hasSize(2);
             assertThat(log.lines()).last(STRING).startsWith("WARNING ").contains("next start");
@@ -97,18 +101,18 @@ class CalendarLeftoversTest {
         assertThat(keychain.prompts).hasValue(0);
         assertThat(consents()).doesNotExist();
         keychain.locked = false;
-        CalendarLeftovers.remove(keys(), folder);
+        CalendarLeftovers.remove(keys(), folder, FILES);
         assertThat(keys().load()).isEqualTo(FORECAST_KEYS);
     }
 
     @Test
     void theSecretsInTheFileGoWhileTheKeychainIsLockedWhichIsLoggedForTheNextStartWithoutAPrompt() throws Exception {
-        var file = new SecretsFile(folder.resolve("secrets.json"));
+        var file = new SecretsFile(folder.resolve("secrets.json"), FILES);
         file.write(WITH_LEFTOVERS);
         keychain.locked = true;
 
         try (var log = LogCapture.of(CalendarLeftovers.class)) {
-            CalendarLeftovers.remove(new ApiKeys(keychain, file), folder);
+            CalendarLeftovers.remove(new ApiKeys(keychain, file), folder, FILES);
 
             assertThat(log.lines()).singleElement().asString().startsWith("WARNING ").contains("next start");
         }
@@ -123,7 +127,7 @@ class CalendarLeftoversTest {
         keys().save(WITH_LEFTOVERS);
 
         try (var log = LogCapture.of(CalendarLeftovers.class)) {
-            CalendarLeftovers.remove(keys(), folder);
+            CalendarLeftovers.remove(keys(), folder, FILES);
 
             assertThat(log.lines()).first(STRING).startsWith("WARNING ").contains(consents().toString());
         }

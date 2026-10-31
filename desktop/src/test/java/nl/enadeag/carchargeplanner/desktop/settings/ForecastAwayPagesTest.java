@@ -8,6 +8,7 @@ import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStorage;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
@@ -18,6 +19,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.FakeProvider;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import nl.enadeag.carchargeplanner.engine.forecast.SunnyDays;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
@@ -38,6 +40,8 @@ import org.junit.jupiter.api.io.TempDir;
 /** The forecast providers with their keys, the weekly away periods, and running set-up again. */
 @FxTest
 class ForecastAwayPagesTest {
+
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
     private static final ProviderId OPEN_METEO = new ProviderId("open-meteo");
     private static final ProviderId FORECAST_SOLAR = new ProviderId("forecast-solar");
@@ -65,7 +69,7 @@ class ForecastAwayPagesTest {
     }
 
     private EngineConfig stored() throws Exception {
-        return new ConfigFile(settings.configPath).read();
+        return new ConfigFile(settings.configPath, FILES).read();
     }
 
     private <T> List<T> all(SettingsView view, Class<T> type) {

@@ -23,6 +23,8 @@ import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges;
 import nl.enadeag.carchargeplanner.engine.secrets.MemoryKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import java.nio.file.Files;
@@ -49,6 +51,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 /** The engine's own schedule: when it plans, and that it keeps planning. */
 class EngineLifeCycleTest {
+
+    private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
 
     private static final Instant NOW = Instant.parse("2026-07-03T06:00:00Z");
     private static final OneOffAwayPeriod AWAY = new OneOffAwayPeriod(NOW.plus(Duration.ofHours(2)), NOW.plus(Duration.ofHours(12)));
@@ -77,13 +81,14 @@ class EngineLifeCycleTest {
             sunny.add(new ForecastStep(start, start.plus(Duration.ofHours(1)), 4.0));
         }
         var providers = new Providers(List.of(new FakeProvider("main", "Main", steps(sunny))));
-        var apiKeys = new ApiKeys(new MemoryKeychain(), new SecretsFile(folder.resolve("secrets.json")));
-        return new Engine(new ConfigFile(config),
-                new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
-                new AwayFile(folder.resolve("away.json")), new TripFile(folder.resolve("trips.json")),
-                new BatteryFile(folder.resolve("battery.json")), Clock.fixed(NOW, ZoneOffset.UTC),
-                new Announcer(new AnnouncedWindows(folder.resolve("announced.json")),
-                        new ToldTrips(folder.resolve("trip-notices.json")), ignored -> { }), on);
+        var apiKeys = new ApiKeys(new MemoryKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES));
+        return new Engine(new ConfigFile(config, FILES),
+                new ForecastService(providers, new ForecastCache(folder.resolve("cache"), FILES), apiKeys), providers,
+                apiKeys,
+                new AwayFile(folder.resolve("away.json"), FILES), new TripFile(folder.resolve("trips.json"), FILES),
+                new BatteryFile(folder.resolve("battery.json"), FILES), Clock.fixed(NOW, ZoneOffset.UTC),
+                new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES),
+                        new ToldTrips(folder.resolve("trip-notices.json"), FILES), ignored -> { }), on);
     }
 
     private Engine started() throws Exception {
@@ -203,7 +208,7 @@ class EngineLifeCycleTest {
         planner.advance(Duration.ofMinutes(5));
 
         assertThat(told).hasSize(1);
-        assertThat(new BatteryFile(folder.resolve("battery.json")).reading()).isPresent();
+        assertThat(new BatteryFile(folder.resolve("battery.json"), FILES).reading()).isPresent();
     }
 
     @Test

@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import nl.enadeag.carchargeplanner.cli.ExitCode;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.host.AppName;
 import nl.enadeag.carchargeplanner.instance.InstanceCommand;
 import nl.enadeag.carchargeplanner.instance.Owner;
@@ -40,6 +42,8 @@ import org.junit.jupiter.api.io.TempDir;
 /** What the app tells the owner, logs and ends with after its single-instance claim. */
 class ClaimReportTest {
 
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
+
     private static final Messages MESSAGES = new Messages(Language.ENGLISH);
 
     @TempDir
@@ -62,7 +66,7 @@ class ClaimReportTest {
         var root = Logger.getLogger(name);
         root.setUseParentHandlers(false);
         var app = Logger.getLogger(name + ".app");
-        log = new AppLog(root, app);
+        log = new AppLog(root, app, FILES);
         logger = System.getLogger(app.getName() + ".claim");
     }
 

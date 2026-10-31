@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import nl.enadeag.carchargeplanner.LogCapture;
 import nl.enadeag.carchargeplanner.desktop.app.Background;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.engine.Engine;
 import nl.enadeag.carchargeplanner.engine.ManualScheduler;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
@@ -21,6 +22,7 @@ import nl.enadeag.carchargeplanner.engine.notify.ToldTrips;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import java.nio.file.Files;
@@ -37,6 +39,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 class DashboardChangesTest {
 
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
+
     private static final Instant NOW = Instant.parse("2026-07-03T06:00:00Z");
     private static final OneOffAwayPeriod AWAY = new OneOffAwayPeriod(NOW.plus(Duration.ofHours(2)), NOW.plus(Duration.ofHours(12)));
 
@@ -50,13 +54,14 @@ class DashboardChangesTest {
     @BeforeEach
     void makeTheEngine() {
         var providers = new Providers(List.of());
-        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json")));
-        var engine = new Engine(new ConfigFile(folder.resolve("engine.json")),
-                new ForecastService(providers, new ForecastCache(folder.resolve("cache")), apiKeys), providers, apiKeys,
-                new AwayFile(folder.resolve("away.json")), new TripFile(folder.resolve("trips.json")),
-                new BatteryFile(folder.resolve("battery.json")), Clock.fixed(NOW, ZoneOffset.UTC),
-                new Announcer(new AnnouncedWindows(folder.resolve("announced.json")),
-                        new ToldTrips(folder.resolve("trip-notices.json")), _ -> { }),
+        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES));
+        var engine = new Engine(new ConfigFile(folder.resolve("engine.json"), FILES),
+                new ForecastService(providers, new ForecastCache(folder.resolve("cache"), FILES), apiKeys), providers,
+                apiKeys,
+                new AwayFile(folder.resolve("away.json"), FILES), new TripFile(folder.resolve("trips.json"), FILES),
+                new BatteryFile(folder.resolve("battery.json"), FILES), Clock.fixed(NOW, ZoneOffset.UTC),
+                new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES),
+                        new ToldTrips(folder.resolve("trip-notices.json"), FILES), _ -> { }),
                 new ManualScheduler());
         changes = new DashboardChanges(engine, new Background(handedOn::add, Runnable::run));
     }
@@ -76,10 +81,10 @@ class DashboardChangesTest {
 
         runTheSavingThread();
 
-        assertThat(new BatteryFile(folder.resolve("battery.json")).reading().map(BatteryReading::level))
+        assertThat(new BatteryFile(folder.resolve("battery.json"), FILES).reading().map(BatteryReading::level))
                 .contains(new Percent(72));
         assertThat(Files.exists(folder.resolve("away.json"))).isTrue();
-        assertThat(new AwayFile(folder.resolve("away.json")).periods()).isEmpty();
+        assertThat(new AwayFile(folder.resolve("away.json"), FILES).periods()).isEmpty();
     }
 
     @Test
@@ -95,7 +100,7 @@ class DashboardChangesTest {
 
         runTheSavingThread();
 
-        assertThat(new TripFile(folder.resolve("trips.json")).trips(NOW)).containsExactly(changed);
+        assertThat(new TripFile(folder.resolve("trips.json"), FILES).trips(NOW)).containsExactly(changed);
     }
 
     @Test
@@ -110,6 +115,6 @@ class DashboardChangesTest {
             assertThat(log.lines()).containsExactly(
                     "WARNING failed in the background: saving the battery level (UncheckedIOException)");
         }
-        assertThat(new AwayFile(folder.resolve("away.json")).periods()).containsExactly(AWAY);
+        assertThat(new AwayFile(folder.resolve("away.json"), FILES).periods()).containsExactly(AWAY);
     }
 }

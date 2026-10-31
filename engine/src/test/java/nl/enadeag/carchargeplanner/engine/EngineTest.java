@@ -56,6 +56,8 @@ import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
+import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import java.io.IOException;
@@ -80,6 +82,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class EngineTest {
+
+    private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
 
     private static final Path EXAMPLE = Path.of("docs", "example-engine.json");
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");
@@ -138,11 +142,11 @@ class EngineTest {
 
     private Engine engine(Clock clock, ManualScheduler scheduler, ForecastProvider... providers) {
         var known = new Providers(List.of(providers));
-        var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json")));
-        var service = new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys);
-        return new Engine(new ConfigFile(config), service, known, apiKeys, new AwayFile(folder.resolve("away.json")),
-                new TripFile(folder.resolve("trips.json")), new BatteryFile(folder.resolve("battery.json")), clock,
-                announcer(), scheduler);
+        var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES));
+        var service = new ForecastService(known, new ForecastCache(folder.resolve("cache"), FILES), apiKeys);
+        return new Engine(new ConfigFile(config, FILES), service, known, apiKeys,
+                new AwayFile(folder.resolve("away.json"), FILES), new TripFile(folder.resolve("trips.json"), FILES),
+                new BatteryFile(folder.resolve("battery.json"), FILES), clock, announcer(), scheduler);
     }
 
     /** Starts the engine and runs its first round, which announces what is due; its outlooks go to {@link #rounds}. */
@@ -160,8 +164,8 @@ class EngineTest {
 
     /** Kept in the test's folder, so a new engine is like the app after a restart. */
     private Announcer announcer() {
-        return new Announcer(new AnnouncedWindows(folder.resolve("announced.json")),
-                new ToldTrips(folder.resolve("trip-notices.json")), notice -> {
+        return new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES),
+                new ToldTrips(folder.resolve("trip-notices.json"), FILES), notice -> {
                     if (notice instanceof Announcement announcement) {
                         told.add(announcement);
                     } else {
@@ -184,7 +188,7 @@ class EngineTest {
 
     @Test
     void theExampleChoosesOpenMeteoWithForecastSolarAsTheFallback() throws ConfigProblem {
-        var forecast = new ConfigFile(EXAMPLE).read().forecast();
+        var forecast = new ConfigFile(EXAMPLE, FILES).read().forecast();
         assertThat(forecast.order()).containsExactly(new ProviderId("open-meteo"), new ProviderId("forecast-solar"));
     }
 
@@ -533,11 +537,11 @@ class EngineTest {
         assertThat(engine(clockAt(7)).keyStorage()).isEqualTo(KeyStorage.KEYCHAIN);
 
         var known = new Providers(List.of(main));
-        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json")));
-        var withoutKeychain = new Engine(new ConfigFile(config),
-                new ForecastService(known, new ForecastCache(folder.resolve("cache")), apiKeys), known, apiKeys,
-                new AwayFile(folder.resolve("away.json")), new TripFile(folder.resolve("trips.json")),
-                new BatteryFile(folder.resolve("battery.json")), clockAt(7),
+        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES));
+        var withoutKeychain = new Engine(new ConfigFile(config, FILES),
+                new ForecastService(known, new ForecastCache(folder.resolve("cache"), FILES), apiKeys), known, apiKeys,
+                new AwayFile(folder.resolve("away.json"), FILES), new TripFile(folder.resolve("trips.json"), FILES),
+                new BatteryFile(folder.resolve("battery.json"), FILES), clockAt(7),
                 announcer(), new ManualScheduler());
         withoutKeychain.saveApiKeys(new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "x"))));
         assertThat(withoutKeychain.keyStorage()).isEqualTo(KeyStorage.FILE);
@@ -732,7 +736,7 @@ class EngineTest {
 
     private static nl.enadeag.carchargeplanner.engine.config.HomeSystem exampleSystem() {
         try {
-            return new ConfigFile(EXAMPLE).read().system();
+            return new ConfigFile(EXAMPLE, FILES).read().system();
         } catch (ConfigProblem e) {
             throw new AssertionError(e);
         }

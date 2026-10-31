@@ -3,6 +3,8 @@ package nl.enadeag.carchargeplanner.host;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import nl.enadeag.carchargeplanner.LogCapture;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -15,6 +17,8 @@ import org.junit.jupiter.api.io.TempDir;
  * before moves once. The folders stand in for {@code %APPDATA%} and {@code %LOCALAPPDATA%}, so this runs anywhere.
  */
 class SecretsLocationTest {
+
+    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
     @TempDir
     Path folder;
@@ -43,7 +47,7 @@ class SecretsLocationTest {
         oldFile();
 
         assertThat(SecretsLocation.file(Os.LINUX, config, data)).isEqualTo(old);
-        assertThat(SecretsLocation.moveFromOldPlace(Os.LINUX, config, data)).isEqualTo(old);
+        assertThat(SecretsLocation.moveFromOldPlace(Os.LINUX, config, data, FILES)).isEqualTo(old);
         assertThat(old).exists();
         assertThat(data).doesNotExist();
     }
@@ -51,7 +55,8 @@ class SecretsLocationTest {
     @Test
     void onWindowsTheFileIsInTheLocalDataFolder() {
         assertThat(SecretsLocation.file(Os.WINDOWS, config, data)).isEqualTo(data.resolve("secrets.json"));
-        assertThat(SecretsLocation.moveFromOldPlace(Os.WINDOWS, config, data)).isEqualTo(data.resolve("secrets.json"));
+        assertThat(SecretsLocation.moveFromOldPlace(Os.WINDOWS, config, data, FILES))
+                .isEqualTo(data.resolve("secrets.json"));
         assertThat(data).as("nothing to move, nothing made").doesNotExist();
     }
 
@@ -64,7 +69,7 @@ class SecretsLocationTest {
         var now = data.resolve("secrets.json");
 
         try (var log = LogCapture.of(SecretsLocation.class)) {
-            assertThat(SecretsLocation.moveFromOldPlace(Os.WINDOWS, config, data)).isEqualTo(now);
+            assertThat(SecretsLocation.moveFromOldPlace(Os.WINDOWS, config, data, FILES)).isEqualTo(now);
             assertThat(log.lines()).containsExactly("INFO moved " + old + " to " + now + ", which stays on this "
                     + "computer");
         }
@@ -74,7 +79,7 @@ class SecretsLocationTest {
         if (mode != null) {
             assertThat(Files.getPosixFilePermissions(now)).isEqualTo(mode);
         }
-        assertThat(SecretsLocation.moveFromOldPlace(Os.WINDOWS, config, data)).isEqualTo(now);
+        assertThat(SecretsLocation.moveFromOldPlace(Os.WINDOWS, config, data, FILES)).isEqualTo(now);
         assertThat(now).hasContent(content);
     }
 
@@ -84,7 +89,7 @@ class SecretsLocationTest {
         var now = Files.writeString(Files.createDirectories(data).resolve("secrets.json"), "{\"version\": 1}");
 
         try (var log = LogCapture.of(SecretsLocation.class)) {
-            assertThat(SecretsLocation.moveFromOldPlace(Os.WINDOWS, config, data)).isEqualTo(now);
+            assertThat(SecretsLocation.moveFromOldPlace(Os.WINDOWS, config, data, FILES)).isEqualTo(now);
             assertThat(log.lines()).singleElement().asString().startsWith("WARNING").contains(old.toString());
         }
 
@@ -98,7 +103,7 @@ class SecretsLocationTest {
         Files.createDirectories(data.getParent());
         Files.writeString(data, "a file where the folder should be");
 
-        assertThat(SecretsLocation.moveFromOldPlace(Os.WINDOWS, config, data)).isEqualTo(old);
+        assertThat(SecretsLocation.moveFromOldPlace(Os.WINDOWS, config, data, FILES)).isEqualTo(old);
 
         assertThat(old).exists();
         assertThat(data).isRegularFile();
