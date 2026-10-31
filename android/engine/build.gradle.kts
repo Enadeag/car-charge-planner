@@ -63,9 +63,7 @@ tasks.checkMavenDrift {
 dependencies {
     // api, as Maven's compile scope: the engine's methods take and give Jackson's types
     api(platform(libs.jackson.bom))
-    api(libs.jackson.databind)
-    api(libs.jackson.core)
-    api(libs.slf4j.api)
+    api(libs.bundles.engine)
 
     testFixturesApi(platform(libs.junit.bom))
     testFixturesApi(libs.junit.jupiter.api)

@@ -39,9 +39,7 @@ android {
 
 dependencies {
     implementation(platform(libs.jackson.bom))
-    implementation(libs.jackson.databind)
-    implementation(libs.jackson.core)
-    implementation(libs.slf4j.api)
+    implementation(libs.bundles.engine)
     coreLibraryDesugaring(libs.desugar.jdk.libs.nio)
 }
 

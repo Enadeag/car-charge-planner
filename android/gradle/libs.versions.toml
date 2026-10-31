@@ -29,6 +29,10 @@ compose-ui = { module = "androidx.compose.ui:ui" }
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
 desugar-jdk-libs-nio = { module = "com.android.tools:desugar_jdk_libs_nio", version.ref = "desugar-jdk-libs" }
 
+[bundles]
+# the engine's own libraries, for :engine and :engine-lint alike; the BOM comes with them as a platform
+engine = ["jackson-databind", "jackson-core", "slf4j-api"]
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
