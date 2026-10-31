@@ -10,8 +10,11 @@ import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -68,7 +71,22 @@ class ApiKeysTest {
     }
 
     private ApiKeys keys(Keychain keychain) {
-        return new ApiKeys(keychain, file(), now::get);
+        return new ApiKeys(keychain, file(), new Clock() {
+            @Override
+            public ZoneId getZone() {
+                return ZoneOffset.UTC;
+            }
+
+            @Override
+            public Clock withZone(ZoneId zone) {
+                throw new UnsupportedOperationException("the keys need no time zone");
+            }
+
+            @Override
+            public Instant instant() {
+                return now.get();
+            }
+        });
     }
 
     private void later(Duration time) {
