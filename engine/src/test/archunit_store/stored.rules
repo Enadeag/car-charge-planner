@@ -1,3 +1,0 @@
-#
-#Sat Oct 17 21:36:11 CEST 2026
-no\ classes\ should\ call\ method\ Thread.sleep(long)\ or\ should\ call\ method\ Thread.sleep(long,\ int)\ or\ should\ call\ method\ Thread.sleep(Duration),\ because\ a\ test\ waits\ for\ a\ signal\ or\ sets\ the\ clock;\ a\ sleep\ is\ slow\ when\ it\ is\ long\ and\ flaky\ when\ it\ is\ short\ (CONTRIBUTING.md,\ ADR\ 0005)=e72756e5-a795-4499-af47-8e65a15f6e5b

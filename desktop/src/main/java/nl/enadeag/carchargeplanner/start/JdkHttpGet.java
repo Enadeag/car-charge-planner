@@ -1,5 +1,7 @@
-package nl.enadeag.carchargeplanner.engine.forecast;
+package nl.enadeag.carchargeplanner.start;
 
+import nl.enadeag.carchargeplanner.engine.forecast.ByteSize;
+import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.http.HttpClient;
@@ -12,7 +14,6 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Flow;
@@ -20,38 +21,29 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Fetches web addresses with Java's own HTTP client, naming the app and its home page in the User-Agent. The body is
- * read into a buffer no larger than the request allows, and the whole answer, body included, must come within the
- * request's timeout; the body is read as UTF-8, which is what JSON is sent in.
+ * Fetches web addresses with Java's own HTTP client, naming the app and its home page in the User-Agent: the
+ * desktop's {@link HttpGet}, as {@code java.net.http} is not there on Android. The body is read into a buffer no
+ * larger than the request allows, and the whole answer, body included, must come within the request's timeout; the
+ * body is read as UTF-8, which is what JSON is sent in. It owns its client, which every request shares.
  */
-public final class JdkHttpGet implements HttpGet {
+public final class JdkHttpGet implements HttpGet, AutoCloseable {
 
-    /** How long to wait for a connection to a server. */
-    public static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
 
     private static final String USER_AGENT = "car-charge-planner (+https://github.com/Enadeag/car-charge-planner)";
 
     private final HttpClient client;
 
-    /**
-     * Makes the fetcher.
-     *
-     * @param client the client to send with, normally one from {@link #newClient()}; it is shared by every request
-     *     and not closed here
-     */
-    public JdkHttpGet(HttpClient client) {
-        this.client = client;
+    /** Makes the fetcher, with a client that gives up on a connection after ten seconds and follows no redirects. */
+    public JdkHttpGet() {
+        client = HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).followRedirects(HttpClient.Redirect.NEVER)
+                .build();
     }
 
-    /**
-     * A client for the forecast providers: it gives up on a connection after {@link #CONNECT_TIMEOUT} and follows no
-     * redirects.
-     *
-     * @return a new client, to be closed by the caller when the app ends
-     */
-    public static HttpClient newClient() {
-        return HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).followRedirects(HttpClient.Redirect.NEVER)
-                .build();
+    /** Closes the client, once the requests still under way have ended; the app does this when it quits. */
+    @Override
+    public void close() {
+        client.close();
     }
 
     @Override
@@ -66,7 +58,7 @@ public final class JdkHttpGet implements HttpGet {
             // the client's own timeout ends when the headers are in (Java 25), so a server that trickles its body
             // could hold the request for ever; this deadline covers the whole answer, and cancelling aborts it
             response = answer.get(request.timeout().toNanos(), TimeUnit.NANOSECONDS);
-        } catch (TimeoutException ignored) {
+        } catch (TimeoutException _) {
             answer.cancel(true);
             throw new HttpTimeoutException("no whole answer within " + request.timeout().toMillis() + " ms");
         } catch (InterruptedException e) {
@@ -76,22 +68,30 @@ public final class JdkHttpGet implements HttpGet {
             throw failure(e.getCause());
         }
         var headers = new HashMap<String, String>();
-        response.headers().map().forEach((name, values) -> headers.put(name, values.get(0)));
+        response.headers().map().forEach((name, values) -> headers.put(name, values.getFirst()));
         return new Reply(response.statusCode(), new String(response.body(), StandardCharsets.UTF_8), headers);
     }
 
-    /** What the client failed with, as the exception {@link HttpGet#get} promises. */
-    private static IOException failure(Throwable cause) {
+    /**
+     * What the client failed with, as the exception {@link HttpGet#get} promises: a {@link TooLarge} anywhere in the
+     * cause chain, as the client may wrap it; else an {@link IOException} as it is, and anything else but an
+     * {@link Error} wrapped in one. Package-private so its tests can reach the failures no server can provoke, as the
+     * real client hands back an {@link IOException} for everything a server does.
+     *
+     * @param cause what the answer failed with, not null
+     * @return the exception to throw
+     * @throws Error when the cause is one, as it is
+     */
+    static IOException failure(Throwable cause) {
         for (var reason = cause; reason != null; reason = reason.getCause()) {
             if (reason instanceof TooLarge tooLarge) {
                 return tooLarge; // the client may have wrapped it
             }
         }
-        var unwrapped = cause instanceof CompletionException && cause.getCause() != null ? cause.getCause() : cause;
-        if (unwrapped instanceof Error error) {
+        if (cause instanceof Error error) {
             throw error;
         }
-        return unwrapped instanceof IOException io ? io : new IOException(unwrapped);
+        return cause instanceof IOException io ? io : new IOException(cause);
     }
 
     /**
@@ -154,6 +154,7 @@ public final class JdkHttpGet implements HttpGet {
         }
 
         private void refuse() {
+            // Java's client also drops the connection once the body fails; cancelling does not rely on that.
             subscription.cancel();
             body.completeExceptionally(new TooLarge(limit));
         }

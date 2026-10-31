@@ -11,7 +11,7 @@ import nl.enadeag.carchargeplanner.LogCapture;
 import nl.enadeag.carchargeplanner.engine.forecast.ReplayHttp.Route;
 import java.io.IOException;
 import java.net.ConnectException;
-import java.net.http.HttpTimeoutException;
+import java.net.SocketTimeoutException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -128,8 +128,8 @@ public abstract class ProviderConformance {
     }
 
     static Stream<IOException> noNetwork() {
-        return Stream.of(new ConnectException("unreachable"), new HttpTimeoutException("slow"), new IOException("reset"),
-                new HttpGet.TooLarge(HttpGet.DEFAULT_MAX_BODY));
+        return Stream.of(new ConnectException("unreachable"), new SocketTimeoutException("slow"),
+                new IOException("reset"), new HttpGet.TooLarge(HttpGet.DEFAULT_MAX_BODY));
     }
 
     @Test

@@ -33,11 +33,11 @@ import nl.enadeag.carchargeplanner.desktop.system.StartAtLogin;
 import nl.enadeag.carchargeplanner.desktop.system.Tray;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
-import nl.enadeag.carchargeplanner.engine.forecast.JdkHttpGet;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.host.Host;
 import nl.enadeag.carchargeplanner.host.Os;
+import nl.enadeag.carchargeplanner.start.JdkHttpGet;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
@@ -471,8 +471,7 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule onlyOneClassMakesHttpCalls = noClasses()
-            .that().resideOutsideOfPackages(ROOT, START)
-            .and(notPartOf(JdkHttpGet.class.getName()))
+            .that(notPartOf(JdkHttpGet.class.getName()))
             .should().dependOnClassesThat().resideInAPackage("java.net.http..")
             .because("every provider asks through the HttpGet port, so a test can answer instead (ADR 0001)");
 
