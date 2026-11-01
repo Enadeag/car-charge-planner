@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  What may leave the phone, from Android 12 on: everything but the keychain's file, which is useless without its
+  Keystore key, and that key never leaves this phone. Settings, trips and the forecast cache move to the owner's next
+  phone. allowBackup="false" turns cloud backup off already; the rules say the same for it, so that holds should backup
+  ever be turned on. The keychain's file lies in noBackupFilesDir (the domain "root" is the app's data folder), with
+  the temporary file it is written through and the copy set aside when it could not be read. backup_rules.xml says
+  the same for Android 8 to 11.
+-->
+<data-extraction-rules>
+  <cloud-backup>
+    <exclude domain="root" path="no_backup/keychain.json" />
+    <exclude domain="root" path="no_backup/keychain.json.tmp" />
+    <exclude domain="root" path="no_backup/keychain.json.damaged" />
+  </cloud-backup>
+  <device-transfer>
+    <exclude domain="root" path="no_backup/keychain.json" />
+    <exclude domain="root" path="no_backup/keychain.json.tmp" />
+    <exclude domain="root" path="no_backup/keychain.json.damaged" />
+  </device-transfer>
+</data-extraction-rules>
