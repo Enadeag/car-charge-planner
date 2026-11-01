@@ -6,4 +6,5 @@
 <full-backup-content>
   <exclude domain="root" path="no_backup/keychain.json" />
   <exclude domain="root" path="no_backup/keychain.json.tmp" />
+  <exclude domain="root" path="no_backup/keychain.json.damaged" />
 </full-backup-content>

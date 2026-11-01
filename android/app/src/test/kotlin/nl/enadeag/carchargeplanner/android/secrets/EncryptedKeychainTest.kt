@@ -61,6 +61,8 @@ class EncryptedKeychainTest {
 
     private val keychain by lazy { store() }
 
+    private val aside by lazy { file.resolveSibling(EncryptedKeychain.DAMAGED_FILE_NAME) }
+
     private fun store(pause: EncryptedKeychain.Pause = EncryptedKeychain.Pause { pauses += it }) =
         EncryptedKeychain(file, PrivateFiles(FilePrivacy.NONE), keys, FIRST, pause)
 
@@ -401,6 +403,30 @@ class EncryptedKeychainTest {
         keychain.write(KEY, "OM-SECRET-1")
 
         assertThat(keychain.read(KEY)).contains("OM-SECRET-1")
+        assertThat(aside.readText()).isEqualTo(content)
+    }
+
+    @Test
+    fun aFileNotInThisFormatIsMovedAsideByteForByteReplacingAnOlderOne() {
+        Files.createDirectories(file.parent)
+        val damaged = byteArrayOf(0x7b, 0xff.toByte(), 0x00, 0x7d)
+        Files.write(file, damaged)
+        aside.writeText("an older damaged file")
+
+        keychain.write(KEY, "OM-SECRET-1")
+
+        assertThat(Files.readAllBytes(aside)).isEqualTo(damaged)
+        assertThat(keychain.read(KEY)).contains("OM-SECRET-1")
+    }
+
+    @Test
+    fun aFileNotInThisFormatThatCannotBeMovedAsideIsUnavailableAndStaysInPlace() {
+        Files.createDirectories(aside.resolve("in the way"))
+        file.writeText("not JSON")
+
+        assertThat(failure { keychain.write(KEY, "OM-SECRET-1") }).isEqualTo(Kind.UNAVAILABLE)
+
+        assertThat(file.readText()).isEqualTo("not JSON")
     }
 
     /** A version is written as a whole number, as the engine's files have it; `1.0` is not one. */
@@ -467,6 +493,7 @@ class EncryptedKeychainTest {
         assertThat(failure { keychain.delete(KEY) }).isEqualTo(Kind.REFUSED)
 
         assertThat(file.readText()).isEqualTo(newer)
+        assertThat(aside).doesNotExist()
     }
 
     @ParameterizedTest

@@ -5,9 +5,11 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.security.GeneralSecurityException;
 import java.util.Base64;
 import java.util.Objects;
@@ -53,12 +55,15 @@ import tools.jackson.databind.node.ObjectNode;
  *       decrypt to UTF-8; a file that is not this format (not UTF-8, not JSON, no whole version from 1, no alias of
  *       this store's form, no entries), on a read or a delete; a file written by a
  *       newer version of the app; a value that UTF-8 cannot hold, such as a lone surrogate.</li>
- *   <li>{@code UNAVAILABLE}: the file could not be read or written ({@link IOException}); a key could not be got,
- *       made or used for a reason that may pass (any other {@link GeneralSecurityException}, such as a busy Keystore);
- *       an interrupt while looking again for a missing key; and any runtime exception, such as Android's
- *       {@code ProviderException} from the Keystore. Nothing is changed then.</li>
+ *   <li>{@code UNAVAILABLE}: the file could not be read, written or moved aside ({@link IOException}); a key could
+ *       not be got, made or used for a reason that may pass (any other {@link GeneralSecurityException}, such as a
+ *       busy Keystore); an interrupt while looking again for a missing key; and any runtime exception, such as
+ *       Android's {@code ProviderException} from the Keystore. Nothing is changed then.</li>
  * </ul>
- * A write over a file that is not this format replaces it; a file of a newer version is never overwritten. Neither a
+ * A write over a file that is not this format first moves it aside to {@value #DAMAGED_FILE_NAME} in the same
+ * folder, in one step where the file system can, replacing an older one there, and logs that with the paths only; a
+ * failure to move it is {@code UNAVAILABLE} and leaves it in place, while a failure to write the new file after it
+ * leaves it moved. A file of a newer version is never overwritten or moved. Neither a
  * value nor a key ever appears in a message or the log. Safe to use from several threads, also through several
  * instances on one file: one call at a time per file. A call may block for about a second while it looks again for a
  * missing key, so it belongs off the main thread.
@@ -67,6 +72,9 @@ public final class EncryptedKeychain implements Keychain {
 
     /** The file's name; the app's data extraction rules name it too. */
     public static final String FILE_NAME = "keychain.json";
+
+    /** Where a file that is not this format goes before a write replaces it; the data extraction rules name it too. */
+    public static final String DAMAGED_FILE_NAME = FILE_NAME + ".damaged";
 
     /** The version of the file's shape that this app writes. */
     static final int VERSION = 1;
@@ -184,11 +192,14 @@ public final class EncryptedKeychain implements Keychain {
         synchronized (lock) {
             try {
                 var contents = readFile();
-                if (contents.damage() != null) {
-                    LOG.warn(file + " cannot be read (" + contents.damage() + "): a new one replaces it");
+                var damaged = contents.damage() != null;
+                if (damaged) {
                     contents = new Contents(StoredJson.object(), firstAlias, null);
                 }
                 var entry = seal(name, plain, contents);
+                if (damaged) {
+                    setAside();
+                }
                 contents.entries().set(name, entry);
                 save(contents.entries(), entry.get(KEY_FIELD).stringValue());
             } catch (RuntimeException e) {
@@ -213,6 +224,21 @@ public final class EncryptedKeychain implements Keychain {
                 throw failed(e);
             }
         }
+    }
+
+    /** Moves a file that is not this format to {@link #DAMAGED_FILE_NAME}, replacing an older one there. */
+    private void setAside() throws KeychainException {
+        var aside = file.resolveSibling(DAMAGED_FILE_NAME);
+        try {
+            try {
+                Files.move(file, aside, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(file, aside, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException e) {
+            throw unavailable("could not move " + file + ", which cannot be read, aside to " + aside, e);
+        }
+        LOG.warn(file + " cannot be read: moved aside to " + aside + ", and a new one replaces it");
     }
 
     private Contents readFile() throws KeychainException {

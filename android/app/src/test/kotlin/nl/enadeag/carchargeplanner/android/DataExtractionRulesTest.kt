@@ -25,7 +25,8 @@ class DataExtractionRulesTest {
     private val olderRules = xml("src/main/res/xml/backup_rules.xml")
 
     private val keychainFiles = listOf("exclude root:no_backup/${EncryptedKeychain.FILE_NAME}",
-        "exclude root:no_backup/${EncryptedKeychain.FILE_NAME}.tmp")
+        "exclude root:no_backup/${EncryptedKeychain.FILE_NAME}.tmp",
+        "exclude root:no_backup/${EncryptedKeychain.DAMAGED_FILE_NAME}")
 
     private val application = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
         .newDocumentBuilder().parse(File("src/main/AndroidManifest.xml")).documentElement
