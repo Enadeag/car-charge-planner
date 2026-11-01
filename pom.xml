@@ -36,7 +36,7 @@
     <javafx.platform>linux</javafx.platform>
     <atlantafx.version>3.0.0</atlantafx.version>
     <dbus-java.version>5.2.2</dbus-java.version>
-    <jackson.version>3.2.3</jackson.version>
+    <jackson.version>3.2.4</jackson.version>
     <slf4j.version>2.0.20</slf4j.version>
 
     <junit.version>6.1.3</junit.version>
