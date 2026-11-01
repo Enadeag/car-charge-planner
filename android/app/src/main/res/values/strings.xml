@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <string name="app_name">Car charge planner</string>
+  <!-- the product's name, the same in every language -->
+  <string name="app_name" translatable="false">Car charge planner</string>
   <!-- %1$s the time the plan is made, written for the phone's language; %2$d the battery level in percent -->
   <string name="skeleton_intro">A first look at the app: the plan for a made-up home on a made-up sunny day,
     as of %1$s, with the battery level at %2$d%%.</string>

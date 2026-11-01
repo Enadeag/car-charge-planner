@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- %1$s the time the plan is made, written for the phone's language; %2$d the battery level in percent -->
+  <string name="skeleton_intro">Een eerste blik op de app: het plan voor een verzonnen huis op een verzonnen zonnige dag,
+    om %1$s, met het accuniveau op %2$d%%.</string>
+  <string name="todays_windows">Laadvensters van vandaag</string>
+  <string name="no_window_today">Vandaag geen laadvenster.</string>
+  <!-- %1$s and %2$s the start and end time; %3$.1f the charge power in kW; %4$d the solar share in percent -->
+  <string name="charge_window">%1$s tot %2$s: %3$.1f kW, %4$d%% zonnestroom</string>
+  <string name="json_check">De auto in JSON</string>
+  <string name="json_read_back_same">Teruggelezen: dezelfde auto.</string>
+  <string name="json_read_back_changed">Teruggelezen: een andere auto.</string>
+</resources>
