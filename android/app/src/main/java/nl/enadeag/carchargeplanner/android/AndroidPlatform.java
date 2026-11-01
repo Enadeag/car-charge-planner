@@ -4,9 +4,9 @@ import android.content.Context;
 import java.io.File;
 import java.nio.file.Path;
 import java.time.Clock;
-import nl.enadeag.carchargeplanner.android.secrets.AndroidKeystoreKey;
+import nl.enadeag.carchargeplanner.android.secrets.AndroidKeystoreKeys;
 import nl.enadeag.carchargeplanner.android.secrets.EncryptedKeychain;
-import nl.enadeag.carchargeplanner.android.secrets.KeychainKey;
+import nl.enadeag.carchargeplanner.android.secrets.KeychainKeys;
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.KeyFallback;
@@ -16,55 +16,54 @@ import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 
 /**
- * The Android side of the engine's platform seams, made once for the app: the {@link HttpGet}, the files, the keychain
- * and the API keys. The engine's files (settings, trips, the forecast cache) go in the app's files folder, which is
- * private already ({@link FilePrivacy#NONE}) and moves to the owner's next phone; the keychain's file goes in the folder
- * that is never backed up, as its key never leaves this phone. The API keys are kept only in the keychain
- * ({@link KeyFallback#NONE}), never unencrypted.
+ * The Android side of the engine's platform seams, made once per process ({@link #of(Context)}): the {@link HttpGet},
+ * the files, the keychain and the API keys. One set per process, as {@link ApiKeys} remembers what it read and each
+ * {@code HttpGet} keeps a pool of threads. The engine's files (settings, trips, the forecast cache) go in the app's
+ * files folder, which is private already ({@link FilePrivacy#NONE}) and moves to the owner's next phone; the keychain's
+ * file goes in the folder that is never backed up, as its keys never leave this phone. The API keys are kept only in
+ * the keychain ({@link KeyFallback#NONE}), never unencrypted.
  */
 public final class AndroidPlatform {
 
     private static final String SECRETS_FILE = "secrets.json";
 
+    private static AndroidPlatform instance;
+
     private final HttpGet http = new AndroidHttpGet();
     private final PrivateFiles files = new PrivateFiles(FilePrivacy.NONE);
     private final Path dataFolder;
+    private final Path keychainFile;
     private final Keychain keychain;
     private final ApiKeys apiKeys;
 
     /**
-     * Makes the parts for the app's own folders.
+     * The parts of this process, made at the first call for the app's own folders; nothing is read, written or made
+     * yet.
      *
-     * @param context the app's context, whose files folder and never-backed-up folder are used
-     * @return the parts; nothing is read, written or made yet
+     * @param context any context of the app; its application's files folder and never-backed-up folder are used
+     * @return the same parts for every call
      */
-    public static AndroidPlatform of(Context context) {
-        return new AndroidPlatform(context.getFilesDir(), context.getNoBackupFilesDir());
+    public static synchronized AndroidPlatform of(Context context) {
+        if (instance == null) {
+            var app = context.getApplicationContext();
+            instance = new AndroidPlatform(app.getFilesDir(), app.getNoBackupFilesDir(), new AndroidKeystoreKeys());
+        }
+        return instance;
     }
 
     /**
-     * Makes the parts for these folders, with the keychain's key in the Android Keystore; nothing is read, written or
-     * made yet.
+     * Makes the parts for these folders and these keys; nothing is read, written or made yet. The app has one set,
+     * from {@link #of(Context)}; tests make their own.
      *
-     * @param filesFolder the app's files folder ({@code Context.getFilesDir()}), for the engine's files
-     * @param noBackupFolder the app's folder that is never backed up ({@code Context.getNoBackupFilesDir()}), for the
-     *     keychain's file
+     * @param filesFolder the folder for the engine's files ({@code Context.getFilesDir()})
+     * @param noBackupFolder the folder for the keychain's file ({@code Context.getNoBackupFilesDir()})
+     * @param keys the keys the keychain encrypts with
      */
-    public AndroidPlatform(File filesFolder, File noBackupFolder) {
-        this(filesFolder, noBackupFolder, new AndroidKeystoreKey(AndroidKeystoreKey.ALIAS));
-    }
-
-    /**
-     * Makes the parts for these folders and this key; nothing is read, written or made yet.
-     *
-     * @param filesFolder the folder for the engine's files
-     * @param noBackupFolder the folder for the keychain's file
-     * @param key the key the keychain encrypts with
-     */
-    AndroidPlatform(File filesFolder, File noBackupFolder, KeychainKey key) {
+    AndroidPlatform(File filesFolder, File noBackupFolder, KeychainKeys keys) {
         dataFolder = filesFolder.toPath();
         var keysFolder = noBackupFolder.toPath();
-        keychain = new EncryptedKeychain(keysFolder.resolve(EncryptedKeychain.FILE_NAME), files, key);
+        keychainFile = keysFolder.resolve(EncryptedKeychain.FILE_NAME);
+        keychain = new EncryptedKeychain(keychainFile, files, keys, AndroidKeystoreKeys.ALIAS);
         // without the fallback the file is never read, written, deleted or moved; ApiKeys still takes one
         apiKeys = new ApiKeys(keychain, new SecretsFile(keysFolder.resolve(SECRETS_FILE), files), KeyFallback.NONE,
                 Clock.systemUTC());
@@ -98,7 +97,16 @@ public final class AndroidPlatform {
     }
 
     /**
-     * The store of the API keys, encrypted with the keychain's key.
+     * Where the keychain keeps its entries, which the backup rules keep on the phone.
+     *
+     * @return {@code keychain.json} in the folder that is never backed up
+     */
+    public Path keychainFile() {
+        return keychainFile;
+    }
+
+    /**
+     * The store of the API keys, encrypted with the keychain's keys.
      *
      * @return the keychain
      */

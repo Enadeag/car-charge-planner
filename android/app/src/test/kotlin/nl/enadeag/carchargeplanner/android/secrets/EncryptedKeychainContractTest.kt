@@ -18,7 +18,7 @@ class EncryptedKeychainContractTest : KeychainContractTest() {
 
     private val keychain by lazy {
         EncryptedKeychain(folder.resolve("no_backup").resolve(EncryptedKeychain.FILE_NAME),
-            PrivateFiles(FilePrivacy.NONE), SoftwareKey())
+            PrivateFiles(FilePrivacy.NONE), SoftwareKeys(), "keychain")
     }
 
     override fun keychain(): Keychain = keychain

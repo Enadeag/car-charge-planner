@@ -19,6 +19,7 @@ import nl.enadeag.carchargeplanner.engine.store.FilePrivacy
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,14 +43,15 @@ class KeysNotInLogcatOnTheDeviceTest {
     private fun apiKeys(): ApiKeys {
         val files = PrivateFiles(FilePrivacy.NONE)
         val keychain = EncryptedKeychain(File(folder, EncryptedKeychain.FILE_NAME).toPath(), files,
-            AndroidKeystoreKey(alias))
+            AndroidKeystoreKeys(), alias)
         return ApiKeys(keychain, SecretsFile(File(folder, "secrets.json").toPath(), files), KeyFallback.NONE,
             Clock.systemUTC())
     }
 
     @After
-    fun removeTheKeyAndTheFile() {
-        keyStore().deleteEntry(alias)
+    fun removeTheKeysAndTheFile() {
+        val keyStore = keyStore()
+        keyStore.aliases().toList().filter { it.startsWith(alias) }.forEach(keyStore::deleteEntry)
         folder.deleteRecursively()
     }
 
@@ -79,7 +81,10 @@ class KeysNotInLogcatOnTheDeviceTest {
         assertTrue("the lost key could not be read", lost != null)
         assertTrue("the marker in $lines", lines.any { marker in it })
         assertTrue("the keychain logged its lost key", lines.any { "EncryptedKeychain" in it })
-        assertEquals(emptyList<String>(), lines.filter { madeUpKey in it })
+        // also a part of it, and across the lines a long record is split into
+        val part = madeUpKey.removePrefix("MADE-UP-KEY-").take(16)
+        assertEquals(emptyList<String>(), lines.filter { part in it })
+        assertFalse(madeUpKey in lines.joinToString(""))
     }
 
     /** Every Logcat line of this process so far: the app's, the engine's and this test's. */

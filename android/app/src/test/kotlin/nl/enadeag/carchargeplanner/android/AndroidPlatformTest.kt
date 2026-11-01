@@ -6,7 +6,8 @@ import java.nio.file.Path
 import java.security.KeyStoreException
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.readText
-import nl.enadeag.carchargeplanner.android.secrets.SoftwareKey
+import nl.enadeag.carchargeplanner.android.secrets.AndroidKeystoreKeys
+import nl.enadeag.carchargeplanner.android.secrets.SoftwareKeys
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 import nl.enadeag.carchargeplanner.engine.secrets.KeychainException
@@ -30,7 +31,7 @@ class AndroidPlatformTest {
 
     private val filesFolder by lazy { root.resolve("files") }
     private val noBackupFolder by lazy { root.resolve("no_backup") }
-    private val key = SoftwareKey()
+    private val key = SoftwareKeys()
     private val platform by lazy { AndroidPlatform(filesFolder.toFile(), noBackupFolder.toFile(), key) }
 
     private fun keys(provider: ProviderId, value: String) = Secrets(mapOf(provider to mapOf("api_key" to value)))
@@ -42,6 +43,7 @@ class AndroidPlatformTest {
         platform.apiKeys().save(keys(OPEN_METEO, "MADE-UP-OM-KEY"))
 
         assertThat(everyFile()).containsExactly(noBackupFolder.resolve("keychain.json"))
+        assertThat(platform.keychainFile()).isEqualTo(noBackupFolder.resolve("keychain.json"))
         assertThat(noBackupFolder.resolve("keychain.json").readText()).doesNotContain("MADE-UP-OM-KEY")
         assertThat(platform.apiKeys().load()).isEqualTo(keys(OPEN_METEO, "MADE-UP-OM-KEY"))
     }
@@ -85,7 +87,8 @@ class AndroidPlatformTest {
     /** The real Keystore key on a JVM, which has no Android Keystore: a failure that may pass, never a refusal. */
     @Test
     fun withoutAnAndroidKeystoreTheKeychainIsUnavailable() {
-        val onTheJvm = AndroidPlatform(File(root.toFile(), "files"), File(root.toFile(), "no_backup"))
+        val onTheJvm =
+            AndroidPlatform(File(root.toFile(), "files"), File(root.toFile(), "no_backup"), AndroidKeystoreKeys())
 
         val failure = catchThrowableOfType(KeychainException::class.java) {
             onTheJvm.keychain().write("forecast/open-meteo/api_key", "MADE-UP-OM-KEY")

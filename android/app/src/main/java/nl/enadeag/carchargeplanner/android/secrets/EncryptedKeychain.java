@@ -9,10 +9,11 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import javax.crypto.AEADBadTagException;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
@@ -28,31 +29,37 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * The Android app's {@link Keychain}: every value encrypted with one AES key ({@link KeychainKey}, on the phone in the
+ * The Android app's {@link Keychain}: every value encrypted with an AES key ({@link KeychainKeys}, on the phone in the
  * Android Keystore), all entries in one file. Each value is encrypted with AES-256-GCM under a random 12-byte IV that
  * the cipher picks, with the entry's name as additional authenticated data, so an entry moved to another name fails
- * its check. The file, {@code {"version": 1, "entries": {"<name>": "<Base64 of IV and ciphertext>"}}}, is written
- * whole and atomically through {@link PrivateFiles}; it lives in the app's folder that is never backed up.
+ * its check. The file, {@code {"version": 1, "key": "<alias>", "entries": {"<name>": {"key": "<alias>", "value":
+ * "<Base64 of IV and ciphertext>"}}}}, names the key that new values are encrypted with and, for each entry, the key it
+ * was encrypted with. It is written whole and atomically through {@link PrivateFiles}, and lives in the app's folder
+ * that is never backed up.
  *
- * <p>The store has no locked state: it never throws {@code LOCKED}. The key is made at the first write. As the engine
- * runs it without the fallback to {@code secrets.json}, a {@code REFUSED} read of the {@code index} makes a save start
- * a new index; so this store refuses only what is lost for good, and every failure that may pass is
- * {@code UNAVAILABLE}:
+ * <p>The store never removes a key or an entry it did not delete on request. The first key is made at the first write,
+ * under the first alias. When the key in use is lost for good, or still missing after {@value #ABSENCE_CHECKS} looks
+ * within about a second while entries need it, the next write makes a new key under a new alias ({@code <first>-2},
+ * {@code -3} and so on, never one that holds a key), and the entries of the old key stay: readable again should that
+ * key come back, otherwise refused, until their names are written again.
+ *
+ * <p>The store has no locked state: it never throws {@code LOCKED}. As the engine runs it without the fallback to
+ * {@code secrets.json}, a {@code REFUSED} read of the {@code index} makes a save start a new index; so this store
+ * refuses only what is lost for good, and every failure that may pass is {@code UNAVAILABLE}:
  * <ul>
- *   <li>{@code REFUSED}: the key is gone while the entry is there ({@link KeychainKey#find()} finds none), or lost for
- *       good ({@link KeychainKey#lostForGood}, such as a key the system invalidated); an entry that fails its check
- *       ({@link AEADBadTagException}: changed, moved to another name, or encrypted with another key); an entry that is
- *       not Base64 of an IV and a tag, or does not decrypt to UTF-8; a file that is not this format (not UTF-8, not
- *       JSON, no version or no entries), on a read or a delete; a file written by a newer version of the app; a value
- *       that UTF-8 cannot hold, such as a lone surrogate.</li>
- *   <li>{@code UNAVAILABLE}: the file could not be read or written ({@link IOException}); the key could not be got,
+ *   <li>{@code REFUSED}: the entry's key missing after every look, or lost for good ({@link KeychainKeys#lostForGood});
+ *       an entry that fails its check ({@link AEADBadTagException}: changed, moved to another name, or encrypted with
+ *       another key); an entry that is not this format or does not decrypt to UTF-8; a file that is not this format
+ *       (not UTF-8, not JSON, no whole version from 1, no key, no entries), on a read or a delete; a file written by a
+ *       newer version of the app; a value that UTF-8 cannot hold, such as a lone surrogate.</li>
+ *   <li>{@code UNAVAILABLE}: the file could not be read or written ({@link IOException}); a key could not be got,
  *       made or used for a reason that may pass (any other {@link GeneralSecurityException}, such as a busy Keystore);
- *       and any runtime exception, such as Android's {@code ProviderException} from the Keystore.</li>
+ *       an interrupt while looking again for a missing key; and any runtime exception, such as Android's
+ *       {@code ProviderException} from the Keystore. Nothing is changed then.</li>
  * </ul>
- * A write that finds the key gone or lost for good removes every entry, as none can be read again, then makes a new
- * key; a write over a file that is not this format replaces it; a file of a newer version is never overwritten.
- * Neither a value nor a key ever appears in a message or the log. Safe to use from several threads: one call at a
- * time.
+ * A write over a file that is not this format replaces it; a file of a newer version is never overwritten. Neither a
+ * value nor a key ever appears in a message or the log. Safe to use from several threads, also through several
+ * instances on one file: one call at a time per file.
  */
 public final class EncryptedKeychain implements Keychain {
 
@@ -62,28 +69,58 @@ public final class EncryptedKeychain implements Keychain {
     /** The version of the file's shape that this app writes. */
     static final int VERSION = 1;
 
+    /** How often a key is looked for before it counts as missing, while entries need it. */
+    static final int ABSENCE_CHECKS = 3;
+
+    private static final long ABSENCE_PAUSE_MILLIS = 500;
+    private static final int MAX_ALIASES = 1000;
     private static final Logger LOG = LoggerFactory.getLogger(EncryptedKeychain.class);
+    /** One lock per file, so that two stores on one file never write it at once. */
+    private static final ConcurrentMap<Path, Object> LOCKS = new ConcurrentHashMap<>();
     private static final String CIPHER = "AES/GCM/NoPadding";
     private static final int IV_BYTES = 12;
     private static final int TAG_BITS = 128;
     private static final String VERSION_FIELD = "version";
+    private static final String KEY_FIELD = "key";
     private static final String ENTRIES_FIELD = "entries";
+    private static final String VALUE_FIELD = "value";
+
+    /** Waits between two looks for a missing key. */
+    interface Pause {
+
+        /**
+         * Waits.
+         *
+         * @param millis how long, in milliseconds
+         * @throws InterruptedException when the thread is interrupted while waiting
+         */
+        void pause(long millis) throws InterruptedException;
+    }
 
     private final Path file;
     private final PrivateFiles files;
-    private final KeychainKey key;
-    private final Object lock = new Object();
+    private final KeychainKeys keys;
+    private final String firstAlias;
+    private final Pause pause;
+    private final Object lock;
 
-    /** The entries as the file holds them, or why the file is not this format. */
-    private static final class Contents {
+    /**
+     * The entries as the file holds them, the alias of the key for new values, or why the file is not this format.
+     *
+     * @param entries per name, the alias and the encrypted value
+     * @param alias the alias of the key that new values are encrypted with
+     * @param damage why the file is not this format; null when it is
+     */
+    private record Contents(ObjectNode entries, String alias, String damage) {
+    }
 
-        private final ObjectNode entries;
-        private final String damage;
-
-        private Contents(ObjectNode entries, String damage) {
-            this.entries = entries;
-            this.damage = damage;
-        }
+    /**
+     * The outcome of looking for a key.
+     *
+     * @param key the key; null when there is none
+     * @param lost whether the key is lost for good, rather than not there
+     */
+    private record Lookup(SecretKey key, boolean lost) {
     }
 
     /**
@@ -92,12 +129,30 @@ public final class EncryptedKeychain implements Keychain {
      * @param file the file that keeps the entries, {@link #FILE_NAME} in the app's folder that is never backed up; it
      *     and its folder are made at the first write
      * @param files how the file is written atomically; never null
-     * @param key the key the values are encrypted with; never null
+     * @param keys the keys the values are encrypted with; never null
+     * @param firstAlias the alias of the first key, which later ones extend with {@code -2}, {@code -3} and so on;
+     *     {@link AndroidKeystoreKeys#ALIAS} for the app
      */
-    public EncryptedKeychain(Path file, PrivateFiles files, KeychainKey key) {
+    public EncryptedKeychain(Path file, PrivateFiles files, KeychainKeys keys, String firstAlias) {
+        this(file, files, keys, firstAlias, Thread::sleep);
+    }
+
+    /**
+     * Makes the store with a pause of its own between two looks for a missing key.
+     *
+     * @param file the file that keeps the entries
+     * @param files how the file is written atomically
+     * @param keys the keys the values are encrypted with
+     * @param firstAlias the alias of the first key
+     * @param pause waits between two looks for a missing key
+     */
+    EncryptedKeychain(Path file, PrivateFiles files, KeychainKeys keys, String firstAlias, Pause pause) {
         this.file = file;
         this.files = files;
-        this.key = key;
+        this.keys = keys;
+        this.firstAlias = firstAlias;
+        this.pause = pause;
+        this.lock = LOCKS.computeIfAbsent(file.toAbsolutePath().normalize(), path -> new Object());
     }
 
     @Override
@@ -106,10 +161,10 @@ public final class EncryptedKeychain implements Keychain {
         synchronized (lock) {
             try {
                 var contents = readFile();
-                if (contents.damage != null) {
-                    throw refused(file + " cannot be read: " + contents.damage);
+                if (contents.damage() != null) {
+                    throw refused(file + " cannot be read: " + contents.damage(), null);
                 }
-                var stored = contents.entries.get(name);
+                var stored = contents.entries().get(name);
                 return stored == null ? Optional.empty() : Optional.of(open(name, stored));
             } catch (RuntimeException e) {
                 throw failed(e);
@@ -125,14 +180,13 @@ public final class EncryptedKeychain implements Keychain {
         synchronized (lock) {
             try {
                 var contents = readFile();
-                var entries = contents.entries;
-                if (contents.damage != null) {
-                    LOG.warn(file + " cannot be read (" + contents.damage + "): a new one replaces it");
-                    entries = StoredJson.object();
+                if (contents.damage() != null) {
+                    LOG.warn(file + " cannot be read (" + contents.damage() + "): a new one replaces it");
+                    contents = new Contents(StoredJson.object(), firstAlias, null);
                 }
-                var sealed = seal(name, plain, entries);
-                entries.put(name, sealed);
-                save(entries);
+                var entry = seal(name, plain, contents);
+                contents.entries().set(name, entry);
+                save(contents.entries(), entry.get(KEY_FIELD).stringValue());
             } catch (RuntimeException e) {
                 throw failed(e);
             }
@@ -145,11 +199,11 @@ public final class EncryptedKeychain implements Keychain {
         synchronized (lock) {
             try {
                 var contents = readFile();
-                if (contents.damage != null) {
-                    throw refused(file + " cannot be read: " + contents.damage);
+                if (contents.damage() != null) {
+                    throw refused(file + " cannot be read: " + contents.damage(), null);
                 }
-                if (contents.entries.remove(name) != null) {
-                    save(contents.entries);
+                if (contents.entries().remove(name) != null) {
+                    save(contents.entries(), contents.alias());
                 }
             } catch (RuntimeException e) {
                 throw failed(e);
@@ -162,9 +216,9 @@ public final class EncryptedKeychain implements Keychain {
         try {
             bytes = Files.readAllBytes(file);
         } catch (NoSuchFileException e) {
-            return new Contents(StoredJson.object(), null);
+            return new Contents(StoredJson.object(), firstAlias, null);
         } catch (IOException e) {
-            throw unavailable("could not read " + file + " (" + e.getClass().getSimpleName() + ")", e);
+            throw unavailable("could not read " + file, e);
         }
         String text;
         try {
@@ -187,130 +241,175 @@ public final class EncryptedKeychain implements Keychain {
         }
         if (version.intValue() > VERSION) {
             throw refused(file + " was written by a newer version of the app (file version " + version.intValue()
-                    + "; this version reads up to " + VERSION + ")");
+                    + "; this version reads up to " + VERSION + ")", null);
+        }
+        var alias = object.get(KEY_FIELD);
+        if (alias == null || !alias.isString() || alias.stringValue().isEmpty()) {
+            return damaged("it names no key");
         }
         if (!(object.get(ENTRIES_FIELD) instanceof ObjectNode entries)) {
             return damaged("it has no entries");
         }
-        return new Contents(entries, null);
+        return new Contents(entries, alias.stringValue(), null);
     }
 
-    private static Contents damaged(String why) {
-        return new Contents(StoredJson.object(), why);
+    private Contents damaged(String why) {
+        return new Contents(StoredJson.object(), firstAlias, why);
     }
 
-    private void save(ObjectNode entries) throws KeychainException {
-        var root = StoredJson.object().put(VERSION_FIELD, VERSION);
+    private void save(ObjectNode entries, String alias) throws KeychainException {
+        var root = StoredJson.object().put(VERSION_FIELD, VERSION).put(KEY_FIELD, alias);
         root.set(ENTRIES_FIELD, entries);
         try {
             files.write(file, StoredJson.compact(root));
         } catch (IOException e) {
-            throw unavailable("could not write " + file + " (" + e.getClass().getSimpleName() + ")", e);
+            throw unavailable("could not write " + file, e);
         }
     }
 
     private String open(String name, JsonNode stored) throws KeychainException {
+        var alias = stored.get(KEY_FIELD);
+        var value = stored.get(VALUE_FIELD);
         byte[] bytes = null;
-        if (stored.isString()) {
+        if (alias != null && alias.isString() && value != null && value.isString()) {
             try {
-                bytes = Base64.getDecoder().decode(stored.stringValue());
+                bytes = Base64.getDecoder().decode(value.stringValue());
             } catch (IllegalArgumentException ignored) {
                 // refused below, as any other entry that is not this format
             }
         }
         if (bytes == null || bytes.length < IV_BYTES + TAG_BITS / Byte.SIZE) {
-            throw refused("the entry " + name + " is not an encrypted value");
+            throw refused("the entry " + name + " is not an encrypted value", null);
         }
-        var secretKey = keyToRead(name);
+        var found = find(alias.stringValue(), true);
+        if (found.key() == null) {
+            throw refused("the key of the entry " + name + (found.lost() ? " is lost for good" : " is gone"), null);
+        }
         try {
             var cipher = Cipher.getInstance(CIPHER);
-            cipher.init(Cipher.DECRYPT_MODE, secretKey, new GCMParameterSpec(TAG_BITS, bytes, 0, IV_BYTES));
+            cipher.init(Cipher.DECRYPT_MODE, found.key(), new GCMParameterSpec(TAG_BITS, bytes, 0, IV_BYTES));
             cipher.updateAAD(name.getBytes(StandardCharsets.UTF_8));
             var plain = cipher.doFinal(bytes, IV_BYTES, bytes.length - IV_BYTES);
             return StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(plain)).toString();
         } catch (AEADBadTagException e) {
-            throw new KeychainException(KeychainException.Kind.REFUSED, "the entry " + name
-                    + " fails its check: it was changed, or encrypted with another key", e);
+            throw refused("the entry " + name + " fails its check: it was changed, or encrypted with another key", e);
         } catch (CharacterCodingException e) {
-            throw refused("the entry " + name + " does not decrypt to text");
+            throw refused("the entry " + name + " does not decrypt to text", e);
         } catch (GeneralSecurityException e) {
-            throw keyFailure("could not decrypt the entry " + name, e);
-        }
-    }
-
-    private SecretKey keyToRead(String name) throws KeychainException {
-        Optional<SecretKey> found;
-        try {
-            found = key.find();
-        } catch (GeneralSecurityException e) {
-            throw keyFailure("could not get the key to read " + name, e);
-        } catch (IOException e) {
-            throw unavailable("could not get the key to read " + name + " (" + e.getClass().getSimpleName() + ")", e);
-        }
-        if (found.isEmpty()) {
-            throw refused("the key of the entry " + name + " is gone");
-        }
-        return found.get();
-    }
-
-    /** The value encrypted under the key, with a new key when the one there is gone or lost for good. */
-    private String seal(String name, byte[] plain, ObjectNode entries) throws KeychainException {
-        var secretKey = keyToWrite(entries);
-        try {
-            return sealWith(secretKey, name, plain);
-        } catch (GeneralSecurityException e) {
-            if (!key.lostForGood(e)) {
-                throw unavailable("could not encrypt the entry " + name + " (" + e.getClass().getSimpleName() + ")",
-                        e);
+            if (keys.lostForGood(e)) {
+                throw refused("could not decrypt the entry " + name + ": its key is lost for good", e);
             }
+            throw unavailable("could not decrypt the entry " + name, e);
         }
-        try {
-            return sealWith(renewed(entries, true), name, plain);
-        } catch (GeneralSecurityException e) {
-            throw unavailable("could not encrypt the entry " + name + " with a new key ("
-                    + e.getClass().getSimpleName() + ")", e);
-        }
-    }
-
-    private SecretKey keyToWrite(ObjectNode entries) throws KeychainException {
-        Optional<SecretKey> found;
-        boolean lost = false;
-        try {
-            found = key.find();
-        } catch (GeneralSecurityException e) {
-            if (!key.lostForGood(e)) {
-                throw unavailable("could not get the key (" + e.getClass().getSimpleName() + ")", e);
-            }
-            found = Optional.empty();
-            lost = true;
-        } catch (IOException e) {
-            throw unavailable("could not get the key (" + e.getClass().getSimpleName() + ")", e);
-        }
-        return found.isPresent() ? found.get() : renewed(entries, lost);
     }
 
     /**
-     * A new key, after removing every entry, which only the key that is gone could read. The emptied file is written
-     * first, so it never holds entries of the old key beside those of the new one.
+     * Looks for a key; when it is not there and {@code confirm} is set, looks again after a pause, so a Keystore that
+     * is restarting is not taken for one that lost the key.
      */
-    private SecretKey renewed(ObjectNode entries, boolean forgetOld) throws KeychainException {
-        if (!entries.isEmpty()) {
-            var names = new ArrayList<>(entries.propertyNames());
-            LOG.warn("the keychain's key is gone, so its " + names.size() + " entries can never be read again and are "
-                    + "removed: " + names);
-            entries.removeAll();
-            save(entries);
+    private Lookup find(String alias, boolean confirm) throws KeychainException {
+        for (int look = 1; ; look++) {
+            Optional<SecretKey> found;
+            try {
+                found = keys.find(alias);
+            } catch (GeneralSecurityException e) {
+                if (keys.lostForGood(e)) {
+                    return new Lookup(null, true);
+                }
+                throw unavailable("could not get the key " + alias, e);
+            } catch (IOException e) {
+                throw unavailable("could not get the key " + alias, e);
+            }
+            if (found.isPresent()) {
+                return new Lookup(found.get(), false);
+            }
+            if (!confirm || look >= ABSENCE_CHECKS) {
+                return new Lookup(null, false);
+            }
+            try {
+                pause.pause(ABSENCE_PAUSE_MILLIS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw unavailable("interrupted while looking for the key " + alias, e);
+            }
+        }
+    }
+
+    /** The entry: the value encrypted under the key in use, or under a new key when that one is gone. */
+    private ObjectNode seal(String name, byte[] plain, Contents contents) throws KeychainException {
+        var alias = contents.alias();
+        var needed = uses(contents.entries(), alias);
+        var found = find(alias, needed);
+        boolean made = false;
+        if (found.key() == null) {
+            if (found.lost() || needed) {
+                LOG.warn("the keychain's key " + alias + (found.lost() ? " is lost for good" : " is gone")
+                        + ": a new key encrypts the values from now on; the entries of the old one are kept");
+                alias = newAlias(contents);
+            }
+            found = new Lookup(make(alias), false);
+            made = true;
         }
         try {
-            if (forgetOld) {
-                key.forget();
+            return entry(alias, sealWith(found.key(), name, plain));
+        } catch (GeneralSecurityException e) {
+            if (made || !keys.lostForGood(e)) {
+                throw unavailable("could not encrypt the entry " + name, e);
             }
-            var made = key.make();
-            LOG.info("made a new key for the keychain");
+        }
+        LOG.warn("the keychain's key " + alias + " is lost for good: a new key encrypts the values from now on; the "
+                + "entries of the old one are kept");
+        alias = newAlias(contents);
+        try {
+            return entry(alias, sealWith(make(alias), name, plain));
+        } catch (GeneralSecurityException e) {
+            throw unavailable("could not encrypt the entry " + name + " with a new key", e);
+        }
+    }
+
+    private SecretKey make(String alias) throws KeychainException {
+        try {
+            var made = keys.make(alias);
+            LOG.info("made the keychain's key " + alias);
             return made;
         } catch (GeneralSecurityException | IOException e) {
-            throw unavailable("could not make a key (" + e.getClass().getSimpleName() + ")", e);
+            throw unavailable("could not make the key " + alias, e);
         }
+    }
+
+    /** The next alias after the one in use that no entry names and that holds no key, so no key is ever replaced. */
+    private String newAlias(Contents contents) throws KeychainException {
+        var current = contents.alias();
+        int number = 1;
+        if (current.startsWith(firstAlias + "-")) {
+            try {
+                number = Integer.parseInt(current.substring(firstAlias.length() + 1));
+            } catch (NumberFormatException ignored) {
+                // an alias of another form counts as the first
+            }
+        }
+        for (int next = number + 1; next <= number + MAX_ALIASES; next++) {
+            var candidate = firstAlias + "-" + next;
+            var found = find(candidate, false);
+            if (!uses(contents.entries(), candidate) && found.key() == null && !found.lost()) {
+                return candidate;
+            }
+        }
+        throw unavailable("found no free alias for a new key after " + current, null);
+    }
+
+    private static boolean uses(ObjectNode entries, String alias) {
+        for (var entry : entries.values()) {
+            var key = entry.get(KEY_FIELD);
+            if (key != null && key.isString() && key.stringValue().equals(alias)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static ObjectNode entry(String alias, String sealed) {
+        return StoredJson.object().put(KEY_FIELD, alias).put(VALUE_FIELD, sealed);
     }
 
     private static String sealWith(SecretKey secretKey, String name, byte[] plain) throws GeneralSecurityException {
@@ -337,27 +436,24 @@ public final class EncryptedKeychain implements Keychain {
             encoded.get(bytes);
             return bytes;
         } catch (CharacterCodingException e) {
-            throw refused("the value is not text that UTF-8 can hold, such as one with a lone surrogate");
+            throw refused("the value is not text that UTF-8 can hold, such as one with a lone surrogate", e);
         }
-    }
-
-    private KeychainException keyFailure(String what, GeneralSecurityException e) {
-        if (key.lostForGood(e)) {
-            return new KeychainException(KeychainException.Kind.REFUSED,
-                    what + ": the key is lost for good (" + e.getClass().getSimpleName() + ")", e);
-        }
-        return unavailable(what + " (" + e.getClass().getSimpleName() + ")", e);
     }
 
     private static KeychainException failed(RuntimeException e) {
-        return unavailable("the keychain failed (" + e.getClass().getSimpleName() + ")", e);
+        return unavailable("the keychain failed", e);
     }
 
-    private static KeychainException refused(String message) {
-        return new KeychainException(KeychainException.Kind.REFUSED, message);
+    private static KeychainException refused(String message, Throwable cause) {
+        return new KeychainException(KeychainException.Kind.REFUSED, message, cause);
     }
 
+    /** The message names the cause's class, never its message, which may quote what it read. */
     private static KeychainException unavailable(String message, Exception cause) {
-        return new KeychainException(KeychainException.Kind.UNAVAILABLE, message, cause);
+        if (cause == null) {
+            return new KeychainException(KeychainException.Kind.UNAVAILABLE, message);
+        }
+        return new KeychainException(KeychainException.Kind.UNAVAILABLE,
+                message + " (" + cause.getClass().getSimpleName() + ")", cause);
     }
 }
