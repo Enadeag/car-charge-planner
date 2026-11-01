@@ -72,7 +72,8 @@ dependencies {
     // the engine's contract tests, with JUnit and AssertJ, for the Android implementations of its seams
     testImplementation(testFixtures(project(":engine")))
 
-    // the instrumented tests on a device or emulator (the emulator job), with JUnit 4, which their runner needs
+    // AndroidX Test's runner, core and JUnit 4 rules, for the instrumented tests on a device or emulator
+    // (the emulator job)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.junit)

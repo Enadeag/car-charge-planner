@@ -10,37 +10,30 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/**
- * The smoke test on a device or emulator, which the emulator job runs on Android 8 (API 26), the app's minimum: the
- * app starts, and the engine plans there with the phone's `java.time` and core library desugaring as it does on the
- * JVM. The instrumented tests of the app's own parts come with those parts.
- */
+/** The smoke test on a device or emulator; the emulator job runs it on Android 8 (API 26), the app's minimum. */
 @RunWith(AndroidJUnit4::class)
 class OnTheDeviceTest {
 
-    /** The screen opens: [MainActivity] plans the day and writes the car to JSON and back before it shows them. */
     @Test
-    fun theAppStartsAndShowsItsScreen() {
+    fun theAppStartsAndResumes() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             assertEquals(Lifecycle.State.RESUMED, scenario.state)
         }
     }
 
     /**
-     * The summer's day of `SunnyDayPlanTest`, planned on the device in the time zone of Amsterdam: the same window as
-     * on the JVM, so the engine's time zone rules and arithmetic behave alike on the phone. The plan uses
-     * `PlanningPreferences.RECOMMENDED`, which checks its durations with `Duration.toSecondsPart`: Android 8 lacks
-     * that method, and desugaring adds it.
+     * The values of `SunnyDayPlanTest`, on purpose. `PlanningPreferences.RECOMMENDED` calls `Duration.toSecondsPart`,
+     * which Android 8 lacks and desugaring adds.
      */
     @Test
-    fun aSummersDayHasTheWindowItHasOnTheJvm() {
+    fun aSummersDayHasTheChargeWindowItHasOnTheJvm() {
         val windows = SunnyDayPlan.windows(LocalDate.parse("2026-06-15"), ZoneId.of("Europe/Amsterdam"))
 
         assertEquals(1, windows.size)
-        val window = windows[0]
-        assertEquals(Instant.parse("2026-06-15T07:00:00Z"), window.start())
-        assertEquals(Instant.parse("2026-06-15T15:00:00Z"), window.end())
-        assertEquals(10, window.amps())
-        assertEquals(18.35936687607709, window.solarKwh(), 1e-9)
+        val chargeWindow = windows[0]
+        assertEquals(Instant.parse("2026-06-15T07:00:00Z"), chargeWindow.start())
+        assertEquals(Instant.parse("2026-06-15T15:00:00Z"), chargeWindow.end())
+        assertEquals(10, chargeWindow.amps())
+        assertEquals(18.35936687607709, chargeWindow.solarKwh(), 1e-9)
     }
 }
