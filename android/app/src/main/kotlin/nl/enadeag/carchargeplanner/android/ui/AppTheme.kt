@@ -1,4 +1,4 @@
-package nl.enadeag.carchargeplanner.android
+package nl.enadeag.carchargeplanner.android.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -13,7 +13,7 @@ import androidx.compose.runtime.Composable
  * @param content what the theme applies to
  */
 @Composable
-internal fun SkeletonTheme(content: @Composable () -> Unit) {
+internal fun AppTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme(),
         content = content,

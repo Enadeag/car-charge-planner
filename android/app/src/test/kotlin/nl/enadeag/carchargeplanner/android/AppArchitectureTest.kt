@@ -9,14 +9,17 @@ import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 import nl.enadeag.carchargeplanner.android.logging.LogcatServiceProvider
+import nl.enadeag.carchargeplanner.android.ui.ScreenThatReadsTheSettingsFile
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 /**
  * The rules for the app's own classes, Java and Kotlin alike (its main code, not its tests), as
  * `EngineArchitectureTest` has them for the engine (ADR 0010): one class opens network connections, [AndroidHttpGet],
- * which keeps the engine's contract on timeouts, size and redirects; no class weakens the checks of TLS; and the app
- * logs through slf4j, whose provider is the one class that writes to Logcat.
+ * which keeps the engine's contract on timeouts, size and redirects; no class weakens the checks of TLS; the app
+ * logs through slf4j, whose provider is the one class that writes to Logcat; and the screens reach the engine only
+ * through the suspend interface that runs it off the main thread.
  */
 class AppArchitectureTest {
 
@@ -113,6 +116,34 @@ class AppArchitectureTest {
         val THE_HTTP_GET = DescribedPredicate.describe<JavaClass>("are the app's HttpGet or nested in it") { type ->
             type.name == HTTP_GET || type.name.startsWith("$HTTP_GET$")
         }
+
+        val SCREENS = DescribedPredicate.describe<JavaClass>("are in a ui package or are activities") { type ->
+            "ui" in type.packageName.split('.') || type.isAssignableTo("android.app.Activity")
+        }
+
+        /** What blocks or reaches the disk, the keychain or the network; the engine's data types are not here. */
+        val READS_OR_WRITES = setOf(
+            "nl.enadeag.carchargeplanner.engine.Engine",
+            "nl.enadeag.carchargeplanner.engine.secrets.ApiKeys",
+            "nl.enadeag.carchargeplanner.engine.secrets.Keychain",
+            "nl.enadeag.carchargeplanner.engine.secrets.SecretsFile",
+            "nl.enadeag.carchargeplanner.engine.config.ConfigFile",
+            "nl.enadeag.carchargeplanner.engine.store.StoredFile",
+            AndroidPlatform::class.java.name,
+            "$APP.secrets.EncryptedKeychain",
+            "$APP.secrets.AndroidKeystoreKeys",
+            "$APP.secrets.KeychainKeys",
+        )
+
+        val THE_ENGINE_ITSELF = DescribedPredicate.describe<JavaClass>(
+            "are the engine, the API keys, the keychain, the settings file or the platform's parts") { type ->
+            type.name in READS_OR_WRITES
+        }
+
+        val SCREENS_REACH_THE_ENGINE_ONLY_THROUGH_ITS_SUSPEND_INTERFACE =
+            noClasses().that(SCREENS).should().dependOnClassesThat(THE_ENGINE_ITSELF)
+                .because("they may block for about a second, so the screens call them through EngineAccess, which "
+                    + "runs them off the main thread (#313); the app's Application is the one place that makes them")
     }
 
     @Test
@@ -122,6 +153,27 @@ class AppArchitectureTest {
         assertThat(APP_CLASSES.contain(LogcatServiceProvider::class.java)).isTrue()
         assertThat(APP_CLASSES.contain(MainActivity::class.java)).`as`("the activity, in Kotlin").isTrue()
         assertThat(APP_CLASSES.contain(AppArchitectureTest::class.java)).`as`("this test").isFalse()
+    }
+
+    @Test
+    fun theScreensRuleSeesTheAppsScreensButNotItsApplication() {
+        assertThat(SCREENS.test(APP_CLASSES.get(MainActivity::class.java))).`as`("the activity").isTrue()
+        assertThat(SCREENS.test(APP_CLASSES.get("$APP.ui.AppNameScreenKt"))).`as`("a screen, in Kotlin").isTrue()
+        assertThat(SCREENS.test(APP_CLASSES.get(CarChargePlannerApp::class.java))).`as`("the Application").isFalse()
+        assertThat(SCREENS.test(APP_CLASSES.get(AppEngine::class.java))).`as`("the engine's builder").isFalse()
+    }
+
+    @Test
+    fun theScreensReachTheEngineOnlyThroughItsSuspendInterface() {
+        SCREENS_REACH_THE_ENGINE_ONLY_THROUGH_ITS_SUSPEND_INTERFACE.check(APP_CLASSES)
+    }
+
+    @Test
+    fun aScreenThatCallsTheEngineItselfBreaksTheRule() {
+        val screen = ClassFileImporter().importClasses(ScreenThatReadsTheSettingsFile::class.java)
+
+        assertThatThrownBy { SCREENS_REACH_THE_ENGINE_ONLY_THROUGH_ITS_SUSPEND_INTERFACE.check(screen) }
+            .isInstanceOf(AssertionError::class.java).hasMessageContaining("ConfigFile")
     }
 
     @Test
