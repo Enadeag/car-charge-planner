@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
@@ -117,13 +118,21 @@ final class KeychainEntries {
         }
     }
 
-    /** The index could be read, but is not a list of the engine's names. */
+    /**
+     * The index could be read, but is not a list of the engine's names; or, without a file to fall back to, the
+     * keychain refused to give it.
+     */
     private static final class DamagedIndex extends KeychainException {
 
         private static final long serialVersionUID = 1L;
 
         DamagedIndex() {
             super(Kind.REFUSED, "the keychain's index of names is damaged");
+        }
+
+        DamagedIndex(KeychainException refusal) {
+            super(Kind.REFUSED, "the keychain refused to give its index of names (" + refusal.getMessage()
+                    + "), which counts as damaged", refusal);
         }
     }
 
@@ -132,28 +141,36 @@ final class KeychainEntries {
     private static final String PREFIX = "forecast/";
 
     private final Keychain keychain;
+    private final KeyFallback fallback;
 
     /**
      * Makes the entries' reader and writer; nothing is read yet.
      *
      * @param keychain the keychain the entries are kept in
+     * @param fallback where the keys go when the keychain cannot be used; without a file, an index the keychain
+     *     refuses to give counts as a damaged one, so a save can start a new index
      */
-    KeychainEntries(Keychain keychain) {
+    KeychainEntries(Keychain keychain, KeyFallback fallback) {
         this.keychain = keychain;
+        this.fallback = fallback;
     }
 
     /**
      * Whether the keychain can be used now, tried by reading the index.
      *
      * @return usable; locked; or unavailable when there is no keychain, it does not answer, or it refused (such as
-     *     without a logon session on Windows), which counts as unavailable
+     *     without a logon session on Windows), which counts as unavailable. Without a file to fall back to, an index it
+     *     refused counts as a damaged one, so the keychain is usable
      */
     State state() {
         try {
             keychain.read(INDEX);
             return State.USABLE;
         } catch (KeychainException e) {
-            return e.kind() == KeychainException.Kind.LOCKED ? State.LOCKED : State.UNAVAILABLE;
+            if (e.kind() == KeychainException.Kind.LOCKED) {
+                return State.LOCKED;
+            }
+            return damagesTheIndex(e) ? State.USABLE : State.UNAVAILABLE;
         }
     }
 
@@ -161,7 +178,8 @@ final class KeychainEntries {
      * Reads every entry the index lists.
      *
      * @return the secrets; none when there is no index
-     * @throws KeychainException when the keychain fails, also for one entry, or the index is damaged
+     * @throws KeychainException when the keychain fails, also for one entry, or the index is damaged (also when it
+     *     refuses to give the index without a file to fall back to)
      */
     Secrets read() throws KeychainException {
         return entries(index(), true).readable();
@@ -173,7 +191,8 @@ final class KeychainEntries {
      *
      * @return the values that could be read, the names of the entries that could not, and the names the index lists;
      *     none when there is no index or it is damaged
-     * @throws KeychainException when the keychain is locked or cannot be used, or refuses to give the index
+     * @throws KeychainException when the keychain is locked or cannot be used, or refuses to give the index while
+     *     there is a file to fall back to
      */
     Contents contents() throws KeychainException {
         try {
@@ -187,7 +206,8 @@ final class KeychainEntries {
      * The names the index lists, without reading the entries; none when it is damaged.
      *
      * @return what the index lists, and no values
-     * @throws KeychainException when the keychain is locked or cannot be used, or refuses to give the index
+     * @throws KeychainException when the keychain is locked or cannot be used, or refuses to give the index while
+     *     there is a file to fall back to
      */
     Contents listed() throws KeychainException {
         try {
@@ -278,8 +298,21 @@ final class KeychainEntries {
         }
     }
 
+    /** Whether this failure to read the index counts as a damaged index: a refusal, without a file to fall back to. */
+    private boolean damagesTheIndex(KeychainException failure) {
+        return fallback == KeyFallback.NONE && failure.kind() == KeychainException.Kind.REFUSED;
+    }
+
     private List<String> index() throws KeychainException {
-        var text = keychain.read(INDEX);
+        Optional<String> text;
+        try {
+            text = keychain.read(INDEX);
+        } catch (KeychainException e) {
+            if (damagesTheIndex(e)) {
+                throw new DamagedIndex(e);
+            }
+            throw e;
+        }
         if (text.isEmpty()) {
             return List.of();
         }

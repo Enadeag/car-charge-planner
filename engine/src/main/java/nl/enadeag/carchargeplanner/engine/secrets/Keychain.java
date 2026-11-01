@@ -29,7 +29,12 @@ import java.util.Optional;
  *       to read, it keeps them as they are and listed in the {@code index}, unless the owner entered or removed them,
  *       and stores the rest; a failure of that save then fails it, without the file, which would hide those entries.
  *       A load whose first read of the {@code index} fails takes the file as their place; a failure later in a load,
- *       of an entry or from a damaged index, is reported as keys that could not be read, and the file is not used. A
+ *       of an entry or from a damaged index, is reported as keys that could not be read, and the file is not used.
+ *       That file is the engine's {@link KeyFallback}; without it ({@link KeyFallback#NONE}, as on Android) such a
+ *       save fails instead, a load from a store that cannot be used is reported as keys that could not be read, and
+ *       a {@code REFUSED} read of the {@code index} counts as a damaged index, so a save starts a new one and the
+ *       entries the old one listed stay until their names are written again. Such a store therefore gives
+ *       {@code REFUSED} only for what is lost for good, and {@code UNAVAILABLE} for a failure that may pass. A
  *       store without a locked state never throws {@code LOCKED} and keeps the refusing
  *       {@link #unlock(Duration, Runnable)}. A null name or value is the caller's mistake, not a failure of the
  *       store.</li>

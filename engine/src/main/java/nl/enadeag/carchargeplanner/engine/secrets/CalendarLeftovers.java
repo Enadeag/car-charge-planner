@@ -32,9 +32,9 @@ public final class CalendarLeftovers {
     /**
      * Removes the leftovers that are there. One that is not there is passed over in silence; one that cannot be
      * removed is logged and left for the next start, and the rest is still removed. A locked keychain cannot be
-     * checked, so a copy it may hold waits for a start at which it is unlocked; the secrets file is cleared all the
-     * same. Never asks the owner anything, as it runs unasked. Blocks while the keychain answers: call it away from
-     * the user interface's thread.
+     * checked, so a copy it may hold waits for a start at which it is unlocked; the secrets file, when it is the
+     * fallback, is cleared all the same. Never asks the owner anything, as it runs unasked. Blocks while the keychain
+     * answers: call it away from the user interface's thread.
      *
      * @param keys where the API keys are kept
      * @param dataFolder the app's data folder, which held the consents file
