@@ -133,21 +133,22 @@ The Android app's texts are Android string resources, in `android/app/src/main/r
 
   The desktop writes the same as one text, `{0,choice,1#{0} day|1<{0} days}`.
 - **What the engine says about a settings file or a provider** (the "details") stays English: one text around it, such as `Details (in het Engels): %1$s`.
+- **Texts must work with a screen reader (TalkBack)**: write them so they make sense when read aloud, with no meaning only in colour, symbols or position, and do not rely on a text's length for the layout: a translation can be twice as long.
 
 **A new text goes into every language's file in the same pull request.** Lint fails the build on a text that is missing in a language or has no English one (`MissingTranslation`, `ExtraTranslation`), on a placeholder that does not match (`StringFormatMatches`, `StringFormatInvalid`, `StringFormatCount`) and on a plural without a form its language needs or with one it does not (`MissingQuantity`, `UnusedQuantity`, `ImpliedQuantity`). A text you cannot translate yourself must still be in the file: put the English text there for a translator to pick up. `StringsResourcesTest` checks the same on the files themselves, and also that every placeholder is positional, that nothing is wrongly escaped, and that the languages the app offers are English and the `values-*` folders.
 
 ### Trying the pseudo-locales
 
-The debug build has two made-up languages, `en-XA` (English with accents and extra length, to see where a text is cut off or a screen has a fixed size) and `ar-XB` (mirrored, right to left, to see the layout flip). An English text that shows without accents in `en-XA` is not a resource but written into the code. They are never in the release build. Choose one in Android's system settings (Languages, add "English (XA)" or "Arabic (XB)" in the developer-options list) or, on Android 13 and later, in the app's own language setting.
+The debug build has two made-up languages, `en-XA` (English with accents and extra length, to see where a text is cut off or a screen has a fixed size) and `ar-XB` (mirrored, right to left, to see the layout flip). An English text that shows without accents in `en-XA` is not a resource but written into the code. They are never in the release build. They show in the system's language list, and in the app's language list on Android 13 and later, of debug builds only; the release build offers English and the `values-*` languages. Always try a language on a debug build, where you can also see the pseudo-locales.
 
 ### Adding a language to the Android app
 
-1. **Start the file.** Create `android/app/src/main/res/values-<code>/strings.xml` with the language's two or three letter code (`values-de`), copying `values/strings.xml` and translating every text, with the comments, following the rules above and the words in the table. Leave `app_name` out.
+1. **Start the file.** Create `android/app/src/main/res/values-<code>/strings.xml` with the language's two or three letter code (`values-de`), copying `values/strings.xml` and translating every text (the comments above the texts stay in English, for the next translator), following the rules above and the words in the table. Leave `app_name` out.
 
 2. **Nothing else lists the language.** The app's language list (what Android offers as the app's own language from Android 13) and the languages kept from libraries come from the `values-*` folders, in `android/app/build.gradle.kts`.
 
 3. **Check it.** `cd android && ./gradlew check` runs Lint and `StringsResourcesTest`.
 
-4. **Try it.** Choose the language in Android's settings for the app (Android 13 and later: Settings, Apps, the app, Language) or as the phone's language, and look at every screen: long words are the usual trouble. The app has no language menu of its own.
+4. **Try it.** On a debug build, choose the language in Android's settings for the app (Android 13 and later: Settings, Apps, the app, Language) or as the phone's language, and look at every screen: long words are the usual trouble. The app has no language menu of its own.
 
 5. **Send it.** Commit the `values-<code>` folder, and open a pull request. A language needs the desktop's texts too, see [Adding a language to the desktop app](#adding-a-language-to-the-desktop-app), or the other app shows English.

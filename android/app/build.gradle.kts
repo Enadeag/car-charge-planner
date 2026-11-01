@@ -1,3 +1,4 @@
+import java.util.Locale
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -5,6 +6,12 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("ccp.no-google-libraries")
 }
+
+// The languages of the texts: the plain values-<language> folders, such as values-nl, whose language is a real ISO 639
+// one (so values-car, a car's UI mode, is none); region forms such as values-pt-rBR do not count.
+fun languageFolders(res: File): List<String> = res.listFiles().orEmpty().map { it.name }
+    .filter { it.startsWith("values-") && it.removePrefix("values-") in Locale.getISOLanguages() }
+    .map { it.removePrefix("values-") }.sorted()
 
 android {
     namespace = "nl.enadeag.carchargeplanner.android"
@@ -34,8 +41,7 @@ android {
     // (the generated locales_config.xml, which the manifest gets by itself) and keep libraries' other languages out.
     androidResources {
         generateLocaleConfig = true
-        localeFilters += listOf("en") + file("src/main/res").listFiles().orEmpty()
-            .map { it.name }.filter { it.matches(Regex("values-[a-z]{2,3}")) }.map { it.removePrefix("values-") }.sorted()
+        localeFilters += listOf("en") + languageFolders(file("src/main/res"))
     }
 
     compileOptions {
@@ -71,18 +77,16 @@ android {
             // The app's slf4j provider writes to android.util.Log, which the local tests' android.jar only stubs:
             // a call fails there, so the records of the engine and of the libraries go nowhere in these tests.
             it.systemProperty("slf4j.provider", "org.slf4j.helpers.NOP_FallbackServiceProvider")
+            // StringsResourcesTest reads the resources and the language list that the release build hands Android,
+            // as the build makes it. AGP has no public handle on that file's folder, so the task's output is used.
+            val localeConfig = files(tasks.named("generateReleaseLocaleConfig").map { task -> task.outputs.files })
+            it.inputs.dir("src/main/res").withPropertyName("resources")
+            it.inputs.files(localeConfig).withPropertyName("localeConfig")
+            it.jvmArgumentProviders.add(CommandLineArgumentProvider {
+                listOf("-Drelease.locale.config.dir=${localeConfig.singleFile}")
+            })
         }
     }
-}
-
-// StringsResourcesTest reads the resources, so a changed text runs it again, and the language list that the release
-// build hands Android, as the build makes it
-tasks.withType<Test>().configureEach {
-    inputs.dir("src/main/res").withPropertyName("resources")
-    dependsOn("generateReleaseLocaleConfig")
-    systemProperty("release.locale.config",
-        layout.buildDirectory.file("generated/res/localeConfig/release/xml/_generated_res_locale_config.xml")
-            .get().asFile.path)
 }
 
 kotlin {

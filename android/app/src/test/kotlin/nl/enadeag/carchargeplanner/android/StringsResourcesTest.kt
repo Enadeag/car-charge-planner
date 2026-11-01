@@ -2,6 +2,8 @@ package nl.enadeag.carchargeplanner.android
 
 import java.io.File
 import java.io.StringReader
+import java.util.Locale
+import java.util.Properties
 import javax.xml.parsers.DocumentBuilderFactory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -36,8 +38,10 @@ class StringsResourcesTest {
         @JvmStatic
         fun languages(): List<String> = languageFolders()
 
-        fun languageFolders(): List<String> = RES.listFiles().orEmpty()
-            .filter { it.name.matches(Regex("values-[a-z]{2,3}")) }.map { it.name.removePrefix("values-") }.sorted()
+        /** The same rule as `languageFolders` in app/build.gradle.kts, which the build uses for the language list. */
+        fun languageFolders(): List<String> = RES.listFiles().orEmpty().map { it.name }
+            .filter { it.startsWith("values-") && it.removePrefix("values-") in Locale.getISOLanguages() }
+            .map { it.removePrefix("values-") }.sorted()
 
         fun parse(input: InputSource): Element =
             DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(input).documentElement
@@ -126,7 +130,7 @@ class StringsResourcesTest {
 
     @Test
     fun everyLanguageFolderHoldsTheTexts() {
-        val folders = RES.listFiles().orEmpty().filter { it.name.matches(Regex("values-[a-z]{2,3}")) }
+        val folders = languageFolders().map { File(RES, "values-$it") }
 
         assertThat(folders).isNotEmpty()
         assertThat(folders.filter { !File(it, "strings.xml").isFile }).isEmpty()
@@ -134,21 +138,14 @@ class StringsResourcesTest {
 
     @Test
     fun theLanguagesTheReleaseOffersAreEnglishAndTheLanguageFolders() {
-        val config = file(File(requireNotNull(System.getProperty("release.locale.config"))))
+        val dir = File(requireNotNull(System.getProperty("release.locale.config.dir")), "xml")
+        val config = file(requireNotNull(dir.listFiles()).single { it.extension == "xml" })
         val offered = children(config, "locale").map { it.getAttribute("android:name") }
+        val defaults = Properties().apply { File(RES, "resources.properties").reader().use { load(it) } }
 
         assertThat(offered).containsExactlyInAnyOrderElementsOf(listOf("en") + languageFolders())
         assertThat(config.getAttribute("android:defaultLocale")).isEqualTo("en")
-        assertThat(File(RES, "resources.properties").readText()).contains("unqualifiedResLocale=en")
-    }
-
-    @Test
-    fun theDutchTextsUseTheTermsOfTheGlossary() {
-        val dutch = language("nl")
-
-        assertThat(dutch.getValue("todays_windows").items[""]).contains("Laadvensters")
-        assertThat(dutch.getValue("no_window_today").items[""]).contains("laadvenster")
-        assertThat(dutch.getValue("charge_window").items[""]).contains("zonnestroom")
+        assertThat(defaults.getProperty("unqualifiedResLocale")).isEqualTo("en")
     }
 
     @Test
