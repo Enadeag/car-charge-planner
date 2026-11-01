@@ -31,7 +31,7 @@
     <!-- the coverage profile sets it to JaCoCo's agent -->
     <argLine></argLine>
 
-    <javafx.version>27</javafx.version>
+    <javafx.version>27.0.1</javafx.version>
     <!-- the classifier of JavaFX's per-system jars; the profiles below set it for Windows and macOS -->
     <javafx.platform>linux</javafx.platform>
     <atlantafx.version>3.0.0</atlantafx.version>
