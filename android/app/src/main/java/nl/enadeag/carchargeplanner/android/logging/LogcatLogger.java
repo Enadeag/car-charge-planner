@@ -68,12 +68,12 @@ final class LogcatLogger extends LegacyAbstractLogger {
     @Override
     protected void handleNormalizedLoggingCall(Level level, Marker marker, String messagePattern, Object[] arguments,
             Throwable throwable) {
-        String message = MessageFormatter.basicArrayFormat(messagePattern, arguments);
+        String message = String.valueOf(MessageFormatter.basicArrayFormat(messagePattern, arguments));
         if (throwable != null) {
             // not Log.getStackTraceString, which leaves out the whole trace of an UnknownHostException
             var trace = new StringWriter();
             throwable.printStackTrace(new PrintWriter(trace));
-            message = message + "\n" + trace;
+            message = message + "\n" + trace.toString().stripTrailing();
         }
         sink.write(level, tag, message);
     }

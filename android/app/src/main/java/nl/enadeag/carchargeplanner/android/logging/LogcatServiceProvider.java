@@ -14,7 +14,7 @@ import org.slf4j.spi.SLF4JServiceProvider;
 /**
  * Binds slf4j to Logcat, so the engine's log and the app's own reach the same place: from INFO in the release build,
  * from DEBUG in the debug build ({@code BuildConfig.DEBUG}). Nothing is written to a file. slf4j finds it through
- * {@code META-INF/services}; once R8 shrinks the app, that file needs a rule keeping this class.
+ * {@code META-INF/services}: check that the file and this class are kept when minification is turned on (#272).
  */
 public final class LogcatServiceProvider implements SLF4JServiceProvider {
 
@@ -28,17 +28,18 @@ public final class LogcatServiceProvider implements SLF4JServiceProvider {
 
     @Override
     public void initialize() {
-        loggers = loggers(new LogcatSink(), threshold(BuildConfig.DEBUG));
+        loggers = forBuild(BuildConfig.DEBUG, new LogcatSink());
     }
 
     /**
-     * The lowest level the build writes.
+     * The loggers of a build: from DEBUG in the debug build, from INFO in the release build.
      *
      * @param debugBuild whether this is the debug build
-     * @return DEBUG in the debug build, INFO in the release build
+     * @param sink where the records go
+     * @return the factory
      */
-    static Level threshold(boolean debugBuild) {
-        return debugBuild ? Level.DEBUG : Level.INFO;
+    static ILoggerFactory forBuild(boolean debugBuild, LogSink sink) {
+        return loggers(sink, debugBuild ? Level.DEBUG : Level.INFO);
     }
 
     /**
