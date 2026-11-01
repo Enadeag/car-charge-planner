@@ -16,6 +16,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0-SNAPSHOT"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     // Only debug signing, AGP's own, until the release work brings the app's key; no git details in the package.
@@ -70,4 +71,10 @@ dependencies {
 
     // the engine's contract tests, with JUnit and AssertJ, for the Android implementations of its seams
     testImplementation(testFixtures(project(":engine")))
+
+    // AndroidX Test's runner, core and JUnit 4 rules, for the instrumented tests on a device or emulator
+    // (the emulator job)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.junit)
 }

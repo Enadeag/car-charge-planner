@@ -1,0 +1,199 @@
+name: Android
+
+# The Android app (android/, ADR 0010). The build job builds the app and its test APK, runs Android Lint and then
+# check: the unit tests and the build's own checks. It runs for a pull request that touches android/, the engine's
+# sources, a pom.xml (checkMavenDrift) or this file, and always on a push, weekly and by hand. The emulator job runs the
+# instrumented tests on an Android 8 (API 26) emulator: for release/android-* branches and the pull requests into them,
+# weekly, by hand, and for a pull request that changes this file. (CONTRIBUTING.md, What is tested where)
+on:
+  push:
+    branches: [main, "release/android-*"]
+  pull_request:
+  schedule:
+    - cron: "41 4 * * 2"  # Tuesdays, 04:41 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new push to a pull request cancels the run it supersedes; runs on main, release branches and the weekly run finish.
+concurrency:
+  group: android-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Decides which jobs a pull request needs. A skipped job counts as passed, so a ruleset that requires them does not
+  # block a pull request that does not touch the app. The job names start with android-, as a ruleset tells checks
+  # apart by name only, and ci.yml has a job called changes that main requires.
+  android-changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      build: ${{ steps.decide.outputs.build }}
+      emulator: ${{ steps.decide.outputs.emulator }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Which jobs does this run need?
+        id: decide
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          build=false
+          emulator=false
+          case "$GITHUB_EVENT_NAME" in
+            pull_request)
+              case "$BASE_REF" in release/android-*) emulator=true ;; esac
+              if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+                build=true
+              else
+                # unquoted names (a non-ASCII name stays as it is), NUL-separated, and a move as its two paths; into a
+                # file first, so a failing git diff fails the step
+                list=$(mktemp)
+                git -c core.quotePath=false diff --name-only -z --no-renames "$BASE" "$GITHUB_SHA" > "$list"
+                while IFS= read -r -d '' file; do
+                  printf '%s\n' "$file"
+                  case "$file" in
+                    .github/workflows/android.yml) build=true; emulator=true ;;
+                    android/*|engine/src/*|pom.xml|*/pom.xml) build=true ;;
+                  esac
+                done < "$list"
+              fi
+              ;;
+            push)
+              build=true
+              case "$GITHUB_REF" in refs/heads/release/android-*) emulator=true ;; esac
+              ;;
+            *)
+              build=true
+              emulator=true
+              ;;
+          esac
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+          echo "emulator=$emulator" >> "$GITHUB_OUTPUT"
+
+  android-build:
+    needs: android-changes
+    if: needs.android-changes.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      # Checks gradle-wrapper.jar against Gradle's published checksums; the cache is the open-source one (basic),
+      # written from main only.
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+      - name: Android SDK platform 36 and build-tools 36.0.0
+        id: sdk
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          (yes || true) | "$sdkmanager" --licenses > /dev/null
+          "$sdkmanager" --install "platforms;android-36" "build-tools;36.0.0"
+      - name: Build the app and its test APK
+        run: ./gradlew --continue --stacktrace assembleDebug assembleDebugAndroidTest
+      - name: Android Lint
+        if: ${{ !cancelled() && steps.sdk.outcome == 'success' }}
+        run: ./gradlew --continue --stacktrace lint
+      - name: Unit tests and the build's checks
+        if: ${{ !cancelled() && steps.sdk.outcome == 'success' }}
+        run: ./gradlew --continue --stacktrace check
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: android-reports
+          path: |
+            android/*/build/reports/
+            android/*/build/test-results/
+          retention-days: 7
+
+  android-emulator:
+    needs: android-changes
+    if: needs.android-changes.outputs.emulator == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      # Read only: the build job writes the cache, under the same key.
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic
+          cache-read-only: true
+      # the same as in android-build
+      - name: Android SDK platform 36 and build-tools 36.0.0
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          (yes || true) | "$sdkmanager" --licenses > /dev/null
+          "$sdkmanager" --install "platforms;android-36" "build-tools;36.0.0"
+      # the udev rule from the emulator action's README, so the emulator can use KVM
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: AVD cache
+        id: avd-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          # names the emulator action's version: update it with the action's pin, so a new version makes a new AVD
+          key: avd-26-default-x86_64-emulator-runner-v2.38.0
+      # On a cache miss: boot the new AVD once and keep its snapshot, so the next runs start from it.
+      - name: Create the AVD and its snapshot
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 26
+          target: default
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "The AVD and its snapshot are made."
+      # api-level, target and arch the same as in the snapshot step, or the snapshot does not match the AVD. Each script
+      # line runs in a shell of its own; logcat runs in the background, apart from the step's output, until the emulator
+      # stops.
+      - name: Instrumented tests on API 26
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 26
+          target: default
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          working-directory: android
+          script: |
+            mkdir -p build
+            adb logcat -v threadtime < /dev/null > build/logcat.txt 2>&1 &
+            ./gradlew --continue --stacktrace :app:connectedDebugAndroidTest
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: android-emulator-reports
+          path: |
+            android/app/build/reports/androidTests/
+            android/app/build/outputs/androidTest-results/
+            android/build/logcat.txt
+          retention-days: 7

@@ -17,7 +17,7 @@ class SunnyDayPlanTest {
     /**
      * The plan the engine makes for a summer's day, as it made it when the skeleton was written: it shows that the
      * Android build plans as the engine does on the JVM, so a deliberate change to the planner updates it in the same
-     * pull request.
+     * pull request. `OnTheDeviceTest` checks the same values on the device, so such a change updates both.
      */
     @Test
     fun aSummersDayHasTheWindowTheEngineGivesIt() {
