@@ -72,7 +72,11 @@ class ApiKeysTest {
     }
 
     private ApiKeys keys(Keychain keychain) {
-        return new ApiKeys(keychain, file(), new Clock() {
+        return keys(keychain, KeyFallback.PRIVATE_FILE);
+    }
+
+    private ApiKeys keys(Keychain keychain, KeyFallback fallback) {
+        return new ApiKeys(keychain, file(), fallback, new Clock() {
             @Override
             public ZoneId getZone() {
                 return ZoneOffset.UTC;
@@ -1393,5 +1397,158 @@ class ApiKeysTest {
     void theFileWithoutAKeychainIsTheOneItWasGiven() {
         var file = file();
         assertThat(new ApiKeys(new NoKeychain(), file).file()).isSameAs(file);
+    }
+
+    @Test
+    void theFallbackIsRequired() {
+        assertThatThrownBy(() -> new ApiKeys(keychain, file(), null, Clock.systemUTC()))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("fallback");
+    }
+
+    @Test
+    void withoutAFallbackAKeychainThatCannotBeUsedMeansTheKeysCouldNotBeReadAndNoFileIsUsed() {
+        var keys = keys(new NoKeychain(), KeyFallback.NONE);
+
+        try (var log = LogCapture.of(ApiKeys.class)) {
+            assertThatThrownBy(keys::load).isInstanceOfSatisfying(SecretsProblem.class,
+                    problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.FAILED))
+                    .hasMessageContaining("could not be read");
+            assertThat(keys.storage()).isEqualTo(KeyStorage.UNAVAILABLE);
+
+            assertThat(log.lines()).containsExactly("WARNING API keys can be neither read nor saved, as there is no "
+                    + "file to keep them in: the system keychain cannot be used");
+        }
+        assertThat(file().path()).doesNotExist();
+    }
+
+    @Test
+    void withoutAFallbackAKeychainThatCannotBeUsedKeepsSayingSoUntilItIsAskedAgain() throws SecretsProblem {
+        var intermittent = holdingTheKeys(new Intermittent());
+        intermittent.away = true;
+        var keys = keys(intermittent, KeyFallback.NONE);
+        assertThatThrownBy(keys::load).isInstanceOf(SecretsProblem.class);
+        intermittent.away = false;
+
+        later(ApiKeys.RETRY_AFTER.minusSeconds(1));
+        assertThatThrownBy(keys::load).isInstanceOf(SecretsProblem.class).hasMessageContaining("could not be read");
+        assertThat(keys.storage()).isEqualTo(KeyStorage.UNAVAILABLE);
+
+        later(Duration.ofSeconds(1));
+        assertThat(keys.load()).isEqualTo(KEYS);
+        assertThat(keys.storage()).isEqualTo(KeyStorage.KEYCHAIN);
+    }
+
+    /** Refuses to store anything, as a store that answers but cannot encrypt. */
+    private static final class RefusingWrites extends MemoryKeychain {
+        @Override
+        public void write(String name, String value) throws KeychainException {
+            throw new KeychainException(KeychainException.Kind.REFUSED, "the value cannot be encrypted");
+        }
+    }
+
+    static Stream<Keychain> keychainsThatCannotStore() {
+        return Stream.of(new NoKeychain(), new FailingWrites(), new RefusingWrites());
+    }
+
+    @ParameterizedTest
+    @MethodSource("keychainsThatCannotStore")
+    void withoutAFallbackASaveTheKeychainCannotTakeFailsAndWritesNoFile(Keychain cannotStore) {
+        var keys = keys(cannotStore, KeyFallback.NONE);
+
+        assertThatThrownBy(() -> keys.applyChanges(NEW_SOLCAST_KEY, () -> { }))
+                .isInstanceOfSatisfying(SecretsProblem.class,
+                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.FAILED))
+                .hasMessageNotContaining("SC-NEW");
+        assertThatThrownBy(() -> keys.save(KEYS)).isInstanceOfSatisfying(SecretsProblem.class,
+                problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.FAILED));
+
+        assertThat(file().path()).doesNotExist();
+        assertThat(keys.storage()).isNotEqualTo(KeyStorage.FILE);
+    }
+
+    @Test
+    void withoutAFallbackAFileFromBeforeIsNeverReadMovedWrittenOrDeleted() throws IOException, SecretsProblem {
+        file().write(KEYS);
+        var before = Files.readString(file().path());
+        var keys = keys(keychain, KeyFallback.NONE);
+
+        assertThat(keys.load()).isEqualTo(Secrets.NONE);
+        keys.moveFileIntoKeychain();
+        assertThat(keychain.entries).isEmpty();
+        keys.applyChanges(NEW_SOLCAST_KEY, () -> { });
+        assertThat(keys.remove(Map.of(OPEN_METEO, Set.of("api_key")))).isFalse();
+
+        assertThat(keys.load()).isEqualTo(new Secrets(Map.of(SOLCAST, Map.of("api_key", "SC-NEW"))));
+        assertThat(keys.storage()).isEqualTo(KeyStorage.KEYCHAIN);
+        assertThat(Files.readString(file().path())).isEqualTo(before);
+    }
+
+    @Test
+    void withoutAFallbackRemovingWhileTheKeychainIsLockedLeavesAFileFromBeforeAlone()
+            throws IOException, SecretsProblem {
+        file().write(KEYS);
+        var before = Files.readString(file().path());
+        var lockable = holdingTheKeys(new LockableKeychain());
+        lockable.locked = true;
+
+        assertThatThrownBy(() -> keys(lockable, KeyFallback.NONE).remove(Map.of(OPEN_METEO, Set.of("api_key"))))
+                .isInstanceOfSatisfying(SecretsProblem.class,
+                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.LOCKED));
+
+        assertThat(Files.readString(file().path())).isEqualTo(before);
+        assertThat(lockable.prompts).hasValue(0);
+    }
+
+    @Test
+    void withoutAFallbackADismissedPromptSavesNothingAndTheKeychainIsStillLocked() {
+        var lockable = holdingTheKeys(new LockableKeychain());
+        var before = Map.copyOf(lockable.entries);
+        lockable.locked = true;
+        lockable.answer = UnlockOutcome.DISMISSED;
+        var keys = keys(lockable, KeyFallback.NONE);
+
+        assertThatThrownBy(() -> keys.applyChanges(NEW_SOLCAST_KEY, () -> { }))
+                .isInstanceOfSatisfying(SecretsProblem.class,
+                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.LOCKED));
+
+        assertThat(file().path()).doesNotExist();
+        assertThat(lockable.entries).isEqualTo(before);
+        assertThat(keys.storage()).isEqualTo(KeyStorage.LOCKED_KEYCHAIN);
+    }
+
+    @Test
+    void withoutAFallbackAnIndexTheKeychainRefusesToGiveIsADamagedOne() {
+        var keys = keys(holdingTheKeys(new UnreadableEntryKeychain(KeychainEntries.INDEX)), KeyFallback.NONE);
+
+        assertThatThrownBy(keys::load).isInstanceOfSatisfying(SecretsProblem.class,
+                problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.FAILED))
+                .hasMessageContaining("could not be read");
+        assertThat(keys.storage()).isEqualTo(KeyStorage.KEYCHAIN);
+    }
+
+    @Test
+    void withoutAFallbackASaveOverARefusedIndexStartsANewOneAndLeavesTheOldEntries() throws SecretsProblem {
+        var refusedIndex = holdingTheKeys(new UnreadableEntryKeychain(KeychainEntries.INDEX));
+        var keys = keys(refusedIndex, KeyFallback.NONE);
+
+        keys.applyChanges(NEW_SOLCAST_KEY, () -> { });
+
+        assertThat(keys.load()).isEqualTo(new Secrets(Map.of(SOLCAST, Map.of("api_key", "SC-NEW"))));
+        assertThat(index(refusedIndex)).containsExactly("forecast/solcast/api_key");
+        assertThat(refusedIndex.entries).containsEntry(FORECAST_SOLAR_ENTRY, "FS-SECRET-2")
+                .containsEntry(OPEN_METEO_ENTRY, "OM-SECRET-1");
+        assertThat(file().path()).doesNotExist();
+    }
+
+    @Test
+    void withoutAFallbackTheOldEntriesOfARefusedIndexAreReplacedWhenTheOwnerEntersThemAgain() throws SecretsProblem {
+        var refusedIndex = holdingTheKeys(new UnreadableEntryKeychain(KeychainEntries.INDEX));
+        var keys = keys(refusedIndex, KeyFallback.NONE);
+
+        keys.applyChanges(KeyChanges.entering(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW")))),
+                () -> { });
+
+        assertThat(keys.load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"))));
+        assertThat(refusedIndex.entries).containsEntry(OPEN_METEO_ENTRY, "OM-NEW");
     }
 }
