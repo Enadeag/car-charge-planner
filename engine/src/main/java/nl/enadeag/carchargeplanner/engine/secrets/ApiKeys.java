@@ -233,6 +233,8 @@ public final class ApiKeys implements SecretsSource {
     /**
      * Stores them all, replacing what is stored, in the keychain when it works and else in the file; as
      * {@link #applyChanges(KeyChanges, Runnable)}, which a client that may not have read every stored key uses instead.
+     * It reads no entry, so it also replaces the ones the keychain refuses to read, and a keychain that then fails
+     * sends the keys to the file as for any other save.
      *
      * @param secrets every provider's secret settings; what is left out is forgotten
      * @throws SecretsProblem as {@link #applyChanges(KeyChanges, Runnable)}
@@ -287,9 +289,9 @@ public final class ApiKeys implements SecretsSource {
      * @return true when one of them was stored and is removed now; false when none was stored
      * @throws SecretsProblem of the kind {@link SecretsProblem.Kind#LOCKED} while the keychain is locked: the keychain
      *     may still hold an older copy, so the caller should try again once it can be read, while the file, when there
-     *     is one, no longer holds them; of the kind {@link SecretsProblem.Kind#FAILED} when the file or the
-     *     keychain's index could not be read, the file not written, or the keychain failed while it holds an entry it
-     *     refuses to read, such as when it refuses to delete one
+     *     is one, no longer holds them; of the kind {@link SecretsProblem.Kind#FAILED} when the file could not be
+     *     read, the keychain refused its index, the file was not written, or the keychain failed while it holds an
+     *     entry it refuses to read, such as when it refuses to delete one; a damaged index counts as holding none
      */
     public boolean remove(Map<ProviderId, Set<String>> names) throws SecretsProblem {
         var changes = new KeyChanges(Secrets.NONE, names);
