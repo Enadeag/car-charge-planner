@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only https: Android 8 allows plain http unless the app refuses it. The debug build has its own copy of this file. -->
+<network-security-config>
+  <base-config cleartextTrafficPermitted="false" />
+</network-security-config>
