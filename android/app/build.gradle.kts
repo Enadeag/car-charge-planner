@@ -35,6 +35,8 @@ android {
 
     buildFeatures {
         compose = true
+        // BuildConfig.DEBUG sets how much the app logs (LogcatServiceProvider)
+        buildConfig = true
     }
 
     // Google's encrypted dependency list is of no use outside Play, and F-Droid refuses it
@@ -51,6 +53,9 @@ android {
     testOptions {
         unitTests.all {
             it.useJUnitPlatform()
+            // The app's slf4j provider writes to android.util.Log, which the local tests' android.jar only stubs:
+            // a call fails there, so the records of the engine and of the libraries go nowhere in these tests.
+            it.systemProperty("slf4j.provider", "org.slf4j.helpers.NOP_FallbackServiceProvider")
         }
     }
 }
@@ -71,6 +76,8 @@ dependencies {
 
     // the engine's contract tests, with JUnit and AssertJ, for the Android implementations of its seams
     testImplementation(testFixtures(project(":engine")))
+    // the rules on which app classes may open connections or write to Logcat (AppArchitectureTest)
+    testImplementation(libs.archunit)
 
     // AndroidX Test's runner, core and JUnit 4 rules, for the instrumented tests on a device or emulator
     // (the emulator job)
