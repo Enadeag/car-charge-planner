@@ -24,6 +24,18 @@ android {
         all {
             vcsInfo.include = false
         }
+        // en-XA (longer, accented texts) and ar-XB (right to left) to try the screens with; never in a release
+        debug {
+            isPseudoLocalesEnabled = true
+        }
+    }
+
+    // The languages are the values-<code> folders and English, once: they decide the per-app language list
+    // (the generated locales_config.xml, which the manifest gets by itself) and keep libraries' other languages out.
+    androidResources {
+        generateLocaleConfig = true
+        localeFilters += listOf("en") + file("src/main/res").listFiles().orEmpty()
+            .map { it.name }.filter { it.matches(Regex("values-[a-z]{2,3}")) }.map { it.removePrefix("values-") }.sorted()
     }
 
     compileOptions {
@@ -48,6 +60,9 @@ android {
     lint {
         abortOnError = true
         error += "NewApi"
+        // a text missing or left over in a language, a placeholder that does not match, a plural without its forms
+        error += listOf("MissingTranslation", "ExtraTranslation", "StringFormatMatches", "StringFormatInvalid",
+            "StringFormatCount", "MissingQuantity", "UnusedQuantity", "ImpliedQuantity")
     }
 
     testOptions {
@@ -58,6 +73,16 @@ android {
             it.systemProperty("slf4j.provider", "org.slf4j.helpers.NOP_FallbackServiceProvider")
         }
     }
+}
+
+// StringsResourcesTest reads the resources, so a changed text runs it again, and the language list that the release
+// build hands Android, as the build makes it
+tasks.withType<Test>().configureEach {
+    inputs.dir("src/main/res").withPropertyName("resources")
+    dependsOn("generateReleaseLocaleConfig")
+    systemProperty("release.locale.config",
+        layout.buildDirectory.file("generated/res/localeConfig/release/xml/_generated_res_locale_config.xml")
+            .get().asFile.path)
 }
 
 kotlin {
