@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.android
 
 import com.tngtech.archunit.base.DescribedPredicate
+import com.tngtech.archunit.core.domain.AccessTarget
 import com.tngtech.archunit.core.domain.JavaAccess
 import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.domain.JavaClasses
@@ -87,6 +88,28 @@ class AppArchitectureTest {
                 "setDefaultSSLSocketFactory", "setHostnameVerifier", "setDefaultHostnameVerifier")
         }
 
+        val CHANGE_THE_NETWORK_OF_THE_PROCESS = DescribedPredicate.describe<JavaAccess<*>>(
+            "change how every connection of the process works (the default proxy selector, authenticator, cookie "
+                + "handler or response cache, URL's stream handlers, URLConnection's content handlers, following "
+                + "redirects for every HttpURLConnection)") { access ->
+            val owner = access.targetOwner.name
+            owner in setOf("java.net.ProxySelector", "java.net.Authenticator", "java.net.CookieHandler",
+                "java.net.ResponseCache") && access.name == "setDefault"
+                || owner == "java.net.URL" && access.name == "setURLStreamHandlerFactory"
+                || owner == "java.net.URLConnection" && access.name == "setContentHandlerFactory"
+                || owner == "java.net.HttpURLConnection" && access.name == "setFollowRedirects"
+        }
+
+        val WRITE_PAST_SLF4J = DescribedPredicate.describe<JavaAccess<*>>(
+            "write to the console (System.out, System.err, Kotlin's print and println) or print a stack trace there "
+                + "(printStackTrace())") { access ->
+            val owner = access.targetOwner.name
+            owner == "java.lang.System" && access.name in setOf("out", "err")
+                || owner == "kotlin.io.ConsoleKt" && access.name in setOf("print", "println")
+                || access.name == "printStackTrace"
+                && (access.target as? AccessTarget.CodeUnitAccessTarget)?.rawParameterTypes?.isEmpty() == true
+        }
+
         val THE_HTTP_GET = DescribedPredicate.describe<JavaClass>("are the app's HttpGet or nested in it") { type ->
             type.name == HTTP_GET || type.name.startsWith("$HTTP_GET$")
         }
@@ -123,11 +146,21 @@ class AppArchitectureTest {
     }
 
     @Test
+    fun noClassChangesTheNetworkOfTheWholeApp() {
+        noClasses()
+            .should().accessTargetWhere(CHANGE_THE_NETWORK_OF_THE_PROCESS)
+            .because("such a setting reaches every connection, AndroidHttpGet's too, around the contract it keeps on "
+                + "redirects and what it sends")
+            .check(APP_CLASSES)
+    }
+
+    @Test
     fun theAppLogsThroughSlf4jAndOnlyItsSinkWritesToLogcat() {
         noClasses().that().doNotHaveFullyQualifiedName(LOGCAT_SINK)
             .should().dependOnClassesThat().haveFullyQualifiedName("android.util.Log")
             .orShould().dependOnClassesThat().resideInAPackage("java.util.logging..")
             .orShould().dependOnClassesThat().haveFullyQualifiedName("java.lang.System\$Logger")
+            .orShould().accessTargetWhere(WRITE_PAST_SLF4J)
             .because("the app logs through slf4j, as the engine does, so its records and the engine's go to Logcat "
                 + "one way, at the build's level")
             .check(APP_CLASSES)
