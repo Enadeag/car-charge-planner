@@ -139,7 +139,7 @@ The Android app's texts are Android string resources, in `android/app/src/main/r
 
 ### Trying the pseudo-locales
 
-The debug build has two made-up languages, `en-XA` (English with accents and extra length, to see where a text is cut off or a screen has a fixed size) and `ar-XB` (mirrored, right to left, to see the layout flip). An English text that shows without accents in `en-XA` is not a resource but written into the code. They are never in the release build. They show in the system's language list, and in the app's language list on Android 13 and later, of debug builds only; the release build offers English and the `values-*` languages. Always try a language on a debug build, where you can also see the pseudo-locales.
+The debug build has two made-up languages, `en-XA` (English with accents and extra length, to see where a text is cut off or a screen has a fixed size) and `ar-XB` (mirrored, right to left, to see the layout flip). An English text that shows without accents in `en-XA` is not a resource but written into the code. They are never in the release build, which offers English and the `values-*` languages only. To pick one on Android 13 and later, open the app's own language (Settings, Apps, Car charge planner, Language): a debug build lists the pseudo-locales there. On an older phone, turn on Developer options and pick one as the phone's language; Android lists them there only with Developer options on. Always try a language on a debug build. (These steps are not yet tried on a device.)
 
 ### Adding a language to the Android app
 
