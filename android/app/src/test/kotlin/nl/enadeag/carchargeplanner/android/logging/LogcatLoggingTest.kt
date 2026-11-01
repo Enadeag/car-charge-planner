@@ -8,6 +8,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
+import org.junit.jupiter.params.provider.ValueSource
 import org.slf4j.event.Level
 import org.slf4j.spi.SLF4JServiceProvider
 
@@ -42,7 +43,6 @@ class LogcatLoggingTest {
         assertThat(written.map { it.level }).containsExactly(Level.DEBUG)
     }
 
-    /** The local tests run against the debug build, so the provider slf4j would use writes from DEBUG. */
     @Test
     fun theProviderTakesItsLevelFromTheBuild() {
         val provider = LogcatServiceProvider()
@@ -50,8 +50,8 @@ class LogcatLoggingTest {
 
         val log = provider.loggerFactory.getLogger("Initialized")
 
-        assertThat(BuildConfig.DEBUG).isTrue()
-        assertThat(log.isDebugEnabled).isTrue()
+        assertThat(log.isDebugEnabled).isEqualTo(BuildConfig.DEBUG)
+        assertThat(log.isInfoEnabled).isTrue()
         assertThat(log.isTraceEnabled).isFalse()
     }
 
@@ -135,6 +135,18 @@ class LogcatLoggingTest {
         assertThat(parts).hasSizeGreaterThan(1).allMatch { it.length <= LogcatSink.MOST_PER_ENTRY }
         assertThat(parts).allMatch { it.startsWith(line) && it.endsWith(")") }
         assertThat(parts.joinToString("\n")).isEqualTo(message)
+    }
+
+    /** A line end just at the most an entry takes, and one just past it. */
+    @ParameterizedTest
+    @ValueSource(ints = [0, 1])
+    fun aLineEndAtTheLimitStillGivesPartsThatFit(pastTheLimit: Int) {
+        val message = "a".repeat(LogcatSink.MOST_PER_ENTRY + pastTheLimit) + "\n" + "b".repeat(10)
+
+        val parts = LogcatSink.parts(message)
+
+        assertThat(parts).allMatch { it.length <= LogcatSink.MOST_PER_ENTRY }
+        assertThat(parts.joinToString("").replace("\n", "")).isEqualTo(message.replace("\n", ""))
     }
 
     @Test
