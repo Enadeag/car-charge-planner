@@ -10,5 +10,10 @@ public enum KeyStorage {
      * No usable keychain, the owner chose not to unlock it, or the file could not be moved into it: a file readable
      * only by the owner.
      */
-    FILE
+    FILE,
+    /**
+     * No usable keychain, and no file to keep the keys in: they can be neither read nor saved until the keychain can
+     * be used again. Never on the desktop, which keeps them in the file.
+     */
+    UNAVAILABLE
 }

@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.settings.form;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
@@ -54,5 +55,13 @@ class KeysNoteTest {
     void aProblemThatSaysTheKeychainIsLockedIsSaidAsSoEvenBeforeTheStorageKnows() {
         assertThat(KeysNote.of(KeyStorage.KEYCHAIN, SecretsProblem.Kind.LOCKED, FILE, ENGLISH))
                 .isEqualTo(KeysNote.of(KeyStorage.LOCKED_KEYCHAIN, FILE, ENGLISH));
+    }
+
+    @Test
+    void keysThatCannotBeKeptAnywhereAreNeverTheDesktopsAsItKeepsAFile() {
+        assertThatThrownBy(() -> KeysNote.of(KeyStorage.UNAVAILABLE, FILE, ENGLISH))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> KeysNote.of(KeyStorage.UNAVAILABLE, SecretsProblem.Kind.FAILED, FILE, ENGLISH))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

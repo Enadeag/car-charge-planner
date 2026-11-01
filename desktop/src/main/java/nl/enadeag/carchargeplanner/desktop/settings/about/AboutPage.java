@@ -48,7 +48,9 @@ public final class AboutPage implements Page {
     /**
      * Shows the page, with where the API keys are kept now.
      *
-     * @param keyStorage whether the keys are in the system keychain, in the locked keychain or in the file
+     * @param keyStorage whether the keys are in the system keychain, in the locked keychain or in the file; never
+     *     {@link KeyStorage#UNAVAILABLE}, which needs an app without a file to fall back to, and the desktop has one
+     * @throws IllegalArgumentException when the storage is {@link KeyStorage#UNAVAILABLE}
      */
     public void show(KeyStorage keyStorage) {
         view.show(
@@ -92,6 +94,8 @@ public final class AboutPage implements Page {
             case KEYCHAIN -> messages.text(TextKey.ABOUT_KEYS_KEYCHAIN);
             case LOCKED_KEYCHAIN -> messages.text(TextKey.ABOUT_KEYS_LOCKED);
             case FILE -> messages.text(TextKey.ABOUT_KEYS_FILE, file.toString());
+            case UNAVAILABLE -> throw new IllegalArgumentException(
+                    "the desktop keeps the API keys in a file when the keychain cannot be used, so never " + storage);
         };
     }
 
