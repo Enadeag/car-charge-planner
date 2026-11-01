@@ -1,0 +1,42 @@
+# Every version the Android build uses. Jackson, slf4j, JUnit and AssertJ are the Maven build's versions
+# (pom.xml): a Maven bump of one of them updates this file in the same pull request, and the engine's
+# checkMavenDrift task fails when the two differ.
+[versions]
+# the oldest Android the app runs on (Android 8) and the API it is compiled against, for :app and :engine-lint
+android-min-sdk = "26"
+android-compile-sdk = "36"
+agp = "9.4.1"
+kotlin = "2.4.21"
+compose-bom = "2026.06.01"
+activity-compose = "1.13.0"
+desugar-jdk-libs = "2.1.5"
+jackson = "3.2.3"
+slf4j = "2.0.20"
+junit = "6.1.3"
+assertj = "3.27.7"
+
+[libraries]
+jackson-bom = { module = "tools.jackson:jackson-bom", version.ref = "jackson" }
+jackson-databind = { module = "tools.jackson.core:jackson-databind" }
+jackson-core = { module = "tools.jackson.core:jackson-core" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api" }
+junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params" }
+junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
+desugar-jdk-libs-nio = { module = "com.android.tools:desugar_jdk_libs_nio", version.ref = "desugar-jdk-libs" }
+
+[bundles]
+# the engine's own libraries, for :engine and :engine-lint alike; the BOM comes with them as a platform
+engine = ["jackson-databind", "jackson-core", "slf4j-api"]
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+android-library = { id = "com.android.library", version.ref = "agp" }

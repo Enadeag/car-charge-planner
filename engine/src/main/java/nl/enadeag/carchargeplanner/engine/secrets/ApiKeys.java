@@ -4,7 +4,6 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.InstantSource;
 import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
@@ -60,7 +59,7 @@ public final class ApiKeys implements SecretsSource {
     private final Keychain keychain;
     private final KeychainEntries entries;
     private final SecretsFile file;
-    private final InstantSource clock;
+    private final Clock clock;
     private final Object turn = new Object();
     /** Held for a whole save, which may wait for the owner without holding the turn, so saves never mix. */
     private final Object saving = new Object();
@@ -85,14 +84,15 @@ public final class ApiKeys implements SecretsSource {
     }
 
     /**
-     * Makes the store; nothing is read or written yet.
+     * Makes the store; nothing is read or written yet. It takes a {@link Clock}, not an {@code InstantSource}, which
+     * Android has only from Android 14 on and desugaring does not add (ADR 0010).
      *
      * @param keychain the system's keychain, or {@link NoKeychain} where there is none
      * @param file where the keys go when the keychain cannot be used
-     * @param clock tells when a keychain that failed may be asked again; never null
+     * @param clock tells when a keychain that failed may be asked again; only its instant is used; never null
      * @throws IllegalArgumentException when the clock is null
      */
-    public ApiKeys(Keychain keychain, SecretsFile file, InstantSource clock) {
+    public ApiKeys(Keychain keychain, SecretsFile file, Clock clock) {
         if (clock == null) {
             throw new IllegalArgumentException("the clock must not be null");
         }

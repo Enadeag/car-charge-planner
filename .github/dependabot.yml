@@ -1,6 +1,6 @@
-# Dependabot proposes new versions of the libraries and plugins in pom.xml and of the actions in the workflows, as pull
-# requests. A version update waits a week after its release; a security update (switched on in the repository's
-# settings) does not wait.
+# Dependabot proposes new versions of the libraries and plugins in pom.xml, of those of the Android build (android/,
+# its version catalog), and of the actions in the workflows, as pull requests. A version update waits a week after its
+# release; a security update (switched on in the repository's settings) does not wait.
 version: 2
 updates:
   - package-ecosystem: maven
@@ -10,6 +10,20 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
+  # The engine's libraries (Jackson, slf4j, JUnit, AssertJ) come in through Maven: a Maven update changes the catalog in
+  # the same pull request, and the engine's checkMavenDrift task fails when the two differ.
+  - package-ecosystem: gradle
+    directory: /android
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "tools.jackson*"
+      - dependency-name: "org.slf4j:*"
+      - dependency-name: "org.junit*"
+      - dependency-name: "org.assertj:*"
   - package-ecosystem: github-actions
     directory: /
     schedule:

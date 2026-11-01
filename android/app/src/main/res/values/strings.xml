@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_name">Car charge planner</string>
+  <!-- %1$s the time the plan is made, written for the phone's language; %2$d the battery level in percent -->
+  <string name="skeleton_intro">A first look at the app: the plan for a made-up home on a made-up sunny day,
+    as of %1$s, with the battery level at %2$d%%.</string>
+  <string name="todays_windows">Today\'s charge windows</string>
+  <string name="no_window_today">No charge window today.</string>
+  <!-- %1$s and %2$s the start and end time; %3$.1f the charge power in kW; %4$d the solar share in percent -->
+  <string name="charge_window">%1$s to %2$s: %3$.1f kW, %4$d%% solar</string>
+  <string name="json_check">The car in JSON</string>
+  <string name="json_read_back_same">Read back: the same car.</string>
+  <string name="json_read_back_changed">Read back: a different car.</string>
+</resources>
