@@ -23,8 +23,9 @@ concurrency:
 
 jobs:
   # Decides which jobs a pull request needs. A skipped job counts as passed, so a ruleset that requires them does not
-  # block a pull request that does not touch the app.
-  changes:
+  # block a pull request that does not touch the app. The job names start with android-, as a ruleset tells checks
+  # apart by name only, and ci.yml has a job called changes that main requires.
+  android-changes:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -71,9 +72,9 @@ jobs:
           echo "build=$build" >> "$GITHUB_OUTPUT"
           echo "emulator=$emulator" >> "$GITHUB_OUTPUT"
 
-  build:
-    needs: changes
-    if: needs.changes.outputs.build == 'true'
+  android-build:
+    needs: android-changes
+    if: needs.android-changes.outputs.build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -116,9 +117,9 @@ jobs:
             android/*/build/test-results/
           retention-days: 7
 
-  emulator:
-    needs: changes
-    if: needs.changes.outputs.emulator == 'true'
+  android-emulator:
+    needs: android-changes
+    if: needs.android-changes.outputs.emulator == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
