@@ -30,7 +30,7 @@ The app also takes the commands `quit` (asks the running app to quit), `test-not
 
 ### The Android app
 
-The Android app ([ADR 0010](docs/adr/0010-android-app.md)) is built with Gradle in `android/`, apart from Maven. Gradle runs on a JDK 21 (`JAVA_HOME`); the engine is still compiled with `--release 17`. It also needs the Android SDK with platform 36 and its build-tools, which Android Studio installs: name its folder in `sdk.dir` in `android/local.properties` (git ignores the file) or in `ANDROID_HOME`. The Gradle wrapper checks the Gradle it downloads against `distributionSha256Sum` in `android/gradle/wrapper/gradle-wrapper.properties`, and every version the build uses is in `android/gradle/libs.versions.toml`.
+The Android app ([ADR 0010](docs/adr/0010-android-app.md)) is built with Gradle in `android/`, apart from Maven. Gradle runs on a JDK 21 (`JAVA_HOME`); the engine is still compiled with `--release 17`. It also needs the Android SDK with platform 36 and its build-tools, which Android Studio installs: name its folder in `sdk.dir` in `android/local.properties` (git ignores the file) or in `ANDROID_HOME`. The Gradle wrapper checks the Gradle it downloads against `distributionSha256Sum` in `android/gradle/wrapper/gradle-wrapper.properties`, and every version the build uses is in `android/gradle/libs.versions.toml`. Plugins and libraries come only from Google's repository and Maven Central (`android/settings.gradle.kts`); the Gradle Plugin Portal is left out, so a plugin found only there brings it back in its own pull request, with the reason.
 
 ```bash
 cd android && ./gradlew check assembleDebug    # build, lint and test; the APK is app/build/outputs/apk/debug/app-debug.apk

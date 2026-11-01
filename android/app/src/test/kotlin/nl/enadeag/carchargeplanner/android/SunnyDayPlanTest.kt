@@ -14,7 +14,11 @@ class SunnyDayPlanTest {
 
     private val zone = ZoneId.of("Europe/Amsterdam")
 
-    /** The plan the engine makes for a summer's day, as it made it when the skeleton was written. */
+    /**
+     * The plan the engine makes for a summer's day, as it made it when the skeleton was written: it shows that the
+     * Android build plans as the engine does on the JVM, so a deliberate change to the planner updates it in the same
+     * pull request.
+     */
     @Test
     fun aSummersDayHasTheWindowTheEngineGivesIt() {
         val windows = SunnyDayPlan.windows(LocalDate.parse("2026-06-15"), zone)
