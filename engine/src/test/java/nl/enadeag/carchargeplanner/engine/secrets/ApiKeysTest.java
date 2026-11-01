@@ -1446,13 +1446,15 @@ class ApiKeysTest {
         }
     }
 
-    static Stream<Keychain> keychainsThatCannotStore() {
-        return Stream.of(new NoKeychain(), new FailingWrites(), new RefusingWrites());
+    static Stream<Arguments> keychainsThatCannotStore() {
+        return Stream.of(Arguments.of(new NoKeychain(), KeyStorage.UNAVAILABLE),
+                Arguments.of(new FailingWrites(), KeyStorage.KEYCHAIN),
+                Arguments.of(new RefusingWrites(), KeyStorage.KEYCHAIN));
     }
 
     @ParameterizedTest
     @MethodSource("keychainsThatCannotStore")
-    void withoutAFallbackASaveTheKeychainCannotTakeFailsAndWritesNoFile(Keychain cannotStore) {
+    void withoutAFallbackASaveTheKeychainCannotTakeFailsAndWritesNoFile(Keychain cannotStore, KeyStorage after) {
         var keys = keys(cannotStore, KeyFallback.NONE);
 
         assertThatThrownBy(() -> keys.applyChanges(NEW_SOLCAST_KEY, () -> { }))
@@ -1463,7 +1465,7 @@ class ApiKeysTest {
                 problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.FAILED));
 
         assertThat(file().path()).doesNotExist();
-        assertThat(keys.storage()).isNotEqualTo(KeyStorage.FILE);
+        assertThat(keys.storage()).isEqualTo(after);
     }
 
     @Test
@@ -1518,12 +1520,17 @@ class ApiKeysTest {
 
     @Test
     void withoutAFallbackAnIndexTheKeychainRefusesToGiveIsADamagedOne() {
-        var keys = keys(holdingTheKeys(new UnreadableEntryKeychain(KeychainEntries.INDEX)), KeyFallback.NONE);
+        var refusedIndex = holdingTheKeys(new UnreadableEntryKeychain(KeychainEntries.INDEX));
+        var before = Map.copyOf(refusedIndex.entries);
+        var keys = keys(refusedIndex, KeyFallback.NONE);
 
         assertThatThrownBy(keys::load).isInstanceOfSatisfying(SecretsProblem.class,
                 problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.FAILED))
                 .hasMessageContaining("could not be read");
         assertThat(keys.storage()).isEqualTo(KeyStorage.KEYCHAIN);
+
+        assertThat(file().path()).doesNotExist();
+        assertThat(refusedIndex.entries).isEqualTo(before);
     }
 
     @Test
@@ -1550,5 +1557,54 @@ class ApiKeysTest {
 
         assertThat(keys.load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"))));
         assertThat(refusedIndex.entries).containsEntry(OPEN_METEO_ENTRY, "OM-NEW");
+    }
+
+    @Test
+    void withoutAFallbackAKeychainThatTurnsOutGoneWhenUnlockingFailsTheSaveAsOneThatCannotBeUsed() {
+        var lockable = holdingTheKeys(new LockableKeychain());
+        var before = Map.copyOf(lockable.entries);
+        lockable.locked = true;
+        lockable.unlockFails = KeychainException.Kind.UNAVAILABLE;
+
+        assertThatThrownBy(() -> keys(lockable, KeyFallback.NONE).applyChanges(NEW_SOLCAST_KEY, () -> { }))
+                .isInstanceOfSatisfying(SecretsProblem.class,
+                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.FAILED))
+                .hasMessageContaining("cannot be used");
+
+        assertThat(file().path()).doesNotExist();
+        assertThat(lockable.entries).isEqualTo(before);
+    }
+
+    @Test
+    void withoutAFallbackRemovingFromAKeychainThatCannotBeUsedFailsAndWritesNoFile() {
+        assertThatThrownBy(() -> keys(new NoKeychain(), KeyFallback.NONE).remove(CalendarLeftovers.SECRETS))
+                .isInstanceOfSatisfying(SecretsProblem.class,
+                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.FAILED));
+
+        assertThat(file().path()).doesNotExist();
+    }
+
+    @Test
+    void withoutAFallbackAFailedSaveBesideAnEntryThatCannotBeReadNeverMentionsTheFile() {
+        var keychain = holdingTheKeys(new RefusesWrites(Set.of(FORECAST_SOLAR_ENTRY)));
+        var before = Map.copyOf(keychain.entries);
+        var entered = KeyChanges.entering(new Secrets(Map.of(FORECAST_SOLAR, Map.of("api_key", "FS-NEW"))));
+
+        assertThatThrownBy(() -> keys(keychain, KeyFallback.NONE).applyChanges(entered, () -> { }))
+                .isInstanceOfSatisfying(SecretsProblem.class,
+                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.FAILED))
+                .hasMessageNotContaining("file").hasMessageNotContaining("FS-NEW");
+
+        assertThat(file().path()).doesNotExist();
+        assertThat(keychain.entries).isEqualTo(before);
+    }
+
+    @Test
+    void withTheFileAsFallbackAFailedSaveBesideAnEntryThatCannotBeReadSaysTheFileWasNotUsedEither() {
+        var keychain = holdingTheKeys(new RefusesWrites(Set.of(FORECAST_SOLAR_ENTRY)));
+        var entered = KeyChanges.entering(new Secrets(Map.of(FORECAST_SOLAR, Map.of("api_key", "FS-NEW"))));
+
+        assertThatThrownBy(() -> keys(keychain).applyChanges(entered, () -> { }))
+                .isInstanceOf(SecretsProblem.class).hasMessageContaining("not stored in the file either");
     }
 }

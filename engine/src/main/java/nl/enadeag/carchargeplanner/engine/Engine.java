@@ -444,7 +444,9 @@ public final class Engine {
      * the keychain is locked. May ask the keychain, which can take a few seconds: call it away from the user
      * interface's thread.
      *
-     * @return the keychain, the locked keychain, or the private file
+     * @return the keychain, the locked keychain, or the private file; or, without the file as fallback
+     *     ({@link nl.enadeag.carchargeplanner.engine.secrets.KeyFallback#NONE}), unavailable while the keychain cannot
+     *     be used
      */
     public KeyStorage keyStorage() {
         return apiKeys.storage();

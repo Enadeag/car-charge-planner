@@ -129,6 +129,11 @@ final class KeychainEntries {
         DamagedIndex() {
             super(Kind.REFUSED, "the keychain's index of names is damaged");
         }
+
+        DamagedIndex(KeychainException refusal) {
+            super(Kind.REFUSED, "the keychain refused to give its index of names (" + refusal.getMessage()
+                    + "), which counts as damaged", refusal);
+        }
     }
 
     /** The name of the entry that lists the others. */
@@ -304,7 +309,7 @@ final class KeychainEntries {
             text = keychain.read(INDEX);
         } catch (KeychainException e) {
             if (damagesTheIndex(e)) {
-                throw new DamagedIndex();
+                throw new DamagedIndex(e);
             }
             throw e;
         }

@@ -1,6 +1,9 @@
 package nl.enadeag.carchargeplanner.engine.secrets;
 
-/** Where {@link ApiKeys} keeps the API keys when the system keychain cannot be used. */
+/**
+ * Where {@link ApiKeys} keeps the API keys when the system keychain cannot be used. Unrelated to the fallback
+ * provider, the forecast provider asked when the main one fails.
+ */
 public enum KeyFallback {
     /**
      * In the private file, {@code secrets.json}, readable only by the owner; for a desktop, where a system may have no

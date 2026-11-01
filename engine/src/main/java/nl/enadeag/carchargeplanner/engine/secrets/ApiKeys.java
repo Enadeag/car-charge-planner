@@ -42,6 +42,9 @@ public final class ApiKeys implements SecretsSource {
     public static final Duration UNLOCK_WAIT = Duration.ofMinutes(2);
 
     private static final Logger LOG = LoggerFactory.getLogger(ApiKeys.class);
+    /** Why a save failed without the file as fallback when the keychain cannot be used. */
+    private static final String CANNOT_BE_USED = "The system keychain cannot be used now, so the API keys were not "
+            + "stored.";
 
     /** What an attempt to store the keys in the keychain came to. */
     private enum SaveResult {
@@ -314,11 +317,10 @@ public final class ApiKeys implements SecretsSource {
      * @return true when one of them was stored and is removed now; false when none was stored
      * @throws SecretsProblem of the kind {@link SecretsProblem.Kind#LOCKED} while the keychain is locked: the keychain
      *     may still hold an older copy, so the caller should try again once it can be read, while the file, when there
-     *     is one and it is the fallback, no longer holds them; of the kind {@link SecretsProblem.Kind#FAILED} when the
-     *     file could not be read, the keychain refused its index (with the file as fallback), the file was not
-     *     written, the keychain failed while it holds an entry it refuses to read, such as when it refuses to delete
-     *     one, or, without the file as fallback, the keychain cannot be used or failed; a damaged index counts as
-     *     holding none
+     *     is one and it is the fallback, no longer holds them. Of the kind {@link SecretsProblem.Kind#FAILED}, with the
+     *     file as fallback: when the file could not be read or was not written, the keychain refused its index, or it
+     *     failed while it holds an entry it refuses to read, such as when it refuses to delete one. Without it: when
+     *     the keychain cannot be used or failed. Either way a damaged index counts as holding none
      */
     public boolean remove(Map<ProviderId, Set<String>> names) throws SecretsProblem {
         var changes = new KeyChanges(Secrets.NONE, names);
@@ -458,8 +460,7 @@ public final class ApiKeys implements SecretsSource {
             switch (entries.state()) {
                 case UNAVAILABLE -> {
                     if (fallback == KeyFallback.NONE) {
-                        throw new SecretsProblem("The system keychain cannot be used now, so the API keys were not "
-                                + "stored.");
+                        throw new SecretsProblem(CANNOT_BE_USED);
                     }
                     intoFile(edit, "the system keychain cannot be used");
                     return SaveResult.IN_FILE;
@@ -484,8 +485,10 @@ public final class ApiKeys implements SecretsSource {
                 // entries: the save fails rather than fall back, also when deleting a removed one is refused
                 if (e.kind() != KeychainException.Kind.LOCKED && !stored.inKeychain().unreadable().isEmpty()) {
                     throw new SecretsProblem("The API keys could not be stored in the system keychain ("
-                            + e.getMessage() + "). As it holds keys that could not be read, they were not stored "
-                            + "in the file either.");
+                            + e.getMessage() + ")." + (fallback == KeyFallback.PRIVATE_FILE
+                                    ? " As it holds keys that could not be read, they were not stored in the file "
+                                            + "either."
+                                    : ""));
                 }
                 return notInKeychain(e, edit);
             }
@@ -607,10 +610,13 @@ public final class ApiKeys implements SecretsSource {
 
     /**
      * Has the system ask the owner to unlock the keychain; outside the turn, so a plan meanwhile still finds out that
-     * it is locked. No keychain after all counts as dismissed, so the keys go to the file; a keychain the app cannot
-     * have unlocked counts as not answered, so nothing is saved.
+     * it is locked. No keychain after all counts as dismissed, so the keys go to the file, or, without the file as
+     * fallback, fails the save; a keychain the app cannot have unlocked counts as not answered, so nothing is saved.
+     *
+     * @throws SecretsProblem of the kind {@link SecretsProblem.Kind#FAILED} when there turns out to be no keychain and
+     *     the file is not the fallback
      */
-    private UnlockOutcome unlock(Runnable prompting) {
+    private UnlockOutcome unlock(Runnable prompting) throws SecretsProblem {
         LOG.info("the system keychain is locked: asking to unlock it to save the API keys");
         try {
             var outcome = keychain.unlock(UNLOCK_WAIT, prompting);
@@ -622,6 +628,9 @@ public final class ApiKeys implements SecretsSource {
             return outcome;
         } catch (KeychainException e) {
             LOG.warn("the system keychain could not be unlocked: " + e.getMessage());
+            if (fallback == KeyFallback.NONE && e.kind() == KeychainException.Kind.UNAVAILABLE) {
+                throw new SecretsProblem(CANNOT_BE_USED);
+            }
             return e.kind() == KeychainException.Kind.UNAVAILABLE ? UnlockOutcome.DISMISSED : UnlockOutcome.NOT_ANSWERED;
         }
     }
