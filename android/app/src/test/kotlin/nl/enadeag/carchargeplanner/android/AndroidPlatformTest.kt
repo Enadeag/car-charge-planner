@@ -13,6 +13,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 import nl.enadeag.carchargeplanner.engine.secrets.KeychainException
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsProblem
+import nl.enadeag.carchargeplanner.engine.store.StoredJson
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.catchThrowableOfType
 import org.junit.jupiter.api.Test
@@ -46,6 +47,15 @@ class AndroidPlatformTest {
         assertThat(platform.keychainFile()).isEqualTo(noBackupFolder.resolve("keychain.json"))
         assertThat(noBackupFolder.resolve("keychain.json").readText()).doesNotContain("MADE-UP-OM-KEY")
         assertThat(platform.apiKeys().load()).isEqualTo(keys(OPEN_METEO, "MADE-UP-OM-KEY"))
+    }
+
+    @Test
+    fun theKeychainsFirstKeyIsTheAppsOwnAlias() {
+        platform.apiKeys().save(keys(OPEN_METEO, "MADE-UP-OM-KEY"))
+
+        val file = StoredJson.parse(noBackupFolder.resolve("keychain.json").readText())
+        assertThat(file.get("key").stringValue()).isEqualTo(AndroidKeystoreKeys.ALIAS)
+        assertThat(key.keys.keys).containsExactly(AndroidKeystoreKeys.ALIAS)
     }
 
     @Test

@@ -160,7 +160,7 @@ class EncryptedKeychainTest {
         keys.missNext(EncryptedKeychain.ABSENCE_CHECKS - 1)
         keychain.write(OTHER, "FS-SECRET-1")
 
-        assertThat(pauses).hasSize(2 * (EncryptedKeychain.ABSENCE_CHECKS - 1))
+        assertThat(pauses).containsExactly(500L, 500L, 500L, 500L)
         assertThat(keys.made).hasValue(1)
         assertThat(aliasOf(OTHER)).isEqualTo(FIRST)
         assertThat(keychain.read(KEY)).contains("OM-SECRET-1")
@@ -172,6 +172,7 @@ class EncryptedKeychainTest {
         keys.keys.remove(FIRST)
 
         assertThat(failure { keychain.read(KEY) }).isEqualTo(Kind.REFUSED)
+        assertThat(pauses).`as`("three looks, half a second apart").containsExactly(500L, 500L)
         keychain.write(OTHER, "FS-SECRET-1")
 
         assertThat(root().get("key").stringValue()).isEqualTo("$FIRST-2")
@@ -207,6 +208,59 @@ class EncryptedKeychainTest {
         assertThat(aliasOf(OTHER)).isEqualTo("$FIRST-3")
         assertThat(aliasOf("index")).isEqualTo("$FIRST-4")
         assertThat(keys.keys["$FIRST-2"]).isSameAs(someoneElses)
+    }
+
+    @Test
+    fun aDeleteKeepsTheNewKeyInUse() {
+        keychain.write(KEY, "OM-SECRET-1")
+        keys.keys.remove(FIRST)
+        keychain.write(OTHER, "FS-SECRET-1")
+
+        keychain.delete(OTHER)
+        keychain.write("index", "[]")
+
+        assertThat(root().get("key").stringValue()).isEqualTo("$FIRST-2")
+        assertThat(aliasOf("index")).isEqualTo("$FIRST-2")
+    }
+
+    @Test
+    fun aNewKeyPassesOverAnAliasAnEntryNamesThoughItsKeyIsGone() {
+        keychain.write(KEY, "OM-SECRET-1")
+        keys.keys.remove(FIRST)
+        keychain.write(OTHER, "FS-SECRET-1")
+        keys.keys.remove("$FIRST-2")
+        val root = root().put("key", FIRST)
+        file.writeText(StoredJson.compact(root))
+
+        keychain.write("index", "[]")
+
+        assertThat(aliasOf("index")).isEqualTo("$FIRST-3")
+    }
+
+    @Test
+    fun aNewKeyPassesOverAnAliasWhoseKeyIsLostForGood() {
+        keychain.write(KEY, "OM-SECRET-1")
+        keys.keys.remove(FIRST)
+        keys.lostForGood = { it is UnrecoverableKeyException }
+        keys.fail("$FIRST-2", UnrecoverableKeyException("the key's data is corrupted"))
+
+        keychain.write(OTHER, "FS-SECRET-1")
+
+        assertThat(aliasOf(OTHER)).isEqualTo("$FIRST-3")
+    }
+
+    @Test
+    fun whenNoAliasIsFreeANewKeyIsUnavailableAndNothingChanges() {
+        keychain.write(KEY, "OM-SECRET-1")
+        val before = file.readText()
+        keys.lostForGood = { it is UnrecoverableKeyException }
+        for (number in 1..EncryptedKeychain.MAX_ALIASES + 1) {
+            keys.fail(if (number == 1) FIRST else "$FIRST-$number", UnrecoverableKeyException("corrupted"))
+        }
+
+        assertThat(failure { keychain.write(OTHER, "FS-SECRET-1") }).isEqualTo(Kind.UNAVAILABLE)
+
+        assertThat(file.readText()).isEqualTo(before)
     }
 
     @Test
@@ -349,6 +403,48 @@ class EncryptedKeychainTest {
         assertThat(keychain.read(KEY)).contains("OM-SECRET-1")
     }
 
+    /** A version is written as a whole number, as the engine's files have it; `1.0` is not one. */
+    @ParameterizedTest
+    @ValueSource(doubles = [1.5, 1.0])
+    fun aFileWhoseVersionIsNotAWholeNumberIsNotReadAsVersion1(version: Double) {
+        keychain.write(KEY, "OM-SECRET-1")
+        file.writeText(StoredJson.compact(root().put("version", version)))
+
+        assertThat(failure { keychain.read(KEY) }).isEqualTo(Kind.REFUSED)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["other", "keychain-1", "keychain-0", "keychain-02", "keychain-x", "keychain-", "keychain2"])
+    fun aFileWhoseKeyIsNotOfThisStoresFormIsRefused(alias: String) {
+        keychain.write(KEY, "OM-SECRET-1")
+        file.writeText(StoredJson.compact(root().put("key", alias)))
+
+        assertThat(failure { keychain.read(KEY) }).isEqualTo(Kind.REFUSED)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["other", "keychain-1", "keychain-x"])
+    fun anEntryWhoseKeyIsNotOfThisStoresFormIsRefusedAndTheOthersStayReadable(alias: String) {
+        keychain.write(KEY, "OM-SECRET-1")
+        keychain.write(OTHER, "FS-SECRET-1")
+        replaceEntries { (it.get(KEY) as ObjectNode).put("key", alias) }
+
+        assertThat(failure { keychain.read(KEY) }).isEqualTo(Kind.REFUSED)
+        assertThat(keychain.read(OTHER)).contains("FS-SECRET-1")
+    }
+
+    @Test
+    fun deletingANameThatIsNotThereLeavesTheFileAlone() {
+        keychain.write(KEY, "OM-SECRET-1")
+        val before = Files.getAttribute(file, "fileKey")
+        val modified = Files.getLastModifiedTime(file)
+
+        keychain.delete(OTHER)
+
+        assertThat(Files.getAttribute(file, "fileKey")).isEqualTo(before)
+        assertThat(Files.getLastModifiedTime(file)).isEqualTo(modified)
+    }
+
     @Test
     fun aFileThatIsNotUtf8IsRefusedAndReplacedByTheNextWrite() {
         Files.createDirectories(file.parent)
@@ -409,7 +505,17 @@ class EncryptedKeychainTest {
 
     @Test
     fun twoStoresOnOneFileWritingAtOnceKeepEveryEntry() {
-        val stores = listOf(store(), store())
+        writeAtOnceThrough(store(), store())
+    }
+
+    @Test
+    fun twoStoresOnOneFileNamedInTwoWaysShareTheirLock() {
+        val roundabout = folder.resolve("no_backup").resolve("..").resolve("no_backup")
+            .resolve(EncryptedKeychain.FILE_NAME)
+        writeAtOnceThrough(store(), EncryptedKeychain(roundabout, PrivateFiles(FilePrivacy.NONE), keys, FIRST))
+    }
+
+    private fun writeAtOnceThrough(vararg stores: EncryptedKeychain) {
         val names = (0 until 16).map { "forecast/thread-$it/api_key" }
         val threads = Executors.newFixedThreadPool(8)
         try {

@@ -19,9 +19,10 @@ import javax.crypto.SecretKey;
  * keys without a prompt; randomized encryption is required, so every value gets a new IV.
  *
  * <p>A key counts as lost for good only when the Keystore has invalidated it
- * ({@link KeyPermanentlyInvalidatedException}) or, from Android 13 on, cannot load it as its data is corrupted ({@link UnrecoverableKeyException} caused by a
- * {@code android.security.KeyStoreException} with {@code ERROR_KEY_CORRUPTED}). Every other failure, such as an
- * {@link UnrecoverableKeyException} before Android 13, which does not say why, may pass.
+ * ({@link KeyPermanentlyInvalidatedException}) or, from Android 13 on, cannot load it as its data is corrupted
+ * ({@link UnrecoverableKeyException} caused by a {@code android.security.KeyStoreException} with
+ * {@code ERROR_KEY_CORRUPTED}). Every other failure, such as an {@link UnrecoverableKeyException} before Android 13,
+ * which does not say why, may pass.
  */
 public final class AndroidKeystoreKeys implements KeychainKeys {
 
@@ -79,7 +80,8 @@ public final class AndroidKeystoreKeys implements KeychainKeys {
         }
         for (var cause = failure.getCause(); cause != null; cause = cause.getCause()) {
             if (cause instanceof android.security.KeyStoreException keystore) {
-                return keystore.getNumericErrorCode() == android.security.KeyStoreException.ERROR_KEY_CORRUPTED;
+                return keystore.getNumericErrorCode()
+                        == android.security.KeyStoreException.ERROR_KEY_CORRUPTED;
             }
         }
         return false;

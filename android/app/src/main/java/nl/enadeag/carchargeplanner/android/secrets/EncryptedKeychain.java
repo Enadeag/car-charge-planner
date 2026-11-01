@@ -49,8 +49,9 @@ import tools.jackson.databind.node.ObjectNode;
  * <ul>
  *   <li>{@code REFUSED}: the entry's key missing after every look, or lost for good ({@link KeychainKeys#lostForGood});
  *       an entry that fails its check ({@link AEADBadTagException}: changed, moved to another name, or encrypted with
- *       another key); an entry that is not this format or does not decrypt to UTF-8; a file that is not this format
- *       (not UTF-8, not JSON, no whole version from 1, no key, no entries), on a read or a delete; a file written by a
+ *       another key); an entry that is not this format (an alias not of this store's form included) or does not
+ *       decrypt to UTF-8; a file that is not this format (not UTF-8, not JSON, no whole version from 1, no alias of
+ *       this store's form, no entries), on a read or a delete; a file written by a
  *       newer version of the app; a value that UTF-8 cannot hold, such as a lone surrogate.</li>
  *   <li>{@code UNAVAILABLE}: the file could not be read or written ({@link IOException}); a key could not be got,
  *       made or used for a reason that may pass (any other {@link GeneralSecurityException}, such as a busy Keystore);
@@ -59,7 +60,8 @@ import tools.jackson.databind.node.ObjectNode;
  * </ul>
  * A write over a file that is not this format replaces it; a file of a newer version is never overwritten. Neither a
  * value nor a key ever appears in a message or the log. Safe to use from several threads, also through several
- * instances on one file: one call at a time per file.
+ * instances on one file: one call at a time per file. A call may block for about a second while it looks again for a
+ * missing key, so it belongs off the main thread.
  */
 public final class EncryptedKeychain implements Keychain {
 
@@ -72,8 +74,10 @@ public final class EncryptedKeychain implements Keychain {
     /** How often a key is looked for before it counts as missing, while entries need it. */
     static final int ABSENCE_CHECKS = 3;
 
+    /** How many aliases after the one in use are tried for a new key. */
+    static final int MAX_ALIASES = 1000;
+
     private static final long ABSENCE_PAUSE_MILLIS = 500;
-    private static final int MAX_ALIASES = 1000;
     private static final Logger LOG = LoggerFactory.getLogger(EncryptedKeychain.class);
     /** One lock per file, so that two stores on one file never write it at once. */
     private static final ConcurrentMap<Path, Object> LOCKS = new ConcurrentHashMap<>();
@@ -162,7 +166,7 @@ public final class EncryptedKeychain implements Keychain {
             try {
                 var contents = readFile();
                 if (contents.damage() != null) {
-                    throw refused(file + " cannot be read: " + contents.damage(), null);
+                    throw refused(file + " cannot be read: " + contents.damage());
                 }
                 var stored = contents.entries().get(name);
                 return stored == null ? Optional.empty() : Optional.of(open(name, stored));
@@ -200,7 +204,7 @@ public final class EncryptedKeychain implements Keychain {
             try {
                 var contents = readFile();
                 if (contents.damage() != null) {
-                    throw refused(file + " cannot be read: " + contents.damage(), null);
+                    throw refused(file + " cannot be read: " + contents.damage());
                 }
                 if (contents.entries().remove(name) != null) {
                     save(contents.entries(), contents.alias());
@@ -241,11 +245,11 @@ public final class EncryptedKeychain implements Keychain {
         }
         if (version.intValue() > VERSION) {
             throw refused(file + " was written by a newer version of the app (file version " + version.intValue()
-                    + "; this version reads up to " + VERSION + ")", null);
+                    + "; this version reads up to " + VERSION + ")");
         }
         var alias = object.get(KEY_FIELD);
-        if (alias == null || !alias.isString() || alias.stringValue().isEmpty()) {
-            return damaged("it names no key");
+        if (alias == null || !alias.isString() || number(alias.stringValue()) == 0) {
+            return damaged("it names no key of this keychain");
         }
         if (!(object.get(ENTRIES_FIELD) instanceof ObjectNode entries)) {
             return damaged("it has no entries");
@@ -271,7 +275,8 @@ public final class EncryptedKeychain implements Keychain {
         var alias = stored.get(KEY_FIELD);
         var value = stored.get(VALUE_FIELD);
         byte[] bytes = null;
-        if (alias != null && alias.isString() && value != null && value.isString()) {
+        if (alias != null && alias.isString() && number(alias.stringValue()) != 0 && value != null
+                && value.isString()) {
             try {
                 bytes = Base64.getDecoder().decode(value.stringValue());
             } catch (IllegalArgumentException ignored) {
@@ -279,11 +284,11 @@ public final class EncryptedKeychain implements Keychain {
             }
         }
         if (bytes == null || bytes.length < IV_BYTES + TAG_BITS / Byte.SIZE) {
-            throw refused("the entry " + name + " is not an encrypted value", null);
+            throw refused("the entry " + name + " is not an encrypted value");
         }
         var found = find(alias.stringValue(), true);
         if (found.key() == null) {
-            throw refused("the key of the entry " + name + (found.lost() ? " is lost for good" : " is gone"), null);
+            throw refused("the key of the entry " + name + (found.lost() ? " is lost for good" : " is gone"));
         }
         try {
             var cipher = Cipher.getInstance(CIPHER);
@@ -335,35 +340,37 @@ public final class EncryptedKeychain implements Keychain {
         }
     }
 
-    /** The entry: the value encrypted under the key in use, or under a new key when that one is gone. */
+    /**
+     * The entry: the value encrypted under the key in use; under a new key when that one is lost for good, or missing
+     * while entries need it. At most two keys are tried.
+     */
     private ObjectNode seal(String name, byte[] plain, Contents contents) throws KeychainException {
         var alias = contents.alias();
         var needed = uses(contents.entries(), alias);
         var found = find(alias, needed);
-        boolean made = false;
-        if (found.key() == null) {
-            if (found.lost() || needed) {
-                LOG.warn("the keychain's key " + alias + (found.lost() ? " is lost for good" : " is gone")
-                        + ": a new key encrypts the values from now on; the entries of the old one are kept");
-                alias = newAlias(contents);
-            }
-            found = new Lookup(make(alias), false);
-            made = true;
+        if (found.key() == null && !found.lost() && !needed) {
+            return sealed(name, plain, alias, make(alias));
         }
-        try {
-            return entry(alias, sealWith(found.key(), name, plain));
-        } catch (GeneralSecurityException e) {
-            if (made || !keys.lostForGood(e)) {
-                throw unavailable("could not encrypt the entry " + name, e);
+        if (found.key() != null) {
+            try {
+                return entry(alias, sealWith(found.key(), name, plain));
+            } catch (GeneralSecurityException e) {
+                if (!keys.lostForGood(e)) {
+                    throw unavailable("could not encrypt the entry " + name, e);
+                }
             }
         }
-        LOG.warn("the keychain's key " + alias + " is lost for good: a new key encrypts the values from now on; the "
+        LOG.warn("the keychain's key " + alias + " is lost or gone: a new key encrypts the values from now on; the "
                 + "entries of the old one are kept");
-        alias = newAlias(contents);
+        var renewed = newAlias(contents);
+        return sealed(name, plain, renewed, make(renewed));
+    }
+
+    private static ObjectNode sealed(String name, byte[] plain, String alias, SecretKey key) throws KeychainException {
         try {
-            return entry(alias, sealWith(make(alias), name, plain));
+            return entry(alias, sealWith(key, name, plain));
         } catch (GeneralSecurityException e) {
-            throw unavailable("could not encrypt the entry " + name + " with a new key", e);
+            throw unavailable("could not encrypt the entry " + name + " with the new key " + alias, e);
         }
     }
 
@@ -380,14 +387,7 @@ public final class EncryptedKeychain implements Keychain {
     /** The next alias after the one in use that no entry names and that holds no key, so no key is ever replaced. */
     private String newAlias(Contents contents) throws KeychainException {
         var current = contents.alias();
-        int number = 1;
-        if (current.startsWith(firstAlias + "-")) {
-            try {
-                number = Integer.parseInt(current.substring(firstAlias.length() + 1));
-            } catch (NumberFormatException ignored) {
-                // an alias of another form counts as the first
-            }
-        }
+        int number = number(current);
         for (int next = number + 1; next <= number + MAX_ALIASES; next++) {
             var candidate = firstAlias + "-" + next;
             var found = find(candidate, false);
@@ -396,6 +396,22 @@ public final class EncryptedKeychain implements Keychain {
             }
         }
         throw unavailable("found no free alias for a new key after " + current, null);
+    }
+
+    /**
+     * The number of one of this store's aliases: 1 for the first, n for {@code <first>-n}, from 2 up to a million;
+     * 0 for an alias of another form.
+     */
+    private int number(String alias) {
+        if (alias.equals(firstAlias)) {
+            return 1;
+        }
+        var prefix = firstAlias + "-";
+        if (!alias.startsWith(prefix) || !alias.substring(prefix.length()).matches("[1-9][0-9]{0,5}")) {
+            return 0;
+        }
+        var number = Integer.parseInt(alias.substring(prefix.length()));
+        return number >= 2 ? number : 0;
     }
 
     private static boolean uses(ObjectNode entries, String alias) {
@@ -442,6 +458,10 @@ public final class EncryptedKeychain implements Keychain {
 
     private static KeychainException failed(RuntimeException e) {
         return unavailable("the keychain failed", e);
+    }
+
+    private static KeychainException refused(String message) {
+        return new KeychainException(KeychainException.Kind.REFUSED, message);
     }
 
     private static KeychainException refused(String message, Throwable cause) {
