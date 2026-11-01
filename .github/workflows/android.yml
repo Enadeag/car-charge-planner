@@ -50,14 +50,17 @@ jobs:
               if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
                 build=true
               else
-                files=$(git diff --name-only "$BASE" "$GITHUB_SHA")
-                echo "$files"
-                while IFS= read -r file; do
+                # unquoted names (a non-ASCII name stays as it is), NUL-separated, and a move as its two paths; into a
+                # file first, so a failing git diff fails the step
+                list=$(mktemp)
+                git -c core.quotePath=false diff --name-only -z --no-renames "$BASE" "$GITHUB_SHA" > "$list"
+                while IFS= read -r -d '' file; do
+                  printf '%s\n' "$file"
                   case "$file" in
                     .github/workflows/android.yml) build=true; emulator=true ;;
                     android/*|engine/src/*|pom.xml|*/pom.xml) build=true ;;
                   esac
-                done <<< "$files"
+                done < "$list"
               fi
               ;;
             push)
@@ -135,6 +138,7 @@ jobs:
         with:
           cache-provider: basic
           cache-read-only: true
+      # the same as in android-build
       - name: Android SDK platform 36 and build-tools 36.0.0
         run: |
           sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
@@ -153,7 +157,8 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-26-default-x86_64
+          # names the emulator action's version: update it with the action's pin, so a new version makes a new AVD
+          key: avd-26-default-x86_64-emulator-runner-v2.38.0
       # On a cache miss: boot the new AVD once and keep its snapshot, so the next runs start from it.
       - name: Create the AVD and its snapshot
         if: steps.avd-cache.outputs.cache-hit != 'true'
@@ -166,8 +171,9 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: false
           script: echo "The AVD and its snapshot are made."
-      # Each script line runs in a shell of its own; logcat runs in the background, apart from the step's output, until
-      # the emulator stops.
+      # api-level, target and arch the same as in the snapshot step, or the snapshot does not match the AVD. Each script
+      # line runs in a shell of its own; logcat runs in the background, apart from the step's output, until the emulator
+      # stops.
       - name: Instrumented tests on API 26
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
