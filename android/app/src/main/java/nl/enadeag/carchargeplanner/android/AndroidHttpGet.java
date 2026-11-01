@@ -16,6 +16,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import nl.enadeag.carchargeplanner.engine.forecast.ByteSize;
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
 
@@ -23,13 +24,16 @@ import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
  * Fetches web addresses with {@link HttpURLConnection}: the Android app's {@link HttpGet}, and the one class in the app
  * that opens a network connection. Each request runs on a worker thread while the caller waits at most the request's
  * timeout; when that passes, or the caller is interrupted, the connection is dropped and the caller goes on. So the
- * timeout covers looking up the name too, which {@link HttpURLConnection}'s own timeouts leave out; those are set to
- * the request's timeout as well, so a worker that was left behind also ends.
+ * deadline frees the caller during the name lookup too, which {@link HttpURLConnection}'s own timeouts leave out; those
+ * are set to the request's timeout as well, so a worker that was left behind ends after connecting or reading. A worker
+ * stuck in the name lookup keeps its daemon thread until the resolver gives up: the pool has no bound and is never shut
+ * down, and its idle threads end after a minute.
  *
  * <p>It asks for the body without compression ({@code Accept-Encoding: identity}): Android's {@link HttpURLConnection}
  * would otherwise ask for gzip and unpack it, the JVM's would not, and the size limit counts the bytes as they come.
- * Redirects are returned, not followed; a status of 400 and up still gives its body; the body is read as UTF-8; of a
- * header sent more than once, the first value counts.
+ * The request's own headers cannot replace that or the User-Agent. Redirects are returned, not followed; a status of
+ * 400 and up still gives its body; an answer that has no body by definition (1xx, 204, 304) gives an empty one; the
+ * body is read as UTF-8; of a header sent more than once, the first value counts.
  */
 public final class AndroidHttpGet implements HttpGet {
 
@@ -38,10 +42,12 @@ public final class AndroidHttpGet implements HttpGet {
 
     private static final int CHUNK = 8 * 1024;
 
+    private final AtomicInteger threads = new AtomicInteger();
+
     // a cached pool: a request whose name lookup hangs keeps its thread until the lookup ends, without holding up the
-    // next request; idle threads end after a minute
+    // next request
     private final ExecutorService workers = Executors.newCachedThreadPool(runnable -> {
-        var thread = new Thread(runnable, "http-get");
+        var thread = new Thread(runnable, "http-get-" + threads.incrementAndGet());
         thread.setDaemon(true);
         return thread;
     });
@@ -53,18 +59,17 @@ public final class AndroidHttpGet implements HttpGet {
     @Override
     public Reply get(Request request) throws IOException, InterruptedException {
         URLConnection opened = request.uri().toURL().openConnection(); // only makes the object; nothing is sent yet
-        if (!(opened instanceof HttpURLConnection)) {
+        if (!(opened instanceof HttpURLConnection connection)) {
             throw new IOException("not a web address: " + request.uri().getScheme());
         }
-        var connection = (HttpURLConnection) opened;
         int backstop = (int) Math.max(1, Math.min(Integer.MAX_VALUE, request.timeout().toMillis()));
         connection.setConnectTimeout(backstop);
         connection.setReadTimeout(backstop);
         connection.setInstanceFollowRedirects(false);
         connection.setUseCaches(false);
+        request.headers().forEach(connection::setRequestProperty);
         connection.setRequestProperty("User-Agent", USER_AGENT);
         connection.setRequestProperty("Accept-Encoding", "identity");
-        request.headers().forEach(connection::setRequestProperty);
 
         Future<Reply> answer = workers.submit(() -> fetch(connection, request.maxBody()));
         try {
@@ -95,6 +100,10 @@ public final class AndroidHttpGet implements HttpGet {
         try {
             int status = connection.getResponseCode();
             var headers = firstValues(connection);
+            if (status < 200 || status == 204 || status == 304) {
+                // no body by definition, whatever Content-Length says: a 304 may give the full answer's length
+                return new Reply(status, "", headers);
+            }
             long declared = connection.getContentLengthLong();
             if (declared > limit.bytes()) {
                 throw new TooLarge(limit);
@@ -148,9 +157,9 @@ public final class AndroidHttpGet implements HttpGet {
      * @throws Error when the cause is one, as it is
      */
     static IOException failure(Throwable cause) {
-        if (cause instanceof Error) {
-            throw (Error) cause;
+        if (cause instanceof Error error) {
+            throw error;
         }
-        return cause instanceof IOException ? (IOException) cause : new IOException(cause);
+        return cause instanceof IOException io ? io : new IOException(cause);
     }
 }
