@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +36,8 @@ public final class ApiKeys implements SecretsSource {
     public static final Duration UNLOCK_WAIT = Duration.ofMinutes(2);
 
     private static final Logger LOG = LoggerFactory.getLogger(ApiKeys.class);
+    /** What a save that replaces every key finds stored: it reads nothing. */
+    private static final KeychainEntries.Contents NOTHING_READ = new KeychainEntries.Contents(Secrets.NONE, Map.of());
 
     /** What an attempt to store the keys in the keychain came to. */
     private enum SaveResult {
@@ -54,6 +57,9 @@ public final class ApiKeys implements SecretsSource {
 
         /** Whether what is stored now does not matter, so it need not be read. */
         boolean replaces();
+
+        /** Per provider, the setting names it removes, also ones whose entry could not be read. */
+        Map<ProviderId, Set<String>> removes();
     }
 
     private final Keychain keychain;
@@ -167,11 +173,12 @@ public final class ApiKeys implements SecretsSource {
     /**
      * Moves the keys from the file into the keychain, when there is a file and the keychain can be used. They are
      * laid over what the keychain holds, so a key kept only in the keychain, such as one the owner did not enter again
-     * while it was locked, stays; the file is removed only after every value was written and read back. Does nothing
-     * without a file, while the keychain is left alone after a failure, or while it is locked, so the next call
-     * notices the unlocking. A keychain that cannot be used, or a move that fails, leaves the keychain alone for
-     * {@link #RETRY_AFTER}. A file that cannot be read, or holds a name that is not allowed, stays, and a load says
-     * why. May ask the keychain, which can take a few seconds: call it away from the user interface's thread.
+     * while it was locked, stays, as does an entry the keychain refuses to read, unless the file holds that key; the
+     * file is removed only after every value was written and read back. Does nothing without a file, while the
+     * keychain is left alone after a failure, or while it is locked, so the next call notices the unlocking. A
+     * keychain that cannot be used, or a move that fails, leaves the keychain alone for {@link #RETRY_AFTER}. A file
+     * that cannot be read, or holds a name that is not allowed, stays, and a load says why. May ask the keychain,
+     * which can take a few seconds: call it away from the user interface's thread.
      */
     public void moveFileIntoKeychain() {
         synchronized (turn) {
@@ -202,13 +209,14 @@ public final class ApiKeys implements SecretsSource {
                 return;
             }
             try {
-                var secrets = KeyChanges.entering(inFile).applyTo(storedInKeychain());
-                entries.write(secrets);
-                if (entries.read().equals(secrets)) {
+                var stored = storedInKeychain();
+                var secrets = KeyChanges.entering(inFile).applyTo(stored.readable());
+                var kept = stored.keptBy(secrets, Map.of());
+                entries.write(secrets, kept);
+                if (entries.contents().equals(new KeychainEntries.Contents(secrets, kept))) {
                     file.delete();
-                    remembered = secrets;
                     LOG.info("moved the API keys from " + file.path() + " into the system keychain");
-                    keptIn(KeyStorage.KEYCHAIN, "");
+                    savedInKeychain(secrets, kept);
                     return;
                 }
             } catch (KeychainException e) {
@@ -241,12 +249,18 @@ public final class ApiKeys implements SecretsSource {
             public boolean replaces() {
                 return true;
             }
+
+            @Override
+            public Map<ProviderId, Set<String>> removes() {
+                return Map.of();
+            }
         }, () -> { });
     }
 
     /**
      * Applies the owner's changes to the stored keys, in the keychain when it works and else in the file: every key
-     * they did not enter or empty stays as it is, also one that could not be read, such as from a locked keychain.
+     * they did not enter or empty stays as it is, also one that could not be read, such as from a locked keychain or
+     * an entry the keychain refuses to read. When the keychain holds such an entry, the keys never go to the file.
      * Tries the keychain also while it is left alone after a failure: the owner asked for this. When the keychain is
      * locked, the system asks the owner to unlock it and this waits up to {@link #UNLOCK_WAIT} for their answer, while
      * loads go on. Blocks: call it away from the user interface's thread.
@@ -256,8 +270,8 @@ public final class ApiKeys implements SecretsSource {
      *     tell the owner; not when the keychain unlocks without one
      * @throws SecretsProblem of the kind {@link SecretsProblem.Kind#LOCKED} when the keychain stayed locked, as the
      *     app cannot have it unlocked, nobody answered in time, or {@link #stopUnlocking()} was called: nothing was
-     *     saved. Of the kind {@link SecretsProblem.Kind#FAILED} when a name has characters that are not allowed or
-     *     the file could not be written
+     *     saved. Of the kind {@link SecretsProblem.Kind#FAILED} when a name has characters that are not allowed, the
+     *     file could not be written, or the keychain failed while it holds an entry it refuses to read
      */
     public void applyChanges(KeyChanges changes, Runnable prompting) throws SecretsProblem {
         changes.entered().checkNames();
@@ -278,7 +292,7 @@ public final class ApiKeys implements SecretsSource {
      * @throws SecretsProblem of the kind {@link SecretsProblem.Kind#LOCKED} while the keychain is locked: the keychain
      *     may still hold an older copy, so the caller should try again once it can be read, while the file, when there
      *     is one, no longer holds them; of the kind {@link SecretsProblem.Kind#FAILED} when the keychain or the file
-     *     could not be read, or the file not written
+     *     could not be read, the file not written, or the keychain failed while it holds an entry it refuses to read
      */
     public boolean remove(Map<ProviderId, Set<String>> names) throws SecretsProblem {
         var changes = new KeyChanges(Secrets.NONE, names);
@@ -307,6 +321,11 @@ public final class ApiKeys implements SecretsSource {
             @Override
             public boolean replaces() {
                 return false;
+            }
+
+            @Override
+            public Map<ProviderId, Set<String>> removes() {
+                return changes.removed();
             }
         };
     }
@@ -369,9 +388,10 @@ public final class ApiKeys implements SecretsSource {
      * Stores the keys in the keychain, or in the file when there is no usable keychain; never while it is locked. The
      * keys stored now, in the keychain and the file, are read first unless the edit replaces them, so the file is
      * moved in with the edit, such as after the owner unlocked the keychain; a damaged index counts as none, as its
-     * entries cannot be found anyway. A file whose keys could not be read is kept, as {@link #moveFileIntoKeychain()}
-     * keeps it, so a save never drops a key it could not read: the keys then still come from the file, and a load says
-     * why it cannot be used.
+     * entries cannot be found anyway. An entry the keychain refuses to read stays as it is unless the edit enters or
+     * removes it; a keychain that holds one fails the save rather than sending it to the file, which would hide it. A
+     * file whose keys could not be read is kept, as {@link #moveFileIntoKeychain()} keeps it, so a save never drops a
+     * key it could not read: the keys then still come from the file, and a load says why it cannot be used.
      */
     private SaveResult intoKeychainElseFile(Edit edit) throws SecretsProblem {
         synchronized (turn) {
@@ -390,23 +410,32 @@ public final class ApiKeys implements SecretsSource {
                     // written below
                 }
             }
+            var holdsUnreadable = false;
             try {
-                var stored = edit.replaces() ? new StoredKeys(Secrets.NONE, true) : storedWithFile();
+                var stored = edit.replaces() ? new StoredKeys(NOTHING_READ, true) : storedWithFile();
+                holdsUnreadable = !stored.inKeychain().unreadable().isEmpty();
                 var secrets = edit.apply(stored.secrets());
-                entries.write(secrets);
+                var kept = stored.inKeychain().keptBy(secrets, edit.removes());
+                entries.write(secrets, kept);
                 if (!stored.fileFoldedIn()) {
+                    logKept(kept);
                     keptIn(KeyStorage.FILE, "the file could not be read, or holds a name that is not allowed");
                     LOG.warn("the API keys were saved in the system keychain, but " + file.path()
                             + " is kept: its keys could not be read, so they were not moved");
                     return SaveResult.IN_KEYCHAIN;
                 }
                 file.delete();
-                remembered = secrets;
-                keptIn(KeyStorage.KEYCHAIN, "");
+                savedInKeychain(secrets, kept);
                 return SaveResult.IN_KEYCHAIN;
             } catch (KeychainException e) {
                 if (e.kind() == KeychainException.Kind.LOCKED) {
                     return SaveResult.LOCKED; // locked since it was asked, or the keychain holds none of our items yet
+                }
+                if (holdsUnreadable) {
+                    // the file would hide the entries the keychain could not read, while it was readable otherwise
+                    throw new SecretsProblem("The API keys could not be stored in the system keychain ("
+                            + e.getMessage() + "). As it holds keys that could not be read, they were not stored "
+                            + "in the file either.");
                 }
                 // such as Windows error 1312 over ssh: no keychain after all, so the file it is
                 intoFile(edit, "the system keychain cannot be used");
@@ -418,16 +447,23 @@ public final class ApiKeys implements SecretsSource {
     /**
      * What is stored, for a save that changes only some keys.
      *
-     * @param secrets what the keychain holds, with the file's keys laid over it when they could be read
+     * @param inKeychain what the keychain holds, as far as it could be read
+     * @param secrets what the keychain holds that could be read, with the file's keys laid over it when they could be
+     *     read
      * @param fileFoldedIn false when there is a file whose keys could not be read, or hold a name that is not allowed
      */
-    private record StoredKeys(Secrets secrets, boolean fileFoldedIn) {
+    private record StoredKeys(KeychainEntries.Contents inKeychain, Secrets secrets, boolean fileFoldedIn) {
+
+        StoredKeys(KeychainEntries.Contents inKeychain, boolean fileFoldedIn) {
+            this(inKeychain, inKeychain.readable(), fileFoldedIn);
+        }
     }
 
     /**
      * What is stored, for a save that changes only some keys: what the keychain holds, with the file's keys laid over
      * it, so that no key kept only in the file is lost when the save removes the file. A file that cannot be read, or
-     * holds a name that is not allowed, adds nothing, and says so, so the save keeps it.
+     * holds a name that is not allowed, adds nothing, and says so, so the save keeps it. Entries the keychain refuses
+     * to read are named, so the save keeps them.
      *
      * @throws KeychainException when the keychain is locked or cannot be used
      */
@@ -439,26 +475,51 @@ public final class ApiKeys implements SecretsSource {
         try {
             var inFile = file.read();
             inFile.checkNames();
-            return new StoredKeys(KeyChanges.entering(inFile).applyTo(inKeychain), true);
+            return new StoredKeys(inKeychain, KeyChanges.entering(inFile).applyTo(inKeychain.readable()), true);
         } catch (SecretsProblem ignored) {
             return new StoredKeys(inKeychain, false);
         }
     }
 
     /**
-     * What the keychain holds; none when its index is damaged.
+     * What the keychain holds, with the names of the entries it refused to give, which a save keeps; none when its
+     * index is damaged or refused.
      *
      * @throws KeychainException when it is locked or cannot be used
      */
-    private Secrets storedInKeychain() throws KeychainException {
+    private KeychainEntries.Contents storedInKeychain() throws KeychainException {
         try {
-            return entries.read();
+            return entries.contents();
         } catch (KeychainException e) {
             if (e.kind() != KeychainException.Kind.REFUSED) {
                 throw e;
             }
-            return Secrets.NONE;
+            return NOTHING_READ;
         }
+    }
+
+    /**
+     * Notes that the keys are in the keychain now. They are remembered only when the keychain holds no entry it could
+     * not read: else the next load reads it again, and says that keys could not be read.
+     */
+    private void savedInKeychain(Secrets secrets, Map<ProviderId, Set<String>> kept) {
+        logKept(kept);
+        remembered = kept.isEmpty() ? secrets : null;
+        keptIn(KeyStorage.KEYCHAIN, "");
+    }
+
+    /** Logs the entries a save kept unread, by name, when there are any. */
+    private static void logKept(Map<ProviderId, Set<String>> kept) {
+        var names = new TreeSet<String>();
+        kept.forEach((id, settings) ->
+                settings.forEach(setting -> names.add(KeychainEntries.entryName(id, setting))));
+        if (names.isEmpty()) {
+            return;
+        }
+        LOG.warn("the API keys were saved in the system keychain, but it could not read " + names.size()
+                + (names.size() == 1 ? " entry, which was kept as it was: "
+                        : " entries, which were kept as they were: ")
+                + String.join(", ", names));
     }
 
     /**
