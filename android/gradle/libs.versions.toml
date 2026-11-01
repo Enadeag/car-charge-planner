@@ -14,6 +14,8 @@ jackson = "3.2.3"
 slf4j = "2.0.20"
 junit = "6.1.3"
 assertj = "3.27.7"
+# the app's architecture tests: the Maven build's version, which checkMavenDrift does not check
+archunit = "1.5.1"
 androidx-test = "1.7.0"
 androidx-test-junit = "1.3.0"
 
@@ -28,6 +30,7 @@ junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params" }
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+archunit = { module = "com.tngtech.archunit:archunit", version.ref = "archunit" }
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
 compose-material3 = { module = "androidx.compose.material3:material3" }
 compose-ui = { module = "androidx.compose.ui:ui" }

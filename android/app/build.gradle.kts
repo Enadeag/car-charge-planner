@@ -76,6 +76,8 @@ dependencies {
 
     // the engine's contract tests, with JUnit and AssertJ, for the Android implementations of its seams
     testImplementation(testFixtures(project(":engine")))
+    // the rules on which app classes may open connections or write to Logcat (AppArchitectureTest)
+    testImplementation(libs.archunit)
 
     // AndroidX Test's runner, core and JUnit 4 rules, for the instrumented tests on a device or emulator
     // (the emulator job)
