@@ -1607,4 +1607,48 @@ class ApiKeysTest {
         assertThatThrownBy(() -> keys(keychain).applyChanges(entered, () -> { }))
                 .isInstanceOf(SecretsProblem.class).hasMessageContaining("not stored in the file either");
     }
+
+    @Test
+    void withoutAFallbackASaveWhileTheKeychainIsLeftAloneAsksItAgainAndStoresTheKeys() throws SecretsProblem {
+        var intermittent = new Intermittent();
+        intermittent.away = true;
+        var keys = keys(intermittent, KeyFallback.NONE);
+        assertThatThrownBy(keys::load).isInstanceOf(SecretsProblem.class);
+        intermittent.away = false;
+
+        keys.applyChanges(NEW_SOLCAST_KEY, () -> { });
+
+        assertThat(keys.load()).isEqualTo(new Secrets(Map.of(SOLCAST, Map.of("api_key", "SC-NEW"))));
+        assertThat(keys.storage()).isEqualTo(KeyStorage.KEYCHAIN);
+        assertThat(file().path()).doesNotExist();
+    }
+
+    @Test
+    void withoutAFallbackAKeychainUnlockedWhenAskedTakesTheSaveAndNoFileIsWritten() throws SecretsProblem {
+        var lockable = holdingTheKeys(new LockableKeychain());
+        lockable.locked = true;
+        var keys = keys(lockable, KeyFallback.NONE);
+
+        keys.applyChanges(NEW_SOLCAST_KEY, () -> { });
+
+        assertThat(lockable.prompts).hasValue(1);
+        assertThat(keys.load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-SECRET-1"),
+                FORECAST_SOLAR, Map.of("api_key", "FS-SECRET-2"), SOLCAST, Map.of("api_key", "SC-NEW"))));
+        assertThat(file().path()).doesNotExist();
+    }
+
+    @Test
+    void withoutAFallbackTwoSavesAfterARefusedIndexBothEndUpInTheNewIndex() throws SecretsProblem {
+        var refusedIndex = holdingTheKeys(new UnreadableEntryKeychain(KeychainEntries.INDEX));
+        var keys = keys(refusedIndex, KeyFallback.NONE);
+
+        keys.applyChanges(NEW_SOLCAST_KEY, () -> { });
+        keys.applyChanges(KeyChanges.entering(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW")))),
+                () -> { });
+
+        assertThat(index(refusedIndex)).containsExactly(OPEN_METEO_ENTRY, "forecast/solcast/api_key");
+        assertThat(keys.load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"),
+                SOLCAST, Map.of("api_key", "SC-NEW"))));
+        assertThat(file().path()).doesNotExist();
+    }
 }
