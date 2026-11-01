@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.android
 
 import java.io.Closeable
+import java.io.IOException
 import java.io.OutputStream
 import java.net.InetAddress
 import java.net.ServerSocket
@@ -28,17 +29,23 @@ class RawServer(private val answer: (OutputStream) -> Unit) : Closeable {
 
     init {
         thread(isDaemon = true, name = "raw-server") {
-            try {
-                while (true) {
-                    socket.accept().use { client ->
-                        val reader = client.getInputStream().bufferedReader(StandardCharsets.ISO_8859_1)
-                        requests += generateSequence { reader.readLine() }.takeWhile { it.isNotEmpty() }.toList()
-                        answer(client.getOutputStream())
-                        client.getOutputStream().flush()
-                    }
+            while (!socket.isClosed) {
+                val client = try {
+                    socket.accept()
+                } catch (closed: SocketException) {
+                    continue // close() ends the server; any other failure to accept is tried again
                 }
-            } catch (closed: SocketException) {
-                // close() ends the server
+                try {
+                    client.use {
+                        val reader = it.getInputStream().bufferedReader(StandardCharsets.ISO_8859_1)
+                        requests += generateSequence { reader.readLine() }.takeWhile { line -> line.isNotEmpty() }
+                            .toList()
+                        answer(it.getOutputStream())
+                        it.getOutputStream().flush()
+                    }
+                } catch (hungUp: IOException) {
+                    // the client hung up while it was answered; the next one is served all the same
+                }
             }
         }
     }

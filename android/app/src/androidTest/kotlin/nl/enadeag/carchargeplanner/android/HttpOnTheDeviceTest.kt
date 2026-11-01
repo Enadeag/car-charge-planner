@@ -21,7 +21,8 @@ import org.junit.runner.RunWith
 /**
  * [AndroidHttpGet] on Android's own `HttpURLConnection`, which is built on OkHttp and can differ from the JVM's that
  * `AndroidHttpGetTest` checks against the engine's contract: compression, a connection that ends too soon, and the
- * network security config. Against [RawServer] on the device's loopback address, which only the debug build may
+ * network security config, and what the contract asks that a device's client might do on its own (redirects,
+ * repeated headers). Against [RawServer] on the device's loopback address, which only the debug build may
  * reach over plain http.
  */
 @RunWith(AndroidJUnit4::class)
@@ -52,6 +53,30 @@ class HttpOnTheDeviceTest {
             assertEquals(AndroidHttpGet.USER_AGENT, server.firstRequestHeader("User-Agent"))
             assertEquals(String(packed, StandardCharsets.UTF_8), reply.body())
             assertEquals("gzip", reply.header("Content-Encoding").orElse(null))
+        }
+    }
+
+    @Test
+    fun ofAHeaderSentTwiceTheFirstValueCounts() {
+        RawServer { out ->
+            out.write("HTTP/1.1 200 OK\r\nX-Several: first\r\nX-Several: second\r\nContent-Length: 0\r\n\r\n"
+                .toByteArray(StandardCharsets.ISO_8859_1))
+        }.use { server ->
+            assertEquals("first", http.get(request(server.root)).header("X-Several").orElse(null))
+        }
+    }
+
+    @Test
+    fun aRedirectIsReturnedNotFollowed() {
+        RawServer { out ->
+            out.write("HTTP/1.1 302 Found\r\nLocation: /moved-here\r\nContent-Length: 0\r\n\r\n"
+                .toByteArray(StandardCharsets.ISO_8859_1))
+        }.use { server ->
+            val reply = http.get(request(server.root))
+
+            assertEquals(302, reply.status())
+            assertEquals("/moved-here", reply.header("Location").orElse(null))
+            assertEquals(1, server.requests.size)
         }
     }
 

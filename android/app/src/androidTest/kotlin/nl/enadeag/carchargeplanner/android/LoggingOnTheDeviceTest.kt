@@ -32,6 +32,7 @@ class LoggingOnTheDeviceTest {
         val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
         var lines = logcat()
         while (expected !in lines && System.nanoTime() < deadline) {
+            Thread.sleep(150) // not a busy loop of logcat processes
             lines = logcat()
         }
         assertTrue("found in $lines", expected in lines)
