@@ -180,7 +180,7 @@ jobs:
           script: |
             mkdir -p build && adb logcat -c
             adb logcat -v threadtime < /dev/null > build/logcat.txt 2>&1 &
-            ./gradlew --continue --stacktrace connectedDebugAndroidTest
+            ./gradlew --continue --stacktrace :app:connectedDebugAndroidTest
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
