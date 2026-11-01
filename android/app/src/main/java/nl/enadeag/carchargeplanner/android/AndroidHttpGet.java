@@ -88,7 +88,9 @@ public final class AndroidHttpGet implements HttpGet {
     /**
      * Ends a request the caller no longer waits for: the worker stops at its next read, as it is interrupted, and the
      * connection is dropped. Dropping it runs on a thread of its own, because the JVM's {@link HttpURLConnection} can
-     * hold {@code disconnect()} for as long as the worker is reading; Android's returns at once.
+     * hold {@code disconnect()} for as long as the worker is reading; Android's returns at once. When the deadline
+     * passes before the worker has connected, as in a slow name lookup, the disconnect finds nothing to drop; the
+     * connection's own timeouts then end that worker.
      */
     private void drop(Future<Reply> answer, HttpURLConnection connection) {
         answer.cancel(true);

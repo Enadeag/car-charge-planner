@@ -7,6 +7,7 @@ import java.net.ServerSocket
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.time.Duration
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.concurrent.thread
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGetContractTest
@@ -44,7 +45,7 @@ class AndroidHttpGetTest : HttpGetContractTest() {
      */
     private fun answeredOnce(answer: String, headers: Map<String, String> = mapOf(), check: (HttpGet.Request) -> Unit):
         List<String> {
-        val lines = mutableListOf<String>()
+        val lines = CopyOnWriteArrayList<String>()
         ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { server ->
             val serving = thread(isDaemon = true) {
                 server.accept().use { client ->
