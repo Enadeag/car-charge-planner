@@ -33,7 +33,7 @@ The app runs on Linux and Windows, as a JavaFX desktop app with the engine insid
 - **F-Droid and GitHub Releases** first, Google Play maybe later. No Google libraries (Play Services, Firebase), so F-Droid can build the app and Play stays possible.
 - **Reproducible builds and an own signing key**, so F-Droid can ship the app under that key once its build matches the release. Google's developer verification, enforced in four countries since 30 September 2026 and expected wider in 2027, ties a package name to the developer's key; this keeps both F-Droid and the APK open.
 - **The signing key** is a secret in the GitHub environment `android-release`, used only after the maintainer approves, on an `android-v*` tag; an offline backup is kept, as a lost key means the app can never be updated again.
-- **Tests:** the engine's tests stay in Maven. Android's code and screens are tested with Robolectric on every pull request; an emulator job on API 26 runs the instrumented tests (timers, notifications, the Keystore) on `release/android-*` branches and weekly. Before a release the app is checked by hand on a real phone.
+- **Tests:** the engine's tests stay in Maven. Android's logic is tested in plain Kotlin classes with JUnit 5 on the JVM, and its screens with Robolectric (JUnit 4, through JUnit's vintage engine), on every pull request; an emulator job on API 26 runs the instrumented tests (timers, notifications, the Keystore) on `release/android-*` branches and weekly. Before a release the app is checked by hand on a real phone.
 - **The app ID** is `io.github.enadeag.car_charge_planner`, after the Flatpak ID.
 
 ## Considered options
