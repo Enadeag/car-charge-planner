@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 8 to 11 back up nothing while allowBackup="false", device-to-device transfer included; should backup be
+  turned on, the keychain's file still stays, as in data_extraction_rules.xml for Android 12 and later.
+-->
+<full-backup-content>
+  <exclude domain="root" path="no_backup/keychain.json" />
+  <exclude domain="root" path="no_backup/keychain.json.tmp" />
+</full-backup-content>
