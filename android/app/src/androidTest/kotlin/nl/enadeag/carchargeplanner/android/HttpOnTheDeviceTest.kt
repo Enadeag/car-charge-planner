@@ -102,12 +102,14 @@ class HttpOnTheDeviceTest {
     /**
      * 127.0.0.2 is this device too, but the debug build's network security config names only 127.0.0.1: the request
      * is refused before a connection is tried. Were plain http let through, nothing listens there, and it would be a
-     * [ConnectException] instead.
+     * [ConnectException] instead. Android 8 refuses with a plain [IOException] that says cleartext is not permitted;
+     * later versions with an [UnknownServiceException] that says the same.
      */
     @Test
     fun plainHttpToAnyOtherAddressIsRefused() {
         val error = assertThrows(IOException::class.java) { http.get(request("http://127.0.0.2:9/")) }
 
-        assertTrue("refused by the network security config: $error", error is UnknownServiceException)
+        assertTrue("not a refused connection: $error", error !is ConnectException)
+        assertTrue("refused by the network security config: $error", error.message.orEmpty().contains("leartext"))
     }
 }
