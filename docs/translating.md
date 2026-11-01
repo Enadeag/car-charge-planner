@@ -143,9 +143,9 @@ The debug build has two made-up languages, `en-XA` (English with accents and ext
 
 ### Adding a language to the Android app
 
-1. **Start the file.** Create `android/app/src/main/res/values-<code>/strings.xml` with the language's two or three letter code (`values-de`), copying `values/strings.xml` and translating every text (the comments above the texts stay in English, for the next translator), following the rules above and the words in the table. Leave `app_name` out.
+1. **Start the file.** Create `android/app/src/main/res/values-<code>/strings.xml` with the language's two-letter ISO 639 code (`values-de`), copying `values/strings.xml` and translating every text (the comments above the texts stay in English, for the next translator), following the rules above and the words in the table. Leave `app_name` out.
 
-2. **Nothing else lists the language.** The app's language list (what Android offers as the app's own language from Android 13) and the languages kept from libraries come from the `values-*` folders, in `android/app/build.gradle.kts`.
+2. **Nothing else lists the language.** The app's language list (what Android offers as the app's own language from Android 13) and the languages kept from libraries come from the `values-*` folders, in `android/app/build.gradle.kts`. Only a folder named after a two-letter code that Java knows counts: use the current codes (`values-id`, `values-he`, `values-yi`, not Android's old `values-in`, `values-iw`, `values-ji`). A regional variant (`values-pt-rBR`) or a language with only a three-letter code is not supported yet: its texts would not be offered.
 
 3. **Check it.** `cd android && ./gradlew check` runs Lint and `StringsResourcesTest`.
 
