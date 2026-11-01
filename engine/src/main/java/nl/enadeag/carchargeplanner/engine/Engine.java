@@ -34,6 +34,7 @@ import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.HashMap;
@@ -268,6 +269,24 @@ public final class Engine {
         try {
             configFile.write(config);
             forecasts.forgetFailures();
+        } finally {
+            schedule.runSoon();
+        }
+    }
+
+    /**
+     * Moves the config file aside to {@code <name>.damaged-<time>}, so the owner can set up again over a file that
+     * cannot be used while what it held is kept; the engine is then not set up. Once started, the engine plans again
+     * soon after.
+     *
+     * @return where the file is kept now, so the owner can be told
+     * @throws java.nio.file.NoSuchFileException when there is no config file
+     * @throws IOException when something other than a plain file is in its place, or it could not be moved; it is
+     *     then left as it was
+     */
+    public Path setConfigAside() throws IOException {
+        try {
+            return configFile.setAside();
         } finally {
             schedule.runSoon();
         }

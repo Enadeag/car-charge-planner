@@ -80,10 +80,11 @@ public sealed interface Outlook {
     }
 
     /**
-     * The config file is there, but cannot be used: it could not be read, or it is not valid.
+     * The config file is there, but cannot be used: it could not be read, it is not valid, or a newer version of the
+     * app wrote it.
      *
-     * @param kind what is wrong with the file: {@link ConfigProblem.Kind#UNREADABLE} or
-     *     {@link ConfigProblem.Kind#INVALID}
+     * @param kind what is wrong with the file: {@link ConfigProblem.Kind#UNREADABLE},
+     *     {@link ConfigProblem.Kind#INVALID} or {@link ConfigProblem.Kind#NEWER_VERSION}
      * @param file the config file's path
      * @param detail in English: the system's error, or the setting and what is wrong with it
      */

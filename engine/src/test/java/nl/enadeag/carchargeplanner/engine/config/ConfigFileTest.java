@@ -429,9 +429,24 @@ class ConfigFileTest {
 
         assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOfSatisfying(ConfigProblem.class,
                 problem -> {
-                    assertThat(problem.kind()).isEqualTo(ConfigProblem.Kind.INVALID);
+                    assertThat(problem.kind()).isEqualTo(ConfigProblem.Kind.NEWER_VERSION);
                     assertThat(problem.detail()).contains("written by a newer version of the app");
+                    assertThat(problem.getMessage()).startsWith(file.getFileName() + ": written by a newer version");
                 });
+    }
+
+    @Test
+    void aFileSetAsideIsKeptAsDamagedWithTheTimeAndTheConfigIsMissingThen() throws IOException {
+        var file = write("{\"version\": 1}");
+        var config = new ConfigFile(file, FILES);
+
+        var aside = config.setAside();
+
+        assertThat(aside.getParent()).isEqualTo(folder);
+        assertThat(aside.getFileName().toString()).matches("engine\\.json\\.damaged-\\d{8}-\\d{6}");
+        assertThat(aside).hasContent("{\"version\": 1}");
+        assertThatThrownBy(config::read).isInstanceOfSatisfying(ConfigProblem.class,
+                problem -> assertThat(problem.kind()).isEqualTo(ConfigProblem.Kind.MISSING));
     }
 
     @Test

@@ -51,7 +51,9 @@ public sealed interface Stored<T> {
     enum Reason {
         /** The system refused to read it, such as for its permissions. */
         UNREADABLE,
-        /** It is not the JSON this version expects: damaged, wrongly edited, or written by a newer version. */
-        INVALID
+        /** It is not the JSON this version expects: damaged or wrongly edited. */
+        INVALID,
+        /** It was written by a newer version of the app, which this version cannot read; updating the app helps. */
+        NEWER_VERSION
     }
 }

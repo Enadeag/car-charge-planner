@@ -40,8 +40,8 @@ public record FileVersion(int current, List<UnaryOperator<ObjectNode>> migration
      *
      * @param root the file's JSON as it was read; changed in place
      * @return the object, brought up to the current version
-     * @throws FormatProblem when the file is not one object, its version is not a whole number from 1, or it was
-     *     written by a newer version of the app
+     * @throws FormatProblem when the file is not one object or its version is not a whole number from 1; a
+     *     {@link NewerFileVersion} when it was written by a newer version of the app
      */
     public ObjectNode upToDate(JsonNode root) throws FormatProblem {
         if (!(root instanceof ObjectNode file)) {
@@ -56,7 +56,7 @@ public record FileVersion(int current, List<UnaryOperator<ObjectNode>> migration
             version = stamp.intValue();
         }
         if (version > current) {
-            throw new FormatProblem("written by a newer version of the app (file version " + version
+            throw new NewerFileVersion("written by a newer version of the app (file version " + version
                     + "; this version reads up to " + current + ")");
         }
         var upToDate = file;

@@ -40,8 +40,9 @@ public final class ConfigFile {
      * The config the file holds, read again when the file changed since it was last read or written.
      *
      * @return the whole config, every value present and valid
-     * @throws ConfigProblem when the file is missing, unreadable, not JSON, written by a newer version of the app, or a
-     *     value is missing or wrong; the problem names the file and the setting
+     * @throws ConfigProblem when the file is missing, unreadable, not JSON, written by a newer version of the app
+     *     ({@link ConfigProblem.Kind#NEWER_VERSION}), or a value is missing or wrong; the problem names the file and
+     *     the setting
      */
     public EngineConfig read() throws ConfigProblem {
         var stored = file.read();
@@ -50,10 +51,7 @@ public final class ConfigFile {
         } else if (stored instanceof Stored.Absent<?>) {
             throw new ConfigProblem(ConfigProblem.Kind.MISSING, path(), "");
         } else if (stored instanceof Stored.Unusable<EngineConfig> unusable) {
-            throw new ConfigProblem(
-                    unusable.reason() == Stored.Reason.UNREADABLE ? ConfigProblem.Kind.UNREADABLE
-                            : ConfigProblem.Kind.INVALID,
-                    path(), unusable.detail());
+            throw new ConfigProblem(kindOf(unusable.reason()), path(), unusable.detail());
         } else {
             throw new IllegalStateException("unknown kind of stored value: " + stored);
         }
@@ -70,5 +68,26 @@ public final class ConfigFile {
      */
     public void write(EngineConfig config) throws IOException {
         file.write(config);
+    }
+
+    /**
+     * Moves the file aside to {@code <name>.damaged-<time>} in the same folder, whatever it holds, so the owner can
+     * set up again while what it held is kept; afterwards {@link #read()} finds no file.
+     *
+     * @return where the file is kept now, for a message that names it
+     * @throws java.nio.file.NoSuchFileException when there is no file
+     * @throws IOException when something other than a plain file is in its place, or it could not be moved; it is
+     *     then left as it was
+     */
+    public Path setAside() throws IOException {
+        return file.setAside();
+    }
+
+    private static ConfigProblem.Kind kindOf(Stored.Reason reason) {
+        return switch (reason) {
+            case UNREADABLE -> ConfigProblem.Kind.UNREADABLE;
+            case INVALID -> ConfigProblem.Kind.INVALID;
+            case NEWER_VERSION -> ConfigProblem.Kind.NEWER_VERSION;
+        };
     }
 }

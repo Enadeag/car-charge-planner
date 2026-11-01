@@ -137,21 +137,49 @@ public final class StoredFile<T> {
         remembered = new Stored.Absent<>();
     }
 
+    /**
+     * Moves the file aside to {@code <name>.damaged-<time>}, whatever it holds, so the owner can start again while
+     * what it held is kept, as when they choose to set up again over a file that cannot be used. Afterwards there is
+     * no file.
+     *
+     * @return where the file is kept now, in the same folder
+     * @throws NoSuchFileException when there is no file
+     * @throws IOException when something other than a plain file is in its place, such as a folder or a link, which
+     *     is not this store's to move, or the file could not be moved; it is then left as it was
+     */
+    public synchronized Path setAside() throws IOException {
+        if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) {
+            throw new NoSuchFileException(path.toString());
+        }
+        if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
+            throw new IOException(path + " is not a plain file, so it is not set aside");
+        }
+        var aside = moveAside();
+        LOG.warn(path + " is kept as " + aside + ", as the owner chose to start again");
+        return aside;
+    }
+
     private void moveAsideWhenUnusable() throws IOException {
         // something else in the file's place, such as a folder, is not ours to move: the write then fails
         if (!(read() instanceof Stored.Unusable<T> unusable) || !Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
             return;
         }
+        var aside = moveAside();
+        LOG.warn(path + " could not be used (" + unusable.detail() + "), so it is kept as " + aside
+                + " before a new one is written");
+    }
+
+    /** Renames the file to a name beside it that is not taken yet, and forgets what it held. */
+    private Path moveAside() throws IOException {
         var name = path.getFileName() + ".damaged-" + ASIDE_TIME.format(clock.instant());
         var aside = path.resolveSibling(name);
-        for (int count = 2; Files.exists(aside); count++) {
+        for (int count = 2; Files.exists(aside, LinkOption.NOFOLLOW_LINKS); count++) {
             aside = path.resolveSibling(name + "-" + count);
         }
         Files.move(path, aside);
-        LOG.warn(path + " could not be used (" + unusable.detail() + "), so it is kept as " + aside
-                + " before a new one is written");
         seen = null;
         remembered = new Stored.Absent<>();
+        return aside;
     }
 
     private Stamp stamp() throws IOException {
@@ -175,6 +203,8 @@ public final class StoredFile<T> {
             // Jackson's message quotes the text it stumbled on, which may be a secret
             var what = format.holdsSecrets() ? "" : ": " + e.getOriginalMessage();
             return new Stored.Unusable<>(Stored.Reason.INVALID, "not valid JSON" + where + what);
+        } catch (NewerFileVersion e) {
+            return new Stored.Unusable<>(Stored.Reason.NEWER_VERSION, e.getMessage());
         } catch (FormatProblem e) {
             return new Stored.Unusable<>(Stored.Reason.INVALID, e.getMessage());
         }
