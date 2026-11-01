@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import tools.jackson.core.JacksonException;
@@ -14,8 +15,8 @@ import tools.jackson.core.JacksonException;
 /**
  * The secrets as keychain entries: one per value, named {@code forecast/<provider>/<name>} after the setting, so other
  * integrations can add their own prefix. A keychain cannot list its entries, so one more entry, {@code index}, holds
- * the names as a JSON list. It is in the keychain, not the config, so that names and values cannot get out of step when the config is
- * copied or deleted; it holds no values.
+ * the names as a JSON list. It is in the keychain, not the config, so that names and values cannot get out of step
+ * when the config is copied or deleted; it holds no values.
  */
 final class KeychainEntries {
 
@@ -37,11 +38,15 @@ final class KeychainEntries {
      *
      * @param readable the values of the entries that could be read
      * @param unreadable per provider, the setting names whose entries the keychain refused to give
+     * @param listed the names of the entries the index lists, such as "forecast/open-meteo/api_key"
      */
-    record Contents(Secrets readable, Map<ProviderId, Set<String>> unreadable) {
+    record Contents(Secrets readable, Map<ProviderId, Set<String>> unreadable, Set<String> listed) {
+
+        /** Nothing read, nothing refused, nothing listed. */
+        static final Contents NONE = new Contents(Secrets.NONE, Map.of(), Set.of());
 
         /**
-         * Copies the names.
+         * Copies the names, without providers that have none.
          *
          * @throws IllegalArgumentException when a setting is both readable and unreadable
          */
@@ -54,9 +59,12 @@ final class KeychainEntries {
                                 + entryName(id, name));
                     }
                 }
-                copied.put(id, Set.copyOf(names));
+                if (!names.isEmpty()) {
+                    copied.put(id, Set.copyOf(names));
+                }
             });
             unreadable = Map.copyOf(copied);
+            listed = Set.copyOf(listed);
         }
 
         /**
@@ -72,11 +80,50 @@ final class KeychainEntries {
                 var left = new TreeSet<>(names);
                 left.removeAll(toStore.of(id).keySet());
                 left.removeAll(removed.getOrDefault(id, Set.of()));
-                if (!left.isEmpty()) {
-                    kept.put(id, Set.copyOf(left));
-                }
+                kept.put(id, left);
             });
-            return Map.copyOf(kept);
+            return new Contents(Secrets.NONE, kept, Set.of()).unreadable();
+        }
+
+        /**
+         * Whether one of these settings is stored, readable or not.
+         *
+         * @param settings per provider, the setting names asked about
+         * @return true when the index lists an entry for one of them that holds a value or could not be read
+         */
+        boolean holdsAnyOf(Map<ProviderId, Set<String>> settings) {
+            for (var setting : settings.entrySet()) {
+                for (var name : setting.getValue()) {
+                    if (readable.of(setting.getKey()).containsKey(name)
+                            || unreadable.getOrDefault(setting.getKey(), Set.of()).contains(name)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        /**
+         * Says what was read by name only, never a value.
+         *
+         * @return the names of the entries that could be read, could not be read, and are listed
+         */
+        @Override
+        public String toString() {
+            var read = new TreeSet<String>();
+            readable.byProvider().forEach((id, values) -> read.addAll(names(Map.of(id, values.keySet()))));
+            return "Contents[readable=" + read + ", unreadable=" + names(unreadable) + ", listed="
+                    + new TreeSet<>(listed) + "]";
+        }
+    }
+
+    /** The index could be read, but is not a list of the engine's names. */
+    private static final class DamagedIndex extends KeychainException {
+
+        private static final long serialVersionUID = 1L;
+
+        DamagedIndex() {
+            super(Kind.REFUSED, "the keychain's index of names is damaged");
         }
     }
 
@@ -114,73 +161,85 @@ final class KeychainEntries {
      * Reads every entry the index lists.
      *
      * @return the secrets; none when there is no index
-     * @throws KeychainException when the keychain fails or the index is damaged
+     * @throws KeychainException when the keychain fails, also for one entry, or the index is damaged
      */
     Secrets read() throws KeychainException {
-        var byProvider = new HashMap<ProviderId, Map<String, String>>();
-        for (var name : index()) {
-            var parts = name.substring(PREFIX.length()).split("/", 2);
-            keychain.read(name).ifPresent(value ->
-                    byProvider.computeIfAbsent(new ProviderId(parts[0]), ignored -> new HashMap<>())
-                            .put(parts[1], value));
-        }
-        return new Secrets(byProvider);
+        return entries(index(), true).readable();
     }
 
     /**
      * Reads every entry the index lists, passing over the ones the keychain refuses to give, such as a value it can no
-     * longer decrypt, so a save can keep them.
+     * longer decrypt, so a save can keep them. A damaged index counts as none, as its entries cannot be found anyway.
      *
-     * @return the values that could be read, and the names of the entries that could not; none when there is no index
-     * @throws KeychainException when the keychain is locked or cannot be used, or the index cannot be read or is
-     *     damaged
+     * @return the values that could be read, the names of the entries that could not, and the names the index lists;
+     *     none when there is no index or it is damaged
+     * @throws KeychainException when the keychain is locked or cannot be used, or refuses to give the index
      */
     Contents contents() throws KeychainException {
+        try {
+            return entries(index(), false);
+        } catch (DamagedIndex ignored) {
+            return Contents.NONE;
+        }
+    }
+
+    /**
+     * The names the index lists, without reading the entries; none when it is damaged.
+     *
+     * @return what the index lists, and no values
+     * @throws KeychainException when the keychain is locked or cannot be used, or refuses to give the index
+     */
+    Contents listed() throws KeychainException {
+        try {
+            return new Contents(Secrets.NONE, Map.of(), Set.copyOf(index()));
+        } catch (DamagedIndex ignored) {
+            return Contents.NONE;
+        }
+    }
+
+    /** Reads the named entries; a refused one fails the read when strict, and is passed over and named otherwise. */
+    private Contents entries(List<String> names, boolean strict) throws KeychainException {
         var byProvider = new HashMap<ProviderId, Map<String, String>>();
         var unreadable = new HashMap<ProviderId, Set<String>>();
-        for (var name : index()) {
+        for (var name : names) {
             var parts = name.substring(PREFIX.length()).split("/", 2);
             var id = new ProviderId(parts[0]);
             try {
                 keychain.read(name).ifPresent(value ->
                         byProvider.computeIfAbsent(id, ignored -> new HashMap<>()).put(parts[1], value));
             } catch (KeychainException e) {
-                if (e.kind() != KeychainException.Kind.REFUSED) {
+                if (strict || e.kind() != KeychainException.Kind.REFUSED) {
                     throw e;
                 }
                 unreadable.computeIfAbsent(id, ignored -> new TreeSet<>()).add(parts[1]);
             }
         }
-        return new Contents(new Secrets(byProvider), unreadable);
+        return new Contents(new Secrets(byProvider), unreadable, Set.copyOf(names));
     }
 
     /**
      * Replaces everything with {@code secrets}, but for the entries that could not be read and are kept: they stay as
-     * they are, and listed. Each value is read back; then the index is written, and entries it no longer lists are
-     * removed, so a write that fails part of the way never removes an entry the index lists.
+     * they are, and listed. Each value is read back; then the index is written, and the entries {@code before} lists
+     * that it no longer lists are removed, so a write that fails part of the way never removes an entry the index
+     * lists. The index is not read again, so an index that cannot be read now never makes the write remove more.
      *
      * @param secrets the secrets to keep, with names that can be split up again
-     * @param kept per provider, the setting names of entries that could not be read and stay as they are; none of
-     *     them in {@code secrets}
+     * @param keptUnread per provider, the setting names of entries that could not be read and stay as they are; none
+     *     of them in {@code secrets}
+     * @param before what the index listed when this save read it
      * @throws KeychainException when the keychain fails or does not keep a value
      * @throws IllegalArgumentException when a kept setting is in {@code secrets} too
      */
-    void write(Secrets secrets, Map<ProviderId, Set<String>> kept) throws KeychainException {
+    void write(Secrets secrets, Map<ProviderId, Set<String>> keptUnread, Contents before) throws KeychainException {
         var wanted = new TreeMap<String, String>();
         secrets.byProvider().forEach((id, values) ->
                 values.forEach((key, value) -> wanted.put(entryName(id, key), value)));
         var listed = new TreeSet<>(wanted.keySet());
-        kept.forEach((id, names) -> names.forEach(name -> {
-            if (wanted.containsKey(entryName(id, name))) {
-                throw new IllegalArgumentException("a kept setting cannot be written too: " + entryName(id, name));
+        for (var name : names(keptUnread)) {
+            if (wanted.containsKey(name)) {
+                throw new IllegalArgumentException("a kept setting cannot be written too: " + name);
             }
-            listed.add(entryName(id, name));
-        }));
-        List<String> old;
-        try {
-            old = index();
-        } catch (KeychainException ignored) {
-            old = List.of(); // a damaged index: its entries are lost to us, not worth stopping for
+            listed.add(name);
         }
         for (var entry : wanted.entrySet()) {
             writeAndCheck(entry.getKey(), entry.getValue());
@@ -188,7 +247,7 @@ final class KeychainEntries {
         var index = StoredJson.array();
         listed.forEach(index::add);
         writeAndCheck(INDEX, StoredJson.compact(index));
-        for (var name : old) {
+        for (var name : new TreeSet<>(before.listed())) {
             if (!listed.contains(name)) {
                 keychain.delete(name);
             }
@@ -196,13 +255,18 @@ final class KeychainEntries {
     }
 
     /**
-     * The name of a setting's entry.
+     * The names of these settings' entries.
      *
-     * @param id the provider the setting belongs to
-     * @param setting the setting's name, such as "api_key"
-     * @return the entry's name, such as "forecast/open-meteo/api_key"
+     * @param settings per provider, setting names
+     * @return the entries' names, such as "forecast/open-meteo/api_key", in order
      */
-    static String entryName(ProviderId id, String setting) {
+    static SortedSet<String> names(Map<ProviderId, Set<String>> settings) {
+        var names = new TreeSet<String>();
+        settings.forEach((id, settingNames) -> settingNames.forEach(name -> names.add(entryName(id, name))));
+        return names;
+    }
+
+    private static String entryName(ProviderId id, String setting) {
         return PREFIX + id.value() + "/" + setting;
     }
 
@@ -223,22 +287,18 @@ final class KeychainEntries {
         try {
             var stored = StoredJson.parse(text.get());
             if (!stored.isArray()) {
-                throw damaged();
+                throw new DamagedIndex();
             }
             for (var name : stored.values()) {
                 if (!name.isString() || !isEntryName(name.stringValue())) {
-                    throw damaged();
+                    throw new DamagedIndex();
                 }
                 names.add(name.stringValue());
             }
         } catch (JacksonException ignored) {
-            throw damaged();
+            throw new DamagedIndex();
         }
         return names;
-    }
-
-    private static KeychainException damaged() {
-        return new KeychainException(KeychainException.Kind.REFUSED, "the keychain's index of names is damaged");
     }
 
     private static boolean isEntryName(String name) {

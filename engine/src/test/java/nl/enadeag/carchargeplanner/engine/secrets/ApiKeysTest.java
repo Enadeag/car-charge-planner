@@ -916,8 +916,8 @@ class ApiKeysTest {
         assertThat(keys(keychain).load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW"))));
     }
 
-    /** Lists a key it cannot give, as an entry that went missing behind the index's back. */
-    private static final class UnreadableEntry extends MemoryKeychain {
+    /** Lists a key it does not answer for, as a Secret Service that hangs on one item. */
+    private static final class EntryThatDoesNotAnswer extends MemoryKeychain {
         @Override
         public Optional<String> read(String name) throws KeychainException {
             if (name.equals("forecast/forecast-solar/api_key")) {
@@ -929,7 +929,7 @@ class ApiKeysTest {
 
     @Test
     void aSaveDoesNotReadTheKeysItReplaces() throws SecretsProblem {
-        var unreadable = new UnreadableEntry();
+        var unreadable = new EntryThatDoesNotAnswer();
         unreadable.entries.put("index", "[\"forecast/forecast-solar/api_key\"]");
         var changed = new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW")));
 
@@ -1060,10 +1060,9 @@ class ApiKeysTest {
 
     static Stream<Arguments> entriesKeptUnread() {
         return Stream.of(
-                Arguments.of(new String[] {FORECAST_SOLAR_ENTRY}, "it could not read 1 entry, which was kept as it "
-                        + "was: " + FORECAST_SOLAR_ENTRY),
-                Arguments.of(new String[] {OPEN_METEO_ENTRY, FORECAST_SOLAR_ENTRY}, "it could not read 2 entries, "
-                        + "which were kept as they were: " + FORECAST_SOLAR_ENTRY + ", " + OPEN_METEO_ENTRY));
+                Arguments.of(new String[] {FORECAST_SOLAR_ENTRY}, "1 (" + FORECAST_SOLAR_ENTRY + ")"),
+                Arguments.of(new String[] {OPEN_METEO_ENTRY, FORECAST_SOLAR_ENTRY},
+                        "2 (" + FORECAST_SOLAR_ENTRY + ", " + OPEN_METEO_ENTRY + ")"));
     }
 
     @ParameterizedTest
@@ -1075,7 +1074,8 @@ class ApiKeysTest {
             keys(keychain).applyChanges(NEW_SOLCAST_KEY, () -> { });
 
             assertThat(log.lines()).containsExactly(
-                    "WARNING the API keys were saved in the system keychain, but " + said,
+                    "WARNING the API keys were saved in the system keychain; entries it could not read, kept as they "
+                            + "were: " + said,
                     "INFO API keys are kept in the system keychain");
         }
     }
@@ -1087,8 +1087,8 @@ class ApiKeysTest {
         try (var log = LogCapture.of(ApiKeys.class)) {
             keys(keychain).applyChanges(NEW_SOLCAST_KEY, () -> { });
 
-            assertThat(log.lines()).startsWith("WARNING the API keys were saved in the system keychain, but it could "
-                    + "not read 1 entry, which was kept as it was: " + FORECAST_SOLAR_ENTRY);
+            assertThat(log.lines()).startsWith("WARNING the API keys were saved in the system keychain; entries it "
+                    + "could not read, kept as they were: 1 (" + FORECAST_SOLAR_ENTRY + ")");
         }
         assertThat(keychain.entries).containsEntry(FORECAST_SOLAR_ENTRY, "FS-SECRET-2");
         assertThat(file().path()).hasContent("not JSON");
@@ -1196,6 +1196,197 @@ class ApiKeysTest {
         keys.applyChanges(NEW_SOLCAST_KEY, () -> { });
 
         assertThat(file().read()).isEqualTo(new Secrets(Map.of(SOLCAST, Map.of("api_key", "SC-NEW"))));
+    }
+
+    @Test
+    void removingAKeyWhoseEntryCannotBeReadDeletesItAndItsNameWithoutAsking() throws SecretsProblem {
+        var keychain = withForecastSolarUnreadable();
+
+        assertThat(keys(keychain).remove(Map.of(FORECAST_SOLAR, Set.of("api_key")))).isTrue();
+
+        assertThat(keychain.entries).containsOnlyKeys(KeychainEntries.INDEX, OPEN_METEO_ENTRY);
+        assertThat(index(keychain)).containsExactly(OPEN_METEO_ENTRY);
+    }
+
+    @Test
+    void removingAnotherKeyKeepsTheEntryThatCannotBeRead() throws SecretsProblem {
+        var keychain = withForecastSolarUnreadable();
+
+        assertThat(keys(keychain).remove(Map.of(OPEN_METEO, Set.of("api_key")))).isTrue();
+
+        assertThat(keychain.entries).containsOnlyKeys(KeychainEntries.INDEX, FORECAST_SOLAR_ENTRY)
+                .containsEntry(FORECAST_SOLAR_ENTRY, "FS-SECRET-2");
+        assertThat(index(keychain)).containsExactly(FORECAST_SOLAR_ENTRY);
+    }
+
+    @Test
+    void removingAKeyThatIsNotStoredBesideAnEntryThatCannotBeReadWritesNothing() throws SecretsProblem {
+        var keychain = withForecastSolarUnreadable();
+        var before = Map.copyOf(keychain.entries);
+
+        assertThat(keys(keychain).remove(Map.of(SOLCAST, Set.of("api_key")))).isFalse();
+
+        assertThat(keychain.entries).isEqualTo(before);
+    }
+
+    /** Answers the index the first time, as a usable keychain, and refuses it from then on. */
+    private static final class RefusesTheIndexAfterTheFirstRead extends MemoryKeychain {
+        private final AtomicInteger indexReads = new AtomicInteger();
+
+        @Override
+        public Optional<String> read(String name) throws KeychainException {
+            if (name.equals(KeychainEntries.INDEX) && indexReads.incrementAndGet() > 1) {
+                throw new KeychainException(KeychainException.Kind.REFUSED, "the index cannot be decrypted");
+            }
+            return super.read(name);
+        }
+    }
+
+    @Test
+    void anIndexRefusedAfterTheKeychainSaidItIsUsableSendsTheSaveToTheFileAndKeepsEveryEntry()
+            throws SecretsProblem {
+        var keychain = holdingTheKeys(new RefusesTheIndexAfterTheFirstRead());
+        var before = Map.copyOf(keychain.entries);
+
+        keys(keychain).applyChanges(NEW_SOLCAST_KEY, () -> { });
+
+        assertThat(keychain.entries).isEqualTo(before);
+        assertThat(file().read()).isEqualTo(new Secrets(Map.of(SOLCAST, Map.of("api_key", "SC-NEW"))));
+    }
+
+    /** Has an entry it cannot read, and can be locked; the owner answers the prompt as the test says. */
+    private static class LockableWithAnUnreadableEntry extends UnreadableEntryKeychain {
+        volatile boolean locked;
+        /** An entry that is locked even while the rest is not, as an item of a locked collection. */
+        volatile String lockedEntry;
+        volatile UnlockOutcome answer = UnlockOutcome.NOT_ANSWERED;
+        final AtomicInteger prompts = new AtomicInteger();
+
+        LockableWithAnUnreadableEntry() {
+            super(FORECAST_SOLAR_ENTRY);
+        }
+
+        @Override
+        public Optional<String> read(String name) throws KeychainException {
+            if (locked || name.equals(lockedEntry)) {
+                throw new KeychainException(KeychainException.Kind.LOCKED, "the keychain is locked");
+            }
+            return super.read(name);
+        }
+
+        @Override
+        public void write(String name, String value) throws KeychainException {
+            if (locked) {
+                throw new KeychainException(KeychainException.Kind.LOCKED, "the keychain is locked");
+            }
+            super.write(name, value);
+        }
+
+        @Override
+        public UnlockOutcome unlock(Duration wait, Runnable prompting) {
+            prompts.incrementAndGet();
+            return answer;
+        }
+    }
+
+    @Test
+    void aLockedEntryAfterOneThatCannotBeReadHasTheOwnerUnlockAndWritesNothingUnanswered() {
+        var keychain = holdingTheKeys(new LockableWithAnUnreadableEntry());
+        keychain.lockedEntry = OPEN_METEO_ENTRY;
+        var before = Map.copyOf(keychain.entries);
+
+        assertThatThrownBy(() -> keys(keychain).applyChanges(NEW_SOLCAST_KEY, () -> { }))
+                .isInstanceOfSatisfying(SecretsProblem.class,
+                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.LOCKED));
+
+        assertThat(keychain.prompts).hasValue(1);
+        assertThat(keychain.entries).isEqualTo(before);
+        assertThat(file().path()).doesNotExist();
+    }
+
+    @Test
+    void removingFromAKeychainWithAnEntryItCannotReadAndOneThatIsLockedIsLockedAndNeverPrompts() {
+        var keychain = holdingTheKeys(new LockableWithAnUnreadableEntry());
+        keychain.lockedEntry = OPEN_METEO_ENTRY;
+        var before = Map.copyOf(keychain.entries);
+
+        assertThatThrownBy(() -> keys(keychain).remove(Map.of(FORECAST_SOLAR, Set.of("api_key"))))
+                .isInstanceOfSatisfying(SecretsProblem.class,
+                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.LOCKED));
+
+        assertThat(keychain.prompts).hasValue(0);
+        assertThat(keychain.entries).isEqualTo(before);
+    }
+
+    @Test
+    void aSaveIntoALockedKeychainWithAnEntryItCannotReadGoesToTheFileWhenDismissedAndKeepsTheEntry()
+            throws SecretsProblem {
+        var keychain = holdingTheKeys(new LockableWithAnUnreadableEntry());
+        keychain.locked = true;
+        keychain.answer = UnlockOutcome.DISMISSED;
+        var before = Map.copyOf(keychain.entries);
+
+        keys(keychain).applyChanges(NEW_SOLCAST_KEY, () -> { });
+
+        assertThat(file().read()).isEqualTo(new Secrets(Map.of(SOLCAST, Map.of("api_key", "SC-NEW"))));
+        assertThat(keychain.entries).isEqualTo(before);
+    }
+
+    /** Has an entry it cannot read, and refuses to store the named entries. */
+    private static final class RefusesWrites extends UnreadableEntryKeychain {
+        private final Set<String> refused;
+
+        RefusesWrites(Set<String> refused) {
+            super(FORECAST_SOLAR_ENTRY);
+            this.refused = refused;
+        }
+
+        @Override
+        public void write(String name, String value) throws KeychainException {
+            if (refused.contains(name)) {
+                throw new KeychainException(KeychainException.Kind.REFUSED, "not kept");
+            }
+            super.write(name, value);
+        }
+    }
+
+    @Test
+    void enteringAKeyWhoseEntryCannotBeReadWhileItsWriteIsRefusedFailsTheSaveWithoutTheFile() {
+        var keychain = holdingTheKeys(new RefusesWrites(Set.of(FORECAST_SOLAR_ENTRY)));
+        var before = Map.copyOf(keychain.entries);
+        var entered = KeyChanges.entering(new Secrets(Map.of(FORECAST_SOLAR, Map.of("api_key", "FS-NEW"))));
+
+        assertThatThrownBy(() -> keys(keychain).applyChanges(entered, () -> { }))
+                .isInstanceOfSatisfying(SecretsProblem.class,
+                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.FAILED));
+
+        assertThat(file().path()).doesNotExist();
+        assertThat(keychain.entries).isEqualTo(before);
+    }
+
+    @Test
+    void aMoveIntoAKeychainWithAnEntryItCannotReadThatRefusesWritesKeepsTheFileAndTheEntries() throws SecretsProblem {
+        var keychain = holdingTheKeys(new RefusesWrites(Set.of("forecast/solcast/api_key")));
+        var before = Map.copyOf(keychain.entries);
+        var inFile = new Secrets(Map.of(SOLCAST, Map.of("api_key", "SC-IN-FILE")));
+        file().write(inFile);
+        var keys = keys(keychain);
+
+        keys.moveFileIntoKeychain();
+
+        assertThat(file().read()).isEqualTo(inFile);
+        assertThat(keychain.entries).isEqualTo(before);
+        assertThat(keys.storage()).isEqualTo(KeyStorage.FILE);
+    }
+
+    @Test
+    void aSaveWithoutChangesLeavesAnEntryThatCannotBeReadAndTheOthersAsTheyAre() throws SecretsProblem {
+        var keychain = withForecastSolarUnreadable();
+        var before = Map.copyOf(keychain.entries);
+
+        keys(keychain).applyChanges(KeyChanges.NONE, () -> { });
+
+        assertThat(keychain.entries).isEqualTo(before);
     }
 
     @Test

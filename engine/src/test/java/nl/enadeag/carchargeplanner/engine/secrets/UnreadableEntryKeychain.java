@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.engine.secrets;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,12 +16,13 @@ public class UnreadableEntryKeychain extends MemoryKeychain {
     private final Set<String> unreadable = ConcurrentHashMap.newKeySet();
 
     /**
-     * Makes the keychain, empty.
+     * Makes the keychain with no entries; reads of these names are refused until a value is written under them.
      *
-     * @param unreadable the names whose entries cannot be read, such as "forecast/forecast-solar/api_key"
+     * @param unreadable the names whose entries cannot be read, such as "forecast/forecast-solar/api_key"; a name
+     *     given twice counts once
      */
     public UnreadableEntryKeychain(String... unreadable) {
-        this.unreadable.addAll(Set.of(unreadable));
+        this.unreadable.addAll(List.of(unreadable));
     }
 
     @Override
