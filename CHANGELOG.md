@@ -7,6 +7,13 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ### Changed
 - A file written by a newer version of the app (`engine.json`, `app.json`, `trips.json`, `away.json`, `battery.json`, `trip-notices.json` or `secrets.json`) is no longer moved aside and replaced when you save: it is left as it is, and saving fails until you update the app.
 
+### Android
+Not released yet; this is the way to the first Android release, 0.1.0.
+- First-run set-up: Welcome (what leaves the phone), Location (search for a place or enter coordinates, with the time zone under **Advanced**), Panels, Car, Charger, More (the house and weekly away) and Check, which fetches a forecast once. Typical values are marked, and each step has "I don't know". In English and Dutch.
+- After set-up, a plain **Today** screen shows today's charge windows from the engine, or the next one, with **Refresh**. Settings come in a later version.
+- A settings file the app cannot use shows its details (in English) and **Set up again**; one of a newer version asks you to update the app and is left as it is.
+- The API keys are kept encrypted with a key in the Android Keystore, and never in a plain file.
+
 ## [0.5.0] - 2026-10-22
 
 Trips: enter a drive, and the plan makes sure the battery holds enough when you leave, with advice and notifications for when to charge and the charge limit to set. Grid charges now start within your charging hours. On Linux the app also comes as a .deb and an .rpm.
