@@ -19,8 +19,7 @@ import tools.jackson.databind.JsonNode;
 /**
  * The windows the owner has been told about, in a file, so a restart neither announces them again nor plans them
  * differently while they run. A file that cannot be used counts as empty, and is kept as
- * {@code announced.json.damaged-<time>} when windows are saved, except one of a newer version, which is left as it is;
- * one that cannot be written does not stop planning. The
+ * {@code announced.json.damaged-<time>} when windows are saved; one that cannot be written does not stop planning. The
  * file is a list with an object per window, in this shape of its own:
  * {@code [{"start": "2026-07-03T10:00:00Z", "end": "2026-07-03T12:00:00Z", "amps": 16, "powerKw": 3.68,
  * "solarKwh": 6.9, "importKwh": 0.46}]}.

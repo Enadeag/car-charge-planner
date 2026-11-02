@@ -214,4 +214,24 @@ class SavesTest {
         saves.shown(SaveOutcome.Saved)
         assertThat(saves.lastOutcome.value).isNull()
     }
+
+    @Test
+    fun twoEqualFailuresNotYetShownAreShownOnceAndALaterSuccessFollows() = runTest {
+        access.writeFails = true
+        val saves = saves()
+        saves.update(KeyChanges.NONE) { withHouse(it, 0.8) }
+        runCurrent()
+        saves.update(KeyChanges.NONE) { withHouse(it, 0.9) }
+        runCurrent()
+        access.writeFails = false
+        saves.update(KeyChanges.NONE) { withHouse(it, 1.0) }
+        runCurrent()
+
+        val failed = SaveOutcome.Failed("No space left on device")
+        assertThat(saves.lastOutcome.value).isEqualTo(failed)
+        saves.shown(failed)
+        assertThat(saves.lastOutcome.value).isEqualTo(SaveOutcome.Saved)
+        saves.shown(SaveOutcome.Saved)
+        assertThat(saves.lastOutcome.value).isNull()
+    }
 }

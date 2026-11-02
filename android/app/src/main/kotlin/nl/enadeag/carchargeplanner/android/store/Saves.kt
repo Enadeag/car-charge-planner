@@ -17,10 +17,11 @@ import org.slf4j.LoggerFactory
 
 /**
  * Saves the settings in the app's own scope, so turning the phone or leaving the screen does not cancel a save, and
- * keeps each save's outcome until a screen has shown it, oldest first, so a failed save is never silent: a later success
- * never takes a failure's place. Only a [SaveOutcome.Saved] that no screen has shown yet is replaced, by a later one, as
- * they say the same. One save at a time: each reads the file again and changes only its own part under one lock, so two
- * screens' saves never undo each other.
+ * keeps each save's outcome until a screen has shown it, oldest first, so a failed save is never silent: a later
+ * success never takes a failure's place. Only an outcome that no screen has shown yet and that equals a later one,
+ * such as two [SaveOutcome.Saved] or two failures with the same detail, is replaced by that later one, as they say the
+ * same. One save at a time: each reads the file again and changes only its own part under one lock, so two screens'
+ * saves never undo each other.
  *
  * @param access the engine's reads and writes
  * @param scope the app's scope, which outlives every screen
@@ -108,9 +109,8 @@ class Saves(private val access: EngineAccess, private val scope: CoroutineScope)
 
     private fun keep(result: SaveOutcome) {
         synchronized(unshown) {
-            if (result == SaveOutcome.Saved) {
-                unshown.remove(SaveOutcome.Saved)
-            }
+            // never two equal outcomes, which lastOutcome, a StateFlow, would show as one
+            unshown.remove(result)
             unshown.addLast(result)
             outcome.value = unshown.first()
         }
