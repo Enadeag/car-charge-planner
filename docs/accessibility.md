@@ -13,4 +13,12 @@ The dashboard, Settings and set-up are made to be used with a keyboard only, wit
 <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/java/settings-200-dark.png"><img alt="Settings at 200%, on the Charger page, with the focus ring on the Phases field." src="screenshots/java/settings-200-light.png" width="500"></picture>
 </p>
 
+## Android
+
+The Android app is not released yet. Its set-up, the screen of a settings file it cannot use, and its plain home are made for TalkBack and for Android's largest font, but they are **not yet checked with TalkBack** on a phone: the maintainer walks them before the first release.
+
+- **TalkBack.** Every control has a name of its own and a role (button, radio button, check box), and every field a real label, a one-line hint and, after Next, its problem under it, which TalkBack reads with the field. Each step of set-up starts with a heading that says "Step 3 of 7", and the focus moves to that heading on a new step; after a Next or Finish that finds a problem, it moves to the first field that has one, from the top. A typical value is marked with the words "Typical value", never by colour alone. What the engine or the system says about a problem stays English, and TalkBack reads it as English. The answer of the place search, of the forecast check, and a Finish or a move of the settings file that failed are live regions, which TalkBack reads when they come in. Signed numbers (latitude, longitude, the panels' direction) have a key of their own for the minus, which a phone's number pad may lack.
+- **Size.** Every control can be touched over at least 48 by 48 dp. Each screen is one column of at most about 600 dp that scrolls, so nothing is cut off at 200% font size, also with the keyboard open.
+- **Tests.** The screens' tests on Robolectric check on every pull request that every control has a name and a role and a touch area of 48 dp, and that every screen scrolls at twice the font size. Compose's own accessibility checks (Google's Accessibility Test Framework) find nothing on Robolectric, so they are not used; what TalkBack really reads stays for the check by hand.
+
 If you use a keyboard only or a screen reader every day, please tell us what does not work: open an issue with your system and screen reader.

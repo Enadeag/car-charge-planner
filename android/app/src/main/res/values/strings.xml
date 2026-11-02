@@ -2,4 +2,181 @@
 <resources>
   <!-- the product's name, the same in every language -->
   <string name="app_name" translatable="false">Car charge planner</string>
+
+  <!-- this file's language as the place search takes it: its two-letter code, so the place names come in the
+       language the app shows; a new language puts its own code here -->
+  <string name="place_search_language">en</string>
+
+  <!-- shown while the settings file is read as the app opens -->
+  <string name="reading_settings">Reading your settings…</string>
+
+  <string name="action_next">Next</string>
+  <string name="action_back">Back</string>
+  <string name="action_finish">Finish</string>
+  <string name="action_try_again">Try again</string>
+  <string name="action_cancel">Cancel</string>
+  <!-- %1$s the engine's own words about a problem, which stay English -->
+  <string name="details_in_english">Details (in English): %1$s</string>
+
+  <!-- the mark beside a field that holds a typical value, and what a screen reader says for it -->
+  <string name="typical_mark">Typical value</string>
+  <string name="typical_mark_description">Typical value, not one you entered: change it when you know your own</string>
+  <string name="use_typical">I don\'t know: use typical values</string>
+  <!-- the button in a signed number field that puts a minus before the number or takes it away -->
+  <string name="sign_toggle">Switch between plus and minus</string>
+
+  <!-- %1$d the step's number; %2$d the number of steps -->
+  <string name="setup_step_of">Step %1$d of %2$d</string>
+  <string name="setup_refused">Some values need attention: see the marked fields.</string>
+
+  <string name="setup_welcome_title">Welcome</string>
+  <string name="setup_welcome_intro">This app tells you when to charge your electric car, so that as much of its power as possible comes from your own solar panels. It needs a few facts about your home and your car, and takes a few minutes.</string>
+  <string name="setup_welcome_privacy_title">What leaves your phone</string>
+  <!-- %1$s the forecast provider's name, such as Open-Meteo -->
+  <string name="setup_welcome_privacy">%1$s, the forecast provider, gets your home\'s location and time zone and the tilt and direction of your panels, to make the forecast. The place you type in the next step goes to %1$s too, to find it. Like any website, %1$s also sees your phone\'s internet address.</string>
+  <string name="setup_welcome_nothing_else">Nothing else leaves your phone. There is no account and no tracking.</string>
+  <string name="setup_welcome_settings">Other forecast providers and API keys are in Settings.</string>
+  <string name="setup_welcome_typical_title">Not sure of a value?</string>
+  <string name="setup_welcome_typical">Press “I don\'t know: use typical values”. The app then uses a typical value and marks it, until you enter your own, here or later in Settings.</string>
+
+  <string name="setup_location_title">Where is your home?</string>
+  <string name="place_field">Place or postcode</string>
+  <!-- %1$s the forecast provider's name, such as Open-Meteo -->
+  <string name="place_hint">Searching sends it to %1$s, which finds the coordinates and the time zone.</string>
+  <string name="place_search">Search</string>
+  <string name="place_searching">Searching…</string>
+  <string name="place_choose">Choose your place:</string>
+  <!-- %1$s the place chosen, such as "Utrecht, Netherlands" -->
+  <string name="place_chosen">Coordinates and time zone of %1$s filled in.</string>
+  <!-- %1$s what the owner searched for -->
+  <string name="place_none">No places found for “%1$s”.</string>
+  <string name="place_no_search">Your forecast provider has no place search: enter the coordinates.</string>
+  <string name="place_too_short">Type at least two letters or digits.</string>
+  <string name="place_unavailable">The place search could not be reached. Check that the phone is online and try again, or enter the coordinates.</string>
+  <string name="place_busy">The place search is busy. Try again in a minute.</string>
+  <string name="place_bad_response">The place search gave an answer the app does not understand.</string>
+  <string name="coordinates_toggle">Enter coordinates instead</string>
+  <string name="latitude">Latitude</string>
+  <string name="latitude_hint">Degrees; positive is north.</string>
+  <string name="longitude">Longitude</string>
+  <string name="longitude_hint">Degrees; positive is east of Greenwich.</string>
+  <string name="advanced">Advanced</string>
+  <!-- %1$s the time zone's id, such as Europe/Amsterdam -->
+  <string name="time_zone_now">Time zone: %1$s</string>
+  <string name="time_zone_change">Change the time zone</string>
+  <string name="time_zone_title">Time zone</string>
+  <string name="time_zone_filter">Search the time zones</string>
+  <string name="time_zone_none">No time zone matches.</string>
+
+  <string name="setup_panels_title">Your solar panels</string>
+  <string name="setup_panels_intro">Enter the panels that share one tilt and one direction. Panels that face another way are added in Settings, as an array of their own.</string>
+  <string name="panel_size">Size</string>
+  <string name="panel_size_hint">kWp: the peak power of the panels together.</string>
+  <string name="panel_tilt">Tilt</string>
+  <string name="panel_tilt_hint">Degrees from flat: 0 is flat, about 35 for a pitched roof.</string>
+  <string name="panel_direction">Direction</string>
+  <string name="panel_direction_hint">Degrees from south: -90 is east, 90 is west.</string>
+  <string name="panel_losses">System losses</string>
+  <string name="panel_losses_hint">Percent, usually 10 to 15.</string>
+
+  <string name="setup_car_title">Your car</string>
+  <string name="car_battery">Usable battery</string>
+  <string name="car_battery_hint">kWh, usually 40 to 100.</string>
+  <string name="car_consumption">Consumption</string>
+  <string name="car_consumption_hint">kWh per 100 km, usually 14 to 22.</string>
+  <string name="car_other_driving">Other driving per day</string>
+  <string name="car_other_driving_hint">km a day of the short drives that are not trips.</string>
+  <string name="car_trip_surcharge">Trip surcharge</string>
+  <string name="car_trip_surcharge_hint">Percent added to the consumption for a trip\'s energy.</string>
+
+  <string name="setup_charger_title">Your charger</string>
+  <string name="charger_phases">Phases</string>
+  <string name="charger_phases_hint">One or three: the charger\'s label or manual says.</string>
+  <string name="phases_one">One phase</string>
+  <string name="phases_three">Three phases</string>
+  <string name="charger_min_current">Minimum charge current</string>
+  <string name="charger_min_current_hint">A per phase, often 6.</string>
+  <string name="charger_max_current">Maximum charge current</string>
+  <string name="charger_max_current_hint">A per phase, often 16 or 32.</string>
+  <string name="charger_voltage">Voltage</string>
+  <string name="charger_voltage_hint">V, usually 230.</string>
+  <string name="charger_efficiency">Charging efficiency</string>
+  <string name="charger_efficiency_hint">Percent, usually about 90.</string>
+
+  <string name="setup_more_title">House and away periods</string>
+  <string name="setup_more_intro">Both are optional: they make the plan better, and you can also set them later in Settings. If you drive to work, add the periods the car is away.</string>
+  <string name="house_heading">House</string>
+  <string name="baseload">House baseload</string>
+  <string name="baseload_hint">kW without the car: a month\'s kWh divided by 730.</string>
+  <string name="away_heading">Weekly away periods</string>
+  <string name="away_none">None: the car is treated as at home all week.</string>
+  <string name="away_add">Add period</string>
+  <!-- %1$d the period's place in the list, from 1 -->
+  <string name="away_period">Away period %1$d</string>
+  <!-- %1$d the period's place in the list, from 1 -->
+  <string name="away_remove">Remove away period %1$d</string>
+  <string name="away_weekday">Weekday</string>
+  <string name="away_from">Away from</string>
+  <string name="away_until">Away until</string>
+  <string name="time_hint">Hours and minutes, such as 08:00.</string>
+
+  <string name="setup_check_title">Check the forecast</string>
+  <string name="setup_check_intro">The app asks for one forecast with what you entered, so you know it works before you finish. Nothing is saved yet.</string>
+  <!-- %1$s the forecast provider's name, such as Open-Meteo -->
+  <string name="check_asking">Asking %1$s for a forecast for your home…</string>
+  <!-- %1$s the forecast provider's name, such as Open-Meteo; %2$d the days of forecast, 0 or more -->
+  <plurals name="check_works">
+    <item quantity="one">Forecast received from %1$s, %2$d day.</item>
+    <item quantity="other">Forecast received from %1$s, %2$d days.</item>
+  </plurals>
+  <string name="check_failed">No forecast received. You can still finish; the app tries again by itself.</string>
+  <string name="check_again">Check again</string>
+  <string name="finish_saving">Saving…</string>
+  <string name="finish_failed">Not saved: the settings could not be written.</string>
+
+  <string name="problem_out_of_range">This value is outside what is allowed here.</string>
+  <string name="problem_not_below_target">Must be below the target charge level.</string>
+  <string name="problem_below_minimum_current">Must not be below the minimum charge current.</string>
+  <string name="problem_same_as_primary">Choose a different provider from the first one.</string>
+  <string name="problem_not_after_start">Must end after it starts, on the same day.</string>
+  <string name="problem_same_as_start">Choose two different times.</string>
+  <string name="problem_not_a_number">Type a number.</string>
+  <string name="problem_not_a_whole_number">Type a whole number, without decimals.</string>
+  <string name="problem_not_a_time">Type the time as hours and minutes, such as 07:30.</string>
+  <string name="problem_required">Required: this provider cannot be asked without it.</string>
+  <string name="problem_server_address">Use an address that starts with https://, or http:// for a server on this phone (localhost, 127.0.0.1 or [::1]), without a user name, ? or #.</string>
+  <string name="problem_letters_and_digits">Use only letters and digits, at most 64: that is what the provider\'s API keys look like.</string>
+  <string name="problem_one_line">Use one line, without line breaks or other control characters.</string>
+  <string name="problem_no_place">Choose where your home is: search for it, or enter its coordinates.</string>
+
+  <string name="unusable_title">Not set up</string>
+  <!-- %1$s the settings file's name, engine.json -->
+  <string name="unusable_text">Your settings file, %1$s, cannot be used. Set up again to start over: the file is kept.</string>
+  <string name="set_up_again">Set up again</string>
+  <string name="set_up_again_question">Set up again?</string>
+  <!-- %1$s the settings file's name, engine.json -->
+  <string name="set_up_again_explained">%1$s is not deleted: it is kept beside the new settings, under another name. Then set-up starts.</string>
+  <string name="set_up_again_moving">Setting the file aside…</string>
+  <string name="set_up_again_failed">The file could not be set aside, and is left as it was.</string>
+
+  <string name="newer_title">Update the app</string>
+  <string name="newer_text">Your settings were saved by a newer version of the app. Update the app to use them; until then they are left as they are.</string>
+
+  <string name="home_title">Today</string>
+  <string name="home_asking">Making the plan…</string>
+  <!-- %1$s the start, such as 13:00; %2$s the end; %3$d the charge current in A; %4$s the charge power in kW,
+       written already, such as 1.4 -->
+  <string name="home_window">From %1$s to %2$s, %3$d A (%4$s kW)</string>
+  <!-- %1$s the day, such as Tuesday; %2$s the start, such as 13:00; %3$s the end; %4$d the charge current in A;
+       %5$s the charge power in kW, written already, such as 1.4 -->
+  <string name="home_next_window">No charge window today. Next: %1$s from %2$s to %3$s, %4$d A (%5$s kW)</string>
+  <string name="home_no_window">No charge window today</string>
+  <!-- %1$s the battery level, written already, such as 40 -->
+  <string name="home_assumed">The plan assumes the battery is at %1$s%%.</string>
+  <!-- %1$s the home's time zone, such as Europe/Lisbon -->
+  <string name="home_zone">Times in %1$s</string>
+  <string name="home_no_forecast">No forecast provider has a forecast to use.</string>
+  <string name="home_refresh">Refresh</string>
+  <string name="home_settings">Settings</string>
+  <string name="home_settings_later">Coming in a later version</string>
 </resources>

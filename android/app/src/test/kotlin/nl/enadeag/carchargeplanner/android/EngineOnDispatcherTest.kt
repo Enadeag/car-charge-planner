@@ -17,6 +17,7 @@ import nl.enadeag.carchargeplanner.android.secrets.SoftwareKeys
 import nl.enadeag.carchargeplanner.android.store.EngineOnDispatcher
 import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.android.store.StoredKeys
+import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
@@ -78,8 +79,9 @@ class EngineOnDispatcherTest {
         access.applyKeyChanges(KeyChanges.NONE)
         access.searchPlaces(ProviderId("unknown"), "Utrecht", "nl")
         access.setSettingsAside()
+        access.outlook()
 
-        assertThat(dispatcher.handed.get()).isGreaterThanOrEqualTo(6)
+        assertThat(dispatcher.handed.get()).isGreaterThanOrEqualTo(7)
         assertThat(dispatcher.threads).containsExactly("engine-io")
     }
 
@@ -126,6 +128,11 @@ class EngineOnDispatcherTest {
         assertThat(aside.fileName.toString()).startsWith("engine.json.damaged-")
         assertThat(aside.readText()).isEqualTo("damaged")
         assertThat(access.readSettings()).isEqualTo(StartState.NotSetUp)
+    }
+
+    @Test
+    fun withoutASettingsFileThereIsNoPlanAndNothingIsAsked() = runBlocking {
+        assertThat(access.outlook()).isInstanceOf(Outlook.NotSetUp::class.java)
     }
 
     @Test

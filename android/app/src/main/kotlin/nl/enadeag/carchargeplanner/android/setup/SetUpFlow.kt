@@ -26,8 +26,8 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId
  *
  * @param handle the set-up screen's saved state
  * @param numbers how the screen's language writes numbers
- * @param draft the config set-up starts from, [draft] for the phone's time zone; made again the same way after the
- *     system ended the app
+ * @param draft the config set-up starts from, [draft] for the phone's time zone, which typed coordinates get; made
+ *     again the same way after the system ended the app
  */
 class SetUpFlow(private val handle: SavedStateHandle, numbers: NumberText, private val draft: EngineConfig) {
 
@@ -46,7 +46,7 @@ class SetUpFlow(private val handle: SavedStateHandle, numbers: NumberText, priva
     }
 
     /** Where the home is; set-up needs a place chosen. */
-    val location = LocationForm(handle, numbers, placeRequired = true)
+    val location = LocationForm(handle, numbers, placeRequired = true, phoneZone = draft.system().timezone())
 
     /** The panel arrays. */
     val panels = PanelsForm(handle, numbers)

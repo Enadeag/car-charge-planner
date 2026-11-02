@@ -137,13 +137,37 @@ The Android app's texts are Android string resources, in `android/app/src/main/r
 
 **A new text goes into every language's file in the same pull request.** Lint fails the build on a text that is missing in a language or has no English one (`MissingTranslation`, `ExtraTranslation`), on a placeholder that does not match (`StringFormatMatches`, `StringFormatInvalid`, `StringFormatCount`) and on a plural without a form its language needs or with one it does not (`MissingQuantity`, `UnusedQuantity`, `ImpliedQuantity`). A text you cannot translate yourself must still be in the file: put the English text there for a translator to pick up. `StringsResourcesTest` checks the same on the files themselves, and also that every placeholder is positional, that nothing is wrongly escaped, and that the languages the app offers are English and the `values-*` folders.
 
+### The words of the Android screens
+
+The set-up screens, the screen of a settings file the app cannot use and the plain home use these words beside the terms above, in every language the same way. The buttons and headings are short, as on a phone; the desktop's wording of the same step may differ.
+
+| English | Dutch | Note |
+| --- | --- | --- |
+| Next | Volgende | set-up's button to the next step |
+| Back | Vorige | set-up's button to the step before |
+| Finish | Voltooien | set-up's last button, which saves |
+| Step 3 of 7 | Stap 3 van 7 | read with each step's heading |
+| I don't know: use typical values | Weet ik niet: gangbare waarden gebruiken | fills in typical values |
+| Enter coordinates instead | Liever de coördinaten invullen | opens the latitude and longitude |
+| Advanced | Geavanceerd | opens the time zone |
+| Check again | Opnieuw controleren | asks the forecast provider once more |
+| Try again | Opnieuw proberen | repeats what failed |
+| Set up again | Opnieuw instellen | for an unusable config |
+| Update the app | Werk de app bij | for a settings file of a newer version |
+| Today | Vandaag | the plain home's heading |
+| Refresh | Vernieuwen | makes the plan again |
+| Settings | Instellingen | |
+| Coming in a later version | Komt in een latere versie | why a button is off |
+
+`place_search_language` is no sentence: it is the two-letter code of the file's own language (`en`, `nl`), which the place search is asked to answer in, so the names of places come in the language the app shows.
+
 ### Trying the pseudo-locales
 
 The debug build has two made-up languages, `en-XA` (English with accents and extra length, to see where a text is cut off or a screen has a fixed size) and `ar-XB` (mirrored, right to left, to see the layout flip). An English text that shows without accents in `en-XA` is not a resource but written into the code. They are never in the release build, which offers English and the `values-*` languages only. To pick one on Android 13 and later, open the app's own language (Settings, Apps, Car charge planner, Language): a debug build lists the pseudo-locales there. On an older phone, turn on Developer options and pick one as the phone's language; Android lists them there only with Developer options on. Always try a language on a debug build. (These steps are not yet tried on a device.)
 
 ### Adding a language to the Android app
 
-1. **Start the file.** Create `android/app/src/main/res/values-<code>/strings.xml` with the language's two-letter ISO 639 code (`values-de`), copying `values/strings.xml` and translating every text (the comments above the texts stay in English, for the next translator), following the rules above and the words in the table. Leave `app_name` out.
+1. **Start the file.** Create `android/app/src/main/res/values-<code>/strings.xml` with the language's two-letter ISO 639 code (`values-de`), copying `values/strings.xml` and translating every text (the comments above the texts stay in English, for the next translator), following the rules above and the words in the tables. Leave `app_name` out, and set `place_search_language` to the language's code.
 
 2. **Nothing else lists the language.** The app's language list (what Android offers as the app's own language from Android 13) and the languages kept from libraries come from the `values-*` folders, in `android/app/build.gradle.kts`. Only a folder named after a two-letter code that Java knows counts: use the current codes (`values-id`, `values-he`, `values-yi`, not Android's old `values-in`, `values-iw`, `values-ji`). A regional variant (`values-pt-rBR`) or a language with only a three-letter code is not supported yet: its texts would not be offered.
 

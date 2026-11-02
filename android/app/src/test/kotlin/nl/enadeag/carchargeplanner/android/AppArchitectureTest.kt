@@ -158,7 +158,7 @@ class AppArchitectureTest {
     @Test
     fun theScreensRuleSeesTheAppsScreensButNotItsApplication() {
         assertThat(SCREENS.test(APP_CLASSES.get(MainActivity::class.java))).`as`("the activity").isTrue()
-        assertThat(SCREENS.test(APP_CLASSES.get("$APP.ui.AppNameScreenKt"))).`as`("a screen, in Kotlin").isTrue()
+        assertThat(SCREENS.test(APP_CLASSES.get("$APP.ui.AppScreenKt"))).`as`("a screen, in Kotlin").isTrue()
         assertThat(SCREENS.test(APP_CLASSES.get(CarChargePlannerApp::class.java))).`as`("the Application").isFalse()
         assertThat(SCREENS.test(APP_CLASSES.get(AppEngine::class.java))).`as`("the engine's builder").isFalse()
     }

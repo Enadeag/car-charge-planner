@@ -15,8 +15,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * The app as Android starts it, on Robolectric: the Application the manifest names, and the one screen until set-up
- * and Settings come. JUnit 4, which Robolectric runs on, through the vintage engine beside the JUnit 5 tests.
+ * The app as Android starts it, on Robolectric: the Application the manifest names, and the activity, which opens on
+ * set-up without a settings file. JUnit 4, which Robolectric runs on, through the vintage engine beside the JUnit 5
+ * tests.
  */
 @RunWith(AndroidJUnit4::class)
 class AppOnRobolectricTest {
@@ -25,8 +26,12 @@ class AppOnRobolectricTest {
     val compose = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun theAppShowsItsNameAsAHeading() {
-        compose.onNode(hasText("Car charge planner") and isHeading()).assertIsDisplayed()
+    fun withoutASettingsFileTheAppOpensOnSetUpsWelcome() {
+        val welcome = isHeading() and hasText("Welcome", substring = true)
+
+        compose.waitUntil(10_000) { compose.onAllNodes(welcome).fetchSemanticsNodes().isNotEmpty() }
+
+        compose.onNode(welcome).assertIsDisplayed()
     }
 
     @Test
@@ -49,9 +54,17 @@ class AppOnRobolectricTest {
     @Test
     fun theEngineIsNotStartedSoNothingIsPlannedOrAnnounced() {
         val app = ApplicationProvider.getApplicationContext<Application>()
+        // the process's platform parts are made once, so a later test's files folder may not be there yet, and
+        // asking for it makes it, which the debug build's StrictMode refuses on the main thread
+        val policy = StrictMode.allowThreadDiskWrites()
+        val files = try {
+            app.filesDir
+        } finally {
+            StrictMode.setThreadPolicy(policy)
+        }
 
         assertThat(Thread.getAllStackTraces().keys.map { it.name }).doesNotContain("planner")
-        assertThat(File(app.filesDir, "announced.json")).doesNotExist()
-        assertThat(File(app.filesDir, "trip-notices.json")).doesNotExist()
+        assertThat(File(files, "announced.json")).doesNotExist()
+        assertThat(File(files, "trip-notices.json")).doesNotExist()
     }
 }

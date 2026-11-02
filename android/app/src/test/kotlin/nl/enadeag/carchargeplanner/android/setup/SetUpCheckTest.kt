@@ -44,4 +44,17 @@ class SetUpCheckTest {
 
         assertThat(check.state.value).isEqualTo(SetUpCheck.State.Failed("Open-Meteo did not answer."))
     }
+
+    @Test
+    fun aCancelledCheckDropsItsAnswer() = runTest {
+        val check = SetUpCheck(access, backgroundScope)
+        check.check(draft)
+        runCurrent()
+
+        check.cancel()
+        access.checks.single().complete(ConnectionResult(true, 7, "Received a forecast for 7 days."))
+        runCurrent()
+
+        assertThat(check.state.value).isEqualTo(SetUpCheck.State.NotAsked)
+    }
 }

@@ -61,4 +61,10 @@ class SetUpCheck(private val access: EngineAccess, scope: CoroutineScope) {
             stateNow.value = if (it.worked()) State.Works(it.days()) else State.Failed(it.message())
         }
     }
+
+    /** Stops a check that runs, as the owner went back; its answer is dropped and nothing is asked. */
+    fun cancel() {
+        latest.cancel()
+        stateNow.value = State.NotAsked
+    }
 }

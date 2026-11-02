@@ -10,13 +10,16 @@ import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting
 
 /**
  * Where the home is: its latitude and longitude in degrees, chosen from the place search or typed, and its time
- * zone, which starts as the phone's and follows a place chosen from the search; the owner may change it.
+ * zone. The zone follows a place chosen from the search, goes back to the phone's when the owner types a coordinate,
+ * and stays as it is once the owner chose a zone themselves, until they choose a place again.
  *
- * @param handle where the fields' texts and the time zone are kept
+ * @param handle where the fields' texts, the time zone and whether the owner chose it are kept
  * @param numbers how the screen's language writes numbers
  * @param placeRequired true for set-up, which does not go on without a place chosen; Settings keeps any valid one
+ * @param phoneZone the phone's time zone, which typed coordinates get unless the owner chose a zone
  */
-class LocationForm(handle: SavedStateHandle, numbers: NumberText, private val placeRequired: Boolean) :
+class LocationForm(private val handle: SavedStateHandle, numbers: NumberText, private val placeRequired: Boolean,
+    private val phoneZone: ZoneId) :
     FieldsForm<LocationForm.Field>(FormState(handle, "location", Field.entries), numbers) {
 
     /** A field of the form. */
@@ -33,6 +36,7 @@ class LocationForm(handle: SavedStateHandle, numbers: NumberText, private val pl
 
     private companion object {
         const val DECIMALS = 4
+        const val ZONE_CHOSEN = "location.zoneChosen"
     }
 
     override fun load(config: EngineConfig) {
@@ -41,26 +45,31 @@ class LocationForm(handle: SavedStateHandle, numbers: NumberText, private val pl
         state.fill(Field.LONGITUDE, numbers.write(system.location().longitude(), DECIMALS))
         state.fill(Field.TIME_ZONE, system.timezone().id)
         state.fill(Field.PLACE, "")
+        handle[ZONE_CHOSEN] = false
     }
 
     /**
-     * Takes a place the owner chose from the search: its coordinates, and its time zone.
+     * Takes a place the owner chose from the search: its coordinates, and its time zone, also over one they chose.
      *
      * @param place the place chosen
      */
     fun choose(place: Place) {
         state.edit(Field.LATITUDE, numbers.write(place.location().latitude(), DECIMALS))
         state.edit(Field.LONGITUDE, numbers.write(place.location().longitude(), DECIMALS))
-        choose(place.timezone())
+        state.edit(Field.TIME_ZONE, place.timezone().id)
         state.edit(Field.PLACE, "")
+        handle[ZONE_CHOSEN] = false
     }
 
     /**
-     * Takes a time zone the owner chose.
+     * Takes a time zone the owner chose, which typed coordinates then leave as it is.
      *
      * @param zone the home's time zone
      */
-    fun choose(zone: ZoneId) = state.edit(Field.TIME_ZONE, zone.id)
+    fun choose(zone: ZoneId) {
+        state.edit(Field.TIME_ZONE, zone.id)
+        handle[ZONE_CHOSEN] = true
+    }
 
     /**
      * The time zone as chosen.
@@ -73,10 +82,20 @@ class LocationForm(handle: SavedStateHandle, numbers: NumberText, private val pl
         null
     }
 
+    /**
+     * Puts what the owner typed: the field's problem goes; a typed coordinate takes the "no place chosen" problem
+     * away too, and puts the time zone back to the phone's unless the owner chose one.
+     *
+     * @param field the field
+     * @param text what it holds now
+     */
     override fun edit(field: Field, text: String) {
         super.edit(field, text)
         if (field == Field.LATITUDE || field == Field.LONGITUDE) {
             state.edit(Field.PLACE, "")
+            if (handle.get<Boolean>(ZONE_CHOSEN) != true && state.text(Field.TIME_ZONE) != phoneZone.id) {
+                state.edit(Field.TIME_ZONE, phoneZone.id)
+            }
         }
     }
 
