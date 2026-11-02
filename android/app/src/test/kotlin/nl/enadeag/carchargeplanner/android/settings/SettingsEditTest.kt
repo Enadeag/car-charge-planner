@@ -3,7 +3,9 @@ package nl.enadeag.carchargeplanner.android.settings
 import androidx.lifecycle.SavedStateHandle
 import java.time.ZoneId
 import java.util.Locale
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -14,6 +16,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import nl.enadeag.carchargeplanner.android.AppEngine
 import nl.enadeag.carchargeplanner.android.form.CarForm
+import nl.enadeag.carchargeplanner.android.form.ConfigForm
 import nl.enadeag.carchargeplanner.android.form.ForecastForm
 import nl.enadeag.carchargeplanner.android.form.HouseForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
@@ -42,6 +45,35 @@ class SettingsEditTest {
 
     /** The screen's own thread, which the test runs. */
     private fun TestScope.screen() = StandardTestDispatcher(testScheduler)
+
+    /** A screen's thread that knows when it runs work, on the test's scheduler like every other dispatcher here. */
+    private class KnownScreen(private val thread: CoroutineDispatcher) : CoroutineDispatcher() {
+
+        private val running = ThreadLocal.withInitial { false }
+
+        /** Whether the work running now was handed to this dispatcher. */
+        fun isRunning(): Boolean = running.get()
+
+        override fun dispatch(context: CoroutineContext, block: Runnable) = thread.dispatch(context) {
+            running.set(true)
+            try {
+                block.run()
+            } finally {
+                running.set(false)
+            }
+        }
+    }
+
+    /** A form that notes, at each read, whether it runs on the screen's thread. */
+    private class Watched(private val form: ConfigForm, private val screen: KnownScreen) : ConfigForm by form {
+
+        val readsOnTheScreen = mutableListOf<Boolean>()
+
+        override fun read(config: EngineConfig): EngineConfig? {
+            readsOnTheScreen += screen.isRunning()
+            return form.read(config)
+        }
+    }
 
     @Test
     fun saveLaysOnlyTheScreensPartOverTheFileAsItIsThen() = runTest {
@@ -114,7 +146,7 @@ class SettingsEditTest {
     }
 
     @Test
-    fun aSaveUnderWayOutlivesTheScreenThatStartedIt() = runTest {
+    fun aSaveStartedFromAScreensScopeOutlivesThatScope() = runTest {
         val screen = screen()
         val screenScope = CoroutineScope(screen + Job())
         val house = HouseForm(SavedStateHandle(), numbers).apply { load(shown) }
@@ -132,5 +164,21 @@ class SettingsEditTest {
 
         assertThat((access.settings as StartState.Ready).config.system().house()).isEqualTo(House(0.8))
         assertThat(saves.lastOutcome.value).isEqualTo(SaveOutcome.Saved)
+    }
+
+    @Test
+    fun theFormsAreReadOnTheScreensThreadWhileTheSaveRunsInTheAppsScope() = runTest {
+        val screen = KnownScreen(screen())
+        val house = Watched(HouseForm(SavedStateHandle(), numbers).apply {
+            load(shown)
+            edit(HouseForm.Field.BASELOAD, "0.8")
+        }, screen)
+        val edit = SettingsEdit(listOf(house), Saves(access, backgroundScope), screen)
+
+        edit.save(shown)
+        runCurrent()
+
+        assertThat(house.readsOnTheScreen).containsExactly(true)
+        assertThat((access.settings as StartState.Ready).config.system().house()).isEqualTo(House(0.8))
     }
 }

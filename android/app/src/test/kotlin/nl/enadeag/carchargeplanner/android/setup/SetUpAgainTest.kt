@@ -2,6 +2,10 @@ package nl.enadeag.carchargeplanner.android.setup
 
 import java.nio.file.Path
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
@@ -127,5 +131,21 @@ class SetUpAgainTest {
 
         assertThat(again.state.value).isEqualTo(SetUpAgain.State.Failed("Permission denied"))
         assertThat(again.confirm()).isNull()
+    }
+
+    @Test
+    fun aMoveCancelledWithItsScopeIsNoFailure() = runTest {
+        val scope = CoroutineScope(StandardTestDispatcher(testScheduler) + Job())
+        access.moveGate = CompletableDeferred()
+        val again = SetUpAgain(damaged, access, scope)
+        again.ask()
+        again.confirm()
+        runCurrent()
+
+        scope.cancel()
+        runCurrent()
+
+        assertThat(again.state.value).isEqualTo(SetUpAgain.State.Moving)
+        assertThat(access.settings).isEqualTo(damaged)
     }
 }
