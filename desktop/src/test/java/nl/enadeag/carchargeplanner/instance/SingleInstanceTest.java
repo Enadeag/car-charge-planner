@@ -68,6 +68,14 @@ class SingleInstanceTest {
         return instance;
     }
 
+    // the copies are made on the test's thread: toClose is a plain list
+    private Callable<ClaimOutcome> claimAtOnce(SingleInstance copy, CountDownLatch start) {
+        return () -> {
+            start.await();
+            return copy.claim(received::add);
+        };
+    }
+
     private SingleInstance first() {
         var first = instance();
         assertThat(first.claim(received::add)).isEqualTo(ClaimOutcome.RUNNING);
@@ -164,14 +172,10 @@ class SingleInstanceTest {
     @Test
     void twoCopiesStartingAtOnceEndWithOneRunningAndTheOtherHandingOver() throws Exception {
         var start = new CountDownLatch(1);
-        Callable<ClaimOutcome> claim = () -> {
-            var instance = instance();
-            start.await();
-            return instance.claim(received::add);
-        };
+        var copies = List.of(instance(), instance());
         try (var threads = Executors.newFixedThreadPool(2)) {
-            var one = threads.submit(claim);
-            var other = threads.submit(claim);
+            var one = threads.submit(claimAtOnce(copies.getFirst(), start));
+            var other = threads.submit(claimAtOnce(copies.getLast(), start));
             start.countDown();
             assertThat(List.of(one.get(), other.get()))
                     .containsExactlyInAnyOrder(ClaimOutcome.RUNNING, ClaimOutcome.HANDED_OVER);
@@ -343,14 +347,10 @@ class SingleInstanceTest {
     void twoCopiesStartingAtOnceWithASocketPathTooLongEndWithOneRunning() throws Exception {
         useTooLongPath();
         var start = new CountDownLatch(1);
-        Callable<ClaimOutcome> claim = () -> {
-            var instance = instance();
-            start.await();
-            return instance.claim(received::add);
-        };
+        var copies = List.of(instance(), instance());
         try (var threads = Executors.newFixedThreadPool(2)) {
-            var one = threads.submit(claim);
-            var other = threads.submit(claim);
+            var one = threads.submit(claimAtOnce(copies.getFirst(), start));
+            var other = threads.submit(claimAtOnce(copies.getLast(), start));
             start.countDown();
             assertThat(List.of(one.get(), other.get()))
                     .containsExactlyInAnyOrder(ClaimOutcome.RUNNING_UNREACHABLE, ClaimOutcome.UNREACHABLE);
