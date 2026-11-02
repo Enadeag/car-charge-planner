@@ -148,6 +148,16 @@ class StoredFileTest {
     }
 
     @Test
+    void aFileOfANewerVersionIsNotSetAside() throws IOException {
+        Files.writeString(path(), "{\"version\": 2, \"text\": \"hello\"}");
+
+        assertThatThrownBy(() -> file().setAside()).isInstanceOf(IOException.class)
+                .hasMessageContaining("written by a newer version of the app");
+        assertThat(path()).hasContent("{\"version\": 2, \"text\": \"hello\"}");
+        assertThat(folder).isDirectoryNotContaining(entry -> entry.getFileName().toString().contains("damaged"));
+    }
+
+    @Test
     void aSecondFileSetAsideInTheSameSecondDoesNotReplaceTheFirst() throws IOException {
         Files.writeString(path(), "first");
         file().setAside();

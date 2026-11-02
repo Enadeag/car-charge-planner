@@ -71,13 +71,14 @@ public final class ConfigFile {
     }
 
     /**
-     * Moves the file aside to {@code <name>.damaged-<time>} in the same folder, whatever it holds, so the owner can
-     * set up again while what it held is kept; afterwards {@link #read()} finds no file.
+     * Moves the file aside to {@code <name>.damaged-<time>} in the same folder, whether it can be used or not, so the
+     * owner can set up again while what it held is kept; afterwards {@link #read()} finds no file. Never a file of a
+     * newer version ({@link ConfigProblem.Kind#NEWER_VERSION}): the owner updates the app instead.
      *
      * @return where the file is kept now, for a message that names it
      * @throws java.nio.file.NoSuchFileException when there is no file
-     * @throws IOException when something other than a plain file is in its place, or it could not be moved; it is
-     *     then left as it was
+     * @throws IOException when something other than a plain file is in its place, the file was written by a newer
+     *     version, or it could not be moved; it is then left as it was
      */
     public Path setAside() throws IOException {
         return file.setAside();

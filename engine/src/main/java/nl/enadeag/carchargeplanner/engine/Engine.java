@@ -249,8 +249,8 @@ public final class Engine {
      * The config as the file holds it now, for a client that shows it to be changed.
      *
      * @return the whole config, every value present and valid
-     * @throws ConfigProblem when the file is missing, unreadable or not valid; the problem names the file and the
-     *     setting
+     * @throws ConfigProblem when the file is missing, unreadable, not valid, or written by a newer version of the app
+     *     ({@link ConfigProblem.Kind#NEWER_VERSION}); the problem names the file and the setting
      */
     public EngineConfig config() throws ConfigProblem {
         return configFile.read();
@@ -276,13 +276,13 @@ public final class Engine {
 
     /**
      * Moves the config file aside to {@code <name>.damaged-<time>}, so the owner can set up again over a file that
-     * cannot be used while what it held is kept; the engine is then not set up. Once started, the engine plans again
-     * soon after.
+     * cannot be used while what it held is kept; the engine is then not set up. A file of a newer version is never
+     * moved ({@link ConfigProblem.Kind#NEWER_VERSION}). Once started, the engine plans again soon after.
      *
      * @return where the file is kept now, so the owner can be told
      * @throws java.nio.file.NoSuchFileException when there is no config file
-     * @throws IOException when something other than a plain file is in its place, or it could not be moved; it is
-     *     then left as it was
+     * @throws IOException when something other than a plain file is in its place, the file was written by a newer
+     *     version, or it could not be moved; it is then left as it was
      */
     public Path setConfigAside() throws IOException {
         try {

@@ -450,6 +450,17 @@ class ConfigFileTest {
     }
 
     @Test
+    void aFileOfANewerVersionIsNotSetAsideAndStaysUnusableForThatReason() throws IOException {
+        var file = write(Files.readString(EXAMPLE).replace("\"version\": 1", "\"version\": 2"));
+        var config = new ConfigFile(file, FILES);
+
+        assertThatThrownBy(config::setAside).isInstanceOf(IOException.class)
+                .hasMessageContaining("written by a newer version of the app");
+        assertThatThrownBy(config::read).isInstanceOfSatisfying(ConfigProblem.class,
+                problem -> assertThat(problem.kind()).isEqualTo(ConfigProblem.Kind.NEWER_VERSION));
+    }
+
+    @Test
     void anUnknownNameIsStillRefusedBesideTheVersion() throws IOException {
         var file = write(Files.readString(EXAMPLE).replaceFirst("\\{", "{\"version\": 1, \"extra\": 1,"));
 

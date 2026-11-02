@@ -138,14 +138,16 @@ public final class StoredFile<T> {
     }
 
     /**
-     * Moves the file aside to {@code <name>.damaged-<time>}, whatever it holds, so the owner can start again while
-     * what it held is kept, as when they choose to set up again over a file that cannot be used. Afterwards there is
-     * no file.
+     * Moves the file aside to {@code <name>.damaged-<time>}, whether this version can use it or not, so the owner can
+     * start again while what it held is kept, as when they choose to set up again over a file that cannot be used.
+     * Never a file of a newer version, which that version can still use: the owner updates the app instead.
+     * Afterwards there is no file.
      *
      * @return where the file is kept now, in the same folder
      * @throws NoSuchFileException when there is no file
      * @throws IOException when something other than a plain file is in its place, such as a folder or a link, which
-     *     is not this store's to move, or the file could not be moved; it is then left as it was
+     *     is not this store's to move, the file was written by a newer version, or it could not be moved; it is then
+     *     left as it was
      */
     public synchronized Path setAside() throws IOException {
         if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) {
@@ -153,6 +155,10 @@ public final class StoredFile<T> {
         }
         if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
             throw new IOException(path + " is not a plain file, so it is not set aside");
+        }
+        if (parsed() instanceof Stored.Unusable<T> unusable && unusable.reason() == Stored.Reason.NEWER_VERSION) {
+            throw new IOException(path + " is not set aside, as it was written by a newer version of the app: "
+                    + unusable.detail());
         }
         var aside = moveAside();
         LOG.warn(path + " is kept as " + aside + ", as the owner chose to start again");

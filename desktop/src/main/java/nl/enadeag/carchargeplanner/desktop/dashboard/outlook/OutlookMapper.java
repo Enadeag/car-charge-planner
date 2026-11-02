@@ -93,7 +93,7 @@ public final class OutlookMapper {
             case MISSING -> throw new IllegalStateException(
                     "a missing config file is not set up, never unusable: " + unusable.file());
             case UNREADABLE -> messages.text(TextKey.NOT_SET_UP_UNREADABLE, unusable.file().toString(), unusable.detail());
-            // a file of a newer version is shown as the invalid file it was before it had a kind of its own
+            // a file of a newer version is shown as an invalid one; its detail says it is of a newer version
             case INVALID, NEWER_VERSION -> messages.text(TextKey.NOT_SET_UP_INVALID, String.valueOf(unusable.file().getFileName()),
                     unusable.detail());
         };
