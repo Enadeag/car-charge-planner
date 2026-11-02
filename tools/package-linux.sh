@@ -40,9 +40,9 @@ mkdir -p target
 # runtime, where JavaFX loads them, instead of JavaFX unpacking them from a jar into ~/.openjfx at every start.
 # The version is javafx.version in the parent pom.xml (PackagingTest checks it); a new version needs its checksum from the same
 # folder of the download site.
-jmods=openjfx-27_linux-x64_bin-jmods.zip
-curl -fsSL --proto '=https' -o "target/$jmods" "https://download2.gluonhq.com/openjfx/27/$jmods"
-echo "ea169b02460a38a2b44acf595e28c7abd3d1ab23075e4b03f324ebaf33920c5b  target/$jmods" | sha256sum -c --quiet -
+jmods=openjfx-27.0.1_linux-x64_bin-jmods.zip
+curl -fsSL --proto '=https' -o "target/$jmods" "https://download2.gluonhq.com/openjfx/27.0.1/$jmods"
+echo "323ceb45b938485f6921d7c31c994cc649adb1f75b16192580ff84a3119694ba  target/$jmods" | sha256sum -c --quiet -
 unzip -q -j -d target/javafx "target/$jmods"
 
 # The app's jar and its libraries, the engine among them; JavaFX is in the runtime.
