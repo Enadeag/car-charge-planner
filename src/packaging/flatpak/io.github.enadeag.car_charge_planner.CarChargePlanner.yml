@@ -56,8 +56,8 @@ modules:
         dest: maven
       # JavaFX's jmods, as tools/package-linux.sh downloads them (PackagingTest checks the address and checksum)
       - type: archive
-        url: https://download2.gluonhq.com/openjfx/27/openjfx-27_linux-x64_bin-jmods.zip
-        sha256: ea169b02460a38a2b44acf595e28c7abd3d1ab23075e4b03f324ebaf33920c5b
+        url: https://download2.gluonhq.com/openjfx/27.0.1/openjfx-27.0.1_linux-x64_bin-jmods.zip
+        sha256: 323ceb45b938485f6921d7c31c994cc649adb1f75b16192580ff84a3119694ba
         dest: javafx-jmods
       # every file the Maven build needs, from Maven Central; made by tools/flatpak-maven-sources.sh
       - maven-sources.json
