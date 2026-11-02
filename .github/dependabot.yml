@@ -10,8 +10,9 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
-  # The engine's libraries (Jackson, slf4j, JUnit, AssertJ) come in through Maven: a Maven update changes the catalog in
-  # the same pull request, and the engine's checkMavenDrift task fails when the two differ.
+  # Jackson, slf4j, JUnit, AssertJ and ArchUnit are left to the Maven updates: the Android build reads their versions
+  # from pom.xml while it configures (android/maven-poms, MavenVersions), so a Maven update reaches it too and the
+  # catalog has no version of theirs to update.
   - package-ecosystem: gradle
     directory: /android
     schedule:
@@ -24,6 +25,7 @@ updates:
       - dependency-name: "org.slf4j:*"
       - dependency-name: "org.junit*"
       - dependency-name: "org.assertj:*"
+      - dependency-name: "com.tngtech.archunit:*"
       # these versions need compileSdk 37; remove both entries with #321
       - dependency-name: "androidx.compose:compose-bom"
         versions: [">= 2026.09.00"]

@@ -10,8 +10,9 @@ import org.gradle.api.attributes.Category;
 
 /**
  * Adds {@code checkMavenDrift}, a {@link MavenDriftCheck} that {@code check} runs, to the engine's Gradle module. The
- * module's own libraries are those of {@code api} and {@code implementation}; its test libraries those of the
- * {@code testFixtures} configurations, where the contract tests are. The build file names the poms.
+ * module's own libraries are those of {@code api}, {@code implementation} and {@code runtimeOnly}; its test libraries
+ * those of the {@code testFixtures} configurations, where the contract tests are. BOMs (platforms) are left out. The
+ * build file names the engine's pom.
  */
 public final class MavenDriftPlugin implements Plugin<Project> {
 
@@ -57,14 +58,11 @@ public final class MavenDriftPlugin implements Plugin<Project> {
             var category = dependency.getAttributes().getAttribute(Category.CATEGORY_ATTRIBUTE);
             boolean bom = category != null && (Category.REGULAR_PLATFORM.equals(category.getName())
                     || Category.ENFORCED_PLATFORM.equals(category.getName()));
-            if (onlyTestGroups && !bom
+            if (bom || onlyTestGroups
                     && TEST_GROUPS.stream().noneMatch(group -> Groups.isIn(dependency.getGroup(), group))) {
                 continue;
             }
-            // a catalog library without a version has none here, or an empty one
-            var version = dependency.getVersion() == null || dependency.getVersion().isEmpty() ? null
-                    : dependency.getVersion();
-            found.add(new Declared(dependency.getGroup(), dependency.getName(), version, bom));
+            found.add(new Declared(dependency.getGroup(), dependency.getName()));
         }
         return found;
     }

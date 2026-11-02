@@ -9,6 +9,8 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 dependencies {
+    implementation("nl.enadeag.carchargeplanner:maven-poms")
+
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter.api)
     testImplementation(libs.junit.jupiter.params)
