@@ -461,6 +461,17 @@ class ConfigFileTest {
     }
 
     @Test
+    void aFileOfANewerVersionIsNotWrittenOver() throws IOException, ConfigProblem {
+        var newer = Files.readString(EXAMPLE).replace("\"version\": 1", "\"version\": 2");
+        var file = write(newer);
+
+        assertThatThrownBy(() -> new ConfigFile(file, FILES).write(new ConfigFile(EXAMPLE, FILES).read()))
+                .isInstanceOf(IOException.class).hasMessageContaining("written by a newer version of the app");
+        assertThat(file).hasContent(newer);
+        assertThat(folder).isDirectoryNotContaining(entry -> entry.getFileName().toString().contains("damaged"));
+    }
+
+    @Test
     void anUnknownNameIsStillRefusedBesideTheVersion() throws IOException {
         var file = write(Files.readString(EXAMPLE).replaceFirst("\\{", "{\"version\": 1, \"extra\": 1,"));
 
@@ -469,7 +480,7 @@ class ConfigFileTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"{\"system\": oops", "{\"version\": 2}", "{\"planning\": {}}"})
+    @ValueSource(strings = {"{\"system\": oops", "{\"version\": 1}", "{\"planning\": {}}"})
     void writingOverAFileThatCannotBeUsedKeepsItAside(String unusable) throws IOException, ConfigProblem {
         var path = write(unusable);
         var config = new ConfigFile(EXAMPLE, FILES).read();

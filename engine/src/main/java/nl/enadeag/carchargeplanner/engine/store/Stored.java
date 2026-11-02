@@ -37,7 +37,8 @@ public sealed interface Stored<T> {
     }
 
     /**
-     * The file is there, but this version cannot use it. It is kept as it is: a write first moves it aside.
+     * The file is there, but this version cannot use it. It is kept as it is: a write first moves it aside, and a
+     * write over a file of a newer version is refused.
      *
      * @param <T> the kind of value the file keeps
      * @param reason why it cannot be used

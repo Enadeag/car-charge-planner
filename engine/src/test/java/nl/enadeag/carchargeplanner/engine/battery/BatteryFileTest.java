@@ -86,18 +86,18 @@ class BatteryFileTest {
     }
 
     @Test
-    void aFileOfANewerVersionCountsAsNoReadingAndIsKeptAsideWhenALevelIsSaved() throws IOException {
+    void aFileOfANewerVersionCountsAsNoReadingAndIsNotWrittenOver() throws IOException {
         Files.createDirectories(path().getParent());
         var newer = "{\"version\": 2, \"levelPct\": 40, \"enteredAt\": \"2026-07-03T07:00:00Z\"}";
         Files.writeString(path(), newer);
         assertThat(new BatteryFile(path(), FILES).reading()).isEmpty();
 
-        new BatteryFile(path(), FILES).save(new BatteryReading(new Percent(70), NOW));
+        assertThatThrownBy(() -> new BatteryFile(path(), FILES).save(new BatteryReading(new Percent(70), NOW)))
+                .isInstanceOf(IOException.class).hasMessageContaining("written by a newer version of the app");
 
-        assertThat(new BatteryFile(path(), FILES).reading()).contains(new BatteryReading(new Percent(70), NOW));
+        assertThat(path()).hasContent(newer);
         try (var kept = Files.list(path().getParent())) {
-            assertThat(kept.filter(file -> file.getFileName().toString().startsWith("battery.json.damaged-")))
-                    .singleElement().satisfies(file -> assertThat(file).hasContent(newer));
+            assertThat(kept).containsExactly(path());
         }
     }
 }

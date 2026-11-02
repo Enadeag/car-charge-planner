@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import nl.enadeag.carchargeplanner.LogCapture;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -154,6 +155,30 @@ class StoredFileTest {
         assertThatThrownBy(() -> file().setAside()).isInstanceOf(IOException.class)
                 .hasMessageContaining("written by a newer version of the app");
         assertThat(path()).hasContent("{\"version\": 2, \"text\": \"hello\"}");
+        assertThat(folder).isDirectoryNotContaining(entry -> entry.getFileName().toString().contains("damaged"));
+    }
+
+    @Test
+    void aFileOfANewerVersionIsNotWrittenOverAndStaysAsItWas() throws IOException {
+        byte[] newer = "{\"version\": 2, \"text\": \"hello\"}\n".getBytes(StandardCharsets.UTF_8);
+        Files.write(path(), newer);
+        var file = file();
+
+        assertThatThrownBy(() -> file.write("mine")).isInstanceOf(IOException.class)
+                .hasMessageContaining("is not written over: written by a newer version of the app");
+        assertThat(path()).hasBinaryContent(newer);
+        assertThat(folder).isDirectoryNotContaining(entry -> entry.getFileName().toString().contains("damaged"));
+        assertThat(file.read()).isInstanceOf(Stored.Unusable.class);
+    }
+
+    @Test
+    void aFileOfANewerVersionIsNotRemovedAndStaysAsItWas() throws IOException {
+        byte[] newer = "{\"version\": 2, \"text\": \"hello\"}\n".getBytes(StandardCharsets.UTF_8);
+        Files.write(path(), newer);
+
+        assertThatThrownBy(() -> file().delete()).isInstanceOf(IOException.class)
+                .hasMessageContaining("is not removed: written by a newer version of the app");
+        assertThat(path()).hasBinaryContent(newer);
         assertThat(folder).isDirectoryNotContaining(entry -> entry.getFileName().toString().contains("damaged"));
     }
 

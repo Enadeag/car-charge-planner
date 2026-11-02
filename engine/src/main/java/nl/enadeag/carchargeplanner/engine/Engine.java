@@ -263,7 +263,9 @@ public final class Engine {
      * that names the setting. Once started, the engine plans again soon after.
      *
      * @param config the whole config to keep
-     * @throws IOException when the file could not be written; it is then left as it was
+     * @throws IOException when the file was written by a newer version of the app
+     *     ({@link ConfigProblem.Kind#NEWER_VERSION}), which is never written over, or could not be written; it is then
+     *     left as it was
      */
     public void saveConfig(EngineConfig config) throws IOException {
         try {

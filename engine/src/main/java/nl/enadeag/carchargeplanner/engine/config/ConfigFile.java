@@ -10,7 +10,8 @@ import java.nio.file.Path;
  * The engine's own config file, in JSON, read and written whole in the shape {@link ConfigFormat} gives. Every value
  * must be given, except the {@code away} and {@code typical} sections: a file without them, such as one written before
  * they existed, has no away periods and no typical values. The config is kept in memory until the file changes on
- * disk; a file that cannot be used is renamed, not overwritten, when a new config is written (see {@link
+ * disk; a file that cannot be used is renamed, not overwritten, when a new config is written, and one of a newer
+ * version ({@link ConfigProblem.Kind#NEWER_VERSION}) is never written over, removed or renamed (see {@link
  * StoredFile}).
  */
 public final class ConfigFile {
@@ -60,11 +61,11 @@ public final class ConfigFile {
     /**
      * Replaces the file by this config, in the form {@link #read()} reads: a reader sees the old file or the new one,
      * never half of one, and only the owner can read it. A file that could not be used is kept as
-     * {@code <name>.damaged-<time>}.
+     * {@code <name>.damaged-<time>}; one of a newer version is refused.
      *
      * @param config the whole config to keep; its records have checked their values already
-     * @throws IOException when the file or its folder could not be written, or an unusable file not renamed; the file
-     *     is then left as it was
+     * @throws IOException when the file was written by a newer version, the file or its folder could not be written, or
+     *     an unusable file not renamed; the file is then left as it was
      */
     public void write(EngineConfig config) throws IOException {
         file.write(config);

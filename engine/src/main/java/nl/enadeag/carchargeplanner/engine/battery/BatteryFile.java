@@ -21,7 +21,8 @@ import tools.jackson.databind.node.ObjectNode;
  * The battery level the owner entered last, in a JSON file the engine keeps:
  * {@code {"version": 1, "levelPct": 64.5, "enteredAt": "2026-07-03T07:00:00Z"}}, where a file without a version is
  * version 1. A file that is missing, cannot be read or holds no valid level counts as no reading, so a bad file never
- * stops planning; it is kept as {@code battery.json.damaged-<time>} when a new level is saved. The reading is kept in
+ * stops planning; it is kept as {@code battery.json.damaged-<time>} when a new level is saved, except one of a newer
+ * version, which is left as it is and refuses the save. The reading is kept in
  * memory until the file changes on disk.
  */
 public final class BatteryFile {
@@ -54,8 +55,8 @@ public final class BatteryFile {
      * Replaces the stored level.
      *
      * @param reading the level the owner entered and when
-     * @throws IOException when the file could not be written, or a file that could not be used not renamed; it is
-     *     then left as it was
+     * @throws IOException when the file was written by a newer version, could not be written, or could not be used and
+     *     was not renamed; it is then left as it was
      */
     public void save(BatteryReading reading) throws IOException {
         file.write(reading);
