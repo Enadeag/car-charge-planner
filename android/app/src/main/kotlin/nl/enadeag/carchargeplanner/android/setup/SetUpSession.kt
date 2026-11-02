@@ -59,7 +59,7 @@ class SetUpSession(handle: SavedStateHandle, numbers: NumberText, phoneZone: () 
     val check = SetUpCheck(access, scope)
 
     /** The place search of the location step, with the primary provider's search. */
-    val places = PlaceSearch(handle, access, scope, draft.forecast().primary(), language)
+    val places = PlaceSearch(handle, access, scope, draft.forecast().primary(), language = language)
 
     private val finishingNow = MutableStateFlow<Finishing>(Finishing.Idle)
     private val refusedNow = MutableStateFlow(false)

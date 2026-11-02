@@ -4,6 +4,7 @@ import java.nio.file.Path
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
@@ -74,5 +75,39 @@ class HomeOutlookTest {
 
         assertThat(home.state.value).isEqualTo(HomeOutlook.State.NoForecast("The plan could not be made."))
         assertThat(lost).isZero()
+    }
+
+    @Test
+    fun aHomeBackFromSettingsWhereNothingChangedShowsItsPlanWithoutAsking() = runTest {
+        val shown = HomeOutlook.State.Planned(TodayPlan.of(planned))
+
+        val home = HomeOutlook(access, backgroundScope, MutableStateFlow(3), shown) { lost++ }
+        runCurrent()
+
+        assertThat(home.state.value).isEqualTo(shown)
+        assertThat(access.outlooks).isEmpty()
+    }
+
+    @Test
+    fun aHomeThatWasStillAskingAsksAgain() = runTest {
+        HomeOutlook(access, backgroundScope, MutableStateFlow(0), HomeOutlook.State.Asking) { lost++ }
+        runCurrent()
+
+        assertThat(access.outlooks).hasSize(1)
+    }
+
+    @Test
+    fun aSettingsSaveThatChangesSomethingWhileTheHomeIsShownAsksAgain() = runTest {
+        val changes = MutableStateFlow(0)
+        val home = HomeOutlook(access, backgroundScope, changes) { lost++ }
+        runCurrent()
+        access.outlooks.single().complete(planned)
+        runCurrent()
+
+        changes.value = 1
+        runCurrent()
+
+        assertThat(access.outlooks).hasSize(2)
+        assertThat(home.state.value).isEqualTo(HomeOutlook.State.Asking)
     }
 }

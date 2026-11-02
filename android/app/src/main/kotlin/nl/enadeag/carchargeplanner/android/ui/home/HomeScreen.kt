@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,9 +22,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.time.ZoneId
@@ -31,28 +33,36 @@ import java.time.format.TextStyle
 import java.util.Locale
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
 import nl.enadeag.carchargeplanner.android.home.TodayPlan
+import nl.enadeag.carchargeplanner.android.store.SaveOutcome
+import nl.enadeag.carchargeplanner.android.ui.components.BarPage
 import nl.enadeag.carchargeplanner.android.ui.components.EnglishDetails
-import nl.enadeag.carchargeplanner.android.ui.components.Heading
-import nl.enadeag.carchargeplanner.android.ui.components.Page
 import nl.enadeag.carchargeplanner.engine.plan.Window
 
 /**
  * The plain home after set-up: today's charge windows, else the next one, else that there is none today, with
- * Refresh, and Settings, which comes in a later version. The times follow the phone's 12- or 24-hour clock, in the
- * home's time zone, which is named when it is not the phone's.
+ * Refresh, and Settings as the top app bar's action. The times follow the phone's 12- or 24-hour clock, in the home's
+ * time zone, which is named when it is not the phone's. A Settings save that no screen showed yet shows here until
+ * the owner closes it, in a live region.
  *
  * @param outlook the plan it shows
+ * @param notice the outcome of a Settings save not shown yet
  * @param phoneZone the phone's time zone as it is now, read each time the plan is shown
+ * @param onSettings opens Settings
  */
 @Composable
-internal fun HomeScreen(outlook: HomeOutlook, phoneZone: () -> ZoneId) {
+internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, phoneZone: () -> ZoneId, onSettings: () -> Unit) {
     val state by outlook.state.collectAsStateWithLifecycle()
     val heading = remember { FocusRequester() }
     LaunchedEffect(Unit) { heading.requestFocus() }
-    Page {
-        Heading(stringResource(R.string.home_title), heading)
+    BarPage(stringResource(R.string.home_title), heading, onUp = null, actions = {
+        TextButton(onClick = onSettings) {
+            Text(stringResource(R.string.home_settings))
+        }
+    }) {
+        Notice(notice)
         when (val now = state) {
             HomeOutlook.State.Asking -> Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -68,7 +78,29 @@ internal fun HomeScreen(outlook: HomeOutlook, phoneZone: () -> ZoneId) {
             Text(stringResource(if (state is HomeOutlook.State.NoForecast) R.string.action_try_again
                 else R.string.home_refresh))
         }
-        SettingsLater()
+    }
+}
+
+/** What a Settings save came to, when no screen showed it, with Close. */
+@Composable
+private fun Notice(notice: HomeNotice) {
+    val shown by notice.notice.collectAsStateWithLifecycle()
+    val outcome = shown ?: return
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
+        when (outcome) {
+            SaveOutcome.Saved -> Text(stringResource(R.string.settings_saved))
+            SaveOutcome.KeysNotSaved -> Text(stringResource(R.string.settings_keys_not_saved),
+                color = MaterialTheme.colorScheme.error)
+            is SaveOutcome.Failed -> {
+                Text(stringResource(R.string.settings_save_failed), color = MaterialTheme.colorScheme.error)
+                EnglishDetails(outcome.detail)
+            }
+            is SaveOutcome.SettingsUnusable -> Unit
+        }
+        OutlinedButton(onClick = { notice.close() }) {
+            Text(stringResource(R.string.action_close))
+        }
     }
 }
 
@@ -99,16 +131,6 @@ private fun nextWindow(window: Window, zone: ZoneId, clock: DateTimeFormatter, n
     stringResource(R.string.home_next_window,
         window.start().atZone(zone).dayOfWeek.getDisplayName(TextStyle.FULL, locale), clock.format(window.start()),
         clock.format(window.end()), window.amps(), numbers.write(window.powerKw(), 1))
-
-/** Settings, shown but off until it comes, with the reason, which a screen reader reads with the button. */
-@Composable
-private fun SettingsLater() {
-    val reason = stringResource(R.string.home_settings_later)
-    OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.semantics { stateDescription = reason }) {
-        Text(stringResource(R.string.home_settings))
-    }
-    Text(reason, modifier = Modifier.clearAndSetSemantics { })
-}
 
 /**
  * Hours and minutes as the phone's clock shows them.

@@ -9,11 +9,13 @@ import androidx.lifecycle.viewModelScope
 import java.time.ZoneId
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.android.start.AppFlow
 import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.ui.home.HomeScreen
+import nl.enadeag.carchargeplanner.android.ui.settings.SettingsScreen
 import nl.enadeag.carchargeplanner.android.ui.setup.SetUpScreen
 import nl.enadeag.carchargeplanner.android.ui.start.NewerVersionScreen
 import nl.enadeag.carchargeplanner.android.ui.start.ReadingScreen
@@ -37,7 +39,7 @@ internal class AppViewModel(access: EngineAccess, saves: Saves, appScope: Corout
 
     /** Which screen is shown. */
     val flow = AppFlow(access, saves, appScope, viewModelScope, handle, NumberText { locale }, ZoneId::systemDefault,
-        { language })
+        { language }, Dispatchers.Main.immediate)
 
     /**
      * Takes the language of an activity made again, so what the screens write and search from now on is in it.
@@ -54,7 +56,8 @@ internal class AppViewModel(access: EngineAccess, saves: Saves, appScope: Corout
 /**
  * The screen the app shows now.
  *
- * @param flow which screen it is, and the phone's time zone, which the home names the home's against
+ * @param flow which screen it is, the way into Settings, and the phone's time zone, which the home names the home's
+ *     against
  */
 @Composable
 internal fun AppScreen(flow: AppFlow) {
@@ -64,6 +67,7 @@ internal fun AppScreen(flow: AppFlow) {
         is AppFlow.Screen.SetUp -> SetUpScreen(now.session)
         is AppFlow.Screen.Unusable -> UnusableScreen(now.again)
         is AppFlow.Screen.NewerVersion -> NewerVersionScreen()
-        is AppFlow.Screen.Home -> HomeScreen(now.outlook, flow.phoneZone)
+        is AppFlow.Screen.Home -> HomeScreen(now.outlook, now.notice, flow.phoneZone, flow::openSettings)
+        is AppFlow.Screen.Settings -> SettingsScreen(now.session, now.page)
     }
 }

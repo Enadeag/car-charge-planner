@@ -17,9 +17,12 @@ import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting
  * @param numbers how the screen's language writes numbers
  * @param placeRequired true for set-up, which does not go on without a place chosen; Settings keeps any valid one
  * @param phoneZone the phone's time zone as it is now, which typed coordinates get unless the owner chose a zone
+ * @param storedZoneIsChosen true for Settings, where a zone loaded from the settings file counts as chosen by hand, so
+ *     typed coordinates leave it alone (#315): the file does not record whether the owner once chose it; false for
+ *     set-up, whose draft has the phone's zone
  */
 class LocationForm(private val handle: SavedStateHandle, numbers: NumberText, private val placeRequired: Boolean,
-    private val phoneZone: () -> ZoneId) :
+    private val phoneZone: () -> ZoneId, private val storedZoneIsChosen: Boolean = false) :
     FieldsForm<LocationForm.Field>(FormState(handle, "location", Field.entries), numbers) {
 
     /** A field of the form. */
@@ -45,7 +48,7 @@ class LocationForm(private val handle: SavedStateHandle, numbers: NumberText, pr
         state.fill(Field.LONGITUDE, numbers.write(system.location().longitude(), DECIMALS))
         state.fill(Field.TIME_ZONE, system.timezone().id)
         state.fill(Field.PLACE, "")
-        handle[ZONE_CHOSEN] = false
+        handle[ZONE_CHOSEN] = storedZoneIsChosen
     }
 
     /**

@@ -5,21 +5,27 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
 import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.android.store.LatestAnswer
 import nl.enadeag.carchargeplanner.engine.Outlook
 import org.slf4j.LoggerFactory
 
 /**
- * The plain home's plan: asked once when the home opens and again on Refresh, only the latest answer counting. A
- * settings file that is gone or cannot be used is handed on, so the app shows set-up or the file's problem instead.
+ * The plain home's plan: asked when the home opens, unless it comes back from Settings where nothing changed, again on
+ * Refresh, and again when a Settings save changes something while the home is shown, only the latest answer counting.
+ * A settings file that is gone or cannot be used is handed on, so the app shows set-up or the file's problem instead.
  * Called from the main thread.
  *
  * @param access the engine's plan
  * @param scope where the plan is asked, the screen's
+ * @param changes counts the Settings saves that changed something; each new count asks for the plan again
+ * @param shown the plan the home showed before Settings opened, kept when no save changed anything since; null asks
  * @param lost called when the outlook says the app is not set up or its settings file cannot be used
  */
-class HomeOutlook(private val access: EngineAccess, scope: CoroutineScope, private val lost: () -> Unit) {
+class HomeOutlook(private val access: EngineAccess, scope: CoroutineScope,
+    changes: StateFlow<Int> = MutableStateFlow(0), shown: State? = null, private val lost: () -> Unit) {
 
     private companion object {
         val LOG = LoggerFactory.getLogger(HomeOutlook::class.java)
@@ -47,13 +53,18 @@ class HomeOutlook(private val access: EngineAccess, scope: CoroutineScope, priva
     }
 
     private val latest = LatestAnswer<Outlook?>(scope)
-    private val stateNow = MutableStateFlow<State>(State.Asking)
+    private val stateNow = MutableStateFlow(shown ?: State.Asking)
 
     /** What the home shows now. */
     val state: StateFlow<State> = stateNow.asStateFlow()
 
     init {
-        refresh()
+        if (shown == null || shown == State.Asking) {
+            refresh()
+        }
+        scope.launch {
+            changes.drop(1).collect { refresh() }
+        }
     }
 
     /** Asks for the plan again, as on Refresh. */

@@ -181,5 +181,114 @@
   <string name="home_no_forecast">No forecast provider has a forecast to use.</string>
   <string name="home_refresh">Refresh</string>
   <string name="home_settings">Settings</string>
-  <string name="home_settings_later">Coming in a later version</string>
+
+  <string name="action_save">Save</string>
+  <!-- the top app bar's Up, which a screen reader reads; it goes back as the system's Back does -->
+  <string name="action_up">Back</string>
+  <string name="action_close">Close</string>
+
+  <string name="settings_title">Settings</string>
+  <string name="settings_solar">Solar panels</string>
+  <string name="settings_location">Location</string>
+  <string name="settings_car_house">Car and house</string>
+  <string name="settings_charger">Charger</string>
+  <string name="settings_forecast">Forecast</string>
+  <string name="settings_away">Away</string>
+  <string name="settings_planning">Planning</string>
+  <!-- the list's one line under Solar panels: %1$d the number of panel arrays; %2$s their size together in kWp,
+       written already, such as 6.5 -->
+  <plurals name="settings_solar_summary">
+    <item quantity="one">%1$d array, %2$s kWp</item>
+    <item quantity="other">%1$d arrays, %2$s kWp</item>
+  </plurals>
+  <!-- %1$s the latitude and %2$s the longitude, written already; %3$s the time zone, such as Europe/Amsterdam -->
+  <string name="settings_location_summary">%1$s, %2$s, %3$s</string>
+  <!-- %1$s the usable battery in kWh and %2$s the house baseload in kW, both written already -->
+  <string name="settings_car_house_summary">Battery %1$s kWh, house %2$s kW</string>
+  <!-- %1$s the phases, such as "Three phases"; %2$d the minimum and %3$d the maximum charge current in A -->
+  <string name="settings_charger_summary">%1$s, %2$d to %3$d A</string>
+  <!-- %1$s the primary provider's name; %2$s the fallback provider's -->
+  <string name="settings_forecast_summary">%1$s, fallback %2$s</string>
+  <!-- %1$s the primary provider's name -->
+  <string name="settings_forecast_summary_alone">%1$s, no fallback</string>
+  <!-- %1$d the number of weekly away periods -->
+  <plurals name="settings_away_summary">
+    <item quantity="one">%1$d period a week</item>
+    <item quantity="other">%1$d periods a week</item>
+  </plurals>
+  <string name="settings_away_none">None</string>
+  <!-- %1$s the target and %2$s the minimum charge level, written already, such as 80 -->
+  <string name="settings_planning_summary">Charge to %1$s%%, minimum %2$s%%</string>
+
+  <string name="settings_saving">Saving…</string>
+  <string name="settings_saved">Saved.</string>
+  <string name="settings_keys_not_saved">Not saved: the API keys could not be stored. Try again.</string>
+  <string name="settings_save_failed">Not saved: the settings could not be written.</string>
+  <string name="settings_discard_question">Discard changes?</string>
+  <string name="settings_discard_text">Your changes on this page are not saved yet.</string>
+  <string name="settings_keep_editing">Keep editing</string>
+  <string name="settings_discard">Discard</string>
+
+  <string name="settings_solar_intro">Panels that share one tilt and one direction are one array. Panels that face another way are an array of their own.</string>
+  <!-- %1$d the array's place in the list, from 1 -->
+  <string name="panel_array">Array %1$d</string>
+  <!-- %1$d the array's place in the list, from 1; %2$s the name the owner gave it, such as "east roof" -->
+  <string name="panel_array_named">Array %1$d, %2$s</string>
+  <!-- a field or button of one array: %1$s its name, such as "Tilt"; %2$d the array's place in the list, from 1 -->
+  <string name="panel_in_array">%1$s, array %2$d</string>
+  <string name="panel_name">Name</string>
+  <string name="panel_name_hint">Optional, such as east roof.</string>
+  <string name="panel_add">Add an array</string>
+  <!-- %1$d the array's place in the list, from 1 -->
+  <string name="panel_remove">Remove array %1$d</string>
+  <!-- why the last array cannot be removed, which a screen reader reads with its Remove -->
+  <string name="panel_keep_one">A system needs at least one panel array</string>
+
+  <!-- %1$s the forecast provider's name, such as Forecast.Solar -->
+  <string name="settings_no_place_search">%1$s, your forecast provider, has no place search: enter the coordinates.</string>
+
+  <string name="settings_car_heading">Car</string>
+
+  <string name="forecast_primary">Forecast provider</string>
+  <string name="forecast_primary_hint">Asked first. Its place search is used on the Location page.</string>
+  <string name="forecast_fallback">Fallback provider</string>
+  <string name="forecast_fallback_hint">Asked only when the first has no usable forecast.</string>
+  <string name="forecast_none">None</string>
+  <!-- %1$s the forecast provider's name, such as Open-Meteo -->
+  <string name="forecast_check">Check connection to %1$s</string>
+  <string name="forecast_check_failed">No forecast received.</string>
+  <!-- a provider's setting: %1$s the setting, such as "API key"; %2$s the provider's name, such as Open-Meteo -->
+  <string name="provider_setting_of">%1$s, %2$s</string>
+  <string name="provider_api_key">API key</string>
+  <string name="provider_base_url">Server address</string>
+  <string name="provider_open_meteo_api_key_hint">Only for a paid plan (commercial use). Free use needs none.</string>
+  <string name="provider_open_meteo_base_url_hint">Leave empty for the free public service. A paid plan or your own server has its own address, starting with https://.</string>
+  <string name="provider_forecast_solar_api_key_hint">Only for a paid plan, which adds more days and finer steps. The free plan needs none.</string>
+  <string name="key_show">Show</string>
+  <string name="key_hide">Hide</string>
+  <!-- what a screen reader says for Show and Hide: %1$s the forecast provider's name, such as Open-Meteo -->
+  <string name="key_show_of">Show the API key of %1$s</string>
+  <!-- %1$s the forecast provider's name, such as Open-Meteo -->
+  <string name="key_hide_of">Hide the API key of %1$s</string>
+  <string name="keys_reading">Reading the API keys…</string>
+  <string name="keys_unreadable">Your saved API keys could not be read. Enter them again and save; a key left empty stays as it is. The app tries to read them again in a few minutes.</string>
+
+  <string name="settings_away_intro">Periods each week when the car is not at home. No charging is planned then.</string>
+
+  <string name="planning_minimum">Minimum charge level</string>
+  <string name="planning_minimum_hint">Percent; the battery never drops below it. Below the target.</string>
+  <string name="planning_target">Target charge level</string>
+  <string name="planning_target_hint">Percent, the everyday maximum.</string>
+  <string name="planning_margin">Planning margin</string>
+  <string name="planning_margin_hint">Percent of the forecast surplus to plan on; lower is more cautious.</string>
+  <string name="planning_tolerance">Import tolerance</string>
+  <string name="planning_tolerance_hint">kWh from the grid a charge window may take.</string>
+  <string name="planning_min_window">Minimum charge window</string>
+  <string name="planning_min_window_hint">Minutes; shorter charge windows are dropped.</string>
+  <string name="planning_lead">Notification lead time</string>
+  <string name="planning_lead_hint">Minutes before a charge window starts.</string>
+  <string name="planning_hours_heading">Charging hours</string>
+  <string name="planning_hours_intro">A grid charge starts within these hours, and may run on after them.</string>
+  <string name="planning_hours_from">Start charging from</string>
+  <string name="planning_hours_until">Start charging no later than</string>
 </resources>

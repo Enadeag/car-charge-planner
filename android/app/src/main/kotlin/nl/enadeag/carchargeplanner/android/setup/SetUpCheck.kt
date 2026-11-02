@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.android.store.LatestAnswer
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
+import nl.enadeag.carchargeplanner.engine.config.HomeSystem
+import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
 
 /**
@@ -55,9 +57,21 @@ class SetUpCheck(private val access: EngineAccess, scope: CoroutineScope) {
      * @param config the whole config as entered
      */
     fun check(config: EngineConfig) {
-        stateNow.value = State.Asking
         val primary = config.forecast().primary()
-        latest.ask({ access.checkConnection(primary, config.system(), config.forecast().settingsOf(primary)) }) {
+        check(primary, config.system(), config.forecast().settingsOf(primary))
+    }
+
+    /**
+     * Asks a provider for one forecast with settings as typed, nothing saved, as Settings' Check connection does; a
+     * check that runs is dropped.
+     *
+     * @param provider the provider to ask
+     * @param system the system to ask for, such as the stored one
+     * @param settings the provider's settings as typed; a secret one left out comes from the stored keys
+     */
+    fun check(provider: ProviderId, system: HomeSystem, settings: Map<String, String>) {
+        stateNow.value = State.Asking
+        latest.ask({ access.checkConnection(provider, system, settings) }) {
             stateNow.value = if (it.worked()) State.Works(it.days()) else State.Failed(it.message())
         }
     }

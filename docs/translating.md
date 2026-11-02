@@ -139,7 +139,7 @@ The Android app's texts are Android string resources, in `android/app/src/main/r
 
 ### The words of the Android screens
 
-The set-up screens, the screen of a settings file the app cannot use and the plain home use these words beside the terms above, in every language the same way. The buttons and headings are short, as on a phone; the desktop's wording of the same step may differ.
+The set-up screens, the screen of a settings file the app cannot use, the plain home and Settings use these words beside the terms above, in every language the same way. The buttons and headings are short, as on a phone; the desktop's wording of the same step may differ.
 
 | English | Dutch | Note |
 | --- | --- | --- |
@@ -159,8 +159,28 @@ The set-up screens, the screen of a settings file the app cannot use and the pla
 | Add period | Afwezigheid toevoegen | adds a weekly away period |
 | Today | Vandaag | the plain home's heading |
 | Refresh | Vernieuwen | makes the plan again |
-| Settings | Instellingen | |
-| Coming in a later version | Komt in een latere versie | why a button is off |
+| Settings | Instellingen | the home's top app bar action, and the list's title |
+| Solar panels | Zonnepanelen | a Settings page: every panel array |
+| Location | Locatie | a Settings page |
+| Car and house | Auto en huis | a Settings page |
+| Charger | Laadpaal | a Settings page |
+| Forecast | Voorspelling | a Settings page: the providers and API keys |
+| Away | Afwezigheid | a Settings page: the weekly away periods only |
+| Planning | Planning | a Settings page: the planning preferences |
+| Save | Opslaan | a page's Save, in its top app bar |
+| Saved. | Opgeslagen. | after a page's Save |
+| Back | Terug | what TalkBack says for the top app bar's Up arrow (set-up's own button stays Vorige) |
+| Discard changes? | Wijzigingen weggooien? | asked by Back or Up on a page with edits |
+| Keep editing | Verder bewerken | stays on the page |
+| Discard | Weggooien | throws the page's edits away |
+| Close | Sluiten | closes a save's outcome shown on the home |
+| Array 2, east roof | Panelengroep 2, oostdak | a panel array's heading, by place and name |
+| Tilt, array 2 | Helling, panelengroep 2 | a panel array's field or button, named with its place |
+| Add an array | Panelengroep toevoegen | |
+| A system needs at least one panel array | Een systeem heeft minstens één panelengroep nodig | why the last array's Remove is off |
+| Check connection to Open-Meteo | Verbinding met Open-Meteo testen | asks the provider once, with what was typed |
+| Show, Hide | Tonen, Verbergen | an API key's mask |
+| None | Geen | no fallback provider; no weekly away period |
 
 `place_search_language` is no sentence: it is the two-letter code of the file's own language (`en`, `nl`), which the place search is asked to answer in, so the names of places come in the language the app shows.
 

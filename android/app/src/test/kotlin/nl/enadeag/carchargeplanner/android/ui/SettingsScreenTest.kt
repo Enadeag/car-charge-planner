@@ -1,0 +1,470 @@
+package nl.enadeag.carchargeplanner.android.ui
+
+import android.view.View
+import android.view.ViewGroup
+import android.view.WindowManager
+import androidx.activity.ComponentActivity
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.isHeading
+import androidx.compose.ui.test.junit4.StateRestorationTester
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.lifecycle.SavedStateHandle
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.time.ZoneId
+import java.util.Locale
+import java.util.Optional
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import nl.enadeag.carchargeplanner.android.R
+import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
+import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.settings.SettingsPage
+import nl.enadeag.carchargeplanner.android.settings.SettingsSession
+import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
+import nl.enadeag.carchargeplanner.android.store.Saves
+import nl.enadeag.carchargeplanner.android.store.StartState
+import nl.enadeag.carchargeplanner.android.ui.settings.SettingsScreen
+import nl.enadeag.carchargeplanner.android.ui.settings.title
+import nl.enadeag.carchargeplanner.engine.config.Coordinates
+import nl.enadeag.carchargeplanner.engine.config.EngineConfig
+import nl.enadeag.carchargeplanner.engine.config.ForecastSelection
+import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
+import nl.enadeag.carchargeplanner.engine.secrets.Secrets
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.After
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+
+/** Settings' screen on Robolectric, on its logic with an engine in memory. */
+@RunWith(AndroidJUnit4::class)
+class SettingsScreenTest {
+
+    @get:Rule
+    val compose = createAndroidComposeRule<ComponentActivity>()
+
+    private val amsterdam = ZoneId.of("Europe/Amsterdam")
+    private val openMeteo = ProviderId("open-meteo")
+    private val draft = EngineConfig.setUpDraft(amsterdam, openMeteo)
+    private val stored = draft.withSystem(draft.system().withLocation(Coordinates(52.0907, 5.1214), amsterdam),
+        draft.typical())
+    private val access = FakeEngineAccess(StartState.Ready(stored))
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val saves = Saves(access, scope)
+    private val handle = SavedStateHandle()
+    private var closed = 0
+
+    @After
+    fun stop() {
+        scope.cancel()
+    }
+
+    private fun session(on: SavedStateHandle = handle, config: EngineConfig = stored) = SettingsSession(on,
+        NumberText(compose.activity.resources.configuration.locales[0]), { amsterdam }, { "en" }, access, saves,
+        scope, Dispatchers.Main.immediate, config, { closed++ }) { }
+
+    private fun show(session: SettingsSession = session(), fontScaleTwo: Boolean = false): SettingsSession {
+        compose.setContent {
+            AppTheme {
+                val page by session.page.collectAsState()
+                if (fontScaleTwo) AtFontScaleTwo { SettingsScreen(session, page) } else SettingsScreen(session, page)
+            }
+        }
+        compose.waitForIdle()
+        return session
+    }
+
+    /** Clicks a control, scrolled to first when it is on the page, not in the top app bar or a dialog. */
+    private fun click(id: Int, vararg args: Any) {
+        val control = compose.onNodeWithText(text(id, *args))
+        if (hasAnyAncestor(hasScrollAction()).matches(control.fetchSemanticsNode())) {
+            control.performScrollTo()
+        }
+        control.performClick()
+    }
+
+    private fun open(page: SettingsPage) {
+        click(page.title())
+        compose.waitForIdle()
+    }
+
+    private fun up() = compose.onNodeWithContentDescription(text(R.string.action_up)).performClick()
+
+    private fun field(label: String) = compose.onNode(hasSetTextAction() and hasText(label, substring = true))
+
+    private fun title(page: SettingsPage) = compose.onNode(isHeading() and hasText(text(page.title())))
+
+    private fun assertInLiveRegion(shown: String) {
+        val live = SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion)
+        compose.onNode(hasText(shown) and (live or hasAnyAncestor(live)), useUnmergedTree = true).assertExists()
+    }
+
+    /** Opens every page from the list and goes back, each checked as it comes in the language the test runs in. */
+    private fun walkEveryPage() {
+        val englishOnly = englishOnlyTexts()
+        compose.onNode(isHeading() and hasText(text(R.string.settings_title))).assertExists()
+        compose.assertShowsNoneOf(englishOnly)
+        for (page in SettingsPage.entries) {
+            open(page)
+            title(page).assertExists()
+            if (page == SettingsPage.AWAY) {
+                click(R.string.away_add)
+            }
+            compose.assertShowsNoneOf(englishOnly)
+            up()
+            compose.waitForIdle()
+            if (page == SettingsPage.AWAY) {
+                compose.assertShowsNoneOf(englishOnly)
+                click(R.string.settings_discard)
+                compose.waitForIdle()
+            }
+        }
+    }
+
+    @Test
+    fun everyPageIsInEnglish() {
+        show()
+        walkEveryPage()
+    }
+
+    @Test
+    @Config(qualifiers = "nl")
+    fun everyPageIsInDutch() {
+        show()
+        walkEveryPage()
+    }
+
+    @Test
+    fun theListAndEveryPageScrollAndTheirControlsAreNamedAndLargeEnoughAtTwiceTheFontSize() {
+        val session = show(fontScaleTwo = true)
+        compose.assertScrolls()
+        compose.assertEveryControlIsNamedAndLargeEnough()
+        for (page in SettingsPage.entries) {
+            session.open(page)
+            compose.waitForIdle()
+            when (page) {
+                SettingsPage.SOLAR -> click(R.string.panel_add)
+                SettingsPage.LOCATION -> click(R.string.advanced)
+                SettingsPage.AWAY -> click(R.string.away_add)
+                else -> Unit
+            }
+            compose.waitForIdle()
+            compose.assertScrolls()
+            compose.assertEveryControlIsNamedAndLargeEnough()
+            session.back()
+            session.discard()
+            compose.waitForIdle()
+        }
+    }
+
+    @Test
+    fun eachRowSaysWhatThePageHoldsNow() {
+        show()
+
+        val kwp = NumberText(Locale.ENGLISH).write(stored.system().panels().single().kwp(), 2)
+        compose.onNodeWithText(compose.activity.resources.getQuantityString(R.plurals.settings_solar_summary, 1, 1,
+            kwp)).assertExists()
+        compose.onNodeWithText(text(R.string.settings_location_summary, "52.0907", "5.1214", "Europe/Amsterdam"))
+            .assertExists()
+        compose.onNodeWithText(text(R.string.settings_forecast_summary_alone, "Open-Meteo")).assertExists()
+        compose.onNodeWithText(text(R.string.settings_away_none)).assertExists()
+    }
+
+    @Test
+    fun aRowOpensItsPageAndMovesTheFocusToItsTitle() {
+        val session = show()
+
+        open(SettingsPage.CHARGER)
+
+        assertThat(session.page.value).isEqualTo(SettingsPage.CHARGER)
+        title(SettingsPage.CHARGER).assertIsFocused()
+    }
+
+    @Test
+    fun saveInTheTopAppBarSavesThePageWhichStaysOpenAndSaysSoInALiveRegion() {
+        val session = show()
+        open(SettingsPage.CAR_AND_HOUSE)
+        field(text(R.string.car_battery)).performTextReplacement("75")
+
+        compose.onNodeWithText(text(R.string.action_save)).assert(!hasAnyAncestor(hasScrollAction())).performClick()
+        compose.waitForIdle()
+
+        assertThat((access.settings as StartState.Ready).config.system().car().usableBatteryKwh()).isEqualTo(75.0)
+        assertThat(session.page.value).isEqualTo(SettingsPage.CAR_AND_HOUSE)
+        assertInLiveRegion(text(R.string.settings_saved))
+        up()
+        compose.waitForIdle()
+        assertThat(session.page.value).isNull()
+    }
+
+    @Test
+    fun aRefusedValueMovesTheFocusToItsField() {
+        show()
+        open(SettingsPage.PLANNING)
+        field(text(R.string.planning_target)).performTextReplacement("10")
+
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        field(text(R.string.planning_minimum)).assertIsFocused()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_not_below_target)))
+        assertInLiveRegion(text(R.string.setup_refused))
+        assertThat(access.written).isEmpty()
+    }
+
+    @Test
+    fun backWithEditsAsksAndKeepEditingKeepsThem() {
+        val session = show()
+        open(SettingsPage.CAR_AND_HOUSE)
+        field(text(R.string.car_battery)).performTextReplacement("75")
+
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        compose.waitForIdle()
+
+        compose.onNode(isDialog()).assertExists()
+        compose.onNodeWithText(text(R.string.settings_discard_question)).assertExists()
+        click(R.string.settings_keep_editing)
+        compose.waitForIdle()
+        compose.onNode(isDialog()).assertDoesNotExist()
+        field(text(R.string.car_battery)).assert(hasText("75"))
+        assertThat(session.page.value).isEqualTo(SettingsPage.CAR_AND_HOUSE)
+    }
+
+    @Test
+    fun upWithEditsAsksAsBackDoesAndDiscardGoesToTheList() {
+        val session = show()
+        open(SettingsPage.CAR_AND_HOUSE)
+        field(text(R.string.car_battery)).performTextReplacement("75")
+
+        up()
+        compose.waitForIdle()
+        click(R.string.settings_discard)
+        compose.waitForIdle()
+
+        assertThat(session.page.value).isNull()
+        compose.onNode(isHeading() and hasText(text(R.string.settings_title))).assertExists()
+        assertThat(access.written).isEmpty()
+    }
+
+    @Test
+    fun backAndUpOnTheListLeaveSettings() {
+        show()
+
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        up()
+
+        assertThat(closed).isEqualTo(2)
+        assertThat(compose.activity.isFinishing).isFalse()
+    }
+
+    @Test
+    fun theForecastPageAllowsNoScreenshotAndNoAutofillOnlyWhileItShows() {
+        show()
+        assertThat(secure()).isFalse()
+
+        open(SettingsPage.FORECAST)
+        assertThat(secure()).isTrue()
+        assertThat(autofillExcluded()).isTrue()
+        up()
+        compose.waitForIdle()
+
+        assertThat(secure()).isFalse()
+        assertThat(autofillExcluded()).isFalse()
+    }
+
+    @Test
+    fun anApiKeyIsMaskedFilledWithTheStoredKeyAndShowShowsIt() {
+        access.keys = Secrets(mapOf(openMeteo to mapOf("api_key" to "STORED1")))
+        show()
+        open(SettingsPage.FORECAST)
+        val key = field(text(R.string.provider_setting_of, text(R.string.provider_api_key), "Open-Meteo"))
+        key.assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Password))
+        assertThat(drawn(key)).isNotEqualTo("STORED1").hasSize("STORED1".length)
+
+        compose.onNodeWithContentDescription(text(R.string.key_show_of, "Open-Meteo")).performScrollTo()
+            .performClick()
+
+        assertThat(drawn(key)).isEqualTo("STORED1")
+        // a screen reader still treats it as a password, and the keyboard neither suggests nor learns it
+        key.assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Password))
+        compose.onNodeWithContentDescription(text(R.string.key_hide_of, "Open-Meteo")).assertExists()
+    }
+
+    @Test
+    fun keysThatCouldNotBeReadSaySoAndMayBeEnteredAgain() {
+        access.keysUnreadable = true
+        show()
+
+        open(SettingsPage.FORECAST)
+
+        compose.onNodeWithText(text(R.string.keys_unreadable)).assertExists()
+        field(text(R.string.provider_setting_of, text(R.string.provider_api_key), "Open-Meteo")).assertIsEnabled()
+    }
+
+    @Test
+    fun keysThatCouldNotBeStoredSaySoInALiveRegion() {
+        show()
+        open(SettingsPage.FORECAST)
+        field(text(R.string.provider_setting_of, text(R.string.provider_api_key), "Open-Meteo"))
+            .performTextInput("K1")
+        access.keysFail = true
+
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        assertInLiveRegion(text(R.string.settings_keys_not_saved))
+    }
+
+    @Test
+    fun checkConnectionShowsTheEnginesEnglishDetailsForAServerOnThisPhone() {
+        show()
+        open(SettingsPage.FORECAST)
+        field(text(R.string.provider_setting_of, text(R.string.provider_base_url), "Open-Meteo"))
+            .performTextInput("http://localhost:8080")
+
+        click(R.string.forecast_check, "Open-Meteo")
+        compose.waitForIdle()
+        access.checks.single().complete(ConnectionResult(false, 0, "Open-Meteo did not answer."))
+        compose.waitForIdle()
+
+        assertThat(access.checked.single().second).containsEntry("base_url", "http://localhost:8080")
+        assertInLiveRegion(text(R.string.forecast_check_failed))
+        compose.onNodeWithText(text(R.string.details_in_english, "Open-Meteo did not answer.")).assertExists()
+    }
+
+    @Test
+    fun aFallbackThatIsThePrimaryShowsItsProblemAtTheChoiceAndTakesTheFocus() {
+        show()
+        open(SettingsPage.FORECAST)
+        val group = SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription,
+            listOf(text(R.string.forecast_fallback)))
+        compose.onNode(hasText("Open-Meteo") and hasAnyAncestor(group)).performScrollTo().performClick()
+
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        compose.onNode(group).assertIsFocused()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_same_as_primary)))
+    }
+
+    @Test
+    fun theLastArraysRemoveIsOffWithItsReasonAndArraysAreNamedByPlaceAndName() {
+        show()
+        open(SettingsPage.SOLAR)
+        compose.onNodeWithText(text(R.string.panel_remove, 1)).assertIsNotEnabled()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(R.string.panel_keep_one)))
+        field(text(R.string.panel_in_array, text(R.string.panel_name), 1)).performTextInput("east roof")
+        compose.onNode(isHeading() and hasText(text(R.string.panel_array_named, 1, "east roof"))).assertExists()
+
+        click(R.string.panel_add)
+        compose.onNode(isHeading() and hasText(text(R.string.panel_array, 2))).assertExists()
+        field(text(R.string.panel_in_array, text(R.string.panel_tilt), 2)).assertExists()
+        click(R.string.panel_remove, 1)
+        compose.waitForIdle()
+
+        compose.onNode(isHeading() and hasText(text(R.string.panel_array, 1))).assertExists()
+        compose.onNodeWithText(text(R.string.panel_remove, 1)).assertIsNotEnabled()
+    }
+
+    @Test
+    fun aProviderWithoutAPlaceSearchHasTheLocationPageSaySo() {
+        val forecastSolar = ProviderId("forecast-solar")
+        val config = stored.withForecast(ForecastSelection(forecastSolar, Optional.empty(), mapOf()))
+        show(session(config = config))
+
+        open(SettingsPage.LOCATION)
+
+        compose.onNodeWithText(text(R.string.settings_no_place_search, "Forecast.Solar")).assertExists()
+        field(text(R.string.place_field)).assertDoesNotExist()
+        field(text(R.string.latitude)).assertExists()
+    }
+
+    @Test
+    fun thePageAndItsTextsSurviveTurningThePhone() {
+        val restoration = StateRestorationTester(compose)
+        val session = session()
+        restoration.setContent {
+            AppTheme {
+                val page by session.page.collectAsState()
+                SettingsScreen(session, page)
+            }
+        }
+        open(SettingsPage.CAR_AND_HOUSE)
+        field(text(R.string.car_battery)).performTextReplacement("75")
+
+        restoration.emulateSavedInstanceStateRestore()
+
+        title(SettingsPage.CAR_AND_HOUSE).assertExists()
+        field(text(R.string.car_battery)).assert(hasText("75"))
+    }
+
+    @Test
+    fun thePageAndItsTextsSurviveTheSystemEndingTheAppButATypedKeyDoesNot() {
+        val restoration = StateRestorationTester(compose)
+        var session by mutableStateOf(session())
+        restoration.setContent {
+            AppTheme {
+                val page by session.page.collectAsState()
+                SettingsScreen(session, page)
+            }
+        }
+        open(SettingsPage.FORECAST)
+        val key = field(text(R.string.provider_setting_of, text(R.string.provider_api_key), "Open-Meteo"))
+        key.performTextInput("TYPED2")
+        field(text(R.string.provider_setting_of, text(R.string.provider_base_url), "Open-Meteo"))
+            .performTextInput("https://example.org")
+
+        session = session(handle.afterTheSystemEndedTheApp())
+        restoration.emulateSavedInstanceStateRestore()
+        compose.waitForIdle()
+
+        title(SettingsPage.FORECAST).assertExists()
+        field(text(R.string.provider_setting_of, text(R.string.provider_base_url), "Open-Meteo"))
+            .assert(hasText("https://example.org"))
+        assertThat(session.forms.forecast.text(openMeteo, "api_key")).isEmpty()
+    }
+
+    /** The text a field draws, after its mask. */
+    private fun drawn(field: SemanticsNodeInteraction): String {
+        val layouts = mutableListOf<TextLayoutResult>()
+        field.fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult].action!!.invoke(layouts)
+        return layouts.first().layoutInput.text.text
+    }
+
+    private fun secure() = (compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE) != 0
+
+    private fun autofillExcluded(): Boolean = views(compose.activity.window.decorView)
+        .any { it.importantForAutofill == View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS }
+
+    private fun views(view: View): List<View> = listOf(view) +
+        ((view as? ViewGroup)?.let { group -> (0 until group.childCount).flatMap { views(group.getChildAt(it)) } })
+            .orEmpty()
+}

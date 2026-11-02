@@ -22,10 +22,11 @@ import org.slf4j.LoggerFactory
  * @param access the engine's place search
  * @param scope where a search runs, the screen's
  * @param provider the forecast provider whose place search is used
+ * @param prefix sets this search's keys in the handle apart, as set-up and Settings share the screen's handle
  * @param language the app's language now, as the place search takes it, such as "nl"
  */
 class PlaceSearch(private val handle: SavedStateHandle, private val access: EngineAccess, scope: CoroutineScope,
-    private val provider: ProviderId, private val language: () -> String) {
+    private val provider: ProviderId, prefix: String = "setUp.place", private val language: () -> String) {
 
     companion object {
 
@@ -38,8 +39,6 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
          */
         const val LONGEST_TEXT = 100
 
-        private const val TEXT = "setUp.place.text"
-        private const val CHOSEN = "setUp.place.chosen"
         private val LOG = LoggerFactory.getLogger(PlaceSearch::class.java)
     }
 
@@ -79,9 +78,11 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
         data class Failed(val problem: PlaceResults.Problem) : State
     }
 
+    private val textKey = "$prefix.text"
+    private val chosenKey = "$prefix.chosen"
     private val latest = LatestAnswer<State>(scope)
     private val stateNow = MutableStateFlow<State>(State.Idle)
-    private val chosenNow = MutableStateFlow(handle.get<String>(CHOSEN))
+    private val chosenNow = MutableStateFlow(handle.get<String>(chosenKey))
 
     /** What the search shows now. */
     val state: StateFlow<State> = stateNow.asStateFlow()
@@ -94,7 +95,7 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
      *
      * @return the text, empty before anything was typed
      */
-    fun text(): String = handle.get<String>(TEXT).orEmpty()
+    fun text(): String = handle.get<String>(textKey).orEmpty()
 
     /**
      * Puts what the owner typed, up to [LONGEST_TEXT] characters; nothing is searched for until they ask.
@@ -102,7 +103,7 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
      * @param text what the field holds now
      */
     fun edit(text: String) {
-        handle[TEXT] = text.take(LONGEST_TEXT)
+        handle[textKey] = text.take(LONGEST_TEXT)
     }
 
     /** Searches for the text typed, dropping a search that runs. */
@@ -131,7 +132,7 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
     }
 
     private fun keepChosen(label: String?) {
-        if (label == null) handle.remove<String>(CHOSEN) else handle[CHOSEN] = label
+        if (label == null) handle.remove<String>(chosenKey) else handle[chosenKey] = label
         chosenNow.value = label
     }
 
