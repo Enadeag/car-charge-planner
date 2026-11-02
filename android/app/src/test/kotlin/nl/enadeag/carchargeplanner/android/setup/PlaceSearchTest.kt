@@ -68,9 +68,25 @@ class PlaceSearchTest {
 
         val found = search.state.value as PlaceSearch.State.Found
         assertThat(found.text).isEqualTo("Bergen")
-        assertThat(found.results).hasSize(PlaceSearch.MOST_RESULTS)
+        assertThat(found.results).hasSize(8)
         assertThat(found.results.map { it.label }.take(3)).containsExactly(
             "Bergen, Noord-Holland, Netherlands", "Bergen, Utrecht, Netherlands", "Place 1, Utrecht, Netherlands")
+    }
+
+    @Test
+    fun aTwinBeyondTheEighthPlaceDoesNotGiveOneShownTheFinerArea() = runTest {
+        val search = search()
+        val places = (1..7).map { place("Place $it") } + place("Bergen", area = "Noord-Holland") +
+            place("Bergen", area = "Limburg-Noord")
+        search.edit("Bergen")
+
+        search.search()
+        runCurrent()
+        access.searches.single().complete(PlaceResults.Found(places))
+        runCurrent()
+
+        assertThat((search.state.value as PlaceSearch.State.Found).results.last().label)
+            .isEqualTo("Bergen, Utrecht, Netherlands")
     }
 
     @Test
@@ -137,6 +153,20 @@ class PlaceSearchTest {
         assertThat(again.text()).isEqualTo("Utrecht")
         assertThat(again.chosen.value).isEqualTo("Utrecht, Netherlands")
         assertThat(again.state.value).isEqualTo(PlaceSearch.State.Idle)
+    }
+
+    @Test
+    fun aSearchStillRunningWhenAPlaceIsChosenDoesNotShowItsResultsAfterwards() = runTest {
+        val search = search()
+        search.edit("Utrecht")
+        search.search()
+        runCurrent()
+
+        search.choose(PlaceSearch.Result(place("Utrecht"), "Utrecht, Netherlands"))
+        access.searches.single().complete(PlaceResults.Found(listOf(place("Utrecht"))))
+        runCurrent()
+
+        assertThat(search.state.value).isEqualTo(PlaceSearch.State.Idle)
     }
 
     @Test

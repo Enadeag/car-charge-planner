@@ -72,7 +72,7 @@ class EngineOnDispatcherTest {
     }
 
     @Test
-    fun everyReadAndWriteRunsOnTheDispatcherItIsGiven() = runBlocking {
+    fun everyReadAndWriteRunsOnTheDispatcherItIsGiven() = runBlocking<Unit> {
         access.readSettings()
         access.saveSettings(draft)
         access.storedKeys()
@@ -80,18 +80,19 @@ class EngineOnDispatcherTest {
         access.searchPlaces(ProviderId("unknown"), "Utrecht", "nl")
         access.setSettingsAside()
         access.outlook()
+        access.checkConnection(ProviderId("unknown"), draft.system(), emptyMap())
 
-        assertThat(dispatcher.handed.get()).isEqualTo(7)
+        assertThat(dispatcher.handed.get()).isEqualTo(8)
         assertThat(dispatcher.threads).containsExactly("engine-io")
     }
 
     @Test
-    fun withoutASettingsFileTheAppIsNotSetUp() = runBlocking {
+    fun withoutASettingsFileTheAppIsNotSetUp() = runBlocking<Unit> {
         assertThat(access.readSettings()).isEqualTo(StartState.NotSetUp)
     }
 
     @Test
-    fun aSettingsFileThatSaysNothingUsableIsUnusableWithItsNameAndTheEnglishDetails() = runBlocking {
+    fun aSettingsFileThatSaysNothingUsableIsUnusableWithItsNameAndTheEnglishDetails() = runBlocking<Unit> {
         settingsFile("{\"version\": 1, \"system\": ")
 
         assertThat(access.readSettings()).isInstanceOfSatisfying(StartState.Unusable::class.java) { unusable ->
@@ -101,7 +102,7 @@ class EngineOnDispatcherTest {
     }
 
     @Test
-    fun aSettingsFileOfANewerVersionAsksForAnUpdateAndIsLeftAsItIs() = runBlocking {
+    fun aSettingsFileOfANewerVersionAsksForAnUpdateAndIsLeftAsItIs() = runBlocking<Unit> {
         val text = StoredJson.pretty(StoredJson.`object`().put("version", 99))
         val file = settingsFile(text)
 
@@ -112,14 +113,14 @@ class EngineOnDispatcherTest {
     }
 
     @Test
-    fun savedSettingsAreReadBackReady() = runBlocking {
+    fun savedSettingsAreReadBackReady() = runBlocking<Unit> {
         access.saveSettings(draft)
 
         assertThat(access.readSettings()).isEqualTo(StartState.Ready(draft))
     }
 
     @Test
-    fun aSettingsFileSetAsideIsKeptBesideItAndTheAppIsNotSetUpThen() = runBlocking {
+    fun aSettingsFileSetAsideIsKeptBesideItAndTheAppIsNotSetUpThen() = runBlocking<Unit> {
         settingsFile("damaged")
 
         val aside = access.setSettingsAside()
@@ -131,19 +132,23 @@ class EngineOnDispatcherTest {
     }
 
     @Test
-    fun withoutASettingsFileThereIsNoPlanAndNothingIsAsked() = runBlocking {
+    fun withoutASettingsFileThereIsNoPlanAndNothingIsAsked() = runBlocking<Unit> {
         assertThat(access.outlook()).isInstanceOf(Outlook.NotSetUp::class.java)
     }
 
     @Test
-    fun keysThatTheKeychainCannotGiveAreUnreadable() = runBlocking {
+    fun keysThatTheKeychainCannotGiveAreUnreadable() = runBlocking<Unit> {
+        val key = Secrets(mapOf(ProviderId("open-meteo") to mapOf("api_key" to "MADEUPKEY")))
+        access.applyKeyChanges(KeyChanges.entering(key))
         keys.failNext(KeyStoreException("the Keystore is busy"))
+        val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys)
+        val later = EngineOnDispatcher(AppEngine.build(platform, QuietNotifier), dispatcher)
 
-        assertThat(access.storedKeys()).isEqualTo(StoredKeys.Unreadable)
+        assertThat(later.storedKeys()).isEqualTo(StoredKeys.Unreadable)
     }
 
     @Test
-    fun keysAppliedAreReadBack() = runBlocking {
+    fun keysAppliedAreReadBack() = runBlocking<Unit> {
         val key = Secrets(mapOf(ProviderId("open-meteo") to mapOf("api_key" to "MADEUPKEY")))
 
         access.applyKeyChanges(KeyChanges.entering(key))

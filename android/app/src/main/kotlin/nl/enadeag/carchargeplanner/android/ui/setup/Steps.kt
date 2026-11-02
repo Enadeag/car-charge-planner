@@ -167,8 +167,9 @@ internal fun MoreStep(house: HouseForm, away: WeeklyAwayForm, edits: Edits, prob
 }
 
 /**
- * One weekly away period: its place in the list as a heading, the weekday, the times, and Remove, each control named
- * with the period's number, so a screen reader that lands on one, as on a problem after Next, says which period.
+ * One weekly away period: its place in the list as a heading, the weekday, the times, and Remove. The weekday group,
+ * each time field and Remove are named with the period's number, so a screen reader that lands on one, as on a problem
+ * after Next, says which period; the weekday's radio buttons are named by the day, inside that group.
  */
 @Composable
 private fun AwayPeriod(away: WeeklyAwayForm, row: Int, index: Int, edits: Edits, problems: ProblemFocus) {

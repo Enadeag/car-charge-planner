@@ -127,6 +127,9 @@ class SetUpScreenTest {
             R.string.setup_check_title)
         titles.forEachIndexed { index, title ->
             heading(index + 1, title).assertExists()
+            if (index == 5) {
+                click(R.string.away_add)
+            }
             compose.assertShowsNoneOf(englishOnly)
             if (index == 1) {
                 chooseUtrecht()
@@ -415,6 +418,7 @@ class SetUpScreenTest {
 
         compose.onNode(isHeading() and hasText(text(R.string.away_period, 2))).assertExists()
         compose.onNodeWithText(text(R.string.away_weekday, 2)).assertExists()
+        compose.onNodeWithContentDescription(text(R.string.away_weekday, 2)).assertExists()
         awayField(R.string.away_until, 2).assertIsFocused()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_not_after_start)))
         awayField(R.string.away_until, 1).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Error))

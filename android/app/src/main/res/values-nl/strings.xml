@@ -95,12 +95,12 @@
   <string name="baseload_hint">kW zonder de auto: de kWh van een maand gedeeld door 730.</string>
   <string name="away_heading">Wekelijkse afwezigheid</string>
   <string name="away_none">Geen: de planning gaat ervan uit dat de auto de hele week thuis is.</string>
-  <string name="away_add">Periode toevoegen</string>
+  <string name="away_add">Afwezigheid toevoegen</string>
   <string name="away_period">Afwezigheid %1$d</string>
   <string name="away_remove">Afwezigheid %1$d verwijderen</string>
-  <string name="away_weekday">Weekdag, periode %1$d</string>
-  <string name="away_from">Afwezig vanaf, periode %1$d</string>
-  <string name="away_until">Afwezig tot, periode %1$d</string>
+  <string name="away_weekday">Weekdag, afwezigheid %1$d</string>
+  <string name="away_from">Afwezig vanaf, afwezigheid %1$d</string>
+  <string name="away_until">Afwezig tot, afwezigheid %1$d</string>
   <string name="time_hint">Uren en minuten, zoals 08:00.</string>
 
   <string name="setup_check_title">Voorspelling controleren</string>

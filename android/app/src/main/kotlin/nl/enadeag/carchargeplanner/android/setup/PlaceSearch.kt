@@ -32,7 +32,10 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
         /** The most places shown for one search. */
         const val MOST_RESULTS = 8
 
-        /** The longest text kept, far longer than any place's name; what is typed beyond it is left out. */
+        /**
+         * The longest text kept, far longer than any place's name; what is typed beyond it is left out, so the saved
+         * state and the request to the provider stay small.
+         */
         const val LONGEST_TEXT = 100
 
         private const val TEXT = "setUp.place.text"

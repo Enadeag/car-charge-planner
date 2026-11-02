@@ -251,7 +251,8 @@ internal fun <T> ChoiceRow(label: String, hint: String?, options: List<T>, chose
     onChoose: (T) -> Unit, typical: Boolean = false) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, style = MaterialTheme.typography.titleSmall)
-        FlowRow(modifier = Modifier.selectableGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(modifier = Modifier.selectableGroup().semantics { contentDescription = label },
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             options.forEach { option ->
                 val selected = option == chosen
                 Row(
