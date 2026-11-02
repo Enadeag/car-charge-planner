@@ -154,6 +154,8 @@ The set-up screens, the screen of a settings file the app cannot use and the pla
 | Try again | Opnieuw proberen | repeats what failed |
 | Set up again | Opnieuw instellen | for an unusable config |
 | Update the app | Werk de app bij | for a settings file of a newer version |
+| Settings file cannot be used | Niet ingesteld | the heading of the screen for an unusable config |
+| Away until, period 2 | Afwezig tot, periode 2 | a weekly away period's field, named with the period's number |
 | Today | Vandaag | the plain home's heading |
 | Refresh | Vernieuwen | makes the plan again |
 | Settings | Instellingen | |

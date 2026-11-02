@@ -23,8 +23,15 @@ data class TodayPlan(val zone: ZoneId, val windows: Windows, val assumedLevel: P
          * Today has charge windows.
          *
          * @property windows today's windows in time order, also those that ended already; never empty
+         * @throws IllegalArgumentException when [windows] is empty
          */
-        data class Today(val windows: List<Window>) : Windows
+        data class Today(val windows: List<Window>) : Windows {
+            init {
+                if (windows.isEmpty()) {
+                    throw IllegalArgumentException("today's windows must not be empty; without one it is Next or None")
+                }
+            }
+        }
 
         /**
          * Today has none, but a later day has.

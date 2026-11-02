@@ -34,7 +34,9 @@ class SetUpSessionTest {
     private val ended = mutableListOf<SaveOutcome>()
 
     private fun TestScope.session(on: SavedStateHandle = handle, saves: Saves = Saves(access, backgroundScope)) =
-        SetUpSession(on, NumberText(Locale.ENGLISH), amsterdam, "en", access, saves, backgroundScope) { ended += it }
+        SetUpSession(on, NumberText(Locale.ENGLISH), { amsterdam }, { "en" }, access, saves, backgroundScope) {
+            ended += it
+        }
 
     /** Goes from the welcome to the check, Utrecht chosen and every other value as drafted. */
     private fun TestScope.toTheCheck(session: SetUpSession) {
@@ -153,7 +155,7 @@ class SetUpSessionTest {
     @Test
     fun aFailureThatComesAtOnceStaysShown() = runTest {
         val immediate = CoroutineScope(backgroundScope.coroutineContext + UnconfinedTestDispatcher(testScheduler))
-        val session = SetUpSession(handle, NumberText(Locale.ENGLISH), amsterdam, "en", access,
+        val session = SetUpSession(handle, NumberText(Locale.ENGLISH), { amsterdam }, { "en" }, access,
             Saves(access, immediate), immediate) { ended += it }
         toTheCheck(session)
         access.writeFails = true
@@ -206,10 +208,58 @@ class SetUpSessionTest {
         assertThat(session.flow.step.value).isEqualTo(SetUpStep.CAR)
         assertThat(session.refused.value).isTrue()
         assertThat(session.problemsShown.value).isEqualTo(1)
+        assertThat(session.finishing.value).isEqualTo(SetUpSession.Finishing.Idle)
         assertThat(access.written).isEmpty()
         session.flow.car.edit(CarForm.Field.CONSUMPTION, "18")
         session.next()
         assertThat(session.refused.value).isFalse()
+    }
+
+    @Test
+    fun afterARefusedValueAtFinishBackWorksAndTakesTheLineAway() = runTest {
+        val session = session()
+        toTheCheck(session)
+        session.flow.car.edit(CarForm.Field.CONSUMPTION, "0")
+        session.finish()
+        runCurrent()
+
+        assertThat(session.back()).isTrue()
+
+        assertThat(session.flow.step.value).isEqualTo(SetUpStep.PANELS)
+        assertThat(session.refused.value).isFalse()
+    }
+
+    @Test
+    fun backFromAFailedFinishForgetsTheFailure() = runTest {
+        val session = session()
+        toTheCheck(session)
+        access.writeFails = true
+        session.finish()
+        runCurrent()
+        assertThat(session.finishing.value).isInstanceOf(SetUpSession.Finishing.Failed::class.java)
+
+        session.back()
+        session.next()
+
+        assertThat(session.flow.step.value).isEqualTo(SetUpStep.CHECK)
+        assertThat(session.finishing.value).isEqualTo(SetUpSession.Finishing.Idle)
+    }
+
+    @Test
+    fun aSecondFinishWhileSavingDoesNotSaveAgain() = runTest {
+        val session = session()
+        toTheCheck(session)
+        val gate = CompletableDeferred<Unit>()
+        access.readGate = gate
+        session.finish()
+        runCurrent()
+
+        session.finish()
+        gate.complete(Unit)
+        runCurrent()
+
+        assertThat(access.written).containsExactly("settings")
+        assertThat(ended).containsExactly(SaveOutcome.Saved)
     }
 
     @Test

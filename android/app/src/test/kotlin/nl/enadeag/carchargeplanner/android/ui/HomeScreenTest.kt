@@ -59,7 +59,8 @@ class HomeScreenTest {
         val outlook = HomeOutlook(access, scope) { }
         compose.setContent {
             AppTheme {
-                if (fontScaleTwo) AtFontScaleTwo { HomeScreen(outlook, phoneZone) } else HomeScreen(outlook, phoneZone)
+                if (fontScaleTwo) AtFontScaleTwo { HomeScreen(outlook) { phoneZone } }
+                else HomeScreen(outlook) { phoneZone }
             }
         }
         compose.waitForIdle()

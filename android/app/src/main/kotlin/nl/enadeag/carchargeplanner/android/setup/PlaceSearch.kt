@@ -22,15 +22,18 @@ import org.slf4j.LoggerFactory
  * @param access the engine's place search
  * @param scope where a search runs, the screen's
  * @param provider the forecast provider whose place search is used
- * @param language the app's language as the place search takes it, such as "nl"
+ * @param language the app's language now, as the place search takes it, such as "nl"
  */
 class PlaceSearch(private val handle: SavedStateHandle, private val access: EngineAccess, scope: CoroutineScope,
-    private val provider: ProviderId, private val language: String) {
+    private val provider: ProviderId, private val language: () -> String) {
 
     companion object {
 
         /** The most places shown for one search. */
         const val MOST_RESULTS = 8
+
+        /** The longest text kept, far longer than any place's name; what is typed beyond it is left out. */
+        const val LONGEST_TEXT = 100
 
         private const val TEXT = "setUp.place.text"
         private const val CHOSEN = "setUp.place.chosen"
@@ -91,12 +94,12 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
     fun text(): String = handle.get<String>(TEXT).orEmpty()
 
     /**
-     * Puts what the owner typed; nothing is searched for until they ask.
+     * Puts what the owner typed, up to [LONGEST_TEXT] characters; nothing is searched for until they ask.
      *
      * @param text what the field holds now
      */
     fun edit(text: String) {
-        handle[TEXT] = text
+        handle[TEXT] = text.take(LONGEST_TEXT)
     }
 
     /** Searches for the text typed, dropping a search that runs. */
@@ -131,7 +134,7 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
 
     private suspend fun ask(text: String): State {
         val answer = try {
-            access.searchPlaces(provider, text, language)
+            access.searchPlaces(provider, text, language())
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: RuntimeException) {

@@ -16,10 +16,10 @@ import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting
  * @param handle where the fields' texts, the time zone and whether the owner chose it are kept
  * @param numbers how the screen's language writes numbers
  * @param placeRequired true for set-up, which does not go on without a place chosen; Settings keeps any valid one
- * @param phoneZone the phone's time zone, which typed coordinates get unless the owner chose a zone
+ * @param phoneZone the phone's time zone as it is now, which typed coordinates get unless the owner chose a zone
  */
 class LocationForm(private val handle: SavedStateHandle, numbers: NumberText, private val placeRequired: Boolean,
-    private val phoneZone: ZoneId) :
+    private val phoneZone: () -> ZoneId) :
     FieldsForm<LocationForm.Field>(FormState(handle, "location", Field.entries), numbers) {
 
     /** A field of the form. */
@@ -93,8 +93,9 @@ class LocationForm(private val handle: SavedStateHandle, numbers: NumberText, pr
         super.edit(field, text)
         if (field == Field.LATITUDE || field == Field.LONGITUDE) {
             state.edit(Field.PLACE, "")
-            if (handle.get<Boolean>(ZONE_CHOSEN) != true && state.text(Field.TIME_ZONE) != phoneZone.id) {
-                state.edit(Field.TIME_ZONE, phoneZone.id)
+            val phone = phoneZone().id
+            if (handle.get<Boolean>(ZONE_CHOSEN) != true && state.text(Field.TIME_ZONE) != phone) {
+                state.edit(Field.TIME_ZONE, phone)
             }
         }
     }

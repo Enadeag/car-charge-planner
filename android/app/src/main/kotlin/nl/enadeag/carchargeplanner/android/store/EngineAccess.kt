@@ -13,7 +13,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 /**
  * All the screens' logic asks of the engine that reads or writes: the settings file, the API keys, the plan, the
  * connection check and the place search. Each call suspends while it runs off the main thread, as the keychain and
- * the API keys may block for about a second and the others reach the disk or the network (#310, A11). The screens
+ * the API keys may block for about a second and the others reach the disk or the network. The screens
  * never call the engine, the keys or the files themselves (`AppArchitectureTest`).
  */
 interface EngineAccess {

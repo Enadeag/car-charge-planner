@@ -115,9 +115,12 @@
   <string name="away_period">Away period %1$d</string>
   <!-- %1$d the period's place in the list, from 1 -->
   <string name="away_remove">Remove away period %1$d</string>
-  <string name="away_weekday">Weekday</string>
-  <string name="away_from">Away from</string>
-  <string name="away_until">Away until</string>
+  <!-- %1$d the period's place in the list, from 1, so a screen reader names the period with each field -->
+  <string name="away_weekday">Weekday, period %1$d</string>
+  <!-- %1$d the period's place in the list, from 1 -->
+  <string name="away_from">Away from, period %1$d</string>
+  <!-- %1$d the period's place in the list, from 1 -->
+  <string name="away_until">Away until, period %1$d</string>
   <string name="time_hint">Hours and minutes, such as 08:00.</string>
 
   <string name="setup_check_title">Check the forecast</string>
@@ -129,7 +132,7 @@
     <item quantity="one">Forecast received from %1$s, %2$d day.</item>
     <item quantity="other">Forecast received from %1$s, %2$d days.</item>
   </plurals>
-  <string name="check_failed">No forecast received. You can still finish; the app tries again by itself.</string>
+  <string name="check_failed">No forecast received. You can still finish: the Today screen asks for one again when it opens.</string>
   <string name="check_again">Check again</string>
   <string name="finish_saving">Saving…</string>
   <string name="finish_failed">Not saved: the settings could not be written.</string>
@@ -149,7 +152,7 @@
   <string name="problem_one_line">Use one line, without line breaks or other control characters.</string>
   <string name="problem_no_place">Choose where your home is: search for it, or enter its coordinates.</string>
 
-  <string name="unusable_title">Not set up</string>
+  <string name="unusable_title">Settings file cannot be used</string>
   <!-- %1$s the settings file's name, engine.json -->
   <string name="unusable_text">Your settings file, %1$s, cannot be used. Set up again to start over: the file is kept.</string>
   <string name="set_up_again">Set up again</string>

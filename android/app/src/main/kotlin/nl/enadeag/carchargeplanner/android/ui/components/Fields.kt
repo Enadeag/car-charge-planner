@@ -6,8 +6,9 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardActions
@@ -207,7 +208,8 @@ private fun SignKey(text: String, onEdit: (String) -> Unit) {
     val description = stringResource(R.string.sign_toggle)
     IconButton(
         onClick = { onEdit(if (text.startsWith("-")) text.removePrefix("-") else "-$text") },
-        modifier = Modifier.semantics { contentDescription = description },
+        // Material draws an icon button at 40 dp; a control is 48 dp at least
+        modifier = Modifier.size(48.dp).semantics { contentDescription = description },
     ) {
         Text("±", style = MaterialTheme.typography.titleLarge, modifier = Modifier.clearAndSetSemantics { })
     }
@@ -254,7 +256,7 @@ internal fun <T> ChoiceRow(label: String, hint: String?, options: List<T>, chose
                 val selected = option == chosen
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.heightIn(min = 48.dp)
+                    modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                         .selectable(selected = selected, role = Role.RadioButton, onClick = { onChoose(option) })
                         .padding(end = 12.dp),
                 ) {

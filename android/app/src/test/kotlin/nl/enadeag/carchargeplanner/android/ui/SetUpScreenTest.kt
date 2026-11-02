@@ -4,20 +4,28 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isHeading
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -27,7 +35,9 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.time.DayOfWeek
 import java.time.ZoneId
+import java.time.format.TextStyle
 import java.util.Locale
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -36,8 +46,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
+import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.LocationForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.form.WeeklyAwayForm
 import nl.enadeag.carchargeplanner.android.setup.PlaceSearch
 import nl.enadeag.carchargeplanner.android.setup.SetUpSession
 import nl.enadeag.carchargeplanner.android.setup.SetUpStep
@@ -73,7 +85,7 @@ class SetUpScreenTest {
     private val utrecht = Place("Utrecht", Coordinates(52.0907, 5.1214), amsterdam, "Utrecht", "Netherlands", "")
 
     private fun session(on: SavedStateHandle = handle) =
-        SetUpSession(on, NumberText(Locale.ENGLISH), amsterdam, "en", access, saves, scope) { ended += it }
+        SetUpSession(on, NumberText(Locale.ENGLISH), { amsterdam }, { "en" }, access, saves, scope) { ended += it }
 
     @After
     fun stop() {
@@ -388,6 +400,173 @@ class SetUpScreenTest {
 
         compose.onNodeWithText(text(R.string.coordinates_toggle)).assertIsOn()
         field(R.string.latitude).assertIsDisplayed()
+    }
+
+    @Test
+    fun eachAwayPeriodNamesItsControlsAndAProblemOfTheSecondTakesTheFocusByItsName() {
+        val session = show()
+        toTheMoreStep(session)
+        click(R.string.away_add)
+        click(R.string.away_add)
+
+        awayField(R.string.away_until, 2).performTextReplacement("07:00")
+        click(R.string.action_next)
+        compose.waitForIdle()
+
+        compose.onNode(isHeading() and hasText(text(R.string.away_period, 2))).assertExists()
+        compose.onNodeWithText(text(R.string.away_weekday, 2)).assertExists()
+        awayField(R.string.away_until, 2).assertIsFocused()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_not_after_start)))
+        awayField(R.string.away_until, 1).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Error))
+    }
+
+    @Test
+    fun withTwoProblemsTheFocusGoesToTheUpperOne() {
+        val session = show()
+        toTheMoreStep(session)
+        click(R.string.away_add)
+        click(R.string.away_add)
+        awayField(R.string.away_until, 2).performTextReplacement("07:00")
+        awayField(R.string.away_from, 1).performTextReplacement("eight")
+
+        click(R.string.action_next)
+        compose.waitForIdle()
+
+        awayField(R.string.away_from, 1).assertIsFocused()
+        awayField(R.string.away_until, 2).assertIsNotFocused()
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Error))
+    }
+
+    @Test
+    fun aValueRefusedAtFinishShowsWhyInALiveRegionAndMovesTheFocusToItsField() {
+        val session = show()
+        toTheCheck(session)
+        session.flow.car.edit(CarForm.Field.CONSUMPTION, "0")
+
+        click(R.string.action_finish)
+        compose.waitForIdle()
+
+        heading(4, R.string.setup_car_title).assertExists()
+        assertInLiveRegion(text(R.string.setup_refused), LiveRegionMode.Polite)
+        field(R.string.car_consumption).assertIsFocused()
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Error))
+    }
+
+    @Test
+    fun eachPlaceSearchProblemHasItsTextInALiveRegion() {
+        val session = show()
+        session.next()
+        compose.waitForIdle()
+        field(R.string.place_field).performTextInput("Atlantis")
+        val answers = listOf(
+            PlaceResults.Failed(PlaceResults.Problem.RATE_LIMITED) to text(R.string.place_busy),
+            PlaceResults.Failed(PlaceResults.Problem.BAD_RESPONSE) to text(R.string.place_bad_response),
+            null to text(R.string.place_no_search),
+            PlaceResults.Found(listOf()) to text(R.string.place_none, "Atlantis"),
+        )
+
+        for ((answer, shown) in answers) {
+            click(R.string.place_search)
+            compose.waitForIdle()
+            access.searches.last().complete(answer)
+            compose.waitForIdle()
+            assertInLiveRegion(shown, LiveRegionMode.Polite)
+        }
+    }
+
+    @Test
+    fun thePlacesFoundAreInALiveRegion() {
+        val session = show()
+        session.next()
+        compose.waitForIdle()
+        field(R.string.place_field).performTextInput("Utrecht")
+        click(R.string.place_search)
+        compose.waitForIdle()
+
+        access.searches.last().complete(PlaceResults.Found(listOf(utrecht)))
+        compose.waitForIdle()
+
+        assertInLiveRegion(text(R.string.place_choose), LiveRegionMode.Polite)
+        assertInLiveRegion("Utrecht, Netherlands", LiveRegionMode.Polite)
+    }
+
+    @Test
+    fun theCheckSaysWhatCameInALiveRegion() {
+        val session = show()
+        toTheCheck(session)
+
+        access.checks.last().complete(ConnectionResult(true, 7, "Received a forecast for 7 days."))
+        compose.waitForIdle()
+
+        assertInLiveRegion(compose.activity.resources.getQuantityString(R.plurals.check_works, 7, "Open-Meteo", 7),
+            LiveRegionMode.Polite)
+    }
+
+    @Test
+    fun theSignKeyPutsAMinusBeforeTheNumberAndTakesItAway() {
+        val session = show()
+        session.next()
+        compose.waitForIdle()
+        click(R.string.coordinates_toggle)
+        field(R.string.latitude).performTextReplacement("52.1")
+        val sign = compose.onAllNodesWithContentDescription(text(R.string.sign_toggle))[0]
+
+        sign.performScrollTo().performClick()
+        field(R.string.latitude).assert(hasText("-52.1"))
+        assertThat(session.flow.location.text(LocationForm.Field.LATITUDE)).isEqualTo("-52.1")
+
+        sign.performClick()
+        field(R.string.latitude).assert(hasText("52.1"))
+    }
+
+    @Test
+    fun aChoiceIsAGroupOfRadioButtonsThatShowWhichIsChosen() {
+        val session = show()
+        toTheMoreStep(session)
+        click(R.string.away_add)
+        val monday = compose.onNodeWithText(DayOfWeek.MONDAY.getDisplayName(TextStyle.FULL, Locale.ENGLISH))
+        val friday = compose.onNodeWithText(DayOfWeek.FRIDAY.getDisplayName(TextStyle.FULL, Locale.ENGLISH))
+        val radio = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
+        monday.assert(radio).assertIsSelected()
+        friday.assert(radio).assertIsNotSelected()
+
+        friday.performScrollTo().performClick()
+
+        friday.assertIsSelected()
+        monday.assertIsNotSelected()
+        val row = session.flow.away.rowIds.value.single()
+        assertThat(session.flow.away.text(row, WeeklyAwayForm.Field.WEEKDAY)).isEqualTo("FRIDAY")
+    }
+
+    @Test
+    fun theTimeZoneDialogsControlsAreNamedAndLargeEnoughAtTwiceTheFontSize() {
+        val session = show(fontScaleTwo = true)
+        session.next()
+        compose.waitForIdle()
+        click(R.string.advanced)
+        click(R.string.time_zone_change)
+        compose.waitForIdle()
+
+        compose.onNode(isDialog()).assertExists()
+        compose.assertEveryControlIsNamedAndLargeEnough()
+        compose.onNodeWithText(text(R.string.action_cancel)).assertIsDisplayed()
+    }
+
+    /** Goes from the welcome to the step with the house and the away periods, Utrecht chosen. */
+    private fun toTheMoreStep(session: SetUpSession) {
+        session.next()
+        session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+        repeat(4) { session.next() }
+        compose.waitForIdle()
+    }
+
+    private fun awayField(label: Int, period: Int) =
+        compose.onNode(hasSetTextAction() and hasText(text(label, period), substring = true))
+
+    /** The text is on screen inside a live region of that mode, which a screen reader reads when it changes. */
+    private fun assertInLiveRegion(shown: String, mode: LiveRegionMode) {
+        val live = SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, mode)
+        compose.onNode(hasText(shown) and (live or hasAnyAncestor(live)), useUnmergedTree = true).assertExists()
     }
 
     private fun toTheCheck(session: SetUpSession) {

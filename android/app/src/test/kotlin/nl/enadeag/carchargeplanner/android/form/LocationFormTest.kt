@@ -22,7 +22,7 @@ class LocationFormTest {
 
     @Test
     fun setUpDoesNotGoOnWithoutAPlaceChosen() {
-        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = PHONE)
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = { PHONE })
         form.load(DRAFT)
 
         assertThat(form.check(DRAFT)).isNull()
@@ -32,7 +32,7 @@ class LocationFormTest {
 
     @Test
     fun settingsKeepsAValidPlaceEvenTheOneNotChosen() {
-        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = false, phoneZone = PHONE)
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = false, phoneZone = { PHONE })
         form.load(DRAFT)
 
         assertThat(form.check(DRAFT)).isEqualTo(DRAFT)
@@ -40,7 +40,7 @@ class LocationFormTest {
 
     @Test
     fun theTimeZoneStartsAsTheDraftsAndFollowsThePlaceChosen() {
-        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = PHONE)
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = { PHONE })
         form.load(DRAFT)
         assertThat(form.timeZone()).isEqualTo(ZoneId.of("Europe/Amsterdam"))
 
@@ -54,7 +54,7 @@ class LocationFormTest {
 
     @Test
     fun typingOneCoordinateTakesNoPlaceChosenAway() {
-        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = PHONE)
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = { PHONE })
         form.load(DRAFT)
         form.check(DRAFT)
 
@@ -67,7 +67,7 @@ class LocationFormTest {
 
     @Test
     fun typedCoordinatesPutTheTimeZoneOfAPlaceBackToThePhones() {
-        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = PHONE)
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = { PHONE })
         form.load(DRAFT)
         form.choose(lisbon)
 
@@ -78,8 +78,20 @@ class LocationFormTest {
     }
 
     @Test
+    fun typedCoordinatesGetThePhonesTimeZoneAsItIsWhenTyped() {
+        var phone = PHONE
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = { phone })
+        form.load(DRAFT)
+
+        phone = ZoneId.of("Europe/Lisbon")
+        form.edit(LocationForm.Field.LATITUDE, "38.72")
+
+        assertThat(form.timeZone()).isEqualTo(ZoneId.of("Europe/Lisbon"))
+    }
+
+    @Test
     fun aTimeZoneTheOwnerChoseStaysWhenTheyTypeCoordinates() {
-        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = PHONE)
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = { PHONE })
         form.load(DRAFT)
         form.choose(ZoneId.of("Asia/Tokyo"))
 
@@ -92,13 +104,14 @@ class LocationFormTest {
     @Test
     fun aPlaceChosenAfterAZoneTakesItsZoneAndTypedCoordinatesThenThePhones() {
         val handle = SavedStateHandle()
-        val form = LocationForm(handle, numbers, placeRequired = true, phoneZone = PHONE)
+        val form = LocationForm(handle, numbers, placeRequired = true, phoneZone = { PHONE })
         form.load(DRAFT)
         form.choose(ZoneId.of("Asia/Tokyo"))
         form.choose(lisbon)
         assertThat(form.timeZone()).isEqualTo(ZoneId.of("Europe/Lisbon"))
 
-        val again = LocationForm(handle.afterTheSystemEndedTheApp(), numbers, placeRequired = true, phoneZone = PHONE)
+        val again = LocationForm(handle.afterTheSystemEndedTheApp(), numbers, placeRequired = true,
+            phoneZone = { PHONE })
         again.edit(LocationForm.Field.LATITUDE, "38.8")
 
         assertThat(again.timeZone()).isEqualTo(PHONE)
@@ -107,11 +120,12 @@ class LocationFormTest {
     @Test
     fun aZoneChosenSurvivesTheSystemEndingTheApp() {
         val handle = SavedStateHandle()
-        val form = LocationForm(handle, numbers, placeRequired = true, phoneZone = PHONE)
+        val form = LocationForm(handle, numbers, placeRequired = true, phoneZone = { PHONE })
         form.load(DRAFT)
         form.choose(ZoneId.of("Asia/Tokyo"))
 
-        val again = LocationForm(handle.afterTheSystemEndedTheApp(), numbers, placeRequired = true, phoneZone = PHONE)
+        val again = LocationForm(handle.afterTheSystemEndedTheApp(), numbers, placeRequired = true,
+            phoneZone = { PHONE })
         again.edit(LocationForm.Field.LATITUDE, "35.68")
 
         assertThat(again.timeZone()).isEqualTo(ZoneId.of("Asia/Tokyo"))
@@ -119,7 +133,7 @@ class LocationFormTest {
 
     @Test
     fun aCoordinateOffTheMapShowsAtItsOwnField() {
-        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = false, phoneZone = PHONE)
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = false, phoneZone = { PHONE })
         form.load(DRAFT)
         form.edit(LocationForm.Field.LONGITUDE, "181")
 
@@ -130,7 +144,7 @@ class LocationFormTest {
 
     @Test
     fun theOwnerMayChooseAnotherTimeZone() {
-        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = false, phoneZone = PHONE)
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = false, phoneZone = { PHONE })
         form.load(DRAFT)
 
         form.choose(ZoneId.of("Asia/Tokyo"))

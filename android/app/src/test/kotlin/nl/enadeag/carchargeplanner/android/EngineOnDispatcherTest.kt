@@ -81,7 +81,7 @@ class EngineOnDispatcherTest {
         access.setSettingsAside()
         access.outlook()
 
-        assertThat(dispatcher.handed.get()).isGreaterThanOrEqualTo(7)
+        assertThat(dispatcher.handed.get()).isEqualTo(7)
         assertThat(dispatcher.threads).containsExactly("engine-io")
     }
 

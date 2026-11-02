@@ -72,7 +72,7 @@ class HomeOutlookTest {
         access.outlooks.single().completeExceptionally(IllegalStateException("a fault"))
         runCurrent()
 
-        assertThat(home.state.value).isInstanceOf(HomeOutlook.State.NoForecast::class.java)
+        assertThat(home.state.value).isEqualTo(HomeOutlook.State.NoForecast("The plan could not be made."))
         assertThat(lost).isZero()
     }
 }

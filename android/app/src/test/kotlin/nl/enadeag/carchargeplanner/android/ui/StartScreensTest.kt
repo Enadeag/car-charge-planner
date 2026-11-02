@@ -20,6 +20,7 @@ import nl.enadeag.carchargeplanner.android.setup.SetUpAgain
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.android.ui.start.NewerVersionScreen
+import nl.enadeag.carchargeplanner.android.ui.start.ReadingScreen
 import nl.enadeag.carchargeplanner.android.ui.start.UnusableScreen
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -109,6 +110,39 @@ class StartScreensTest {
         compose.onNode(isHeading() and hasText(text(R.string.newer_title))).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.newer_text)).assertIsDisplayed()
         assertThat(compose.onAllNodes(hasClickAction()).fetchSemanticsNodes()).isEmpty()
+    }
+
+    @Test
+    @Config(qualifiers = "nl")
+    fun theNewerVersionScreenIsInDutch() {
+        compose.setContent { AppTheme { NewerVersionScreen() } }
+
+        compose.onNode(isHeading() and hasText("Werk de app bij")).assertIsDisplayed()
+        compose.assertShowsNoneOf(englishOnlyTexts())
+    }
+
+    @Test
+    @Config(qualifiers = "nl")
+    fun theReadingScreenIsInDutch() {
+        compose.setContent { AppTheme { ReadingScreen() } }
+
+        compose.onNodeWithText(text(R.string.reading_settings)).assertIsDisplayed()
+        compose.assertShowsNoneOf(englishOnlyTexts())
+    }
+
+    @Test
+    fun theNewerVersionScreenShowsAllItsTextAtTwiceTheFontSize() {
+        compose.setContent { AppTheme { AtFontScaleTwo { NewerVersionScreen() } } }
+
+        compose.onNode(isHeading() and hasText(text(R.string.newer_title))).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.newer_text)).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun theReadingScreenShowsItsTextAtTwiceTheFontSize() {
+        compose.setContent { AppTheme { AtFontScaleTwo { ReadingScreen() } } }
+
+        compose.onNodeWithText(text(R.string.reading_settings)).performScrollTo().assertIsDisplayed()
     }
 
     @Test

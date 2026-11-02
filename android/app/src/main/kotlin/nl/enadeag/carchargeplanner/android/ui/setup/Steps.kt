@@ -8,8 +8,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import java.time.DayOfWeek
 import java.time.format.TextStyle
@@ -152,26 +156,34 @@ internal fun MoreStep(house: HouseForm, away: WeeklyAwayForm, edits: Edits, prob
     if (rows.isEmpty()) {
         Text(stringResource(R.string.away_none))
     }
-    rows.forEachIndexed { index, row -> AwayPeriod(away, row, index, edits, problems) }
+    rows.forEachIndexed { index, row ->
+        key(row) {
+            AwayPeriod(away, row, index, edits, problems)
+        }
+    }
     OutlinedButton(onClick = { edits.make { away.add() } }) {
         Text(stringResource(R.string.away_add))
     }
 }
 
-/** One weekly away period: its place in the list, the weekday, the times, and Remove. */
+/**
+ * One weekly away period: its place in the list as a heading, the weekday, the times, and Remove, each control named
+ * with the period's number, so a screen reader that lands on one, as on a problem after Next, says which period.
+ */
 @Composable
 private fun AwayPeriod(away: WeeklyAwayForm, row: Int, index: Int, edits: Edits, problems: ProblemFocus) {
     val shown by away.problems(row).collectAsStateWithLifecycle()
     val locale = LocalConfiguration.current.locales[0]
     val number = index + 1
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.away_period, number), style = MaterialTheme.typography.titleSmall)
-        ChoiceRow(stringResource(R.string.away_weekday), null, DayOfWeek.entries,
+        Text(stringResource(R.string.away_period, number), style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.semantics { heading() })
+        ChoiceRow(stringResource(R.string.away_weekday, number), null, DayOfWeek.entries,
             edits.shown { DayOfWeek.entries.firstOrNull { it.name == away.text(row, WeeklyAwayForm.Field.WEEKDAY) } },
             { it.getDisplayName(TextStyle.FULL, locale) }, { day -> edits.make { away.choose(row, day) } })
         listOf(WeeklyAwayForm.Field.START to R.string.away_from, WeeklyAwayForm.Field.END to R.string.away_until)
             .forEachIndexed { place, (field, label) ->
-                TimeField(stringResource(label), edits.shown { away.text(row, field) },
+                TimeField(stringResource(label, number), edits.shown { away.text(row, field) },
                     { text -> edits.make { away.edit(row, field, text) } }, shown[field],
                     rememberFieldFocus(problems, 100 + 2 * index + place, field in shown))
             }

@@ -30,13 +30,13 @@ import nl.enadeag.carchargeplanner.android.store.StartState
  * @param appScope the app's scope, where a move of the settings file runs so that it is never cut off
  * @param scope the scope of the screens, which ends with them
  * @param handle the saved state that set-up keeps its step and texts in
- * @param numbers how the screen's language writes numbers
- * @param phoneZone the phone's time zone
- * @param language the app's language as the place search takes it, such as "nl"
+ * @param numbers how the screen's language writes numbers, which follows a change of the app's language
+ * @property phoneZone the phone's time zone as it is now; the screens read it from here only
+ * @param language the app's language now, as the place search takes it, such as "nl"
  */
 class AppFlow(private val access: EngineAccess, private val saves: Saves, private val appScope: CoroutineScope,
     private val scope: CoroutineScope, private val handle: SavedStateHandle, private val numbers: NumberText,
-    private val phoneZone: ZoneId, private val language: String) {
+    val phoneZone: () -> ZoneId, private val language: () -> String) {
 
     /** A screen of the app. */
     sealed interface Screen {

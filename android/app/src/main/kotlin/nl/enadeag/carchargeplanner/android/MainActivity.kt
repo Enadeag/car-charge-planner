@@ -4,12 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.stringResource
+import androidx.activity.viewModels
 import androidx.lifecycle.createSavedStateHandle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import java.time.ZoneId
-import nl.enadeag.carchargeplanner.android.form.NumberText
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import nl.enadeag.carchargeplanner.android.ui.AppScreen
 import nl.enadeag.carchargeplanner.android.ui.AppTheme
 import nl.enadeag.carchargeplanner.android.ui.AppViewModel
@@ -17,19 +15,28 @@ import nl.enadeag.carchargeplanner.android.ui.AppViewModel
 /** The app's one activity: set-up, the problem of a settings file, or the home, as the settings file decides. */
 class MainActivity : ComponentActivity() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            AppTheme {
-                val locale = LocalConfiguration.current.locales[0]
-                val language = stringResource(R.string.place_search_language)
-                val model = viewModel {
-                    AppViewModel(application as CarChargePlannerApp, createSavedStateHandle(), NumberText(locale),
-                        ZoneId.systemDefault(), language)
-                }
-                AppScreen(model.flow, model.phoneZone)
+    private val model: AppViewModel by viewModels {
+        viewModelFactory {
+            initializer {
+                val app = application as CarChargePlannerApp
+                AppViewModel(app.engine, app.saves, app.scope, createSavedStateHandle(), locale(), searchLanguage())
             }
         }
     }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        // a change of the app's language makes this activity again, but not the model
+        model.speak(locale(), searchLanguage())
+        setContent {
+            AppTheme {
+                AppScreen(model.flow)
+            }
+        }
+    }
+
+    private fun locale() = resources.configuration.locales[0]
+
+    private fun searchLanguage() = getString(R.string.place_search_language)
 }

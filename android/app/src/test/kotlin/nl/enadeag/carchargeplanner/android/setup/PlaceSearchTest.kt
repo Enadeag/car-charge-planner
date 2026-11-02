@@ -26,7 +26,7 @@ class PlaceSearchTest {
         Place(name, Coordinates(52.09, 5.12), amsterdam, region, "Netherlands", area)
 
     private fun TestScope.search(): PlaceSearch =
-        PlaceSearch(handle, access, backgroundScope, ProviderId("open-meteo"), "nl")
+        PlaceSearch(handle, access, backgroundScope, ProviderId("open-meteo")) { "nl" }
 
     @Test
     fun theTrimmedTextGoesToTheSearchInTheAppsLanguageOnlyWhenAsked() = runTest {
@@ -40,6 +40,18 @@ class PlaceSearchTest {
 
         assertThat(search.state.value).isEqualTo(PlaceSearch.State.Searching)
         assertThat(access.searched).containsExactly("Utrecht" to "nl")
+    }
+
+    @Test
+    fun aTextLongerThanAHundredCharactersIsCutOffThere() = runTest {
+        val search = search()
+
+        search.edit("a".repeat(101))
+
+        assertThat(search.text()).isEqualTo("a".repeat(100))
+        val again = PlaceSearch(handle.afterTheSystemEndedTheApp(), access, backgroundScope, ProviderId("open-meteo"),
+            { "nl" })
+        assertThat(again.text()).hasSize(100)
     }
 
     @Test
@@ -121,7 +133,7 @@ class PlaceSearchTest {
 
         assertThat(search.state.value).isEqualTo(PlaceSearch.State.Idle)
         val again = PlaceSearch(handle.afterTheSystemEndedTheApp(), access, backgroundScope, ProviderId("open-meteo"),
-            "nl")
+            { "nl" })
         assertThat(again.text()).isEqualTo("Utrecht")
         assertThat(again.chosen.value).isEqualTo("Utrecht, Netherlands")
         assertThat(again.state.value).isEqualTo(PlaceSearch.State.Idle)
@@ -136,6 +148,6 @@ class PlaceSearchTest {
 
         assertThat(search.chosen.value).isNull()
         assertThat(PlaceSearch(handle.afterTheSystemEndedTheApp(), access, backgroundScope, ProviderId("open-meteo"),
-            "nl").chosen.value).isNull()
+            { "nl" }).chosen.value).isNull()
     }
 }

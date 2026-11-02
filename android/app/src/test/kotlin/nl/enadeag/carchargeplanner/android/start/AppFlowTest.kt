@@ -32,7 +32,7 @@ class AppFlowTest {
 
     private fun TestScope.flow(access: FakeEngineAccess, saves: Saves = Saves(access, backgroundScope)) =
         AppFlow(access, saves, backgroundScope, backgroundScope, SavedStateHandle(), NumberText(Locale.ENGLISH),
-            amsterdam, "en").also { runCurrent() }
+            { amsterdam }, { "en" }).also { runCurrent() }
 
     @Test
     fun withoutSettingsTheAppShowsSetUp() = runTest {

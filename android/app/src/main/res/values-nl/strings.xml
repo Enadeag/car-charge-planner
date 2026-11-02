@@ -98,9 +98,9 @@
   <string name="away_add">Periode toevoegen</string>
   <string name="away_period">Afwezigheid %1$d</string>
   <string name="away_remove">Afwezigheid %1$d verwijderen</string>
-  <string name="away_weekday">Weekdag</string>
-  <string name="away_from">Afwezig vanaf</string>
-  <string name="away_until">Afwezig tot</string>
+  <string name="away_weekday">Weekdag, periode %1$d</string>
+  <string name="away_from">Afwezig vanaf, periode %1$d</string>
+  <string name="away_until">Afwezig tot, periode %1$d</string>
   <string name="time_hint">Uren en minuten, zoals 08:00.</string>
 
   <string name="setup_check_title">Voorspelling controleren</string>
@@ -110,7 +110,7 @@
     <item quantity="one">Voorspelling ontvangen van %1$s, %2$d dag.</item>
     <item quantity="other">Voorspelling ontvangen van %1$s, %2$d dagen.</item>
   </plurals>
-  <string name="check_failed">Geen voorspelling ontvangen. Je kunt toch voltooien; de app probeert het zelf opnieuw.</string>
+  <string name="check_failed">Geen voorspelling ontvangen. Je kunt toch voltooien: het scherm Vandaag vraagt er opnieuw om als het opent.</string>
   <string name="check_again">Opnieuw controleren</string>
   <string name="finish_saving">Opslaan…</string>
   <string name="finish_failed">Niet opgeslagen: de instellingen konden niet worden geschreven.</string>

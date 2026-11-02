@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.android
 
 import android.app.Application
 import android.os.StrictMode
+import androidx.annotation.VisibleForTesting
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -19,13 +20,13 @@ class CarChargePlannerApp : Application() {
     /** Where saves and other work that must outlive a screen run; it is never cancelled. */
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    /** The engine's reads and writes, each off the main thread. */
+    /** The engine's reads and writes, each off the main thread; a test of the activity puts one in memory. */
     lateinit var engine: EngineAccess
-        private set
+        @VisibleForTesting internal set
 
     /** The saves of set-up and Settings, and the last one's outcome. */
     lateinit var saves: Saves
-        private set
+        @VisibleForTesting internal set
 
     override fun onCreate() {
         super.onCreate()

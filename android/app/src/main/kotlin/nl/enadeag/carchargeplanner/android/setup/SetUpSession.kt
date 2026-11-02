@@ -20,15 +20,16 @@ import nl.enadeag.carchargeplanner.android.store.Saves
  * ended the app there, and Back stops it. Back waits while Finish saves. Called from the main thread.
  *
  * @param handle the set-up screen's saved state
- * @param numbers how the screen's language writes numbers
- * @param phoneZone the phone's time zone, which the home has until a place is chosen
- * @param language the app's language as the place search takes it, such as "nl"
+ * @param numbers how the screen's language writes numbers, which follows a change of the app's language
+ * @param phoneZone the phone's time zone as it is now: the home has it until a place is chosen, and typed coordinates
+ *     get it
+ * @param language the app's language now, as the place search takes it, such as "nl"
  * @param access the engine's place search and connection check
  * @param saves the app's saves, which outlive the screen; the session shows each outcome they give
  * @param scope where the search and the check run, the screen's
  * @param ended gets a save's outcome that ends set-up: [SaveOutcome.Saved], or a settings file that cannot be used
  */
-class SetUpSession(handle: SavedStateHandle, numbers: NumberText, phoneZone: ZoneId, language: String,
+class SetUpSession(handle: SavedStateHandle, numbers: NumberText, phoneZone: () -> ZoneId, language: () -> String,
     private val access: EngineAccess, private val saves: Saves, scope: CoroutineScope,
     private val ended: (SaveOutcome) -> Unit) {
 
@@ -49,10 +50,10 @@ class SetUpSession(handle: SavedStateHandle, numbers: NumberText, phoneZone: Zon
         data class Failed(val detail: String) : Finishing
     }
 
-    private val draft = SetUpFlow.draft(phoneZone)
+    private val draft = SetUpFlow.draft(phoneZone())
 
     /** The steps and their forms. */
-    val flow = SetUpFlow(handle, numbers, draft)
+    val flow = SetUpFlow(handle, numbers, draft, phoneZone)
 
     /** The check of the forecast on the last step. */
     val check = SetUpCheck(access, scope)

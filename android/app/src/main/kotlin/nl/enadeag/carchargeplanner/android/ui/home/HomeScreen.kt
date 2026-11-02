@@ -44,10 +44,10 @@ import nl.enadeag.carchargeplanner.engine.plan.Window
  * home's time zone, which is named when it is not the phone's.
  *
  * @param outlook the plan it shows
- * @param phoneZone the phone's time zone
+ * @param phoneZone the phone's time zone as it is now, read each time the plan is shown
  */
 @Composable
-internal fun HomeScreen(outlook: HomeOutlook, phoneZone: ZoneId) {
+internal fun HomeScreen(outlook: HomeOutlook, phoneZone: () -> ZoneId) {
     val state by outlook.state.collectAsStateWithLifecycle()
     val heading = remember { FocusRequester() }
     LaunchedEffect(Unit) { heading.requestFocus() }
@@ -58,7 +58,7 @@ internal fun HomeScreen(outlook: HomeOutlook, phoneZone: ZoneId) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                 Text(stringResource(R.string.home_asking), modifier = Modifier.padding(start = 8.dp))
             }
-            is HomeOutlook.State.Planned -> Today(now.today, phoneZone)
+            is HomeOutlook.State.Planned -> Today(now.today, phoneZone())
             is HomeOutlook.State.NoForecast -> {
                 Text(stringResource(R.string.home_no_forecast))
                 EnglishDetails(now.reason)

@@ -11,6 +11,9 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.performScrollTo
@@ -63,35 +66,48 @@ internal fun SemanticsNodeInteractionsProvider.shownTexts(): List<String> =
 
 /**
  * Checks what a screen reader needs of every control on the screen: each one that can be clicked has a name and a
- * role, each field has a label, and each is at least 48 dp in both directions where it can be touched.
+ * role, each field has a label, and each is drawn at least 48 dp in both directions. A control on a page that scrolls
+ * is scrolled to first, so one that cannot be reached fails.
  */
 internal fun SemanticsNodeInteractionsProvider.assertEveryControlIsNamedAndLargeEnough() {
     val controls = onAllNodes(hasClickAction())
     val count = controls.fetchSemanticsNodes().size
     assertThat(count).isPositive()
     (0 until count).forEach { index ->
-        // only what is on screen has a size where it can be touched; a dialog's controls are on screen already
-        runCatching { controls[index].performScrollTo() }
+        // a dialog's buttons have no page to scroll and are on screen already
+        if (ON_A_SCROLLING_PAGE.matches(controls[index].fetchSemanticsNode())) {
+            controls[index].performScrollTo().assertIsDisplayed()
+        }
         val node = controls[index].fetchSemanticsNode()
         assertThat(nameOf(node)).`as`("the name of %s", node.config).isNotBlank()
         val editable = node.config.contains(SemanticsActions.SetText)
         if (!editable) {
             assertThat(node.config.getOrNull(SemanticsProperties.Role)).`as`("the role of %s", nameOf(node)).isNotNull()
         }
-        // where it can be touched, which Material's controls make larger than they look
-        val touched = node.touchBoundsInRoot
+        // the size it is drawn at: Compose widens where any clickable node can be touched to 48 dp on its own
         val dp = node.layoutInfo.density.density
-        assertThat(minOf(touched.width, touched.height) / dp).`as`("the size of %s", nameOf(node))
+        assertThat(minOf(node.size.width, node.size.height) / dp).`as`("the size of %s", nameOf(node))
             .isGreaterThanOrEqualTo(47.5f)
     }
 }
 
 /**
- * Checks that the screen's page scrolls up and down, so nothing is out of reach at a large font size.
+ * Checks that the screen's page scrolls far enough to show its last control whole, so nothing is out of reach at a
+ * large font size.
  */
 internal fun SemanticsNodeInteractionsProvider.assertScrolls() {
-    val scrolling = onAllNodes(hasScrollAction()).fetchSemanticsNodes()
-    assertThat(scrolling.mapNotNull { it.config.getOrNull(SemanticsProperties.VerticalScrollAxisRange) }).isNotEmpty()
+    val page = onNode(hasScrollAction() and hasAnyDescendant(hasClickAction()))
+    val controls = onAllNodes(hasClickAction() and ON_A_SCROLLING_PAGE)
+    val nodes = controls.fetchSemanticsNodes()
+    assertThat(nodes).isNotEmpty()
+    val last = nodes.indices.maxBy { nodes[it].boundsInRoot.bottom }
+
+    controls[last].performScrollTo()
+
+    val shown = page.fetchSemanticsNode().boundsInRoot
+    val control = controls[last].fetchSemanticsNode().boundsInRoot
+    assertThat(control.top).`as`("the top of %s", nameOf(nodes[last])).isGreaterThanOrEqualTo(shown.top - 0.5f)
+    assertThat(control.bottom).`as`("the bottom of %s", nameOf(nodes[last])).isLessThanOrEqualTo(shown.bottom + 0.5f)
 }
 
 /**
@@ -104,6 +120,8 @@ internal fun SemanticsNodeInteractionsProvider.assertShowsNoneOf(texts: Set<Stri
     assertThat(shown).isNotEmpty()
     assertThat(shown.filter { it in texts }).isEmpty()
 }
+
+private val ON_A_SCROLLING_PAGE = hasAnyAncestor(hasScrollAction())
 
 private fun nameOf(node: SemanticsNode): String =
     (node.config.getOrNull(SemanticsProperties.ContentDescription).orEmpty() +
