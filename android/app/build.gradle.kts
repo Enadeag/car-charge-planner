@@ -7,11 +7,11 @@ plugins {
     id("ccp.no-google-libraries")
 }
 
-// The languages of the texts: the plain values-<language> folders, such as values-nl, whose language is a real ISO 639
-// one (so values-car, a car's UI mode, is none); region forms such as values-pt-rBR do not count.
 // the example settings file of the docs, which a JVM test and an instrumented test read through the engine
 val exampleConfig: File = file("../../docs/example-engine.json")
 
+// The languages of the texts: the plain values-<language> folders, such as values-nl, whose language is a real ISO 639
+// one (so values-car, a car's UI mode, is none); region forms such as values-pt-rBR do not count.
 fun languageFolders(res: File): List<String> = res.listFiles().orEmpty().map { it.name }
     .filter { it.startsWith("values-") && it.removePrefix("values-") in Locale.getISOLanguages() }
     .map { it.removePrefix("values-") }.sorted()
@@ -158,6 +158,7 @@ dependencies {
     testImplementation(libs.androidx.test.junit)
     testImplementation(libs.compose.ui.test.junit4)
     testRuntimeOnly(libs.junit.vintage.engine)
+    // Compose's test manifest, for the screens' tests; it puts an exported empty activity in the debug APK only
     debugImplementation(libs.compose.ui.test.manifest)
 
     // AndroidX Test's runner, core and JUnit 4 rules, for the instrumented tests on a device or emulator

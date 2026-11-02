@@ -17,8 +17,10 @@ import org.slf4j.LoggerFactory
 
 /**
  * Saves the settings in the app's own scope, so turning the phone or leaving the screen does not cancel a save, and
- * keeps the last save's outcome until a screen has shown it, so a failed save is never silent. One save at a time:
- * each reads the file again and changes only its own part under one lock, so two screens' saves never undo each other.
+ * keeps each save's outcome until a screen has shown it, oldest first, so a failed save is never silent: a later success
+ * never takes a failure's place. Only a [SaveOutcome.Saved] that no screen has shown yet is replaced, by a later one, as
+ * they say the same. One save at a time: each reads the file again and changes only its own part under one lock, so two
+ * screens' saves never undo each other.
  *
  * @param access the engine's reads and writes
  * @param scope the app's scope, which outlives every screen
@@ -30,9 +32,15 @@ class Saves(private val access: EngineAccess, private val scope: CoroutineScope)
     }
 
     private val lock = Mutex()
+
+    /** The outcomes no screen has shown yet, oldest first; changed only while holding itself. */
+    private val unshown = ArrayDeque<SaveOutcome>()
     private val outcome = MutableStateFlow<SaveOutcome?>(null)
 
-    /** The outcome of the last save that no screen has shown yet; null when there is none. */
+    /**
+     * The oldest outcome that no screen has shown yet, which a screen shows and then passes to [shown]; null when there
+     * is none.
+     */
     val lastOutcome: StateFlow<SaveOutcome?> = outcome.asStateFlow()
 
     /**
@@ -42,7 +50,7 @@ class Saves(private val access: EngineAccess, private val scope: CoroutineScope)
      * @param keys what the owner entered and emptied in the API keys; [KeyChanges.NONE] for a screen without keys
      * @param change lays the screen's part over the whole config read again from the file, on the thread it chooses;
      *     may throw the engine's [IllegalArgumentException] when the part no longer fits it
-     * @return the save, which sets [lastOutcome] when it ends
+     * @return the save, which keeps its outcome for [lastOutcome] when it ends
      */
     fun update(keys: KeyChanges, change: suspend (EngineConfig) -> EngineConfig): Job = save {
         if (!keys.isEmpty) {
@@ -71,7 +79,7 @@ class Saves(private val access: EngineAccess, private val scope: CoroutineScope)
      * aside; never over a file of a newer version.
      *
      * @param config the whole config as entered in set-up
-     * @return the save, which sets [lastOutcome] when it ends
+     * @return the save, which keeps its outcome for [lastOutcome] when it ends
      */
     fun finishSetUp(config: EngineConfig): Job = save {
         when (val now = access.readSettings()) {
@@ -84,17 +92,33 @@ class Saves(private val access: EngineAccess, private val scope: CoroutineScope)
     }
 
     /**
-     * Forgets an outcome once a screen has shown it; a later save's outcome stays.
+     * Forgets the outcome a screen has shown, so [lastOutcome] gives the next one; an outcome that is not the oldest
+     * unshown one, such as one another screen showed already, changes nothing.
      *
-     * @param shown the outcome the screen showed
+     * @param shown the outcome the screen showed, as [lastOutcome] gave it
      */
     fun shown(shown: SaveOutcome) {
-        outcome.compareAndSet(shown, null)
+        synchronized(unshown) {
+            if (unshown.firstOrNull() == shown) {
+                unshown.removeFirst()
+                outcome.value = unshown.firstOrNull()
+            }
+        }
+    }
+
+    private fun keep(result: SaveOutcome) {
+        synchronized(unshown) {
+            if (result == SaveOutcome.Saved) {
+                unshown.remove(SaveOutcome.Saved)
+            }
+            unshown.addLast(result)
+            outcome.value = unshown.first()
+        }
     }
 
     private fun save(work: suspend () -> SaveOutcome): Job = scope.launch {
-        val result = lock.withLock {
-            try {
+        lock.withLock {
+            val result = try {
                 work()
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -104,7 +128,7 @@ class Saves(private val access: EngineAccess, private val scope: CoroutineScope)
                 LOG.warn("A save failed", failure)
                 SaveOutcome.Failed(failure.message ?: failure.javaClass.simpleName)
             }
+            keep(result)
         }
-        outcome.value = result
     }
 }

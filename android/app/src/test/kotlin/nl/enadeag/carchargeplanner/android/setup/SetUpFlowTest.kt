@@ -8,8 +8,10 @@ import kotlinx.coroutines.test.runTest
 import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.FieldProblem
+import nl.enadeag.carchargeplanner.android.form.HouseForm
 import nl.enadeag.carchargeplanner.android.form.LocationForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.form.WeeklyAwayForm
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.SaveOutcome
 import nl.enadeag.carchargeplanner.android.store.Saves
@@ -18,6 +20,7 @@ import nl.enadeag.carchargeplanner.engine.config.Coordinates
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.Place
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting
+import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -132,7 +135,8 @@ class SetUpFlowTest {
     fun finishGoesBackToTheFirstStepWithARefusedValueAndSavesNothing() = runTest {
         val access = FakeEngineAccess(StartState.NotSetUp)
         throughTheLocation()
-        flow.next()
+        repeat(5) { flow.next() }
+        assertThat(flow.step.value).isEqualTo(SetUpStep.CHECK)
         flow.car.edit(CarForm.Field.CONSUMPTION, "0")
 
         assertThat(flow.finish(Saves(access, backgroundScope))).isNull()
@@ -140,5 +144,37 @@ class SetUpFlowTest {
 
         assertThat(flow.step.value).isEqualTo(SetUpStep.CAR)
         assertThat(access.written).isEmpty()
+    }
+
+    /** Goes from the welcome to the step with more, every value before it accepted. */
+    private fun toTheStepWithMore() {
+        throughTheLocation()
+        repeat(3) { flow.next() }
+        assertThat(flow.step.value).isEqualTo(SetUpStep.MORE)
+    }
+
+    @Test
+    fun aRefusedValueInTheFirstFormOfAStepKeepsTheStepWhenTheSecondIsAccepted() {
+        toTheStepWithMore()
+        flow.house.edit(HouseForm.Field.BASELOAD, "x")
+
+        assertThat(flow.next()).isFalse()
+
+        assertThat(flow.step.value).isEqualTo(SetUpStep.MORE)
+    }
+
+    @Test
+    fun aRefusedValueInTheSecondFormOfAStepKeepsTheStepAndEachFormShowsItsProblems() {
+        toTheStepWithMore()
+        flow.house.edit(HouseForm.Field.BASELOAD, "x")
+        val row = flow.away.add()
+        flow.away.edit(row, WeeklyAwayForm.Field.END, "07:00")
+
+        assertThat(flow.next()).isFalse()
+
+        assertThat(flow.step.value).isEqualTo(SetUpStep.MORE)
+        assertThat(flow.house.problems.value).containsOnlyKeys(HouseForm.Field.BASELOAD)
+        assertThat(flow.away.problems(row).value).containsExactlyEntriesOf(mapOf(
+            WeeklyAwayForm.Field.END to FieldProblem.Refused(InvalidSetting.Rule.NOT_AFTER_START)))
     }
 }

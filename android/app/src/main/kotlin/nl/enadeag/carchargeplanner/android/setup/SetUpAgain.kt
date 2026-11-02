@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.android.setup
 
 import java.io.IOException
 import java.nio.file.Path
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.android.store.StartState
+import org.slf4j.LoggerFactory
 
 /**
  * "Set up again" for a settings file that cannot be used: after the owner confirms, the file is moved aside to
@@ -22,6 +24,10 @@ import nl.enadeag.carchargeplanner.android.store.StartState
  */
 class SetUpAgain(val unusable: StartState.Unusable, private val access: EngineAccess,
     private val scope: CoroutineScope) {
+
+    private companion object {
+        val LOG = LoggerFactory.getLogger(SetUpAgain::class.java)
+    }
 
     /** Where "Set up again" is. */
     sealed interface State {
@@ -43,9 +49,9 @@ class SetUpAgain(val unusable: StartState.Unusable, private val access: EngineAc
         data class Moved(val keptAs: Path) : State
 
         /**
-         * The file could not be moved and is left as it was; the owner may try again.
+         * The file could not be moved, or the move failed otherwise, and is left as it was; the owner may try again.
          *
-         * @property detail the system's words, in English
+         * @property detail the system's or the engine's words, in English
          */
         data class Failed(val detail: String) : State
     }
@@ -82,7 +88,12 @@ class SetUpAgain(val unusable: StartState.Unusable, private val access: EngineAc
         return scope.launch {
             stateNow.value = try {
                 State.Moved(access.setSettingsAside())
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (failure: IOException) {
+                State.Failed(failure.message ?: failure.javaClass.simpleName)
+            } catch (failure: RuntimeException) {
+                LOG.warn("The settings file could not be set aside", failure)
                 State.Failed(failure.message ?: failure.javaClass.simpleName)
             }
         }

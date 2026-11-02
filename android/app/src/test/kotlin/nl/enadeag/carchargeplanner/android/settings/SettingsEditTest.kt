@@ -3,6 +3,11 @@ package nl.enadeag.carchargeplanner.android.settings
 import androidx.lifecycle.SavedStateHandle
 import java.time.ZoneId
 import java.util.Locale
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -12,6 +17,7 @@ import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.ForecastForm
 import nl.enadeag.carchargeplanner.android.form.HouseForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.form.PlanningForm
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.SaveOutcome
 import nl.enadeag.carchargeplanner.android.store.Saves
@@ -86,6 +92,45 @@ class SettingsEditTest {
 
         assertThat(access.written).containsExactly("keys")
         assertThat(access.keys).isEqualTo(Secrets(mapOf(ProviderId("open-meteo") to mapOf("api_key" to "MADEUPKEY"))))
+        assertThat(saves.lastOutcome.value).isEqualTo(SaveOutcome.Saved)
+    }
+
+    @Test
+    fun oneRefusedValueAmongAcceptedFormsSavesNothing() = runTest {
+        val car = CarForm(SavedStateHandle(), numbers).apply { load(shown) }
+        val house = HouseForm(SavedStateHandle(), numbers).apply { load(shown) }
+        val planning = PlanningForm(SavedStateHandle(), numbers).apply { load(shown) }
+        val saves = Saves(access, backgroundScope)
+        val edit = SettingsEdit(listOf(car, house, planning), saves, screen())
+        car.edit(CarForm.Field.BATTERY, "77")
+        house.edit(HouseForm.Field.BASELOAD, "x")
+
+        assertThat(edit.save(shown)).isNull()
+        runCurrent()
+
+        assertThat(house.problems.value).containsOnlyKeys(HouseForm.Field.BASELOAD)
+        assertThat(access.written).isEmpty()
+        assertThat(saves.lastOutcome.value).isNull()
+    }
+
+    @Test
+    fun aSaveUnderWayOutlivesTheScreenThatStartedIt() = runTest {
+        val screen = screen()
+        val screenScope = CoroutineScope(screen + Job())
+        val house = HouseForm(SavedStateHandle(), numbers).apply { load(shown) }
+        val saves = Saves(access, backgroundScope)
+        val edit = SettingsEdit(listOf(house), saves, screen)
+        house.edit(HouseForm.Field.BASELOAD, "0.8")
+        val gate = CompletableDeferred<Unit>()
+        access.readGate = gate
+
+        screenScope.launch { edit.save(shown) }
+        runCurrent()
+        screenScope.cancel()
+        gate.complete(Unit)
+        runCurrent()
+
+        assertThat((access.settings as StartState.Ready).config.system().house()).isEqualTo(House(0.8))
         assertThat(saves.lastOutcome.value).isEqualTo(SaveOutcome.Saved)
     }
 }

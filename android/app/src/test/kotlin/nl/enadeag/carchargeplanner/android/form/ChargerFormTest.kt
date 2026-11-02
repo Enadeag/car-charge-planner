@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.android.form
 
 import androidx.lifecycle.SavedStateHandle
 import java.util.Locale
+import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.engine.config.Charger
 import nl.enadeag.carchargeplanner.engine.config.Phases
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues
@@ -14,7 +15,9 @@ import org.junit.jupiter.params.provider.ValueSource
 
 class ChargerFormTest {
 
-    private val form = ChargerForm(SavedStateHandle(), NumberText(Locale.ENGLISH))
+    private val handle = SavedStateHandle()
+    private val numbers = NumberText(Locale.ENGLISH)
+    private val form = ChargerForm(handle, numbers)
 
     /** A charger whose efficiency has more decimals than its field shows. */
     private val stored = DRAFT.withSystem(DRAFT.system().withCharger(Charger(Phases.THREE, 6, 32, 231.4, 0.937)),
@@ -90,5 +93,22 @@ class ChargerFormTest {
 
         assertThat(form.read(stored)!!.system().charger()).isEqualTo(Charger.TYPICAL)
         assertThat(form.typical()).hasSize(ChargerForm.Field.entries.size)
+    }
+
+    @Test
+    fun theChosenPhasesTheTextsAndTheTypicalMarksSurviveTheSystemEndingTheApp() {
+        form.load(DRAFT)
+        form.choose(Phases.THREE)
+        form.edit(ChargerForm.Field.MAX_CURRENT, "25")
+
+        val again = ChargerForm(handle.afterTheSystemEndedTheApp(), numbers)
+
+        assertThat(again.phases()).isEqualTo(Phases.THREE)
+        assertThat(again.text(ChargerForm.Field.MAX_CURRENT)).isEqualTo("25")
+        assertThat(again.typical()).doesNotContain(ChargerForm.Field.PHASES, ChargerForm.Field.MAX_CURRENT)
+            .contains(ChargerForm.Field.MIN_CURRENT)
+        val charger = again.read(DRAFT)!!.system().charger()
+        assertThat(charger.phases()).isEqualTo(Phases.THREE)
+        assertThat(charger.maxAmps()).isEqualTo(25)
     }
 }

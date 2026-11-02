@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.android.settings
 
-import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
 import nl.enadeag.carchargeplanner.android.form.ConfigForm
@@ -16,10 +16,11 @@ import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
  *
  * @param forms the screen's forms; a [ForecastForm] among them brings the API keys
  * @param saves the app's saves, which outlive the screen
- * @param screen where the forms are read, the screen's own thread, as they are not made for others
+ * @param screen where the forms are read, the screen's own thread, as they are not made for others; a dispatcher only,
+ *     never a screen's scope, whose end would cancel a save already under way
  */
 class SettingsEdit(private val forms: List<ConfigForm>, private val saves: Saves,
-    private val screen: CoroutineContext) {
+    private val screen: CoroutineDispatcher) {
 
     /**
      * Checks the forms and saves them when every value is accepted.

@@ -179,18 +179,37 @@ class SavesTest {
     }
 
     @Test
-    fun theOutcomeStaysUntilShownAndALaterOneIsNotClearedByAnEarlierOne() = runTest {
+    fun aFailureNotYetShownIsShownBeforeALaterSuccess() = runTest {
         access.writeFails = true
         val saves = saves()
         saves.update(KeyChanges.NONE) { withHouse(it, 0.8) }
         runCurrent()
-        val failed = saves.lastOutcome.value!!
-
         access.writeFails = false
         saves.update(KeyChanges.NONE) { withHouse(it, 0.9) }
         runCurrent()
-        saves.shown(failed)
 
+        val failed = SaveOutcome.Failed("No space left on device")
+        assertThat(saves.lastOutcome.value).isEqualTo(failed)
+        saves.shown(SaveOutcome.Saved)
+        assertThat(saves.lastOutcome.value).isEqualTo(failed)
+        saves.shown(failed)
+        assertThat(saves.lastOutcome.value).isEqualTo(SaveOutcome.Saved)
+        saves.shown(SaveOutcome.Saved)
+        assertThat(saves.lastOutcome.value).isNull()
+    }
+
+    @Test
+    fun aSuccessNotYetShownIsReplacedByALaterSuccessAfterAFailure() = runTest {
+        val saves = saves()
+        saves.update(KeyChanges.NONE) { withHouse(it, 0.8) }
+        runCurrent()
+        saves.update(KeyChanges.NONE) { throw IllegalArgumentException("a value no longer fits") }
+        runCurrent()
+        saves.update(KeyChanges.NONE) { withHouse(it, 0.9) }
+        runCurrent()
+
+        assertThat(saves.lastOutcome.value).isEqualTo(SaveOutcome.Failed("a value no longer fits"))
+        saves.shown(SaveOutcome.Failed("a value no longer fits"))
         assertThat(saves.lastOutcome.value).isEqualTo(SaveOutcome.Saved)
         saves.shown(SaveOutcome.Saved)
         assertThat(saves.lastOutcome.value).isNull()

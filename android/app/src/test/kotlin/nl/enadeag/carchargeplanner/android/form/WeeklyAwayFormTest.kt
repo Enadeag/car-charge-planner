@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.android.form
 import androidx.lifecycle.SavedStateHandle
 import java.time.DayOfWeek
 import java.time.LocalTime
+import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.WeeklyAwaySchedule
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
@@ -11,7 +12,8 @@ import org.junit.jupiter.api.Test
 
 class WeeklyAwayFormTest {
 
-    private val form = WeeklyAwayForm(SavedStateHandle())
+    private val handle = SavedStateHandle()
+    private val form = WeeklyAwayForm(handle)
 
     private val thursday = WeeklyAwayPeriod(DayOfWeek.THURSDAY, LocalTime.of(6, 0), LocalTime.of(19, 0))
     private val stored = DRAFT.withAway(WeeklyAwaySchedule(listOf(thursday)))
@@ -63,5 +65,22 @@ class WeeklyAwayFormTest {
 
         assertThat(form.read(stored)!!.away()).isEqualTo(WeeklyAwaySchedule.NONE)
         assertThat(form.isEdited()).isTrue()
+    }
+
+    @Test
+    fun theRowsTheirTextsAndTheChosenWeekdaysSurviveTheSystemEndingTheApp() {
+        form.load(stored)
+        val added = form.add()
+        form.choose(added, DayOfWeek.SATURDAY)
+        form.edit(added, WeeklyAwayForm.Field.START, "09:30")
+        form.remove(form.rowIds.value.first())
+
+        val again = WeeklyAwayForm(handle.afterTheSystemEndedTheApp())
+
+        assertThat(again.rowIds.value).containsExactly(added)
+        assertThat(again.text(added, WeeklyAwayForm.Field.START)).isEqualTo("09:30")
+        assertThat(again.isEdited()).isTrue()
+        assertThat(again.read(stored)!!.away().weekly())
+            .containsExactly(WeeklyAwayPeriod(DayOfWeek.SATURDAY, LocalTime.of(9, 30), LocalTime.of(17, 0)))
     }
 }

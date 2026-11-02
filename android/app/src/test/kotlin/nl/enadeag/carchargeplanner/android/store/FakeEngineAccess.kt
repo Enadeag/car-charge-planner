@@ -24,6 +24,12 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     var writeFails = false
     var moveFails = false
 
+    /** When set, the move of the settings file throws it, as a fault in the engine would. */
+    var moveThrows: RuntimeException? = null
+
+    /** When set, the next move of the settings file waits for it. */
+    var moveGate: CompletableDeferred<Unit>? = null
+
     /** When set, the next read of the settings waits for it before it gives what the file held when it started. */
     var readGate: CompletableDeferred<Unit>? = null
 
@@ -50,6 +56,11 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     }
 
     override suspend fun setSettingsAside(): Path {
+        moveGate?.let {
+            moveGate = null
+            it.await()
+        }
+        moveThrows?.let { throw it }
         if (moveFails) {
             throw IOException("Permission denied")
         }

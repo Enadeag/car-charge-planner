@@ -112,6 +112,14 @@ class CarFormTest {
 
         form.edit(CarForm.Field.TRIP_SURCHARGE, "100")
         assertThat(form.check(stored)!!.system().car().tripSurcharge()).isEqualTo(Percent(100.0))
+
+        form.edit(CarForm.Field.TRIP_SURCHARGE, "-1")
+        assertThat(form.check(stored)).isNull()
+        assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
+            CarForm.Field.TRIP_SURCHARGE to FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)))
+
+        form.edit(CarForm.Field.TRIP_SURCHARGE, "0")
+        assertThat(form.check(stored)!!.system().car().tripSurcharge()).isEqualTo(Percent(0.0))
     }
 
     @Test
