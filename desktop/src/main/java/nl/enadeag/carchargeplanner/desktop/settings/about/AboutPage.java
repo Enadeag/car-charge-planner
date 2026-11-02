@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.settings.about;
 
+import nl.enadeag.carchargeplanner.desktop.settings.form.KeysNote;
 import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Page;
@@ -48,7 +49,9 @@ public final class AboutPage implements Page {
     /**
      * Shows the page, with where the API keys are kept now.
      *
-     * @param keyStorage whether the keys are in the system keychain, in the locked keychain or in the file
+     * @param keyStorage whether the keys are in the system keychain, in the locked keychain or in the file; never
+     *     {@link KeyStorage#UNAVAILABLE}: the desktop always has the file
+     * @throws IllegalArgumentException when the storage is {@link KeyStorage#UNAVAILABLE}
      */
     public void show(KeyStorage keyStorage) {
         view.show(
@@ -92,6 +95,7 @@ public final class AboutPage implements Page {
             case KEYCHAIN -> messages.text(TextKey.ABOUT_KEYS_KEYCHAIN);
             case LOCKED_KEYCHAIN -> messages.text(TextKey.ABOUT_KEYS_LOCKED);
             case FILE -> messages.text(TextKey.ABOUT_KEYS_FILE, file.toString());
+            case UNAVAILABLE -> throw KeysNote.notOnTheDesktop(storage);
         };
     }
 

@@ -11,6 +11,7 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.parts.DayKind;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.engine.Outlook;
+import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
@@ -21,6 +22,7 @@ import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -71,6 +73,19 @@ class OutlookMapperTest {
 
     private static DashboardModel.Plan plan(DayPlan... days) {
         return (DashboardModel.Plan) MAPPER.map(planned(false, days));
+    }
+
+    @Test
+    void aConfigFileOfANewerVersionIsShownAsAnInvalidOne() {
+        var detail = "written by a newer version of the app (file version 2; this version reads up to 1)";
+        var newer = new Outlook.ConfigUnusable(ConfigProblem.Kind.NEWER_VERSION, Path.of("/home/owner/engine.json"),
+                detail);
+        var invalid = new Outlook.ConfigUnusable(ConfigProblem.Kind.INVALID, Path.of("/home/owner/engine.json"),
+                detail);
+
+        assertThat(OutlookMapper.whatToFix(newer, new Messages(Language.ENGLISH)))
+                .isEqualTo("Fix engine.json: " + detail)
+                .isEqualTo(OutlookMapper.whatToFix(invalid, new Messages(Language.ENGLISH)));
     }
 
     @Test

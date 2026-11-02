@@ -6,7 +6,8 @@ public class KeychainException extends Exception {
     /**
      * What kind of failure it is. Only {@link #LOCKED}, or a refused unlock, makes the app wait for the owner. After
      * either other kind a save sends the API keys to the private file ({@code secrets.json}), and so does a load whose
-     * first read of the index fails; a later failure in a load is reported as keys that could not be read.
+     * first read of the index fails; a later failure in a load is reported as keys that could not be read. An entry
+     * whose read is {@link #REFUSED} while saving is kept as it is instead, and the save then never uses the file.
      */
     public enum Kind {
         /** There is no keychain the app can use at all, or it does not answer. */

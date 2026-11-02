@@ -111,7 +111,7 @@ class FlatpakPackagingTest {
         var modules = MODULE.matcher(read(Path.of("pom.xml"))).results().map(match -> match.group(1) + "/target");
 
         assertThat(skipped).as("the skip list of the manifest's own folder")
-                .contains("target").containsAll(modules.toList());
+                .contains("target", "android").containsAll(modules.toList());
     }
 
     private static String value(String text, String pattern) {

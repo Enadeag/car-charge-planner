@@ -121,7 +121,7 @@ The state before set-up was finished: there is no settings file yet, so no forec
 _Avoid_: Unconfigured, first run (first run is the moment, not the state)
 
 **Unusable config**:
-A settings file that is there but cannot be used, because it cannot be read or holds a value that is not allowed. Unlike not set up, the owner fixes the file rather than going through set-up.
+A settings file that is there but cannot be used, because it cannot be read, holds a value that is not allowed, or was written by a newer version of the app. Unlike not set up, the owner fixes the file rather than going through set-up; the Android app also offers "Set up again", which keeps the file aside as `engine.json.damaged-<time>` and starts set-up. A file of a newer version is never set aside or written over: the owner updates the app.
 _Avoid_: Broken config, not set up (that is the state without a file)
 
 **Settings file**:

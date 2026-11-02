@@ -37,7 +37,8 @@ public sealed interface Stored<T> {
     }
 
     /**
-     * The file is there, but this version cannot use it. It is kept as it is: a write first moves it aside.
+     * The file is there, but this version cannot use it. It is kept as it is: a write first moves it aside, and a
+     * write over a file of a newer version is refused.
      *
      * @param <T> the kind of value the file keeps
      * @param reason why it cannot be used
@@ -51,7 +52,9 @@ public sealed interface Stored<T> {
     enum Reason {
         /** The system refused to read it, such as for its permissions. */
         UNREADABLE,
-        /** It is not the JSON this version expects: damaged, wrongly edited, or written by a newer version. */
-        INVALID
+        /** It is not the JSON this version expects: damaged or wrongly edited. */
+        INVALID,
+        /** It was written by a newer version of the app, which this version cannot read; updating the app helps. */
+        NEWER_VERSION
     }
 }

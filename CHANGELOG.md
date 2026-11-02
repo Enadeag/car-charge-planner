@@ -4,6 +4,9 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Changed
+- A file written by a newer version of the app (`engine.json`, `app.json`, `trips.json`, `away.json`, `battery.json`, `trip-notices.json` or `secrets.json`) is no longer moved aside and replaced when you save: it is left as it is, and saving fails until you update the app.
+
 ## [0.5.0] - 2026-10-22
 
 Trips: enter a drive, and the plan makes sure the battery holds enough when you leave, with advice and notifications for when to charge and the charge limit to set. Grid charges now start within your charging hours. On Linux the app also comes as a .deb and an .rpm.

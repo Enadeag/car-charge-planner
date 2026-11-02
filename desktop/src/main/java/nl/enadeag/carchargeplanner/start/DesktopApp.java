@@ -39,6 +39,7 @@ import nl.enadeag.carchargeplanner.engine.notify.Notifier;
 import nl.enadeag.carchargeplanner.engine.notify.ToldTrips;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.CalendarLeftovers;
+import nl.enadeag.carchargeplanner.engine.secrets.KeyFallback;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.trip.TripFile;
@@ -194,7 +195,7 @@ public final class DesktopApp {
         var texts = new AnnouncementTexts(language, units::get);
         var keychain = parts.keychain();
         closing.add("the keychain", keychain::close);
-        var apiKeys = new ApiKeys(keychain, secretsFile, Clock.systemUTC());
+        var apiKeys = new ApiKeys(keychain, secretsFile, KeyFallback.PRIVATE_FILE, Clock.systemUTC());
         background.run("removing what the calendar trips left", () -> {
             CalendarLeftovers.remove(apiKeys, dataFolder, files);
             return null;

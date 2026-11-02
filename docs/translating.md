@@ -1,6 +1,6 @@
 # Translating
 
-This is for everyone who writes or changes the app's texts: developers, and translators who add a language. It covers the desktop app today; the Android app follows (see Android below). What each term means is in [CONTEXT.md](../CONTEXT.md); this page says which word each language uses for it and how the texts are written.
+This is for everyone who writes or changes the app's texts: developers, and translators who add a language. It covers both apps: the desktop app and the Android app keep their texts apart, as their screens and sentences differ, but use the same words and write them the same way. What each term means is in [CONTEXT.md](../CONTEXT.md); this page says which word each language uses for it and how the texts are written.
 
 ## The words
 
@@ -70,10 +70,11 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 
 - **The texts speak to the owner**, in Dutch as "je".
 - **Numbers, times and day names come in already written** in the language's own way: a decimal comma or point, a 24- or 12-hour clock, "zondag" or "Sunday". Only the words around them are the translator's, including the unit and the space before it: `{0} kW`, but `{0}%` without one, as English and Dutch write it.
-- **A text with a count has one form per plural**, with a `choice` place: `{0,choice,1#{0} day|1<{0} days}`. That covers languages with a singular and a plural, such as English and Dutch. A language with more plural forms (Polish, Russian) would need ICU4J, which the app does not use yet.
+- **A text with a count has one form per plural**; each app's part below says how it is written. Both cover languages with a singular and a plural, such as English and Dutch.
 - **Product and provider names** (Open-Meteo, Forecast.Solar, "Car charge planner") and the provider's credit stay as they are.
 - **What the engine says about a settings file or a provider** (the "details") stays English, like its log messages. The sentence around it is translated and says that the details are in English, such as "Details (in het Engels): {0}".
 - **A translation of a term uses the word in the table above**, so the dashboard, Settings, set-up and notifications agree.
+- **Each app's texts are checked by its own tests**, and a language needs both apps: adding one to only one app leaves the other showing English.
 
 ## Desktop texts
 
@@ -85,11 +86,13 @@ DAY_SET = Set {0} A ({1} kW)
 
 The keys are the constants of `TextKey.java`, which says, per key, what each `{0}`, `{1}` holds. `{0}`, `{1}` are filled in by the app: keep each one, but put it wherever your language wants it, as word order is yours.
 
+A text with a count has one form per plural, with a `choice` place: `{0,choice,1#{0} day|1<{0} days}`. A language with more plural forms (Polish, Russian) would need ICU4J, which the app does not use yet.
+
 An apostrophe is written twice, also in a text without `{0}`: `charger''s app` shows as "charger's app". A single one would hide the text after it (the texts are `java.text.MessageFormat` patterns).
 
 **A new text gets a constant in `TextKey.java` and a key in every language's file in the same pull request.** A text you cannot translate yourself may stay English there for a translator to pick up, but the key must be in every file.
 
-### Adding a language
+### Adding a language to the desktop app
 
 1. **Add the language to the app.** In `desktop/text/Language.java`, add a constant with the language's ISO 639 code, the locale whose numbers, times and day names it uses, and its name in itself, which the language list shows, such as `GERMAN("de", Locale.GERMANY, "Deutsch")`. Language codes are two letters: `de`, `fr`, `pt`. Add the code to `--include-locales` in `src/packaging/jlink.args` too, so the packaged app has the language's day names and numbers.
 
@@ -105,8 +108,47 @@ An apostrophe is written twice, also in a text without `{0}`: `charger''s app` s
 
    Look at the dashboard, set-up, Settings, the tray icon's tooltip and menu, and a notification: long words are the usual trouble.
 
-5. **Send it.** Commit the `.properties` file and the line in `Language.java`, and open a pull request.
+5. **Send it.** Commit the `.properties` file and the line in `Language.java`, and open a pull request. A language needs the Android app's texts too, see [Adding a language to the Android app](#adding-a-language-to-the-android-app), or that app shows English.
 
-## Android
+## Android texts
 
-The Android app follows ([#274](https://github.com/Enadeag/car-charge-planner/issues/274), [ADR 0010](adr/0010-android-app.md)). How its texts are kept is written here when it exists.
+The Android app's texts are Android string resources, in `android/app/src/main/res/`: `values/strings.xml` is English, which any language without its own file falls back to, and `values-nl/strings.xml` is Dutch. The names are the same in every file. `app_name` is the one text that is not translated (`translatable="false"`): it is the product's name.
+
+```xml
+<!-- %1$s the start time; %2$d the number of days -->
+<string name="window_from">From %1$s, for %2$d days</string>
+```
+
+- **A comment above a text says what each placeholder holds**, in the English file; the translations keep to it.
+- **Placeholders are always positional**: `%1$s`, `%2$d`, `%3$.1f`, never a bare `%s`. Keep every one, with the same number and type as in English, but put it where your language wants it: `%2$s` may come before `%1$s`. Numbers and times that are already written for the phone come in as `%s`; a number the app has not written yet is `%d` or `%.1f`.
+- **Escaping** differs from the desktop's: an apostrophe is `\'` (the desktop writes `''`), a literal percent sign is `%%`, a new line is `\n`, and a text that starts with `@` or `?` starts with `\@` or `\?`. An unescaped `'` or `"` is an error, and so is a text that is not valid XML: write `&amp;` and `&lt;`. Type `é` and `ü` as they are.
+- **A text with a count is a `<plurals>`**, with the forms the language has: English and Dutch both have `one` and `other`. Give every form its own sentence, also `one` when it has no number to show ("One day"), and give both languages the same forms:
+
+  ```xml
+  <plurals name="days">
+    <item quantity="one">%1$d day</item>
+    <item quantity="other">%1$d days</item>
+  </plurals>
+  ```
+
+  The desktop writes the same as one text, `{0,choice,1#{0} day|1<{0} days}`.
+- **What the engine says about a settings file or a provider** (the "details") stays English: one text around it, such as `Details (in het Engels): %1$s`.
+- **Texts must work with a screen reader (TalkBack)**: write them so they make sense when read aloud, with no meaning only in colour, symbols or position, and do not rely on a text's length for the layout: a translation can be twice as long.
+
+**A new text goes into every language's file in the same pull request.** Lint fails the build on a text that is missing in a language or has no English one (`MissingTranslation`, `ExtraTranslation`), on a placeholder that does not match (`StringFormatMatches`, `StringFormatInvalid`, `StringFormatCount`) and on a plural without a form its language needs or with one it does not (`MissingQuantity`, `UnusedQuantity`, `ImpliedQuantity`). A text you cannot translate yourself must still be in the file: put the English text there for a translator to pick up. `StringsResourcesTest` checks the same on the files themselves, and also that every placeholder is positional, that nothing is wrongly escaped, and that the languages the app offers are English and the `values-*` folders.
+
+### Trying the pseudo-locales
+
+The debug build has two made-up languages, `en-XA` (English with accents and extra length, to see where a text is cut off or a screen has a fixed size) and `ar-XB` (mirrored, right to left, to see the layout flip). An English text that shows without accents in `en-XA` is not a resource but written into the code. They are never in the release build, which offers English and the `values-*` languages only. To pick one on Android 13 and later, open the app's own language (Settings, Apps, Car charge planner, Language): a debug build lists the pseudo-locales there. On an older phone, turn on Developer options and pick one as the phone's language; Android lists them there only with Developer options on. Always try a language on a debug build. (These steps are not yet tried on a device.)
+
+### Adding a language to the Android app
+
+1. **Start the file.** Create `android/app/src/main/res/values-<code>/strings.xml` with the language's two-letter ISO 639 code (`values-de`), copying `values/strings.xml` and translating every text (the comments above the texts stay in English, for the next translator), following the rules above and the words in the table. Leave `app_name` out.
+
+2. **Nothing else lists the language.** The app's language list (what Android offers as the app's own language from Android 13) and the languages kept from libraries come from the `values-*` folders, in `android/app/build.gradle.kts`. Only a folder named after a two-letter code that Java knows counts: use the current codes (`values-id`, `values-he`, `values-yi`, not Android's old `values-in`, `values-iw`, `values-ji`). A regional variant (`values-pt-rBR`) or a language with only a three-letter code is not supported yet: its texts would not be offered.
+
+3. **Check it.** `cd android && ./gradlew check` runs Lint and `StringsResourcesTest`.
+
+4. **Try it.** On a debug build, choose the language in Android's settings for the app (Android 13 and later: Settings, Apps, the app, Language) or as the phone's language, and look at every screen: long words are the usual trouble. The app has no language menu of its own.
+
+5. **Send it.** Commit the `values-<code>` folder, and open a pull request. A language needs the desktop's texts too, see [Adding a language to the desktop app](#adding-a-language-to-the-desktop-app), or the other app shows English.

@@ -15,7 +15,9 @@ public class ConfigProblem extends Exception {
         /** The file is there, but could not be read. */
         UNREADABLE,
         /** The file is not JSON, or a value in it is missing or wrong. */
-        INVALID
+        INVALID,
+        /** The file was written by a newer version of the app, which this version cannot read; it is not replaced. */
+        NEWER_VERSION
     }
 
     private final Kind kind;
@@ -27,8 +29,9 @@ public class ConfigProblem extends Exception {
      *
      * @param kind what is wrong with the file; not null
      * @param file the config file's path, as the engine was given it; not null
-     * @param detail in English: the system's error for an unreadable file, or for an invalid one the setting and what
-     *     is wrong with it, such as "system.car.usableBatteryKwh: must be more than 0"; empty for a missing file
+     * @param detail in English: the system's error for an unreadable file, for an invalid one the setting and what is
+     *     wrong with it, such as "system.car.usableBatteryKwh: must be more than 0", and for one of a newer version
+     *     its version and the newest this version reads; empty for a missing file
      */
     public ConfigProblem(Kind kind, Path file, String detail) {
         super(message(kind, file, detail));
@@ -68,7 +71,7 @@ public class ConfigProblem extends Exception {
         return switch (kind) {
             case MISSING -> "There is no config file at " + file;
             case UNREADABLE -> "Could not read " + file + ": " + detail;
-            case INVALID -> file.getFileName() + ": " + detail;
+            case INVALID, NEWER_VERSION -> file.getFileName() + ": " + detail;
         };
     }
 }

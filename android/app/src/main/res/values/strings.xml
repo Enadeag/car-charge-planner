@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- the product's name, the same in every language -->
+  <string name="app_name" translatable="false">Car charge planner</string>
+</resources>

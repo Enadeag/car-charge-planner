@@ -58,3 +58,7 @@ The app runs on Linux and Windows, as a JavaFX desktop app with the engine insid
 - `CONTEXT.md` loses its `_Dutch_` lines to `docs/translating.md`, and the translation part of `CONTRIBUTING.md` becomes a pointer to it.
 - CI grows Android jobs, and a release environment holds a key whose loss cannot be undone.
 - The README, install guide and privacy page get an Android part when the app ships.
+
+## Note, 2026-11-02 (#313)
+
+Android's logic, in plain Kotlin classes, is tested with JUnit 5 on the JVM, and only its screens with Robolectric (JUnit 4, through JUnit's vintage engine); the rest of the Tests decision stands.
