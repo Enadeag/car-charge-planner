@@ -2689,73 +2689,73 @@
   },
   {
     "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx-base/27/javafx-base-27-linux.jar",
-    "sha256": "47442adf4d186e5459d8f5468e941e226826d87b1ff4198c2bca3fe0547a281d",
-    "dest": "maven-local/org/openjfx/javafx-base/27",
-    "dest-filename": "javafx-base-27-linux.jar"
+    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx-base/27.0.1/javafx-base-27.0.1-linux.jar",
+    "sha256": "75661785ddcb30b2e2b0a49b85fc404426563f7c3d2bbf8326b7e9744efb7c10",
+    "dest": "maven-local/org/openjfx/javafx-base/27.0.1",
+    "dest-filename": "javafx-base-27.0.1-linux.jar"
   },
   {
     "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx-base/27/javafx-base-27.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx-base/27.0.1/javafx-base-27.0.1.jar",
     "sha256": "96d6cf65983b431a39e7f6c4cd9aae245f9ec986e71537ef800353dc615d16b9",
-    "dest": "maven-local/org/openjfx/javafx-base/27",
-    "dest-filename": "javafx-base-27.jar"
+    "dest": "maven-local/org/openjfx/javafx-base/27.0.1",
+    "dest-filename": "javafx-base-27.0.1.jar"
   },
   {
     "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx-base/27/javafx-base-27.pom",
-    "sha256": "921ff41d22d03ac41efe019e2e875daeff814aacb1540f3ffdadc376eb32611f",
-    "dest": "maven-local/org/openjfx/javafx-base/27",
-    "dest-filename": "javafx-base-27.pom"
+    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx-base/27.0.1/javafx-base-27.0.1.pom",
+    "sha256": "7900dc4385636886915ba1085764ddb9178e2edc495c07f2615698084dc60f0e",
+    "dest": "maven-local/org/openjfx/javafx-base/27.0.1",
+    "dest-filename": "javafx-base-27.0.1.pom"
   },
   {
     "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx-controls/27/javafx-controls-27-linux.jar",
-    "sha256": "6669666e3ecd2700f2fcba7f1dce5ed83f240dd8781da7bfcafe487204d672a8",
-    "dest": "maven-local/org/openjfx/javafx-controls/27",
-    "dest-filename": "javafx-controls-27-linux.jar"
+    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx-controls/27.0.1/javafx-controls-27.0.1-linux.jar",
+    "sha256": "2c90a41c1a68f568c7211d2bd0779e57ba3e8c4447bf2f88391d8c55a9dbca93",
+    "dest": "maven-local/org/openjfx/javafx-controls/27.0.1",
+    "dest-filename": "javafx-controls-27.0.1-linux.jar"
   },
   {
     "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx-controls/27/javafx-controls-27.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx-controls/27.0.1/javafx-controls-27.0.1.jar",
     "sha256": "c784433ff123030dace20263dd9a1963337ad913ffb447353388ad76b66dac30",
-    "dest": "maven-local/org/openjfx/javafx-controls/27",
-    "dest-filename": "javafx-controls-27.jar"
+    "dest": "maven-local/org/openjfx/javafx-controls/27.0.1",
+    "dest-filename": "javafx-controls-27.0.1.jar"
   },
   {
     "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx-controls/27/javafx-controls-27.pom",
-    "sha256": "d6bb93118d15f11391ad054f1ad140cf2c9fd2eb48c818f8178f9204ec8e88e6",
-    "dest": "maven-local/org/openjfx/javafx-controls/27",
-    "dest-filename": "javafx-controls-27.pom"
+    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx-controls/27.0.1/javafx-controls-27.0.1.pom",
+    "sha256": "24761e32a70e98961a1637c444c78bd029785302df0a5dd1e085632b82389f13",
+    "dest": "maven-local/org/openjfx/javafx-controls/27.0.1",
+    "dest-filename": "javafx-controls-27.0.1.pom"
   },
   {
     "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx-graphics/27/javafx-graphics-27-linux.jar",
-    "sha256": "93a8a1159b0acf3ec9a6823baf62381805e54ebec0e5a528785246865ea2d6b0",
-    "dest": "maven-local/org/openjfx/javafx-graphics/27",
-    "dest-filename": "javafx-graphics-27-linux.jar"
+    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx-graphics/27.0.1/javafx-graphics-27.0.1-linux.jar",
+    "sha256": "6823427dd66154e383879cdca968c9b9982c5d5048ec686b1d9e9ffe8852e339",
+    "dest": "maven-local/org/openjfx/javafx-graphics/27.0.1",
+    "dest-filename": "javafx-graphics-27.0.1-linux.jar"
   },
   {
     "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx-graphics/27/javafx-graphics-27.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx-graphics/27.0.1/javafx-graphics-27.0.1.jar",
     "sha256": "3c491d46bdbf2e6b2654834b29eb6f26da290c35acb1d58d78defccecfe8bb5b",
-    "dest": "maven-local/org/openjfx/javafx-graphics/27",
-    "dest-filename": "javafx-graphics-27.jar"
+    "dest": "maven-local/org/openjfx/javafx-graphics/27.0.1",
+    "dest-filename": "javafx-graphics-27.0.1.jar"
   },
   {
     "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx-graphics/27/javafx-graphics-27.pom",
-    "sha256": "76f5da494d9b2ec1ecee52149f8a6c90ed608fbcea4b483d9223f792f0bc40e4",
-    "dest": "maven-local/org/openjfx/javafx-graphics/27",
-    "dest-filename": "javafx-graphics-27.pom"
+    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx-graphics/27.0.1/javafx-graphics-27.0.1.pom",
+    "sha256": "7d0a9b1d5963ec55cde0da074c08560c85608015fe11948a0b81c3193bd1872f",
+    "dest": "maven-local/org/openjfx/javafx-graphics/27.0.1",
+    "dest-filename": "javafx-graphics-27.0.1.pom"
   },
   {
     "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx/27/javafx-27.pom",
-    "sha256": "5a531f2f6eb7f94013e4e4cfa5f164e921459bb80729571100a04ed3286da0b4",
-    "dest": "maven-local/org/openjfx/javafx/27",
-    "dest-filename": "javafx-27.pom"
+    "url": "https://repo.maven.apache.org/maven2/org/openjfx/javafx/27.0.1/javafx-27.0.1.pom",
+    "sha256": "9b9b36629a45c07706e7a4ea94ba95e04bbd81adf2f39bd241478bf46cb1482a",
+    "dest": "maven-local/org/openjfx/javafx/27.0.1",
+    "dest-filename": "javafx-27.0.1.pom"
   },
   {
     "type": "file",

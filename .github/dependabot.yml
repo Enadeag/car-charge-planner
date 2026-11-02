@@ -24,6 +24,11 @@ updates:
       - dependency-name: "org.slf4j:*"
       - dependency-name: "org.junit*"
       - dependency-name: "org.assertj:*"
+      # these versions need compileSdk 37; remove both entries with #321
+      - dependency-name: "androidx.compose:compose-bom"
+        versions: [">= 2026.09.00"]
+      - dependency-name: "androidx.lifecycle:*"
+        versions: [">= 2.11.0"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

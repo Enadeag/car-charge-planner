@@ -24,9 +24,9 @@ New-Item -ItemType Directory -Force target | Out-Null
 # runtime, where JavaFX loads them, instead of JavaFX unpacking them from a jar into the user's .openjfx folder at every
 # start. The version is javafx.version in the parent pom.xml (PackagingTest checks it); a new version needs its checksum from the
 # same folder of the download site.
-$jmods = "openjfx-27_windows-x64_bin-jmods.zip"
-$sha256 = "0ad5830f31608363e1e239b84bb1ce875f5edf834f0ceda67feead9cfbaf2b41"
-curl.exe -fsSL --proto "=https" -o "target\$jmods" "https://download2.gluonhq.com/openjfx/27/$jmods"
+$jmods = "openjfx-27.0.1_windows-x64_bin-jmods.zip"
+$sha256 = "5c2a69a7ab42da347b0e8bb244a819e94af75d9f21ae4d129695a3ebc81e3979"
+curl.exe -fsSL --proto "=https" -o "target\$jmods" "https://download2.gluonhq.com/openjfx/27.0.1/$jmods"
 if ($LASTEXITCODE) { exit 1 }
 if ((Get-FileHash "target\$jmods" -Algorithm SHA256).Hash -ne $sha256) {
   throw "target\$jmods does not have the expected SHA-256"
