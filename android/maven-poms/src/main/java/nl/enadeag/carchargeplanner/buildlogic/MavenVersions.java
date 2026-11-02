@@ -2,6 +2,8 @@ package nl.enadeag.carchargeplanner.buildlogic;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -32,6 +34,19 @@ public abstract class MavenVersions {
             "junit", new Declared("org.junit", "junit-bom"),
             "assertj", new Declared("org.assertj", "assertj-core"),
             "archunit", new Declared("com.tngtech.archunit", "archunit")));
+
+    /**
+     * Groups outside a library's own that its version also manages: Jackson 3's BOM manages the 2.x
+     * {@code com.fasterxml.jackson.core:jackson-annotations}.
+     */
+    private static final Map<Declared, List<String>> EXTRA_GROUPS = Map.of(
+            new Declared("tools.jackson", "jackson-bom"), List.of("com.fasterxml.jackson"));
+
+    /**
+     * The properties {@code engine/pom.xml} may set. Maven lets a property of a module override the parent's, such as
+     * {@code jackson.version}, which Android does not see, so the list is short.
+     */
+    private static final Set<String> ENGINE_PROPERTIES = Set.of("maven.compiler.release");
 
     /** Makes the extension; Gradle calls it. */
     public MavenVersions() {
@@ -65,9 +80,13 @@ public abstract class MavenVersions {
     /**
      * Adds the versions of {@code FROM_PARENT_POM} to a catalog, as the parent pom gives them, and checks that the
      * Maven build pins no other version of those libraries' groups, which Android would not read: no other entry of
-     * the parent's {@code dependencyManagement} in those groups (a BOM import apart) unless it takes its version from
-     * the same property as the entry of its group, and no dependency of {@code engine/pom.xml}, which sits beside the
-     * parent pom, with a {@code <version>} of its own. No versions are compared.
+     * the parent's {@code dependencyManagement} in those groups (and in {@code com.fasterxml.jackson}, which Jackson's
+     * BOM manages too), a BOM import included, unless it takes its version from the same property as the entry of its
+     * group; no profile of the parent that sets one of the properties those versions name or has a dependency or
+     * managed entry in those groups; and in {@code engine/pom.xml}, which sits beside the parent pom, no dependency
+     * with a {@code <version>} of its own, no {@code dependencyManagement}, no property but
+     * {@code maven.compiler.release}, and no profile with properties, dependencies or a {@code dependencyManagement}.
+     * No versions are compared.
      *
      * @param catalog the catalog the settings script creates; its libraries name these versions with
      *     {@code version.ref}
@@ -110,30 +129,85 @@ public abstract class MavenVersions {
 
     private static void checkNothingElseIsPinned(byte[] parent, File parentPom, byte[] engine, File enginePom)
             throws IOException {
-        List<Declared> read = List.copyOf(FROM_PARENT_POM.values());
         var managed = MavenPoms.managedLibraries(parent, parentPom.toString());
         for (var entry : managed) {
-            if (entry.imported() || read.contains(entry.library())) {
+            if (FROM_PARENT_POM.containsValue(entry.library())) {
                 continue;
             }
-            for (var own : managed) {
-                boolean sameGroup = read.contains(own.library())
-                        && Groups.isIn(entry.library().group(), own.library().group());
-                if (sameGroup && !Objects.equals(entry.version(), own.version())) {
+            for (var own : FROM_PARENT_POM.values()) {
+                var ownEntry = managed.stream().filter(m -> m.library().equals(own)).findFirst().orElse(null);
+                if (ownEntry != null && guards(own, entry.library())
+                        && !Objects.equals(entry.version(), ownEntry.version())) {
                     throw new GradleException("Android does not read the version of " + entry.library().module()
                             + " that " + parentPom + " manages: the Android build takes only the versions of "
-                            + read.stream().map(Declared::module).collect(Collectors.joining(", "))
-                            + " from it. Let it take its version from "
-                            + own.version() + ", as " + own.library().module() + " does, or have MavenVersions"
-                            + " read it.");
+                            + readModules() + " from it. Let it take its version from " + ownEntry.version()
+                            + ", as " + own.module() + " does, or have MavenVersions read it.");
                 }
             }
         }
-        var pinned = MavenPoms.librariesWithOwnVersion(engine, enginePom.toString());
+        var versionProperties = new HashSet<String>();
+        for (var entry : managed) {
+            if (FROM_PARENT_POM.containsValue(entry.library())) {
+                versionProperties.addAll(MavenPoms.propertiesNamedBy(entry.version()));
+            }
+        }
+        for (var profile : MavenPoms.profiles(parent, parentPom.toString())) {
+            for (var name : profile.propertyNames()) {
+                if (versionProperties.contains(name)) {
+                    throw new GradleException("Android does not read the property " + name + " that profile "
+                            + profile.id() + " of " + parentPom + " sets: it is a version of " + readModules()
+                            + ", which the Android build takes from the top level of the parent only.");
+                }
+            }
+            var pinned = new ArrayList<Declared>(profile.dependencies());
+            profile.managed().forEach(m -> pinned.add(m.library()));
+            for (var library : pinned) {
+                if (FROM_PARENT_POM.values().stream().anyMatch(own -> guards(own, library))) {
+                    throw new GradleException("Android does not read the version of " + library.module()
+                            + " that profile " + profile.id() + " of " + parentPom + " pins: the Android build takes"
+                            + " only the versions of " + readModules() + ", from the top level of the parent only.");
+                }
+            }
+        }
+        checkEngine(engine, enginePom, parentPom);
+    }
+
+    private static void checkEngine(byte[] engine, File enginePom, File parentPom) throws IOException {
+        var name = enginePom.toString();
+        var pinned = MavenPoms.librariesWithOwnVersion(engine, name);
         if (!pinned.isEmpty()) {
             throw new GradleException("Android does not read the version that " + enginePom + " gives "
                     + pinned.get(0).module() + ": a version belongs in the dependencyManagement of " + parentPom
                     + ", and the Android build reads only some of those.");
         }
+        if (MavenPoms.hasDependencyManagement(engine, name)) {
+            throw new GradleException("Android does not read the dependencyManagement of " + enginePom
+                    + ": the versions belong in the dependencyManagement of " + parentPom + ".");
+        }
+        for (var property : MavenPoms.propertyNames(engine, name)) {
+            if (!ENGINE_PROPERTIES.contains(property)) {
+                throw new GradleException("Android does not read the property " + property + " that " + enginePom
+                        + " sets: Maven would use it for the versions the parent manages, so only "
+                        + String.join(", ", ENGINE_PROPERTIES) + " is allowed there.");
+            }
+        }
+        for (var profile : MavenPoms.profiles(engine, name)) {
+            if (!profile.propertyNames().isEmpty() || !profile.dependencies().isEmpty()
+                    || !profile.managed().isEmpty()) {
+                throw new GradleException("Android does not read what profile " + profile.id() + " of " + enginePom
+                        + " sets: a profile there may configure plugins, but carry no properties, dependencies or"
+                        + " dependencyManagement.");
+            }
+        }
+    }
+
+    /** Whether a version the parent pom gives {@code own} is the one a library of its guarded groups takes. */
+    private static boolean guards(Declared own, Declared library) {
+        return Groups.isIn(library.group(), own.group())
+                || EXTRA_GROUPS.getOrDefault(own, List.of()).stream().anyMatch(g -> Groups.isIn(library.group(), g));
+    }
+
+    private static String readModules() {
+        return FROM_PARENT_POM.values().stream().map(Declared::module).collect(Collectors.joining(", "));
     }
 }

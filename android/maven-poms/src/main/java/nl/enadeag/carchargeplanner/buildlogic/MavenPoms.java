@@ -22,8 +22,8 @@ import org.xml.sax.SAXException;
 
 /**
  * What the Android build takes from the Maven poms: the libraries a module declares, and the version the parent's
- * {@code dependencyManagement} gives a library, with the parent's properties filled in. No profiles, no inheritance
- * beyond the one parent. {@code managedVersion} takes the pom as bytes, not as a path, because the settings read the
+ * {@code dependencyManagement} gives a library, with the parent's properties filled in. No inheritance beyond the one parent, and a profile is
+ * only read to report what it sets, never applied. {@code managedVersion} takes the pom as bytes, not as a path, because the settings read the
  * pom as a tracked input of Gradle's configuration, which hands them its contents.
  */
 public final class MavenPoms {
@@ -116,9 +116,100 @@ public final class MavenPoms {
      * @throws IOException when the contents are not a pom
      */
     public static List<Managed> managedLibraries(byte[] pom, String pomName) throws IOException {
+        return managed(parse(new ByteArrayInputStream(pom), pomName).getDocumentElement(), "dependencyManagement");
+    }
+
+    /**
+     * What a profile of a pom sets or gives that reaches the versions of the libraries.
+     *
+     * @param id the profile's {@code id}, or {@code (no id)}
+     * @param propertyNames the names of the properties it sets
+     * @param dependencies the libraries of its {@code dependencies}
+     * @param managed the entries of its {@code dependencyManagement}
+     */
+    public record Profile(String id, List<String> propertyNames, List<Declared> dependencies, List<Managed> managed) {
+    }
+
+    /**
+     * The profiles of a pom.
+     *
+     * @param pom the pom's contents
+     * @param pomName the pom's path, for the messages
+     * @return the profiles, in the pom's order
+     * @throws IOException when the contents are not a pom
+     */
+    public static List<Profile> profiles(byte[] pom, String pomName) throws IOException {
         var root = parse(new ByteArrayInputStream(pom), pomName).getDocumentElement();
+        var found = new ArrayList<Profile>();
+        for (var list : children(root, "profiles")) {
+            for (var profile : children(list, "profile")) {
+                var id = text(profile, "id");
+                var libraries = new ArrayList<Declared>();
+                for (var dependency : dependencies(profile, null)) {
+                    libraries.add(new Declared(text(dependency, "groupId"), text(dependency, "artifactId")));
+                }
+                found.add(new Profile(id == null || id.isEmpty() ? "(no id)" : id, propertyNames(profile),
+                        libraries, managed(profile, "dependencyManagement")));
+            }
+        }
+        return found;
+    }
+
+    /**
+     * The names of the properties a pom sets at its top level, not those of its profiles.
+     *
+     * @param pom the pom's contents
+     * @param pomName the pom's path, for the messages
+     * @return the names, in the pom's order
+     * @throws IOException when the contents are not a pom
+     */
+    public static List<String> propertyNames(byte[] pom, String pomName) throws IOException {
+        return propertyNames(parse(new ByteArrayInputStream(pom), pomName).getDocumentElement());
+    }
+
+    /**
+     * Whether a pom has a {@code dependencyManagement} of its own.
+     *
+     * @param pom the pom's contents
+     * @param pomName the pom's path, for the messages
+     * @return true when the top level has the element, even an empty one
+     * @throws IOException when the contents are not a pom
+     */
+    public static boolean hasDependencyManagement(byte[] pom, String pomName) throws IOException {
+        var root = parse(new ByteArrayInputStream(pom), pomName).getDocumentElement();
+        return !children(root, "dependencyManagement").isEmpty();
+    }
+
+    /**
+     * The properties a version names.
+     *
+     * @param version a version as a pom writes it, such as {@code ${jackson.version}}; null for none
+     * @return the names inside {@code ${}}, such as {@code jackson.version}; empty when there are none
+     */
+    public static List<String> propertiesNamedBy(String version) {
+        var names = new ArrayList<String>();
+        if (version != null) {
+            Matcher matcher = PROPERTY.matcher(version);
+            while (matcher.find()) {
+                names.add(matcher.group(1));
+            }
+        }
+        return names;
+    }
+
+    private static List<String> propertyNames(Element holder) {
+        var names = new ArrayList<String>();
+        for (var section : children(holder, "properties")) {
+            for (var property : children(section, null)) {
+                names.add(property.getTagName());
+            }
+        }
+        return names;
+    }
+
+    private static List<Managed> managed(Element holder, String section) {
         var managed = new ArrayList<Managed>();
-        for (var dependency : dependencies(root, "dependencyManagement")) {
+        for (var dependency : dependencies(holder, section)) {
             managed.add(new Managed(new Declared(text(dependency, "groupId"), text(dependency, "artifactId")),
                     text(dependency, "version"), "import".equals(text(dependency, "scope"))));
         }

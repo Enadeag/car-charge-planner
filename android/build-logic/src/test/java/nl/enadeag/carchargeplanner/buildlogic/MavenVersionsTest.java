@@ -149,6 +149,105 @@ class MavenVersionsTest {
                 engine.toString());
     }
 
+    private static final String PROFILE_END = "</profile></profiles>";
+
+    private void engineHas(String addition) throws IOException {
+        Files.writeString(repository.resolve("engine/pom.xml"), ENGINE.replace("</project>", addition + "</project>"));
+    }
+
+    private void parentHas(String addition) throws IOException {
+        Files.writeString(repository.resolve("pom.xml"), PARENT.replace("</project>", addition + "</project>"));
+    }
+
+    @Test
+    void aPropertyTheEngineSetsFailsTheBuildNamingItAndThePom() throws IOException {
+        engineHas("<properties><jackson.version>3.2.4</jackson.version></properties>");
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", "jackson.version",
+                repository.resolve("engine/pom.xml").toString());
+    }
+
+    @Test
+    void theEngineMaySetTheCompilerRelease() throws IOException {
+        engineHas("<properties><maven.compiler.release>17</maven.compiler.release></properties>");
+
+        assertThat(gradle().build().getOutput()).contains("jackson-bom 3.2.3");
+    }
+
+    @Test
+    void aDependencyManagementInTheEngineFailsTheBuildNamingThePom() throws IOException {
+        engineHas("<dependencyManagement><dependencies><dependency><groupId>org.slf4j</groupId>"
+                + "<artifactId>slf4j-api</artifactId><version>2.0.18</version></dependency></dependencies>"
+                + "</dependencyManagement>");
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read",
+                "dependencyManagement", repository.resolve("engine/pom.xml").toString());
+    }
+
+    @Test
+    void anEngineProfileWithPropertiesFailsTheBuildNamingItAndThePom() throws IOException {
+        engineHas("<profiles><profile><id>odd</id><properties><jackson.version>3.2.4</jackson.version></properties>"
+                + PROFILE_END);
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", "odd",
+                repository.resolve("engine/pom.xml").toString());
+    }
+
+    @Test
+    void anEngineProfileThatOnlyConfiguresPluginsPasses() throws IOException {
+        engineHas("<profiles><profile><id>coverage</id><build><plugins><plugin><artifactId>x</artifactId></plugin>"
+                + "</plugins></build>" + PROFILE_END);
+
+        assertThat(gradle().build().getOutput()).contains("jackson-bom 3.2.3");
+    }
+
+    @Test
+    void aParentProfileThatSetsAVersionPropertyFailsTheBuildNamingItAndThePom() throws IOException {
+        parentHas("<profiles><profile><id>odd</id><properties><jackson.version>3.2.4</jackson.version></properties>"
+                + PROFILE_END);
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", "jackson.version", "odd",
+                repository.resolve("pom.xml").toString());
+    }
+
+    @Test
+    void aParentProfileThatPinsALibraryOfTheGroupsFailsTheBuildNamingItAndThePom() throws IOException {
+        parentHas("<profiles><profile><id>odd</id><dependencyManagement><dependencies><dependency>"
+                + "<groupId>org.assertj</groupId><artifactId>assertj-core</artifactId><version>1</version>"
+                + "</dependency></dependencies></dependencyManagement>" + PROFILE_END);
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read",
+                "org.assertj:assertj-core", "odd", repository.resolve("pom.xml").toString());
+    }
+
+    @Test
+    void aParentProfileThatOnlySetsOtherPropertiesPasses() throws IOException {
+        parentHas("<profiles><profile><id>live</id><properties><groups>live</groups></properties>" + PROFILE_END);
+
+        assertThat(gradle().build().getOutput()).contains("jackson-bom 3.2.3");
+    }
+
+    @Test
+    void aJacksonTwoLibraryManagedInTheParentFailsTheBuildNamingItAndThePom() throws IOException {
+        Files.writeString(repository.resolve("pom.xml"), PARENT.replace("</dependencies>\n  </dependencyManagement>",
+                "<dependency><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-annotations</artifactId>"
+                        + "<version>2.20</version></dependency></dependencies></dependencyManagement>"));
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read",
+                "com.fasterxml.jackson.core:jackson-annotations", repository.resolve("pom.xml").toString());
+    }
+
+    @Test
+    void anotherBomImportOfAGuardedGroupWithAnotherVersionFailsTheBuildNamingItAndThePom() throws IOException {
+        Files.writeString(repository.resolve("pom.xml"), PARENT.replace("</dependencies>\n  </dependencyManagement>",
+                "<dependency><groupId>org.junit</groupId><artifactId>other-bom</artifactId><version>1</version>"
+                        + "<type>pom</type><scope>import</scope></dependency></dependencies>"
+                        + "</dependencyManagement>"));
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", "org.junit:other-bom",
+                repository.resolve("pom.xml").toString());
+    }
+
     @Test
     void aMissingPomFailsTheBuildNamingIt() throws IOException {
         Files.delete(repository.resolve("pom.xml"));
