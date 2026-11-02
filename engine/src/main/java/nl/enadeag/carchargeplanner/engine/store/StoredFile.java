@@ -22,8 +22,9 @@ import tools.jackson.core.JacksonException;
  *
  * <p>A file this version cannot use is never overwritten as it is: a write first renames it to
  * {@code <name>.damaged-<time>}, such as {@code engine.json.damaged-20261017-143000}, and logs that, so the owner can
- * still find what it held. Writes go through the {@link PrivateFiles} it is made with, so the file is private on
- * every platform. Safe to use from several threads.
+ * still find what it held. A file of a newer version, which that version can still use, is never written over,
+ * removed or renamed: such a write fails, and the owner updates the app. Writes go through the {@link PrivateFiles}
+ * it is made with, so the file is private on every platform. Safe to use from several threads.
  *
  * @param <T> the kind of value the file keeps
  */
@@ -108,13 +109,15 @@ public final class StoredFile<T> {
     }
 
     /**
-     * Replaces the file by this value. A file this version cannot use is renamed first, and kept.
+     * Replaces the file by this value. A file this version cannot use is renamed first, and kept; one of a newer
+     * version is refused.
      *
      * @param value the value to keep
-     * @throws IOException when the file could not be renamed or written; it is then left as it was
+     * @throws IOException when the file was written by a newer version, or could not be renamed or written; it is
+     *     then left as it was
      */
     public synchronized void write(T value) throws IOException {
-        moveAsideWhenUnusable();
+        moveAsideWhenUnusable("written over");
         files.write(path, StoredJson.pretty(format.write(value)));
         remembered = new Stored.Found<>(value);
         try {
@@ -126,32 +129,72 @@ public final class StoredFile<T> {
 
     /**
      * Removes the file, for a value that is kept elsewhere now. A file this version cannot use is renamed instead, so
-     * what it held is not lost.
+     * what it held is not lost; one of a newer version is refused.
      *
-     * @throws IOException when the file could not be removed or renamed
+     * @throws IOException when the file was written by a newer version, or could not be removed or renamed; it is
+     *     then left as it was
      */
     public synchronized void delete() throws IOException {
-        moveAsideWhenUnusable();
+        moveAsideWhenUnusable("removed");
         Files.deleteIfExists(path);
         seen = null;
         remembered = new Stored.Absent<>();
     }
 
-    private void moveAsideWhenUnusable() throws IOException {
+    /**
+     * Moves the file aside to {@code <name>.damaged-<time>}, whether this version can use it or not, so the owner can
+     * start again while what it held is kept, as when they choose to set up again over a file that cannot be used.
+     * Never a file of a newer version, which that version can still use: the owner updates the app instead.
+     * Afterwards there is no file.
+     *
+     * @return where the file is kept now, in the same folder
+     * @throws NoSuchFileException when there is no file
+     * @throws IOException when something other than a plain file is in its place, such as a folder or a link, which
+     *     is not this store's to move, the file was written by a newer version, or it could not be moved; it is then
+     *     left as it was
+     */
+    public synchronized Path setAside() throws IOException {
+        if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) {
+            throw new NoSuchFileException(path.toString());
+        }
+        if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
+            throw new IOException(path + " is not a plain file, so it is not set aside");
+        }
+        refuseNewer(parsed(), "set aside");
+        var aside = moveAside();
+        LOG.warn(path + " is kept as " + aside + ", as the owner chose to start again");
+        return aside;
+    }
+
+    private void moveAsideWhenUnusable(String change) throws IOException {
         // something else in the file's place, such as a folder, is not ours to move: the write then fails
         if (!(read() instanceof Stored.Unusable<T> unusable) || !Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
             return;
         }
+        refuseNewer(unusable, change);
+        var aside = moveAside();
+        LOG.warn(path + " could not be used (" + unusable.detail() + "), so it is kept as " + aside
+                + " before a new one is written");
+    }
+
+    /** Throws when the file was written by a newer version, naming the change it refuses, such as "removed". */
+    private void refuseNewer(Stored<T> stored, String change) throws IOException {
+        if (stored instanceof Stored.Unusable<T> unusable && unusable.reason() == Stored.Reason.NEWER_VERSION) {
+            throw new IOException(path + " is not " + change + ": " + unusable.detail());
+        }
+    }
+
+    /** Renames the file to a name beside it that is not taken yet, and forgets what it held. */
+    private Path moveAside() throws IOException {
         var name = path.getFileName() + ".damaged-" + ASIDE_TIME.format(clock.instant());
         var aside = path.resolveSibling(name);
-        for (int count = 2; Files.exists(aside); count++) {
+        for (int count = 2; Files.exists(aside, LinkOption.NOFOLLOW_LINKS); count++) {
             aside = path.resolveSibling(name + "-" + count);
         }
         Files.move(path, aside);
-        LOG.warn(path + " could not be used (" + unusable.detail() + "), so it is kept as " + aside
-                + " before a new one is written");
         seen = null;
         remembered = new Stored.Absent<>();
+        return aside;
     }
 
     private Stamp stamp() throws IOException {
@@ -175,6 +218,8 @@ public final class StoredFile<T> {
             // Jackson's message quotes the text it stumbled on, which may be a secret
             var what = format.holdsSecrets() ? "" : ": " + e.getOriginalMessage();
             return new Stored.Unusable<>(Stored.Reason.INVALID, "not valid JSON" + where + what);
+        } catch (NewerFileVersion e) {
+            return new Stored.Unusable<>(Stored.Reason.NEWER_VERSION, e.getMessage());
         } catch (FormatProblem e) {
             return new Stored.Unusable<>(Stored.Reason.INVALID, e.getMessage());
         }

@@ -34,6 +34,7 @@ import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.HashMap;
@@ -248,8 +249,8 @@ public final class Engine {
      * The config as the file holds it now, for a client that shows it to be changed.
      *
      * @return the whole config, every value present and valid
-     * @throws ConfigProblem when the file is missing, unreadable or not valid; the problem names the file and the
-     *     setting
+     * @throws ConfigProblem when the file is missing, unreadable, not valid, or written by a newer version of the app
+     *     ({@link ConfigProblem.Kind#NEWER_VERSION}); the problem names the file and the setting
      */
     public EngineConfig config() throws ConfigProblem {
         return configFile.read();
@@ -262,12 +263,32 @@ public final class Engine {
      * that names the setting. Once started, the engine plans again soon after.
      *
      * @param config the whole config to keep
-     * @throws IOException when the file could not be written; it is then left as it was
+     * @throws IOException when the file was written by a newer version of the app
+     *     ({@link ConfigProblem.Kind#NEWER_VERSION}), which is never written over, or could not be written; it is then
+     *     left as it was
      */
     public void saveConfig(EngineConfig config) throws IOException {
         try {
             configFile.write(config);
             forecasts.forgetFailures();
+        } finally {
+            schedule.runSoon();
+        }
+    }
+
+    /**
+     * Moves the config file aside to {@code <name>.damaged-<time>}, so the owner can set up again over a file that
+     * cannot be used while what it held is kept; the engine is then not set up. A file of a newer version is never
+     * moved ({@link ConfigProblem.Kind#NEWER_VERSION}). Once started, the engine plans again soon after.
+     *
+     * @return where the file is kept now, so the owner can be told
+     * @throws java.nio.file.NoSuchFileException when there is no config file
+     * @throws IOException when something other than a plain file is in its place, the file was written by a newer
+     *     version, or it could not be moved; it is then left as it was
+     */
+    public Path setConfigAside() throws IOException {
+        try {
+            return configFile.setAside();
         } finally {
             schedule.runSoon();
         }

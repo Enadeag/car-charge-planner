@@ -108,16 +108,16 @@ class AppSettingsFileTest {
     }
 
     @Test
-    void aFileOfANewerVersionIsKeptAsideWhenTheSettingsAreSaved() throws IOException {
+    void aFileOfANewerVersionIsNotWrittenOverWhenTheSettingsAreSaved() throws IOException {
         var newer = "{\"version\": 2, \"language\": \"nl\"}";
         Files.writeString(folder.resolve("app.json"), newer);
 
-        file().write(FOLLOWING);
+        assertThatThrownBy(() -> file().write(FOLLOWING)).isInstanceOf(IOException.class)
+                .hasMessageContaining("written by a newer version of the app");
 
-        assertThat(file().read()).isEqualTo(FOLLOWING);
+        assertThat(folder.resolve("app.json")).hasContent(newer);
         try (var kept = Files.list(folder)) {
-            assertThat(kept.filter(path -> path.getFileName().toString().startsWith("app.json.damaged-")))
-                    .singleElement().satisfies(path -> assertThat(path).hasContent(newer));
+            assertThat(kept).containsExactly(folder.resolve("app.json"));
         }
     }
 }

@@ -342,6 +342,30 @@ class EngineTest {
     }
 
     @Test
+    void aConfigFileOfANewerVersionCannotBeUsedForThatReason() throws IOException {
+        Files.writeString(config, Files.readString(config).replace("\"version\": 1", "\"version\": 2"));
+
+        assertThat(engine(clockAt(7)).outlook()).isInstanceOfSatisfying(Outlook.ConfigUnusable.class,
+                unusable -> assertThat(unusable.kind()).isEqualTo(ConfigProblem.Kind.NEWER_VERSION));
+    }
+
+    @Test
+    void aConfigFileSetAsideIsKeptBesideItAndTheEngineIsNotSetUpThen() throws IOException {
+        Files.writeString(config, "{\"version\": 1}");
+        var scheduler = new ManualScheduler();
+        var engine = engine(clockAt(7), scheduler, main, backup);
+        start(engine, scheduler);
+
+        var aside = engine.setConfigAside();
+        scheduler.runPending();
+
+        assertThat(aside).hasContent("{\"version\": 1}").hasParent(folder);
+        assertThat(rounds).last().isEqualTo(new Outlook.NotSetUp(config));
+        assertThatThrownBy(engine::config).isInstanceOfSatisfying(ConfigProblem.class,
+                problem -> assertThat(problem.kind()).isEqualTo(ConfigProblem.Kind.MISSING));
+    }
+
+    @Test
     void aMissingConfigFileIsNotSetUpRatherThanUnusable() {
         assertThatThrownBy(() -> new Outlook.ConfigUnusable(ConfigProblem.Kind.MISSING, config, ""))
                 .isInstanceOf(IllegalArgumentException.class);

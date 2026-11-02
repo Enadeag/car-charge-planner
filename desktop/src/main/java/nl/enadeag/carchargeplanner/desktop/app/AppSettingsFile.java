@@ -22,8 +22,9 @@ import tools.jackson.databind.node.ObjectNode;
  * {@code {"version": 1, "language": "nl", "units": "metric", "mode": "automatic", "appearance": "dark"}}.
  * {@code "system"}, or no {@code language} at all, follows the system's language; no {@code appearance} follows the
  * system's light or dark; a file without a version is version 1. The app always starts: a value it cannot use is
- * logged and replaced by the one that follows the system, and a file it cannot use at all, such as one of a newer
- * version, is logged and kept as {@code app.json.damaged-<time>} when the settings are saved.
+ * logged and replaced by the one that follows the system, and a file it cannot use at all, such as one that is not
+ * JSON, is logged and kept as {@code app.json.damaged-<time>} when the settings are saved. A file of a newer version
+ * is read as following the system and never written over: saving the settings then fails.
  */
 public final class AppSettingsFile {
 
@@ -71,8 +72,8 @@ public final class AppSettingsFile {
      * Replaces the file by these settings: the file is never half written, and only the owner can read it.
      *
      * @param settings the settings to keep
-     * @throws IOException when the file or its folder could not be written, or a file that could not be used not
-     *     renamed; the file is then left as it was
+     * @throws IOException when the file was written by a newer version, the file or its folder could not be written,
+     *     or a file that could not be used not renamed; the file is then left as it was
      */
     public void write(AppSettings settings) throws IOException {
         file.write(settings);

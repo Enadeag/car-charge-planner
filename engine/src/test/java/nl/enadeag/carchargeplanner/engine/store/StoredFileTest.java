@@ -1,16 +1,20 @@
 package nl.enadeag.carchargeplanner.engine.store;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import nl.enadeag.carchargeplanner.LogCapture;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -23,11 +27,14 @@ class StoredFileTest {
 
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-17T14:30:00Z"), ZoneOffset.UTC);
 
-    /** A file that holds one text, {@code {"text": "..."}}, and refuses anything else. */
+    /** A file of version 1 that holds one text, {@code {"text": "..."}}, and refuses anything else. */
     private static final class TextFormat implements FileFormat<String> {
+
+        private static final FileVersion VERSION = new FileVersion(1, List.of());
 
         @Override
         public String read(JsonNode root) throws FormatProblem {
+            root = VERSION.upToDate(root);
             if (!root.path("text").isString()) {
                 throw new FormatProblem("text: must be a text");
             }
@@ -105,6 +112,113 @@ class StoredFileTest {
         Files.writeString(path(), "{\"text\": 5}");
 
         assertThat(file().read()).isEqualTo(new Stored.Unusable<String>(Stored.Reason.INVALID, "text: must be a text"));
+    }
+
+    @Test
+    void aFileOfANewerVersionCannotBeUsedForThatReason() throws IOException {
+        Files.writeString(path(), "{\"version\": 2, \"text\": \"hello\"}");
+
+        assertThat(file().read()).isInstanceOfSatisfying(Stored.Unusable.class, unusable -> {
+            assertThat(unusable.reason()).isEqualTo(Stored.Reason.NEWER_VERSION);
+            assertThat(unusable.detail()).contains("written by a newer version of the app");
+        });
+    }
+
+    @Test
+    void aFileSetAsideIsKeptBesideItWithTheTimeAndTheStoreHoldsNothing() throws IOException {
+        Files.writeString(path(), "{\"text\": 5}");
+        var file = file();
+        file.read();
+
+        var aside = file.setAside();
+
+        assertThat(aside).isEqualTo(folder.resolve("data.json.damaged-20261017-143000")).hasContent("{\"text\": 5}");
+        assertThat(path()).doesNotExist();
+        assertThat(file.read()).isEqualTo(new Stored.Absent<String>());
+    }
+
+    @Test
+    void aFileThatCanBeUsedIsSetAsideAsWell() throws IOException {
+        var file = file();
+        file.write("hello");
+
+        var aside = file.setAside();
+
+        assertThat(StoredJson.parse(Files.readString(aside)).path("text").stringValue()).isEqualTo("hello");
+        assertThat(file.read()).isEqualTo(new Stored.Absent<String>());
+    }
+
+    @Test
+    void aFileOfANewerVersionIsNotSetAside() throws IOException {
+        Files.writeString(path(), "{\"version\": 2, \"text\": \"hello\"}");
+
+        assertThatThrownBy(() -> file().setAside()).isInstanceOf(IOException.class)
+                .hasMessageContaining("written by a newer version of the app");
+        assertThat(path()).hasContent("{\"version\": 2, \"text\": \"hello\"}");
+        assertThat(folder).isDirectoryNotContaining(entry -> entry.getFileName().toString().contains("damaged"));
+    }
+
+    @Test
+    void aFileOfANewerVersionIsNotWrittenOverAndStaysAsItWas() throws IOException {
+        byte[] newer = "{\"version\": 2, \"text\": \"hello\"}\n".getBytes(StandardCharsets.UTF_8);
+        Files.write(path(), newer);
+        var file = file();
+
+        assertThatThrownBy(() -> file.write("mine")).isInstanceOf(IOException.class)
+                .hasMessageContaining("is not written over: written by a newer version of the app");
+        assertThat(path()).hasBinaryContent(newer);
+        assertThat(folder).isDirectoryNotContaining(entry -> entry.getFileName().toString().contains("damaged"));
+        assertThat(file.read()).isInstanceOf(Stored.Unusable.class);
+    }
+
+    @Test
+    void aFileOfANewerVersionIsNotRemovedAndStaysAsItWas() throws IOException {
+        byte[] newer = "{\"version\": 2, \"text\": \"hello\"}\n".getBytes(StandardCharsets.UTF_8);
+        Files.write(path(), newer);
+
+        assertThatThrownBy(() -> file().delete()).isInstanceOf(IOException.class)
+                .hasMessageContaining("is not removed: written by a newer version of the app");
+        assertThat(path()).hasBinaryContent(newer);
+        assertThat(folder).isDirectoryNotContaining(entry -> entry.getFileName().toString().contains("damaged"));
+    }
+
+    @Test
+    void aSecondFileSetAsideInTheSameSecondDoesNotReplaceTheFirst() throws IOException {
+        Files.writeString(path(), "first");
+        file().setAside();
+        Files.writeString(path(), "second");
+
+        var aside = file().setAside();
+
+        assertThat(aside).isEqualTo(folder.resolve("data.json.damaged-20261017-143000-2")).hasContent("second");
+        assertThat(folder.resolve("data.json.damaged-20261017-143000")).hasContent("first");
+    }
+
+    @Test
+    void withoutAFileThereIsNothingToSetAside() {
+        assertThatThrownBy(() -> file().setAside()).isInstanceOf(NoSuchFileException.class);
+        assertThat(folder).isEmptyDirectory();
+    }
+
+    @Test
+    void aFolderInTheFilesPlaceIsNotSetAside() throws IOException {
+        Files.createDirectory(path());
+
+        assertThatThrownBy(() -> file().setAside()).isInstanceOf(IOException.class)
+                .isNotInstanceOf(NoSuchFileException.class);
+        assertThat(path()).isDirectory();
+        assertThat(folder).isDirectoryNotContaining(entry -> entry.getFileName().toString().contains("damaged"));
+    }
+
+    @Test
+    void settingAFileAsideIsLogged() throws IOException {
+        Files.writeString(path(), "damaged");
+        try (var log = LogCapture.of(StoredFile.class)) {
+            file().setAside();
+
+            assertThat(log.lines()).containsExactly("WARNING " + path() + " is kept as "
+                    + folder.resolve("data.json.damaged-20261017-143000") + ", as the owner chose to start again");
+        }
     }
 
     @Test

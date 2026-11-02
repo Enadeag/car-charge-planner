@@ -429,9 +429,46 @@ class ConfigFileTest {
 
         assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOfSatisfying(ConfigProblem.class,
                 problem -> {
-                    assertThat(problem.kind()).isEqualTo(ConfigProblem.Kind.INVALID);
+                    assertThat(problem.kind()).isEqualTo(ConfigProblem.Kind.NEWER_VERSION);
                     assertThat(problem.detail()).contains("written by a newer version of the app");
+                    assertThat(problem.getMessage()).startsWith(file.getFileName() + ": written by a newer version");
                 });
+    }
+
+    @Test
+    void aFileSetAsideIsKeptAsDamagedWithTheTimeAndTheConfigIsMissingThen() throws IOException {
+        var file = write("{\"version\": 1}");
+        var config = new ConfigFile(file, FILES);
+
+        var aside = config.setAside();
+
+        assertThat(aside.getParent()).isEqualTo(folder);
+        assertThat(aside.getFileName().toString()).matches("engine\\.json\\.damaged-\\d{8}-\\d{6}");
+        assertThat(aside).hasContent("{\"version\": 1}");
+        assertThatThrownBy(config::read).isInstanceOfSatisfying(ConfigProblem.class,
+                problem -> assertThat(problem.kind()).isEqualTo(ConfigProblem.Kind.MISSING));
+    }
+
+    @Test
+    void aFileOfANewerVersionIsNotSetAsideAndStaysUnusableForThatReason() throws IOException {
+        var file = write(Files.readString(EXAMPLE).replace("\"version\": 1", "\"version\": 2"));
+        var config = new ConfigFile(file, FILES);
+
+        assertThatThrownBy(config::setAside).isInstanceOf(IOException.class)
+                .hasMessageContaining("written by a newer version of the app");
+        assertThatThrownBy(config::read).isInstanceOfSatisfying(ConfigProblem.class,
+                problem -> assertThat(problem.kind()).isEqualTo(ConfigProblem.Kind.NEWER_VERSION));
+    }
+
+    @Test
+    void aFileOfANewerVersionIsNotWrittenOver() throws IOException, ConfigProblem {
+        var newer = Files.readString(EXAMPLE).replace("\"version\": 1", "\"version\": 2");
+        var file = write(newer);
+
+        assertThatThrownBy(() -> new ConfigFile(file, FILES).write(new ConfigFile(EXAMPLE, FILES).read()))
+                .isInstanceOf(IOException.class).hasMessageContaining("written by a newer version of the app");
+        assertThat(file).hasContent(newer);
+        assertThat(folder).isDirectoryNotContaining(entry -> entry.getFileName().toString().contains("damaged"));
     }
 
     @Test
@@ -443,7 +480,7 @@ class ConfigFileTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"{\"system\": oops", "{\"version\": 2}", "{\"planning\": {}}"})
+    @ValueSource(strings = {"{\"system\": oops", "{\"version\": 1}", "{\"planning\": {}}"})
     void writingOverAFileThatCannotBeUsedKeepsItAside(String unusable) throws IOException, ConfigProblem {
         var path = write(unusable);
         var config = new ConfigFile(EXAMPLE, FILES).read();

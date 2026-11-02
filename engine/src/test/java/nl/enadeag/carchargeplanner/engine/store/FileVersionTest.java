@@ -28,7 +28,7 @@ class FileVersionTest {
     @Test
     void aFileOfANewerVersionIsRefused() {
         assertThatThrownBy(() -> FIRST.upToDate(StoredJson.parse("{\"version\": 2, \"a\": 1}")))
-                .isInstanceOf(FormatProblem.class)
+                .isInstanceOf(NewerFileVersion.class)
                 .hasMessageContaining("written by a newer version of the app");
     }
 
@@ -36,7 +36,8 @@ class FileVersionTest {
     @ValueSource(strings = {"{\"version\": 0}", "{\"version\": 1.5}", "{\"version\": \"1\"}", "{\"version\": null}",
         "[1]", "\"text\""})
     void aVersionThatIsNoWholeNumberFromOneOrAFileThatIsNoObjectIsRefused(String json) {
-        assertThatThrownBy(() -> FIRST.upToDate(StoredJson.parse(json))).isInstanceOf(FormatProblem.class);
+        assertThatThrownBy(() -> FIRST.upToDate(StoredJson.parse(json))).isInstanceOf(FormatProblem.class)
+                .isNotInstanceOf(NewerFileVersion.class);
     }
 
     @Test

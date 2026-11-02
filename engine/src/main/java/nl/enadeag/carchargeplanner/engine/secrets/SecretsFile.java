@@ -25,7 +25,8 @@ import tools.jackson.databind.node.ObjectNode;
  * not is made private before it is read ({@link #makePrivate()}), or refused when that fails. On the desktop that is
  * readable and writable by its owner only where files have modes (Linux, macOS); on Windows the user's own
  * application data folder keeps it from other users. A file that cannot be used is kept as
- * {@code secrets.json.damaged-<time>}, as private as it was, before new keys are written; no message quotes it.
+ * {@code secrets.json.damaged-<time>}, as private as it was, before new keys are written; one of a newer version is
+ * never written over, removed or renamed. No message quotes it.
  */
 public final class SecretsFile {
 
@@ -108,7 +109,8 @@ public final class SecretsFile {
 
     /**
      * Removes the file, once its keys are safe in the keychain. A file that could not be read is kept aside instead,
-     * as its keys are not in the keychain; a file that cannot be removed stays, and is moved again next time.
+     * as its keys are not in the keychain, and one of a newer version stays as it is; a file that cannot be removed
+     * stays, and is tried again next time.
      */
     void delete() {
         try {

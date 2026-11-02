@@ -22,7 +22,8 @@ import tools.jackson.databind.node.ObjectNode;
  * {@code {"version": 1, "trips": [{"departure": "2026-07-05T06:30:00Z", "chargeStart": true, "askedGridPct": 23.5,
  * "short": false}]}}, where a file without a version is version 1 and {@code askedGridPct} is left out while the owner
  * was not asked about the battery level. A file that cannot be used counts as empty, and is kept as
- * {@code trip-notices.json.damaged-<time>} when the trips are saved; one that cannot be written does not stop planning.
+ * {@code trip-notices.json.damaged-<time>} when the trips are saved, except one of a newer version, which is left as
+ * it is; one that cannot be written does not stop planning.
  */
 public final class ToldTrips {
 
