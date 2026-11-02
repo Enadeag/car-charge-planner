@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.android.store
 
 import java.nio.file.Path
+import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.HomeSystem
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
@@ -10,10 +11,10 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 
 /**
- * All the screens' logic asks of the engine that reads or writes: the settings file, the API keys, the connection
- * check and the place search. Each call suspends while it runs off the main thread, as the keychain and the API keys
- * may block for about a second and the others reach the disk or the network (#310, A11). The screens never call the
- * engine, the keys or the files themselves (`AppArchitectureTest`).
+ * All the screens' logic asks of the engine that reads or writes: the settings file, the API keys, the plan, the
+ * connection check and the place search. Each call suspends while it runs off the main thread, as the keychain and
+ * the API keys may block for about a second and the others reach the disk or the network. The screens
+ * never call the engine, the keys or the files themselves (`AppArchitectureTest`).
  */
 interface EngineAccess {
 
@@ -61,6 +62,13 @@ interface EngineAccess {
      * @throws nl.enadeag.carchargeplanner.engine.secrets.SecretsProblem when the keychain could not store them
      */
     suspend fun applyKeyChanges(changes: KeyChanges)
+
+    /**
+     * Makes a plan from the settings file and a forecast, which may be fetched first; nobody is told about a window.
+     *
+     * @return the plan, or why there is none: not set up, a settings file that cannot be used, or no forecast
+     */
+    suspend fun outlook(): Outlook
 
     /**
      * Asks a provider for one forecast with these settings; nothing is cached or saved.

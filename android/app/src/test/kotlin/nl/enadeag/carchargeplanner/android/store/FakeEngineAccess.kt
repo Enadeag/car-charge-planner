@@ -3,6 +3,8 @@ package nl.enadeag.carchargeplanner.android.store
 import java.io.IOException
 import java.nio.file.Path
 import kotlinx.coroutines.CompletableDeferred
+import nl.enadeag.carchargeplanner.android.AppEngine
+import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.HomeSystem
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
@@ -36,7 +38,19 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     /** The answers of the connection checks, which wait until completed, in the order asked. */
     val checks = mutableListOf<CompletableDeferred<ConnectionResult>>()
 
-    override fun providers(): List<ProviderInfo> = emptyList()
+    /** The outlooks asked for, which wait until completed, in the order asked. */
+    val outlooks = mutableListOf<CompletableDeferred<Outlook>>()
+
+    /** The place searches asked for: the text and the language, in the order asked. */
+    val searched = mutableListOf<Pair<String, String>>()
+
+    /** The answers of the place searches, which wait until completed, in the order asked. */
+    val searches = mutableListOf<CompletableDeferred<PlaceResults?>>()
+
+    /** The app's own providers, whose information never reaches the network. */
+    override fun providers(): List<ProviderInfo> = PROVIDERS
+
+    override suspend fun outlook(): Outlook = CompletableDeferred<Outlook>().also { outlooks += it }.await()
 
     override suspend fun readSettings(): StartState {
         val read = settings
@@ -81,5 +95,13 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     override suspend fun checkConnection(provider: ProviderId, system: HomeSystem, settings: Map<String, String>):
         ConnectionResult = CompletableDeferred<ConnectionResult>().also { checks += it }.await()
 
-    override suspend fun searchPlaces(provider: ProviderId, text: String, language: String): PlaceResults? = null
+    override suspend fun searchPlaces(provider: ProviderId, text: String, language: String): PlaceResults? {
+        searched += text to language
+        return CompletableDeferred<PlaceResults?>().also { searches += it }.await()
+    }
+
+    private companion object {
+        val PROVIDERS: List<ProviderInfo> = AppEngine.providers { throw IOException("no network in these tests") }
+            .let { known -> known.ids().map { id -> known.find(id).get().info() } }
+    }
 }

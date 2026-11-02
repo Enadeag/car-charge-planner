@@ -30,8 +30,9 @@ class SetUpFlowTest {
 
     private val handle = SavedStateHandle()
     private val numbers = NumberText(Locale.ENGLISH)
-    private val draft = SetUpFlow.draft(ZoneId.of("Europe/Amsterdam"))
-    private val flow = SetUpFlow(handle, numbers, draft)
+    private val amsterdam = ZoneId.of("Europe/Amsterdam")
+    private val draft = SetUpFlow.draft(amsterdam)
+    private val flow = SetUpFlow(handle, numbers, draft) { amsterdam }
     private val utrecht = Place("Utrecht", Coordinates(52.0907, 5.1214), ZoneId.of("Europe/Amsterdam"), "", "", "")
 
     /** Goes from the welcome to the step after the location, with Utrecht chosen. */
@@ -100,7 +101,7 @@ class SetUpFlowTest {
         flow.next()
         flow.car.edit(CarForm.Field.BATTERY, "75")
 
-        val again = SetUpFlow(handle.afterTheSystemEndedTheApp(), numbers, draft)
+        val again = SetUpFlow(handle.afterTheSystemEndedTheApp(), numbers, draft) { amsterdam }
 
         assertThat(again.step.value).isEqualTo(SetUpStep.CAR)
         assertThat(again.car.text(CarForm.Field.BATTERY)).isEqualTo("75")

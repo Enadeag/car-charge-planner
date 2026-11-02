@@ -12,16 +12,22 @@ import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
  * minus and ASCII digits, and nothing else: no thousands separator, exponent, space or plus sign, and an empty field
  * is no number. Whether the number fits is left to the engine's rules.
  *
- * @param locale the language the screen speaks, from its configuration
+ * @param locale the language the screen speaks now, asked at each write, so a change of the app's language reaches
+ *     forms that outlive the screen
  */
-class NumberText(locale: Locale) {
+class NumberText(private val locale: () -> Locale) {
+
+    /**
+     * A writer for one language that never changes.
+     *
+     * @param locale the language
+     */
+    constructor(locale: Locale) : this({ locale })
 
     private companion object {
         val NUMBER = Regex("-?[0-9]+([.,][0-9]+)?")
         val WHOLE = Regex("-?[0-9]+")
     }
-
-    private val mark = if (DecimalFormatSymbols.getInstance(locale).decimalSeparator == ',') ',' else '.'
 
     /**
      * A value as the field shows it.
@@ -33,7 +39,7 @@ class NumberText(locale: Locale) {
     fun write(value: Double, decimals: Int): String {
         require(decimals >= 0) { "decimals must not be negative, not $decimals" }
         val text = BigDecimal.valueOf(value).setScale(decimals, RoundingMode.HALF_UP).toPlainString()
-        return if (mark == '.') text else text.replace('.', mark)
+        return if (DecimalFormatSymbols.getInstance(locale()).decimalSeparator == ',') text.replace('.', ',') else text
     }
 
     /**

@@ -4,6 +4,7 @@ import kotlin.jvm.optionals.getOrNull
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import nl.enadeag.carchargeplanner.engine.Engine
+import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.HomeSystem
@@ -56,6 +57,8 @@ class EngineOnDispatcher(private val engine: Engine, private val dispatcher: Cor
         // the Android keychain has no locked state, so there is never a prompt to unlock it
         engine.applyKeyChanges(changes) { }
     }
+
+    override suspend fun outlook(): Outlook = withContext(dispatcher) { engine.outlook() }
 
     override suspend fun checkConnection(provider: ProviderId, system: HomeSystem, settings: Map<String, String>) =
         withContext(dispatcher) { engine.checkConnection(provider, system, settings) }

@@ -1,3 +1,155 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+  <string name="place_search_language">nl</string>
+
+  <string name="reading_settings">Je instellingen worden gelezen…</string>
+
+  <string name="action_next">Volgende</string>
+  <string name="action_back">Vorige</string>
+  <string name="action_finish">Voltooien</string>
+  <string name="action_try_again">Opnieuw proberen</string>
+  <string name="action_cancel">Annuleren</string>
+  <string name="details_in_english">Details (in het Engels): %1$s</string>
+
+  <string name="typical_mark">Gangbare waarde</string>
+  <string name="typical_mark_description">Gangbare waarde, niet door jou ingevuld: pas hem aan als je je eigen waarde weet</string>
+  <string name="use_typical">Weet ik niet: gangbare waarden gebruiken</string>
+  <string name="sign_toggle">Wisselen tussen plus en min</string>
+
+  <string name="setup_step_of">Stap %1$d van %2$d</string>
+  <string name="setup_refused">Sommige waarden vragen aandacht: kijk bij de gemarkeerde velden.</string>
+
+  <string name="setup_welcome_title">Welkom</string>
+  <string name="setup_welcome_intro">Deze app vertelt je wanneer je je elektrische auto het beste kunt laden, zodat zo veel mogelijk stroom van je eigen zonnepanelen komt. Daarvoor zijn een paar gegevens over je huis en je auto nodig; het duurt een paar minuten.</string>
+  <string name="setup_welcome_privacy_title">Wat je telefoon verlaat</string>
+  <string name="setup_welcome_privacy">%1$s, de voorspellingsdienst, krijgt de locatie en de tijdzone van je huis en de helling en richting van je panelen, om de voorspelling te maken. De plaats die je bij de volgende stap typt, gaat ook naar %1$s, om hem te vinden. Zoals elke website ziet %1$s ook het internetadres van je telefoon.</string>
+  <string name="setup_welcome_nothing_else">Verder verlaat niets je telefoon. Er is geen account en je wordt niet gevolgd.</string>
+  <string name="setup_welcome_settings">Andere voorspellingsdiensten en API-sleutels staan bij Instellingen.</string>
+  <string name="setup_welcome_typical_title">Weet je een waarde niet?</string>
+  <string name="setup_welcome_typical">Druk op “Weet ik niet: gangbare waarden gebruiken”. De app neemt dan een gangbare waarde en markeert die, tot je je eigen waarde invult, hier of later bij Instellingen.</string>
+
+  <string name="setup_location_title">Waar staat je huis?</string>
+  <string name="place_field">Plaats of postcode</string>
+  <string name="place_hint">Zoeken stuurt die naar %1$s, die de coördinaten en de tijdzone opzoekt.</string>
+  <string name="place_search">Zoeken</string>
+  <string name="place_searching">Zoeken…</string>
+  <string name="place_choose">Kies je plaats:</string>
+  <string name="place_chosen">Coördinaten en tijdzone van %1$s ingevuld.</string>
+  <string name="place_none">Geen plaatsen gevonden voor “%1$s”.</string>
+  <string name="place_no_search">Je voorspellingsdienst kan geen plaatsen zoeken: vul de coördinaten in.</string>
+  <string name="place_too_short">Typ minstens twee letters of cijfers.</string>
+  <string name="place_unavailable">De zoekdienst was niet bereikbaar. Kijk of de telefoon online is en probeer het opnieuw, of vul de coördinaten in.</string>
+  <string name="place_busy">De zoekdienst is even te druk. Probeer het over een minuut opnieuw.</string>
+  <string name="place_bad_response">De zoekdienst gaf een antwoord dat de app niet begrijpt.</string>
+  <string name="coordinates_toggle">Liever de coördinaten invullen</string>
+  <string name="latitude">Breedtegraad</string>
+  <string name="latitude_hint">Graden; positief is noord.</string>
+  <string name="longitude">Lengtegraad</string>
+  <string name="longitude_hint">Graden; positief is ten oosten van Greenwich.</string>
+  <string name="advanced">Geavanceerd</string>
+  <string name="time_zone_now">Tijdzone: %1$s</string>
+  <string name="time_zone_change">Tijdzone wijzigen</string>
+  <string name="time_zone_title">Tijdzone</string>
+  <string name="time_zone_filter">Tijdzones doorzoeken</string>
+  <string name="time_zone_none">Geen tijdzone gevonden.</string>
+
+  <string name="setup_panels_title">Je zonnepanelen</string>
+  <string name="setup_panels_intro">Vul de panelen in met dezelfde helling en richting. Panelen die een andere kant op liggen, voeg je bij Instellingen toe, als een eigen panelengroep.</string>
+  <string name="panel_size">Vermogen</string>
+  <string name="panel_size_hint">kWp: het piekvermogen van de panelen samen.</string>
+  <string name="panel_tilt">Helling</string>
+  <string name="panel_tilt_hint">Graden vanaf plat: 0 is plat, ongeveer 35 voor een schuin dak.</string>
+  <string name="panel_direction">Richting</string>
+  <string name="panel_direction_hint">Graden vanaf zuid: -90 is oost, 90 is west.</string>
+  <string name="panel_losses">Systeemverlies</string>
+  <string name="panel_losses_hint">Procent, meestal 10 tot 15.</string>
+
+  <string name="setup_car_title">Je auto</string>
+  <string name="car_battery">Bruikbare accucapaciteit</string>
+  <string name="car_battery_hint">kWh, meestal 40 tot 100.</string>
+  <string name="car_consumption">Verbruik</string>
+  <string name="car_consumption_hint">kWh per 100 km, meestal 14 tot 22.</string>
+  <string name="car_other_driving">Overige rijafstand per dag</string>
+  <string name="car_other_driving_hint">km per dag aan korte ritjes die geen rit zijn.</string>
+  <string name="car_trip_surcharge">Ritopslag</string>
+  <string name="car_trip_surcharge_hint">Procent dat bij het verbruik komt voor de energie van een rit.</string>
+
+  <string name="setup_charger_title">Je laadpaal</string>
+  <string name="charger_phases">Fasen</string>
+  <string name="charger_phases_hint">Eén of drie: het typeplaatje of de handleiding van de laadpaal zegt het.</string>
+  <string name="phases_one">Eén fase</string>
+  <string name="phases_three">Drie fasen</string>
+  <string name="charger_min_current">Minimale laadstroom</string>
+  <string name="charger_min_current_hint">A per fase, vaak 6.</string>
+  <string name="charger_max_current">Maximale laadstroom</string>
+  <string name="charger_max_current_hint">A per fase, vaak 16 of 32.</string>
+  <string name="charger_voltage">Spanning</string>
+  <string name="charger_voltage_hint">V, meestal 230.</string>
+  <string name="charger_efficiency">Laadrendement</string>
+  <string name="charger_efficiency_hint">Procent, meestal ongeveer 90.</string>
+
+  <string name="setup_more_title">Huis en afwezigheid</string>
+  <string name="setup_more_intro">Allebei optioneel: ze maken de planning beter, en je kunt ze ook later bij Instellingen invullen. Rijd je naar je werk, voeg dan de tijden toe waarop de auto afwezig is.</string>
+  <string name="house_heading">Huis</string>
+  <string name="baseload">Basisverbruik van het huis</string>
+  <string name="baseload_hint">kW zonder de auto: de kWh van een maand gedeeld door 730.</string>
+  <string name="away_heading">Wekelijkse afwezigheid</string>
+  <string name="away_none">Geen: de planning gaat ervan uit dat de auto de hele week thuis is.</string>
+  <string name="away_add">Afwezigheid toevoegen</string>
+  <string name="away_period">Afwezigheid %1$d</string>
+  <string name="away_remove">Afwezigheid %1$d verwijderen</string>
+  <string name="away_weekday">Weekdag, afwezigheid %1$d</string>
+  <string name="away_from">Afwezig vanaf, afwezigheid %1$d</string>
+  <string name="away_until">Afwezig tot, afwezigheid %1$d</string>
+  <string name="time_hint">Uren en minuten, zoals 08:00.</string>
+
+  <string name="setup_check_title">Voorspelling controleren</string>
+  <string name="setup_check_intro">Er wordt één voorspelling opgevraagd met wat je hebt ingevuld, zodat je weet dat het werkt voordat je klaar bent. Er is nog niets opgeslagen.</string>
+  <string name="check_asking">Er wordt een voorspelling voor je huis opgevraagd bij %1$s…</string>
+  <plurals name="check_works">
+    <item quantity="one">Voorspelling ontvangen van %1$s, %2$d dag.</item>
+    <item quantity="other">Voorspelling ontvangen van %1$s, %2$d dagen.</item>
+  </plurals>
+  <string name="check_failed">Geen voorspelling ontvangen. Je kunt toch voltooien: het scherm Vandaag vraagt er opnieuw om als het opent.</string>
+  <string name="check_again">Opnieuw controleren</string>
+  <string name="finish_saving">Opslaan…</string>
+  <string name="finish_failed">Niet opgeslagen: de instellingen konden niet worden geschreven.</string>
+
+  <string name="problem_out_of_range">Deze waarde valt buiten wat hier mag.</string>
+  <string name="problem_not_below_target">Moet lager zijn dan het doelniveau.</string>
+  <string name="problem_below_minimum_current">Mag niet lager zijn dan de minimale laadstroom.</string>
+  <string name="problem_same_as_primary">Kies een andere dienst dan de eerste.</string>
+  <string name="problem_not_after_start">Moet op dezelfde dag eindigen na het begin.</string>
+  <string name="problem_same_as_start">Kies twee verschillende tijden.</string>
+  <string name="problem_not_a_number">Typ een getal.</string>
+  <string name="problem_not_a_whole_number">Typ een heel getal, zonder decimalen.</string>
+  <string name="problem_not_a_time">Typ de tijd als uren en minuten, zoals 07:30.</string>
+  <string name="problem_required">Verplicht: zonder dit kan de dienst niet geraadpleegd worden.</string>
+  <string name="problem_server_address">Gebruik een adres dat begint met https://, of http:// voor een server op deze telefoon (localhost, 127.0.0.1 of [::1]), zonder gebruikersnaam, ? of #.</string>
+  <string name="problem_letters_and_digits">Gebruik alleen letters en cijfers, hoogstens 64: zo zien de API-sleutels van de dienst eruit.</string>
+  <string name="problem_one_line">Gebruik één regel, zonder regeleinden of andere stuurtekens.</string>
+  <string name="problem_no_place">Kies waar je huis staat: zoek het op, of vul de coördinaten in.</string>
+
+  <string name="unusable_title">Niet ingesteld</string>
+  <string name="unusable_text">Je instellingenbestand, %1$s, is niet te gebruiken. Stel de app opnieuw in om opnieuw te beginnen: het bestand blijft bewaard.</string>
+  <string name="set_up_again">Opnieuw instellen</string>
+  <string name="set_up_again_question">Opnieuw instellen?</string>
+  <string name="set_up_again_explained">%1$s wordt niet verwijderd: het blijft naast de nieuwe instellingen bewaard, onder een andere naam. Daarna start de instelhulp.</string>
+  <string name="set_up_again_moving">Het bestand wordt opzijgezet…</string>
+  <string name="set_up_again_failed">Het bestand kon niet opzij worden gezet en is gebleven zoals het was.</string>
+
+  <string name="newer_title">Werk de app bij</string>
+  <string name="newer_text">Je instellingen zijn opgeslagen door een nieuwere versie van de app. Werk de app bij om ze te gebruiken; tot dan blijven ze zoals ze zijn.</string>
+
+  <string name="home_title">Vandaag</string>
+  <string name="home_asking">De planning wordt gemaakt…</string>
+  <string name="home_window">Van %1$s tot %2$s, %3$d A (%4$s kW)</string>
+  <string name="home_next_window">Geen laadvenster vandaag. Volgende: %1$s van %2$s tot %3$s, %4$d A (%5$s kW)</string>
+  <string name="home_no_window">Geen laadvenster vandaag</string>
+  <string name="home_assumed">De planning gaat ervan uit dat de accu op %1$s%% staat.</string>
+  <string name="home_zone">Tijden in %1$s</string>
+  <string name="home_no_forecast">Geen enkele voorspellingsdienst heeft een bruikbare voorspelling.</string>
+  <string name="home_refresh">Vernieuwen</string>
+  <string name="home_settings">Instellingen</string>
+  <string name="home_settings_later">Komt in een latere versie</string>
 </resources>

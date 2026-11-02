@@ -21,6 +21,17 @@ class NumberTextTest {
     }
 
     @Test
+    fun aWriterThatFollowsTheLanguageWritesTheMarkOfTheLanguageNow() {
+        var language = Locale.ENGLISH
+        val following = NumberText { language }
+        assertThat(following.write(0.25, 2)).isEqualTo("0.25")
+
+        language = Locale.forLanguageTag("nl")
+
+        assertThat(following.write(0.25, 2)).isEqualTo("0,25")
+    }
+
+    @Test
     fun aValueIsRoundedHalfUpToTheDecimalsShown() {
         assertThat(english.write(0.125, 2)).isEqualTo("0.13")
         assertThat(english.write(2.5, 0)).isEqualTo("3")
