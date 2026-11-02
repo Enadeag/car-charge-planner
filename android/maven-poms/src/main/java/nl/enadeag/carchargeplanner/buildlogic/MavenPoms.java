@@ -181,6 +181,19 @@ public final class MavenPoms {
     }
 
     /**
+     * Whether a pom has a {@code <parent>} of its own.
+     *
+     * @param pom the pom's contents
+     * @param pomName the pom's path, for the messages
+     * @return true when the top level has the element
+     * @throws IOException when the contents are not a pom
+     */
+    public static boolean hasParent(byte[] pom, String pomName) throws IOException {
+        var root = parse(new ByteArrayInputStream(pom), pomName).getDocumentElement();
+        return !children(root, "parent").isEmpty();
+    }
+
+    /**
      * The properties a version names.
      *
      * @param version a version as a pom writes it, such as {@code ${jackson.version}}; null for none

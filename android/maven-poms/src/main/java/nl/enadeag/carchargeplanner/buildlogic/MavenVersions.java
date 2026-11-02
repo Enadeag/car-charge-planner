@@ -34,8 +34,11 @@ public abstract class MavenVersions {
      */
     private static final Set<Declared> IMPORTABLE = Set.of(JACKSON_BOM, JUNIT_BOM);
 
-    /** The folder of Maven's own options, beside the parent pom, and the files in it that can set properties. */
-    private static final List<String> MAVEN_OPTION_FILES = List.of(".mvn/maven.config", ".mvn/jvm.config");
+    /**
+     * Maven's own options file, beside the parent pom. Its {@code -D} overrides the poms' properties; the properties of
+     * {@code .mvn/jvm.config} rank below them, so that file is not read.
+     */
+    private static final String MAVEN_CONFIG = ".mvn/maven.config";
 
     /**
      * Per version of the catalog, the library of the parent pom's {@code dependencyManagement} whose version it is: the
@@ -98,7 +101,8 @@ public abstract class MavenVersions {
      * but those of Jackson's and JUnit's, at the top level; no {@code dependencies} of the parent, which the engine
      * inherits, at the top level or in a profile; no profile of the parent that sets one of the properties those
      * versions name or has a managed entry in those groups; no {@code -D} of one of those properties in
-     * {@code .mvn/maven.config} or {@code .mvn/jvm.config}; and in {@code engine/pom.xml}, which sits beside the parent pom, no dependency
+     * {@code .mvn/maven.config}; no {@code <parent>} of the parent pom, whose {@code dependencyManagement} Maven
+     * would apply; and in {@code engine/pom.xml}, which sits beside the parent pom, no dependency
      * with a {@code <version>} of its own, no {@code dependencyManagement}, no property but
      * {@code maven.compiler.release}, and no profile with properties, dependencies or a {@code dependencyManagement}.
      * No versions are compared.
@@ -116,13 +120,11 @@ public abstract class MavenVersions {
                 + " from");
         var engine = contents(enginePom, "checks that no version is pinned in");
         var options = new TreeMap<File, byte[]>();
-        for (var name : MAVEN_OPTION_FILES) {
-            var file = parentPom.toPath().resolveSibling(name).toFile();
-            var found = getProviders().fileContents(getObjects().fileProperty().fileValue(file)).getAsBytes()
-                    .getOrNull();
-            if (found != null) {
-                options.put(file, found);
-            }
+        var configFile = parentPom.toPath().resolveSibling(MAVEN_CONFIG).toFile();
+        var config = getProviders().fileContents(getObjects().fileProperty().fileValue(configFile)).getAsBytes()
+                .getOrNull();
+        if (config != null) {
+            options.put(configFile, config);
         }
         try {
             checkNothingElseIsPinned(parent, parentPom, engine, enginePom, options);
@@ -153,6 +155,10 @@ public abstract class MavenVersions {
 
     private static void checkNothingElseIsPinned(byte[] parent, File parentPom, byte[] engine, File enginePom,
             Map<File, byte[]> options) throws IOException {
+        if (MavenPoms.hasParent(parent, parentPom.toString())) {
+            throw new GradleException("Android does not read what a parent of " + parentPom + " manages: Maven would"
+                    + " apply the versions in its dependencyManagement, so the pom may have no <parent>.");
+        }
         var managed = MavenPoms.managedLibraries(parent, parentPom.toString());
         if (!MavenPoms.ownDependencies(parent, parentPom.toString()).isEmpty()) {
             throw new GradleException("Android does not read the dependencies of " + parentPom + ": the engine"
@@ -239,7 +245,7 @@ public abstract class MavenVersions {
     /** The names of the properties that Maven option lines such as {@code -Djackson.version=3.1} set. */
     private static List<String> propertiesSet(byte[] options) {
         var names = new ArrayList<String>();
-        var words = new String(options, StandardCharsets.UTF_8).trim().split("\\s+");
+        var words = new String(options, StandardCharsets.UTF_8).replaceAll("[\"']", "").trim().split("\\s+");
         for (int i = 0; i < words.length; i++) {
             String definition = null;
             if (words[i].equals("-D") || words[i].equals("--define")) {

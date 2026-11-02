@@ -9,6 +9,8 @@ import org.gradle.testkit.runner.GradleRunner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /** A Gradle build of its own, laid out as the repository is: the pom at the root, the Gradle build in android/. */
 class MavenVersionsTest {
@@ -315,6 +317,25 @@ class MavenVersionsTest {
 
         assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", "jackson.version",
                 config.toString());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"\"-Djackson.version=3.1.2\"", "-D\"jackson.version=3.1.2\"",
+            "'-Djackson.version=3.1.2'"})
+    void aQuotedVersionPropertyInMavensConfigFailsTheBuildNamingIt(String line) throws IOException {
+        var config = Files.createDirectory(repository.resolve(".mvn")).resolve("maven.config");
+        Files.writeString(config, line + "\n");
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", "jackson.version",
+                config.toString());
+    }
+
+    @Test
+    void aParentOfTheParentPomFailsTheBuildNamingThePom() throws IOException {
+        parentHas("<parent><groupId>org.example</groupId><artifactId>p</artifactId><version>1</version></parent>");
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", "parent of",
+                repository.resolve("pom.xml").toString());
     }
 
     @Test
