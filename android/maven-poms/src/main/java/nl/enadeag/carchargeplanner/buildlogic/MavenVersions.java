@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.buildlogic;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -24,14 +25,26 @@ import org.gradle.api.provider.ProviderFactory;
  */
 public abstract class MavenVersions {
 
+    private static final Declared JACKSON_BOM = new Declared("tools.jackson", "jackson-bom");
+    private static final Declared JUNIT_BOM = new Declared("org.junit", "junit-bom");
+
+    /**
+     * The only BOMs the parent pom may import, at its top level: Maven lets the first import that manages a library
+     * win, so another BOM could give the engine a version that Android does not read.
+     */
+    private static final Set<Declared> IMPORTABLE = Set.of(JACKSON_BOM, JUNIT_BOM);
+
+    /** The folder of Maven's own options, beside the parent pom, and the files in it that can set properties. */
+    private static final List<String> MAVEN_OPTION_FILES = List.of(".mvn/maven.config", ".mvn/jvm.config");
+
     /**
      * Per version of the catalog, the library of the parent pom's {@code dependencyManagement} whose version it is: the
      * BOM for Jackson and JUnit, which manages the versions of the rest of each.
      */
     private static final Map<String, Declared> FROM_PARENT_POM = new TreeMap<>(Map.of(
-            "jackson", new Declared("tools.jackson", "jackson-bom"),
+            "jackson", JACKSON_BOM,
             "slf4j", new Declared("org.slf4j", "slf4j-api"),
-            "junit", new Declared("org.junit", "junit-bom"),
+            "junit", JUNIT_BOM,
             "assertj", new Declared("org.assertj", "assertj-core"),
             "archunit", new Declared("com.tngtech.archunit", "archunit")));
 
@@ -81,9 +94,11 @@ public abstract class MavenVersions {
      * Adds the versions of {@code FROM_PARENT_POM} to a catalog, as the parent pom gives them, and checks that the
      * Maven build pins no other version of those libraries' groups, which Android would not read: no other entry of
      * the parent's {@code dependencyManagement} in those groups (and in {@code com.fasterxml.jackson}, which Jackson's
-     * BOM manages too), a BOM import included, unless it takes its version from the same property as the entry of its
-     * group; no profile of the parent that sets one of the properties those versions name or has a dependency or
-     * managed entry in those groups; and in {@code engine/pom.xml}, which sits beside the parent pom, no dependency
+     * BOM manages too), unless it takes its version from the same property as the entry of its group; no BOM import
+     * but those of Jackson's and JUnit's, at the top level; no {@code dependencies} of the parent, which the engine
+     * inherits, at the top level or in a profile; no profile of the parent that sets one of the properties those
+     * versions name or has a managed entry in those groups; no {@code -D} of one of those properties in
+     * {@code .mvn/maven.config} or {@code .mvn/jvm.config}; and in {@code engine/pom.xml}, which sits beside the parent pom, no dependency
      * with a {@code <version>} of its own, no {@code dependencyManagement}, no property but
      * {@code maven.compiler.release}, and no profile with properties, dependencies or a {@code dependencyManagement}.
      * No versions are compared.
@@ -100,8 +115,17 @@ public abstract class MavenVersions {
         var parent = contents(parentPom, "takes the versions of " + String.join(", ", FROM_PARENT_POM.keySet())
                 + " from");
         var engine = contents(enginePom, "checks that no version is pinned in");
+        var options = new TreeMap<File, byte[]>();
+        for (var name : MAVEN_OPTION_FILES) {
+            var file = parentPom.toPath().resolveSibling(name).toFile();
+            var found = getProviders().fileContents(getObjects().fileProperty().fileValue(file)).getAsBytes()
+                    .getOrNull();
+            if (found != null) {
+                options.put(file, found);
+            }
+        }
         try {
-            checkNothingElseIsPinned(parent, parentPom, engine, enginePom);
+            checkNothingElseIsPinned(parent, parentPom, engine, enginePom, options);
         } catch (IOException | IllegalArgumentException e) {
             throw new GradleException("The Android build cannot check the versions the Maven build pins: "
                     + e.getMessage(), e);
@@ -127,10 +151,19 @@ public abstract class MavenVersions {
         return contents;
     }
 
-    private static void checkNothingElseIsPinned(byte[] parent, File parentPom, byte[] engine, File enginePom)
-            throws IOException {
+    private static void checkNothingElseIsPinned(byte[] parent, File parentPom, byte[] engine, File enginePom,
+            Map<File, byte[]> options) throws IOException {
         var managed = MavenPoms.managedLibraries(parent, parentPom.toString());
+        if (!MavenPoms.ownDependencies(parent, parentPom.toString()).isEmpty()) {
+            throw new GradleException("Android does not read the dependencies of " + parentPom + ": the engine"
+                    + " inherits them, with versions Android does not take. Declare a dependency in the module that"
+                    + " uses it, with its version in the dependencyManagement.");
+        }
         for (var entry : managed) {
+            if (entry.imported()) {
+                checkImportable(entry.library(), parentPom, null);
+                continue;
+            }
             if (FROM_PARENT_POM.containsValue(entry.library())) {
                 continue;
             }
@@ -151,7 +184,28 @@ public abstract class MavenVersions {
                 versionProperties.addAll(MavenPoms.propertiesNamedBy(entry.version()));
             }
         }
+        for (var file : options.entrySet()) {
+            for (var name : propertiesSet(file.getValue())) {
+                if (versionProperties.contains(name)) {
+                    throw new GradleException("Android does not read the property " + name + " that "
+                            + file.getKey() + " sets: it is a version of " + readModules() + ", which the Android"
+                            + " build takes from the parent pom's properties.");
+                }
+            }
+        }
         for (var profile : MavenPoms.profiles(parent, parentPom.toString())) {
+            if (!profile.dependencies().isEmpty()) {
+                throw new GradleException("Android does not read the dependencies of profile " + profile.id()
+                        + " of " + parentPom + ": the engine inherits them, with versions Android does not take.");
+            }
+            for (var imported : profile.managed()) {
+                if (imported.imported()) {
+                    checkImportable(imported.library(), parentPom, profile.id());
+                    throw new GradleException("Android does not read the versions that the BOM "
+                            + imported.library().module() + " manages when profile " + profile.id() + " of "
+                            + parentPom + " imports it: BOMs are imported at the top level of the parent only.");
+                }
+            }
             for (var name : profile.propertyNames()) {
                 if (versionProperties.contains(name)) {
                     throw new GradleException("Android does not read the property " + name + " that profile "
@@ -170,6 +224,36 @@ public abstract class MavenVersions {
             }
         }
         checkEngine(engine, enginePom, parentPom);
+    }
+
+    private static void checkImportable(Declared bom, File parentPom, String profile) {
+        if (!IMPORTABLE.contains(bom)) {
+            throw new GradleException("Android does not read the versions that the BOM " + bom.module() + " manages,"
+                    + " which " + (profile == null ? "" : "profile " + profile + " of ") + parentPom + " imports:"
+                    + " the first import that manages a library wins in Maven, so the parent may import only "
+                    + IMPORTABLE.stream().map(Declared::module).sorted().collect(Collectors.joining(" and "))
+                    + ".");
+        }
+    }
+
+    /** The names of the properties that Maven option lines such as {@code -Djackson.version=3.1} set. */
+    private static List<String> propertiesSet(byte[] options) {
+        var names = new ArrayList<String>();
+        var words = new String(options, StandardCharsets.UTF_8).trim().split("\\s+");
+        for (int i = 0; i < words.length; i++) {
+            String definition = null;
+            if (words[i].equals("-D") || words[i].equals("--define")) {
+                definition = i + 1 < words.length ? words[++i] : null;
+            } else if (words[i].startsWith("--define=")) {
+                definition = words[i].substring("--define=".length());
+            } else if (words[i].startsWith("-D")) {
+                definition = words[i].substring(2);
+            }
+            if (definition != null) {
+                names.add(definition.split("=", 2)[0]);
+            }
+        }
+        return names;
     }
 
     private static void checkEngine(byte[] engine, File enginePom, File parentPom) throws IOException {

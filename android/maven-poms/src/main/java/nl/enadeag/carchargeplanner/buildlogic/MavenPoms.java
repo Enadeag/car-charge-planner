@@ -217,6 +217,24 @@ public final class MavenPoms {
     }
 
     /**
+     * The libraries of a pom's own {@code dependencies}, at the top level: not those of its profiles, and not the
+     * ones plugins have under {@code build}.
+     *
+     * @param pom the pom's contents
+     * @param pomName the pom's path, for the messages
+     * @return the libraries, in the pom's order
+     * @throws IOException when the contents are not a pom
+     */
+    public static List<Declared> ownDependencies(byte[] pom, String pomName) throws IOException {
+        var root = parse(new ByteArrayInputStream(pom), pomName).getDocumentElement();
+        var found = new ArrayList<Declared>();
+        for (var dependency : dependencies(root, null)) {
+            found.add(new Declared(text(dependency, "groupId"), text(dependency, "artifactId")));
+        }
+        return found;
+    }
+
+    /**
      * The libraries a module's own {@code dependencies} give a {@code <version>} of their own, instead of taking the
      * parent's.
      *

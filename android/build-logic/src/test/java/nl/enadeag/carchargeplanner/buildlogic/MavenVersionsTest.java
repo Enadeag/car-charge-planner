@@ -248,6 +248,83 @@ class MavenVersionsTest {
                 repository.resolve("pom.xml").toString());
     }
 
+    private static final String FOREIGN_BOM = "<dependency><groupId>org.springframework.boot</groupId>"
+            + "<artifactId>spring-boot-dependencies</artifactId><version>4.0.0</version><type>pom</type>"
+            + "<scope>import</scope></dependency>";
+
+    @Test
+    void aForeignBomImportedBeforeJacksonsFailsTheBuildNamingItAndThePom() throws IOException {
+        Files.writeString(repository.resolve("pom.xml"), PARENT.replace("<dependencyManagement>\n    <dependencies>",
+                "<dependencyManagement><dependencies>" + FOREIGN_BOM));
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read",
+                "org.springframework.boot:spring-boot-dependencies", repository.resolve("pom.xml").toString());
+    }
+
+    @Test
+    void aForeignBomImportedInAParentProfileFailsTheBuildNamingItAndThePom() throws IOException {
+        parentHas("<profiles><profile><id>odd</id><dependencyManagement><dependencies>" + FOREIGN_BOM
+                + "</dependencies></dependencyManagement>" + PROFILE_END);
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read",
+                "org.springframework.boot:spring-boot-dependencies", "odd", repository.resolve("pom.xml").toString());
+    }
+
+    @Test
+    void anAllowedBomImportedInAParentProfileFailsTheBuildNamingItAndThePom() throws IOException {
+        parentHas("<profiles><profile><id>odd</id><dependencyManagement><dependencies><dependency>"
+                + "<groupId>org.junit</groupId><artifactId>junit-bom</artifactId><version>6.0.0</version>"
+                + "<type>pom</type><scope>import</scope></dependency></dependencies></dependencyManagement>"
+                + PROFILE_END);
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", "org.junit:junit-bom",
+                "odd", repository.resolve("pom.xml").toString());
+    }
+
+    @Test
+    void aDependencyOfTheParentFailsTheBuildNamingThePom() throws IOException {
+        parentHas("<dependencies><dependency><groupId>com.fasterxml.jackson.core</groupId>"
+                + "<artifactId>jackson-annotations</artifactId><version>2.21</version></dependency></dependencies>");
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", "dependencies of",
+                repository.resolve("pom.xml").toString());
+    }
+
+    @Test
+    void aDependencyInAParentProfileFailsTheBuildNamingItAndThePom() throws IOException {
+        parentHas("<profiles><profile><id>odd</id><dependencies><dependency><groupId>org.example</groupId>"
+                + "<artifactId>x</artifactId><version>1</version></dependency></dependencies>" + PROFILE_END);
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", "odd",
+                repository.resolve("pom.xml").toString());
+    }
+
+    @Test
+    void aParentProfileWithOnlyPluginDependenciesPasses() throws IOException {
+        parentHas("<profiles><profile><id>pit</id><build><plugins><plugin><artifactId>x</artifactId><dependencies>"
+                + "<dependency><groupId>org.example</groupId><artifactId>y</artifactId><version>1</version>"
+                + "</dependency></dependencies></plugin></plugins></build>" + PROFILE_END);
+
+        assertThat(gradle().build().getOutput()).contains("jackson-bom 3.2.3");
+    }
+
+    @Test
+    void aVersionPropertySetInMavensConfigFailsTheBuildNamingItAndTheFile() throws IOException {
+        var config = Files.createDirectory(repository.resolve(".mvn")).resolve("maven.config");
+        Files.writeString(config, "--strict-checksums\n-Djackson.version=3.1.5\n");
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", "jackson.version",
+                config.toString());
+    }
+
+    @Test
+    void aMavenConfigWithOtherOptionsPasses() throws IOException {
+        Files.writeString(Files.createDirectory(repository.resolve(".mvn")).resolve("maven.config"),
+                "--strict-checksums\n-Dgroups=live\n");
+
+        assertThat(gradle().build().getOutput()).contains("jackson-bom 3.2.3");
+    }
+
     @Test
     void aMissingPomFailsTheBuildNamingIt() throws IOException {
         Files.delete(repository.resolve("pom.xml"));
