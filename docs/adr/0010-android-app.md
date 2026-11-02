@@ -62,3 +62,7 @@ The app runs on Linux and Windows, as a JavaFX desktop app with the engine insid
 ## Note, 2026-11-02 (#313)
 
 Android's logic, in plain Kotlin classes, is tested with JUnit 5 on the JVM, and only its screens with Robolectric (JUnit 4, through JUnit's vintage engine); the rest of the Tests decision stands.
+
+## Note, 2026-11-02 (#329)
+
+The engine's libraries are no longer versioned in both builds. The Android build reads the versions of Jackson, slf4j, JUnit, AssertJ and ArchUnit from the parent `pom.xml` into its version catalog while it configures, so a Maven update reaches it without a second change; `checkMavenDrift` now holds only the list of the engine's libraries in Gradle to `engine/pom.xml`, by name.

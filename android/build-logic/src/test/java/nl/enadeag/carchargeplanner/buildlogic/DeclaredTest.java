@@ -13,17 +13,12 @@ class DeclaredTest {
     @CsvSource(value = {"NULL, slf4j-api", "'', slf4j-api", "' ', slf4j-api", "org.slf4j, NULL", "org.slf4j, ''",
         "org.slf4j, ' '"}, nullValues = "NULL")
     void aLibraryWithoutAGroupOrAnArtifactIsRefused(String group, String artifact) {
-        assertThatIllegalArgumentException().isThrownBy(() -> new Declared(group, artifact, "2.0.20", false));
+        assertThatIllegalArgumentException().isThrownBy(() -> new Declared(group, artifact));
     }
 
     @Test
-    void aBomWithoutAVersionIsRefused() {
-        assertThatIllegalArgumentException().isThrownBy(() -> new Declared("org.junit", "junit-bom", null, true));
-    }
-
-    @Test
-    void aLibraryWithoutAVersionIsAccepted() {
-        assertThat(new Declared("org.junit.jupiter", "junit-jupiter-api", null, false).module())
+    void theModuleIsGroupAndArtifact() {
+        assertThat(new Declared("org.junit.jupiter", "junit-jupiter-api").module())
                 .isEqualTo("org.junit.jupiter:junit-jupiter-api");
     }
 }

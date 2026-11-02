@@ -2,7 +2,8 @@ name: Android
 
 # The Android app (android/, ADR 0010). The build job builds the app and its test APK, runs Android Lint and then
 # check: the unit tests and the build's own checks. It runs for a pull request that touches android/, the engine's
-# sources, a pom.xml (checkMavenDrift) or this file, and always on a push, weekly and by hand. The emulator job runs the
+# sources, a pom.xml (the build takes the versions of the engine's libraries from pom.xml, and checkMavenDrift holds it
+# to the libraries of engine/pom.xml) or this file, and always on a push, weekly and by hand. The emulator job runs the
 # instrumented tests on an Android 8 (API 26) emulator: for release/android-* branches and the pull requests into them,
 # weekly, by hand, and for a pull request that changes this file. (CONTRIBUTING.md, What is tested where)
 on:

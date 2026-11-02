@@ -54,9 +54,8 @@ tasks.check {
     dependsOn(tasks.named("compileTestFixturesJava"))
 }
 
-// the poms the engine's libraries come from: Gradle declares the same, with the catalog's versions
+// the pom the engine's libraries come from: Gradle declares the same ones, with the pom's versions (the settings)
 tasks.checkMavenDrift {
-    parentPom = layout.projectDirectory.file("../../pom.xml")
     modulePom = layout.projectDirectory.file("../../engine/pom.xml")
 }
 
