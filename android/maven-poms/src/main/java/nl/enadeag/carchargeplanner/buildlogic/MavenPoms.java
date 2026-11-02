@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -22,11 +23,13 @@ import org.xml.sax.SAXException;
 /**
  * What the Android build takes from the Maven poms: the libraries a module declares, and the version the parent's
  * {@code dependencyManagement} gives a library, with the parent's properties filled in. No profiles, no inheritance
- * beyond the one parent.
+ * beyond the one parent. {@code managedVersion} takes the pom as bytes, not as a path, because the settings read the
+ * pom as a tracked input of Gradle's configuration, which hands them its contents.
  */
 public final class MavenPoms {
 
     private static final Pattern PROPERTY = Pattern.compile("\\$\\{([^}]+)}");
+    private static final Pattern PLAIN_VERSION = Pattern.compile("[0-9A-Za-z._-]+");
 
     private MavenPoms() {
     }
@@ -66,8 +69,10 @@ public final class MavenPoms {
      * @param library the library, as its {@code dependencyManagement} entry names it
      * @return the version, never blank
      * @throws IOException when the contents are not a pom
-     * @throws IllegalArgumentException when the pom does not manage the library, gives it no version, or its version
-     *     names a property the pom does not set; the message names the library or the property, and the pom
+     * @throws IllegalArgumentException when the pom does not manage the library, gives it no version, its version
+     *     names a property the pom does not set, or the result is not a plain version (letters, digits, {@code .},
+     *     {@code _} and {@code -}: no range, {@code +}, {@code latest.*} or property inside a property); the message
+     *     names the library or the property, and the pom
      */
     public static String managedVersion(byte[] pom, String pomName, Declared library) throws IOException {
         var root = parse(new ByteArrayInputStream(pom), pomName).getDocumentElement();
@@ -91,6 +96,55 @@ public final class MavenPoms {
         throw new IllegalArgumentException(pomName + " has no " + library.module() + " in its dependencyManagement");
     }
 
+    /**
+     * A library a pom's {@code dependencyManagement} manages.
+     *
+     * @param library the library
+     * @param version the version as the pom writes it, a property reference such as {@code ${slf4j.version}} included;
+     *     null when the entry has none
+     * @param imported whether the entry imports a BOM ({@code <scope>import</scope>}) rather than managing one library
+     */
+    public record Managed(Declared library, String version, boolean imported) {
+    }
+
+    /**
+     * The entries of a pom's {@code dependencyManagement}, with their versions as written.
+     *
+     * @param pom the pom's contents
+     * @param pomName the pom's path, for the messages
+     * @return the entries, in the pom's order
+     * @throws IOException when the contents are not a pom
+     */
+    public static List<Managed> managedLibraries(byte[] pom, String pomName) throws IOException {
+        var root = parse(new ByteArrayInputStream(pom), pomName).getDocumentElement();
+        var managed = new ArrayList<Managed>();
+        for (var dependency : dependencies(root, "dependencyManagement")) {
+            managed.add(new Managed(new Declared(text(dependency, "groupId"), text(dependency, "artifactId")),
+                    text(dependency, "version"), "import".equals(text(dependency, "scope"))));
+        }
+        return managed;
+    }
+
+    /**
+     * The libraries a module's own {@code dependencies} give a {@code <version>} of their own, instead of taking the
+     * parent's.
+     *
+     * @param modulePom the module pom's contents
+     * @param pomName the pom's path, for the messages
+     * @return those libraries, in the pom's order; empty when none sets a version
+     * @throws IOException when the contents are not a pom
+     */
+    public static List<Declared> librariesWithOwnVersion(byte[] modulePom, String pomName) throws IOException {
+        var root = parse(new ByteArrayInputStream(modulePom), pomName).getDocumentElement();
+        var found = new ArrayList<Declared>();
+        for (var dependency : dependencies(root, null)) {
+            if (text(dependency, "version") != null) {
+                found.add(new Declared(text(dependency, "groupId"), text(dependency, "artifactId")));
+            }
+        }
+        return found;
+    }
+
     private static String resolve(String value, Map<String, String> properties, Declared library, String pomName) {
         Matcher matcher = PROPERTY.matcher(value);
         var resolved = new StringBuilder();
@@ -102,7 +156,19 @@ public final class MavenPoms {
             }
             matcher.appendReplacement(resolved, Matcher.quoteReplacement(property));
         }
-        return matcher.appendTail(resolved).toString();
+        var version = matcher.appendTail(resolved).toString();
+        if (version.contains("${")) {
+            throw new IllegalArgumentException("the version of " + library.module() + " in " + pomName + " is \""
+                    + version + "\" once its properties are filled in: a property that names another property is not"
+                    + " resolved");
+        }
+        var lower = version.toLowerCase(Locale.ROOT);
+        if (!PLAIN_VERSION.matcher(version).matches() || lower.startsWith("latest") || lower.equals("release")) {
+            throw new IllegalArgumentException("the version of " + library.module() + " in " + pomName + " is \""
+                    + version + "\", which is not a plain version: Android takes letters, digits, '.', '_' and '-'"
+                    + " only, no range, '+' or 'latest'");
+        }
+        return version;
     }
 
     /** The {@code dependency} elements of the root's {@code dependencies}, or of that within {@code section}. */

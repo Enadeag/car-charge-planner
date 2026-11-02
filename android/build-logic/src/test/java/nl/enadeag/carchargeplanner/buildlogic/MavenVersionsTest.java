@@ -36,6 +36,9 @@ class MavenVersionsTest {
                     <version>${junit.version}</version><type>pom</type><scope>import</scope>
                   </dependency>
                   <dependency>
+                    <groupId>org.slf4j</groupId><artifactId>slf4j-jdk14</artifactId><version>${slf4j.version}</version>
+                  </dependency>
+                  <dependency>
                     <groupId>org.assertj</groupId><artifactId>assertj-core</artifactId>
                     <version>${assertj.version}</version>
                   </dependency>
@@ -45,6 +48,14 @@ class MavenVersionsTest {
                   </dependency>
                 </dependencies>
               </dependencyManagement>
+            </project>
+            """;
+
+    private static final String ENGINE = """
+            <project>
+              <dependencies>
+                <dependency><groupId>org.slf4j</groupId><artifactId>slf4j-api</artifactId></dependency>
+              </dependencies>
             </project>
             """;
 
@@ -80,6 +91,7 @@ class MavenVersionsTest {
     @BeforeEach
     void layOut() throws IOException {
         Files.writeString(repository.resolve("pom.xml"), PARENT);
+        Files.writeString(Files.createDirectory(repository.resolve("engine")).resolve("pom.xml"), ENGINE);
         android = Files.createDirectory(repository.resolve("android"));
         Files.writeString(android.resolve("settings.gradle.kts"), SETTINGS);
         Files.writeString(android.resolve("build.gradle.kts"), BUILD);
@@ -116,6 +128,25 @@ class MavenVersionsTest {
 
         assertThat(gradle().buildAndFail().getOutput()).contains("org.junit:junit-bom",
                 repository.resolve("pom.xml").toString());
+    }
+
+    @Test
+    void aVersionManagedOutsideTheOnesAndroidReadsFailsTheBuildNamingTheLibraryAndThePom() throws IOException {
+        Files.writeString(repository.resolve("pom.xml"), PARENT.replace("</dependencies>\n  </dependencyManagement>",
+                "<dependency><groupId>tools.jackson.core</groupId><artifactId>jackson-core</artifactId>"
+                        + "<version>3.0.1</version></dependency></dependencies></dependencyManagement>"));
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read",
+                "tools.jackson.core:jackson-core", repository.resolve("pom.xml").toString());
+    }
+
+    @Test
+    void aVersionTheEngineDependencySetsItselfFailsTheBuildNamingTheLibraryAndThePom() throws IOException {
+        var engine = repository.resolve("engine/pom.xml");
+        Files.writeString(engine, ENGINE.replace("slf4j-api</artifactId>", "slf4j-api</artifactId><version>1</version>"));
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", "org.slf4j:slf4j-api",
+                engine.toString());
     }
 
     @Test

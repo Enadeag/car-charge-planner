@@ -11,6 +11,8 @@ import java.nio.file.Path;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class MavenPomsTest {
 
@@ -108,6 +110,56 @@ class MavenPomsTest {
         assertThat(MavenPoms.libraries(module, Set.of("org.junit"))).containsExactly(SLF4J,
                 new Declared("org.junit.jupiter", "junit-jupiter-api"));
         assertThat(MavenPoms.libraries(module, Set.of())).containsExactly(SLF4J);
+    }
+
+    @Test
+    void whitespaceAroundAModulesLibraryIsNotPartOfIt() throws IOException {
+        var module = Files.writeString(folder.resolve("pom.xml"), MODULE.replace("<scope>test<", "<scope> test <")
+                .replace("<groupId>org.slf4j<", "<groupId> org.slf4j\n<"));
+
+        assertThat(MavenPoms.libraries(module, Set.of("org.junit"))).containsExactly(SLF4J,
+                new Declared("org.junit.jupiter", "junit-jupiter-api"));
+        assertThat(MavenPoms.libraries(module, Set.of())).containsExactly(SLF4J);
+    }
+
+    @Test
+    void aPropertyThatNamesAnotherPropertyIsRefusedNamingTheLibraryAndThePom() {
+        var parent = PARENT.replace("<slf4j.version>2.0.20<", "<slf4j.version>${other.version}<")
+                .replace("<properties>", "<properties><other.version>2.0.20</other.version>");
+
+        assertThatIllegalArgumentException().isThrownBy(() -> version(parent, SLF4J))
+                .withMessageContaining("parent/pom.xml").withMessageContaining("org.slf4j:slf4j-api")
+                .withMessageContaining("another property");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"[2.0,3.0)", "2.+", "latest.release", "LATEST", "RELEASE", "2.0!!", "2.0 2.1", "2.0,2.1", ""})
+    void aVersionThatIsNotPlainIsRefusedNamingTheLibraryAndThePom(String written) {
+        var parent = PARENT.replace("<slf4j.version>2.0.20<", "<slf4j.version>" + written + "<");
+
+        assertThatIllegalArgumentException().isThrownBy(() -> version(parent, SLF4J))
+                .withMessageContaining("parent/pom.xml").withMessageContaining("org.slf4j:slf4j-api");
+    }
+
+    @Test
+    void theManagedEntriesCarryTheirVersionsAsWrittenAndSayWhichImportABom() throws IOException {
+        var entries = MavenPoms.managedLibraries(PARENT.getBytes(StandardCharsets.UTF_8), "parent/pom.xml");
+
+        assertThat(entries).containsExactly(new MavenPoms.Managed(SLF4J, "${slf4j.version}", false),
+                new MavenPoms.Managed(JUNIT_BOM, "6.1.3", true));
+    }
+
+    @Test
+    void theLibrariesWithAVersionOfTheirOwnAreFoundInTheModulesDependenciesOnly() throws IOException {
+        var module = MODULE.replace("<artifactId>slf4j-api</artifactId>", "<artifactId>slf4j-api</artifactId>"
+                + "<version>2.0.1</version>");
+
+        assertThat(MavenPoms.librariesWithOwnVersion(module.getBytes(StandardCharsets.UTF_8), "module/pom.xml"))
+                .containsExactly(SLF4J);
+        assertThat(MavenPoms.librariesWithOwnVersion(MODULE.getBytes(StandardCharsets.UTF_8), "module/pom.xml"))
+                .isEmpty();
+        assertThat(MavenPoms.librariesWithOwnVersion(PARENT.getBytes(StandardCharsets.UTF_8), "parent/pom.xml"))
+                .isEmpty();
     }
 
     @Test
