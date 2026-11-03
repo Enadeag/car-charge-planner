@@ -130,6 +130,9 @@ class SettingsScreenTest {
         compose.waitForIdle()
     }
 
+    private fun pageScroll() = compose.onAllNodes(hasScrollAction()).onFirst()
+        .fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
+
     private fun up() = compose.onNodeWithContentDescription(text(R.string.action_up)).performClick()
 
     private fun field(label: String) = compose.onNode(hasSetTextAction() and hasText(label, substring = true))
@@ -278,6 +281,46 @@ class SettingsScreenTest {
         compose.waitForIdle()
 
         compose.onNodeWithText(text(R.string.settings_save_failed)).assertIsDisplayed()
+    }
+
+    @Test
+    fun aSuccessfulSaveFromTheBottomOfThePageLeavesTheScrollWhereItWas() {
+        val session = show(fontScaleTwo = true)
+        open(SettingsPage.CAR_AND_HOUSE)
+        session.forms.car.edit(CarForm.Field.BATTERY, "75")
+        access.writeFails = true
+        compose.onNodeWithText(text(R.string.action_save)).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText(text(R.string.settings_save_failed)).assertIsDisplayed()
+        access.writeFails = false
+        field(text(R.string.baseload)).performScrollTo()
+        assertThat(pageScroll()).isGreaterThan(0f)
+
+        val reading = CompletableDeferred<Unit>()
+        access.readGate = reading
+        compose.onNodeWithText(text(R.string.action_save)).performClick()
+        compose.waitForIdle()
+        assertThat(pageScroll()).`as`("while saving").isGreaterThan(0f)
+        reading.complete(Unit)
+        compose.waitForIdle()
+
+        assertThat(access.written).isNotEmpty()
+        assertThat(pageScroll()).`as`("once saved").isGreaterThan(0f)
+    }
+
+    @Test
+    fun keysThatCouldNotBeStoredFromTheBottomOfThePageScrollBackToTheirReason() {
+        show(fontScaleTwo = true)
+        open(SettingsPage.FORECAST)
+        apiKey.performTextInput("K1")
+        access.keysFail = true
+        baseUrl.performScrollTo()
+        compose.onNodeWithText(text(R.string.settings_keys_not_saved)).assertDoesNotExist()
+
+        compose.onNodeWithText(text(R.string.action_save)).performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithText(text(R.string.settings_keys_not_saved)).assertIsDisplayed()
     }
 
     @Test
