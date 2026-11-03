@@ -7,6 +7,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -44,6 +45,15 @@ class Saves(private val access: EngineAccess, private val scope: CoroutineScope)
      */
     val lastOutcome: StateFlow<SaveOutcome?> = outcome.asStateFlow()
 
+    private val changesNow = MutableStateFlow(0)
+
+    /**
+     * How many Settings saves changed something stored: the API keys, or the settings file. The home asks for the plan
+     * again when it grew since the home last asked, and only then (#315); a save that found nothing different counts
+     * not.
+     */
+    val changes: StateFlow<Int> = changesNow.asStateFlow()
+
     /**
      * Saves one Settings screen: the keys first, then the screen's part laid over the settings file as it is now,
      * written only when that changes it.
@@ -57,6 +67,7 @@ class Saves(private val access: EngineAccess, private val scope: CoroutineScope)
         if (!keys.isEmpty) {
             try {
                 access.applyKeyChanges(keys)
+                changesNow.update { it + 1 }
             } catch (problem: SecretsProblem) {
                 LOG.warn("The API keys could not be saved: " + problem.message)
                 return@save SaveOutcome.KeysNotSaved
@@ -67,6 +78,7 @@ class Saves(private val access: EngineAccess, private val scope: CoroutineScope)
                 val changed = change(now.config)
                 if (changed != now.config) {
                     access.saveSettings(changed)
+                    changesNow.update { it + 1 }
                 }
                 SaveOutcome.Saved
             }

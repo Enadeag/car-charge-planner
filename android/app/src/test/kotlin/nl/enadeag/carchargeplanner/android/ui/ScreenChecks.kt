@@ -6,6 +6,7 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -16,6 +17,9 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.test.core.app.ApplicationProvider
@@ -66,8 +70,8 @@ internal fun SemanticsNodeInteractionsProvider.shownTexts(): List<String> =
 
 /**
  * Checks what a screen reader needs of every control on the screen: each one that can be clicked has a name and a
- * role, each field has a label, and each is drawn at least 48 dp in both directions. A control on a page that scrolls
- * is scrolled to first, so one that cannot be reached fails.
+ * role, each field has a label, and each is drawn at least 48 dp in both directions, not only touched there. A
+ * control on a page that scrolls is scrolled to first, so one that cannot be reached fails.
  */
 internal fun SemanticsNodeInteractionsProvider.assertEveryControlIsNamedAndLargeEnough() {
     val controls = onAllNodes(hasClickAction())
@@ -84,16 +88,19 @@ internal fun SemanticsNodeInteractionsProvider.assertEveryControlIsNamedAndLarge
         if (!editable) {
             assertThat(node.config.getOrNull(SemanticsProperties.Role)).`as`("the role of %s", nameOf(node)).isNotNull()
         }
-        // the size it is drawn at: Compose widens where any clickable node can be touched to 48 dp on its own
         val dp = node.layoutInfo.density.density
-        assertThat(minOf(node.size.width, node.size.height) / dp).`as`("the size of %s", nameOf(node))
+        // the node's own size, which is what is drawn: Material widens a control drawn smaller to 48 dp of touch
+        // area outside it (minimumInteractiveComponentSize), which ScreenChecksTest shows this does not count
+        val drawn = node.size
+        assertThat(minOf(drawn.width, drawn.height) / dp).`as`("the size of %s", nameOf(node))
             .isGreaterThanOrEqualTo(47.5f)
     }
 }
 
 /**
  * Checks that the screen's page scrolls far enough to show its last control whole, so nothing is out of reach at a
- * large font size.
+ * large font size; the page has room of its own, as a page squeezed to nothing by what is pinned above it would show
+ * nothing and pass the rest.
  */
 internal fun SemanticsNodeInteractionsProvider.assertScrolls() {
     val page = onNode(hasScrollAction() and hasAnyDescendant(hasClickAction()))
@@ -106,6 +113,9 @@ internal fun SemanticsNodeInteractionsProvider.assertScrolls() {
 
     val shown = page.fetchSemanticsNode().boundsInRoot
     val control = controls[last].fetchSemanticsNode().boundsInRoot
+    assertThat(shown.height).`as`("the height of the page that scrolls").isPositive()
+    assertThat(control.width).`as`("the width of %s", nameOf(nodes[last])).isPositive()
+    assertThat(control.height).`as`("the height of %s", nameOf(nodes[last])).isPositive()
     assertThat(control.top).`as`("the top of %s", nameOf(nodes[last])).isGreaterThanOrEqualTo(shown.top - 0.5f)
     assertThat(control.bottom).`as`("the bottom of %s", nameOf(nodes[last])).isLessThanOrEqualTo(shown.bottom + 0.5f)
 }
@@ -119,6 +129,37 @@ internal fun SemanticsNodeInteractionsProvider.assertShowsNoneOf(texts: Set<Stri
     val shown = shownTexts()
     assertThat(shown).isNotEmpty()
     assertThat(shown.filter { it in texts }).isEmpty()
+}
+
+/**
+ * The live region a text is read in, its own or that of the nearest part around it.
+ *
+ * @param shown the text, whole
+ * @return how a screen reader reads it when it changes; null when it is in no live region
+ */
+internal fun SemanticsNodeInteractionsProvider.liveRegionOf(shown: String): LiveRegionMode? {
+    var node: SemanticsNode? = onNode(hasText(shown), useUnmergedTree = true).fetchSemanticsNode()
+    while (node != null) {
+        node.config.getOrNull(SemanticsProperties.LiveRegion)?.let { return it }
+        node = node.parent
+    }
+    return null
+}
+
+/**
+ * Checks the keyboard's action key of every field on the screen, from the top: Done on the last, so the keyboard
+ * closes, Next on each other. A field whose key does something of its own, such as the place search's Search, is
+ * left out.
+ */
+internal fun SemanticsNodeInteractionsProvider.assertOnlyTheLastFieldIsDone() {
+    val actions = onAllNodes(hasSetTextAction()).fetchSemanticsNodes()
+        .map { (it.config.getOrNull(SemanticsProperties.ImeAction) ?: ImeAction.Default) to nameOf(it) }
+        .filter { (action, _) -> action != ImeAction.Search }
+    assertThat(actions).isNotEmpty()
+    actions.forEachIndexed { index, (action, name) ->
+        val expected = if (index == actions.lastIndex) ImeAction.Done else ImeAction.Next
+        assertThat(action).`as`("the keyboard's action on %s", name).isEqualTo(expected)
+    }
 }
 
 private val ON_A_SCROLLING_PAGE = hasAnyAncestor(hasScrollAction())

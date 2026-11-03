@@ -37,6 +37,9 @@ class SetUpFlow(private val handle: SavedStateHandle, numbers: NumberText, priva
 
         private const val STEP = "setUp.step"
 
+        /** The first part of the forms' keys in the handle, which Settings' forms share. */
+        val PREFIXES = listOf("location", "panels", "car", "charger", "house", "away")
+
         /**
          * What set-up starts from: no place chosen yet, the typical home with its values marked as typical, the
          * recommended planning preferences, and Open-Meteo without a fallback.

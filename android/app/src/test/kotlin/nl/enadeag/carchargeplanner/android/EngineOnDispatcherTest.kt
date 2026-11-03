@@ -155,4 +155,10 @@ class EngineOnDispatcherTest {
 
         assertThat(access.storedKeys()).isEqualTo(StoredKeys.Read(key))
     }
+
+    @Test
+    fun openMeteoHasAPlaceSearchAndForecastSolarNone() {
+        assertThat(access.hasPlaceSearch(ProviderId("open-meteo"))).isTrue()
+        assertThat(access.hasPlaceSearch(ProviderId("forecast-solar"))).isFalse()
+    }
 }

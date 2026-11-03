@@ -234,4 +234,35 @@ class SavesTest {
         saves.shown(SaveOutcome.Saved)
         assertThat(saves.lastOutcome.value).isNull()
     }
+
+    @Test
+    fun onlyASaveThatStoresSomethingCountsAsAChange() = runTest {
+        val saves = saves()
+
+        saves.update(KeyChanges.NONE) { it }
+        runCurrent()
+        assertThat(saves.changes.value).isZero()
+        saves.update(KeyChanges.NONE) { withHouse(it, 0.8) }
+        runCurrent()
+        assertThat(saves.changes.value).isEqualTo(1)
+        saves.update(someKey) { it }
+        runCurrent()
+
+        assertThat(saves.changes.value).isEqualTo(2)
+    }
+
+    @Test
+    fun keysThatCouldNotBeStoredAndAFileThatCouldNotBeWrittenAreNoChange() = runTest {
+        val saves = saves()
+        access.keysFail = true
+        saves.update(someKey) { withHouse(it, 0.8) }
+        runCurrent()
+        access.keysFail = false
+        access.writeFails = true
+
+        saves.update(KeyChanges.NONE) { withHouse(it, 0.9) }
+        runCurrent()
+
+        assertThat(saves.changes.value).isZero()
+    }
 }

@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.android.ui.components
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -55,6 +56,8 @@ internal enum class FieldKind(val keyboard: KeyboardType) {
     TIME(KeyboardType.Ascii),
     /** Any text, such as a place's name. */
     TEXT(KeyboardType.Text),
+    /** A server's address, such as https://example.org, on a keyboard with its slashes and dots. */
+    ADDRESS(KeyboardType.Uri),
 }
 
 /**
@@ -127,11 +130,14 @@ internal fun rememberFieldFocus(problems: ProblemFocus?, order: Int, hasProblem:
  * @param problem the problem it shows; null for none
  * @param typical whether it holds a typical value
  * @param focus moves the focus to it
+ * @param imeAction the keyboard's action key: Next moves on to the next field; Done, on a page's last, closes the
+ *     keyboard
  */
 @Composable
 internal fun NumberField(label: String, hint: String, text: String, onEdit: (String) -> Unit, kind: FieldKind,
-    problem: FieldProblem?, typical: Boolean = false, focus: FocusRequester = remember { FocusRequester() }) {
-    EntryField(label, hint, text, onEdit, kind, problem, typical, focus)
+    problem: FieldProblem?, typical: Boolean = false, focus: FocusRequester = remember { FocusRequester() },
+    imeAction: ImeAction = ImeAction.Next) {
+    EntryField(label, hint, text, onEdit, kind, problem, typical, focus, imeAction = imeAction)
 }
 
 /**
@@ -142,11 +148,14 @@ internal fun NumberField(label: String, hint: String, text: String, onEdit: (Str
  * @param onEdit gets what the owner typed
  * @param problem the problem it shows; null for none
  * @param focus moves the focus to it
+ * @param imeAction the keyboard's action key: Next moves on to the next field; Done, on a page's last, closes the
+ *     keyboard
  */
 @Composable
 internal fun TimeField(label: String, text: String, onEdit: (String) -> Unit, problem: FieldProblem?,
-    focus: FocusRequester = remember { FocusRequester() }) {
-    EntryField(label, stringResource(R.string.time_hint), text, onEdit, FieldKind.TIME, problem, false, focus)
+    focus: FocusRequester = remember { FocusRequester() }, imeAction: ImeAction = ImeAction.Next) {
+    EntryField(label, stringResource(R.string.time_hint), text, onEdit, FieldKind.TIME, problem, false, focus,
+        imeAction = imeAction)
 }
 
 /**
@@ -244,14 +253,25 @@ internal fun TypicalMark(modifier: Modifier = Modifier) {
  * @param name an option's name as shown
  * @param onChoose gets the option the owner chose
  * @param typical whether the choice holds a typical value
+ * @param problem the problem it shows, under it and to a screen reader with the group; null for none
+ * @param focus moves the focus to the group, as to the first problem after Save; null for a choice that never shows
+ *     a problem, whose group then takes no focus of its own
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun <T> ChoiceRow(label: String, hint: String?, options: List<T>, chosen: T?, name: @Composable (T) -> String,
-    onChoose: (T) -> Unit, typical: Boolean = false) {
+    onChoose: (T) -> Unit, typical: Boolean = false, problem: FieldProblem? = null,
+    focus: FocusRequester? = null) {
+    val problemSentence = problem?.let { problemText(it) }
+    val focused = if (focus == null) Modifier else Modifier.focusRequester(focus).focusable()
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, style = MaterialTheme.typography.titleSmall)
-        FlowRow(modifier = Modifier.selectableGroup().semantics { contentDescription = label },
+        FlowRow(modifier = Modifier.selectableGroup().then(focused).semantics {
+            contentDescription = label
+            if (problemSentence != null) {
+                error(problemSentence)
+            }
+        },
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             options.forEach { option ->
                 val selected = option == chosen
@@ -265,6 +285,10 @@ internal fun <T> ChoiceRow(label: String, hint: String?, options: List<T>, chose
                     Text(name(option), modifier = Modifier.padding(start = 4.dp))
                 }
             }
+        }
+        if (problemSentence != null) {
+            Text(problemSentence, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.clearAndSetSemantics { })
         }
         if (hint != null) {
             Text(hint, style = MaterialTheme.typography.bodySmall)

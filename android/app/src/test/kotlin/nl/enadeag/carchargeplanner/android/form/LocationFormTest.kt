@@ -151,4 +151,41 @@ class LocationFormTest {
 
         assertThat(form.read(DRAFT)!!.system().timezone()).isEqualTo(ZoneId.of("Asia/Tokyo"))
     }
+
+    @Test
+    fun inSettingsAStoredZoneCountsAsChosenSoTypedCoordinatesLeaveIt() {
+        val stored = DRAFT.withSystem(DRAFT.system().withLocation(Coordinates(38.7223, -9.1393),
+            ZoneId.of("Europe/Lisbon")), DRAFT.typical())
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = false, phoneZone = { PHONE },
+            storedZoneIsChosen = true)
+        form.load(stored)
+
+        form.edit(LocationForm.Field.LATITUDE, "38.8")
+
+        assertThat(form.timeZone()).isEqualTo(ZoneId.of("Europe/Lisbon"))
+        assertThat(form.check(stored)!!.system().timezone()).isEqualTo(ZoneId.of("Europe/Lisbon"))
+    }
+
+    @Test
+    fun inSettingsAPlaceChosenStillTakesItsZone() {
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = false, phoneZone = { PHONE },
+            storedZoneIsChosen = true)
+        form.load(DRAFT)
+
+        form.choose(lisbon)
+
+        assertThat(form.timeZone()).isEqualTo(ZoneId.of("Europe/Lisbon"))
+    }
+
+    @Test
+    fun inSetUpAZoneLoadedFromAFileDoesNotCountAsChosen() {
+        val stored = DRAFT.withSystem(DRAFT.system().withLocation(Coordinates(38.7223, -9.1393),
+            ZoneId.of("Europe/Lisbon")), DRAFT.typical())
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = { PHONE })
+        form.load(stored)
+
+        form.edit(LocationForm.Field.LATITUDE, "38.8")
+
+        assertThat(form.timeZone()).isEqualTo(PHONE)
+    }
 }

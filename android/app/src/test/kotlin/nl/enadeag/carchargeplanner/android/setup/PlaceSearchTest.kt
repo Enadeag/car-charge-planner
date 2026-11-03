@@ -50,7 +50,7 @@ class PlaceSearchTest {
 
         assertThat(search.text()).isEqualTo("a".repeat(100))
         val again = PlaceSearch(handle.afterTheSystemEndedTheApp(), access, backgroundScope, ProviderId("open-meteo"),
-            { "nl" })
+            language = { "nl" })
         assertThat(again.text()).hasSize(100)
     }
 
@@ -149,7 +149,7 @@ class PlaceSearchTest {
 
         assertThat(search.state.value).isEqualTo(PlaceSearch.State.Idle)
         val again = PlaceSearch(handle.afterTheSystemEndedTheApp(), access, backgroundScope, ProviderId("open-meteo"),
-            { "nl" })
+            language = { "nl" })
         assertThat(again.text()).isEqualTo("Utrecht")
         assertThat(again.chosen.value).isEqualTo("Utrecht, Netherlands")
         assertThat(again.state.value).isEqualTo(PlaceSearch.State.Idle)
@@ -178,6 +178,24 @@ class PlaceSearchTest {
 
         assertThat(search.chosen.value).isNull()
         assertThat(PlaceSearch(handle.afterTheSystemEndedTheApp(), access, backgroundScope, ProviderId("open-meteo"),
-            { "nl" }).chosen.value).isNull()
+            language = { "nl" }).chosen.value).isNull()
+    }
+
+    @Test
+    fun twoSearchesOnOneHandleWithTheirOwnPrefixKeepTheirTextsApart() = runTest {
+        val setUp = search()
+        val settings = PlaceSearch(handle, access, backgroundScope, ProviderId("open-meteo"),
+            "settings.place") { "nl" }
+
+        setUp.edit("Utrecht")
+        settings.edit("Lisbon")
+
+        assertThat(setUp.text()).isEqualTo("Utrecht")
+        assertThat(settings.text()).isEqualTo("Lisbon")
+        val kept = handle.afterTheSystemEndedTheApp()
+        assertThat(PlaceSearch(kept, access, backgroundScope, ProviderId("open-meteo"), language = { "nl" }).text())
+            .isEqualTo("Utrecht")
+        assertThat(PlaceSearch(kept, access, backgroundScope, ProviderId("open-meteo"), "settings.place") { "nl" }
+            .text()).isEqualTo("Lisbon")
     }
 }

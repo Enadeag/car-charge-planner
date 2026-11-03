@@ -28,6 +28,8 @@ class EngineOnDispatcher(private val engine: Engine, private val dispatcher: Cor
 
     override fun providers() = engine.providers().toList()
 
+    override fun hasPlaceSearch(provider: ProviderId) = engine.hasPlaceSearch(provider)
+
     override suspend fun readSettings(): StartState = withContext(dispatcher) {
         try {
             StartState.Ready(engine.config())

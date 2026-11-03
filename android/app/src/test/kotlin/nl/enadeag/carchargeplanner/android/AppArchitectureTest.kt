@@ -217,4 +217,18 @@ class AppArchitectureTest {
                 + "one way, at the build's level")
             .check(APP_CLASSES)
     }
+
+    @Test
+    fun theScreensDrawTheirButtonsThroughTheAppsOwnWhichAreTallEnough() {
+        val materialButtons = DescribedPredicate.describe<JavaAccess<*>>("call Material's buttons themselves") {
+            access -> access.targetOwner.name == "androidx.compose.material3.ButtonKt"
+                && access.name.substringBefore('$') in setOf("Button", "OutlinedButton", "TextButton",
+                    "ElevatedButton", "FilledTonalButton")
+        }
+        noClasses().that().doNotHaveFullyQualifiedName("$APP.ui.components.ButtonsKt")
+            .should().accessTargetWhere(materialButtons)
+            .because("Material draws its buttons at 40 dp, and every control is drawn at 48 dp at least "
+                + "(docs/accessibility.md): AppButton, AppOutlinedButton and AppTextButton do that")
+            .check(APP_CLASSES)
+    }
 }

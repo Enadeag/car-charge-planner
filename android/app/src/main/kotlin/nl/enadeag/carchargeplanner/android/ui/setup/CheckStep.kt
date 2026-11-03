@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,6 +23,7 @@ import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.setup.SetUpCheck
 import nl.enadeag.carchargeplanner.android.setup.SetUpSession
 import nl.enadeag.carchargeplanner.android.ui.components.EnglishDetails
+import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
 
 /**
  * The last step: one forecast for what was entered, which does not block Finish when it fails, and what Finish's save
@@ -38,7 +38,7 @@ internal fun CheckStep(session: SetUpSession) {
     val provider = session.providerName()
     Text(stringResource(R.string.setup_check_intro))
     Column(verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
+        modifier = Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
         when (val now = check) {
             SetUpCheck.State.NotAsked -> Unit
             SetUpCheck.State.Asking -> Row(verticalAlignment = Alignment.CenterVertically) {
@@ -49,7 +49,7 @@ internal fun CheckStep(session: SetUpSession) {
             is SetUpCheck.State.Failed -> {
                 Text(stringResource(R.string.check_failed))
                 EnglishDetails(now.detail)
-                OutlinedButton(onClick = { session.checkAgain() }) {
+                AppOutlinedButton(onClick = { session.checkAgain() }) {
                     Text(stringResource(R.string.check_again))
                 }
             }
@@ -58,10 +58,10 @@ internal fun CheckStep(session: SetUpSession) {
     val failed = finishing as? SetUpSession.Finishing.Failed
     if (failed != null) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive }) {
+            modifier = Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Assertive }) {
             Text(stringResource(R.string.finish_failed), color = MaterialTheme.colorScheme.error)
             EnglishDetails(failed.detail)
-            OutlinedButton(onClick = { session.finish() }) {
+            AppOutlinedButton(onClick = { session.finish() }) {
                 Text(stringResource(R.string.action_try_again))
             }
         }

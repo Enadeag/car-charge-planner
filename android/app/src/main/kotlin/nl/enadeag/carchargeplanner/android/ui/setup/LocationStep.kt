@@ -8,13 +8,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +37,9 @@ import nl.enadeag.carchargeplanner.android.ui.components.NumberField
 import nl.enadeag.carchargeplanner.android.ui.components.ProblemFocus
 import nl.enadeag.carchargeplanner.android.ui.components.rememberFieldFocus
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults
+import nl.enadeag.carchargeplanner.android.ui.components.AppButton
+import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
+import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 
 /**
  * Where the home is: the place search, on its button or the keyboard's search key, and its results; the coordinates
@@ -52,36 +52,74 @@ import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults
  */
 @Composable
 internal fun LocationStep(session: SetUpSession, edits: Edits, problems: ProblemFocus) {
-    val location = session.flow.location
-    val places = session.places
+    val chosen by session.places.chosen.collectAsStateWithLifecycle()
+    val typed = chosen == null && session.flow.config().system().location().isChosen
+    LocationFields(session.flow.location, session.places, session.providerName(), true, edits, problems,
+        if (typed) Coordinates.OPEN else Coordinates.CLOSED, session::choose, session::typeCoordinate)
+}
+
+/** How a location page shows the coordinates. */
+internal enum class Coordinates {
+    /** Behind "Enter coordinates instead", closed. */
+    CLOSED,
+    /** Behind "Enter coordinates instead", open, as for coordinates typed before. */
+    OPEN,
+    /** Always shown, as Settings has coordinates already. */
+    SHOWN,
+}
+
+/**
+ * The place search with its results, or a line that the provider has none; the coordinates; and the time zone under
+ * "Advanced".
+ *
+ * @param location the location's form
+ * @param places the place search
+ * @param provider the forecast provider's name, which the search's hint names
+ * @param hasSearch whether that provider has a place search; without one only the coordinates are offered
+ * @param edits counts each edit, so the fields show it
+ * @param problems the page's fields in order, for the focus after Next or Save
+ * @param coordinates whether the coordinates are shown, or behind their toggle and how it starts
+ * @param onChoose takes a place chosen from the results
+ * @param onType takes a coordinate the owner typed
+ */
+@Composable
+internal fun LocationFields(location: LocationForm, places: PlaceSearch, provider: String, hasSearch: Boolean,
+    edits: Edits, problems: ProblemFocus, coordinates: Coordinates, onChoose: (PlaceSearch.Result) -> Unit,
+    onType: (LocationForm.Field, String) -> Unit) {
     val shown by location.problems.collectAsStateWithLifecycle()
     val chosen by places.chosen.collectAsStateWithLifecycle()
     val typedCoordinates = LocationForm.Field.LATITUDE in shown || LocationForm.Field.LONGITUDE in shown
-    var coordinates by rememberSaveable {
-        mutableStateOf(chosen == null && session.flow.config().system().location().isChosen)
-    }
+    var open by rememberSaveable { mutableStateOf(coordinates == Coordinates.OPEN) }
     var advanced by rememberSaveable { mutableStateOf(false) }
-    val provider = session.providerName()
 
-    EntryField(stringResource(R.string.place_field), stringResource(R.string.place_hint, provider),
-        edits.shown { places.text() }, { text -> edits.make { places.edit(text) } }, FieldKind.TEXT,
-        shown[LocationForm.Field.PLACE], false, rememberFieldFocus(problems, 0, LocationForm.Field.PLACE in shown),
-        imeAction = ImeAction.Search, onAction = { places.search() })
-    Button(onClick = { places.search() }) {
-        Text(stringResource(R.string.place_search))
+    if (hasSearch) {
+        EntryField(stringResource(R.string.place_field), stringResource(R.string.place_hint, provider),
+            edits.shown { places.text() }, { text -> edits.make { places.edit(text) } }, FieldKind.TEXT,
+            shown[LocationForm.Field.PLACE], false,
+            rememberFieldFocus(problems, 0, LocationForm.Field.PLACE in shown),
+            imeAction = ImeAction.Search, onAction = { places.search() })
+        AppButton(onClick = { places.search() }) {
+            Text(stringResource(R.string.place_search))
+        }
+        SearchResults(places) { result -> edits.make { onChoose(result) } }
+        chosen?.let { Text(stringResource(R.string.place_chosen, it)) }
+    } else {
+        Text(stringResource(R.string.settings_no_place_search, provider))
     }
-    SearchResults(places) { result -> edits.make { session.choose(result) } }
-    chosen?.let { Text(stringResource(R.string.place_chosen, it)) }
 
-    Toggle(stringResource(R.string.coordinates_toggle), coordinates || typedCoordinates) { coordinates = it }
-    if (coordinates || typedCoordinates) {
+    val showCoordinates = coordinates == Coordinates.SHOWN || open || typedCoordinates
+    if (coordinates != Coordinates.SHOWN) {
+        Toggle(stringResource(R.string.coordinates_toggle), showCoordinates) { open = it }
+    }
+    if (showCoordinates) {
         listOf(
             LocationForm.Field.LATITUDE to (R.string.latitude to R.string.latitude_hint),
             LocationForm.Field.LONGITUDE to (R.string.longitude to R.string.longitude_hint),
         ).forEachIndexed { index, (field, texts) ->
             NumberField(stringResource(texts.first), stringResource(texts.second),
-                edits.shown { location.text(field) }, { text -> edits.make { session.typeCoordinate(field, text) } },
-                FieldKind.SIGNED, shown[field], focus = rememberFieldFocus(problems, index + 1, field in shown))
+                edits.shown { location.text(field) }, { text -> edits.make { onType(field, text) } },
+                FieldKind.SIGNED, shown[field], focus = rememberFieldFocus(problems, index + 1, field in shown),
+                imeAction = if (field == LocationForm.Field.LONGITUDE) ImeAction.Done else ImeAction.Next)
         }
     }
 
@@ -96,7 +134,7 @@ internal fun LocationStep(session: SetUpSession, edits: Edits, problems: Problem
 private fun SearchResults(places: PlaceSearch, onChoose: (PlaceSearch.Result) -> Unit) {
     val state by places.state.collectAsStateWithLifecycle()
     Column(verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
+        modifier = Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
         when (val now = state) {
             PlaceSearch.State.Idle -> Unit
             PlaceSearch.State.Searching -> Row(verticalAlignment = Alignment.CenterVertically) {
@@ -108,7 +146,7 @@ private fun SearchResults(places: PlaceSearch, onChoose: (PlaceSearch.Result) ->
             } else {
                 Text(stringResource(R.string.place_choose))
                 now.results.forEach { result ->
-                    TextButton(onClick = { onChoose(result) }, modifier = Modifier.fillMaxWidth()) {
+                    AppTextButton(onClick = { onChoose(result) }, modifier = Modifier.fillMaxWidth()) {
                         Text(result.label, modifier = Modifier.fillMaxWidth())
                     }
                 }
@@ -142,7 +180,7 @@ private fun Toggle(label: String, open: Boolean, onChange: (Boolean) -> Unit) {
 private fun TimeZone(zone: String, onChoose: (java.time.ZoneId) -> Unit) {
     var choosing by rememberSaveable { mutableStateOf(false) }
     Text(stringResource(R.string.time_zone_now, zone), style = MaterialTheme.typography.bodyLarge)
-    OutlinedButton(onClick = { choosing = true }) {
+    AppOutlinedButton(onClick = { choosing = true }) {
         Text(stringResource(R.string.time_zone_change))
     }
     if (choosing) {

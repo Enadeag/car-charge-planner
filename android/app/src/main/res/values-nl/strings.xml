@@ -151,5 +151,95 @@
   <string name="home_no_forecast">Geen enkele voorspellingsdienst heeft een bruikbare voorspelling.</string>
   <string name="home_refresh">Vernieuwen</string>
   <string name="home_settings">Instellingen</string>
-  <string name="home_settings_later">Komt in een latere versie</string>
+
+  <string name="action_save">Opslaan</string>
+  <string name="action_up">Terug</string>
+  <string name="action_close">Sluiten</string>
+
+  <string name="settings_title">Instellingen</string>
+  <string name="settings_solar">Zonnepanelen</string>
+  <string name="settings_location">Locatie</string>
+  <string name="settings_car_house">Auto en huis</string>
+  <string name="settings_charger">Laadpaal</string>
+  <string name="settings_forecast">Voorspelling</string>
+  <string name="settings_away">Afwezigheid</string>
+  <string name="settings_planning">Planning</string>
+  <plurals name="settings_solar_summary">
+    <item quantity="one">%1$d panelengroep, %2$s kWp</item>
+    <item quantity="other">%1$d panelengroepen, %2$s kWp</item>
+  </plurals>
+  <string name="settings_location_summary">%1$s, %2$s, %3$s</string>
+  <string name="settings_car_house_summary">Accu %1$s kWh, huis %2$s kW</string>
+  <string name="settings_charger_summary">%1$s, %2$d tot %3$d A</string>
+  <string name="settings_forecast_summary">%1$s, reservedienst %2$s</string>
+  <string name="settings_forecast_summary_alone">%1$s, geen reservedienst</string>
+  <plurals name="settings_away_summary">
+    <item quantity="one">%1$d afwezigheid per week</item>
+    <item quantity="other">%1$d afwezigheden per week</item>
+  </plurals>
+  <string name="settings_away_none">Geen</string>
+  <string name="settings_planning_summary">Laden tot %1$s%%, minimaal %2$s%%</string>
+
+  <string name="settings_saving">Opslaan…</string>
+  <string name="settings_saved">Opgeslagen.</string>
+  <string name="settings_not_saved">Niet opgeslagen.</string>
+  <string name="settings_keys_not_saved">Niet opgeslagen: de API-sleutels konden niet worden bewaard. Probeer het opnieuw.</string>
+  <string name="settings_save_failed">Niet opgeslagen: de instellingen konden niet worden geschreven.</string>
+  <string name="settings_discard_question">Wijzigingen weggooien?</string>
+  <string name="settings_discard_text">Je wijzigingen op deze pagina zijn nog niet opgeslagen.</string>
+  <string name="settings_keep_editing">Verder bewerken</string>
+  <string name="settings_discard">Weggooien</string>
+
+  <string name="settings_solar_intro">Panelen met dezelfde helling en richting vormen één panelengroep. Panelen die een andere kant op liggen, vormen een eigen groep.</string>
+  <string name="panel_array">Panelengroep %1$d</string>
+  <string name="panel_array_named">Panelengroep %1$d, %2$s</string>
+  <string name="panel_in_array">%1$s, panelengroep %2$d</string>
+  <string name="panel_name">Naam</string>
+  <string name="panel_name_hint">Optioneel, zoals oostdak.</string>
+  <string name="panel_add">Panelengroep toevoegen</string>
+  <string name="panel_remove">Panelengroep %1$d verwijderen</string>
+  <string name="panel_keep_one">Een systeem heeft minstens één panelengroep nodig</string>
+
+  <string name="settings_no_place_search">%1$s, je voorspellingsdienst, kan geen plaatsen zoeken: vul de coördinaten in.</string>
+
+  <string name="settings_car_heading">Auto</string>
+
+  <string name="forecast_primary">Voorspellingsdienst</string>
+  <string name="forecast_primary_hint">Wordt als eerste geraadpleegd. Zijn zoekfunctie wordt gebruikt op de pagina Locatie.</string>
+  <string name="forecast_fallback">Reservedienst</string>
+  <string name="forecast_fallback_hint">Wordt alleen geraadpleegd als de eerste geen bruikbare voorspelling heeft.</string>
+  <string name="forecast_none">Geen</string>
+  <string name="forecast_check">Verbinding met %1$s testen</string>
+  <string name="forecast_check_failed">Geen voorspelling ontvangen.</string>
+  <string name="provider_setting_of">%1$s, %2$s</string>
+  <string name="provider_api_key">API-sleutel</string>
+  <string name="provider_base_url">Serveradres</string>
+  <string name="provider_open_meteo_api_key_hint">Alleen voor een betaald abonnement (commercieel gebruik). Gratis gebruik heeft er geen nodig.</string>
+  <string name="provider_open_meteo_base_url_hint">Laat leeg voor de gratis openbare dienst. Een betaald abonnement of een eigen server heeft een eigen adres, dat begint met https://.</string>
+  <string name="provider_forecast_solar_api_key_hint">Alleen voor een betaald abonnement, dat meer dagen en kleinere stappen geeft. Het gratis abonnement heeft er geen nodig.</string>
+  <string name="key_show">Tonen</string>
+  <string name="key_hide">Verbergen</string>
+  <string name="key_show_of">API-sleutel van %1$s tonen</string>
+  <string name="key_hide_of">API-sleutel van %1$s verbergen</string>
+  <string name="keys_reading">De API-sleutels worden gelezen…</string>
+  <string name="keys_unreadable">Je opgeslagen API-sleutels konden niet gelezen worden. Vul ze opnieuw in en sla op; een API-sleutel die je leeg laat, blijft zoals hij is. De app probeert ze over een paar minuten opnieuw te lezen.</string>
+
+  <string name="settings_away_intro">Tijden in elke week waarop de auto niet thuis is. Dan plant de app geen laadvensters.</string>
+
+  <string name="planning_minimum">Minimaal laadniveau</string>
+  <string name="planning_minimum_hint">Procent; de accu zakt er nooit onder. Lager dan het doelniveau.</string>
+  <string name="planning_target">Doelniveau</string>
+  <string name="planning_target_hint">Procent, het hoogste niveau waartoe het plan bij dagelijks gebruik laadt.</string>
+  <string name="planning_margin">Planningsmarge</string>
+  <string name="planning_margin_hint">Procent van het voorspelde overschot om mee te plannen; lager is voorzichtiger.</string>
+  <string name="planning_tolerance">Toegestane netstroom</string>
+  <string name="planning_tolerance_hint">kWh uit het net die een laadvenster mag gebruiken.</string>
+  <string name="planning_min_window">Minimale duur laadvenster</string>
+  <string name="planning_min_window_hint">Minuten; kortere laadvensters vallen weg.</string>
+  <string name="planning_lead">Melding vooraf</string>
+  <string name="planning_lead_hint">Minuten voordat een laadvenster begint.</string>
+  <string name="planning_hours_heading">Laaduren</string>
+  <string name="planning_hours_intro">Laden uit het net begint binnen deze tijden, en mag daarna doorlopen.</string>
+  <string name="planning_hours_from">Laden starten vanaf</string>
+  <string name="planning_hours_until">Laden starten uiterlijk om</string>
 </resources>

@@ -72,4 +72,19 @@ class MainActivityTest {
         click(R.string.coordinates_toggle)
         field(R.string.latitude).assert(hasText("52,0907"))
     }
+
+    @Test
+    fun withTheManifestsBackCallbacksSetUpsBackGoesOneStepBackAndOnTheWelcomeClosesTheApp() {
+        compose.waitUntil(10_000) { compose.onAllNodes(isHeading()).fetchSemanticsNodes().isNotEmpty() }
+        click(R.string.action_next)
+        compose.waitForIdle()
+
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        compose.waitForIdle()
+        compose.onNode(isHeading() and hasText(text(R.string.setup_welcome_title), substring = true)).assertExists()
+        assertThat(compose.activity.isFinishing).isFalse()
+
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        assertThat(compose.activity.isFinishing).isTrue()
+    }
 }

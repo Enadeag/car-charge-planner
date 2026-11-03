@@ -23,7 +23,13 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
 
     var keys: Secrets = Secrets.NONE
     var keysFail = false
+
+    /** When true, the keychain cannot give the keys, as `StoredKeys.Unreadable` says. */
+    var keysUnreadable = false
     var writeFails = false
+
+    /** What a failing write of the settings says. */
+    var writeProblem = "No space left on device"
     var moveFails = false
 
     /** When set, the move of the settings file throws it, as a fault in the engine would. */
@@ -32,8 +38,17 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     /** When set, the next move of the settings file waits for it. */
     var moveGate: CompletableDeferred<Unit>? = null
 
+    /** When set, the next read of the API keys waits for it. */
+    var keysGate: CompletableDeferred<Unit>? = null
+
     /** When set, the next read of the settings waits for it before it gives what the file held when it started. */
     var readGate: CompletableDeferred<Unit>? = null
+
+    /** The connection checks asked for: the provider and the settings as typed, in the order asked. */
+    val checked = mutableListOf<Pair<ProviderId, Map<String, String>>>()
+
+    /** The providers whose place search was asked, in the order asked. */
+    val searchedWith = mutableListOf<ProviderId>()
 
     /** The answers of the connection checks, which wait until completed, in the order asked. */
     val checks = mutableListOf<CompletableDeferred<ConnectionResult>>()
@@ -50,6 +65,9 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     /** The app's own providers, whose information never reaches the network. */
     override fun providers(): List<ProviderInfo> = PROVIDERS
 
+    /** As the app's providers: Open-Meteo has a place search, Forecast.Solar none. */
+    override fun hasPlaceSearch(provider: ProviderId) = provider.value() == "open-meteo"
+
     override suspend fun outlook(): Outlook = CompletableDeferred<Outlook>().also { outlooks += it }.await()
 
     override suspend fun readSettings(): StartState {
@@ -63,7 +81,7 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
 
     override suspend fun saveSettings(config: EngineConfig) {
         if (writeFails) {
-            throw IOException("No space left on device")
+            throw IOException(writeProblem)
         }
         written += "settings"
         settings = StartState.Ready(config)
@@ -82,7 +100,13 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
         return Path.of("files", "engine.json.damaged-20261101-120000")
     }
 
-    override suspend fun storedKeys(): StoredKeys = StoredKeys.Read(keys)
+    override suspend fun storedKeys(): StoredKeys {
+        keysGate?.let {
+            keysGate = null
+            it.await()
+        }
+        return if (keysUnreadable) StoredKeys.Unreadable else StoredKeys.Read(keys)
+    }
 
     override suspend fun applyKeyChanges(changes: KeyChanges) {
         if (keysFail) {
@@ -93,10 +117,14 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     }
 
     override suspend fun checkConnection(provider: ProviderId, system: HomeSystem, settings: Map<String, String>):
-        ConnectionResult = CompletableDeferred<ConnectionResult>().also { checks += it }.await()
+        ConnectionResult {
+        checked += provider to settings
+        return CompletableDeferred<ConnectionResult>().also { checks += it }.await()
+    }
 
     override suspend fun searchPlaces(provider: ProviderId, text: String, language: String): PlaceResults? {
         searched += text to language
+        searchedWith += provider
         return CompletableDeferred<PlaceResults?>().also { searches += it }.await()
     }
 

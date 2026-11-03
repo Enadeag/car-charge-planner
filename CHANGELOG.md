@@ -10,7 +10,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ### Android
 Not released yet; this is the way to the first Android release, 0.1.0.
 - First-run set-up: Welcome (what leaves the phone), Location (search for a place or enter coordinates, with the time zone under **Advanced**), Panels, Car, Charger, More (the house and weekly away) and Check, which fetches a forecast once. Typical values are marked, and each step has "I don't know". In English and Dutch.
-- After set-up, a plain **Today** screen shows today's charge windows from the engine, or the next one, with **Refresh**. Settings come in a later version.
+- After set-up, a plain **Today** screen shows today's charge windows from the engine, or the next one, with **Refresh**, and **Settings** in its top bar.
+- **Settings**, with the desktop's seven pages: Solar panels (every panel array), Location, Car and house, Charger, Forecast (the providers, **Check connection** and the API keys, with Show and Hide), Away (the weekly away periods) and Planning. Each page has its own **Save** and asks before Back throws edits away. The Forecast page allows no screenshot. In English and Dutch.
 - A settings file the app cannot use shows its details (in English) and **Set up again**; one of a newer version asks you to update the app and is left as it is.
 - The API keys are kept encrypted with a key in the Android Keystore, and never in a plain file.
 

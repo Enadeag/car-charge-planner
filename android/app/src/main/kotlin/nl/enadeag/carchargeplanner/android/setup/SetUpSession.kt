@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import nl.enadeag.carchargeplanner.android.form.LocationForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.form.forget
 import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.android.store.SaveOutcome
 import nl.enadeag.carchargeplanner.android.store.Saves
@@ -32,6 +33,19 @@ import nl.enadeag.carchargeplanner.android.store.Saves
 class SetUpSession(handle: SavedStateHandle, numbers: NumberText, phoneZone: () -> ZoneId, language: () -> String,
     private val access: EngineAccess, private val saves: Saves, scope: CoroutineScope,
     private val ended: (SaveOutcome) -> Unit) {
+
+    companion object {
+        /** Every key of set-up in the handle: the step, the place search and the forms' texts. */
+        private val KEYS = listOf("setUp") + SetUpFlow.PREFIXES
+
+        /**
+         * Forgets everything set-up kept in the handle, as it ends, so a later set-up starts on its welcome with its
+         * own draft, and Settings, whose forms share the prefixes, shows nothing of it.
+         *
+         * @param handle the screen's saved state
+         */
+        fun forget(handle: SavedStateHandle) = handle.forget(KEYS)
+    }
 
     /** Where Finish is. */
     sealed interface Finishing {
@@ -59,7 +73,7 @@ class SetUpSession(handle: SavedStateHandle, numbers: NumberText, phoneZone: () 
     val check = SetUpCheck(access, scope)
 
     /** The place search of the location step, with the primary provider's search. */
-    val places = PlaceSearch(handle, access, scope, draft.forecast().primary(), language)
+    val places = PlaceSearch(handle, access, scope, draft.forecast().primary(), language = language)
 
     private val finishingNow = MutableStateFlow<Finishing>(Finishing.Idle)
     private val refusedNow = MutableStateFlow(false)

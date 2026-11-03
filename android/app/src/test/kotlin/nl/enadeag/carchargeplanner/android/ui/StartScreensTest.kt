@@ -89,6 +89,7 @@ class StartScreensTest {
 
         compose.onNodeWithText(text(R.string.set_up_again_failed)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.details_in_english, "Permission denied")).assertIsDisplayed()
+        compose.assertEveryControlIsNamedAndLargeEnough()
         compose.onNodeWithText(text(R.string.action_try_again)).performScrollTo().performClick()
 
         assertThat(again.state.value).isEqualTo(SetUpAgain.State.Confirming)
@@ -101,6 +102,19 @@ class StartScreensTest {
 
         compose.assertEveryControlIsNamedAndLargeEnough()
         compose.onNodeWithText(text(R.string.set_up_again)).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun theUnusableScreenAndItsDialogHaveTheirControlsNamedAndLargeEnoughAtTheNormalFontSize() {
+        showUnusable()
+        compose.waitForIdle()
+        compose.assertEveryControlIsNamedAndLargeEnough()
+
+        compose.onNodeWithText(text(R.string.set_up_again)).performScrollTo().performClick()
+        compose.waitForIdle()
+
+        compose.onNode(isDialog()).assertExists()
+        compose.assertEveryControlIsNamedAndLargeEnough()
     }
 
     @Test

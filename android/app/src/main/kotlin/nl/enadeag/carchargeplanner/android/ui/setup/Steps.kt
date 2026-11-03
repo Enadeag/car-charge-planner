@@ -3,17 +3,14 @@ package nl.enadeag.carchargeplanner.android.ui.setup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import java.time.DayOfWeek
 import java.time.format.TextStyle
@@ -26,12 +23,17 @@ import nl.enadeag.carchargeplanner.android.form.PanelsForm
 import nl.enadeag.carchargeplanner.android.form.WeeklyAwayForm
 import nl.enadeag.carchargeplanner.android.ui.components.ChoiceRow
 import nl.enadeag.carchargeplanner.android.ui.components.FieldKind
+import nl.enadeag.carchargeplanner.android.ui.components.NoneLine
 import nl.enadeag.carchargeplanner.android.ui.components.NumberField
 import nl.enadeag.carchargeplanner.android.ui.components.ProblemFocus
 import nl.enadeag.carchargeplanner.android.ui.components.SectionHeading
 import nl.enadeag.carchargeplanner.android.ui.components.TimeField
+import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
+import nl.enadeag.carchargeplanner.android.ui.components.RowHeading
 import nl.enadeag.carchargeplanner.android.ui.components.rememberFieldFocus
 import nl.enadeag.carchargeplanner.engine.config.Phases
+import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
+import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 
 /**
  * What the app does, what leaves the phone and to whom, and what to do when a value is not known; read only.
@@ -71,7 +73,8 @@ internal fun PanelsStep(panels: PanelsForm, edits: Edits, problems: ProblemFocus
     ).forEachIndexed { order, (field, texts, kind) ->
         NumberField(stringResource(texts.first), stringResource(texts.second), edits.shown { panels.text(row, field) },
             { text -> edits.make { panels.edit(row, field, text) } }, kind, shown[field], field in typical,
-            rememberFieldFocus(problems, order, field in shown))
+            rememberFieldFocus(problems, order, field in shown),
+            if (field == PanelsForm.Field.LOSSES) ImeAction.Done else ImeAction.Next)
     }
     UseTypical { edits.make { panels.useTypical(row) } }
 }
@@ -82,9 +85,10 @@ internal fun PanelsStep(panels: PanelsForm, edits: Edits, problems: ProblemFocus
  * @param car the car's form
  * @param edits counts each edit, so the fields show it
  * @param problems the step's fields in order, for the focus after Next
+ * @param lastAction the keyboard's action key on the trip surcharge: Done when it is the page's last field
  */
 @Composable
-internal fun CarStep(car: CarForm, edits: Edits, problems: ProblemFocus) {
+internal fun CarStep(car: CarForm, edits: Edits, problems: ProblemFocus, lastAction: ImeAction = ImeAction.Done) {
     val shown by car.problems.collectAsStateWithLifecycle()
     val typical = edits.shown { car.typical() }
     listOf(
@@ -95,7 +99,8 @@ internal fun CarStep(car: CarForm, edits: Edits, problems: ProblemFocus) {
     ).forEachIndexed { order, (field, texts) ->
         NumberField(stringResource(texts.first), stringResource(texts.second), edits.shown { car.text(field) },
             { text -> edits.make { car.edit(field, text) } }, FieldKind.DECIMAL, shown[field], field in typical,
-            rememberFieldFocus(problems, order, field in shown))
+            rememberFieldFocus(problems, order, field in shown),
+            if (field == CarForm.Field.TRIP_SURCHARGE) lastAction else ImeAction.Next)
     }
     UseTypical { edits.make { car.useTypical() } }
 }
@@ -126,7 +131,8 @@ internal fun ChargerStep(charger: ChargerForm, edits: Edits, problems: ProblemFo
     ).forEachIndexed { order, (field, texts, kind) ->
         NumberField(stringResource(texts.first), stringResource(texts.second), edits.shown { charger.text(field) },
             { text -> edits.make { charger.edit(field, text) } }, kind, shown[field], field in typical,
-            rememberFieldFocus(problems, order, field in shown))
+            rememberFieldFocus(problems, order, field in shown),
+            if (field == ChargerForm.Field.EFFICIENCY) ImeAction.Done else ImeAction.Next)
     }
     UseTypical { edits.make { charger.useTypical() } }
 }
@@ -142,26 +148,57 @@ internal fun ChargerStep(charger: ChargerForm, edits: Edits, problems: ProblemFo
  */
 @Composable
 internal fun MoreStep(house: HouseForm, away: WeeklyAwayForm, edits: Edits, problems: ProblemFocus) {
-    val houseProblems by house.problems.collectAsStateWithLifecycle()
-    val rows by away.rowIds.collectAsStateWithLifecycle()
     Text(stringResource(R.string.setup_more_intro))
+    val periods by away.rowIds.collectAsStateWithLifecycle()
     SectionHeading(stringResource(R.string.house_heading))
+    HouseFields(house, edits, problems, 0, if (periods.isEmpty()) ImeAction.Done else ImeAction.Next)
+    SectionHeading(stringResource(R.string.away_heading))
+    AwayPeriods(away, edits, problems)
+}
+
+/**
+ * The house's baseload with "I don't know".
+ *
+ * @param house the house's form
+ * @param edits counts each edit, so the field shows it
+ * @param problems the page's fields in order, for the focus after Next or Save
+ * @param order the field's place among them
+ * @param imeAction the keyboard's action key: Done when it is the page's last field
+ */
+@Composable
+internal fun HouseFields(house: HouseForm, edits: Edits, problems: ProblemFocus, order: Int, imeAction: ImeAction) {
+    val houseProblems by house.problems.collectAsStateWithLifecycle()
     val baseload = HouseForm.Field.BASELOAD
     NumberField(stringResource(R.string.baseload), stringResource(R.string.baseload_hint),
         edits.shown { house.text(baseload) }, { text -> edits.make { house.edit(baseload, text) } },
         FieldKind.DECIMAL, houseProblems[baseload], baseload in edits.shown { house.typical() },
-        rememberFieldFocus(problems, 0, baseload in houseProblems))
+        rememberFieldFocus(problems, order, baseload in houseProblems), imeAction)
     UseTypical { edits.make { house.useTypical() } }
-    SectionHeading(stringResource(R.string.away_heading))
+}
+
+/**
+ * The weekly away periods, each with its controls named by its number, "None" when there are none, and Add. They
+ * end the page, so the last period's end time has the keyboard's Done. After Add the focus goes to the new period's
+ * heading, after Remove to the one before, to the next when the first went, or to the line that says there are none
+ * when none is left.
+ *
+ * @param away the weekly away periods' form
+ * @param edits counts each edit, so the fields show it
+ * @param problems the page's fields in order, for the focus after Next or Save
+ */
+@Composable
+internal fun AwayPeriods(away: WeeklyAwayForm, edits: Edits, problems: ProblemFocus) {
+    val rows by away.rowIds.collectAsStateWithLifecycle()
+    val focus = remember { RowFocus() }
     if (rows.isEmpty()) {
-        Text(stringResource(R.string.away_none))
+        NoneLine(stringResource(R.string.away_none), focus)
     }
     rows.forEachIndexed { index, row ->
         key(row) {
-            AwayPeriod(away, row, index, edits, problems)
+            AwayPeriod(away, row, index, rows, edits, problems, focus)
         }
     }
-    OutlinedButton(onClick = { edits.make { away.add() } }) {
+    AppOutlinedButton(onClick = { edits.make { focus.next = away.add() } }) {
         Text(stringResource(R.string.away_add))
     }
 }
@@ -169,16 +206,18 @@ internal fun MoreStep(house: HouseForm, away: WeeklyAwayForm, edits: Edits, prob
 /**
  * One weekly away period: its place in the list as a heading, the weekday, the times, and Remove. The weekday group,
  * each time field and Remove are named with the period's number, so a screen reader that lands on one, as on a problem
- * after Next, says which period; the weekday's radio buttons are named by the day, inside that group.
+ * after Next, says which period; the weekday's radio buttons are named by the day, inside that group. Only the last
+ * period's end time has the keyboard's Done.
  */
 @Composable
-private fun AwayPeriod(away: WeeklyAwayForm, row: Int, index: Int, edits: Edits, problems: ProblemFocus) {
+private fun AwayPeriod(away: WeeklyAwayForm, row: Int, index: Int, rows: List<Int>, edits: Edits,
+    problems: ProblemFocus, focus: RowFocus) {
+    val last = index == rows.lastIndex
     val shown by away.problems(row).collectAsStateWithLifecycle()
     val locale = LocalConfiguration.current.locales[0]
     val number = index + 1
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.away_period, number), style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.semantics { heading() })
+        RowHeading(stringResource(R.string.away_period, number), MaterialTheme.typography.titleSmall, focus, row)
         ChoiceRow(stringResource(R.string.away_weekday, number), null, DayOfWeek.entries,
             edits.shown { DayOfWeek.entries.firstOrNull { it.name == away.text(row, WeeklyAwayForm.Field.WEEKDAY) } },
             { it.getDisplayName(TextStyle.FULL, locale) }, { day -> edits.make { away.choose(row, day) } })
@@ -186,18 +225,29 @@ private fun AwayPeriod(away: WeeklyAwayForm, row: Int, index: Int, edits: Edits,
             .forEachIndexed { place, (field, label) ->
                 TimeField(stringResource(label, number), edits.shown { away.text(row, field) },
                     { text -> edits.make { away.edit(row, field, text) } }, shown[field],
-                    rememberFieldFocus(problems, 100 + 2 * index + place, field in shown))
+                    rememberFieldFocus(problems, 100 + 2 * index + place, field in shown),
+                    if (field == WeeklyAwayForm.Field.END && last) ImeAction.Done else ImeAction.Next)
             }
-        TextButton(onClick = { edits.make { away.remove(row) } }) {
+        AppTextButton(onClick = {
+            edits.make {
+                focus.removing(rows, row)
+                away.remove(row)
+            }
+        }) {
             Text(stringResource(R.string.away_remove, number))
         }
     }
 }
 
-/** "I don't know": fills in the typical values and marks them. */
+/**
+ * "I don't know": fills in the typical values and marks them.
+ *
+ * @param name the button's text; the plain "I don't know" unless several on a page need telling apart
+ * @param onClick fills them in
+ */
 @Composable
-private fun UseTypical(onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick) {
-        Text(stringResource(R.string.use_typical))
+internal fun UseTypical(name: String = stringResource(R.string.use_typical), onClick: () -> Unit) {
+    AppOutlinedButton(onClick = onClick) {
+        Text(name)
     }
 }

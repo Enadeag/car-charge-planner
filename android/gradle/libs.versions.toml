@@ -34,6 +34,8 @@ archunit = { module = "com.tngtech.archunit:archunit", version.ref = "archunit" 
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
 compose-material3 = { module = "androidx.compose.material3:material3" }
 compose-ui = { module = "androidx.compose.ui:ui" }
+# Material's icons as Compose code (Up, the home's Settings), at the BOM's version; Apache-2.0, see android/legal/
+compose-material-icons-core = { module = "androidx.compose.material:material-icons-core" }
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
 # the screens' view models with their SavedStateHandle, and state that follows the screen's lifecycle
 lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }

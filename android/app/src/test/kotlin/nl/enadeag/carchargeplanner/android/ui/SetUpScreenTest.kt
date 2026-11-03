@@ -7,7 +7,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
@@ -297,10 +296,7 @@ class SetUpScreenTest {
         compose.waitForIdle()
 
         assertEnglish("No space left on device")
-        assertThat(compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion))
-            .fetchSemanticsNodes().flatMap { node -> node.children.flatMap { child ->
-                child.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text } } })
-            .contains(text(R.string.finish_failed))
+        assertThat(compose.liveRegionOf(text(R.string.finish_failed))).isEqualTo(LiveRegionMode.Assertive)
         access.writeFails = false
         click(R.string.action_try_again)
         compose.waitForIdle()
@@ -556,6 +552,38 @@ class SetUpScreenTest {
         compose.onNodeWithText(text(R.string.action_cancel)).assertIsDisplayed()
     }
 
+    @Test
+    fun aStepsControlsAreNamedAndLargeEnoughAtTheNormalFontSize() {
+        val session = show()
+        toTheMoreStep(session)
+        click(R.string.away_add)
+        compose.waitForIdle()
+
+        compose.assertEveryControlIsNamedAndLargeEnough()
+    }
+
+    @Test
+    fun onEveryStepOnlyTheLastFieldHasTheKeyboardsDone() {
+        val session = show()
+        session.next()
+        compose.waitForIdle()
+        compose.onNodeWithText(text(R.string.coordinates_toggle)).performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.assertOnlyTheLastFieldIsDone()
+        session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+        repeat(4) {
+            session.next()
+            compose.waitForIdle()
+            compose.assertOnlyTheLastFieldIsDone()
+        }
+        assertThat(session.flow.step.value).isEqualTo(SetUpStep.MORE)
+
+        repeat(2) { click(R.string.away_add) }
+        compose.waitForIdle()
+
+        compose.assertOnlyTheLastFieldIsDone()
+    }
+
     /** Goes from the welcome to the step with the house and the away periods, Utrecht chosen. */
     private fun toTheMoreStep(session: SetUpSession) {
         session.next()
@@ -583,7 +611,8 @@ class SetUpScreenTest {
     /** The details are on screen in the sentence that says they are English, and marked as English. */
     private fun assertEnglish(details: String) {
         val sentence = text(R.string.details_in_english, details)
-        val node = compose.onNodeWithText(sentence).performScrollTo().assertIsDisplayed().fetchSemanticsNode()
+        val node = compose.onNodeWithText(sentence, useUnmergedTree = true).performScrollTo().assertIsDisplayed()
+            .fetchSemanticsNode()
         val shown = node.config[SemanticsProperties.Text].single()
         assertThat(shown.spanStyles).anySatisfy { span ->
             assertThat(shown.text.substring(span.start, span.end)).isEqualTo(details)

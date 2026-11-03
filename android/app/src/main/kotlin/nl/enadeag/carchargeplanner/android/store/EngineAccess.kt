@@ -26,6 +26,14 @@ interface EngineAccess {
     fun providers(): List<ProviderInfo>
 
     /**
+     * Whether a provider has a place search, so a screen can say so before the owner types a place; nothing is read.
+     *
+     * @param provider the provider; one the app does not know has none
+     * @return true when [searchPlaces] asks it
+     */
+    fun hasPlaceSearch(provider: ProviderId): Boolean
+
+    /**
      * Reads the settings file.
      *
      * @return ready with the config, or why there is none; never [StartState.Reading]
