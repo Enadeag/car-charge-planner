@@ -110,7 +110,7 @@
     <item quantity="one">Voorspelling ontvangen van %1$s, %2$d dag.</item>
     <item quantity="other">Voorspelling ontvangen van %1$s, %2$d dagen.</item>
   </plurals>
-  <string name="check_failed">Geen voorspelling ontvangen. Je kunt toch voltooien: het scherm Vandaag vraagt er opnieuw om als het opent.</string>
+  <string name="check_failed">Geen voorspelling ontvangen. Je kunt toch voltooien: het dashboard vraagt er opnieuw om als het opent.</string>
   <string name="check_again">Opnieuw controleren</string>
   <string name="finish_saving">Opslaan…</string>
   <string name="finish_failed">Niet opgeslagen: de instellingen konden niet worden geschreven.</string>

@@ -39,7 +39,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import nl.enadeag.carchargeplanner.android.R
 
@@ -89,9 +88,10 @@ internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Un
 
 /**
  * Material's top app bar over one column of at most [MOST_WIDTH], centred, which fills the rest of the screen: the
- * bar's title is the screen's heading, with Up when there is a screen to go back to and the screen's actions. The bar
- * keeps clear of the status bar and a display cutout, also one at the side; the column of those, the navigation bar
- * and the keyboard. A snackbar shows at the bottom.
+ * bar's title is the screen's heading, with Up when there is a screen to go back to and the screen's actions. The
+ * title wraps and the bar grows with it, so nothing of it is cut off at a large font size. The bar keeps clear of the
+ * status bar and a display cutout, also one at the side; the column of those, the navigation bar and the keyboard. A
+ * snackbar shows at the bottom.
  *
  * @param title the screen's title, which a screen reader reads as its heading
  * @param titleFocus moves the focus to the title, as on a new screen; null for one that never takes it
@@ -111,8 +111,8 @@ internal fun BarScaffold(title: String, titleFocus: FocusRequester?, onUp: (() -
                 title = {
                     val focused = if (titleFocus == null) Modifier
                         else Modifier.focusRequester(titleFocus).focusable()
-                    Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = focused.semantics { heading() })
+                    // no line limit: Material's bar grows with its title, so a long one at a large font is whole
+                    Text(title, modifier = focused.semantics { heading() })
                 },
                 navigationIcon = { if (onUp != null) UpButton(onUp) },
                 actions = actions,

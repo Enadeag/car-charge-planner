@@ -12,6 +12,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 
 /**
@@ -24,7 +25,9 @@ import androidx.compose.ui.platform.LocalContext
 @Composable
 internal fun AppTheme(content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()
-    MaterialTheme(colorScheme = appColorScheme(Build.VERSION.SDK_INT, dark, LocalContext.current)) {
+    val context = LocalContext.current
+    val scheme = remember(dark, context) { appColorScheme(Build.VERSION.SDK_INT, dark, context) }
+    MaterialTheme(colorScheme = scheme) {
         CompositionLocalProvider(LocalSourceColours provides SourceColours.of(dark), content = content)
     }
 }

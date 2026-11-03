@@ -8,7 +8,10 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -18,6 +21,7 @@ import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
@@ -221,5 +225,93 @@ class HomeOutlookTest {
 
         assertThat(access.outlooks).hasSize(2)
         assertThat(home.state.value).isEqualTo(HomeOutlook.State.Asking)
+    }
+
+    @Test
+    fun whileTheHomeAsksAgainAfterASettingsChangeItKeepsNothing() = runTest {
+        val changes = MutableStateFlow(0)
+        val home = HomeOutlook(access, backgroundScope, clock, changes) { lost++ }
+        runCurrent()
+        answer(0, planned)
+
+        changes.value = 1
+        runCurrent()
+
+        assertThat(home.kept()).isNull()
+    }
+
+    @Test
+    fun askingIsNoAnswerToKeep() {
+        assertThatThrownBy { HomeOutlook.Kept(HomeOutlook.State.Asking, clock.now) }
+            .isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    @Test
+    fun theAwayPeriodsFailingInTheEngineIsAPlanThatMayBeTriedAgain() = runTest {
+        access.awayThrows = IllegalStateException("a fault")
+        val home = home()
+
+        answer(0, planned)
+
+        assertThat(home.state.value).isEqualTo(HomeOutlook.State.NoForecast("The plan could not be made."))
+        assertThat(lost).isZero()
+    }
+
+    @Test
+    fun aHomeWhoseScreenIsGoneWhileItAsksShowsNoFailure() = runTest {
+        val screen = CoroutineScope(backgroundScope.coroutineContext + Job())
+        val home = HomeOutlook(access, screen, clock) { lost++ }
+        runCurrent()
+
+        screen.cancel()
+        runCurrent()
+
+        assertThat(home.state.value).isEqualTo(HomeOutlook.State.Asking)
+    }
+
+    @Test
+    fun aPullOrRefreshWhileThePlanIsAskedDoesNotStartItOver() = runTest {
+        val home = home()
+
+        home.refresh()
+        runCurrent()
+        assertThat(access.outlooks).hasSize(1)
+
+        answer(0, planned)
+        home.refresh()
+        home.refresh()
+        runCurrent()
+        assertThat(access.outlooks).hasSize(2)
+    }
+
+    @Test
+    fun comingBackLongAfterASettingsChangeWhileItIsAskedAsksNothingMore() = runTest {
+        val changes = MutableStateFlow(0)
+        val home = HomeOutlook(access, backgroundScope, clock, changes) { lost++ }
+        runCurrent()
+        answer(0, planned)
+        changes.value = 1
+        runCurrent()
+
+        clock.now = clock.now.plus(Duration.ofMinutes(16))
+        home.returned()
+        runCurrent()
+
+        assertThat(access.outlooks).hasSize(2)
+        assertThat(access.outlooks[1].isCancelled).isFalse()
+    }
+
+    @Test
+    fun comingBackLongAfterWhileARefreshRunsAsksNothingMore() = runTest {
+        val home = home()
+        answer(0, planned)
+        home.refresh()
+        runCurrent()
+
+        clock.now = clock.now.plus(Duration.ofMinutes(16))
+        home.returned()
+        runCurrent()
+
+        assertThat(access.outlooks).hasSize(2)
     }
 }

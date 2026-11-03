@@ -132,7 +132,7 @@
     <item quantity="one">Forecast received from %1$s, %2$d day.</item>
     <item quantity="other">Forecast received from %1$s, %2$d days.</item>
   </plurals>
-  <string name="check_failed">No forecast received. You can still finish: the Today screen asks for one again when it opens.</string>
+  <string name="check_failed">No forecast received. You can still finish: the dashboard asks for one again when it opens.</string>
   <string name="check_again">Check again</string>
   <string name="finish_saving">Saving…</string>
   <string name="finish_failed">Not saved: the settings could not be written.</string>
@@ -196,6 +196,7 @@
   <string name="day_battery">Battery %1$s → %2$s%%</string>
   <!-- the same as a screen reader reads it -->
   <string name="day_battery_spoken">Battery from %1$s%% to %2$s%%</string>
+  <!-- a day's note, after its later windows: why a day has no charge window; "Today" names today's tab, day_today -->
   <string name="day_grid_why">Solar power is not enough to stay above the minimum: see the grid advice on Today.</string>
   <string name="day_none_why">The car needs no charging, or there is too little solar power for it.</string>
   <!-- %1$s the later charge windows, each a day_later_window, joined by commas -->
@@ -205,6 +206,7 @@
   <!-- %1$s the battery level, written already, such as 40 -->
   <string name="day_battery_assumed">The plan assumes the battery is at %1$s%%.</string>
 
+  <!-- the heading of the grid advice on today's tab, drawn in the grid's colours -->
   <string name="advice_label">Grid advice</string>
   <!-- %1$s the energy in kWh, written already; %2$s the day as in a sentence (today, tomorrow, Sunday); %3$s the
        window's times, a time_span -->
@@ -243,6 +245,8 @@
   <!-- above the plan when its forecast could not be refreshed; %1$s the time the forecast was fetched, such as 10:51 -->
   <string name="stale_warning">The forecast was not refreshed since %1$s. The plan uses that forecast.</string>
 
+  <!-- the heading of the card when there is no plan, then why: no forecast provider had one, or the forecast had no
+       days; Try again is under it -->
   <string name="no_forecast">No forecast</string>
   <string name="no_forecast_why">No forecast provider has a forecast to use.</string>
   <string name="no_forecast_no_days">The forecast has no days to plan.</string>

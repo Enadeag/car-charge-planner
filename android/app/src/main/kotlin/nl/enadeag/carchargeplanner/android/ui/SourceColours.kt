@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.android.ui
 
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import nl.enadeag.carchargeplanner.android.home.EnergySource
 
 /**
  * The colours that mean an energy source on the dashboard, as on the desktop: solar amber, grid blue, the car green.
@@ -22,6 +23,18 @@ internal data class SourceColours(val solar: Pair, val grid: Pair, val car: Pair
      * @property container what its text is drawn on
      */
     data class Pair(val text: Color, val container: Color)
+
+    /**
+     * One source's colours.
+     *
+     * @param source the source
+     * @return its text and container colours
+     */
+    fun of(source: EnergySource): Pair = when (source) {
+        EnergySource.SOLAR -> solar
+        EnergySource.GRID -> grid
+        EnergySource.CAR -> car
+    }
 
     companion object {
 

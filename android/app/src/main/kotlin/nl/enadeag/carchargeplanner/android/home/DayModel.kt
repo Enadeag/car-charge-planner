@@ -11,28 +11,107 @@ import nl.enadeag.carchargeplanner.engine.plan.Window
  * @property date the day, in the home's time zone
  * @property name how the day is named: today, tomorrow or by its date
  * @property kind where the day's charge comes from, which also says why a day without a charge window has none
- * @property main the day's first charge window, the one the day is about; null when it has none
+ * @property main the day's first charge window with its figures, the one the day is about; null when it has none
  * @property later the day's other charge windows, in time order; empty when it has one or none
- * @property energyKwh about how much the main window charges, in kWh; null without one
- * @property solarSharePct the main window's solar share, from 0 to 100; null without one
- * @property gridKwh what the main window takes from the grid, in kWh; null without one, or when it is too little to
- *     show
  * @property battery the battery level at the start of the day and after its charging
  * @property assumedLevel the battery level the plan assumed, as the day's note says; only today has it, and only
  *     while the owner entered no level
+ * @throws IllegalArgumentException when the day is [DayKind.SOLAR] without a main window, or has one while it is
+ *     another kind, or has later windows without a main one
  */
 data class DayModel(
     val date: LocalDate,
     val name: DayName,
     val kind: DayKind,
-    val main: Window?,
+    val main: MainCharge?,
     val later: List<Window>,
-    val energyKwh: Double?,
-    val solarSharePct: Double?,
-    val gridKwh: Double?,
     val battery: BatteryLevels,
     val assumedLevel: Percent?,
-)
+) {
+
+    init {
+        if ((kind == DayKind.SOLAR) != (main != null)) {
+            throw IllegalArgumentException("a day has a main window exactly when it is SOLAR, not $kind with $main")
+        }
+        if (main == null && later.isNotEmpty()) {
+            throw IllegalArgumentException("a day without a main window has no later ones, not $later")
+        }
+    }
+
+    /** The day's figures by source, each shown in its source's colours: the solar share, the battery, the grid. */
+    val figures: List<SourceFigure>
+        get() = listOfNotNull(main?.let { SourceFigure.SolarShare(it.solarShare) }, SourceFigure.Battery(battery),
+            main?.gridKwh?.let { SourceFigure.FromGrid(it) })
+}
+
+/** An energy source the dashboard shows figures of, each in colours of its own. */
+enum class EnergySource {
+
+    /** The solar panels. */
+    SOLAR,
+
+    /** The grid. */
+    GRID,
+
+    /** The car and its battery. */
+    CAR,
+}
+
+/** A figure about one energy source, as a day shows it. */
+sealed interface SourceFigure {
+
+    /** The source the figure is about, whose colours it is drawn in. */
+    val source: EnergySource
+
+    /**
+     * How much of the main window's charge is solar.
+     *
+     * @property share the solar share
+     */
+    data class SolarShare(val share: Percent) : SourceFigure {
+        override val source: EnergySource get() = EnergySource.SOLAR
+    }
+
+    /**
+     * The battery level at the start of the day and after its charging.
+     *
+     * @property levels the levels
+     */
+    data class Battery(val levels: BatteryLevels) : SourceFigure {
+        override val source: EnergySource get() = EnergySource.CAR
+    }
+
+    /**
+     * What the main window takes from the grid.
+     *
+     * @property kwh the energy, in kWh
+     */
+    data class FromGrid(val kwh: Double) : SourceFigure {
+        override val source: EnergySource get() = EnergySource.GRID
+    }
+}
+
+/**
+ * A day's main charge window and what it charges.
+ *
+ * @property window the charge window
+ * @property energyKwh about how much it charges, in kWh; finite, 0 or more
+ * @property solarShare how much of that is solar
+ * @property gridKwh what it takes from the grid, in kWh, finite and more than 0; null when it is too little to show
+ * @throws IllegalArgumentException when [energyKwh] is negative, infinite or not a number, or [gridKwh] is not null
+ *     and not finite and more than 0
+ */
+data class MainCharge(val window: Window, val energyKwh: Double, val solarShare: Percent, val gridKwh: Double?) {
+
+    init {
+        if (!(energyKwh >= 0) || energyKwh.isInfinite()) {
+            throw IllegalArgumentException("the energy must be finite and 0 or more, not $energyKwh kWh")
+        }
+        if (gridKwh != null && (!(gridKwh > 0) || gridKwh.isInfinite())) {
+            throw IllegalArgumentException("the grid energy must be finite and more than 0, not $gridKwh kWh")
+        }
+    }
+}
 
 /**
  * The battery level at the start of a day and after its charging.

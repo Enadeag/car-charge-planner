@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.android.home
 
 import java.time.LocalDate
 import nl.enadeag.carchargeplanner.engine.Outlook
+import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice
 
@@ -43,11 +44,11 @@ class DayMapper(planned: Outlook.Planned) {
             date = day.date(),
             name = DayName.of(day.date(), today),
             kind = kind,
-            main = main,
+            main = main?.let {
+                MainCharge(it, it.solarKwh() + it.importKwh(), Percent(it.solarShare() * 100),
+                    it.importKwh().takeIf { kwh -> kwh >= NO_GRID_KWH })
+            },
             later = day.windows().drop(1),
-            energyKwh = main?.let { it.solarKwh() + it.importKwh() },
-            solarSharePct = main?.let { it.solarShare() * 100 },
-            gridKwh = main?.importKwh()?.takeIf { it >= NO_GRID_KWH },
             battery = BatteryLevels(day.startLevelPct(), day.levelAfterChargingPct()),
             assumedLevel = assumed.takeIf { day.date() == today },
         )

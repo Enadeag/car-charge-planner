@@ -75,13 +75,24 @@ class HomeOutlook(private val access: EngineAccess, scope: CoroutineScope, priva
      *
      * @property state the answer; never [State.Asking]
      * @property at when it came, by the home's clock
+     * @throws IllegalArgumentException when [state] is [State.Asking], which is no answer
      */
-    data class Kept(val state: State, val at: Instant)
+    data class Kept(val state: State, val at: Instant) {
+
+        init {
+            if (state == State.Asking) {
+                throw IllegalArgumentException("a kept answer is an answer, not Asking")
+            }
+        }
+    }
 
     private val latest = LatestAnswer<State?>(scope)
     private val stateNow = MutableStateFlow(kept?.state ?: State.Asking)
     private val refreshingNow = MutableStateFlow(false)
     private var answeredAt: Instant? = kept?.at
+
+    /** True from a question until its answer; an answer that leads away from the home ends it too. */
+    private var pending = false
 
     /** What the home shows now. */
     val state: StateFlow<State> = stateNow.asStateFlow()
@@ -90,7 +101,7 @@ class HomeOutlook(private val access: EngineAccess, scope: CoroutineScope, priva
     val refreshing: StateFlow<Boolean> = refreshingNow.asStateFlow()
 
     init {
-        if (kept == null || kept.state == State.Asking) {
+        if (kept == null) {
             ask()
         }
         scope.launch {
@@ -98,12 +109,22 @@ class HomeOutlook(private val access: EngineAccess, scope: CoroutineScope, priva
         }
     }
 
-    /** Asks for the plan again, as on Refresh or a pull: a plan shown stays in view until the new one comes. */
+    /**
+     * Asks for the plan again, as on Refresh or a pull: a plan shown stays in view until the new one comes. While a
+     * plan is asked already it does nothing, so the one on its way is not started over.
+     */
     fun refresh() {
-        if (stateNow.value is State.Planned) ask(keepShown = true) else ask()
+        when {
+            pending -> return
+            stateNow.value is State.Planned -> ask(keepShown = true)
+            else -> ask()
+        }
     }
 
-    /** Tells that the owner came back to the app: a plan older than [STALE_AFTER] is asked again. */
+    /**
+     * Tells that the owner came back to the app: a plan older than [STALE_AFTER] is asked again, unless one is asked
+     * already.
+     */
     fun returned() {
         val at = answeredAt ?: return
         if (Duration.between(at, clock.instant()) > STALE_AFTER) {
@@ -125,7 +146,9 @@ class HomeOutlook(private val access: EngineAccess, scope: CoroutineScope, priva
             stateNow.value = State.Asking
             refreshingNow.value = false
         }
+        pending = true
         latest.ask({ answer() }) { state ->
+            pending = false
             refreshingNow.value = false
             if (state == null) {
                 answeredAt = null

@@ -15,8 +15,9 @@ import nl.enadeag.carchargeplanner.engine.plan.Window
  * @property window the charge window to take it in; null when no day before [lowDay] has room for it
  * @property windowDay the day of [window]; null without one
  * @property chargeLimit the charge limit to set in the car or the charger; null without a window
- * @property endLevelPct the battery level [lowDay] would end at without the grid charge; 0 or less runs it empty
- * @property minimumPct the minimum charge level it would fall below
+ * @property endLevelPct the battery level [lowDay] would end at without the grid charge; 0 or less runs it empty. Not
+ *     a [Percent]: it goes below 0 when the driving needs more than the battery holds
+ * @property minimum the minimum charge level it would fall below
  */
 data class GridAdviceModel(
     val energyKwh: Double,
@@ -25,7 +26,7 @@ data class GridAdviceModel(
     val windowDay: DayName?,
     val chargeLimit: Percent?,
     val endLevelPct: Double,
-    val minimumPct: Double,
+    val minimum: Percent,
 ) {
 
     /** True when the battery would run empty rather than only end below the minimum. */
@@ -50,7 +51,9 @@ data class GridAdviceModel(
                 windowDay = window?.let { DayName.of(it.start().atZone(zone).toLocalDate(), today) },
                 chargeLimit = advice.chargeLimitPct().orElse(null),
                 endLevelPct = advice.endLevelPct(),
-                minimumPct = advice.endLevelPct() + advice.deficitPct(),
+                // the engine's deficit is the minimum less the end level, so the sum gives the minimum back, give or
+                // take a rounding that could put it a hair outside a percentage's range
+                minimum = Percent((advice.endLevelPct() + advice.deficitPct()).coerceIn(0.0, 100.0)),
             )
         }
     }

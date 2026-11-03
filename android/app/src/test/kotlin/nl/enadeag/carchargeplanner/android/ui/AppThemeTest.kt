@@ -40,6 +40,10 @@ class AppThemeTest {
     fun onAndroid10And11TheAppHasMaterialsFixedColours() {
         assertThat(appColorScheme(Build.VERSION_CODES.R, false, context).primary)
             .isEqualTo(lightColorScheme().primary)
+        assertThat(appColorScheme(Build.VERSION_CODES.R, true, context).primary)
+            .isEqualTo(darkColorScheme().primary)
+        assertThat(appColorScheme(Build.VERSION_CODES.Q, false, context).primary)
+            .isEqualTo(lightColorScheme().primary)
         assertThat(appColorScheme(Build.VERSION_CODES.Q, true, context).primary)
             .isEqualTo(darkColorScheme().primary)
     }
@@ -75,5 +79,23 @@ class AppThemeTest {
 
         assertThat(shown.primary).isEqualTo(dynamicDarkColorScheme(context).primary)
         assertThat(sources).isEqualTo(SourceColours.DARK)
+    }
+
+    @Test
+    fun theDashboardsWarningFooterAndErrorsReachFourAndAHalfToOneInEveryScheme() {
+        for (sdk in listOf(Build.VERSION_CODES.R, Build.VERSION_CODES.S)) {
+            for (dark in listOf(false, true)) {
+                val scheme = appColorScheme(sdk, dark, context)
+                val pairs = mapOf(
+                    "the stale warning" to (scheme.onErrorContainer to scheme.errorContainer),
+                    "a failed save" to (scheme.error to scheme.surface),
+                    "the footer" to (scheme.onSurfaceVariant to scheme.surface),
+                )
+                for ((what, pair) in pairs) {
+                    assertThat(contrast(pair.first, pair.second)).`as`("the contrast of %s on API %s, %s", what, sdk,
+                        if (dark) "dark" else "light").isGreaterThanOrEqualTo(4.5)
+                }
+            }
+        }
     }
 }

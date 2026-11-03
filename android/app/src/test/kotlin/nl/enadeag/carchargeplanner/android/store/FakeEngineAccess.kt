@@ -74,7 +74,13 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     /** The one-off away periods stored, in order of their start. */
     var away: List<OneOffAwayPeriod> = listOf()
 
-    override suspend fun awayPeriods(): List<OneOffAwayPeriod> = away
+    /** When set, the read of the one-off away periods throws it, as a fault in the engine would. */
+    var awayThrows: RuntimeException? = null
+
+    override suspend fun awayPeriods(): List<OneOffAwayPeriod> {
+        awayThrows?.let { throw it }
+        return away
+    }
 
     override suspend fun readSettings(): StartState {
         val read = settings

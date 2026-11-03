@@ -16,6 +16,7 @@ import nl.enadeag.carchargeplanner.android.home.DayModel
 import nl.enadeag.carchargeplanner.android.home.DayName
 import nl.enadeag.carchargeplanner.android.home.Footer
 import nl.enadeag.carchargeplanner.android.home.GridAdviceModel
+import nl.enadeag.carchargeplanner.android.home.SourceFigure
 import nl.enadeag.carchargeplanner.engine.plan.Window
 
 /**
@@ -120,6 +121,31 @@ internal class DashboardWords(private val resources: Resources, private val loca
     fun whole(value: Double): String = numbers.write(value, 0)
 
     /**
+     * A figure by source, as its chip shows it.
+     *
+     * @param figure the figure
+     * @return such as "92% solar", "Battery 50 → 74%" or "0.4 kWh from the grid"
+     */
+    fun figure(figure: SourceFigure): String = when (figure) {
+        is SourceFigure.SolarShare -> text(R.string.day_solar_share, whole(figure.share.value()))
+        is SourceFigure.Battery -> text(R.string.day_battery, whole(figure.levels.startPct.value()),
+            whole(figure.levels.afterPct.value()))
+        is SourceFigure.FromGrid -> text(R.string.day_from_grid, decimal(figure.kwh))
+    }
+
+    /**
+     * A figure by source as a screen reader reads it, when its chip reads badly aloud.
+     *
+     * @param figure the figure
+     * @return such as "Battery from 50% to 74%"; null when the chip's text reads well
+     */
+    fun spokenFigure(figure: SourceFigure): String? = when (figure) {
+        is SourceFigure.Battery -> text(R.string.day_battery_spoken, whole(figure.levels.startPct.value()),
+            whole(figure.levels.afterPct.value()))
+        is SourceFigure.SolarShare, is SourceFigure.FromGrid -> null
+    }
+
+    /**
      * What a day holds, under its name.
      *
      * @param day the day
@@ -174,9 +200,9 @@ internal class DashboardWords(private val resources: Resources, private val loca
      */
     fun adviceDetail(advice: GridAdviceModel): String {
         val why = if (advice.runsEmpty) text(R.string.advice_runs_empty, inSentence(advice.lowDay),
-            whole(advice.minimumPct))
+            whole(advice.minimum.value()))
             else text(R.string.advice_ends_low, inSentence(advice.lowDay), whole(advice.endLevelPct),
-                whole(advice.minimumPct))
+                whole(advice.minimum.value()))
         val window = advice.window
         val limit = advice.chargeLimit
         val settings = if (window != null && limit != null) text(R.string.advice_set, window.amps(),

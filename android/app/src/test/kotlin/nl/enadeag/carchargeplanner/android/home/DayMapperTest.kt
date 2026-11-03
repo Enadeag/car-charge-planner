@@ -8,6 +8,7 @@ import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice
 import nl.enadeag.carchargeplanner.engine.plan.Window
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -32,10 +33,10 @@ class DayMapperTest {
         val day = days(listOf(morning, afternoon)).single()
 
         assertThat(day.kind).isEqualTo(DayKind.SOLAR)
-        assertThat(day.main).isEqualTo(morning)
+        assertThat(day.main?.window).isEqualTo(morning)
         assertThat(day.later).containsExactly(afternoon)
-        assertThat(day.energyKwh).isCloseTo(1.38, within(1e-9))
-        assertThat(day.solarSharePct).isCloseTo(100.0, within(1e-9))
+        assertThat(day.main?.energyKwh).isCloseTo(1.38, within(1e-9))
+        assertThat(day.main?.solarShare?.value()).isCloseTo(100.0, within(1e-9))
         assertThat(day.battery).isEqualTo(BatteryLevels(Percent(40.0), Percent(60.0)))
     }
 
@@ -43,9 +44,9 @@ class DayMapperTest {
     fun theEnergyAndTheSolarShareCountWhatComesFromTheGrid() {
         val day = days(listOf(Plans.window(amsterdam, today, 13, 15, importKwh = 0.69))).single()
 
-        assertThat(day.energyKwh).isCloseTo(2.76, within(1e-9))
-        assertThat(day.solarSharePct).isCloseTo(75.0, within(1e-9))
-        assertThat(day.gridKwh).isCloseTo(0.69, within(1e-9))
+        assertThat(day.main?.energyKwh).isCloseTo(2.76, within(1e-9))
+        assertThat(day.main?.solarShare?.value()).isCloseTo(75.0, within(1e-9))
+        assertThat(day.main?.gridKwh).isCloseTo(0.69, within(1e-9))
     }
 
     @ParameterizedTest
@@ -53,7 +54,7 @@ class DayMapperTest {
     fun gridEnergyWithinTheForecastsPrecisionIsNotShown(importKwh: Double, shown: Boolean) {
         val day = days(listOf(Plans.window(amsterdam, today, 13, 15, importKwh))).single()
 
-        assertThat(day.gridKwh).isEqualTo(if (shown) importKwh else null)
+        assertThat(day.main?.gridKwh).isEqualTo(if (shown) importKwh else null)
     }
 
     @Test
@@ -73,9 +74,6 @@ class DayMapperTest {
 
         assertThat(days.map { it.kind }).containsExactly(DayKind.NONE, DayKind.GRID, DayKind.SOLAR)
         assertThat(days[0].main).isNull()
-        assertThat(days[0].energyKwh).isNull()
-        assertThat(days[0].solarSharePct).isNull()
-        assertThat(days[0].gridKwh).isNull()
         assertThat(days[0].battery).isEqualTo(BatteryLevels(Percent(40.0), Percent(40.0)))
     }
 
@@ -102,5 +100,55 @@ class DayMapperTest {
 
         assertThat(days.map { it.date to it.name }).containsExactly(home to DayName.Today,
             home.plusDays(1) to DayName.Tomorrow)
+    }
+
+    @Test
+    fun aDayShowsItsFiguresEachInItsOwnSourcesColoursSolarBatteryGrid() {
+        val day = days(listOf(Plans.window(amsterdam, today, 13, 15, importKwh = 0.69))).single()
+
+        assertThat(day.figures.map { it.source to it }).containsExactly(
+            EnergySource.SOLAR to SourceFigure.SolarShare(day.main!!.solarShare),
+            EnergySource.CAR to SourceFigure.Battery(BatteryLevels(Percent(40.0), Percent(50.0))),
+            EnergySource.GRID to SourceFigure.FromGrid(0.69))
+    }
+
+    @Test
+    fun aDayWithoutAWindowShowsOnlyItsBattery() {
+        val day = days(listOf()).single()
+
+        assertThat(day.figures).containsExactly(SourceFigure.Battery(BatteryLevels(Percent(40.0), Percent(40.0))))
+    }
+
+    private val window = Plans.window(amsterdam, today, 13, 15)
+    private val battery = BatteryLevels(Percent(40.0), Percent(50.0))
+
+    private fun day(kind: DayKind, main: MainCharge?, later: List<Window> = listOf()) =
+        DayModel(today, DayName.Today, kind, main, later, battery, null)
+
+    @Test
+    fun aSolarDayHasAMainWindowAndAnyOtherKindNone() {
+        val main = MainCharge(window, 2.76, Percent(100.0), null)
+
+        assertThatThrownBy { day(DayKind.SOLAR, null) }.isInstanceOf(IllegalArgumentException::class.java)
+        assertThatThrownBy { day(DayKind.GRID, main) }.isInstanceOf(IllegalArgumentException::class.java)
+        assertThatThrownBy { day(DayKind.NONE, main) }.isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(day(DayKind.SOLAR, main).main).isEqualTo(main)
+    }
+
+    @Test
+    fun aDayWithoutAMainWindowHasNoLaterOnes() {
+        assertThatThrownBy { day(DayKind.NONE, null, listOf(window)) }.isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    @ParameterizedTest
+    @CsvSource("-0.1, ", "NaN, ", "Infinity, ", "1.0, 0.0", "1.0, -0.2", "1.0, NaN", "1.0, Infinity")
+    fun theMainWindowsEnergyIsFiniteAndNotNegativeAndItsGridEnergyMoreThanNothing(energy: Double, grid: Double?) {
+        assertThatThrownBy { MainCharge(window, energy, Percent(50.0), grid) }
+            .isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    @Test
+    fun aMainWindowThatChargesNothingFromTheGridHasNoGridFigure() {
+        assertThat(MainCharge(window, 0.0, Percent(0.0), null).gridKwh).isNull()
     }
 }

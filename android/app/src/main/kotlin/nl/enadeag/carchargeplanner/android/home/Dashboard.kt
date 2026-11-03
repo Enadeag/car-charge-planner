@@ -28,6 +28,14 @@ data class Dashboard(val zone: ZoneId, val days: List<DayModel>, val gridAdvice:
         }
     }
 
+    /**
+     * The grid advice a day's tab shows.
+     *
+     * @param day one of [days]
+     * @return the grid advice on today's tab; null on any other, or when there is none
+     */
+    fun adviceOn(day: DayModel): GridAdviceModel? = gridAdvice.takeIf { day.name == DayName.Today }
+
     companion object {
 
         /**

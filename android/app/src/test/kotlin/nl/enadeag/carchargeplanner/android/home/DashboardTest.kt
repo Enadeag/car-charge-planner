@@ -78,7 +78,8 @@ class DashboardTest {
         val advice = GridAdvice(today.plusDays(2), 17.0, 13.0, 3.7, Optional.of(window), Optional.of(Percent(55.0)))
 
         assertThat(dashboard(gridAdvice = advice).gridAdvice).isEqualTo(GridAdviceModel(3.7,
-            DayName.Other(today.plusDays(2)), window, DayName.Other(today.plusDays(2)), Percent(55.0), 17.0, 30.0))
+            DayName.Other(today.plusDays(2)), window, DayName.Other(today.plusDays(2)), Percent(55.0), 17.0,
+            Percent(30.0)))
     }
 
     @ParameterizedTest
@@ -125,5 +126,41 @@ class DashboardTest {
 
         assertThat(listed[0]).isEqualTo(ComingAway.AllDay(DayName.Today))
         assertThat(listed[1]).isNotInstanceOf(ComingAway.AllDay::class.java)
+    }
+
+    @Test
+    fun gridAdvicesLowDayIsNamedFromTheDayThePlanWasMadeInTheHomesZone() {
+        // 22:30 in UTC on the 1st is 00:30 on the 2nd in Amsterdam: the 3rd is tomorrow, not the day after
+        val lateAtNight = Instant.parse("2026-06-01T22:30:00Z").atZone(amsterdam)
+        val advice = GridAdvice(today.plusDays(2), 12.0, 18.0, 7.4, Optional.empty(), Optional.empty())
+
+        val shown = Dashboard.of(Plans.planned(lateAtNight, listOf(listOf(), listOf()), gridAdvice = advice), listOf())
+
+        assertThat(shown.gridAdvice?.lowDay).isEqualTo(DayName.Tomorrow)
+    }
+
+    @Test
+    fun gridAdviceShowsOnTodaysTabAndNoOther() {
+        val advice = GridAdvice(today.plusDays(1), 12.0, 18.0, 7.4, Optional.empty(), Optional.empty())
+        val shown = dashboard(gridAdvice = advice)
+
+        assertThat(shown.days.map { shown.adviceOn(it) }).containsExactly(shown.gridAdvice, null, null)
+    }
+
+    @Test
+    fun aPlanWhoseFirstDayIsNotTodayShowsNoGridAdvice() {
+        val advice = GridAdvice(today.plusDays(2), 12.0, 18.0, 7.4, Optional.empty(), Optional.empty())
+        val shown = dashboard(gridAdvice = advice)
+        val later = shown.copy(days = shown.days.drop(1))
+
+        assertThat(later.days.map { later.adviceOn(it) }).containsOnlyNulls()
+    }
+
+    @Test
+    fun gridAdvicesMinimumIsTheEndLevelAndTheDeficitWithinAPercentagesRange() {
+        // the engine's deficit is the minimum less the end level; a rounding must not make the sum refused
+        val advice = GridAdvice(today.plusDays(1), -3.3, 103.30000000000001, 6.0, Optional.empty(), Optional.empty())
+
+        assertThat(dashboard(gridAdvice = advice).gridAdvice?.minimum).isEqualTo(Percent(100.0))
     }
 }

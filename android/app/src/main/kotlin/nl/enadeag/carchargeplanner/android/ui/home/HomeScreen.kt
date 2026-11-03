@@ -57,6 +57,7 @@ import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.home.ComingAway
 import nl.enadeag.carchargeplanner.android.home.Dashboard
 import nl.enadeag.carchargeplanner.android.home.DayModel
+import nl.enadeag.carchargeplanner.android.home.EnergySource
 import nl.enadeag.carchargeplanner.android.home.Footer
 import nl.enadeag.carchargeplanner.android.home.GridAdviceModel
 import nl.enadeag.carchargeplanner.android.home.HomeNotice
@@ -128,18 +129,21 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
     }
     PullToRefreshBox(refreshing, refresh, Modifier.weight(1f).fillMaxWidth()) {
         HorizontalPager(pager, Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) { index ->
+            val day = days[index]
             Page {
-                notice()
+                // once, on the day in view: a pager may draw its neighbours too, and the notice is one live region
+                // with one Close
+                if (index == selected) {
+                    notice()
+                }
                 if (dashboard.footer.stale) {
                     StaleWarning(words.time(dashboard.footer.fetchedAt))
                 }
                 if (dashboard.zone != phoneZone) {
                     Text(stringResource(R.string.home_zone, dashboard.zone.id))
                 }
-                DayCard(days[index], words)
-                if (index == 0) {
-                    dashboard.gridAdvice?.let { GridAdviceCard(it, words) }
-                }
+                DayCard(day, words)
+                dashboard.adviceOn(day)?.let { GridAdviceCard(it, words) }
                 AwayList(dashboard.away, words)
                 FooterLine(dashboard.footer, words)
             }
@@ -184,12 +188,17 @@ private fun NoPlan(state: HomeOutlook.State, tryAgain: () -> Unit) {
     }
 }
 
+/** A card that says there is no forecast, why, and Try again. */
 @Composable
 private fun NoForecast(tryAgain: () -> Unit, why: @Composable () -> Unit) {
-    Text(stringResource(R.string.no_forecast), style = MaterialTheme.typography.titleLarge,
-        modifier = Modifier.semantics { heading() })
-    why()
-    AppButton(onClick = tryAgain) { Text(stringResource(R.string.action_try_again)) }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.no_forecast), style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.semantics { heading() })
+            why()
+            AppButton(onClick = tryAgain) { Text(stringResource(R.string.action_try_again)) }
+        }
+    }
 }
 
 /**
@@ -205,25 +214,20 @@ private fun DayCard(day: DayModel, words: DashboardWords) {
             Text(words.title(day.name), style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.semantics { heading() })
             Text(words.heading(day), style = MaterialTheme.typography.titleMedium)
-            day.main?.let { window ->
-                val spoken = words.spokenSpan(window)
-                Text(words.span(window), style = MaterialTheme.typography.headlineMedium,
+            day.main?.let { main ->
+                val spoken = words.spokenSpan(main.window)
+                Text(words.span(main.window), style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.semantics { contentDescription = spoken })
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(stringResource(R.string.day_set, window.amps(), words.decimal(window.powerKw())))
-                    day.energyKwh?.let { Text(stringResource(R.string.day_energy, words.decimal(it))) }
+                    Text(stringResource(R.string.day_set, main.window.amps(), words.decimal(main.window.powerKw())))
+                    Text(stringResource(R.string.day_energy, words.decimal(main.energyKwh)))
                 }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                day.solarSharePct?.let {
-                    SourceChip(stringResource(R.string.day_solar_share, words.whole(it)), sources.solar)
+                day.figures.forEach {
+                    SourceChip(words.figure(it), sources.of(it.source), spoken = words.spokenFigure(it))
                 }
-                val start = words.whole(day.battery.startPct.value())
-                val after = words.whole(day.battery.afterPct.value())
-                SourceChip(stringResource(R.string.day_battery, start, after), sources.car,
-                    spoken = stringResource(R.string.day_battery_spoken, start, after))
-                day.gridKwh?.let { SourceChip(stringResource(R.string.day_from_grid, words.decimal(it)), sources.grid) }
             }
             val note = words.note(day)
             if (note.isNotEmpty()) {
@@ -238,7 +242,7 @@ private fun DayCard(day: DayModel, words: DashboardWords) {
 private fun GridAdviceCard(advice: GridAdviceModel, words: DashboardWords) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SourceChip(stringResource(R.string.advice_label), LocalSourceColours.current.grid,
+            SourceChip(stringResource(R.string.advice_label), LocalSourceColours.current.of(EnergySource.GRID),
                 modifier = Modifier.semantics { heading() })
             Text(words.adviceTitle(advice), style = MaterialTheme.typography.titleMedium)
             Text(words.adviceDetail(advice), style = MaterialTheme.typography.bodyMedium)
@@ -260,14 +264,16 @@ private fun AwayList(away: List<ComingAway>, words: DashboardWords) {
 }
 
 /**
- * That the forecast could not be refreshed, with a warning sign and the words, in a container that stands out; the
- * plan below stays in view.
+ * That the forecast could not be refreshed, with a warning sign and the words, in a container that stands out and a
+ * polite live region, so a refresh that leaves the forecast stale is heard; the plan below stays in view.
  */
 @Composable
 private fun StaleWarning(fetched: String) {
     Surface(color = MaterialTheme.colorScheme.errorContainer,
         contentColor = MaterialTheme.colorScheme.onErrorContainer, shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth()) {
+        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
+            liveRegion = LiveRegionMode.Polite
+        }) {
         Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically) {
             // the words say it; the sign is for the eye, so a screen reader skips it

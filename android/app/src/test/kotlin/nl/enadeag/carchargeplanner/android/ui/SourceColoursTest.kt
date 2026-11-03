@@ -1,27 +1,11 @@
 package nl.enadeag.carchargeplanner.android.ui
 
-import androidx.compose.ui.graphics.Color
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.pow
+import nl.enadeag.carchargeplanner.android.home.EnergySource
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
 class SourceColoursTest {
-
-    /** WCAG 2's relative luminance of a colour in sRGB. */
-    private fun luminance(colour: Color): Double {
-        fun linear(channel: Float): Double =
-            if (channel <= 0.04045) channel / 12.92 else ((channel + 0.055) / 1.055).pow(2.4)
-        return 0.2126 * linear(colour.red) + 0.7152 * linear(colour.green) + 0.0722 * linear(colour.blue)
-    }
-
-    private fun contrast(one: Color, other: Color): Double {
-        val a = luminance(one)
-        val b = luminance(other)
-        return (max(a, b) + 0.05) / (min(a, b) + 0.05)
-    }
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
@@ -41,5 +25,13 @@ class SourceColoursTest {
 
         assertThat(setOf(colours.solar.container, colours.grid.container, colours.car.container)).hasSize(3)
         assertThat(setOf(colours.solar.text, colours.grid.text, colours.car.text)).hasSize(3)
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun eachSourceHasItsOwnColours(dark: Boolean) {
+        val colours = SourceColours.of(dark)
+
+        assertThat(EnergySource.entries.map { colours.of(it) }).containsExactly(colours.solar, colours.grid, colours.car)
     }
 }

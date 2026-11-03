@@ -57,7 +57,9 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.House
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness
+import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice
 import nl.enadeag.carchargeplanner.engine.plan.Window
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
@@ -106,7 +108,7 @@ class HomeScreenTest {
     private var settingsOpened = 0
     private lateinit var focus: FocusManager
 
-    private fun show(answer: Outlook, phoneZone: ZoneId = amsterdam, fontScaleTwo: Boolean = false): HomeOutlook {
+    private fun show(answer: Outlook?, phoneZone: ZoneId = amsterdam, fontScaleTwo: Boolean = false): HomeOutlook {
         val outlook = HomeOutlook(access, scope, clock) { }
         val notice = HomeNotice(saves, scope) { }
         compose.setContent {
@@ -117,7 +119,7 @@ class HomeScreenTest {
             }
         }
         compose.waitForIdle()
-        answer(answer)
+        answer?.let { answer(it) }
         return outlook
     }
 
@@ -467,5 +469,141 @@ class HomeScreenTest {
 
         compose.assertScrolls()
         compose.assertEveryControlIsNamedAndLargeEnough()
+    }
+
+    @Test
+    fun theTitleHasTheFocusWhenTheHomeOpens() {
+        show(lisbonWeek())
+
+        compose.onNode(title).assertIsFocused()
+    }
+
+    @Test
+    fun refreshIsOffWhileTheFirstPlanIsMade() {
+        show(null)
+
+        compose.onNodeWithText(text(R.string.home_asking)).assertIsDisplayed()
+        compose.onNodeWithContentDescription(text(R.string.home_refresh)).assertIsNotEnabled()
+    }
+
+    @Test
+    fun aPullDownThePageWithoutAPlanAsksAgain() {
+        show(Outlook.NoForecast("Open-Meteo: no network"))
+
+        compose.onNode(page).performTouchInput { swipeDown(startY = top + 10f, endY = bottom) }
+        compose.waitForIdle()
+
+        assertThat(access.outlooks).hasSize(2)
+    }
+
+    @Test
+    fun aPauseWithoutLeavingTheAppAsksNothingNewHoweverLong() {
+        show(lisbonWeek())
+
+        clock.now = clock.now.plus(Duration.ofMinutes(16))
+        compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        compose.waitForIdle()
+
+        assertThat(access.outlooks).hasSize(1)
+    }
+
+    @Test
+    fun aStaleForecastsWarningIsReadPolitely() {
+        clock("24")
+        show(lisbonWeek(freshness = Freshness.STALE))
+
+        assertThat(compose.liveRegionOf(text(R.string.stale_warning, "08:51"))).isEqualTo(LiveRegionMode.Polite)
+    }
+
+    /** Monday's plan in Lisbon with today's forecast from this source. */
+    private fun footerOf(source: (Instant) -> ForecastSource): String {
+        clock("24")
+        show(Plans.planned(today.atTime(9, 0).atZone(lisbon), listOf(listOf()),
+            source = source(today.atTime(8, 51).atZone(lisbon).toInstant())))
+        return compose.onNodeWithText(Plans.CREDIT, substring = true).performScrollTo()
+            .fetchSemanticsNode().config[SemanticsProperties.Text].single().text
+    }
+
+    @Test
+    fun theFooterNamesTheProviderTheFallbackStoodInForAndUntilWhenItIsBusy() {
+        val busy = today.atTime(9, 30).atZone(lisbon).toInstant()
+
+        val footer = footerOf { Plans.source(it, role = ProviderRole.FALLBACK, primaryName = "Forecast.Solar",
+            busyUntil = busy) }
+
+        assertThat(footer).isEqualTo(listOf(Plans.CREDIT, text(R.string.footer_fallback, "Forecast.Solar"),
+            text(R.string.footer_updated, "08:51"), text(R.string.footer_busy, "09:30")).joinToString(" · "))
+    }
+
+    @Test
+    fun theFooterOfAFallbackForAnUnnamedProviderSaysTheChosenOneWasUnavailable() {
+        val footer = footerOf { Plans.source(it, role = ProviderRole.FALLBACK) }
+
+        assertThat(footer).isEqualTo(listOf(Plans.CREDIT, text(R.string.footer_fallback_unknown),
+            text(R.string.footer_updated, "08:51")).joinToString(" · "))
+    }
+
+    @Test
+    fun awayPeriodsBeyondTomorrowAreNamedByTheirDateAndThoseOverDaysByBothEnds() {
+        clock("24")
+        access.away = listOf(OneOffAwayPeriod.allDay(today.plusDays(3), lisbon),
+            OneOffAwayPeriod(today.plusDays(2).atTime(18, 0).atZone(lisbon).toInstant(),
+                today.plusDays(4).atTime(9, 0).atZone(lisbon).toInstant()))
+
+        show(lisbonWeek())
+
+        compose.onNodeWithText(text(R.string.one_off_all_day, "Thu, Jun 4")).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.one_off_days, "Wed, Jun 3", "18:00", "Fri, Jun 5", "09:00"))
+            .performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun gridAdviceForALaterDayNamesItsWeekday() {
+        show(lisbonWeek(GridAdvice(today.plusDays(2), 12.0, 18.0, 7.4, Optional.empty(), Optional.empty())))
+
+        compose.onNodeWithText(text(R.string.advice_title_no_window, "7.4", "Wednesday")).performScrollTo()
+            .assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.advice_ends_low, "Wednesday", "12", "30") + " " +
+            text(R.string.advice_no_room)).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun aDaysLaterWindowsAreListedInItsNote() {
+        clock("24")
+        show(Plans.planned(today.atTime(9, 0).atZone(lisbon), listOf(listOf(Plans.window(lisbon, today, 10, 11),
+            Plans.window(lisbon, today, 13, 14), Plans.window(lisbon, today, 16, 17))), assumed = false))
+
+        compose.onNodeWithText(text(R.string.day_later_windows,
+            "13:00 – 14:00 at 6 A, 16:00 – 17:00 at 6 A")).assertIsDisplayed()
+    }
+
+    @Test
+    fun aRefreshToFewerDaysOnALaterTabShowsADayThatIsThere() {
+        clock("24")
+        val home = show(lisbonWeek())
+        tab("Wednesday").performClick()
+        compose.waitForIdle()
+
+        home.refresh()
+        compose.waitForIdle()
+        answer(Plans.planned(today.atTime(9, 0).atZone(lisbon), listOf(listOf(Plans.window(lisbon, today, 13, 15)))))
+
+        tab("Today").assertIsSelected()
+        compose.onNodeWithText("13:00 – 15:00").assertIsDisplayed()
+    }
+
+    @Test
+    fun aDayKeepsWhereItWasScrolledWhileAnotherDayIsShown() {
+        show(lisbonWeek(), fontScaleTwo = true)
+        val footer = compose.onNodeWithText(Plans.CREDIT, substring = true)
+        footer.performScrollTo().assertIsDisplayed()
+
+        tab("Wednesday").performScrollTo().performClick()
+        compose.waitForIdle()
+        tab("Today").performScrollTo().performClick()
+        compose.waitForIdle()
+
+        footer.assertIsDisplayed()
     }
 }
