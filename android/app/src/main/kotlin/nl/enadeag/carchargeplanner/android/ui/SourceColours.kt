@@ -33,7 +33,7 @@ internal data class SourceColours(val solar: Pair, val grid: Pair, val car: Pair
      *
      * @property ground what the chart and the bar are drawn on, the whole card
      * @property text the card's heading, the line under the chart, "now" and its line, the battery bar's marks
-     * @property muted the axis, the legend's words, the house's line and the marks' words
+     * @property muted the axis, the legend's words, the house's line, the marks' words and the empty track's outline
      * @property gridLine the chart's grid and the battery bar's empty track
      * @property solar the solar curve's line and its legend's sign
      * @property solarArea the solar curve's fill, see-through
@@ -43,7 +43,26 @@ internal data class SourceColours(val solar: Pair, val grid: Pair, val car: Pair
      * @property carText the battery levels' words
      */
     data class Chart(val ground: Color, val text: Color, val muted: Color, val gridLine: Color, val solar: Color,
-        val solarArea: Color, val car: Color, val carArea: Color, val carAfter: Color, val carText: Color)
+        val solarArea: Color, val car: Color, val carArea: Color, val carAfter: Color, val carText: Color) {
+
+        /**
+         * The colour a shape of the drawings is drawn in.
+         *
+         * @param ink the shape's colour by its role
+         * @return that colour
+         */
+        fun of(ink: ChartInk): Color = when (ink) {
+            ChartInk.GROUND -> ground
+            ChartInk.TEXT -> text
+            ChartInk.MUTED -> muted
+            ChartInk.GRID_LINE -> gridLine
+            ChartInk.SOLAR -> solar
+            ChartInk.SOLAR_AREA -> solarArea
+            ChartInk.CAR -> car
+            ChartInk.CAR_AREA -> carArea
+            ChartInk.CAR_AFTER -> carAfter
+        }
+    }
 
     /**
      * One source's colours.
@@ -97,6 +116,37 @@ internal data class SourceColours(val solar: Pair, val grid: Pair, val car: Pair
          */
         fun of(dark: Boolean): SourceColours = if (dark) DARK else LIGHT
     }
+}
+
+/** The colours of the solar chart's and the battery bar's shapes, by their role; [SourceColours.Chart] has each. */
+internal enum class ChartInk {
+
+    /** The cards' ground, also the line between the battery's two levels. */
+    GROUND,
+
+    /** "Now" and its line, and the battery bar's marks. */
+    TEXT,
+
+    /** The house's line and the empty track's outline. */
+    MUTED,
+
+    /** The chart's grid and the battery bar's empty track. */
+    GRID_LINE,
+
+    /** The solar curve's line. */
+    SOLAR,
+
+    /** The solar curve's fill. */
+    SOLAR_AREA,
+
+    /** The charge windows' marks, the battery level and the line around the level after charging. */
+    CAR,
+
+    /** The charge windows' bands. */
+    CAR_AREA,
+
+    /** The battery level after charging. */
+    CAR_AFTER,
 }
 
 /** The source colours of the theme around, light or dark; [AppTheme] provides them. */

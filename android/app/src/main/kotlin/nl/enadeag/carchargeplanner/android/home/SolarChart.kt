@@ -44,7 +44,8 @@ data class SolarChart(
 
     init {
         if (!(fromHour >= 0 && toHour > fromHour)) {
-            throw IllegalArgumentException("the hours shown must run forwards from 0 or later, not $fromHour to $toHour")
+            throw IllegalArgumentException(
+                "the hours shown must run forwards from 0 or later, not $fromHour to $toHour")
         }
         if (!(scaleKw > 0) || scaleKw.isInfinite()) {
             throw IllegalArgumentException("the scale must be finite and more than 0 kW, not $scaleKw")

@@ -1,6 +1,19 @@
 package nl.enadeag.carchargeplanner.android.ui
 
 import android.provider.Settings
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.view.ViewGroup
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.unit.LayoutDirection
+import kotlin.math.roundToInt
+import org.assertj.core.api.Assertions.within
+import org.robolectric.annotation.GraphicsMode
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Offset
@@ -703,6 +716,9 @@ class HomeScreenTest {
     @Test
     fun theLegendNamesTheSolarCurveTheHouseAndTheChargeWindowsInWords() {
         show(sunnyDays())
+        // on a day without a window, as today's card says "Charge window" too, to be read
+        tab("Tomorrow").performClick()
+        compose.waitForIdle()
 
         listOf(R.string.chart_legend_solar, R.string.chart_legend_house, R.string.chart_legend_window).forEach {
             compose.assertShownButNotReadApart(text(it))
@@ -736,6 +752,7 @@ class HomeScreenTest {
     }
 
     @Test
+    @Config(qualifiers = "w411dp-h891dp")
     fun theTimeAxisMarksFewerHoursAtTwiceTheFontSizeOnThePhones12HourClock() {
         clock("12")
         var twice by mutableStateOf(false)
@@ -793,5 +810,141 @@ class HomeScreenTest {
             useUnmergedTree = true).performScrollTo().assertIsDisplayed()
         compose.assertShownButNotReadApart(text(R.string.battery_target, "80"))
         compose.assertScrollsToShow(hasText(Plans.CREDIT, substring = true))
+    }
+
+    private fun chart(): SemanticsNode =
+        compose.onNode(SemanticsMatcher.keyIsDefined(AxisLabels), useUnmergedTree = true).fetchSemanticsNode()
+
+    private fun saying(sentence: String): Rect =
+        compose.onNode(hasContentDescription(sentence), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+
+    private fun shown(words: String): Rect =
+        compose.onNodeWithText(words, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+
+    /** The width of the cards' column in pixels: the day's page less its padding and the card's, 16 dp each. */
+    private fun column(): Float {
+        val page = compose.onNode(page and hasAnyDescendant(SemanticsMatcher.keyIsDefined(AxisLabels)),
+            useUnmergedTree = true).fetchSemanticsNode()
+        return page.size.width - 64 * page.layoutInfo.density.density
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h800dp")
+    fun onANarrowColumnTheChartTakesItsWidthAndIsStill160DpHigh() {
+        show(sunnyDays())
+
+        // half of the column's 296 dp would be lower than 160 dp
+        val chart = chart()
+        assertThat(chart.size.width.toFloat()).isCloseTo(column(), within(1f))
+        assertThat(chart.size.height / chart.layoutInfo.density.density).isCloseTo(160f, within(0.5f))
+    }
+
+    @Test
+    @Config(qualifiers = "w900dp-h1200dp")
+    fun onAWideColumnTheChartTakesItsWidthAndIsHalfAsHigh() {
+        show(sunnyDays())
+
+        val chart = chart()
+        assertThat(chart.size.width.toFloat()).isCloseTo(column(), within(1f))
+        assertThat(chart.size.height.toFloat()).isCloseTo(chart.size.width / 2f, within(1f))
+    }
+
+    @Test
+    fun marksCloseTogetherHaveTheirWordsOnTwoLinesBothWithinTheBar() {
+        show(Plans.planned(today.atTime(9, 0).atZone(lisbon), listOf(listOf()), minimum = 70.0, target = 75.0))
+        compose.onNodeWithText(text(R.string.battery_target, "75"), useUnmergedTree = true).performScrollTo()
+
+        val bar = saying(text(R.string.battery_spoken_today, "40", "40", "70", "75"))
+        val minimum = shown(text(R.string.battery_minimum, "70"))
+        val target = shown(text(R.string.battery_target, "75"))
+        assertThat(minimum.overlaps(target)).`as`("the marks' words %s and %s overlap", minimum, target).isFalse()
+        listOf(minimum, target).forEach {
+            assertThat(it.left).isGreaterThanOrEqualTo(bar.left - 0.5f)
+            assertThat(it.right).isLessThanOrEqualTo(bar.right + 0.5f)
+            assertThat(it.top).isGreaterThanOrEqualTo(bar.top - 0.5f)
+            assertThat(it.bottom).isLessThanOrEqualTo(bar.bottom + 0.5f)
+        }
+    }
+
+    @Test
+    fun rightToLeftTheBatteryBarRunsLeftToRightWithEachMarksWordsUnderIt() {
+        val outlook = HomeOutlook(access, scope, clock) { }
+        val notice = HomeNotice(saves, scope) { }
+        compose.setContent {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                AppTheme { HomeScreen(outlook, notice, { amsterdam }) { } }
+            }
+        }
+        compose.waitForIdle()
+        answer(lisbonWeek())
+        compose.onNodeWithText(text(R.string.battery_target, "80"), useUnmergedTree = true).performScrollTo()
+
+        val bar = saying(text(R.string.battery_spoken_today, "40", "60", "20", "80"))
+        assertThat(shown(text(R.string.battery_minimum, "20")).center.x)
+            .isCloseTo(bar.left + bar.width * 0.2f, within(1f))
+        assertThat(shown(text(R.string.battery_target, "80")).center.x)
+            .isCloseTo(bar.left + bar.width * 0.8f, within(1f))
+    }
+
+    @Test
+    fun onTomorrowTheBatteryBarSaysTomorrowInItsSentence() {
+        show(lisbonWeek())
+
+        tab("Tomorrow").performClick()
+        compose.waitForIdle()
+
+        compose.assertReadAsOne(text(R.string.battery_spoken_day, "40", "tomorrow", "40", "20", "80"), Role.Image)
+    }
+
+    @Test
+    @Config(qualifiers = "nl")
+    fun onTomorrowTheBatteryBarSaysTomorrowInItsSentenceInDutch() {
+        show(lisbonWeek())
+
+        tab("Morgen").performClick()
+        compose.waitForIdle()
+
+        compose.assertReadAsOne(text(R.string.battery_spoken_day, "40", "morgen", "40", "20", "80"), Role.Image)
+    }
+
+    @Test
+    fun theSolarChartComesBeforeTheBatteryBar() {
+        show(sunnyDays())
+
+        val chart = compose.onNode(isHeading() and hasText(text(R.string.chart_heading))).fetchSemanticsNode()
+        val battery = compose.onNode(isHeading() and hasText(text(R.string.battery_heading))).fetchSemanticsNode()
+        // the positions, unlike the bounds, are not cut off where the page ends
+        assertThat(chart.positionInRoot.y).isLessThan(battery.positionInRoot.y)
+    }
+
+    /** The colour on the card in its padding, left of its heading, once scrolled to, as the screen draws it. */
+    private fun groundBeside(heading: Int): Color {
+        val node = compose.onNode(isHeading() and hasText(text(heading))).performScrollTo().fetchSemanticsNode()
+        val bounds = node.boundsInRoot
+        // Compose's captureToImage waits for a frame that Robolectric's paused main thread never draws
+        val screen = compose.activity.findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
+        val shot = Bitmap.createBitmap(screen.width, screen.height, Bitmap.Config.ARGB_8888)
+        compose.runOnIdle { screen.draw(Canvas(shot)) }
+        return Color(shot.getPixel((bounds.left - 8 * node.layoutInfo.density.density).roundToInt(),
+            bounds.center.y.roundToInt()))
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun inLightTheChartAndTheBatteryBarAreOnTheirOwnGroundNotTheWallpapers() {
+        show(sunnyDays())
+
+        assertThat(groundBeside(R.string.chart_heading)).isEqualTo(SourceColours.LIGHT.chart.ground)
+        assertThat(groundBeside(R.string.battery_heading)).isEqualTo(SourceColours.LIGHT.chart.ground)
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "night")
+    fun inDarkTheChartAndTheBatteryBarAreOnTheirOwnGroundNotTheWallpapers() {
+        show(sunnyDays())
+
+        assertThat(groundBeside(R.string.chart_heading)).isEqualTo(SourceColours.DARK.chart.ground)
+        assertThat(groundBeside(R.string.battery_heading)).isEqualTo(SourceColours.DARK.chart.ground)
     }
 }

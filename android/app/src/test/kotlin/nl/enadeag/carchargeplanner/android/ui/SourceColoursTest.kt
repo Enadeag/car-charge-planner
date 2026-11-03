@@ -50,18 +50,40 @@ class SourceColoursTest {
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
+    fun eachInkOfTheChartsIsTheColourOfItsRole(dark: Boolean) {
+        val chart = SourceColours.of(dark).chart
+
+        assertThat(ChartInk.entries.associateWith(chart::of)).isEqualTo(mapOf(ChartInk.GROUND to chart.ground,
+            ChartInk.TEXT to chart.text, ChartInk.MUTED to chart.muted, ChartInk.GRID_LINE to chart.gridLine,
+            ChartInk.SOLAR to chart.solar, ChartInk.SOLAR_AREA to chart.solarArea, ChartInk.CAR to chart.car,
+            ChartInk.CAR_AREA to chart.carArea, ChartInk.CAR_AFTER to chart.carAfter))
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun everyInkOfTheChartsIsAColourOfItsOwn(dark: Boolean) {
+        val chart = SourceColours.of(dark).chart
+
+        // the level after charging, filled in the ground's colour, would look as empty as the track
+        assertThat(ChartInk.entries.map(chart::of).toSet()).hasSize(ChartInk.entries.size)
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
     fun theChartsTextsReachFourAndAHalfToOneAndTheirLinesAndMarksThreeToOneOnTheirGround(dark: Boolean) {
         val chart = SourceColours.of(dark).chart
-        val texts = mapOf("text" to chart.text, "muted" to chart.muted, "battery levels" to chart.carText)
-        val marks = mapOf("solar line" to chart.solar, "window mark" to chart.car, "house line" to chart.muted,
-            "now line and battery marks" to chart.text)
+        val texts = mapOf("text" to chart.of(ChartInk.TEXT), "muted" to chart.of(ChartInk.MUTED),
+            "battery levels" to chart.carText)
+        val marks = mapOf("solar line" to ChartInk.SOLAR, "window mark and battery level" to ChartInk.CAR,
+            "house line and the track's outline" to ChartInk.MUTED, "now line and battery marks" to ChartInk.TEXT)
+        val ground = chart.of(ChartInk.GROUND)
 
         texts.forEach { (name, colour) ->
-            assertThat(contrast(colour, chart.ground)).`as`("the contrast of %s in %s", name,
+            assertThat(contrast(colour, ground)).`as`("the contrast of %s in %s", name,
                 if (dark) "dark" else "light").isGreaterThanOrEqualTo(4.5)
         }
-        marks.forEach { (name, colour) ->
-            assertThat(contrast(colour, chart.ground)).`as`("the contrast of %s in %s", name,
+        marks.forEach { (name, ink) ->
+            assertThat(contrast(chart.of(ink), ground)).`as`("the contrast of %s in %s", name,
                 if (dark) "dark" else "light").isGreaterThanOrEqualTo(3.0)
         }
     }
@@ -71,6 +93,6 @@ class SourceColoursTest {
     fun theBatteryLevelStandsOutThreeToOneFromTheEmptyTrack(dark: Boolean) {
         val chart = SourceColours.of(dark).chart
 
-        assertThat(contrast(chart.car, chart.gridLine)).isGreaterThanOrEqualTo(3.0)
+        assertThat(contrast(chart.of(ChartInk.CAR), chart.of(ChartInk.GRID_LINE))).isGreaterThanOrEqualTo(3.0)
     }
 }

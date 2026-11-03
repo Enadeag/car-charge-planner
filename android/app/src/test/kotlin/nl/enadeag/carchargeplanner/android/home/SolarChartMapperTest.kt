@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.android.home
 import java.time.LocalDate
 import java.time.ZoneId
 import nl.enadeag.carchargeplanner.engine.Outlook
+import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep
 import nl.enadeag.carchargeplanner.engine.plan.Window
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -37,6 +38,40 @@ class SolarChartMapperTest {
         assertThat(chart.steps.map { it.startHour }).containsExactly(6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0,
             14.0, 15.0, 16.0, 17.0, 18.0)
         assertThat(chart.steps[6]).isEqualTo(SolarChart.Step(12.0, 13.0, 3.2))
+    }
+
+    @Test
+    fun stepsThatStartAtHalfPastTheHourShowWholeHoursAroundTheSun() {
+        // sun from 07:30 to 17:30, in steps of an hour from half past
+        val planned = Plans.planned(today.atTime(9, 0).atZone(amsterdam), listOf(listOf()), forecast = { day ->
+            (0 until 23).map { hour ->
+                val start = day.atStartOfDay(amsterdam).plusHours(hour.toLong()).plusMinutes(30)
+                ForecastStep(start.toInstant(), start.plusHours(1).toInstant(), if (hour in 7..16) 1.0 else 0.0)
+            }
+        })
+
+        val chart = charts(planned).single()
+
+        assertThat(chart.fromHour).isEqualTo(6.0)
+        assertThat(chart.toHour).isEqualTo(19.0)
+    }
+
+    @Test
+    fun justMoreThanAHundredthOfAKilowattIsSun() {
+        val chart = charts(planned { DoubleArray(24) { hour -> if (hour == 12) 0.011 else 0.0 } }).first()
+
+        assertThat(chart.fromHour).isEqualTo(11.0)
+        assertThat(chart.toHour).isEqualTo(14.0)
+        assertThat(chart.peak?.kw).isEqualTo(0.011)
+    }
+
+    @Test
+    fun ofTwoEqualPeaksTheFirstIsThePeakAsOnTheDesktop() {
+        val chart = charts(planned {
+            DoubleArray(24) { hour -> if (hour == 11 || hour == 14) 3.0 else if (hour in 8..16) 1.0 else 0.0 }
+        }).first()
+
+        assertThat(chart.peak).isEqualTo(SolarChart.Peak(3.0, today.atTime(11, 0).atZone(amsterdam).toInstant()))
     }
 
     @Test

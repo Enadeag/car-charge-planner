@@ -126,10 +126,19 @@ data class BatteryLevels(val startPct: Percent, val afterPct: Percent)
 /**
  * The minimum and target charge levels of the plan, which every day's battery bar marks.
  *
- * @property minimum the minimum charge level
+ * @property minimum the minimum charge level, not above [target]
  * @property target the target charge level
+ * @throws IllegalArgumentException when the minimum is above the target
  */
-data class ChargeLevels(val minimum: Percent, val target: Percent)
+data class ChargeLevels(val minimum: Percent, val target: Percent) {
+
+    init {
+        if (minimum.value() > target.value()) {
+            throw IllegalArgumentException("the minimum charge level must not be above the target, not " +
+                "${minimum.value()}% over ${target.value()}%")
+        }
+    }
+}
 
 /** Where a day's charge comes from. */
 enum class DayKind {

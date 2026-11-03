@@ -71,10 +71,13 @@ internal object Plans {
      * @param source where the forecast came from; fetched when the plan was made by default
      * @param forecast each day's forecast steps, by its date; none by default
      * @param baseloadKw the house's use
+     * @param minimum the minimum charge level in percent
+     * @param target the target charge level in percent
      */
     fun planned(madeAt: ZonedDateTime, days: List<List<Window>>, assumed: Boolean = true,
         gridAdvice: GridAdvice? = null, source: ForecastSource = source(madeAt.toInstant()),
-        forecast: (LocalDate) -> List<ForecastStep> = { listOf() }, baseloadKw: Double = 0.3): Outlook.Planned {
+        forecast: (LocalDate) -> List<ForecastStep> = { listOf() }, baseloadKw: Double = 0.3, minimum: Double = 20.0,
+        target: Double = 80.0): Outlook.Planned {
         val level = Percent(40.0)
         val plans = days.mapIndexed { index, windows ->
             val after = Percent(40.0 + 10.0 * windows.size)
@@ -82,6 +85,6 @@ internal object Plans {
             DayPlan(date, level, windows, after, after, 0.0, forecast(date))
         }
         return Outlook.Planned(madeAt.toInstant(), madeAt.zone, plans, level, assumed, Optional.ofNullable(gridAdvice),
-            listOf(), source, baseloadKw, Percent(20.0), Percent(80.0))
+            listOf(), source, baseloadKw, Percent(minimum), Percent(target))
     }
 }

@@ -146,7 +146,9 @@ internal fun SemanticsNodeInteractionsProvider.assertScrollsToShow(last: Semanti
 
 /**
  * Checks that a drawing, such as a chart, is one part for a screen reader: a single node that says this sentence,
- * with this role and with nothing inside it that is read apart.
+ * with this role and with nothing inside it that is read apart. Inside means the node's own children in the
+ * unmerged tree: words placed over the drawing beside it, such as the battery bar's marks, are not inside it, so
+ * [assertShownButNotReadApart] checks those.
  *
  * @param sentence what the node says, whole
  * @param role the node's role
@@ -163,13 +165,14 @@ internal fun SemanticsNodeInteractionsProvider.assertReadAsOne(sentence: String,
 
 /**
  * Checks that a text is shown on the page that scrolls, once scrolled to, but is not read apart by a screen reader,
- * as a part beside it says the same.
+ * as a part beside it says the same; nor does any other part show the same text to be read.
  *
  * @param shown the text, whole
  */
 internal fun SemanticsNodeInteractionsProvider.assertShownButNotReadApart(shown: String) {
-    val node = onNode(hasText(shown) and NOT_READ_APART, useUnmergedTree = true)
-    node.performScrollTo().assertIsDisplayed()
+    val read = onAllNodes(hasText(shown) and !NOT_READ_APART, useUnmergedTree = true).fetchSemanticsNodes()
+    assertThat(read).`as`("the parts that show %s to be read", shown).isEmpty()
+    onNode(hasText(shown) and NOT_READ_APART, useUnmergedTree = true).performScrollTo().assertIsDisplayed()
 }
 
 /** A part a screen reader skips, as a part beside it says the same. */

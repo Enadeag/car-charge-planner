@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -18,8 +19,11 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -28,8 +32,11 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.DrawStyle
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsPropertyKey
@@ -41,7 +48,9 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import kotlin.math.max
@@ -144,55 +153,34 @@ private fun SolarCanvas(day: DayModel, words: DashboardWords, colours: SourceCol
     val axis = MaterialTheme.typography.labelSmall.copy(color = colours.muted)
     val nowStyle = axis.copy(color = colours.text)
     val nowText = stringResource(R.string.chart_now)
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val density = LocalDensity.current
-        val height = max(maxWidth / 2, MIN_CHART_HEIGHT)
-        val width = constraints.maxWidth.toFloat()
-        val gap = with(density) { 4.dp.toPx() }
-        val scale = measurer.measure(words.scale(chart.scaleKw), axis)
-        val zero = measurer.measure(words.whole(0.0), axis)
-        val now = measurer.measure(nowText, nowStyle)
-        val lineHeight = scale.size.height.toFloat()
-        val left = max(scale.size.width, zero.size.width) + gap
-        val plot = PlotArea(left, lineHeight / 2, max(0f, width - left - gap),
-            max(0f, with(density) { height.toPx() } - lineHeight * 1.5f - gap), chart.fromHour, chart.toHour,
-            chart.scaleKw)
-        val labels = chart.ticks.associateWith { measurer.measure(words.tick(it), axis) }
-        val ticks = TimeAxis.fit(chart, plot, width, gap * 2) { labels.getValue(it).size.width.toFloat() }
-        val stroke = with(density) { 2.dp.toPx() }
-        Canvas(Modifier.fillMaxWidth().height(height).semantics {
-            contentDescription = spoken
-            role = Role.Image
-            axisLabels = ticks.map { words.tick(it.tick) }
-        }) {
-            listOf(chart.scaleKw, chart.scaleKw / 2, 0.0).forEach {
-                drawLine(colours.gridLine, Offset(plot.left, plot.y(it)), Offset(plot.right, plot.y(it)), 1f)
-            }
-            chart.windows.forEach {
-                val start = plot.x(it.startHour)
-                val end = plot.x(it.endHour)
-                drawRect(colours.carArea, Offset(start, plot.top), Size(end - start, plot.height))
-                drawLine(colours.car, Offset(start, plot.bottom), Offset(end, plot.bottom), stroke * 2,
-                    StrokeCap.Round)
-            }
-            val curve = Path().apply {
-                curveOf(chart.steps, chart.fromHour, chart.toHour).forEachIndexed { index, point ->
-                    if (index == 0) moveTo(plot.x(point.hour), plot.y(point.kw))
-                    else lineTo(plot.x(point.hour), plot.y(point.kw))
+    val scale = remember(measurer, axis, chart, words) { measurer.measure(words.scale(chart.scaleKw), axis) }
+    val zero = remember(measurer, axis, words) { measurer.measure(words.whole(0.0), axis) }
+    val now = remember(measurer, nowStyle, nowText) { measurer.measure(nowText, nowStyle) }
+    val labels = remember(measurer, axis, chart, words) {
+        chart.ticks.associateWith { measurer.measure(words.tick(it), axis) }
+    }
+    LeftToRight {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val density = LocalDensity.current
+            val height = max(maxWidth / 2, MIN_CHART_HEIGHT)
+            val width = constraints.maxWidth.toFloat()
+            val heightPx = with(density) { height.toPx() }
+            val drawing = remember(chart, width, heightPx, density.density, scale, zero, now, labels) {
+                SolarDrawing.of(chart, width, heightPx, density.density, scale.size.height.toFloat(),
+                    scale.size.width.toFloat(), zero.size.width.toFloat(), now.size.width.toFloat()) {
+                    labels.getValue(it).size.width.toFloat()
                 }
-                close()
             }
-            drawPath(curve, colours.solarArea)
-            drawPath(curve, colours.solar, style = Stroke(stroke))
-            dashed(colours.muted, Offset(plot.left, plot.y(chart.houseKw)), Offset(plot.right, plot.y(chart.houseKw)))
-            chart.now?.let {
-                val x = plot.x(it.hour)
-                dashed(colours.text, Offset(x, plot.top), Offset(x, plot.bottom))
-                drawText(now, topLeft = Offset(minOf(x + gap / 2, plot.right - now.size.width), plot.top))
-            }
-            drawText(scale, topLeft = Offset(0f, plot.top - lineHeight / 2))
-            drawText(zero, topLeft = Offset(0f, plot.bottom - lineHeight / 2))
-            ticks.forEach { drawText(labels.getValue(it.tick), topLeft = Offset(it.left, plot.bottom + gap)) }
+            Spacer(Modifier.fillMaxWidth().height(height).semantics {
+                contentDescription = spoken
+                role = Role.Image
+                axisLabels = drawing.ticks.map { words.tick(it.tick) }
+            }.drawn(drawing.shapes, colours) {
+                drawing.nowAt?.let { drawText(now, topLeft = it.offset) }
+                drawText(scale, topLeft = drawing.scaleAt.offset)
+                drawText(zero, topLeft = drawing.zeroAt.offset)
+                drawing.ticks.forEach { drawText(labels.getValue(it.tick), topLeft = Offset(it.left, drawing.tickTop)) }
+            })
         }
     }
 }
@@ -205,63 +193,100 @@ private fun BatteryBar(day: DayModel, levels: ChargeLevels, words: DashboardWord
     val minimumText = words.minimum(levels)
     val targetText = words.target(levels)
     val spoken = words.battery(day, levels)
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val density = LocalDensity.current
-        val width = constraints.maxWidth.toFloat()
-        val minimum = measurer.measure(minimumText, style)
-        val target = measurer.measure(targetText, style)
-        val gap = with(density) { 8.dp.toPx() }
-        val layout = BatteryBarLayout.of(day.battery, levels, width, minimum.size.width.toFloat(),
-            target.size.width.toFloat(), gap)
-        val overhang = with(density) { 4.dp.toPx() }
-        val bar = with(density) { 16.dp.toPx() }
-        val line = max(minimum.size.height, target.size.height).toFloat()
-        val labelsTop = overhang * 2 + bar + gap / 2
-        val height = with(density) { (labelsTop + line * layout.rows).toDp() }
-        Box(Modifier.fillMaxWidth().height(height)) {
-            Canvas(Modifier.fillMaxWidth().height(height).semantics {
-                contentDescription = spoken
-                role = Role.Image
-            }) {
-                val radius = CornerRadius(bar / 2)
-                drawRoundRect(colours.gridLine, Offset(0f, overhang), Size(width, bar), radius)
-                if (layout.afterEnd > 0) {
-                    drawRoundRect(colours.carAfter, Offset(0f, overhang), Size(layout.afterEnd, bar), radius)
-                    drawRoundRect(colours.car, Offset(0f, overhang), Size(layout.afterEnd, bar), radius,
-                        Stroke(with(density) { 1.5.dp.toPx() }))
-                }
-                if (layout.levelEnd > 0) {
-                    drawRoundRect(colours.car, Offset(0f, overhang), Size(layout.levelEnd, bar), radius)
-                }
-                // a line of the ground between the level and the level after charging, as their two greens are
-                // too close to tell apart by contrast alone
-                if (layout.afterEnd > layout.levelEnd && layout.levelEnd > 0) {
-                    drawLine(colours.ground, Offset(layout.levelEnd, overhang), Offset(layout.levelEnd, overhang + bar),
-                        with(density) { 2.dp.toPx() })
-                }
-                listOf(layout.minimum, layout.target).forEach {
-                    drawLine(colours.text, Offset(it.x, 0f), Offset(it.x, overhang * 2 + bar),
-                        with(density) { 2.dp.toPx() })
-                }
+    val minimum = remember(measurer, style, minimumText) { measurer.measure(minimumText, style) }
+    val target = remember(measurer, style, targetText) { measurer.measure(targetText, style) }
+    LeftToRight {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val density = LocalDensity.current
+            val width = constraints.maxWidth.toFloat()
+            val layout = remember(day.battery, levels, width, minimum, target, density.density) {
+                BatteryBarLayout.of(day.battery, levels, width, minimum.size.width.toFloat(),
+                    target.size.width.toFloat(), max(minimum.size.height, target.size.height).toFloat(),
+                    density.density)
             }
-            MarkLabel(minimumText, layout.minimum, labelsTop, line, style.color)
-            MarkLabel(targetText, layout.target, labelsTop, line, style.color)
+            val height = with(density) { layout.height.toDp() }
+            Box(Modifier.fillMaxWidth().height(height)) {
+                Spacer(Modifier.fillMaxWidth().height(height).semantics {
+                    contentDescription = spoken
+                    role = Role.Image
+                }.drawn(layout.shapes, colours))
+                MarkLabel(minimumText, layout.minimum, layout.labelTop(layout.minimum), style.color)
+                MarkLabel(targetText, layout.target, layout.labelTop(layout.target), style.color)
+            }
         }
     }
 }
 
+/**
+ * The charts' drawings run left to right in every language, as their hours and levels do, so the words placed over
+ * them are too.
+ */
+@Composable
+private fun LeftToRight(content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr, content = content)
+}
+
 /** A mark's words, shown as text so that they are the same facts as the bar's sentence. */
 @Composable
-private fun MarkLabel(text: String, mark: BatteryBarLayout.Mark, top: Float, line: Float,
-    colour: Color) {
+private fun MarkLabel(text: String, mark: BatteryBarLayout.Mark, top: Float, colour: Color) {
     Text(text, style = MaterialTheme.typography.labelSmall, color = colour, maxLines = 1, softWrap = false,
-        modifier = Modifier.offset { IntOffset(mark.labelLeft.roundToInt(), (top + line * mark.row).roundToInt()) }
+        modifier = Modifier.offset { IntOffset(mark.labelLeft.roundToInt(), top.roundToInt()) }
             .semantics { hideFromAccessibility() })
 }
+
+/**
+ * Draws the shapes in the charts' colours, then what [over] adds; the paths and the dashes are made once per size
+ * and set of shapes, not per frame.
+ */
+private fun Modifier.drawn(shapes: List<Shape>, colours: SourceColours.Chart, over: DrawScope.() -> Unit = {}) =
+    drawWithCache {
+        val dash = dashes()
+        val steps = shapes.map { shape -> step(shape, colours.of(shape.ink), dash) }
+        onDrawBehind {
+            steps.forEach { it() }
+            over()
+        }
+    }
+
+/** How a shape is drawn, with its path made once. */
+private fun step(shape: Shape, colour: Color, dash: PathEffect): DrawScope.() -> Unit = when (shape) {
+    is Shape.Line -> {
+        val cap = if (shape.round) StrokeCap.Round else StrokeCap.Butt
+        val effect = if (shape.dashed) dash else null
+        val draw: DrawScope.() -> Unit = {
+            drawLine(colour, shape.from.offset, shape.to.offset, shape.width, cap, effect)
+        }
+        draw
+    }
+    is Shape.Rect -> {
+        val style = styleOf(shape.outline)
+        val draw: DrawScope.() -> Unit = {
+            drawRoundRect(colour, Offset(shape.left, shape.top), Size(shape.width, shape.height),
+                CornerRadius(shape.corner), style)
+        }
+        draw
+    }
+    is Shape.Area -> {
+        val path = Path().apply {
+            shape.points.forEachIndexed { index, point ->
+                if (index == 0) moveTo(point.x, point.y) else lineTo(point.x, point.y)
+            }
+            close()
+        }
+        val style = styleOf(shape.outline)
+        val draw: DrawScope.() -> Unit = { drawPath(path, colour, style = style) }
+        draw
+    }
+}
+
+private fun styleOf(outline: Float?): DrawStyle = outline?.let { Stroke(it) } ?: Fill
+
+private val Point.offset: Offset get() = Offset(x, y)
+
+private fun Density.dashes() = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 3.dp.toPx()))
 
 private fun DrawScope.swatch(colour: Color) =
     drawRoundRect(colour, cornerRadius = CornerRadius(2.dp.toPx()))
 
 private fun DrawScope.dashed(colour: Color, from: Offset, to: Offset) =
-    drawLine(colour, from, to, 1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(
-        5.dp.toPx(), 3.dp.toPx())))
+    drawLine(colour, from, to, 1.5.dp.toPx(), pathEffect = dashes())
