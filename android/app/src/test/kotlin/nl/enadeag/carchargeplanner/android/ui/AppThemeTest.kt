@@ -81,6 +81,10 @@ class AppThemeTest {
         assertThat(sources).isEqualTo(SourceColours.DARK)
     }
 
+    /**
+     * On Robolectric the dynamic scheme (API 31 and later) is Material's default palette for dynamic colour, not a
+     * wallpaper's, so this checks that palette only; a phone's own wallpaper is for the maintainer's walk.
+     */
     @Test
     fun theDashboardsWarningFooterAndErrorsReachFourAndAHalfToOneInEveryScheme() {
         for (sdk in listOf(Build.VERSION_CODES.R, Build.VERSION_CODES.S)) {

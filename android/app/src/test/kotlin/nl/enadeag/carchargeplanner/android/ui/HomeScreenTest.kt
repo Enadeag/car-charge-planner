@@ -3,10 +3,12 @@ package nl.enadeag.carchargeplanner.android.ui
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
@@ -22,6 +24,9 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -605,5 +610,61 @@ class HomeScreenTest {
         compose.waitForIdle()
 
         footer.assertIsDisplayed()
+    }
+
+    private fun failedSave() {
+        access.writeFails = true
+        saves.update(KeyChanges.NONE) { it.withSystem(it.system().withHouseAndCar(House(0.9), it.system().car()),
+            it.typical()) }
+    }
+
+    private fun warningWords() = text(R.string.stale_warning, "08:51")
+
+    @Test
+    fun theStaleWarningIsOnePolitePieceOfTextWithoutTheSignInIt() {
+        clock("24")
+        show(lisbonWeek(freshness = Freshness.STALE))
+
+        val region = compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+
+        val config = region.fetchSemanticsNode().config
+        assertThat(config[SemanticsProperties.Text].joinToString("") { it.text }).isEqualTo(warningWords())
+        assertThat(config.getOrNull(SemanticsProperties.ContentDescription)).isNull()
+    }
+
+    @Test
+    fun theNoticeAndTheStaleWarningFollowTheSelectedTabOnceEach() {
+        clock("24")
+        failedSave()
+        show(lisbonWeek(freshness = Freshness.STALE))
+
+        tab("Tomorrow").performClick()
+        compose.waitForIdle()
+
+        compose.onAllNodesWithText(text(R.string.settings_save_failed)).assertCountEquals(1)
+        compose.onAllNodesWithText(text(R.string.action_close)).assertCountEquals(1)
+        compose.onAllNodesWithText(warningWords()).assertCountEquals(1)
+    }
+
+    @Test
+    fun halfWayBetweenTwoDaysTheNoticeAndTheStaleWarningAreStillOneEach() {
+        clock("24")
+        failedSave()
+        show(lisbonWeek(freshness = Freshness.STALE))
+        compose.mainClock.autoAdvance = false
+
+        compose.onNode(page).performTouchInput {
+            down(center)
+            moveBy(Offset(-width / 2f, 0f))
+        }
+        compose.mainClock.advanceTimeByFrame()
+        compose.mainClock.advanceTimeByFrame()
+
+        // two days are in the pager now: the notice and the warning must still be in one of them only
+        assertThat(compose.onAllNodes(page).fetchSemanticsNodes()).hasSize(2)
+        compose.onAllNodesWithText(text(R.string.action_close)).assertCountEquals(1)
+        compose.onAllNodesWithText(warningWords()).assertCountEquals(1)
+        compose.onAllNodes(page).onFirst().performTouchInput { up() }
+        compose.mainClock.autoAdvance = true
     }
 }

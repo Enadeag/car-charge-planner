@@ -89,6 +89,10 @@ class BarScaffoldTest {
     @Config(qualifiers = "w360dp-h640dp")
     fun onAPhoneEveryTitleIsWholeAtTwiceTheFontSize() = assertEveryTitleIsWhole()
 
+    /**
+     * Guards that the bar does not crowd the page on a small screen on its side; it does not test the title's
+     * wrapping, as the title fits on one line there.
+     */
     @Test
     @Config(qualifiers = "w480dp-h320dp-land")
     fun onASmallPhoneOnItsSideEveryTitleIsWholeAtTwiceTheFontSize() = assertEveryTitleIsWhole()

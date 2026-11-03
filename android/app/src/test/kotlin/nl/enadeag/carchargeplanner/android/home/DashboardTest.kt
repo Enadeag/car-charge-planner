@@ -163,4 +163,11 @@ class DashboardTest {
 
         assertThat(dashboard(gridAdvice = advice).gridAdvice?.minimum).isEqualTo(Percent(100.0))
     }
+
+    @Test
+    fun gridAdvicesMinimumStaysAtNothingWhenARoundingPutsTheSumJustBelow() {
+        val advice = GridAdvice(today.plusDays(1), -4.0, 3.9999999, 6.0, Optional.empty(), Optional.empty())
+
+        assertThat(dashboard(gridAdvice = advice).gridAdvice?.minimum).isEqualTo(Percent(0.0))
+    }
 }

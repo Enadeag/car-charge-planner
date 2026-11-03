@@ -136,7 +136,8 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
                 if (index == selected) {
                     notice()
                 }
-                if (dashboard.footer.stale) {
+                // as the notice: once, on the day in view
+                if (index == selected && dashboard.footer.stale) {
                     StaleWarning(words.time(dashboard.footer.fetchedAt))
                 }
                 if (dashboard.zone != phoneZone) {
@@ -226,7 +227,7 @@ private fun DayCard(day: DayModel, words: DashboardWords) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 day.figures.forEach {
-                    SourceChip(words.figure(it), sources.of(it.source), spoken = words.spokenFigure(it))
+                    SourceChip(words.figure(it), sources.of(it), spoken = words.spokenFigure(it))
                 }
             }
             val note = words.note(day)
