@@ -136,8 +136,14 @@ private fun PageScreen(session: SettingsSession, page: SettingsPage, snackbars: 
     if (page == SettingsPage.FORECAST) {
         SecureWindow()
     }
+    // a failed or refused save: the page scrolls to its top, where why is, also when Save was pressed far down
+    val saving by session.saving.collectAsStateWithLifecycle()
+    val refused by session.refused.collectAsStateWithLifecycle()
+    val failed = saving is SettingsSession.SaveState.Failed || saving == SettingsSession.SaveState.KeysNotSaved
+    val outcome = if (failed || refused) Triple(saving.takeIf { failed }, refused, problemsShown) else null
     BarPage(stringResource(page.title()), title, onUp = { session.back() }, actions = { SaveAction(session, page) },
-        snackbars = snackbars, status = { SaveStatus(session) }, lead = { SaveProblem(session) }) {
+        snackbars = snackbars, status = { SaveStatus(session) }, lead = { SaveProblem(session) },
+        scrollToTop = outcome) {
         val forms = session.forms
         when (page) {
             SettingsPage.SOLAR -> SolarPage(forms.panels, edits, problems)

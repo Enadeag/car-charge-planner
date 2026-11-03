@@ -301,7 +301,6 @@ class SettingsSession(private val handle: SavedStateHandle, private val numbers:
             val read = access.storedKeys()
             forms.forecast.loadKeys(read)
             keysNow.value = read
-            loadsNow.value++
         }
     }
 

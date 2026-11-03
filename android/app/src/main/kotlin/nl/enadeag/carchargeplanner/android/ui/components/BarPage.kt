@@ -30,6 +30,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -61,6 +62,8 @@ private val MOST_WIDTH = 600.dp
  * @param status what stays in view under the bar while the column scrolls: one short line at most, so the page keeps
  *     its room at any font size; nothing by default
  * @param lead what opens the column, without its spacing, such as why a save failed; nothing by default
+ * @param scrollToTop scrolls the column to its top whenever it changes to something other than null, so what [lead]
+ *     says is in view; null for none
  * @param content the page's parts, from top to bottom
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,7 +71,13 @@ private val MOST_WIDTH = 600.dp
 internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Unit)?,
     actions: @Composable RowScope.() -> Unit = {}, padded: Boolean = true, snackbars: SnackbarHostState? = null,
     status: @Composable ColumnScope.() -> Unit = {}, lead: @Composable ColumnScope.() -> Unit = {},
-    content: @Composable ColumnScope.() -> Unit) {
+    scrollToTop: Any? = null, content: @Composable ColumnScope.() -> Unit) {
+    val scroll = rememberScrollState()
+    LaunchedEffect(scrollToTop) {
+        if (scrollToTop != null) {
+            scroll.animateScrollTo(0)
+        }
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -90,7 +99,7 @@ internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Un
             Column(Modifier.widthIn(max = MOST_WIDTH).fillMaxWidth()) {
                 Column(Modifier.padding(horizontal = 16.dp), content = status)
                 Column(
-                    modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
+                    modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll)
                         .padding(if (padded) PaddingValues(16.dp) else PaddingValues(vertical = 8.dp)),
                 ) {
                     lead()

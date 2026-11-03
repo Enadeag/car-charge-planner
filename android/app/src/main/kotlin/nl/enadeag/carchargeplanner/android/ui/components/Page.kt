@@ -81,7 +81,8 @@ internal fun SectionHeading(text: String) {
 
 /**
  * Which row's heading takes the focus next, after Add or Remove changed the rows, such as the panel arrays: the new
- * row's after Add, the one before after Remove, so the focus does not fall off the page with a button that went.
+ * row's after Add, the one before after Remove, so the focus does not fall off the page with a button that went. When
+ * the last row goes, the focus is for the page's Add button instead.
  */
 @Stable
 internal class RowFocus {
@@ -89,8 +90,12 @@ internal class RowFocus {
     /** The row whose heading takes the focus once it is shown; null for none. */
     var next by mutableStateOf<Int?>(null)
 
+    /** Whether the page's Add button takes the focus, as no row is left; the button clears it once it has. */
+    var add by mutableStateOf(false)
+
     /**
-     * Readies the focus for a row that goes: to the row before it, or the one after when it is the first.
+     * Readies the focus for a row that goes: to the row before it, or the one after when it is the first, or the Add
+     * button when it is the only one.
      *
      * @param rows the rows as they are before it goes
      * @param row the row that goes
@@ -98,7 +103,27 @@ internal class RowFocus {
     fun removing(rows: List<Int>, row: Int) {
         val index = rows.indexOf(row)
         next = rows.getOrNull(index - 1) ?: rows.getOrNull(index + 1)
+        add = next == null
     }
+}
+
+/**
+ * Moves the focus to a page's Add button when [RowFocus] asks, as the last row went. The button is made focusable
+ * itself, as a button of Material is not in touch mode, where the focus would stay where it was.
+ *
+ * @param focus which row's heading or the Add button takes the focus next
+ * @return the modifier of the Add button, which takes the focus
+ */
+@Composable
+internal fun addFocus(focus: RowFocus): Modifier {
+    val requester = remember { FocusRequester() }
+    LaunchedEffect(focus.add) {
+        if (focus.add) {
+            requester.requestFocus()
+            focus.add = false
+        }
+    }
+    return Modifier.focusRequester(requester).focusable()
 }
 
 /**

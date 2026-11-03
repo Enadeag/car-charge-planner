@@ -32,6 +32,7 @@ import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -52,6 +53,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
+import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.android.settings.SettingsPage
 import nl.enadeag.carchargeplanner.android.settings.SettingsSession
@@ -240,6 +242,40 @@ class SettingsScreenTest {
         up()
         compose.waitForIdle()
         assertThat(session.page.value).isNull()
+        // the snackbar stays while the list opens
+        compose.onNodeWithText(text(R.string.settings_saved)).assertIsDisplayed()
+    }
+
+    @Test
+    fun aSecondSavesSnackbarReplacesTheFirstInsteadOfWaitingBehindIt() {
+        val session = show()
+        open(SettingsPage.CAR_AND_HOUSE)
+        compose.mainClock.autoAdvance = false
+
+        repeat(2) { time ->
+            session.forms.car.edit(CarForm.Field.BATTERY, "7$time")
+            compose.runOnIdle { session.save() }
+            compose.mainClock.advanceTimeBy(1_000)
+        }
+        compose.onNodeWithText(text(R.string.settings_saved)).assertExists()
+        compose.mainClock.advanceTimeBy(5_500)
+
+        compose.onNodeWithText(text(R.string.settings_saved)).assertDoesNotExist()
+    }
+
+    @Test
+    fun aFailedSaveFromTheBottomOfThePageScrollsBackToItsReason() {
+        val session = show(fontScaleTwo = true)
+        open(SettingsPage.CAR_AND_HOUSE)
+        session.forms.car.edit(CarForm.Field.BATTERY, "75")
+        access.writeFails = true
+        field(text(R.string.baseload)).performScrollTo()
+        compose.onNodeWithText(text(R.string.settings_save_failed)).assertDoesNotExist()
+
+        compose.onNodeWithText(text(R.string.action_save)).performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithText(text(R.string.settings_save_failed)).assertIsDisplayed()
     }
 
     @Test
@@ -513,6 +549,20 @@ class SettingsScreenTest {
         assertThat(drawn(apiKey)).isNotEqualTo("STORED1").hasSize("STORED1".length)
     }
 
+    /** Takes the focus off the headings, so what moves it back is what is under test. */
+    private fun focusAwayFromTheHeadings() {
+        compose.onAllNodes(hasSetTextAction()).onFirst().performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+    }
+
+    private fun array(number: Int) = compose.onNode(isHeading() and hasText(text(R.string.panel_array, number)))
+
+    private fun removeArray(number: Int) {
+        focusAwayFromTheHeadings()
+        click(R.string.panel_remove, number)
+        compose.waitForIdle()
+    }
+
     @Test
     fun addAndRemoveOfAnArrayMoveTheFocusToTheNewArrayAndToTheOneBefore() {
         show()
@@ -520,16 +570,52 @@ class SettingsScreenTest {
 
         click(R.string.panel_add)
         compose.waitForIdle()
-        compose.onNode(isHeading() and hasText(text(R.string.panel_array, 2))).assertIsFocused()
+        array(2).assertIsFocused()
         click(R.string.panel_add)
         compose.waitForIdle()
-        click(R.string.panel_remove, 3)
+        removeArray(3)
+
+        array(2).assertIsFocused()
+        removeArray(1)
+        array(1).assertIsFocused()
+    }
+
+    @Test
+    fun removingTheFirstOfSeveralArraysMovesTheFocusToTheNewFirst() {
+        show()
+        open(SettingsPage.SOLAR)
+        repeat(2) { click(R.string.panel_add) }
         compose.waitForIdle()
 
-        compose.onNode(isHeading() and hasText(text(R.string.panel_array, 2))).assertIsFocused()
-        click(R.string.panel_remove, 1)
+        removeArray(1)
+
+        array(1).assertIsFocused()
+    }
+
+    @Test
+    fun removingAMiddleArrayMovesTheFocusToTheOneBefore() {
+        show()
+        open(SettingsPage.SOLAR)
+        repeat(2) { click(R.string.panel_add) }
         compose.waitForIdle()
-        compose.onNode(isHeading() and hasText(text(R.string.panel_array, 1))).assertIsFocused()
+
+        removeArray(2)
+
+        array(1).assertIsFocused()
+    }
+
+    @Test
+    fun theFocusMovesAgainToAHeadingItAlreadyWentToOnceTheFocusLeftIt() {
+        show()
+        open(SettingsPage.SOLAR)
+        repeat(2) { click(R.string.panel_add) }
+        compose.waitForIdle()
+        removeArray(1)
+        array(1).assertIsFocused()
+
+        removeArray(2)
+
+        array(1).assertIsFocused()
     }
 
     @Test
@@ -542,10 +628,26 @@ class SettingsScreenTest {
             compose.waitForIdle()
         }
         compose.onNode(isHeading() and hasText(text(R.string.away_period, 2))).assertIsFocused()
+        focusAwayFromTheHeadings()
         click(R.string.away_remove, 2)
         compose.waitForIdle()
 
         compose.onNode(isHeading() and hasText(text(R.string.away_period, 1))).assertIsFocused()
+    }
+
+    @Test
+    fun removingTheOnlyAwayPeriodMovesTheFocusToAdd() {
+        show()
+        open(SettingsPage.AWAY)
+        click(R.string.away_add)
+        compose.waitForIdle()
+        focusAwayFromTheHeadings()
+
+        click(R.string.away_remove, 1)
+        compose.waitForIdle()
+
+        compose.onNodeWithText(text(R.string.away_none)).assertExists()
+        compose.onNodeWithText(text(R.string.away_add)).assertIsFocused()
     }
 
     /** The text a field draws, after its mask. */

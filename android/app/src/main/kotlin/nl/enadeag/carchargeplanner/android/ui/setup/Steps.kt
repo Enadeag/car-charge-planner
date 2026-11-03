@@ -28,6 +28,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.ProblemFocus
 import nl.enadeag.carchargeplanner.android.ui.components.SectionHeading
 import nl.enadeag.carchargeplanner.android.ui.components.TimeField
 import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
+import nl.enadeag.carchargeplanner.android.ui.components.addFocus
 import nl.enadeag.carchargeplanner.android.ui.components.RowHeading
 import nl.enadeag.carchargeplanner.android.ui.components.rememberFieldFocus
 import nl.enadeag.carchargeplanner.engine.config.Phases
@@ -178,7 +179,7 @@ internal fun HouseFields(house: HouseForm, edits: Edits, problems: ProblemFocus,
 /**
  * The weekly away periods, each with its controls named by its number, "None" when there are none, and Add. They
  * end the page, so the last period's end time has the keyboard's Done. After Add the focus goes to the new period's
- * heading, after Remove to the one before.
+ * heading, after Remove to the one before, to the next when the first went, or to Add when none is left.
  *
  * @param away the weekly away periods' form
  * @param edits counts each edit, so the fields show it
@@ -196,7 +197,7 @@ internal fun AwayPeriods(away: WeeklyAwayForm, edits: Edits, problems: ProblemFo
             AwayPeriod(away, row, index, rows, edits, problems, focus)
         }
     }
-    AppOutlinedButton(onClick = { edits.make { focus.next = away.add() } }) {
+    AppOutlinedButton(onClick = { edits.make { focus.next = away.add() } }, modifier = addFocus(focus)) {
         Text(stringResource(R.string.away_add))
     }
 }

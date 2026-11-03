@@ -178,6 +178,20 @@ class SettingsSessionTest {
     }
 
     @Test
+    fun sayingASavedMessageWasShownLeavesAFailureStanding() = runTest {
+        val session = session()
+        session.open(SettingsPage.CAR_AND_HOUSE)
+        session.forms.car.edit(CarForm.Field.BATTERY, "75")
+        access.writeFails = true
+        session.save()
+        runCurrent()
+
+        session.savedShown()
+
+        assertThat(session.saving.value).isEqualTo(SettingsSession.SaveState.Failed("No space left on device"))
+    }
+
+    @Test
     fun keysThatCouldNotBeStoredSaySoAndTheTypedKeyStays() = runTest {
         val session = session()
         session.open(SettingsPage.FORECAST)

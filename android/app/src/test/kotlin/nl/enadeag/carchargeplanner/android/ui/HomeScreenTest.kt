@@ -2,10 +2,13 @@ package nl.enadeag.carchargeplanner.android.ui
 
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.isHeading
@@ -69,12 +72,14 @@ class HomeScreenTest {
 
     private val saves = Saves(access, scope)
     private var settingsOpened = 0
+    private lateinit var focus: FocusManager
 
     private fun show(answer: Outlook, phoneZone: ZoneId = amsterdam, fontScaleTwo: Boolean = false): HomeOutlook {
         val outlook = HomeOutlook(access, scope) { }
         val notice = HomeNotice(saves, scope) { }
         compose.setContent {
             AppTheme {
+                focus = LocalFocusManager.current
                 if (fontScaleTwo) AtFontScaleTwo { HomeScreen(outlook, notice, { phoneZone }) { settingsOpened++ } }
                 else HomeScreen(outlook, notice, { phoneZone }) { settingsOpened++ }
             }
@@ -164,6 +169,9 @@ class HomeScreenTest {
             .assertExists()
         // Close is a button of its own, outside the live region
         assertThat(compose.liveRegionOf(text(R.string.action_close))).isNull()
+        // the title took the focus when the home opened; the focus is off it, so Close has to bring it back
+        compose.runOnIdle { focus.clearFocus() }
+        compose.onNode(isHeading() and hasText(text(R.string.home_title))).assertIsNotFocused()
         compose.onNodeWithText(text(R.string.action_close)).performScrollTo().performClick()
         compose.waitForIdle()
 
