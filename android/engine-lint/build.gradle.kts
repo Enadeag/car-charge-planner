@@ -2,7 +2,7 @@ import nl.enadeag.carchargeplanner.buildlogic.AndroidApiClassesCheck
 
 // The engine's sources once more, as an Android library that nothing uses, for two checks at the app's minSdk with
 // core library desugaring (ADR 0010). Lint's NewApi fails on a class or method that some Android version has but
-// Android 8 lacks and desugaring does not add; lint skips that check in a plain Java module such as :engine.
+// Android 10 lacks and desugaring does not add; lint skips that check in a plain Java module such as :engine.
 // checkAndroidApiClasses fails on a JDK class that no Android version has, which NewApi does not see.
 plugins {
     alias(libs.plugins.android.library)

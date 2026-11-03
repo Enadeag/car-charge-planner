@@ -10,7 +10,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** The smoke test on a device or emulator; the emulator job runs it on Android 8 (API 26), the app's minimum. */
+/** The smoke test on a device or emulator; the emulator job runs it on Android 10 (API 29), the app's minimum. */
 @RunWith(AndroidJUnit4::class)
 class OnTheDeviceTest {
 
@@ -23,7 +23,7 @@ class OnTheDeviceTest {
 
     /**
      * The values of `SunnyDayPlanTest`, on purpose. `PlanningPreferences.RECOMMENDED` calls `Duration.toSecondsPart`,
-     * which Android 8 lacks and desugaring adds.
+     * which Android 10 lacks and desugaring adds.
      */
     @Test
     fun aSummersDayHasTheChargeWindowItHasOnTheJvm() {

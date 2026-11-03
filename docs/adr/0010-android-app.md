@@ -66,3 +66,7 @@ Android's logic, in plain Kotlin classes, is tested with JUnit 5 on the JVM, and
 ## Note, 2026-11-02 (#329)
 
 The engine's libraries are no longer versioned in both builds. The Android build reads the versions of Jackson, slf4j, JUnit, AssertJ and ArchUnit from the parent `pom.xml` into its version catalog while it configures, so a Maven update reaches it without a second change; `checkMavenDrift` now holds only the list of the engine's libraries in Gradle to `engine/pom.xml`, by name. A version the Maven build pins outside those five (another entry of the parent's `dependencyManagement` in their groups, or a version on a dependency in `engine/pom.xml`) fails the Android configuration, so it cannot go unnoticed.
+
+## Note, 2026-11-03 (#332)
+
+The minimum Android version is **Android 10 (API 29)**, not Android 8. Core library desugaring stays: with it off at API 29, lint's `NewApi` fails on `Stream.toList` (API 34), `URLEncoder.encode` with a `Charset` (33) and `Duration.toSeconds`, `toSecondsPart` and `toNanosPart` (31). The emulator job runs on API 29.

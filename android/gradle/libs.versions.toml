@@ -3,8 +3,8 @@
 # read from the Maven build's pom.xml (maven-poms/, MavenVersions), so a Maven update of one of them reaches this build
 # too. A version that pom.xml lacks fails the build while it configures.
 [versions]
-# the oldest Android the app runs on (Android 8) and the API it is compiled against, for :app and :engine-lint
-android-min-sdk = "26"
+# the oldest Android the app runs on (Android 10) and the API it is compiled against, for :app and :engine-lint
+android-min-sdk = "29"
 android-compile-sdk = "36"
 agp = "9.5.0"
 kotlin = "2.4.21"
