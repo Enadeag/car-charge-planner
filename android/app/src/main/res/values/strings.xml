@@ -223,6 +223,40 @@
        charge level; both written already -->
   <string name="advice_ends_low">Without it the battery ends %1$s at %2$s%%, below the minimum of %3$s%%.</string>
 
+  <!-- the solar chart's card: its heading, and its legend, the words beside the chart's signs -->
+  <string name="chart_heading">Forecast</string>
+  <string name="chart_legend_solar">Solar</string>
+  <string name="chart_legend_house">House</string>
+  <string name="chart_legend_window">Charge window</string>
+  <!-- on the chart's line at the moment the plan was made, today only -->
+  <string name="chart_now">now</string>
+  <!-- the power at the top of the chart; %1$s the power in kW, written already, such as 4 -->
+  <string name="chart_scale">%1$s kW</string>
+  <!-- the chart in words, which a screen reader reads for it and which shows under it, in up to three sentences:
+       %1$s the day (Today, Tomorrow, Sunday); %2$s the highest solar power in kW, written already; %3$s its time;
+       %4$s the house's use in kW, written already -->
+  <string name="chart_spoken">%1$s, expected solar power: peak %2$s kW around %3$s; the house uses about %4$s kW.</string>
+  <!-- %1$s the day (Today, Tomorrow, Sunday) -->
+  <string name="chart_spoken_no_solar">%1$s, expected solar power: none.</string>
+  <!-- %1$s the day's charge windows, each a time_span_spoken, joined by commas -->
+  <string name="chart_spoken_windows">Charging: %1$s.</string>
+  <!-- %1$s the time the plan was made, today only -->
+  <string name="chart_spoken_now">Now %1$s.</string>
+
+  <!-- the battery bar's card: its heading, and the levels at the start of the day and after its charging, both
+       written already, such as 50 -->
+  <string name="battery_heading">Car battery</string>
+  <string name="battery_levels">%1$s → %2$s%%</string>
+  <!-- the marks on the battery bar; %1$s the minimum or target charge level, written already -->
+  <string name="battery_minimum">min %1$s%%</string>
+  <string name="battery_target">target %1$s%%</string>
+  <!-- the battery bar as a screen reader reads it, today: %1$s the level now; %2$s after charging; %3$s the minimum
+       charge level; %4$s the target charge level; all written already -->
+  <string name="battery_spoken_today">Car battery %1$s%% now, %2$s%% after charging; minimum %3$s%%, target %4$s%%.</string>
+  <!-- the same on another day: %1$s the level at its start; %2$s the day as in a sentence (tomorrow, Sunday);
+       %3$s after charging; %4$s the minimum; %5$s the target -->
+  <string name="battery_spoken_day">Car battery %1$s%% at the start of %2$s, %3$s%% after charging; minimum %4$s%%, target %5$s%%.</string>
+
   <!-- the one-off away periods: the heading, and the line when there are none -->
   <string name="one_off_heading">Car away</string>
   <string name="one_off_none">None entered for the coming days.</string>

@@ -9,6 +9,7 @@ import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource
+import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan
@@ -48,6 +49,18 @@ internal object Plans {
         "Open-Meteo", CREDIT, fetchedAt, freshness, role, primaryName, Optional.ofNullable(busyUntil))
 
     /**
+     * Hourly forecast steps of one day, by the clock in a time zone.
+     *
+     * @param zone the time zone of the hours
+     * @param day the day
+     * @param kw the power of each hour from 00:00, in kW; the hours after the last have no step
+     */
+    fun forecast(zone: ZoneId, day: LocalDate, vararg kw: Double): List<ForecastStep> = kw.indices.map {
+        ForecastStep(day.atStartOfDay(zone).plusHours(it.toLong()).toInstant(),
+            day.atStartOfDay(zone).plusHours(it + 1L).toInstant(), kw[it])
+    }
+
+    /**
      * A plan made at a moment, with one window list per day from that moment's day on; each day starts at 40% and
      * ends its charging 10 points higher per window.
      *
@@ -56,15 +69,19 @@ internal object Plans {
      * @param assumed whether the battery level is assumed
      * @param gridAdvice the grid advice, if any
      * @param source where the forecast came from; fetched when the plan was made by default
+     * @param forecast each day's forecast steps, by its date; none by default
+     * @param baseloadKw the house's use
      */
     fun planned(madeAt: ZonedDateTime, days: List<List<Window>>, assumed: Boolean = true,
-        gridAdvice: GridAdvice? = null, source: ForecastSource = source(madeAt.toInstant())): Outlook.Planned {
+        gridAdvice: GridAdvice? = null, source: ForecastSource = source(madeAt.toInstant()),
+        forecast: (LocalDate) -> List<ForecastStep> = { listOf() }, baseloadKw: Double = 0.3): Outlook.Planned {
         val level = Percent(40.0)
         val plans = days.mapIndexed { index, windows ->
             val after = Percent(40.0 + 10.0 * windows.size)
-            DayPlan(madeAt.toLocalDate().plusDays(index.toLong()), level, windows, after, after, 0.0, listOf())
+            val date = madeAt.toLocalDate().plusDays(index.toLong())
+            DayPlan(date, level, windows, after, after, 0.0, forecast(date))
         }
         return Outlook.Planned(madeAt.toInstant(), madeAt.zone, plans, level, assumed, Optional.ofNullable(gridAdvice),
-            listOf(), source, 0.3, Percent(20.0), Percent(80.0))
+            listOf(), source, baseloadKw, Percent(20.0), Percent(80.0))
     }
 }

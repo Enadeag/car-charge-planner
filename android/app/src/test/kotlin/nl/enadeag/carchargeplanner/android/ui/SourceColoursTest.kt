@@ -47,4 +47,30 @@ class SourceColoursTest {
         assertThat(colours.of(SourceFigure.Battery(BatteryLevels(Percent(50.0), Percent(74.0))))).isEqualTo(colours.car)
         assertThat(colours.of(SourceFigure.FromGrid(0.4))).isEqualTo(colours.grid)
     }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun theChartsTextsReachFourAndAHalfToOneAndTheirLinesAndMarksThreeToOneOnTheirGround(dark: Boolean) {
+        val chart = SourceColours.of(dark).chart
+        val texts = mapOf("text" to chart.text, "muted" to chart.muted, "battery levels" to chart.carText)
+        val marks = mapOf("solar line" to chart.solar, "window mark" to chart.car, "house line" to chart.muted,
+            "now line and battery marks" to chart.text)
+
+        texts.forEach { (name, colour) ->
+            assertThat(contrast(colour, chart.ground)).`as`("the contrast of %s in %s", name,
+                if (dark) "dark" else "light").isGreaterThanOrEqualTo(4.5)
+        }
+        marks.forEach { (name, colour) ->
+            assertThat(contrast(colour, chart.ground)).`as`("the contrast of %s in %s", name,
+                if (dark) "dark" else "light").isGreaterThanOrEqualTo(3.0)
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun theBatteryLevelStandsOutThreeToOneFromTheEmptyTrack(dark: Boolean) {
+        val chart = SourceColours.of(dark).chart
+
+        assertThat(contrast(chart.car, chart.gridLine)).isGreaterThanOrEqualTo(3.0)
+    }
 }

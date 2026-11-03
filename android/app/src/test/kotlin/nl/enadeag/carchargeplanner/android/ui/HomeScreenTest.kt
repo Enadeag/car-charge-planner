@@ -25,6 +25,9 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -55,6 +58,7 @@ import nl.enadeag.carchargeplanner.android.home.Plans
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
+import nl.enadeag.carchargeplanner.android.ui.home.AxisLabels
 import nl.enadeag.carchargeplanner.android.ui.home.HomeScreen
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
@@ -146,6 +150,18 @@ class HomeScreenTest {
             listOf(Plans.window(lisbon, today.plusDays(2), 11, 12, importKwh = 0.3))),
         gridAdvice = gridAdvice, source = Plans.source(today.atTime(8, 51).atZone(lisbon).toInstant(), freshness))
 
+    /** Sun from 07:00 to 18:00 on every day, at most 3.2 kW at noon. */
+    private val sun = DoubleArray(24) { hour -> if (hour == 12) 3.2 else if (hour in 7..17) 2.0 else 0.0 }
+
+    /** Monday in Lisbon in the sun, with two windows today and none on Tuesday. */
+    private fun sunnyDays() = Plans.planned(today.atTime(9, 0).atZone(lisbon), listOf(
+        listOf(Plans.window(lisbon, today, 13, 15), Plans.window(lisbon, today, 16, 17)), listOf()),
+        forecast = { Plans.forecast(lisbon, it, *sun) })
+
+    private fun axisLabels(): List<String> =
+        compose.onNode(SemanticsMatcher.keyIsDefined(AxisLabels), useUnmergedTree = true).fetchSemanticsNode()
+            .config[AxisLabels]
+
     @Test
     fun theTopAppBarNamesTheAppAndATabNamesEveryDayOfThePlanTodayFirst() {
         show(lisbonWeek())
@@ -163,7 +179,8 @@ class HomeScreenTest {
         show(lisbonWeek())
 
         compose.onNode(isHeading() and hasText("Today"), useUnmergedTree = true).assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.day_window)).assertIsDisplayed()
+        // the chart's legend says "Charge window" too, but is not read apart
+        compose.onNode(hasText(text(R.string.day_window)) and !NOT_READ_APART).assertIsDisplayed()
         compose.onNodeWithText("13:00 – 15:00").assert(hasContentDescription("13:00 to 15:00"))
         compose.onNodeWithText(text(R.string.day_set, 6, "1.4")).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.day_energy, "2.8")).assertIsDisplayed()
@@ -436,6 +453,8 @@ class HomeScreenTest {
             Freshness.STALE))
 
         tab("Vandaag").assertIsSelected()
+        compose.assertReadAsOne(text(R.string.chart_spoken_no_solar, "Vandaag"), Role.Image)
+        compose.assertReadAsOne(text(R.string.battery_spoken_today, "40", "60", "20", "80"), Role.Image)
         compose.onNodeWithText(text(R.string.advice_runs_empty, "morgen", "30") + " " + text(R.string.advice_no_room))
             .assertExists()
         compose.assertShowsNoneOf(englishOnlyTexts())
@@ -666,5 +685,113 @@ class HomeScreenTest {
         compose.onAllNodesWithText(warningWords()).assertCountEquals(1)
         compose.onAllNodes(page).onFirst().performTouchInput { up() }
         compose.mainClock.autoAdvance = true
+    }
+
+    @Test
+    fun theSolarChartIsOneImageThatSaysTheDayInASentenceThatAlsoShowsUnderIt() {
+        clock("24")
+        show(sunnyDays())
+
+        val said = listOf(text(R.string.chart_spoken, "Today", "3.2", "12:00", "0.3"),
+            text(R.string.chart_spoken_windows, "13:00 to 15:00, 16:00 to 17:00"),
+            text(R.string.chart_spoken_now, "09:00")).joinToString(" ")
+        compose.assertReadAsOne(said, Role.Image).performScrollTo().assertIsDisplayed()
+        compose.assertShownButNotReadApart(said)
+        compose.onNode(isHeading() and hasText(text(R.string.chart_heading))).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun theLegendNamesTheSolarCurveTheHouseAndTheChargeWindowsInWords() {
+        show(sunnyDays())
+
+        listOf(R.string.chart_legend_solar, R.string.chart_legend_house, R.string.chart_legend_window).forEach {
+            compose.assertShownButNotReadApart(text(it))
+        }
+    }
+
+    @Test
+    fun onAnotherDayTheChartSaysThatDayWithoutNow() {
+        clock("24")
+        show(sunnyDays())
+
+        tab("Tomorrow").performClick()
+        compose.waitForIdle()
+
+        compose.assertReadAsOne(text(R.string.chart_spoken, "Tomorrow", "3.2", "12:00", "0.3"), Role.Image)
+    }
+
+    @Test
+    fun aDayWithoutSunSaysItsChartHasNone() {
+        show(lisbonWeek())
+
+        compose.assertReadAsOne(text(R.string.chart_spoken_no_solar, "Today"), Role.Image)
+    }
+
+    @Test
+    fun theTimeAxisMarksEveryThirdHourOnThePhones24HourClock() {
+        clock("24")
+        show(sunnyDays())
+
+        assertThat(axisLabels()).containsExactly("06", "09", "12", "15", "18")
+    }
+
+    @Test
+    fun theTimeAxisMarksFewerHoursAtTwiceTheFontSizeOnThePhones12HourClock() {
+        clock("12")
+        var twice by mutableStateOf(false)
+        val outlook = HomeOutlook(access, scope, clock) { }
+        val notice = HomeNotice(saves, scope) { }
+        compose.setContent {
+            AppTheme {
+                if (twice) AtFontScaleTwo { HomeScreen(outlook, notice, { amsterdam }) { } }
+                else HomeScreen(outlook, notice, { amsterdam }) { }
+            }
+        }
+        compose.waitForIdle()
+        answer(sunnyDays())
+        val normal = axisLabels()
+
+        twice = true
+        compose.waitForIdle()
+        val large = axisLabels()
+
+        assertThat(normal).hasSize(5).allMatch { it.endsWith("AM") || it.endsWith("PM") }
+        assertThat(large).hasSize(3).isSubsetOf(normal)
+    }
+
+    @Test
+    fun theBatteryBarIsOneImageThatSaysTheLevelsWhichAlsoShowWithItsMarks() {
+        show(lisbonWeek())
+
+        compose.assertReadAsOne(text(R.string.battery_spoken_today, "40", "60", "20", "80"), Role.Image)
+            .performScrollTo().assertIsDisplayed()
+        compose.onNode(isHeading() and hasText(text(R.string.battery_heading))).performScrollTo().assertIsDisplayed()
+        compose.assertShownButNotReadApart(text(R.string.battery_levels, "40", "60"))
+        compose.assertShownButNotReadApart(text(R.string.battery_minimum, "20"))
+        compose.assertShownButNotReadApart(text(R.string.battery_target, "80"))
+    }
+
+    @Test
+    fun onAnotherDayTheBatteryBarSaysTheLevelAtItsStart() {
+        show(lisbonWeek())
+
+        tab("Wednesday").performClick()
+        compose.waitForIdle()
+
+        compose.assertReadAsOne(text(R.string.battery_spoken_day, "40", "Wednesday", "50", "20", "80"), Role.Image)
+        compose.assertShownButNotReadApart(text(R.string.battery_levels, "40", "50"))
+    }
+
+    @Test
+    @Config(qualifiers = "w480dp-h320dp-land")
+    fun onASmallPhoneOnItsSideAtTwiceTheFontSizeTheChartAndTheBatteryBarCanBeScrolledTo() {
+        show(sunnyDays(), fontScaleTwo = true)
+
+        compose.onNode(SemanticsMatcher.keyIsDefined(AxisLabels), useUnmergedTree = true).performScrollTo()
+            .assertIsDisplayed()
+        compose.onNode(hasContentDescription(text(R.string.battery_spoken_today, "40", "60", "20", "80")),
+            useUnmergedTree = true).performScrollTo().assertIsDisplayed()
+        compose.assertShownButNotReadApart(text(R.string.battery_target, "80"))
+        compose.assertScrollsToShow(hasText(Plans.CREDIT, substring = true))
     }
 }

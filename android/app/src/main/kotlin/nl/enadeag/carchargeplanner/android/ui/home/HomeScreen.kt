@@ -74,8 +74,8 @@ import nl.enadeag.carchargeplanner.android.ui.components.inEnglish
 
 /**
  * The home after set-up: the dashboard. A tab per day of the plan, Today first, over a pager that swipes between them,
- * each day with its charge windows and figures; today's also with the grid advice; every day with the coming one-off
- * away periods and the forecast's footer. Refresh and Settings are the top app bar's actions, and a pull asks for the
+ * each day with its charge windows and figures; today's also with the grid advice; every day with its solar chart,
+ * its battery bar, the coming one-off away periods and the forecast's footer. Refresh and Settings are the top app bar's actions, and a pull asks for the
  * plan too; coming back to the app asks again when the plan is old. The times are in the home's time zone, named when
  * it is not the phone's, on the phone's 12- or 24-hour clock. A Settings save that no screen showed yet shows here
  * until the owner closes it, in a live region.
@@ -145,6 +145,8 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
                 }
                 DayCard(day, words)
                 dashboard.adviceOn(day)?.let { GridAdviceCard(it, words) }
+                SolarCard(day, words)
+                BatteryCard(day, dashboard.levels, words)
                 AwayList(dashboard.away, words)
                 FooterLine(dashboard.footer, words)
             }

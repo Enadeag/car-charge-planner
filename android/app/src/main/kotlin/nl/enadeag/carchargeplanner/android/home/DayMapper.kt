@@ -10,7 +10,8 @@ import nl.enadeag.carchargeplanner.engine.plan.GridAdvice
  * The days of one plan as the dashboard's tabs show them, in the home's time zone, as the desktop's `DayMapper`
  * does; trips are left out.
  *
- * @param planned the plan whose time zone, day of making, assumed battery level and grid advice the days are told in
+ * @param planned the plan whose time zone, day of making, assumed battery level, grid advice and forecast the days
+ *     are told in
  */
 class DayMapper(planned: Outlook.Planned) {
 
@@ -19,6 +20,7 @@ class DayMapper(planned: Outlook.Planned) {
         const val NO_GRID_KWH = 0.05
     }
 
+    private val charts = SolarChartMapper(planned)
     private val today: LocalDate = planned.madeAt().atZone(planned.zone()).toLocalDate()
     private val assumed = if (planned.batteryAssumed()) planned.batteryLevelPct() else null
 
@@ -51,6 +53,7 @@ class DayMapper(planned: Outlook.Planned) {
             later = day.windows().drop(1),
             battery = BatteryLevels(day.startLevelPct(), day.levelAfterChargingPct()),
             assumedLevel = assumed.takeIf { day.date() == today },
+            chart = charts.map(day),
         )
     }
 }

@@ -16,6 +16,7 @@ import nl.enadeag.carchargeplanner.engine.plan.Window
  * @property battery the battery level at the start of the day and after its charging
  * @property assumedLevel the battery level the plan assumed, as the day's note says; only today has it, and only
  *     while the owner entered no level
+ * @property chart the day's expected solar power, the house's use and the charge windows, as the chart draws them
  * @throws IllegalArgumentException when the day is [DayKind.SOLAR] without a main window, or has one while it is
  *     another kind, or has later windows without a main one
  */
@@ -27,6 +28,7 @@ data class DayModel(
     val later: List<Window>,
     val battery: BatteryLevels,
     val assumedLevel: Percent?,
+    val chart: SolarChart,
 ) {
 
     init {
@@ -120,6 +122,14 @@ data class MainCharge(val window: Window, val energyKwh: Double, val solarShare:
  * @property afterPct after the day's charging; the start's when the day has none
  */
 data class BatteryLevels(val startPct: Percent, val afterPct: Percent)
+
+/**
+ * The minimum and target charge levels of the plan, which every day's battery bar marks.
+ *
+ * @property minimum the minimum charge level
+ * @property target the target charge level
+ */
+data class ChargeLevels(val minimum: Percent, val target: Percent)
 
 /** Where a day's charge comes from. */
 enum class DayKind {

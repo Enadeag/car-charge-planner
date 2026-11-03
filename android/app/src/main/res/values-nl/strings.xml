@@ -175,6 +175,24 @@
   <string name="advice_runs_empty">Anders raakt de accu %1$s leeg; het minimum is %2$s%%.</string>
   <string name="advice_ends_low">Anders eindigt de accu %1$s op %2$s%%, onder het minimum van %3$s%%.</string>
 
+  <string name="chart_heading">Voorspelling</string>
+  <string name="chart_legend_solar">Zonnestroom</string>
+  <string name="chart_legend_house">Huis</string>
+  <string name="chart_legend_window">Laadvenster</string>
+  <string name="chart_now">nu</string>
+  <string name="chart_scale">%1$s kW</string>
+  <string name="chart_spoken">%1$s, verwachte zonnestroom: piek %2$s kW rond %3$s; het huis gebruikt ongeveer %4$s kW.</string>
+  <string name="chart_spoken_no_solar">%1$s, verwachte zonnestroom: geen.</string>
+  <string name="chart_spoken_windows">Laden: %1$s.</string>
+  <string name="chart_spoken_now">Nu %1$s.</string>
+
+  <string name="battery_heading">Accu van de auto</string>
+  <string name="battery_levels">%1$s → %2$s%%</string>
+  <string name="battery_minimum">min. %1$s%%</string>
+  <string name="battery_target">doel %1$s%%</string>
+  <string name="battery_spoken_today">Accu van de auto nu %1$s%%, na het laden %2$s%%; minimum %3$s%%, doel %4$s%%.</string>
+  <string name="battery_spoken_day">Accu van de auto %1$s%% aan het begin van %2$s, na het laden %3$s%%; minimum %4$s%%, doel %5$s%%.</string>
+
   <string name="one_off_heading">Afwezig</string>
   <string name="one_off_none">Niets ingevuld voor de komende dagen.</string>
   <string name="one_off_all_day">%1$s, hele dag</string>
