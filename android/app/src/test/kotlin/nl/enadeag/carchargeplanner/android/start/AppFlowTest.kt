@@ -405,6 +405,28 @@ class AppFlowTest {
     }
 
     @Test
+    fun aBatteryLevelSavedWhileARefreshRunsAsksAgainAndOnlyTheNewestAnswerCounts() = runTest {
+        val access = FakeEngineAccess(StartState.Ready(config))
+        val home = plannedHome(access, SavedStateHandle())
+        home.outlook.refresh()
+        runCurrent()
+        home.battery.open()
+        home.battery.edit("64")
+
+        home.battery.save()
+        runCurrent()
+
+        assertThat(access.outlooks).hasSize(3)
+        access.outlooks[1].complete(Outlook.NoForecast("asked before the level was saved"))
+        runCurrent()
+        assertThat(home.outlook.refreshing.value).isTrue()
+        access.outlooks[2].complete(planned)
+        runCurrent()
+        assertThat(home.outlook.refreshing.value).isFalse()
+        assertThat(home.outlook.state.value).isInstanceOf(HomeOutlook.State.Planned::class.java)
+    }
+
+    @Test
     fun theBatteryEntryComesBackWithWhatWasTypedAfterTheSystemEndedTheApp() = runTest {
         val access = FakeEngineAccess(StartState.Ready(config))
         val handle = SavedStateHandle()
@@ -432,6 +454,23 @@ class AppFlowTest {
         runCurrent()
 
         assertThat(flow.screen.value).isInstanceOf(AppFlow.Screen.SetUp::class.java)
+        assertThat(handle.keys().filter { it.startsWith("battery") }).isEmpty()
+    }
+
+    @Test
+    fun aHomeThatLeadsToTheSettingsFilesProblemForgetsItsBatteryEntry() = runTest {
+        val access = FakeEngineAccess(StartState.Ready(config))
+        val handle = SavedStateHandle()
+        val flow = flow(access, handle = handle)
+        val home = flow.screen.value as AppFlow.Screen.Home
+        home.battery.open()
+        home.battery.edit("64")
+        access.settings = StartState.Unusable("engine.json", "not valid JSON")
+
+        access.outlooks.single().complete(Outlook.NotSetUp(Path.of("engine.json")))
+        runCurrent()
+
+        assertThat(flow.screen.value).isInstanceOf(AppFlow.Screen.Unusable::class.java)
         assertThat(handle.keys().filter { it.startsWith("battery") }).isEmpty()
     }
 }

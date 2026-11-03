@@ -12,7 +12,6 @@ import nl.enadeag.carchargeplanner.android.form.FieldProblem
 import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.engine.config.Percent
-import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -86,8 +85,7 @@ class BatteryEntryTest {
         runCurrent()
 
         assertThat(entry.problems.value)
-            .containsExactlyEntriesOf(mapOf(BatteryEntry.Field.LEVEL to
-                FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)))
+            .containsExactlyEntriesOf(mapOf(BatteryEntry.Field.LEVEL to FieldProblem.NotFrom0To100))
         assertThat(entry.problemsShown.value).isEqualTo(1)
         assertThat(access.batteryLevels).isEmpty()
         assertThat(entry.open.value).isTrue()
@@ -120,6 +118,30 @@ class BatteryEntryTest {
         assertThat(entry.problems.value)
             .containsExactlyEntriesOf(mapOf(BatteryEntry.Field.LEVEL to FieldProblem.NotANumber))
         assertThat(access.batteryLevels).isEmpty()
+    }
+
+    @Test
+    fun eachRefusedSaveCountsAsAProblemShownAgainSoTheFieldTakesTheFocusAgain() = runTest {
+        val entry = typed("101")
+
+        entry.save()
+        entry.save()
+        runCurrent()
+
+        assertThat(entry.problemsShown.value).isEqualTo(2)
+    }
+
+    @Test
+    fun aRefusedLevelIsForgottenWhenTheEntryIsCancelledAndOpenedAgain() = runTest {
+        val entry = typed("101")
+        entry.save()
+        runCurrent()
+
+        entry.cancel()
+        entry.open()
+
+        assertThat(entry.problems.value).isEmpty()
+        assertThat(entry.text.value).isEmpty()
     }
 
     @Test
@@ -174,6 +196,19 @@ class BatteryEntryTest {
             "battery.json is not written: written by a newer version of the app"))
         assertThat(entry.savedToShow.value).isFalse()
         assertThat(plannedAgain).isZero()
+    }
+
+    @Test
+    fun aFailedSaveIsForgottenWhenTheEntryIsCancelledAndOpenedAgain() = runTest {
+        access.batteryFails = "No space left on device"
+        val entry = typed("64")
+        entry.save()
+        runCurrent()
+
+        entry.cancel()
+        entry.open()
+
+        assertThat(entry.saving.value).isEqualTo(BatteryEntry.SaveState.Idle)
     }
 
     @Test
@@ -251,6 +286,16 @@ class BatteryEntryTest {
         assertThat(entry.discardAsked.value).isFalse()
         assertThat(batteryKeys()).isEmpty()
         assertThat(access.batteryLevels).isEmpty()
+    }
+
+    @Test
+    fun backWithOnlyASpaceTypedAsksAsTheFieldIsNotEmpty() = runTest {
+        val entry = typed(" ")
+
+        entry.back()
+
+        assertThat(entry.discardAsked.value).isTrue()
+        assertThat(entry.open.value).isTrue()
     }
 
     @Test

@@ -163,7 +163,7 @@ class SettingsScreenTest {
             compose.waitForIdle()
             if (page == SettingsPage.AWAY) {
                 compose.assertShowsNoneOf(englishOnly)
-                click(R.string.settings_discard)
+                click(R.string.discard)
                 compose.waitForIdle()
             }
         }
@@ -348,8 +348,8 @@ class SettingsScreenTest {
         compose.waitForIdle()
 
         compose.onNode(isDialog()).assertExists()
-        compose.onNodeWithText(text(R.string.settings_discard_question)).assertExists()
-        click(R.string.settings_keep_editing)
+        compose.onNodeWithText(text(R.string.discard_question)).assertExists()
+        click(R.string.keep_editing)
         compose.waitForIdle()
         compose.onNode(isDialog()).assertDoesNotExist()
         field(text(R.string.car_battery)).assert(hasText("75"))
@@ -364,7 +364,7 @@ class SettingsScreenTest {
 
         up()
         compose.waitForIdle()
-        click(R.string.settings_discard)
+        click(R.string.discard)
         compose.waitForIdle()
 
         assertThat(session.page.value).isNull()
@@ -901,7 +901,7 @@ class SettingsScreenTest {
         click(R.string.action_save)
         compose.waitForIdle()
 
-        compose.onNodeWithText(text(R.string.settings_saving)).assertIsNotEnabled()
+        compose.onNodeWithText(text(R.string.saving)).assertIsNotEnabled()
     }
 
     @Test
@@ -936,7 +936,7 @@ class SettingsScreenTest {
         compose.waitForIdle()
         assertThat(secure()).isTrue()
 
-        click(R.string.settings_discard)
+        click(R.string.discard)
         compose.waitForIdle()
 
         assertThat(secure()).isFalse()

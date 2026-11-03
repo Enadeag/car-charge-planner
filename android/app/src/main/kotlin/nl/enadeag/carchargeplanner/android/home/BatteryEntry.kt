@@ -62,6 +62,7 @@ class BatteryEntry(private val handle: SavedStateHandle, private val numbers: Nu
         private const val PREFIX = "battery"
         private const val OPEN = "$PREFIX.open"
         private const val DISCARD = "$PREFIX.discard"
+        private val TOO_LARGE = FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)
 
         /**
          * Forgets everything the entry kept in the handle, as the home it belongs to ends.
@@ -129,6 +130,7 @@ class BatteryEntry(private val handle: SavedStateHandle, private val numbers: Nu
         }
         val level = level() ?: return
         savingNow.value = SaveState.Saving
+        // a save cut off as the home ends may still have stored the level
         scope.launch {
             when (val outcome = access.saveBatteryLevel(level)) {
                 BatteryLevelSave.Saved -> {
@@ -161,10 +163,7 @@ class BatteryEntry(private val handle: SavedStateHandle, private val numbers: Nu
     }
 
     /** Throws the typed level away and closes, as the owner chose Discard. */
-    fun discard() {
-        ask(false)
-        close()
-    }
+    fun discard() = close()
 
     /** Stays in the entry with what was typed, as the owner chose Keep editing. */
     fun keepEditing() = ask(false)
@@ -177,9 +176,11 @@ class BatteryEntry(private val handle: SavedStateHandle, private val numbers: Nu
     /** The typed level; null when it is refused, its problem then shown. */
     private fun level(): Percent? {
         val problem = when (val typed = numbers.readWhole(form.text(Field.LEVEL))) {
-            is NumberText.WholeNumber.Wrong -> typed.problem
+            // a number too large to read is outside the range too
+            is NumberText.WholeNumber.Wrong -> if (typed.problem == TOO_LARGE) FieldProblem.NotFrom0To100
+                else typed.problem
             is NumberText.WholeNumber.Read -> if (typed.value in 0..100) return Percent(typed.value.toDouble())
-                else FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)
+                else FieldProblem.NotFrom0To100
         }
         form.show(mapOf(Field.LEVEL to problem))
         problemsShownNow.value++

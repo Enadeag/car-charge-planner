@@ -34,10 +34,8 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -118,7 +116,7 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
     }) {
         when (val now = state) {
             is HomeOutlook.State.Planned -> Days(now.dashboard, refreshing, phoneZone(), outlook::refresh,
-                Battery(battery::open, update)) {
+                BatteryAction(battery::open, update)) {
                 Notice(notice, closed)
             }
             else -> Refreshable(refreshing, outlook::refresh) {
@@ -129,14 +127,6 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
     }
     BatteryEntryDialog(battery)
 }
-
-/**
- * Today's way into the entry of the battery level.
- *
- * @property open opens the entry
- * @property focus moves the focus to the button that opens it
- */
-private class Battery(val open: () -> Unit, val focus: FocusRequester)
 
 /**
  * What the battery entry's save came to, beside the entry itself: a level saved says so in a snackbar, which a screen
@@ -160,22 +150,29 @@ private fun BatteryOutcome(battery: BatteryEntry, snackbars: SnackbarHostState, 
         }
     }
     val open by battery.open.collectAsStateWithLifecycle()
-    var wasOpen by remember { mutableStateOf(open) }
+    val seen = remember { Seen(open) }
     LaunchedEffect(open) {
-        if (wasOpen && !open) {
+        if (seen.open && !open) {
             // the dialog's window gives the focus back once it is gone, which this waits for
             withFrameNanos { }
             closed()
         }
-        wasOpen = open
+        seen.open = open
     }
 }
+
+/**
+ * Whether the battery entry was open when last looked at, which drawing never reads.
+ *
+ * @property open true when it was
+ */
+private class Seen(var open: Boolean)
 
 /** A tab per day over a pager, kept in step: a tab's click moves the pager, a swipe moves the tab. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZone: ZoneId, refresh: () -> Unit,
-    battery: Battery, notice: @Composable () -> Unit) {
+    battery: BatteryAction, notice: @Composable () -> Unit) {
     val words = dashboardWords(dashboard.zone)
     val days = dashboard.days
     val pager = rememberPagerState { days.size }
@@ -207,11 +204,7 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
                 DayCard(day, words)
                 dashboard.adviceOn(day)?.let { GridAdviceCard(it, words) }
                 SolarCard(day, words)
-                if (day.name == DayName.Today) {
-                    BatteryCard(day, dashboard.levels, words, battery.open, battery.focus)
-                } else {
-                    BatteryCard(day, dashboard.levels, words)
-                }
+                BatteryCard(day, dashboard.levels, words, battery.takeIf { day.name == DayName.Today })
                 AwayList(dashboard.away, words)
                 FooterLine(dashboard.footer, words)
             }

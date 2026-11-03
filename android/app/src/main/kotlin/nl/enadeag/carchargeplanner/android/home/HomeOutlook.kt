@@ -20,10 +20,9 @@ import org.slf4j.LoggerFactory
  * The dashboard's plan: asked when the home opens, unless it comes back from Settings where nothing changed, again on
  * Refresh or a pull, again when the owner comes back to the app and the plan shown is older than [STALE_AFTER], again
  * when a Settings save changes something while the home is shown, and again after the owner entered the battery
- * level, only the latest answer counting. Refresh
- * keeps a plan in view while the new one is made; a Settings change does not, as the plan shown no longer fits. A
- * settings file that is gone or cannot be used is handed on, so the app shows set-up or the file's problem instead.
- * Called from the main thread.
+ * level, only the latest answer counting. Refresh keeps a plan in view while the new one is made; a Settings change
+ * does not, as the plan shown no longer fits. A settings file that is gone or cannot be used is handed on, so the app
+ * shows set-up or the file's problem instead. Called from the main thread.
  *
  * @param access the engine's plan and the one-off away periods
  * @param scope where the plan is asked, the screen's

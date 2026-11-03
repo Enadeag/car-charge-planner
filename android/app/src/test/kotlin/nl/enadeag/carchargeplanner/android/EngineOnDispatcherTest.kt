@@ -1,7 +1,9 @@
 package nl.enadeag.carchargeplanner.android
 
+import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.FileAttribute
 import java.security.KeyStoreException
 import java.time.Instant
 import java.time.ZoneId
@@ -11,6 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.CoroutineContext
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.runBlocking
@@ -26,8 +29,11 @@ import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets
+import nl.enadeag.carchargeplanner.engine.store.FilePrivacy
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles
 import nl.enadeag.carchargeplanner.engine.store.StoredJson
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -174,6 +180,43 @@ class EngineOnDispatcherTest {
             assertThat(failed.detail).contains("newer version")
         }
         assertThat(file.readText()).isEqualTo(newer)
+    }
+
+    /** File privacy that fails, as a platform's part may, with what it is given. */
+    private class FailingPrivacy(private val failure: Exception) : FilePrivacy {
+        override fun newFileAttributes(file: Path): List<FileAttribute<*>> = throw failure
+        override fun newFolderAttributes(folder: Path): List<FileAttribute<*>> = throw failure
+        override fun tighten(path: Path): Boolean = throw failure
+    }
+
+    /** The engine on files that fail with this as they are written. */
+    private fun writingFails(failure: Exception): EngineOnDispatcher {
+        val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys)
+        return EngineOnDispatcher(AppEngine.build(filesFolder, platform.http(), PrivateFiles(FailingPrivacy(failure)),
+            platform.apiKeys(), QuietNotifier), dispatcher)
+    }
+
+    @Test
+    fun aBatteryLevelSaveThatIsCancelledStaysCancelledInsteadOfFailing() {
+        val access = writingFails(CancellationException("the home ended"))
+
+        assertThatThrownBy { runBlocking { access.saveBatteryLevel(Percent(64.0)) } }
+            .isInstanceOf(CancellationException::class.java)
+    }
+
+    @Test
+    fun anotherProblemWhileTheBatteryLevelIsStoredIsAFailureWithItsWords() = runBlocking<Unit> {
+        val access = writingFails(IllegalStateException("the folder went away"))
+
+        assertThat(access.saveBatteryLevel(Percent(64.0))).isEqualTo(BatteryLevelSave.Failed("the folder went away"))
+    }
+
+    @Test
+    fun aProblemWithoutWordsIsAFailureNamedByItsKind() = runBlocking<Unit> {
+        assertThat(writingFails(IOException()).saveBatteryLevel(Percent(64.0)))
+            .isEqualTo(BatteryLevelSave.Failed("IOException"))
+        assertThat(writingFails(IllegalStateException()).saveBatteryLevel(Percent(64.0)))
+            .isEqualTo(BatteryLevelSave.Failed("IllegalStateException"))
     }
 
     @Test

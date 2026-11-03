@@ -98,6 +98,14 @@ internal fun SolarCard(day: DayModel, words: DashboardWords) {
 }
 
 /**
+ * Today's way into the entry of the battery level, at the end of its battery card.
+ *
+ * @property open opens the entry
+ * @property focus moves the focus to the button that opens it
+ */
+internal class BatteryAction(val open: () -> Unit, val focus: FocusRequester)
+
+/**
  * A day's battery, as the desktop's bar: the level at the start, the level after charging outlined beyond it, and
  * marks at the minimum and target charge levels with their words under them; the levels in words above it. A screen
  * reader reads the bar as one sentence, with the levels; their words are not read apart. Today's card ends with the
@@ -106,12 +114,11 @@ internal fun SolarCard(day: DayModel, words: DashboardWords) {
  * @param day the day, with its levels
  * @param levels the minimum and target charge levels
  * @param words the dashboard's words
- * @param update opens the entry of the level; null on a day whose level cannot be entered, any but today
- * @param updateFocus moves the focus to that button, as when the entry closes
+ * @param update the button that opens the entry of the level; null on a day whose level cannot be entered, any but
+ *     today
  */
 @Composable
-internal fun BatteryCard(day: DayModel, levels: ChargeLevels, words: DashboardWords, update: (() -> Unit)? = null,
-    updateFocus: FocusRequester = remember { FocusRequester() }) {
+internal fun BatteryCard(day: DayModel, levels: ChargeLevels, words: DashboardWords, update: BatteryAction? = null) {
     val colours = LocalSourceColours.current.chart
     ChartCard(colours) {
         Text(stringResource(R.string.battery_heading), style = MaterialTheme.typography.titleMedium,
@@ -123,8 +130,8 @@ internal fun BatteryCard(day: DayModel, levels: ChargeLevels, words: DashboardWo
             // filled, so its words stand on Material's own button colours, whatever the card's fixed ground; it may
             // take the focus also in touch mode, where a button takes none, so the focus comes back to it, and a
             // screen reader with it, when the entry closes
-            AppButton(onClick = update,
-                modifier = Modifier.focusProperties { canFocus = true }.focusRequester(updateFocus)) {
+            AppButton(onClick = update.open,
+                modifier = Modifier.focusProperties { canFocus = true }.focusRequester(update.focus)) {
                 Text(stringResource(R.string.battery_update))
             }
         }

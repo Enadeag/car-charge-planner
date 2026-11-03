@@ -151,6 +151,8 @@
   <string name="problem_letters_and_digits">Use only letters and digits, at most 64: that is what the provider\'s API keys look like.</string>
   <string name="problem_one_line">Use one line, without line breaks or other control characters.</string>
   <string name="problem_no_place">Choose where your home is: search for it, or enter its coordinates.</string>
+  <!-- under the battery level's field, for a whole number below 0 or above 100 -->
+  <string name="problem_level_out_of_range">Type a level from 0 to 100.</string>
 
   <string name="unusable_title">Settings file cannot be used</string>
   <!-- %1$s the settings file's name, engine.json -->
@@ -204,8 +206,9 @@
   <!-- %1$s the window's times, a time_span; %2$d its charge current in A -->
   <string name="day_later_window">%1$s at %2$d A</string>
   <!-- that the plan starts from the assumed battery level, and how to enter the real one; %1$s the assumed level,
-       written already, such as 40; "Car battery" is the heading of the battery's card (battery_heading) -->
-  <string name="day_battery_assumed">The plan assumes the battery is at %1$s%%. Enter the level the car shows under Car battery.</string>
+       written already, such as 40; "Update battery level" is the button (battery_update) on the card headed "Car
+       battery" (battery_heading) -->
+  <string name="day_battery_assumed">The plan assumes the battery is at %1$s%%. Use Update battery level under Car battery.</string>
 
   <!-- the heading of the grid advice on today's tab, drawn in the grid's colours -->
   <string name="advice_label">Grid advice</string>
@@ -257,8 +260,9 @@
   <!-- the same on another day: %1$s the level at its start; %2$s the day as in a sentence (tomorrow, Sunday);
        %3$s after charging; %4$s the minimum; %5$s the target -->
   <string name="battery_spoken_day">Car battery %1$s%% at the start of %2$s, %3$s%% after charging; minimum %4$s%%, target %5$s%%.</string>
-  <!-- added to today's battery_spoken_today while the plan starts from an assumed battery level -->
-  <string name="battery_assumed">The battery level is assumed: enter the level the car shows.</string>
+  <!-- added to today's battery_spoken_today while the plan starts from an assumed battery level; "Update battery
+       level" is the button (battery_update) under the bar -->
+  <string name="battery_assumed">The battery level is assumed. Use Update battery level under it to enter the level the car shows.</string>
 
   <!-- the entry of the battery level, from today's battery card: the button that opens it, its title and sentence,
        its field's label and hint -->
@@ -271,7 +275,7 @@
        English details -->
   <string name="battery_saved">Battery level saved.</string>
   <string name="battery_not_saved">Not saved: the battery level could not be written.</string>
-  <!-- asked by Back with a level typed, under settings_discard_question -->
+  <!-- asked by Back with a level typed, under discard_question -->
   <string name="battery_discard_text">The battery level you typed is not saved yet.</string>
 
   <!-- the one-off away periods: the heading, and the line when there are none -->
@@ -340,15 +344,18 @@
   <!-- %1$s the target and %2$s the minimum charge level, written already, such as 80 -->
   <string name="settings_planning_summary">Charge to %1$s%%, minimum %2$s%%</string>
 
-  <string name="settings_saving">Saving…</string>
+  <!-- Save while it saves, on a Settings page and in the battery level's entry -->
+  <string name="saving">Saving…</string>
   <string name="settings_saved">Saved.</string>
   <string name="settings_not_saved">Not saved.</string>
   <string name="settings_keys_not_saved">Not saved: the API keys could not be stored. Try again.</string>
   <string name="settings_save_failed">Not saved: the settings could not be written.</string>
-  <string name="settings_discard_question">Discard changes?</string>
+  <!-- asked by Back over typed edits that are not saved, on a Settings page and in the battery level's entry, with
+       Keep editing and Discard -->
+  <string name="discard_question">Discard changes?</string>
   <string name="settings_discard_text">Your changes on this page are not saved yet.</string>
-  <string name="settings_keep_editing">Keep editing</string>
-  <string name="settings_discard">Discard</string>
+  <string name="keep_editing">Keep editing</string>
+  <string name="discard">Discard</string>
 
   <string name="settings_solar_intro">Panels that share one tilt and one direction are one array. Panels that face another way are an array of their own.</string>
   <!-- %1$d the array's place in the list, from 1 -->
