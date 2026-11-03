@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.android
 
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
-import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.hasText
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.LocalDate
@@ -10,6 +10,7 @@ import nl.enadeag.carchargeplanner.android.home.Plans
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
+import nl.enadeag.carchargeplanner.android.ui.NOT_READ_APART
 import nl.enadeag.carchargeplanner.android.ui.text
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
@@ -45,7 +46,7 @@ class MainActivityOnTheHomeTest {
         access.outlooks.single().complete(Plans.planned(LocalDate.of(2026, 6, 1).atTime(9, 0).atZone(zone),
             listOf(listOf(Plans.window(zone, LocalDate.of(2026, 6, 1), 13, 15)))))
         compose.waitForIdle()
-        compose.onNodeWithText(text(R.string.day_window)).assertExists()
+        compose.onNode(hasText(text(R.string.day_window)) and !NOT_READ_APART).assertExists()
 
         compose.activity.onBackPressedDispatcher.onBackPressed()
 

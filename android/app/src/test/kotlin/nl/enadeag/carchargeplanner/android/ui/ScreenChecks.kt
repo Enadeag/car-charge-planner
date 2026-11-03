@@ -7,16 +7,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
@@ -140,6 +143,40 @@ internal fun SemanticsNodeInteractionsProvider.assertScrollsToShow(last: Semanti
     assertThat(shown.top).`as`("the top of the last part").isGreaterThanOrEqualTo(page.top - 0.5f)
     assertThat(shown.bottom).`as`("the bottom of the last part").isLessThanOrEqualTo(page.bottom + 0.5f)
 }
+
+/**
+ * Checks that a drawing, such as a chart, is one part for a screen reader: a single node that says this sentence,
+ * with this role and with nothing inside it that is read apart. Inside means the node's own children in the
+ * unmerged tree: words placed over the drawing beside it, such as the battery bar's marks, are not inside it, so
+ * [assertShownButNotReadApart] checks those.
+ *
+ * @param sentence what the node says, whole
+ * @param role the node's role
+ * @return the node
+ */
+internal fun SemanticsNodeInteractionsProvider.assertReadAsOne(sentence: String, role: Role): SemanticsNodeInteraction {
+    val nodes = onAllNodes(hasContentDescription(sentence), useUnmergedTree = true).fetchSemanticsNodes()
+    assertThat(nodes).`as`("the parts that say %s", sentence).hasSize(1)
+    assertThat(nodes.single().config.getOrNull(SemanticsProperties.Role)).`as`("the role of %s", sentence)
+        .isEqualTo(role)
+    assertThat(nodes.single().children).`as`("what is inside %s", sentence).isEmpty()
+    return onNode(hasContentDescription(sentence), useUnmergedTree = true)
+}
+
+/**
+ * Checks that a text is shown on the page that scrolls, once scrolled to, but is not read apart by a screen reader,
+ * as a part beside it says the same; nor does any other part show the same text to be read.
+ *
+ * @param shown the text, whole
+ */
+internal fun SemanticsNodeInteractionsProvider.assertShownButNotReadApart(shown: String) {
+    val read = onAllNodes(hasText(shown) and !NOT_READ_APART, useUnmergedTree = true).fetchSemanticsNodes()
+    assertThat(read).`as`("the parts that show %s to be read", shown).isEmpty()
+    onNode(hasText(shown) and NOT_READ_APART, useUnmergedTree = true).performScrollTo().assertIsDisplayed()
+}
+
+/** A part a screen reader skips, as a part beside it says the same. */
+internal val NOT_READ_APART = SemanticsMatcher.keyIsDefined(SemanticsProperties.HideFromAccessibility)
 
 private val SCROLLS_UP_AND_DOWN = SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange)
 

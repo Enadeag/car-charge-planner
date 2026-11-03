@@ -1,16 +1,28 @@
 package nl.enadeag.carchargeplanner.android.ui
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.provider.Settings
+import android.view.ViewGroup
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
@@ -19,12 +31,12 @@ import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -34,6 +46,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.Lifecycle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.Clock
@@ -44,6 +57,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.Optional
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -55,6 +69,7 @@ import nl.enadeag.carchargeplanner.android.home.Plans
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
+import nl.enadeag.carchargeplanner.android.ui.home.AxisLabels
 import nl.enadeag.carchargeplanner.android.ui.home.HomeScreen
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
@@ -70,11 +85,13 @@ import nl.enadeag.carchargeplanner.engine.plan.Window
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.within
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /** The dashboard on Robolectric, on plans made up here; 1 June 2026 is a Monday. */
 @RunWith(AndroidJUnit4::class)
@@ -146,6 +163,18 @@ class HomeScreenTest {
             listOf(Plans.window(lisbon, today.plusDays(2), 11, 12, importKwh = 0.3))),
         gridAdvice = gridAdvice, source = Plans.source(today.atTime(8, 51).atZone(lisbon).toInstant(), freshness))
 
+    /** Sun from 07:00 to 18:00 on every day, at most 3.2 kW at noon. */
+    private val sun = DoubleArray(24) { hour -> if (hour == 12) 3.2 else if (hour in 7..17) 2.0 else 0.0 }
+
+    /** Monday in Lisbon in the sun, with two windows today and none on Tuesday. */
+    private fun sunnyDays() = Plans.planned(today.atTime(9, 0).atZone(lisbon), listOf(
+        listOf(Plans.window(lisbon, today, 13, 15), Plans.window(lisbon, today, 16, 17)), listOf()),
+        forecast = { Plans.forecast(lisbon, it, *sun) })
+
+    private fun axisLabels(): List<String> =
+        compose.onNode(SemanticsMatcher.keyIsDefined(AxisLabels), useUnmergedTree = true).fetchSemanticsNode()
+            .config[AxisLabels]
+
     @Test
     fun theTopAppBarNamesTheAppAndATabNamesEveryDayOfThePlanTodayFirst() {
         show(lisbonWeek())
@@ -163,7 +192,8 @@ class HomeScreenTest {
         show(lisbonWeek())
 
         compose.onNode(isHeading() and hasText("Today"), useUnmergedTree = true).assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.day_window)).assertIsDisplayed()
+        // the chart's legend says "Charge window" too, but is not read apart
+        compose.onNode(hasText(text(R.string.day_window)) and !NOT_READ_APART).assertIsDisplayed()
         compose.onNodeWithText("13:00 – 15:00").assert(hasContentDescription("13:00 to 15:00"))
         compose.onNodeWithText(text(R.string.day_set, 6, "1.4")).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.day_energy, "2.8")).assertIsDisplayed()
@@ -436,6 +466,8 @@ class HomeScreenTest {
             Freshness.STALE))
 
         tab("Vandaag").assertIsSelected()
+        compose.assertReadAsOne(text(R.string.chart_spoken_no_solar, "Vandaag"), Role.Image)
+        compose.assertReadAsOne(text(R.string.battery_spoken_today, "40", "60", "20", "80"), Role.Image)
         compose.onNodeWithText(text(R.string.advice_runs_empty, "morgen", "30") + " " + text(R.string.advice_no_room))
             .assertExists()
         compose.assertShowsNoneOf(englishOnlyTexts())
@@ -666,5 +698,301 @@ class HomeScreenTest {
         compose.onAllNodesWithText(warningWords()).assertCountEquals(1)
         compose.onAllNodes(page).onFirst().performTouchInput { up() }
         compose.mainClock.autoAdvance = true
+    }
+
+    @Test
+    fun theSolarChartIsOneImageThatSaysTheDayInASentenceThatAlsoShowsUnderIt() {
+        clock("24")
+        show(sunnyDays())
+
+        val said = listOf(text(R.string.chart_spoken, "Today", "3.2", "12:00", "0.3"),
+            text(R.string.chart_spoken_windows, "13:00 to 15:00, 16:00 to 17:00"),
+            text(R.string.chart_spoken_now, "09:00")).joinToString(" ")
+        compose.assertReadAsOne(said, Role.Image).performScrollTo().assertIsDisplayed()
+        compose.assertShownButNotReadApart(said)
+        compose.onNode(isHeading() and hasText(text(R.string.chart_heading))).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun theLegendNamesTheSolarCurveTheHouseAndTheChargeWindowsInWords() {
+        show(sunnyDays())
+        // on a day without a window, as today's card says "Charge window" too, to be read
+        tab("Tomorrow").performClick()
+        compose.waitForIdle()
+
+        listOf(R.string.chart_legend_solar, R.string.chart_legend_house, R.string.chart_legend_window).forEach {
+            compose.assertShownButNotReadApart(text(it))
+        }
+    }
+
+    @Test
+    fun onTodayTheLegendsThreeEntriesAreShownButNotReadApart() {
+        show(sunnyDays())
+
+        // today's own card says "Charge window" too, to be read: the legend's is the hidden one of the two
+        listOf(R.string.chart_legend_solar, R.string.chart_legend_house, R.string.chart_legend_window).forEach {
+            compose.onAllNodes(hasText(text(it)) and NOT_READ_APART, useUnmergedTree = true).assertCountEquals(1)
+        }
+        compose.onAllNodes(hasText(text(R.string.chart_legend_solar)) and !NOT_READ_APART, useUnmergedTree = true)
+            .assertCountEquals(0)
+        compose.onAllNodes(hasText(text(R.string.chart_legend_house)) and !NOT_READ_APART, useUnmergedTree = true)
+            .assertCountEquals(0)
+    }
+
+    @Test
+    fun onAnotherDayTheChartSaysThatDayWithoutNow() {
+        clock("24")
+        show(sunnyDays())
+
+        tab("Tomorrow").performClick()
+        compose.waitForIdle()
+
+        compose.assertReadAsOne(text(R.string.chart_spoken, "Tomorrow", "3.2", "12:00", "0.3"), Role.Image)
+    }
+
+    @Test
+    fun aDayWithoutSunSaysItsChartHasNone() {
+        show(lisbonWeek())
+
+        compose.assertReadAsOne(text(R.string.chart_spoken_no_solar, "Today"), Role.Image)
+    }
+
+    @Test
+    fun theTimeAxisMarksEveryThirdHourOnThePhones24HourClock() {
+        clock("24")
+        show(sunnyDays())
+
+        assertThat(axisLabels()).containsExactly("06", "09", "12", "15", "18")
+    }
+
+    @Test
+    @Config(qualifiers = "w411dp-h891dp")
+    fun theTimeAxisMarksFewerHoursAtTwiceTheFontSizeOnThePhones12HourClock() {
+        clock("12")
+        var twice by mutableStateOf(false)
+        val outlook = HomeOutlook(access, scope, clock) { }
+        val notice = HomeNotice(saves, scope) { }
+        compose.setContent {
+            AppTheme {
+                if (twice) AtFontScaleTwo { HomeScreen(outlook, notice, { amsterdam }) { } }
+                else HomeScreen(outlook, notice, { amsterdam }) { }
+            }
+        }
+        compose.waitForIdle()
+        answer(sunnyDays())
+        val normal = axisLabels()
+
+        twice = true
+        compose.waitForIdle()
+        val large = axisLabels()
+
+        assertThat(normal).hasSize(5).allMatch { it.endsWith("AM") || it.endsWith("PM") }
+        assertThat(large).hasSize(3).isSubsetOf(normal)
+    }
+
+    @Test
+    fun theBatteryBarIsOneImageThatSaysTheLevelsWhichAlsoShowWithItsMarks() {
+        show(lisbonWeek())
+
+        compose.assertReadAsOne(text(R.string.battery_spoken_today, "40", "60", "20", "80"), Role.Image)
+            .performScrollTo().assertIsDisplayed()
+        compose.onNode(isHeading() and hasText(text(R.string.battery_heading))).performScrollTo().assertIsDisplayed()
+        compose.assertShownButNotReadApart(text(R.string.battery_levels, "40", "60"))
+        compose.assertShownButNotReadApart(text(R.string.battery_minimum, "20"))
+        compose.assertShownButNotReadApart(text(R.string.battery_target, "80"))
+    }
+
+    @Test
+    fun onAnotherDayTheBatteryBarSaysTheLevelAtItsStart() {
+        show(lisbonWeek())
+
+        tab("Wednesday").performClick()
+        compose.waitForIdle()
+
+        compose.assertReadAsOne(text(R.string.battery_spoken_day, "40", "Wednesday", "50", "20", "80"), Role.Image)
+        compose.assertShownButNotReadApart(text(R.string.battery_levels, "40", "50"))
+    }
+
+    @Test
+    @Config(qualifiers = "w480dp-h320dp-land")
+    fun onASmallPhoneOnItsSideAtTwiceTheFontSizeTheChartAndTheBatteryBarCanBeScrolledTo() {
+        show(sunnyDays(), fontScaleTwo = true)
+
+        compose.onNode(SemanticsMatcher.keyIsDefined(AxisLabels), useUnmergedTree = true).performScrollTo()
+            .assertIsDisplayed()
+        compose.onNode(hasContentDescription(text(R.string.battery_spoken_today, "40", "60", "20", "80")),
+            useUnmergedTree = true).performScrollTo().assertIsDisplayed()
+        compose.assertShownButNotReadApart(text(R.string.battery_target, "80"))
+        compose.assertScrollsToShow(hasText(Plans.CREDIT, substring = true))
+    }
+
+    private fun chart(): SemanticsNode =
+        compose.onNode(SemanticsMatcher.keyIsDefined(AxisLabels), useUnmergedTree = true).fetchSemanticsNode()
+
+    private fun saying(sentence: String): Rect =
+        compose.onNode(hasContentDescription(sentence), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+
+    private fun shown(words: String): Rect =
+        compose.onNodeWithText(words, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+
+    /** The width of the cards' column in pixels: the day's page less its padding and the card's, 16 dp each. */
+    private fun column(): Float {
+        val page = compose.onNode(page and hasAnyDescendant(SemanticsMatcher.keyIsDefined(AxisLabels)),
+            useUnmergedTree = true).fetchSemanticsNode()
+        return page.size.width - 64 * page.layoutInfo.density.density
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h800dp")
+    fun onANarrowColumnTheChartTakesItsWidthAndIsStill160DpHigh() {
+        show(sunnyDays())
+
+        // half of the column's 296 dp would be lower than 160 dp
+        val chart = chart()
+        assertThat(chart.size.width.toFloat()).isCloseTo(column(), within(1f))
+        assertThat(chart.size.height / chart.layoutInfo.density.density).isCloseTo(160f, within(0.5f))
+    }
+
+    @Test
+    @Config(qualifiers = "w900dp-h1200dp")
+    fun onAWideColumnTheChartTakesItsWidthAndIsHalfAsHigh() {
+        show(sunnyDays())
+
+        val chart = chart()
+        assertThat(chart.size.width.toFloat()).isCloseTo(column(), within(1f))
+        assertThat(chart.size.height.toFloat()).isCloseTo(chart.size.width / 2f, within(1f))
+    }
+
+    @Test
+    fun marksCloseTogetherHaveTheirWordsOnTwoLinesBothWithinTheBar() {
+        show(Plans.planned(today.atTime(9, 0).atZone(lisbon), listOf(listOf()), minimum = 70.0, target = 75.0))
+        compose.onNodeWithText(text(R.string.battery_target, "75"), useUnmergedTree = true).performScrollTo()
+
+        val bar = saying(text(R.string.battery_spoken_today, "40", "40", "70", "75"))
+        val minimum = shown(text(R.string.battery_minimum, "70"))
+        val target = shown(text(R.string.battery_target, "75"))
+        assertThat(minimum.overlaps(target)).`as`("the marks' words %s and %s overlap", minimum, target).isFalse()
+        listOf(minimum, target).forEach {
+            assertThat(it.left).isGreaterThanOrEqualTo(bar.left - 0.5f)
+            assertThat(it.right).isLessThanOrEqualTo(bar.right + 0.5f)
+            assertThat(it.top).isGreaterThanOrEqualTo(bar.top - 0.5f)
+            assertThat(it.bottom).isLessThanOrEqualTo(bar.bottom + 0.5f)
+        }
+    }
+
+    @Test
+    fun rightToLeftTheBatteryBarRunsLeftToRightWithEachMarksWordsUnderIt() {
+        val outlook = HomeOutlook(access, scope, clock) { }
+        val notice = HomeNotice(saves, scope) { }
+        compose.setContent {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                AppTheme { HomeScreen(outlook, notice, { amsterdam }) { } }
+            }
+        }
+        compose.waitForIdle()
+        answer(lisbonWeek())
+        compose.onNodeWithText(text(R.string.battery_target, "80"), useUnmergedTree = true).performScrollTo()
+
+        val bar = saying(text(R.string.battery_spoken_today, "40", "60", "20", "80"))
+        assertThat(shown(text(R.string.battery_minimum, "20")).center.x)
+            .isCloseTo(bar.left + bar.width * 0.2f, within(1f))
+        assertThat(shown(text(R.string.battery_target, "80")).center.x)
+            .isCloseTo(bar.left + bar.width * 0.8f, within(1f))
+    }
+
+    /** The screen as Android draws it; Compose's captureToImage waits for a frame that Robolectric never draws. */
+    private fun screenshot(): Bitmap {
+        val screen = compose.activity.findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
+        val shot = Bitmap.createBitmap(screen.width, screen.height, Bitmap.Config.ARGB_8888)
+        compose.runOnIdle { screen.draw(Canvas(shot)) }
+        return shot
+    }
+
+    /** What the screen shows within [area], in pixels. */
+    private fun picture(area: Rect): Bitmap = Bitmap.createBitmap(screenshot(), area.left.roundToInt(),
+        area.top.roundToInt(), area.width.roundToInt(), area.height.roundToInt())
+
+    @Test
+    fun rightToLeftTheSolarChartIsDrawnAsLeftToRightWithItsWordsWhereTheyWere() {
+        clock("24")
+        var rtl by mutableStateOf(false)
+        val outlook = HomeOutlook(access, scope, clock) { }
+        val notice = HomeNotice(saves, scope) { }
+        compose.setContent {
+            CompositionLocalProvider(LocalLayoutDirection provides
+                if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
+                AppTheme { HomeScreen(outlook, notice, { amsterdam }) { } }
+            }
+        }
+        compose.waitForIdle()
+        answer(sunnyDays())
+        compose.onNode(SemanticsMatcher.keyIsDefined(AxisLabels), useUnmergedTree = true).performScrollTo()
+        val leftToRight = picture(chart().boundsInRoot)
+        val leftToRightLabels = axisLabels()
+
+        rtl = true
+        compose.waitForIdle()
+        compose.onNode(SemanticsMatcher.keyIsDefined(AxisLabels), useUnmergedTree = true).performScrollTo()
+
+        assertThat(axisLabels()).isEqualTo(leftToRightLabels)
+        assertThat(picture(chart().boundsInRoot).sameAs(leftToRight)).`as`("the chart as drawn right to left").isTrue()
+    }
+
+    @Test
+    fun onTomorrowTheBatteryBarSaysTomorrowInItsSentence() {
+        show(lisbonWeek())
+
+        tab("Tomorrow").performClick()
+        compose.waitForIdle()
+
+        compose.assertReadAsOne(text(R.string.battery_spoken_day, "40", "tomorrow", "40", "20", "80"), Role.Image)
+    }
+
+    @Test
+    @Config(qualifiers = "nl")
+    fun onTomorrowTheBatteryBarSaysTomorrowInItsSentenceInDutch() {
+        show(lisbonWeek())
+
+        tab("Morgen").performClick()
+        compose.waitForIdle()
+
+        compose.assertReadAsOne(text(R.string.battery_spoken_day, "40", "morgen", "40", "20", "80"), Role.Image)
+    }
+
+    @Test
+    fun theSolarChartComesBeforeTheBatteryBar() {
+        show(sunnyDays())
+
+        val chart = compose.onNode(isHeading() and hasText(text(R.string.chart_heading))).fetchSemanticsNode()
+        val battery = compose.onNode(isHeading() and hasText(text(R.string.battery_heading))).fetchSemanticsNode()
+        // the positions, unlike the bounds, are not cut off where the page ends
+        assertThat(chart.positionInRoot.y).isLessThan(battery.positionInRoot.y)
+    }
+
+    /** The colour on the card in its padding, left of its heading, once scrolled to, as the screen draws it. */
+    private fun groundBeside(heading: Int): Color {
+        val node = compose.onNode(isHeading() and hasText(text(heading))).performScrollTo().fetchSemanticsNode()
+        val bounds = node.boundsInRoot
+        return Color(screenshot().getPixel((bounds.left - 8 * node.layoutInfo.density.density).roundToInt(),
+            bounds.center.y.roundToInt()))
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun inLightTheChartAndTheBatteryBarAreOnTheirOwnGroundNotTheWallpapers() {
+        show(sunnyDays())
+
+        assertThat(groundBeside(R.string.chart_heading)).isEqualTo(SourceColours.LIGHT.chart.ground)
+        assertThat(groundBeside(R.string.battery_heading)).isEqualTo(SourceColours.LIGHT.chart.ground)
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "night")
+    fun inDarkTheChartAndTheBatteryBarAreOnTheirOwnGroundNotTheWallpapers() {
+        show(sunnyDays())
+
+        assertThat(groundBeside(R.string.chart_heading)).isEqualTo(SourceColours.DARK.chart.ground)
+        assertThat(groundBeside(R.string.battery_heading)).isEqualTo(SourceColours.DARK.chart.ground)
     }
 }

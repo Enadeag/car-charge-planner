@@ -173,6 +173,12 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Charge 8.4 kWh from the grid: Sunday 09:00 – 15:10. | Laad 8,4 kWh uit het net: zondag 09:00 – 15:10. | the grid advice's title; "before Sunday" when no day has room |
 | Without it the battery ends Sunday at 17%, below the minimum of 30%. | Anders eindigt de accu zondag op 17%, onder het minimum van 30%. | why the grid advice; "runs empty" when it would end at 0% or below |
 | Set 16 A (3.7 kW), and a charge limit of 80% in the car or the charger. | Stel 16 A in (3,7 kW), en een laadlimiet van 80% in de auto of de laadpaal. | what to set for the grid charge; otherwise "No day before it has room for a grid charge." |
+| Solar, House, Charge window | Zonnestroom, Huis, Laadvenster | the solar chart's legend; "House" is the legend's short word for the baseload, as on the desktop, not "House use" |
+| now | nu | on the chart's line at the moment the plan was made, today only |
+| Today, expected solar power: peak 4.2 kW around 13:00; the house uses about 0.4 kW. Charging: 13:00 to 15:00. Now 09:00. | Vandaag, verwachte zonnestroom: piek 4,2 kW rond 13:00; het huis gebruikt ongeveer 0,4 kW. Laden: 13:00 tot 15:00. Nu 09:00. | the solar chart in words: what TalkBack reads for it, and the line under it; "expected solar power: none." on a day without sun |
+| Car battery | Accu van de auto | the heading of the battery bar |
+| min 30%, target 80% | min. 30%, doel 80% | the marks on the battery bar |
+| Car battery 50% now, 74% after charging; minimum 30%, target 80%. | Accu van de auto nu 50%, na het laden 74%; minimum 30%, doel 80%. | what TalkBack reads for the battery bar; on another day "50% at the start of Sunday" ("50% aan het begin van zondag") |
 | Car away | Afwezig | the heading of the one-off away periods |
 | None entered for the coming days. | Niets ingevuld voor de komende dagen. | no one-off away period to come |
 | updated 10:51, not refreshed since 10:51 | bijgewerkt om 10:51, niet vernieuwd sinds 10:51 | the footer, after the provider's credit, which stays as it is |
@@ -184,7 +190,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Location | Locatie | a Settings page |
 | Car and house | Auto en huis | a Settings page |
 | Charger | Laadpaal | a Settings page |
-| Forecast | Voorspelling | a Settings page: the providers and API keys |
+| Forecast | Voorspelling | a Settings page: the providers and API keys; also a day's solar chart |
 | Away | Afwezigheid | a Settings page: the weekly away periods only |
 | Planning | Planning | a Settings page: the planning preferences |
 | Save | Opslaan | a page's Save, in its top app bar |

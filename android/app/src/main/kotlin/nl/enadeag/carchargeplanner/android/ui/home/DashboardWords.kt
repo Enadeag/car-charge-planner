@@ -10,12 +10,15 @@ import java.time.format.TextStyle
 import java.util.Locale
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.home.BatteryLevels
+import nl.enadeag.carchargeplanner.android.home.ChargeLevels
 import nl.enadeag.carchargeplanner.android.home.ComingAway
 import nl.enadeag.carchargeplanner.android.home.DayKind
 import nl.enadeag.carchargeplanner.android.home.DayModel
 import nl.enadeag.carchargeplanner.android.home.DayName
 import nl.enadeag.carchargeplanner.android.home.Footer
 import nl.enadeag.carchargeplanner.android.home.GridAdviceModel
+import nl.enadeag.carchargeplanner.android.home.SolarChart
 import nl.enadeag.carchargeplanner.android.home.SourceFigure
 import nl.enadeag.carchargeplanner.engine.plan.Window
 
@@ -32,6 +35,8 @@ internal class DashboardWords(private val resources: Resources, private val loca
     private val zone: ZoneId) {
 
     private val clock = clockOf(twentyFour, locale).withZone(zone)
+    private val hour = DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale,
+        if (twentyFour) "H" else "h"), locale).withZone(zone)
     private val shortDate = DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "EEEdMMM"), locale)
     private val numbers = NumberText(locale)
 
@@ -240,6 +245,83 @@ internal class DashboardWords(private val resources: Resources, private val loca
         val fresh = text(if (footer.stale) R.string.footer_stale else R.string.footer_updated, time(footer.fetchedAt))
         val busy = footer.busyUntil?.let { text(R.string.footer_busy, time(it)) }
         return listOfNotNull(footer.credit, fallback, fresh, busy).joinToString(" · ")
+    }
+
+    /**
+     * A tick's label on the chart's time axis: the hour alone, on the phone's clock.
+     *
+     * @param tick the tick
+     * @return such as "15" or "3 PM"
+     */
+    fun tick(tick: SolarChart.Tick): String = hour.format(tick.at)
+
+    /**
+     * The power at the top of the chart.
+     *
+     * @param kw the power in kW
+     * @return such as "4 kW"
+     */
+    fun scale(kw: Double): String = text(R.string.chart_scale, whole(kw))
+
+    /**
+     * A day's chart in words, as the desktop's: its peak and the house's use, its charge windows and, today, now.
+     * A screen reader reads it for the chart, and it shows under the chart.
+     *
+     * @param day the day, with its chart and charge windows
+     * @return such as "Today, expected solar power: peak 4.2 kW around 13:00; the house uses about 0.4 kW. Charging:
+     *     13:00 to 15:00. Now 09:00."; for a day without sun only that it has none
+     */
+    fun chart(day: DayModel): String {
+        val title = title(day.name)
+        val peak = day.chart.peak ?: return text(R.string.chart_spoken_no_solar, title)
+        val solar = text(R.string.chart_spoken, title, decimal(peak.kw), time(peak.at), decimal(day.chart.houseKw))
+        val windows = listOfNotNull(day.main?.window) + day.later
+        val charging = if (windows.isEmpty()) "" else text(R.string.chart_spoken_windows,
+            windows.joinToString(", ") { spokenSpan(it) })
+        val now = day.chart.now?.let { text(R.string.chart_spoken_now, time(it.at)) }.orEmpty()
+        return listOf(solar, charging, now).filter { it.isNotEmpty() }.joinToString(" ")
+    }
+
+    /**
+     * The battery levels beside the bar.
+     *
+     * @param battery the levels at the start of the day and after its charging
+     * @return such as "50 → 74%"
+     */
+    fun batteryLevels(battery: BatteryLevels): String =
+        text(R.string.battery_levels, whole(battery.startPct.value()), whole(battery.afterPct.value()))
+
+    /**
+     * The minimum's mark on the battery bar.
+     *
+     * @param levels the charge levels
+     * @return such as "min 30%"
+     */
+    fun minimum(levels: ChargeLevels): String = text(R.string.battery_minimum, whole(levels.minimum.value()))
+
+    /**
+     * The target's mark on the battery bar.
+     *
+     * @param levels the charge levels
+     * @return such as "target 80%"
+     */
+    fun target(levels: ChargeLevels): String = text(R.string.battery_target, whole(levels.target.value()))
+
+    /**
+     * A day's battery bar in words, as a screen reader reads it.
+     *
+     * @param day the day, with its levels
+     * @param levels the minimum and target charge levels
+     * @return such as "Car battery 50% now, 74% after charging; minimum 30%, target 80%." today, and "… at the start
+     *     of Sunday, …" on another day
+     */
+    fun battery(day: DayModel, levels: ChargeLevels): String {
+        val start = whole(day.battery.startPct.value())
+        val after = whole(day.battery.afterPct.value())
+        val minimum = whole(levels.minimum.value())
+        val target = whole(levels.target.value())
+        return if (day.name == DayName.Today) text(R.string.battery_spoken_today, start, after, minimum, target)
+            else text(R.string.battery_spoken_day, start, inSentence(day.name), after, minimum, target)
     }
 
     private fun weekday(date: LocalDate, style: TextStyle): String = date.dayOfWeek.getDisplayName(style, locale)

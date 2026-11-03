@@ -113,6 +113,19 @@ class DayMapperTest {
     }
 
     @Test
+    fun eachDayHasItsOwnChartWithNowOnTodaysOnly() {
+        val planned = Plans.planned(today.atTime(8, 0).atZone(amsterdam), listOf(listOf(
+            Plans.window(amsterdam, today, 13, 15)), listOf()), forecast = {
+            Plans.forecast(amsterdam, it, *DoubleArray(24) { hour -> if (hour in 7..17) 2.0 else 0.0 }) })
+
+        val days = DayMapper(planned).map(planned.days())
+
+        assertThat(days.map { it.chart }).containsExactlyElementsOf(planned.days().map(SolarChartMapper(planned)::map))
+        assertThat(days[0].chart.windows).containsExactly(SolarChart.Span(13.0, 15.0))
+        assertThat(days.map { it.chart.now?.hour }).containsExactly(8.0, null)
+    }
+
+    @Test
     fun aDayWithoutAWindowShowsOnlyItsBattery() {
         val day = days(listOf()).single()
 
@@ -123,7 +136,8 @@ class DayMapperTest {
     private val battery = BatteryLevels(Percent(40.0), Percent(50.0))
 
     private fun day(kind: DayKind, main: MainCharge?, later: List<Window> = listOf()) =
-        DayModel(today, DayName.Today, kind, main, later, battery, null)
+        DayModel(today, DayName.Today, kind, main, later, battery, null,
+            SolarChart(6.0, 20.0, 1.0, listOf(), 0.3, listOf(), null, listOf(), null))
 
     @Test
     fun aSolarDayHasAMainWindowAndAnyOtherKindNone() {

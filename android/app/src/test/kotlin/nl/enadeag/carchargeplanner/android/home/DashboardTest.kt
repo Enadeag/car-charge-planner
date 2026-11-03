@@ -157,6 +157,18 @@ class DashboardTest {
     }
 
     @Test
+    fun theBatteryBarsMarkThePlansMinimumAndTargetChargeLevels() {
+        assertThat(dashboard().levels).isEqualTo(ChargeLevels(Percent(20.0), Percent(80.0)))
+    }
+
+    @Test
+    fun theChargeLevelsRefuseAMinimumAboveTheTargetButTakeOneEqualToIt() {
+        assertThatThrownBy { ChargeLevels(Percent(81.0), Percent(80.0)) }
+            .isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(ChargeLevels(Percent(80.0), Percent(80.0)).minimum).isEqualTo(Percent(80.0))
+    }
+
+    @Test
     fun gridAdvicesMinimumIsTheEndLevelAndTheDeficitWithinAPercentagesRange() {
         // the engine's deficit is the minimum less the end level; a rounding must not make the sum refused
         val advice = GridAdvice(today.plusDays(1), -3.3, 103.30000000000001, 6.0, Optional.empty(), Optional.empty())

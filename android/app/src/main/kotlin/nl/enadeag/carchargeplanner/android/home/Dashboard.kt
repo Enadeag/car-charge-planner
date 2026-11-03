@@ -9,18 +9,19 @@ import nl.enadeag.carchargeplanner.engine.forecast.Freshness
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole
 
 /**
- * What the dashboard shows of a plan with days: the days, today first, today's grid advice, the coming one-off away
- * periods and the footer.
+ * What the dashboard shows of a plan with days: the days, today first, today's grid advice, the charge levels the
+ * battery bars mark, the coming one-off away periods and the footer.
  *
  * @property zone the home's time zone, in which the days and times are meant
  * @property days the plan's days, today first; never empty
  * @property gridAdvice the grid advice, shown on today's tab; null when there is none
+ * @property levels the minimum and target charge levels
  * @property away the one-off away periods that had not ended when the plan was made, in order of their start
  * @property footer the forecast's credit, source and freshness
  * @throws IllegalArgumentException when [days] is empty, which shows as no forecast instead
  */
 data class Dashboard(val zone: ZoneId, val days: List<DayModel>, val gridAdvice: GridAdviceModel?,
-    val away: List<ComingAway>, val footer: Footer) {
+    val levels: ChargeLevels, val away: List<ComingAway>, val footer: Footer) {
 
     init {
         if (days.isEmpty()) {
@@ -50,6 +51,7 @@ data class Dashboard(val zone: ZoneId, val days: List<DayModel>, val gridAdvice:
             val today = planned.madeAt().atZone(planned.zone()).toLocalDate()
             return Dashboard(planned.zone(), DayMapper(planned).map(planned.days()),
                 planned.gridAdvice().map { GridAdviceModel.of(it, planned.zone(), today) }.orElse(null),
+                ChargeLevels(planned.minimumPct(), planned.targetPct()),
                 ComingAway.of(away, planned.zone(), planned.madeAt()), Footer.of(planned))
         }
     }
