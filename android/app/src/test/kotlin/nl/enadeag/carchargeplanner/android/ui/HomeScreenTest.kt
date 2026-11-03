@@ -1,29 +1,28 @@
 package nl.enadeag.carchargeplanner.android.ui
 
-import android.provider.Settings
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.provider.Settings
 import android.view.ViewGroup
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.semantics.SemanticsNode
-import androidx.compose.ui.test.hasAnyDescendant
-import androidx.compose.ui.unit.LayoutDirection
-import kotlin.math.roundToInt
-import org.assertj.core.api.Assertions.within
-import org.robolectric.annotation.GraphicsMode
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
@@ -32,15 +31,12 @@ import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
-import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -50,6 +46,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.Lifecycle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.Clock
@@ -60,6 +57,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.Optional
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -87,11 +85,13 @@ import nl.enadeag.carchargeplanner.engine.plan.Window
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.within
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /** The dashboard on Robolectric, on plans made up here; 1 June 2026 is a Monday. */
 @RunWith(AndroidJUnit4::class)
@@ -726,6 +726,20 @@ class HomeScreenTest {
     }
 
     @Test
+    fun onTodayTheLegendsThreeEntriesAreShownButNotReadApart() {
+        show(sunnyDays())
+
+        // today's own card says "Charge window" too, to be read: the legend's is the hidden one of the two
+        listOf(R.string.chart_legend_solar, R.string.chart_legend_house, R.string.chart_legend_window).forEach {
+            compose.onAllNodes(hasText(text(it)) and NOT_READ_APART, useUnmergedTree = true).assertCountEquals(1)
+        }
+        compose.onAllNodes(hasText(text(R.string.chart_legend_solar)) and !NOT_READ_APART, useUnmergedTree = true)
+            .assertCountEquals(0)
+        compose.onAllNodes(hasText(text(R.string.chart_legend_house)) and !NOT_READ_APART, useUnmergedTree = true)
+            .assertCountEquals(0)
+    }
+
+    @Test
     fun onAnotherDayTheChartSaysThatDayWithoutNow() {
         clock("24")
         show(sunnyDays())
@@ -886,6 +900,44 @@ class HomeScreenTest {
             .isCloseTo(bar.left + bar.width * 0.8f, within(1f))
     }
 
+    /** The screen as Android draws it; Compose's captureToImage waits for a frame that Robolectric never draws. */
+    private fun screenshot(): Bitmap {
+        val screen = compose.activity.findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
+        val shot = Bitmap.createBitmap(screen.width, screen.height, Bitmap.Config.ARGB_8888)
+        compose.runOnIdle { screen.draw(Canvas(shot)) }
+        return shot
+    }
+
+    /** What the screen shows within [area], in pixels. */
+    private fun picture(area: Rect): Bitmap = Bitmap.createBitmap(screenshot(), area.left.roundToInt(),
+        area.top.roundToInt(), area.width.roundToInt(), area.height.roundToInt())
+
+    @Test
+    fun rightToLeftTheSolarChartIsDrawnAsLeftToRightWithItsWordsWhereTheyWere() {
+        clock("24")
+        var rtl by mutableStateOf(false)
+        val outlook = HomeOutlook(access, scope, clock) { }
+        val notice = HomeNotice(saves, scope) { }
+        compose.setContent {
+            CompositionLocalProvider(LocalLayoutDirection provides
+                if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
+                AppTheme { HomeScreen(outlook, notice, { amsterdam }) { } }
+            }
+        }
+        compose.waitForIdle()
+        answer(sunnyDays())
+        compose.onNode(SemanticsMatcher.keyIsDefined(AxisLabels), useUnmergedTree = true).performScrollTo()
+        val leftToRight = picture(chart().boundsInRoot)
+        val leftToRightLabels = axisLabels()
+
+        rtl = true
+        compose.waitForIdle()
+        compose.onNode(SemanticsMatcher.keyIsDefined(AxisLabels), useUnmergedTree = true).performScrollTo()
+
+        assertThat(axisLabels()).isEqualTo(leftToRightLabels)
+        assertThat(picture(chart().boundsInRoot).sameAs(leftToRight)).`as`("the chart as drawn right to left").isTrue()
+    }
+
     @Test
     fun onTomorrowTheBatteryBarSaysTomorrowInItsSentence() {
         show(lisbonWeek())
@@ -921,11 +973,7 @@ class HomeScreenTest {
     private fun groundBeside(heading: Int): Color {
         val node = compose.onNode(isHeading() and hasText(text(heading))).performScrollTo().fetchSemanticsNode()
         val bounds = node.boundsInRoot
-        // Compose's captureToImage waits for a frame that Robolectric's paused main thread never draws
-        val screen = compose.activity.findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
-        val shot = Bitmap.createBitmap(screen.width, screen.height, Bitmap.Config.ARGB_8888)
-        compose.runOnIdle { screen.draw(Canvas(shot)) }
-        return Color(shot.getPixel((bounds.left - 8 * node.layoutInfo.density.density).roundToInt(),
+        return Color(screenshot().getPixel((bounds.left - 8 * node.layoutInfo.density.density).roundToInt(),
             bounds.center.y.roundToInt()))
     }
 

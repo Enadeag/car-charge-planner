@@ -14,6 +14,7 @@ import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.ValueSource
 
 class ChartGeometryTest {
 
@@ -192,6 +193,34 @@ class ChartGeometryTest {
         assertThat(drawing.nowAt).isEqualTo(Point(42f, 5f))
     }
 
+    @ParameterizedTest
+    @ValueSource(floats = [1f, 3f])
+    fun everySizeOfTheSolarDrawingThatIsInDpGrowsWithTheDp(dp: Float) {
+        val gap = 4 * dp
+        val left = 16f + gap
+        val day = chart.copy(steps = listOf(SolarChart.Step(9.0, 10.0, 2.0)), houseKw = 1.0,
+            windows = listOf(SolarChart.Span(11.0, 13.0)), now = SolarChart.Moment(8.0, Instant.EPOCH))
+
+        // a plot of 100 by 50 px from 6:00 to 16:00, whatever the dp
+        val drawing = drawing(day, width = left + 100f + gap, height = 15f + gap + 50f, dp = dp)
+
+        fun x(hour: Double) = left + (hour.toFloat() - 6f) * 10f
+        val curve = listOf(Point(x(9.0), 55f), Point(x(9.5), 30f), Point(x(10.0), 55f))
+        assertThat(drawing.plot).isEqualTo(PlotArea(left, 5f, 100f, 50f, 6.0, 16.0, 4.0))
+        assertThat(drawing.shapes).containsExactly(
+            Shape.Line(Point(left, 5f), Point(left + 100f, 5f), ChartInk.GRID_LINE, 1f),
+            Shape.Line(Point(left, 30f), Point(left + 100f, 30f), ChartInk.GRID_LINE, 1f),
+            Shape.Line(Point(left, 55f), Point(left + 100f, 55f), ChartInk.GRID_LINE, 1f),
+            Shape.Rect(x(11.0), 5f, 20f, 50f, ChartInk.CAR_AREA),
+            Shape.Line(Point(x(11.0), 55f), Point(x(13.0), 55f), ChartInk.CAR, 4f * dp, round = true),
+            Shape.Area(curve, ChartInk.SOLAR_AREA),
+            Shape.Area(curve, ChartInk.SOLAR, 2f * dp),
+            Shape.Line(Point(left, 42.5f), Point(left + 100f, 42.5f), ChartInk.MUTED, 1.5f * dp, dashed = true),
+            Shape.Line(Point(x(8.0), 5f), Point(x(8.0), 55f), ChartInk.TEXT, 1.5f * dp, dashed = true))
+        assertThat(drawing.nowAt).isEqualTo(Point(x(8.0) + gap / 2, 5f))
+        assertThat(drawing.tickTop).isEqualTo(55f + gap)
+    }
+
     @Test
     fun nowsWordsStayWithinThePlotAtItsRightEdge() {
         val late = drawing(chart.copy(now = SolarChart.Moment(15.9, Instant.EPOCH)))
@@ -210,9 +239,9 @@ class ChartGeometryTest {
     private val battery = BatteryLevels(Percent(40.0), Percent(50.0))
 
     private fun bar(battery: BatteryLevels = this.battery, minimum: Double = 20.0, target: Double = 80.0,
-        width: Float = 200f, minimumLabel: Float = 30f, targetLabel: Float = 30f) =
+        width: Float = 200f, minimumLabel: Float = 30f, targetLabel: Float = 30f, dp: Float = 1f) =
         BatteryBarLayout.of(battery, ChargeLevels(Percent(minimum), Percent(target)), width, minimumLabel, targetLabel,
-            10f, 1f)
+            10f, dp)
 
     @Test
     fun theBatteryBarsLevelsAndMarksAreAtTheirPercentages() {
@@ -249,6 +278,36 @@ class ChartGeometryTest {
     fun theMarksWordsThatLeaveJustTheGapStayOnOneLineAndOnePixelMoreDoesNot(minimumLabel: Float, row: String) {
         // marks 40 px apart with words of 32 px: the target's words start just 8 px after the minimum's end
         val layout = bar(minimum = 50.0, target = 75.0, width = 160f, minimumLabel = minimumLabel, targetLabel = 32f)
+
+        assertThat(layout.target.row).isEqualTo(Row.valueOf(row))
+    }
+
+    @ParameterizedTest
+    @ValueSource(floats = [1f, 3f])
+    fun everySizeOfTheBatteryBarThatIsInDpGrowsWithTheDp(dp: Float) {
+        val layout = bar(dp = dp)
+
+        assertThat(layout.shapes).containsExactly(
+            Shape.Rect(0f, 4f * dp, 200f, 16f * dp, ChartInk.GRID_LINE, 8f * dp),
+            Shape.Rect(0f, 4f * dp, 200f, 16f * dp, ChartInk.MUTED, 8f * dp, 1f * dp),
+            Shape.Rect(0f, 4f * dp, 100f, 16f * dp, ChartInk.CAR_AFTER, 8f * dp),
+            Shape.Rect(0f, 4f * dp, 100f, 16f * dp, ChartInk.CAR, 8f * dp, 1.5f * dp),
+            Shape.Rect(0f, 4f * dp, 80f, 16f * dp, ChartInk.CAR, 8f * dp),
+            Shape.Line(Point(80f, 4f * dp), Point(80f, 20f * dp), ChartInk.GROUND, 2f * dp),
+            Shape.Line(Point(40f, 0f), Point(40f, 24f * dp), ChartInk.TEXT, 2f * dp),
+            Shape.Line(Point(160f, 0f), Point(160f, 24f * dp), ChartInk.TEXT, 2f * dp))
+        assertThat(layout.height).isEqualTo(28f * dp + 10f)
+        assertThat(layout.labelTop(layout.target)).isEqualTo(28f * dp)
+        assertThat(bar(minimum = 70.0, target = 75.0, dp = dp).height).isEqualTo(28f * dp + 20f)
+    }
+
+    @ParameterizedTest
+    @CsvSource("1, 152, FIRST", "1, 154, SECOND", "3, 120, FIRST", "3, 122, SECOND")
+    fun theMarksWordsKeepEightDpBetweenThemWhateverTheDp(dp: Float, minimumLabel: Float, row: String) {
+        // the target's words start 16 px before its mark, at 284 px, and the minimum's mark is at 200 px: its words
+        // may end 8 dp before that
+        val layout = bar(minimum = 50.0, target = 75.0, width = 400f, minimumLabel = minimumLabel, targetLabel = 32f,
+            dp = dp)
 
         assertThat(layout.target.row).isEqualTo(Row.valueOf(row))
     }

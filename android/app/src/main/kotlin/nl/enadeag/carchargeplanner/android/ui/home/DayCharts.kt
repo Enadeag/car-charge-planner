@@ -148,6 +148,13 @@ private fun LegendEntry(text: String, colours: SourceColours.Chart, sign: DrawSc
 /** The drawing of the chart, measured to the column: the labels of the axis are those that fit side by side. */
 @Composable
 private fun SolarCanvas(day: DayModel, words: DashboardWords, colours: SourceColours.Chart, spoken: String) {
+    LeftToRight {
+        SolarPlot(day, words, colours, spoken)
+    }
+}
+
+@Composable
+private fun SolarPlot(day: DayModel, words: DashboardWords, colours: SourceColours.Chart, spoken: String) {
     val chart = day.chart
     val measurer = rememberTextMeasurer()
     val axis = MaterialTheme.typography.labelSmall.copy(color = colours.muted)
@@ -159,35 +166,41 @@ private fun SolarCanvas(day: DayModel, words: DashboardWords, colours: SourceCol
     val labels = remember(measurer, axis, chart, words) {
         chart.ticks.associateWith { measurer.measure(words.tick(it), axis) }
     }
-    LeftToRight {
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val density = LocalDensity.current
-            val height = max(maxWidth / 2, MIN_CHART_HEIGHT)
-            val width = constraints.maxWidth.toFloat()
-            val heightPx = with(density) { height.toPx() }
-            val drawing = remember(chart, width, heightPx, density.density, scale, zero, now, labels) {
-                SolarDrawing.of(chart, width, heightPx, density.density, scale.size.height.toFloat(),
-                    scale.size.width.toFloat(), zero.size.width.toFloat(), now.size.width.toFloat()) {
-                    labels.getValue(it).size.width.toFloat()
-                }
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val density = LocalDensity.current
+        val height = max(maxWidth / 2, MIN_CHART_HEIGHT)
+        val width = constraints.maxWidth.toFloat()
+        val heightPx = with(density) { height.toPx() }
+        val drawing = remember(chart, width, heightPx, density.density, scale, zero, now, labels) {
+            SolarDrawing.of(chart, width, heightPx, density.density, scale.size.height.toFloat(),
+                scale.size.width.toFloat(), zero.size.width.toFloat(), now.size.width.toFloat()) {
+                labels.getValue(it).size.width.toFloat()
             }
-            Spacer(Modifier.fillMaxWidth().height(height).semantics {
-                contentDescription = spoken
-                role = Role.Image
-                axisLabels = drawing.ticks.map { words.tick(it.tick) }
-            }.drawn(drawing.shapes, colours) {
-                drawing.nowAt?.let { drawText(now, topLeft = it.offset) }
-                drawText(scale, topLeft = drawing.scaleAt.offset)
-                drawText(zero, topLeft = drawing.zeroAt.offset)
-                drawing.ticks.forEach { drawText(labels.getValue(it.tick), topLeft = Offset(it.left, drawing.tickTop)) }
-            })
         }
+        Spacer(Modifier.fillMaxWidth().height(height).semantics {
+            contentDescription = spoken
+            role = Role.Image
+            axisLabels = drawing.ticks.map { words.tick(it.tick) }
+        }.drawn(drawing.shapes, colours) {
+            drawing.nowAt?.let { drawText(now, topLeft = it.offset) }
+            drawText(scale, topLeft = drawing.scaleAt.offset)
+            drawText(zero, topLeft = drawing.zeroAt.offset)
+            drawing.ticks.forEach { drawText(labels.getValue(it.tick), topLeft = Offset(it.left, drawing.tickTop)) }
+        })
     }
 }
 
 /** The bar, as wide as the column, with the words of its marks under it, on a second line when they would overlap. */
 @Composable
 private fun BatteryBar(day: DayModel, levels: ChargeLevels, words: DashboardWords, colours: SourceColours.Chart) {
+    LeftToRight {
+        BatteryBarDrawing(day, levels, words, colours)
+    }
+}
+
+@Composable
+private fun BatteryBarDrawing(day: DayModel, levels: ChargeLevels, words: DashboardWords,
+    colours: SourceColours.Chart) {
     val measurer = rememberTextMeasurer()
     val style = MaterialTheme.typography.labelSmall.copy(color = colours.muted)
     val minimumText = words.minimum(levels)
@@ -195,24 +208,22 @@ private fun BatteryBar(day: DayModel, levels: ChargeLevels, words: DashboardWord
     val spoken = words.battery(day, levels)
     val minimum = remember(measurer, style, minimumText) { measurer.measure(minimumText, style) }
     val target = remember(measurer, style, targetText) { measurer.measure(targetText, style) }
-    LeftToRight {
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val density = LocalDensity.current
-            val width = constraints.maxWidth.toFloat()
-            val layout = remember(day.battery, levels, width, minimum, target, density.density) {
-                BatteryBarLayout.of(day.battery, levels, width, minimum.size.width.toFloat(),
-                    target.size.width.toFloat(), max(minimum.size.height, target.size.height).toFloat(),
-                    density.density)
-            }
-            val height = with(density) { layout.height.toDp() }
-            Box(Modifier.fillMaxWidth().height(height)) {
-                Spacer(Modifier.fillMaxWidth().height(height).semantics {
-                    contentDescription = spoken
-                    role = Role.Image
-                }.drawn(layout.shapes, colours))
-                MarkLabel(minimumText, layout.minimum, layout.labelTop(layout.minimum), style.color)
-                MarkLabel(targetText, layout.target, layout.labelTop(layout.target), style.color)
-            }
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val density = LocalDensity.current
+        val width = constraints.maxWidth.toFloat()
+        val layout = remember(day.battery, levels, width, minimum, target, density.density) {
+            BatteryBarLayout.of(day.battery, levels, width, minimum.size.width.toFloat(),
+                target.size.width.toFloat(), max(minimum.size.height, target.size.height).toFloat(),
+                density.density)
+        }
+        val height = with(density) { layout.height.toDp() }
+        Box(Modifier.fillMaxWidth().height(height)) {
+            Spacer(Modifier.fillMaxWidth().height(height).semantics {
+                contentDescription = spoken
+                role = Role.Image
+            }.drawn(layout.shapes, colours))
+            MarkLabel(minimumText, layout.minimum, layout.labelTop(layout.minimum), style.color)
+            MarkLabel(targetText, layout.target, layout.labelTop(layout.target), style.color)
         }
     }
 }
@@ -237,8 +248,13 @@ private fun MarkLabel(text: String, mark: BatteryBarLayout.Mark, top: Float, col
 /**
  * Draws the shapes in the charts' colours, then what [over] adds; the paths and the dashes are made once per size
  * and set of shapes, not per frame.
+ *
+ * @param shapes what to draw, in order
+ * @param colours the colours the shapes' inks stand for
+ * @param over what is drawn on top of the shapes, such as words
+ * @return the modifier that draws them behind its content
  */
-private fun Modifier.drawn(shapes: List<Shape>, colours: SourceColours.Chart, over: DrawScope.() -> Unit = {}) =
+internal fun Modifier.drawn(shapes: List<Shape>, colours: SourceColours.Chart, over: DrawScope.() -> Unit = {}) =
     drawWithCache {
         val dash = dashes()
         val steps = shapes.map { shape -> step(shape, colours.of(shape.ink), dash) }
