@@ -225,7 +225,7 @@ class AppArchitectureTest {
                 && access.name.substringBefore('$') in setOf("Button", "OutlinedButton", "TextButton",
                     "ElevatedButton", "FilledTonalButton")
         }
-        noClasses().that().resideOutsideOfPackage("$APP.ui.components")
+        noClasses().that().doNotHaveFullyQualifiedName("$APP.ui.components.ButtonsKt")
             .should().accessTargetWhere(materialButtons)
             .because("Material draws its buttons at 40 dp, and every control is drawn at 48 dp at least "
                 + "(docs/accessibility.md): AppButton, AppOutlinedButton and AppTextButton do that")

@@ -57,7 +57,7 @@ class SettingsSession(private val handle: SavedStateHandle, private val numbers:
         /** The page is being saved; Save and Back wait. */
         data object Saving : SaveState
 
-        /** Saved, or nothing differed from what was stored. */
+        /** Saved, or nothing differed from what was stored; until the page said so, as [savedShown] tells. */
         data object Saved : SaveState
 
         /** The API keys could not be stored, so nothing was; the page keeps what was typed. */
@@ -236,6 +236,13 @@ class SettingsSession(private val handle: SavedStateHandle, private val numbers:
             savingNow.value = SaveState.Idle
             refusedNow.value = true
             problemsShownNow.value++
+        }
+    }
+
+    /** The page said its save was saved, a message that goes by itself, so it is not shown again, as after turning. */
+    fun savedShown() {
+        if (savingNow.value == SaveState.Saved) {
+            savingNow.value = SaveState.Idle
         }
     }
 

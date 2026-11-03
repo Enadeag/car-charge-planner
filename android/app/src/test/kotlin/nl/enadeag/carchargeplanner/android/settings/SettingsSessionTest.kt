@@ -11,11 +11,14 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.android.form.CarForm
+import nl.enadeag.carchargeplanner.android.form.ChargerForm
 import nl.enadeag.carchargeplanner.android.form.FieldProblem
+import nl.enadeag.carchargeplanner.android.form.HouseForm
 import nl.enadeag.carchargeplanner.android.form.LocationForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.android.form.PanelsForm
 import nl.enadeag.carchargeplanner.android.form.PlanningForm
+import nl.enadeag.carchargeplanner.android.form.WeeklyAwayForm
 import nl.enadeag.carchargeplanner.android.setup.PlaceSearch
 import nl.enadeag.carchargeplanner.android.setup.SetUpCheck
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
@@ -414,6 +417,49 @@ class SettingsSessionTest {
         runCurrent()
 
         assertThat(session.forms.car.text(CarForm.Field.BATTERY)).isEqualTo("75.0")
+    }
+
+    @Test
+    fun forgettingSettingsLeavesNoKeyOfAnyPageInTheHandle() = runTest {
+        val session = session()
+        // the Location page last, as leaving a page forgets its place search
+        for (page in SettingsPage.entries.sortedBy { it == SettingsPage.LOCATION }) {
+            session.open(page)
+            runCurrent()
+            val forms = session.forms
+            when (page) {
+                SettingsPage.SOLAR -> {
+                    forms.panels.edit(forms.panels.rowIds.value.single(), PanelsForm.Field.NAME, "east roof")
+                    forms.panels.add()
+                }
+                SettingsPage.LOCATION -> {
+                    forms.location.edit(LocationForm.Field.LATITUDE, "52.1")
+                    forms.location.choose(ZoneId.of("Europe/Lisbon"))
+                    session.places.edit("Utrecht")
+                }
+                SettingsPage.CAR_AND_HOUSE -> {
+                    forms.car.edit(CarForm.Field.BATTERY, "75")
+                    forms.house.edit(HouseForm.Field.BASELOAD, "0.5")
+                }
+                SettingsPage.CHARGER -> forms.charger.edit(ChargerForm.Field.MAX_CURRENT, "20")
+                SettingsPage.FORECAST -> {
+                    forms.forecast.choosePrimary(forecastSolar)
+                    forms.forecast.chooseFallback(openMeteo)
+                    forms.forecast.edit(openMeteo, "base_url", "https://example.org")
+                }
+                SettingsPage.AWAY -> forms.away.edit(forms.away.add(), WeeklyAwayForm.Field.START, "08:00")
+                SettingsPage.PLANNING -> forms.planning.edit(PlanningForm.Field.MARGIN, "50")
+            }
+            session.back()
+            if (page != SettingsPage.LOCATION) {
+                session.discard()
+            }
+        }
+        assertThat(handle.keys()).contains("settings.place.text", "forecast.primary", "planning.text.MARGIN")
+
+        SettingsSession.forget(handle)
+
+        assertThat(handle.keys()).isEmpty()
     }
 
     @Test

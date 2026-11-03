@@ -182,6 +182,7 @@
 
   <string name="settings_saving">Opslaan…</string>
   <string name="settings_saved">Opgeslagen.</string>
+  <string name="settings_not_saved">Niet opgeslagen.</string>
   <string name="settings_keys_not_saved">Niet opgeslagen: de API-sleutels konden niet worden bewaard. Probeer het opnieuw.</string>
   <string name="settings_save_failed">Niet opgeslagen: de instellingen konden niet worden geschreven.</string>
   <string name="settings_discard_question">Wijzigingen weggooien?</string>
@@ -228,7 +229,7 @@
   <string name="planning_minimum">Minimaal laadniveau</string>
   <string name="planning_minimum_hint">Procent; de accu zakt er nooit onder. Lager dan het doelniveau.</string>
   <string name="planning_target">Doelniveau</string>
-  <string name="planning_target_hint">Procent, het hoogste niveau bij dagelijks gebruik.</string>
+  <string name="planning_target_hint">Procent, het hoogste niveau waartoe het plan bij dagelijks gebruik laadt.</string>
   <string name="planning_margin">Planningsmarge</string>
   <string name="planning_margin_hint">Procent van het voorspelde overschot om mee te plannen; lager is voorzichtiger.</string>
   <string name="planning_tolerance">Toegestane netstroom</string>

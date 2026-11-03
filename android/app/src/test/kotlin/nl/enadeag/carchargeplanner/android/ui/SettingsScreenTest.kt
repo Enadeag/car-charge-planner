@@ -19,6 +19,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -221,7 +222,7 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun saveInTheTopAppBarSavesThePageWhichStaysOpenAndSaysSoInALiveRegion() {
+    fun saveInTheTopAppBarSavesThePageWhichStaysOpenAndSaysSoInASnackbar() {
         val session = show()
         open(SettingsPage.CAR_AND_HOUSE)
         field(text(R.string.car_battery)).performTextReplacement("75")
@@ -231,9 +232,10 @@ class SettingsScreenTest {
 
         assertThat((access.settings as StartState.Ready).config.system().car().usableBatteryKwh()).isEqualTo(75.0)
         assertThat(session.page.value).isEqualTo(SettingsPage.CAR_AND_HOUSE)
+        // Material's snackbar, outside the page that scrolls, which a screen reader reads politely
         assertInLiveRegion(text(R.string.settings_saved))
-        // it stays in view under the top app bar while the page scrolls
         compose.onNodeWithText(text(R.string.settings_saved)).assert(!hasAnyAncestor(hasScrollAction()))
+        assertThat(session.saving.value).isEqualTo(SettingsSession.SaveState.Idle)
         field(text(R.string.car_battery)).assert(hasText("75.0"))
         up()
         compose.waitForIdle()
@@ -355,7 +357,8 @@ class SettingsScreenTest {
         click(R.string.action_save)
         compose.waitForIdle()
 
-        assertInLiveRegion(text(R.string.settings_keys_not_saved), LiveRegionMode.Assertive)
+        assertInLiveRegion(text(R.string.settings_not_saved), LiveRegionMode.Assertive)
+        assertInLiveRegion(text(R.string.settings_keys_not_saved))
     }
 
     @Test
@@ -467,6 +470,84 @@ class SettingsScreenTest {
         assertThat(session.forms.forecast.text(openMeteo, "api_key")).isEmpty()
     }
 
+    @Test
+    fun aKeyReadAfterThePageShowedFillsItsMaskedField() {
+        access.keys = Secrets(mapOf(openMeteo to mapOf("api_key" to "STORED1")))
+        val keys = CompletableDeferred<Unit>()
+        access.keysGate = keys
+        show()
+        open(SettingsPage.FORECAST)
+        compose.onNodeWithText(text(R.string.keys_reading)).assertExists()
+
+        keys.complete(Unit)
+        compose.waitForIdle()
+
+        assertThat(drawn(apiKey)).isNotEqualTo("STORED1").hasSize("STORED1".length)
+    }
+
+    @Test
+    fun aKeyShownComesBackMaskedAfterTurningThePhoneAndAfterTheSystemEndedTheApp() {
+        access.keys = Secrets(mapOf(openMeteo to mapOf("api_key" to "STORED1")))
+        val restoration = StateRestorationTester(compose)
+        var session by mutableStateOf(session())
+        restoration.setContent {
+            AppTheme {
+                val page by session.page.collectAsState()
+                SettingsScreen(session, page)
+            }
+        }
+        open(SettingsPage.FORECAST)
+        val show = text(R.string.key_show_of, "Open-Meteo")
+        compose.onNodeWithContentDescription(show).performScrollTo().performClick()
+        assertThat(drawn(apiKey)).isEqualTo("STORED1")
+
+        restoration.emulateSavedInstanceStateRestore()
+        compose.waitForIdle()
+        assertThat(drawn(apiKey)).isNotEqualTo("STORED1").hasSize("STORED1".length)
+        compose.onNodeWithContentDescription(show).performScrollTo().performClick()
+        assertThat(drawn(apiKey)).isEqualTo("STORED1")
+
+        session = session(handle.afterTheSystemEndedTheApp())
+        restoration.emulateSavedInstanceStateRestore()
+        compose.waitForIdle()
+        assertThat(drawn(apiKey)).isNotEqualTo("STORED1").hasSize("STORED1".length)
+    }
+
+    @Test
+    fun addAndRemoveOfAnArrayMoveTheFocusToTheNewArrayAndToTheOneBefore() {
+        show()
+        open(SettingsPage.SOLAR)
+
+        click(R.string.panel_add)
+        compose.waitForIdle()
+        compose.onNode(isHeading() and hasText(text(R.string.panel_array, 2))).assertIsFocused()
+        click(R.string.panel_add)
+        compose.waitForIdle()
+        click(R.string.panel_remove, 3)
+        compose.waitForIdle()
+
+        compose.onNode(isHeading() and hasText(text(R.string.panel_array, 2))).assertIsFocused()
+        click(R.string.panel_remove, 1)
+        compose.waitForIdle()
+        compose.onNode(isHeading() and hasText(text(R.string.panel_array, 1))).assertIsFocused()
+    }
+
+    @Test
+    fun addAndRemoveOfAnAwayPeriodMoveTheFocusToTheNewPeriodAndToTheOneBefore() {
+        show()
+        open(SettingsPage.AWAY)
+
+        repeat(2) {
+            click(R.string.away_add)
+            compose.waitForIdle()
+        }
+        compose.onNode(isHeading() and hasText(text(R.string.away_period, 2))).assertIsFocused()
+        click(R.string.away_remove, 2)
+        compose.waitForIdle()
+
+        compose.onNode(isHeading() and hasText(text(R.string.away_period, 1))).assertIsFocused()
+    }
+
     /** The text a field draws, after its mask. */
     private fun drawn(field: SemanticsNodeInteraction): String {
         val layouts = mutableListOf<TextLayoutResult>()
@@ -555,7 +636,7 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun aFailedSaveShowsItsEnglishDetailsInALiveRegionReadAtOnce() {
+    fun aFailedSaveIsReadAtOnceUnderTheTopAppBarAndItsEnglishDetailsOpenThePage() {
         show()
         open(SettingsPage.CAR_AND_HOUSE)
         field(text(R.string.car_battery)).performTextReplacement("75")
@@ -564,8 +645,33 @@ class SettingsScreenTest {
         click(R.string.action_save)
         compose.waitForIdle()
 
-        assertInLiveRegion(text(R.string.settings_save_failed), LiveRegionMode.Assertive)
-        assertInLiveRegion(text(R.string.details_in_english, "No space left on device"), LiveRegionMode.Assertive)
+        compose.onNodeWithText(text(R.string.settings_not_saved)).assert(!hasAnyAncestor(hasScrollAction()))
+        assertInLiveRegion(text(R.string.settings_not_saved), LiveRegionMode.Assertive)
+        val details = text(R.string.details_in_english, "No space left on device")
+        compose.onNodeWithText(details, useUnmergedTree = true).assert(hasAnyAncestor(hasScrollAction()))
+        assertInLiveRegion(text(R.string.settings_save_failed))
+        assertInLiveRegion(details)
+    }
+
+    @Test
+    @Config(qualifiers = "w480dp-h320dp-land")
+    fun aFailedSaveWithALongDetailLeavesThePageItsRoomOnASmallScreenAtTwiceTheFontSize() {
+        val detail = "Could not write /data/user/0/nl.enadeag.carchargeplanner/files/engine.json.tmp-1730637045123 " +
+            "because the file system reported that no space is left on the device and the write stopped."
+        assertThat(detail.length).isGreaterThan(180)
+        show(fontScaleTwo = true)
+        open(SettingsPage.CAR_AND_HOUSE)
+        field(text(R.string.car_battery)).performTextReplacement("75")
+        access.writeFails = true
+        access.writeProblem = detail
+
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        compose.onNodeWithText(text(R.string.settings_not_saved)).assertIsDisplayed()
+        compose.assertScrolls()
+        compose.onNodeWithText(text(R.string.details_in_english, detail), useUnmergedTree = true).performScrollTo()
+            .assertIsDisplayed()
     }
 
     @Test

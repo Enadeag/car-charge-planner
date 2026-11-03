@@ -104,6 +104,19 @@ class StartScreensTest {
     }
 
     @Test
+    fun theUnusableScreenAndItsDialogHaveTheirControlsNamedAndLargeEnoughAtTheNormalFontSize() {
+        showUnusable()
+        compose.waitForIdle()
+        compose.assertEveryControlIsNamedAndLargeEnough()
+
+        compose.onNodeWithText(text(R.string.set_up_again)).performScrollTo().performClick()
+        compose.waitForIdle()
+
+        compose.onNode(isDialog()).assertExists()
+        compose.assertEveryControlIsNamedAndLargeEnough()
+    }
+
+    @Test
     fun aFileOfANewerVersionOnlyAsksForAnUpdate() {
         compose.setContent { AppTheme { NewerVersionScreen() } }
 

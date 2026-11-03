@@ -125,8 +125,7 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
      * @param result the place chosen, from [State.Found]
      */
     fun choose(result: Result) {
-        latest.cancel()
-        stateNow.value = State.Idle
+        cancel()
         keepChosen(result.label)
     }
 

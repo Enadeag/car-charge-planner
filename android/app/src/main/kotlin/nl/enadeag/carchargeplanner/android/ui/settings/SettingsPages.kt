@@ -7,12 +7,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
@@ -33,6 +33,8 @@ import nl.enadeag.carchargeplanner.android.ui.components.EntryField
 import nl.enadeag.carchargeplanner.android.ui.components.FieldKind
 import nl.enadeag.carchargeplanner.android.ui.components.NumberField
 import nl.enadeag.carchargeplanner.android.ui.components.ProblemFocus
+import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
+import nl.enadeag.carchargeplanner.android.ui.components.RowHeading
 import nl.enadeag.carchargeplanner.android.ui.components.SectionHeading
 import nl.enadeag.carchargeplanner.android.ui.components.TimeField
 import nl.enadeag.carchargeplanner.android.ui.components.rememberFieldFocus
@@ -100,7 +102,7 @@ internal fun phasesName(phases: Phases): Int = if (phases == Phases.ONE) R.strin
 /**
  * Every panel array, each named by its place and its name ("Array 2, east roof"), with its own "I don't know" and
  * Remove, which acts at once; the last array's Remove is off, with the reason, which a screen reader reads with it.
- * There is no reordering.
+ * There is no reordering. After Add the focus goes to the new array's heading, after Remove to the one before.
  *
  * @param panels the panels' form
  * @param edits counts each edit, so the fields show it
@@ -109,27 +111,30 @@ internal fun phasesName(phases: Phases): Int = if (phases == Phases.ONE) R.strin
 @Composable
 internal fun SolarPage(panels: PanelsForm, edits: Edits, problems: ProblemFocus) {
     val rows by panels.rowIds.collectAsStateWithLifecycle()
+    val focus = remember { RowFocus() }
     Text(stringResource(R.string.settings_solar_intro))
     rows.forEachIndexed { index, row ->
         key(row) {
-            PanelArray(panels, row, index, rows.size, edits, problems)
+            PanelArray(panels, row, index, rows, edits, problems, focus)
         }
     }
-    AppOutlinedButton(onClick = { edits.make { panels.add() } }) {
+    AppOutlinedButton(onClick = { edits.make { focus.next = panels.add() } }) {
         Text(stringResource(R.string.panel_add))
     }
 }
 
 @Composable
-private fun PanelArray(panels: PanelsForm, row: Int, index: Int, count: Int, edits: Edits, problems: ProblemFocus) {
+private fun PanelArray(panels: PanelsForm, row: Int, index: Int, rows: List<Int>, edits: Edits,
+    problems: ProblemFocus, focus: RowFocus) {
+    val count = rows.size
     val shown by panels.problems(row).collectAsStateWithLifecycle()
     val typical = edits.shown { panels.typical(row) }
     val number = index + 1
     val name = edits.shown { panels.text(row, PanelsForm.Field.NAME) }.trim()
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(if (name.isEmpty()) stringResource(R.string.panel_array, number)
-            else stringResource(R.string.panel_array_named, number, name),
-            style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+        RowHeading(if (name.isEmpty()) stringResource(R.string.panel_array, number)
+            else stringResource(R.string.panel_array_named, number, name), MaterialTheme.typography.titleMedium, focus,
+            row)
         listOf(
             Triple(PanelsForm.Field.NAME, R.string.panel_name to R.string.panel_name_hint, FieldKind.TEXT),
             Triple(PanelsForm.Field.SIZE, R.string.panel_size to R.string.panel_size_hint, FieldKind.DECIMAL),
@@ -147,7 +152,12 @@ private fun PanelArray(panels: PanelsForm, row: Int, index: Int, count: Int, edi
         UseTypical(stringResource(R.string.panel_in_array, stringResource(R.string.use_typical), number)) {
             edits.make { panels.useTypical(row) }
         }
-        RemoveArray(number, count > 1) { edits.make { panels.remove(row) } }
+        RemoveArray(number, count > 1) {
+            edits.make {
+                focus.removing(rows, row)
+                panels.remove(row)
+            }
+        }
     }
 }
 

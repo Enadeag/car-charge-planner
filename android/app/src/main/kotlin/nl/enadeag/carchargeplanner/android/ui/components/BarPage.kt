@@ -25,6 +25,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -45,23 +47,28 @@ private val MOST_WIDTH = 600.dp
 
 /**
  * A screen with Material's top app bar: the title as the page's heading, Up when there is a screen to go back to, and
- * the screen's actions, such as Save, which stay in view above the keyboard; below it a status that stays in view,
- * such as what a save came to, and one column of at most [MOST_WIDTH], centred, that scrolls. The bar keeps clear of
- * the status bar and a display cutout, also one at the side, the column of the navigation bar and the keyboard.
+ * the screen's actions, such as Save, which stay in view above the keyboard; below it a short status that stays in
+ * view, such as that a save failed, and one column of at most [MOST_WIDTH], centred, that scrolls, which opens with
+ * what the status is about. A snackbar shows at the bottom. The bar keeps clear of the status bar and a display
+ * cutout, also one at the side, the column of the navigation bar and the keyboard.
  *
  * @param title the page's title, which a screen reader reads as its heading
  * @param titleFocus moves the focus to the title, as on a new page; null for one that never takes it
  * @param onUp what Up does, the same as Back; null for a screen without Up
  * @param actions the bar's actions, at its end
  * @param padded false for a list whose rows have their own padding, such as Settings' pages
- * @param status what stays in view under the bar while the column scrolls; nothing by default
+ * @param snackbars where a snackbar shows, such as "Saved."; null for a screen without
+ * @param status what stays in view under the bar while the column scrolls: one short line at most, so the page keeps
+ *     its room at any font size; nothing by default
+ * @param lead what opens the column, without its spacing, such as why a save failed; nothing by default
  * @param content the page's parts, from top to bottom
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Unit)?,
-    actions: @Composable RowScope.() -> Unit = {}, padded: Boolean = true,
-    status: @Composable ColumnScope.() -> Unit = {}, content: @Composable ColumnScope.() -> Unit) {
+    actions: @Composable RowScope.() -> Unit = {}, padded: Boolean = true, snackbars: SnackbarHostState? = null,
+    status: @Composable ColumnScope.() -> Unit = {}, lead: @Composable ColumnScope.() -> Unit = {},
+    content: @Composable ColumnScope.() -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -76,6 +83,7 @@ internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Un
                 windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
             )
         },
+        snackbarHost = { if (snackbars != null) SnackbarHost(snackbars) },
         contentWindowInsets = WindowInsets.safeDrawing,
     ) { inner ->
         Box(Modifier.fillMaxSize().padding(inner).consumeWindowInsets(inner), contentAlignment = Alignment.TopCenter) {
@@ -84,9 +92,11 @@ internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Un
                 Column(
                     modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
                         .padding(if (padded) PaddingValues(16.dp) else PaddingValues(vertical = 8.dp)),
-                    verticalArrangement = Arrangement.spacedBy(if (padded) 16.dp else 0.dp),
-                    content = content,
-                )
+                ) {
+                    lead()
+                    Column(verticalArrangement = Arrangement.spacedBy(if (padded) 16.dp else 0.dp),
+                        content = content)
+                }
             }
         }
     }

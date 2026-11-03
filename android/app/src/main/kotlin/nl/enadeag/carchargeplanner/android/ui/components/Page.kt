@@ -18,12 +18,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 
 /** The widest a page's column grows on a tablet or a phone on its side, so lines stay easy to read. */
@@ -70,4 +77,46 @@ internal fun Heading(text: String, focus: FocusRequester? = null) {
 @Composable
 internal fun SectionHeading(text: String) {
     Text(text, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+}
+
+/**
+ * Which row's heading takes the focus next, after Add or Remove changed the rows, such as the panel arrays: the new
+ * row's after Add, the one before after Remove, so the focus does not fall off the page with a button that went.
+ */
+@Stable
+internal class RowFocus {
+
+    /** The row whose heading takes the focus once it is shown; null for none. */
+    var next by mutableStateOf<Int?>(null)
+
+    /**
+     * Readies the focus for a row that goes: to the row before it, or the one after when it is the first.
+     *
+     * @param rows the rows as they are before it goes
+     * @param row the row that goes
+     */
+    fun removing(rows: List<Int>, row: Int) {
+        val index = rows.indexOf(row)
+        next = rows.getOrNull(index - 1) ?: rows.getOrNull(index + 1)
+    }
+}
+
+/**
+ * A row's heading, such as "Array 2, east roof", which takes the focus when [RowFocus] names its row.
+ *
+ * @param text the heading
+ * @param style its size, as the rows of its page have it
+ * @param focus which row's heading takes the focus next
+ * @param row the row it heads
+ */
+@Composable
+internal fun RowHeading(text: String, style: TextStyle, focus: RowFocus, row: Int) {
+    val requester = remember { FocusRequester() }
+    LaunchedEffect(focus.next) {
+        if (focus.next == row) {
+            requester.requestFocus()
+            focus.next = null
+        }
+    }
+    Text(text, style = style, modifier = Modifier.focusRequester(requester).focusable().semantics { heading() })
 }

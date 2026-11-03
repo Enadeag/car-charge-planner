@@ -7,11 +7,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import java.time.DayOfWeek
@@ -29,6 +27,8 @@ import nl.enadeag.carchargeplanner.android.ui.components.NumberField
 import nl.enadeag.carchargeplanner.android.ui.components.ProblemFocus
 import nl.enadeag.carchargeplanner.android.ui.components.SectionHeading
 import nl.enadeag.carchargeplanner.android.ui.components.TimeField
+import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
+import nl.enadeag.carchargeplanner.android.ui.components.RowHeading
 import nl.enadeag.carchargeplanner.android.ui.components.rememberFieldFocus
 import nl.enadeag.carchargeplanner.engine.config.Phases
 import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
@@ -177,7 +177,8 @@ internal fun HouseFields(house: HouseForm, edits: Edits, problems: ProblemFocus,
 
 /**
  * The weekly away periods, each with its controls named by its number, "None" when there are none, and Add. They
- * end the page, so the last period's end time has the keyboard's Done.
+ * end the page, so the last period's end time has the keyboard's Done. After Add the focus goes to the new period's
+ * heading, after Remove to the one before.
  *
  * @param away the weekly away periods' form
  * @param edits counts each edit, so the fields show it
@@ -186,15 +187,16 @@ internal fun HouseFields(house: HouseForm, edits: Edits, problems: ProblemFocus,
 @Composable
 internal fun AwayPeriods(away: WeeklyAwayForm, edits: Edits, problems: ProblemFocus) {
     val rows by away.rowIds.collectAsStateWithLifecycle()
+    val focus = remember { RowFocus() }
     if (rows.isEmpty()) {
         Text(stringResource(R.string.away_none))
     }
     rows.forEachIndexed { index, row ->
         key(row) {
-            AwayPeriod(away, row, index, index == rows.lastIndex, edits, problems)
+            AwayPeriod(away, row, index, rows, edits, problems, focus)
         }
     }
-    AppOutlinedButton(onClick = { edits.make { away.add() } }) {
+    AppOutlinedButton(onClick = { edits.make { focus.next = away.add() } }) {
         Text(stringResource(R.string.away_add))
     }
 }
@@ -206,14 +208,14 @@ internal fun AwayPeriods(away: WeeklyAwayForm, edits: Edits, problems: ProblemFo
  * period's end time has the keyboard's Done.
  */
 @Composable
-private fun AwayPeriod(away: WeeklyAwayForm, row: Int, index: Int, last: Boolean, edits: Edits,
-    problems: ProblemFocus) {
+private fun AwayPeriod(away: WeeklyAwayForm, row: Int, index: Int, rows: List<Int>, edits: Edits,
+    problems: ProblemFocus, focus: RowFocus) {
+    val last = index == rows.lastIndex
     val shown by away.problems(row).collectAsStateWithLifecycle()
     val locale = LocalConfiguration.current.locales[0]
     val number = index + 1
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.away_period, number), style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.semantics { heading() })
+        RowHeading(stringResource(R.string.away_period, number), MaterialTheme.typography.titleSmall, focus, row)
         ChoiceRow(stringResource(R.string.away_weekday, number), null, DayOfWeek.entries,
             edits.shown { DayOfWeek.entries.firstOrNull { it.name == away.text(row, WeeklyAwayForm.Field.WEEKDAY) } },
             { it.getDisplayName(TextStyle.FULL, locale) }, { day -> edits.make { away.choose(row, day) } })
@@ -224,7 +226,12 @@ private fun AwayPeriod(away: WeeklyAwayForm, row: Int, index: Int, last: Boolean
                     rememberFieldFocus(problems, 100 + 2 * index + place, field in shown),
                     if (field == WeeklyAwayForm.Field.END && last) ImeAction.Done else ImeAction.Next)
             }
-        AppTextButton(onClick = { edits.make { away.remove(row) } }) {
+        AppTextButton(onClick = {
+            edits.make {
+                focus.removing(rows, row)
+                away.remove(row)
+            }
+        }) {
             Text(stringResource(R.string.away_remove, number))
         }
     }

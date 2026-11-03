@@ -82,26 +82,29 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, phoneZone: () 
 }
 
 /**
- * What a Settings save came to, when no screen showed it, with Close, in a live region read at once for a failure;
- * after Close the focus goes on, as the notice is gone.
+ * What a Settings save came to, when no screen showed it, in a live region read at once for a failure, with Close
+ * beside it as a button of its own; after Close the focus goes on, as the notice is gone.
  */
 @Composable
 private fun Notice(notice: HomeNotice, closed: () -> Unit) {
     val shown by notice.notice.collectAsStateWithLifecycle()
     val outcome = shown ?: return
     val failed = outcome != SaveOutcome.Saved
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.semantics(mergeDescendants = true) {
-        liveRegion = if (failed) LiveRegionMode.Assertive else LiveRegionMode.Polite
-    }) {
-        when (outcome) {
-            SaveOutcome.Saved -> Text(stringResource(R.string.settings_saved))
-            SaveOutcome.KeysNotSaved -> Text(stringResource(R.string.settings_keys_not_saved),
-                color = MaterialTheme.colorScheme.error)
-            is SaveOutcome.Failed -> {
-                Text(stringResource(R.string.settings_save_failed), color = MaterialTheme.colorScheme.error)
-                EnglishDetails(outcome.detail)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val live = Modifier.semantics(mergeDescendants = true) {
+            liveRegion = if (failed) LiveRegionMode.Assertive else LiveRegionMode.Polite
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = live) {
+            when (outcome) {
+                SaveOutcome.Saved -> Text(stringResource(R.string.settings_saved))
+                SaveOutcome.KeysNotSaved -> Text(stringResource(R.string.settings_keys_not_saved),
+                    color = MaterialTheme.colorScheme.error)
+                is SaveOutcome.Failed -> {
+                    Text(stringResource(R.string.settings_save_failed), color = MaterialTheme.colorScheme.error)
+                    EnglishDetails(outcome.detail)
+                }
+                is SaveOutcome.SettingsUnusable -> Unit
             }
-            is SaveOutcome.SettingsUnusable -> Unit
         }
         AppOutlinedButton(onClick = {
             notice.close()

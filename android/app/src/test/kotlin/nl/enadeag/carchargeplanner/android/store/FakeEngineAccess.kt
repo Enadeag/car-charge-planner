@@ -27,6 +27,9 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     /** When true, the keychain cannot give the keys, as `StoredKeys.Unreadable` says. */
     var keysUnreadable = false
     var writeFails = false
+
+    /** What a failing write of the settings says. */
+    var writeProblem = "No space left on device"
     var moveFails = false
 
     /** When set, the move of the settings file throws it, as a fault in the engine would. */
@@ -78,7 +81,7 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
 
     override suspend fun saveSettings(config: EngineConfig) {
         if (writeFails) {
-            throw IOException("No space left on device")
+            throw IOException(writeProblem)
         }
         written += "settings"
         settings = StartState.Ready(config)

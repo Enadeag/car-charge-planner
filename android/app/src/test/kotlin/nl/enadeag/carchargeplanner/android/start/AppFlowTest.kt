@@ -310,6 +310,64 @@ class AppFlowTest {
     }
 
     @Test
+    fun setUpsStepAndTypedTextsSurviveTheSystemEndingTheApp() = runTest {
+        val access = FakeEngineAccess(StartState.NotSetUp)
+        val handle = SavedStateHandle()
+        val session = (flow(access, handle = handle).screen.value as AppFlow.Screen.SetUp).session
+        session.next()
+        session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+        repeat(2) { session.next() }
+        session.flow.car.edit(CarForm.Field.BATTERY, "75")
+        val latitude = session.flow.location.text(LocationForm.Field.LATITUDE)
+
+        val again = flow(access, handle = handle.afterTheSystemEndedTheApp())
+
+        val setUp = (again.screen.value as AppFlow.Screen.SetUp).session
+        assertThat(setUp.flow.step.value).isEqualTo(SetUpStep.CAR)
+        assertThat(setUp.flow.car.text(CarForm.Field.BATTERY)).isEqualTo("75")
+        assertThat(setUp.flow.location.text(LocationForm.Field.LATITUDE)).isEqualTo(latitude).isNotEmpty()
+    }
+
+    @Test
+    fun settingsEndedByAFileThatWentLeavesSetUpCleanAndKeepsNothingOfIt() = runTest {
+        val access = FakeEngineAccess(StartState.Ready(config))
+        val handle = SavedStateHandle()
+        val flow = settingsFromThePlannedHome(access, handle = handle)
+        val session = (flow.screen.value as AppFlow.Screen.Settings).session
+        session.open(SettingsPage.CAR_AND_HOUSE)
+        session.forms.car.edit(CarForm.Field.BATTERY, "75")
+        access.settings = StartState.NotSetUp
+        val kept = handle.afterTheSystemEndedTheApp()
+
+        val again = flow(access, handle = kept)
+
+        val setUp = (again.screen.value as AppFlow.Screen.SetUp).session
+        assertThat(setUp.flow.step.value).isEqualTo(SetUpStep.WELCOME)
+        assertThat(setUp.flow.isEdited()).isFalse()
+        assertThat(setUp.flow.car.text(CarForm.Field.BATTERY)).isNotEqualTo("75")
+        finishSetUp(setUp)
+        assertThat(again.screen.value).isInstanceOf(AppFlow.Screen.Home::class.java)
+        assertThat(kept.keys()).isEmpty()
+    }
+
+    @Test
+    fun settingsEndedByAFileOfANewerVersionKeepsNothingOfIt() = runTest {
+        val access = FakeEngineAccess(StartState.Ready(config))
+        val handle = SavedStateHandle()
+        val flow = settingsFromThePlannedHome(access, handle = handle)
+        val session = (flow.screen.value as AppFlow.Screen.Settings).session
+        session.open(SettingsPage.CAR_AND_HOUSE)
+        session.forms.car.edit(CarForm.Field.BATTERY, "75")
+        access.settings = StartState.NewerVersion("version 99")
+        val kept = handle.afterTheSystemEndedTheApp()
+
+        val again = flow(access, handle = kept)
+
+        assertThat(again.screen.value).isEqualTo(AppFlow.Screen.NewerVersion("version 99"))
+        assertThat(kept.keys()).isEmpty()
+    }
+
+    @Test
     fun finishingSetUpKeepsNothingOfIt() = runTest {
         val access = FakeEngineAccess(StartState.NotSetUp)
         val handle = SavedStateHandle()

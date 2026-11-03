@@ -168,7 +168,8 @@ The set-up screens, the screen of a settings file the app cannot use, the plain 
 | Away | Afwezigheid | a Settings page: the weekly away periods only |
 | Planning | Planning | a Settings page: the planning preferences |
 | Save | Opslaan | a page's Save, in its top app bar |
-| Saved. | Opgeslagen. | after a page's Save |
+| Saved. | Opgeslagen. | after a page's Save, in a snackbar |
+| Not saved. | Niet opgeslagen. | under the top app bar after a page's Save failed; why is at the top of the page |
 | Back | Terug | what TalkBack says for the top app bar's Up arrow (set-up's own button stays Vorige) |
 | Discard changes? | Wijzigingen weggooien? | asked by Back or Up on a page with edits |
 | Keep editing | Verder bewerken | stays on the page |

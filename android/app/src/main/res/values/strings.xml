@@ -222,6 +222,7 @@
 
   <string name="settings_saving">Saving…</string>
   <string name="settings_saved">Saved.</string>
+  <string name="settings_not_saved">Not saved.</string>
   <string name="settings_keys_not_saved">Not saved: the API keys could not be stored. Try again.</string>
   <string name="settings_save_failed">Not saved: the settings could not be written.</string>
   <string name="settings_discard_question">Discard changes?</string>

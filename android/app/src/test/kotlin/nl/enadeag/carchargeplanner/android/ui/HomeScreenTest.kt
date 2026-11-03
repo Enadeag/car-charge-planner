@@ -162,6 +162,8 @@ class HomeScreenTest {
         assertThat(compose.liveRegionOf(text(R.string.settings_save_failed))).isEqualTo(LiveRegionMode.Assertive)
         compose.onNodeWithText(text(R.string.details_in_english, "No space left on device"), useUnmergedTree = true)
             .assertExists()
+        // Close is a button of its own, outside the live region
+        assertThat(compose.liveRegionOf(text(R.string.action_close))).isNull()
         compose.onNodeWithText(text(R.string.action_close)).performScrollTo().performClick()
         compose.waitForIdle()
 

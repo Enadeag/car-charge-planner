@@ -22,7 +22,6 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntSize
 import androidx.test.core.app.ApplicationProvider
 import java.util.Locale
 import nl.enadeag.carchargeplanner.android.R
@@ -90,7 +89,9 @@ internal fun SemanticsNodeInteractionsProvider.assertEveryControlIsNamedAndLarge
             assertThat(node.config.getOrNull(SemanticsProperties.Role)).`as`("the role of %s", nameOf(node)).isNotNull()
         }
         val dp = node.layoutInfo.density.density
-        val drawn = drawnSize(node)
+        // the node's own size, which is what is drawn: Material widens a control drawn smaller to 48 dp of touch
+        // area outside it (minimumInteractiveComponentSize), which ScreenChecksTest shows this does not count
+        val drawn = node.size
         assertThat(minOf(drawn.width, drawn.height) / dp).`as`("the size of %s", nameOf(node))
             .isGreaterThanOrEqualTo(47.5f)
     }
@@ -98,7 +99,8 @@ internal fun SemanticsNodeInteractionsProvider.assertEveryControlIsNamedAndLarge
 
 /**
  * Checks that the screen's page scrolls far enough to show its last control whole, so nothing is out of reach at a
- * large font size.
+ * large font size; the page has room of its own, as a page squeezed to nothing by what is pinned above it would show
+ * nothing and pass the rest.
  */
 internal fun SemanticsNodeInteractionsProvider.assertScrolls() {
     val page = onNode(hasScrollAction() and hasAnyDescendant(hasClickAction()))
@@ -111,6 +113,9 @@ internal fun SemanticsNodeInteractionsProvider.assertScrolls() {
 
     val shown = page.fetchSemanticsNode().boundsInRoot
     val control = controls[last].fetchSemanticsNode().boundsInRoot
+    assertThat(shown.height).`as`("the height of the page that scrolls").isPositive()
+    assertThat(control.width).`as`("the width of %s", nameOf(nodes[last])).isPositive()
+    assertThat(control.height).`as`("the height of %s", nameOf(nodes[last])).isPositive()
     assertThat(control.top).`as`("the top of %s", nameOf(nodes[last])).isGreaterThanOrEqualTo(shown.top - 0.5f)
     assertThat(control.bottom).`as`("the bottom of %s", nameOf(nodes[last])).isLessThanOrEqualTo(shown.bottom + 0.5f)
 }
@@ -155,16 +160,6 @@ internal fun SemanticsNodeInteractionsProvider.assertOnlyTheLastFieldIsDone() {
         val expected = if (index == actions.lastIndex) ImeAction.Done else ImeAction.Next
         assertThat(action).`as`("the keyboard's action on %s", name).isEqualTo(expected)
     }
-}
-
-/**
- * The size a control is drawn at. Material pads a control drawn smaller than 48 dp out to 48 dp of touch area
- * (`minimumInteractiveComponentSize`), which the node's own size includes, so the size inside that padding counts.
- */
-private fun drawnSize(node: SemanticsNode): IntSize {
-    val modifiers = node.layoutInfo.getModifierInfo()
-    val padded = modifiers.indexOfFirst { it.modifier::class.java.simpleName == "MinimumInteractiveModifier" }
-    return if (padded in 0 until modifiers.lastIndex) modifiers[padded + 1].coordinates.size else node.size
 }
 
 private val ON_A_SCROLLING_PAGE = hasAnyAncestor(hasScrollAction())
