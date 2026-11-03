@@ -132,7 +132,7 @@
     <item quantity="one">Forecast received from %1$s, %2$d day.</item>
     <item quantity="other">Forecast received from %1$s, %2$d days.</item>
   </plurals>
-  <string name="check_failed">No forecast received. You can still finish: the Today screen asks for one again when it opens.</string>
+  <string name="check_failed">No forecast received. You can still finish: the dashboard asks for one again when it opens.</string>
   <string name="check_again">Check again</string>
   <string name="finish_saving">Saving…</string>
   <string name="finish_failed">Not saved: the settings could not be written.</string>
@@ -165,22 +165,91 @@
   <string name="newer_title">Update the app</string>
   <string name="newer_text">Your settings were saved by a newer version of the app. Update the app to use them; until then they are left as they are.</string>
 
-  <string name="home_title">Today</string>
   <string name="home_asking">Making the plan…</string>
-  <!-- %1$s the start, such as 13:00; %2$s the end; %3$d the charge current in A; %4$s the charge power in kW,
-       written already, such as 1.4 -->
-  <string name="home_window">From %1$s to %2$s, %3$d A (%4$s kW)</string>
-  <!-- %1$s the day, such as Tuesday; %2$s the start, such as 13:00; %3$s the end; %4$d the charge current in A;
-       %5$s the charge power in kW, written already, such as 1.4 -->
-  <string name="home_next_window">No charge window today. Next: %1$s from %2$s to %3$s, %4$d A (%5$s kW)</string>
-  <string name="home_no_window">No charge window today</string>
-  <!-- %1$s the battery level, written already, such as 40 -->
-  <string name="home_assumed">The plan assumes the battery is at %1$s%%.</string>
   <!-- %1$s the home's time zone, such as Europe/Lisbon -->
   <string name="home_zone">Times in %1$s</string>
-  <string name="home_no_forecast">No forecast provider has a forecast to use.</string>
   <string name="home_refresh">Refresh</string>
   <string name="home_settings">Settings</string>
+
+  <!-- a day's name: on its tab and as a title, and in the middle of a sentence -->
+  <string name="day_today">Today</string>
+  <string name="day_tomorrow">Tomorrow</string>
+  <string name="day_today_in_sentence">today</string>
+  <string name="day_tomorrow_in_sentence">tomorrow</string>
+  <!-- what a day holds, under its name -->
+  <string name="day_window">Charge window</string>
+  <string name="day_grid">Grid charge needed</string>
+  <string name="day_none">No charge window</string>
+  <!-- %1$s a start time, such as 11:15; %2$s an end time, such as 14:30 -->
+  <string name="time_span">%1$s – %2$s</string>
+  <!-- the same span as a screen reader reads it; %1$s the start time, %2$s the end time -->
+  <string name="time_span_spoken">%1$s to %2$s</string>
+  <!-- %1$d the charge current in A; %2$s the charge power in kW, written already, such as 2.3 -->
+  <string name="day_set">Set %1$d A (%2$s kW)</string>
+  <!-- %1$s the energy in kWh, written already, such as 7.9 -->
+  <string name="day_energy">about %1$s kWh</string>
+  <!-- %1$s the solar share in percent, written already, such as 92 -->
+  <string name="day_solar_share">%1$s%% solar</string>
+  <!-- %1$s the energy in kWh, written already, such as 0.4 -->
+  <string name="day_from_grid">%1$s kWh from the grid</string>
+  <!-- %1$s the battery level at the start of the day; %2$s after its charging; both written already, such as 50 -->
+  <string name="day_battery">Battery %1$s → %2$s%%</string>
+  <!-- the same as a screen reader reads it -->
+  <string name="day_battery_spoken">Battery from %1$s%% to %2$s%%</string>
+  <!-- a day's note, after its later windows: why a day has no charge window; "Today" names today's tab, day_today -->
+  <string name="day_grid_why">Solar power is not enough to stay above the minimum: see the grid advice on Today.</string>
+  <string name="day_none_why">The car needs no charging, or there is too little solar power for it.</string>
+  <!-- %1$s the later charge windows, each a day_later_window, joined by commas -->
+  <string name="day_later_windows">Also %1$s.</string>
+  <!-- %1$s the window's times, a time_span; %2$d its charge current in A -->
+  <string name="day_later_window">%1$s at %2$d A</string>
+  <!-- %1$s the battery level, written already, such as 40 -->
+  <string name="day_battery_assumed">The plan assumes the battery is at %1$s%%.</string>
+
+  <!-- the heading of the grid advice on today's tab, drawn in the grid's colours -->
+  <string name="advice_label">Grid advice</string>
+  <!-- %1$s the energy in kWh, written already; %2$s the day as in a sentence (today, tomorrow, Sunday); %3$s the
+       window's times, a time_span -->
+  <string name="advice_title_window">Charge %1$s kWh from the grid: %2$s %3$s.</string>
+  <!-- %1$s the energy in kWh, written already; %2$s the day as in a sentence (today, tomorrow, Sunday) -->
+  <string name="advice_title_no_window">Charge %1$s kWh from the grid before %2$s.</string>
+  <!-- %1$d the charge current in A; %2$s the charge power in kW, written already; %3$s the charge limit in percent,
+       written already -->
+  <string name="advice_set">Set %1$d A (%2$s kW), and a charge limit of %3$s%% in the car or the charger.</string>
+  <string name="advice_no_room">No day before it has room for a grid charge.</string>
+  <!-- %1$s the day as in a sentence (today, tomorrow, Sunday); %2$s the minimum charge level, written already -->
+  <string name="advice_runs_empty">Without it the battery runs empty %1$s; the minimum is %2$s%%.</string>
+  <!-- %1$s the day as in a sentence (today, tomorrow, Sunday); %2$s the battery level it ends at; %3$s the minimum
+       charge level; both written already -->
+  <string name="advice_ends_low">Without it the battery ends %1$s at %2$s%%, below the minimum of %3$s%%.</string>
+
+  <!-- the one-off away periods: the heading, and the line when there are none -->
+  <string name="one_off_heading">Car away</string>
+  <string name="one_off_none">None entered for the coming days.</string>
+  <!-- %1$s the day: Today, Tomorrow, or its short weekday and date such as Sat 17 Oct -->
+  <string name="one_off_all_day">%1$s, all day</string>
+  <!-- %1$s the day, as in one_off_all_day; %2$s the times, a time_span -->
+  <string name="one_off_part">%1$s, %2$s</string>
+  <!-- %1$s the day it starts, as in one_off_all_day; %2$s the start time; %3$s the day it ends; %4$s the end time -->
+  <string name="one_off_days">%1$s %2$s – %3$s %4$s</string>
+
+  <!-- the footer's parts, after the provider's own credit; %1$s the primary provider's name, such as Open-Meteo -->
+  <string name="footer_fallback">%1$s unavailable</string>
+  <string name="footer_fallback_unknown">the chosen provider unavailable</string>
+  <!-- %1$s the time the forecast was fetched, such as 10:51 -->
+  <string name="footer_updated">updated %1$s</string>
+  <!-- %1$s the time the forecast was fetched, such as 10:51 -->
+  <string name="footer_stale">not refreshed since %1$s</string>
+  <!-- %1$s the time the provider may be asked again, such as 11:30 -->
+  <string name="footer_busy">provider busy until %1$s</string>
+  <!-- above the plan when its forecast could not be refreshed; %1$s the time the forecast was fetched, such as 10:51 -->
+  <string name="stale_warning">The forecast was not refreshed since %1$s. The plan uses that forecast.</string>
+
+  <!-- the heading of the card when there is no plan, then why: no forecast provider had one, or the forecast had no
+       days; Try again is under it -->
+  <string name="no_forecast">No forecast</string>
+  <string name="no_forecast_why">No forecast provider has a forecast to use.</string>
+  <string name="no_forecast_no_days">The forecast has no days to plan.</string>
 
   <string name="action_save">Save</string>
   <!-- the top app bar's Up, which a screen reader reads; it goes back as the system's Back does -->

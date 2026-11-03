@@ -14,9 +14,9 @@ import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.LocationForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.home.Dashboard
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
 import nl.enadeag.carchargeplanner.android.home.Plans
-import nl.enadeag.carchargeplanner.android.home.TodayPlan
 import nl.enadeag.carchargeplanner.android.settings.SettingsPage
 import nl.enadeag.carchargeplanner.android.setup.PlaceSearch
 import nl.enadeag.carchargeplanner.android.setup.SetUpAgain
@@ -162,7 +162,7 @@ class AppFlowTest {
         runCurrent()
 
         val home = flow.screen.value as AppFlow.Screen.Home
-        assertThat(home.outlook.state.value).isEqualTo(HomeOutlook.State.Planned(TodayPlan.of(planned)))
+        assertThat(home.outlook.state.value).isEqualTo(HomeOutlook.State.Planned(Dashboard.of(planned, listOf())))
         assertThat(access.outlooks).hasSize(1)
     }
 

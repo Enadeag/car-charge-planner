@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.android
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyStoreException
+import java.time.Instant
 import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -18,6 +19,7 @@ import nl.enadeag.carchargeplanner.android.store.EngineOnDispatcher
 import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.android.store.StoredKeys
 import nl.enadeag.carchargeplanner.engine.Outlook
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
@@ -80,9 +82,10 @@ class EngineOnDispatcherTest {
         access.searchPlaces(ProviderId("unknown"), "Utrecht", "nl")
         access.setSettingsAside()
         access.outlook()
+        access.awayPeriods()
         access.checkConnection(ProviderId("unknown"), draft.system(), emptyMap())
 
-        assertThat(dispatcher.handed.get()).isEqualTo(8)
+        assertThat(dispatcher.handed.get()).isEqualTo(9)
         assertThat(dispatcher.threads).containsExactly("engine-io")
     }
 
@@ -134,6 +137,18 @@ class EngineOnDispatcherTest {
     @Test
     fun withoutASettingsFileThereIsNoPlanAndNothingIsAsked() = runBlocking<Unit> {
         assertThat(access.outlook()).isInstanceOf(Outlook.NotSetUp::class.java)
+    }
+
+    @Test
+    fun theOneOffAwayPeriodsAreReadFromTheFilesFolderInOrder() = runBlocking<Unit> {
+        Files.createDirectories(filesFolder)
+        filesFolder.resolve("away.json").writeText("""{"version": 1, "periods": [
+            {"start": "2026-06-03T08:00:00Z", "end": "2026-06-03T16:00:00Z"},
+            {"start": "2026-06-01T08:00:00Z", "end": "2026-06-01T10:00:00Z"}]}""")
+
+        assertThat(access.awayPeriods()).containsExactly(
+            OneOffAwayPeriod(Instant.parse("2026-06-01T08:00:00Z"), Instant.parse("2026-06-01T10:00:00Z")),
+            OneOffAwayPeriod(Instant.parse("2026-06-03T08:00:00Z"), Instant.parse("2026-06-03T16:00:00Z")))
     }
 
     @Test

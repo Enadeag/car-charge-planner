@@ -139,7 +139,7 @@ The Android app's texts are Android string resources, in `android/app/src/main/r
 
 ### The words of the Android screens
 
-The set-up screens, the screen of a settings file the app cannot use, the plain home and Settings use these words beside the terms above, in every language the same way. The buttons and headings are short, as on a phone; the desktop's wording of the same step may differ.
+The set-up screens, the screen of a settings file the app cannot use, the dashboard and Settings use these words beside the terms above, in every language the same way. The buttons and headings are short, as on a phone; the desktop's wording of the same step may differ.
 
 | English | Dutch | Note |
 | --- | --- | --- |
@@ -157,8 +157,28 @@ The set-up screens, the screen of a settings file the app cannot use, the plain 
 | Settings file cannot be used | Niet ingesteld | the heading of the screen for an unusable config |
 | Away until, period 2 | Afwezig tot, afwezigheid 2 | a weekly away period's field, named with the period's number |
 | Add period | Afwezigheid toevoegen | adds a weekly away period |
-| Today | Vandaag | the plain home's heading |
-| Refresh | Vernieuwen | makes the plan again |
+| Today, Tomorrow | Vandaag, Morgen | a day's tab and title; the other days by their weekday |
+| Refresh | Vernieuwen | makes the plan again; the top app bar's action |
+| Charge window, No charge window | Laadvenster, Geen laadvenster | what a day holds, under its name |
+| Grid charge needed | Laden uit het net nodig | a day without a window that the grid advice is about |
+| Set 10 A (2.3 kW) | Stel 10 A in (2,3 kW) | what to set for a day's charge window |
+| about 7.9 kWh | ongeveer 7,9 kWh | what the window charges |
+| 92% solar, 0.4 kWh from the grid | 92% zonnestroom, 0,4 kWh uit het net | a day's figures by source, each in its colour |
+| Battery 50 → 74% | Accu 50 → 74% | the battery level at the start of the day and after charging; TalkBack reads "Battery from 50% to 74%" |
+| 11:15 to 14:30 | 11:15 tot 14:30 | what TalkBack reads for a charge window's 11:15 – 14:30 |
+| Solar power is not enough to stay above the minimum: see the grid advice on Today. | Zonnestroom is niet genoeg om boven het minimum te blijven: zie het advies over laden uit het net bij Vandaag. | why a day the grid advice is about has no charge window; "Today" is today's tab |
+| The car needs no charging, or there is too little solar power for it. | De auto hoeft niet te laden, of er is te weinig zonnestroom voor. | why a day has no charge window |
+| Also 16:00 – 17:00 at 6 A, 18:00 – 19:00 at 8 A. | Ook 16:00 – 17:00 met 6 A, 18:00 – 19:00 met 8 A. | a day's later charge windows, in its note |
+| Grid advice | Advies: laden uit het net | the heading of today's grid advice |
+| Charge 8.4 kWh from the grid: Sunday 09:00 – 15:10. | Laad 8,4 kWh uit het net: zondag 09:00 – 15:10. | the grid advice's title; "before Sunday" when no day has room |
+| Without it the battery ends Sunday at 17%, below the minimum of 30%. | Anders eindigt de accu zondag op 17%, onder het minimum van 30%. | why the grid advice; "runs empty" when it would end at 0% or below |
+| Set 16 A (3.7 kW), and a charge limit of 80% in the car or the charger. | Stel 16 A in (3,7 kW), en een laadlimiet van 80% in de auto of de laadpaal. | what to set for the grid charge; otherwise "No day before it has room for a grid charge." |
+| Car away | Afwezig | the heading of the one-off away periods |
+| None entered for the coming days. | Niets ingevuld voor de komende dagen. | no one-off away period to come |
+| updated 10:51, not refreshed since 10:51 | bijgewerkt om 10:51, niet vernieuwd sinds 10:51 | the footer, after the provider's credit, which stays as it is |
+| provider busy until 11:30 | dienst weer beschikbaar om 11:30 | the footer, during a cool-down |
+| The forecast was not refreshed since 10:51. The plan uses that forecast. | De voorspelling is niet vernieuwd sinds 10:51. De planning gebruikt die voorspelling. | the warning above a plan on a stale forecast |
+| No forecast | Geen voorspelling | the heading when there is no plan |
 | Settings | Instellingen | the home's top app bar action, and the list's title |
 | Solar panels | Zonnepanelen | a Settings page: every panel array |
 | Location | Locatie | a Settings page |

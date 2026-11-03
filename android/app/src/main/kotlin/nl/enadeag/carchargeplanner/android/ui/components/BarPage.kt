@@ -39,7 +39,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import nl.enadeag.carchargeplanner.android.R
 
@@ -47,11 +46,9 @@ import nl.enadeag.carchargeplanner.android.R
 private val MOST_WIDTH = 600.dp
 
 /**
- * A screen with Material's top app bar: the title as the page's heading, Up when there is a screen to go back to, and
- * the screen's actions, such as Save, which stay in view above the keyboard; below it a short status that stays in
- * view, such as that a save failed, and one column of at most [MOST_WIDTH], centred, that scrolls, which opens with
- * what the status is about. A snackbar shows at the bottom. The bar keeps clear of the status bar and a display
- * cutout, also one at the side, the column of the navigation bar and the keyboard.
+ * A [BarScaffold] page: the bar's actions, such as Save, stay in view above the keyboard; below the bar a short status
+ * that stays in view, such as that a save failed, and the column that scrolls, which opens with what the status is
+ * about.
  *
  * @param title the page's title, which a screen reader reads as its heading
  * @param titleFocus moves the focus to the title, as on a new page; null for one that never takes it
@@ -66,7 +63,6 @@ private val MOST_WIDTH = 600.dp
  *     says is in view; null for none
  * @param content the page's parts, from top to bottom
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Unit)?,
     actions: @Composable RowScope.() -> Unit = {}, padded: Boolean = true, snackbars: SnackbarHostState? = null,
@@ -78,14 +74,45 @@ internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Un
             scroll.animateScrollTo(0)
         }
     }
+    BarScaffold(title, titleFocus, onUp, actions, snackbars) {
+        Column(Modifier.padding(horizontal = 16.dp), content = status)
+        Column(
+            modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll)
+                .padding(if (padded) PaddingValues(16.dp) else PaddingValues(vertical = 8.dp)),
+        ) {
+            lead()
+            Column(verticalArrangement = Arrangement.spacedBy(if (padded) 16.dp else 0.dp), content = content)
+        }
+    }
+}
+
+/**
+ * Material's top app bar over one column of at most [MOST_WIDTH], centred, which fills the rest of the screen: the
+ * bar's title is the screen's heading, with Up when there is a screen to go back to and the screen's actions. The
+ * title wraps and the bar grows with it, so nothing of it is cut off at a large font size. The bar keeps clear of the
+ * status bar and a display cutout, also one at the side; the column of those, the navigation bar and the keyboard. A
+ * snackbar shows at the bottom.
+ *
+ * @param title the screen's title, which a screen reader reads as its heading
+ * @param titleFocus moves the focus to the title, as on a new screen; null for one that never takes it
+ * @param onUp what Up does, the same as Back; null for a screen without Up
+ * @param actions the bar's actions, at its end
+ * @param snackbars where a snackbar shows; null for a screen without
+ * @param content the column's parts, which scroll on their own
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun BarScaffold(title: String, titleFocus: FocusRequester?, onUp: (() -> Unit)?,
+    actions: @Composable RowScope.() -> Unit = {}, snackbars: SnackbarHostState? = null,
+    content: @Composable ColumnScope.() -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     val focused = if (titleFocus == null) Modifier
                         else Modifier.focusRequester(titleFocus).focusable()
-                    Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = focused.semantics { heading() })
+                    // no line limit: Material's bar grows with its title, so a long one at a large font is whole
+                    Text(title, modifier = focused.semantics { heading() })
                 },
                 navigationIcon = { if (onUp != null) UpButton(onUp) },
                 actions = actions,
@@ -96,17 +123,7 @@ internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Un
         contentWindowInsets = WindowInsets.safeDrawing,
     ) { inner ->
         Box(Modifier.fillMaxSize().padding(inner).consumeWindowInsets(inner), contentAlignment = Alignment.TopCenter) {
-            Column(Modifier.widthIn(max = MOST_WIDTH).fillMaxWidth()) {
-                Column(Modifier.padding(horizontal = 16.dp), content = status)
-                Column(
-                    modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll)
-                        .padding(if (padded) PaddingValues(16.dp) else PaddingValues(vertical = 8.dp)),
-                ) {
-                    lead()
-                    Column(verticalArrangement = Arrangement.spacedBy(if (padded) 16.dp else 0.dp),
-                        content = content)
-                }
-            }
+            Column(Modifier.widthIn(max = MOST_WIDTH).fillMaxWidth(), content = content)
         }
     }
 }
@@ -114,7 +131,7 @@ internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Un
 /** The top app bar's Up, Material's arrow, mirrored right to left, that a screen reader names "Back". */
 @Composable
 private fun UpButton(onUp: () -> Unit) {
-    BarIconButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_up), onUp)
+    BarIconButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_up), onClick = onUp)
 }
 
 /**
@@ -122,12 +139,13 @@ private fun UpButton(onUp: () -> Unit) {
  *
  * @param icon Material's icon
  * @param name what a screen reader says for it, as the icon has no text
+ * @param enabled false while it cannot be used, as while the plan is made
  * @param onClick what it does
  */
 @Composable
-internal fun BarIconButton(icon: ImageVector, name: String, onClick: () -> Unit) {
+internal fun BarIconButton(icon: ImageVector, name: String, enabled: Boolean = true, onClick: () -> Unit) {
     // Material draws an icon button at 40 dp; a control is 48 dp at least
-    IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
+    IconButton(onClick = onClick, modifier = Modifier.size(48.dp), enabled = enabled) {
         Icon(icon, contentDescription = name)
     }
 }
