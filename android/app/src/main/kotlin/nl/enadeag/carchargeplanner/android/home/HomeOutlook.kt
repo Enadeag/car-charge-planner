@@ -1,5 +1,9 @@
 package nl.enadeag.carchargeplanner.android.home
 
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,36 +17,42 @@ import nl.enadeag.carchargeplanner.engine.Outlook
 import org.slf4j.LoggerFactory
 
 /**
- * The plain home's plan: asked when the home opens, unless it comes back from Settings where nothing changed, again on
- * Refresh, and again when a Settings save changes something while the home is shown, only the latest answer counting.
- * A settings file that is gone or cannot be used is handed on, so the app shows set-up or the file's problem instead.
+ * The dashboard's plan: asked when the home opens, unless it comes back from Settings where nothing changed, again on
+ * Refresh or a pull, again when the owner comes back to the app and the plan shown is older than [STALE_AFTER], and
+ * again when a Settings save changes something while the home is shown, only the latest answer counting. Refresh
+ * keeps a plan in view while the new one is made; a Settings change does not, as the plan shown no longer fits. A
+ * settings file that is gone or cannot be used is handed on, so the app shows set-up or the file's problem instead.
  * Called from the main thread.
  *
- * @param access the engine's plan
+ * @param access the engine's plan and the one-off away periods
  * @param scope where the plan is asked, the screen's
+ * @param clock tells how old the plan shown is
  * @param changes counts the Settings saves that changed something; each new count asks for the plan again
- * @param shown the plan the home showed before Settings opened, kept when no save changed anything since; null asks
+ * @param kept what the home showed before Settings opened, kept when no save changed anything since; null asks
  * @param lost called when the outlook says the app is not set up or its settings file cannot be used
  */
-class HomeOutlook(private val access: EngineAccess, scope: CoroutineScope,
-    changes: StateFlow<Int> = MutableStateFlow(0), shown: State? = null, private val lost: () -> Unit) {
+class HomeOutlook(private val access: EngineAccess, scope: CoroutineScope, private val clock: Clock,
+    changes: StateFlow<Int> = MutableStateFlow(0), kept: Kept? = null, private val lost: () -> Unit) {
 
-    private companion object {
-        val LOG = LoggerFactory.getLogger(HomeOutlook::class.java)
+    companion object {
+        /** How old a plan may be when the owner comes back to the app before a new one is asked. */
+        val STALE_AFTER: Duration = Duration.ofMinutes(15)
+
+        private val LOG = LoggerFactory.getLogger(HomeOutlook::class.java)
     }
 
     /** What the home shows. */
     sealed interface State {
 
-        /** The plan is being made, which may fetch a forecast first. */
+        /** The first plan is being made, which may fetch a forecast first. */
         data object Asking : State
 
         /**
-         * There is a plan.
+         * There is a plan with days.
          *
-         * @property today what the home shows of it
+         * @property dashboard what the home shows of it
          */
-        data class Planned(val today: TodayPlan) : State
+        data class Planned(val dashboard: Dashboard) : State
 
         /**
          * No forecast provider had a forecast, or the plan failed otherwise; the owner may try again.
@@ -50,42 +60,95 @@ class HomeOutlook(private val access: EngineAccess, scope: CoroutineScope,
          * @property reason the engine's words, in English
          */
         data class NoForecast(val reason: String) : State
+
+        /**
+         * The forecast has no days to plan.
+         *
+         * @property footer the forecast's credit, source and freshness
+         * @property zone the home's time zone, in which the footer's times are told
+         */
+        data class NoDays(val footer: Footer, val zone: ZoneId) : State
     }
 
-    private val latest = LatestAnswer<Outlook?>(scope)
-    private val stateNow = MutableStateFlow(shown ?: State.Asking)
+    /**
+     * An answer the home showed, and when it came, so a home made again shows it as it was.
+     *
+     * @property state the answer; never [State.Asking]
+     * @property at when it came, by the home's clock
+     */
+    data class Kept(val state: State, val at: Instant)
+
+    private val latest = LatestAnswer<State?>(scope)
+    private val stateNow = MutableStateFlow(kept?.state ?: State.Asking)
+    private val refreshingNow = MutableStateFlow(false)
+    private var answeredAt: Instant? = kept?.at
 
     /** What the home shows now. */
     val state: StateFlow<State> = stateNow.asStateFlow()
 
+    /** True while a new plan is made with the one before still in view. */
+    val refreshing: StateFlow<Boolean> = refreshingNow.asStateFlow()
+
     init {
-        if (shown == null || shown == State.Asking) {
-            refresh()
+        if (kept == null || kept.state == State.Asking) {
+            ask()
         }
         scope.launch {
-            changes.drop(1).collect { refresh() }
+            changes.drop(1).collect { ask() }
         }
     }
 
-    /** Asks for the plan again, as on Refresh. */
+    /** Asks for the plan again, as on Refresh or a pull: a plan shown stays in view until the new one comes. */
     fun refresh() {
-        stateNow.value = State.Asking
-        latest.ask({ ask() }) { outlook ->
-            when (outlook) {
-                is Outlook.Planned -> stateNow.value = State.Planned(TodayPlan.of(outlook))
-                is Outlook.NoForecast -> stateNow.value = State.NoForecast(outlook.reason())
-                is Outlook.NotSetUp, is Outlook.ConfigUnusable -> lost()
-                null -> stateNow.value = State.NoForecast("The plan could not be made.")
+        if (stateNow.value is State.Planned) ask(keepShown = true) else ask()
+    }
+
+    /** Tells that the owner came back to the app: a plan older than [STALE_AFTER] is asked again. */
+    fun returned() {
+        val at = answeredAt ?: return
+        if (Duration.between(at, clock.instant()) > STALE_AFTER) {
+            refresh()
+        }
+    }
+
+    /**
+     * What the home shows now, for a home made again.
+     *
+     * @return the answer and when it came; null while the first is asked
+     */
+    fun kept(): Kept? = answeredAt?.let { at -> stateNow.value.takeIf { it != State.Asking }?.let { Kept(it, at) } }
+
+    private fun ask(keepShown: Boolean = false) {
+        if (keepShown) {
+            refreshingNow.value = true
+        } else {
+            stateNow.value = State.Asking
+            refreshingNow.value = false
+        }
+        latest.ask({ answer() }) { state ->
+            refreshingNow.value = false
+            if (state == null) {
+                answeredAt = null
+                lost()
+            } else {
+                stateNow.value = state
+                answeredAt = clock.instant()
             }
         }
     }
 
-    private suspend fun ask(): Outlook? = try {
-        access.outlook()
+    /** The home's next state; null when the app is not set up or its settings file cannot be used. */
+    private suspend fun answer(): State? = try {
+        when (val outlook = access.outlook()) {
+            is Outlook.Planned -> if (outlook.days().isEmpty()) State.NoDays(Footer.of(outlook), outlook.zone())
+                else State.Planned(Dashboard.of(outlook, access.awayPeriods()))
+            is Outlook.NoForecast -> State.NoForecast(outlook.reason())
+            is Outlook.NotSetUp, is Outlook.ConfigUnusable -> null
+        }
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (failure: RuntimeException) {
         LOG.warn("The plan could not be made", failure)
-        null
+        State.NoForecast("The plan could not be made.")
     }
 }

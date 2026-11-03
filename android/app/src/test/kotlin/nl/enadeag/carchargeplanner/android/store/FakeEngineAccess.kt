@@ -5,6 +5,7 @@ import java.nio.file.Path
 import kotlinx.coroutines.CompletableDeferred
 import nl.enadeag.carchargeplanner.android.AppEngine
 import nl.enadeag.carchargeplanner.engine.Outlook
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.HomeSystem
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
@@ -69,6 +70,11 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     override fun hasPlaceSearch(provider: ProviderId) = provider.value() == "open-meteo"
 
     override suspend fun outlook(): Outlook = CompletableDeferred<Outlook>().also { outlooks += it }.await()
+
+    /** The one-off away periods stored, in order of their start. */
+    var away: List<OneOffAwayPeriod> = listOf()
+
+    override suspend fun awayPeriods(): List<OneOffAwayPeriod> = away
 
     override suspend fun readSettings(): StartState {
         val read = settings

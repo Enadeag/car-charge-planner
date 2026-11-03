@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.android.start
 
 import androidx.lifecycle.SavedStateHandle
+import java.time.Clock
 import java.time.ZoneId
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -40,10 +41,12 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig
  * @property phoneZone the phone's time zone as it is now; the screens read it from here only
  * @param language the app's language now, as the place search takes it, such as "nl"
  * @param mainThread the screens' own thread, where a Settings save reads its forms: `Dispatchers.Main.immediate`
+ * @param clock tells the home how old the plan it shows is
  */
 class AppFlow(private val access: EngineAccess, private val saves: Saves, private val appScope: CoroutineScope,
     private val scope: CoroutineScope, private val handle: SavedStateHandle, private val numbers: NumberText,
-    val phoneZone: () -> ZoneId, private val language: () -> String, private val mainThread: CoroutineDispatcher) {
+    val phoneZone: () -> ZoneId, private val language: () -> String, private val mainThread: CoroutineDispatcher,
+    private val clock: Clock = Clock.systemUTC()) {
 
     private companion object {
         const val SETTINGS = "app.settings"
@@ -77,7 +80,7 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
         data class NewerVersion(val details: String) : Screen
 
         /**
-         * The home, with today's charge windows.
+         * The home: the dashboard, with the plan's days.
          *
          * @property outlook the plan it shows
          * @property notice the outcome of a Settings save that no screen showed yet
@@ -97,7 +100,7 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
     private var screenScope: CoroutineScope? = null
 
     /** What the home showed when Settings opened, kept for its return when no save changed anything. */
-    private var homeShown: HomeOutlook.State? = null
+    private var homeShown: HomeOutlook.Kept? = null
     private var changesSeen = 0
 
     /** The screen shown now. */
@@ -116,7 +119,7 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
     /** Opens Settings from the home, on the settings file read again. */
     fun openSettings() {
         val home = screenNow.value as? Screen.Home ?: return
-        homeShown = home.outlook.state.value
+        homeShown = home.outlook.kept()
         changesSeen = saves.changes.value
         handle[SETTINGS] = true
         read()
@@ -155,9 +158,10 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
     }
 
     /** The home, which keeps nothing of set-up in the handle. */
-    private fun home(own: CoroutineScope, shown: HomeOutlook.State? = null): Screen.Home {
+    private fun home(own: CoroutineScope, kept: HomeOutlook.Kept? = null): Screen.Home {
         SetUpSession.forget(handle)
-        return Screen.Home(HomeOutlook(access, own, saves.changes, shown, ::read), HomeNotice(saves, own, ::show))
+        return Screen.Home(HomeOutlook(access, own, clock, saves.changes, kept, ::read),
+            HomeNotice(saves, own, ::show))
     }
 
     private fun settings(own: CoroutineScope, config: EngineConfig): Screen.Settings {

@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.android.store
 
 import java.nio.file.Path
 import nl.enadeag.carchargeplanner.engine.Outlook
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.HomeSystem
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
@@ -12,9 +13,9 @@ import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 
 /**
  * All the screens' logic asks of the engine that reads or writes: the settings file, the API keys, the plan, the
- * connection check and the place search. Each call suspends while it runs off the main thread, as the keychain and
- * the API keys may block for about a second and the others reach the disk or the network. The screens
- * never call the engine, the keys or the files themselves (`AppArchitectureTest`).
+ * one-off away periods, the connection check and the place search. Each call suspends while it runs off the main
+ * thread, as the keychain and the API keys may block for about a second and the others reach the disk or the network.
+ * The screens never call the engine, the keys or the files themselves (`AppArchitectureTest`).
  */
 interface EngineAccess {
 
@@ -77,6 +78,14 @@ interface EngineAccess {
      * @return the plan, or why there is none: not set up, a settings file that cannot be used, or no forecast
      */
     suspend fun outlook(): Outlook
+
+    /**
+     * Reads the one-off away periods the owner entered; the weekly ones are in the settings file.
+     *
+     * @return the stored periods in order of their start, also those that ended in the last day; empty when there are
+     *     none or the file cannot be read
+     */
+    suspend fun awayPeriods(): List<OneOffAwayPeriod>
 
     /**
      * Asks a provider for one forecast with these settings; nothing is cached or saved.

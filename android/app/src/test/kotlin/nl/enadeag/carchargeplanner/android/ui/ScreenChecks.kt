@@ -11,6 +11,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasAnyAncestor
@@ -119,6 +120,28 @@ internal fun SemanticsNodeInteractionsProvider.assertScrolls() {
     assertThat(control.top).`as`("the top of %s", nameOf(nodes[last])).isGreaterThanOrEqualTo(shown.top - 0.5f)
     assertThat(control.bottom).`as`("the bottom of %s", nameOf(nodes[last])).isLessThanOrEqualTo(shown.bottom + 0.5f)
 }
+
+/**
+ * Checks that the page that scrolls up and down, the one shown of a pager's, has room of its own and scrolls far
+ * enough to show this part of it whole, such as the last line of a page without a control at its end.
+ *
+ * @param last what the page shows last
+ */
+internal fun SemanticsNodeInteractionsProvider.assertScrollsToShow(last: SemanticsMatcher) {
+    val part = onNode(last and hasAnyAncestor(SCROLLS_UP_AND_DOWN), useUnmergedTree = true)
+
+    part.performScrollTo()
+
+    val page = onNode(SCROLLS_UP_AND_DOWN and hasAnyDescendant(last), useUnmergedTree = true)
+        .fetchSemanticsNode().boundsInRoot
+    val shown = part.fetchSemanticsNode().boundsInRoot
+    assertThat(page.height).`as`("the height of the page that scrolls").isPositive()
+    assertThat(shown.height).`as`("the height of the last part").isPositive()
+    assertThat(shown.top).`as`("the top of the last part").isGreaterThanOrEqualTo(page.top - 0.5f)
+    assertThat(shown.bottom).`as`("the bottom of the last part").isLessThanOrEqualTo(page.bottom + 0.5f)
+}
+
+private val SCROLLS_UP_AND_DOWN = SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange)
 
 /**
  * Checks that the screen shows none of these texts.

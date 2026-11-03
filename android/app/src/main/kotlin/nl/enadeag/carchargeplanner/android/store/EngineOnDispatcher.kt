@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import nl.enadeag.carchargeplanner.engine.Engine
 import nl.enadeag.carchargeplanner.engine.Outlook
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.HomeSystem
@@ -61,6 +62,8 @@ class EngineOnDispatcher(private val engine: Engine, private val dispatcher: Cor
     }
 
     override suspend fun outlook(): Outlook = withContext(dispatcher) { engine.outlook() }
+
+    override suspend fun awayPeriods(): List<OneOffAwayPeriod> = withContext(dispatcher) { engine.awayPeriods() }
 
     override suspend fun checkConnection(provider: ProviderId, system: HomeSystem, settings: Map<String, String>) =
         withContext(dispatcher) { engine.checkConnection(provider, system, settings) }

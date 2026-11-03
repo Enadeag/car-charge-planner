@@ -141,16 +141,56 @@
   <string name="newer_title">Werk de app bij</string>
   <string name="newer_text">Je instellingen zijn opgeslagen door een nieuwere versie van de app. Werk de app bij om ze te gebruiken; tot dan blijven ze zoals ze zijn.</string>
 
-  <string name="home_title">Vandaag</string>
   <string name="home_asking">De planning wordt gemaakt…</string>
-  <string name="home_window">Van %1$s tot %2$s, %3$d A (%4$s kW)</string>
-  <string name="home_next_window">Geen laadvenster vandaag. Volgende: %1$s van %2$s tot %3$s, %4$d A (%5$s kW)</string>
-  <string name="home_no_window">Geen laadvenster vandaag</string>
-  <string name="home_assumed">De planning gaat ervan uit dat de accu op %1$s%% staat.</string>
   <string name="home_zone">Tijden in %1$s</string>
-  <string name="home_no_forecast">Geen enkele voorspellingsdienst heeft een bruikbare voorspelling.</string>
   <string name="home_refresh">Vernieuwen</string>
   <string name="home_settings">Instellingen</string>
+
+  <string name="day_today">Vandaag</string>
+  <string name="day_tomorrow">Morgen</string>
+  <string name="day_today_in_sentence">vandaag</string>
+  <string name="day_tomorrow_in_sentence">morgen</string>
+  <string name="day_window">Laadvenster</string>
+  <string name="day_grid">Laden uit het net nodig</string>
+  <string name="day_none">Geen laadvenster</string>
+  <string name="time_span">%1$s – %2$s</string>
+  <string name="time_span_spoken">%1$s tot %2$s</string>
+  <string name="day_set">Stel %1$d A in (%2$s kW)</string>
+  <string name="day_energy">ongeveer %1$s kWh</string>
+  <string name="day_solar_share">%1$s%% zonnestroom</string>
+  <string name="day_from_grid">%1$s kWh uit het net</string>
+  <string name="day_battery">Accu %1$s → %2$s%%</string>
+  <string name="day_battery_spoken">Accu van %1$s%% naar %2$s%%</string>
+  <string name="day_grid_why">Zonnestroom is niet genoeg om boven het minimum te blijven: zie het advies over laden uit het net bij Vandaag.</string>
+  <string name="day_none_why">De auto hoeft niet te laden, of er is te weinig zonnestroom voor.</string>
+  <string name="day_later_windows">Ook %1$s.</string>
+  <string name="day_later_window">%1$s met %2$d A</string>
+  <string name="day_battery_assumed">De planning gaat ervan uit dat de accu op %1$s%% staat.</string>
+
+  <string name="advice_label">Advies: laden uit het net</string>
+  <string name="advice_title_window">Laad %1$s kWh uit het net: %2$s %3$s.</string>
+  <string name="advice_title_no_window">Laad %1$s kWh uit het net vóór %2$s.</string>
+  <string name="advice_set">Stel %1$d A in (%2$s kW), en een laadlimiet van %3$s%% in de auto of de laadpaal.</string>
+  <string name="advice_no_room">Er is geen dag ervoor met ruimte om uit het net te laden.</string>
+  <string name="advice_runs_empty">Anders raakt de accu %1$s leeg; het minimum is %2$s%%.</string>
+  <string name="advice_ends_low">Anders eindigt de accu %1$s op %2$s%%, onder het minimum van %3$s%%.</string>
+
+  <string name="one_off_heading">Afwezig</string>
+  <string name="one_off_none">Niets ingevuld voor de komende dagen.</string>
+  <string name="one_off_all_day">%1$s, hele dag</string>
+  <string name="one_off_part">%1$s, %2$s</string>
+  <string name="one_off_days">%1$s %2$s – %3$s %4$s</string>
+
+  <string name="footer_fallback">%1$s niet beschikbaar</string>
+  <string name="footer_fallback_unknown">de gekozen dienst niet beschikbaar</string>
+  <string name="footer_updated">bijgewerkt om %1$s</string>
+  <string name="footer_stale">niet vernieuwd sinds %1$s</string>
+  <string name="footer_busy">dienst weer beschikbaar om %1$s</string>
+  <string name="stale_warning">De voorspelling is niet vernieuwd sinds %1$s. De planning gebruikt die voorspelling.</string>
+
+  <string name="no_forecast">Geen voorspelling</string>
+  <string name="no_forecast_why">Geen enkele voorspellingsdienst heeft een bruikbare voorspelling.</string>
+  <string name="no_forecast_no_days">De voorspelling heeft geen dagen om te plannen.</string>
 
   <string name="action_save">Opslaan</string>
   <string name="action_up">Terug</string>

@@ -62,7 +62,7 @@ class AppScreenTest {
         compose.onNodeWithContentDescription(text(R.string.action_up)).performClick()
         compose.waitForIdle()
 
-        compose.onNode(isHeading() and hasText(text(R.string.home_title))).assertExists()
+        compose.onNode(isHeading() and hasText(text(R.string.app_name))).assertExists()
         assertThat(flow.screen.value).isInstanceOf(AppFlow.Screen.Home::class.java)
     }
 }
