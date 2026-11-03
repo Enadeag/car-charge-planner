@@ -207,7 +207,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Not saved. | Niet opgeslagen. | under the top app bar after a page's Save failed; why is at the top of the page |
 | Back | Terug | what TalkBack says for the top app bar's Up arrow (set-up's own button stays Vorige) |
 | Saving… | Opslaan… | Save while it saves, on a Settings page and in the battery level's entry |
-| Discard changes? | Wijzigingen weggooien? | asked by Back or Up on a Settings page with edits, and by Back in the battery level's entry with a level typed |
+| Discard changes? | Wijzigingen weggooien? | asked by Back or Up on a Settings page with edits, and by Back, or a tap beside it, in the battery level's entry with a level typed |
 | Keep editing | Verder bewerken | stays on the page, or in the entry |
 | Discard | Weggooien | throws the page's edits, or the typed level, away |
 | Close | Sluiten | closes a save's outcome shown on the home |
