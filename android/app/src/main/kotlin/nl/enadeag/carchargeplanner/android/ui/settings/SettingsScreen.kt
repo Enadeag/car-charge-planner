@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -47,10 +46,11 @@ import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.settings.SettingsPage
 import nl.enadeag.carchargeplanner.android.settings.SettingsSession
 import nl.enadeag.carchargeplanner.android.ui.components.BarPage
+import nl.enadeag.carchargeplanner.android.ui.components.DiscardChangesDialog
 import nl.enadeag.carchargeplanner.android.ui.components.EnglishDetails
 import nl.enadeag.carchargeplanner.android.ui.components.ProblemFocus
+import nl.enadeag.carchargeplanner.android.ui.components.SaveButton
 import nl.enadeag.carchargeplanner.android.ui.setup.Edits
-import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 
 /**
  * Settings' screen (#315): the list of its pages, or one page with Up, its title and Save in the top app bar. System
@@ -83,7 +83,7 @@ internal fun SettingsScreen(session: SettingsSession, page: SettingsPage?) {
         PageScreen(session, page, snackbars)
     }
     if (asked) {
-        DiscardDialog(session)
+        DiscardChangesDialog(stringResource(R.string.settings_discard_text), session::keepEditing, session::discard)
     }
 }
 
@@ -164,15 +164,8 @@ private fun PageScreen(session: SettingsSession, page: SettingsPage, snackbars: 
 private fun SaveAction(session: SettingsSession, page: SettingsPage) {
     val saving by session.saving.collectAsStateWithLifecycle()
     val keys by session.keys.collectAsStateWithLifecycle()
-    val busy = saving == SettingsSession.SaveState.Saving
-    AppTextButton(onClick = { session.save() }, enabled = !busy && (page != SettingsPage.FORECAST || keys != null)) {
-        if (busy) {
-            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-            Text(stringResource(R.string.settings_saving), modifier = Modifier.padding(start = 8.dp))
-        } else {
-            Text(stringResource(R.string.action_save))
-        }
-    }
+    SaveButton(saving == SettingsSession.SaveState.Saving, { session.save() },
+        enabled = page != SettingsPage.FORECAST || keys != null)
 }
 
 /**
@@ -220,26 +213,6 @@ private fun SaveProblem(session: SettingsSession) {
             else -> Unit
         }
     }
-}
-
-/** "Discard changes?", with Keep editing and Discard, which is named for what it does and drawn as a warning. */
-@Composable
-private fun DiscardDialog(session: SettingsSession) {
-    AlertDialog(
-        onDismissRequest = { session.keepEditing() },
-        title = { Text(stringResource(R.string.settings_discard_question)) },
-        text = { Text(stringResource(R.string.settings_discard_text)) },
-        confirmButton = {
-            AppTextButton(onClick = { session.discard() }) {
-                Text(stringResource(R.string.settings_discard), color = MaterialTheme.colorScheme.error)
-            }
-        },
-        dismissButton = {
-            AppTextButton(onClick = { session.keepEditing() }) {
-                Text(stringResource(R.string.settings_keep_editing))
-            }
-        },
-    )
 }
 
 /**

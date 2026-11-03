@@ -29,10 +29,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -172,11 +174,13 @@ internal fun TimeField(label: String, text: String, onEdit: (String) -> Unit, pr
  * @param modifier the field's place in the layout
  * @param imeAction the keyboard's action key
  * @param onAction what the action key does; null to move on to the next field
+ * @param announceProblem whether a screen reader reads a problem as it comes, for a field that keeps the focus while
+ *     its problem shows; otherwise the problem is read with the field once the focus moves to it
  */
 @Composable
 internal fun EntryField(label: String, hint: String, text: String, onEdit: (String) -> Unit, kind: FieldKind,
     problem: FieldProblem?, typical: Boolean, focus: FocusRequester, modifier: Modifier = Modifier,
-    imeAction: ImeAction = ImeAction.Next, onAction: (() -> Unit)? = null) {
+    imeAction: ImeAction = ImeAction.Next, onAction: (() -> Unit)? = null, announceProblem: Boolean = false) {
     val problemSentence = problem?.let { problemText(it) }
     Column(modifier = modifier.fillMaxWidth()) {
         OutlinedTextField(
@@ -193,7 +197,13 @@ internal fun EntryField(label: String, hint: String, text: String, onEdit: (Stri
             } else null,
             supportingText = {
                 Column {
-                    if (problemSentence != null) {
+                    if (announceProblem) {
+                        // a node of its own, outside the field's, which stays while empty, so a problem that comes in
+                        // is read while the focus stays in the field
+                        Column(Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
+                            problemSentence?.let { Text(it) }
+                        }
+                    } else if (problemSentence != null) {
                         Text(problemSentence)
                     }
                     Text(hint)

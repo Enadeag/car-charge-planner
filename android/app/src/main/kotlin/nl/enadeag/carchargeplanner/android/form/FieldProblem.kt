@@ -21,6 +21,9 @@ sealed interface FieldProblem {
     /** A number with decimals where the field takes a whole number, such as amps or minutes; nothing is rounded. */
     data object NotAWholeNumber : FieldProblem
 
+    /** A whole number below 0 or above 100 where the field takes a level in %, such as the battery level. */
+    data object NotFrom0To100 : FieldProblem
+
     /** The text is not a time such as 07:30. */
     data object NotATime : FieldProblem
 

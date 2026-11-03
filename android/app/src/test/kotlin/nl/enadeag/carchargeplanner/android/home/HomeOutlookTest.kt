@@ -314,4 +314,53 @@ class HomeOutlookTest {
 
         assertThat(access.outlooks).hasSize(2)
     }
+
+    @Test
+    fun planningAgainKeepsThePlanInViewAndShowsTheNewOne() = runTest {
+        val home = home()
+        answer(0, planned)
+        val shown = home.state.value
+
+        home.planAgain()
+        runCurrent()
+        assertThat(home.state.value).isEqualTo(shown)
+        assertThat(home.refreshing.value).isTrue()
+        val later = Plans.planned(today.atTime(9, 0).atZone(zone), listOf(listOf()), assumed = false)
+        answer(1, later)
+
+        assertThat(home.state.value).isEqualTo(HomeOutlook.State.Planned(Dashboard.of(later, listOf())))
+        assertThat(home.refreshing.value).isFalse()
+    }
+
+    @Test
+    fun planningAgainWhileAPlanIsAskedAsksAnewAndOnlyTheNewAnswerCounts() = runTest {
+        val home = home()
+        answer(0, planned)
+        home.refresh()
+        runCurrent()
+
+        home.planAgain()
+        runCurrent()
+
+        assertThat(access.outlooks).hasSize(3)
+        val shown = home.state.value
+        answer(1, Plans.planned(today.atTime(8, 30).atZone(zone), listOf(listOf())))
+        assertThat(home.state.value).isEqualTo(shown)
+        assertThat(home.refreshing.value).isTrue()
+        val later = Plans.planned(today.atTime(9, 0).atZone(zone), listOf(listOf()), assumed = false)
+        answer(2, later)
+        assertThat(home.state.value).isEqualTo(HomeOutlook.State.Planned(Dashboard.of(later, listOf())))
+    }
+
+    @Test
+    fun planningAgainWithoutAPlanShownAsksAsAtTheStart() = runTest {
+        val home = home()
+        answer(0, Outlook.NoForecast("Open-Meteo: no network"))
+
+        home.planAgain()
+        runCurrent()
+
+        assertThat(home.state.value).isEqualTo(HomeOutlook.State.Asking)
+        assertThat(home.refreshing.value).isFalse()
+    }
 }

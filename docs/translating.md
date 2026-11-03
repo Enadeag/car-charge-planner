@@ -179,6 +179,15 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Car battery | Accu van de auto | the heading of the battery bar |
 | min 30%, target 80% | min. 30%, doel 80% | the marks on the battery bar |
 | Car battery 50% now, 74% after charging; minimum 30%, target 80%. | Accu van de auto nu 50%, na het laden 74%; minimum 30%, doel 80%. | what TalkBack reads for the battery bar; on another day "50% at the start of Sunday" ("50% aan het begin van zondag") |
+| The battery level is assumed. Use Update battery level under it to enter the level the car shows. | Het accuniveau is aangenomen. Gebruik Accuniveau bijwerken eronder om in te vullen wat de auto aangeeft. | added to what TalkBack reads for today's battery bar while the plan starts from the assumed battery level; "Update battery level" is the button under the bar |
+| The plan assumes the battery is at 40%. Use Update battery level under Car battery. | De planning gaat ervan uit dat de accu op 40% staat. Gebruik Accuniveau bijwerken onder Accu van de auto. | today's note while the level is assumed; "Update battery level" is the button on the card headed "Car battery" |
+| Update battery level | Accuniveau bijwerken | today's battery card's button, which opens the entry of the level |
+| Battery level, Battery level in percent | Accuniveau, Accuniveau in procent | the entry's title and its field's label |
+| A whole number from 0 to 100, such as 64. | Een heel getal van 0 tot 100, zoals 64. | the hint under the entry's field; a decimal gets "Type a whole number, without decimals.", a number outside the range "Type a level from 0 to 100." |
+| Type a level from 0 to 100. | Typ een niveau van 0 tot 100. | under the entry's field after Save, for a whole number below 0 or above 100 |
+| Battery level saved. | Accuniveau opgeslagen. | after the entry's Save, in a snackbar |
+| Not saved: the battery level could not be written. | Niet opgeslagen: het accuniveau kon niet worden geschreven. | in the entry after its Save failed, above the English details |
+| The battery level you typed is not saved yet. | Het accuniveau dat je typte is nog niet opgeslagen. | under "Discard changes?", asked by Back with a level typed |
 | Car away | Afwezig | the heading of the one-off away periods |
 | None entered for the coming days. | Niets ingevuld voor de komende dagen. | no one-off away period to come |
 | updated 10:51, not refreshed since 10:51 | bijgewerkt om 10:51, niet vernieuwd sinds 10:51 | the footer, after the provider's credit, which stays as it is |
@@ -197,9 +206,10 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Saved. | Opgeslagen. | after a page's Save, in a snackbar |
 | Not saved. | Niet opgeslagen. | under the top app bar after a page's Save failed; why is at the top of the page |
 | Back | Terug | what TalkBack says for the top app bar's Up arrow (set-up's own button stays Vorige) |
-| Discard changes? | Wijzigingen weggooien? | asked by Back or Up on a page with edits |
-| Keep editing | Verder bewerken | stays on the page |
-| Discard | Weggooien | throws the page's edits away |
+| Saving… | Opslaan… | Save while it saves, on a Settings page and in the battery level's entry |
+| Discard changes? | Wijzigingen weggooien? | asked by Back or Up on a Settings page with edits, and by Back, or a tap beside it, in the battery level's entry with a level typed |
+| Keep editing | Verder bewerken | stays on the page, or in the entry |
+| Discard | Weggooien | throws the page's edits, or the typed level, away |
 | Close | Sluiten | closes a save's outcome shown on the home |
 | Array 2, east roof | Panelengroep 2, oostdak | a panel array's heading, by place and name |
 | Tilt, array 2 | Helling, panelengroep 2 | a panel array's field or button, named with its place |

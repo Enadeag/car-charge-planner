@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.home.BatteryEntry
 import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
 import nl.enadeag.carchargeplanner.android.settings.SettingsPage
@@ -36,7 +37,8 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig
  * @param saves the app's saves, which outlive the screens
  * @param appScope the app's scope, where a move of the settings file runs so that it is never cut off
  * @param scope the scope of the screens, which ends with them
- * @param handle the saved state that set-up and Settings keep their place and texts in, each forgotten as it ends
+ * @param handle the saved state that set-up, Settings and the home's battery entry keep their place and texts in,
+ *     each forgotten as it ends
  * @param numbers how the screen's language writes numbers, which follows a change of the app's language
  * @property phoneZone the phone's time zone as it is now; the screens read it from here only
  * @param language the app's language now, as the place search takes it, such as "nl"
@@ -84,8 +86,9 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
          *
          * @property outlook the plan it shows
          * @property notice the outcome of a Settings save that no screen showed yet
+         * @property battery the entry of the battery level the car shows
          */
-        data class Home(val outlook: HomeOutlook, val notice: HomeNotice) : Screen
+        data class Home(val outlook: HomeOutlook, val notice: HomeNotice, val battery: BatteryEntry) : Screen
 
         /**
          * Settings: the list of its pages, or one page.
@@ -138,6 +141,10 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
             SettingsSession.forget(handle)
             handle.remove<Boolean>(SETTINGS)
         }
+        // the home ends here, and its battery entry with it
+        if (state !is StartState.Ready) {
+            BatteryEntry.forget(handle)
+        }
         val own = nextScope()
         screenNow.value = when (state) {
             is StartState.Ready -> if (handle.contains(SETTINGS)) settings(own, state.config) else home(own)
@@ -157,11 +164,15 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
         }
     }
 
-    /** The home, which keeps nothing of set-up in the handle. */
+    /**
+     * The home, which keeps nothing of set-up in the handle; its battery entry comes back as the handle has it, and a
+     * level saved there has the plan made again.
+     */
     private fun home(own: CoroutineScope, kept: HomeOutlook.Kept? = null): Screen.Home {
         SetUpSession.forget(handle)
-        return Screen.Home(HomeOutlook(access, own, clock, saves.changes, kept, ::read),
-            HomeNotice(saves, own, ::show))
+        val outlook = HomeOutlook(access, own, clock, saves.changes, kept, ::read)
+        return Screen.Home(outlook, HomeNotice(saves, own, ::show),
+            BatteryEntry(handle, numbers, access, own, outlook::planAgain))
     }
 
     private fun settings(own: CoroutineScope, config: EngineConfig): Screen.Settings {

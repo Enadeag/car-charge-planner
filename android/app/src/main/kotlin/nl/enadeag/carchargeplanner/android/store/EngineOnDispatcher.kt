@@ -1,6 +1,8 @@
 package nl.enadeag.carchargeplanner.android.store
 
+import java.io.IOException
 import kotlin.jvm.optionals.getOrNull
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import nl.enadeag.carchargeplanner.engine.Engine
@@ -9,6 +11,7 @@ import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.HomeSystem
+import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsProblem
@@ -64,6 +67,21 @@ class EngineOnDispatcher(private val engine: Engine, private val dispatcher: Cor
     override suspend fun outlook(): Outlook = withContext(dispatcher) { engine.outlook() }
 
     override suspend fun awayPeriods(): List<OneOffAwayPeriod> = withContext(dispatcher) { engine.awayPeriods() }
+
+    override suspend fun saveBatteryLevel(level: Percent): BatteryLevelSave = withContext(dispatcher) {
+        try {
+            engine.setBatteryLevel(level)
+            BatteryLevelSave.Saved
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: IOException) {
+            LOG.warn("The battery level could not be saved: " + failure.message)
+            BatteryLevelSave.Failed(failure.message ?: failure.javaClass.simpleName)
+        } catch (failure: RuntimeException) {
+            LOG.warn("The battery level could not be saved", failure)
+            BatteryLevelSave.Failed(failure.message ?: failure.javaClass.simpleName)
+        }
+    }
 
     override suspend fun checkConnection(provider: ProviderId, system: HomeSystem, settings: Map<String, String>) =
         withContext(dispatcher) { engine.checkConnection(provider, system, settings) }

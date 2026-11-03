@@ -9,10 +9,12 @@ import android.os.SystemClock
 import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.ComponentDialog
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -101,6 +103,8 @@ class SettingsScreenTest {
         scope.cancel()
     }
 
+    private var errorColour = Color.Unspecified
+
     private fun session(on: SavedStateHandle = handle, config: EngineConfig = stored) = SettingsSession(on,
         NumberText(compose.activity.resources.configuration.locales[0]), { amsterdam }, { "en" }, access, saves,
         scope, Dispatchers.Main.immediate, config, { closed++ }) { }
@@ -108,6 +112,7 @@ class SettingsScreenTest {
     private fun show(session: SettingsSession = session(), fontScaleTwo: Boolean = false): SettingsSession {
         compose.setContent {
             AppTheme {
+                errorColour = MaterialTheme.colorScheme.error
                 val page by session.page.collectAsState()
                 if (fontScaleTwo) AtFontScaleTwo { SettingsScreen(session, page) } else SettingsScreen(session, page)
             }
@@ -163,7 +168,7 @@ class SettingsScreenTest {
             compose.waitForIdle()
             if (page == SettingsPage.AWAY) {
                 compose.assertShowsNoneOf(englishOnly)
-                click(R.string.settings_discard)
+                click(R.string.discard)
                 compose.waitForIdle()
             }
         }
@@ -335,6 +340,7 @@ class SettingsScreenTest {
         field(text(R.string.planning_minimum)).assertIsFocused()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_not_below_target)))
         assertInLiveRegion(text(R.string.setup_refused))
+        assertThat(compose.liveRegionOf(text(R.string.problem_not_below_target))).isNull()
         assertThat(access.written).isEmpty()
     }
 
@@ -348,8 +354,9 @@ class SettingsScreenTest {
         compose.waitForIdle()
 
         compose.onNode(isDialog()).assertExists()
-        compose.onNodeWithText(text(R.string.settings_discard_question)).assertExists()
-        click(R.string.settings_keep_editing)
+        compose.onNodeWithText(text(R.string.discard_question)).assertExists()
+        compose.onNodeWithText(text(R.string.settings_discard_text)).assertExists()
+        click(R.string.keep_editing)
         compose.waitForIdle()
         compose.onNode(isDialog()).assertDoesNotExist()
         field(text(R.string.car_battery)).assert(hasText("75"))
@@ -364,12 +371,32 @@ class SettingsScreenTest {
 
         up()
         compose.waitForIdle()
-        click(R.string.settings_discard)
+        compose.onNodeWithText(text(R.string.settings_discard_text)).assertExists()
+        click(R.string.discard)
         compose.waitForIdle()
 
         assertThat(session.page.value).isNull()
         compose.onNode(isHeading() and hasText(text(R.string.settings_title))).assertExists()
         assertThat(access.written).isEmpty()
+    }
+
+    @Test
+    fun discardIsDrawnInTheErrorColourAndKeepEditingIsNot() {
+        show()
+        open(SettingsPage.CAR_AND_HOUSE)
+        field(text(R.string.car_battery)).performTextReplacement("75")
+        up()
+        compose.waitForIdle()
+
+        fun colourOf(id: Int): Color {
+            val layouts = mutableListOf<TextLayoutResult>()
+            compose.onNodeWithText(text(id), useUnmergedTree = true).fetchSemanticsNode()
+                .config[SemanticsActions.GetTextLayoutResult].action!!.invoke(layouts)
+            return layouts.single().layoutInput.style.color
+        }
+        assertThat(errorColour).isNotEqualTo(Color.Unspecified)
+        assertThat(colourOf(R.string.discard)).isEqualTo(errorColour)
+        assertThat(colourOf(R.string.keep_editing)).isNotEqualTo(errorColour)
     }
 
     @Test
@@ -901,7 +928,7 @@ class SettingsScreenTest {
         click(R.string.action_save)
         compose.waitForIdle()
 
-        compose.onNodeWithText(text(R.string.settings_saving)).assertIsNotEnabled()
+        compose.onNodeWithText(text(R.string.saving)).assertIsNotEnabled()
     }
 
     @Test
@@ -936,7 +963,7 @@ class SettingsScreenTest {
         compose.waitForIdle()
         assertThat(secure()).isTrue()
 
-        click(R.string.settings_discard)
+        click(R.string.discard)
         compose.waitForIdle()
 
         assertThat(secure()).isFalse()
