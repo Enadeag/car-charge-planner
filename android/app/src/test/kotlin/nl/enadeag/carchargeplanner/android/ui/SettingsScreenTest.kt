@@ -19,6 +19,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
@@ -32,6 +33,7 @@ import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -636,7 +638,7 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun removingTheOnlyAwayPeriodMovesTheFocusToAdd() {
+    fun removingTheOnlyAwayPeriodMovesTheFocusToTheLineThatSaysThereIsNone() {
         show()
         open(SettingsPage.AWAY)
         click(R.string.away_add)
@@ -646,8 +648,25 @@ class SettingsScreenTest {
         click(R.string.away_remove, 1)
         compose.waitForIdle()
 
-        compose.onNodeWithText(text(R.string.away_none)).assertExists()
-        compose.onNodeWithText(text(R.string.away_add)).assertIsFocused()
+        compose.onNodeWithText(text(R.string.away_none)).assertIsFocused()
+        compose.onAllNodesWithText(text(R.string.away_add)).assertCountEquals(1)
+    }
+
+    @Test
+    fun aRefusedValueFarDownThePageIsNotScrolledAwayFromItsField() {
+        show(fontScaleTwo = true)
+        open(SettingsPage.AWAY)
+        repeat(4) {
+            click(R.string.away_add)
+            compose.waitForIdle()
+        }
+        field(text(R.string.away_from, 4)).performScrollTo().performTextReplacement("not a time")
+        field(text(R.string.away_from, 4)).assertIsDisplayed()
+
+        compose.onNodeWithText(text(R.string.action_save)).performClick()
+        compose.waitForIdle()
+
+        field(text(R.string.away_from, 4)).assertIsFocused().assertIsDisplayed()
     }
 
     /** The text a field draws, after its mask. */

@@ -90,12 +90,12 @@ internal class RowFocus {
     /** The row whose heading takes the focus once it is shown; null for none. */
     var next by mutableStateOf<Int?>(null)
 
-    /** Whether the page's Add button takes the focus, as no row is left; the button clears it once it has. */
-    var add by mutableStateOf(false)
+    /** Whether the line that says there is none takes the focus, as no row is left; the line clears it once it has. */
+    var none by mutableStateOf(false)
 
     /**
-     * Readies the focus for a row that goes: to the row before it, or the one after when it is the first, or the Add
-     * button when it is the only one.
+     * Readies the focus for a row that goes: to the row before it, or the one after when it is the first, or the line
+     * that says there is none when it is the only one.
      *
      * @param rows the rows as they are before it goes
      * @param row the row that goes
@@ -103,27 +103,27 @@ internal class RowFocus {
     fun removing(rows: List<Int>, row: Int) {
         val index = rows.indexOf(row)
         next = rows.getOrNull(index - 1) ?: rows.getOrNull(index + 1)
-        add = next == null
+        none = next == null
     }
 }
 
 /**
- * Moves the focus to a page's Add button when [RowFocus] asks, as the last row went. The button is made focusable
- * itself, as a button of Material is not in touch mode, where the focus would stay where it was.
+ * The line that says a page has no rows, which takes the focus when [RowFocus] asks, as the last row went. It is
+ * shown exactly when no row is left.
  *
- * @param focus which row's heading or the Add button takes the focus next
- * @return the modifier of the Add button, which takes the focus
+ * @param text the line
+ * @param focus which row's heading or this line takes the focus next
  */
 @Composable
-internal fun addFocus(focus: RowFocus): Modifier {
+internal fun NoneLine(text: String, focus: RowFocus) {
     val requester = remember { FocusRequester() }
-    LaunchedEffect(focus.add) {
-        if (focus.add) {
+    LaunchedEffect(focus.none) {
+        if (focus.none) {
             requester.requestFocus()
-            focus.add = false
+            focus.none = false
         }
     }
-    return Modifier.focusRequester(requester).focusable()
+    Text(text, modifier = Modifier.focusRequester(requester).focusable())
 }
 
 /**
