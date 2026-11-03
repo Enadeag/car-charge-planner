@@ -5,7 +5,7 @@
   phone. allowBackup="false" turns cloud backup off already; the rules say the same for it, so that holds should backup
   ever be turned on. The keychain's file lies in noBackupFilesDir (the domain "root" is the app's data folder), with
   the temporary file it is written through and the copy set aside when it could not be read. backup_rules.xml says
-  the same for Android 8 to 11.
+  the same for Android 10 and 11.
 -->
 <data-extraction-rules>
   <cloud-backup>

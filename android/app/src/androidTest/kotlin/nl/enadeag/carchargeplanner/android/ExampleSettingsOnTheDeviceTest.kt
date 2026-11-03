@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
 
 /**
  * The docs' example settings file read through the engine on the device, in a folder of its own rather than the app's
- * files folder: Jackson, java.time and java.nio.file on Android 8 as the app uses them. The test APK carries the file
+ * files folder: Jackson, java.time and java.nio.file on Android 10 as the app uses them. The test APK carries the file
  * as an asset (app/build.gradle.kts).
  */
 @RunWith(AndroidJUnit4::class)

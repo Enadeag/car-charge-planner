@@ -14,6 +14,7 @@ Not released yet; this is the way to the first Android release, 0.1.0.
 - **Settings**, with the desktop's seven pages: Solar panels (every panel array), Location, Car and house, Charger, Forecast (the providers, **Check connection** and the API keys, with Show and Hide), Away (the weekly away periods) and Planning. Each page has its own **Save** and asks before Back throws edits away. The Forecast page allows no screenshot. In English and Dutch.
 - A settings file the app cannot use shows its details (in English) and **Set up again**; one of a newer version asks you to update the app and is left as it is.
 - The API keys are kept encrypted with a key in the Android Keystore, and never in a plain file.
+- The app needs Android 10 or newer.
 
 ## [0.5.0] - 2026-10-22
 

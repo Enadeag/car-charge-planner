@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Only https: Android 8 allows plain http unless the app refuses it. The debug build has its own copy of this file. -->
+<!-- Only https: Android 10 and later refuse plain http by default at this targetSdk; said here so it holds whatever
+  the target. The debug build has its own copy of this file. -->
 <network-security-config>
   <base-config cleartextTrafficPermitted="false" />
 </network-security-config>

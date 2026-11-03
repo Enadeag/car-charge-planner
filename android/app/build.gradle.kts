@@ -50,7 +50,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-        // the engine uses java.time and java.nio.file, which Android 8 lacks in part (ADR 0010)
+        // the engine calls Stream.toList, URLEncoder.encode with a Charset and Duration.toSeconds, toSecondsPart and
+        // toNanosPart, which Android 10 lacks (ADR 0010)
         isCoreLibraryDesugaringEnabled = true
     }
 
