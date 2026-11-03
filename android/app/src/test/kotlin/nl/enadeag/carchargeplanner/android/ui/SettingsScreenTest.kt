@@ -1,9 +1,14 @@
 package nl.enadeag.carchargeplanner.android.ui
 
+import android.text.InputType
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.inputmethod.EditorInfo
+import android.os.SystemClock
+import android.view.MotionEvent
 import androidx.activity.ComponentActivity
+import androidx.activity.ComponentDialog
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +23,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
@@ -28,6 +34,7 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
@@ -37,6 +44,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.ZoneId
 import java.util.Locale
 import java.util.Optional
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -63,6 +71,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowDialog
 
 /** Settings' screen on Robolectric, on its logic with an engine in memory. */
 @RunWith(AndroidJUnit4::class)
@@ -122,10 +131,13 @@ class SettingsScreenTest {
 
     private fun title(page: SettingsPage) = compose.onNode(isHeading() and hasText(text(page.title())))
 
-    private fun assertInLiveRegion(shown: String) {
-        val live = SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion)
-        compose.onNode(hasText(shown) and (live or hasAnyAncestor(live)), useUnmergedTree = true).assertExists()
+    private fun assertInLiveRegion(shown: String, mode: LiveRegionMode = LiveRegionMode.Polite) {
+        assertThat(compose.liveRegionOf(shown)).`as`("the live region of %s", shown).isEqualTo(mode)
     }
+
+    private val apiKey get() = field(text(R.string.provider_setting_of, text(R.string.provider_api_key), "Open-Meteo"))
+
+    private val baseUrl get() = field(text(R.string.provider_setting_of, text(R.string.provider_base_url), "Open-Meteo"))
 
     /** Opens every page from the list and goes back, each checked as it comes in the language the test runs in. */
     private fun walkEveryPage() {
@@ -220,6 +232,9 @@ class SettingsScreenTest {
         assertThat((access.settings as StartState.Ready).config.system().car().usableBatteryKwh()).isEqualTo(75.0)
         assertThat(session.page.value).isEqualTo(SettingsPage.CAR_AND_HOUSE)
         assertInLiveRegion(text(R.string.settings_saved))
+        // it stays in view under the top app bar while the page scrolls
+        compose.onNodeWithText(text(R.string.settings_saved)).assert(!hasAnyAncestor(hasScrollAction()))
+        field(text(R.string.car_battery)).assert(hasText("75.0"))
         up()
         compose.waitForIdle()
         assertThat(session.page.value).isNull()
@@ -340,7 +355,7 @@ class SettingsScreenTest {
         click(R.string.action_save)
         compose.waitForIdle()
 
-        assertInLiveRegion(text(R.string.settings_keys_not_saved))
+        assertInLiveRegion(text(R.string.settings_keys_not_saved), LiveRegionMode.Assertive)
     }
 
     @Test
@@ -467,4 +482,232 @@ class SettingsScreenTest {
     private fun views(view: View): List<View> = listOf(view) +
         ((view as? ViewGroup)?.let { group -> (0 until group.childCount).flatMap { views(group.getChildAt(it)) } })
             .orEmpty()
+
+    @Test
+    fun theListAPageAndADialogHaveTheirControlsNamedAndLargeEnoughAtTheNormalFontSize() {
+        val session = show()
+        compose.assertEveryControlIsNamedAndLargeEnough()
+        session.open(SettingsPage.FORECAST)
+        compose.waitForIdle()
+        compose.assertEveryControlIsNamedAndLargeEnough()
+
+        session.forms.forecast.chooseFallback(ProviderId("forecast-solar"))
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        compose.waitForIdle()
+
+        compose.onNode(isDialog()).assertExists()
+        compose.assertEveryControlIsNamedAndLargeEnough()
+    }
+
+    @Test
+    fun eachRowIsOneButtonThatReadsThePagesNameAndItsValues() {
+        show()
+
+        compose.onNode(hasClickAction() and hasText(text(R.string.settings_away))
+            and hasText(text(R.string.settings_away_none))).assertExists()
+    }
+
+    @Test
+    fun dismissingTheDiscardQuestionWithBackKeepsEditing() {
+        val session = askToDiscard()
+
+        compose.runOnIdle { (ShadowDialog.getLatestDialog() as ComponentDialog).onBackPressedDispatcher.onBackPressed() }
+        compose.waitForIdle()
+
+        assertStillEditing(session)
+    }
+
+    @Test
+    fun dismissingTheDiscardQuestionWithATapOutsideKeepsEditing() {
+        val session = askToDiscard()
+
+        compose.runOnIdle {
+            val window = ShadowDialog.getLatestDialog().window!!.decorView
+            val now = SystemClock.uptimeMillis()
+            listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP).forEach { action ->
+                // well away from the dialog, above and to the left of its window
+                val touch = MotionEvent.obtain(now, now, action, -100f, -100f, 0)
+                window.dispatchTouchEvent(touch)
+                touch.recycle()
+            }
+        }
+        compose.waitForIdle()
+
+        assertStillEditing(session)
+    }
+
+    /** The Car and house page with an edit, and Back's question. */
+    private fun askToDiscard(): SettingsSession {
+        val session = show()
+        open(SettingsPage.CAR_AND_HOUSE)
+        field(text(R.string.car_battery)).performTextReplacement("75")
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        compose.waitForIdle()
+        compose.onNode(isDialog()).assertExists()
+        return session
+    }
+
+    private fun assertStillEditing(session: SettingsSession) {
+        compose.onNode(isDialog()).assertDoesNotExist()
+        assertThat(session.discardAsked.value).isFalse()
+        assertThat(session.page.value).isEqualTo(SettingsPage.CAR_AND_HOUSE)
+        field(text(R.string.car_battery)).assert(hasText("75"))
+    }
+
+    @Test
+    fun aFailedSaveShowsItsEnglishDetailsInALiveRegionReadAtOnce() {
+        show()
+        open(SettingsPage.CAR_AND_HOUSE)
+        field(text(R.string.car_battery)).performTextReplacement("75")
+        access.writeFails = true
+
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        assertInLiveRegion(text(R.string.settings_save_failed), LiveRegionMode.Assertive)
+        assertInLiveRegion(text(R.string.details_in_english, "No space left on device"), LiveRegionMode.Assertive)
+    }
+
+    @Test
+    fun withTwoProblemsTheFocusGoesToTheUpperOne() {
+        show()
+        open(SettingsPage.PLANNING)
+        field(text(R.string.planning_margin)).performTextReplacement("lots")
+        field(text(R.string.planning_minimum)).performTextReplacement("lots")
+
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        field(text(R.string.planning_minimum)).assertIsFocused()
+    }
+
+    @Test
+    fun onEveryPageOnlyTheLastFieldHasTheKeyboardsDone() {
+        val session = show()
+        for (page in SettingsPage.entries) {
+            session.open(page)
+            compose.waitForIdle()
+            when (page) {
+                SettingsPage.SOLAR -> click(R.string.panel_add)
+                SettingsPage.AWAY -> repeat(2) { click(R.string.away_add) }
+                else -> Unit
+            }
+            compose.waitForIdle()
+            compose.assertOnlyTheLastFieldIsDone()
+            session.back()
+            session.discard()
+            compose.waitForIdle()
+        }
+    }
+
+    @Test
+    fun theApiKeysKeyboardIsForAPasswordWithoutCorrections() {
+        show()
+        open(SettingsPage.FORECAST)
+
+        apiKey.performScrollTo().performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+
+        val editor = EditorInfo()
+        compose.runOnIdle { textEditor(compose.activity.window.decorView)!!.onCreateInputConnection(editor) }
+        assertThat(editor.inputType and InputType.TYPE_MASK_VARIATION)
+            .isEqualTo(InputType.TYPE_TEXT_VARIATION_PASSWORD)
+        assertThat(editor.inputType and InputType.TYPE_TEXT_FLAG_AUTO_CORRECT).isZero()
+    }
+
+    @Test
+    fun saveOnTheForecastPageWaitsForTheKeysAndWhileItSaves() {
+        val keys = CompletableDeferred<Unit>()
+        access.keysGate = keys
+        show()
+        open(SettingsPage.FORECAST)
+        compose.onNodeWithText(text(R.string.action_save)).assertIsNotEnabled()
+
+        keys.complete(Unit)
+        compose.waitForIdle()
+        compose.onNodeWithText(text(R.string.action_save)).assertIsEnabled()
+        baseUrl.performTextInput("https://example.org")
+        access.readGate = CompletableDeferred()
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        compose.onNodeWithText(text(R.string.settings_saving)).assertIsNotEnabled()
+    }
+
+    @Test
+    fun anotherPageAllowsScreenshotsAndAutofill() {
+        show()
+
+        open(SettingsPage.CAR_AND_HOUSE)
+
+        assertThat(secure()).isFalse()
+        assertThat(autofillExcluded()).isFalse()
+    }
+
+    @Test
+    fun systemBackFromTheForecastPageEndsItsProtection() {
+        show()
+        open(SettingsPage.FORECAST)
+        assertThat(secure()).isTrue()
+
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        compose.waitForIdle()
+
+        assertThat(secure()).isFalse()
+        assertThat(autofillExcluded()).isFalse()
+    }
+
+    @Test
+    fun backAndDiscardFromTheForecastPageEndItsProtection() {
+        show()
+        open(SettingsPage.FORECAST)
+        baseUrl.performTextInput("https://example.org")
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        compose.waitForIdle()
+        assertThat(secure()).isTrue()
+
+        click(R.string.settings_discard)
+        compose.waitForIdle()
+
+        assertThat(secure()).isFalse()
+        assertThat(autofillExcluded()).isFalse()
+    }
+
+    @Test
+    fun theForecastPageIsProtectedAgainAfterTurningThePhoneAndAfterTheSystemEndedTheApp() {
+        val restoration = StateRestorationTester(compose)
+        var session by mutableStateOf(session())
+        restoration.setContent {
+            AppTheme {
+                val page by session.page.collectAsState()
+                SettingsScreen(session, page)
+            }
+        }
+        open(SettingsPage.FORECAST)
+
+        restoration.emulateSavedInstanceStateRestore()
+        compose.waitForIdle()
+        assertThat(secure()).isTrue()
+        assertThat(autofillExcluded()).isTrue()
+
+        session = session(handle.afterTheSystemEndedTheApp())
+        restoration.emulateSavedInstanceStateRestore()
+        compose.waitForIdle()
+        assertThat(secure()).isTrue()
+        assertThat(autofillExcluded()).isTrue()
+    }
+
+    @Test
+    fun theOpenMeteoAddressHintIsTheAppsOwnAndSaysHttps() {
+        show()
+
+        open(SettingsPage.FORECAST)
+
+        val hint = text(R.string.provider_open_meteo_base_url_hint)
+        assertThat(hint).contains("https://")
+        compose.onNodeWithText(hint, useUnmergedTree = true).assertExists()
+    }
+
+    /** The view that takes the keyboard's input, Compose's own. */
+    private fun textEditor(view: View): View? = views(view).firstOrNull { it.onCheckIsTextEditor() }
 }

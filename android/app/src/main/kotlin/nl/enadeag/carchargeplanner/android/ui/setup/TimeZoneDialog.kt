@@ -13,7 +13,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,6 +26,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import java.time.ZoneId
 import nl.enadeag.carchargeplanner.android.R
+import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 
 /**
  * Chooses the home's time zone from Java's list of zone ids, which a typed text narrows; only an id from the list can
@@ -68,7 +68,7 @@ internal fun TimeZoneDialog(current: String, onChoose: (ZoneId) -> Unit, onDismi
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            AppTextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.action_cancel))
             }
         },

@@ -35,6 +35,9 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     /** When set, the next move of the settings file waits for it. */
     var moveGate: CompletableDeferred<Unit>? = null
 
+    /** When set, the next read of the API keys waits for it. */
+    var keysGate: CompletableDeferred<Unit>? = null
+
     /** When set, the next read of the settings waits for it before it gives what the file held when it started. */
     var readGate: CompletableDeferred<Unit>? = null
 
@@ -94,7 +97,13 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
         return Path.of("files", "engine.json.damaged-20261101-120000")
     }
 
-    override suspend fun storedKeys(): StoredKeys = if (keysUnreadable) StoredKeys.Unreadable else StoredKeys.Read(keys)
+    override suspend fun storedKeys(): StoredKeys {
+        keysGate?.let {
+            keysGate = null
+            it.await()
+        }
+        return if (keysUnreadable) StoredKeys.Unreadable else StoredKeys.Read(keys)
+    }
 
     override suspend fun applyKeyChanges(changes: KeyChanges) {
         if (keysFail) {

@@ -153,13 +153,16 @@ class ForecastForm(private val handle: SavedStateHandle, private val providers: 
     }
 
     /**
-     * The secret settings as entered, for a connection check of what the owner typed.
+     * The secret settings as entered, for a connection check of what the owner typed. A key the owner emptied is
+     * there, empty, so the check does not use the stored one, which Save would remove; while the stored keys could not
+     * be read, an empty key stays as it is, so it is left out and the engine takes the stored one.
      *
      * @param provider the provider
-     * @return its secret settings with a value, as typed or stored
+     * @return its secret settings with a value, as typed or stored, and the ones the owner emptied
      */
     fun secretsOf(provider: ProviderId): Map<String, String> = infoOf(provider)?.settings().orEmpty()
-        .filter { it.secret() }.associate { it.name() to text(provider, it.name()) }.filterValues { it.isNotEmpty() }
+        .filter { it.secret() }.associate { it.name() to text(provider, it.name()) }
+        .filter { (name, value) -> value.isNotEmpty() || keysReadable() && Target.Setting(provider, name) in typedKeys }
 
     /**
      * The settings that are not secret as entered.

@@ -221,7 +221,7 @@
   <string name="key_show_of">API-sleutel van %1$s tonen</string>
   <string name="key_hide_of">API-sleutel van %1$s verbergen</string>
   <string name="keys_reading">De API-sleutels worden gelezen…</string>
-  <string name="keys_unreadable">Je opgeslagen API-sleutels konden niet gelezen worden. Vul ze opnieuw in en sla op; een sleutel die je leeg laat, blijft zoals hij is. De app probeert ze over een paar minuten opnieuw te lezen.</string>
+  <string name="keys_unreadable">Je opgeslagen API-sleutels konden niet gelezen worden. Vul ze opnieuw in en sla op; een API-sleutel die je leeg laat, blijft zoals hij is. De app probeert ze over een paar minuten opnieuw te lezen.</string>
 
   <string name="settings_away_intro">Tijden in elke week waarop de auto niet thuis is. Dan plant de app geen laadvensters.</string>
 

@@ -6,12 +6,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,9 +36,12 @@ import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
 import nl.enadeag.carchargeplanner.android.home.TodayPlan
 import nl.enadeag.carchargeplanner.android.store.SaveOutcome
+import nl.enadeag.carchargeplanner.android.ui.components.BarIconButton
 import nl.enadeag.carchargeplanner.android.ui.components.BarPage
 import nl.enadeag.carchargeplanner.android.ui.components.EnglishDetails
 import nl.enadeag.carchargeplanner.engine.plan.Window
+import nl.enadeag.carchargeplanner.android.ui.components.AppButton
+import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
 
 /**
  * The plain home after set-up: today's charge windows, else the next one, else that there is none today, with
@@ -58,11 +60,9 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, phoneZone: () 
     val heading = remember { FocusRequester() }
     LaunchedEffect(Unit) { heading.requestFocus() }
     BarPage(stringResource(R.string.home_title), heading, onUp = null, actions = {
-        TextButton(onClick = onSettings) {
-            Text(stringResource(R.string.home_settings))
-        }
+        BarIconButton(Icons.Filled.Settings, stringResource(R.string.home_settings), onSettings)
     }) {
-        Notice(notice)
+        Notice(notice) { heading.requestFocus() }
         when (val now = state) {
             HomeOutlook.State.Asking -> Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -74,20 +74,25 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, phoneZone: () 
                 EnglishDetails(now.reason)
             }
         }
-        Button(onClick = { outlook.refresh() }, enabled = state != HomeOutlook.State.Asking) {
+        AppButton(onClick = { outlook.refresh() }, enabled = state != HomeOutlook.State.Asking) {
             Text(stringResource(if (state is HomeOutlook.State.NoForecast) R.string.action_try_again
                 else R.string.home_refresh))
         }
     }
 }
 
-/** What a Settings save came to, when no screen showed it, with Close. */
+/**
+ * What a Settings save came to, when no screen showed it, with Close, in a live region read at once for a failure;
+ * after Close the focus goes on, as the notice is gone.
+ */
 @Composable
-private fun Notice(notice: HomeNotice) {
+private fun Notice(notice: HomeNotice, closed: () -> Unit) {
     val shown by notice.notice.collectAsStateWithLifecycle()
     val outcome = shown ?: return
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
+    val failed = outcome != SaveOutcome.Saved
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.semantics(mergeDescendants = true) {
+        liveRegion = if (failed) LiveRegionMode.Assertive else LiveRegionMode.Polite
+    }) {
         when (outcome) {
             SaveOutcome.Saved -> Text(stringResource(R.string.settings_saved))
             SaveOutcome.KeysNotSaved -> Text(stringResource(R.string.settings_keys_not_saved),
@@ -98,7 +103,10 @@ private fun Notice(notice: HomeNotice) {
             }
             is SaveOutcome.SettingsUnusable -> Unit
         }
-        OutlinedButton(onClick = { notice.close() }) {
+        AppOutlinedButton(onClick = {
+            notice.close()
+            closed()
+        }) {
             Text(stringResource(R.string.action_close))
         }
     }

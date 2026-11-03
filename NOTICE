@@ -15,3 +15,7 @@ Additional terms under sections 7(b) and 7(c) of the GNU General Public License 
 Version 0.1.0 was released under the MIT licence; later versions are under the terms above.
 
 Every source file in this repository is covered by this notice; there is no per-file header.
+
+One exception: Material's icons for Compose (androidx.compose.material:material-icons-core, by The Android Open Source
+Project), which the Android app's package holds and draws as they are, stay under the Apache License 2.0; its text is in
+android/legal/apache-2.0.txt.

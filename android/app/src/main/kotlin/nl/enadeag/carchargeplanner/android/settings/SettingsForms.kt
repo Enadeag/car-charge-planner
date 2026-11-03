@@ -26,6 +26,11 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo
 class SettingsForms(handle: SavedStateHandle, numbers: NumberText, phoneZone: () -> ZoneId,
     providers: List<ProviderInfo>) {
 
+    companion object {
+        /** The first part of the forms' keys in the handle, which set-up's forms share in part. */
+        val PREFIXES = listOf("panels", "location", "car", "house", "charger", "forecast", "away", "planning")
+    }
+
     /** Every panel array. */
     val panels = PanelsForm(handle, numbers)
 

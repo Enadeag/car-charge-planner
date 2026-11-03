@@ -3,15 +3,15 @@ package nl.enadeag.carchargeplanner.android.ui
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -35,6 +35,7 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.House
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
+import nl.enadeag.carchargeplanner.engine.secrets.Secrets
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Rule
@@ -145,7 +146,7 @@ class HomeScreenTest {
     fun settingsIsTheTopAppBarsActionAndOpensSettings() {
         show(lisbonAfternoon())
 
-        compose.onNodeWithText(text(R.string.home_settings)).assert(hasNoScrollAncestor).performClick()
+        compose.onNodeWithContentDescription(text(R.string.home_settings)).assert(hasNoScrollAncestor).performClick()
 
         assertThat(settingsOpened).isEqualTo(1)
     }
@@ -158,13 +159,47 @@ class HomeScreenTest {
         show(lisbonAfternoon())
         compose.waitForIdle()
 
-        val live = SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite)
-        compose.onNode(hasText(text(R.string.settings_save_failed)) and hasAnyAncestor(live), useUnmergedTree = true)
+        assertThat(compose.liveRegionOf(text(R.string.settings_save_failed))).isEqualTo(LiveRegionMode.Assertive)
+        compose.onNodeWithText(text(R.string.details_in_english, "No space left on device"), useUnmergedTree = true)
             .assertExists()
-        compose.onNodeWithText(text(R.string.details_in_english, "No space left on device")).assertExists()
         compose.onNodeWithText(text(R.string.action_close)).performScrollTo().performClick()
+        compose.waitForIdle()
 
         compose.onNodeWithText(text(R.string.settings_save_failed)).assertDoesNotExist()
+        compose.onNode(isHeading() and hasText(text(R.string.home_title))).assertIsFocused()
+    }
+
+    @Test
+    fun aSavedNoticeIsReadPolitely() {
+        saves.update(KeyChanges.NONE) { it.withSystem(it.system().withHouseAndCar(House(0.9), it.system().car()),
+            it.typical()) }
+        show(lisbonAfternoon())
+        compose.waitForIdle()
+
+        assertThat(compose.liveRegionOf(text(R.string.settings_saved))).isEqualTo(LiveRegionMode.Polite)
+    }
+
+    @Test
+    fun keysNotSavedOnTheHomeAreReadAtOnce() {
+        access.keysFail = true
+        saves.update(KeyChanges.entering(Secrets(mapOf(ProviderId("open-meteo") to mapOf("api_key" to "K1"))))) {
+            it
+        }
+        show(lisbonAfternoon())
+        compose.waitForIdle()
+
+        assertThat(compose.liveRegionOf(text(R.string.settings_keys_not_saved))).isEqualTo(LiveRegionMode.Assertive)
+    }
+
+    @Test
+    fun theHomesControlsAreNamedAndLargeEnoughAtTheNormalFontSize() {
+        access.writeFails = true
+        saves.update(KeyChanges.NONE) { it.withSystem(it.system().withHouseAndCar(House(0.9), it.system().car()),
+            it.typical()) }
+        show(lisbonAfternoon())
+        compose.waitForIdle()
+
+        compose.assertEveryControlIsNamedAndLargeEnough()
     }
 
     @Test

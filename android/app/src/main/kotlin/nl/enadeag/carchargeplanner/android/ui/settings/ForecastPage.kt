@@ -5,14 +5,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -48,6 +46,8 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo
 import nl.enadeag.carchargeplanner.engine.forecast.SettingFormat
 import nl.enadeag.carchargeplanner.engine.forecast.SettingSpec
+import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
+import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 
 /**
  * The forecast providers: the primary, the fallback or none, each with Check connection on the values as typed, and a
@@ -102,11 +102,11 @@ private fun CheckConnection(session: SettingsSession, role: SettingsSession.Role
     provider: ProviderId) {
     val state by check.state.collectAsStateWithLifecycle()
     val name = session.providerName(provider)
-    OutlinedButton(onClick = { session.checkConnection(role) }, enabled = state != SetUpCheck.State.Asking) {
+    AppOutlinedButton(onClick = { session.checkConnection(role) }, enabled = state != SetUpCheck.State.Asking) {
         Text(stringResource(R.string.forecast_check, name))
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
+        modifier = Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
         when (val now = state) {
             SetUpCheck.State.NotAsked -> Unit
             SetUpCheck.State.Asking -> Waiting(stringResource(R.string.check_asking, name))
@@ -144,7 +144,8 @@ private fun ProviderSetting(forecast: ForecastForm, info: ProviderInfo, setting:
 @Composable
 private fun KeyField(label: String, hint: String, text: String, onEdit: (String) -> Unit, problem: FieldProblem?,
     enabled: Boolean, provider: String, focus: FocusRequester, imeAction: ImeAction) {
-    var visible by rememberSaveable { mutableStateOf(false) }
+    // not saved: after the system ended the app, as after turning the phone, the key comes back masked
+    var visible by remember { mutableStateOf(false) }
     val problemSentence = problem?.let { problemText(it) }
     val toggle = stringResource(if (visible) R.string.key_hide_of else R.string.key_show_of, provider)
     OutlinedTextField(
@@ -158,7 +159,7 @@ private fun KeyField(label: String, hint: String, text: String, onEdit: (String)
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false,
             imeAction = imeAction),
         trailingIcon = {
-            TextButton(onClick = { visible = !visible },
+            AppTextButton(onClick = { visible = !visible },
                 modifier = Modifier.semantics { contentDescription = toggle }) {
                 Text(stringResource(if (visible) R.string.key_hide else R.string.key_show))
             }

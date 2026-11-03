@@ -113,6 +113,12 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
         latest.ask({ ask(text) }) { stateNow.value = it }
     }
 
+    /** Drops a search that runs, as its page closes; what was typed stays. */
+    fun cancel() {
+        latest.cancel()
+        stateNow.value = State.Idle
+    }
+
     /**
      * Keeps the place the owner chose, whose label the step then shows; the results go.
      *

@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.android.form.CarForm
+import nl.enadeag.carchargeplanner.android.form.LocationForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
 import nl.enadeag.carchargeplanner.android.home.Plans
@@ -19,6 +20,8 @@ import nl.enadeag.carchargeplanner.android.home.TodayPlan
 import nl.enadeag.carchargeplanner.android.settings.SettingsPage
 import nl.enadeag.carchargeplanner.android.setup.PlaceSearch
 import nl.enadeag.carchargeplanner.android.setup.SetUpAgain
+import nl.enadeag.carchargeplanner.android.setup.SetUpSession
+import nl.enadeag.carchargeplanner.android.setup.SetUpStep
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.SaveOutcome
 import nl.enadeag.carchargeplanner.android.store.Saves
@@ -52,6 +55,15 @@ class AppFlowTest {
         flow.openSettings()
         runCurrent()
         return flow
+    }
+
+    /** Goes through set-up with a place chosen and the rest as it comes, and finishes it. */
+    private fun TestScope.finishSetUp(session: SetUpSession, place: Place = utrecht) {
+        session.next()
+        session.choose(PlaceSearch.Result(place, place.label()))
+        repeat(5) { session.next() }
+        session.finish()
+        runCurrent()
     }
 
     private val planned = Plans.planned(LocalDate.of(2026, 6, 1).atTime(8, 0).atZone(amsterdam), listOf(listOf()))
@@ -213,5 +225,99 @@ class AppFlowTest {
         access.settings = StartState.Ready(config)
         val again = flow(access, handle = handle.afterTheSystemEndedTheApp())
         assertThat(again.screen.value).isInstanceOf(AppFlow.Screen.Home::class.java)
+    }
+
+    @Test
+    fun setUpAgainAfterASettingsSaveFoundTheFileUnusableStartsAfreshAndSettingsLaterOpensOnItsList() = runTest {
+        val lisbon = ZoneId.of("Europe/Lisbon")
+        val access = FakeEngineAccess(StartState.NotSetUp)
+        val flow = flow(access)
+        finishSetUp((flow.screen.value as AppFlow.Screen.SetUp).session,
+            Place("Lisbon", Coordinates(38.72, -9.14), lisbon, "", "Portugal", ""))
+        access.outlooks.single().complete(planned)
+        runCurrent()
+        flow.openSettings()
+        runCurrent()
+        val settings = (flow.screen.value as AppFlow.Screen.Settings).session
+        settings.open(SettingsPage.LOCATION)
+        settings.back()
+        settings.open(SettingsPage.CAR_AND_HOUSE)
+        settings.forms.car.edit(CarForm.Field.BATTERY, "75")
+        access.settings = StartState.Unusable("engine.json", "not valid JSON")
+        settings.save()
+        runCurrent()
+        val again = (flow.screen.value as AppFlow.Screen.Unusable).again
+        again.ask()
+        again.confirm()
+        runCurrent()
+
+        val setUp = (flow.screen.value as AppFlow.Screen.SetUp).session
+        assertThat(setUp.flow.step.value).isEqualTo(SetUpStep.WELCOME)
+        setUp.next()
+        setUp.typeCoordinate(LocationForm.Field.LATITUDE, "38.8")
+        assertThat(setUp.flow.location.timeZone()).isEqualTo(amsterdam)
+        setUp.back()
+        finishSetUp(setUp)
+        access.outlooks.last().complete(planned)
+        runCurrent()
+        flow.openSettings()
+        runCurrent()
+        val later = flow.screen.value as AppFlow.Screen.Settings
+        assertThat(later.page).isNull()
+        later.session.open(SettingsPage.CAR_AND_HOUSE)
+        assertThat(later.session.forms.car.text(CarForm.Field.BATTERY)).isEqualTo("60.0")
+    }
+
+    @Test
+    fun setUpAgainAfterTheSystemEndedTheAppDuringSetUpStartsOnTheWelcome() = runTest {
+        val access = FakeEngineAccess(StartState.NotSetUp)
+        val handle = SavedStateHandle()
+        val session = (flow(access, handle = handle).screen.value as AppFlow.Screen.SetUp).session
+        session.next()
+        session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+        session.next()
+        access.settings = StartState.Unusable("engine.json", "not valid JSON")
+
+        val flow = flow(access, handle = handle.afterTheSystemEndedTheApp())
+        val again = (flow.screen.value as AppFlow.Screen.Unusable).again
+        again.ask()
+        again.confirm()
+        runCurrent()
+
+        val setUp = (flow.screen.value as AppFlow.Screen.SetUp).session
+        assertThat(setUp.flow.step.value).isEqualTo(SetUpStep.WELCOME)
+        assertThat(setUp.flow.isEdited()).isFalse()
+    }
+
+    @Test
+    fun leavingSettingsKeepsNothingOfItSoTheAppComesBackOnTheHome() = runTest {
+        val access = FakeEngineAccess(StartState.Ready(config))
+        val handle = SavedStateHandle()
+        val flow = settingsFromThePlannedHome(access, handle = handle)
+        val session = (flow.screen.value as AppFlow.Screen.Settings).session
+        session.open(SettingsPage.CAR_AND_HOUSE)
+        session.forms.car.edit(CarForm.Field.BATTERY, "75")
+        session.back()
+        session.discard()
+
+        session.back()
+        runCurrent()
+
+        assertThat(flow.screen.value).isInstanceOf(AppFlow.Screen.Home::class.java)
+        assertThat(handle.keys()).isEmpty()
+        val again = flow(access, handle = handle.afterTheSystemEndedTheApp())
+        assertThat(again.screen.value).isInstanceOf(AppFlow.Screen.Home::class.java)
+    }
+
+    @Test
+    fun finishingSetUpKeepsNothingOfIt() = runTest {
+        val access = FakeEngineAccess(StartState.NotSetUp)
+        val handle = SavedStateHandle()
+        val flow = flow(access, handle = handle)
+
+        finishSetUp((flow.screen.value as AppFlow.Screen.SetUp).session)
+
+        assertThat(flow.screen.value).isInstanceOf(AppFlow.Screen.Home::class.java)
+        assertThat(handle.keys()).isEmpty()
     }
 }

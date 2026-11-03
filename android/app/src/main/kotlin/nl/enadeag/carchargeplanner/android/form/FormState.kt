@@ -144,3 +144,14 @@ class FormState<F : Enum<F>>(private val handle: SavedStateHandle, private val p
 
     private fun textKey(field: F) = "$prefix.text.${field.name}"
 }
+
+/**
+ * Forgets every key under these prefixes, as a screen that ends takes its texts, marks and place with it; the forms of
+ * set-up and of Settings share their prefixes, so what one left behind would show in the other.
+ *
+ * @param prefixes the first part of each key to forget, such as "car" for "car.text.BATTERY"; a key equal to one is
+ *     forgotten too
+ */
+fun SavedStateHandle.forget(prefixes: Collection<String>) {
+    keys().filter { key -> prefixes.any { key == it || key.startsWith("$it.") } }.forEach { remove<Any>(it) }
+}

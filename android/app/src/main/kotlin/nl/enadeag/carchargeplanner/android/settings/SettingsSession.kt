@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.form.forget
 import nl.enadeag.carchargeplanner.android.setup.PlaceSearch
 import nl.enadeag.carchargeplanner.android.setup.SetUpCheck
 import nl.enadeag.carchargeplanner.android.store.EngineAccess
@@ -78,10 +79,21 @@ class SettingsSession(private val handle: SavedStateHandle, private val numbers:
         FALLBACK,
     }
 
-    private companion object {
-        const val PAGE = "settings.page"
-        const val DISCARD = "settings.discard"
-        const val PLACE = "settings.place"
+    companion object {
+        private const val PAGE = "settings.page"
+        private const val DISCARD = "settings.discard"
+        private const val PLACE = "settings.place"
+
+        /** Every key of Settings in the handle: the page, the question, the place search and the forms' texts. */
+        private val KEYS = listOf("settings") + SettingsForms.PREFIXES
+
+        /**
+         * Forgets everything Settings kept in the handle, as it closes, so the next Settings opens on its list and
+         * set-up, whose forms share the prefixes, starts from its own draft.
+         *
+         * @param handle the screen's saved state
+         */
+        fun forget(handle: SavedStateHandle) = handle.forget(KEYS)
     }
 
     private val configNow = MutableStateFlow(stored)
@@ -254,6 +266,7 @@ class SettingsSession(private val handle: SavedStateHandle, private val numbers:
     private fun prepare() {
         primaryCheck.cancel()
         fallbackCheck.cancel()
+        places.cancel()
         keysRead?.cancel()
         keysNow.value = null
         savingNow.value = SaveState.Idle

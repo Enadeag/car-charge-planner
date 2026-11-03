@@ -8,13 +8,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +37,9 @@ import nl.enadeag.carchargeplanner.android.ui.components.NumberField
 import nl.enadeag.carchargeplanner.android.ui.components.ProblemFocus
 import nl.enadeag.carchargeplanner.android.ui.components.rememberFieldFocus
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults
+import nl.enadeag.carchargeplanner.android.ui.components.AppButton
+import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
+import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 
 /**
  * Where the home is: the place search, on its button or the keyboard's search key, and its results; the coordinates
@@ -98,7 +98,7 @@ internal fun LocationFields(location: LocationForm, places: PlaceSearch, provide
             shown[LocationForm.Field.PLACE], false,
             rememberFieldFocus(problems, 0, LocationForm.Field.PLACE in shown),
             imeAction = ImeAction.Search, onAction = { places.search() })
-        Button(onClick = { places.search() }) {
+        AppButton(onClick = { places.search() }) {
             Text(stringResource(R.string.place_search))
         }
         SearchResults(places) { result -> edits.make { onChoose(result) } }
@@ -134,7 +134,7 @@ internal fun LocationFields(location: LocationForm, places: PlaceSearch, provide
 private fun SearchResults(places: PlaceSearch, onChoose: (PlaceSearch.Result) -> Unit) {
     val state by places.state.collectAsStateWithLifecycle()
     Column(verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
+        modifier = Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
         when (val now = state) {
             PlaceSearch.State.Idle -> Unit
             PlaceSearch.State.Searching -> Row(verticalAlignment = Alignment.CenterVertically) {
@@ -146,7 +146,7 @@ private fun SearchResults(places: PlaceSearch, onChoose: (PlaceSearch.Result) ->
             } else {
                 Text(stringResource(R.string.place_choose))
                 now.results.forEach { result ->
-                    TextButton(onClick = { onChoose(result) }, modifier = Modifier.fillMaxWidth()) {
+                    AppTextButton(onClick = { onChoose(result) }, modifier = Modifier.fillMaxWidth()) {
                         Text(result.label, modifier = Modifier.fillMaxWidth())
                     }
                 }
@@ -180,7 +180,7 @@ private fun Toggle(label: String, open: Boolean, onChange: (Boolean) -> Unit) {
 private fun TimeZone(zone: String, onChoose: (java.time.ZoneId) -> Unit) {
     var choosing by rememberSaveable { mutableStateOf(false) }
     Text(stringResource(R.string.time_zone_now, zone), style = MaterialTheme.typography.bodyLarge)
-    OutlinedButton(onClick = { choosing = true }) {
+    AppOutlinedButton(onClick = { choosing = true }) {
         Text(stringResource(R.string.time_zone_change))
     }
     if (choosing) {

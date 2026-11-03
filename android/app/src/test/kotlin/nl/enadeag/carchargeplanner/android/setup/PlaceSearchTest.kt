@@ -192,6 +192,10 @@ class PlaceSearchTest {
 
         assertThat(setUp.text()).isEqualTo("Utrecht")
         assertThat(settings.text()).isEqualTo("Lisbon")
-        assertThat(handle.keys()).contains("settings.place.text", "setUp.place.text")
+        val kept = handle.afterTheSystemEndedTheApp()
+        assertThat(PlaceSearch(kept, access, backgroundScope, ProviderId("open-meteo"), language = { "nl" }).text())
+            .isEqualTo("Utrecht")
+        assertThat(PlaceSearch(kept, access, backgroundScope, ProviderId("open-meteo"), "settings.place") { "nl" }
+            .text()).isEqualTo("Lisbon")
     }
 }

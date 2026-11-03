@@ -16,6 +16,8 @@ import nl.enadeag.carchargeplanner.android.form.LocationForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.android.form.PanelsForm
 import nl.enadeag.carchargeplanner.android.form.PlanningForm
+import nl.enadeag.carchargeplanner.android.setup.PlaceSearch
+import nl.enadeag.carchargeplanner.android.setup.SetUpCheck
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
@@ -23,6 +25,9 @@ import nl.enadeag.carchargeplanner.android.store.StoredKeys
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
+import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults
+import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -337,5 +342,101 @@ class SettingsSessionTest {
         runCurrent()
 
         assertThat(unusable).containsExactly(StartState.NewerVersion("version 99"))
+    }
+
+    @Test
+    fun checkConnectionWithAnEmptiedKeyDoesNotUseTheStoredOne() = runTest {
+        access.keys = Secrets(mapOf(openMeteo to mapOf("api_key" to "STORED1")))
+        val session = session()
+        session.open(SettingsPage.FORECAST)
+        runCurrent()
+        session.forms.forecast.edit(openMeteo, "api_key", "")
+
+        session.checkConnection(SettingsSession.Role.PRIMARY)
+        runCurrent()
+
+        assertThat(access.checked).containsExactly(openMeteo to mapOf("api_key" to ""))
+    }
+
+    @Test
+    fun checkConnectionWithAKeyLeftEmptyWhileTheKeysCouldNotBeReadLeavesItToTheStoredOne() = runTest {
+        access.keysUnreadable = true
+        val session = session()
+        session.open(SettingsPage.FORECAST)
+        runCurrent()
+        session.forms.forecast.edit(openMeteo, "api_key", "")
+
+        session.checkConnection(SettingsSession.Role.PRIMARY)
+        runCurrent()
+
+        assertThat(access.checked).containsExactly(openMeteo to mapOf())
+    }
+
+    @Test
+    fun anEmptiedKeyIsRemovedOnSave() = runTest {
+        access.keys = Secrets(mapOf(openMeteo to mapOf("api_key" to "STORED1")))
+        val session = session()
+        session.open(SettingsPage.FORECAST)
+        runCurrent()
+        session.forms.forecast.edit(openMeteo, "api_key", "")
+
+        session.save()
+        runCurrent()
+
+        assertThat(access.keys.of(openMeteo)).doesNotContainKey("api_key")
+        assertThat(session.saving.value).isEqualTo(SettingsSession.SaveState.Saved)
+    }
+
+    @Test
+    fun anotherSavesOutcomeLeavesThePagesEditsAlone() = runTest {
+        val saves = Saves(access, backgroundScope)
+        val session = session(saves = saves)
+        session.open(SettingsPage.CAR_AND_HOUSE)
+        session.forms.car.edit(CarForm.Field.BATTERY, "75")
+
+        val lisbon = Coordinates(38.72, -9.14)
+        saves.update(KeyChanges.NONE) { it.withSystem(it.system().withLocation(lisbon, amsterdam), it.typical()) }
+        runCurrent()
+
+        assertThat(session.config.value.system().location()).isEqualTo(lisbon)
+        assertThat(session.forms.car.text(CarForm.Field.BATTERY)).isEqualTo("75")
+        assertThat(session.forms.car.isEdited()).isTrue()
+        assertThat(session.saving.value).isEqualTo(SettingsSession.SaveState.Idle)
+    }
+
+    @Test
+    fun aSavedValueShowsAsStored() = runTest {
+        val session = session()
+        session.open(SettingsPage.CAR_AND_HOUSE)
+        session.forms.car.edit(CarForm.Field.BATTERY, "75")
+
+        session.save()
+        runCurrent()
+
+        assertThat(session.forms.car.text(CarForm.Field.BATTERY)).isEqualTo("75.0")
+    }
+
+    @Test
+    fun leavingAPageStopsItsPlaceSearchAndItsChecks() = runTest {
+        val session = session()
+        session.open(SettingsPage.LOCATION)
+        val places = session.places
+        places.edit("Utrecht")
+        places.search()
+        runCurrent()
+        session.back()
+        session.open(SettingsPage.FORECAST)
+        runCurrent()
+        val check = session.primaryCheck
+        session.checkConnection(SettingsSession.Role.PRIMARY)
+        runCurrent()
+
+        session.back()
+        access.searches.single().complete(PlaceResults.Found(listOf()))
+        access.checks.single().complete(ConnectionResult(true, 2, "Works"))
+        runCurrent()
+
+        assertThat(places.state.value).isEqualTo(PlaceSearch.State.Idle)
+        assertThat(check.state.value).isNotInstanceOf(SetUpCheck.State.Works::class.java)
     }
 }

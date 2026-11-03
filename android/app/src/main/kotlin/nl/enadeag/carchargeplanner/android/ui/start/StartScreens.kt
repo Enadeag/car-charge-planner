@@ -6,11 +6,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -26,6 +24,8 @@ import nl.enadeag.carchargeplanner.android.setup.SetUpAgain
 import nl.enadeag.carchargeplanner.android.ui.components.EnglishDetails
 import nl.enadeag.carchargeplanner.android.ui.components.Heading
 import nl.enadeag.carchargeplanner.android.ui.components.Page
+import nl.enadeag.carchargeplanner.android.ui.components.AppButton
+import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 
 /** While the settings file is read as the app opens. */
 @Composable
@@ -58,14 +58,14 @@ internal fun UnusableScreen(again: SetUpAgain) {
                 Text(stringResource(R.string.set_up_again_moving), modifier = Modifier.padding(start = 8.dp))
             }
             is SetUpAgain.State.Failed -> Column(verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive }) {
+                modifier = Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Assertive }) {
                 Text(stringResource(R.string.set_up_again_failed), color = MaterialTheme.colorScheme.error)
                 EnglishDetails(now.detail)
-                Button(onClick = { again.ask() }) {
+                AppButton(onClick = { again.ask() }) {
                     Text(stringResource(R.string.action_try_again))
                 }
             }
-            SetUpAgain.State.Offered, SetUpAgain.State.Confirming -> Button(onClick = { again.ask() }) {
+            SetUpAgain.State.Offered, SetUpAgain.State.Confirming -> AppButton(onClick = { again.ask() }) {
                 Text(stringResource(R.string.set_up_again))
             }
         }
@@ -76,12 +76,12 @@ internal fun UnusableScreen(again: SetUpAgain) {
             title = { Text(stringResource(R.string.set_up_again_question)) },
             text = { Text(stringResource(R.string.set_up_again_explained, file)) },
             confirmButton = {
-                TextButton(onClick = { again.confirm() }) {
+                AppTextButton(onClick = { again.confirm() }) {
                     Text(stringResource(R.string.set_up_again))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { again.cancel() }) {
+                AppTextButton(onClick = { again.cancel() }) {
                     Text(stringResource(R.string.action_cancel))
                 }
             },

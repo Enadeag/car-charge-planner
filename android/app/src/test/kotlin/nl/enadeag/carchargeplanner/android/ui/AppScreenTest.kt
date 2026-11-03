@@ -55,7 +55,7 @@ class AppScreenTest {
         compose.setContent { AppTheme { AppScreen(flow) } }
         compose.waitForIdle()
 
-        compose.onNodeWithText(text(R.string.home_settings)).performClick()
+        compose.onNodeWithContentDescription(text(R.string.home_settings)).performClick()
         compose.waitForIdle()
         compose.onNode(isHeading() and hasText(text(R.string.settings_title))).assertExists()
         assertThat(flow.screen.value).isInstanceOf(AppFlow.Screen.Settings::class.java)

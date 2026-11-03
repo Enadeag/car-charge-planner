@@ -271,14 +271,14 @@
   <!-- %1$s the forecast provider's name, such as Open-Meteo -->
   <string name="key_hide_of">Hide the API key of %1$s</string>
   <string name="keys_reading">Reading the API keys…</string>
-  <string name="keys_unreadable">Your saved API keys could not be read. Enter them again and save; a key left empty stays as it is. The app tries to read them again in a few minutes.</string>
+  <string name="keys_unreadable">Your saved API keys could not be read. Enter them again and save; an API key left empty stays as it is. The app tries to read them again in a few minutes.</string>
 
   <string name="settings_away_intro">Periods each week when the car is not at home. No charging is planned then.</string>
 
   <string name="planning_minimum">Minimum charge level</string>
   <string name="planning_minimum_hint">Percent; the battery never drops below it. Below the target.</string>
   <string name="planning_target">Target charge level</string>
-  <string name="planning_target_hint">Percent, the everyday maximum.</string>
+  <string name="planning_target_hint">Percent, the highest level the plan charges to in everyday use.</string>
   <string name="planning_margin">Planning margin</string>
   <string name="planning_margin_hint">Percent of the forecast surplus to plan on; lower is more cautious.</string>
   <string name="planning_tolerance">Import tolerance</string>

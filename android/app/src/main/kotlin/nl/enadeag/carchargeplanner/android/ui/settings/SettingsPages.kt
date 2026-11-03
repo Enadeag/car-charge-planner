@@ -3,9 +3,7 @@ package nl.enadeag.carchargeplanner.android.ui.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -48,6 +46,8 @@ import nl.enadeag.carchargeplanner.android.ui.setup.LocationFields
 import nl.enadeag.carchargeplanner.android.ui.setup.UseTypical
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.Phases
+import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
+import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 
 /**
  * A page's values now, in one line for its row in the list.
@@ -115,7 +115,7 @@ internal fun SolarPage(panels: PanelsForm, edits: Edits, problems: ProblemFocus)
             PanelArray(panels, row, index, rows.size, edits, problems)
         }
     }
-    OutlinedButton(onClick = { edits.make { panels.add() } }) {
+    AppOutlinedButton(onClick = { edits.make { panels.add() } }) {
         Text(stringResource(R.string.panel_add))
     }
 }
@@ -142,7 +142,7 @@ private fun PanelArray(panels: PanelsForm, row: Int, index: Int, count: Int, edi
                 stringResource(texts.second), edits.shown { panels.text(row, field) },
                 { text -> edits.make { panels.edit(row, field, text) } }, kind, shown[field], field in typical,
                 rememberFieldFocus(problems, 10 * index + place, field in shown),
-                imeAction = if (field == PanelsForm.Field.LOSSES) ImeAction.Done else ImeAction.Next)
+                imeAction = if (field == PanelsForm.Field.LOSSES && number == count) ImeAction.Done else ImeAction.Next)
         }
         UseTypical(stringResource(R.string.panel_in_array, stringResource(R.string.use_typical), number)) {
             edits.make { panels.useTypical(row) }
@@ -155,7 +155,7 @@ private fun PanelArray(panels: PanelsForm, row: Int, index: Int, count: Int, edi
 @Composable
 private fun RemoveArray(number: Int, removable: Boolean, onRemove: () -> Unit) {
     val reason = stringResource(R.string.panel_keep_one)
-    TextButton(onClick = onRemove, enabled = removable,
+    AppTextButton(onClick = onRemove, enabled = removable,
         modifier = if (removable) Modifier else Modifier.semantics { stateDescription = reason }) {
         Text(stringResource(R.string.panel_remove, number))
     }

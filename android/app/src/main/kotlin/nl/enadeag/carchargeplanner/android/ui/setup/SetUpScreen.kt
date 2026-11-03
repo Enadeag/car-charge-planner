@@ -8,10 +8,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,6 +36,8 @@ import nl.enadeag.carchargeplanner.android.setup.SetUpSession
 import nl.enadeag.carchargeplanner.android.setup.SetUpStep
 import nl.enadeag.carchargeplanner.android.ui.components.Page
 import nl.enadeag.carchargeplanner.android.ui.components.ProblemFocus
+import nl.enadeag.carchargeplanner.android.ui.components.AppButton
+import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
 
 /**
  * Counts the owner's edits on set-up's screen. The forms keep their texts in the saved state, which Compose does not
@@ -139,12 +139,12 @@ private fun StepButtons(session: SetUpSession, step: SetUpStep) {
     val saving = finishing == SetUpSession.Finishing.Saving
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
         if (step != SetUpStep.WELCOME) {
-            OutlinedButton(onClick = { session.back() }, enabled = !saving) {
+            AppOutlinedButton(onClick = { session.back() }, enabled = !saving) {
                 Text(stringResource(R.string.action_back))
             }
         }
         if (step == SetUpStep.CHECK) {
-            Button(onClick = { session.finish() }, enabled = !saving) {
+            AppButton(onClick = { session.finish() }, enabled = !saving) {
                 if (saving) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     Text(stringResource(R.string.finish_saving), modifier = Modifier.padding(start = 8.dp))
@@ -153,7 +153,7 @@ private fun StepButtons(session: SetUpSession, step: SetUpStep) {
                 }
             }
         } else {
-            Button(onClick = { session.next() }) {
+            AppButton(onClick = { session.next() }) {
                 Text(stringResource(R.string.action_next))
             }
         }

@@ -35,7 +35,7 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig
  * @param saves the app's saves, which outlive the screens
  * @param appScope the app's scope, where a move of the settings file runs so that it is never cut off
  * @param scope the scope of the screens, which ends with them
- * @param handle the saved state that set-up keeps its step and texts in
+ * @param handle the saved state that set-up and Settings keep their place and texts in, each forgotten as it ends
  * @param numbers how the screen's language writes numbers, which follows a change of the app's language
  * @property phoneZone the phone's time zone as it is now; the screens read it from here only
  * @param language the app's language now, as the place search takes it, such as "nl"
@@ -123,7 +123,9 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
     }
 
     private fun show(state: StartState) {
-        if (state !is StartState.Ready) {
+        // Settings ends here; without its mark no key of Settings is left, and set-up's must stay
+        if (state !is StartState.Ready && handle.contains(SETTINGS)) {
+            SettingsSession.forget(handle)
             handle.remove<Boolean>(SETTINGS)
         }
         val own = nextScope()
@@ -132,7 +134,12 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
             StartState.NotSetUp -> setUp(own)
             is StartState.Unusable -> Screen.Unusable(SetUpAgain(state, access, appScope).also { again ->
                 own.launch {
-                    again.state.collect { if (it is SetUpAgain.State.Moved) screenNow.value = setUp(nextScope()) }
+                    again.state.collect {
+                        if (it is SetUpAgain.State.Moved) {
+                            SetUpSession.forget(handle)
+                            screenNow.value = setUp(nextScope())
+                        }
+                    }
                 }
             })
             is StartState.NewerVersion -> Screen.NewerVersion(state.details)
@@ -140,8 +147,11 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
         }
     }
 
-    private fun home(own: CoroutineScope, shown: HomeOutlook.State? = null) =
-        Screen.Home(HomeOutlook(access, own, saves.changes, shown, ::read), HomeNotice(saves, own, ::show))
+    /** The home, which keeps nothing of set-up in the handle. */
+    private fun home(own: CoroutineScope, shown: HomeOutlook.State? = null): Screen.Home {
+        SetUpSession.forget(handle)
+        return Screen.Home(HomeOutlook(access, own, saves.changes, shown, ::read), HomeNotice(saves, own, ::show))
+    }
 
     private fun settings(own: CoroutineScope, config: EngineConfig): Screen.Settings {
         val session = SettingsSession(handle, numbers, phoneZone, language, access, saves, own, mainThread, config,
@@ -152,6 +162,7 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
 
     /** Back to the home, which asks for the plan again only when a save changed something since Settings opened. */
     private fun closeSettings() {
+        SettingsSession.forget(handle)
         handle.remove<Boolean>(SETTINGS)
         val unchanged = saves.changes.value == changesSeen
         screenNow.value = home(nextScope(), if (unchanged) homeShown else null)

@@ -18,7 +18,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -49,6 +48,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.BarPage
 import nl.enadeag.carchargeplanner.android.ui.components.EnglishDetails
 import nl.enadeag.carchargeplanner.android.ui.components.ProblemFocus
 import nl.enadeag.carchargeplanner.android.ui.setup.Edits
+import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 
 /**
  * Settings' screen (#315): the list of its pages, or one page with Up, its title and Save in the top app bar. System
@@ -121,8 +121,8 @@ private fun PageScreen(session: SettingsSession, page: SettingsPage) {
     if (page == SettingsPage.FORECAST) {
         SecureWindow()
     }
-    BarPage(stringResource(page.title()), title, onUp = { session.back() }, actions = { SaveAction(session, page) }) {
-        SaveStatus(session)
+    BarPage(stringResource(page.title()), title, onUp = { session.back() }, actions = { SaveAction(session, page) },
+        status = { SaveStatus(session) }) {
         val forms = session.forms
         when (page) {
             SettingsPage.SOLAR -> SolarPage(forms.panels, edits, problems)
@@ -145,7 +145,7 @@ private fun SaveAction(session: SettingsSession, page: SettingsPage) {
     val saving by session.saving.collectAsStateWithLifecycle()
     val keys by session.keys.collectAsStateWithLifecycle()
     val busy = saving == SettingsSession.SaveState.Saving
-    TextButton(onClick = { session.save() }, enabled = !busy && (page != SettingsPage.FORECAST || keys != null)) {
+    AppTextButton(onClick = { session.save() }, enabled = !busy && (page != SettingsPage.FORECAST || keys != null)) {
         if (busy) {
             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
             Text(stringResource(R.string.settings_saving), modifier = Modifier.padding(start = 8.dp))
@@ -155,15 +155,21 @@ private fun SaveAction(session: SettingsSession, page: SettingsPage) {
     }
 }
 
-/** What the page's Save came to, or that a value needs attention, in a live region. */
+/**
+ * What the page's Save came to, or that a value needs attention, under the top app bar, so it stays in view while the
+ * page scrolls; in a live region, read at once for a failure.
+ */
 @Composable
 private fun SaveStatus(session: SettingsSession) {
     val saving by session.saving.collectAsStateWithLifecycle()
     val refused by session.refused.collectAsStateWithLifecycle()
     val failed = saving is SettingsSession.SaveState.Failed || saving == SettingsSession.SaveState.KeysNotSaved
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.semantics {
-        liveRegion = if (failed) LiveRegionMode.Assertive else LiveRegionMode.Polite
-    }) {
+    val empty = !refused && (saving == SettingsSession.SaveState.Idle || saving == SettingsSession.SaveState.Saving)
+    // the live region stays while empty, so what comes in later is read
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.padding(top = if (empty) 0.dp else 8.dp).semantics(mergeDescendants = true) {
+            liveRegion = if (failed) LiveRegionMode.Assertive else LiveRegionMode.Polite
+        }) {
         if (refused) {
             Text(stringResource(R.string.setup_refused), color = MaterialTheme.colorScheme.error)
         }
@@ -188,12 +194,12 @@ private fun DiscardDialog(session: SettingsSession) {
         title = { Text(stringResource(R.string.settings_discard_question)) },
         text = { Text(stringResource(R.string.settings_discard_text)) },
         confirmButton = {
-            TextButton(onClick = { session.discard() }) {
+            AppTextButton(onClick = { session.discard() }) {
                 Text(stringResource(R.string.settings_discard), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
-            TextButton(onClick = { session.keepEditing() }) {
+            AppTextButton(onClick = { session.keepEditing() }) {
                 Text(stringResource(R.string.settings_keep_editing))
             }
         },
