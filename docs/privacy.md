@@ -40,6 +40,8 @@ On Linux `XDG_CONFIG_HOME` and `XDG_DATA_HOME` move the config and data folders,
 
 How the app reads and writes these files, and what it does with a damaged one, is in the [guide](guide.md#the-files-and-the-log).
 
+In the Android app, which is not released yet, the engine's files (the settings file and the battery level you entered last, `battery.json`, among them) are kept in the app's own files folder on the phone, which no other app can read. They never leave the phone except in Android's transfer to your next phone; the API keys stay out of that.
+
 ### API keys
 
 API keys are kept by the system, not in a file:

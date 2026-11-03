@@ -8,6 +8,7 @@ import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.HomeSystem
+import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults
@@ -80,6 +81,25 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     override suspend fun awayPeriods(): List<OneOffAwayPeriod> {
         awayThrows?.let { throw it }
         return away
+    }
+
+    /** The battery levels stored, in the order saved. */
+    val batteryLevels = mutableListOf<Percent>()
+
+    /** When set, a save of the battery level fails with these words, as the engine's would. */
+    var batteryFails: String? = null
+
+    /** When set, the next save of the battery level waits for it. */
+    var batteryGate: CompletableDeferred<Unit>? = null
+
+    override suspend fun saveBatteryLevel(level: Percent): BatteryLevelSave {
+        batteryGate?.let {
+            batteryGate = null
+            it.await()
+        }
+        batteryFails?.let { return BatteryLevelSave.Failed(it) }
+        batteryLevels += level
+        return BatteryLevelSave.Saved
     }
 
     override suspend fun readSettings(): StartState {

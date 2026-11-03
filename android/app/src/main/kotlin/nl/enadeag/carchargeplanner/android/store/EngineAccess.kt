@@ -5,6 +5,7 @@ import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.HomeSystem
+import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults
@@ -13,7 +14,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 
 /**
  * All the screens' logic asks of the engine that reads or writes: the settings file, the API keys, the plan, the
- * one-off away periods, the connection check and the place search. Each call suspends while it runs off the main
+ * one-off away periods, the battery level, the connection check and the place search. Each call suspends while it runs off the main
  * thread, as the keychain and the API keys may block for about a second and the others reach the disk or the network.
  * The screens never call the engine, the keys or the files themselves (`AppArchitectureTest`).
  */
@@ -86,6 +87,15 @@ interface EngineAccess {
      *     none or the file cannot be read
      */
     suspend fun awayPeriods(): List<OneOffAwayPeriod>
+
+    /**
+     * Stores the battery level the owner read off the car, so the next plan starts from it instead of the assumed
+     * level; it is kept until the owner enters another one. A failure is an outcome, never thrown.
+     *
+     * @param level the level the car shows now
+     * @return saved, or failed with the system's or the engine's words, the stored level then unchanged
+     */
+    suspend fun saveBatteryLevel(level: Percent): BatteryLevelSave
 
     /**
      * Asks a provider for one forecast with these settings; nothing is cached or saved.

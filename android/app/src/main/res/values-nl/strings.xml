@@ -165,7 +165,7 @@
   <string name="day_none_why">De auto hoeft niet te laden, of er is te weinig zonnestroom voor.</string>
   <string name="day_later_windows">Ook %1$s.</string>
   <string name="day_later_window">%1$s met %2$d A</string>
-  <string name="day_battery_assumed">De planning gaat ervan uit dat de accu op %1$s%% staat.</string>
+  <string name="day_battery_assumed">De planning gaat ervan uit dat de accu op %1$s%% staat. Vul bij Accu van de auto het accuniveau in dat de auto aangeeft.</string>
 
   <string name="advice_label">Advies: laden uit het net</string>
   <string name="advice_title_window">Laad %1$s kWh uit het net: %2$s %3$s.</string>
@@ -192,6 +192,16 @@
   <string name="battery_target">doel %1$s%%</string>
   <string name="battery_spoken_today">Accu van de auto nu %1$s%%, na het laden %2$s%%; minimum %3$s%%, doel %4$s%%.</string>
   <string name="battery_spoken_day">Accu van de auto %1$s%% aan het begin van %2$s, na het laden %3$s%%; minimum %4$s%%, doel %5$s%%.</string>
+  <string name="battery_assumed">Het accuniveau is aangenomen: vul in wat de auto aangeeft.</string>
+
+  <string name="battery_update">Accuniveau bijwerken</string>
+  <string name="battery_entry_title">Accuniveau</string>
+  <string name="battery_entry_text">Vul het accuniveau in dat de auto aangeeft.</string>
+  <string name="battery_entry_field">Accuniveau in procent</string>
+  <string name="battery_entry_hint">Een heel getal van 0 tot 100, zoals 64.</string>
+  <string name="battery_saved">Accuniveau opgeslagen.</string>
+  <string name="battery_not_saved">Niet opgeslagen: het accuniveau kon niet worden geschreven.</string>
+  <string name="battery_discard_text">Het accuniveau dat je typte is nog niet opgeslagen.</string>
 
   <string name="one_off_heading">Afwezig</string>
   <string name="one_off_none">Niets ingevuld voor de komende dagen.</string>

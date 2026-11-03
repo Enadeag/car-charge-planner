@@ -26,6 +26,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -33,8 +34,11 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -54,9 +58,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.time.ZoneId
 import kotlinx.coroutines.launch
 import nl.enadeag.carchargeplanner.android.R
+import nl.enadeag.carchargeplanner.android.home.BatteryEntry
 import nl.enadeag.carchargeplanner.android.home.ComingAway
 import nl.enadeag.carchargeplanner.android.home.Dashboard
 import nl.enadeag.carchargeplanner.android.home.DayModel
+import nl.enadeag.carchargeplanner.android.home.DayName
 import nl.enadeag.carchargeplanner.android.home.EnergySource
 import nl.enadeag.carchargeplanner.android.home.Footer
 import nl.enadeag.carchargeplanner.android.home.GridAdviceModel
@@ -78,28 +84,41 @@ import nl.enadeag.carchargeplanner.android.ui.components.inEnglish
  * its battery bar, the coming one-off away periods and the forecast's footer. Refresh and Settings are the top app
  * bar's actions, and a pull asks for the plan too; coming back to the app asks again when the plan is old. The times
  * are in the home's time zone, named when it is not the phone's, on the phone's 12- or 24-hour clock. A Settings save
- * that no screen showed yet shows here until the owner closes it, in a live region.
+ * that no screen showed yet shows here until the owner closes it, in a live region. Today's battery card opens the
+ * entry of the level the car shows; a level saved there says so in a snackbar, and when the entry closes the focus
+ * goes back to the button that opened it.
  *
  * @param outlook the plan it shows
  * @param notice the outcome of a Settings save not shown yet
+ * @param battery the entry of the battery level
  * @param phoneZone the phone's time zone as it is now, read each time the plan is shown
  * @param onSettings opens Settings
  */
 @Composable
-internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, phoneZone: () -> ZoneId, onSettings: () -> Unit) {
+internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: BatteryEntry, phoneZone: () -> ZoneId,
+    onSettings: () -> Unit) {
     val state by outlook.state.collectAsStateWithLifecycle()
     val refreshing by outlook.refreshing.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_START) { outlook.returned() }
     val heading = remember { FocusRequester() }
     LaunchedEffect(Unit) { heading.requestFocus() }
     val closed: () -> Unit = { heading.requestFocus() }
-    BarScaffold(stringResource(R.string.app_name), heading, onUp = null, actions = {
+    val update = remember { FocusRequester() }
+    val snackbars = remember { SnackbarHostState() }
+    BatteryOutcome(battery, snackbars) {
+        // the button is on today's page, which may be out of view; the title then takes the focus
+        if (!update.requestFocus()) {
+            heading.requestFocus()
+        }
+    }
+    BarScaffold(stringResource(R.string.app_name), heading, onUp = null, snackbars = snackbars, actions = {
         BarIconButton(Icons.Filled.Refresh, stringResource(R.string.home_refresh),
             enabled = state != HomeOutlook.State.Asking && !refreshing) { outlook.refresh() }
         BarIconButton(Icons.Filled.Settings, stringResource(R.string.home_settings), onClick = onSettings)
     }) {
         when (val now = state) {
-            is HomeOutlook.State.Planned -> Days(now.dashboard, refreshing, phoneZone(), outlook::refresh) {
+            is HomeOutlook.State.Planned -> Days(now.dashboard, refreshing, phoneZone(), outlook::refresh,
+                Battery(battery::open, update)) {
                 Notice(notice, closed)
             }
             else -> Refreshable(refreshing, outlook::refresh) {
@@ -108,13 +127,55 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, phoneZone: () 
             }
         }
     }
+    BatteryEntryDialog(battery)
+}
+
+/**
+ * Today's way into the entry of the battery level.
+ *
+ * @property open opens the entry
+ * @property focus moves the focus to the button that opens it
+ */
+private class Battery(val open: () -> Unit, val focus: FocusRequester)
+
+/**
+ * What the battery entry's save came to, beside the entry itself: a level saved says so in a snackbar, which a screen
+ * reader reads when it comes, once, also after turning the phone; and when the entry closes, however it does, the
+ * focus moves on.
+ *
+ * @param battery the entry
+ * @param snackbars where the snackbar shows
+ * @param closed moves the focus once the entry closed
+ */
+@Composable
+private fun BatteryOutcome(battery: BatteryEntry, snackbars: SnackbarHostState, closed: () -> Unit) {
+    val saved = stringResource(R.string.battery_saved)
+    LaunchedEffect(battery) {
+        battery.savedToShow.collect { now ->
+            if (now) {
+                battery.savedShown()
+                snackbars.currentSnackbarData?.dismiss()
+                launch { snackbars.showSnackbar(saved) }
+            }
+        }
+    }
+    val open by battery.open.collectAsStateWithLifecycle()
+    var wasOpen by remember { mutableStateOf(open) }
+    LaunchedEffect(open) {
+        if (wasOpen && !open) {
+            // the dialog's window gives the focus back once it is gone, which this waits for
+            withFrameNanos { }
+            closed()
+        }
+        wasOpen = open
+    }
 }
 
 /** A tab per day over a pager, kept in step: a tab's click moves the pager, a swipe moves the tab. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZone: ZoneId, refresh: () -> Unit,
-    notice: @Composable () -> Unit) {
+    battery: Battery, notice: @Composable () -> Unit) {
     val words = dashboardWords(dashboard.zone)
     val days = dashboard.days
     val pager = rememberPagerState { days.size }
@@ -146,7 +207,11 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
                 DayCard(day, words)
                 dashboard.adviceOn(day)?.let { GridAdviceCard(it, words) }
                 SolarCard(day, words)
-                BatteryCard(day, dashboard.levels, words)
+                if (day.name == DayName.Today) {
+                    BatteryCard(day, dashboard.levels, words, battery.open, battery.focus)
+                } else {
+                    BatteryCard(day, dashboard.levels, words)
+                }
                 AwayList(dashboard.away, words)
                 FooterLine(dashboard.footer, words)
             }

@@ -29,6 +29,7 @@ import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
+import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.Place
 import org.assertj.core.api.Assertions.assertThat
@@ -377,5 +378,60 @@ class AppFlowTest {
 
         assertThat(flow.screen.value).isInstanceOf(AppFlow.Screen.Home::class.java)
         assertThat(handle.keys()).isEmpty()
+    }
+
+    /** The home with its plan in. */
+    private fun TestScope.plannedHome(access: FakeEngineAccess, handle: SavedStateHandle): AppFlow.Screen.Home {
+        val flow = flow(access, handle = handle)
+        access.outlooks.single().complete(planned)
+        runCurrent()
+        return flow.screen.value as AppFlow.Screen.Home
+    }
+
+    @Test
+    fun aBatteryLevelSavedOnTheHomeHasANewPlanMadeWithTheOneShownKeptInView() = runTest {
+        val access = FakeEngineAccess(StartState.Ready(config))
+        val home = plannedHome(access, SavedStateHandle())
+        home.battery.open()
+        home.battery.edit("64")
+
+        home.battery.save()
+        runCurrent()
+
+        assertThat(access.batteryLevels).containsExactly(Percent(64.0))
+        assertThat(access.outlooks).hasSize(2)
+        assertThat(home.outlook.refreshing.value).isTrue()
+        assertThat(home.outlook.state.value).isInstanceOf(HomeOutlook.State.Planned::class.java)
+    }
+
+    @Test
+    fun theBatteryEntryComesBackWithWhatWasTypedAfterTheSystemEndedTheApp() = runTest {
+        val access = FakeEngineAccess(StartState.Ready(config))
+        val handle = SavedStateHandle()
+        val home = plannedHome(access, handle)
+        home.battery.open()
+        home.battery.edit("64,5")
+
+        val again = flow(access, handle = handle.afterTheSystemEndedTheApp()).screen.value as AppFlow.Screen.Home
+
+        assertThat(again.battery.open.value).isTrue()
+        assertThat(again.battery.text.value).isEqualTo("64,5")
+    }
+
+    @Test
+    fun aHomeThatLeadsToSetUpForgetsItsBatteryEntry() = runTest {
+        val access = FakeEngineAccess(StartState.Ready(config))
+        val handle = SavedStateHandle()
+        val flow = flow(access, handle = handle)
+        val home = flow.screen.value as AppFlow.Screen.Home
+        home.battery.open()
+        home.battery.edit("64")
+        access.settings = StartState.NotSetUp
+
+        access.outlooks.single().complete(Outlook.NotSetUp(Path.of("engine.json")))
+        runCurrent()
+
+        assertThat(flow.screen.value).isInstanceOf(AppFlow.Screen.SetUp::class.java)
+        assertThat(handle.keys().filter { it.startsWith("battery") }).isEmpty()
     }
 }

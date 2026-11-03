@@ -203,8 +203,9 @@
   <string name="day_later_windows">Also %1$s.</string>
   <!-- %1$s the window's times, a time_span; %2$d its charge current in A -->
   <string name="day_later_window">%1$s at %2$d A</string>
-  <!-- %1$s the battery level, written already, such as 40 -->
-  <string name="day_battery_assumed">The plan assumes the battery is at %1$s%%.</string>
+  <!-- that the plan starts from the assumed battery level, and how to enter the real one; %1$s the assumed level,
+       written already, such as 40; "Car battery" is the heading of the battery's card (battery_heading) -->
+  <string name="day_battery_assumed">The plan assumes the battery is at %1$s%%. Enter the level the car shows under Car battery.</string>
 
   <!-- the heading of the grid advice on today's tab, drawn in the grid's colours -->
   <string name="advice_label">Grid advice</string>
@@ -256,6 +257,22 @@
   <!-- the same on another day: %1$s the level at its start; %2$s the day as in a sentence (tomorrow, Sunday);
        %3$s after charging; %4$s the minimum; %5$s the target -->
   <string name="battery_spoken_day">Car battery %1$s%% at the start of %2$s, %3$s%% after charging; minimum %4$s%%, target %5$s%%.</string>
+  <!-- added to today's battery_spoken_today while the plan starts from an assumed battery level -->
+  <string name="battery_assumed">The battery level is assumed: enter the level the car shows.</string>
+
+  <!-- the entry of the battery level, from today's battery card: the button that opens it, its title and sentence,
+       its field's label and hint -->
+  <string name="battery_update">Update battery level</string>
+  <string name="battery_entry_title">Battery level</string>
+  <string name="battery_entry_text">Enter the battery level the car shows.</string>
+  <string name="battery_entry_field">Battery level in percent</string>
+  <string name="battery_entry_hint">A whole number from 0 to 100, such as 64.</string>
+  <!-- after a save of the battery level: in a snackbar when it worked; in the entry when it failed, above the
+       English details -->
+  <string name="battery_saved">Battery level saved.</string>
+  <string name="battery_not_saved">Not saved: the battery level could not be written.</string>
+  <!-- asked by Back with a level typed, under settings_discard_question -->
+  <string name="battery_discard_text">The battery level you typed is not saved yet.</string>
 
   <!-- the one-off away periods: the heading, and the line when there are none -->
   <string name="one_off_heading">Car away</string>

@@ -163,7 +163,8 @@ internal class DashboardWords(private val resources: Resources, private val loca
     })
 
     /**
-     * A day's note: its later charge windows, why it has none, and the battery level the plan assumed.
+     * A day's note: its later charge windows, why it has none, and the battery level the plan assumed with how to
+     * enter the one the car shows.
      *
      * @param day the day
      * @return the sentences, joined; empty when there are none
@@ -312,16 +313,19 @@ internal class DashboardWords(private val resources: Resources, private val loca
      *
      * @param day the day, with its levels
      * @param levels the minimum and target charge levels
-     * @return such as "Car battery 50% now, 74% after charging; minimum 30%, target 80%." today, and "… at the start
-     *     of Sunday, …" on another day
+     * @return such as "Car battery 50% now, 74% after charging; minimum 30%, target 80%." today, followed by that the
+     *     level is assumed and how to enter it while it is, and "… at the start of Sunday, …" on another day
      */
     fun battery(day: DayModel, levels: ChargeLevels): String {
         val start = whole(day.battery.startPct.value())
         val after = whole(day.battery.afterPct.value())
         val minimum = whole(levels.minimum.value())
         val target = whole(levels.target.value())
-        return if (day.name == DayName.Today) text(R.string.battery_spoken_today, start, after, minimum, target)
-            else text(R.string.battery_spoken_day, start, inSentence(day.name), after, minimum, target)
+        if (day.name != DayName.Today) {
+            return text(R.string.battery_spoken_day, start, inSentence(day.name), after, minimum, target)
+        }
+        val today = text(R.string.battery_spoken_today, start, after, minimum, target)
+        return if (day.assumedLevel == null) today else "$today ${text(R.string.battery_assumed)}"
     }
 
     private fun weekday(date: LocalDate, style: TextStyle): String = date.dayOfWeek.getDisplayName(style, locale)

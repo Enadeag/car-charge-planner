@@ -179,6 +179,14 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Car battery | Accu van de auto | the heading of the battery bar |
 | min 30%, target 80% | min. 30%, doel 80% | the marks on the battery bar |
 | Car battery 50% now, 74% after charging; minimum 30%, target 80%. | Accu van de auto nu 50%, na het laden 74%; minimum 30%, doel 80%. | what TalkBack reads for the battery bar; on another day "50% at the start of Sunday" ("50% aan het begin van zondag") |
+| The battery level is assumed: enter the level the car shows. | Het accuniveau is aangenomen: vul in wat de auto aangeeft. | added to what TalkBack reads for today's battery bar while the plan starts from the assumed battery level |
+| The plan assumes the battery is at 40%. Enter the level the car shows under Car battery. | De planning gaat ervan uit dat de accu op 40% staat. Vul bij Accu van de auto het accuniveau in dat de auto aangeeft. | today's note while the level is assumed; "Car battery" is the battery card's heading |
+| Update battery level | Accuniveau bijwerken | today's battery card's button, which opens the entry of the level |
+| Battery level, Battery level in percent | Accuniveau, Accuniveau in procent | the entry's title and its field's label |
+| A whole number from 0 to 100, such as 64. | Een heel getal van 0 tot 100, zoals 64. | the hint under the entry's field; a decimal gets "Type a whole number, without decimals.", a number outside the range "This value is outside what is allowed here." |
+| Battery level saved. | Accuniveau opgeslagen. | after the entry's Save, in a snackbar |
+| Not saved: the battery level could not be written. | Niet opgeslagen: het accuniveau kon niet worden geschreven. | in the entry after its Save failed, above the English details |
+| The battery level you typed is not saved yet. | Het accuniveau dat je typte is nog niet opgeslagen. | under "Discard changes?", asked by Back with a level typed |
 | Car away | Afwezig | the heading of the one-off away periods |
 | None entered for the coming days. | Niets ingevuld voor de komende dagen. | no one-off away period to come |
 | updated 10:51, not refreshed since 10:51 | bijgewerkt om 10:51, niet vernieuwd sinds 10:51 | the footer, after the provider's credit, which stays as it is |

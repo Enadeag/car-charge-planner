@@ -24,6 +24,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -60,6 +63,7 @@ import nl.enadeag.carchargeplanner.android.home.ChargeLevels
 import nl.enadeag.carchargeplanner.android.home.DayModel
 import nl.enadeag.carchargeplanner.android.ui.LocalSourceColours
 import nl.enadeag.carchargeplanner.android.ui.SourceColours
+import nl.enadeag.carchargeplanner.android.ui.components.AppButton
 
 /** The tick labels the chart's time axis shows, for the tests: what is drawn has no semantics of its own. */
 internal val AxisLabels = SemanticsPropertyKey<List<String>>("AxisLabels")
@@ -96,14 +100,18 @@ internal fun SolarCard(day: DayModel, words: DashboardWords) {
 /**
  * A day's battery, as the desktop's bar: the level at the start, the level after charging outlined beyond it, and
  * marks at the minimum and target charge levels with their words under them; the levels in words above it. A screen
- * reader reads the bar as one sentence, with the levels; their words are not read apart.
+ * reader reads the bar as one sentence, with the levels; their words are not read apart. Today's card ends with the
+ * button that opens the entry of the level the car shows.
  *
  * @param day the day, with its levels
  * @param levels the minimum and target charge levels
  * @param words the dashboard's words
+ * @param update opens the entry of the level; null on a day whose level cannot be entered, any but today
+ * @param updateFocus moves the focus to that button, as when the entry closes
  */
 @Composable
-internal fun BatteryCard(day: DayModel, levels: ChargeLevels, words: DashboardWords) {
+internal fun BatteryCard(day: DayModel, levels: ChargeLevels, words: DashboardWords, update: (() -> Unit)? = null,
+    updateFocus: FocusRequester = remember { FocusRequester() }) {
     val colours = LocalSourceColours.current.chart
     ChartCard(colours) {
         Text(stringResource(R.string.battery_heading), style = MaterialTheme.typography.titleMedium,
@@ -111,6 +119,15 @@ internal fun BatteryCard(day: DayModel, levels: ChargeLevels, words: DashboardWo
         Text(words.batteryLevels(day.battery), style = MaterialTheme.typography.titleMedium, color = colours.carText,
             modifier = Modifier.semantics { hideFromAccessibility() })
         BatteryBar(day, levels, words, colours)
+        if (update != null) {
+            // filled, so its words stand on Material's own button colours, whatever the card's fixed ground; it may
+            // take the focus also in touch mode, where a button takes none, so the focus comes back to it, and a
+            // screen reader with it, when the entry closes
+            AppButton(onClick = update,
+                modifier = Modifier.focusProperties { canFocus = true }.focusRequester(updateFocus)) {
+                Text(stringResource(R.string.battery_update))
+            }
+        }
     }
 }
 

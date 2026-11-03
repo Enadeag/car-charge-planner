@@ -48,6 +48,7 @@ import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.Clock
 import java.time.Duration
@@ -56,6 +57,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
+import java.util.Locale
 import java.util.Optional
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
@@ -63,6 +65,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import nl.enadeag.carchargeplanner.android.R
+import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.home.BatteryEntry
 import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
 import nl.enadeag.carchargeplanner.android.home.Plans
@@ -130,14 +134,32 @@ class HomeScreenTest {
     private var settingsOpened = 0
     private lateinit var focus: FocusManager
 
-    private fun show(answer: Outlook?, phoneZone: ZoneId = amsterdam, fontScaleTwo: Boolean = false): HomeOutlook {
+    /** The home's saved state, which the battery entry keeps its texts in. */
+    private val handle = SavedStateHandle()
+    private lateinit var battery: BatteryEntry
+    private lateinit var shownOutlook: HomeOutlook
+
+    /** A battery entry of its own, for a home a test sets up itself. */
+    private fun entry() = BatteryEntry(SavedStateHandle(), NumberText(Locale.ENGLISH), access, scope) { }
+
+    /** Today's battery bar in words while its level is assumed, as in the plans here unless they say otherwise. */
+    private fun todaysBattery(vararg levels: String) =
+        text(R.string.battery_spoken_today, *levels) + " " + text(R.string.battery_assumed)
+
+    private fun show(answer: Outlook?, phoneZone: ZoneId = amsterdam, fontScaleTwo: Boolean = false,
+        kept: SavedStateHandle = handle): HomeOutlook {
         val outlook = HomeOutlook(access, scope, clock) { }
+        shownOutlook = outlook
+        battery = BatteryEntry(kept, NumberText(Locale.ENGLISH), access, scope) { outlook.planAgain() }
         val notice = HomeNotice(saves, scope) { }
         compose.setContent {
             AppTheme {
                 focus = LocalFocusManager.current
-                if (fontScaleTwo) AtFontScaleTwo { HomeScreen(outlook, notice, { phoneZone }) { settingsOpened++ } }
-                else HomeScreen(outlook, notice, { phoneZone }) { settingsOpened++ }
+                if (fontScaleTwo) {
+                    AtFontScaleTwo { HomeScreen(outlook, notice, battery, { phoneZone }) { settingsOpened++ } }
+                } else {
+                    HomeScreen(outlook, notice, battery, { phoneZone }) { settingsOpened++ }
+                }
             }
         }
         compose.waitForIdle()
@@ -467,7 +489,7 @@ class HomeScreenTest {
 
         tab("Vandaag").assertIsSelected()
         compose.assertReadAsOne(text(R.string.chart_spoken_no_solar, "Vandaag"), Role.Image)
-        compose.assertReadAsOne(text(R.string.battery_spoken_today, "40", "60", "20", "80"), Role.Image)
+        compose.assertReadAsOne(todaysBattery("40", "60", "20", "80"), Role.Image)
         compose.onNodeWithText(text(R.string.advice_runs_empty, "morgen", "30") + " " + text(R.string.advice_no_room))
             .assertExists()
         compose.assertShowsNoneOf(englishOnlyTexts())
@@ -772,10 +794,11 @@ class HomeScreenTest {
         var twice by mutableStateOf(false)
         val outlook = HomeOutlook(access, scope, clock) { }
         val notice = HomeNotice(saves, scope) { }
+        val battery = entry()
         compose.setContent {
             AppTheme {
-                if (twice) AtFontScaleTwo { HomeScreen(outlook, notice, { amsterdam }) { } }
-                else HomeScreen(outlook, notice, { amsterdam }) { }
+                if (twice) AtFontScaleTwo { HomeScreen(outlook, notice, battery, { amsterdam }) { } }
+                else HomeScreen(outlook, notice, battery, { amsterdam }) { }
             }
         }
         compose.waitForIdle()
@@ -794,7 +817,7 @@ class HomeScreenTest {
     fun theBatteryBarIsOneImageThatSaysTheLevelsWhichAlsoShowWithItsMarks() {
         show(lisbonWeek())
 
-        compose.assertReadAsOne(text(R.string.battery_spoken_today, "40", "60", "20", "80"), Role.Image)
+        compose.assertReadAsOne(todaysBattery("40", "60", "20", "80"), Role.Image)
             .performScrollTo().assertIsDisplayed()
         compose.onNode(isHeading() and hasText(text(R.string.battery_heading))).performScrollTo().assertIsDisplayed()
         compose.assertShownButNotReadApart(text(R.string.battery_levels, "40", "60"))
@@ -820,7 +843,7 @@ class HomeScreenTest {
 
         compose.onNode(SemanticsMatcher.keyIsDefined(AxisLabels), useUnmergedTree = true).performScrollTo()
             .assertIsDisplayed()
-        compose.onNode(hasContentDescription(text(R.string.battery_spoken_today, "40", "60", "20", "80")),
+        compose.onNode(hasContentDescription(todaysBattery("40", "60", "20", "80")),
             useUnmergedTree = true).performScrollTo().assertIsDisplayed()
         compose.assertShownButNotReadApart(text(R.string.battery_target, "80"))
         compose.assertScrollsToShow(hasText(Plans.CREDIT, substring = true))
@@ -868,7 +891,7 @@ class HomeScreenTest {
         show(Plans.planned(today.atTime(9, 0).atZone(lisbon), listOf(listOf()), minimum = 70.0, target = 75.0))
         compose.onNodeWithText(text(R.string.battery_target, "75"), useUnmergedTree = true).performScrollTo()
 
-        val bar = saying(text(R.string.battery_spoken_today, "40", "40", "70", "75"))
+        val bar = saying(todaysBattery("40", "40", "70", "75"))
         val minimum = shown(text(R.string.battery_minimum, "70"))
         val target = shown(text(R.string.battery_target, "75"))
         assertThat(minimum.overlaps(target)).`as`("the marks' words %s and %s overlap", minimum, target).isFalse()
@@ -884,16 +907,17 @@ class HomeScreenTest {
     fun rightToLeftTheBatteryBarRunsLeftToRightWithEachMarksWordsUnderIt() {
         val outlook = HomeOutlook(access, scope, clock) { }
         val notice = HomeNotice(saves, scope) { }
+        val battery = entry()
         compose.setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                AppTheme { HomeScreen(outlook, notice, { amsterdam }) { } }
+                AppTheme { HomeScreen(outlook, notice, battery, { amsterdam }) { } }
             }
         }
         compose.waitForIdle()
         answer(lisbonWeek())
         compose.onNodeWithText(text(R.string.battery_target, "80"), useUnmergedTree = true).performScrollTo()
 
-        val bar = saying(text(R.string.battery_spoken_today, "40", "60", "20", "80"))
+        val bar = saying(todaysBattery("40", "60", "20", "80"))
         assertThat(shown(text(R.string.battery_minimum, "20")).center.x)
             .isCloseTo(bar.left + bar.width * 0.2f, within(1f))
         assertThat(shown(text(R.string.battery_target, "80")).center.x)
@@ -918,10 +942,11 @@ class HomeScreenTest {
         var rtl by mutableStateOf(false)
         val outlook = HomeOutlook(access, scope, clock) { }
         val notice = HomeNotice(saves, scope) { }
+        val battery = entry()
         compose.setContent {
             CompositionLocalProvider(LocalLayoutDirection provides
                 if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
-                AppTheme { HomeScreen(outlook, notice, { amsterdam }) { } }
+                AppTheme { HomeScreen(outlook, notice, battery, { amsterdam }) { } }
             }
         }
         compose.waitForIdle()
