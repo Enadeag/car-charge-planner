@@ -927,11 +927,66 @@ class SettingsScreenTest {
     fun eachRowIsAtLeast56DpHigh() {
         show()
 
-        SettingsPage.entries.forEach { page ->
-            val row = row(page)
+        (SettingsPage.entries.map { it to row(it) } + ("licences" to licencesRow())).forEach { (page, row) ->
             assertThat(row.size.height / row.layoutInfo.density.density).`as`("the height of %s's row", page)
                 .isGreaterThanOrEqualTo(56f)
         }
+    }
+
+    /** The open source licences' row, after the pages', scrolled to. */
+    private fun licencesRow() = compose.onNode(hasClickAction() and hasText(text(R.string.settings_licences)))
+        .performScrollTo().fetchSemanticsNode()
+
+    @Test
+    fun theLastRowIsOneButtonThatOpensTheLicencesWhoseBackAndUpReturnToTheList() {
+        val session = show()
+        val row = licencesRow()
+        assertThat(row.config.getOrNull(SemanticsProperties.Role)).isEqualTo(Role.Button)
+        assertThat(row.config.getOrNull(SemanticsProperties.ContentDescription)).`as`("what its icon reads").isNull()
+        assertThat(row.positionInRoot.y).isGreaterThan(row(SettingsPage.entries.last()).positionInRoot.y)
+
+        click(R.string.settings_licences)
+        compose.waitForIdle()
+
+        compose.onNode(isHeading() and hasText(text(R.string.settings_licences))).assertIsFocused()
+        assertThat(session.page.value).isNull()
+        // the app's own assets, as the build made them: the app's licence comes first
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasClickAction() and hasText("Car charge planner (GPL-3.0-or-later)"))
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        compose.waitForIdle()
+        compose.onNode(isHeading() and hasText(text(R.string.settings_title))).assertExists()
+        assertThat(closed).isZero()
+
+        click(R.string.settings_licences)
+        compose.waitForIdle()
+        up()
+        compose.waitForIdle()
+        compose.onNode(isHeading() and hasText(text(R.string.settings_title))).assertExists()
+        assertThat(closed).isZero()
+    }
+
+    @Test
+    fun theLicencesStayOpenAfterTheSystemEndedTheApp() {
+        val restoration = StateRestorationTester(compose)
+        val session = session()
+        restoration.setContent {
+            AppTheme {
+                val page by session.page.collectAsState()
+                SettingsScreen(session, page)
+            }
+        }
+        compose.waitForIdle()
+        click(R.string.settings_licences)
+        compose.waitForIdle()
+
+        restoration.emulateSavedInstanceStateRestore()
+        compose.waitForIdle()
+
+        compose.onNode(isHeading() and hasText(text(R.string.settings_licences))).assertExists()
     }
 
     @Test
@@ -964,7 +1019,7 @@ class SettingsScreenTest {
     fun theGapBetweenTwoRowsIsOneDividerThick() {
         show()
 
-        val rows = SettingsPage.entries.map { row(it) }
+        val rows = SettingsPage.entries.map { row(it) } + licencesRow()
         val divider = DividerDefaults.Thickness.value * rows.first().layoutInfo.density.density
         val gaps = rows.zipWithNext { above, below ->
             below.positionInRoot.y - (above.positionInRoot.y + above.size.height)
@@ -980,8 +1035,7 @@ class SettingsScreenTest {
         val list = compose.onNode(hasScrollAction()).fetchSemanticsNode()
         val first = compose.onNode(hasClickAction() and hasText(text(SettingsPage.entries.first().title())))
             .fetchSemanticsNode()
-        val last = compose.onNode(hasClickAction() and hasText(text(SettingsPage.entries.last().title())))
-            .fetchSemanticsNode()
+        val last = compose.onNode(hasClickAction() and hasText(text(R.string.settings_licences))).fetchSemanticsNode()
         // only the list's own padding, 8 dp, lies between a row and the list's edge
         val padding = 8f * list.layoutInfo.density.density
         assertThat(first.positionInRoot.y - list.positionInRoot.y).isCloseTo(padding, within(0.5f))

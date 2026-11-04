@@ -1,8 +1,87 @@
-Apache License 2.0, for the Android app's libraries and copied files under it that this repository names
-Artifact: androidx.compose.material:material-icons-core
-Source: https://cs.android.com/androidx/platform/frameworks/support
-Licence: Apache-2.0, as the library's pom names it; its aar carries no licence or notice file of its own.
-Copyright The Android Open Source Project.
+Apache License 2.0
+For the Android app's libraries, each named by an Artifact line by group and artifact, without its version (Gradle's
+releaseRuntimeClasspath, the engine's libraries included), and for the copied files that this file names.
+Source: AndroidX and Compose https://cs.android.com/androidx/platform/frameworks/support; Kotlin https://kotlinlang.org;
+kotlinx https://github.com/Kotlin/kotlinx.coroutines and https://github.com/Kotlin/kotlinx.serialization; JetBrains'
+annotations https://github.com/JetBrains/java-annotations; JSpecify http://jspecify.org; listenablefuture
+https://github.com/google/guava.
+Licence: Apache-2.0, as each library's pom names it (guava-parent's for listenablefuture). Most AndroidX libraries carry
+this text, without its appendix, as META-INF/androidx/<group>/<artifact>/LICENSE.txt; the others carry no licence
+file, and none of these libraries carries a notice file.
+Artifact: androidx.activity:activity
+Artifact: androidx.activity:activity-compose
+Artifact: androidx.activity:activity-ktx
+Artifact: androidx.annotation:annotation-experimental
+Artifact: androidx.annotation:annotation-jvm
+Artifact: androidx.arch.core:core-common
+Artifact: androidx.arch.core:core-runtime
+Artifact: androidx.autofill:autofill
+Artifact: androidx.collection:collection-jvm
+Artifact: androidx.collection:collection-ktx
+Artifact: androidx.compose.animation:animation-android
+Artifact: androidx.compose.animation:animation-core-android
+Artifact: androidx.compose.foundation:foundation-android
+Artifact: androidx.compose.foundation:foundation-layout-android
+Artifact: androidx.compose.material3:material3-android
+Artifact: androidx.compose.material:material-icons-core-android
+Artifact: androidx.compose.material:material-ripple-android
+Artifact: androidx.compose.runtime:runtime-android
+Artifact: androidx.compose.runtime:runtime-annotation-android
+Artifact: androidx.compose.runtime:runtime-retain-android
+Artifact: androidx.compose.runtime:runtime-saveable-android
+Artifact: androidx.compose.ui:ui-android
+Artifact: androidx.compose.ui:ui-geometry-android
+Artifact: androidx.compose.ui:ui-graphics-android
+Artifact: androidx.compose.ui:ui-text-android
+Artifact: androidx.compose.ui:ui-unit-android
+Artifact: androidx.compose.ui:ui-util-android
+Artifact: androidx.concurrent:concurrent-futures
+Artifact: androidx.core:core
+Artifact: androidx.core:core-ktx
+Artifact: androidx.core:core-viewtree
+Artifact: androidx.customview:customview-poolingcontainer
+Artifact: androidx.documentfile:documentfile
+Artifact: androidx.dynamicanimation:dynamicanimation
+Artifact: androidx.emoji2:emoji2
+Artifact: androidx.graphics:graphics-path
+Artifact: androidx.interpolator:interpolator
+Artifact: androidx.legacy:legacy-support-core-utils
+Artifact: androidx.lifecycle:lifecycle-common-java8
+Artifact: androidx.lifecycle:lifecycle-common-jvm
+Artifact: androidx.lifecycle:lifecycle-livedata
+Artifact: androidx.lifecycle:lifecycle-livedata-core
+Artifact: androidx.lifecycle:lifecycle-livedata-core-ktx
+Artifact: androidx.lifecycle:lifecycle-process
+Artifact: androidx.lifecycle:lifecycle-runtime-android
+Artifact: androidx.lifecycle:lifecycle-runtime-compose-android
+Artifact: androidx.lifecycle:lifecycle-runtime-ktx-android
+Artifact: androidx.lifecycle:lifecycle-viewmodel
+Artifact: androidx.lifecycle:lifecycle-viewmodel-android
+Artifact: androidx.lifecycle:lifecycle-viewmodel-compose-android
+Artifact: androidx.lifecycle:lifecycle-viewmodel-ktx
+Artifact: androidx.lifecycle:lifecycle-viewmodel-savedstate-android
+Artifact: androidx.loader:loader
+Artifact: androidx.localbroadcastmanager:localbroadcastmanager
+Artifact: androidx.navigationevent:navigationevent-android
+Artifact: androidx.navigationevent:navigationevent-compose-android
+Artifact: androidx.print:print
+Artifact: androidx.profileinstaller:profileinstaller
+Artifact: androidx.savedstate:savedstate-android
+Artifact: androidx.savedstate:savedstate-compose-android
+Artifact: androidx.savedstate:savedstate-ktx
+Artifact: androidx.startup:startup-runtime
+Artifact: androidx.tracing:tracing
+Artifact: androidx.transition:transition
+Artifact: androidx.versionedparcelable:versionedparcelable
+Artifact: androidx.window:window
+Artifact: androidx.window:window-core-android
+Artifact: com.google.guava:listenablefuture
+Artifact: org.jetbrains:annotations
+Artifact: org.jetbrains.kotlin:kotlin-stdlib
+Artifact: org.jetbrains.kotlinx:kotlinx-coroutines-android
+Artifact: org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm
+Artifact: org.jetbrains.kotlinx:kotlinx-serialization-core-jvm
+Artifact: org.jspecify:jspecify
 
 Copied: Material's Filled icons SolarPower, ElectricCar, EvStation, WbCloudy, EventBusy and Schedule, in
 android/app/src/main/kotlin/nl/enadeag/carchargeplanner/android/ui/settings/SettingsIcons.kt

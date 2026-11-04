@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import nl.enadeag.carchargeplanner.android.R
+import nl.enadeag.carchargeplanner.android.licences.LicenceFiles
 import nl.enadeag.carchargeplanner.android.settings.SettingsPage
 import nl.enadeag.carchargeplanner.android.settings.SettingsSession
 import nl.enadeag.carchargeplanner.android.ui.components.BarPage
@@ -61,13 +63,17 @@ import nl.enadeag.carchargeplanner.android.ui.setup.Edits
  * Back and Up do the same: from a page with edits they ask whether to throw them away, from a page without they go to
  * the list, and from the list to the home. A new page moves the focus to its title; a Save that shows problems moves
  * it to the first field that has one. A page's save that worked says so in a snackbar, which a screen reader reads
- * when it comes and which stays while the list opens.
+ * when it comes and which stays while the list opens. The list's last row opens the open source licences (#331), a
+ * read-only screen and not a page, so it has no Save and nothing to discard; Back and Up there return to the list, and
+ * it stays open after turning the phone or the system ending the app, until Settings closes.
  *
  * @param session the pages, their forms and their Save
  * @param page the page open; null for the list
+ * @param licences where the licence texts are read from: the app's assets, or a test's fixture
  */
 @Composable
-internal fun SettingsScreen(session: SettingsSession, page: SettingsPage?) {
+internal fun SettingsScreen(session: SettingsSession, page: SettingsPage?,
+    licences: LicenceFiles = AssetLicenceFiles(LocalContext.current.assets)) {
     val asked by session.discardAsked.collectAsStateWithLifecycle()
     val snackbars = remember { SnackbarHostState() }
     val saved = stringResource(R.string.settings_saved)
@@ -81,8 +87,11 @@ internal fun SettingsScreen(session: SettingsSession, page: SettingsPage?) {
         }
     }
     BackHandler { session.back() }
-    if (page == null) {
-        SettingsList(session, snackbars)
+    var licencesOpen by rememberSaveable { mutableStateOf(false) }
+    if (page == null && licencesOpen) {
+        LicencesScreen(licences) { licencesOpen = false }
+    } else if (page == null) {
+        SettingsList(session, snackbars) { licencesOpen = true }
     } else {
         PageScreen(session, page, snackbars)
     }
@@ -93,10 +102,11 @@ internal fun SettingsScreen(session: SettingsSession, page: SettingsPage?) {
 
 /**
  * The pages, each a row with its icon, its name and its current values, which wrap rather than being cut, the whole row
- * a button; a divider between two rows. The icon is decoration: the name says what the row is.
+ * a button; then the open source licences' row; a divider between two rows. The icon is decoration: the name says what
+ * the row is.
  */
 @Composable
-private fun SettingsList(session: SettingsSession, snackbars: SnackbarHostState) {
+private fun SettingsList(session: SettingsSession, snackbars: SnackbarHostState, openLicences: () -> Unit) {
     val config by session.config.collectAsStateWithLifecycle()
     val title = remember { FocusRequester() }
     LaunchedEffect(Unit) { title.requestFocus() }
@@ -113,6 +123,12 @@ private fun SettingsList(session: SettingsSession, snackbars: SnackbarHostState)
                 modifier = Modifier.heightIn(min = 56.dp).clickable(role = Role.Button) { session.open(page) },
             )
         }
+        HorizontalDivider()
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.settings_licences)) },
+            leadingContent = { Icon(Icons.Filled.Info, contentDescription = null) },
+            modifier = Modifier.heightIn(min = 56.dp).clickable(role = Role.Button, onClick = openLicences),
+        )
     }
 }
 

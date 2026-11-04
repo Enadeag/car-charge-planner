@@ -1,10 +1,14 @@
+import com.android.build.api.artifact.SingleArtifact
 import java.util.Locale
+import nl.enadeag.carchargeplanner.buildlogic.LicenceAssets
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     id("ccp.no-google-libraries")
+    // checkLegalFiles: android/legal names exactly the libraries and copied files the release build brings (#331)
+    id("ccp.legal-files")
 }
 
 // the example settings file of the docs, which a JVM test and an instrumented test read through the engine
@@ -131,9 +135,26 @@ val exampleConfigAsset = tasks.register<ExampleConfigAsset>("exampleConfigAsset"
     example = exampleConfig
 }
 
+// the licence texts of the app and of its libraries, which the screen of the licences shows (#331)
+val licenceAssets = tasks.register<LicenceAssets>("licenceAssets") {
+    notice = file("../../NOTICE")
+    licence = file("../../LICENSE")
+    additionalTerms = file("../../ADDITIONAL-TERMS.md")
+    legal = file("../legal")
+}
+
 androidComponents {
     onVariants { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(licenceAssets, LicenceAssets::getAssets)
         variant.androidTest?.sources?.assets?.addGeneratedSourceDirectory(exampleConfigAsset, ExampleConfigAsset::assets)
+        // LicencesInTheApkTest reads the debug APK as the build packs it
+        if (variant.name == "debug") {
+            val apk = variant.artifacts.get(SingleArtifact.APK)
+            tasks.withType<Test>().named { it == "testDebugUnitTest" }.configureEach {
+                inputs.dir(apk).withPropertyName("apk")
+                jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-Dapk.dir=${apk.get().asFile}") })
+            }
+        }
     }
 }
 
