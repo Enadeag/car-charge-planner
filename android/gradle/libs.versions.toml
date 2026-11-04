@@ -1,7 +1,8 @@
-# Every version the Android build uses, except those of Jackson, slf4j, JUnit, AssertJ and ArchUnit: the libraries
-# below name the versions jackson, slf4j, junit, assertj and archunit, which the settings (android/ and build-logic/)
-# read from the Maven build's pom.xml (maven-poms/, MavenVersions), so a Maven update of one of them reaches this build
-# too. A version that pom.xml lacks fails the build while it configures.
+# Every version the Android build uses, except those of Jackson, slf4j, JUnit, AssertJ and ArchUnit, and of PIT and its
+# JUnit 5 plugin: the libraries below name the versions jackson, slf4j, junit, assertj and archunit, and app/ the
+# versions pitest and pitest-junit5, which the settings (android/ and build-logic/) read from the Maven build's pom.xml
+# (maven-poms/, MavenVersions), so a Maven update of one of them reaches this build too. A version that pom.xml lacks
+# fails the build while it configures.
 [versions]
 # the oldest Android the app runs on (Android 10) and the API it is compiled against, for :app and :engine-lint
 android-min-sdk = "29"
@@ -16,6 +17,8 @@ androidx-test-junit = "1.3.0"
 lifecycle = "2.10.0"
 coroutines = "1.11.0"
 robolectric = "4.17"
+# the Android fork of the PIT plugin, for :app's mutation testing (pitestDebug); PIT's own version comes from pom.xml
+pitest-plugin = "0.3.0"
 
 [libraries]
 jackson-bom = { module = "tools.jackson:jackson-bom", version.ref = "jackson" }
@@ -63,3 +66,4 @@ engine = ["jackson-databind", "jackson-core", "slf4j-api"]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
+pitest = { id = "pl.droidsonroids.pitest", version.ref = "pitest-plugin" }

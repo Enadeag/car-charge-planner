@@ -9,10 +9,16 @@ plugins {
     id("ccp.no-google-libraries")
     // checkLegalFiles: android/legal names exactly the libraries and copied files the release build brings (#331)
     id("ccp.legal-files")
+    alias(libs.plugins.pitest)
 }
 
 // the example settings file of the docs, which a JVM test and an instrumented test read through the engine
 val exampleConfig: File = file("../../docs/example-engine.json")
+
+// What the logic tests need of their JVM, for the unit-test task and for PIT's test JVMs alike. The app's slf4j provider
+// writes to android.util.Log, which the local tests' android.jar only stubs: a call fails there, so the records of the
+// engine and of the libraries go nowhere in these tests.
+val logicTestProperties = mapOf("slf4j.provider" to "org.slf4j.helpers.NOP_FallbackServiceProvider")
 
 // The languages of the texts: the plain values-<language> folders, such as values-nl, whose language is a real ISO 639
 // one (so values-car, a car's UI mode, is none); region forms such as values-pt-rBR do not count.
@@ -92,9 +98,7 @@ android {
             it.useJUnitPlatform()
             // Robolectric's Android 16 (SDK 36) reaches into the JDK's file descriptors, which JDK 21 keeps closed
             it.jvmArgs("--add-opens=java.base/jdk.internal.access=ALL-UNNAMED")
-            // The app's slf4j provider writes to android.util.Log, which the local tests' android.jar only stubs:
-            // a call fails there, so the records of the engine and of the libraries go nowhere in these tests.
-            it.systemProperty("slf4j.provider", "org.slf4j.helpers.NOP_FallbackServiceProvider")
+            it.systemProperties(logicTestProperties)
             // StringsResourcesTest reads the resources and the language list that the release build hands Android,
             // as the build makes it. AGP has no public handle on that file's folder, so the task's output is used.
             val localeConfig = files(tasks.named("generateReleaseLocaleConfig").map { task -> task.outputs.files })
@@ -181,6 +185,11 @@ dependencies {
     testImplementation(libs.androidx.test.junit)
     testImplementation(libs.compose.ui.test.junit4)
     testRuntimeOnly(libs.junit.vintage.engine)
+    // PIT's classpath (the fork's) leaves out what the engine's test fixtures bring at run time, the JUnit 5 engine
+    // among them, and looks for the app's Java resources, such as slf4j's service file, where AGP 8 put them
+    pitestRuntimeOnly(platform(libs.junit.bom))
+    pitestRuntimeOnly(libs.junit.jupiter.engine)
+    pitestRuntimeOnly(files("src/main/resources"))
     // Compose's test manifest, for the screens' tests; it puts an exported empty activity in the debug APK only
     debugImplementation(libs.compose.ui.test.manifest)
 
@@ -189,4 +198,43 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.junit)
+}
+
+// The app's logic, which PIT mutates (CONTRIBUTING.md, What is tested where): the classes with plain JUnit 5 tests.
+// The screens, tested on Robolectric only, are left out; their tests keep hand mutants in the review.
+val pitLogic = listOf("form.*", "setup.*", "settings.*", "store.*", "home.*", "start.*", "licences.*", "logging.*",
+    "secrets.*", "OwnCode*", "MainThreadViolations*", "AndroidHttpGet*", "AndroidPlatform*",
+    // ChartGeometry.kt: the charts' geometry and the shapes they draw, apart from the Compose code in DayCharts.kt
+    "ui.home.ChartGeometryKt*", "ui.home.PlotArea*", "ui.home.CurvePoint*", "ui.home.PlacedTick*",
+    "ui.home.TimeAxis*", "ui.home.Point*", "ui.home.Shape*", "ui.home.SolarDrawing*", "ui.home.BatteryBarLayout*")
+    .map { "nl.enadeag.carchargeplanner.android.$it" }.toSet()
+
+// ./gradlew :app:pitestDebug, or with -PpitClasses=<comma-separated class names or globs> for the changed classes only
+pitest {
+    pitestVersion = libs.versions.pitest.asProvider()
+    junit5PluginVersion = libs.versions.pitest.junit5
+    // as the Maven runs: two test JVMs at once, each with a heap of 512 MB, and PIT's own JVM with as much
+    threads = 2
+    jvmArgs = listOf("-Xmx512m") + logicTestProperties.map { (name, value) -> "-D$name=$value" }
+    mainProcessJvmArgs = listOf("-Xmx512m")
+    outputFormats = setOf("HTML", "XML")
+    timestampedReports = false
+    targetClasses = providers.gradleProperty("pitClasses")
+        .map { classes -> classes.split(",").map(String::trim).filter(String::isNotEmpty).toSet() }
+        .orElse(pitLogic)
+    // A few points below the share of mutants killed when it was set (74 %). The removed calls to the null and result
+    // checks the Kotlin compiler adds (Intrinsics, ResultKt), which no test can see, are 207 of its survivors: they
+    // are not left out with avoidCallsTo, as PIT then drops every mutant on a line with such a call, and in the first
+    // run that dropped as many real mutants as generated ones.
+    mutationThreshold = 71
+    targetTests = setOf("nl.enadeag.carchargeplanner.android.*")
+    excludedTestClasses = listOf(
+        // the screens' tests, JUnit 4 on Robolectric, which runs Android in the test JVM
+        "AppOnRobolectricTest", "MainActivity*Test", "licences.AssetLicenceFilesTest", "ui.*Screen*Test",
+        "ui.AppThemeTest", "ui.BarScaffoldTest", "ui.home.DashboardWordsTest", "ui.home.DrawnShapesTest",
+        // what the build makes rather than what the code does: the resources, the manifest, the APK and the engine on
+        // the example settings file; and the ArchUnit rules, which read the classes' structure and kill no mutant
+        "StringsResourcesTest", "DataExtractionRulesTest", "NetworkSecurityConfigTest", "licences.LicencesInTheApkTest",
+        "AppEngineTest", "AppArchitectureTest",
+    ).map { "nl.enadeag.carchargeplanner.android.$it" }.toSet()
 }

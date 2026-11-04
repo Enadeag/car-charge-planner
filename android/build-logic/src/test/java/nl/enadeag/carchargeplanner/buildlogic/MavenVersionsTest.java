@@ -23,6 +23,8 @@ class MavenVersionsTest {
                 <junit.version>6.1.3</junit.version>
                 <assertj.version>3.27.7</assertj.version>
                 <archunit.version>1.5.1</archunit.version>
+                <pitest.version>1.30.1</pitest.version>
+                <pitest-junit5.version>1.2.3</pitest-junit5.version>
               </properties>
               <dependencyManagement>
                 <dependencies>
@@ -83,6 +85,7 @@ class MavenVersionsTest {
             println("slf4j-api " + libs.slf4j.api.get().version)
             println("versions " + with(libs.versions) { listOf(jackson, slf4j, junit, assertj, archunit) }
                     .map { it.get() })
+            println("pit " + libs.versions.pitest.asProvider().get() + " " + libs.versions.pitest.junit5.get())
             """;
 
     @TempDir
@@ -108,7 +111,7 @@ class MavenVersionsTest {
     @Test
     void aVersionInThePomReachesTheLibrariesEvenFromTheConfigurationCache() throws IOException {
         assertThat(gradle().build().getOutput()).contains("jackson-bom 3.2.3", "slf4j-api 2.0.20",
-                "versions [3.2.3, 2.0.20, 6.1.3, 3.27.7, 1.5.1]");
+                "versions [3.2.3, 2.0.20, 6.1.3, 3.27.7, 1.5.1]", "pit 1.30.1 1.2.3");
         assertThat(gradle().build().getOutput()).doesNotContain("jackson-bom");
 
         Files.writeString(repository.resolve("pom.xml"), PARENT.replace(">3.2.3<", ">3.2.4<"));
@@ -121,6 +124,22 @@ class MavenVersionsTest {
         Files.writeString(repository.resolve("pom.xml"), PARENT.replace("archunit.version>", "archunit.v>"));
 
         assertThat(gradle().buildAndFail().getOutput()).contains("archunit.version",
+                repository.resolve("pom.xml").toString());
+    }
+
+    @Test
+    void aPitVersionPropertyThePomLacksFailsTheBuildNamingItAndThePom() throws IOException {
+        Files.writeString(repository.resolve("pom.xml"), PARENT.replace("pitest-junit5.version>", "pit5.version>"));
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("pitest-junit5.version",
+                repository.resolve("pom.xml").toString());
+    }
+
+    @Test
+    void aPitVersionThatIsNoPlainVersionFailsTheBuildNamingItAndThePom() throws IOException {
+        Files.writeString(repository.resolve("pom.xml"), PARENT.replace(">1.30.1<", ">[1.30,)<"));
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("pitest", "[1.30,)", "not a plain version",
                 repository.resolve("pom.xml").toString());
     }
 
@@ -209,6 +228,15 @@ class MavenVersionsTest {
                 + PROFILE_END);
 
         assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", "jackson.version", "odd",
+                repository.resolve("pom.xml").toString());
+    }
+
+    @Test
+    void aParentProfileThatSetsAPitVersionPropertyFailsTheBuildNamingItAndThePom() throws IOException {
+        parentHas("<profiles><profile><id>odd</id><properties><pitest.version>1.31.0</pitest.version></properties>"
+                + PROFILE_END);
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", "pitest.version", "odd",
                 repository.resolve("pom.xml").toString());
     }
 

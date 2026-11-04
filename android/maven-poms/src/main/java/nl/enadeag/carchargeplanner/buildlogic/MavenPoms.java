@@ -76,12 +76,7 @@ public final class MavenPoms {
      */
     public static String managedVersion(byte[] pom, String pomName, Declared library) throws IOException {
         var root = parse(new ByteArrayInputStream(pom), pomName).getDocumentElement();
-        var properties = new HashMap<String, String>();
-        for (var section : children(root, "properties")) {
-            for (var property : children(section, null)) {
-                properties.put(property.getTagName(), property.getTextContent().trim());
-            }
-        }
+        var properties = properties(root);
         for (var dependency : dependencies(root, "dependencyManagement")) {
             if (library.group().equals(text(dependency, "groupId"))
                     && library.artifact().equals(text(dependency, "artifactId"))) {
@@ -90,7 +85,7 @@ public final class MavenPoms {
                     throw new IllegalArgumentException(library.module() + " has no version in the dependencyManagement"
                             + " of " + pomName);
                 }
-                return resolve(version, properties, library, pomName);
+                return resolve(version, properties, library.module(), pomName);
             }
         }
         throw new IllegalArgumentException(pomName + " has no " + library.module() + " in its dependencyManagement");
@@ -267,26 +262,55 @@ public final class MavenPoms {
         return found;
     }
 
-    private static String resolve(String value, Map<String, String> properties, Declared library, String pomName) {
+    /**
+     * The version a property at a pom's top level holds, such as the parent's {@code pitest.version}, for a tool the
+     * pom names by that property rather than in its {@code dependencyManagement}.
+     *
+     * @param pom the pom's contents
+     * @param pomName the pom's path, for the messages
+     * @param property the property's name, such as {@code pitest.version}
+     * @param tool what the version is of, for the messages, such as {@code PIT}
+     * @return the version, never blank
+     * @throws IOException when the contents are not a pom
+     * @throws IllegalArgumentException when the top level does not set the property, or its value is not a plain
+     *     version, as for {@link #managedVersion}; the message names the property and the pom
+     */
+    public static String propertyVersion(byte[] pom, String pomName, String property, String tool)
+            throws IOException {
+        var properties = properties(parse(new ByteArrayInputStream(pom), pomName).getDocumentElement());
+        return resolve("${" + property + "}", properties, tool, pomName);
+    }
+
+    private static Map<String, String> properties(Element root) {
+        var properties = new HashMap<String, String>();
+        for (var section : children(root, "properties")) {
+            for (var property : children(section, null)) {
+                properties.put(property.getTagName(), property.getTextContent().trim());
+            }
+        }
+        return properties;
+    }
+
+    private static String resolve(String value, Map<String, String> properties, String subject, String pomName) {
         Matcher matcher = PROPERTY.matcher(value);
         var resolved = new StringBuilder();
         while (matcher.find()) {
             var property = properties.get(matcher.group(1));
             if (property == null || property.isEmpty()) {
                 throw new IllegalArgumentException(pomName + " does not set the property " + matcher.group(1)
-                        + ", which the version of " + library.module() + " names");
+                        + ", which the version of " + subject + " names");
             }
             matcher.appendReplacement(resolved, Matcher.quoteReplacement(property));
         }
         var version = matcher.appendTail(resolved).toString();
         if (version.contains("${")) {
-            throw new IllegalArgumentException("the version of " + library.module() + " in " + pomName + " is \""
+            throw new IllegalArgumentException("the version of " + subject + " in " + pomName + " is \""
                     + version + "\" once its properties are filled in: a property that names another property is not"
                     + " resolved");
         }
         var lower = version.toLowerCase(Locale.ROOT);
         if (!PLAIN_VERSION.matcher(version).matches() || lower.startsWith("latest") || lower.equals("release")) {
-            throw new IllegalArgumentException("the version of " + library.module() + " in " + pomName + " is \""
+            throw new IllegalArgumentException("the version of " + subject + " in " + pomName + " is \""
                     + version + "\", which is not a plain version: Android takes letters, digits, '.', '_' and '-'"
                     + " only, no range, '+' or 'latest'");
         }
