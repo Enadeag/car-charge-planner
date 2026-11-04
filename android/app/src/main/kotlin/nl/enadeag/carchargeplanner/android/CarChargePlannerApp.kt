@@ -34,24 +34,38 @@ class CarChargePlannerApp : Application() {
         engine = EngineOnDispatcher(AppEngine.build(platform, QuietNotifier), Dispatchers.IO)
         saves = Saves(engine, scope)
         // only now: the parts above may touch the disk while they are made
-        if (BuildConfig.DEBUG) {
-            StrictMode.setThreadPolicy(mainThreadPolicy())
-        }
+        applyMainThreadPolicy(BuildConfig.DEBUG)
     }
 
     internal companion object {
 
         /**
-         * What the debug build allows on the main thread: no disk reads, disk writes or network, or the app crashes
-         * at once, so a call that should run off the main thread is found while developing.
+         * Sets the main thread's policy in the debug build only; the release build keeps none.
          *
-         * @return a new policy
+         * @param debug whether this is the debug build
+         * @param set what puts the policy on the calling thread
+         */
+        fun applyMainThreadPolicy(
+            debug: Boolean,
+            set: (StrictMode.ThreadPolicy) -> Unit = StrictMode::setThreadPolicy,
+        ) {
+            if (debug) {
+                set(mainThreadPolicy())
+            }
+        }
+
+        /**
+         * What the debug build allows on the main thread: no disk reads, disk writes or network from the app's own
+         * code, or the app crashes at once, so a call that should run off the main thread is found while developing.
+         * Such a call from the system's or a vendor's code alone is logged as a warning ([MainThreadViolations]).
+         *
+         * @return a new policy, with a listener of its own
          */
         fun mainThreadPolicy(): StrictMode.ThreadPolicy = StrictMode.ThreadPolicy.Builder()
             .detectDiskReads()
             .detectDiskWrites()
             .detectNetwork()
-            .penaltyDeath()
+            .penaltyListener(Runnable::run, MainThreadViolations())
             .build()
     }
 }
