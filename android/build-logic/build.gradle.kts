@@ -33,5 +33,9 @@ gradlePlugin {
             id = "ccp.no-google-libraries"
             implementationClass = "nl.enadeag.carchargeplanner.buildlogic.NoGoogleLibrariesPlugin"
         }
+        create("legalFiles") {
+            id = "ccp.legal-files"
+            implementationClass = "nl.enadeag.carchargeplanner.buildlogic.LegalFilesPlugin"
+        }
     }
 }

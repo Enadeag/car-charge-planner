@@ -220,6 +220,12 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Check connection to Open-Meteo | Verbinding met Open-Meteo testen | asks the provider once, with what was typed |
 | Show, Hide | Tonen, Verbergen | an API key's mask |
 | None | Geen | no fallback provider; no weekly away period |
+| Open source licences | Opensourcelicenties | Settings' last row, and the title of the read-only screen it opens; the licence texts and their titles stay English |
+| Source code: … | Broncode: … | the repository's address on that screen, as plain text |
+| Expanded, Collapsed | Uitgevouwen, Ingevouwen | what TalkBack says of a licence's row: whether its text shows under it |
+| Reading the licences… | De licenties worden gelezen… | while a licence text, or the list of them, is read |
+| This text could not be read. | Deze tekst kon niet worden gelezen. | a licence text that is missing |
+| The licences could not be read. | De licenties konden niet worden gelezen. | the list of the licences that is missing |
 
 `place_search_language` is no sentence: it is the two-letter code of the file's own language (`en`, `nl`), which the place search is asked to answer in, so the names of places come in the language the app shows.
 

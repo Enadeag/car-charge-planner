@@ -423,4 +423,14 @@
   <string name="planning_hours_intro">A grid charge starts within these hours, and may run on after them.</string>
   <string name="planning_hours_from">Start charging from</string>
   <string name="planning_hours_until">Start charging no later than</string>
+  <!-- Settings' last row and the read-only screen it opens: the licence texts of the app and its libraries (#331). The
+       texts themselves and their titles stay English. -->
+  <string name="settings_licences">Open source licences</string>
+  <string name="licences_source">Source code: %1$s</string>
+  <string name="licences_reading">Reading the licences…</string>
+  <string name="licences_not_read">This text could not be read.</string>
+  <string name="licences_list_not_read">The licences could not be read.</string>
+  <!-- what TalkBack says of a licence's row: whether its text shows under it -->
+  <string name="licences_expanded">Expanded</string>
+  <string name="licences_collapsed">Collapsed</string>
 </resources>
