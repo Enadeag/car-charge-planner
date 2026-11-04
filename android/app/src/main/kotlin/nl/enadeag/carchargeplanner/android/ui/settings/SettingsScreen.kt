@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import nl.enadeag.carchargeplanner.android.R
+import nl.enadeag.carchargeplanner.android.licences.AssetLicenceFiles
 import nl.enadeag.carchargeplanner.android.licences.LicenceFiles
 import nl.enadeag.carchargeplanner.android.settings.SettingsPage
 import nl.enadeag.carchargeplanner.android.settings.SettingsSession
@@ -73,7 +74,7 @@ import nl.enadeag.carchargeplanner.android.ui.setup.Edits
  */
 @Composable
 internal fun SettingsScreen(session: SettingsSession, page: SettingsPage?,
-    licences: LicenceFiles = AssetLicenceFiles(LocalContext.current.assets)) {
+    licences: LicenceFiles = rememberAssetLicenceFiles()) {
     val asked by session.discardAsked.collectAsStateWithLifecycle()
     val snackbars = remember { SnackbarHostState() }
     val saved = stringResource(R.string.settings_saved)
@@ -298,6 +299,13 @@ internal fun SettingsPage.icon(): ImageVector = when (this) {
     SettingsPage.FORECAST -> SettingsIcons.WbCloudy
     SettingsPage.AWAY -> SettingsIcons.EventBusy
     SettingsPage.PLANNING -> SettingsIcons.Schedule
+}
+
+/** The app's licence texts in its assets, by one reader for as long as Settings shows, so none is read twice. */
+@Composable
+private fun rememberAssetLicenceFiles(): LicenceFiles {
+    val assets = LocalContext.current.assets
+    return remember(assets) { AssetLicenceFiles(assets) }
 }
 
 /** A row's progress while something is read, such as the API keys. */

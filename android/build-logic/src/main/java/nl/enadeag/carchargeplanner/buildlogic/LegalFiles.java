@@ -94,7 +94,9 @@ public final class LegalFiles {
             } else {
                 var file = files.iterator().next();
                 var artifact = module.substring(module.indexOf(':') + 1);
-                for (var notice : new TreeSet<String>(noticesByModule.containsKey(module) ? noticesByModule.get(module) : List.of())) {
+                Collection<String> inJars = noticesByModule.get(module);
+                var notices = new TreeSet<String>(inJars == null ? List.of() : inJars);
+                for (var notice : notices) {
                     if (!carries(legalFiles.get(file), notice, artifact)) {
                         problems.add("`" + module + "` has " + notice + " in its jar, which " + FOLDER + file
                                 + " does not carry: add its text there under a line `==== " + notice + " of "

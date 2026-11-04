@@ -9,7 +9,8 @@ import org.junit.jupiter.api.Test;
 
 class LicenceAssetsTest {
 
-    private static final String NOTICE = "Car charge planner\r\nCopyright (C) 2026 Someone\r\n\r\nThis program is free.";
+    private static final String NOTICE =
+            "Car charge planner\r\nCopyright (C) 2026 Someone\r\n\r\nThis program is free.";
     private static final String LICENCE = "GNU GENERAL PUBLIC LICENSE\n";
     private static final String TERMS = "# Additional terms\n\nTerms.\n";
 

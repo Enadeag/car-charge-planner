@@ -21,7 +21,8 @@ class LicenceIndexTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["part\tNOTICE\tTitle\n", "copyright\tC\npart\tNOTICE\n", "copyright\tC\nfile\tA\tB\n",
-        "copyright\tC\npart\t\tTitle\n"])
+        "copyright\tC\npart\t\tTitle\n", "copyright\tC\npart\tNOTICE\t\n", "copyright\tC\tD\n",
+        "copyright\tC\npart\tNOTICE\tTitle\tMore\n"])
     fun anIndexTheBuildNeverWritesCannotBeRead(text: String) {
         assertThatThrownBy { LicenceIndex.parse(text) }.isInstanceOf(IOException::class.java)
     }

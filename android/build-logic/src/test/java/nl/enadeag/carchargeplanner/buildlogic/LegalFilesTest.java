@@ -67,7 +67,8 @@ class LegalFilesTest {
         assertThat(problems(used, NOTICES, Map.of("apache-2.0.txt", APACHE, "jackson.txt", JACKSON), List.of(ICONS),
                 Set.of(ICONS))).containsExactly(
                 "the release build has `androidx.window:window` (via `releaseRuntimeClasspath`) but no file in "
-                        + "android/legal names it: add an `Artifact:` line to the file of its licence (see CONTRIBUTING)",
+                        + "android/legal names it: add an `Artifact:` line to the file of its licence (see "
+                        + "CONTRIBUTING)",
                 "the release build has `com.android.tools:desugar_jdk_libs_nio` (via `coreLibraryDesugaring`) but no "
                         + "file in android/legal names it: add an `Artifact:` line to the file of its licence (see "
                         + "CONTRIBUTING)");
@@ -166,10 +167,44 @@ class LegalFilesTest {
 
     @Test
     void aNoticeCarriedForAnotherArtifactDoesNotCount() {
-        var jackson = JACKSON.replace("==== META-INF/NOTICE of jackson-core ====", "==== META-INF/NOTICE of jackson ===");
+        var jackson = JACKSON.replace("==== META-INF/NOTICE of jackson-core ====",
+                "==== META-INF/NOTICE of jackson ===");
 
         assertThat(problems(Map.of("apache-2.0.txt", APACHE, "jackson.txt", jackson))).singleElement().asString()
                 .startsWith("`tools.jackson.core:jackson-core` has META-INF/NOTICE in its jar");
+    }
+
+    @Test
+    void aNoticeCarriedOnALineThatNamesMoreArtifactsCounts() {
+        var jackson = JACKSON.replace("==== META-INF/NOTICE of jackson-core ====",
+                "==== META-INF/NOTICE of jackson-core, the same in jackson-databind ====");
+
+        assertThat(problems(Map.of("apache-2.0.txt", APACHE, "jackson.txt", jackson))).isEmpty();
+    }
+
+    @Test
+    void aLineOfACopiedBlockWithoutASlashIsNoPath() {
+        var described = APACHE.replace(ICONS + "\n", "ElectricCar\n" + ICONS + "\n");
+
+        assertThat(problems(Map.of("apache-2.0.txt", described, "jackson.txt", JACKSON))).isEmpty();
+    }
+
+    @Test
+    void aSecondCopiedLineBeforeTheFirstBlocksFromFails() {
+        var twice = APACHE.replace("Copied: two icons, in\n", "Copied: an icon, in\nandroid/app/Other.kt\n"
+                + "Copied: two icons, in\n");
+
+        assertThat(problems(USED, NOTICES, Map.of("apache-2.0.txt", twice, "jackson.txt", JACKSON), List.of(ICONS),
+                Set.of(ICONS, "android/app/Other.kt"))).containsExactly("android/legal/apache-2.0.txt has a `Copied:` "
+                        + "block without a `From:` line: say where the copied file comes from");
+    }
+
+    @Test
+    void anIndentedCopiedBlockCounts() {
+        var indented = APACHE.replace("Copied: two icons, in\n" + ICONS + "\nFrom:",
+                "  Copied: two icons, in\n    " + ICONS + "  \n  From:");
+
+        assertThat(problems(Map.of("apache-2.0.txt", indented, "jackson.txt", JACKSON))).isEmpty();
     }
 
     @Test
@@ -186,7 +221,7 @@ class LegalFilesTest {
     @ParameterizedTest
     @ValueSource(strings = {"/*\n * Copyright 2025 The Android Open Source Project\n */",
         "// Copyright (C) 2019 Someone\nclass A", "<!-- Copyright 2020 Someone -->", "# SPDX-License-Identifier: MIT",
-        "/* (c) 2001 Someone */", "/** Copyright 2024 Someone */"})
+        "/* (c) 2001 Someone */", "/** Copyright 2024 Someone */", "// © 2023 Someone", "/* COPYRIGHT 2020 Someone */"})
     void aCommentLineThatStartsWithACopyrightIsAThirdPartysHeader(String text) {
         assertThat(LegalFiles.hasThirdPartyHeader(text)).isTrue();
     }

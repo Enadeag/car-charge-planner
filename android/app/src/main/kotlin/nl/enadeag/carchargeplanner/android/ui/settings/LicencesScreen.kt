@@ -1,6 +1,5 @@
 package nl.enadeag.carchargeplanner.android.ui.settings
 
-import android.content.res.AssetManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,9 +25,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.collapse
 import androidx.compose.ui.semantics.expand
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
@@ -43,15 +45,8 @@ import nl.enadeag.carchargeplanner.android.ui.components.BarPage
 /** Where the app's sources are, shown as plain text: the screen links to no website (#331). */
 private const val SOURCE_CODE = "github.com/Enadeag/car-charge-planner"
 
-/**
- * The licence texts of the app and its libraries, as the build put them in the assets.
- *
- * @param assets the app's assets
- */
-internal class AssetLicenceFiles(private val assets: AssetManager) : LicenceFiles {
-    override fun read(name: String): String =
-        assets.open(LicenceIndex.FOLDER + name).use { it.readBytes().toString(Charsets.UTF_8) }
-}
+/** An empty line, also one with spaces, which ends a paragraph of a licence text. */
+private val PARAGRAPH_END = Regex("\n\\s*\n")
 
 /** What the screen has of a text or of the index: still reading, what was read, or that it could not be read. */
 private sealed interface Reading<out T> {
@@ -90,22 +85,21 @@ internal fun LicencesScreen(files: LicenceFiles, onClose: () -> Unit) {
     // the texts shown, by asset; kept while the screen lives, also when the phone is turned
     var shown by rememberSaveable { mutableStateOf(listOf<String>()) }
     BarPage(stringResource(R.string.settings_licences), title, onUp = onClose, padded = false) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium)
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.semantics { heading() })
             (index as? Reading.Read)?.let { Text(it.value.copyright) }
             Text(stringResource(R.string.licences_source, SOURCE_CODE))
             Text(stringResource(R.string.licences_in_english))
         }
-        when (val now = index) {
-            Reading.Busy -> Column(Modifier.padding(16.dp)) { Waiting(stringResource(R.string.licences_reading)) }
-            Reading.Failed -> NotRead()
-            is Reading.Read -> now.value.parts.forEach { part ->
-                HorizontalDivider()
-                val open = part.asset in shown
-                PartRow(part.title, open) { shown = if (open) shown - part.asset else shown + part.asset }
-                if (open) {
-                    PartText(files, part.asset)
-                }
+        Status(index)
+        (index as? Reading.Read)?.value?.parts?.forEach { part ->
+            HorizontalDivider()
+            val open = part.asset in shown
+            PartRow(part.title, open) { shown = if (open) shown - part.asset else shown + part.asset }
+            if (open) {
+                PartText(files, part.asset)
             }
         }
     }
@@ -138,24 +132,30 @@ private fun PartRow(title: String, open: Boolean, toggle: () -> Unit) {
 @Composable
 private fun PartText(files: LicenceFiles, asset: String) {
     val text by produceState<Reading<String>>(Reading.Busy, files, asset) { value = read(files) { it.read(asset) } }
-    when (val now = text) {
-        Reading.Busy -> Column(Modifier.padding(16.dp)) { Waiting(stringResource(R.string.licences_reading)) }
-        Reading.Failed -> NotRead()
-        // a paragraph per part, so a screen reader moves through a long licence a paragraph at a time
-        is Reading.Read -> Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            now.value.split(Regex("\n\\s*\n")).filter { it.isNotBlank() }.forEach { paragraph ->
-                Text(paragraph.trimEnd(), style = MaterialTheme.typography.bodyMedium)
-            }
-        }
+    Status(text)
+    val body = (text as? Reading.Read)?.value ?: return
+    // a paragraph per part, so a screen reader moves through a long licence a paragraph at a time
+    val paragraphs = remember(body) { body.split(PARAGRAPH_END).filter { it.isNotBlank() }.map { it.trimEnd() } }
+    Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        paragraphs.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
     }
 }
 
-/** That a text, or the list of texts, could not be read, in the error colour. */
+/**
+ * That a text, or the list of texts, is still being read, or that it could not be read, in the error colour; nothing
+ * once it is read. A polite live region, which stays while empty, so a screen reader reads what comes in.
+ */
 @Composable
-private fun NotRead() {
-    Text(stringResource(R.string.licences_not_read), color = MaterialTheme.colorScheme.error,
-        modifier = Modifier.padding(16.dp))
+private fun Status(reading: Reading<*>) {
+    Column(Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
+        when (reading) {
+            Reading.Busy -> Column(Modifier.padding(16.dp)) { Waiting(stringResource(R.string.licences_reading)) }
+            Reading.Failed -> Text(stringResource(R.string.licences_not_read), color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(16.dp))
+            is Reading.Read -> Unit
+        }
+    }
 }
 
 /** Reads off the main thread; a text that is missing or cannot be read, or an index the build never wrote, fails. */

@@ -87,11 +87,8 @@ public abstract class LicenceAssets extends DefaultTask {
     /** Writes the assets. */
     @TaskAction
     public void write() {
-        var legal = new TreeMap<String, String>();
-        try (Stream<Path> files = Files.list(getLegal().get().getAsFile().toPath())) {
-            for (var file : files.filter(Files::isRegularFile).sorted(Comparator.comparing(Path::toString)).toList()) {
-                legal.put(file.getFileName().toString(), read(file));
-            }
+        var legal = LegalFolder.texts(getLegal().get().getAsFile().toPath());
+        try {
             var assets = getAssets().get().getAsFile().toPath();
             delete(assets);
             var folder = Files.createDirectories(assets.resolve(FOLDER));

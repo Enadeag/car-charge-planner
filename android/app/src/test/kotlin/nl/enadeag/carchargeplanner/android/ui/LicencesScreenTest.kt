@@ -2,6 +2,8 @@ package nl.enadeag.carchargeplanner.android.ui
 
 import android.os.Looper
 import androidx.activity.ComponentActivity
+import androidx.compose.material3.DividerDefaults
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -22,10 +24,12 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.io.FileNotFoundException
 import java.util.Collections
+import java.util.concurrent.CountDownLatch
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.licences.LicenceFiles
 import nl.enadeag.carchargeplanner.android.ui.settings.LicencesScreen
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.within
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -98,7 +102,7 @@ class LicencesScreenTest {
         show()
 
         compose.onNode(isHeading() and hasText(text(R.string.settings_licences))).assertExists()
-        compose.onNodeWithText(text(R.string.app_name)).assertExists()
+        compose.onNode(isHeading() and hasText(text(R.string.app_name))).assertExists()
         compose.onNodeWithText("Copyright (C) 2026 Someone").assertExists()
         compose.onNodeWithText(text(R.string.licences_source, "github.com/Enadeag/car-charge-planner")).assertExists()
         assertThat(text(R.string.licences_source, "x")).isEqualTo("Source code: x")
@@ -118,6 +122,59 @@ class LicencesScreenTest {
         compose.onNode(hasText("GNU GENERAL PUBLIC LICENSE", substring = true)).assertDoesNotExist()
         compose.onNode(hasText("TERMS AND CONDITIONS", substring = true)).assertDoesNotExist()
         assertThat(readOn).hasSize(1)
+    }
+
+    @Test
+    fun theGapBetweenTwoRowsIsOneDividerThick() {
+        show()
+
+        val rows = listOf("Car charge planner (GPL-3.0-or-later)", "Apache License 2.0", "Gone").map {
+            row(it).fetchSemanticsNode()
+        }
+        val divider = DividerDefaults.Thickness.value * rows.first().layoutInfo.density.density
+        val gaps = rows.zipWithNext { above, below ->
+            below.positionInRoot.y - (above.positionInRoot.y + above.size.height)
+        }
+        assertThat(gaps).allSatisfy { assertThat(it).isCloseTo(divider, within(0.5f)) }
+    }
+
+    @Test
+    fun whileTheListIsReadTheScreenSaysSoInAPoliteLiveRegion() {
+        val gate = CountDownLatch(1)
+        try {
+            compose.setContent {
+                AppTheme {
+                    LicencesScreen({ gate.await(); files.read(it) }) { closed++ }
+                }
+            }
+            val reading = text(R.string.licences_reading)
+
+            compose.onNodeWithText(reading).assertExists()
+            compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo)).assertExists()
+            assertThat(compose.liveRegionOf(reading)).isEqualTo(LiveRegionMode.Polite)
+            gate.countDown()
+            waitFor("Copyright (C) 2026 Someone")
+            compose.onNodeWithText(reading).assertDoesNotExist()
+        } finally {
+            gate.countDown()
+        }
+    }
+
+    @Test
+    fun whileATextIsReadItsPlaceSaysSoInAPoliteLiveRegion() {
+        val gate = CountDownLatch(1)
+        try {
+            show(files = { name -> if (name != "index.txt") gate.await(); files.read(name) })
+            click("Apache License 2.0")
+            val reading = text(R.string.licences_reading)
+
+            assertThat(compose.liveRegionOf(reading)).isEqualTo(LiveRegionMode.Polite)
+            gate.countDown()
+            waitFor("TERMS AND CONDITIONS")
+            compose.onNodeWithText(reading).assertDoesNotExist()
+        } finally {
+            gate.countDown()
+        }
     }
 
     @Test
@@ -157,7 +214,7 @@ class LicencesScreenTest {
         click("Gone")
         waitFor(text(R.string.licences_not_read))
 
-        compose.onNodeWithText(text(R.string.licences_not_read)).assertExists()
+        assertThat(compose.liveRegionOf(text(R.string.licences_not_read))).isEqualTo(LiveRegionMode.Polite)
     }
 
     @Test
