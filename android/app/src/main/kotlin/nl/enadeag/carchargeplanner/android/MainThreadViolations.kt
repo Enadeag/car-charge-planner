@@ -42,14 +42,23 @@ internal class MainThreadViolations(
     private val log: Logger = LoggerFactory.getLogger(MainThreadViolations::class.java),
 ) : StrictMode.OnThreadViolationListener {
 
-    /** The violations already warned of, each by its kind and stack; at most [MOST_WARNED]. */
-    private val warned = HashSet<Pair<String, List<StackTraceElement>>>()
+    /** A violation's kind and stack, which is what makes two violations the same. */
+    private data class Signature(val kind: String, val stack: List<StackTraceElement>)
 
+    /** The violations already warned of, each by its [Signature]; at most [MOST_WARNED]. */
+    private val warned = HashSet<Signature>()
+
+    /**
+     * StrictMode's call for each violation, on the main thread.
+     *
+     * @param v what StrictMode found, with the stack of the call that broke the policy
+     */
     override fun onThreadViolation(v: Violation) = decide(v)
 
     /**
      * Ends the app for a violation of the app's own code; warns once of one from the system's or a vendor's code
-     * alone, until [MOST_WARNED] different ones were warned of, and is silent after that.
+     * alone, until [MOST_WARNED] different ones were warned of, and is silent after that. It takes a Throwable and
+     * not StrictMode's Violation, which cannot be made on the JVM, so that it can be tested there.
      *
      * @param violation what StrictMode found, with the stack of the call that broke the policy
      */
@@ -58,7 +67,8 @@ internal class MainThreadViolations(
             crash(violation)
             return
         }
-        if (warned.size < MOST_WARNED && warned.add(violation.javaClass.name to violation.stackTrace.toList())) {
+        val signature = Signature(violation.javaClass.name, violation.stackTrace.toList())
+        if (warned.size < MOST_WARNED && warned.add(signature)) {
             log.warn(
                 "StrictMode: {} on the main thread in the system's or a vendor's code",
                 violation.javaClass.simpleName,

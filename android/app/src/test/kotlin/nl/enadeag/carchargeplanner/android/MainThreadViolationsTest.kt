@@ -77,6 +77,17 @@ class MainThreadViolationsTest {
     }
 
     @Test
+    fun theSameStackOfAnotherKindOfViolationIsLoggedAgain() {
+        val read = vendors(1)
+        val write = IllegalStateException("disk write").apply { stackTrace = read.stackTrace }
+
+        violations.decide(read)
+        violations.decide(write)
+
+        assertThat(log.records.map { it.thrown }).containsExactly(read, write)
+    }
+
+    @Test
     fun afterTheMostDifferentViolationsFurtherOnesAreNotLogged() {
         repeat(MainThreadViolations.MOST_WARNED + 5) { violations.decide(vendors(it)) }
 

@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.Looper
 import android.os.StrictMode
 import android.os.strictmode.DiskReadViolation
+import android.os.strictmode.DiskWriteViolation
 import android.system.Os
 import android.system.OsConstants
 import androidx.compose.ui.test.assertIsDisplayed
@@ -53,10 +54,55 @@ class AppOnRobolectricTest {
     }
 
     @Test
-    fun onlyTheDebugBuildCrashesOnTheDiskOrTheNetworkOnTheMainThread() {
+    fun theDebugBuildsMainThreadPolicyDetectsDiskReadsDiskWritesAndTheNetworkAndNothingElseOfItsOwn() {
+        val literal = StrictMode.ThreadPolicy.Builder()
+            .detectDiskReads()
+            .detectDiskWrites()
+            .detectNetwork()
+            .penaltyListener(Runnable::run) {}
+            .build()
+
+        assertThat(CarChargePlannerApp.mainThreadPolicy().toString()).isEqualTo(literal.toString())
+    }
+
+    @Test
+    fun onlyTheDebugBuildSetsAMainThreadPolicy() {
+        val set = mutableListOf<StrictMode.ThreadPolicy>()
+
+        CarChargePlannerApp.applyMainThreadPolicy(debug = false, set = { set += it })
+        assertThat(set).isEmpty()
+
+        CarChargePlannerApp.applyMainThreadPolicy(debug = true, set = { set += it })
+        assertThat(set).hasSize(1)
+    }
+
+    @Test
+    fun theAppSetsThePolicyOnlyInTheDebugBuild() {
         val expected = if (BuildConfig.DEBUG) CarChargePlannerApp.mainThreadPolicy() else StrictMode.ThreadPolicy.LAX
 
         assertThat(StrictMode.getThreadPolicy().toString()).isEqualTo(expected.toString())
+    }
+
+    @Test
+    fun aDiskWriteOfTheAppsOwnCodeOnTheMainThreadCrashesTheDebugBuild() {
+        assumeTrue(BuildConfig.DEBUG)
+        val policy = StrictMode.allowThreadDiskWrites()
+        StrictMode.allowThreadDiskReads()
+        val file = try {
+            val cache = ApplicationProvider.getApplicationContext<Application>().cacheDir.apply { mkdirs() }
+            File(cache, "strictmode-write")
+        } finally {
+            StrictMode.setThreadPolicy(policy)
+        }
+
+        Os.open(file.path, OsConstants.O_WRONLY or OsConstants.O_CREAT, 384)
+        // opening for writing is a read of the disk and then a write, each its own crash
+        val crashes = List(2) { catchThrowable { shadowOf(Looper.getMainLooper()).idle() } }
+
+        assertThat(crashes.map { it?.cause?.javaClass?.name }).containsExactly(
+            DiskReadViolation::class.java.name,
+            DiskWriteViolation::class.java.name,
+        )
     }
 
     @Test
