@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.MalformedInputException;
 import java.nio.charset.StandardCharsets;
-import java.nio.charset.UnmappableCharacterException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -46,7 +45,7 @@ final class LegalFolder {
                 try {
                     texts.put(name, Files.readString(file, StandardCharsets.UTF_8).replace("\r\n", "\n")
                             .replace('\r', '\n'));
-                } catch (MalformedInputException | UnmappableCharacterException e) {
+                } catch (MalformedInputException e) {
                     problems.add(LegalFiles.FOLDER + name + " is no UTF-8 text: save it as UTF-8");
                 }
             }

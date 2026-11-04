@@ -148,9 +148,9 @@ public final class LegalFiles {
         }
         for (var path : named) {
             if (!exists.test(path)) {
-                problems.add(FOLDER + file + " names `" + path + "` in a `Copied:` block, but there is no such "
-                        + "file, a symbolic link being none: "
-                        + "correct the path, or remove the block when the file is gone");
+                problems.add(FOLDER + file + " names `" + path + "` in a `Copied:` block, but that is no file of "
+                        + "the repository (a folder, a symbolic link, a path through one and a path out of the "
+                        + "repository are none): correct the path, or remove the block when the file is gone");
             }
         }
         return named;

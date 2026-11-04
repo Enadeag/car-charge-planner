@@ -67,10 +67,13 @@ class LegalFolderTest {
         Files.writeString(legal().resolve("latin1.txt"), "Caf\u00e9", StandardCharsets.ISO_8859_1);
 
         assertThatThrownBy(() -> LegalFolder.texts(legal())).isInstanceOf(GradleException.class)
-                .hasMessageContainingAll("android/legal/image.png is no plain .txt file: remove it",
+                .hasMessage(String.join("\n",
+                        "android/legal/image.png is no plain .txt file: remove it, or move it out of android/legal, "
+                                + "which holds only the licence texts, each a .txt file, as the APK carries every "
+                                + "file in it",
                         "android/legal/latin1.txt is no UTF-8 text: save it as UTF-8",
-                        "android/legal/zzz.md is no plain .txt file: remove it")
-                .message().satisfies(message -> assertThat(message.indexOf("image.png"))
-                        .isLessThan(message.indexOf("latin1.txt")).isLessThan(message.indexOf("zzz.md")));
+                        "android/legal/zzz.md is no plain .txt file: remove it, or move it out of android/legal, "
+                                + "which holds only the licence texts, each a .txt file, as the APK carries every "
+                                + "file in it"));
     }
 }

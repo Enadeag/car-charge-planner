@@ -100,7 +100,8 @@ class LegalFilesCheckTest {
 
         assertThatThrownBy(() -> LegalFilesCheck.withHeader(root, root.resolve("android/app/src")))
                 .isInstanceOf(GradleException.class)
-                .hasMessageContaining("`android/app/src/main/kotlin/Link.kt` is a symbolic link");
+                .hasMessageContainingAll("`android/app/src/main/kotlin/Link.kt` is a symbolic link",
+                        "replace it with the file itself");
     }
 
     @Test
@@ -111,6 +112,16 @@ class LegalFilesCheckTest {
 
         assertThat(exists.test("android/app/Icons.kt")).isTrue();
         assertThat(exists.test("android/app/Alias.kt")).isFalse();
+    }
+
+    @Test
+    void aCopiedPathThroughALinkedFolderIsNoFile() throws IOException {
+        write("repo/android/real/Icons.kt", "class Icons\n");
+        symbolicLink(dir.resolve("repo/android/alias"), dir.resolve("repo/android/real"));
+        var exists = LegalFilesCheck.inRepository(dir.resolve("repo").toAbsolutePath().normalize());
+
+        assertThat(exists.test("android/real/Icons.kt")).isTrue();
+        assertThat(exists.test("android/alias/Icons.kt")).isFalse();
     }
 
     private static void symbolicLink(Path link, Path target) throws IOException {

@@ -2,10 +2,18 @@ package nl.enadeag.carchargeplanner.buildlogic;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.gradle.api.GradleException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class LicenceAssetsTest {
 
@@ -61,5 +69,29 @@ class LicenceAssetsTest {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> LicenceAssets.contents(NOTICE, LICENCE, TERMS, Map.of("x.txt", "\nText\n")))
                 .withMessageContaining("x.txt");
+    }
+
+    @Test
+    void aTabInTheCopyrightLineIsRefusedAsTheIndexSeparatesItsFieldsByTabs() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> LicenceAssets.contents("Car\nCopyright (C)\t2026 Someone\n", LICENCE, TERMS,
+                        Map.of()))
+                .withMessageContaining("copyright line").withMessageContaining("replace the tab with spaces");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"a\tb.txt", "a\nb.txt", "a\rb.txt"})
+    void aFileNameWithATabOrALineBreakIsRefusedAsTheIndexHasOneLinePerFile(String name) {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> LicenceAssets.contents(NOTICE, LICENCE, TERMS, Map.of(name, "Title\n")))
+                .withMessageContaining("tab or a line break in its name").withMessageContaining("rename the file");
+    }
+
+    @Test
+    void anOwnTextThatIsNoUtf8IsRefusedNamingTheFileWithItsFix(@TempDir Path dir) throws IOException {
+        var notice = Files.write(dir.resolve("NOTICE"), new byte[] {'C', 'a', 'f', (byte) 0xE9});
+
+        assertThatThrownBy(() -> LicenceAssets.read(notice)).isInstanceOf(GradleException.class)
+                .hasMessage("NOTICE is no UTF-8 text: save it as UTF-8");
     }
 }

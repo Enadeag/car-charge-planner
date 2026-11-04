@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.buildlogic;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.charset.MalformedInputException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,6 +12,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 import org.gradle.api.DefaultTask;
+import org.gradle.api.GradleException;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.tasks.InputDirectory;
@@ -113,8 +115,8 @@ public abstract class LicenceAssets extends DefaultTask {
      * @param terms the text of {@code ADDITIONAL-TERMS.md}, whose first line is its Markdown heading; never null
      * @param legal per name of a file of {@code android/legal}, its text, whose first line is its title; never null
      * @return per asset's name in {@link #FOLDER}, its text
-     * @throws IllegalArgumentException when the notice has no copyright line, a text is empty, or a title line has a
-     *     tab
+     * @throws IllegalArgumentException when the notice has no copyright line or its copyright line has a tab, a
+     *     text is empty, a title line has a tab, or a file's name has a tab or a line break
      */
     public static LinkedHashMap<String, String> contents(String notice, String licence, String terms,
             Map<String, String> legal) {
@@ -122,12 +124,22 @@ public abstract class LicenceAssets extends DefaultTask {
         var index = new StringBuilder();
         var copyright = normalised(notice).lines().filter(line -> line.startsWith("Copyright")).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("NOTICE has no line that starts with Copyright"));
+        if (copyright.indexOf('\t') >= 0) {
+            throw new IllegalArgumentException("NOTICE has a tab in its copyright line, but the index separates its "
+                    + "fields by tabs: replace the tab with spaces");
+        }
         index.append("copyright\t").append(copyright).append('\n');
         add(assets, index, "NOTICE", firstLine("NOTICE", notice) + " (GPL-3.0-or-later)", notice);
         add(assets, index, "LICENSE", "GNU General Public License, version 3", licence);
         add(assets, index, "ADDITIONAL-TERMS.md", firstLine("ADDITIONAL-TERMS.md", terms).replaceFirst("^#+\\s*", ""),
                 terms);
-        new TreeMap<>(legal).forEach((name, text) -> add(assets, index, name, firstLine(name, text), text));
+        new TreeMap<>(legal).forEach((name, text) -> {
+            if (name.indexOf('\t') >= 0 || name.indexOf('\n') >= 0 || name.indexOf('\r') >= 0) {
+                throw new IllegalArgumentException("a file of android/legal has a tab or a line break in its name, "
+                        + "but the index has one line per file, its fields separated by tabs: rename the file");
+            }
+            add(assets, index, name, firstLine(name, text), text);
+        });
         assets.put(INDEX, index.toString());
         return assets;
     }
@@ -159,8 +171,20 @@ public abstract class LicenceAssets extends DefaultTask {
         return read(file.get().getAsFile().toPath());
     }
 
-    private static String read(Path file) throws IOException {
-        return Files.readString(file, StandardCharsets.UTF_8);
+    /**
+     * Reads one of the app's own texts.
+     *
+     * @param file the file of {@code NOTICE}, {@code LICENSE} or {@code ADDITIONAL-TERMS.md}; never null
+     * @return its text
+     * @throws GradleException when the file is no UTF-8 text
+     * @throws IOException when the file cannot be read
+     */
+    static String read(Path file) throws IOException {
+        try {
+            return Files.readString(file, StandardCharsets.UTF_8);
+        } catch (MalformedInputException e) {
+            throw new GradleException(file.getFileName() + " is no UTF-8 text: save it as UTF-8");
+        }
     }
 
     private static void delete(Path folder) throws IOException {

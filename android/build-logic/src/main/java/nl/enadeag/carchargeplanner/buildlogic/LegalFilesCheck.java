@@ -163,12 +163,20 @@ public abstract class LegalFilesCheck extends DefaultTask {
      *
      * @param root the repository's root, absolute and normalised; never null
      * @return true for a path, from the root, of a regular file under it; false for a folder, a symbolic link, a
-     *     missing file or a path that leads out of the repository
+     *     path through a linked folder, a missing file or a path that leads out of the repository
+     * @throws UncheckedIOException when the real path of a file cannot be read
      */
     static Predicate<String> inRepository(Path root) {
         return path -> {
             var file = root.resolve(path).normalize();
-            return file.startsWith(root) && Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS);
+            if (!file.startsWith(root) || !Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)) {
+                return false;
+            }
+            try {
+                return file.toRealPath().equals(root.toRealPath().resolve(root.relativize(file)));
+            } catch (IOException e) {
+                throw new UncheckedIOException("cannot read " + file, e);
+            }
         };
     }
 }
