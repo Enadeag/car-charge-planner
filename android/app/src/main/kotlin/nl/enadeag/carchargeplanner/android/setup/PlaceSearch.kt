@@ -46,7 +46,8 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
      * A place found, as the list shows it.
      *
      * @property place the place
-     * @property label its name, region and country; with its finer area too when another place found reads alike
+     * @property label its name, region and country; with its finer area too when another place found reads alike; at
+     *     most [LONGEST_TEXT] characters, as the field holds it after a choice
      */
     data class Result(val place: Place, val label: String)
 
@@ -83,7 +84,7 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
     private val latest = LatestAnswer<State>(scope)
     private val stateNow = MutableStateFlow<State>(State.Idle)
     private val chosenNow = MutableStateFlow(handle.get<String>(chosenKey))
-    private val choicesNow = MutableStateFlow(0)
+    private val chosenCountNow = MutableStateFlow(0)
 
     /** What the search shows now. */
     val state: StateFlow<State> = stateNow.asStateFlow()
@@ -95,7 +96,7 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
      * How many times a place was chosen since this search was made, so the screen can tell a new choice, whose
      * confirmation then takes the focus, from one it showed before, as before turning the phone.
      */
-    val choices: StateFlow<Int> = choicesNow.asStateFlow()
+    val chosenCount: StateFlow<Int> = chosenCountNow.asStateFlow()
 
     /**
      * What the owner typed.
@@ -135,7 +136,7 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
         cancel()
         edit(result.label)
         keepChosen(result.label)
-        choicesNow.value++
+        chosenCountNow.value++
     }
 
     /**
@@ -172,6 +173,6 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
 
     private fun labelled(places: List<Place>): List<Result> = places.map { place ->
         val alike = places.count { it.label() == place.label() } > 1
-        Result(place, if (alike) place.detailedLabel() else place.label())
+        Result(place, (if (alike) place.detailedLabel() else place.label()).take(LONGEST_TEXT))
     }
 }

@@ -626,6 +626,92 @@ class SetUpScreenTest {
     }
 
     @Test
+    fun aDividerSetsThePlacesFoundApartButNotTheFirstFromItsHeading() {
+        val session = show()
+        session.next()
+        compose.waitForIdle()
+        field(R.string.place_field).performTextInput("Utrecht")
+        click(R.string.place_search)
+        compose.waitForIdle()
+
+        access.searches.last().complete(PlaceResults.Found(listOf(utrecht, amersfoort, longName)))
+        compose.waitForIdle()
+
+        val heading = compose.onNodeWithText(text(R.string.place_choose), useUnmergedTree = true).fetchSemanticsNode()
+            .boundsInRoot
+        val rows = listOf("Utrecht, Netherlands", "Amersfoort, Utrecht, Netherlands",
+            "Sint-Michielsgestel, North Brabant, Netherlands")
+            .map { compose.onNode(hasClickAction() and hasText(it)).fetchSemanticsNode() }
+        val density = rows.first().layoutInfo.density.density
+        val gaps = rows.zipWithNext { above, below -> below.boundsInRoot.top - above.boundsInRoot.bottom }
+        assertThat(gaps).`as`("the gaps between the rows").allSatisfy { assertThat(it).isGreaterThan(0f) }
+        // the column's own spacing of 4 dp, with no divider in it
+        assertThat(rows.first().boundsInRoot.top - heading.bottom).`as`("the gap under the heading")
+            .isLessThan(4 * density + gaps.first())
+    }
+
+    @Test
+    fun choosingTheSamePlaceAgainMovesTheFocusToTheCardAgain() {
+        val session = show()
+        session.next()
+        compose.waitForIdle()
+        chooseUtrecht()
+        field(R.string.place_field).performClick()
+        chosenCard().assertIsNotFocused()
+
+        chooseUtrecht()
+
+        chosenCard().assertIsFocused()
+    }
+
+    /** Searches for Sint-Michielsgestel, whose name wraps at twice the font size, and chooses it. */
+    private fun chooseALongName(): String {
+        field(R.string.place_field).performTextInput("Sint")
+        click(R.string.place_search)
+        compose.waitForIdle()
+        access.searches.last().complete(PlaceResults.Found(listOf(longName)))
+        val label = "Sint-Michielsgestel, North Brabant, Netherlands"
+        compose.onNodeWithText(label).performScrollTo().performClick()
+        compose.waitForIdle()
+        return label
+    }
+
+    /** Checks that the chosen card's first line wraps in full and that the card can be scrolled into view. */
+    private fun assertTheCardWrapsAndIsInView(label: String) {
+        chosenCard(label).performScrollTo().assertIsDisplayed()
+        val words = compose.onNode(hasText(text(R.string.place_chosen_label, label)), useUnmergedTree = true)
+            .fetchSemanticsNode()
+        val layout = mutableListOf<TextLayoutResult>()
+        words.config[SemanticsActions.GetTextLayoutResult].action!!.invoke(layout)
+        assertThat(layout.single().lineCount).isGreaterThan(1)
+        assertThat(layout.single().hasVisualOverflow).isFalse()
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h640dp")
+    fun theCardOfALongPlaceWrapsAtTwiceTheFontSizeOnANarrowPhone() {
+        val session = show(fontScaleTwo = true)
+        session.next()
+        compose.waitForIdle()
+
+        val label = chooseALongName()
+
+        assertTheCardWrapsAndIsInView(label)
+    }
+
+    @Test
+    @Config(qualifiers = "w640dp-h320dp")
+    fun theCardOfALongPlaceWrapsAtTwiceTheFontSizeOnAPhoneOnItsSide() {
+        val session = show(fontScaleTwo = true)
+        session.next()
+        compose.waitForIdle()
+
+        val label = chooseALongName()
+
+        assertTheCardWrapsAndIsInView(label)
+    }
+
+    @Test
     fun theCheckSaysWhatCameInALiveRegion() {
         val session = show()
         toTheCheck(session)

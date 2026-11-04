@@ -24,7 +24,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -105,17 +104,16 @@ internal fun LocationFields(location: LocationForm, places: PlaceSearch, provide
     val typedCoordinates = LocationForm.Field.LATITUDE in shown || LocationForm.Field.LONGITUDE in shown
     var open by rememberSaveable { mutableStateOf(coordinates == Coordinates.OPEN) }
     var advanced by rememberSaveable { mutableStateOf(false) }
-    val choices by places.choices.collectAsStateWithLifecycle()
+    val chosenCount by places.chosenCount.collectAsStateWithLifecycle()
     // a choice made before the fields were shown, as before turning the phone or leaving the step, does not take
-    // the focus again
-    var seenChoices by remember(places) { mutableIntStateOf(places.choices.value) }
+    // the focus again; each one after it does, also of the same place
+    val firstSeen = remember(places) { places.chosenCount.value }
     val card = remember { FocusRequester() }
-    LaunchedEffect(choices, chosen) {
-        if (chosen != null && choices != seenChoices) {
-            // the card is composed with the choice, which this waits for
+    LaunchedEffect(chosenCount) {
+        if (chosenCount != firstSeen) {
+            // the card is composed a frame after the choice, which this waits for
             withFrameNanos { }
             card.requestFocus()
-            seenChoices = choices
         }
     }
 
@@ -128,12 +126,7 @@ internal fun LocationFields(location: LocationForm, places: PlaceSearch, provide
         AppButton(onClick = { places.search() }) {
             Text(stringResource(R.string.place_search))
         }
-        chosen?.let { label ->
-            val shownCoordinates = if (coordinates == Coordinates.SHOWN) null else edits.shown {
-                location.text(LocationForm.Field.LATITUDE) to location.text(LocationForm.Field.LONGITUDE)
-            }
-            ChosenPlace(label, shownCoordinates, edits.shown { location.timeZone()?.id.orEmpty() }, card)
-        }
+        chosen?.let { label -> ChosenPlace(label, location, edits, coordinates != Coordinates.SHOWN, card) }
         SearchResults(places) { result -> edits.make { onChoose(result) } }
     } else {
         Text(stringResource(R.string.settings_no_place_search, provider))
@@ -200,25 +193,30 @@ private fun SearchResults(places: PlaceSearch, onChoose: (PlaceSearch.Result) ->
 
 /**
  * What a choice from the search filled in, on a card under the Search button: the place, its coordinates as the
- * fields hold them, and its time zone. It is one part for a screen reader, which takes the focus after a choice.
+ * fields hold them, and its time zone. Read as one part by a screen reader; takes the focus after a choice (see
+ * [LocationFields]).
  *
  * @param label the place chosen, as the results showed it
- * @param coordinates the latitude and longitude as written in the fields; null where the fields are always shown
- * @param zone the time zone's id, such as Europe/Amsterdam
+ * @param location the location's form, whose coordinates and time zone the card shows
+ * @param edits counts each edit, so the card shows it
+ * @param withCoordinates whether the card shows the coordinates; not where the fields are always shown
  * @param focus moves the focus to the card
  */
 @Composable
-private fun ChosenPlace(label: String, coordinates: Pair<String, String>?, zone: String, focus: FocusRequester) {
+private fun ChosenPlace(label: String, location: LocationForm, edits: Edits, withCoordinates: Boolean,
+    focus: FocusRequester) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
         modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) { }.focusRequester(focus).focusable()) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(16.dp)) {
             Icon(Icons.Filled.CheckCircle, contentDescription = null)
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(stringResource(R.string.place_chosen_label, label), style = MaterialTheme.typography.titleMedium)
-                coordinates?.let { (latitude, longitude) ->
-                    Text(stringResource(R.string.place_chosen_coordinates, latitude, longitude))
+                if (withCoordinates) {
+                    Text(stringResource(R.string.place_chosen_coordinates,
+                        edits.shown { location.text(LocationForm.Field.LATITUDE) },
+                        edits.shown { location.text(LocationForm.Field.LONGITUDE) }))
                 }
-                Text(stringResource(R.string.time_zone_now, zone))
+                Text(stringResource(R.string.time_zone_now, edits.shown { location.timeZone()?.id.orEmpty() }))
             }
         }
     }

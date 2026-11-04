@@ -55,6 +55,23 @@ class PlaceSearchTest {
     }
 
     @Test
+    fun aPlaceWithALabelLongerThanAHundredCharactersIsShownAndKeptCutOffThere() = runTest {
+        val search = search()
+        search.edit("Long")
+        search.search()
+        runCurrent()
+        access.searches.single().complete(PlaceResults.Found(listOf(place("a".repeat(120)))))
+        runCurrent()
+
+        val found = (search.state.value as PlaceSearch.State.Found).results.single()
+        search.choose(found)
+
+        assertThat(found.label).isEqualTo("a".repeat(100))
+        assertThat(search.chosen.value).isEqualTo("a".repeat(100))
+        assertThat(search.text()).isEqualTo("a".repeat(100))
+    }
+
+    @Test
     fun atMostEightPlacesShowAndTwoThatReadAlikeNameTheirFinerArea() = runTest {
         val search = search()
         val places = listOf(place("Bergen", area = "Noord-Holland", region = "Noord-Holland"),
@@ -197,14 +214,14 @@ class PlaceSearchTest {
     @Test
     fun eachChoiceCountsAndAnEditKeepsThePlaceChosen() = runTest {
         val search = search()
-        assertThat(search.choices.value).isZero()
+        assertThat(search.chosenCount.value).isZero()
 
         search.choose(PlaceSearch.Result(place("Utrecht"), "Utrecht, Netherlands"))
         search.edit("Amersfoort")
         assertThat(search.chosen.value).isEqualTo("Utrecht, Netherlands")
         search.choose(PlaceSearch.Result(place("Amersfoort"), "Amersfoort, Netherlands"))
 
-        assertThat(search.choices.value).isEqualTo(2)
+        assertThat(search.chosenCount.value).isEqualTo(2)
         assertThat(search.chosen.value).isEqualTo("Amersfoort, Netherlands")
     }
 
