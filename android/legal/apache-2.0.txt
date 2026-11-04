@@ -1,4 +1,4 @@
-Apache License 2.0, for the Android app's libraries under it that this repository names
+Apache License 2.0, for the Android app's libraries and copied files under it that this repository names
 Artifact: androidx.compose.material:material-icons-core
 Source: https://cs.android.com/androidx/platform/frameworks/support
 Licence: Apache-2.0, as the library's pom names it; its aar carries no licence or notice file of its own.

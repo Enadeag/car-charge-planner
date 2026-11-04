@@ -945,7 +945,8 @@ class HomeScreenTest {
         compose.onNode(SemanticsMatcher.keyIsDefined(AxisLabels), useUnmergedTree = true).performScrollTo()
 
         assertThat(axisLabels()).isEqualTo(leftToRightLabels)
-        assertThat(compose.picture(chart().boundsInRoot).sameAs(leftToRight)).`as`("the chart as drawn right to left").isTrue()
+        assertThat(compose.picture(chart().boundsInRoot).sameAs(leftToRight))
+            .`as`("the chart as drawn right to left").isTrue()
     }
 
     @Test

@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
@@ -75,7 +76,6 @@ import nl.enadeag.carchargeplanner.android.settings.SettingsSession
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
-import nl.enadeag.carchargeplanner.android.ui.components.UNPADDED_PAGE_PADDING
 import nl.enadeag.carchargeplanner.android.ui.settings.SettingsIcons
 import nl.enadeag.carchargeplanner.android.ui.settings.SettingsScreen
 import nl.enadeag.carchargeplanner.android.ui.settings.icon
@@ -879,15 +879,25 @@ class SettingsScreenTest {
         assertThat(copied).allSatisfy {
             assertThat(listOf(it.viewportWidth, it.viewportHeight)).containsExactly(24f, 24f)
             assertThat(listOf(it.defaultWidth, it.defaultHeight)).containsExactly(24.dp, 24.dp)
+            assertThat(it.autoMirror).`as`("%s mirrored right to left", it.name).isFalse()
         }
     }
 
-    /** What an icon draws: its paths' count, their nodes' count and the hash of the nodes' text, and how each is filled. */
-    private data class Shape(val paths: Int, val nodes: Int, val hash: Int, val fills: List<List<Any?>>)
+    /** What an icon draws: its paths' count, their nodes' count and the hash of the nodes' text, and their fills. */
+    private data class Shape(val paths: Int, val nodes: Int, val hash: Int, val fills: List<Fill>)
+
+    /** How one path is filled and stroked. */
+    private data class Fill(
+        val fill: Brush?,
+        val fillAlpha: Float,
+        val stroke: Brush?,
+        val strokeAlpha: Float,
+        val type: PathFillType,
+    )
 
     /** The [Shape] of an icon whose paths all are filled as materialPath does by default. */
     private fun expected(paths: Int, nodes: Int, hash: Int) = Shape(paths, nodes, hash,
-        List(paths) { listOf(SolidColor(Color.Black), 1f, null, 1f, PathFillType.NonZero) })
+        List(paths) { Fill(SolidColor(Color.Black), 1f, null, 1f, PathFillType.NonZero) })
 
     /** An icon's [Shape]; `Close` is an object, whose own text differs per run. */
     private fun shape(icon: ImageVector): Shape {
@@ -896,7 +906,7 @@ class SettingsScreenTest {
             path.pathData.joinToString(" ") { if (it == PathNode.Close) "Close" else it.toString() }
         }
         return Shape(paths.size, paths.sumOf { it.pathData.size }, nodes.hashCode(),
-            paths.map { listOf(it.fill, it.fillAlpha, it.stroke, it.strokeAlpha, it.pathFillType) })
+            paths.map { Fill(it.fill, it.fillAlpha, it.stroke, it.strokeAlpha, it.pathFillType) })
     }
 
     @Test
@@ -972,8 +982,8 @@ class SettingsScreenTest {
             .fetchSemanticsNode()
         val last = compose.onNode(hasClickAction() and hasText(text(SettingsPage.entries.last().title())))
             .fetchSemanticsNode()
-        // only the list's own padding lies between a row and the list's edge
-        val padding = UNPADDED_PAGE_PADDING.value * list.layoutInfo.density.density
+        // only the list's own padding, 8 dp, lies between a row and the list's edge
+        val padding = 8f * list.layoutInfo.density.density
         assertThat(first.positionInRoot.y - list.positionInRoot.y).isCloseTo(padding, within(0.5f))
         val range = list.config[SemanticsProperties.VerticalScrollAxisRange]
         assertThat(range.maxValue()).isPositive()
@@ -985,7 +995,8 @@ class SettingsScreenTest {
 
     /**
      * Checks that every row's values, with Location's at their longest (coordinates of the most digits and one of the
-     * longest time zones), show whole at twice the font size: on every line they need, none cut short, within their row.
+     * longest time zones), show whole at twice the font size: on every line they need, none cut short, within their
+     * row.
      *
      * @return the number of lines Location's values take
      */

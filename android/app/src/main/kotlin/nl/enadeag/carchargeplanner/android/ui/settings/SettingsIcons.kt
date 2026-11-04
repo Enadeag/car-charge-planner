@@ -26,8 +26,8 @@ import androidx.compose.material.icons.materialPath
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
- * Material's Filled icons that Settings' list shows and `material-icons-core` lacks, each built when first drawn; copied
- * because `material-icons-extended-android` holds thousands of icons, too large a dependency for six.
+ * Material's Filled icons that Settings' list shows and `material-icons-core` lacks, each built when first drawn;
+ * copied because `material-icons-extended-android` holds thousands of icons, too large a dependency for six.
  */
 internal object SettingsIcons {
 
