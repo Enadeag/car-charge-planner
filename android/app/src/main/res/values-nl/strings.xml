@@ -317,6 +317,7 @@
   <string name="licences_in_english">De licentieteksten zijn in het Engels.</string>
   <string name="licences_reading">De licenties worden gelezen…</string>
   <string name="licences_not_read">Deze tekst kon niet worden gelezen.</string>
+  <string name="licences_list_not_read">De licenties konden niet worden gelezen.</string>
   <string name="licences_expanded">Uitgevouwen</string>
   <string name="licences_collapsed">Ingevouwen</string>
 </resources>

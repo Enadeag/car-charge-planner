@@ -115,8 +115,9 @@ class LegalFilesTest {
     void aCopiedFileThatDoesNotExistFails() {
         assertThat(problems(USED, NOTICES, Map.of("apache-2.0.txt", APACHE, "jackson.txt", JACKSON), List.of(),
                 Set.of())).containsExactly(
-                "android/legal/apache-2.0.txt names `" + ICONS + "` in a `Copied:` block, but there is no such file: "
-                        + "correct the path, or remove the block when the file is gone");
+                "android/legal/apache-2.0.txt names `" + ICONS + "` in a `Copied:` block, but there is no such "
+                        + "file, a symbolic link being none: correct the path, or remove the block when the file is "
+                        + "gone");
     }
 
     @Test

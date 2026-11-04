@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.android.ui.settings
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -93,7 +94,7 @@ internal fun LicencesScreen(files: LicenceFiles, onClose: () -> Unit) {
             Text(stringResource(R.string.licences_source, SOURCE_CODE))
             Text(stringResource(R.string.licences_in_english))
         }
-        Status(index)
+        Status(index, R.string.licences_list_not_read)
         (index as? Reading.Read)?.value?.parts?.forEach { part ->
             HorizontalDivider()
             val open = part.asset in shown
@@ -132,7 +133,7 @@ private fun PartRow(title: String, open: Boolean, toggle: () -> Unit) {
 @Composable
 private fun PartText(files: LicenceFiles, asset: String) {
     val text by produceState<Reading<String>>(Reading.Busy, files, asset) { value = read(files) { it.read(asset) } }
-    Status(text)
+    Status(text, R.string.licences_not_read)
     val body = (text as? Reading.Read)?.value ?: return
     // a paragraph per part, so a screen reader moves through a long licence a paragraph at a time
     val paragraphs = remember(body) { body.split(PARAGRAPH_END).filter { it.isNotBlank() }.map { it.trimEnd() } }
@@ -145,13 +146,16 @@ private fun PartText(files: LicenceFiles, asset: String) {
 /**
  * That a text, or the list of texts, is still being read, or that it could not be read, in the error colour; nothing
  * once it is read. A polite live region, which stays while empty, so a screen reader reads what comes in.
+ *
+ * @param reading how far the reading is
+ * @param notRead what it says when the reading failed: of one text, or of the list
  */
 @Composable
-private fun Status(reading: Reading<*>) {
+private fun Status(reading: Reading<*>, @StringRes notRead: Int) {
     Column(Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
         when (reading) {
             Reading.Busy -> Column(Modifier.padding(16.dp)) { Waiting(stringResource(R.string.licences_reading)) }
-            Reading.Failed -> Text(stringResource(R.string.licences_not_read), color = MaterialTheme.colorScheme.error,
+            Reading.Failed -> Text(stringResource(notRead), color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(16.dp))
             is Reading.Read -> Unit
         }

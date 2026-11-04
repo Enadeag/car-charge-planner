@@ -47,6 +47,13 @@ class LicenceAssetsTest {
     }
 
     @Test
+    void aTitleLineWithATabIsRefusedAsTheIndexSeparatesItsFieldsByTabs() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> LicenceAssets.contents(NOTICE, LICENCE, TERMS, Map.of("x.txt", "Two\twords\n")))
+                .withMessageContaining("x.txt").withMessageContaining("replace the tab with spaces");
+    }
+
+    @Test
     void aNoticeWithoutACopyrightLineOrAFileWithoutATitleIsRefused() {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> LicenceAssets.contents("Car charge planner\n", LICENCE, TERMS, Map.of()))

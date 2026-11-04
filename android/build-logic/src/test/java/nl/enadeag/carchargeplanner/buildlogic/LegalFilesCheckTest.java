@@ -15,6 +15,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.gradle.api.GradleException;
 import org.gradle.testfixtures.ProjectBuilder;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -79,6 +80,45 @@ class LegalFilesCheckTest {
 
         assertThat(LegalFilesCheck.notices(Map.of("g:core", List.of(core), "g:annotations", List.of(annotations))))
                 .containsExactly(entry("g:core", List.of("META-INF/NOTICE", "META-INF/notice.txt")));
+    }
+
+    @Test
+    void aLibrarysNoticesComeFromEveryJarOfIt() throws IOException {
+        var plain = jar("plain.jar", "META-INF/MANIFEST.MF");
+        var withNotice = jar("with-notice.jar", "META-INF/NOTICE");
+
+        assertThat(LegalFilesCheck.notices(Map.of("g:core", List.of(plain, withNotice))))
+                .containsExactly(entry("g:core", List.of("META-INF/NOTICE")));
+    }
+
+    @Test
+    void aSymbolicLinkInTheSourcesIsReportedAndNotFollowed() throws IOException {
+        var outside = write("outside.kt", "// © 2023 Someone\n");
+        write("android/app/src/main/kotlin/Own.kt", "class Own\n");
+        symbolicLink(dir.resolve("android/app/src/main/kotlin/Link.kt"), outside);
+        var root = dir.toAbsolutePath().normalize();
+
+        assertThatThrownBy(() -> LegalFilesCheck.withHeader(root, root.resolve("android/app/src")))
+                .isInstanceOf(GradleException.class)
+                .hasMessageContaining("`android/app/src/main/kotlin/Link.kt` is a symbolic link");
+    }
+
+    @Test
+    void aCopiedPathThatIsASymbolicLinkIsNoFile() throws IOException {
+        var target = write("repo/android/app/Icons.kt", "class Icons\n");
+        symbolicLink(dir.resolve("repo/android/app/Alias.kt"), target);
+        var exists = LegalFilesCheck.inRepository(dir.resolve("repo").toAbsolutePath().normalize());
+
+        assertThat(exists.test("android/app/Icons.kt")).isTrue();
+        assertThat(exists.test("android/app/Alias.kt")).isFalse();
+    }
+
+    private static void symbolicLink(Path link, Path target) throws IOException {
+        try {
+            Files.createSymbolicLink(link, target);
+        } catch (IOException | UnsupportedOperationException e) {
+            Assumptions.abort("this system makes no symbolic links: " + e);
+        }
     }
 
     @Test

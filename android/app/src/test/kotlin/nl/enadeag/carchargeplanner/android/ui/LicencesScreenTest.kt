@@ -3,12 +3,16 @@ package nl.enadeag.carchargeplanner.android.ui
 import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.DividerDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
@@ -25,6 +29,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.io.FileNotFoundException
 import java.util.Collections
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.licences.LicenceFiles
 import nl.enadeag.carchargeplanner.android.ui.settings.LicencesScreen
@@ -53,9 +58,11 @@ class LicencesScreenTest {
         "index.txt" to "copyright\tCopyright (C) 2026 Someone\n" +
             "part\tLICENSE\tCar charge planner (GPL-3.0-or-later)\n" +
             "part\tapache-2.0.txt\tApache License 2.0\n" +
-            "part\tgone.txt\tGone\n",
+            "part\tgone.txt\tGone\n" +
+            "part\tparagraphs.txt\tParagraphs\n",
         "LICENSE" to gpl,
         "apache-2.0.txt" to apache,
+        "paragraphs.txt" to "\n\nA  \n  \nB\n\n\nC\n\n",
     )
 
     /** The threads the texts were read on. */
@@ -67,6 +74,10 @@ class LicencesScreenTest {
     }
 
     private var closed = 0
+
+    /** Holds a read until the test lets go; a read on the main thread, which is the test's, fails after 5 seconds. */
+    private fun CountDownLatch.holdRead() =
+        check(await(5, TimeUnit.SECONDS)) { "the read waits for the test, so it runs on the main thread" }
 
     private fun show(files: LicenceFiles = this.files, fontScaleTwo: Boolean = false) {
         compose.setContent {
@@ -94,6 +105,19 @@ class LicencesScreenTest {
     /** Clicks a part's row, scrolled to first, as at a large font it may be below the screen. */
     private fun click(title: String) = row(title).performScrollTo().performClick()
 
+    /** How many nodes the screen reader reads as one live region that holds [shown], as the merged tree shows. */
+    private fun SemanticsNodeInteractionsProvider.mergedLiveRegions(shown: String) =
+        onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion) and hasText(shown))
+            .fetchSemanticsNodes().size
+
+    /** The colour a text is drawn in, from its layout. */
+    private fun colourOf(shown: String): Color {
+        val layouts = mutableListOf<TextLayoutResult>()
+        compose.onNode(hasText(shown), useUnmergedTree = true).fetchSemanticsNode()
+            .config[SemanticsActions.GetTextLayoutResult].action!!.invoke(layouts)
+        return layouts.single().layoutInput.style.color
+    }
+
     private fun stateOf(title: String) =
         row(title).fetchSemanticsNode().config.getOrNull(SemanticsProperties.StateDescription)
 
@@ -105,6 +129,7 @@ class LicencesScreenTest {
         compose.onNode(isHeading() and hasText(text(R.string.app_name))).assertExists()
         compose.onNodeWithText("Copyright (C) 2026 Someone").assertExists()
         compose.onNodeWithText(text(R.string.licences_source, "github.com/Enadeag/car-charge-planner")).assertExists()
+        compose.onNodeWithText(text(R.string.licences_in_english)).assertExists()
         assertThat(text(R.string.licences_source, "x")).isEqualTo("Source code: x")
         // plain text, not a link
         compose.onNode(hasText("github.com", substring = true) and hasClickAction()).assertDoesNotExist()
@@ -144,7 +169,7 @@ class LicencesScreenTest {
         try {
             compose.setContent {
                 AppTheme {
-                    LicencesScreen({ gate.await(); files.read(it) }) { closed++ }
+                    LicencesScreen({ gate.holdRead(); files.read(it) }) { closed++ }
                 }
             }
             val reading = text(R.string.licences_reading)
@@ -152,6 +177,7 @@ class LicencesScreenTest {
             compose.onNodeWithText(reading).assertExists()
             compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo)).assertExists()
             assertThat(compose.liveRegionOf(reading)).isEqualTo(LiveRegionMode.Polite)
+            assertThat(compose.mergedLiveRegions(reading)).isEqualTo(1)
             gate.countDown()
             waitFor("Copyright (C) 2026 Someone")
             compose.onNodeWithText(reading).assertDoesNotExist()
@@ -164,11 +190,12 @@ class LicencesScreenTest {
     fun whileATextIsReadItsPlaceSaysSoInAPoliteLiveRegion() {
         val gate = CountDownLatch(1)
         try {
-            show(files = { name -> if (name != "index.txt") gate.await(); files.read(name) })
+            show(files = { name -> if (name != "index.txt") gate.holdRead(); files.read(name) })
             click("Apache License 2.0")
             val reading = text(R.string.licences_reading)
 
             assertThat(compose.liveRegionOf(reading)).isEqualTo(LiveRegionMode.Polite)
+            assertThat(compose.mergedLiveRegions(reading)).isEqualTo(1)
             gate.countDown()
             waitFor("TERMS AND CONDITIONS")
             compose.onNodeWithText(reading).assertDoesNotExist()
@@ -209,18 +236,37 @@ class LicencesScreenTest {
     }
 
     @Test
-    fun aTextThatIsMissingSaysItCouldNotBeRead() {
-        show()
+    fun aTextThatIsMissingSaysItCouldNotBeReadInTheErrorColourInAPoliteLiveRegion() {
+        var error = Color.Unspecified
+        compose.setContent { AppTheme { error = MaterialTheme.colorScheme.error; LicencesScreen(files) { closed++ } } }
+        waitFor("Copyright (C) 2026 Someone")
         click("Gone")
         waitFor(text(R.string.licences_not_read))
 
         assertThat(compose.liveRegionOf(text(R.string.licences_not_read))).isEqualTo(LiveRegionMode.Polite)
+        assertThat(compose.mergedLiveRegions(text(R.string.licences_not_read))).isEqualTo(1)
+        assertThat(colourOf(text(R.string.licences_not_read))).isEqualTo(error)
+        assertThat(error).isNotEqualTo(colourOf("Copyright (C) 2026 Someone"))
     }
 
     @Test
-    fun anIndexThatIsMissingSaysItCouldNotBeRead() {
+    fun aTextIsDrawnAsOneNodePerParagraphWithoutBlankOnesOrTrailingSpaces() {
+        show()
+        click("Paragraphs")
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasText("C"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+
+        val paragraphs = compose.onAllNodes(hasText("A") or hasText("B") or hasText("C"), useUnmergedTree = true)
+        assertThat(paragraphs.fetchSemanticsNodes().map { it.config[SemanticsProperties.Text].single().text })
+            .containsExactly("A", "B", "C")
+        compose.onAllNodes(hasText(""), useUnmergedTree = true).assertCountEquals(0)
+    }
+
+    @Test
+    fun anIndexThatIsMissingSaysThatTheLicencesCouldNotBeRead() {
         compose.setContent { AppTheme { LicencesScreen({ throw FileNotFoundException(it) }) { closed++ } } }
-        waitFor(text(R.string.licences_not_read))
+        waitFor(text(R.string.licences_list_not_read))
 
         compose.onNodeWithText(text(R.string.licences_source, "github.com/Enadeag/car-charge-planner")).assertExists()
         compose.onNode(hasClickAction() and hasText("Gone")).assertDoesNotExist()

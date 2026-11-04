@@ -149,7 +149,8 @@ public final class LegalFiles {
         for (var path : named) {
             if (!exists.test(path)) {
                 problems.add(FOLDER + file + " names `" + path + "` in a `Copied:` block, but there is no such "
-                        + "file: correct the path, or remove the block when the file is gone");
+                        + "file, a symbolic link being none: "
+                        + "correct the path, or remove the block when the file is gone");
             }
         }
         return named;

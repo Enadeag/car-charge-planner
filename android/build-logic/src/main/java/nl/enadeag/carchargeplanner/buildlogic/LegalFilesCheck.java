@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -131,12 +132,21 @@ public abstract class LegalFilesCheck extends DefaultTask {
      * @param root the repository's root, absolute and normalised; never null
      * @param sources the folder of the sources, such as {@code android/app/src}; never null
      * @return their paths from the root, with {@code /} on every system, in no particular order
+     * @throws GradleException when the sources hold a symbolic link, which the check does not follow
      * @throws UncheckedIOException when a file cannot be read
      */
     static List<String> withHeader(Path root, Path sources) {
         try (Stream<Path> files = Files.walk(sources)) {
             var found = new ArrayList<String>();
-            for (var file : files.filter(Files::isRegularFile).toList()) {
+            for (var file : files.toList()) {
+                if (Files.isSymbolicLink(file)) {
+                    throw new GradleException("`" + root.relativize(file.toAbsolutePath().normalize()).toString()
+                            .replace('\\', '/') + "` is a symbolic link, which the check does not follow: replace "
+                            + "it with the file itself");
+                }
+                if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)) {
+                    continue;
+                }
                 // the String constructor replaces what is no UTF-8, as in an image, and keeps a UTF-8 ©
                 if (LegalFiles.hasThirdPartyHeader(new String(Files.readAllBytes(file), StandardCharsets.UTF_8))) {
                     found.add(root.relativize(file.toAbsolutePath().normalize()).toString().replace('\\', '/'));
@@ -152,13 +162,13 @@ public abstract class LegalFilesCheck extends DefaultTask {
      * Whether a path that a {@code Copied:} block names is a file in the repository.
      *
      * @param root the repository's root, absolute and normalised; never null
-     * @return true for a path, from the root, of a regular file under it; false for a folder, a missing file or a path
-     *     that leads out of the repository
+     * @return true for a path, from the root, of a regular file under it; false for a folder, a symbolic link, a
+     *     missing file or a path that leads out of the repository
      */
     static Predicate<String> inRepository(Path root) {
         return path -> {
             var file = root.resolve(path).normalize();
-            return file.startsWith(root) && Files.isRegularFile(file);
+            return file.startsWith(root) && Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS);
         };
     }
 }

@@ -1,12 +1,13 @@
 desugar_jdk_libs
 Artifact: com.android.tools:desugar_jdk_libs_nio
-Source: https://github.com/google/desugar_jdk_libs; the source of 2.1.5 is the commit that prepared that version
-(the project tags no 2.x release): https://github.com/google/desugar_jdk_libs/tree/73170c345e6a762fc6a1f0301bb15218850023ef
-Licence: GPL-2.0-only with the Classpath Exception, as the pom names it ("GNU General Public License, version 2, with
-the Classpath Exception"). A small subset of OpenJDK's libraries, which the build adds to the APK so the app runs on
-Android 10 (core library desugaring). The jar the app's build uses (2.1.5) carries no licence or notice file; the text below is
-the project's LICENSE, which the pom links to: OpenJDK's GPL version 2 with the Classpath Exception, taken from a JDK's
-legal/java.base/LICENSE.
+Source: https://github.com/google/desugar_jdk_libs; the source of 2.1.5 is the commit that prepared that
+version (the project tags no 2.x release):
+https://github.com/google/desugar_jdk_libs/tree/73170c345e6a762fc6a1f0301bb15218850023ef
+Licence: GPL-2.0-only with the Classpath Exception, as the pom names it ("GNU General Public License, version 2,
+with the Classpath Exception"). A small subset of OpenJDK's libraries, which the build adds to the APK so the app
+runs on Android 10 (core library desugaring). The jar the app's build uses (2.1.5) carries no licence or notice
+file; the text below is the project's LICENSE, which the pom links to: OpenJDK's GPL version 2 with the Classpath
+Exception, taken from a JDK's legal/java.base/LICENSE.
 
 The GNU General Public License (GPL)
 

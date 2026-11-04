@@ -225,7 +225,8 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | The licence texts are in English. | De licentieteksten zijn in het Engels. | under the address on that screen |
 | Expanded, Collapsed | Uitgevouwen, Ingevouwen | what TalkBack says of a licence's row: whether its text shows under it |
 | Reading the licences… | De licenties worden gelezen… | while a licence text, or the list of them, is read |
-| This text could not be read. | Deze tekst kon niet worden gelezen. | a licence text, or the list of them, that is missing |
+| This text could not be read. | Deze tekst kon niet worden gelezen. | a licence text that is missing |
+| The licences could not be read. | De licenties konden niet worden gelezen. | the list of the licences that is missing |
 
 `place_search_language` is no sentence: it is the two-letter code of the file's own language (`en`, `nl`), which the place search is asked to answer in, so the names of places come in the language the app shows.
 

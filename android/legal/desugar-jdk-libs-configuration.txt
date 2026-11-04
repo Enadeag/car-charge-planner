@@ -1,6 +1,6 @@
 desugar_jdk_libs configuration
 Artifact: com.android.tools:desugar_jdk_libs_configuration_nio
-Source: https://github.com/google/desugar_jdk_libs
+Source: https://r8.googlesource.com/r8
 Licence: BSD-3-Clause, as the pom names it. The conversions between the desugared and Android's own classes, which the
 build adds to the APK with desugar_jdk_libs. The text below is the LICENSE file of the jar the app's build uses
 (2.1.5); it has no notice file.

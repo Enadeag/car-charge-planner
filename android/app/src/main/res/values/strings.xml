@@ -430,6 +430,7 @@
   <string name="licences_in_english">The licence texts are in English.</string>
   <string name="licences_reading">Reading the licences…</string>
   <string name="licences_not_read">This text could not be read.</string>
+  <string name="licences_list_not_read">The licences could not be read.</string>
   <!-- what TalkBack says of a licence's row: whether its text shows under it -->
   <string name="licences_expanded">Expanded</string>
   <string name="licences_collapsed">Collapsed</string>

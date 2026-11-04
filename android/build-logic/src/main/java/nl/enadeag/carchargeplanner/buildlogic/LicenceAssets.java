@@ -113,7 +113,8 @@ public abstract class LicenceAssets extends DefaultTask {
      * @param terms the text of {@code ADDITIONAL-TERMS.md}, whose first line is its Markdown heading; never null
      * @param legal per name of a file of {@code android/legal}, its text, whose first line is its title; never null
      * @return per asset's name in {@link #FOLDER}, its text
-     * @throws IllegalArgumentException when the notice has no copyright line, or a text is empty
+     * @throws IllegalArgumentException when the notice has no copyright line, a text is empty, or a title line has a
+     *     tab
      */
     public static LinkedHashMap<String, String> contents(String notice, String licence, String terms,
             Map<String, String> legal) {
@@ -140,6 +141,10 @@ public abstract class LicenceAssets extends DefaultTask {
         var first = normalised(text).lines().findFirst().orElse("").strip();
         if (first.isEmpty()) {
             throw new IllegalArgumentException(name + " does not start with its title");
+        }
+        if (first.indexOf('\t') >= 0) {
+            throw new IllegalArgumentException(name + " has a tab in its title line, but the index separates its "
+                    + "fields by tabs: replace the tab with spaces");
         }
         return first;
     }
