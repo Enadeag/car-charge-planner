@@ -57,8 +57,8 @@ internal class MainThreadViolations(
 
     /**
      * Ends the app for a violation of the app's own code; warns once of one from the system's or a vendor's code
-     * alone, until [MOST_WARNED] different ones were warned of, and is silent after that. It takes a Throwable and
-     * not StrictMode's Violation, which cannot be made on the JVM, so that it can be tested there.
+     * alone, until [MOST_WARNED] different ones were warned of, then says so once and is silent after that. It takes a
+     * Throwable and not StrictMode's Violation, which cannot be made on the JVM, so that it can be tested there.
      *
      * @param violation what StrictMode found, with the stack of the call that broke the policy
      */
@@ -74,6 +74,7 @@ internal class MainThreadViolations(
                 violation.javaClass.simpleName,
                 violation,
             )
+            if (warned.size == MOST_WARNED) log.warn(NO_MORE_WARNINGS)
         }
     }
 
@@ -81,6 +82,9 @@ internal class MainThreadViolations(
 
         /** How many different violations are warned of at most, so the set of those warned of stays small. */
         const val MOST_WARNED = 32
+
+        /** The one line that says no further violation of the system's or a vendor's code is warned of. */
+        const val NO_MORE_WARNINGS = "further violations of the system's or a vendor's code are not logged"
 
         /**
          * Ends the app on the main looper's next message, with the violation as the cause, so the crash shows the

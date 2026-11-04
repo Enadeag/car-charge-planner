@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.android
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.tuple
 import org.junit.jupiter.api.Test
 import org.slf4j.Marker
 import org.slf4j.event.Level
@@ -13,7 +14,7 @@ import org.slf4j.helpers.LegacyAbstractLogger
  */
 class MainThreadViolationsTest {
 
-    private data class Record(val level: Level, val thrown: Throwable?)
+    private data class Record(val level: Level, val thrown: Throwable?, val message: String? = null)
 
     private class KeptLog : LegacyAbstractLogger() {
         val records = mutableListOf<Record>()
@@ -32,7 +33,7 @@ class MainThreadViolationsTest {
             arguments: Array<out Any>?,
             throwable: Throwable?,
         ) {
-            records += Record(level, throwable)
+            records += Record(level, throwable, messagePattern)
         }
     }
 
@@ -62,7 +63,7 @@ class MainThreadViolationsTest {
 
         violations.decide(vendor)
 
-        assertThat(log.records).containsExactly(Record(Level.WARN, vendor))
+        assertThat(log.records).extracting({ it.level }, { it.thrown }).containsExactly(tuple(Level.WARN, vendor))
         assertThat(crashes).isEmpty()
     }
 
@@ -91,6 +92,20 @@ class MainThreadViolationsTest {
     fun afterTheMostDifferentViolationsFurtherOnesAreNotLogged() {
         repeat(MainThreadViolations.MOST_WARNED + 5) { violations.decide(vendors(it)) }
 
-        assertThat(log.records).hasSize(MainThreadViolations.MOST_WARNED)
+        assertThat(log.records.filter { it.thrown != null }).hasSize(MainThreadViolations.MOST_WARNED)
+    }
+
+    @Test
+    fun theBoundIsSaidOnceRightAfterTheLastWarnedViolationAndThenNothingMoreIsLogged() {
+        repeat(MainThreadViolations.MOST_WARNED - 1) { violations.decide(vendors(it)) }
+        assertThat(log.records.map { it.message }).doesNotContain(MainThreadViolations.NO_MORE_WARNINGS)
+
+        violations.decide(vendors(MainThreadViolations.MOST_WARNED))
+        repeat(5) { violations.decide(vendors(100 + it)) }
+
+        assertThat(log.records).hasSize(MainThreadViolations.MOST_WARNED + 1)
+        assertThat(log.records.last())
+            .isEqualTo(Record(Level.WARN, null, MainThreadViolations.NO_MORE_WARNINGS))
+        assertThat(log.records.count { it.message == MainThreadViolations.NO_MORE_WARNINGS }).isEqualTo(1)
     }
 }

@@ -54,7 +54,7 @@ class AppOnRobolectricTest {
     }
 
     @Test
-    fun theDebugBuildsMainThreadPolicyDetectsDiskReadsDiskWritesAndTheNetworkAndNothingElseOfItsOwn() {
+    fun theDebugBuildsMainThreadPolicyDetectsDiskReadsDiskWritesAndTheNetworkOnly() {
         val literal = StrictMode.ThreadPolicy.Builder()
             .detectDiskReads()
             .detectDiskWrites()
@@ -95,9 +95,20 @@ class AppOnRobolectricTest {
             StrictMode.setThreadPolicy(policy)
         }
 
-        Os.open(file.path, OsConstants.O_WRONLY or OsConstants.O_CREAT, 384)
+        val descriptor = Os.open(file.path, OsConstants.O_WRONLY or OsConstants.O_CREAT, 384)
         // opening for writing is a read of the disk and then a write, each its own crash
-        val crashes = List(2) { catchThrowable { shadowOf(Looper.getMainLooper()).idle() } }
+        val crashes = try {
+            List(2) { catchThrowable { shadowOf(Looper.getMainLooper()).idle() } }
+        } finally {
+            val allowed = StrictMode.allowThreadDiskWrites()
+            StrictMode.allowThreadDiskReads()
+            try {
+                Os.close(descriptor)
+                file.delete()
+            } finally {
+                StrictMode.setThreadPolicy(allowed)
+            }
+        }
 
         assertThat(crashes.map { it?.cause?.javaClass?.name }).containsExactly(
             DiskReadViolation::class.java.name,
