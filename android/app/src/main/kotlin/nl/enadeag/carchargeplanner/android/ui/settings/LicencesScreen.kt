@@ -92,7 +92,6 @@ internal fun LicencesScreen(files: LicenceFiles, onClose: () -> Unit) {
                 modifier = Modifier.semantics { heading() })
             (index as? Reading.Read)?.let { Text(it.value.copyright) }
             Text(stringResource(R.string.licences_source, SOURCE_CODE))
-            Text(stringResource(R.string.licences_in_english))
         }
         Status(index, R.string.licences_list_not_read)
         (index as? Reading.Read)?.value?.parts?.forEach { part ->

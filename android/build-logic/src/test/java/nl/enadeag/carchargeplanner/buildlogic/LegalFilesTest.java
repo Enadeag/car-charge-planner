@@ -40,11 +40,12 @@ class LegalFilesTest {
             "releaseRuntimeClasspath", List.of("androidx.core:core", "org.jetbrains.kotlin:kotlin-stdlib",
                     "tools.jackson.core:jackson-core"));
 
-    private static final Map<String, List<String>> NOTICES = Map.of(
-            "tools.jackson.core:jackson-core", List.of("META-INF/NOTICE"));
+    private static final Map<String, Map<String, String>> NOTICES = Map.of(
+            "tools.jackson.core:jackson-core", Map.of("META-INF/NOTICE", "Jackson is a JSON processor.\n"));
 
     private static List<String> problems(Map<String, ? extends Collection<String>> used,
-            Map<String, ? extends Collection<String>> notices, Map<String, String> legal, Collection<String> headers,
+            Map<String, ? extends Map<String, String>> notices, Map<String, String> legal,
+            Collection<String> headers,
             Set<String> files) {
         return LegalFiles.problems(used, notices, legal, headers, files::contains);
     }
@@ -154,8 +155,9 @@ class LegalFilesTest {
 
     @Test
     void aJarsNoticeThatTheFileDoesNotCarryFails() {
-        var notices = Map.of("tools.jackson.core:jackson-core", List.of("META-INF/NOTICE", "META-INF/NOTICE.txt"),
-                "androidx.core:core", List.of("META-INF/NOTICE.md"));
+        var notices = Map.of("tools.jackson.core:jackson-core", Map.of("META-INF/NOTICE",
+                        "Jackson is a JSON processor.", "META-INF/NOTICE.txt", "More."),
+                "androidx.core:core", Map.of("META-INF/NOTICE.md", "Core."));
 
         assertThat(problems(USED, notices, Map.of("apache-2.0.txt", APACHE, "jackson.txt", JACKSON), List.of(ICONS),
                 Set.of(ICONS))).containsExactly(
@@ -164,6 +166,53 @@ class LegalFilesTest {
                 "`tools.jackson.core:jackson-core` has META-INF/NOTICE.txt in its jar, which android/legal/jackson.txt "
                         + "does not carry: add its text there under a line `==== META-INF/NOTICE.txt of jackson-core "
                         + "====`");
+    }
+
+    private static List<String> withNotice(String carried, String inJar) {
+        var jackson = JACKSON.replace("Jackson is a JSON processor.\n", carried);
+        return problems(USED, Map.of("tools.jackson.core:jackson-core", Map.of("META-INF/NOTICE", inJar)),
+                Map.of("apache-2.0.txt", APACHE, "jackson.txt", jackson), List.of(ICONS), Set.of(ICONS));
+    }
+
+    @Test
+    void aNoticeTextThatDiffersFromTheJarsFailsNamingTheFileTheEntryAndTheArtifact() {
+        assertThat(withNotice("Jackson is a JSON processor.\n", "Jackson is a fast JSON processor.\n"))
+                .containsExactly("android/legal/jackson.txt carries META-INF/NOTICE of jackson-core with a text that "
+                        + "differs from the one in the jar of `tools.jackson.core:jackson-core`: take over the jar's "
+                        + "new NOTICE text");
+    }
+
+    @Test
+    void aNoticeTextThatDiffersOnlyInLineEndingsTrailingSpacesAndBlankLinesAtTheEndsPasses() {
+        assertThat(withNotice("\n\nJackson is a JSON processor.  \nSecond line\t\n\n\n",
+                "Jackson is a JSON processor.\r\nSecond line\r\n")).isEmpty();
+        assertThat(withNotice("Jackson is a JSON processor.\n", "Jackson is a JSON processor.")).isEmpty();
+    }
+
+    @Test
+    void aNoticeTextThatDiffersInLeadingSpacesInnerBlankLinesOrCaseFails() {
+        assertThat(withNotice("Jackson is a JSON processor.\n", "  Jackson is a JSON processor.\n")).hasSize(1);
+        assertThat(withNotice("A\nB\n", "A\n\nB\n")).hasSize(1);
+        assertThat(withNotice("Jackson is a JSON processor.\n", "jackson is a JSON processor.\n")).hasSize(1);
+    }
+
+    @Test
+    void aNoticeTextEndsAtTheNextHeadingSoTextThatFollowsTheNoticeDiffers() {
+        assertThat(withNotice("Jackson is a JSON processor.\n==== META-INF/NOTICE of other ====\nMore\n",
+                "Jackson is a JSON processor.\n")).isEmpty();
+        assertThat(withNotice("Jackson is a JSON processor.\nMore\n", "Jackson is a JSON processor.\n"))
+                .hasSize(1);
+    }
+
+    @Test
+    void aNoticeCarriedAsTheLastTextOfTheFileIsComparedToo() {
+        var jackson = "Jackson\nArtifact: tools.jackson.core:jackson-core\n"
+                + "==== META-INF/NOTICE of jackson-core ====\nOld";
+
+        assertThat(problems(USED, NOTICES, Map.of("apache-2.0.txt", APACHE, "jackson.txt", jackson),
+                List.of(ICONS), Set.of(ICONS))).hasSize(1);
+        assertThat(problems(USED, Map.of("tools.jackson.core:jackson-core", Map.of("META-INF/NOTICE", "Old")),
+                Map.of("apache-2.0.txt", APACHE, "jackson.txt", jackson), List.of(ICONS), Set.of(ICONS))).isEmpty();
     }
 
     @Test

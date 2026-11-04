@@ -314,7 +314,6 @@
   <string name="planning_hours_until">Laden starten uiterlijk om</string>
   <string name="settings_licences">Opensourcelicenties</string>
   <string name="licences_source">Broncode: %1$s</string>
-  <string name="licences_in_english">De licentieteksten zijn in het Engels.</string>
   <string name="licences_reading">De licenties worden gelezen…</string>
   <string name="licences_not_read">Deze tekst kon niet worden gelezen.</string>
   <string name="licences_list_not_read">De licenties konden niet worden gelezen.</string>

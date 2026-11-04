@@ -15,7 +15,8 @@ import org.gradle.api.artifacts.result.ResolvedArtifactResult;
  * brings: {@code releaseRuntimeClasspath}, the engine's libraries included, and {@code coreLibraryDesugaring}, whose
  * library the build puts in the APK too. A library counts when it brings a file, so a module that only points to its
  * Android variant, or a BOM, does not. The legal files are {@code android/legal}, the sources the project's
- * {@code src}.
+ * {@code src} and the engine's {@code engine/src/main} at the repository's root, which {@code :engine} compiles into
+ * the APK.
  */
 public final class LegalFilesPlugin implements Plugin<Project> {
 
@@ -31,7 +32,8 @@ public final class LegalFilesPlugin implements Plugin<Project> {
         var check = project.getTasks().register("checkLegalFiles", LegalFilesCheck.class, task -> {
             task.getLegal().convention(project.getRootProject().getLayout().getProjectDirectory().dir("legal"));
             task.getRepository().convention(project.getRootProject().getLayout().getProjectDirectory().dir(".."));
-            task.getSources().convention(project.getLayout().getProjectDirectory().dir("src"));
+            task.getSources().from(project.getLayout().getProjectDirectory().dir("src"),
+                    project.getRootProject().getLayout().getProjectDirectory().dir("../engine/src/main"));
             project.getConfigurations().matching(configuration -> CONFIGURATIONS.contains(configuration.getName()))
                     .all(configuration -> {
                         var artifacts = configuration.getIncoming().getArtifacts().getResolvedArtifacts();

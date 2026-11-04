@@ -65,14 +65,15 @@ class LegalFilesPluginTest {
     }
 
     @Test
-    void checkRunsItOverTheAppsSourcesAndAndroidLegal() {
+    void checkRunsItOverTheAppsAndTheEnginesSourcesAndAndroidLegal() {
         var app = app();
 
         var check = (LegalFilesCheck) app.getTasks().getByName("checkLegalFiles");
 
         assertThat(List.<Object>copyOf(app.getTasks().getByName("check").getTaskDependencies().getDependencies(null)))
                 .contains(check);
-        assertThat(check.getSources().get().getAsFile().toPath()).isEqualTo(dir.resolve("android/app/src"));
+        assertThat(check.getSources().getFiles().stream().map(file -> file.toPath().normalize()).toList())
+                .containsExactlyInAnyOrder(dir.resolve("android/app/src"), dir.resolve("engine/src/main"));
         assertThat(check.getLegal().get().getAsFile().toPath()).isEqualTo(dir.resolve("android/legal"));
         assertThat(check.getRepository().get().getAsFile().toPath().normalize()).isEqualTo(dir);
     }

@@ -129,7 +129,6 @@ class LicencesScreenTest {
         compose.onNode(isHeading() and hasText(text(R.string.app_name))).assertExists()
         compose.onNodeWithText("Copyright (C) 2026 Someone").assertExists()
         compose.onNodeWithText(text(R.string.licences_source, "github.com/Enadeag/car-charge-planner")).assertExists()
-        compose.onNodeWithText(text(R.string.licences_in_english)).assertExists()
         assertThat(text(R.string.licences_source, "x")).isEqualTo("Source code: x")
         // plain text, not a link
         compose.onNode(hasText("github.com", substring = true) and hasClickAction()).assertDoesNotExist()

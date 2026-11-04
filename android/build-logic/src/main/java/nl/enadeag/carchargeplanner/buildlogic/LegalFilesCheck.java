@@ -18,10 +18,12 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.MapProperty;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
+import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
@@ -67,13 +69,14 @@ public abstract class LegalFilesCheck extends DefaultTask {
     public abstract DirectoryProperty getLegal();
 
     /**
-     * The app's sources, every file of which is looked at for a third party's header.
+     * The folders of the sources the APK is built from, every file of which is looked at for a third party's header:
+     * the app's {@code src} and the engine's {@code src/main}, which {@code :engine} compiles into the APK.
      *
-     * @return the folder, such as {@code android/app/src}
+     * @return the folders, such as {@code android/app/src}; each must exist when the task runs
      */
-    @InputDirectory
+    @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
-    public abstract DirectoryProperty getSources();
+    public abstract ConfigurableFileCollection getSources();
 
     /**
      * The repository's root, which the paths of a {@code Copied:} block start from.
@@ -94,7 +97,8 @@ public abstract class LegalFilesCheck extends DefaultTask {
         var root = getRepository().get().getAsFile().toPath().toAbsolutePath().normalize();
         var problems = LegalFiles.problems(getLibraries().get(), notices(getJars().get()),
                 LegalFolder.texts(getLegal().get().getAsFile().toPath()),
-                withHeader(root, getSources().get().getAsFile().toPath()), inRepository(root));
+                withHeader(root, getSources().getFiles().stream().map(File::toPath).sorted().toList()),
+                inRepository(root));
         if (!problems.isEmpty()) {
             throw new GradleException("android/legal does not match what the app brings:\n  "
                     + String.join("\n  ", problems));
@@ -102,22 +106,30 @@ public abstract class LegalFilesCheck extends DefaultTask {
     }
 
     /**
-     * Per library, the {@code META-INF/NOTICE*} entries of its jars: any case, right in {@code META-INF}, not in a
-     * folder under it.
+     * Per library, the {@code META-INF/NOTICE*} entries of its jars with their texts: any case, right in
+     * {@code META-INF}, not in a folder under it.
      *
      * @param jars per {@code group:artifact}, the paths of its jars; never null
-     * @return per library that has any, the entries' names as the jar has them; a library without one is left out
+     * @return per library that has any, per entry's name as the jar has it, the entry's text as UTF-8, with
+     *     {@code \n} line endings; the first jar's wins when two have the entry; a library without one is left out
      * @throws UncheckedIOException when a jar cannot be read
      */
-    static Map<String, List<String>> notices(Map<String, List<String>> jars) {
-        var notices = new TreeMap<String, List<String>>();
+    static Map<String, Map<String, String>> notices(Map<String, List<String>> jars) {
+        var notices = new TreeMap<String, Map<String, String>>();
         jars.forEach((module, paths) -> {
             for (var path : paths) {
                 try (var jar = new ZipFile(new File(path))) {
-                    jar.stream().map(ZipEntry::getName)
-                            .filter(name -> name.toUpperCase(Locale.ROOT).startsWith("META-INF/NOTICE")
-                                    && name.indexOf('/', "META-INF/".length()) < 0)
-                            .forEach(name -> notices.computeIfAbsent(module, ignored -> new ArrayList<>()).add(name));
+                    for (var entry : jar.stream().toList()) {
+                        var name = entry.getName();
+                        if (name.toUpperCase(Locale.ROOT).startsWith("META-INF/NOTICE")
+                                && name.indexOf('/', "META-INF/".length()) < 0) {
+                            try (var in = jar.getInputStream(entry)) {
+                                notices.computeIfAbsent(module, ignored -> new TreeMap<>()).putIfAbsent(name,
+                                        new String(in.readAllBytes(), StandardCharsets.UTF_8).replace("\r\n", "\n")
+                                                .replace('\r', '\n'));
+                            }
+                        }
+                    }
                 } catch (IOException e) {
                     throw new UncheckedIOException("cannot read " + path, e);
                 }
@@ -127,15 +139,24 @@ public abstract class LegalFilesCheck extends DefaultTask {
     }
 
     /**
-     * The sources that carry a third party's header: every file under the sources, whatever its kind.
+     * The sources that carry a third party's header: every file under the sources' folders, whatever its kind.
      *
      * @param root the repository's root, absolute and normalised; never null
-     * @param sources the folder of the sources, such as {@code android/app/src}; never null
+     * @param sources the folders of the sources, such as {@code android/app/src} and {@code engine/src/main}; never
+     *     null
      * @return their paths from the root, with {@code /} on every system, in no particular order
      * @throws GradleException when the sources hold a symbolic link, which the check does not follow
-     * @throws UncheckedIOException when a file cannot be read
+     * @throws UncheckedIOException when a folder is missing or a file cannot be read
      */
-    static List<String> withHeader(Path root, Path sources) {
+    static List<String> withHeader(Path root, List<Path> sources) {
+        var found = new ArrayList<String>();
+        for (var folder : sources) {
+            found.addAll(withHeader(root, folder));
+        }
+        return found;
+    }
+
+    private static List<String> withHeader(Path root, Path sources) {
         try (Stream<Path> files = Files.walk(sources)) {
             var found = new ArrayList<String>();
             for (var file : files.toList()) {

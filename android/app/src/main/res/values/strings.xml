@@ -427,7 +427,6 @@
        texts themselves and their titles stay English. -->
   <string name="settings_licences">Open source licences</string>
   <string name="licences_source">Source code: %1$s</string>
-  <string name="licences_in_english">The licence texts are in English.</string>
   <string name="licences_reading">Reading the licences…</string>
   <string name="licences_not_read">This text could not be read.</string>
   <string name="licences_list_not_read">The licences could not be read.</string>
