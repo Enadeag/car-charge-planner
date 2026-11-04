@@ -1,9 +1,6 @@
 package nl.enadeag.carchargeplanner.android.ui
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.provider.Settings
-import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -924,18 +921,6 @@ class HomeScreenTest {
             .isCloseTo(bar.left + bar.width * 0.8f, within(1f))
     }
 
-    /** The screen as Android draws it; Compose's captureToImage waits for a frame that Robolectric never draws. */
-    private fun screenshot(): Bitmap {
-        val screen = compose.activity.findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
-        val shot = Bitmap.createBitmap(screen.width, screen.height, Bitmap.Config.ARGB_8888)
-        compose.runOnIdle { screen.draw(Canvas(shot)) }
-        return shot
-    }
-
-    /** What the screen shows within [area], in pixels. */
-    private fun picture(area: Rect): Bitmap = Bitmap.createBitmap(screenshot(), area.left.roundToInt(),
-        area.top.roundToInt(), area.width.roundToInt(), area.height.roundToInt())
-
     @Test
     fun rightToLeftTheSolarChartIsDrawnAsLeftToRightWithItsWordsWhereTheyWere() {
         clock("24")
@@ -952,7 +937,7 @@ class HomeScreenTest {
         compose.waitForIdle()
         answer(sunnyDays())
         compose.onNode(SemanticsMatcher.keyIsDefined(AxisLabels), useUnmergedTree = true).performScrollTo()
-        val leftToRight = picture(chart().boundsInRoot)
+        val leftToRight = compose.picture(chart().boundsInRoot)
         val leftToRightLabels = axisLabels()
 
         rtl = true
@@ -960,7 +945,7 @@ class HomeScreenTest {
         compose.onNode(SemanticsMatcher.keyIsDefined(AxisLabels), useUnmergedTree = true).performScrollTo()
 
         assertThat(axisLabels()).isEqualTo(leftToRightLabels)
-        assertThat(picture(chart().boundsInRoot).sameAs(leftToRight)).`as`("the chart as drawn right to left").isTrue()
+        assertThat(compose.picture(chart().boundsInRoot).sameAs(leftToRight)).`as`("the chart as drawn right to left").isTrue()
     }
 
     @Test
@@ -998,7 +983,7 @@ class HomeScreenTest {
     private fun groundBeside(heading: Int): Color {
         val node = compose.onNode(isHeading() and hasText(text(heading))).performScrollTo().fetchSemanticsNode()
         val bounds = node.boundsInRoot
-        return Color(screenshot().getPixel((bounds.left - 8 * node.layoutInfo.density.density).roundToInt(),
+        return Color(compose.screenshot().getPixel((bounds.left - 8 * node.layoutInfo.density.density).roundToInt(),
             bounds.center.y.roundToInt()))
     }
 

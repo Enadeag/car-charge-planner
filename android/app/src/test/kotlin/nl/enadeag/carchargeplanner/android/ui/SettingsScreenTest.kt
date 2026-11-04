@@ -1,7 +1,5 @@
 package nl.enadeag.carchargeplanner.android.ui
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.text.InputType
 import android.view.View
 import android.view.ViewGroup
@@ -19,6 +17,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathNode
 import androidx.compose.ui.graphics.vector.VectorPath
@@ -61,7 +61,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.ZoneId
 import java.util.Locale
 import java.util.Optional
-import kotlin.math.roundToInt
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -76,6 +75,7 @@ import nl.enadeag.carchargeplanner.android.settings.SettingsSession
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
+import nl.enadeag.carchargeplanner.android.ui.components.UNPADDED_PAGE_PADDING
 import nl.enadeag.carchargeplanner.android.ui.settings.SettingsIcons
 import nl.enadeag.carchargeplanner.android.ui.settings.SettingsScreen
 import nl.enadeag.carchargeplanner.android.ui.settings.icon
@@ -866,14 +866,15 @@ class SettingsScreenTest {
             SettingsIcons.WbCloudy, SettingsIcons.EventBusy, SettingsIcons.Schedule)
 
         // measured on Icons.Filled's own icons of material-icons-extended-android 1.7.8 with shape(): the number of
-        // paths, of their nodes, and the hash of the nodes' text
+        // paths, of their nodes, and the hash of the nodes' text, and how each path is filled, which is materialPath's
+        // default there: black, fully opaque, not stroked, non-zero
         assertThat(copied.associate { it.name to shape(it) }).isEqualTo(mapOf(
-            "Filled.SolarPower" to listOf(10, 50, -877365170),
-            "Filled.ElectricCar" to listOf(2, 43, 995439527),
-            "Filled.EvStation" to listOf(1, 42, -585541679),
-            "Filled.WbCloudy" to listOf(1, 9, 1954581329),
-            "Filled.EventBusy" to listOf(1, 38, -955125091),
-            "Filled.Schedule" to listOf(2, 19, -750104808),
+            "Filled.SolarPower" to expected(10, 50, -877365170),
+            "Filled.ElectricCar" to expected(2, 43, 995439527),
+            "Filled.EvStation" to expected(1, 42, -585541679),
+            "Filled.WbCloudy" to expected(1, 9, 1954581329),
+            "Filled.EventBusy" to expected(1, 38, -955125091),
+            "Filled.Schedule" to expected(2, 19, -750104808),
         ))
         assertThat(copied).allSatisfy {
             assertThat(listOf(it.viewportWidth, it.viewportHeight)).containsExactly(24f, 24f)
@@ -881,13 +882,21 @@ class SettingsScreenTest {
         }
     }
 
-    /** An icon's paths, their nodes and a hash of the nodes; `Close` is an object, whose own text differs per run. */
-    private fun shape(icon: ImageVector): List<Int> {
-        val paths = (0 until icon.root.size).map { (icon.root[it] as VectorPath).pathData }
+    /** What an icon draws: its paths' count, their nodes' count and the hash of the nodes' text, and how each is filled. */
+    private data class Shape(val paths: Int, val nodes: Int, val hash: Int, val fills: List<List<Any?>>)
+
+    /** The [Shape] of an icon whose paths all are filled as materialPath does by default. */
+    private fun expected(paths: Int, nodes: Int, hash: Int) = Shape(paths, nodes, hash,
+        List(paths) { listOf(SolidColor(Color.Black), 1f, null, 1f, PathFillType.NonZero) })
+
+    /** An icon's [Shape]; `Close` is an object, whose own text differs per run. */
+    private fun shape(icon: ImageVector): Shape {
+        val paths = (0 until icon.root.size).map { icon.root[it] as VectorPath }
         val nodes = paths.joinToString(";") { path ->
-            path.joinToString(" ") { if (it == PathNode.Close) "Close" else it.toString() }
+            path.pathData.joinToString(" ") { if (it == PathNode.Close) "Close" else it.toString() }
         }
-        return listOf(paths.size, paths.sumOf { it.size }, nodes.hashCode())
+        return Shape(paths.size, paths.sumOf { it.pathData.size }, nodes.hashCode(),
+            paths.map { listOf(it.fill, it.fillAlpha, it.stroke, it.strokeAlpha, it.pathFillType) })
     }
 
     @Test
@@ -934,7 +943,7 @@ class SettingsScreenTest {
     private fun drawnBefore(page: SettingsPage): IntArray {
         val row = row(page)
         val name = compose.onNode(hasText(text(page.title())), useUnmergedTree = true).fetchSemanticsNode()
-        val start = picture(Rect(row.boundsInRoot.left, row.boundsInRoot.top, name.boundsInRoot.left,
+        val start = compose.picture(Rect(row.boundsInRoot.left, row.boundsInRoot.top, name.boundsInRoot.left,
             row.boundsInRoot.bottom))
         val pixels = IntArray(start.width * start.height)
         start.getPixels(pixels, 0, start.width, 0, 0, start.width, start.height)
@@ -963,8 +972,8 @@ class SettingsScreenTest {
             .fetchSemanticsNode()
         val last = compose.onNode(hasClickAction() and hasText(text(SettingsPage.entries.last().title())))
             .fetchSemanticsNode()
-        // only the list's own padding of 8 dp lies between a row and the list's edge
-        val padding = 8 * list.layoutInfo.density.density
+        // only the list's own padding lies between a row and the list's edge
+        val padding = UNPADDED_PAGE_PADDING.value * list.layoutInfo.density.density
         assertThat(first.positionInRoot.y - list.positionInRoot.y).isCloseTo(padding, within(0.5f))
         val range = list.config[SemanticsProperties.VerticalScrollAxisRange]
         assertThat(range.maxValue()).isPositive()
@@ -1017,18 +1026,6 @@ class SettingsScreenTest {
     fun aRowsValuesWrapWithoutBeingCutAtTwiceTheFontSizeOnAPhoneOnItsSide() {
         assertThat(assertEveryRowsValuesShowWhole()).isGreaterThan(1)
     }
-
-    /** The screen as Android draws it; Compose's captureToImage waits for a frame that Robolectric never draws. */
-    private fun screenshot(): Bitmap {
-        val screen = compose.activity.findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
-        val shot = Bitmap.createBitmap(screen.width, screen.height, Bitmap.Config.ARGB_8888)
-        compose.runOnIdle { screen.draw(Canvas(shot)) }
-        return shot
-    }
-
-    /** What the screen shows within [area], in pixels. */
-    private fun picture(area: Rect): Bitmap = Bitmap.createBitmap(screenshot(), area.left.roundToInt(),
-        area.top.roundToInt(), area.width.roundToInt(), area.height.roundToInt())
 
     @Test
     fun dismissingTheDiscardQuestionWithBackKeepsEditing() {

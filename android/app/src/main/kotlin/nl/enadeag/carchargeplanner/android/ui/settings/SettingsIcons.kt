@@ -14,9 +14,9 @@
  * limitations under the License.
  *
  * Six of Material's Filled icons, which material-icons-core lacks, from
- * androidx.compose.material:material-icons-extended-android 1.7.8 (the Compose BOM's), whose path data comes from
- * google/material-design-icons; the licence's text is also in android/legal/apache-2.0.txt. Changed: the six files
- * are merged into one object in this package, each icon built on first use; names and path data copied unchanged.
+ * androidx.compose.material:material-icons-extended-android 1.7.8 (the Compose BOM's); the licence's text is also in
+ * android/legal/apache-2.0.txt. Changed: the six files are merged into one object in this package, each icon built on
+ * first use; the icons' names (`Filled.X`) and path data are unchanged, and each is reached as `SettingsIcons.X`.
  * None of them is mirrored right to left in Material.
  */
 package nl.enadeag.carchargeplanner.android.ui.settings

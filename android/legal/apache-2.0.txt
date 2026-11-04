@@ -7,8 +7,8 @@ Copyright The Android Open Source Project.
 Copied: Material's Filled icons SolarPower, ElectricCar, EvStation, WbCloudy, EventBusy and Schedule, in
 android/app/src/main/kotlin/nl/enadeag/carchargeplanner/android/ui/settings/SettingsIcons.kt
 From: androidx.compose.material:material-icons-extended-android 1.7.8 (its sources jar), not a dependency of the app
-Changed: the six files merged into one object in that package, each icon built on first use; names and path data
-copied unchanged
+Changed: the six files merged into one object in that package, each icon built on first use; icon names (`Filled.X`)
+and path data unchanged, reached as `SettingsIcons.X`
 Source: https://cs.android.com/androidx/platform/frameworks/support
 Licence: Apache-2.0, as the library's pom names it.
 Copyright 2025 The Android Open Source Project.
