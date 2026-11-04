@@ -17,5 +17,7 @@ Version 0.1.0 was released under the MIT licence; later versions are under the t
 Every source file in this repository is covered by this notice; there is no per-file header.
 
 One exception: Material's icons for Compose (androidx.compose.material:material-icons-core, by The Android Open Source
-Project), which the Android app's package holds and draws as they are, stay under the Apache License 2.0; its text is in
-android/legal/apache-2.0.txt.
+Project), which the Android app's package holds and draws as they are, and the six of Material's Filled icons copied as
+they are from androidx.compose.material:material-icons-extended into
+android/app/src/main/kotlin/nl/enadeag/carchargeplanner/android/ui/settings/SettingsIcons.kt, stay under the Apache
+License 2.0; its text is in android/legal/apache-2.0.txt.
