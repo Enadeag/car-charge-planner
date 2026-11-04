@@ -45,6 +45,9 @@ import nl.enadeag.carchargeplanner.android.R
 /** The widest a bar page's column grows, as [Page]'s: lines stay easy to read on a tablet or a phone on its side. */
 private val MOST_WIDTH = 600.dp
 
+/** The vertical padding of a bar page's column with `padded` false: all that lies between its rows and its edges. */
+internal val UNPADDED_PAGE_PADDING = 8.dp
+
 /**
  * A [BarScaffold] page: the bar's actions, such as Save, stay in view above the keyboard; below the bar a short status
  * that stays in view, such as that a save failed, and the column that scrolls, which opens with what the status is
@@ -78,7 +81,7 @@ internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Un
         Column(Modifier.padding(horizontal = 16.dp), content = status)
         Column(
             modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll)
-                .padding(if (padded) PaddingValues(16.dp) else PaddingValues(vertical = 8.dp)),
+                .padding(if (padded) PaddingValues(16.dp) else PaddingValues(vertical = UNPADDED_PAGE_PADDING)),
         ) {
             lead()
             Column(verticalArrangement = Arrangement.spacedBy(if (padded) 16.dp else 0.dp), content = content)

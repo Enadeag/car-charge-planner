@@ -9,15 +9,25 @@ import android.os.SystemClock
 import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.ComponentDialog
+import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.PathNode
+import androidx.compose.ui.graphics.vector.VectorPath
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
@@ -46,6 +56,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.ZoneId
@@ -65,7 +76,9 @@ import nl.enadeag.carchargeplanner.android.settings.SettingsSession
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
+import nl.enadeag.carchargeplanner.android.ui.settings.SettingsIcons
 import nl.enadeag.carchargeplanner.android.ui.settings.SettingsScreen
+import nl.enadeag.carchargeplanner.android.ui.settings.icon
 import nl.enadeag.carchargeplanner.android.ui.settings.title
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
@@ -76,6 +89,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.Place
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.within
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -108,6 +122,8 @@ class SettingsScreenTest {
 
     private var errorColour = Color.Unspecified
 
+    private var onSurfaceVariant = Color.Unspecified
+
     private fun session(on: SavedStateHandle = handle, config: EngineConfig = stored) = SettingsSession(on,
         NumberText(compose.activity.resources.configuration.locales[0]), { amsterdam }, { "en" }, access, saves,
         scope, Dispatchers.Main.immediate, config, { closed++ }) { }
@@ -116,6 +132,7 @@ class SettingsScreenTest {
         compose.setContent {
             AppTheme {
                 errorColour = MaterialTheme.colorScheme.error
+                onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
                 val page by session.page.collectAsState()
                 if (fontScaleTwo) AtFontScaleTwo { SettingsScreen(session, page) } else SettingsScreen(session, page)
             }
@@ -825,6 +842,200 @@ class SettingsScreenTest {
 
         compose.onNode(hasClickAction() and hasText(text(R.string.settings_away))
             and hasText(text(R.string.settings_away_none))).assertExists()
+    }
+
+    @Test
+    fun everyPageHasMaterialsFilledIconForWhatItHolds() {
+        val names = SettingsPage.entries.associateWith { it.icon().name }
+
+        assertThat(names).isEqualTo(mapOf(
+            SettingsPage.SOLAR to "Filled.SolarPower",
+            SettingsPage.LOCATION to "Filled.LocationOn",
+            SettingsPage.CAR_AND_HOUSE to "Filled.ElectricCar",
+            SettingsPage.CHARGER to "Filled.EvStation",
+            SettingsPage.FORECAST to "Filled.WbCloudy",
+            SettingsPage.AWAY to "Filled.EventBusy",
+            SettingsPage.PLANNING to "Filled.Schedule",
+        ))
+        assertThat(SettingsPage.entries.map { it.icon() }.toSet()).hasSize(SettingsPage.entries.size)
+    }
+
+    @Test
+    fun theCopiedIconsDrawMaterialsShapesUnchanged() {
+        val copied = listOf(SettingsIcons.SolarPower, SettingsIcons.ElectricCar, SettingsIcons.EvStation,
+            SettingsIcons.WbCloudy, SettingsIcons.EventBusy, SettingsIcons.Schedule)
+
+        // measured on Icons.Filled's own icons of material-icons-extended-android 1.7.8 with shape(): the number of
+        // paths, of their nodes, and the hash of the nodes' text, and how each path is filled, which is materialPath's
+        // default there: black, fully opaque, not stroked, non-zero
+        assertThat(copied.associate { it.name to shape(it) }).isEqualTo(mapOf(
+            "Filled.SolarPower" to expected(10, 50, -877365170),
+            "Filled.ElectricCar" to expected(2, 43, 995439527),
+            "Filled.EvStation" to expected(1, 42, -585541679),
+            "Filled.WbCloudy" to expected(1, 9, 1954581329),
+            "Filled.EventBusy" to expected(1, 38, -955125091),
+            "Filled.Schedule" to expected(2, 19, -750104808),
+        ))
+        assertThat(copied).allSatisfy {
+            assertThat(listOf(it.viewportWidth, it.viewportHeight)).containsExactly(24f, 24f)
+            assertThat(listOf(it.defaultWidth, it.defaultHeight)).containsExactly(24.dp, 24.dp)
+            assertThat(it.autoMirror).`as`("%s mirrored right to left", it.name).isFalse()
+        }
+    }
+
+    /** What an icon draws: its paths' count, their nodes' count and the hash of the nodes' text, and their fills. */
+    private data class Shape(val paths: Int, val nodes: Int, val hash: Int, val fills: List<Fill>)
+
+    /** How one path is filled and stroked. */
+    private data class Fill(
+        val fill: Brush?,
+        val fillAlpha: Float,
+        val stroke: Brush?,
+        val strokeAlpha: Float,
+        val type: PathFillType,
+    )
+
+    /** The [Shape] of an icon whose paths all are filled as materialPath does by default. */
+    private fun expected(paths: Int, nodes: Int, hash: Int) = Shape(paths, nodes, hash,
+        List(paths) { Fill(SolidColor(Color.Black), 1f, null, 1f, PathFillType.NonZero) })
+
+    /** An icon's [Shape]; `Close` is an object, whose own text differs per run. */
+    private fun shape(icon: ImageVector): Shape {
+        val paths = (0 until icon.root.size).map { icon.root[it] as VectorPath }
+        val nodes = paths.joinToString(";") { path ->
+            path.pathData.joinToString(" ") { if (it == PathNode.Close) "Close" else it.toString() }
+        }
+        return Shape(paths.size, paths.sumOf { it.pathData.size }, nodes.hashCode(),
+            paths.map { Fill(it.fill, it.fillAlpha, it.stroke, it.strokeAlpha, it.pathFillType) })
+    }
+
+    @Test
+    fun eachRowIsOneButtonThatReadsItsNameAndValuesButNothingOfItsIcon() {
+        show()
+
+        SettingsPage.entries.forEach { page ->
+            val row = row(page)
+            assertThat(row.config.getOrNull(SemanticsProperties.Role)).isEqualTo(Role.Button)
+            assertThat(row.config.getOrNull(SemanticsProperties.ContentDescription))
+                .`as`("what %s's icon reads", page).isNull()
+            assertThat(row.config[SemanticsProperties.Text].map { it.text }).hasSize(2).first()
+                .isEqualTo(text(page.title()))
+        }
+    }
+
+    @Test
+    fun eachRowIsAtLeast56DpHigh() {
+        show()
+
+        SettingsPage.entries.forEach { page ->
+            val row = row(page)
+            assertThat(row.size.height / row.layoutInfo.density.density).`as`("the height of %s's row", page)
+                .isGreaterThanOrEqualTo(56f)
+        }
+    }
+
+    @Test
+    fun eachRowDrawsAnIconInTheThemesColourBeforeItsName() {
+        show()
+
+        SettingsPage.entries.forEach { page ->
+            // exact colour: a filled shape has opaque pixels inside, only its edges are blended with the ground
+            assertThat(drawnBefore(page).count { Color(it) == onSurfaceVariant })
+                .`as`("%s's icon in onSurfaceVariant", page).isPositive()
+        }
+    }
+
+    /** The row of [page] in the list, scrolled to. */
+    private fun row(page: SettingsPage) =
+        compose.onNode(hasClickAction() and hasText(text(page.title()))).performScrollTo().fetchSemanticsNode()
+
+    /** The pixels at the start of [page]'s row, up to its name. */
+    private fun drawnBefore(page: SettingsPage): IntArray {
+        val row = row(page)
+        val name = compose.onNode(hasText(text(page.title())), useUnmergedTree = true).fetchSemanticsNode()
+        val start = compose.picture(Rect(row.boundsInRoot.left, row.boundsInRoot.top, name.boundsInRoot.left,
+            row.boundsInRoot.bottom))
+        val pixels = IntArray(start.width * start.height)
+        start.getPixels(pixels, 0, start.width, 0, 0, start.width, start.height)
+        return pixels
+    }
+
+    @Test
+    fun theGapBetweenTwoRowsIsOneDividerThick() {
+        show()
+
+        val rows = SettingsPage.entries.map { row(it) }
+        val divider = DividerDefaults.Thickness.value * rows.first().layoutInfo.density.density
+        val gaps = rows.zipWithNext { above, below ->
+            below.positionInRoot.y - (above.positionInRoot.y + above.size.height)
+        }
+        assertThat(gaps).allSatisfy { assertThat(it).isCloseTo(divider, within(0.5f)) }
+    }
+
+    @Test
+    fun noDividerAboveTheFirstRowOrUnderTheLast() {
+        // at twice the font size the list is longer than the screen, so where it ends shows in its scroll range
+        show(fontScaleTwo = true)
+
+        val list = compose.onNode(hasScrollAction()).fetchSemanticsNode()
+        val first = compose.onNode(hasClickAction() and hasText(text(SettingsPage.entries.first().title())))
+            .fetchSemanticsNode()
+        val last = compose.onNode(hasClickAction() and hasText(text(SettingsPage.entries.last().title())))
+            .fetchSemanticsNode()
+        // only the list's own padding, 8 dp, lies between a row and the list's edge
+        val padding = 8f * list.layoutInfo.density.density
+        assertThat(first.positionInRoot.y - list.positionInRoot.y).isCloseTo(padding, within(0.5f))
+        val range = list.config[SemanticsProperties.VerticalScrollAxisRange]
+        assertThat(range.maxValue()).isPositive()
+        // the list's content, from its top: what it shows plus how far it scrolls
+        val listEnd = list.size.height + range.maxValue()
+        assertThat(last.positionInRoot.y + last.size.height + padding - list.positionInRoot.y)
+            .isCloseTo(listEnd, within(0.5f))
+    }
+
+    /**
+     * Checks that every row's values, with Location's at their longest (coordinates of the most digits and one of the
+     * longest time zones), show whole at twice the font size: on every line they need, none cut short, within their
+     * row.
+     *
+     * @return the number of lines Location's values take
+     */
+    private fun assertEveryRowsValuesShowWhole(): Int {
+        val zone = ZoneId.of("America/Argentina/Buenos_Aires")
+        show(session(config = stored.withSystem(stored.system().withLocation(Coordinates(-27.1127, -109.3497), zone),
+            stored.typical())), fontScaleTwo = true)
+        return SettingsPage.entries.map { page ->
+            val row = row(page)
+            val summary = row.config[SemanticsProperties.Text].last().text
+            val words = compose.onNode(hasText(summary), useUnmergedTree = true).fetchSemanticsNode()
+            val layouts = mutableListOf<TextLayoutResult>()
+            words.config[SemanticsActions.GetTextLayoutResult].action!!.invoke(layouts)
+            val layout = layouts.single()
+            assertThat(layout.multiParagraph.didExceedMaxLines).`as`("%s's values need more lines", page).isFalse()
+            assertThat((0 until layout.lineCount).filter { layout.isLineEllipsized(it) }).`as`("%s's cut lines", page)
+                .isEmpty()
+            assertThat(row.boundsInRoot.bottom).`as`("the bottom of %s's row", page)
+                .isGreaterThanOrEqualTo(words.boundsInRoot.bottom)
+            layout.lineCount
+        }[SettingsPage.LOCATION.ordinal]
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h640dp")
+    fun aRowsValuesWrapWithoutBeingCutAtTwiceTheFontSizeOnANarrowPhone() {
+        assertThat(assertEveryRowsValuesShowWhole()).isGreaterThan(2)
+    }
+
+    @Test
+    @Config(qualifiers = "nl-w320dp-h640dp")
+    fun aRowsValuesWrapWithoutBeingCutAtTwiceTheFontSizeOnANarrowPhoneInDutch() {
+        assertThat(assertEveryRowsValuesShowWhole()).isGreaterThan(2)
+    }
+
+    @Test
+    @Config(qualifiers = "w640dp-h320dp-land")
+    fun aRowsValuesWrapWithoutBeingCutAtTwiceTheFontSizeOnAPhoneOnItsSide() {
+        assertThat(assertEveryRowsValuesShowWhole()).isGreaterThan(1)
     }
 
     @Test

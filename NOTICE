@@ -14,8 +14,13 @@ Additional terms under sections 7(b) and 7(c) of the GNU General Public License 
 
 Version 0.1.0 was released under the MIT licence; later versions are under the terms above.
 
-Every source file in this repository is covered by this notice; there is no per-file header.
+Every source file in this repository is covered by this notice; there is no per-file header,
+except in the copied file named below.
 
-One exception: Material's icons for Compose (androidx.compose.material:material-icons-core, by The Android Open Source
-Project), which the Android app's package holds and draws as they are, stay under the Apache License 2.0; its text is in
-android/legal/apache-2.0.txt.
+Exceptions: Material's icons for Compose (androidx.compose.material:material-icons-core, by The Android Open Source
+Project), which the Android app's package holds and draws as they are, and the six of Material's Filled icons whose path
+data is copied from androidx.compose.material:material-icons-extended-android 1.7.8 into
+android/app/src/main/kotlin/nl/enadeag/carchargeplanner/android/ui/settings/SettingsIcons.kt (the six files merged into
+one object there, each icon built on first use, icon names (`Filled.X`) and path data unchanged, reached as
+`SettingsIcons.X`, under the originals' header), stay under the Apache License 2.0; its
+text is in android/legal/apache-2.0.txt.

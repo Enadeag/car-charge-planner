@@ -13,7 +13,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
@@ -31,6 +35,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -38,7 +43,6 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
@@ -87,7 +91,10 @@ internal fun SettingsScreen(session: SettingsSession, page: SettingsPage?) {
     }
 }
 
-/** The pages, each a row with its name and its values now in one line, the whole row a button. */
+/**
+ * The pages, each a row with its icon, its name and its current values, which wrap rather than being cut, the whole row
+ * a button; a divider between two rows. The icon is decoration: the name says what the row is.
+ */
 @Composable
 private fun SettingsList(session: SettingsSession, snackbars: SnackbarHostState) {
     val config by session.config.collectAsStateWithLifecycle()
@@ -95,12 +102,14 @@ private fun SettingsList(session: SettingsSession, snackbars: SnackbarHostState)
     LaunchedEffect(Unit) { title.requestFocus() }
     BarPage(stringResource(R.string.settings_title), title, onUp = { session.back() }, padded = false,
         snackbars = snackbars) {
-        SettingsPage.entries.forEach { page ->
+        SettingsPage.entries.forEachIndexed { index, page ->
+            if (index > 0) {
+                HorizontalDivider()
+            }
             ListItem(
                 headlineContent = { Text(stringResource(page.title())) },
-                supportingContent = {
-                    Text(summary(page, config, session), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                },
+                supportingContent = { Text(summary(page, config, session)) },
+                leadingContent = { Icon(page.icon(), contentDescription = null) },
                 modifier = Modifier.heightIn(min = 56.dp).clickable(role = Role.Button) { session.open(page) },
             )
         }
@@ -257,6 +266,22 @@ internal fun SettingsPage.title(): Int = when (this) {
     SettingsPage.FORECAST -> R.string.settings_forecast
     SettingsPage.AWAY -> R.string.settings_away
     SettingsPage.PLANNING -> R.string.settings_planning
+}
+
+/**
+ * The page's icon at the start of its row in the list.
+ *
+ * @return Material's Filled icon for what the page holds, one of its own per page, so the rows are told apart at a
+ *     glance; decoration, as the page's name says what the row is
+ */
+internal fun SettingsPage.icon(): ImageVector = when (this) {
+    SettingsPage.SOLAR -> SettingsIcons.SolarPower
+    SettingsPage.LOCATION -> Icons.Filled.LocationOn
+    SettingsPage.CAR_AND_HOUSE -> SettingsIcons.ElectricCar
+    SettingsPage.CHARGER -> SettingsIcons.EvStation
+    SettingsPage.FORECAST -> SettingsIcons.WbCloudy
+    SettingsPage.AWAY -> SettingsIcons.EventBusy
+    SettingsPage.PLANNING -> SettingsIcons.Schedule
 }
 
 /** A row's progress while something is read, such as the API keys. */
