@@ -1,12 +1,16 @@
 package nl.enadeag.carchargeplanner.android.ui
 
 import androidx.activity.ComponentActivity
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
@@ -15,9 +19,11 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
@@ -32,6 +38,8 @@ import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.DayOfWeek
@@ -82,6 +90,10 @@ class SetUpScreenTest {
     private val handle = SavedStateHandle()
     private val amsterdam = ZoneId.of("Europe/Amsterdam")
     private val utrecht = Place("Utrecht", Coordinates(52.0907, 5.1214), amsterdam, "Utrecht", "Netherlands", "")
+    private val amersfoort = Place("Amersfoort", Coordinates(52.1561, 5.3878), amsterdam, "Utrecht", "Netherlands", "")
+    private val longName = Place("Sint-Michielsgestel", Coordinates(51.6417, 5.3528), amsterdam, "North Brabant",
+        "Netherlands", "")
+    private var colours = lightColorScheme()
 
     private fun session(on: SavedStateHandle = handle) =
         SetUpSession(on, NumberText(Locale.ENGLISH), { amsterdam }, { "en" }, access, saves, scope) { ended += it }
@@ -94,6 +106,7 @@ class SetUpScreenTest {
     private fun show(session: SetUpSession = session(), fontScaleTwo: Boolean = false): SetUpSession {
         compose.setContent {
             AppTheme {
+                colours = MaterialTheme.colorScheme
                 if (fontScaleTwo) AtFontScaleTwo { SetUpScreen(session) } else SetUpScreen(session)
             }
         }
@@ -107,6 +120,9 @@ class SetUpScreenTest {
     private fun click(id: Int) = compose.onNodeWithText(text(id)).performScrollTo().performClick()
 
     private fun field(label: Int) = compose.onNode(hasSetTextAction() and hasText(text(label), substring = true))
+
+    private fun chosenCard(place: String = "Utrecht, Netherlands") =
+        compose.onNode(hasText(text(R.string.place_chosen_label, place)))
 
     /** Searches for Utrecht and chooses it, on the location step. */
     private fun chooseUtrecht() {
@@ -488,6 +504,125 @@ class SetUpScreenTest {
 
         assertInLiveRegion(text(R.string.place_choose), LiveRegionMode.Polite)
         assertInLiveRegion("Utrecht, Netherlands", LiveRegionMode.Polite)
+    }
+
+    @Test
+    fun aChosenPlaceShowsOnACardReadAsOneWithItsCoordinatesAndTimeZoneAndInTheField() {
+        show()
+        click(R.string.action_next)
+        click(R.string.action_next)
+        compose.waitForIdle()
+
+        chooseUtrecht()
+
+        val card = chosenCard().assertIsDisplayed().fetchSemanticsNode()
+        assertThat(card.config[SemanticsProperties.Text].map { it.text }).containsExactly(
+            text(R.string.place_chosen_label, "Utrecht, Netherlands"),
+            text(R.string.place_chosen_coordinates, "52.0907", "5.1214"), text(R.string.time_zone_now, amsterdam.id))
+        assertThat(card.config.getOrNull(SemanticsProperties.ContentDescription)).isNull()
+        field(R.string.place_field).assert(hasText("Utrecht, Netherlands"))
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Error))
+        compose.onNodeWithText(text(R.string.coordinates_toggle)).assertIsOff()
+    }
+
+    @Test
+    fun editingTheFieldOrSearchingAgainKeepsTheCardUnderTheSearchButtonUntilAnotherPlaceIsChosen() {
+        val session = show()
+        session.next()
+        compose.waitForIdle()
+        chooseUtrecht()
+
+        field(R.string.place_field).performTextReplacement("Amersfoort")
+        click(R.string.place_search)
+        compose.waitForIdle()
+        access.searches.last().complete(PlaceResults.Found(listOf(amersfoort)))
+        compose.waitForIdle()
+
+        val card = chosenCard().assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val result = compose.onNodeWithText("Amersfoort, Utrecht, Netherlands").fetchSemanticsNode().boundsInRoot
+        val search = compose.onNodeWithText(text(R.string.place_search)).fetchSemanticsNode().boundsInRoot
+        assertThat(card.top).`as`("the card's top").isGreaterThanOrEqualTo(search.bottom)
+        assertThat(result.top).`as`("the first result's top").isGreaterThanOrEqualTo(card.bottom)
+        compose.onNodeWithText("Amersfoort, Utrecht, Netherlands").performScrollTo().performClick()
+        compose.waitForIdle()
+        chosenCard().assertDoesNotExist()
+        chosenCard("Amersfoort, Utrecht, Netherlands")
+            .assert(hasText(text(R.string.place_chosen_coordinates, "52.1561", "5.3878")))
+    }
+
+    @Test
+    fun aTypedCoordinateTakesTheCardAwayAndEmptiesTheField() {
+        val session = show()
+        session.next()
+        compose.waitForIdle()
+        chooseUtrecht()
+
+        click(R.string.coordinates_toggle)
+        field(R.string.latitude).performTextReplacement("52.1")
+
+        chosenCard().assertDoesNotExist()
+        field(R.string.place_field).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,
+            AnnotatedString("")))
+        compose.onNodeWithText(text(R.string.place_chosen_label, ""), substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun aChoiceMovesTheFocusToTheCardButNotAgainAfterTurningThePhone() {
+        val restoration = StateRestorationTester(compose)
+        val session = session()
+        restoration.setContent { AppTheme { SetUpScreen(session) } }
+        session.next()
+        compose.waitForIdle()
+
+        chooseUtrecht()
+
+        chosenCard().assertIsFocused()
+        field(R.string.place_field).performClick()
+        restoration.emulateSavedInstanceStateRestore()
+        chosenCard().assertIsDisplayed().assertIsNotFocused()
+    }
+
+    @Test
+    fun comingBackToTheStepMovesTheFocusToItsHeadingNotToTheCard() {
+        val session = show()
+        session.next()
+        compose.waitForIdle()
+        chooseUtrecht()
+
+        click(R.string.action_next)
+        compose.waitForIdle()
+        click(R.string.action_back)
+        compose.waitForIdle()
+
+        heading(2, R.string.setup_location_title).assertIsFocused()
+        chosenCard().assertIsNotFocused()
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h640dp")
+    fun thePlacesFoundAreRowsThatReadAsChoicesAndWrapAtTwiceTheFontSizeOnANarrowPhone() {
+        val session = show(fontScaleTwo = true)
+        session.next()
+        compose.waitForIdle()
+        field(R.string.place_field).performTextInput("Sint")
+        click(R.string.place_search)
+        compose.waitForIdle()
+
+        access.searches.last().complete(PlaceResults.Found(listOf(longName, utrecht)))
+        compose.waitForIdle()
+
+        val label = "Sint-Michielsgestel, North Brabant, Netherlands"
+        val row = compose.onNode(hasClickAction() and hasText(label)).performScrollTo().assertIsDisplayed()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button)).fetchSemanticsNode()
+        val words = compose.onNode(hasText(label), useUnmergedTree = true).fetchSemanticsNode()
+        val layout = mutableListOf<TextLayoutResult>()
+        words.config[SemanticsActions.GetTextLayoutResult].action!!.invoke(layout)
+        assertThat(layout.single().lineCount).isGreaterThan(1)
+        assertThat(layout.single().hasVisualOverflow).isFalse()
+        assertThat(layout.single().layoutInput.style.color).isEqualTo(colours.onSurface)
+        assertThat(row.size.height / row.layoutInfo.density.density).isGreaterThanOrEqualTo(48f)
+        assertThat(row.boundsInRoot.bottom).isGreaterThanOrEqualTo(words.boundsInRoot.bottom)
+        compose.assertEveryControlIsNamedAndLargeEnough()
     }
 
     @Test

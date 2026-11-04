@@ -34,7 +34,8 @@
   <string name="place_search">Zoeken</string>
   <string name="place_searching">Zoeken…</string>
   <string name="place_choose">Kies je plaats:</string>
-  <string name="place_chosen">Coördinaten en tijdzone van %1$s ingevuld.</string>
+  <string name="place_chosen_label">Gekozen: %1$s</string>
+  <string name="place_chosen_coordinates">Coördinaten: %1$s; %2$s</string>
   <string name="place_none">Geen plaatsen gevonden voor “%1$s”.</string>
   <string name="place_no_search">Je voorspellingsdienst kan geen plaatsen zoeken: vul de coördinaten in.</string>
   <string name="place_too_short">Typ minstens twee letters of cijfers.</string>

@@ -46,8 +46,12 @@
   <string name="place_search">Search</string>
   <string name="place_searching">Searching…</string>
   <string name="place_choose">Choose your place:</string>
-  <!-- %1$s the place chosen, such as "Utrecht, Netherlands" -->
-  <string name="place_chosen">Coordinates and time zone of %1$s filled in.</string>
+  <!-- the first line of the card shown after a place is chosen from the results; %1$s the place, such as
+       "Utrecht, Netherlands" -->
+  <string name="place_chosen_label">Chosen: %1$s</string>
+  <!-- the card's line with what the choice filled in; %1$s the latitude, %2$s the longitude, written as the fields
+       write them, such as 52.0907 and 5.1214; a language with a decimal comma separates them with a semicolon -->
+  <string name="place_chosen_coordinates">Coordinates: %1$s, %2$s</string>
   <!-- %1$s what the owner searched for -->
   <string name="place_none">No places found for “%1$s”.</string>
   <string name="place_no_search">Your forecast provider has no place search: enter the coordinates.</string>

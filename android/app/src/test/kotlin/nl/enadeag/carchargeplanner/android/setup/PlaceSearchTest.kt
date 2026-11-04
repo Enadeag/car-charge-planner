@@ -150,7 +150,7 @@ class PlaceSearchTest {
         assertThat(search.state.value).isEqualTo(PlaceSearch.State.Idle)
         val again = PlaceSearch(handle.afterTheSystemEndedTheApp(), access, backgroundScope, ProviderId("open-meteo"),
             language = { "nl" })
-        assertThat(again.text()).isEqualTo("Utrecht")
+        assertThat(again.text()).isEqualTo("Utrecht, Netherlands")
         assertThat(again.chosen.value).isEqualTo("Utrecht, Netherlands")
         assertThat(again.state.value).isEqualTo(PlaceSearch.State.Idle)
     }
@@ -170,15 +170,42 @@ class PlaceSearchTest {
     }
 
     @Test
-    fun typedCoordinatesForgetThePlaceChosen() = runTest {
+    fun typedCoordinatesForgetThePlaceChosenAndEmptyTheFieldThatNamedIt() = runTest {
         val search = search()
         search.choose(PlaceSearch.Result(place("Utrecht"), "Utrecht, Netherlands"))
 
         search.forgetChosen()
 
         assertThat(search.chosen.value).isNull()
-        assertThat(PlaceSearch(handle.afterTheSystemEndedTheApp(), access, backgroundScope, ProviderId("open-meteo"),
-            language = { "nl" }).chosen.value).isNull()
+        assertThat(search.text()).isEmpty()
+        val again = PlaceSearch(handle.afterTheSystemEndedTheApp(), access, backgroundScope, ProviderId("open-meteo"),
+            language = { "nl" })
+        assertThat(again.chosen.value).isNull()
+        assertThat(again.text()).isEmpty()
+    }
+
+    @Test
+    fun typedCoordinatesWithNoPlaceChosenLeaveTheTypedTextAlone() = runTest {
+        val search = search()
+        search.edit("Utrecht")
+
+        search.forgetChosen()
+
+        assertThat(search.text()).isEqualTo("Utrecht")
+    }
+
+    @Test
+    fun eachChoiceCountsAndAnEditKeepsThePlaceChosen() = runTest {
+        val search = search()
+        assertThat(search.choices.value).isZero()
+
+        search.choose(PlaceSearch.Result(place("Utrecht"), "Utrecht, Netherlands"))
+        search.edit("Amersfoort")
+        assertThat(search.chosen.value).isEqualTo("Utrecht, Netherlands")
+        search.choose(PlaceSearch.Result(place("Amersfoort"), "Amersfoort, Netherlands"))
+
+        assertThat(search.choices.value).isEqualTo(2)
+        assertThat(search.chosen.value).isEqualTo("Amersfoort, Netherlands")
     }
 
     @Test

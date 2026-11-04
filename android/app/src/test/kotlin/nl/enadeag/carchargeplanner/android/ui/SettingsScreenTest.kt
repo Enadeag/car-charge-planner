@@ -71,6 +71,8 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.ForecastSelection
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
+import nl.enadeag.carchargeplanner.engine.forecast.Place
+import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -531,6 +533,27 @@ class SettingsScreenTest {
         compose.onNodeWithText(text(R.string.settings_no_place_search, "Forecast.Solar")).assertExists()
         field(text(R.string.place_field)).assertDoesNotExist()
         field(text(R.string.latitude)).assertExists()
+    }
+
+    @Test
+    fun aChosenPlaceShowsOnACardWithItsTimeZoneButNotTheCoordinatesTheFieldsShow() {
+        show()
+        open(SettingsPage.LOCATION)
+        field(text(R.string.place_field)).performTextInput("Amersfoort")
+        click(R.string.place_search)
+        compose.waitForIdle()
+        access.searches.last().complete(PlaceResults.Found(listOf(Place("Amersfoort", Coordinates(52.1561, 5.3878),
+            amsterdam, "Utrecht", "Netherlands", ""))))
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Amersfoort, Utrecht, Netherlands").performScrollTo().performClick()
+        compose.waitForIdle()
+
+        val chosen = text(R.string.place_chosen_label, "Amersfoort, Utrecht, Netherlands")
+        val card = compose.onNode(hasText(chosen)).assertIsDisplayed().assertIsFocused().fetchSemanticsNode()
+        assertThat(card.config[SemanticsProperties.Text].map { it.text })
+            .containsExactly(chosen, text(R.string.time_zone_now, amsterdam.id))
+        field(text(R.string.latitude)).assert(hasText("52.1561"))
     }
 
     @Test

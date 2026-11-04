@@ -83,12 +83,19 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
     private val latest = LatestAnswer<State>(scope)
     private val stateNow = MutableStateFlow<State>(State.Idle)
     private val chosenNow = MutableStateFlow(handle.get<String>(chosenKey))
+    private val choicesNow = MutableStateFlow(0)
 
     /** What the search shows now. */
     val state: StateFlow<State> = stateNow.asStateFlow()
 
     /** The label of the place chosen from the results; null when none was, or coordinates were typed since. */
     val chosen: StateFlow<String?> = chosenNow.asStateFlow()
+
+    /**
+     * How many times a place was chosen since this search was made, so the screen can tell a new choice, whose
+     * confirmation then takes the focus, from one it showed before, as before turning the phone.
+     */
+    val choices: StateFlow<Int> = choicesNow.asStateFlow()
 
     /**
      * What the owner typed.
@@ -120,19 +127,25 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
     }
 
     /**
-     * Keeps the place the owner chose, whose label the step then shows; the results go.
+     * Keeps the place the owner chose, whose label the step then shows, also in the field; the results go.
      *
      * @param result the place chosen, from [State.Found]
      */
     fun choose(result: Result) {
         cancel()
+        edit(result.label)
         keepChosen(result.label)
+        choicesNow.value++
     }
 
-    /** Forgets the place chosen, as the owner typed coordinates of their own. */
+    /**
+     * Forgets the place chosen, as the owner typed coordinates of their own; the field, which showed its label, is
+     * emptied too, so it never names a place the coordinates are not of.
+     */
     fun forgetChosen() {
         if (chosenNow.value != null) {
             keepChosen(null)
+            handle.remove<String>(textKey)
         }
     }
 
