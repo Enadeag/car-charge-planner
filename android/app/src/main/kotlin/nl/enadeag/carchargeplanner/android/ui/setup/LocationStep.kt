@@ -111,7 +111,7 @@ internal fun LocationFields(location: LocationForm, places: PlaceSearch, provide
     val card = remember { FocusRequester() }
     LaunchedEffect(chosenCount) {
         if (chosenCount != firstSeen) {
-            // the card is composed a frame after the choice, which this waits for
+            // the card is composed by the next frame at the latest, which this waits for to be sure
             withFrameNanos { }
             card.requestFocus()
         }
