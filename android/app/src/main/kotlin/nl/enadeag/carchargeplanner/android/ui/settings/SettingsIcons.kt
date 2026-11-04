@@ -1,8 +1,23 @@
 /*
- * Six of Material's Filled icons, which material-icons-core lacks, copied as they are from
+ * Copyright 2025 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Six of Material's Filled icons, which material-icons-core lacks, from
  * androidx.compose.material:material-icons-extended-android 1.7.8 (the Compose BOM's), whose path data comes from
- * google/material-design-icons. By The Android Open Source Project, under the Apache License 2.0; its text is in
- * android/legal/apache-2.0.txt. None of them is mirrored right to left in Material.
+ * google/material-design-icons; the licence's text is also in android/legal/apache-2.0.txt. Changed: the six files
+ * are merged into one object in this package, each icon built on first use; names and path data copied unchanged.
+ * None of them is mirrored right to left in Material.
  */
 package nl.enadeag.carchargeplanner.android.ui.settings
 
@@ -10,7 +25,10 @@ import androidx.compose.material.icons.materialIcon
 import androidx.compose.material.icons.materialPath
 import androidx.compose.ui.graphics.vector.ImageVector
 
-/** Material's Filled icons that Settings' list shows and `material-icons-core` lacks, each built when first drawn. */
+/**
+ * Material's Filled icons that Settings' list shows and `material-icons-core` lacks, each built when first drawn; copied
+ * because `material-icons-extended-android` holds thousands of icons, too large a dependency for six.
+ */
 internal object SettingsIcons {
 
     /** Material's `Filled.SolarPower`: a panel under the sun, for the panel arrays. */

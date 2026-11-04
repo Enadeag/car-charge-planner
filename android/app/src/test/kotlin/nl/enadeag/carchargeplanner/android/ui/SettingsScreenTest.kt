@@ -19,6 +19,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.PathNode
+import androidx.compose.ui.graphics.vector.VectorPath
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
@@ -52,6 +55,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.ZoneId
@@ -72,6 +76,7 @@ import nl.enadeag.carchargeplanner.android.settings.SettingsSession
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
+import nl.enadeag.carchargeplanner.android.ui.settings.SettingsIcons
 import nl.enadeag.carchargeplanner.android.ui.settings.SettingsScreen
 import nl.enadeag.carchargeplanner.android.ui.settings.icon
 import nl.enadeag.carchargeplanner.android.ui.settings.title
@@ -856,90 +861,161 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun eachRowShowsAnIconOfItsOwnBeforeItsNameWhichIsNotRead() {
+    fun theCopiedIconsDrawMaterialsShapesUnchanged() {
+        val copied = listOf(SettingsIcons.SolarPower, SettingsIcons.ElectricCar, SettingsIcons.EvStation,
+            SettingsIcons.WbCloudy, SettingsIcons.EventBusy, SettingsIcons.Schedule)
+
+        // measured on Icons.Filled's own icons of material-icons-extended-android 1.7.8 with shape(): the number of
+        // paths, of their nodes, and the hash of the nodes' text
+        assertThat(copied.associate { it.name to shape(it) }).isEqualTo(mapOf(
+            "Filled.SolarPower" to listOf(10, 50, -877365170),
+            "Filled.ElectricCar" to listOf(2, 43, 995439527),
+            "Filled.EvStation" to listOf(1, 42, -585541679),
+            "Filled.WbCloudy" to listOf(1, 9, 1954581329),
+            "Filled.EventBusy" to listOf(1, 38, -955125091),
+            "Filled.Schedule" to listOf(2, 19, -750104808),
+        ))
+        assertThat(copied).allSatisfy {
+            assertThat(listOf(it.viewportWidth, it.viewportHeight)).containsExactly(24f, 24f)
+            assertThat(listOf(it.defaultWidth, it.defaultHeight)).containsExactly(24.dp, 24.dp)
+        }
+    }
+
+    /** An icon's paths, their nodes and a hash of the nodes; `Close` is an object, whose own text differs per run. */
+    private fun shape(icon: ImageVector): List<Int> {
+        val paths = (0 until icon.root.size).map { (icon.root[it] as VectorPath).pathData }
+        val nodes = paths.joinToString(";") { path ->
+            path.joinToString(" ") { if (it == PathNode.Close) "Close" else it.toString() }
+        }
+        return listOf(paths.size, paths.sumOf { it.size }, nodes.hashCode())
+    }
+
+    @Test
+    fun eachRowIsOneButtonThatReadsItsNameAndValuesButNothingOfItsIcon() {
         show()
 
         SettingsPage.entries.forEach { page ->
-            val row = compose.onNode(hasClickAction() and hasText(text(page.title()))).performScrollTo()
-                .fetchSemanticsNode()
-            // one button that reads the name and the values, and nothing of the icon
+            val row = row(page)
             assertThat(row.config.getOrNull(SemanticsProperties.Role)).isEqualTo(Role.Button)
             assertThat(row.config.getOrNull(SemanticsProperties.ContentDescription))
                 .`as`("what %s's icon reads", page).isNull()
-            val texts = row.config[SemanticsProperties.Text].map { it.text }
-            assertThat(texts).hasSize(2).first().isEqualTo(text(page.title()))
-            assertThat(row.size.height / row.layoutInfo.density.density).`as`("the height of %s's row", page)
-                .isGreaterThanOrEqualTo(56f)
-            val name = compose.onNode(hasText(text(page.title())), useUnmergedTree = true).fetchSemanticsNode()
-            // the start of the row, up to its name
-            val start = picture(Rect(row.boundsInRoot.left, row.boundsInRoot.top, name.boundsInRoot.left,
-                row.boundsInRoot.bottom))
-            val pixels = IntArray(start.width * start.height)
-            start.getPixels(pixels, 0, start.width, 0, 0, start.width, start.height)
-            val ground = start.getPixel(0, 0)
-            assertThat(pixels.count { it != ground }).`as`("what is drawn before %s's name", page).isPositive()
-            assertThat(pixels.count { Color(it) == onSurfaceVariant }).`as`("%s's icon in Material's colour", page)
-                .isPositive()
+            assertThat(row.config[SemanticsProperties.Text].map { it.text }).hasSize(2).first()
+                .isEqualTo(text(page.title()))
         }
     }
 
     @Test
-    fun aDividerSetsTheRowsApartButNeitherTheFirstFromTheBarNorTheLastFromTheEnd() {
+    fun eachRowIsAtLeast56DpHigh() {
+        show()
+
+        SettingsPage.entries.forEach { page ->
+            val row = row(page)
+            assertThat(row.size.height / row.layoutInfo.density.density).`as`("the height of %s's row", page)
+                .isGreaterThanOrEqualTo(56f)
+        }
+    }
+
+    @Test
+    fun eachRowDrawsAnIconInTheThemesColourBeforeItsName() {
+        show()
+
+        SettingsPage.entries.forEach { page ->
+            // exact colour: a filled shape has opaque pixels inside, only its edges are blended with the ground
+            assertThat(drawnBefore(page).count { Color(it) == onSurfaceVariant })
+                .`as`("%s's icon in onSurfaceVariant", page).isPositive()
+        }
+    }
+
+    /** The row of [page] in the list, scrolled to. */
+    private fun row(page: SettingsPage) =
+        compose.onNode(hasClickAction() and hasText(text(page.title()))).performScrollTo().fetchSemanticsNode()
+
+    /** The pixels at the start of [page]'s row, up to its name. */
+    private fun drawnBefore(page: SettingsPage): IntArray {
+        val row = row(page)
+        val name = compose.onNode(hasText(text(page.title())), useUnmergedTree = true).fetchSemanticsNode()
+        val start = picture(Rect(row.boundsInRoot.left, row.boundsInRoot.top, name.boundsInRoot.left,
+            row.boundsInRoot.bottom))
+        val pixels = IntArray(start.width * start.height)
+        start.getPixels(pixels, 0, start.width, 0, 0, start.width, start.height)
+        return pixels
+    }
+
+    @Test
+    fun theGapBetweenTwoRowsIsOneDividerThick() {
+        show()
+
+        val rows = SettingsPage.entries.map { row(it) }
+        val divider = DividerDefaults.Thickness.value * rows.first().layoutInfo.density.density
+        val gaps = rows.zipWithNext { above, below ->
+            below.positionInRoot.y - (above.positionInRoot.y + above.size.height)
+        }
+        assertThat(gaps).allSatisfy { assertThat(it).isCloseTo(divider, within(0.5f)) }
+    }
+
+    @Test
+    fun noDividerAboveTheFirstRowOrUnderTheLast() {
         // at twice the font size the list is longer than the screen, so where it ends shows in its scroll range
         show(fontScaleTwo = true)
 
         val list = compose.onNode(hasScrollAction()).fetchSemanticsNode()
-        val rows = SettingsPage.entries.map {
-            compose.onNode(hasClickAction() and hasText(text(it.title()))).fetchSemanticsNode()
-        }
-        val density = list.layoutInfo.density.density
-        val divider = DividerDefaults.Thickness.value * density
-        val gaps = rows.zipWithNext { above, below ->
-            below.positionInRoot.y - (above.positionInRoot.y + above.size.height)
-        }
-        assertThat(gaps).`as`("the gaps between the rows")
-            .allSatisfy { assertThat(it).isCloseTo(divider, within(0.5f)) }
-        // the list's own padding of 8 dp above the first row and under the last, with no divider in it
-        val padding = 8 * density
-        assertThat(rows.first().positionInRoot.y - list.positionInRoot.y).`as`("above the first row")
-            .isCloseTo(padding, within(0.5f))
+        val first = compose.onNode(hasClickAction() and hasText(text(SettingsPage.entries.first().title())))
+            .fetchSemanticsNode()
+        val last = compose.onNode(hasClickAction() and hasText(text(SettingsPage.entries.last().title())))
+            .fetchSemanticsNode()
+        // only the list's own padding of 8 dp lies between a row and the list's edge
+        val padding = 8 * list.layoutInfo.density.density
+        assertThat(first.positionInRoot.y - list.positionInRoot.y).isCloseTo(padding, within(0.5f))
         val range = list.config[SemanticsProperties.VerticalScrollAxisRange]
         assertThat(range.maxValue()).isPositive()
-        val end = rows.last().positionInRoot.y + rows.last().size.height + padding - list.positionInRoot.y
-        assertThat(end).`as`("where the list ends").isCloseTo(list.size.height + range.maxValue(), within(0.5f))
+        // the list's content, from its top: what it shows plus how far it scrolls
+        val listEnd = list.size.height + range.maxValue()
+        assertThat(last.positionInRoot.y + last.size.height + padding - list.positionInRoot.y)
+            .isCloseTo(listEnd, within(0.5f))
     }
 
     /**
-     * Checks that the Location row's values, the longest, with one of the longest time zones, wrap onto three lines and
-     * more at twice the font size on a narrow phone, whole.
+     * Checks that every row's values, with Location's at their longest (coordinates of the most digits and one of the
+     * longest time zones), show whole at twice the font size: on every line they need, none cut short, within their row.
+     *
+     * @return the number of lines Location's values take
      */
-    private fun assertTheLocationSummaryWraps() {
+    private fun assertEveryRowsValuesShowWhole(): Int {
         val zone = ZoneId.of("America/Argentina/Buenos_Aires")
-        show(session(config = stored.withSystem(stored.system().withLocation(Coordinates(52.0907, 5.1214), zone),
+        show(session(config = stored.withSystem(stored.system().withLocation(Coordinates(-27.1127, -109.3497), zone),
             stored.typical())), fontScaleTwo = true)
-        val row = compose.onNode(hasClickAction() and hasText(text(SettingsPage.LOCATION.title()))).performScrollTo()
-            .fetchSemanticsNode()
-        val summary = row.config[SemanticsProperties.Text][1].text
-        val words = compose.onNode(hasText(summary), useUnmergedTree = true).fetchSemanticsNode()
-        val layouts = mutableListOf<TextLayoutResult>()
-        words.config[SemanticsActions.GetTextLayoutResult].action!!.invoke(layouts)
-        val layout = layouts.single()
-        assertThat(layout.lineCount).isGreaterThan(2)
-        assertThat((0 until layout.lineCount).filter { layout.isLineEllipsized(it) }).isEmpty()
-        assertThat(layout.hasVisualOverflow).isFalse()
-        assertThat(row.boundsInRoot.bottom).isGreaterThanOrEqualTo(words.boundsInRoot.bottom)
+        return SettingsPage.entries.map { page ->
+            val row = row(page)
+            val summary = row.config[SemanticsProperties.Text].last().text
+            val words = compose.onNode(hasText(summary), useUnmergedTree = true).fetchSemanticsNode()
+            val layouts = mutableListOf<TextLayoutResult>()
+            words.config[SemanticsActions.GetTextLayoutResult].action!!.invoke(layouts)
+            val layout = layouts.single()
+            assertThat(layout.multiParagraph.didExceedMaxLines).`as`("%s's values need more lines", page).isFalse()
+            assertThat((0 until layout.lineCount).filter { layout.isLineEllipsized(it) }).`as`("%s's cut lines", page)
+                .isEmpty()
+            assertThat(row.boundsInRoot.bottom).`as`("the bottom of %s's row", page)
+                .isGreaterThanOrEqualTo(words.boundsInRoot.bottom)
+            layout.lineCount
+        }[SettingsPage.LOCATION.ordinal]
     }
 
     @Test
     @Config(qualifiers = "w320dp-h640dp")
     fun aRowsValuesWrapWithoutBeingCutAtTwiceTheFontSizeOnANarrowPhone() {
-        assertTheLocationSummaryWraps()
+        assertThat(assertEveryRowsValuesShowWhole()).isGreaterThan(2)
     }
 
     @Test
     @Config(qualifiers = "nl-w320dp-h640dp")
     fun aRowsValuesWrapWithoutBeingCutAtTwiceTheFontSizeOnANarrowPhoneInDutch() {
-        assertTheLocationSummaryWraps()
+        assertThat(assertEveryRowsValuesShowWhole()).isGreaterThan(2)
+    }
+
+    @Test
+    @Config(qualifiers = "w640dp-h320dp-land")
+    fun aRowsValuesWrapWithoutBeingCutAtTwiceTheFontSizeOnAPhoneOnItsSide() {
+        assertThat(assertEveryRowsValuesShowWhole()).isGreaterThan(1)
     }
 
     /** The screen as Android draws it; Compose's captureToImage waits for a frame that Robolectric never draws. */

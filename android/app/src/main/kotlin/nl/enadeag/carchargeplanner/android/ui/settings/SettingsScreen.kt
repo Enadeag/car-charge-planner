@@ -92,8 +92,8 @@ internal fun SettingsScreen(session: SettingsSession, page: SettingsPage?) {
 }
 
 /**
- * The pages, each a row with its icon, its name and its values now, which wrap rather than being cut, the whole row a
- * button; a divider between two rows. The icon is decoration: the name says what the row is.
+ * The pages, each a row with its icon, its name and its current values, which wrap rather than being cut, the whole row
+ * a button; a divider between two rows. The icon is decoration: the name says what the row is.
  */
 @Composable
 private fun SettingsList(session: SettingsSession, snackbars: SnackbarHostState) {
@@ -269,9 +269,10 @@ internal fun SettingsPage.title(): Int = when (this) {
 }
 
 /**
- * The page's icon at the start of its row in the list: Material's Filled icon for what the page holds.
+ * The page's icon at the start of its row in the list.
  *
- * @return the icon
+ * @return Material's Filled icon for what the page holds, one of its own per page, so the rows are told apart at a
+ *     glance; decoration, as the page's name says what the row is
  */
 internal fun SettingsPage.icon(): ImageVector = when (this) {
     SettingsPage.SOLAR -> SettingsIcons.SolarPower
