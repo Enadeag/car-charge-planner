@@ -149,6 +149,8 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Step 3 of 7 | Stap 3 van 7 | read with each step's heading |
 | I don't know: use typical values | Weet ik niet: gangbare waarden gebruiken | fills in typical values |
 | Enter coordinates instead | Liever de coördinaten invullen | opens the latitude and longitude |
+| Chosen: Utrecht, Netherlands | Gekozen: Utrecht, Nederland | the first line of the card shown after a place is chosen from the search's results |
+| Coordinates: 52.0907, 5.1214 | Coördinaten: 52,0907; 5,1214 | the card's line with what the choice filled in, the numbers as the fields write them; Dutch separates them with a semicolon, as it writes a decimal comma; the card's last line is "Time zone: Europe/Amsterdam" ("Tijdzone: Europe/Amsterdam"), as under Advanced |
 | Advanced | Geavanceerd | opens the time zone |
 | Check again | Opnieuw controleren | asks the forecast provider once more |
 | Try again | Opnieuw proberen | repeats what failed |

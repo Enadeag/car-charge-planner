@@ -1,5 +1,7 @@
 package nl.enadeag.carchargeplanner.android.ui.setup
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,17 +10,29 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -39,7 +53,6 @@ import nl.enadeag.carchargeplanner.android.ui.components.rememberFieldFocus
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults
 import nl.enadeag.carchargeplanner.android.ui.components.AppButton
 import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
-import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 
 /**
  * Where the home is: the place search, on its button or the keyboard's search key, and its results; the coordinates
@@ -69,8 +82,8 @@ internal enum class Coordinates {
 }
 
 /**
- * The place search with its results, or a line that the provider has none; the coordinates; and the time zone under
- * "Advanced".
+ * The place search with its results, or a line that the provider has none; once a place is chosen, a card with what
+ * it filled in, which takes the focus; the coordinates; and the time zone under "Advanced".
  *
  * @param location the location's form
  * @param places the place search
@@ -91,6 +104,18 @@ internal fun LocationFields(location: LocationForm, places: PlaceSearch, provide
     val typedCoordinates = LocationForm.Field.LATITUDE in shown || LocationForm.Field.LONGITUDE in shown
     var open by rememberSaveable { mutableStateOf(coordinates == Coordinates.OPEN) }
     var advanced by rememberSaveable { mutableStateOf(false) }
+    val chosenCount by places.chosenCount.collectAsStateWithLifecycle()
+    // a choice made before the fields were shown, as before turning the phone or leaving the step, does not take
+    // the focus again; each one after it does, also of the same place
+    val firstSeen = remember(places) { places.chosenCount.value }
+    val card = remember { FocusRequester() }
+    LaunchedEffect(chosenCount) {
+        if (chosenCount != firstSeen) {
+            // the card is composed by the next frame at the latest, which this waits for to be sure
+            withFrameNanos { }
+            card.requestFocus()
+        }
+    }
 
     if (hasSearch) {
         EntryField(stringResource(R.string.place_field), stringResource(R.string.place_hint, provider),
@@ -101,8 +126,8 @@ internal fun LocationFields(location: LocationForm, places: PlaceSearch, provide
         AppButton(onClick = { places.search() }) {
             Text(stringResource(R.string.place_search))
         }
+        chosen?.let { label -> ChosenPlace(label, location, edits, coordinates != Coordinates.SHOWN, card) }
         SearchResults(places) { result -> edits.make { onChoose(result) } }
-        chosen?.let { Text(stringResource(R.string.place_chosen, it)) }
     } else {
         Text(stringResource(R.string.settings_no_place_search, provider))
     }
@@ -145,9 +170,13 @@ private fun SearchResults(places: PlaceSearch, onChoose: (PlaceSearch.Result) ->
                 Text(stringResource(R.string.place_none, now.text))
             } else {
                 Text(stringResource(R.string.place_choose))
-                now.results.forEach { result ->
-                    AppTextButton(onClick = { onChoose(result) }, modifier = Modifier.fillMaxWidth()) {
-                        Text(result.label, modifier = Modifier.fillMaxWidth())
+                Column {
+                    now.results.forEachIndexed { index, result ->
+                        if (index > 0) {
+                            HorizontalDivider()
+                        }
+                        ListItem(headlineContent = { Text(result.label) },
+                            modifier = Modifier.fillMaxWidth().clickable(role = Role.Button) { onChoose(result) })
                     }
                 }
             }
@@ -158,6 +187,37 @@ private fun SearchResults(places: PlaceSearch, onChoose: (PlaceSearch.Result) ->
                 PlaceResults.Problem.RATE_LIMITED -> R.string.place_busy
                 PlaceResults.Problem.BAD_RESPONSE -> R.string.place_bad_response
             }))
+        }
+    }
+}
+
+/**
+ * What a choice from the search filled in, on a card under the Search button: the place, its coordinates as the
+ * fields hold them, and its time zone. Read as one part by a screen reader; takes the focus after a choice (see
+ * [LocationFields]).
+ *
+ * @param label the place chosen, as the results showed it
+ * @param location the location's form, whose coordinates and time zone the card shows
+ * @param edits counts each edit, so the card shows it
+ * @param withCoordinates whether the card shows the coordinates; not where the fields are always shown
+ * @param focus moves the focus to the card
+ */
+@Composable
+private fun ChosenPlace(label: String, location: LocationForm, edits: Edits, withCoordinates: Boolean,
+    focus: FocusRequester) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) { }.focusRequester(focus).focusable()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(16.dp)) {
+            Icon(Icons.Filled.CheckCircle, contentDescription = null)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResource(R.string.place_chosen_label, label), style = MaterialTheme.typography.titleMedium)
+                if (withCoordinates) {
+                    Text(stringResource(R.string.place_chosen_coordinates,
+                        edits.shown { location.text(LocationForm.Field.LATITUDE) },
+                        edits.shown { location.text(LocationForm.Field.LONGITUDE) }))
+                }
+                Text(stringResource(R.string.time_zone_now, edits.shown { location.timeZone()?.id.orEmpty() }))
+            }
         }
     }
 }
