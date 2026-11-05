@@ -26,6 +26,10 @@ fun languageFolders(res: File): List<String> = res.listFiles().orEmpty().map { i
     .filter { it.startsWith("values-") && it.removePrefix("values-") in Locale.getISOLanguages() }
     .map { it.removePrefix("values-") }.sorted()
 
+// The short commit of a CI build, else "dev"; read as a provider, so the configuration cache sees the variable.
+val debugBuildLabel: Provider<String> = providers.environmentVariable("GITHUB_SHA")
+    .map { it.take(7) }.orElse("dev")
+
 android {
     namespace = "nl.enadeag.carchargeplanner.android"
     compileSdk = libs.versions.android.compile.sdk.get().toInt()
@@ -39,14 +43,29 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    // Only debug signing, AGP's own, until the release work brings the app's key; no git details in the package.
+    // The debug build is signed with the project's public debug key (not secret: anyone can sign with it, so it proves
+    // nothing about the owner); release signing is #271/#272's and stays unset, which checkReleaseNotDebugSigned holds
+    // it to. No git details in the package.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         all {
             vcsInfo.include = false
         }
-        // en-XA (longer, accented texts) and ar-XB (right to left) to try the screens with; never in a release
+        // en-XA (longer, accented texts) and ar-XB (right to left) to try the screens with; never in a release.
+        // An id of its own, so the debug build sits beside a release build on one phone, and a version name that shows
+        // the commit on CI (GITHUB_SHA) and "dev" elsewhere.
         debug {
             isPseudoLocalesEnabled = true
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug+" + debugBuildLabel.get()
         }
     }
 
@@ -147,7 +166,48 @@ val licenceAssets = tasks.register<LicenceAssets>("licenceAssets") {
     legal = file("../legal")
 }
 
+/** Fails when the release build type is signed with the debug key, by its signing config or by its keystore's bytes. */
+abstract class ReleaseSigningCheck : DefaultTask() {
+
+    @get:Input
+    @get:Optional
+    abstract val releaseSigningName: Property<String>
+
+    @get:Input
+    @get:Optional
+    abstract val releaseStoreFile: Property<String>
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val debugKeystore: RegularFileProperty
+
+    @TaskAction
+    fun check() {
+        val name = releaseSigningName.orNull
+        val store = releaseStoreFile.orNull?.let(::File)
+        val debug = debugKeystore.get().asFile
+        val sameKey = name == "debug" ||
+            (store != null && store.exists() && store.readBytes().contentEquals(debug.readBytes()))
+        if (sameKey) {
+            throw GradleException("The release build type is signed with the debug key (signing config " +
+                "'$name', keystore '${store ?: "none"}'); release signing is #271/#272's own key")
+        }
+    }
+}
+
+val checkReleaseNotDebugSigned = tasks.register<ReleaseSigningCheck>("checkReleaseNotDebugSigned") {
+    debugKeystore = layout.projectDirectory.file("debug.keystore")
+}
+tasks.named("check") { dependsOn(checkReleaseNotDebugSigned) }
+
 androidComponents {
+    finalizeDsl { dsl ->
+        val signing = dsl.buildTypes.getByName("release").signingConfig
+        checkReleaseNotDebugSigned.configure {
+            releaseSigningName = signing?.name
+            releaseStoreFile = signing?.storeFile?.absolutePath
+        }
+    }
     onVariants { variant ->
         variant.sources.assets?.addGeneratedSourceDirectory(licenceAssets, LicenceAssets::getAssets)
         variant.androidTest?.sources?.assets?.addGeneratedSourceDirectory(exampleConfigAsset, ExampleConfigAsset::assets)
