@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.android
 
 import android.app.Application
+import android.app.NotificationManager
 import android.os.Looper
 import android.os.StrictMode
 import android.os.strictmode.DiskReadViolation
@@ -146,5 +147,15 @@ class AppOnRobolectricTest {
         assertThat(Thread.getAllStackTraces().keys.map { it.name }).doesNotContain("planner")
         assertThat(File(files, "announced.json")).doesNotExist()
         assertThat(File(files, "trip-notices.json")).doesNotExist()
+    }
+
+    @Test
+    fun theAppMakesItsNotificationChannelsAsItStartsBeforeAnyNotification() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val manager = app.getSystemService(NotificationManager::class.java)
+
+        assertThat(manager.notificationChannels.map { it.id })
+            .containsExactlyInAnyOrder("charge_windows", "battery_trip_checks", "problems")
+        assertThat(shadowOf(manager).allNotifications).isEmpty()
     }
 }

@@ -2,22 +2,29 @@ package nl.enadeag.carchargeplanner.android.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.liveRegion
@@ -31,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.form.FieldProblem
 import nl.enadeag.carchargeplanner.android.form.ForecastForm
+import nl.enadeag.carchargeplanner.android.prefs.WifiOnly
 import nl.enadeag.carchargeplanner.android.settings.SettingsSession
 import nl.enadeag.carchargeplanner.android.setup.SetUpCheck
 import nl.enadeag.carchargeplanner.android.ui.components.ChoiceRow
@@ -52,14 +60,16 @@ import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 /**
  * The forecast providers: the primary, the fallback or none, each with Check connection on the values as typed, and a
  * section per provider with its settings. An API key is masked, with Show and Hide, filled with the stored key; when
- * the stored keys could not be read, a note says so and a key left empty stays as stored.
+ * the stored keys could not be read, a note says so and a key left empty stays as stored. Last, the "Wi-Fi only"
+ * switch of the hourly update while the app is closed, which applies at once, outside the page's Save.
  *
  * @param session the forecast's form, the API keys as read, and the checks
  * @param edits counts each edit, so the fields show it
  * @param problems the page's fields in order, for the focus after Save
+ * @param wifiOnly the switch; null shows none
  */
 @Composable
-internal fun ForecastPage(session: SettingsSession, edits: Edits, problems: ProblemFocus) {
+internal fun ForecastPage(session: SettingsSession, edits: Edits, problems: ProblemFocus, wifiOnly: WifiOnly?) {
     val forecast = session.forms.forecast
     val shown by forecast.problems.collectAsStateWithLifecycle()
     val keys by session.keys.collectAsStateWithLifecycle()
@@ -93,6 +103,27 @@ internal fun ForecastPage(session: SettingsSession, edits: Edits, problems: Prob
                 shown[ForecastForm.Target.Setting(info.id(), setting.name())],
                 last = index == providers.lastIndex && place == info.settings().lastIndex)
         }
+    }
+    wifiOnly?.let { WifiOnlyRow(it) }
+}
+
+/**
+ * The "Wi-Fi only" switch with what it does, as one row a screen reader reads as a switch with its label and hint;
+ * off until its value is read.
+ */
+@Composable
+private fun WifiOnlyRow(wifiOnly: WifiOnly) {
+    val on by wifiOnly.on.collectAsStateWithLifecycle<Boolean?>(null)
+    val now = on
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+        .toggleable(value = now == true, enabled = now != null, role = Role.Switch) { wifiOnly.switch(it) }) {
+        Column(Modifier.weight(1f).padding(end = 16.dp)) {
+            Text(stringResource(R.string.forecast_wifi_only), style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.forecast_wifi_only_hint), style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        // the row is the control; the switch only shows its state
+        Switch(checked = now == true, onCheckedChange = null, enabled = now != null)
     }
 }
 

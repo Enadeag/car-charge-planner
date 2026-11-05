@@ -1,6 +1,10 @@
 package nl.enadeag.carchargeplanner.android.ui.home
 
+import android.Manifest
+import android.os.Build
 import android.text.format.DateFormat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,6 +21,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
@@ -73,6 +78,7 @@ import nl.enadeag.carchargeplanner.android.home.Footer
 import nl.enadeag.carchargeplanner.android.home.GridAdviceModel
 import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
+import nl.enadeag.carchargeplanner.android.home.NotificationCard
 import nl.enadeag.carchargeplanner.android.store.SaveOutcome
 import nl.enadeag.carchargeplanner.android.ui.LocalSourceColours
 import nl.enadeag.carchargeplanner.android.ui.SourceColours
@@ -87,6 +93,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.NoneLine
 import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
 import nl.enadeag.carchargeplanner.android.ui.components.RowLine
 import nl.enadeag.carchargeplanner.android.ui.components.inEnglish
+import nl.enadeag.carchargeplanner.android.ui.notify.openNotificationSettings
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 
 /**
@@ -99,21 +106,27 @@ import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
  * entry of the level the car shows; a level saved there says so in a snackbar, and when the entry closes the focus
  * goes back to the button that opened it. Each day's "Car away" list has Add, which opens the entry of a one-off away
  * period on that day, and a Remove per period, which acts at once; a change says so in a snackbar, Remove's with Undo,
- * and the list shows the stored periods at once while the plan is made again.
+ * and the list shows the stored periods at once while the plan is made again. A provider that refused its API key
+ * gets a warning in the stale warning's place. While notifications are not allowed, a card asks for them, after the
+ * warnings and before the day; it is looked at again each time the owner comes back to the app.
  *
  * @param outlook the plan it shows
  * @param notice the outcome of a Settings save not shown yet
  * @param battery the entry of the battery level
  * @param away the changes to the one-off away periods
  * @param phoneZone the phone's time zone as it is now, read each time the plan is shown
+ * @param card the card that asks for notifications; null shows none
  * @param onSettings opens Settings
  */
 @Composable
 internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: BatteryEntry, away: AwayEntry,
-    phoneZone: () -> ZoneId, onSettings: () -> Unit) {
+    phoneZone: () -> ZoneId, card: NotificationCard? = null, onSettings: () -> Unit) {
     val state by outlook.state.collectAsStateWithLifecycle()
     val refreshing by outlook.refreshing.collectAsStateWithLifecycle()
-    LifecycleEventEffect(Lifecycle.Event.ON_START) { outlook.returned() }
+    LifecycleEventEffect(Lifecycle.Event.ON_START) {
+        outlook.returned()
+        card?.recheck()
+    }
     val heading = remember { FocusRequester() }
     LaunchedEffect(Unit) { heading.requestFocus() }
     val closed: () -> Unit = { heading.requestFocus() }
@@ -142,13 +155,15 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
             enabled = state != HomeOutlook.State.Asking && !refreshing) { outlook.refresh() }
         BarIconButton(Icons.Filled.Settings, stringResource(R.string.home_settings), onClick = onSettings)
     }) {
+        val askCard: @Composable () -> Unit = { card?.let { NotificationsCard(it, closed) } }
         when (val now = state) {
             is HomeOutlook.State.Planned -> Days(now.dashboard, refreshing, phoneZone(), outlook::refresh,
-                BatteryAction(battery::open, update), AwayAction(away, add, busy, going, restoring)) {
+                BatteryAction(battery::open, update), AwayAction(away, add, busy, going, restoring), askCard) {
                 Notice(notice, closed)
             }
             else -> Refreshable(refreshing, outlook::refresh) {
                 Notice(notice, closed)
+                askCard()
                 NoPlan(now, outlook::refresh)
             }
         }
@@ -317,7 +332,7 @@ private class Seen(var open: Boolean)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZone: ZoneId, refresh: () -> Unit,
-    battery: BatteryAction, away: AwayAction, notice: @Composable () -> Unit) {
+    battery: BatteryAction, away: AwayAction, card: @Composable () -> Unit, notice: @Composable () -> Unit) {
     val words = dashboardWords(dashboard.zone)
     val days = dashboard.days
     val pager = rememberPagerState { days.size }
@@ -341,7 +356,13 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
                 }
                 // as the notice: once, on the day in view
                 if (index == selected && dashboard.footer.stale) {
-                    StaleWarning(words.time(dashboard.footer.fetchedAt))
+                    Warning(listOf(stringResource(R.string.stale_warning, words.time(dashboard.footer.fetchedAt))))
+                }
+                if (index == selected && dashboard.keyRefusedBy.isNotEmpty()) {
+                    Warning(dashboard.keyRefusedBy.map { stringResource(R.string.key_refused_warning, it) })
+                }
+                if (index == selected) {
+                    card()
                 }
                 if (dashboard.zone != phoneZone) {
                     Text(stringResource(R.string.home_zone, dashboard.zone.id))
@@ -535,11 +556,14 @@ private fun AwayList(dashboard: Dashboard, day: DayModel, words: DashboardWords,
 private class Going(var period: OneOffAwayPeriod? = null, var rows: List<OneOffAwayPeriod> = listOf())
 
 /**
- * That the forecast could not be refreshed, with a warning sign and the words, in a container that stands out and a
- * polite live region, so a refresh that leaves the forecast stale is heard; the plan below stays in view.
+ * A warning above the plan, with a warning sign and the words, in a container that stands out and a polite live
+ * region, so a refresh that brings it is heard; the plan below stays in view. That the forecast could not be
+ * refreshed, or that a provider refused its API key.
+ *
+ * @param lines the warning's sentences, each on a line of its own
  */
 @Composable
-private fun StaleWarning(fetched: String) {
+private fun Warning(lines: List<String>) {
     Surface(color = MaterialTheme.colorScheme.errorContainer,
         contentColor = MaterialTheme.colorScheme.onErrorContainer, shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
@@ -549,7 +573,9 @@ private fun StaleWarning(fetched: String) {
             verticalAlignment = Alignment.CenterVertically) {
             // the words say it; the sign is for the eye, so a screen reader skips it
             Icon(Icons.Filled.Warning, contentDescription = null)
-            Text(stringResource(R.string.stale_warning, fetched))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                lines.forEach { Text(it) }
+            }
         }
     }
 }
@@ -608,6 +634,53 @@ private fun Notice(notice: HomeNotice, closed: () -> Unit) {
             closed()
         }) {
             Text(stringResource(R.string.action_close))
+        }
+    }
+}
+
+/**
+ * The card that asks for notifications while they are not allowed: what they are for and where to change it later,
+ * and one button that asks Android, or, when Android will not ask, opens the app's notification settings, with a line
+ * that says why. It is one card that scrolls with the page and is no live region; × closes it for good, and the focus
+ * then goes on, as the card is gone.
+ *
+ * @param card what the card shows, and its answers
+ * @param closed moves the focus once the card is closed
+ */
+@Composable
+private fun NotificationsCard(card: NotificationCard, closed: () -> Unit) {
+    val shown by card.shown.collectAsStateWithLifecycle()
+    if (shown == NotificationCard.Shown.NONE) {
+        return
+    }
+    val context = LocalContext.current
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission(), card::answered)
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.notification_card_title), style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f).semantics { heading() })
+                BarIconButton(Icons.Filled.Close, stringResource(R.string.action_close)) {
+                    card.close()
+                    closed()
+                }
+            }
+            Text(stringResource(R.string.notification_card_body))
+            if (shown == NotificationCard.Shown.ASK) {
+                AppButton(onClick = {
+                    // the card asks only where Android has the permission, Android 13 and later
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        ask.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                }) {
+                    Text(stringResource(R.string.notification_card_ask))
+                }
+            } else {
+                Text(stringResource(R.string.notification_card_no_ask))
+                AppButton(onClick = { openNotificationSettings(context) }) {
+                    Text(stringResource(R.string.notification_card_open_settings))
+                }
+            }
         }
     }
 }

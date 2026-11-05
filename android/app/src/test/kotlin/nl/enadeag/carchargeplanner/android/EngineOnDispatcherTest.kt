@@ -38,6 +38,7 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole
+import nl.enadeag.carchargeplanner.engine.notify.Notifier
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan
 import nl.enadeag.carchargeplanner.engine.plan.Window
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
@@ -80,7 +81,7 @@ class EngineOnDispatcherTest {
     private val filesFolder by lazy { root.resolve("files") }
     private val access by lazy {
         val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys)
-        EngineOnDispatcher(AppEngine.build(platform, QuietNotifier), dispatcher)
+        EngineOnDispatcher(AppEngine.build(platform, Notifier { }), dispatcher)
     }
     private val draft = EngineConfig.setUpDraft(ZoneId.of("Europe/Amsterdam"), ProviderId("open-meteo"))
 
@@ -299,7 +300,7 @@ class EngineOnDispatcherTest {
             val privacy = SlowPrivacy()
             val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys)
             val twoThreads = EngineOnDispatcher(AppEngine.build(filesFolder, platform.http(), PrivateFiles(privacy),
-                platform.apiKeys(), QuietNotifier), pool.asCoroutineDispatcher())
+                platform.apiKeys(), Notifier { }), pool.asCoroutineDispatcher())
             val earlier = OneOffAwayPeriod(Instant.parse("2096-05-01T08:00:00Z"),
                 Instant.parse("2096-05-01T10:00:00Z"))
 
@@ -345,7 +346,7 @@ class EngineOnDispatcherTest {
     private fun writingFails(failure: Exception): EngineOnDispatcher {
         val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys)
         return EngineOnDispatcher(AppEngine.build(filesFolder, platform.http(), PrivateFiles(FailingPrivacy(failure)),
-            platform.apiKeys(), QuietNotifier), dispatcher)
+            platform.apiKeys(), Notifier { }), dispatcher)
     }
 
     @Test
@@ -377,7 +378,7 @@ class EngineOnDispatcherTest {
         access.applyKeyChanges(KeyChanges.entering(key))
         keys.failNext(KeyStoreException("the Keystore is busy"))
         val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys)
-        val later = EngineOnDispatcher(AppEngine.build(platform, QuietNotifier), dispatcher)
+        val later = EngineOnDispatcher(AppEngine.build(platform, Notifier { }), dispatcher)
 
         assertThat(later.storedKeys()).isEqualTo(StoredKeys.Unreadable)
     }

@@ -34,6 +34,9 @@
   <string name="setup_welcome_privacy_title">What leaves your phone</string>
   <!-- %1$s the forecast provider's name, such as Open-Meteo -->
   <string name="setup_welcome_privacy">%1$s, the forecast provider, gets your home\'s location and time zone and the tilt and direction of your panels, to make the forecast. The place you type in the next step goes to %1$s too, to find it. Like any website, %1$s also sees your phone\'s internet address.</string>
+  <!-- the hourly ask while the app is closed, for the notifications; %1$s the forecast provider's name, such as
+       Open-Meteo -->
+  <string name="setup_welcome_background">While the app is closed, it also asks %1$s about once an hour, so it can tell you before a charge window starts.</string>
   <string name="setup_welcome_nothing_else">Nothing else leaves your phone. There is no account and no tracking.</string>
   <string name="setup_welcome_settings">Other forecast providers and API keys are in Settings.</string>
   <string name="setup_welcome_typical_title">Not sure of a value?</string>
@@ -339,6 +342,19 @@
   <string name="footer_busy">provider busy until %1$s</string>
   <!-- above the plan when its forecast could not be refreshed; %1$s the time the forecast was fetched, such as 10:51 -->
   <string name="stale_warning">The forecast was not refreshed since %1$s. The plan uses that forecast.</string>
+  <!-- in the stale warning's place when a provider refused its API key, also while another forecast is used; %1$s the
+       provider's name, such as Open-Meteo; "Forecast" is the Settings page -->
+  <string name="key_refused_warning">%1$s refused the API key. Check it under Forecast in Settings.</string>
+
+  <!-- the dashboard's card while notifications are not allowed; "Notifications" is Settings' row -->
+  <string name="notification_card_title">Get a notice before each charge window</string>
+  <string name="notification_card_body">The app tells you shortly before a charge window starts, so you can set your charger in time. You can change this later under Notifications in Settings.</string>
+  <!-- the card's button that asks Android for the permission -->
+  <string name="notification_card_ask">Turn on notifications</string>
+  <!-- the card's button after a refusal, or where notifications are blocked, which opens Android's settings of the
+       app's notifications, with the line above it -->
+  <string name="notification_card_open_settings">Open notification settings</string>
+  <string name="notification_card_no_ask">Android does not ask again. Turn notifications on there.</string>
 
   <!-- the heading of the card when there is no plan, then why: no forecast provider had one, or the forecast had no
        days; Try again is under it -->
@@ -421,6 +437,9 @@
   <string name="forecast_primary_hint">Asked first. Its place search is used on the Location page.</string>
   <string name="forecast_fallback">Fallback provider</string>
   <string name="forecast_fallback_hint">Asked only when the first has no usable forecast.</string>
+  <!-- the Forecast page's switch, which applies at once; Wi-Fi as Android writes it -->
+  <string name="forecast_wifi_only">Wi-Fi only</string>
+  <string name="forecast_wifi_only_hint">The hourly update while the app is closed waits for Wi-Fi, or another network without a data limit. Off: any network.</string>
   <string name="forecast_none">None</string>
   <!-- %1$s the forecast provider's name, such as Open-Meteo -->
   <string name="forecast_check">Check connection to %1$s</string>
@@ -459,6 +478,9 @@
   <string name="planning_hours_intro">A grid charge starts within these hours, and may run on after them.</string>
   <string name="planning_hours_from">Start charging from</string>
   <string name="planning_hours_until">Start charging no later than</string>
+  <!-- Settings' row before the licences', which opens Android's settings of the app's notifications -->
+  <string name="settings_notifications">Notifications</string>
+  <string name="settings_notifications_summary">Opens Android\'s settings for this app</string>
   <!-- Settings' last row and the read-only screen it opens: the licence texts of the app and its libraries (#331). The
        texts themselves and their titles stay English. -->
   <string name="settings_licences">Open source licences</string>
@@ -469,4 +491,50 @@
   <!-- what TalkBack says of a licence's row: whether its text shows under it -->
   <string name="licences_expanded">Expanded</string>
   <string name="licences_collapsed">Collapsed</string>
+
+  <!-- The notifications. What to set in the charger's app, which ends a charge window's text and a trip's grid
+       charge's: %1$d the charge current in A, %2$s the charge power in kW, such as 2.3 -->
+  <string name="notice_set_one_phase">Set the charge current to %1$d A (%2$s kW) in your charger\'s app.</string>
+  <string name="notice_set_three_phases">Set the charge current to %1$d A per phase (%2$s kW) in your charger\'s app.</string>
+  <!-- %1$s the window's times as a screen reader reads them, a time_span_spoken -->
+  <string name="notice_window_title">Charge window %1$s</string>
+  <!-- %1$s the energy in kWh, such as 7.9; %2$s the solar share in whole percent, such as 92 -->
+  <string name="notice_window_body">About %1$s kWh, %2$s%% solar.</string>
+  <!-- %1$s the window's times as a screen reader reads them, a time_span_spoken -->
+  <string name="notice_grid_title">Grid charge window %1$s</string>
+  <!-- %1$s the energy in kWh, such as 8.4; %2$s the minimum charge level in whole percent; %3$s the charge limit in
+       whole percent -->
+  <string name="notice_grid_body">About %1$s kWh, needed to stay above %2$s%%. Set the charge limit in the car or the charger to %3$s%%.</string>
+  <!-- a trip's grid charge as planned, under notice_grid_title: %1$s the time to start, such as 09:00; %2$s the
+       weekday of the departure, as in a sentence, such as Sunday; %3$s its time; %4$s the charge limit in whole
+       percent -->
+  <string name="notice_trip_start_body">Start charging at %1$s for your trip on %2$s at %3$s, and set the charge limit to %4$s%%.</string>
+  <string name="notice_trip_now_title">Start charging now</string>
+  <!-- %1$s the weekday of the departure, as in a sentence, such as Sunday; %2$s its time; %3$s the charge limit in
+       whole percent -->
+  <string name="notice_trip_now_body">Start charging now for your trip on %1$s at %2$s, and set the charge limit to %3$s%%: little time is left before the departure.</string>
+  <!-- as notice_trip_now_body -->
+  <string name="notice_trip_now_outside_body">Start charging now for your trip on %1$s at %2$s, and set the charge limit to %3$s%%, although that is outside your charging hours: waiting for them would leave too little time.</string>
+  <string name="notice_level_title">Check the battery level</string>
+  <!-- %1$s the weekday of the departure, as in a sentence, such as Sunday; %2$s its time; %3$s the battery level the
+       plan assumes, in whole percent; "Tap" opens the battery level's entry -->
+  <string name="notice_level_body">Your trip on %1$s at %2$s needs charging. Is the battery at about %3$s%%? Tap to enter the level the car shows.</string>
+  <!-- the battery check's action button, which opens the battery level's entry -->
+  <string name="notice_level_action">Enter battery level</string>
+  <string name="notice_short_title">Plan a charging stop</string>
+  <!-- %1$s the weekday of the departure, as in a sentence, such as Sunday; %2$s its time; %3$s the distance short in
+       whole km, rounded up -->
+  <string name="notice_short_body">For your trip on %1$s at %2$s you are %3$s km short: plan a charging stop.</string>
+  <!-- the Problems notification: the forecast cannot be updated until the owner fixes the settings or the API key -->
+  <string name="notice_problems_title">Forecast not updated</string>
+  <string name="notice_problems_body">The forecast could not be updated. Open the app for details.</string>
+  <!-- what a locked screen shows of a charge window's notification, which hides its times there -->
+  <string name="notice_window_soon">Charge window soon</string>
+  <!-- the channels' names and descriptions, which Android's settings of the app's notifications show -->
+  <string name="channel_charge_windows">Charge windows</string>
+  <string name="channel_charge_windows_description">A notice shortly before a charge window starts, also for a grid charge, with what to set in your charger\'s app.</string>
+  <string name="channel_battery_trip_checks">Battery and trip checks</string>
+  <string name="channel_battery_trip_checks_description">Asks whether the battery level is right for a trip, and tells you when a trip needs a charging stop.</string>
+  <string name="channel_problems">Problems</string>
+  <string name="channel_problems_description">Tells you when the forecast cannot be updated and only you can fix it.</string>
 </resources>

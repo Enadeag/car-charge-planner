@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -50,6 +51,7 @@ import kotlinx.coroutines.launch
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.licences.AssetLicenceFiles
 import nl.enadeag.carchargeplanner.android.licences.LicenceFiles
+import nl.enadeag.carchargeplanner.android.prefs.WifiOnly
 import nl.enadeag.carchargeplanner.android.settings.SettingsPage
 import nl.enadeag.carchargeplanner.android.settings.SettingsSession
 import nl.enadeag.carchargeplanner.android.ui.components.BarPage
@@ -57,6 +59,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.DiscardChangesDialog
 import nl.enadeag.carchargeplanner.android.ui.components.EnglishDetails
 import nl.enadeag.carchargeplanner.android.ui.components.ProblemFocus
 import nl.enadeag.carchargeplanner.android.ui.components.SaveButton
+import nl.enadeag.carchargeplanner.android.ui.notify.openNotificationSettings
 import nl.enadeag.carchargeplanner.android.ui.setup.Edits
 
 /**
@@ -64,17 +67,19 @@ import nl.enadeag.carchargeplanner.android.ui.setup.Edits
  * Back and Up do the same: from a page with edits they ask whether to throw them away, from a page without they go to
  * the list, and from the list to the home. A new page moves the focus to its title; a Save that shows problems moves
  * it to the first field that has one. A page's save that worked says so in a snackbar, which a screen reader reads
- * when it comes and which stays while the list opens. The list's last row opens the open source licences (#331), a
- * read-only screen and not a page, so it has no Save and nothing to discard; Back and Up there return to the list, and
- * it stays open after turning the phone or the system ending the app, until Settings closes.
+ * when it comes and which stays while the list opens. After the pages, a row opens Android's settings of the app's
+ * notifications. The list's last row opens the open source licences (#331), a read-only screen and not a page, so it
+ * has no Save and nothing to discard; Back and Up there return to the list, and it stays open after turning the phone
+ * or the system ending the app, until Settings closes.
  *
  * @param session the pages, their forms and their Save
  * @param page the page open; null for the list
  * @param licences where the licence texts are read from: the app's assets, or a test's fixture
+ * @param wifiOnly the Forecast page's "Wi-Fi only" switch, which applies at once; null shows none
  */
 @Composable
 internal fun SettingsScreen(session: SettingsSession, page: SettingsPage?,
-    licences: LicenceFiles = rememberAssetLicenceFiles()) {
+    licences: LicenceFiles = rememberAssetLicenceFiles(), wifiOnly: WifiOnly? = null) {
     val asked by session.discardAsked.collectAsStateWithLifecycle()
     val snackbars = remember { SnackbarHostState() }
     val saved = stringResource(R.string.settings_saved)
@@ -94,7 +99,7 @@ internal fun SettingsScreen(session: SettingsSession, page: SettingsPage?,
     } else if (page == null) {
         SettingsList(session, snackbars) { licencesOpen = true }
     } else {
-        PageScreen(session, page, snackbars)
+        PageScreen(session, page, snackbars, wifiOnly)
     }
     if (asked) {
         DiscardChangesDialog(stringResource(R.string.settings_discard_text), session::keepEditing, session::discard)
@@ -103,8 +108,8 @@ internal fun SettingsScreen(session: SettingsSession, page: SettingsPage?,
 
 /**
  * The pages, each a row with its icon, its name and its current values, which wrap rather than being cut, the whole row
- * a button; then the open source licences' row; a divider between two rows. The icon is decoration: the name says what
- * the row is.
+ * a button; then the row of the notifications, which opens Android's settings of them, and the open source licences'
+ * row; a divider between two rows. The icon is decoration: the name says what the row is.
  */
 @Composable
 private fun SettingsList(session: SettingsSession, snackbars: SnackbarHostState, openLicences: () -> Unit) {
@@ -125,6 +130,16 @@ private fun SettingsList(session: SettingsSession, snackbars: SnackbarHostState,
             )
         }
         HorizontalDivider()
+        val context = LocalContext.current
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.settings_notifications)) },
+            supportingContent = { Text(stringResource(R.string.settings_notifications_summary)) },
+            leadingContent = { Icon(Icons.Filled.Notifications, contentDescription = null) },
+            modifier = Modifier.heightIn(min = 56.dp).clickable(role = Role.Button) {
+                openNotificationSettings(context)
+            },
+        )
+        HorizontalDivider()
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_licences)) },
             leadingContent = { Icon(Icons.Filled.Info, contentDescription = null) },
@@ -133,9 +148,10 @@ private fun SettingsList(session: SettingsSession, snackbars: SnackbarHostState,
     }
 }
 
-/** One page: its fields, what its Save came to, and Save. */
+/** One page: its fields, what its Save came to, and Save; the Forecast page also the switch that applies at once. */
 @Composable
-private fun PageScreen(session: SettingsSession, page: SettingsPage, snackbars: SnackbarHostState) {
+private fun PageScreen(session: SettingsSession, page: SettingsPage, snackbars: SnackbarHostState,
+    wifiOnly: WifiOnly?) {
     val problemsShown by session.problemsShown.collectAsStateWithLifecycle()
     val loads by session.loads.collectAsStateWithLifecycle()
     val edits = remember(page) { Edits() }
@@ -175,7 +191,7 @@ private fun PageScreen(session: SettingsSession, page: SettingsPage, snackbars: 
             SettingsPage.LOCATION -> LocationPage(session, edits, problems)
             SettingsPage.CAR_AND_HOUSE -> CarAndHousePage(forms.car, forms.house, edits, problems)
             SettingsPage.CHARGER -> ChargerPage(forms.charger, edits, problems)
-            SettingsPage.FORECAST -> ForecastPage(session, edits, problems)
+            SettingsPage.FORECAST -> ForecastPage(session, edits, problems, wifiOnly)
             SettingsPage.AWAY -> AwayPage(forms.away, edits, problems)
             SettingsPage.PLANNING -> PlanningPage(forms.planning, edits, problems)
         }

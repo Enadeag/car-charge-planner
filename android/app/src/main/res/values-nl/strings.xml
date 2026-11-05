@@ -23,6 +23,7 @@
   <string name="setup_welcome_intro">Deze app vertelt je wanneer je je elektrische auto het beste kunt laden, zodat zo veel mogelijk stroom van je eigen zonnepanelen komt. Daarvoor zijn een paar gegevens over je huis en je auto nodig; het duurt een paar minuten.</string>
   <string name="setup_welcome_privacy_title">Wat je telefoon verlaat</string>
   <string name="setup_welcome_privacy">%1$s, de voorspellingsdienst, krijgt de locatie en de tijdzone van je huis en de helling en richting van je panelen, om de voorspelling te maken. De plaats die je bij de volgende stap typt, gaat ook naar %1$s, om hem te vinden. Zoals elke website ziet %1$s ook het internetadres van je telefoon.</string>
+  <string name="setup_welcome_background">Ook als de app dicht is, vraagt de app ongeveer elk uur aan %1$s om een voorspelling, zodat je een melding krijgt voordat een laadvenster begint.</string>
   <string name="setup_welcome_nothing_else">Verder verlaat niets je telefoon. Er is geen account en je wordt niet gevolgd.</string>
   <string name="setup_welcome_settings">Andere voorspellingsdiensten en API-sleutels staan bij Instellingen.</string>
   <string name="setup_welcome_typical_title">Weet je een waarde niet?</string>
@@ -237,6 +238,13 @@
   <string name="footer_stale">niet vernieuwd sinds %1$s</string>
   <string name="footer_busy">dienst weer beschikbaar om %1$s</string>
   <string name="stale_warning">De voorspelling is niet vernieuwd sinds %1$s. De planning gebruikt die voorspelling.</string>
+  <string name="key_refused_warning">%1$s weigert de API-sleutel. Controleer de sleutel bij Voorspelling in Instellingen.</string>
+
+  <string name="notification_card_title">Krijg een melding vóór elk laadvenster</string>
+  <string name="notification_card_body">De app meldt het kort voordat een laadvenster begint, zodat je je laadpaal op tijd kunt instellen. Dat kun je later wijzigen bij Meldingen in Instellingen.</string>
+  <string name="notification_card_ask">Meldingen aanzetten</string>
+  <string name="notification_card_open_settings">Meldingsinstellingen openen</string>
+  <string name="notification_card_no_ask">Android vraagt het niet nog een keer. Zet meldingen daar aan.</string>
 
   <string name="no_forecast">Geen voorspelling</string>
   <string name="no_forecast_why">Geen enkele voorspellingsdienst heeft een bruikbare voorspelling.</string>
@@ -298,6 +306,8 @@
   <string name="forecast_primary_hint">Wordt als eerste geraadpleegd. Zijn zoekfunctie wordt gebruikt op de pagina Locatie.</string>
   <string name="forecast_fallback">Reservedienst</string>
   <string name="forecast_fallback_hint">Wordt alleen geraadpleegd als de eerste geen bruikbare voorspelling heeft.</string>
+  <string name="forecast_wifi_only">Alleen wifi</string>
+  <string name="forecast_wifi_only_hint">De update elk uur terwijl de app dicht is wacht op wifi, of een ander netwerk zonder datalimiet. Uit: elk netwerk.</string>
   <string name="forecast_none">Geen</string>
   <string name="forecast_check">Verbinding met %1$s testen</string>
   <string name="forecast_check_failed">Geen voorspelling ontvangen.</string>
@@ -332,6 +342,8 @@
   <string name="planning_hours_intro">Laden uit het net begint binnen deze tijden, en mag daarna doorlopen.</string>
   <string name="planning_hours_from">Laden starten vanaf</string>
   <string name="planning_hours_until">Laden starten uiterlijk om</string>
+  <string name="settings_notifications">Meldingen</string>
+  <string name="settings_notifications_summary">Opent de instellingen van Android voor deze app</string>
   <string name="settings_licences">Opensourcelicenties</string>
   <string name="licences_source">Broncode: %1$s</string>
   <string name="licences_reading">De licenties worden gelezen…</string>
@@ -339,4 +351,29 @@
   <string name="licences_list_not_read">De licenties konden niet worden gelezen.</string>
   <string name="licences_expanded">Uitgevouwen</string>
   <string name="licences_collapsed">Ingevouwen</string>
+
+  <string name="notice_set_one_phase">Stel in de app van je laadpaal de laadstroom in op %1$d A (%2$s kW).</string>
+  <string name="notice_set_three_phases">Stel in de app van je laadpaal de laadstroom in op %1$d A per fase (%2$s kW).</string>
+  <string name="notice_window_title">Laadvenster %1$s</string>
+  <string name="notice_window_body">Ongeveer %1$s kWh, %2$s%% zonnestroom.</string>
+  <string name="notice_grid_title">Laden uit het net %1$s</string>
+  <string name="notice_grid_body">Ongeveer %1$s kWh, nodig om boven %2$s%% te blijven. Stel de laadlimiet in de auto of de laadpaal in op %3$s%%.</string>
+  <string name="notice_trip_start_body">Start het laden om %1$s voor je rit van %2$s %3$s, en zet de laadlimiet op %4$s%%.</string>
+  <string name="notice_trip_now_title">Start nu met laden</string>
+  <string name="notice_trip_now_body">Start nu met laden voor je rit van %1$s %2$s, en zet de laadlimiet op %3$s%%: er is weinig tijd tot het vertrek.</string>
+  <string name="notice_trip_now_outside_body">Start nu met laden voor je rit van %1$s %2$s, en zet de laadlimiet op %3$s%%, ook al is dat buiten je laaduren: wachten laat te weinig tijd over.</string>
+  <string name="notice_level_title">Controleer het accuniveau</string>
+  <string name="notice_level_body">Je rit van %1$s %2$s vraagt laden. Staat de accu op ongeveer %3$s%%? Tik om het accuniveau in te vullen dat de auto aangeeft.</string>
+  <string name="notice_level_action">Accuniveau invullen</string>
+  <string name="notice_short_title">Plan een laadstop</string>
+  <string name="notice_short_body">Voor je rit van %1$s %2$s kom je %3$s km tekort: plan een laadstop.</string>
+  <string name="notice_problems_title">Voorspelling niet vernieuwd</string>
+  <string name="notice_problems_body">De voorspelling kon niet worden vernieuwd. Open de app voor details.</string>
+  <string name="notice_window_soon">Laadvenster binnenkort</string>
+  <string name="channel_charge_windows">Laadvensters</string>
+  <string name="channel_charge_windows_description">Een melding kort voordat een laadvenster begint, ook voor laden uit het net, met wat je in de app van je laadpaal instelt.</string>
+  <string name="channel_battery_trip_checks">Controles van accuniveau en ritten</string>
+  <string name="channel_battery_trip_checks_description">Vraagt of het accuniveau klopt voor een rit, en meldt wanneer een rit een laadstop nodig heeft.</string>
+  <string name="channel_problems">Problemen</string>
+  <string name="channel_problems_description">Meldt wanneer de voorspelling niet vernieuwd kan worden en alleen jij dat kunt oplossen.</string>
 </resources>

@@ -43,10 +43,12 @@ internal object Plans {
      * @param role whether the primary or the fallback provider gave it
      * @param primaryName the primary provider's name, when the fallback stood in
      * @param busyUntil the provider's cool-down
+     * @param keyRefusedBy the providers that refused their API key
      */
     fun source(fetchedAt: Instant, freshness: Freshness = Freshness.FRESH, role: ProviderRole = ProviderRole.PRIMARY,
-        primaryName: String = "", busyUntil: Instant? = null) = ForecastSource(ProviderId("open-meteo"),
-        "Open-Meteo", CREDIT, fetchedAt, freshness, role, primaryName, Optional.ofNullable(busyUntil), listOf())
+        primaryName: String = "", busyUntil: Instant? = null, keyRefusedBy: List<ProviderId> = listOf()) =
+        ForecastSource(ProviderId("open-meteo"), "Open-Meteo", CREDIT, fetchedAt, freshness, role, primaryName,
+            Optional.ofNullable(busyUntil), keyRefusedBy)
 
     /**
      * Hourly forecast steps of one day, by the clock in a time zone.

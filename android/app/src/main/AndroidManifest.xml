@@ -4,6 +4,8 @@
 
   <!-- the forecasts and the place search; AndroidHttpGet is the one class that connects -->
   <uses-permission android:name="android.permission.INTERNET" />
+  <!-- the notifications, which Android 13 and later ask the owner for; the dashboard's card asks -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
   <!-- enableOnBackInvokedCallback: the predictive back gesture, which Android 13 and later have (tools:targetApi) -->
   <application
@@ -18,9 +20,11 @@
       android:label="@string/app_name"
       android:supportsRtl="true"
       android:theme="@style/Theme.CarChargePlanner">
+    <!-- singleTop: a notification's tap reaches the activity shown, through onNewIntent, rather than a second one -->
     <activity
         android:name=".MainActivity"
-        android:exported="true">
+        android:exported="true"
+        android:launchMode="singleTop">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />

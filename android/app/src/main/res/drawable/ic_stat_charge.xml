@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- the notifications' small icon: the launcher icon's bolt (ic_launcher_foreground) drawn again to fill a 24 dp
+  status bar icon, white, as Android tints it; it changes with the launcher icon -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:fillColor="#FFFFFFFF"
+      android:pathData="M13.667,2 L6.167,13.667 L11.167,13.667 L9.5,22 L17.833,9.5 L12.833,9.5 Z" />
+</vector>

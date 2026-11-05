@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.android.ui
 
+import android.provider.Settings
 import android.text.InputType
 import android.view.View
 import android.view.ViewGroup
@@ -28,6 +29,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
@@ -67,10 +69,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.prefs.WifiOnly
 import nl.enadeag.carchargeplanner.android.settings.SettingsPage
 import nl.enadeag.carchargeplanner.android.settings.SettingsSession
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
@@ -94,6 +99,7 @@ import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowDialog
 
@@ -128,13 +134,32 @@ class SettingsScreenTest {
         NumberText(compose.activity.resources.configuration.locales[0]), { amsterdam }, { "en" }, access, saves,
         scope, Dispatchers.Main.immediate, config, { closed++ }) { }
 
+    /** The "Wi-Fi only" switch in memory, with every switch the screen asked for. */
+    private class Switch : WifiOnly {
+        val now = MutableStateFlow(false)
+        val asked = mutableListOf<Boolean>()
+
+        override val on: Flow<Boolean> = now
+
+        override fun switch(on: Boolean) {
+            asked += on
+            now.value = on
+        }
+    }
+
+    private val wifiOnly = Switch()
+
     private fun show(session: SettingsSession = session(), fontScaleTwo: Boolean = false): SettingsSession {
         compose.setContent {
             AppTheme {
                 errorColour = MaterialTheme.colorScheme.error
                 onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
                 val page by session.page.collectAsState()
-                if (fontScaleTwo) AtFontScaleTwo { SettingsScreen(session, page) } else SettingsScreen(session, page)
+                if (fontScaleTwo) {
+                    AtFontScaleTwo { SettingsScreen(session, page, wifiOnly = wifiOnly) }
+                } else {
+                    SettingsScreen(session, page, wifiOnly = wifiOnly)
+                }
             }
         }
         compose.waitForIdle()
@@ -927,10 +952,88 @@ class SettingsScreenTest {
     fun eachRowIsAtLeast56DpHigh() {
         show()
 
-        (SettingsPage.entries.map { it to row(it) } + ("licences" to licencesRow())).forEach { (page, row) ->
+        (SettingsPage.entries.map { it to row(it) } + ("notifications" to notificationsRow()) +
+            ("licences" to licencesRow())).forEach { (page, row) ->
             assertThat(row.size.height / row.layoutInfo.density.density).`as`("the height of %s's row", page)
                 .isGreaterThanOrEqualTo(56f)
         }
+    }
+
+    /** The notifications' row, after the pages', scrolled to. */
+    private fun notificationsRow() = compose.onNode(hasClickAction() and hasText(text(R.string.settings_notifications)))
+        .performScrollTo().fetchSemanticsNode()
+
+    @Test
+    fun theNotificationsRowIsOneButtonBetweenThePagesAndTheLicences() {
+        show()
+
+        val row = notificationsRow()
+        assertThat(row.config.getOrNull(SemanticsProperties.Role)).isEqualTo(Role.Button)
+        assertThat(row.config.getOrNull(SemanticsProperties.ContentDescription)).`as`("what its icon reads").isNull()
+        assertThat(row.config[SemanticsProperties.Text].map { it.text })
+            .containsExactly(text(R.string.settings_notifications), text(R.string.settings_notifications_summary))
+        assertThat(row.size.height / row.layoutInfo.density.density).isGreaterThanOrEqualTo(56f)
+        val last = row(SettingsPage.entries.last()).positionInRoot.y
+        assertThat(notificationsRow().positionInRoot.y).isGreaterThan(last)
+            .isLessThan(licencesRow().positionInRoot.y)
+    }
+
+    @Test
+    fun theNotificationsRowOpensAndroidsSettingsOfTheAppsNotifications() {
+        show()
+
+        click(R.string.settings_notifications)
+
+        val started = shadowOf(compose.activity).nextStartedActivity
+        assertThat(started.action).isEqualTo(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+        assertThat(started.getStringExtra(Settings.EXTRA_APP_PACKAGE)).isEqualTo(compose.activity.packageName)
+    }
+
+    /** The "Wi-Fi only" switch's row, scrolled to. */
+    private fun wifiRow() = compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch))
+        .performScrollTo()
+
+    @Test
+    fun theForecastPageEndsWithTheWifiOnlySwitchAsOneRowReadWithItsLabelAndHint() {
+        show()
+        open(SettingsPage.FORECAST)
+
+        val row = wifiRow().fetchSemanticsNode()
+        assertThat(row.config[SemanticsProperties.Text].map { it.text })
+            .containsExactly(text(R.string.forecast_wifi_only), text(R.string.forecast_wifi_only_hint))
+        assertThat(row.config[SemanticsProperties.ToggleableState]).isEqualTo(ToggleableState.Off)
+        assertThat(row.size.height / row.layoutInfo.density.density).isGreaterThanOrEqualTo(48f)
+        compose.onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch)).assertCountEquals(1)
+    }
+
+    @Test
+    fun theWifiOnlySwitchAppliesAtOnceAndLeavesNothingToSaveOrDiscard() {
+        show()
+        open(SettingsPage.FORECAST)
+
+        wifiRow().performClick()
+        compose.waitForIdle()
+
+        assertThat(wifiOnly.asked).containsExactly(true)
+        assertThat(wifiRow().fetchSemanticsNode().config[SemanticsProperties.ToggleableState])
+            .isEqualTo(ToggleableState.On)
+        up()
+        compose.waitForIdle()
+        compose.onNodeWithText(text(R.string.settings_discard_text)).assertDoesNotExist()
+        compose.onNode(isHeading() and hasText(text(R.string.settings_title))).assertExists()
+        assertThat(access.written).isEmpty()
+    }
+
+    @Test
+    fun theWifiOnlySwitchShowsWhatIsStoredAndSwitchesItOff() {
+        wifiOnly.now.value = true
+        show()
+        open(SettingsPage.FORECAST)
+
+        wifiRow().performClick()
+        compose.waitForIdle()
+
+        assertThat(wifiOnly.asked).containsExactly(false)
     }
 
     /** The open source licences' row, after the pages', scrolled to. */
@@ -1019,7 +1122,7 @@ class SettingsScreenTest {
     fun theGapBetweenTwoRowsIsOneDividerThick() {
         show()
 
-        val rows = SettingsPage.entries.map { row(it) } + licencesRow()
+        val rows = SettingsPage.entries.map { row(it) } + notificationsRow() + licencesRow()
         val divider = DividerDefaults.Thickness.value * rows.first().layoutInfo.density.density
         val gaps = rows.zipWithNext { above, below ->
             below.positionInRoot.y - (above.positionInRoot.y + above.size.height)

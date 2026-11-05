@@ -12,6 +12,7 @@ import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.notify.Notifier
 import nl.enadeag.carchargeplanner.engine.store.FilePrivacy
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles
 import org.assertj.core.api.Assertions.assertThat
@@ -36,7 +37,7 @@ class AppEngineTest {
 
     @Test
     fun theAppOffersTheDesktopsProvidersInItsOrder() {
-        val engine = AppEngine.build(platform, QuietNotifier)
+        val engine = AppEngine.build(platform, Notifier { })
 
         assertThat(engine.providers().map { it.id() })
             .containsExactly(ProviderId("open-meteo"), ProviderId("forecast-solar"))
@@ -46,7 +47,7 @@ class AppEngineTest {
     fun theDocsExampleSettingsFileIsReadThroughTheEngineFromTheFilesFolder() = runTest {
         Files.createDirectories(filesFolder)
         EXAMPLE.copyTo(filesFolder.resolve("engine.json"))
-        val access = EngineOnDispatcher(AppEngine.build(platform, QuietNotifier),
+        val access = EngineOnDispatcher(AppEngine.build(platform, Notifier { }),
             StandardTestDispatcher(testScheduler))
 
         val state = access.readSettings()
@@ -61,7 +62,7 @@ class AppEngineTest {
     @Test
     fun theSettingsAreWrittenToEngineJsonInTheFilesFolderInTheDesktopsFormat() = runTest {
         val example = ConfigFile(EXAMPLE, PrivateFiles(FilePrivacy.NONE)).read()
-        val access = EngineOnDispatcher(AppEngine.build(platform, QuietNotifier),
+        val access = EngineOnDispatcher(AppEngine.build(platform, Notifier { }),
             StandardTestDispatcher(testScheduler))
 
         access.saveSettings(example)

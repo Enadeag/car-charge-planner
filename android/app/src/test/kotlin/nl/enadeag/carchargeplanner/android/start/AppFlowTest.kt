@@ -5,6 +5,7 @@ import java.nio.file.Path
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Locale
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -506,5 +507,95 @@ class AppFlowTest {
 
         assertThat(flow.screen.value).isInstanceOf(AppFlow.Screen.SetUp::class.java)
         assertThat(handle.keys().filter { it.startsWith("oneOffAway") }).isEmpty()
+    }
+
+    @Test
+    fun aBatteryChecksTapOnTheHomeOpensTheBatteryEntry() = runTest {
+        val flow = flow(FakeEngineAccess(StartState.Ready(config)))
+
+        flow.openBatteryEntry()
+
+        assertThat((flow.screen.value as AppFlow.Screen.Home).battery.open.value).isTrue()
+    }
+
+    @Test
+    fun aBatteryChecksTapWhileTheAppStartsOpensTheEntryOnTheHomeThatComes() = runTest {
+        val access = FakeEngineAccess(StartState.Ready(config))
+        val gate = CompletableDeferred<Unit>().also { access.readGate = it }
+        val flow = flow(access)
+        assertThat(flow.screen.value).isEqualTo(AppFlow.Screen.Reading)
+
+        flow.openBatteryEntry()
+        gate.complete(Unit)
+        runCurrent()
+
+        assertThat((flow.screen.value as AppFlow.Screen.Home).battery.open.value).isTrue()
+    }
+
+    @Test
+    fun aBatteryChecksTapWhileTheAppStartsOnSetUpIsForgotten() = runTest {
+        val access = FakeEngineAccess(StartState.NotSetUp)
+        val gate = CompletableDeferred<Unit>().also { access.readGate = it }
+        val flow = flow(access)
+        flow.openBatteryEntry()
+        gate.complete(Unit)
+        runCurrent()
+        val session = (flow.screen.value as AppFlow.Screen.SetUp).session
+
+        finishSetUp(session)
+
+        assertThat((flow.screen.value as AppFlow.Screen.Home).battery.open.value).isFalse()
+    }
+
+    @Test
+    fun aBatteryChecksTapInSettingsLeavesSettingsAsItIsAndTheHomeAfterItWithoutTheEntry() = runTest {
+        val access = FakeEngineAccess(StartState.Ready(config))
+        val flow = settingsFromThePlannedHome(access)
+        val settings = flow.screen.value as AppFlow.Screen.Settings
+
+        flow.openBatteryEntry()
+        runCurrent()
+        assertThat(flow.screen.value).isEqualTo(settings)
+        settings.session.back()
+        runCurrent()
+
+        assertThat((flow.screen.value as AppFlow.Screen.Home).battery.open.value).isFalse()
+    }
+
+    @Test
+    fun aTapWhileSettingsIsReadOpensNoEntryOnTheHomeAfterSettings() = runTest {
+        val access = FakeEngineAccess(StartState.Ready(config))
+        val flow = flow(access)
+        access.outlooks.single().complete(planned)
+        runCurrent()
+        val gate = CompletableDeferred<Unit>().also { access.readGate = it }
+        flow.openSettings()
+        runCurrent()
+        assertThat(flow.screen.value).isEqualTo(AppFlow.Screen.Reading)
+
+        flow.openBatteryEntry()
+        gate.complete(Unit)
+        runCurrent()
+        (flow.screen.value as AppFlow.Screen.Settings).session.back()
+        runCurrent()
+
+        assertThat((flow.screen.value as AppFlow.Screen.Home).battery.open.value).isFalse()
+    }
+
+    @Test
+    fun eachPlanTheHomeAskedForIsPassedOnBeforeItShows() = runTest {
+        val access = FakeEngineAccess(StartState.Ready(config))
+        val seen = mutableListOf<Outlook>()
+        val flow = AppFlow(access, Saves(access, backgroundScope), backgroundScope, backgroundScope,
+            SavedStateHandle(), NumberText(Locale.ENGLISH), { amsterdam }, { "en" },
+            StandardTestDispatcher(testScheduler), seen = { seen += it })
+        runCurrent()
+
+        access.outlooks.single().complete(planned)
+        runCurrent()
+
+        assertThat(seen).containsExactly(planned)
+        assertThat((flow.screen.value as AppFlow.Screen.Home).outlook.state.value)
+            .isInstanceOf(HomeOutlook.State.Planned::class.java)
     }
 }

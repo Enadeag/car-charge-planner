@@ -7,6 +7,7 @@ import java.time.ZoneId
 import java.util.Optional
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.Percent
+import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice
@@ -30,6 +31,28 @@ class DashboardTest {
     fun aPlanWithoutDaysIsNoDashboard() {
         assertThatThrownBy { Dashboard.of(Plans.planned(madeAt, listOf()), listOf()) }
             .isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    @Test
+    fun theProvidersThatRefusedTheirKeyAreNamedInTheOrderTheyWereAskedAndNoneWithout() {
+        val source = Plans.source(madeAt.toInstant(), keyRefusedBy = listOf(ProviderId("open-meteo"),
+            ProviderId("forecast-solar")))
+        val names = mapOf("open-meteo" to "Open-Meteo", "forecast-solar" to "Forecast.Solar")
+
+        val refused = Dashboard.of(Plans.planned(madeAt, listOf(listOf()), source = source), listOf()) {
+            names.getValue(it.value())
+        }
+
+        assertThat(refused.keyRefusedBy).containsExactly("Open-Meteo", "Forecast.Solar")
+        assertThat(dashboard().keyRefusedBy).isEmpty()
+    }
+
+    @Test
+    fun withoutTheirNamesTheProvidersThatRefusedTheirKeyAreNamedByTheirIds() {
+        val source = Plans.source(madeAt.toInstant(), keyRefusedBy = listOf(ProviderId("open-meteo")))
+
+        assertThat(Dashboard.of(Plans.planned(madeAt, listOf(listOf()), source = source), listOf()).keyRefusedBy)
+            .containsExactly("open-meteo")
     }
 
     @Test

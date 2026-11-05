@@ -152,7 +152,8 @@ private fun UpButton(onUp: () -> Unit) {
 }
 
 /**
- * An icon in the top app bar that acts, such as Up or the home's Settings, drawn at 48 dp.
+ * An icon that acts, such as Up or the home's Settings in the top app bar, or the notification card's Close, drawn
+ * at 48 dp.
  *
  * @param icon Material's icon
  * @param name what a screen reader says for it, as the icon has no text

@@ -25,6 +25,7 @@ import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.android.store.SaveOutcome
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
+import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 
 /**
@@ -45,11 +46,12 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig
  * @param language the app's language now, as the place search takes it, such as "nl"
  * @param mainThread the screens' own thread, where a Settings save reads its forms: `Dispatchers.Main.immediate`
  * @param clock tells the home how old the plan it shows is, and whether an away period entered there has passed
+ * @param seen gets each plan the home asked for, so a Problems notification it no longer shows goes
  */
 class AppFlow(private val access: EngineAccess, private val saves: Saves, private val appScope: CoroutineScope,
     private val scope: CoroutineScope, private val handle: SavedStateHandle, private val numbers: NumberText,
     val phoneZone: () -> ZoneId, private val language: () -> String, private val mainThread: CoroutineDispatcher,
-    private val clock: Clock = Clock.systemUTC()) {
+    private val clock: Clock = Clock.systemUTC(), private val seen: suspend (Outlook) -> Unit = {}) {
 
     private companion object {
         const val SETTINGS = "app.settings"
@@ -109,6 +111,9 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
     private var homeShown: HomeOutlook.Kept? = null
     private var changesSeen = 0
 
+    /** True when a battery check's tap came while the settings file was read, for the home that may come next. */
+    private var batteryAsked = false
+
     /** The screen shown now. */
     val screen: StateFlow<Screen> = screenNow.asStateFlow()
 
@@ -120,6 +125,19 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
         val own = nextScope()
         screenNow.value = Screen.Reading
         own.launch { show(access.readSettings()) }
+    }
+
+    /**
+     * Opens the battery level's entry, as a battery check's notification asks: on the home at once; while the
+     * settings file is read, as the app starts, on the home if that comes next; otherwise not at all, as the owner is
+     * in set-up or Settings, which the tap only brings forward.
+     */
+    fun openBatteryEntry() {
+        when (val now = screenNow.value) {
+            is Screen.Home -> now.battery.open()
+            Screen.Reading -> batteryAsked = true
+            else -> Unit
+        }
     }
 
     /** Opens Settings from the home, on the settings file read again. */
@@ -150,8 +168,11 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
             AwayEntry.forget(handle)
         }
         val own = nextScope()
+        val battery = batteryAsked
+        batteryAsked = false
         screenNow.value = when (state) {
-            is StartState.Ready -> if (handle.contains(SETTINGS)) settings(own, state.config) else home(own)
+            is StartState.Ready -> if (handle.contains(SETTINGS)) settings(own, state.config)
+                else home(own).also { if (battery) it.battery.open() }
             StartState.NotSetUp -> setUp(own)
             is StartState.Unusable -> Screen.Unusable(SetUpAgain(state, access, appScope).also { again ->
                 own.launch {
@@ -174,7 +195,7 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
      */
     private fun home(own: CoroutineScope, kept: HomeOutlook.Kept? = null): Screen.Home {
         SetUpSession.forget(handle)
-        val outlook = HomeOutlook(access, own, clock, saves.changes, kept, ::read)
+        val outlook = HomeOutlook(access, own, clock, saves.changes, kept, seen, ::read)
         return Screen.Home(outlook, HomeNotice(saves, own, ::show),
             BatteryEntry(handle, numbers, access, own, outlook::planAgain),
             AwayEntry(handle, access, own, clock, outlook::awayChanged))

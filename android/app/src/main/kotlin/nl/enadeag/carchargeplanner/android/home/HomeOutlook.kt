@@ -15,6 +15,7 @@ import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.android.store.LatestAnswer
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
+import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import org.slf4j.LoggerFactory
 
 /**
@@ -30,10 +31,13 @@ import org.slf4j.LoggerFactory
  * @param clock tells how old the plan shown is
  * @param changes counts the Settings saves that changed something; each new count asks for the plan again
  * @param kept what the home showed before Settings opened, kept when no save changed anything since; null asks
+ * @param seen gets each outlook the engine gave, before the home shows it, so a Problems notification that it no
+ *     longer shows goes; a failure in it is logged and changes nothing the home shows
  * @param lost called when the outlook says the app is not set up or its settings file cannot be used
  */
 class HomeOutlook(private val access: EngineAccess, scope: CoroutineScope, private val clock: Clock,
-    changes: StateFlow<Int> = MutableStateFlow(0), kept: Kept? = null, private val lost: () -> Unit) {
+    changes: StateFlow<Int> = MutableStateFlow(0), kept: Kept? = null,
+    private val seen: suspend (Outlook) -> Unit = {}, private val lost: () -> Unit) {
 
     companion object {
         /** How old a plan may be when the owner comes back to the app before a new one is asked. */
@@ -183,9 +187,9 @@ class HomeOutlook(private val access: EngineAccess, scope: CoroutineScope, priva
 
     /** The home's next state; null when the app is not set up or its settings file cannot be used. */
     private suspend fun answer(): State? = try {
-        when (val outlook = access.outlook()) {
+        when (val outlook = access.outlook().also { tell(it) }) {
             is Outlook.Planned -> if (outlook.days().isEmpty()) State.NoDays(Footer.of(outlook), outlook.zone())
-                else State.Planned(Dashboard.of(outlook, access.awayPeriods()))
+                else State.Planned(Dashboard.of(outlook, access.awayPeriods(), ::providerName))
             is Outlook.NoForecast -> State.NoForecast(outlook.reason())
             is Outlook.NotSetUp, is Outlook.ConfigUnusable -> null
         }
@@ -195,4 +199,18 @@ class HomeOutlook(private val access: EngineAccess, scope: CoroutineScope, priva
         LOG.warn("The plan could not be made", failure)
         State.NoForecast("The plan could not be made.")
     }
+
+    private suspend fun tell(outlook: Outlook) {
+        try {
+            seen(outlook)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: RuntimeException) {
+            LOG.warn("The plan could not be passed on to the notifications", failure)
+        }
+    }
+
+    /** A provider's name as the engine knows it; its id when the engine does not know it. */
+    private fun providerName(id: ProviderId): String =
+        access.providers().firstOrNull { it.id() == id }?.name() ?: id.value()
 }

@@ -134,6 +134,14 @@ class SetUpScreenTest {
         compose.waitForIdle()
     }
 
+    @Test
+    fun theWelcomeSaysThatTheAppAlsoAsksTheProviderAboutOnceAnHourWhileItIsClosed() {
+        show()
+
+        compose.onNodeWithText(text(R.string.setup_welcome_background, "Open-Meteo")).performScrollTo()
+            .assertIsDisplayed()
+    }
+
     /** Goes through every step to the check, each one checked as it comes in the language the test runs in. */
     private fun walkEveryStep() {
         val englishOnly = englishOnlyTexts()
