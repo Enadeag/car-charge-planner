@@ -94,7 +94,7 @@ jobs:
           java-version: "21"
       # Checks gradle-wrapper.jar against Gradle's published checksums; the cache is the open-source one (basic),
       # written from main only.
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-provider: basic
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
@@ -135,7 +135,7 @@ jobs:
           distribution: temurin
           java-version: "21"
       # Read only: the build job writes the cache, under the same key.
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-provider: basic
           cache-read-only: true
