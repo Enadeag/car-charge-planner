@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.android.store
 
 import java.io.IOException
+import java.time.Instant
 import kotlin.jvm.optionals.getOrNull
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -8,6 +9,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import nl.enadeag.carchargeplanner.engine.Engine
+import nl.enadeag.carchargeplanner.engine.ForecastUse
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem
@@ -71,6 +73,11 @@ class EngineOnDispatcher(private val engine: Engine, private val dispatcher: Cor
     }
 
     override suspend fun outlook(): Outlook = withContext(dispatcher) { engine.outlook() }
+
+    override suspend fun round(use: ForecastUse): Outlook = withContext(dispatcher) { engine.round(use) }
+
+    override suspend fun nextNoticeDue(outlook: Outlook): Instant? =
+        withContext(dispatcher) { engine.nextNoticeDue(outlook).getOrNull() }
 
     override suspend fun awayPeriods(): List<OneOffAwayPeriod> = withContext(dispatcher) { engine.awayPeriods() }
 

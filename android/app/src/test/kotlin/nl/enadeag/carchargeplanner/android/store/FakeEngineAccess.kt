@@ -2,8 +2,10 @@ package nl.enadeag.carchargeplanner.android.store
 
 import java.io.IOException
 import java.nio.file.Path
+import java.time.Instant
 import kotlinx.coroutines.CompletableDeferred
 import nl.enadeag.carchargeplanner.android.AppEngine
+import nl.enadeag.carchargeplanner.engine.ForecastUse
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
@@ -71,6 +73,28 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     override fun hasPlaceSearch(provider: ProviderId) = provider.value() == "open-meteo"
 
     override suspend fun outlook(): Outlook = CompletableDeferred<Outlook>().also { outlooks += it }.await()
+
+    /** The rounds asked for, with where their forecast may come from, in the order asked. */
+    val roundsAsked = mutableListOf<ForecastUse>()
+
+    /** The answers of the rounds, which wait until completed, in the order asked. */
+    val rounds = mutableListOf<CompletableDeferred<Outlook>>()
+
+    override suspend fun round(use: ForecastUse): Outlook {
+        roundsAsked += use
+        return CompletableDeferred<Outlook>().also { rounds += it }.await()
+    }
+
+    /** The outlooks the next due notice was asked for, in the order asked. */
+    val dueAskedFor = mutableListOf<Outlook>()
+
+    /** When the next notice is due, for every outlook; null while nothing is. */
+    var nextDue: Instant? = null
+
+    override suspend fun nextNoticeDue(outlook: Outlook): Instant? {
+        dueAskedFor += outlook
+        return nextDue
+    }
 
     /** The one-off away periods stored, in order of their start. */
     var away: List<OneOffAwayPeriod> = listOf()

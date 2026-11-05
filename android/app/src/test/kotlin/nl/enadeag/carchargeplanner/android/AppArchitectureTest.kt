@@ -5,10 +5,13 @@ import com.tngtech.archunit.core.domain.AccessTarget
 import com.tngtech.archunit.core.domain.JavaAccess
 import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.domain.JavaClasses
+import com.tngtech.archunit.core.domain.JavaMethodCall
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 import nl.enadeag.carchargeplanner.android.logging.LogcatServiceProvider
+import nl.enadeag.carchargeplanner.android.store.EngineAccess
+import nl.enadeag.carchargeplanner.android.ui.ScreenThatPlansARound
 import nl.enadeag.carchargeplanner.android.ui.ScreenThatReadsTheSettingsFile
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -18,8 +21,9 @@ import org.junit.jupiter.api.Test
  * The rules for the app's own classes, Java and Kotlin alike (its main code, not its tests), as
  * `EngineArchitectureTest` has them for the engine (ADR 0010): one class opens network connections, [AndroidHttpGet],
  * which keeps the engine's contract on timeouts, size and redirects; no class weakens the checks of TLS; the app
- * logs through slf4j, whose provider is the one class that writes to Logcat; and the screens reach the engine only
- * through the suspend interface that runs it off the main thread.
+ * logs through slf4j, whose provider is the one class that writes to Logcat; the screens reach the engine only
+ * through the suspend interface that runs it off the main thread; and they leave the planning round, and when the next
+ * notice is due, to the work in the background.
  */
 class AppArchitectureTest {
 
@@ -144,6 +148,16 @@ class AppArchitectureTest {
             noClasses().that(SCREENS).should().dependOnClassesThat(THE_ENGINE_ITSELF)
                 .because("they may block for about a second, so the screens call them through EngineAccess, which "
                     + "runs them off the main thread (#313); the app's Application is the one place that makes them")
+
+        val CALL_THE_ROUND = DescribedPredicate.describe<JavaMethodCall>(
+            "call EngineAccess.round or EngineAccess.nextNoticeDue") { call ->
+            call.targetOwner.isAssignableTo(EngineAccess::class.java) && call.name in setOf("round", "nextNoticeDue")
+        }
+
+        val SCREENS_LEAVE_THE_ROUND_TO_THE_BACKGROUND_WORK =
+            noClasses().that(SCREENS).should().callMethodWhere(CALL_THE_ROUND)
+                .because("a round tells the owner what is due, once, while a screen shows an outlook and tells "
+                    + "nobody; the round and the next due notice are for the work in the background")
     }
 
     @Test
@@ -174,6 +188,19 @@ class AppArchitectureTest {
 
         assertThatThrownBy { SCREENS_REACH_THE_ENGINE_ONLY_THROUGH_ITS_SUSPEND_INTERFACE.check(screen) }
             .isInstanceOf(AssertionError::class.java).hasMessageContaining("ConfigFile")
+    }
+
+    @Test
+    fun theScreensLeaveTheRoundToTheBackgroundWork() {
+        SCREENS_LEAVE_THE_ROUND_TO_THE_BACKGROUND_WORK.check(APP_CLASSES)
+    }
+
+    @Test
+    fun aScreenThatMakesARoundBreaksTheRule() {
+        val screen = ClassFileImporter().importClasses(ScreenThatPlansARound::class.java)
+
+        assertThatThrownBy { SCREENS_LEAVE_THE_ROUND_TO_THE_BACKGROUND_WORK.check(screen) }
+            .isInstanceOf(AssertionError::class.java).hasMessageContaining("ScreenThatPlansARound.plan")
     }
 
     @Test

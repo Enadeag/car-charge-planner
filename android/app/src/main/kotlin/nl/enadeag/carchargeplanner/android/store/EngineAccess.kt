@@ -1,6 +1,8 @@
 package nl.enadeag.carchargeplanner.android.store
 
 import java.nio.file.Path
+import java.time.Instant
+import nl.enadeag.carchargeplanner.engine.ForecastUse
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
@@ -13,11 +15,12 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 
 /**
- * All the screens' logic asks of the engine that reads or writes: the settings file, the API keys, the plan, the
- * one-off away periods and their changes, the battery level, the connection check and the place search. Each call
- * suspends while it runs off the main thread, as the keychain and the API keys may block for about a second and the
- * others reach the disk or the network.
- * The screens never call the engine, the keys or the files themselves (`AppArchitectureTest`).
+ * All the app asks of the engine that reads or writes: the settings file, the API keys, the plan, the one-off away
+ * periods and their changes, the battery level, the connection check and the place search for the screens' logic; a
+ * planning round and when the next notice is due for the work in the background. Each call suspends while it runs off
+ * the main thread, as the keychain and the API keys may block for about a second and the others reach the disk or the
+ * network.
+ * The screens never call the engine, the keys or the files themselves, nor the round (`AppArchitectureTest`).
  */
 interface EngineAccess {
 
@@ -80,6 +83,24 @@ interface EngineAccess {
      * @return the plan, or why there is none: not set up, a settings file that cannot be used, or no forecast
      */
     suspend fun outlook(): Outlook
+
+    /**
+     * Makes one planning round, for the work in the background: the plan, and the owner told what is due on it, each
+     * notice once. Never for a screen, which shows an [outlook] and tells nobody.
+     *
+     * @param use where the forecast may come from: the providers as their rules allow, or only the stored forecast,
+     *     which never uses the network
+     * @return the plan, or why there is none: not set up, a settings file that cannot be used, or no forecast
+     */
+    suspend fun round(use: ForecastUse): Outlook
+
+    /**
+     * When the next notice is due on a plan a [round] made, for the work in the background to wake the device then.
+     *
+     * @param outlook what the round gave
+     * @return the earliest moment, now when one is due now; null when nothing is to come, also without a plan
+     */
+    suspend fun nextNoticeDue(outlook: Outlook): Instant?
 
     /**
      * Reads the one-off away periods the owner entered; the weekly ones are in the settings file.
