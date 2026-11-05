@@ -192,6 +192,20 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | The battery level you typed is not saved yet. | Het accuniveau dat je typte is nog niet opgeslagen. | under "Discard changes?", asked by Back with a level typed |
 | Car away | Afwezig | the heading of the one-off away periods |
 | None entered for the coming days. | Niets ingevuld voor de komende dagen. | no one-off away period to come |
+| Add | Toevoegen | the button in the "Car away" heading row, which opens the entry of a one-off away period on the page's day |
+| Remove, Remove Tomorrow, all day | Verwijderen, Morgen, hele dag verwijderen | a one-off away period's button, and what TalkBack reads for it: the period as the list shows it |
+| Car away on Thursday, November 5 | Afwezig op donderdag 5 november | the entry's title, with the day's weekday and date as the phone writes them in a sentence |
+| All day, Part of the day | Hele dag, Deel van de dag | the entry's choice |
+| Away from, Away until | Afwezig vanaf, Afwezig tot | part of the day's two times, each a button that opens the time picker, and the picker's title |
+| OK | OK | confirms the time picker's time |
+| The end must be after the start. | Het einde moet na het begin liggen. | under the end time after Save |
+| That time has passed already. | Die tijd is al voorbij. | under the end time, or the choice for all day, after Save |
+| Saved: Tomorrow, all day. | Opgeslagen: Morgen, hele dag. | in a snackbar after the entry's Save or Undo |
+| Removed: Tomorrow, all day. | Verwijderd: Morgen, hele dag. | in a snackbar after Remove, with Undo |
+| Undo | Ongedaan maken | the snackbar's action after Remove, which adds the period back |
+| Not saved: the away time could not be written. | Niet opgeslagen: de afwezige tijd kon niet worden geschreven. | in the entry after its Save failed, and in a snackbar after Undo failed, with the English details; a one-off period is "afwezig", never "afwezigheid" |
+| Not removed: the away time could not be written. | Niet verwijderd: de afwezige tijd kon niet worden geschreven. | in a snackbar after Remove failed, with the English details |
+| The away time you entered is not saved yet. | De afwezige tijd die je invulde is nog niet opgeslagen. | under "Discard changes?", asked by Back in the entry with the choice or a time changed |
 | updated 10:51, not refreshed since 10:51 | bijgewerkt om 10:51, niet vernieuwd sinds 10:51 | the footer, after the provider's credit, which stays as it is |
 | provider busy until 11:30 | dienst weer beschikbaar om 11:30 | the footer, during a cool-down |
 | The forecast was not refreshed since 10:51. The plan uses that forecast. | De voorspelling is niet vernieuwd sinds 10:51. De planning gebruikt die voorspelling. | the warning above a plan on a stale forecast |
@@ -208,8 +222,8 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Saved. | Opgeslagen. | after a page's Save, in a snackbar |
 | Not saved. | Niet opgeslagen. | under the top app bar after a page's Save failed; why is at the top of the page |
 | Back | Terug | what TalkBack says for the top app bar's Up arrow (set-up's own button stays Vorige) |
-| Saving… | Opslaan… | Save while it saves, on a Settings page and in the battery level's entry |
-| Discard changes? | Wijzigingen weggooien? | asked by Back or Up on a Settings page with edits, and by Back, or a tap beside it, in the battery level's entry with a level typed |
+| Saving… | Opslaan… | Save while it saves, on a Settings page and in the battery level's and the one-off away period's entries |
+| Discard changes? | Wijzigingen weggooien? | asked by Back or Up on a Settings page with edits, and by Back, or a tap beside it, in the battery level's entry with a level typed and in the one-off away period's entry with something changed |
 | Keep editing | Verder bewerken | stays on the page, or in the entry |
 | Discard | Weggooien | throws the page's edits, or the typed level, away |
 | Close | Sluiten | closes a save's outcome shown on the home |

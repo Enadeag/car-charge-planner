@@ -189,7 +189,7 @@ internal fun HouseFields(house: HouseForm, edits: Edits, problems: ProblemFocus,
 @Composable
 internal fun AwayPeriods(away: WeeklyAwayForm, edits: Edits, problems: ProblemFocus) {
     val rows by away.rowIds.collectAsStateWithLifecycle()
-    val focus = remember { RowFocus() }
+    val focus = remember { RowFocus<Int>() }
     if (rows.isEmpty()) {
         NoneLine(stringResource(R.string.away_none), focus)
     }
@@ -211,7 +211,7 @@ internal fun AwayPeriods(away: WeeklyAwayForm, edits: Edits, problems: ProblemFo
  */
 @Composable
 private fun AwayPeriod(away: WeeklyAwayForm, row: Int, index: Int, rows: List<Int>, edits: Edits,
-    problems: ProblemFocus, focus: RowFocus) {
+    problems: ProblemFocus, focus: RowFocus<Int>) {
     val last = index == rows.lastIndex
     val shown by away.problems(row).collectAsStateWithLifecycle()
     val locale = LocalConfiguration.current.locales[0]

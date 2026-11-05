@@ -291,6 +291,37 @@
   <string name="one_off_part">%1$s, %2$s</string>
   <!-- %1$s the day it starts, as in one_off_all_day; %2$s the start time; %3$s the day it ends; %4$s the end time -->
   <string name="one_off_days">%1$s %2$s – %3$s %4$s</string>
+  <!-- the button at the end of the heading row that opens the entry of a one-off away period on the page's day -->
+  <string name="one_off_add">Add</string>
+  <!-- each period's button; a screen reader says it with the period, %1$s the period as the list shows it, such as
+       one_off_all_day -->
+  <string name="one_off_remove">Remove</string>
+  <string name="one_off_remove_spoken">Remove %1$s</string>
+  <!-- the entry's title; %1$s the day: its weekday and date as the phone writes them in a sentence, such as
+       "Thursday, November 5" -->
+  <string name="one_off_entry_title">Car away on %1$s</string>
+  <!-- the entry's choice of the whole day or part of it -->
+  <string name="one_off_whole_day">All day</string>
+  <string name="one_off_part_of_day">Part of the day</string>
+  <!-- part of the day's two times, each a button that opens the time picker and its title -->
+  <string name="one_off_from">Away from</string>
+  <string name="one_off_until">Away until</string>
+  <!-- confirms the time picker's time -->
+  <string name="action_ok">OK</string>
+  <!-- under the end time, or the choice for all day, after Save refused the period -->
+  <string name="one_off_end_before_start">The end must be after the start.</string>
+  <string name="one_off_passed">That time has passed already.</string>
+  <!-- after a change, in a snackbar; %1$s the period as the list shows it, such as one_off_all_day; Removed has the
+       action Undo, which adds it back -->
+  <string name="one_off_saved">Saved: %1$s.</string>
+  <string name="one_off_removed">Removed: %1$s.</string>
+  <string name="action_undo">Undo</string>
+  <!-- after a change failed, above or before the English details: in the entry after its Save, or in a snackbar
+       after Undo; in a snackbar after Remove -->
+  <string name="one_off_not_saved">Not saved: the away time could not be written.</string>
+  <string name="one_off_not_removed">Not removed: the away time could not be written.</string>
+  <!-- asked by Back in the entry with the choice or a time changed, under discard_question -->
+  <string name="one_off_discard_text">The away time you entered is not saved yet.</string>
 
   <!-- the footer's parts, after the provider's own credit; %1$s the primary provider's name, such as Open-Meteo -->
   <string name="footer_fallback">%1$s unavailable</string>

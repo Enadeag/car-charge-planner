@@ -46,6 +46,7 @@ import kotlinx.coroutines.cancel
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.home.AwayEntry
 import nl.enadeag.carchargeplanner.android.home.BatteryEntry
 import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
@@ -106,11 +107,12 @@ class BatteryEntryScreenTest {
         restoration: StateRestorationTester? = null) {
         val outlook = HomeOutlook(access, scope, Clock.systemUTC(), kept = plan) { }
         entry = BatteryEntry(kept, NumberText(Locale.ENGLISH), access, scope) { outlook.planAgain() }
+        val away = AwayEntry(kept, access, scope, Clock.systemUTC(), outlook::awayChanged)
         val notice = HomeNotice(saves, scope) { }
         val content = @Composable {
             AppTheme {
                 focus = LocalFocusManager.current
-                HomeScreen(outlook, notice, entry, { lisbon }) { }
+                HomeScreen(outlook, notice, entry, away, { lisbon }) { }
             }
         }
         if (restoration == null) compose.setContent(content) else restoration.setContent(content)

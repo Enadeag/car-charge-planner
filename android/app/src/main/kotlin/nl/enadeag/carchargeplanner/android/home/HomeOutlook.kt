@@ -14,13 +14,14 @@ import kotlinx.coroutines.launch
 import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.android.store.LatestAnswer
 import nl.enadeag.carchargeplanner.engine.Outlook
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import org.slf4j.LoggerFactory
 
 /**
  * The dashboard's plan: asked when the home opens, unless it comes back from Settings where nothing changed, again on
  * Refresh or a pull, again when the owner comes back to the app and the plan shown is older than [STALE_AFTER], again
  * when a Settings save changes something while the home is shown, and again after the owner entered the battery
- * level, only the latest answer counting. Refresh keeps a plan in view while the new one is made; a Settings change
+ * level or changed a one-off away period, only the latest answer counting. Refresh keeps a plan in view while the new one is made; a Settings change
  * does not, as the plan shown no longer fits. A settings file that is gone or cannot be used is handed on, so the app
  * shows set-up or the file's problem instead. Called from the main thread.
  *
@@ -128,6 +129,17 @@ class HomeOutlook(private val access: EngineAccess, scope: CoroutineScope, priva
      */
     fun planAgain() {
         ask(keepShown = stateNow.value is State.Planned)
+    }
+
+    /**
+     * Shows the one-off away periods as the engine stored them after the owner added or removed one, at once, then
+     * asks for the plan again as [planAgain] does, the plan shown staying in view until the new one comes.
+     *
+     * @param periods the stored periods after the change, in order of their start
+     */
+    fun awayChanged(periods: List<OneOffAwayPeriod>) {
+        (stateNow.value as? State.Planned)?.let { stateNow.value = State.Planned(it.dashboard.withAway(periods)) }
+        planAgain()
     }
 
     /**

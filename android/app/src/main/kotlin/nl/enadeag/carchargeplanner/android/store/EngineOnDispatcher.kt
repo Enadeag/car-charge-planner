@@ -68,6 +68,27 @@ class EngineOnDispatcher(private val engine: Engine, private val dispatcher: Cor
 
     override suspend fun awayPeriods(): List<OneOffAwayPeriod> = withContext(dispatcher) { engine.awayPeriods() }
 
+    override suspend fun addAwayPeriod(period: OneOffAwayPeriod): AwaySave =
+        changeAway("The away period could not be added") { engine.addAwayPeriod(period) }
+
+    override suspend fun removeAwayPeriod(period: OneOffAwayPeriod): AwaySave =
+        changeAway("The away period could not be removed") { engine.removeAwayPeriod(period) }
+
+    private suspend fun changeAway(what: String, change: () -> List<OneOffAwayPeriod>): AwaySave =
+        withContext(dispatcher) {
+            try {
+                AwaySave.Saved(change())
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: IOException) {
+                LOG.warn(what + ": " + failure.message)
+                AwaySave.Failed(failure.message ?: failure.javaClass.simpleName)
+            } catch (failure: RuntimeException) {
+                LOG.warn(what, failure)
+                AwaySave.Failed(failure.message ?: failure.javaClass.simpleName)
+            }
+        }
+
     override suspend fun saveBatteryLevel(level: Percent): BatteryLevelSave = withContext(dispatcher) {
         try {
             engine.setBatteryLevel(level)

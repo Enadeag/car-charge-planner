@@ -210,6 +210,23 @@
   <string name="one_off_all_day">%1$s, hele dag</string>
   <string name="one_off_part">%1$s, %2$s</string>
   <string name="one_off_days">%1$s %2$s – %3$s %4$s</string>
+  <string name="one_off_add">Toevoegen</string>
+  <string name="one_off_remove">Verwijderen</string>
+  <string name="one_off_remove_spoken">%1$s verwijderen</string>
+  <string name="one_off_entry_title">Afwezig op %1$s</string>
+  <string name="one_off_whole_day">Hele dag</string>
+  <string name="one_off_part_of_day">Deel van de dag</string>
+  <string name="one_off_from">Afwezig vanaf</string>
+  <string name="one_off_until">Afwezig tot</string>
+  <string name="action_ok">OK</string>
+  <string name="one_off_end_before_start">Het einde moet na het begin liggen.</string>
+  <string name="one_off_passed">Die tijd is al voorbij.</string>
+  <string name="one_off_saved">Opgeslagen: %1$s.</string>
+  <string name="one_off_removed">Verwijderd: %1$s.</string>
+  <string name="action_undo">Ongedaan maken</string>
+  <string name="one_off_not_saved">Niet opgeslagen: de afwezige tijd kon niet worden geschreven.</string>
+  <string name="one_off_not_removed">Niet verwijderd: de afwezige tijd kon niet worden geschreven.</string>
+  <string name="one_off_discard_text">De afwezige tijd die je invulde is nog niet opgeslagen.</string>
 
   <string name="footer_fallback">%1$s niet beschikbaar</string>
   <string name="footer_fallback_unknown">de gekozen dienst niet beschikbaar</string>

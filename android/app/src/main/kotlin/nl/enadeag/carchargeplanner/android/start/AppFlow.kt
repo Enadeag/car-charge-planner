@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.home.AwayEntry
 import nl.enadeag.carchargeplanner.android.home.BatteryEntry
 import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
@@ -37,13 +38,13 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig
  * @param saves the app's saves, which outlive the screens
  * @param appScope the app's scope, where a move of the settings file runs so that it is never cut off
  * @param scope the scope of the screens, which ends with them
- * @param handle the saved state that set-up, Settings and the home's battery entry keep their place and texts in,
+ * @param handle the saved state that set-up, Settings and the home's entries keep their place and texts in,
  *     each forgotten as it ends
  * @param numbers how the screen's language writes numbers, which follows a change of the app's language
  * @property phoneZone the phone's time zone as it is now; the screens read it from here only
  * @param language the app's language now, as the place search takes it, such as "nl"
  * @param mainThread the screens' own thread, where a Settings save reads its forms: `Dispatchers.Main.immediate`
- * @param clock tells the home how old the plan it shows is
+ * @param clock tells the home how old the plan it shows is, and whether an away period entered there has passed
  */
 class AppFlow(private val access: EngineAccess, private val saves: Saves, private val appScope: CoroutineScope,
     private val scope: CoroutineScope, private val handle: SavedStateHandle, private val numbers: NumberText,
@@ -87,8 +88,10 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
          * @property outlook the plan it shows
          * @property notice the outcome of a Settings save that no screen showed yet
          * @property battery the entry of the battery level the car shows
+         * @property away the changes to the one-off away periods
          */
-        data class Home(val outlook: HomeOutlook, val notice: HomeNotice, val battery: BatteryEntry) : Screen
+        data class Home(val outlook: HomeOutlook, val notice: HomeNotice, val battery: BatteryEntry,
+            val away: AwayEntry) : Screen
 
         /**
          * Settings: the list of its pages, or one page.
@@ -141,9 +144,10 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
             SettingsSession.forget(handle)
             handle.remove<Boolean>(SETTINGS)
         }
-        // the home ends here, and its battery entry with it
+        // the home ends here, and its entries with it
         if (state !is StartState.Ready) {
             BatteryEntry.forget(handle)
+            AwayEntry.forget(handle)
         }
         val own = nextScope()
         screenNow.value = when (state) {
@@ -165,14 +169,15 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
     }
 
     /**
-     * The home, which keeps nothing of set-up in the handle; its battery entry comes back as the handle has it, and a
-     * level saved there has the plan made again.
+     * The home, which keeps nothing of set-up in the handle; its entries come back as the handle has them, and a
+     * level or an away period saved there has the plan made again.
      */
     private fun home(own: CoroutineScope, kept: HomeOutlook.Kept? = null): Screen.Home {
         SetUpSession.forget(handle)
         val outlook = HomeOutlook(access, own, clock, saves.changes, kept, ::read)
         return Screen.Home(outlook, HomeNotice(saves, own, ::show),
-            BatteryEntry(handle, numbers, access, own, outlook::planAgain))
+            BatteryEntry(handle, numbers, access, own, outlook::planAgain),
+            AwayEntry(handle, access, own, clock, outlook::awayChanged))
     }
 
     private fun settings(own: CoroutineScope, config: EngineConfig): Screen.Settings {

@@ -67,7 +67,7 @@ internal fun AppScreen(flow: AppFlow) {
         is AppFlow.Screen.SetUp -> SetUpScreen(now.session)
         is AppFlow.Screen.Unusable -> UnusableScreen(now.again)
         is AppFlow.Screen.NewerVersion -> NewerVersionScreen()
-        is AppFlow.Screen.Home -> HomeScreen(now.outlook, now.notice, now.battery, flow.phoneZone,
+        is AppFlow.Screen.Home -> HomeScreen(now.outlook, now.notice, now.battery, now.away, flow.phoneZone,
             flow::openSettings)
         is AppFlow.Screen.Settings -> SettingsScreen(now.session, now.page)
     }
