@@ -26,9 +26,10 @@ fun languageFolders(res: File): List<String> = res.listFiles().orEmpty().map { i
     .filter { it.startsWith("values-") && it.removePrefix("values-") in Locale.getISOLanguages() }
     .map { it.removePrefix("values-") }.sorted()
 
-// The short commit of a CI build, else "dev"; read as a provider, so the configuration cache sees the variable.
-val debugBuildLabel: Provider<String> = providers.environmentVariable("GITHUB_SHA")
-    .map { it.take(7) }.orElse("dev")
+// The short commit of a CI build (BUILD_COMMIT, which android.yml sets to a pull request's head commit or the pushed
+// commit), else "dev"; read as a provider, so the configuration cache sees the variable. An empty value counts as unset.
+val debugBuildLabel: Provider<String> = providers.environmentVariable("BUILD_COMMIT")
+    .filter { it.isNotEmpty() }.map { it.take(7) }.orElse("dev")
 
 android {
     namespace = "nl.enadeag.carchargeplanner.android"
@@ -61,7 +62,7 @@ android {
         }
         // en-XA (longer, accented texts) and ar-XB (right to left) to try the screens with; never in a release.
         // An id of its own, so the debug build sits beside a release build on one phone, and a version name that shows
-        // the commit on CI (GITHUB_SHA) and "dev" elsewhere.
+        // the commit on CI (BUILD_COMMIT) and "dev" elsewhere.
         debug {
             isPseudoLocalesEnabled = true
             applicationIdSuffix = ".debug"
@@ -166,16 +167,22 @@ val licenceAssets = tasks.register<LicenceAssets>("licenceAssets") {
     legal = file("../legal")
 }
 
-/** Fails when the release build type is signed with the debug key, by its signing config or by its keystore's bytes. */
+/**
+ * Fails when a build type other than debug (release, or any later one) is signed with the debug key: by its signing
+ * config being the debug one, or by a keystore file whose bytes are those of debug.keystore. It does not see a
+ * re-exported copy of the key with other bytes, nor signing set after the DSL is final (the Variant API,
+ * `android.injected.signing.*`). It has no outputs, so it runs every time.
+ */
 abstract class ReleaseSigningCheck : DefaultTask() {
 
+    /** The signing config's name by build type; a build type without one is left out. */
     @get:Input
-    @get:Optional
-    abstract val releaseSigningName: Property<String>
+    abstract val signingNames: MapProperty<String, String>
 
-    @get:Input
-    @get:Optional
-    abstract val releaseStoreFile: Property<String>
+    /** The keystore files of the non-debug build types' signing configs. */
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val keystores: ConfigurableFileCollection
 
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
@@ -183,14 +190,12 @@ abstract class ReleaseSigningCheck : DefaultTask() {
 
     @TaskAction
     fun check() {
-        val name = releaseSigningName.orNull
-        val store = releaseStoreFile.orNull?.let(::File)
-        val debug = debugKeystore.get().asFile
-        val sameKey = name == "debug" ||
-            (store != null && store.exists() && store.readBytes().contentEquals(debug.readBytes()))
-        if (sameKey) {
-            throw GradleException("The release build type is signed with the debug key (signing config " +
-                "'$name', keystore '${store ?: "none"}'); release signing is #271/#272's own key")
+        val debug = debugKeystore.get().asFile.readBytes()
+        val byName = signingNames.get().filterValues { it == "debug" }.keys
+        val byBytes = keystores.files.filter { it.isFile && it.readBytes().contentEquals(debug) }
+        if (byName.isNotEmpty() || byBytes.isNotEmpty()) {
+            throw GradleException("A build type other than debug is signed with the debug key (signing config 'debug' " +
+                "on $byName, keystore copies of it: $byBytes); release signing is #271/#272's own key")
         }
     }
 }
@@ -202,13 +207,20 @@ tasks.named("check") { dependsOn(checkReleaseNotDebugSigned) }
 
 androidComponents {
     finalizeDsl { dsl ->
-        val signing = dsl.buildTypes.getByName("release").signingConfig
+        val signed = dsl.buildTypes.filter { it.name != "debug" }.mapNotNull { type ->
+            type.signingConfig?.let { type.name to it }
+        }
         checkReleaseNotDebugSigned.configure {
-            releaseSigningName = signing?.name
-            releaseStoreFile = signing?.storeFile?.absolutePath
+            signingNames.putAll(signed.associate { (type, signing) -> type to signing.name })
+            keystores.from(signed.mapNotNull { (_, signing) -> signing.storeFile })
         }
     }
     onVariants { variant ->
+        // every build of a build type other than debug (assembleRelease, bundleRelease) needs the guard, not only check
+        if (variant.buildType != "debug") {
+            val preBuild = "pre" + variant.name.replaceFirstChar { it.uppercase() } + "Build"
+            tasks.matching { it.name == preBuild }.configureEach { dependsOn(checkReleaseNotDebugSigned) }
+        }
         variant.sources.assets?.addGeneratedSourceDirectory(licenceAssets, LicenceAssets::getAssets)
         variant.androidTest?.sources?.assets?.addGeneratedSourceDirectory(exampleConfigAsset, ExampleConfigAsset::assets)
         // LicencesInTheApkTest reads the debug APK as the build packs it
