@@ -271,6 +271,16 @@ class ForecastServiceTest {
     }
 
     @Test
+    void aBugInAProviderWaitsTheFullIntervalTooAsItMayHaveSpentARequest() throws ForecastUnavailable {
+        main.script(crash(new IllegalStateException("bug")));
+        get(T0);
+        get(later(30));
+        assertThat(main.callCount()).isEqualTo(1);
+        get(later(61));
+        assertThat(main.callCount()).isEqualTo(2);
+    }
+
+    @Test
     void aProviderThatBreaksTheContractIsTreatedAsABadAnswer() throws ForecastUnavailable {
         main.script(steps(List.of(new ForecastStep(T0, T0.plus(Duration.ofHours(1)), -1.0))));
         assertThat(get(T0).source().providerRole()).isEqualTo(ProviderRole.FALLBACK); // the primary's answer was refused, not used
