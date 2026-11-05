@@ -117,7 +117,7 @@ class HomeScreenTest {
     private val lisbon = ZoneId.of("Europe/Lisbon")
     private val today = LocalDate.of(2026, 6, 1)
     private val clock = TestClock(today.atTime(9, 0).atZone(lisbon).toInstant())
-    private val title = isHeading() and hasText("Car charge planner")
+    private val title = isHeading() and hasText(text(R.string.app_name))
 
     @After
     fun stop() {

@@ -1,11 +1,12 @@
 name: Android
 
 # The Android app (android/, ADR 0010). The build job builds the app and its test APK, runs Android Lint and then
-# check: the unit tests and the build's own checks. It runs for a pull request that touches android/, the engine's
-# sources, a pom.xml (the build takes the versions of the engine's libraries from pom.xml, and checkMavenDrift holds it
-# to the libraries of engine/pom.xml) or this file, and always on a push, weekly and by hand. The emulator job runs the
-# instrumented tests on an Android 10 (API 29) emulator: for release/android-* branches and the pull requests into them,
-# weekly, by hand, and for a pull request that changes this file. (CONTRIBUTING.md, What is tested where)
+# check (the unit tests and the build's own checks), and keeps the debug APK for 14 days, to install on a phone (not
+# for a pull request from a fork). It runs for a pull request that touches android/, the engine's sources, a pom.xml
+# (the build takes the versions of the engine's libraries from pom.xml, and checkMavenDrift holds it to the libraries
+# of engine/pom.xml) or this file, and always on a push, weekly and by hand. The emulator job runs the instrumented
+# tests on an Android 10 (API 29) emulator: for release/android-* branches and the pull requests into them, weekly, by
+# hand, and for a pull request that changes this file. (CONTRIBUTING.md, What is tested where)
 on:
   push:
     branches: [main, "release/android-*"]
@@ -81,6 +82,9 @@ jobs:
     if: needs.android-changes.outputs.build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # the commit in the debug version name: a pull request's own head, not the merge commit GITHUB_SHA names there
+      BUILD_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     defaults:
       run:
         working-directory: android
@@ -112,6 +116,21 @@ jobs:
       - name: Unit tests and the build's checks
         if: ${{ !cancelled() && steps.sdk.outcome == 'success' }}
         run: ./gradlew --continue --stacktrace check
+      # The debug APK to install on a phone (CONTRIBUTING.md, The Android app), kept even when lint or the tests failed;
+      # the step fails when the build left no APK. Not for a pull request from a fork, which runs code from outside the
+      # repository, nor for Dependabot's (its author, so a re-run by the maintainer skips it too). The attempt is in the
+      # name, so a re-run of failed jobs does not meet the artifact of the first attempt.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: >-
+          ${{ !cancelled() && steps.sdk.outcome == 'success'
+          && (github.event_name != 'pull_request'
+          || (github.event.pull_request.head.repo.full_name == github.repository
+          && github.event.pull_request.user.login != 'dependabot[bot]')) }}
+        with:
+          name: android-debug-apk-${{ github.run_number }}-${{ github.run_attempt }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
