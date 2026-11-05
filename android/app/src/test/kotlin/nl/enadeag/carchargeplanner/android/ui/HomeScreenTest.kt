@@ -268,7 +268,8 @@ class HomeScreenTest {
         clock("24")
         val window = Window(today.atTime(20, 0).atZone(lisbon).toInstant(),
             today.atTime(22, 0).atZone(lisbon).toInstant(), 16, 3.7, 0.0, 7.4)
-        show(lisbonWeek(GridAdvice(today.plusDays(1), 12.0, 18.0, 7.4, Optional.of(window), Optional.of(Percent(60.0)))))
+        val advice = GridAdvice(today.plusDays(1), 12.0, 18.0, 7.4, Optional.of(window), Optional.of(Percent(60.0)))
+        show(lisbonWeek(advice))
 
         compose.onNodeWithText(text(R.string.advice_label)).performScrollTo().assert(isHeading())
         compose.onNodeWithText(text(R.string.advice_title_window, "7.4", "today", "20:00 – 22:00")).assertExists()

@@ -48,8 +48,8 @@ import nl.enadeag.carchargeplanner.android.home.AwayEntry
 import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
 import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 import nl.enadeag.carchargeplanner.android.ui.components.DiscardChangesDialog
-import nl.enadeag.carchargeplanner.android.ui.components.EnglishDetails
 import nl.enadeag.carchargeplanner.android.ui.components.SaveButton
+import nl.enadeag.carchargeplanner.android.ui.components.SaveFailure
 
 /** Which of the entry's two times the picker is open for. */
 private enum class Picked {
@@ -131,7 +131,7 @@ internal fun AwayEntryDialog(entry: AwayEntry) {
                         Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                SaveFailure(saving)
+                SaveFailure(stringResource(R.string.one_off_not_saved), (saving as? AwayEntry.SaveState.Failed)?.detail)
             }
         },
         confirmButton = { SaveButton(busy, { entry.save() }) },
@@ -227,19 +227,6 @@ private fun TimeDialog(title: String, time: LocalTime, chosen: (LocalTime) -> Un
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
             TimePicker(state)
-        }
-    }
-}
-
-/** Why the save failed, with the English details, in a live region read at once; it stays while empty. */
-@Composable
-private fun SaveFailure(saving: AwayEntry.SaveState) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.semantics(mergeDescendants = true) {
-        liveRegion = LiveRegionMode.Assertive
-    }) {
-        if (saving is AwayEntry.SaveState.Failed) {
-            Text(stringResource(R.string.one_off_not_saved), color = MaterialTheme.colorScheme.error)
-            EnglishDetails(saving.detail)
         }
     }
 }

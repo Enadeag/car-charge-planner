@@ -81,6 +81,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 import nl.enadeag.carchargeplanner.android.ui.components.BarIconButton
 import nl.enadeag.carchargeplanner.android.ui.components.BarScaffold
 import nl.enadeag.carchargeplanner.android.ui.components.EnglishDetails
+import nl.enadeag.carchargeplanner.android.ui.components.FailureVisuals
 import nl.enadeag.carchargeplanner.android.ui.components.NoneLine
 import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
 import nl.enadeag.carchargeplanner.android.ui.components.RowLine
@@ -199,34 +200,25 @@ private fun AwayOutcome(away: AwayEntry, snackbars: SnackbarHostState, named: (O
                     is AwayEntry.Notice.Saved ->
                         snackbars.showSnackbar(resources.getString(R.string.one_off_saved, name(notice.period)))
                     is AwayEntry.Notice.Removed -> {
+                        // it stays until the next notice or Close: Material takes any other away after about 10 s,
+                        // also with TalkBack, which is too soon to find Undo
                         val undo = snackbars.showSnackbar(resources.getString(R.string.one_off_removed,
                             name(notice.period)), resources.getString(R.string.action_undo),
-                            duration = SnackbarDuration.Long)
+                            withDismissAction = true, duration = SnackbarDuration.Indefinite)
                         if (undo == SnackbarResult.ActionPerformed) {
                             away.undo(notice.period)
                         }
                     }
-                    is AwayEntry.Notice.NotRemoved -> snackbars.showSnackbar(resources.getString(
-                        R.string.one_off_not_removed) + " " + resources.getString(R.string.details_in_english,
-                        notice.detail), withDismissAction = true, duration = SnackbarDuration.Long)
-                    is AwayEntry.Notice.NotSaved -> snackbars.showSnackbar(resources.getString(
-                        R.string.one_off_not_saved) + " " + resources.getString(R.string.details_in_english,
-                        notice.detail), withDismissAction = true, duration = SnackbarDuration.Long)
+                    is AwayEntry.Notice.NotRemoved -> snackbars.showSnackbar(
+                        FailureVisuals(resources.getString(R.string.one_off_not_removed), notice.detail))
+                    is AwayEntry.Notice.NotSaved -> snackbars.showSnackbar(
+                        FailureVisuals(resources.getString(R.string.one_off_not_saved), notice.detail))
                 }
             }
         }
     }
     val draft by away.draft.collectAsStateWithLifecycle()
-    val open = draft != null
-    val seen = remember { Seen(open) }
-    LaunchedEffect(open) {
-        if (seen.open && !open) {
-            // the dialog's window gives the focus back once it is gone, which this waits for
-            withFrameNanos { }
-            closed()
-        }
-        seen.open = open
-    }
+    AfterClose(draft != null, closed)
 }
 
 /**
@@ -260,6 +252,17 @@ private fun BatteryOutcome(battery: BatteryEntry, snackbars: SnackbarHostState, 
         }
     }
     val open by battery.open.collectAsStateWithLifecycle()
+    AfterClose(open, closed)
+}
+
+/**
+ * Calls [closed] once an entry dialog that was open is gone, however it closed.
+ *
+ * @param open whether the entry is open
+ * @param closed moves the focus on
+ */
+@Composable
+private fun AfterClose(open: Boolean, closed: () -> Unit) {
     val seen = remember { Seen(open) }
     LaunchedEffect(open) {
         if (seen.open && !open) {
@@ -272,7 +275,7 @@ private fun BatteryOutcome(battery: BatteryEntry, snackbars: SnackbarHostState, 
 }
 
 /**
- * Whether the battery entry was open when last looked at, which drawing never reads.
+ * Whether an entry dialog was open when last looked at, which drawing never reads.
  *
  * @property open true when it was
  */
@@ -444,6 +447,13 @@ private fun AwayList(dashboard: Dashboard, day: DayModel, words: DashboardWords,
             focus.removing(going.rows, gone)
         }
         going.period = null
+    }
+    LaunchedEffect(away.busy) {
+        // a Remove that failed leaves its period in the list, so no later change of the list moves the focus for it
+        val pressed = going.period
+        if (!away.busy && pressed != null && pressed in periods) {
+            going.period = null
+        }
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

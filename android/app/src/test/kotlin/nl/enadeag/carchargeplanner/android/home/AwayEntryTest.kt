@@ -133,7 +133,7 @@ class AwayEntryTest {
     }
 
     @Test
-    fun partOfTheDayThatEndedByTheTimeOfSaveIsRefused() = runTest {
+    fun aPeriodEndingExactlyAtTheTimeOfSaveIsRefusedAsPassed() = runTest {
         val entry = partOfDay("06:00", "08:00")
 
         assertThat(saved(entry)).isNull()

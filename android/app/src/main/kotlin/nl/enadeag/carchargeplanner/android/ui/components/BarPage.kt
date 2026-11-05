@@ -122,7 +122,7 @@ internal fun BarScaffold(title: String, titleFocus: FocusRequester?, onUp: (() -
                 windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
             )
         },
-        snackbarHost = { if (snackbars != null) SnackbarHost(snackbars) },
+        snackbarHost = { if (snackbars != null) SnackbarHost(snackbars) { AppSnackbar(it) } },
         contentWindowInsets = WindowInsets.safeDrawing,
     ) { inner ->
         Box(Modifier.fillMaxSize().padding(inner).consumeWindowInsets(inner), contentAlignment = Alignment.TopCenter) {

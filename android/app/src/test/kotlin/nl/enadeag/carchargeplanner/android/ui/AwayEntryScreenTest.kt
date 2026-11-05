@@ -4,6 +4,8 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.ComponentDialog
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
@@ -13,6 +15,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
@@ -88,6 +91,7 @@ class AwayEntryScreenTest {
     private val handle = SavedStateHandle()
     private lateinit var away: AwayEntry
     private lateinit var entryDialog: ComponentDialog
+    private lateinit var focus: FocusManager
 
     private val tomorrow = OneOffAwayPeriod.allDay(today.plusDays(1), lisbon)
     private val wednesday = OneOffAwayPeriod.on(today.plusDays(2), LocalTime.of(10, 0), LocalTime.of(12, 0), lisbon)
@@ -109,19 +113,24 @@ class AwayEntryScreenTest {
      *
      * @param kept the saved state the entry comes back from
      * @param wrap what the home is shown in, such as twice the font size
+     * @param planned false to leave the plan still asked
      */
-    private fun show(kept: SavedStateHandle = handle, wrap: @Composable (@Composable () -> Unit) -> Unit = { it() }) {
+    private fun show(kept: SavedStateHandle = handle, planned: Boolean = true,
+        wrap: @Composable (@Composable () -> Unit) -> Unit = { it() }) {
         clock("24")
         val outlook = HomeOutlook(access, scope, clock) { }
         val battery = BatteryEntry(kept, NumberText(Locale.ENGLISH), access, scope) { }
         away = AwayEntry(kept, access, scope, clock, outlook::awayChanged)
         val notice = HomeNotice(saves, scope) { }
         compose.setContent {
+            focus = LocalFocusManager.current
             AppTheme { wrap { HomeScreen(outlook, notice, battery, away, { lisbon }) { } } }
         }
         compose.waitForIdle()
-        access.outlooks.last().complete(week())
-        compose.waitForIdle()
+        if (planned) {
+            access.outlooks.last().complete(week())
+            compose.waitForIdle()
+        }
     }
 
     private val add get() = compose.onNode(hasText(text(R.string.one_off_add)) and !hasAnyAncestor(isDialog()))
@@ -140,7 +149,7 @@ class AwayEntryScreenTest {
         windowFocused(entryDialog, true)
     }
 
-    /** Gives a dialog's window the focus, or takes it, as Android does as dialogs show and go and Robolectric does not. */
+    /** Gives a dialog's window the focus, or takes it, as Android does as dialogs show and go; Robolectric does not. */
     private fun windowFocused(dialog: ComponentDialog, focused: Boolean) {
         compose.runOnIdle {
             // the decor view's parent is the window's ViewRootImpl, which the SDK hides
@@ -284,7 +293,7 @@ class AwayEntryScreenTest {
             .performSemanticsAction(SemanticsActions.OnClick)
         compose.waitForIdle()
 
-        compose.runOnIdle { (ShadowDialog.getLatestDialog() as ComponentDialog).onBackPressedDispatcher.onBackPressed() }
+        backInTheDialog()
         compose.waitForIdle()
 
         assertThat(away.draft.value?.end).isEqualTo(LocalTime.of(17, 0))
@@ -508,7 +517,7 @@ class AwayEntryScreenTest {
     @Config(qualifiers = "w320dp-h480dp", fontScale = 2.0f)
     fun onASmallPhoneAtTwiceTheFontSizeTheEntryWithARefusalAndAFailureIsNamedLargeEnoughAndReachable() {
         access.awayFails = "away.json is not written: written by a newer version of the app (file version 2)"
-        show { AtFontScaleTwo(it) }
+        show(wrap = { AtFontScaleTwo(it) })
         add.performScrollTo()
         compose.assertEveryControlIsNamedAndLargeEnough()
         openTheEntry()
@@ -529,10 +538,177 @@ class AwayEntryScreenTest {
         show()
         add.assertExists()
         compose.assertShowsNoneOf(englishOnlyTexts())
+        compose.onNode(hasContentDescription(" verwijderen", substring = true)).performScrollTo()
+            .assert(hasText("Verwijderen"))
         openTheEntry()
+        compose.onNode(isHeading() and hasText("Afwezig op ", substring = true) and hasAnyAncestor(isDialog()))
+            .assertIsDisplayed()
         partOfTheDay()
         backInTheDialog()
 
         compose.assertShowsNoneOf(englishOnlyTexts())
+    }
+
+    private val remove = { period: String -> compose.onNode(hasContentDescription(text(R.string.one_off_remove_spoken,
+        period))) }
+
+    @Test
+    fun theUndoSnackbarStaysPastTheTimeMaterialGivesOtherSnackbarsAndHasADismissButton() {
+        access.away = listOf(tomorrow)
+        show()
+        val period = text(R.string.one_off_all_day, "Tomorrow")
+        remove(period).performScrollTo().performClick()
+        compose.waitForIdle()
+
+        compose.mainClock.advanceTimeBy(60_000)
+
+        compose.onNodeWithText(text(R.string.one_off_removed, period)).assertIsDisplayed()
+        // Material's own button, named by Material
+        compose.onNode(hasContentDescription("Dismiss") and hasClickAction()).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.action_undo)).performClick()
+        compose.waitForIdle()
+        assertThat(access.away).containsExactly(tomorrow)
+    }
+
+    @Test
+    fun aSecondNoticeTakesTheFirstSnackbarsPlace() {
+        access.away = listOf(tomorrow, wednesday)
+        show()
+        val first = text(R.string.one_off_all_day, "Tomorrow")
+        val second = text(R.string.one_off_part, "Wed, Jun 3", text(R.string.time_span, "10:00", "12:00"))
+        remove(first).performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText(text(R.string.one_off_removed, first)).assertIsDisplayed()
+
+        remove(second).performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+
+        compose.onNodeWithText(text(R.string.one_off_removed, second)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.one_off_removed, first)).assertDoesNotExist()
+    }
+
+    @Test
+    fun theEnglishDetailsOfAFailureInTheSnackbarAreMarkedAsEnglishForTheScreenReader() {
+        access.away = listOf(tomorrow)
+        access.awayFails = "No space left on device"
+        show()
+        val period = text(R.string.one_off_all_day, "Tomorrow")
+
+        remove(period).performScrollTo().performClick()
+        compose.waitForIdle()
+
+        val failed = text(R.string.one_off_not_removed) + " " +
+            text(R.string.details_in_english, "No space left on device")
+        val shown = compose.onNodeWithText(failed).fetchSemanticsNode().config[SemanticsProperties.Text].single()
+        val english = shown.spanStyles.filter { it.item.localeList?.get(0)?.language == "en" }.single()
+        assertThat(shown.text.substring(english.start, english.end)).isEqualTo("No space left on device")
+        compose.onNode(hasContentDescription(text(R.string.action_close)) and hasClickAction()).assertIsDisplayed()
+    }
+
+    @Test
+    fun anUndoThatFailedSaysNotSavedWithTheEnglishDetailsAndTheRowStaysGone() {
+        access.away = listOf(tomorrow)
+        show()
+        val period = text(R.string.one_off_all_day, "Tomorrow")
+        remove(period).performScrollTo().performClick()
+        compose.waitForIdle()
+        access.awayFails = "No space left on device"
+
+        compose.onNodeWithText(text(R.string.action_undo)).performClick()
+        compose.waitForIdle()
+
+        val failed = text(R.string.one_off_not_saved) + " " +
+            text(R.string.details_in_english, "No space left on device")
+        compose.onNodeWithText(failed).assertIsDisplayed()
+        assertThat(compose.liveRegionOf(failed)).isEqualTo(LiveRegionMode.Polite)
+        compose.onNode(hasContentDescription(text(R.string.action_close)) and hasClickAction()).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.one_off_not_removed), substring = true).assertDoesNotExist()
+        line(period).assertDoesNotExist()
+        assertThat(access.away).isEmpty()
+    }
+
+    @Test
+    fun anEntryClosedWhileThePlanIsStillAskedPutsTheFocusOnTheTitle() {
+        AwayEntry(handle, access, scope, clock) { }.open(today, lisbon)
+        show(kept = handle.afterTheSystemEndedTheApp(), planned = false)
+        entryDialog = ShadowDialog.getLatestDialog() as ComponentDialog
+        windowFocused(entryDialog, true)
+        val title = compose.onNode(isHeading() and hasText(text(R.string.app_name)) and !hasAnyAncestor(isDialog()))
+        // the title took the focus when the home opened; the focus is off it, so the entry's close has to bring it back
+        compose.runOnIdle { focus.clearFocus() }
+        title.assertIsNotFocused()
+
+        click(R.string.action_cancel)
+
+        add.assertDoesNotExist()
+        title.assertIsFocused()
+    }
+
+    @Test
+    fun theTimePickerFollowsThePhonesTwelveOrTwentyFourHourClock() {
+        show()
+        clock("12")
+        openTheEntry()
+        partOfTheDay()
+        timeButton(R.string.one_off_from).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("AM").assertExists()
+        compose.onNodeWithText("PM").assertExists()
+        click(R.string.action_ok)
+    }
+
+    @Test
+    fun onATwentyFourHourClockTheTimePickerHasNoAmPm() {
+        show()
+        openTheEntry()
+        partOfTheDay()
+        timeButton(R.string.one_off_from).performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithText(text(R.string.action_ok)).assertExists()
+        compose.onNodeWithText("AM").assertDoesNotExist()
+        compose.onNodeWithText("PM").assertDoesNotExist()
+    }
+
+    @Test
+    fun whilePartOfTheDayIsSavedTheChoicesAndBothTimesAreOff() {
+        val gate = CompletableDeferred<Unit>()
+        access.awayGate = gate
+        show()
+        openTheEntry()
+        partOfTheDay()
+
+        save.performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithText(text(R.string.one_off_whole_day)).assertIsNotEnabled()
+        compose.onNodeWithText(text(R.string.one_off_part_of_day)).assertIsNotEnabled()
+        timeButton(R.string.one_off_from).assertIsNotEnabled()
+        timeButton(R.string.one_off_until).assertIsNotEnabled()
+        gate.complete(Unit)
+        compose.waitForIdle()
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h480dp", fontScale = 2.0f)
+    fun onASmallPhoneAtTwiceTheFontSizeTheTimePickersOkAndCancelAreShownNamedAndLargeEnough() {
+        show(wrap = { AtFontScaleTwo(it) })
+        openTheEntry()
+        partOfTheDay()
+        timeButton(R.string.one_off_from).performClick()
+        compose.waitForIdle()
+
+        listOf(R.string.action_ok, R.string.action_cancel).forEach { id ->
+            val buttons = compose.onAllNodes(hasText(text(id)) and hasClickAction())
+            val nodes = buttons.fetchSemanticsNodes()
+            assertThat(nodes).`as`(text(id)).isNotEmpty()
+            nodes.indices.forEach { index ->
+                buttons[index].assertIsDisplayed()
+                val node = nodes[index]
+                assertThat(node.config[SemanticsProperties.Role]).isEqualTo(Role.Button)
+                val dp = node.layoutInfo.density.density
+                assertThat(minOf(node.size.width, node.size.height) / dp).`as`(text(id)).isGreaterThanOrEqualTo(47.5f)
+            }
+        }
     }
 }

@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -15,9 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -26,7 +23,7 @@ import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.home.BatteryEntry
 import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 import nl.enadeag.carchargeplanner.android.ui.components.DiscardChangesDialog
-import nl.enadeag.carchargeplanner.android.ui.components.EnglishDetails
+import nl.enadeag.carchargeplanner.android.ui.components.SaveFailure
 import nl.enadeag.carchargeplanner.android.ui.components.EntryField
 import nl.enadeag.carchargeplanner.android.ui.components.FieldKind
 import nl.enadeag.carchargeplanner.android.ui.components.SaveButton
@@ -72,7 +69,8 @@ internal fun BatteryEntryDialog(entry: BatteryEntry) {
                 EntryField(stringResource(R.string.battery_entry_field), stringResource(R.string.battery_entry_hint),
                     text, { entry.edit(it) }, FieldKind.WHOLE, problems[BatteryEntry.Field.LEVEL], typical = false,
                     focus = field, imeAction = ImeAction.Done, onAction = { entry.save() }, announceProblem = true)
-                SaveFailure(saving)
+                SaveFailure(stringResource(R.string.battery_not_saved),
+                    (saving as? BatteryEntry.SaveState.Failed)?.detail)
             }
         },
         confirmButton = { SaveButton(busy, { entry.save() }) },
@@ -84,19 +82,5 @@ internal fun BatteryEntryDialog(entry: BatteryEntry) {
     )
     if (asked) {
         DiscardChangesDialog(stringResource(R.string.battery_discard_text), entry::keepEditing, entry::discard)
-    }
-}
-
-/** Why the save failed, with the English details, in a live region read at once; it stays while empty. */
-@Composable
-private fun SaveFailure(saving: BatteryEntry.SaveState) {
-    // the live region stays while empty, so a failure that comes in later is read
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.semantics(mergeDescendants = true) {
-        liveRegion = LiveRegionMode.Assertive
-    }) {
-        if (saving is BatteryEntry.SaveState.Failed) {
-            Text(stringResource(R.string.battery_not_saved), color = MaterialTheme.colorScheme.error)
-            EnglishDetails(saving.detail)
-        }
     }
 }
