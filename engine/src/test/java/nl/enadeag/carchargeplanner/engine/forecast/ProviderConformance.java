@@ -322,6 +322,17 @@ public abstract class ProviderConformance {
         fails(List.of(Route.answer("", new HttpGet.Reply(status, ""))), ProviderError.KeyRefused.class);
     }
 
+    /** The connection check shows a refused key's message as it is, so it must say whose key was refused. */
+    @ParameterizedTest
+    @ValueSource(ints = {401, 403})
+    void aRefusedKeysMessageNamesTheProvider(int status) {
+        var name = providerCase().provider(List.of()).provider().info().name();
+
+        var error = fails(List.of(Route.answer("", new HttpGet.Reply(status, ""))), ProviderError.KeyRefused.class);
+
+        assertThat(error.getMessage()).contains(name);
+    }
+
     @ParameterizedTest
     @CsvSource({"500, true", "499, false"})
     void aStatusFrom500OnIsTheServersProblemAndBelowItARefusal(int status, boolean serverProblem) {

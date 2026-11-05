@@ -255,7 +255,7 @@ What it checks:
 | Several panel arrays | A system with a second array gives one valid forecast. If the provider asks once per array, it is the sum of the single-array forecasts, and a failure for the second array fails the whole forecast. |
 | Same answer, same steps | Deterministic; it leaves its settings alone. |
 | Rate limit | A refusal for too many requests throws `RateLimited` with the retry time the server gave. |
-| Refused key | A 401 or 403 throws `KeyRefused`. |
+| Refused key | A 401 or 403 throws `KeyRefused`, whose message names the provider (its `ProviderInfo` name): the connection check shows it as it is. |
 | Server error, no network | A 5xx and a failed connection (refused, timeout, reset, an answer too large) throw `Unavailable`. |
 | Limits | Every request reads at most `HttpGet.DEFAULT_MAX_BODY` and waits at most `HttpGet.DEFAULT_TIMEOUT`. |
 | Not as documented | A 200 with the wrong content throws `BadResponse`; an empty answer throws a `ProviderError` or gives valid steps, and never anything else. |

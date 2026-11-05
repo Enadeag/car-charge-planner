@@ -70,7 +70,7 @@ class ConnectionCheckTest {
                         "Main is not set up completely: the server address must start with https://"),
                 Arguments.of(new ProviderError.BadResponse("odd"), "Main gave an answer the app does not understand: odd"),
                 Arguments.of(new ProviderError.KeyRefused("Main refused the request (status 401): check the API key"),
-                        "Main refused the API key: Main refused the request (status 401): check the API key"));
+                        "Main refused the request (status 401): check the API key"));
     }
 
     @ParameterizedTest

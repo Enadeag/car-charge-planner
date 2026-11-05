@@ -59,9 +59,10 @@ final class ProviderAttempt {
      * @param now the current moment, by which ages, waits and cool-downs are measured
      * @param force the owner asked for a refresh: skip the minimum refresh interval and the wait after a failure,
      *     never a cool-down
-     * @param marksFailures true to keep a failure in the provider's cache file, as its failed refresh and its
-     *     cool-down; false for a check of settings that need not be saved, such as set-up's or Settings', as the file
-     *     is the saved system's too, which a wrong key typed in a form must not mark
+     * @param marksFailures true to keep what a failure means for the next attempt: the failed refresh and the
+     *     cool-down in the provider's cache file, and the wait after it; false for a check of settings
+     *     that need not be saved, such as set-up's or Settings', as the file and the wait are the saved system's too,
+     *     which a wrong key typed in a form must not mark
      */
     ProviderAttempt(ForecastProvider provider, ForecastCache cache, Map<ProviderId, Retry> retryAt,
             ProviderHealth health, Instant now, boolean force, boolean marksFailures) {
@@ -150,7 +151,7 @@ final class ProviderAttempt {
             List<String> secrets, CacheState held) {
         try {
             var steps = StepRules.requireValid(provider.fetch(system, settings, now));
-            retryAt.remove(info.id());
+            retryAt.remove(info.id()); // a check is not asked during a wait, so this ends none of the saved system's
             health.recordAnswer(info);
             cache.saveForecast(info.id(), key, now, steps);
             return new ProviderOutcome.Usable(steps, now, Freshness.FRESH, Optional.empty(), false);
@@ -161,21 +162,31 @@ final class ProviderAttempt {
             }
             return afterFailure(e.getMessage(), secrets, held.inCooldownUntil(until), false);
         } catch (ProviderError.Unavailable e) {
-            retryAt.put(info.id(), new Retry(now.plus(RETRY_AFTER_UNAVAILABLE), false));
+            waitUntil(new Retry(now.plus(RETRY_AFTER_UNAVAILABLE), false));
             markRefreshFailed();
             return afterFailure(e.getMessage(), secrets, held, false);
         } catch (ProviderError e) {
             boolean keyRefused = e instanceof ProviderError.KeyRefused;
-            retryAt.put(info.id(), new Retry(now.plus(info.minRefresh()), keyRefused)); // it answered: that counted
+            waitUntil(new Retry(now.plus(info.minRefresh()), keyRefused)); // it answered: that counted
             markRefreshFailed();
             return afterFailure(e.getMessage(), secrets, held, keyRefused);
         } catch (RuntimeException e) {
             // a bug in a provider must not stop the app; its message may hold a secret, so only its kind is told
             var kind = e.getClass().getSimpleName();
             LOG.error("forecast provider " + info.id() + " failed unexpectedly (" + kind + ")");
-            retryAt.put(info.id(), new Retry(now.plus(info.minRefresh()), false));
+            waitUntil(new Retry(now.plus(info.minRefresh()), false));
             markRefreshFailed();
             return afterFailure("an unexpected error (" + kind + ")", secrets, held, false);
+        }
+    }
+
+    /**
+     * Makes the provider wait after a failure, unless this is a check of settings that need not be saved: its wait,
+     * like the mark in the cache file, would hold for the saved system's rounds too.
+     */
+    private void waitUntil(Retry retry) {
+        if (marksFailures) {
+            retryAt.put(info.id(), retry);
         }
     }
 

@@ -85,7 +85,7 @@ public final class ConnectionCheck {
         } else if (error instanceof ProviderError.MissingSetting notConfigured) {
             return info.name() + " is not set up completely: " + notConfigured.getMessage();
         } else if (error instanceof ProviderError.KeyRefused) {
-            return info.name() + " refused the API key: " + error.getMessage();
+            return error.getMessage(); // it names the provider and says to check the key (the providers' contract)
         } else if (error instanceof ProviderError.BadResponse) {
             return info.name() + " gave an answer the app does not understand: " + error.getMessage();
         } else {

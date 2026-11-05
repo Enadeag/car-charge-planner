@@ -1060,6 +1060,27 @@ class ForecastServiceTest {
         assertThat(file.path("cooldownUntil").isNull()).isTrue();
     }
 
+    static Stream<FakeProvider.Answer> failedChecks() {
+        return Stream.of(error(new KeyRefused("Main refused the request (status 401): check the API key")),
+                error(new Unavailable("could not reach Main (ConnectException)")));
+    }
+
+    @ParameterizedTest
+    @MethodSource("failedChecks")
+    void aFailingCheckOfAFormLetsTheNextOrdinaryRequestAskAtOnceAndNamesNoRefusedKey(FakeProvider.Answer failure)
+            throws ForecastUnavailable {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), failure, steps(SunnyDays.day(DAY, 3.0)));
+        get(T0);
+        check(later(60), new Secrets(Map.of(MAIN, Map.of("api_key", "TYPED-WRONG"))));
+
+        var source = get(later(61)).source();
+
+        assertThat(source)
+                .extracting(ForecastSource::providerId, ForecastSource::freshness, ForecastSource::keyRefusedBy)
+                .containsExactly(MAIN, Freshness.FRESH, List.of());
+        assertThat(main.callCount()).isEqualTo(3);
+    }
+
     @Test
     void aCheckOfAFormWithoutARequiredSettingLeavesTheStoredForecastCached() throws ForecastUnavailable {
         mainNeedsAKey(steps(SunnyDays.day(DAY, 3.0)));

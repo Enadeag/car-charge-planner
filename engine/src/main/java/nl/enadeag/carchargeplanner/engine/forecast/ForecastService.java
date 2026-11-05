@@ -50,8 +50,8 @@ public final class ForecastService {
         /** From the cache or a provider, as the rules allow. */
         USUAL,
         /**
-         * As usual, for a check of settings that need not be saved: a failure is not kept in the provider's cache
-         * file, which is the saved system's too.
+         * As usual, for a check of settings that need not be saved: what a failure means for the next request is not
+         * kept, neither in the provider's cache file nor as its wait, which are the saved system's too.
          */
         CHECK,
         /** As usual, but a provider is asked before its minimum refresh interval and without its wait. */
@@ -120,9 +120,10 @@ public final class ForecastService {
     /**
      * A forecast for a system with secret settings that need not be stored yet, such as the ones set-up shows before
      * it saves; from the cache or a provider, as {@link #get(SolarSite, ForecastSelection, Instant)}. A provider's
-     * forecast is cached, but its failure is not kept in the cache file, neither as a failed refresh nor as a
-     * cool-down: that file is one per provider, so a wrong key typed in a form, or another system, would otherwise
-     * mark the saved system's forecast as stale. The wait after the failure is kept, in memory, as for any request.
+     * forecast is cached, but its failure is kept neither in the cache file, as a failed refresh or a cool-down, nor
+     * as a wait before the provider is asked again: both are one per provider, so a wrong key typed in a form, or
+     * another system, would otherwise mark the saved system's forecast as stale, or make its next request wait and
+     * say that the key was refused.
      *
      * @param system the system to forecast; the cache is used only when it was made for the same one
      * @param selection the providers to ask and their settings that are not secret
