@@ -11,10 +11,16 @@ import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 import nl.enadeag.carchargeplanner.android.logging.LogcatServiceProvider
 import nl.enadeag.carchargeplanner.android.store.EngineAccess
+import nl.enadeag.carchargeplanner.android.store.EngineOnDispatcher
+import nl.enadeag.carchargeplanner.android.background.WorkThatCallsTheEngineItself
 import nl.enadeag.carchargeplanner.android.background.WorkThatPlansARound
+import nl.enadeag.carchargeplanner.android.backgroundwork.WorkBesideTheBackgroundPackage
+import nl.enadeag.carchargeplanner.android.store.StoreThatCallsTheEngineItself
 import nl.enadeag.carchargeplanner.android.home.LogicThatPlansARound
+import nl.enadeag.carchargeplanner.android.ui.ScreenAccessThatPlansInALambda
 import nl.enadeag.carchargeplanner.android.ui.ScreenThatPlansARound
 import nl.enadeag.carchargeplanner.android.ui.ScreenThatRoundsANumber
+import nl.enadeag.carchargeplanner.android.ui.background.ScreenWorkThatPlansARound
 import nl.enadeag.carchargeplanner.android.ui.ScreenThatReadsTheSettingsFile
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -25,8 +31,8 @@ import org.junit.jupiter.api.Test
  * `EngineArchitectureTest` has them for the engine (ADR 0010): one class opens network connections, [AndroidHttpGet],
  * which keeps the engine's contract on timeouts, size and redirects; no class weakens the checks of TLS; the app
  * logs through slf4j, whose provider is the one class that writes to Logcat; the screens reach the engine only
- * through the suspend interface that runs it off the main thread; and only the work in the background, in a
- * `background` package, makes the planning round and asks when the next notice is due.
+ * through the suspend interface that runs it off the main thread; and only the work in the background, in the app's
+ * `background` package, makes the planning round and asks when the next notice is due, through that interface.
  */
 class AppArchitectureTest {
 
@@ -152,22 +158,46 @@ class AppArchitectureTest {
                 .because("they may block for about a second, so the screens call them through EngineAccess, which "
                     + "runs them off the main thread (#313); the app's Application is the one place that makes them")
 
-        // through the interface or any class that has it, such as EngineOnDispatcher; a suspend function's own
-        // continuation, nested in the class that has it, calls it again on resuming, which is no round of its own
-        val CALL_THE_ROUND = DescribedPredicate.describe<JavaMethodCall>(
-            "call EngineAccess.round or EngineAccess.nextNoticeDue") { call ->
-            val owner = call.targetOwner.name
-            call.targetOwner.isAssignableTo(EngineAccess::class.java) && call.name in setOf("round", "nextNoticeDue")
-                && !call.originOwner.name.startsWith("$owner$")
+        const val BACKGROUND_WORK = "$APP.background"
+
+        val ENGINE_ON_DISPATCHER: String = EngineOnDispatcher::class.java.name
+
+        const val ENGINE = "nl.enadeag.carchargeplanner.engine.Engine"
+
+        val ROUND_METHODS = setOf("round", "nextNoticeDue")
+
+        /** The app's own background package or one inside it, not any package that has a `background` part. */
+        fun inTheBackgroundWork(type: JavaClass) =
+            type.packageName == BACKGROUND_WORK || type.packageName.startsWith("$BACKGROUND_WORK.")
+
+        /**
+         * Whether a call comes from the called method's own continuation or lambda, which Kotlin nests in the class
+         * that has the method under the method's name: a suspend function's continuation calls it again on resuming,
+         * which is no round of its own.
+         */
+        fun fromTheMethodItself(call: JavaMethodCall, owner: String) =
+            call.originOwner.name.startsWith("$owner$${call.name}$")
+
+        // through the interface or any class that has it, such as EngineOnDispatcher; the engine's own methods only
+        // from the lambda that EngineOnDispatcher's method of the same name runs on its dispatcher
+        val MAKE_A_ROUND_OUT_OF_PLACE = DescribedPredicate.describe<JavaMethodCall>(
+            "call EngineAccess.round or EngineAccess.nextNoticeDue outside the package $BACKGROUND_WORK, or "
+                + "Engine.round or Engine.nextNoticeDue outside EngineOnDispatcher's own round and nextNoticeDue") {
+            call ->
+            call.name in ROUND_METHODS && (
+                call.targetOwner.isAssignableTo(EngineAccess::class.java) && !inTheBackgroundWork(call.originOwner)
+                    && !fromTheMethodItself(call, call.targetOwner.name)
+                    || call.targetOwner.name == ENGINE && !fromTheMethodItself(call, ENGINE_ON_DISPATCHER))
         }
 
-        const val BACKGROUND_WORK = "..background.."
+        /** The class Kotlin makes for [ScreenThatPlansARound.planInALambda]'s lambda. */
+        val SCREENS_LAMBDA = ScreenThatPlansARound::class.java.name + "\$planInALambda\$1"
 
         val ONLY_THE_BACKGROUND_WORK_MAKES_A_ROUND =
-            noClasses().that().resideOutsideOfPackage(BACKGROUND_WORK).should().callMethodWhere(CALL_THE_ROUND)
+            noClasses().should().callMethodWhere(MAKE_A_ROUND_OUT_OF_PLACE)
                 .because("a round tells the owner what is due, once, while a screen or its logic shows an outlook "
-                    + "and tells nobody; the round and the next due notice are for the work in the background, in a "
-                    + "background package (#362)")
+                    + "and tells nobody; the round and the next due notice are for the work in the background, in the "
+                    + "app's background package (#362), which reaches the engine through EngineAccess")
     }
 
     @Test
@@ -207,13 +237,24 @@ class AppArchitectureTest {
 
     @Test
     fun aRoundOrTheNextDueNoticeOutsideTheBackgroundWorkBreaksTheRule() {
-        val screen = ClassFileImporter().importClasses(ScreenThatPlansARound::class.java)
+        val screen = ClassFileImporter().importClasses(ScreenThatPlansARound::class.java,
+            Class.forName(SCREENS_LAMBDA))
 
         assertThatThrownBy { ONLY_THE_BACKGROUND_WORK_MAKES_A_ROUND.check(screen) }
             .isInstanceOf(AssertionError::class.java)
             .hasMessageContaining("ScreenThatPlansARound.plan(")
             .hasMessageContaining("ScreenThatPlansARound.due(")
             .hasMessageContaining("ScreenThatPlansARound.planOnTheDispatcher(")
+            .hasMessageContaining("${SCREENS_LAMBDA}.invokeSuspend(")
+    }
+
+    @Test
+    fun aLambdaNestedInAClassThatHasEngineAccessIsNoContinuationOfItsRound() {
+        val lambda = ScreenAccessThatPlansInALambda::class.java.name + "\$planLater\$1"
+        val screen = ClassFileImporter().importClasses(Class.forName(lambda))
+
+        assertThatThrownBy { ONLY_THE_BACKGROUND_WORK_MAKES_A_ROUND.check(screen) }
+            .isInstanceOf(AssertionError::class.java).hasMessageContaining("$lambda.invokeSuspend(")
     }
 
     @Test
@@ -225,9 +266,54 @@ class AppArchitectureTest {
     }
 
     @Test
-    fun theBackgroundWorkMayMakeARound() {
-        ONLY_THE_BACKGROUND_WORK_MAKES_A_ROUND.allowEmptyShould(true)
-            .check(ClassFileImporter().importClasses(WorkThatPlansARound::class.java))
+    fun aBackgroundPackageOutsideTheAppsOwnBreaksTheRule() {
+        val work = ClassFileImporter().importClasses(ScreenWorkThatPlansARound::class.java)
+
+        assertThatThrownBy { ONLY_THE_BACKGROUND_WORK_MAKES_A_ROUND.check(work) }
+            .isInstanceOf(AssertionError::class.java).hasMessageContaining("ScreenWorkThatPlansARound.plan(")
+    }
+
+    @Test
+    fun aPackageNamedLikeTheBackgroundPackageBreaksTheRule() {
+        val work = ClassFileImporter().importClasses(WorkBesideTheBackgroundPackage::class.java)
+
+        assertThatThrownBy { ONLY_THE_BACKGROUND_WORK_MAKES_A_ROUND.check(work) }
+            .isInstanceOf(AssertionError::class.java).hasMessageContaining("WorkBesideTheBackgroundPackage.plan(")
+    }
+
+    @Test
+    fun anotherClassOfTheStoreThatCallsTheEngineItselfBreaksTheRule() {
+        val store = ClassFileImporter().importClasses(StoreThatCallsTheEngineItself::class.java)
+
+        assertThatThrownBy { ONLY_THE_BACKGROUND_WORK_MAKES_A_ROUND.check(store) }
+            .isInstanceOf(AssertionError::class.java).hasMessageContaining("StoreThatCallsTheEngineItself.plan(")
+    }
+
+    @Test
+    fun theBackgroundWorkMayMakeARoundThroughEngineAccess() {
+        ONLY_THE_BACKGROUND_WORK_MAKES_A_ROUND.check(ClassFileImporter().importClasses(WorkThatPlansARound::class.java))
+    }
+
+    @Test
+    fun theBackgroundWorkThatCallsTheEngineItselfBreaksTheRule() {
+        val work = ClassFileImporter().importClasses(WorkThatCallsTheEngineItself::class.java)
+
+        assertThatThrownBy { ONLY_THE_BACKGROUND_WORK_MAKES_A_ROUND.check(work) }
+            .isInstanceOf(AssertionError::class.java)
+            .hasMessageContaining("WorkThatCallsTheEngineItself.plan(")
+            .hasMessageContaining("Engine.round(")
+            .hasMessageContaining("Engine.nextNoticeDue(")
+    }
+
+    @Test
+    fun onlyEngineOnDispatcherCallsTheEnginesRoundItself() {
+        val calls = APP_CLASSES.flatMap { type -> type.methodCallsFromSelf }
+            .filter { call -> call.targetOwner.name == ENGINE && call.name in ROUND_METHODS }
+
+        assertThat(calls).`as`("the calls the rule lets through").isNotEmpty
+            .allSatisfy { call ->
+                assertThat(call.originOwner.name).startsWith("$ENGINE_ON_DISPATCHER$${call.name}$")
+            }
     }
 
     @Test
