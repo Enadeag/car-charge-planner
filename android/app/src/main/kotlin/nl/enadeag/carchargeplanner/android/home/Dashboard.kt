@@ -13,6 +13,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole
  * battery bars mark, the coming one-off away periods and the footer.
  *
  * @property zone the home's time zone, in which the days and times are meant
+ * @property madeAt when the plan was made, whose day in [zone] is today
  * @property days the plan's days, today first; never empty
  * @property gridAdvice the grid advice, shown on today's tab; null when there is none
  * @property levels the minimum and target charge levels
@@ -20,8 +21,8 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole
  * @property footer the forecast's credit, source and freshness
  * @throws IllegalArgumentException when [days] is empty, which shows as no forecast instead
  */
-data class Dashboard(val zone: ZoneId, val days: List<DayModel>, val gridAdvice: GridAdviceModel?,
-    val levels: ChargeLevels, val away: List<ComingAway>, val footer: Footer) {
+data class Dashboard(val zone: ZoneId, val madeAt: Instant, val days: List<DayModel>,
+    val gridAdvice: GridAdviceModel?, val levels: ChargeLevels, val away: List<ComingAway>, val footer: Footer) {
 
     init {
         if (days.isEmpty()) {
@@ -37,6 +38,23 @@ data class Dashboard(val zone: ZoneId, val days: List<DayModel>, val gridAdvice:
      */
     fun adviceOn(day: DayModel): GridAdviceModel? = gridAdvice.takeIf { day.name == DayName.Today }
 
+    /**
+     * The same dashboard with the one-off away periods as they are stored now, such as after the owner added or
+     * removed one; the rest stays as the plan made it.
+     *
+     * @param periods the stored one-off away periods, in order of their start; those that ended are left out
+     * @return the dashboard with those periods
+     */
+    fun withAway(periods: List<OneOffAwayPeriod>): Dashboard = copy(away = ComingAway.of(periods, zone, madeAt))
+
+    /**
+     * A one-off away period as this dashboard tells it, such as one just added or removed.
+     *
+     * @param period the period
+     * @return it by kind, its days named from the day the plan was made
+     */
+    fun describe(period: OneOffAwayPeriod): ComingAway = ComingAway.describe(period, zone, madeAt)
+
     companion object {
 
         /**
@@ -49,7 +67,7 @@ data class Dashboard(val zone: ZoneId, val days: List<DayModel>, val gridAdvice:
          */
         fun of(planned: Outlook.Planned, away: List<OneOffAwayPeriod>): Dashboard {
             val today = planned.madeAt().atZone(planned.zone()).toLocalDate()
-            return Dashboard(planned.zone(), DayMapper(planned).map(planned.days()),
+            return Dashboard(planned.zone(), planned.madeAt(), DayMapper(planned).map(planned.days()),
                 planned.gridAdvice().map { GridAdviceModel.of(it, planned.zone(), today) }.orElse(null),
                 ChargeLevels(planned.minimumPct(), planned.targetPct()),
                 ComingAway.of(away, planned.zone(), planned.madeAt()), Footer.of(planned))

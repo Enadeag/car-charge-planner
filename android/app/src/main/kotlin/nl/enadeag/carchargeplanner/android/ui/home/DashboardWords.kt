@@ -4,6 +4,7 @@ import android.content.res.Resources
 import android.text.format.DateFormat
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
@@ -38,6 +39,7 @@ internal class DashboardWords(private val resources: Resources, private val loca
     private val hour = DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale,
         if (twentyFour) "H" else "h"), locale).withZone(zone)
     private val shortDate = DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "EEEdMMM"), locale)
+    private val longDate = DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "EEEEdMMMM"), locale)
     private val numbers = NumberText(locale)
 
     /**
@@ -83,6 +85,22 @@ internal class DashboardWords(private val resources: Resources, private val loca
         DayName.Today, DayName.Tomorrow -> title(day)
         is DayName.Other -> capitalised(shortDate.format(day.date))
     }
+
+    /**
+     * A day by its weekday and date, in the middle of a sentence, as the one-off away entry's title names it.
+     *
+     * @param date the day
+     * @return such as "Thursday, November 5" or "donderdag 5 november", as the phone writes them
+     */
+    fun day(date: LocalDate): String = longDate.format(date)
+
+    /**
+     * A time of day as the phone's clock shows it.
+     *
+     * @param time the time
+     * @return such as "09:00" or "9:00 AM"
+     */
+    fun time(time: LocalTime): String = clock.format(time)
 
     /**
      * A moment as a clock time in the home's time zone.

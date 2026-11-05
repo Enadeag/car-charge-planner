@@ -82,13 +82,15 @@ internal fun SectionHeading(text: String) {
 /**
  * Which row's heading takes the focus next, after Add or Remove changed the rows, such as the panel arrays: the new
  * row's after Add, the one before after Remove, so the focus does not fall off the page with a button that went. When
- * the last row goes, the focus is for the page's Add button instead.
+ * the last row goes, the focus is for the line that says there is none instead.
+ *
+ * @param K what names a row, such as its number
  */
 @Stable
-internal class RowFocus {
+internal class RowFocus<K> {
 
     /** The row whose heading takes the focus once it is shown; null for none. */
-    var next by mutableStateOf<Int?>(null)
+    var next by mutableStateOf<K?>(null)
 
     /** Whether the line that says there is none takes the focus, as no row is left; the line clears it once it has. */
     var none by mutableStateOf(false)
@@ -100,7 +102,7 @@ internal class RowFocus {
      * @param rows the rows as they are before it goes
      * @param row the row that goes
      */
-    fun removing(rows: List<Int>, row: Int) {
+    fun removing(rows: List<K>, row: K) {
         val index = rows.indexOf(row)
         next = rows.getOrNull(index - 1) ?: rows.getOrNull(index + 1)
         none = next == null
@@ -115,7 +117,7 @@ internal class RowFocus {
  * @param focus which row's heading or this line takes the focus next
  */
 @Composable
-internal fun NoneLine(text: String, focus: RowFocus) {
+internal fun NoneLine(text: String, focus: RowFocus<*>) {
     val requester = remember { FocusRequester() }
     LaunchedEffect(focus.none) {
         if (focus.none) {
@@ -129,13 +131,36 @@ internal fun NoneLine(text: String, focus: RowFocus) {
 /**
  * A row's heading, such as "Array 2, east roof", which takes the focus when [RowFocus] names its row.
  *
+ * @param K what names a row
  * @param text the heading
  * @param style its size, as the rows of its page have it
  * @param focus which row's heading takes the focus next
  * @param row the row it heads
  */
 @Composable
-internal fun RowHeading(text: String, style: TextStyle, focus: RowFocus, row: Int) {
+internal fun <K> RowHeading(text: String, style: TextStyle, focus: RowFocus<K>, row: K) {
+    Text(text, style = style, modifier = Modifier.focusRequester(rowFocus(focus, row)).focusable()
+        .semantics { heading() })
+}
+
+/**
+ * A row's line that is no heading, such as a one-off away period in a list, which takes the focus when [RowFocus]
+ * names its row.
+ *
+ * @param K what names a row
+ * @param text the line
+ * @param focus which row's line takes the focus next
+ * @param row the row it is
+ * @param modifier its place in the row
+ */
+@Composable
+internal fun <K> RowLine(text: String, focus: RowFocus<K>, row: K, modifier: Modifier = Modifier) {
+    Text(text, modifier = modifier.focusRequester(rowFocus(focus, row)).focusable())
+}
+
+/** A requester that takes the focus when [focus] names [row], once. */
+@Composable
+private fun <K> rowFocus(focus: RowFocus<K>, row: K): FocusRequester {
     val requester = remember { FocusRequester() }
     LaunchedEffect(focus.next) {
         if (focus.next == row) {
@@ -143,5 +168,5 @@ internal fun RowHeading(text: String, style: TextStyle, focus: RowFocus, row: In
             focus.next = null
         }
     }
-    Text(text, style = style, modifier = Modifier.focusRequester(requester).focusable().semantics { heading() })
+    return requester
 }

@@ -109,10 +109,23 @@ class DashboardTest {
             today.plusDays(4).atTime(9, 0).atZone(amsterdam).toInstant())
 
         assertThat(dashboard(listOf(ended, running, allDay, days)).away).containsExactly(
-            ComingAway.PartOfDay(DayName.Today, running.start(), running.end()),
-            ComingAway.AllDay(DayName.Tomorrow),
-            ComingAway.Days(DayName.Other(today.plusDays(2)), days.start(), DayName.Other(today.plusDays(4)),
-                days.end()))
+            ComingAway.PartOfDay(DayName.Today, running),
+            ComingAway.AllDay(DayName.Tomorrow, allDay),
+            ComingAway.Days(DayName.Other(today.plusDays(2)), DayName.Other(today.plusDays(4)), days))
+        val listed = dashboard(listOf(days)).away.single() as ComingAway.Days
+        assertThat(listed.start to listed.end).isEqualTo(days.start() to days.end())
+    }
+
+    @Test
+    fun aPeriodIsDescribedFromTheDayThePlanWasMadeAlsoWhenItEnded() {
+        val ended = OneOffAwayPeriod.on(today, LocalTime.of(7, 0), LocalTime.of(8, 0), amsterdam)
+        val tomorrow = OneOffAwayPeriod.allDay(today.plusDays(1), amsterdam)
+        val shown = dashboard()
+
+        assertThat(shown.describe(ended)).isEqualTo(ComingAway.PartOfDay(DayName.Today, ended))
+        assertThat((shown.describe(ended) as ComingAway.PartOfDay).let { it.start to it.end })
+            .isEqualTo(ended.start() to ended.end())
+        assertThat(shown.describe(tomorrow)).isEqualTo(ComingAway.AllDay(DayName.Tomorrow, tomorrow))
     }
 
     @ParameterizedTest
@@ -124,7 +137,7 @@ class DashboardTest {
 
         val listed = ComingAway.of(listOf(whole, twentyFourHours), amsterdam, start)
 
-        assertThat(listed[0]).isEqualTo(ComingAway.AllDay(DayName.Today))
+        assertThat(listed[0]).isEqualTo(ComingAway.AllDay(DayName.Today, whole))
         assertThat(listed[1]).isNotInstanceOf(ComingAway.AllDay::class.java)
     }
 

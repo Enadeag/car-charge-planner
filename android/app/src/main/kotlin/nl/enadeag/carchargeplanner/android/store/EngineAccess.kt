@@ -14,9 +14,9 @@ import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 
 /**
  * All the screens' logic asks of the engine that reads or writes: the settings file, the API keys, the plan, the
- * one-off away periods, the battery level, the connection check and the place search. Each call suspends while it
- * runs off the main thread, as the keychain and the API keys may block for about a second and the others reach the
- * disk or the network.
+ * one-off away periods and their changes, the battery level, the connection check and the place search. Each call
+ * suspends while it runs off the main thread, as the keychain and the API keys may block for about a second and the
+ * others reach the disk or the network.
  * The screens never call the engine, the keys or the files themselves (`AppArchitectureTest`).
  */
 interface EngineAccess {
@@ -88,6 +88,26 @@ interface EngineAccess {
      *     none or the file cannot be read
      */
     suspend fun awayPeriods(): List<OneOffAwayPeriod>
+
+    /**
+     * Stores a one-off away period the owner entered, so the next plan leaves that time free; one stored already is
+     * kept once. A failure is an outcome, never thrown.
+     *
+     * @param period the time the car is away
+     * @return saved with the stored periods after the change, or failed with the system's or the engine's words, the
+     *     stored periods then unchanged
+     */
+    suspend fun addAwayPeriod(period: OneOffAwayPeriod): AwaySave
+
+    /**
+     * Forgets a one-off away period, so the next plan may use that time again; one that is not stored changes nothing.
+     * A failure is an outcome, never thrown.
+     *
+     * @param period the period as [awayPeriods] gave it
+     * @return saved with the stored periods after the change, or failed with the system's or the engine's words, the
+     *     stored periods then unchanged
+     */
+    suspend fun removeAwayPeriod(period: OneOffAwayPeriod): AwaySave
 
     /**
      * Stores the battery level the owner read off the car, so the next plan starts from it instead of the assumed

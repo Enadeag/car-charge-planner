@@ -63,6 +63,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.home.AwayEntry
 import nl.enadeag.carchargeplanner.android.home.BatteryEntry
 import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
@@ -134,10 +135,14 @@ class HomeScreenTest {
     /** The home's saved state, which the battery entry keeps its texts in. */
     private val handle = SavedStateHandle()
     private lateinit var battery: BatteryEntry
+    private lateinit var away: AwayEntry
     private lateinit var shownOutlook: HomeOutlook
 
     /** A battery entry of its own, for a home a test sets up itself. */
     private fun entry() = BatteryEntry(SavedStateHandle(), NumberText(Locale.ENGLISH), access, scope) { }
+
+    /** Changes to the away periods of their own, for a home a test sets up itself. */
+    private fun awayEntry() = AwayEntry(SavedStateHandle(), access, scope, clock) { }
 
     /** Today's battery bar in words while its level is assumed, as in the plans here unless they say otherwise. */
     private fun todaysBattery(vararg levels: String) =
@@ -148,14 +153,15 @@ class HomeScreenTest {
         val outlook = HomeOutlook(access, scope, clock) { }
         shownOutlook = outlook
         battery = BatteryEntry(kept, NumberText(Locale.ENGLISH), access, scope) { outlook.planAgain() }
+        away = AwayEntry(kept, access, scope, clock, outlook::awayChanged)
         val notice = HomeNotice(saves, scope) { }
         compose.setContent {
             AppTheme {
                 focus = LocalFocusManager.current
                 if (fontScaleTwo) {
-                    AtFontScaleTwo { HomeScreen(outlook, notice, battery, { phoneZone }) { settingsOpened++ } }
+                    AtFontScaleTwo { HomeScreen(outlook, notice, battery, away, { phoneZone }) { settingsOpened++ } }
                 } else {
-                    HomeScreen(outlook, notice, battery, { phoneZone }) { settingsOpened++ }
+                    HomeScreen(outlook, notice, battery, away, { phoneZone }) { settingsOpened++ }
                 }
             }
         }
@@ -262,7 +268,8 @@ class HomeScreenTest {
         clock("24")
         val window = Window(today.atTime(20, 0).atZone(lisbon).toInstant(),
             today.atTime(22, 0).atZone(lisbon).toInstant(), 16, 3.7, 0.0, 7.4)
-        show(lisbonWeek(GridAdvice(today.plusDays(1), 12.0, 18.0, 7.4, Optional.of(window), Optional.of(Percent(60.0)))))
+        val advice = GridAdvice(today.plusDays(1), 12.0, 18.0, 7.4, Optional.of(window), Optional.of(Percent(60.0)))
+        show(lisbonWeek(advice))
 
         compose.onNodeWithText(text(R.string.advice_label)).performScrollTo().assert(isHeading())
         compose.onNodeWithText(text(R.string.advice_title_window, "7.4", "today", "20:00 – 22:00")).assertExists()
@@ -792,10 +799,11 @@ class HomeScreenTest {
         val outlook = HomeOutlook(access, scope, clock) { }
         val notice = HomeNotice(saves, scope) { }
         val battery = entry()
+        val away = awayEntry()
         compose.setContent {
             AppTheme {
-                if (twice) AtFontScaleTwo { HomeScreen(outlook, notice, battery, { amsterdam }) { } }
-                else HomeScreen(outlook, notice, battery, { amsterdam }) { }
+                if (twice) AtFontScaleTwo { HomeScreen(outlook, notice, battery, away, { amsterdam }) { } }
+                else HomeScreen(outlook, notice, battery, away, { amsterdam }) { }
             }
         }
         compose.waitForIdle()
@@ -905,9 +913,10 @@ class HomeScreenTest {
         val outlook = HomeOutlook(access, scope, clock) { }
         val notice = HomeNotice(saves, scope) { }
         val battery = entry()
+        val away = awayEntry()
         compose.setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                AppTheme { HomeScreen(outlook, notice, battery, { amsterdam }) { } }
+                AppTheme { HomeScreen(outlook, notice, battery, away, { amsterdam }) { } }
             }
         }
         compose.waitForIdle()
@@ -928,10 +937,11 @@ class HomeScreenTest {
         val outlook = HomeOutlook(access, scope, clock) { }
         val notice = HomeNotice(saves, scope) { }
         val battery = entry()
+        val away = awayEntry()
         compose.setContent {
             CompositionLocalProvider(LocalLayoutDirection provides
                 if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
-                AppTheme { HomeScreen(outlook, notice, battery, { amsterdam }) { } }
+                AppTheme { HomeScreen(outlook, notice, battery, away, { amsterdam }) { } }
             }
         }
         compose.waitForIdle()

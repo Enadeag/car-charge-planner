@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -57,12 +59,13 @@ internal fun AppOutlinedButton(onClick: () -> Unit, modifier: Modifier = Modifie
  * @param onClick what it does
  * @param modifier its place in the layout
  * @param enabled false while it cannot be used
+ * @param colors its colours; Material's text button's by default, a snackbar's action has its own
  * @param content its text
  */
 @Composable
 internal fun AppTextButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true,
-    content: @Composable RowScope.() -> Unit) {
-    TextButton(onClick = onClick, modifier = modifier.heightIn(min = LEAST_HEIGHT), enabled = enabled,
+    colors: ButtonColors = ButtonDefaults.textButtonColors(), content: @Composable RowScope.() -> Unit) {
+    TextButton(onClick = onClick, modifier = modifier.heightIn(min = LEAST_HEIGHT), enabled = enabled, colors = colors,
         content = content)
 }
 

@@ -15,9 +15,12 @@ import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import nl.enadeag.carchargeplanner.android.secrets.SoftwareKeys
+import nl.enadeag.carchargeplanner.android.store.AwaySave
 import nl.enadeag.carchargeplanner.android.store.BatteryLevelSave
 import nl.enadeag.carchargeplanner.android.store.EngineOnDispatcher
 import nl.enadeag.carchargeplanner.android.store.StartState
@@ -71,6 +74,9 @@ class EngineOnDispatcherTest {
     }
     private val draft = EngineConfig.setUpDraft(ZoneId.of("Europe/Amsterdam"), ProviderId("open-meteo"))
 
+    /** An away period long after any run of these tests, which the engine keeps however late it is. */
+    private val later = OneOffAwayPeriod(Instant.parse("2096-06-01T08:00:00Z"), Instant.parse("2096-06-01T10:00:00Z"))
+
     @AfterEach
     fun stopTheThread() {
         dispatcher.close()
@@ -93,8 +99,10 @@ class EngineOnDispatcherTest {
         access.awayPeriods()
         access.checkConnection(ProviderId("unknown"), draft.system(), emptyMap())
         access.saveBatteryLevel(Percent(64.0))
+        access.addAwayPeriod(later)
+        access.removeAwayPeriod(later)
 
-        assertThat(dispatcher.handed.get()).isEqualTo(10)
+        assertThat(dispatcher.handed.get()).isEqualTo(12)
         assertThat(dispatcher.threads).containsExactly("engine-io")
     }
 
@@ -158,6 +166,101 @@ class EngineOnDispatcherTest {
         assertThat(access.awayPeriods()).containsExactly(
             OneOffAwayPeriod(Instant.parse("2026-06-01T08:00:00Z"), Instant.parse("2026-06-01T10:00:00Z")),
             OneOffAwayPeriod(Instant.parse("2026-06-03T08:00:00Z"), Instant.parse("2026-06-03T16:00:00Z")))
+    }
+
+    @Test
+    fun anAddedAwayPeriodIsStoredInTheFilesFolderAndTheStoredOnesComeBackInOrder() = runBlocking<Unit> {
+        val earlier = OneOffAwayPeriod(Instant.parse("2096-05-01T08:00:00Z"), Instant.parse("2096-05-01T10:00:00Z"))
+        access.addAwayPeriod(later)
+
+        val outcome = access.addAwayPeriod(earlier)
+
+        assertThat(outcome).isEqualTo(AwaySave.Saved(listOf(earlier, later)))
+        assertThat(filesFolder.resolve("away.json").readText()).contains("2096-05-01T08:00:00Z")
+        assertThat(access.awayPeriods()).containsExactly(earlier, later)
+    }
+
+    @Test
+    fun aRemovedAwayPeriodIsGoneFromTheFilesFolderAndTheOthersComeBack() = runBlocking<Unit> {
+        val other = OneOffAwayPeriod(Instant.parse("2096-07-01T08:00:00Z"), Instant.parse("2096-07-01T10:00:00Z"))
+        access.addAwayPeriod(later)
+        access.addAwayPeriod(other)
+
+        val outcome = access.removeAwayPeriod(later)
+
+        assertThat(outcome).isEqualTo(AwaySave.Saved(listOf(other)))
+        assertThat(access.awayPeriods()).containsExactly(other)
+    }
+
+    @Test
+    fun anAwayChangeThatCannotBeStoredIsAFailureWithTheEnginesWordsAndTheFileStaysAsItWas() = runBlocking<Unit> {
+        Files.createDirectories(filesFolder)
+        val newer = StoredJson.pretty(StoredJson.`object`().put("version", 99))
+        val file = filesFolder.resolve("away.json").also { it.writeText(newer) }
+
+        listOf(access.addAwayPeriod(later), access.removeAwayPeriod(later)).forEach { outcome ->
+            assertThat(outcome).isInstanceOfSatisfying(AwaySave.Failed::class.java) { failed ->
+                assertThat(failed.detail).contains("newer version")
+            }
+        }
+        assertThat(file.readText()).isEqualTo(newer)
+    }
+
+    @Test
+    fun anAwayChangeThatIsCancelledStaysCancelledInsteadOfFailing() {
+        val access = writingFails(CancellationException("the home ended"))
+
+        assertThatThrownBy { runBlocking { access.addAwayPeriod(later) } }
+            .isInstanceOf(CancellationException::class.java)
+        assertThatThrownBy { runBlocking { access.removeAwayPeriod(later) } }
+            .isInstanceOf(CancellationException::class.java)
+    }
+
+    @Test
+    fun anotherProblemWhileAnAwayChangeIsStoredIsAFailureWithItsWordsOrItsKind() = runBlocking<Unit> {
+        assertThat(writingFails(IllegalStateException("the folder went away")).addAwayPeriod(later))
+            .isEqualTo(AwaySave.Failed("the folder went away"))
+        assertThat(writingFails(IllegalStateException()).removeAwayPeriod(later))
+            .isEqualTo(AwaySave.Failed("IllegalStateException"))
+        assertThat(writingFails(IOException()).addAwayPeriod(later)).isEqualTo(AwaySave.Failed("IOException"))
+        assertThat(writingFails(IOException("Read-only file system")).removeAwayPeriod(later))
+            .isEqualTo(AwaySave.Failed("Read-only file system"))
+    }
+
+    /** File privacy that takes its time and counts how many writes are inside it at once. */
+    private class SlowPrivacy : FilePrivacy {
+        private val inside = AtomicInteger()
+        val most = AtomicInteger()
+
+        override fun newFileAttributes(file: Path): List<FileAttribute<*>> {
+            most.accumulateAndGet(inside.incrementAndGet()) { a, b -> maxOf(a, b) }
+            Thread.sleep(300)
+            inside.decrementAndGet()
+            return listOf()
+        }
+
+        override fun newFolderAttributes(folder: Path): List<FileAttribute<*>> = listOf()
+        override fun tighten(path: Path): Boolean = true
+    }
+
+    @Test
+    fun twoAwayChangesStartedTogetherRunOneAfterTheOtherAndBothAreKept() = runBlocking<Unit> {
+        val pool = Executors.newFixedThreadPool(2)
+        try {
+            val privacy = SlowPrivacy()
+            val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys)
+            val twoThreads = EngineOnDispatcher(AppEngine.build(filesFolder, platform.http(), PrivateFiles(privacy),
+                platform.apiKeys(), QuietNotifier), pool.asCoroutineDispatcher())
+            val earlier = OneOffAwayPeriod(Instant.parse("2096-05-01T08:00:00Z"),
+                Instant.parse("2096-05-01T10:00:00Z"))
+
+            listOf(async { twoThreads.addAwayPeriod(later) }, async { twoThreads.addAwayPeriod(earlier) }).awaitAll()
+
+            assertThat(privacy.most.get()).isEqualTo(1)
+            assertThat(twoThreads.awayPeriods()).containsExactly(earlier, later)
+        } finally {
+            pool.shutdownNow()
+        }
     }
 
     @Test

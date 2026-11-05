@@ -111,7 +111,7 @@ internal fun phasesName(phases: Phases): Int = if (phases == Phases.ONE) R.strin
 @Composable
 internal fun SolarPage(panels: PanelsForm, edits: Edits, problems: ProblemFocus) {
     val rows by panels.rowIds.collectAsStateWithLifecycle()
-    val focus = remember { RowFocus() }
+    val focus = remember { RowFocus<Int>() }
     Text(stringResource(R.string.settings_solar_intro))
     rows.forEachIndexed { index, row ->
         key(row) {
@@ -125,7 +125,7 @@ internal fun SolarPage(panels: PanelsForm, edits: Edits, problems: ProblemFocus)
 
 @Composable
 private fun PanelArray(panels: PanelsForm, row: Int, index: Int, rows: List<Int>, edits: Edits,
-    problems: ProblemFocus, focus: RowFocus) {
+    problems: ProblemFocus, focus: RowFocus<Int>) {
     val count = rows.size
     val shown by panels.problems(row).collectAsStateWithLifecycle()
     val typical = edits.shown { panels.typical(row) }

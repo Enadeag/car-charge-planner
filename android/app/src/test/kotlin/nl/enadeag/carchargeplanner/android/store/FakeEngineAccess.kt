@@ -83,6 +83,33 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
         return away
     }
 
+    /** The changes to the one-off away periods asked for, in order, such as "add" and "remove", with the period. */
+    val awayChanges = mutableListOf<Pair<String, OneOffAwayPeriod>>()
+
+    /** When set, a change of the one-off away periods fails with these words, as the engine's would. */
+    var awayFails: String? = null
+
+    /** When set, the next change of the one-off away periods waits for it. */
+    var awayGate: CompletableDeferred<Unit>? = null
+
+    override suspend fun addAwayPeriod(period: OneOffAwayPeriod): AwaySave =
+        changeAway("add", period) { (it + period).distinct().sortedBy(OneOffAwayPeriod::start) }
+
+    override suspend fun removeAwayPeriod(period: OneOffAwayPeriod): AwaySave =
+        changeAway("remove", period) { it - period }
+
+    private suspend fun changeAway(what: String, period: OneOffAwayPeriod,
+        change: (List<OneOffAwayPeriod>) -> List<OneOffAwayPeriod>): AwaySave {
+        awayChanges += what to period
+        awayGate?.let {
+            awayGate = null
+            it.await()
+        }
+        awayFails?.let { return AwaySave.Failed(it) }
+        away = change(away)
+        return AwaySave.Saved(away)
+    }
+
     /** The battery levels stored, in the order saved. */
     val batteryLevels = mutableListOf<Percent>()
 

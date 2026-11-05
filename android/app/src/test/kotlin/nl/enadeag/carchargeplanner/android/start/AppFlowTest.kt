@@ -27,6 +27,7 @@ import nl.enadeag.carchargeplanner.android.store.SaveOutcome
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.engine.Outlook
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.Percent
@@ -472,5 +473,38 @@ class AppFlowTest {
 
         assertThat(flow.screen.value).isInstanceOf(AppFlow.Screen.Unusable::class.java)
         assertThat(handle.keys().filter { it.startsWith("battery") }).isEmpty()
+    }
+
+    @Test
+    fun anAwayPeriodRemovedOnTheHomeLeavesTheListAtOnceAndHasANewPlanMade() = runTest {
+        val access = FakeEngineAccess(StartState.Ready(config))
+        val later = OneOffAwayPeriod.allDay(LocalDate.of(2096, 6, 1), ZoneId.of("UTC"))
+        access.away = listOf(later)
+        val home = plannedHome(access, SavedStateHandle())
+        assertThat((home.outlook.state.value as HomeOutlook.State.Planned).dashboard.away).hasSize(1)
+
+        home.away.remove(later)
+        runCurrent()
+
+        assertThat(access.away).isEmpty()
+        assertThat((home.outlook.state.value as HomeOutlook.State.Planned).dashboard.away).isEmpty()
+        assertThat(access.outlooks).hasSize(2)
+        assertThat(home.outlook.refreshing.value).isTrue()
+    }
+
+    @Test
+    fun aHomeThatLeadsToSetUpForgetsItsAwayEntry() = runTest {
+        val access = FakeEngineAccess(StartState.Ready(config))
+        val handle = SavedStateHandle()
+        val flow = flow(access, handle = handle)
+        val home = flow.screen.value as AppFlow.Screen.Home
+        home.away.open(LocalDate.of(2096, 6, 1), ZoneId.of("UTC"))
+        access.settings = StartState.NotSetUp
+
+        access.outlooks.single().complete(Outlook.NotSetUp(Path.of("engine.json")))
+        runCurrent()
+
+        assertThat(flow.screen.value).isInstanceOf(AppFlow.Screen.SetUp::class.java)
+        assertThat(handle.keys().filter { it.startsWith("oneOffAway") }).isEmpty()
     }
 }

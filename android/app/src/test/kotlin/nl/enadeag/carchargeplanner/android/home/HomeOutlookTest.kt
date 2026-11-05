@@ -363,4 +363,37 @@ class HomeOutlookTest {
         assertThat(home.state.value).isEqualTo(HomeOutlook.State.Asking)
         assertThat(home.refreshing.value).isFalse()
     }
+
+    @Test
+    fun awayPeriodsChangedShowAtOnceFromTheStoredListAndThePlanIsMadeAgainWithThisOneInView() = runTest {
+        val home = home()
+        answer(0, planned)
+        val tomorrow = OneOffAwayPeriod.allDay(today.plusDays(1), zone)
+        val ended = OneOffAwayPeriod.on(today, LocalTime.of(6, 0), LocalTime.of(7, 0), zone)
+
+        home.awayChanged(listOf(ended, tomorrow))
+        runCurrent()
+
+        val shown = (home.state.value as HomeOutlook.State.Planned).dashboard
+        assertThat(shown.away).containsExactly(ComingAway.AllDay(DayName.Tomorrow, tomorrow))
+        assertThat(shown.days).isEqualTo(Dashboard.of(planned, listOf()).days)
+        assertThat(home.refreshing.value).isTrue()
+        assertThat(access.outlooks).hasSize(2)
+        access.away = listOf(tomorrow)
+        val later = Plans.planned(today.atTime(9, 0).atZone(zone), listOf(listOf()), assumed = false)
+        answer(1, later)
+        assertThat(home.state.value).isEqualTo(HomeOutlook.State.Planned(Dashboard.of(later, listOf(tomorrow))))
+    }
+
+    @Test
+    fun awayPeriodsChangedWithoutAPlanShownAskAsAtTheStart() = runTest {
+        val home = home()
+        answer(0, Outlook.NoForecast("Open-Meteo: no network"))
+
+        home.awayChanged(listOf(OneOffAwayPeriod.allDay(today.plusDays(1), zone)))
+        runCurrent()
+
+        assertThat(home.state.value).isEqualTo(HomeOutlook.State.Asking)
+        assertThat(access.outlooks).hasSize(2)
+    }
 }
