@@ -27,7 +27,8 @@ fun languageFolders(res: File): List<String> = res.listFiles().orEmpty().map { i
     .map { it.removePrefix("values-") }.sorted()
 
 // The short commit of a CI build (BUILD_COMMIT, which android.yml sets to a pull request's head commit or the pushed
-// commit), else "dev"; read as a provider, so the configuration cache sees the variable. An empty value counts as unset.
+// commit), else "dev"; read as a provider, so the configuration cache sees the variable. An empty value counts as
+// unset.
 val debugBuildLabel: Provider<String> = providers.environmentVariable("BUILD_COMMIT")
     .filter { it.isNotEmpty() }.map { it.take(7) }.orElse("dev")
 
@@ -45,8 +46,8 @@ android {
     }
 
     // The debug build is signed with the project's public debug key (not secret: anyone can sign with it, so it proves
-    // nothing about the owner); release signing is #271/#272's and stays unset, which checkReleaseNotDebugSigned holds
-    // it to. No git details in the package.
+    // nothing about the owner); release signing is #271/#272's. checkReleaseNotDebugSigned keeps the debug key off
+    // every build type other than debug. No git details in the package.
     signingConfigs {
         getByName("debug") {
             storeFile = file("debug.keystore")
@@ -168,8 +169,9 @@ val licenceAssets = tasks.register<LicenceAssets>("licenceAssets") {
 }
 
 /**
- * Fails when a build type other than debug (release, or any later one) is signed with the debug key: by its signing
- * config being the debug one, or by a keystore file whose bytes are those of debug.keystore. It does not see a
+ * Fails when a build type other than debug (release, or any later one) is signed with the debug key: by its effective
+ * signing config being the debug one (the build type's own, else the first product flavor's that sets one, else the
+ * default config's), or by a keystore file whose bytes are those of debug.keystore. It does not see a
  * re-exported copy of the key with other bytes, nor signing set after the DSL is final (the Variant API,
  * `android.injected.signing.*`). It has no outputs, so it runs every time.
  */
@@ -194,8 +196,8 @@ abstract class ReleaseSigningCheck : DefaultTask() {
         val byName = signingNames.get().filterValues { it == "debug" }.keys
         val byBytes = keystores.files.filter { it.isFile && it.readBytes().contentEquals(debug) }
         if (byName.isNotEmpty() || byBytes.isNotEmpty()) {
-            throw GradleException("A build type other than debug is signed with the debug key (signing config 'debug' " +
-                "on $byName, keystore copies of it: $byBytes); release signing is #271/#272's own key")
+            throw GradleException("A build type other than debug is signed with the debug key (signing config " +
+                "'debug' on $byName, keystore copies of it: $byBytes): give it a key of its own, not the debug key")
         }
     }
 }
@@ -207,8 +209,14 @@ tasks.named("check") { dependsOn(checkReleaseNotDebugSigned) }
 
 androidComponents {
     finalizeDsl { dsl ->
+        // the signing config a build type ends up with: its own, else the first product flavor's that sets one (in the
+        // order of the flavor dimensions), else the default config's
+        val dimensions = dsl.flavorDimensions
+        val flavors = dsl.productFlavors.sortedBy { dimensions.indexOf(it.dimension) }
         val signed = dsl.buildTypes.filter { it.name != "debug" }.mapNotNull { type ->
-            type.signingConfig?.let { type.name to it }
+            val effective = type.signingConfig ?: flavors.firstNotNullOfOrNull { it.signingConfig }
+                ?: dsl.defaultConfig.signingConfig
+            effective?.let { type.name to it }
         }
         checkReleaseNotDebugSigned.configure {
             signingNames.putAll(signed.associate { (type, signing) -> type to signing.name })

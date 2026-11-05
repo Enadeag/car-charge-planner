@@ -112,7 +112,7 @@ An apostrophe is written twice, also in a text without `{0}`: `charger''s app` s
 
 ## Android texts
 
-The Android app's texts are Android string resources, in `android/app/src/main/res/`: `values/strings.xml` is English, which any language without its own file falls back to, and `values-nl/strings.xml` is Dutch. The names are the same in every file. `app_name` is the one text that is not translated (`translatable="false"`): it is the product's name.
+The Android app's texts are Android string resources, in `android/app/src/main/res/`: `values/strings.xml` is English, which any language without its own file falls back to, and `values-nl/strings.xml` is Dutch. The names are the same in every file. `app_name` is the one text that is not translated (`translatable="false"`): it is the product's name. The debug build alone overrides it in `android/app/src/debug/res/values/strings.xml` as "Car charge planner (debug)", also untranslated, so the two builds differ in the launcher; a new language leaves it out as before.
 
 ```xml
 <!-- %1$s the start time; %2$d the number of days -->

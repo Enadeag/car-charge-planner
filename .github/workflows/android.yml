@@ -117,15 +117,17 @@ jobs:
         if: ${{ !cancelled() && steps.sdk.outcome == 'success' }}
         run: ./gradlew --continue --stacktrace check
       # The debug APK to install on a phone (CONTRIBUTING.md, The Android app), kept even when lint or the tests failed;
-      # the step fails when the build left no APK. Not for a pull request from a fork: that one runs code from outside
-      # the repository.
+      # the step fails when the build left no APK. Not for a pull request from a fork, which runs code from outside the
+      # repository, nor for Dependabot's (its author, so a re-run by the maintainer skips it too). The attempt is in the
+      # name, so a re-run of failed jobs does not meet the artifact of the first attempt.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: >-
           ${{ !cancelled() && steps.sdk.outcome == 'success'
           && (github.event_name != 'pull_request'
-          || github.event.pull_request.head.repo.full_name == github.repository) }}
+          || (github.event.pull_request.head.repo.full_name == github.repository
+          && github.event.pull_request.user.login != 'dependabot[bot]')) }}
         with:
-          name: android-debug-apk-${{ github.run_number }}
+          name: android-debug-apk-${{ github.run_number }}-${{ github.run_attempt }}
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
