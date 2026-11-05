@@ -167,7 +167,7 @@ public final class OpenMeteo implements ForecastProvider {
             throw new ProviderError.Unavailable("Open-Meteo has a problem (status " + reply.status() + ")");
         }
         if (reply.status() == 401 || reply.status() == 403) {
-            throw new ProviderError.BadResponse("Open-Meteo refused the request (status " + reply.status()
+            throw new ProviderError.KeyRefused("Open-Meteo refused the request (status " + reply.status()
                     + "): check the API key and server address");
         }
         throw new ProviderError.BadResponse("Open-Meteo did not accept the request (status " + reply.status() + ")"

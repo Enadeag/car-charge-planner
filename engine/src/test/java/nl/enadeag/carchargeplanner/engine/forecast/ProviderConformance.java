@@ -27,6 +27,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * The conformance kit: what every forecast provider must do, run against recorded answers. A provider's test class
@@ -180,8 +181,8 @@ public abstract class ProviderConformance {
         var made = c.provider(c.errorSaying().apply("we also know " + otherKey));
         var cache = new ForecastCache(cacheFolder, FILES);
         try (var log = LogCapture.of("nl.enadeag.carchargeplanner")) {
-            var outcome = new ProviderAttempt(made.provider(), cache, new HashMap<>(), new ProviderHealth(), c.now(), true)
-                    .forecastOrReason(ProviderCase.EXAMPLE_SYSTEM, c::allSettings,
+            var outcome = new ProviderAttempt(made.provider(), cache, new HashMap<>(), new ProviderHealth(), c.now(), true,
+                    true).forecastOrReason(ProviderCase.EXAMPLE_SYSTEM, c::allSettings,
                             cache.key(ProviderCase.EXAMPLE_SYSTEM, Map.of()), () -> List.of(otherKey));
             var check = ConnectionCheck.attempt(made.provider(), ProviderCase.EXAMPLE_SYSTEM, c.allSettings(), c.now(),
                     List.of(otherKey));
@@ -267,7 +268,7 @@ public abstract class ProviderConformance {
                 var cache = new ForecastCache(cacheFolder, FILES);
                 // as the forecast service asks, so the lines it logs about a provider failing are made too
                 var outcome = new ProviderAttempt(made.provider(), cache, new HashMap<>(), new ProviderHealth(), c.now(),
-                        true).forecastOrReason(ProviderCase.EXAMPLE_SYSTEM, c::allSettings,
+                        true, true).forecastOrReason(ProviderCase.EXAMPLE_SYSTEM, c::allSettings,
                         cache.key(ProviderCase.EXAMPLE_SYSTEM, Map.of()), List::of);
                 if (outcome instanceof ProviderOutcome.Failure failure) {
                     shown.add(failure.reason());
@@ -313,6 +314,23 @@ public abstract class ProviderConformance {
         assertThat(error).isInstanceOf(kind);
         assertThat(made.http().unexpected).isEmpty();
         return (ProviderError) error;
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {401, 403})
+    void aRefusedKeyIsKeyRefused(int status) {
+        fails(List.of(Route.answer("", new HttpGet.Reply(status, ""))), ProviderError.KeyRefused.class);
+    }
+
+    /** The connection check shows a refused key's message as it is, so it must say whose key was refused. */
+    @ParameterizedTest
+    @ValueSource(ints = {401, 403})
+    void aRefusedKeysMessageNamesTheProvider(int status) {
+        var name = providerCase().provider(List.of()).provider().info().name();
+
+        var error = fails(List.of(Route.answer("", new HttpGet.Reply(status, ""))), ProviderError.KeyRefused.class);
+
+        assertThat(error.getMessage()).contains(name);
     }
 
     @ParameterizedTest

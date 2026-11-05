@@ -5,8 +5,12 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileAttribute
 import java.security.KeyStoreException
+import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
+import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
@@ -25,11 +29,17 @@ import nl.enadeag.carchargeplanner.android.store.BatteryLevelSave
 import nl.enadeag.carchargeplanner.android.store.EngineOnDispatcher
 import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.android.store.StoredKeys
+import nl.enadeag.carchargeplanner.engine.ForecastUse
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource
+import nl.enadeag.carchargeplanner.engine.forecast.Freshness
+import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole
+import nl.enadeag.carchargeplanner.engine.plan.DayPlan
+import nl.enadeag.carchargeplanner.engine.plan.Window
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets
 import nl.enadeag.carchargeplanner.engine.store.FilePrivacy
@@ -101,8 +111,9 @@ class EngineOnDispatcherTest {
         access.saveBatteryLevel(Percent(64.0))
         access.addAwayPeriod(later)
         access.removeAwayPeriod(later)
+        access.nextNoticeDue(access.round(ForecastUse.STORED_ONLY))
 
-        assertThat(dispatcher.handed.get()).isEqualTo(12)
+        assertThat(dispatcher.handed.get()).isEqualTo(14)
         assertThat(dispatcher.threads).containsExactly("engine-io")
     }
 
@@ -154,6 +165,44 @@ class EngineOnDispatcherTest {
     @Test
     fun withoutASettingsFileThereIsNoPlanAndNothingIsAsked() = runBlocking<Unit> {
         assertThat(access.outlook()).isInstanceOf(Outlook.NotSetUp::class.java)
+    }
+
+    @Test
+    fun withoutASettingsFileARoundIsNotSetUpAndNoNoticeIsDue() = runBlocking<Unit> {
+        val outlook = access.round(ForecastUse.ASK_PROVIDERS)
+
+        assertThat(outlook).isInstanceOf(Outlook.NotSetUp::class.java)
+        assertThat(access.nextNoticeDue(outlook)).isNull()
+    }
+
+    @Test
+    fun aRoundOnTheStoredForecastOnlyWithNoneStoredHasNoForecastAndNoNoticeIsDue() = runBlocking<Unit> {
+        access.saveSettings(draft)
+
+        val outlook = access.round(ForecastUse.STORED_ONLY)
+
+        assertThat(outlook).isInstanceOfSatisfying(Outlook.NoForecast::class.java) { none ->
+            assertThat(none.reason()).isEqualTo("Open-Meteo: no stored forecast that is still useful")
+            assertThat(none.keyRefusedBy()).isEmpty()
+        }
+        assertThat(access.nextNoticeDue(outlook)).isNull()
+    }
+
+    @Test
+    fun aPlanWithAWindowToComeHasItsNoticeDueAtTheWindowsStartLessTheLeadTime() = runBlocking<Unit> {
+        access.saveSettings(draft)
+        val now = Instant.now()
+        val start = now.plus(Duration.ofHours(2)).truncatedTo(ChronoUnit.MINUTES)
+        val window = Window(start, start.plus(Duration.ofHours(2)), 7, 1.6, 3.2, 0.0)
+        val zone = draft.system().timezone()
+        val day = DayPlan(LocalDate.ofInstant(start, zone), Percent(40.0), listOf(window), Percent(55.0),
+            Percent(40.0), 12.0, listOf())
+        val source = ForecastSource(ProviderId("open-meteo"), "Open-Meteo", "Weather data by Open-Meteo.com", now,
+            Freshness.FRESH, ProviderRole.PRIMARY, "", Optional.empty(), listOf())
+        val planned = Outlook.Planned(now, zone, listOf(day), Percent(50.0), true, Optional.empty(), listOf(), source,
+            0.5, Percent(30.0), Percent(80.0))
+
+        assertThat(access.nextNoticeDue(planned)).isEqualTo(start.minus(draft.planning().notifyLead()))
     }
 
     @Test

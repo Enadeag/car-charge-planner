@@ -265,7 +265,7 @@ class ForecastSolarTest extends ProviderConformance {
     @Test
     void aRefusedKeyPointsAtTheSettings() {
         assertThatThrownBy(() -> new ForecastSolar(ReplayHttp.always(new Reply(401, ""))).fetch(EXAMPLE_SYSTEM, Map.of(), NOW))
-                .isInstanceOf(ProviderError.BadResponse.class).hasMessageContaining("API key");
+                .isInstanceOf(ProviderError.KeyRefused.class).hasMessageContaining("API key");
     }
 
     @ParameterizedTest

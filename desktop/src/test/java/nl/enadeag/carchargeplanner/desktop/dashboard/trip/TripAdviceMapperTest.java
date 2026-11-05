@@ -57,7 +57,7 @@ class TripAdviceMapperTest {
     /** Made at 10:20 today from a battery level of 45%, with a target of 80%. */
     private static Outlook.Planned planned(boolean assumed, TripAdvice... advice) {
         var source = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", "Weather data", MADE_AT,
-                Freshness.FRESH, ProviderRole.PRIMARY, "", Optional.empty());
+                Freshness.FRESH, ProviderRole.PRIMARY, "", Optional.empty(), List.of());
         return new Outlook.Planned(MADE_AT, BRUSSELS, List.of(), new Percent(45), assumed, Optional.empty(),
                 List.of(advice), source, 0.4, new Percent(30), new Percent(80));
     }

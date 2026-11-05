@@ -23,9 +23,10 @@ import tools.jackson.databind.node.MissingNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * The last good forecast of each provider and the end of its cool-down, in a file per provider, so both survive a
- * restart. A file that cannot be read, or holds a forecast for another system, is not used; a folder that cannot be
- * written does not stop planning. Each file is kept in memory until it changes on disk.
+ * The last good forecast of each provider, the end of its cool-down and whether it failed when it was last asked, in a
+ * file per provider, so they survive a restart and reach another process, such as one woken only to plan from the
+ * stored forecast. A file that cannot be read, or holds a forecast for another system, is not used; a folder that
+ * cannot be written does not stop planning. Each file is kept in memory until it changes on disk.
  */
 public final class ForecastCache {
 
@@ -48,10 +49,14 @@ public final class ForecastCache {
         }
     }
 
-    /** What one provider's file holds; a part that is missing or damaged is empty. */
-    private record Entry(JsonNode key, Optional<Cached> forecast, Optional<Instant> cooldownUntil) {
+    /**
+     * What one provider's file holds; a part that is missing or damaged is empty, and a refresh that is not marked
+     * failed did not fail.
+     */
+    private record Entry(JsonNode key, Optional<Cached> forecast, Optional<Instant> cooldownUntil,
+            boolean refreshFailed) {
 
-        static final Entry NONE = new Entry(MissingNode.getInstance(), Optional.empty(), Optional.empty());
+        static final Entry NONE = new Entry(MissingNode.getInstance(), Optional.empty(), Optional.empty(), false);
     }
 
     private final Path folder;
@@ -120,7 +125,19 @@ public final class ForecastCache {
     }
 
     /**
-     * Keeps a new forecast, replacing the provider's last one. Also ends a cool-down: the provider answered.
+     * Whether the provider failed when it was last asked, so its forecast could not be refreshed: until it answers
+     * again, also in another process.
+     *
+     * @param providerId the provider whose cache to read
+     * @return true after a failure that no answer followed; false when the file cannot be read
+     */
+    boolean refreshFailed(ProviderId providerId) {
+        return read(providerId).refreshFailed();
+    }
+
+    /**
+     * Keeps a new forecast, replacing the provider's last one. Also ends a cool-down and a failed refresh: the
+     * provider answered.
      *
      * @param providerId the provider that made it
      * @param key what it was made for, as {@link #key} makes it
@@ -128,18 +145,30 @@ public final class ForecastCache {
      * @param steps its steps, keeping the providers' contract
      */
     void saveForecast(ProviderId providerId, JsonNode key, Instant fetchedAt, List<ForecastStep> steps) {
-        write(providerId, new Entry(key, Optional.of(new Cached(fetchedAt, List.copyOf(steps))), Optional.empty()));
+        write(providerId, new Entry(key, Optional.of(new Cached(fetchedAt, List.copyOf(steps))), Optional.empty(),
+                false));
     }
 
     /**
-     * Notes a cool-down, keeping the cached forecast: it stays usable while the provider refuses.
+     * Notes a cool-down, and so a failed refresh, keeping the cached forecast: it stays usable while the provider
+     * refuses.
      *
      * @param providerId the provider that refused
      * @param until when it may be asked again
      */
     void saveCooldown(ProviderId providerId, Instant until) {
         var entry = read(providerId);
-        write(providerId, new Entry(entry.key(), entry.forecast(), Optional.of(until)));
+        write(providerId, new Entry(entry.key(), entry.forecast(), Optional.of(until), true));
+    }
+
+    /**
+     * Notes that the provider was asked and gave no forecast, keeping the cached forecast and the cool-down.
+     *
+     * @param providerId the provider that failed
+     */
+    void saveRefreshFailed(ProviderId providerId) {
+        var entry = read(providerId);
+        write(providerId, new Entry(entry.key(), entry.forecast(), entry.cooldownUntil(), true));
     }
 
     private StoredFile<Entry> file(ProviderId providerId) {
@@ -159,7 +188,10 @@ public final class ForecastCache {
         }
     }
 
-    /** The JSON shape of one provider's file: the key, the forecast's moment and steps, and the cool-down. */
+    /**
+     * The JSON shape of one provider's file: the key, the forecast's moment and steps, the cool-down, and whether the
+     * last refresh failed; a file written before that was kept counts as one whose refresh did not fail.
+     */
     private static final class Format implements FileFormat<Entry> {
 
         @Override
@@ -171,7 +203,9 @@ public final class ForecastCache {
             var steps = steps(root.path("steps"));
             var forecast = fetchedAt.isPresent() && steps.isPresent()
                     ? Optional.of(new Cached(fetchedAt.get(), steps.get())) : Optional.<Cached>empty();
-            return new Entry(root.path("key"), forecast, instant(root.path("cooldownUntil")));
+            var refreshFailed = root.path("refreshFailed");
+            return new Entry(root.path("key"), forecast, instant(root.path("cooldownUntil")),
+                    refreshFailed.isBoolean() && refreshFailed.booleanValue());
         }
 
         @Override
@@ -188,6 +222,7 @@ public final class ForecastCache {
             });
             entry.cooldownUntil().ifPresentOrElse(until -> blob.put("cooldownUntil", until.toString()),
                     () -> blob.putNull("cooldownUntil"));
+            blob.put("refreshFailed", entry.refreshFailed());
             return blob;
         }
     }

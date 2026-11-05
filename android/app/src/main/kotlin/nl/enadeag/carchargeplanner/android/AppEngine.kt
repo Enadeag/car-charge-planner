@@ -23,8 +23,9 @@ import nl.enadeag.carchargeplanner.engine.trip.TripFile
 
 /**
  * Makes the app's [Engine] from the platform's parts, with the same files and the same forecast providers as the
- * desktop app's (`DesktopApp.engine`), so a settings file moves between the two as it is. The engine is not started:
- * it plans and announces only once the app has notifications (#277).
+ * desktop app's (`DesktopApp.engine`), so a settings file moves between the two as it is. The engine is not started,
+ * so it makes no rounds of its own: the owner is told what is due only in a round that the work in the background
+ * makes (#277).
  */
 internal object AppEngine {
 
@@ -35,7 +36,7 @@ internal object AppEngine {
      * The app's engine on the platform's parts.
      *
      * @param platform the process's one set of parts, from [AndroidPlatform.of]
-     * @param notifier tells the owner about an announcement; the engine calls it only once started
+     * @param notifier tells the owner about an announcement; the engine calls it only in a round
      * @return the engine, with nothing read or fetched yet
      */
     fun build(platform: AndroidPlatform, notifier: Notifier): Engine =
@@ -48,7 +49,7 @@ internal object AppEngine {
      * @param http the way to the network, for the forecast providers
      * @param files how the engine writes its files
      * @param apiKeys the store of the providers' secret settings
-     * @param notifier tells the owner about an announcement; the engine calls it only once started
+     * @param notifier tells the owner about an announcement; the engine calls it only in a round
      * @return the engine, with nothing read or fetched yet
      */
     fun build(dataFolder: Path, http: HttpGet, files: PrivateFiles, apiKeys: ApiKeys, notifier: Notifier): Engine {

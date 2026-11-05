@@ -30,7 +30,7 @@ Everything the app keeps is on your computer. Delete any of it to start over.
 | Your trips: when you leave and are back, the distance and whether you can charge there | `~/.local/share/car-charge-planner/trips.json` | `%LOCALAPPDATA%\car-charge-planner\trips.json` |
 | The windows you were notified about | `~/.local/share/car-charge-planner/announced.json` | `%LOCALAPPDATA%\car-charge-planner\announced.json` |
 | What you were notified about each trip, by its departure | `~/.local/share/car-charge-planner/trip-notices.json` | `%LOCALAPPDATA%\car-charge-planner\trip-notices.json` |
-| Forecast cache: the last forecast of each provider, one file per provider | `~/.local/share/car-charge-planner/forecasts/` | `%LOCALAPPDATA%\car-charge-planner\forecasts\` |
+| Forecast cache: the last forecast of each provider, with when the app may ask again and whether the last request failed, one file per provider | `~/.local/share/car-charge-planner/forecasts/` | `%LOCALAPPDATA%\car-charge-planner\forecasts\` |
 | Log: what the app did, the newest in `.0.log` and two older ones of up to 1 MB | `~/.local/share/car-charge-planner/car-charge-planner.0.log` | `%LOCALAPPDATA%\car-charge-planner\car-charge-planner.0.log` |
 | API keys, if you use a paid plan (never in the settings file) | The system keychain; `~/.config/car-charge-planner/secrets.json` only where there is none (see [API keys](#api-keys)) | Credential Manager; `%LOCALAPPDATA%\car-charge-planner\secrets.json` only where it cannot be used |
 | Start at login | `~/.config/autostart/car-charge-planner.desktop` | The `Run` key of your user in the registry |

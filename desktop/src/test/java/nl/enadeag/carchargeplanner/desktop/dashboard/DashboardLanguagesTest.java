@@ -95,7 +95,7 @@ class DashboardLanguagesTest {
         var friday = new DayPlan(TODAY.plusDays(2), new Percent(22), List.of(), new Percent(22), new Percent(10), 12, List.of());
         var night = new Window(at(TODAY, 22), at(TODAY.plusDays(1), 4), 16, 3.7, 0, 11.0);
         var source = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)",
-                at(TODAY, 7), Freshness.STALE, ProviderRole.FALLBACK, "Forecast.Solar", Optional.of(at(TODAY, 9)));
+                at(TODAY, 7), Freshness.STALE, ProviderRole.FALLBACK, "Forecast.Solar", Optional.of(at(TODAY, 9)), List.of());
         return new Outlook.Planned(at(TODAY, 8), BRUSSELS, List.of(today, tomorrow, friday), new Percent(50), true,
                 Optional.of(new GridAdvice(TODAY.plusDays(1), 22, 8, 11.0, Optional.of(night),
                         Optional.of(new Percent(67)))), List.of(tripAdvice(today.windows())), source, 0.45,

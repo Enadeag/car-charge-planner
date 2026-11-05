@@ -29,7 +29,8 @@ All of it is in the package `engine.forecast` ([`engine/src/main/java/nl/enadeag
 | --- | --- | --- |
 | `Unavailable` | no network, a timeout, a 5xx | tries again in five minutes |
 | `RateLimited(message, retryAfter)` | the service refuses more requests; `retryAfter` is a `Duration` if it says when, else `null` | leaves the provider alone until then, or for its `minRefresh` |
-| `BadResponse` | an answer that is not what the service documents, a refused key (401, 403), a bad request, steps that break the contract | waits the `minRefresh` |
+| `KeyRefused` | the service refuses the API key (401, 403) | waits the `minRefresh`; the outlook names the provider until it answers or the settings are saved, also while the fallback's or its last forecast gives a plan, so the app can say that only a new key helps |
+| `BadResponse` | an answer that is not what the service documents, a bad request, steps that break the contract | waits the `minRefresh` |
 | `MissingSetting` | a setting is missing or unusable (checked before anything is sent) | reports it |
 
 A `RuntimeException` is treated as a bug: the app carries on without that provider and logs only the kind of error. Error messages are shown to the user: **never put the URL (it may hold a key) or a setting's value in one.** Text the server wrote, such as the reason in an error answer, goes in only through `ProviderText.quoted(INFO.name(), text, INFO.secretValues(settings))`: it reads "Example Solar says: ...", without the keys, without control or direction characters, and at most 200 characters. The forecast service and the connection check also replace every stored key with `***` in whatever a provider reports, before it is shown or logged.
@@ -142,6 +143,10 @@ public final class ExampleSolar implements ForecastProvider {
         if (reply.status() >= 500) {
             throw new ProviderError.Unavailable("Example Solar has a problem (status " + reply.status() + ")");
         }
+        if (reply.status() == 401 || reply.status() == 403) {
+            throw new ProviderError.KeyRefused("Example Solar refused the request (status " + reply.status()
+                    + "): check the API key");
+        }
         if (!reply.ok()) {
             // the server's own words, such as {"error": "unknown key"}, only through ProviderText
             var words = Exchange.json(reply.body()).path("error");
@@ -250,6 +255,7 @@ What it checks:
 | Several panel arrays | A system with a second array gives one valid forecast. If the provider asks once per array, it is the sum of the single-array forecasts, and a failure for the second array fails the whole forecast. |
 | Same answer, same steps | Deterministic; it leaves its settings alone. |
 | Rate limit | A refusal for too many requests throws `RateLimited` with the retry time the server gave. |
+| Refused key | A 401 or 403 throws `KeyRefused`, whose message names the provider (its `ProviderInfo` name): the connection check shows it as it is. |
 | Server error, no network | A 5xx and a failed connection (refused, timeout, reset, an answer too large) throw `Unavailable`. |
 | Limits | Every request reads at most `HttpGet.DEFAULT_MAX_BODY` and waits at most `HttpGet.DEFAULT_TIMEOUT`. |
 | Not as documented | A 200 with the wrong content throws `BadResponse`; an empty answer throws a `ProviderError` or gives valid steps, and never anything else. |

@@ -133,7 +133,7 @@ public final class ForecastSolar implements ForecastProvider {
             throw new ProviderError.Unavailable("Forecast.Solar has a problem (status " + reply.status() + ")");
         }
         if (reply.status() == 401 || reply.status() == 403) {
-            throw new ProviderError.BadResponse("Forecast.Solar refused the request (status " + reply.status()
+            throw new ProviderError.KeyRefused("Forecast.Solar refused the request (status " + reply.status()
                     + "): check the API key");
         }
         throw new ProviderError.BadResponse("Forecast.Solar did not accept the request (status " + reply.status() + ")"

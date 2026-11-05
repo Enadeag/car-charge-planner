@@ -171,7 +171,7 @@ One span of time in a forecast, such as a quarter of an hour or an hour, with th
 _Avoid_: Slot, interval, sample
 
 **Forecast freshness**:
-How recent the forecast behind a plan is: **fresh** when it was just fetched from the provider, **cached** when it was fetched earlier and it is too soon to ask again, **stale** when a refresh was due but failed and the older forecast is still young enough to use. A forecast too old to use is not stale: there is then no forecast.
+How recent the forecast behind a plan is. **Fresh**: it was just fetched from the provider. **Cached**: it was fetched earlier and it is too soon to ask again. **Stale**: a refresh was due but failed, and the older forecast is still young enough to use. A planning round that may use only the stored forecast tells it as stale when its provider failed when it was last asked, also in another process, with no answer since, and else as cached. A forecast too old to use is not stale: there is then no forecast.
 _Avoid_: Age, outdated, expired
 
 **Cool-down**:
@@ -213,7 +213,7 @@ Anything that shows the engine's plan and passes on the owner's changes: today t
 _Avoid_: Frontend, UI (a client is more than its screens)
 
 **Outlook**:
-What the engine tells its clients after each planning round: either the plan for the coming days, with where its forecast came from, or why there is no plan (not set up, an unusable config, or no forecast).
+What the engine tells its clients after each planning round: either the plan for the coming days, with where its forecast came from, or why there is no plan (not set up, an unusable config, or no forecast). Either way it names the providers that refused their API key when they were asked, also while a fallback's or an older forecast still gives a plan.
 _Avoid_: Status, result, plan (a plan is only one kind of outlook)
 
 **Desktop app**:

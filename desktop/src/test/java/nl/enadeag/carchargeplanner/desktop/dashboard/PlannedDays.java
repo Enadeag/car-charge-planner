@@ -63,7 +63,7 @@ public final class PlannedDays {
     /** A plan with a minimum of 30 % and a target of 80 %. */
     public static Outlook.Planned planned(Instant madeAt, boolean assumed, DayPlan... days) {
         var source = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", "Weather data", madeAt, Freshness.FRESH,
-                ProviderRole.PRIMARY, "", Optional.empty());
+                ProviderRole.PRIMARY, "", Optional.empty(), List.of());
         return new Outlook.Planned(madeAt, BRUSSELS, List.of(days), new Percent(50), assumed, Optional.empty(), List.of(), source, 0.4,
                 new Percent(30), new Percent(80));
     }

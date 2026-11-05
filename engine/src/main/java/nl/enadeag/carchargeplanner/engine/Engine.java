@@ -104,11 +104,10 @@ public final class Engine {
 
     /**
      * Starts planning on the engine's own thread: at once, then every minute, and again after each change made through
-     * the engine, also one that could not be saved, so the listener sees what is stored. Each round moves API keys
-     * kept in their file into the keychain once it can be used ({@link ApiKeys#moveFileIntoKeychain()}), makes the
-     * {@linkplain #outlook() outlook}, then tells the owner about a window that starts within the notification lead
-     * time; the rounds come often enough for that. A round that fails, even with an {@link Error}, is logged, and the
-     * next one is made as planned.
+     * the engine, also one that could not be saved, so the listener sees what is stored. Each is a
+     * {@linkplain #round(ForecastUse) round} that may ask the providers; the rounds come often enough to tell the owner
+     * about a window within the notification lead time. A round that fails, even with an {@link Error}, is logged, and
+     * the next one is made as planned.
      *
      * @param listener gets each new outlook, on the engine's thread, so it should hand slow work on; never null
      * @throws IllegalStateException when the engine was started before
@@ -117,7 +116,7 @@ public final class Engine {
         if (listener == null) {
             throw new IllegalArgumentException("the listener must not be null");
         }
-        schedule.start(() -> listener.accept(round()));
+        schedule.start(() -> listener.accept(round(ForecastUse.ASK_PROVIDERS)));
     }
 
     /**
@@ -129,36 +128,81 @@ public final class Engine {
     }
 
     /**
-     * Makes a plan from the config file and a forecast; nobody is told about a window, which only the rounds of
-     * {@link #start(Consumer)} do. Blocks while the forecast is fetched.
+     * Makes a plan from the config file and a forecast; nobody is told about a window, which only a
+     * {@linkplain #round(ForecastUse) round} does. Blocks while the forecast is fetched.
      *
      * @return the plan, or why there is none: not set up, a config file that cannot be used, or no forecast
      */
     public Outlook outlook() {
         try {
-            return outlook(readConfig());
+            return outlook(readConfig(), ForecastUse.ASK_PROVIDERS);
         } catch (ConfigProblem e) {
             return withoutConfig(e);
         }
     }
 
     /**
-     * One scheduled round: first the API keys move from their file into the keychain when they can, so the move
-     * follows the keychain's unlocking within a round; then the outlook, and the announcements that are due on it.
+     * One planning round, as {@link #start(Consumer)} makes one every minute, for a client that plans at moments of
+     * its own instead: first, in a round that may ask the providers, the API keys move from their file into the
+     * keychain when they can, so the move follows the keychain's unlocking within a round, while a round on the stored
+     * forecast only reads no key at all; then the outlook, and on a plan the owner is told what is due: each
+     * window within the notification lead time before its start, and what is due about the trips. What was told is
+     * kept, so no round tells it again. Blocks while the forecast is fetched: call it away from the user interface's
+     * thread.
+     *
+     * @param use where the forecast may come from: the providers as their rules allow, or only the stored forecast,
+     *     which never asks a provider; without a stored forecast that is still useful the outlook has no forecast, and
+     *     nothing is told on one more than 6 hours old, nor on one whose provider failed when it was last asked, also
+     *     by another process, as it is stale then
+     * @return the plan, or why there is none: not set up, a config file that cannot be used, or no forecast
      */
-    private Outlook round() {
-        apiKeys.moveFileIntoKeychain();
+    public Outlook round(ForecastUse use) {
+        if (use == null) {
+            throw new IllegalArgumentException("the forecast use must not be null");
+        }
+        if (use == ForecastUse.ASK_PROVIDERS) {
+            apiKeys.moveFileIntoKeychain();
+        }
         EngineConfig config;
         try {
             config = readConfig();
         } catch (ConfigProblem e) {
             return withoutConfig(e);
         }
-        var outlook = outlook(config);
+        var outlook = outlook(config, use);
         if (outlook instanceof Outlook.Planned planned) {
             announce(planned, config);
         }
         return outlook;
+    }
+
+    /**
+     * When the next notice is due on a plan that a round made, for a client that wakes the device for it: a window
+     * that was not announced yet, at its start minus the notification lead time, or the start of a trip's grid charge,
+     * by the same rules a round tells them. The battery check and a short trip are not part of it: they wait for the
+     * rounds that come anyway. Reads the config file for the lead time.
+     *
+     * @param outlook what a round gave, after it told what was due
+     * @return the earliest moment, now when a notice is due now; empty when nothing is to come, when the outlook has
+     *     no plan, its forecast could not be refreshed or would be more than 6 hours old by then, or the config file
+     *     cannot be used
+     */
+    public Optional<Instant> nextNoticeDue(Outlook outlook) {
+        if (!(outlook instanceof Outlook.Planned planned)) {
+            return Optional.empty();
+        }
+        EngineConfig config;
+        try {
+            config = readConfig();
+        } catch (ConfigProblem e) {
+            return Optional.empty();
+        }
+        var now = clock.instant();
+        return planned.gridAdvice()
+                .map(advice -> announcer.nextDue(planned.days(), advice, planned.tripAdvice(),
+                        planned.forecastSource(), now, config))
+                .orElseGet(() -> announcer.nextDue(planned.days(), planned.tripAdvice(), planned.forecastSource(),
+                        now, config));
     }
 
     /** Why there is no plan when the config file cannot be read: not set up yet, or a file that cannot be used. */
@@ -179,13 +223,15 @@ public final class Engine {
         }
     }
 
-    private Outlook outlook(EngineConfig config) {
+    private Outlook outlook(EngineConfig config, ForecastUse use) {
         var now = clock.instant();
+        var site = SolarSite.of(config.system());
         try {
-            var forecast = forecasts.get(SolarSite.of(config.system()), config.forecast(), now);
+            var forecast = use == ForecastUse.STORED_ONLY ? forecasts.stored(site, config.forecast(), now)
+                    : forecasts.get(site, config.forecast(), now);
             return planned(config, forecast, now);
         } catch (ForecastUnavailable e) {
-            return new Outlook.NoForecast(e.getMessage(), e.keychainLocked());
+            return new Outlook.NoForecast(e.getMessage(), e.keychainLocked(), e.keyRefusedBy());
         }
     }
 
@@ -207,14 +253,16 @@ public final class Engine {
      * Makes a plan from a config that need not be saved, such as the one set-up shows before Finish, so the owner sees
      * their dashboard with their own data first. The config, the keys and the owner's other files stay as they are,
      * and nobody is told about a window; only a forecast that is fetched is cached, as for a plan, so the first plan
-     * after saving the same system does not ask the provider again. Blocks while the forecast is fetched: call it away
-     * from the user interface's thread.
+     * after saving the same system does not ask the provider again. A provider's failure is not kept in its cache file,
+     * neither as a failed refresh nor as a cool-down, so a wrong key typed in the form does not mark the saved
+     * system's forecast as stale. Blocks while the forecast is fetched: call it away from the user interface's
+     * thread.
      *
      * @param config the whole config to plan with, as the owner entered it
      * @param keys every provider's secret settings as the owner entered them, in place of the stored ones; may be
      *     none
-     * @return the plan, or why there is none: no forecast; never {@link Outlook.NotSetUp} or
-     *     {@link Outlook.ConfigUnusable}
+     * @return the plan, or why there is none: no forecast, with the providers that refused their API key; never
+     *     {@link Outlook.NotSetUp} or {@link Outlook.ConfigUnusable}
      */
     public Outlook preview(EngineConfig config, Secrets keys) {
         var now = clock.instant();
@@ -222,7 +270,7 @@ public final class Engine {
             var forecast = forecasts.getWithKeys(SolarSite.of(config.system()), config.forecast(), keys, now);
             return planned(config, forecast, now);
         } catch (ForecastUnavailable e) {
-            return new Outlook.NoForecast(e.getMessage());
+            return new Outlook.NoForecast(e.getMessage(), e.keychainLocked(), e.keyRefusedBy());
         }
     }
 

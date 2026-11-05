@@ -97,6 +97,10 @@ public final class ExampleSolar implements ForecastProvider {
         if (reply.status() >= 500) {
             throw new ProviderError.Unavailable("Example Solar has a problem (status " + reply.status() + ")");
         }
+        if (reply.status() == 401 || reply.status() == 403) {
+            throw new ProviderError.KeyRefused("Example Solar refused the request (status " + reply.status()
+                    + "): check the API key");
+        }
         if (!reply.ok()) {
             // the server's own words, such as {"error": "unknown key"}, only through ProviderText
             var words = Exchange.json(reply.body()).path("error");

@@ -5,6 +5,9 @@ import static nl.enadeag.carchargeplanner.engine.forecast.FakeProvider.error;
 import static nl.enadeag.carchargeplanner.engine.forecast.FakeProvider.steps;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import nl.enadeag.carchargeplanner.LogCapture;
 import nl.enadeag.carchargeplanner.engine.config.Coordinates;
@@ -12,6 +15,7 @@ import nl.enadeag.carchargeplanner.engine.config.ForecastSelection;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderError.BadResponse;
+import nl.enadeag.carchargeplanner.engine.forecast.ProviderError.KeyRefused;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderError.RateLimited;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderError.Unavailable;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
@@ -33,10 +37,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
@@ -111,7 +118,7 @@ class ForecastServiceTest {
         var result = get(T0);
 
         assertThat(result.source()).isEqualTo(new ForecastSource(MAIN, "Main", "Forecast by Main", T0,
-                Freshness.FRESH, ProviderRole.PRIMARY, "", Optional.empty()));
+                Freshness.FRESH, ProviderRole.PRIMARY, "", Optional.empty(), List.of()));
         assertThat(result.steps()).isEqualTo(SunnyDays.day(DAY, 3.0));
         assertThat(main.callCount()).isEqualTo(1);
         assertThat(backup.callCount()).isZero();
@@ -256,6 +263,16 @@ class ForecastServiceTest {
     @Test
     void aBadAnswerCountsAsARequestAndWaitsTheFullInterval() throws ForecastUnavailable {
         main.script(error(new BadResponse("odd")));
+        get(T0);
+        get(later(30));
+        assertThat(main.callCount()).isEqualTo(1);
+        get(later(61));
+        assertThat(main.callCount()).isEqualTo(2);
+    }
+
+    @Test
+    void aBugInAProviderWaitsTheFullIntervalTooAsItMayHaveSpentARequest() throws ForecastUnavailable {
+        main.script(crash(new IllegalStateException("bug")));
         get(T0);
         get(later(30));
         assertThat(main.callCount()).isEqualTo(1);
@@ -659,5 +676,503 @@ class ForecastServiceTest {
         assertThat(key.path("settings").propertyNames()).containsExactly("a", "b");
         assertThat(key.path("settings").path("a").stringValue()).isEqualTo("1");
         assertThat(key.path("settings").path("b").stringValue()).isEqualTo("2");
+    }
+
+    // a refused API key, told apart from the other failures
+
+    private ForecastUnavailable unavailable(Instant now) {
+        return catchThrowableOfType(ForecastUnavailable.class, () -> get(now));
+    }
+
+    @Test
+    void aRefusedKeyIsToldWithTheProviderThatRefusedIt() {
+        main.script(error(new KeyRefused("Main refused the request (status 401): check the API key")));
+        backup.script(error(new Unavailable("down")));
+
+        var failure = unavailable(T0);
+
+        assertThat(failure.keyRefusedBy()).containsExactly(MAIN);
+        assertThat(failure).hasMessage("Main: Main refused the request (status 401): check the API key; Backup: down");
+    }
+
+    @Test
+    void bothProvidersThatRefusedTheirKeyAreToldInTheOrderAsked() {
+        main.script(error(new KeyRefused("no")));
+        backup.script(error(new KeyRefused("no")));
+
+        assertThat(unavailable(T0).keyRefusedBy()).containsExactly(MAIN, BACKUP);
+    }
+
+    @Test
+    void aRefusedKeyIsStillToldWhileTheProviderWaitsBeforeItIsAskedAgain() {
+        main.script(error(new KeyRefused("no")), steps(SunnyDays.day(DAY, 3.0)));
+        withoutFallback();
+        unavailable(T0);
+
+        var waiting = unavailable(later(30));
+
+        assertThat(waiting.keyRefusedBy()).containsExactly(MAIN);
+        assertThat(waiting).hasMessageContaining("not asked again until");
+        assertThat(main.callCount()).isEqualTo(1);
+    }
+
+    @Test
+    void aWaitAfterAnotherFailureIsNoRefusedKey() {
+        main.script(error(new Unavailable("down")));
+        withoutFallback();
+        unavailable(T0);
+
+        var waiting = unavailable(later(2));
+
+        assertThat(waiting).hasMessageContaining("not asked again until");
+        assertThat(waiting.keyRefusedBy()).isEmpty();
+    }
+
+    @Test
+    void aCoolDownIsNoRefusedKey() {
+        main.script(error(new RateLimited("busy", Duration.ofMinutes(30))));
+        withoutFallback();
+        assertThat(unavailable(T0).keyRefusedBy()).isEmpty();
+
+        var cooling = unavailable(later(10));
+
+        assertThat(cooling).hasMessageContaining("not asked again until");
+        assertThat(cooling.keyRefusedBy()).isEmpty();
+    }
+
+    @Test
+    void savedSettingsLetAProviderThatRefusedItsKeyBeAskedAgainAtOnce() throws ForecastUnavailable {
+        main.script(error(new KeyRefused("no")), steps(SunnyDays.day(DAY, 3.0)));
+        backup.script(error(new Unavailable("down")));
+        unavailable(T0);
+
+        service.forgetFailures();
+
+        assertThat(get(later(1)).source().providerId()).isEqualTo(MAIN);
+    }
+
+    @Test
+    void aRefusedKeyIsToldWhileTheFallbackAnswers() throws ForecastUnavailable {
+        main.script(error(new KeyRefused("no")));
+
+        var source = get(T0).source();
+
+        assertThat(source.providerRole()).isEqualTo(ProviderRole.FALLBACK);
+        assertThat(source.keyRefusedBy()).containsExactly(MAIN);
+    }
+
+    @Test
+    void aRefusedKeyIsToldWhileTheLastForecastIsStillUsedAlsoDuringTheWait() throws ForecastUnavailable {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), error(new KeyRefused("no")));
+        get(T0);
+
+        var refused = get(later(60)).source();
+        var waiting = get(later(90)).source();
+
+        assertThat(refused.freshness()).isEqualTo(Freshness.STALE);
+        assertThat(refused.keyRefusedBy()).containsExactly(MAIN);
+        assertThat(waiting.freshness()).isEqualTo(Freshness.STALE);
+        assertThat(waiting.keyRefusedBy()).containsExactly(MAIN);
+        assertThat(main.callCount()).isEqualTo(2);
+    }
+
+    @Test
+    void aLaterAnswerEndsTheRefusedKey() throws ForecastUnavailable {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), error(new KeyRefused("no")), steps(SunnyDays.day(DAY, 3.0)));
+        get(T0);
+        get(later(60));
+
+        var source = get(later(120)).source();
+
+        assertThat(source.freshness()).isEqualTo(Freshness.FRESH);
+        assertThat(source.keyRefusedBy()).isEmpty();
+    }
+
+    @Test
+    void savedSettingsEndTheRefusedKeyWhileTheLastForecastIsUsed() throws ForecastUnavailable {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), error(new KeyRefused("no")), error(new Unavailable("down")));
+        get(T0);
+        get(later(60));
+
+        service.forgetFailures();
+        var source = get(later(61)).source();
+
+        assertThat(source.freshness()).isEqualTo(Freshness.STALE);
+        assertThat(source.keyRefusedBy()).isEmpty();
+    }
+
+    @ParameterizedTest
+    @MethodSource("otherFailures")
+    void aLastForecastUsedAfterAnotherFailureNamesNoRefusedKey(ProviderError failure) throws ForecastUnavailable {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), error(failure));
+        get(T0);
+
+        var source = get(later(60)).source();
+
+        assertThat(source.providerId()).isEqualTo(MAIN);
+        assertThat(source.keyRefusedBy()).isEmpty();
+    }
+
+    static Stream<ProviderError> otherFailures() {
+        return Stream.of(new Unavailable("down"), new BadResponse("odd"), new RateLimited("busy", null),
+                new ProviderError.MissingSetting("the server address is wrong"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("otherFailures")
+    void otherFailuresAreNoRefusedKey(ProviderError failure) {
+        main.script(error(failure));
+        withoutFallback();
+
+        assertThat(unavailable(T0).keyRefusedBy()).isEmpty();
+    }
+
+    @Test
+    void aMissingKeyIsNoRefusedKey() {
+        mainNeedsAKey(steps(SunnyDays.day(DAY, 3.0)));
+        withoutFallback();
+
+        assertThat(unavailable(T0).keyRefusedBy()).isEmpty();
+    }
+
+    // the stored forecast only, for a moment the device woke for
+
+    private ForecastResult stored(Instant now) throws ForecastUnavailable {
+        return service.stored(SYSTEM, selection, now);
+    }
+
+    @Test
+    void theStoredForecastIsUsedWithoutAskingAnyoneAndToldAsCached() throws ForecastUnavailable {
+        get(T0);
+
+        var result = stored(later(150));
+
+        assertThat(result.source()).isEqualTo(new ForecastSource(MAIN, "Main", "Forecast by Main", T0,
+                Freshness.CACHED, ProviderRole.PRIMARY, "", Optional.empty(), List.of()));
+        assertThat(result.steps()).isEqualTo(SunnyDays.day(DAY, 3.0));
+        assertThat(main.callCount()).isEqualTo(1);
+        assertThat(backup.callCount()).isZero();
+    }
+
+    @Test
+    void theStoredForecastSurvivesARestart() throws ForecastUnavailable {
+        get(T0);
+        restart();
+
+        assertThat(stored(later(10)).source().fetchedAt()).isEqualTo(T0);
+    }
+
+    @Test
+    void withoutAStoredForecastNothingIsAskedNoKeyIsReadAndTheReasonsSaySo() {
+        mainNeedsAKey(steps(SunnyDays.day(DAY, 3.0)));
+        var reads = new AtomicInteger();
+        secrets = () -> {
+            reads.incrementAndGet();
+            throw new SecretsProblem(SecretsProblem.Kind.LOCKED, "the keychain is locked");
+        };
+
+        var failure = catchThrowableOfType(ForecastUnavailable.class, () -> stored(T0));
+
+        assertThat(failure).hasMessage("Main: no stored forecast that is still useful; "
+                + "Backup: no stored forecast that is still useful");
+        assertThat(failure.keychainLocked()).isFalse();
+        assertThat(failure.keyRefusedBy()).isEmpty();
+        assertThat(main.callCount() + backup.callCount()).isZero();
+        assertThat(reads).hasValue(0);
+    }
+
+    @Test
+    void theFallbacksStoredForecastIsUsedWhenThePrimaryHasNone() throws ForecastUnavailable {
+        main.script(error(new Unavailable("down")));
+        get(T0);
+
+        var source = stored(later(5)).source();
+
+        assertThat(source.providerRole()).isEqualTo(ProviderRole.FALLBACK);
+        assertThat(source.primaryName()).isEqualTo("Main");
+        assertThat(main.callCount()).isEqualTo(1);
+    }
+
+    /** The fake providers' forecasts are useful for six hours. */
+    @ParameterizedTest
+    @CsvSource({"0, true", "1, false"})
+    void aStoredForecastIsUsedWhileItIsStillUseful(long secondsMore, boolean used) {
+        withoutFallback();
+        assertThatCode(() -> get(T0)).doesNotThrowAnyException();
+
+        var at = T0.plus(Duration.ofHours(6)).plusSeconds(secondsMore);
+
+        if (used) {
+            assertThatCode(() -> stored(at)).doesNotThrowAnyException();
+        } else {
+            assertThatThrownBy(() -> stored(at)).isInstanceOf(ForecastUnavailable.class);
+        }
+    }
+
+    @Test
+    void aStoredForecastCarriesTheProvidersCoolDown() throws ForecastUnavailable {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), error(new RateLimited("busy", Duration.ofMinutes(30))));
+        get(T0);
+        get(later(120));
+
+        assertThat(stored(later(125)).source().cooldownUntil()).contains(later(150));
+        assertThat(stored(later(150)).source().cooldownUntil()).isEmpty();
+    }
+
+    // a refresh that failed, kept with the stored forecast so a stored-only request of another process knows it
+
+    static Stream<FakeProvider.Answer> failedRefreshes() {
+        return Stream.of(error(new Unavailable("down")), error(new BadResponse("odd")), error(new KeyRefused("no")),
+                error(new RateLimited("busy", Duration.ofMinutes(30))), crash(new IllegalStateException("bug")));
+    }
+
+    @ParameterizedTest
+    @MethodSource("failedRefreshes")
+    void afterAFailedRefreshTheStoredForecastIsStaleAlsoAfterARestart(FakeProvider.Answer failure)
+            throws ForecastUnavailable {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), failure);
+        get(T0);
+        get(later(60));
+
+        assertThat(stored(later(61)).source().freshness()).isEqualTo(Freshness.STALE);
+        restart();
+        assertThat(stored(later(62)).source())
+                .extracting(ForecastSource::providerId, ForecastSource::freshness, ForecastSource::keyRefusedBy)
+                .containsExactly(MAIN, Freshness.STALE, List.of());
+    }
+
+    @Test
+    void aFailedRefreshTheOwnerAskedForMakesTheStoredForecastStaleToo() throws ForecastUnavailable {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), error(new Unavailable("down")));
+        get(T0);
+        refresh(later(10));
+
+        assertThat(stored(later(11)).source().freshness()).isEqualTo(Freshness.STALE);
+    }
+
+    @Test
+    void aRequestThatAsksIsToldAsBeforeAfterAFailedRefresh() throws ForecastUnavailable {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), error(new Unavailable("down")));
+        get(T0);
+        refresh(later(10));
+        restart();
+
+        assertThat(get(later(11)).source().freshness()).isEqualTo(Freshness.CACHED);
+    }
+
+    @Test
+    void anAnswerAfterAFailedRefreshMakesTheStoredForecastCachedAgain() throws ForecastUnavailable {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), error(new Unavailable("down")), steps(SunnyDays.day(DAY, 3.0)));
+        get(T0);
+        get(later(60));
+        get(later(65));
+        restart();
+
+        assertThat(stored(later(66)).source())
+                .extracting(ForecastSource::fetchedAt, ForecastSource::freshness)
+                .containsExactly(later(65), Freshness.CACHED);
+    }
+
+    @Test
+    void aFailedPrimaryLeavesTheFallbacksStoredForecastCached() throws ForecastUnavailable {
+        main.script(error(new Unavailable("down")));
+        get(T0);
+
+        assertThat(stored(later(5)).source())
+                .extracting(ForecastSource::providerRole, ForecastSource::freshness)
+                .containsExactly(ProviderRole.FALLBACK, Freshness.CACHED);
+    }
+
+    @Test
+    void aFileWrittenBeforeFailedRefreshesWereKeptCountsAsNotFailed() throws Exception {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), error(new Unavailable("down")));
+        get(T0);
+        get(later(60));
+        var json = new JsonMapper();
+        var blob = (ObjectNode) json.readTree(Files.readString(cacheFile("main")));
+        assertThat(blob.path("refreshFailed").booleanValue()).isTrue();
+        blob.remove("refreshFailed");
+        Files.writeString(cacheFile("main"), json.writeValueAsString(blob));
+        restart();
+
+        assertThat(stored(later(61)).source().freshness()).isEqualTo(Freshness.CACHED);
+    }
+
+    /** A value that is not JSON's true, which only a boolean is: a file damaged or written by hand. */
+    @ParameterizedTest
+    @ValueSource(strings = {"\"true\"", "1", "null", "{}"})
+    void aRefreshFailedMarkThatIsNoBooleanCountsAsNotFailed(String mark) throws Exception {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), error(new Unavailable("down")));
+        get(T0);
+        get(later(60));
+        var json = new JsonMapper();
+        var blob = (ObjectNode) json.readTree(Files.readString(cacheFile("main")));
+        blob.set("refreshFailed", json.readTree(mark));
+        Files.writeString(cacheFile("main"), json.writeValueAsString(blob));
+        restart();
+
+        assertThat(stored(later(61)).source().freshness()).isEqualTo(Freshness.CACHED);
+    }
+
+    @Test
+    void aMissingRequiredSettingMakesTheStoredForecastStale() throws ForecastUnavailable {
+        mainNeedsAKey(steps(SunnyDays.day(DAY, 3.0)));
+        secrets = () -> new Secrets(Map.of(MAIN, Map.of("api_key", SECRET)));
+        get(T0);
+        secrets = () -> Secrets.NONE; // the key was removed
+
+        assertThat(get(later(60)).source().providerRole()).isEqualTo(ProviderRole.FALLBACK);
+
+        assertThat(stored(later(61)).source())
+                .extracting(ForecastSource::providerId, ForecastSource::freshness)
+                .containsExactly(MAIN, Freshness.STALE);
+    }
+
+    @Test
+    void aMissingRequiredSettingMetEveryMinuteDoesNotWriteTheMarkAgain() throws Exception {
+        mainNeedsAKey(steps(SunnyDays.day(DAY, 3.0)));
+        secrets = () -> new Secrets(Map.of(MAIN, Map.of("api_key", SECRET)));
+        get(T0);
+        secrets = () -> Secrets.NONE;
+        get(later(60));
+        var json = new JsonMapper();
+        var blob = (ObjectNode) json.readTree(Files.readString(cacheFile("main")));
+        blob.put("written", "by the test"); // gone when the service writes the file again
+        Files.writeString(cacheFile("main"), json.writeValueAsString(blob));
+
+        get(later(61));
+
+        assertThat(json.readTree(Files.readString(cacheFile("main"))).path("written").stringValue())
+                .isEqualTo("by the test");
+    }
+
+    // a check of the set-up or Settings form, whose typed keys and system need not be saved
+
+    private ForecastResult check(Instant now, Secrets typed) throws ForecastUnavailable {
+        return service.getWithKeys(SYSTEM, selection, typed, now);
+    }
+
+    @ParameterizedTest
+    @MethodSource("failedRefreshes")
+    void aFailingCheckOfAFormLeavesTheStoredForecastCachedAndStartsNoCoolDown(FakeProvider.Answer failure)
+            throws Exception {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), failure);
+        get(T0);
+
+        check(later(60), new Secrets(Map.of(MAIN, Map.of("api_key", "TYPED-WRONG"))));
+        restart();
+
+        assertThat(stored(later(61)).source())
+                .extracting(ForecastSource::freshness, ForecastSource::cooldownUntil)
+                .containsExactly(Freshness.CACHED, Optional.empty());
+        var file = new JsonMapper().readTree(Files.readString(cacheFile("main")));
+        assertThat(file.path("refreshFailed").booleanValue()).isFalse();
+        assertThat(file.path("cooldownUntil").isNull()).isTrue();
+    }
+
+    static Stream<FakeProvider.Answer> failedChecks() {
+        return Stream.of(error(new KeyRefused("Main refused the request (status 401): check the API key")),
+                error(new Unavailable("could not reach Main (ConnectException)")));
+    }
+
+    @ParameterizedTest
+    @MethodSource("failedChecks")
+    void aFailingCheckOfAFormLetsTheNextOrdinaryRequestAskAtOnceAndNamesNoRefusedKey(FakeProvider.Answer failure)
+            throws ForecastUnavailable {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), failure, steps(SunnyDays.day(DAY, 3.0)));
+        get(T0);
+        check(later(60), new Secrets(Map.of(MAIN, Map.of("api_key", "TYPED-WRONG"))));
+
+        var source = get(later(61)).source();
+
+        assertThat(source)
+                .extracting(ForecastSource::providerId, ForecastSource::freshness, ForecastSource::keyRefusedBy)
+                .containsExactly(MAIN, Freshness.FRESH, List.of());
+        assertThat(main.callCount()).isEqualTo(3);
+    }
+
+    @Test
+    void aCheckDuringTheWaitAfterARefusedKeyTriesTheTypedKeyAtOnce() throws ForecastUnavailable {
+        mainNeedsAKey(steps(SunnyDays.day(DAY, 3.0)), error(new KeyRefused("Main refused the request (status 401)")),
+                steps(SunnyDays.day(DAY, 3.0)));
+        secrets = () -> new Secrets(Map.of(MAIN, Map.of("api_key", "SAVED")));
+        get(T0);
+        get(later(60)); // refused: the saved system waits until later(120)
+
+        var result = check(later(61), new Secrets(Map.of(MAIN, Map.of("api_key", "TYPED-NEW"))));
+
+        assertThat(result.source())
+                .extracting(ForecastSource::providerId, ForecastSource::freshness, ForecastSource::keyRefusedBy)
+                .containsExactly(MAIN, Freshness.FRESH, List.of());
+        assertThat(main.calls.get(2).settings()).containsEntry("api_key", "TYPED-NEW");
+    }
+
+    @Test
+    void aCheckDuringACoolDownStillWaitsForIt() throws ForecastUnavailable {
+        withoutFallback();
+        main.script(steps(SunnyDays.day(DAY, 3.0)), error(new RateLimited("busy", Duration.ofMinutes(30))));
+        get(T0);
+        get(later(60)); // a cool-down until later(90)
+
+        var source = check(later(61), new Secrets(Map.of(MAIN, Map.of("api_key", "TYPED-NEW")))).source();
+
+        assertThat(source).extracting(ForecastSource::freshness, ForecastSource::cooldownUntil)
+                .containsExactly(Freshness.STALE, Optional.of(later(90)));
+        assertThat(main.callCount()).isEqualTo(2);
+    }
+
+    @Test
+    void aCheckOfAFormWithoutARequiredSettingLeavesTheStoredForecastCached() throws ForecastUnavailable {
+        mainNeedsAKey(steps(SunnyDays.day(DAY, 3.0)));
+        secrets = () -> new Secrets(Map.of(MAIN, Map.of("api_key", SECRET)));
+        get(T0);
+
+        assertThat(check(later(60), Secrets.NONE).source().providerRole()).isEqualTo(ProviderRole.FALLBACK);
+
+        assertThat(stored(later(61)).source().freshness()).isEqualTo(Freshness.CACHED);
+    }
+
+    @Test
+    void aCheckOfAFormStillCachesTheForecastItGets() throws ForecastUnavailable {
+        check(T0, Secrets.NONE);
+
+        assertThat(stored(later(1)).source())
+                .extracting(ForecastSource::fetchedAt, ForecastSource::freshness)
+                .containsExactly(T0, Freshness.CACHED);
+    }
+
+    @Test
+    void aStoredOnlyRequestDoesNotWaitForAProviderThatIsBeingAsked() throws Exception {
+        var asked = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        var day = SunnyDays.day(DAY, 3.0);
+        main.script(steps(day), () -> {
+            asked.countDown();
+            try {
+                release.await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException ignored) {
+                throw new ProviderError.Unavailable("interrupted");
+            }
+            return day;
+        });
+        get(T0);
+        var asking = new Thread(() -> {
+            try {
+                refresh(later(10));
+            } catch (ForecastUnavailable e) {
+                throw new AssertionError(e);
+            }
+        });
+        asking.start();
+        try {
+            assertThat(asked.await(10, TimeUnit.SECONDS)).isTrue();
+
+            var result = assertTimeoutPreemptively(Duration.ofSeconds(5), () -> stored(later(11)));
+
+            assertThat(result.source().fetchedAt()).isEqualTo(T0);
+        } finally {
+            release.countDown();
+            asking.join(10_000);
+        }
     }
 }
