@@ -187,7 +187,8 @@ dependencies {
     testRuntimeOnly(libs.junit.vintage.engine)
     // PIT's classpath (the fork's) leaves out two things the unit-test task has: the JUnit 5 engine, which the engine's
     // test fixtures bring at run time (without it PIT finds no JUnit 5 tests), and the app's Java resources (without
-    // slf4j's service file LogcatLoggingTest.slf4jFindsTheProvider fails), which it looks for where AGP 8 put them
+    // slf4j's service file LogcatLoggingTest.slf4jFindsTheProvider fails), which it looks for where older AGP versions
+    // put them
     pitestRuntimeOnly(platform(libs.junit.bom))
     pitestRuntimeOnly(libs.junit.jupiter.engine)
     pitestRuntimeOnly(files(layout.projectDirectory.dir("src/main/resources")))
@@ -207,14 +208,16 @@ val pitLogic = listOf("form.*", "setup.*", "settings.*", "store.*", "home.*", "s
     "secrets.*", "OwnCode*", "MainThreadViolations*", "AndroidHttpGet*", "AndroidPlatform*",
     // ChartGeometry.kt: the charts' geometry and the shapes they draw, apart from the Compose code in DayCharts.kt
     "ui.home.ChartGeometryKt*", "ui.home.PlotArea*", "ui.home.CurvePoint*", "ui.home.PlacedTick*",
-    "ui.home.TimeAxis*", "ui.home.Point*", "ui.home.Shape*", "ui.home.SolarDrawing*", "ui.home.BatteryBarLayout*")
+    "ui.home.TimeAxis*", "ui.home.Point*", "ui.home.Shape*", "ui.home.SolarDrawing*", "ui.home.BatteryBarLayout*",
+    // the view model (AppScreen.kt, apart from the screen's Compose code) and the source colours
+    "ui.AppViewModel*", "ui.SourceColours*")
     .map { "nl.enadeag.carchargeplanner.android.$it" }.toSet()
 
 // ./gradlew :app:pitestDebug, or with -PpitClasses=<comma-separated class names or globs> for the changed classes only
 val pitClasses: Set<String>? = providers.gradleProperty("pitClasses").orNull?.let { value ->
-    value.split(",").map(String::trim).filter(String::isNotEmpty).toSet().also {
-        if (it.isEmpty()) throw GradleException("-PpitClasses names no class: give class names or globs, comma-separated")
-    }
+    val names = value.split(",").map(String::trim).filter(String::isNotEmpty).toSet()
+    if (names.isEmpty()) throw GradleException("-PpitClasses names no class: give class names or globs, comma-separated")
+    names
 }
 
 pitest {

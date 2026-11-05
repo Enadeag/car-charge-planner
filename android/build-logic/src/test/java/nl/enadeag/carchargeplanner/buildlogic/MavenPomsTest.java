@@ -73,12 +73,25 @@ class MavenPomsTest {
         assertThat(version(parent, JUNIT_BOM)).isEqualTo("6.1.3");
     }
 
-    @Test
-    void aPropertyThePomDoesNotSetIsRefusedNamingItAndThePom() {
-        var parent = PARENT.replace("<slf4j.version>2.0.20</slf4j.version>", "<slf4j.v>2.0.20</slf4j.v>");
+    @ParameterizedTest
+    @ValueSource(strings = {"<slf4j.v>2.0.20</slf4j.v>", "<slf4j.version></slf4j.version>"})
+    void aPropertyThePomDoesNotSetOrLeavesEmptyIsRefusedNamingItAndThePom(String written) {
+        var parent = PARENT.replace("<slf4j.version>2.0.20</slf4j.version>", written);
 
         assertThatIllegalArgumentException().isThrownBy(() -> version(parent, SLF4J))
-                .withMessageContaining("parent/pom.xml").withMessageContaining("slf4j.version");
+                .withMessageContaining("parent/pom.xml").withMessageContaining("does not set the property slf4j.version");
+    }
+
+    @Test
+    void aPropertyVersionIsReadAndARefusalNamesWhatTheVersionIsOf() throws IOException {
+        var pom = "<project><properties><pitest.version>1.30.1</pitest.version></properties></project>";
+
+        assertThat(MavenPoms.propertyVersion(pom.getBytes(StandardCharsets.UTF_8), "parent/pom.xml", "pitest.version",
+                "pitest")).isEqualTo("1.30.1");
+        assertThatIllegalArgumentException().isThrownBy(() -> MavenPoms.propertyVersion(
+                        pom.getBytes(StandardCharsets.UTF_8), "parent/pom.xml", "other.version", "the tool"))
+                .withMessageContaining("parent/pom.xml").withMessageContaining("other.version")
+                .withMessageContaining("the version of the tool names");
     }
 
     @Test

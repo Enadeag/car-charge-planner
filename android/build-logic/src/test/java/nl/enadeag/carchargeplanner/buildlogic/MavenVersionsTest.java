@@ -124,7 +124,7 @@ class MavenVersionsTest {
         Files.writeString(repository.resolve("pom.xml"), PARENT.replace("archunit.version>", "archunit.v>"));
 
         assertThat(gradle().buildAndFail().getOutput()).contains("archunit.version",
-                repository.resolve("pom.xml").toString());
+                "catalog's version \"archunit\"", repository.resolve("pom.xml").toString());
     }
 
     @Test
@@ -132,7 +132,7 @@ class MavenVersionsTest {
         Files.writeString(repository.resolve("pom.xml"), PARENT.replace("pitest-junit5.version>", "pit5.version>"));
 
         assertThat(gradle().buildAndFail().getOutput()).contains("pitest-junit5.version",
-                repository.resolve("pom.xml").toString());
+                "catalog's version \"pitest-junit5\"", repository.resolve("pom.xml").toString());
     }
 
     @Test
@@ -238,7 +238,7 @@ class MavenVersionsTest {
                 + ".version></properties>" + PROFILE_END);
 
         assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", tool + ".version", "odd",
-                repository.resolve("pom.xml").toString());
+                "and of the properties pitest.version, pitest-junit5.version", repository.resolve("pom.xml").toString());
     }
 
     @Test

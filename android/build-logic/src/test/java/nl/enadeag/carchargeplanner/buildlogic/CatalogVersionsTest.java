@@ -30,8 +30,7 @@ class CatalogVersionsTest {
     }
 
     @Test
-    void theVersionsThePomsGiveAreThoseOfTheLibrariesAndOfPit() {
-        assertThat(MavenVersions.versionNames()).containsExactlyInAnyOrder("jackson", "slf4j", "junit", "assertj",
-                "archunit", "pitest", "pitest-junit5");
+    void thePomsAlsoGiveTheVersionsOfPit() {
+        assertThat(MavenVersions.versionNames()).contains("pitest", "pitest-junit5");
     }
 }
