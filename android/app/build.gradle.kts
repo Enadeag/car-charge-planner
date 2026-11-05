@@ -225,7 +225,7 @@ pitest {
     // A few points below the share of mutants killed when it was set (74 %). The removed calls to the null and result
     // checks the Kotlin compiler adds (Intrinsics, ResultKt), which no test can see, are 207 of its survivors: they
     // are not left out with avoidCallsTo, as PIT then drops every mutant on a line with such a call, and in the first
-    // run that dropped as many real mutants as generated ones.
+    // run that dropped as many real mutants as generated ones. Set before the other survivors are handled: #351 raises it.
     mutationThreshold = 71
     targetTests = setOf("nl.enadeag.carchargeplanner.android.*")
     excludedTestClasses = listOf(
