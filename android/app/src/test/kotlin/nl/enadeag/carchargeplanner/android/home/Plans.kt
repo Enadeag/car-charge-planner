@@ -46,7 +46,7 @@ internal object Plans {
      */
     fun source(fetchedAt: Instant, freshness: Freshness = Freshness.FRESH, role: ProviderRole = ProviderRole.PRIMARY,
         primaryName: String = "", busyUntil: Instant? = null) = ForecastSource(ProviderId("open-meteo"),
-        "Open-Meteo", CREDIT, fetchedAt, freshness, role, primaryName, Optional.ofNullable(busyUntil))
+        "Open-Meteo", CREDIT, fetchedAt, freshness, role, primaryName, Optional.ofNullable(busyUntil), listOf())
 
     /**
      * Hourly forecast steps of one day, by the clock in a time zone.

@@ -74,27 +74,12 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
 
     override suspend fun outlook(): Outlook = CompletableDeferred<Outlook>().also { outlooks += it }.await()
 
-    /** The rounds asked for, with where their forecast may come from, in the order asked. */
-    val roundsAsked = mutableListOf<ForecastUse>()
+    /** No test makes a round yet: the work in the background that does is still to come (#362). */
+    override suspend fun round(use: ForecastUse): Outlook = throw UnsupportedOperationException("no round in this fake")
 
-    /** The answers of the rounds, which wait until completed, in the order asked. */
-    val rounds = mutableListOf<CompletableDeferred<Outlook>>()
-
-    override suspend fun round(use: ForecastUse): Outlook {
-        roundsAsked += use
-        return CompletableDeferred<Outlook>().also { rounds += it }.await()
-    }
-
-    /** The outlooks the next due notice was asked for, in the order asked. */
-    val dueAskedFor = mutableListOf<Outlook>()
-
-    /** When the next notice is due, for every outlook; null while nothing is. */
-    var nextDue: Instant? = null
-
-    override suspend fun nextNoticeDue(outlook: Outlook): Instant? {
-        dueAskedFor += outlook
-        return nextDue
-    }
+    /** No test asks when the next notice is due yet (#362). */
+    override suspend fun nextNoticeDue(outlook: Outlook): Instant? =
+        throw UnsupportedOperationException("no next due notice in this fake")
 
     /** The one-off away periods stored, in order of their start. */
     var away: List<OneOffAwayPeriod> = listOf()
