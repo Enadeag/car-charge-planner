@@ -171,7 +171,7 @@ One span of time in a forecast, such as a quarter of an hour or an hour, with th
 _Avoid_: Slot, interval, sample
 
 **Forecast freshness**:
-How recent the forecast behind a plan is: **fresh** when it was just fetched from the provider, **cached** when it was fetched earlier and it is too soon to ask again, or the planning round may use only the stored forecast and the provider's last refresh did not fail, **stale** when a refresh was due but failed and the older forecast is still young enough to use, or the planning round may use only the stored forecast and the provider failed when it was last asked, also in another process, with no answer since. A forecast too old to use is not stale: there is then no forecast.
+How recent the forecast behind a plan is. **Fresh**: it was just fetched from the provider. **Cached**: it was fetched earlier and it is too soon to ask again. **Stale**: a refresh was due but failed, and the older forecast is still young enough to use. A planning round that may use only the stored forecast tells it as stale when its provider failed when it was last asked, also in another process, with no answer since, and else as cached. A forecast too old to use is not stale: there is then no forecast.
 _Avoid_: Age, outdated, expired
 
 **Cool-down**:

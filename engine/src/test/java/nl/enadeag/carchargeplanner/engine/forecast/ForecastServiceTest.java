@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import nl.enadeag.carchargeplanner.LogCapture;
 import nl.enadeag.carchargeplanner.engine.config.Coordinates;
@@ -985,5 +986,132 @@ class ForecastServiceTest {
         restart();
 
         assertThat(stored(later(61)).source().freshness()).isEqualTo(Freshness.CACHED);
+    }
+
+    /** A value that is not JSON's true, which only a boolean is: a file damaged or written by hand. */
+    @ParameterizedTest
+    @ValueSource(strings = {"\"true\"", "1", "null", "{}"})
+    void aRefreshFailedMarkThatIsNoBooleanCountsAsNotFailed(String mark) throws Exception {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), error(new Unavailable("down")));
+        get(T0);
+        get(later(60));
+        var json = new JsonMapper();
+        var blob = (ObjectNode) json.readTree(Files.readString(cacheFile("main")));
+        blob.set("refreshFailed", json.readTree(mark));
+        Files.writeString(cacheFile("main"), json.writeValueAsString(blob));
+        restart();
+
+        assertThat(stored(later(61)).source().freshness()).isEqualTo(Freshness.CACHED);
+    }
+
+    @Test
+    void aMissingRequiredSettingMakesTheStoredForecastStale() throws ForecastUnavailable {
+        mainNeedsAKey(steps(SunnyDays.day(DAY, 3.0)));
+        secrets = () -> new Secrets(Map.of(MAIN, Map.of("api_key", SECRET)));
+        get(T0);
+        secrets = () -> Secrets.NONE; // the key was removed
+
+        assertThat(get(later(60)).source().providerRole()).isEqualTo(ProviderRole.FALLBACK);
+
+        assertThat(stored(later(61)).source())
+                .extracting(ForecastSource::providerId, ForecastSource::freshness)
+                .containsExactly(MAIN, Freshness.STALE);
+    }
+
+    @Test
+    void aMissingRequiredSettingMetEveryMinuteDoesNotWriteTheMarkAgain() throws Exception {
+        mainNeedsAKey(steps(SunnyDays.day(DAY, 3.0)));
+        secrets = () -> new Secrets(Map.of(MAIN, Map.of("api_key", SECRET)));
+        get(T0);
+        secrets = () -> Secrets.NONE;
+        get(later(60));
+        var json = new JsonMapper();
+        var blob = (ObjectNode) json.readTree(Files.readString(cacheFile("main")));
+        blob.put("written", "by the test"); // gone when the service writes the file again
+        Files.writeString(cacheFile("main"), json.writeValueAsString(blob));
+
+        get(later(61));
+
+        assertThat(json.readTree(Files.readString(cacheFile("main"))).path("written").stringValue())
+                .isEqualTo("by the test");
+    }
+
+    // a check of the set-up or Settings form, whose typed keys and system need not be saved
+
+    private ForecastResult check(Instant now, Secrets typed) throws ForecastUnavailable {
+        return service.getWithKeys(SYSTEM, selection, typed, now);
+    }
+
+    @ParameterizedTest
+    @MethodSource("failedRefreshes")
+    void aFailingCheckOfAFormLeavesTheStoredForecastCachedAndStartsNoCoolDown(FakeProvider.Answer failure)
+            throws Exception {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), failure);
+        get(T0);
+
+        check(later(60), new Secrets(Map.of(MAIN, Map.of("api_key", "TYPED-WRONG"))));
+        restart();
+
+        assertThat(stored(later(61)).source())
+                .extracting(ForecastSource::freshness, ForecastSource::cooldownUntil)
+                .containsExactly(Freshness.CACHED, Optional.empty());
+        var file = new JsonMapper().readTree(Files.readString(cacheFile("main")));
+        assertThat(file.path("refreshFailed").booleanValue()).isFalse();
+        assertThat(file.path("cooldownUntil").isNull()).isTrue();
+    }
+
+    @Test
+    void aCheckOfAFormWithoutARequiredSettingLeavesTheStoredForecastCached() throws ForecastUnavailable {
+        mainNeedsAKey(steps(SunnyDays.day(DAY, 3.0)));
+        secrets = () -> new Secrets(Map.of(MAIN, Map.of("api_key", SECRET)));
+        get(T0);
+
+        assertThat(check(later(60), Secrets.NONE).source().providerRole()).isEqualTo(ProviderRole.FALLBACK);
+
+        assertThat(stored(later(61)).source().freshness()).isEqualTo(Freshness.CACHED);
+    }
+
+    @Test
+    void aCheckOfAFormStillCachesTheForecastItGets() throws ForecastUnavailable {
+        check(T0, Secrets.NONE);
+
+        assertThat(stored(later(1)).source())
+                .extracting(ForecastSource::fetchedAt, ForecastSource::freshness)
+                .containsExactly(T0, Freshness.CACHED);
+    }
+
+    @Test
+    void aStoredOnlyRequestDoesNotWaitForAProviderThatIsBeingAsked() throws Exception {
+        var asked = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        var day = SunnyDays.day(DAY, 3.0);
+        main.script(steps(day), () -> {
+            asked.countDown();
+            try {
+                release.await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException ignored) {
+                throw new ProviderError.Unavailable("interrupted");
+            }
+            return day;
+        });
+        get(T0);
+        var asking = new Thread(() -> {
+            try {
+                refresh(later(10));
+            } catch (ForecastUnavailable e) {
+                throw new AssertionError(e);
+            }
+        });
+        asking.start();
+        try {
+            assertThat(asked.await(10, TimeUnit.SECONDS)).isTrue();
+
+            var result = assertTimeoutPreemptively(Duration.ofSeconds(5), () -> stored(later(11)));
+
+            assertThat(result.source().fetchedAt()).isEqualTo(T0);
+        } finally {
+            release.countDown();
+            asking.join(10_000);
+        }
     }
 }

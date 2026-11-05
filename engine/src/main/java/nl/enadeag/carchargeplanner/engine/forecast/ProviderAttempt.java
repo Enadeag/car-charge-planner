@@ -46,6 +46,7 @@ final class ProviderAttempt {
     private final ProviderHealth health;
     private final Instant now;
     private final boolean force;
+    private final boolean marksFailures;
 
     /**
      * Prepares one attempt; nothing is read or asked yet.
@@ -58,9 +59,12 @@ final class ProviderAttempt {
      * @param now the current moment, by which ages, waits and cool-downs are measured
      * @param force the owner asked for a refresh: skip the minimum refresh interval and the wait after a failure,
      *     never a cool-down
+     * @param marksFailures true to keep a failure in the provider's cache file, as its failed refresh and its
+     *     cool-down; false for a check of settings that need not be saved, such as set-up's or Settings', as the file
+     *     is the saved system's too, which a wrong key typed in a form must not mark
      */
     ProviderAttempt(ForecastProvider provider, ForecastCache cache, Map<ProviderId, Retry> retryAt,
-            ProviderHealth health, Instant now, boolean force) {
+            ProviderHealth health, Instant now, boolean force, boolean marksFailures) {
         this.provider = provider;
         this.info = provider.info();
         this.cache = cache;
@@ -68,6 +72,7 @@ final class ProviderAttempt {
         this.health = health;
         this.now = now;
         this.force = force;
+        this.marksFailures = marksFailures;
     }
 
     /**
@@ -92,6 +97,7 @@ final class ProviderAttempt {
         var secrets = Stream.concat(info.secretValues(values).stream(), storedSecrets.get().stream()).toList();
         var missing = info.missingRequired(values);
         if (!missing.isEmpty()) { // nothing is sent without what the provider requires
+            markRefreshFailed(); // its stored forecast is not refreshed either
             return afterFailure(String.join(", ", missing) + " is required", secrets, CacheState.NONE, false);
         }
         var waiting = held.cooldownUntil().map(until -> new Retry(until, false)).or(this::waitingAfterFailure);
@@ -150,24 +156,37 @@ final class ProviderAttempt {
             return new ProviderOutcome.Usable(steps, now, Freshness.FRESH, Optional.empty(), false);
         } catch (ProviderError.RateLimited e) {
             var until = now.plus(e.retryAfter().orElse(info.minRefresh()));
-            cache.saveCooldown(info.id(), until);
+            if (marksFailures) {
+                cache.saveCooldown(info.id(), until);
+            }
             return afterFailure(e.getMessage(), secrets, held.inCooldownUntil(until), false);
         } catch (ProviderError.Unavailable e) {
             retryAt.put(info.id(), new Retry(now.plus(RETRY_AFTER_UNAVAILABLE), false));
-            cache.saveRefreshFailed(info.id());
+            markRefreshFailed();
             return afterFailure(e.getMessage(), secrets, held, false);
         } catch (ProviderError e) {
             boolean keyRefused = e instanceof ProviderError.KeyRefused;
             retryAt.put(info.id(), new Retry(now.plus(info.minRefresh()), keyRefused)); // it answered: that counted
-            cache.saveRefreshFailed(info.id());
+            markRefreshFailed();
             return afterFailure(e.getMessage(), secrets, held, keyRefused);
         } catch (RuntimeException e) {
             // a bug in a provider must not stop the app; its message may hold a secret, so only its kind is told
             var kind = e.getClass().getSimpleName();
             LOG.error("forecast provider " + info.id() + " failed unexpectedly (" + kind + ")");
             retryAt.put(info.id(), new Retry(now.plus(info.minRefresh()), false));
-            cache.saveRefreshFailed(info.id());
+            markRefreshFailed();
             return afterFailure("an unexpected error (" + kind + ")", secrets, held, false);
+        }
+    }
+
+    /**
+     * Keeps in the cache file that the provider's forecast could not be refreshed, unless this is a check of settings
+     * that need not be saved; a file that says so already is not written again, as a missing setting meets it every
+     * minute.
+     */
+    private void markRefreshFailed() {
+        if (marksFailures && !cache.refreshFailed(info.id())) {
+            cache.saveRefreshFailed(info.id());
         }
     }
 

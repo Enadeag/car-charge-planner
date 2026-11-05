@@ -49,6 +49,11 @@ public final class ForecastService {
     private enum Asking {
         /** From the cache or a provider, as the rules allow. */
         USUAL,
+        /**
+         * As usual, for a check of settings that need not be saved: a failure is not kept in the provider's cache
+         * file, which is the saved system's too.
+         */
+        CHECK,
         /** As usual, but a provider is asked before its minimum refresh interval and without its wait. */
         FORCED,
         /** From the cache only; no provider is asked and no key is read. */
@@ -96,6 +101,11 @@ public final class ForecastService {
      * Instant)}, but a provider is asked also before its minimum refresh interval has passed, and after a failure
      * without its wait; never during its cool-down.
      *
+     * <p>Not wired to a caller yet, and it must not be before this is fixed: when the provider refuses its API key to
+     * a forced request within the minimum refresh interval of its last answer, the next ordinary request within that
+     * interval names no provider that refused its key, as the cache answers it before the wait after the refusal is
+     * looked at.
+     *
      * @param system the system to forecast; the cache is used only when it was made for the same one
      * @param selection the providers to ask and their settings that are not secret
      * @param now the current moment, by which the cache's age and cool-downs are measured
@@ -109,7 +119,10 @@ public final class ForecastService {
 
     /**
      * A forecast for a system with secret settings that need not be stored yet, such as the ones set-up shows before
-     * it saves; from the cache or a provider, as {@link #get(SolarSite, ForecastSelection, Instant)}.
+     * it saves; from the cache or a provider, as {@link #get(SolarSite, ForecastSelection, Instant)}. A provider's
+     * forecast is cached, but its failure is not kept in the cache file, neither as a failed refresh nor as a
+     * cool-down: that file is one per provider, so a wrong key typed in a form, or another system, would otherwise
+     * mark the saved system's forecast as stale. The wait after the failure is kept, in memory, as for any request.
      *
      * @param system the system to forecast; the cache is used only when it was made for the same one
      * @param selection the providers to ask and their settings that are not secret
@@ -121,16 +134,16 @@ public final class ForecastService {
     public ForecastResult getWithKeys(SolarSite system, ForecastSelection selection, Secrets secrets,
             Instant now) throws ForecastUnavailable {
         return fetch(system, selection, new Once<>(() -> new KeysOrProblem(secrets, Optional.empty())), now,
-                Asking.USUAL);
+                Asking.CHECK);
     }
 
-    private ForecastResult fetch(SolarSite system, ForecastSelection selection, Once<KeysOrProblem> stored,
+    private ForecastResult fetch(SolarSite system, ForecastSelection selection, Once<KeysOrProblem> storedKeys,
             Instant now, Asking mode) throws ForecastUnavailable {
         var reasons = new ArrayList<String>();
         var keyRefusedBy = new ArrayList<ProviderId>();
         var order = selection.order();
         for (int index = 0; index < order.size(); index++) {
-            var outcome = ask(order.get(index), system, selection, stored, now, mode);
+            var outcome = ask(order.get(index), system, selection, storedKeys, now, mode);
             if (outcome instanceof ProviderOutcome.Usable usable) {
                 if (usable.keyRefused()) {
                     keyRefusedBy.add(order.get(index));
@@ -147,7 +160,7 @@ public final class ForecastService {
             }
         }
         var locked = new boolean[1];
-        stored.ifMade(secrets -> secrets.problem().ifPresent(problem -> {
+        storedKeys.ifMade(secrets -> secrets.problem().ifPresent(problem -> {
             reasons.add(problem.getMessage());
             locked[0] = problem.kind() == SecretsProblem.Kind.LOCKED;
         }));
@@ -171,7 +184,7 @@ public final class ForecastService {
     }
 
     private ProviderOutcome ask(ProviderId providerId, SolarSite system, ForecastSelection selection,
-            Once<KeysOrProblem> stored, Instant now, Asking mode) {
+            Once<KeysOrProblem> storedKeys, Instant now, Asking mode) {
         var found = providers.find(providerId);
         if (found.isEmpty()) {
             return new ProviderOutcome.Failure(
@@ -180,15 +193,18 @@ public final class ForecastService {
         var provider = found.get();
         var plain = selection.settingsOf(providerId);
         Supplier<Map<String, String>> settings =
-                () -> provider.info().settingsFrom(plain, stored.get().secrets().of(providerId));
+                () -> provider.info().settingsFrom(plain, storedKeys.get().secrets().of(providerId));
         // a changed key does not make the cached forecast wrong, so the key is left out of what it depends on
         var key = cache.key(system, provider.info().settingsFrom(plain, Map.of()));
+        var attempt = new ProviderAttempt(provider, cache, retryAt, health, now, mode == Asking.FORCED,
+                mode != Asking.CHECK);
+        if (mode == Asking.STORED_ONLY) { // asks nobody, so it never waits for a request of another round
+            return attempt.storedOrReason(key);
+        }
         var lock = asking.computeIfAbsent(providerId, ignored -> new ReentrantLock());
         lock.lock();
         try {
-            var attempt = new ProviderAttempt(provider, cache, retryAt, health, now, mode == Asking.FORCED);
-            return mode == Asking.STORED_ONLY ? attempt.storedOrReason(key)
-                    : attempt.forecastOrReason(system, settings, key, () -> stored.get().secrets().values());
+            return attempt.forecastOrReason(system, settings, key, () -> storedKeys.get().secrets().values());
         } finally {
             lock.unlock();
         }

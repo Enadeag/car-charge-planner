@@ -541,6 +541,35 @@ class EngineTest {
     }
 
     @Test
+    void aPreviewWithoutAForecastNamesTheProviderThatRefusedTheTypedKey() throws IOException {
+        choose("main", "");
+        main.script(error(new ProviderError.KeyRefused("Main refused the request (status 401): check the API key")));
+        var engine = engine(clockAt(7));
+
+        var preview = engine.preview(EngineConfig.setUpDraft(BRUSSELS, new ProviderId("main")),
+                new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "TYPED-WRONG"))));
+
+        assertThat(preview).isInstanceOfSatisfying(Outlook.NoForecast.class, none -> {
+            assertThat(none.keyRefusedBy()).containsExactly(new ProviderId("main"));
+            assertThat(none.keychainLocked()).isFalse();
+        });
+    }
+
+    @Test
+    void aFailingPreviewLeavesTheSavedSystemsStoredForecastToldAsCached() throws Exception {
+        engine(clockAt(7)).outlook();
+        main.script(error(new ProviderError.KeyRefused("Main refused the request (status 401): check the API key")));
+        backup.script(error(new ProviderError.Unavailable("down")));
+        var form = engine(clockAt(8, 30));
+        form.preview(form.config(), new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "TYPED-WRONG"))));
+
+        var outlook = engine(clockAt(9, 50)).round(ForecastUse.STORED_ONLY);
+
+        assertThat(((Outlook.Planned) outlook).forecastSource().freshness()).isEqualTo(Freshness.CACHED);
+        assertThat(told).hasSize(1);
+    }
+
+    @Test
     void theFirstRunConfigHasTypicalValuesTaggedAndNoPlaceYet() {
         var draft = EngineConfig.setUpDraft(BRUSSELS, new ProviderId("open-meteo"));
 
@@ -615,6 +644,17 @@ class EngineTest {
                 "{\"version\": 1, \"main\": {\"api_key\": \"KEPT-IN-FILE\"}}");
 
         engine(clockAt(7)).outlook();
+
+        assertThat(file).exists();
+        assertThat(keychain.entries).isEmpty();
+    }
+
+    @Test
+    void aRoundOnTheStoredForecastOnlyLeavesKeysKeptInTheFileWhereTheyAre() throws IOException {
+        var file = Files.writeString(folder.resolve("secrets.json"),
+                "{\"version\": 1, \"main\": {\"api_key\": \"KEPT-IN-FILE\"}}");
+
+        engine(clockAt(7)).round(ForecastUse.STORED_ONLY);
 
         assertThat(file).exists();
         assertThat(keychain.entries).isEmpty();

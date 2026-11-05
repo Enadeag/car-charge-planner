@@ -143,8 +143,9 @@ public final class Engine {
 
     /**
      * One planning round, as {@link #start(Consumer)} makes one every minute, for a client that plans at moments of
-     * its own instead: first the API keys move from their file into the keychain when they can, so the move follows
-     * the keychain's unlocking within a round; then the outlook, and on a plan the owner is told what is due: each
+     * its own instead: first, in a round that may ask the providers, the API keys move from their file into the
+     * keychain when they can, so the move follows the keychain's unlocking within a round, while a round on the stored
+     * forecast only reads no key at all; then the outlook, and on a plan the owner is told what is due: each
      * window within the notification lead time before its start, and what is due about the trips. What was told is
      * kept, so no round tells it again. Blocks while the forecast is fetched: call it away from the user interface's
      * thread.
@@ -159,7 +160,9 @@ public final class Engine {
         if (use == null) {
             throw new IllegalArgumentException("the forecast use must not be null");
         }
-        apiKeys.moveFileIntoKeychain();
+        if (use == ForecastUse.ASK_PROVIDERS) {
+            apiKeys.moveFileIntoKeychain();
+        }
         EngineConfig config;
         try {
             config = readConfig();
@@ -250,14 +253,16 @@ public final class Engine {
      * Makes a plan from a config that need not be saved, such as the one set-up shows before Finish, so the owner sees
      * their dashboard with their own data first. The config, the keys and the owner's other files stay as they are,
      * and nobody is told about a window; only a forecast that is fetched is cached, as for a plan, so the first plan
-     * after saving the same system does not ask the provider again. Blocks while the forecast is fetched: call it away
-     * from the user interface's thread.
+     * after saving the same system does not ask the provider again. A provider's failure is not kept in its cache file,
+     * neither as a failed refresh nor as a cool-down, so a wrong key typed in the form does not mark the saved
+     * system's forecast as stale. Blocks while the forecast is fetched: call it away from the user interface's
+     * thread.
      *
      * @param config the whole config to plan with, as the owner entered it
      * @param keys every provider's secret settings as the owner entered them, in place of the stored ones; may be
      *     none
-     * @return the plan, or why there is none: no forecast; never {@link Outlook.NotSetUp} or
-     *     {@link Outlook.ConfigUnusable}
+     * @return the plan, or why there is none: no forecast, with the providers that refused their API key; never
+     *     {@link Outlook.NotSetUp} or {@link Outlook.ConfigUnusable}
      */
     public Outlook preview(EngineConfig config, Secrets keys) {
         var now = clock.instant();
@@ -265,7 +270,7 @@ public final class Engine {
             var forecast = forecasts.getWithKeys(SolarSite.of(config.system()), config.forecast(), keys, now);
             return planned(config, forecast, now);
         } catch (ForecastUnavailable e) {
-            return new Outlook.NoForecast(e.getMessage());
+            return new Outlook.NoForecast(e.getMessage(), e.keychainLocked(), e.keyRefusedBy());
         }
     }
 

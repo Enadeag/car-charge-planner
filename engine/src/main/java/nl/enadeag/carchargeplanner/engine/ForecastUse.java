@@ -7,8 +7,8 @@ public enum ForecastUse {
     ASK_PROVIDERS,
 
     /**
-     * From the stored forecast only: no provider is asked, so the network is not used, such as for a round at a moment
-     * the device woke for.
+     * From the stored forecast only: no provider is asked, so the network is not used, and no API key is read, such as
+     * for a round at a moment the device woke for.
      */
     STORED_ONLY
 }

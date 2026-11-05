@@ -84,7 +84,9 @@ public final class ConnectionCheck {
             return "Could not get a forecast from " + info.name() + ": " + unavailable.getMessage();
         } else if (error instanceof ProviderError.MissingSetting notConfigured) {
             return info.name() + " is not set up completely: " + notConfigured.getMessage();
-        } else if (error instanceof ProviderError.BadResponse || error instanceof ProviderError.KeyRefused) {
+        } else if (error instanceof ProviderError.KeyRefused) {
+            return info.name() + " refused the API key: " + error.getMessage();
+        } else if (error instanceof ProviderError.BadResponse) {
             return info.name() + " gave an answer the app does not understand: " + error.getMessage();
         } else {
             throw new IllegalStateException("unknown kind of provider error: " + error);

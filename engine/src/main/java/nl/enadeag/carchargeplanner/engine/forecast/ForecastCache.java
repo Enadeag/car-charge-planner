@@ -25,8 +25,8 @@ import tools.jackson.databind.node.ObjectNode;
 /**
  * The last good forecast of each provider, the end of its cool-down and whether it failed when it was last asked, in a
  * file per provider, so they survive a restart and reach another process, such as one woken only to plan from the
- * stored forecast. A file that cannot be read, or holds a forecast for another system, is not used; a folder that cannot be
- * written does not stop planning. Each file is kept in memory until it changes on disk.
+ * stored forecast. A file that cannot be read, or holds a forecast for another system, is not used; a folder that
+ * cannot be written does not stop planning. Each file is kept in memory until it changes on disk.
  */
 public final class ForecastCache {
 

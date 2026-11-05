@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Where a forecast came from: who made it, the credit their terms ask for, how fresh it is, and which provider asked
- * for it refused its API key, which a forecast that is still usable must not hide.
+ * Where a forecast came from: who made it, the credit their terms ask for, how fresh it is, and which providers refused
+ * their API key when they were asked for it, which a forecast that is still usable must not hide.
  *
  * @param providerId the provider that made it
  * @param providerName its name

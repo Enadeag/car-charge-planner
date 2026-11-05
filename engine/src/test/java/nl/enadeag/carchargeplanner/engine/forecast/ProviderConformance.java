@@ -181,8 +181,8 @@ public abstract class ProviderConformance {
         var made = c.provider(c.errorSaying().apply("we also know " + otherKey));
         var cache = new ForecastCache(cacheFolder, FILES);
         try (var log = LogCapture.of("nl.enadeag.carchargeplanner")) {
-            var outcome = new ProviderAttempt(made.provider(), cache, new HashMap<>(), new ProviderHealth(), c.now(), true)
-                    .forecastOrReason(ProviderCase.EXAMPLE_SYSTEM, c::allSettings,
+            var outcome = new ProviderAttempt(made.provider(), cache, new HashMap<>(), new ProviderHealth(), c.now(), true,
+                    true).forecastOrReason(ProviderCase.EXAMPLE_SYSTEM, c::allSettings,
                             cache.key(ProviderCase.EXAMPLE_SYSTEM, Map.of()), () -> List.of(otherKey));
             var check = ConnectionCheck.attempt(made.provider(), ProviderCase.EXAMPLE_SYSTEM, c.allSettings(), c.now(),
                     List.of(otherKey));
@@ -268,7 +268,7 @@ public abstract class ProviderConformance {
                 var cache = new ForecastCache(cacheFolder, FILES);
                 // as the forecast service asks, so the lines it logs about a provider failing are made too
                 var outcome = new ProviderAttempt(made.provider(), cache, new HashMap<>(), new ProviderHealth(), c.now(),
-                        true).forecastOrReason(ProviderCase.EXAMPLE_SYSTEM, c::allSettings,
+                        true, true).forecastOrReason(ProviderCase.EXAMPLE_SYSTEM, c::allSettings,
                         cache.key(ProviderCase.EXAMPLE_SYSTEM, Map.of()), List::of);
                 if (outcome instanceof ProviderOutcome.Failure failure) {
                     shown.add(failure.reason());
