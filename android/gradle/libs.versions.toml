@@ -18,7 +18,7 @@ lifecycle = "2.10.0"
 coroutines = "1.11.0"
 robolectric = "4.17"
 # the Android fork of the PIT plugin, for :app's mutation testing (pitestDebug); PIT's own version comes from pom.xml
-pitest-plugin = "0.3.0"
+droidsonroids-pitest = "0.3.0"
 
 [libraries]
 jackson-bom = { module = "tools.jackson:jackson-bom", version.ref = "jackson" }
@@ -66,4 +66,4 @@ engine = ["jackson-databind", "jackson-core", "slf4j-api"]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
-pitest = { id = "pl.droidsonroids.pitest", version.ref = "pitest-plugin" }
+pitest = { id = "pl.droidsonroids.pitest", version.ref = "droidsonroids-pitest" }

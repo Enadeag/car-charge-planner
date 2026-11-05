@@ -28,4 +28,10 @@ class CatalogVersionsTest {
 
         assertThat(keys).isNotEmpty().doesNotContainAnyElementsOf(MavenVersions.versionNames());
     }
+
+    @Test
+    void theVersionsThePomsGiveAreThoseOfTheLibrariesAndOfPit() {
+        assertThat(MavenVersions.versionNames()).containsExactlyInAnyOrder("jackson", "slf4j", "junit", "assertj",
+                "archunit", "pitest", "pitest-junit5");
+    }
 }

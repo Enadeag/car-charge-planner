@@ -185,11 +185,12 @@ dependencies {
     testImplementation(libs.androidx.test.junit)
     testImplementation(libs.compose.ui.test.junit4)
     testRuntimeOnly(libs.junit.vintage.engine)
-    // PIT's classpath (the fork's) leaves out what the engine's test fixtures bring at run time, the JUnit 5 engine
-    // among them, and looks for the app's Java resources, such as slf4j's service file, where AGP 8 put them
+    // PIT's classpath (the fork's) leaves out two things the unit-test task has: the JUnit 5 engine, which the engine's
+    // test fixtures bring at run time (without it PIT finds no JUnit 5 tests), and the app's Java resources (without
+    // slf4j's service file LogcatLoggingTest.slf4jFindsTheProvider fails), which it looks for where AGP 8 put them
     pitestRuntimeOnly(platform(libs.junit.bom))
     pitestRuntimeOnly(libs.junit.jupiter.engine)
-    pitestRuntimeOnly(files("src/main/resources"))
+    pitestRuntimeOnly(files(layout.projectDirectory.dir("src/main/resources")))
     // Compose's test manifest, for the screens' tests; it puts an exported empty activity in the debug APK only
     debugImplementation(libs.compose.ui.test.manifest)
 
@@ -210,6 +211,12 @@ val pitLogic = listOf("form.*", "setup.*", "settings.*", "store.*", "home.*", "s
     .map { "nl.enadeag.carchargeplanner.android.$it" }.toSet()
 
 // ./gradlew :app:pitestDebug, or with -PpitClasses=<comma-separated class names or globs> for the changed classes only
+val pitClasses: Set<String>? = providers.gradleProperty("pitClasses").orNull?.let { value ->
+    value.split(",").map(String::trim).filter(String::isNotEmpty).toSet().also {
+        if (it.isEmpty()) throw GradleException("-PpitClasses names no class: give class names or globs, comma-separated")
+    }
+}
+
 pitest {
     pitestVersion = libs.versions.pitest.asProvider()
     junit5PluginVersion = libs.versions.pitest.junit5
@@ -219,14 +226,12 @@ pitest {
     mainProcessJvmArgs = listOf("-Xmx512m")
     outputFormats = setOf("HTML", "XML")
     timestampedReports = false
-    targetClasses = providers.gradleProperty("pitClasses")
-        .map { classes -> classes.split(",").map(String::trim).filter(String::isNotEmpty).toSet() }
-        .orElse(pitLogic)
-    // A few points below the share of mutants killed when it was set (74 %). The removed calls to the null and result
-    // checks the Kotlin compiler adds (Intrinsics, ResultKt), which no test can see, are 207 of its survivors: they
-    // are not left out with avoidCallsTo, as PIT then drops every mutant on a line with such a call, and in the first
-    // run that dropped as many real mutants as generated ones. Set before the other survivors are handled: #351 raises it.
-    mutationThreshold = 71
+    targetClasses = pitClasses ?: pitLogic
+    // A few points below the share of mutants killed when it was set (74 %), for the full run only: a run narrowed to
+    // some classes may be small or hold many survivors. The removed calls to the null and result checks the Kotlin
+    // compiler adds (Intrinsics, ResultKt) survive, as no test can see them, and avoidCallsTo would not help: PIT
+    // then drops every mutant on a line with such a call, the real ones too.
+    mutationThreshold = if (pitClasses == null) 71 else 0
     targetTests = setOf("nl.enadeag.carchargeplanner.android.*")
     excludedTestClasses = listOf(
         // the screens' tests, JUnit 4 on Robolectric, which runs Android in the test JVM

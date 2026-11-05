@@ -269,16 +269,16 @@ public final class MavenPoms {
      * @param pom the pom's contents
      * @param pomName the pom's path, for the messages
      * @param property the property's name, such as {@code pitest.version}
-     * @param tool what the version is of, for the messages, such as {@code PIT}
+     * @param subject what the version is of, for the messages: the catalog's name for it, such as {@code pitest}
      * @return the version, never blank
      * @throws IOException when the contents are not a pom
      * @throws IllegalArgumentException when the top level does not set the property, or its value is not a plain
      *     version, as for {@link #managedVersion}; the message names the property and the pom
      */
-    public static String propertyVersion(byte[] pom, String pomName, String property, String tool)
-            throws IOException {
+    public static String propertyVersion(byte[] pom, String pomName, String property,
+            String subject) throws IOException {
         var properties = properties(parse(new ByteArrayInputStream(pom), pomName).getDocumentElement());
-        return resolve("${" + property + "}", properties, tool, pomName);
+        return resolve("${" + property + "}", properties, subject, pomName);
     }
 
     private static Map<String, String> properties(Element root) {

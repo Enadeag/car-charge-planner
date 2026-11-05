@@ -231,12 +231,13 @@ class MavenVersionsTest {
                 repository.resolve("pom.xml").toString());
     }
 
-    @Test
-    void aParentProfileThatSetsAPitVersionPropertyFailsTheBuildNamingItAndThePom() throws IOException {
-        parentHas("<profiles><profile><id>odd</id><properties><pitest.version>1.31.0</pitest.version></properties>"
-                + PROFILE_END);
+    @ParameterizedTest
+    @ValueSource(strings = {"pitest", "pitest-junit5"})
+    void aParentProfileThatSetsAPitVersionPropertyFailsTheBuildNamingItAndThePom(String tool) throws IOException {
+        parentHas("<profiles><profile><id>odd</id><properties><" + tool + ".version>1.31.0</" + tool
+                + ".version></properties>" + PROFILE_END);
 
-        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", "pitest.version", "odd",
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", tool + ".version", "odd",
                 repository.resolve("pom.xml").toString());
     }
 
@@ -344,6 +345,16 @@ class MavenVersionsTest {
         Files.writeString(config, "--strict-checksums\n-Djackson.version=3.1.5\n");
 
         assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", "jackson.version",
+                config.toString());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"pitest", "pitest-junit5"})
+    void aPitVersionPropertySetInMavensConfigFailsTheBuildNamingItAndTheFile(String tool) throws IOException {
+        var config = Files.createDirectory(repository.resolve(".mvn")).resolve("maven.config");
+        Files.writeString(config, "--strict-checksums\n-D" + tool + ".version=1.31.0\n");
+
+        assertThat(gradle().buildAndFail().getOutput()).contains("Android does not read", tool + ".version",
                 config.toString());
     }
 

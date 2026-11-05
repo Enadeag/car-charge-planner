@@ -107,16 +107,15 @@ public abstract class MavenVersions {
 
     /**
      * Adds the versions of {@code FROM_PARENT_POM} and {@code FROM_PROPERTIES} to a catalog, as the parent pom gives
-     * them, and checks that the
-     * Maven build pins no other version of those libraries' groups, which Android would not read: no other entry of
-     * the parent's {@code dependencyManagement} in those groups (and in {@code com.fasterxml.jackson}, which Jackson's
-     * BOM manages too), unless it takes its version from the same property as the entry of its group; no BOM import
-     * but those of Jackson's and JUnit's, at the top level; no {@code dependencies} of the parent, which the engine
-     * inherits, at the top level or in a profile; no profile of the parent that sets one of the properties those
-     * versions name or has a managed entry in those groups; no {@code -D} of one of those properties in
-     * {@code .mvn/maven.config}; no {@code <parent>} of the parent pom, whose {@code dependencyManagement} Maven
-     * would apply; and in {@code engine/pom.xml}, which sits beside the parent pom, no dependency
-     * with a {@code <version>} of its own, no {@code dependencyManagement}, no property but
+     * them, and checks that the Maven build pins no other version of those libraries' groups, which Android would not
+     * read: no other entry of the parent's {@code dependencyManagement} in those groups (and in
+     * {@code com.fasterxml.jackson}, which Jackson's BOM manages too), unless it takes its version from the same
+     * property as the entry of its group; no BOM import but those of Jackson's and JUnit's, at the top level; no
+     * {@code dependencies} of the parent, which the engine inherits, at the top level or in a profile; no profile of
+     * the parent that sets one of the properties those versions name or has a managed entry in those groups; no
+     * {@code -D} of one of those properties in {@code .mvn/maven.config}; no {@code <parent>} of the parent pom, whose
+     * {@code dependencyManagement} Maven would apply; and in {@code engine/pom.xml}, which sits beside the parent pom,
+     * no dependency with a {@code <version>} of its own, no {@code dependencyManagement}, no property but
      * {@code maven.compiler.release}, and no profile with properties, dependencies or a {@code dependencyManagement}.
      * No versions are compared.
      *
