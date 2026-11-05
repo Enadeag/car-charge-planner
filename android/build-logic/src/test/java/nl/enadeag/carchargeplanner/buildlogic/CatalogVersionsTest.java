@@ -28,4 +28,9 @@ class CatalogVersionsTest {
 
         assertThat(keys).isNotEmpty().doesNotContainAnyElementsOf(MavenVersions.versionNames());
     }
+
+    @Test
+    void thePomsAlsoGiveTheVersionsOfPit() {
+        assertThat(MavenVersions.versionNames()).contains("pitest", "pitest-junit5");
+    }
 }

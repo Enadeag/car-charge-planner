@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import org.gradle.api.GradleException;
@@ -52,6 +53,15 @@ public abstract class MavenVersions {
             "archunit", new Declared("com.tngtech.archunit", "archunit")));
 
     /**
+     * Per version of the catalog, the parent pom's top-level property that holds it, for the tools the pom names by a
+     * property rather than in its {@code dependencyManagement}: PIT and its JUnit 5 plugin, which the {@code pit}
+     * profile runs, so that Gradle's mutation testing runs the same PIT as Maven's.
+     */
+    private static final Map<String, String> FROM_PROPERTIES = new TreeMap<>(Map.of(
+            "pitest", "pitest.version",
+            "pitest-junit5", "pitest-junit5.version"));
+
+    /**
      * Groups outside a library's own that its version also manages: Jackson 3's BOM manages the 2.x
      * {@code com.fasterxml.jackson.core:jackson-annotations}.
      */
@@ -74,7 +84,9 @@ public abstract class MavenVersions {
      * @return the names, such as {@code jackson}
      */
     static Set<String> versionNames() {
-        return FROM_PARENT_POM.keySet();
+        var names = new TreeSet<>(FROM_PARENT_POM.keySet());
+        names.addAll(FROM_PROPERTIES.keySet());
+        return names;
     }
 
     /**
@@ -94,16 +106,16 @@ public abstract class MavenVersions {
     protected abstract ObjectFactory getObjects();
 
     /**
-     * Adds the versions of {@code FROM_PARENT_POM} to a catalog, as the parent pom gives them, and checks that the
-     * Maven build pins no other version of those libraries' groups, which Android would not read: no other entry of
-     * the parent's {@code dependencyManagement} in those groups (and in {@code com.fasterxml.jackson}, which Jackson's
-     * BOM manages too), unless it takes its version from the same property as the entry of its group; no BOM import
-     * but those of Jackson's and JUnit's, at the top level; no {@code dependencies} of the parent, which the engine
-     * inherits, at the top level or in a profile; no profile of the parent that sets one of the properties those
-     * versions name or has a managed entry in those groups; no {@code -D} of one of those properties in
-     * {@code .mvn/maven.config}; no {@code <parent>} of the parent pom, whose {@code dependencyManagement} Maven
-     * would apply; and in {@code engine/pom.xml}, which sits beside the parent pom, no dependency
-     * with a {@code <version>} of its own, no {@code dependencyManagement}, no property but
+     * Adds the versions of {@code FROM_PARENT_POM} and {@code FROM_PROPERTIES} to a catalog, as the parent pom gives
+     * them, and checks that the Maven build pins no other version of those libraries' groups, which Android would not
+     * read: no other entry of the parent's {@code dependencyManagement} in those groups (and in
+     * {@code com.fasterxml.jackson}, which Jackson's BOM manages too), unless it takes its version from the same
+     * property as the entry of its group; no BOM import but those of Jackson's and JUnit's, at the top level; no
+     * {@code dependencies} of the parent, which the engine inherits, at the top level or in a profile; no profile of
+     * the parent that sets one of the properties those versions name or has a managed entry in those groups; no
+     * {@code -D} of one of those properties in {@code .mvn/maven.config}; no {@code <parent>} of the parent pom, whose
+     * {@code dependencyManagement} Maven would apply; and in {@code engine/pom.xml}, which sits beside the parent pom,
+     * no dependency with a {@code <version>} of its own, no {@code dependencyManagement}, no property but
      * {@code maven.compiler.release}, and no profile with properties, dependencies or a {@code dependencyManagement}.
      * No versions are compared.
      *
@@ -116,8 +128,7 @@ public abstract class MavenVersions {
      */
     public void addTo(VersionCatalogBuilder catalog, File parentPom) {
         var enginePom = parentPom.toPath().resolveSibling("engine/pom.xml").toFile();
-        var parent = contents(parentPom, "takes the versions of " + String.join(", ", FROM_PARENT_POM.keySet())
-                + " from");
+        var parent = contents(parentPom, "takes the versions of " + String.join(", ", versionNames()) + " from");
         var engine = contents(enginePom, "checks that no version is pinned in");
         var options = new TreeMap<File, byte[]>();
         var configFile = parentPom.toPath().resolveSibling(MAVEN_CONFIG).toFile();
@@ -136,6 +147,15 @@ public abstract class MavenVersions {
             try {
                 catalog.version(version.getKey(),
                         MavenPoms.managedVersion(parent, parentPom.toString(), version.getValue()));
+            } catch (IOException | IllegalArgumentException e) {
+                throw new GradleException("The Android build takes the catalog's version \"" + version.getKey()
+                        + "\" from the Maven build, but " + e.getMessage(), e);
+            }
+        }
+        for (var version : FROM_PROPERTIES.entrySet()) {
+            try {
+                catalog.version(version.getKey(),
+                        MavenPoms.propertyVersion(parent, parentPom.toString(), version.getValue(), version.getKey()));
             } catch (IOException | IllegalArgumentException e) {
                 throw new GradleException("The Android build takes the catalog's version \"" + version.getKey()
                         + "\" from the Maven build, but " + e.getMessage(), e);
@@ -184,7 +204,7 @@ public abstract class MavenVersions {
                 }
             }
         }
-        var versionProperties = new HashSet<String>();
+        var versionProperties = new HashSet<String>(FROM_PROPERTIES.values());
         for (var entry : managed) {
             if (FROM_PARENT_POM.containsValue(entry.library())) {
                 versionProperties.addAll(MavenPoms.propertiesNamedBy(entry.version()));
@@ -298,6 +318,7 @@ public abstract class MavenVersions {
     }
 
     private static String readModules() {
-        return FROM_PARENT_POM.values().stream().map(Declared::module).collect(Collectors.joining(", "));
+        return FROM_PARENT_POM.values().stream().map(Declared::module).collect(Collectors.joining(", "))
+                + " and of the properties " + String.join(", ", FROM_PROPERTIES.values());
     }
 }
