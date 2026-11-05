@@ -50,8 +50,9 @@ public final class ForecastService {
         /** From the cache or a provider, as the rules allow. */
         USUAL,
         /**
-         * As usual, for a check of settings that need not be saved: what a failure means for the next request is not
-         * kept, neither in the provider's cache file nor as its wait, which are the saved system's too.
+         * As usual, for a check of settings that need not be saved: a provider is asked without the wait after an
+         * earlier failure, never during its cool-down, and what a failure means for the next request is not kept,
+         * neither in the provider's cache file nor as its wait, which are the saved system's.
          */
         CHECK,
         /** As usual, but a provider is asked before its minimum refresh interval and without its wait. */
@@ -123,7 +124,9 @@ public final class ForecastService {
      * forecast is cached, but its failure is kept neither in the cache file, as a failed refresh or a cool-down, nor
      * as a wait before the provider is asked again: both are one per provider, so a wrong key typed in a form, or
      * another system, would otherwise mark the saved system's forecast as stale, or make its next request wait and
-     * say that the key was refused.
+     * say that the key was refused. For the same reason the saved system's wait after an earlier failure does not
+     * hold for it: a key typed anew is tried at once. A cool-down holds, as it
+     * is the provider's word.
      *
      * @param system the system to forecast; the cache is used only when it was made for the same one
      * @param selection the providers to ask and their settings that are not secret

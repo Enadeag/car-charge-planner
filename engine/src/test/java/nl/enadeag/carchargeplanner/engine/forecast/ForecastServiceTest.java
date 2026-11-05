@@ -1092,6 +1092,36 @@ class ForecastServiceTest {
     }
 
     @Test
+    void aCheckDuringTheWaitAfterARefusedKeyTriesTheTypedKeyAtOnce() throws ForecastUnavailable {
+        mainNeedsAKey(steps(SunnyDays.day(DAY, 3.0)), error(new KeyRefused("Main refused the request (status 401)")),
+                steps(SunnyDays.day(DAY, 3.0)));
+        secrets = () -> new Secrets(Map.of(MAIN, Map.of("api_key", "SAVED")));
+        get(T0);
+        get(later(60)); // refused: the saved system waits until later(120)
+
+        var result = check(later(61), new Secrets(Map.of(MAIN, Map.of("api_key", "TYPED-NEW"))));
+
+        assertThat(result.source())
+                .extracting(ForecastSource::providerId, ForecastSource::freshness, ForecastSource::keyRefusedBy)
+                .containsExactly(MAIN, Freshness.FRESH, List.of());
+        assertThat(main.calls.get(2).settings()).containsEntry("api_key", "TYPED-NEW");
+    }
+
+    @Test
+    void aCheckDuringACoolDownStillWaitsForIt() throws ForecastUnavailable {
+        withoutFallback();
+        main.script(steps(SunnyDays.day(DAY, 3.0)), error(new RateLimited("busy", Duration.ofMinutes(30))));
+        get(T0);
+        get(later(60)); // a cool-down until later(90)
+
+        var source = check(later(61), new Secrets(Map.of(MAIN, Map.of("api_key", "TYPED-NEW")))).source();
+
+        assertThat(source).extracting(ForecastSource::freshness, ForecastSource::cooldownUntil)
+                .containsExactly(Freshness.STALE, Optional.of(later(90)));
+        assertThat(main.callCount()).isEqualTo(2);
+    }
+
+    @Test
     void aCheckOfAFormWithoutARequiredSettingLeavesTheStoredForecastCached() throws ForecastUnavailable {
         mainNeedsAKey(steps(SunnyDays.day(DAY, 3.0)));
         secrets = () -> new Secrets(Map.of(MAIN, Map.of("api_key", SECRET)));

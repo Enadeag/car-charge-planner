@@ -59,10 +59,11 @@ final class ProviderAttempt {
      * @param now the current moment, by which ages, waits and cool-downs are measured
      * @param force the owner asked for a refresh: skip the minimum refresh interval and the wait after a failure,
      *     never a cool-down
-     * @param marksFailures true to keep what a failure means for the next attempt: the failed refresh and the
-     *     cool-down in the provider's cache file, and the wait after it; false for a check of settings
-     *     that need not be saved, such as set-up's or Settings', as the file and the wait are the saved system's too,
-     *     which a wrong key typed in a form must not mark
+     * @param marksFailures true for a request with the saved settings: it waits after an earlier failure, and keeps
+     *     what a failure means for the next attempt (the failed refresh and the cool-down in the provider's cache
+     *     file, the wait after it); false for a check of settings
+     *     that need not be saved, such as set-up's or Settings', which is asked without that wait, never during a
+     *     cool-down, and keeps no failure: the file and the wait are the saved system's
      */
     ProviderAttempt(ForecastProvider provider, ForecastCache cache, Map<ProviderId, Retry> retryAt,
             ProviderHealth health, Instant now, boolean force, boolean marksFailures) {
@@ -132,7 +133,8 @@ final class ProviderAttempt {
     }
 
     private Optional<Retry> waitingAfterFailure() {
-        return force ? Optional.empty()
+        // a check tries the settings typed in the form at once: the wait is the saved system's
+        return force || !marksFailures ? Optional.empty()
                 : Optional.ofNullable(retryAt.get(info.id())).filter(retry -> now.isBefore(retry.at()));
     }
 
@@ -151,7 +153,7 @@ final class ProviderAttempt {
             List<String> secrets, CacheState held) {
         try {
             var steps = StepRules.requireValid(provider.fetch(system, settings, now));
-            retryAt.remove(info.id()); // a check is not asked during a wait, so this ends none of the saved system's
+            retryAt.remove(info.id());
             health.recordAnswer(info);
             cache.saveForecast(info.id(), key, now, steps);
             return new ProviderOutcome.Usable(steps, now, Freshness.FRESH, Optional.empty(), false);
