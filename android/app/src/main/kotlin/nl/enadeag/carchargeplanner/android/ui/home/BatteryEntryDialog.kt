@@ -23,10 +23,10 @@ import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.home.BatteryEntry
 import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 import nl.enadeag.carchargeplanner.android.ui.components.DiscardChangesDialog
-import nl.enadeag.carchargeplanner.android.ui.components.SaveFailure
 import nl.enadeag.carchargeplanner.android.ui.components.EntryField
 import nl.enadeag.carchargeplanner.android.ui.components.FieldKind
 import nl.enadeag.carchargeplanner.android.ui.components.SaveButton
+import nl.enadeag.carchargeplanner.android.ui.components.SaveFailure
 
 /**
  * The entry of the battery level the car shows, while it is open: Material's dialog with a number field, whose

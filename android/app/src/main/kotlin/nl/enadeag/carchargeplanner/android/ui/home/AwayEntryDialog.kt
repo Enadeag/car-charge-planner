@@ -17,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePickerDialog
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -63,7 +64,7 @@ private enum class Picked {
 /**
  * The entry of a one-off away period, while it is open: Material's dialog with the day in its title, the choice of all
  * day or part of it, and for part of the day the two times, each a button that opens Material's time picker on the
- * phone's 12- or 24-hour clock; then Save and Cancel. The choice takes the focus when the entry opens, a time's button
+ * phone's 12- or 24-hour clock, as a dial or typed; then Save and Cancel. The choice takes the focus when the entry opens, a time's button
  * when its picker closes, and what had it before when the question over the entry closes. Why Save refused the period
  * shows under the end time, or under the choice for all day, in a polite live region; a save that failed says so in the
  * entry, with the English details, in a live region read at once. Save shows its progress while it runs. The content
@@ -197,7 +198,8 @@ private fun TimeButton(name: String, time: String, focus: FocusRequester, proble
 
 /**
  * Material's time picker in its dialog, on the phone's 12- or 24-hour clock, with OK and Cancel; Back, or a tap beside
- * it, cancels. Its content scrolls, so OK stays reachable at a large font size.
+ * it, cancels. A text button switches between the dial and typing the time, which stays as it was when the phone
+ * turns. Its content scrolls, so OK stays reachable at a large font size.
  *
  * @param title which time it is, the dialog's heading
  * @param time the time it opens on
@@ -208,6 +210,7 @@ private fun TimeButton(name: String, time: String, focus: FocusRequester, proble
 @Composable
 private fun TimeDialog(title: String, time: LocalTime, chosen: (LocalTime) -> Unit, closed: () -> Unit) {
     val state = rememberTimePickerState(time.hour, time.minute, DateFormat.is24HourFormat(LocalContext.current))
+    var typing by rememberSaveable { mutableStateOf(false) }
     TimePickerDialog(
         onDismissRequest = closed,
         title = { Text(title, modifier = Modifier.semantics { heading() }) },
@@ -226,7 +229,13 @@ private fun TimeDialog(title: String, time: LocalTime, chosen: (LocalTime) -> Un
         },
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
-            TimePicker(state)
+            if (typing) TimeInput(state) else TimePicker(state)
+            // Material's mode toggle is an icon; this one says in words what it switches to. It sits under the
+            // picker, not in the dialog's `modeToggleButton` slot: that slot shares one row, as wide as the dial, with
+            // Cancel and OK, which has no room for all three at a large font size or in Dutch
+            AppTextButton(onClick = { typing = !typing }) {
+                Text(stringResource(if (typing) R.string.one_off_clock else R.string.one_off_keyboard))
+            }
         }
     }
 }

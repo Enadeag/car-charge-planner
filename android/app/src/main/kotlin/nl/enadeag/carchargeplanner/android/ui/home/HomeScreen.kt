@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
@@ -126,8 +127,11 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
     }
     val add = remember { FocusRequester() }
     val shown = remember { Shown() }
-    (state as? HomeOutlook.State.Planned)?.let { shown.dashboard = it.dashboard }
-    AwayOutcome(away, snackbars, awayWords(shown)) {
+    val planned = (state as? HomeOutlook.State.Planned)?.dashboard
+    SideEffect { planned?.let { shown.dashboard = it } }
+    val going = remember { Going() }
+    val restoring = remember { Restoring() }
+    AwayOutcome(away, snackbars, going, restoring, awayWords(shown)) {
         if (!add.requestFocus()) {
             heading.requestFocus()
         }
@@ -140,7 +144,7 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
     }) {
         when (val now = state) {
             is HomeOutlook.State.Planned -> Days(now.dashboard, refreshing, phoneZone(), outlook::refresh,
-                BatteryAction(battery::open, update), AwayAction(away, add, busy)) {
+                BatteryAction(battery::open, update), AwayAction(away, add, busy, going, restoring)) {
                 Notice(notice, closed)
             }
             else -> Refreshable(refreshing, outlook::refresh) {
@@ -160,15 +164,23 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
  */
 private class Shown(var dashboard: Dashboard? = null)
 
-/** A one-off away period as the list names it, by the dashboard shown last; empty before any was shown. */
+/**
+ * A one-off away period as the list names it, by the dashboard shown last; before any was shown, as the entry that
+ * saved it reads it, in its zone and by the clock at Save; empty when neither is known.
+ */
 @Composable
-private fun awayWords(shown: Shown): (OneOffAwayPeriod) -> String {
+private fun awayWords(shown: Shown): (OneOffAwayPeriod, AwayEntry.Entered?) -> String {
     val resources = LocalResources.current
     val locale = LocalConfiguration.current.locales[0]
     val twentyFour = DateFormat.is24HourFormat(LocalContext.current)
-    return { period ->
-        shown.dashboard?.let { DashboardWords(resources, locale, twentyFour, it.zone).away(it.describe(period)) }
-            .orEmpty()
+    return { period, entered ->
+        val dashboard = shown.dashboard
+        when {
+            dashboard != null ->
+                DashboardWords(resources, locale, twentyFour, dashboard.zone).away(dashboard.describe(period))
+            entered != null -> DashboardWords(resources, locale, twentyFour, entered.zone).away(entered.away)
+            else -> ""
+        }
     }
 }
 
@@ -180,12 +192,14 @@ private fun awayWords(shown: Shown): (OneOffAwayPeriod) -> String {
  *
  * @param away the changes
  * @param snackbars where the snackbar shows
- * @param named a period as the list names it
+ * @param going the Remove that was pressed, forgotten when it failed
+ * @param restoring gets the period an Undo adds back, so the list puts the focus on its row, forgotten when it failed
+ * @param named a period as the list names it, given how the entry that saved it read it, when it did
  * @param closed moves the focus once the entry closed
  */
 @Composable
-private fun AwayOutcome(away: AwayEntry, snackbars: SnackbarHostState, named: (OneOffAwayPeriod) -> String,
-    closed: () -> Unit) {
+private fun AwayOutcome(away: AwayEntry, snackbars: SnackbarHostState, going: Going, restoring: Restoring,
+    named: (OneOffAwayPeriod, AwayEntry.Entered?) -> String, closed: () -> Unit) {
     val resources = LocalResources.current
     val name by rememberUpdatedState(named)
     LaunchedEffect(away) {
@@ -194,18 +208,25 @@ private fun AwayOutcome(away: AwayEntry, snackbars: SnackbarHostState, named: (O
                 return@collect
             }
             away.noticeShown()
+            // a change that failed leaves the list as it was, so no later change of the list moves the focus for it
+            when (notice) {
+                is AwayEntry.Notice.NotRemoved -> going.period = null
+                is AwayEntry.Notice.NotSaved -> restoring.period = null
+                else -> Unit
+            }
             snackbars.currentSnackbarData?.dismiss()
             launch {
                 when (notice) {
-                    is AwayEntry.Notice.Saved ->
-                        snackbars.showSnackbar(resources.getString(R.string.one_off_saved, name(notice.period)))
+                    is AwayEntry.Notice.Saved -> snackbars.showSnackbar(resources.getString(R.string.one_off_saved,
+                        name(notice.period, notice.entered)))
                     is AwayEntry.Notice.Removed -> {
-                        // it stays until the next notice or Close: Material takes any other away after about 10 s,
-                        // also with TalkBack, which is too soon to find Undo
+                        // it stays until the next notice or Close: Material takes one with an action away after about
+                        // 10 s, also with TalkBack, which is too soon to find Undo
                         val undo = snackbars.showSnackbar(resources.getString(R.string.one_off_removed,
-                            name(notice.period)), resources.getString(R.string.action_undo),
+                            name(notice.period, null)), resources.getString(R.string.action_undo),
                             withDismissAction = true, duration = SnackbarDuration.Indefinite)
                         if (undo == SnackbarResult.ActionPerformed) {
+                            restoring.period = notice.period
                             away.undo(notice.period)
                         }
                     }
@@ -227,8 +248,19 @@ private fun AwayOutcome(away: AwayEntry, snackbars: SnackbarHostState, named: (O
  * @property entry the entry and Remove
  * @property focus moves the focus to the Add of the page in view
  * @property busy true while a change runs, so Add and Remove are off
+ * @property going the period whose Remove was pressed, whose neighbour takes the focus once it is out of the list
+ * @property restoring the period an Undo is adding back, whose row takes the focus once it is in the list
  */
-private class AwayAction(val entry: AwayEntry, val focus: FocusRequester, val busy: Boolean)
+private class AwayAction(val entry: AwayEntry, val focus: FocusRequester, val busy: Boolean, val going: Going,
+    val restoring: Restoring)
+
+/**
+ * The period an Undo is adding back, which drawing never reads: the list on the page in view puts the focus on its row
+ * once it shows; an Undo that failed forgets it.
+ *
+ * @property period the period; null when no Undo is under way
+ */
+private class Restoring(var period: OneOffAwayPeriod? = null)
 
 /**
  * What the battery entry's save came to, beside the entry itself: a level saved says so in a snackbar, which a screen
@@ -439,20 +471,21 @@ private fun GridAdviceCard(advice: GridAdviceModel, words: DashboardWords) {
 @Composable
 private fun AwayList(dashboard: Dashboard, day: DayModel, words: DashboardWords, away: AwayAction, inView: Boolean) {
     val focus = remember { RowFocus<OneOffAwayPeriod>() }
-    val going = remember { Going() }
     val periods = dashboard.away.map { it.period }
     LaunchedEffect(periods) {
-        val gone = going.period ?: return@LaunchedEffect
-        if (gone !in periods) {
-            focus.removing(going.rows, gone)
+        // only the page in view: the change was made on it, and a page beside it has its own rows
+        if (!inView) {
+            return@LaunchedEffect
         }
-        going.period = null
-    }
-    LaunchedEffect(away.busy) {
-        // a Remove that failed leaves its period in the list, so no later change of the list moves the focus for it
-        val pressed = going.period
-        if (!away.busy && pressed != null && pressed in periods) {
-            going.period = null
+        val pressed = away.going.period
+        if (pressed != null && pressed !in periods) {
+            focus.removing(away.going.rows, pressed)
+            away.going.period = null
+        }
+        val back = away.restoring.period
+        if (back != null && back in periods) {
+            focus.next = back
+            away.restoring.period = null
         }
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -463,8 +496,9 @@ private fun AwayList(dashboard: Dashboard, day: DayModel, words: DashboardWords,
             // and a screen reader with it, when the entry closes
             val opener = if (inView) Modifier.focusProperties { canFocus = true }.focusRequester(away.focus)
                 else Modifier
+            val spoken = stringResource(R.string.one_off_add_spoken)
             AppTextButton(onClick = { away.entry.open(day.date, dashboard.zone) }, enabled = !away.busy,
-                modifier = opener) {
+                modifier = opener.semantics { contentDescription = spoken }) {
                 Text(stringResource(R.string.one_off_add))
             }
         }
@@ -479,8 +513,8 @@ private fun AwayList(dashboard: Dashboard, day: DayModel, words: DashboardWords,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     RowLine(text, focus, coming.period, Modifier.weight(1f))
                     AppTextButton(onClick = {
-                        going.period = coming.period
-                        going.rows = periods
+                        away.going.period = coming.period
+                        away.going.rows = periods
                         away.entry.remove(coming.period)
                     }, enabled = !away.busy, modifier = Modifier.semantics { contentDescription = spoken }) {
                         Text(stringResource(R.string.one_off_remove))
@@ -493,7 +527,7 @@ private fun AwayList(dashboard: Dashboard, day: DayModel, words: DashboardWords,
 
 /**
  * The period whose Remove was pressed and the periods as they were then, which drawing never reads, so the focus moves
- * on once the list no longer has it.
+ * on once the list no longer has it; a Remove that failed forgets it, as its period stays in the list.
  *
  * @property period the period going; null when none is
  * @property rows the periods before it went, in order

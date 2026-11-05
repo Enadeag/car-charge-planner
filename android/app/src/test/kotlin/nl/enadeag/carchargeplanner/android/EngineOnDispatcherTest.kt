@@ -15,6 +15,8 @@ import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import nl.enadeag.carchargeplanner.android.secrets.SoftwareKeys
@@ -223,6 +225,42 @@ class EngineOnDispatcherTest {
         assertThat(writingFails(IOException()).addAwayPeriod(later)).isEqualTo(AwaySave.Failed("IOException"))
         assertThat(writingFails(IOException("Read-only file system")).removeAwayPeriod(later))
             .isEqualTo(AwaySave.Failed("Read-only file system"))
+    }
+
+    /** File privacy that takes its time and counts how many writes are inside it at once. */
+    private class SlowPrivacy : FilePrivacy {
+        private val inside = AtomicInteger()
+        val most = AtomicInteger()
+
+        override fun newFileAttributes(file: Path): List<FileAttribute<*>> {
+            most.accumulateAndGet(inside.incrementAndGet()) { a, b -> maxOf(a, b) }
+            Thread.sleep(300)
+            inside.decrementAndGet()
+            return listOf()
+        }
+
+        override fun newFolderAttributes(folder: Path): List<FileAttribute<*>> = listOf()
+        override fun tighten(path: Path): Boolean = true
+    }
+
+    @Test
+    fun twoAwayChangesStartedTogetherRunOneAfterTheOtherAndBothAreKept() = runBlocking<Unit> {
+        val pool = Executors.newFixedThreadPool(2)
+        try {
+            val privacy = SlowPrivacy()
+            val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys)
+            val twoThreads = EngineOnDispatcher(AppEngine.build(filesFolder, platform.http(), PrivateFiles(privacy),
+                platform.apiKeys(), QuietNotifier), pool.asCoroutineDispatcher())
+            val earlier = OneOffAwayPeriod(Instant.parse("2096-05-01T08:00:00Z"),
+                Instant.parse("2096-05-01T10:00:00Z"))
+
+            listOf(async { twoThreads.addAwayPeriod(later) }, async { twoThreads.addAwayPeriod(earlier) }).awaitAll()
+
+            assertThat(privacy.most.get()).isEqualTo(1)
+            assertThat(twoThreads.awayPeriods()).containsExactly(earlier, later)
+        } finally {
+            pool.shutdownNow()
+        }
     }
 
     @Test

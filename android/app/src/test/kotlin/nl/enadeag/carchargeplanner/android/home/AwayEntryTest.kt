@@ -232,7 +232,11 @@ class AwayEntryTest {
 
         val period = OneOffAwayPeriod(at(today, "10:00"), at(today, "12:00"))
         assertThat(entry.draft.value).isNull()
-        assertThat(entry.notice.value).isEqualTo(Notice.Saved(period))
+        assertThat(entry.notice.value).isEqualTo(Notice.Saved(period, AwayEntry.Entered(amsterdam,
+            ComingAway.describe(period, amsterdam, clock.instant()))))
+        val entered = (entry.notice.value as Notice.Saved).entered
+        assertThat(entered?.zone).isEqualTo(amsterdam)
+        assertThat(entered?.away).isEqualTo(ComingAway.describe(period, amsterdam, clock.instant()))
         assertThat(changes).containsExactly(listOf(period, before))
         assertThat(entry.busy.value).isFalse()
         assertThat(keys()).isEmpty()
@@ -420,6 +424,25 @@ class AwayEntryTest {
             LocalTime.of(10, 30), LocalTime.of(12, 45)))
         assertThat(again.discardAsked.value).isTrue()
     }
+
+    @ParameterizedTest
+    @CsvSource(
+        "Mars/Olympus,2026-06-02,32400",
+        "Europe/Amsterdam,not-a-day,32400",
+        "Europe/Amsterdam,2026-06-02,99999",
+    )
+    fun anEntryWhoseKeptZoneDayOrTimeCannotBeReadIsClosedAndForgotten(zone: String, day: String, start: Int) =
+        runTest {
+            val kept = SavedStateHandle(mapOf("oneOffAway.day" to day, "oneOffAway.zone" to zone,
+                "oneOffAway.part" to true, "oneOffAway.start" to start, "oneOffAway.end" to 61200,
+                "oneOffAway.discard" to true))
+
+            val again = entry(kept)
+
+            assertThat(again.draft.value).isNull()
+            assertThat(again.discardAsked.value).isFalse()
+            assertThat(kept.keys().filter { it.startsWith("oneOffAway") }).isEmpty()
+        }
 
     @Test
     fun aClosedEntryStaysClosedAfterTheSystemEndedTheApp() = runTest {

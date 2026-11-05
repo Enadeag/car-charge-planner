@@ -31,11 +31,17 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -94,7 +100,7 @@ internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Un
  * bar's title is the screen's heading, with Up when there is a screen to go back to and the screen's actions. The
  * title wraps and the bar grows with it, so nothing of it is cut off at a large font size. The bar keeps clear of the
  * status bar and a display cutout, also one at the side; the column of those, the navigation bar and the keyboard. A
- * snackbar shows at the bottom.
+ * snackbar shows at the bottom, and the column keeps clear of it while it shows, so the last row can scroll above it.
  *
  * @param title the screen's title, which a screen reader reads as its heading
  * @param titleFocus moves the focus to the title, as on a new screen; null for one that never takes it
@@ -108,6 +114,8 @@ internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Un
 internal fun BarScaffold(title: String, titleFocus: FocusRequester?, onUp: (() -> Unit)?,
     actions: @Composable RowScope.() -> Unit = {}, snackbars: SnackbarHostState? = null,
     content: @Composable ColumnScope.() -> Unit) {
+    var snackbarHeight by remember { mutableIntStateOf(0) }
+    val room = with(LocalDensity.current) { snackbarHeight.toDp() }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -122,11 +130,17 @@ internal fun BarScaffold(title: String, titleFocus: FocusRequester?, onUp: (() -
                 windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
             )
         },
-        snackbarHost = { if (snackbars != null) SnackbarHost(snackbars) { AppSnackbar(it) } },
+        snackbarHost = {
+            if (snackbars != null) {
+                Box(Modifier.onSizeChanged { snackbarHeight = it.height }) {
+                    SnackbarHost(snackbars) { AppSnackbar(it) }
+                }
+            }
+        },
         contentWindowInsets = WindowInsets.safeDrawing,
     ) { inner ->
         Box(Modifier.fillMaxSize().padding(inner).consumeWindowInsets(inner), contentAlignment = Alignment.TopCenter) {
-            Column(Modifier.widthIn(max = MOST_WIDTH).fillMaxWidth(), content = content)
+            Column(Modifier.widthIn(max = MOST_WIDTH).fillMaxWidth().padding(bottom = room), content = content)
         }
     }
 }

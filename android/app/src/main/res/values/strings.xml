@@ -293,6 +293,8 @@
   <string name="one_off_days">%1$s %2$s – %3$s %4$s</string>
   <!-- the button at the end of the heading row that opens the entry of a one-off away period on the page's day -->
   <string name="one_off_add">Add</string>
+  <!-- what a screen reader says for it; it starts with the visible word, so Voice Access finds it by that -->
+  <string name="one_off_add_spoken">Add away period</string>
   <!-- each period's button; a screen reader says it with the period, %1$s the period as the list shows it, such as
        one_off_all_day -->
   <string name="one_off_remove">Remove</string>
@@ -306,6 +308,9 @@
   <!-- part of the day's two times, each a button that opens the time picker and its title -->
   <string name="one_off_from">Away from</string>
   <string name="one_off_until">Away until</string>
+  <!-- the time picker's button that switches between the dial and typing the time; its words say what it switches to -->
+  <string name="one_off_keyboard">Keyboard</string>
+  <string name="one_off_clock">Clock</string>
   <!-- confirms the time picker's time -->
   <string name="action_ok">OK</string>
   <!-- under the end time, or the choice for all day, after Save refused the period -->

@@ -193,11 +193,13 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Car away | Afwezig | the heading of the one-off away periods |
 | None entered for the coming days. | Niets ingevuld voor de komende dagen. | no one-off away period to come |
 | Add | Toevoegen | the button in the "Car away" heading row, which opens the entry of a one-off away period on the page's day |
+| Add away period | Afwezig toevoegen | what TalkBack and Voice Access call that button; it starts with the word on the button in English, and holds it in Dutch |
 | Remove, Remove Tomorrow, all day | Verwijderen, Morgen, hele dag verwijderen | a one-off away period's button, and what TalkBack reads for it: the period as the list shows it |
 | Car away on Thursday, November 5 | Afwezig op donderdag 5 november | the entry's title, with the day's weekday and date as the phone writes them in a sentence |
 | All day, Part of the day | Hele dag, Deel van de dag | the entry's choice |
 | Away from, Away until | Afwezig vanaf, Afwezig tot | part of the day's two times, each a button that opens the time picker, and the picker's title |
 | OK | OK | confirms the time picker's time |
+| Keyboard, Clock | Toetsenbord, Klok | the time picker's button under the dial or the typed time, named for what it switches to: typing the time, or the dial |
 | The end must be after the start. | Het einde moet na het begin liggen. | under the end time after Save |
 | That time has passed already. | Die tijd is al voorbij. | under the end time, or the choice for all day, after Save |
 | Saved: Tomorrow, all day. | Opgeslagen: Morgen, hele dag. | in a snackbar after the entry's Save or Undo |
@@ -226,7 +228,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Discard changes? | Wijzigingen weggooien? | asked by Back or Up on a Settings page with edits, and by Back, or a tap beside it, in the battery level's entry with a level typed and in the one-off away period's entry with something changed |
 | Keep editing | Verder bewerken | stays on the page, or in the entry |
 | Discard | Weggooien | throws the page's edits, or the typed level, away |
-| Close | Sluiten | closes a save's outcome shown on the home |
+| Close | Sluiten | closes a save's outcome shown on the home, and the close button of a failure or Undo snackbar |
 | Array 2, east roof | Panelengroep 2, oostdak | a panel array's heading, by place and name |
 | Tilt, array 2 | Helling, panelengroep 2 | a panel array's field or button, named with its place |
 | Add an array | Panelengroep toevoegen | |

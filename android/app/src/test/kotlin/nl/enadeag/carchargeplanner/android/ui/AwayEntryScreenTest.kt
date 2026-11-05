@@ -12,6 +12,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -20,6 +21,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isHeading
@@ -28,6 +30,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTextReplacement
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.Clock
@@ -141,6 +144,9 @@ class AwayEntryScreenTest {
         and SemanticsMatcher.keyIsDefined(SemanticsActions.OnClick))
 
     private fun line(text: String) = compose.onNode(hasText(text) and !hasAnyAncestor(isDialog()))
+
+    private fun remove(period: String) =
+        compose.onNode(hasContentDescription(text(R.string.one_off_remove_spoken, period)))
 
     private fun openTheEntry() {
         add.performScrollTo().performClick()
@@ -536,7 +542,7 @@ class AwayEntryScreenTest {
     fun theListAndTheEntryAreInDutch() {
         access.away = listOf(tomorrow)
         show()
-        add.assertExists()
+        add.assertExists().assert(hasContentDescription("Afwezig toevoegen"))
         compose.assertShowsNoneOf(englishOnlyTexts())
         compose.onNode(hasContentDescription(" verwijderen", substring = true)).performScrollTo()
             .assert(hasText("Verwijderen"))
@@ -549,11 +555,8 @@ class AwayEntryScreenTest {
         compose.assertShowsNoneOf(englishOnlyTexts())
     }
 
-    private val remove = { period: String -> compose.onNode(hasContentDescription(text(R.string.one_off_remove_spoken,
-        period))) }
-
     @Test
-    fun theUndoSnackbarStaysPastTheTimeMaterialGivesOtherSnackbarsAndHasADismissButton() {
+    fun theUndoSnackbarStaysPastTheTimeMaterialGivesOtherSnackbarsAndHasTheAppsCloseButton() {
         access.away = listOf(tomorrow)
         show()
         val period = text(R.string.one_off_all_day, "Tomorrow")
@@ -563,11 +566,65 @@ class AwayEntryScreenTest {
         compose.mainClock.advanceTimeBy(60_000)
 
         compose.onNodeWithText(text(R.string.one_off_removed, period)).assertIsDisplayed()
-        // Material's own button, named by Material
-        compose.onNode(hasContentDescription("Dismiss") and hasClickAction()).assertIsDisplayed()
+        // the app's own name for it, as on the failure snackbars, not Material's "Dismiss"
+        compose.onNode(hasContentDescription(text(R.string.action_close)) and hasClickAction()).assertIsDisplayed()
+        compose.onNode(hasContentDescription("Dismiss")).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.action_undo)).performClick()
         compose.waitForIdle()
         assertThat(access.away).containsExactly(tomorrow)
+    }
+
+    @Test
+    fun closeClosesTheUndoSnackbarAndLeavesThePeriodRemoved() {
+        access.away = listOf(tomorrow)
+        show()
+        val period = text(R.string.one_off_all_day, "Tomorrow")
+        remove(period).performScrollTo().performClick()
+        compose.waitForIdle()
+
+        compose.onNode(hasContentDescription(text(R.string.action_close)) and hasClickAction()).performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithText(text(R.string.one_off_removed, period)).assertDoesNotExist()
+        assertThat(access.away).isEmpty()
+    }
+
+    @Test
+    fun aFailureSnackbarStaysPastTheTimeMaterialGivesOtherSnackbarsUntilItIsClosed() {
+        access.away = listOf(tomorrow)
+        access.awayFails = "No space left on device"
+        show()
+        val period = text(R.string.one_off_all_day, "Tomorrow")
+        remove(period).performScrollTo().performClick()
+        compose.waitForIdle()
+        val failed = text(R.string.one_off_not_removed) + " " +
+            text(R.string.details_in_english, "No space left on device")
+
+        compose.mainClock.advanceTimeBy(60_000)
+
+        compose.onNodeWithText(failed).assertIsDisplayed()
+        compose.onNode(hasContentDescription(text(R.string.action_close)) and hasClickAction()).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText(failed).assertDoesNotExist()
+    }
+
+    @Test
+    fun whileTheUndoSnackbarShowsTheLastRowAndTheFooterScrollIntoViewAboveIt() {
+        access.away = listOf(tomorrow, wednesday)
+        show()
+        val first = text(R.string.one_off_all_day, "Tomorrow")
+        val second = text(R.string.one_off_part, "Wed, Jun 3", text(R.string.time_span, "10:00", "12:00"))
+        remove(first).performScrollTo().performClick()
+        compose.waitForIdle()
+        val snackbar = compose.onNodeWithText(text(R.string.one_off_removed, first))
+        snackbar.assertIsDisplayed()
+
+        val top = snackbar.fetchSemanticsNode().boundsInRoot.top
+        listOf(remove(second), compose.onNode(hasText(text(R.string.footer_updated, "09:00"), substring = true)))
+            .forEach { last ->
+                last.performScrollTo()
+                assertThat(last.fetchSemanticsNode().boundsInRoot.bottom).isLessThanOrEqualTo(top)
+            }
     }
 
     @Test
@@ -691,14 +748,14 @@ class AwayEntryScreenTest {
 
     @Test
     @Config(qualifiers = "w320dp-h480dp", fontScale = 2.0f)
-    fun onASmallPhoneAtTwiceTheFontSizeTheTimePickersOkAndCancelAreShownNamedAndLargeEnough() {
+    fun onASmallPhoneAtTwiceTheFontSizeTheTimePickersToggleOkAndCancelAreShownNamedAndLargeEnough() {
         show(wrap = { AtFontScaleTwo(it) })
         openTheEntry()
         partOfTheDay()
         timeButton(R.string.one_off_from).performClick()
         compose.waitForIdle()
 
-        listOf(R.string.action_ok, R.string.action_cancel).forEach { id ->
+        listOf(R.string.one_off_keyboard, R.string.action_ok, R.string.action_cancel).forEach { id ->
             val buttons = compose.onAllNodes(hasText(text(id)) and hasClickAction())
             val nodes = buttons.fetchSemanticsNodes()
             assertThat(nodes).`as`(text(id)).isNotEmpty()
@@ -710,5 +767,136 @@ class AwayEntryScreenTest {
                 assertThat(minOf(node.size.width, node.size.height) / dp).`as`(text(id)).isGreaterThanOrEqualTo(47.5f)
             }
         }
+    }
+
+    @Test
+    fun addIsSpokenAsAddAwayPeriodWhichStartsWithTheWordOnTheButton() {
+        show()
+
+        add.performScrollTo().assert(hasContentDescription(text(R.string.one_off_add_spoken)))
+        assertThat(text(R.string.one_off_add_spoken)).startsWith(text(R.string.one_off_add))
+    }
+
+    @Test
+    fun theTimePickersToggleSwitchesBetweenTheDialAndTypingTheTime() {
+        show()
+        openTheEntry()
+        partOfTheDay()
+        timeButton(R.string.one_off_from).performClick()
+        compose.waitForIdle()
+        val dial = hasContentDescription("10 hours") and hasClickAction()
+        val fields = hasSetTextAction() and hasAnyAncestor(isDialog())
+        compose.onNode(dial).assertExists()
+        compose.onAllNodes(fields).assertCountEquals(0)
+        compose.onNodeWithText(text(R.string.one_off_clock)).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.one_off_keyboard))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+
+        click(R.string.one_off_keyboard)
+
+        compose.onNode(dial).assertDoesNotExist()
+        compose.onAllNodes(fields).assertCountEquals(2)
+        compose.onNodeWithText(text(R.string.one_off_keyboard)).assertDoesNotExist()
+
+        click(R.string.one_off_clock)
+
+        compose.onNode(dial).assertExists()
+        compose.onAllNodes(fields).assertCountEquals(0)
+    }
+
+    @Test
+    fun aTimeTypedInThePickerAndConfirmedWithOkIsTheTime() {
+        show()
+        openTheEntry()
+        partOfTheDay()
+        timeButton(R.string.one_off_until).performClick()
+        compose.waitForIdle()
+        click(R.string.one_off_keyboard)
+
+        val fields = compose.onAllNodes(hasSetTextAction() and hasAnyAncestor(isDialog()))
+        fields[0].performTextReplacement("18")
+        fields[1].performTextReplacement("45")
+        compose.waitForIdle()
+        click(R.string.action_ok)
+
+        assertThat(away.draft.value?.end).isEqualTo(LocalTime.of(18, 45))
+    }
+
+    @Test
+    fun savingBeforeAnyPlanWasShownStillNamesThePeriodInTheSnackbar() {
+        AwayEntry(handle, access, scope, clock) { }.open(today, lisbon)
+        show(kept = handle.afterTheSystemEndedTheApp(), planned = false)
+        entryDialog = ShadowDialog.getLatestDialog() as ComponentDialog
+        windowFocused(entryDialog, true)
+
+        save.performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithText(text(R.string.one_off_saved, text(R.string.one_off_all_day, "Today")))
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun afterAFailedRemoveAReplanThatDropsThePeriodDoesNotMoveTheFocusToItsNeighbour() {
+        val ending = OneOffAwayPeriod.on(today, LocalTime.of(10, 0), LocalTime.of(12, 0), lisbon)
+        access.away = listOf(ending, tomorrow)
+        access.awayFails = "No space left on device"
+        show()
+        val first = text(R.string.one_off_part, "Today", text(R.string.time_span, "10:00", "12:00"))
+        val neighbour = text(R.string.one_off_all_day, "Tomorrow")
+        remove(first).performScrollTo().performClick()
+        compose.waitForIdle()
+        line(first).assertExists()
+
+        // the plan is made again after 12:00, so the period that did not go has ended, as nobody pressed a button
+        compose.onNode(hasContentDescription(text(R.string.home_refresh))).performClick()
+        compose.waitForIdle()
+        access.outlooks.last().complete(
+            Plans.planned(today.atTime(13, 0).atZone(lisbon), listOf(listOf(), listOf(), listOf())))
+        compose.waitForIdle()
+
+        line(first).assertDoesNotExist()
+        line(neighbour).assertIsNotFocused()
+    }
+
+    @Test
+    fun afterUndoTheFocusGoesToTheRestoredRow() {
+        access.away = listOf(tomorrow, wednesday)
+        show()
+        val first = text(R.string.one_off_all_day, "Tomorrow")
+        val second = text(R.string.one_off_part, "Wed, Jun 3", text(R.string.time_span, "10:00", "12:00"))
+        remove(first).performScrollTo().performClick()
+        compose.waitForIdle()
+        line(second).assertIsFocused()
+
+        compose.onNodeWithText(text(R.string.action_undo)).performClick()
+        compose.waitForIdle()
+
+        line(first).assertExists().assertIsFocused()
+    }
+
+    @Test
+    fun afterAnUndoThatFailedTheFocusStaysWhereItWasAndALaterRestoreDoesNotMoveIt() {
+        access.away = listOf(tomorrow, wednesday)
+        show()
+        val first = text(R.string.one_off_all_day, "Tomorrow")
+        val second = text(R.string.one_off_part, "Wed, Jun 3", text(R.string.time_span, "10:00", "12:00"))
+        remove(first).performScrollTo().performClick()
+        compose.waitForIdle()
+        line(second).assertIsFocused()
+        access.awayFails = "No space left on device"
+        compose.onNodeWithText(text(R.string.action_undo)).performClick()
+        compose.waitForIdle()
+        access.awayFails = null
+
+        // the period comes back by another way, with a new plan
+        access.away = listOf(tomorrow, wednesday)
+        compose.onNode(hasContentDescription(text(R.string.home_refresh))).performClick()
+        compose.waitForIdle()
+        access.outlooks.last().complete(week())
+        compose.waitForIdle()
+
+        line(first).assertExists().assertIsNotFocused()
+        line(second).assertIsFocused()
     }
 }

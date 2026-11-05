@@ -4,6 +4,8 @@ import java.io.IOException
 import kotlin.jvm.optionals.getOrNull
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import nl.enadeag.carchargeplanner.engine.Engine
 import nl.enadeag.carchargeplanner.engine.Outlook
@@ -19,7 +21,8 @@ import org.slf4j.LoggerFactory
 
 /**
  * The [EngineAccess] on the app's engine: every call that reads or writes runs on the dispatcher it is given,
- * `Dispatchers.IO` in the app and a test's own in the tests.
+ * `Dispatchers.IO` in the app and a test's own in the tests. Changes to the one-off away periods run one after the
+ * other, so one started before the home is rebuilt cannot overlap a new one and lose it.
  *
  * @param engine the app's one engine
  * @param dispatcher where the engine's calls run; never the main thread's
@@ -29,6 +32,9 @@ class EngineOnDispatcher(private val engine: Engine, private val dispatcher: Cor
     private companion object {
         val LOG = LoggerFactory.getLogger(EngineOnDispatcher::class.java)
     }
+
+    /** Held by an away change while it runs, so a change started while another runs waits for it. */
+    private val awayChange = Mutex()
 
     override fun providers() = engine.providers().toList()
 
@@ -75,17 +81,19 @@ class EngineOnDispatcher(private val engine: Engine, private val dispatcher: Cor
         changeAway("The away period could not be removed") { engine.removeAwayPeriod(period) }
 
     private suspend fun changeAway(what: String, change: () -> List<OneOffAwayPeriod>): AwaySave =
-        withContext(dispatcher) {
-            try {
-                AwaySave.Saved(change())
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (failure: IOException) {
-                LOG.warn(what + ": " + failure.message)
-                AwaySave.Failed(failure.message ?: failure.javaClass.simpleName)
-            } catch (failure: RuntimeException) {
-                LOG.warn(what, failure)
-                AwaySave.Failed(failure.message ?: failure.javaClass.simpleName)
+        awayChange.withLock {
+            withContext(dispatcher) {
+                try {
+                    AwaySave.Saved(change())
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (failure: IOException) {
+                    LOG.warn(what + ": " + failure.message)
+                    AwaySave.Failed(failure.message ?: failure.javaClass.simpleName)
+                } catch (failure: RuntimeException) {
+                    LOG.warn(what, failure)
+                    AwaySave.Failed(failure.message ?: failure.javaClass.simpleName)
+                }
             }
         }
 

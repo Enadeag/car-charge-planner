@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.android.home
 
 import androidx.lifecycle.SavedStateHandle
 import java.time.Clock
+import java.time.DateTimeException
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -27,7 +28,8 @@ import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
  * do nothing, as the screen has them off. Back, or a tap beside the entry, asks before it throws changed times or
  * choice away; Cancel throws them away at once. While a save runs, nothing closes the entry. Whether it is open, its
  * day and zone, what was entered and the question survive turning the phone and the system ending the app in the
- * [SavedStateHandle], and are forgotten when it closes; what a change came to and the problem shown are not kept.
+ * [SavedStateHandle], and are forgotten when it closes, or when they can no longer be read, such as a time zone that
+ * an update removed; what a change came to and the problem shown are not kept.
  * Called from the main thread.
  *
  * @param handle the screen's saved state
@@ -111,6 +113,14 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
         data class Refused(val problem: Problem) : Checked
     }
 
+    /**
+     * A period as the entry that saved it reads it, in the entry's zone and by the clock at Save.
+     *
+     * @property zone the home's time zone, in which the period is told
+     * @property away the period by kind, its day named from the day of Save
+     */
+    data class Entered(val zone: ZoneId, val away: ComingAway)
+
     /** Where the entry's Save is. */
     sealed interface SaveState {
 
@@ -135,8 +145,10 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
          * A period was added, by Save or by Undo.
          *
          * @property period the period
+         * @property entered how the entry that saved it reads the period, for a screen that has shown no plan yet to
+         *     name it by; null for an Undo, which follows a plan that was shown
          */
-        data class Saved(val period: OneOffAwayPeriod) : Notice
+        data class Saved(val period: OneOffAwayPeriod, val entered: Entered? = null) : Notice
 
         /**
          * A period was removed; Undo adds it back.
@@ -265,7 +277,8 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
             when (val outcome = access.addAwayPeriod(period)) {
                 is AwaySave.Saved -> {
                     close()
-                    noticeNow.value = Notice.Saved(period)
+                    noticeNow.value = Notice.Saved(period, Entered(draft.zone,
+                        ComingAway.describe(period, draft.zone, clock.instant())))
                     changed(outcome.periods)
                 }
                 is AwaySave.Failed -> savingNow.value = SaveState.Failed(outcome.detail)
@@ -359,10 +372,16 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
     private fun kept(): Draft? {
         val day = handle.get<String>(DAY) ?: return null
         val zone = handle.get<String>(ZONE) ?: return null
-        return Draft(LocalDate.parse(day), ZoneId.of(zone),
-            if (handle.get<Boolean>(PART) == true) Kind.PART_OF_DAY else Kind.ALL_DAY,
-            handle.get<Int>(START)?.let { LocalTime.ofSecondOfDay(it.toLong()) } ?: FIRST_START,
-            handle.get<Int>(END)?.let { LocalTime.ofSecondOfDay(it.toLong()) } ?: FIRST_END)
+        return try {
+            Draft(LocalDate.parse(day), ZoneId.of(zone),
+                if (handle.get<Boolean>(PART) == true) Kind.PART_OF_DAY else Kind.ALL_DAY,
+                handle.get<Int>(START)?.let { LocalTime.ofSecondOfDay(it.toLong()) } ?: FIRST_START,
+                handle.get<Int>(END)?.let { LocalTime.ofSecondOfDay(it.toLong()) } ?: FIRST_END)
+        } catch (_: DateTimeException) {
+            // a zone a time-zone update removed, or a value that is no date or time: the entry is closed
+            forget(handle)
+            null
+        }
     }
 
     private fun ask(asking: Boolean) {
