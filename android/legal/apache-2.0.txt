@@ -2,7 +2,8 @@ Apache License 2.0
 For the Android app's libraries, each named by an Artifact line by group and artifact, without its version (Gradle's
 releaseRuntimeClasspath, the engine's libraries included), and for the copied files that this file names.
 Source: AndroidX and Compose https://cs.android.com/androidx/platform/frameworks/support; Kotlin https://kotlinlang.org;
-kotlinx https://github.com/Kotlin/kotlinx.coroutines and https://github.com/Kotlin/kotlinx.serialization; JetBrains'
+kotlinx https://github.com/Kotlin/kotlinx.coroutines, https://github.com/Kotlin/kotlinx.serialization and
+https://github.com/Kotlin/kotlinx-atomicfu; Okio https://github.com/square/okio; JetBrains'
 annotations https://github.com/JetBrains/java-annotations; JSpecify http://jspecify.org; listenablefuture
 https://github.com/google/guava.
 Licence: Apache-2.0, as each library's pom names it (guava-parent's for listenablefuture). Most AndroidX libraries carry
@@ -40,6 +41,12 @@ Artifact: androidx.core:core
 Artifact: androidx.core:core-ktx
 Artifact: androidx.core:core-viewtree
 Artifact: androidx.customview:customview-poolingcontainer
+Artifact: androidx.datastore:datastore-android
+Artifact: androidx.datastore:datastore-core-android
+Artifact: androidx.datastore:datastore-core-okio-jvm
+Artifact: androidx.datastore:datastore-preferences-android
+Artifact: androidx.datastore:datastore-preferences-core-android
+Artifact: androidx.datastore:datastore-preferences-proto
 Artifact: androidx.documentfile:documentfile
 Artifact: androidx.dynamicanimation:dynamicanimation
 Artifact: androidx.emoji2:emoji2
@@ -70,17 +77,19 @@ Artifact: androidx.savedstate:savedstate-android
 Artifact: androidx.savedstate:savedstate-compose-android
 Artifact: androidx.savedstate:savedstate-ktx
 Artifact: androidx.startup:startup-runtime
-Artifact: androidx.tracing:tracing
+Artifact: androidx.tracing:tracing-android
 Artifact: androidx.transition:transition
 Artifact: androidx.versionedparcelable:versionedparcelable
 Artifact: androidx.window:window
 Artifact: androidx.window:window-core-android
 Artifact: com.google.guava:listenablefuture
-Artifact: org.jetbrains:annotations
+Artifact: com.squareup.okio:okio-jvm
 Artifact: org.jetbrains.kotlin:kotlin-stdlib
+Artifact: org.jetbrains.kotlinx:atomicfu-jvm
 Artifact: org.jetbrains.kotlinx:kotlinx-coroutines-android
 Artifact: org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm
 Artifact: org.jetbrains.kotlinx:kotlinx-serialization-core-jvm
+Artifact: org.jetbrains:annotations
 Artifact: org.jspecify:jspecify
 
 Copied: Material's Filled icons SolarPower, ElectricCar, EvStation, WbCloudy, EventBusy and Schedule, in
