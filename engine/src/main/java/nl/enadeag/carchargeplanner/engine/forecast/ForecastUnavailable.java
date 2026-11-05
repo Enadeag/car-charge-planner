@@ -14,26 +14,6 @@ public class ForecastUnavailable extends Exception {
     private final List<ProviderId> keyRefusedBy;
 
     /**
-     * Makes the exception, for when the stored keys were not the problem.
-     *
-     * @param message the reason of each provider asked, in words for the owner
-     */
-    public ForecastUnavailable(String message) {
-        this(message, false);
-    }
-
-    /**
-     * Makes the exception.
-     *
-     * @param message the reason of each provider asked, in words for the owner
-     * @param keychainLocked true when a provider was asked without the stored keys because the system keychain that
-     *     holds them is locked
-     */
-    public ForecastUnavailable(String message, boolean keychainLocked) {
-        this(message, keychainLocked, List.of());
-    }
-
-    /**
      * Makes the exception.
      *
      * @param message the reason of each provider asked, in words for the owner

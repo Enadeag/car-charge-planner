@@ -19,8 +19,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Decides when the owner is told about a charge window: once, within the notification lead time before it starts;
- * and what the owner is told about the trips. Each announcement is logged, with its kind and the window's start, and
- * each notice about a trip with the trip's departure.
+ * what the owner is told about the trips; and, by the same rules, when the next of those notices is due, for a client
+ * that wakes the device for it. Each announcement is logged, with its kind and the window's start, and each notice
+ * about a trip with the trip's departure.
  *
  * <p>Only windows that have not started are announced. A window that overlaps one announced before counts as
  * announced, for a newer forecast can move a start by a few minutes. Nothing is announced while the forecast could

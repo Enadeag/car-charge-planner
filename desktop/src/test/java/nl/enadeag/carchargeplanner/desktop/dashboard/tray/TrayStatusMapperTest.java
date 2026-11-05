@@ -45,7 +45,7 @@ class TrayStatusMapperTest {
 
     private static Outlook.Planned plannedAt(int hour, Optional<GridAdvice> advice, DayPlan... days) {
         var source = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)",
-                at(TODAY, 7, 45), Freshness.FRESH, ProviderRole.PRIMARY, "", Optional.empty());
+                at(TODAY, 7, 45), Freshness.FRESH, ProviderRole.PRIMARY, "", Optional.empty(), List.of());
         return new Outlook.Planned(at(TODAY, hour, 0), BRUSSELS, List.of(days), new Percent(50), false, advice, List.of(), source, 0.4, new Percent(30), new Percent(80));
     }
 

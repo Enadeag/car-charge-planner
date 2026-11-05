@@ -83,7 +83,7 @@ class AnnouncerTest {
 
     private static ForecastSource forecast(Instant fetchedAt, Freshness freshness) {
         return new ForecastSource(new ProviderId("main"), "Main", "Forecast by Main", fetchedAt, freshness,
-                ProviderRole.PRIMARY, "", Optional.empty());
+                ProviderRole.PRIMARY, "", Optional.empty(), List.of());
     }
 
     private Announcer announcer() {

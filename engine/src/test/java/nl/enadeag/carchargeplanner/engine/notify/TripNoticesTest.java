@@ -76,7 +76,7 @@ class TripNoticesTest {
 
     private static ForecastSource forecast(Instant fetchedAt, Freshness freshness) {
         return new ForecastSource(new ProviderId("main"), "Main", "Forecast by Main", fetchedAt, freshness,
-                ProviderRole.PRIMARY, "", Optional.empty());
+                ProviderRole.PRIMARY, "", Optional.empty(), List.of());
     }
 
     /** Kept in the test's folder, so a new announcer is like the app after a restart. */

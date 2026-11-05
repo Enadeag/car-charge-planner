@@ -55,7 +55,7 @@ class OutlookMapperTest {
     /** Fetched at 07:45 from the primary provider, Open-Meteo. */
     private static ForecastSource fresh() {
         return new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", CREDIT, at(TODAY, 7, 45), Freshness.FRESH,
-                ProviderRole.PRIMARY, "", Optional.empty());
+                ProviderRole.PRIMARY, "", Optional.empty(), List.of());
     }
 
     private static Outlook.Planned planned(boolean batteryAssumed, DayPlan... days) {
@@ -156,7 +156,7 @@ class OutlookMapperTest {
     @Test
     void aForecastFromTheCacheThatIsNotDueForARefreshIsCalledUpdatedAsWell() {
         var cached = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", CREDIT, at(TODAY, 7, 45), Freshness.CACHED,
-                ProviderRole.PRIMARY, "", Optional.empty());
+                ProviderRole.PRIMARY, "", Optional.empty(), List.of());
 
         assertThat(((DashboardModel.Plan) MAPPER.map(planned(cached))).footer()).isEqualTo(CREDIT + " · updated 07:45");
     }
@@ -164,7 +164,7 @@ class OutlookMapperTest {
     @Test
     void aFallbackForecastSaysWhichProviderItStandsInFor() {
         var fallback = new ForecastSource(new ProviderId("forecast-solar"), "Forecast.Solar", "Solar forecast: Forecast.Solar",
-                at(TODAY, 7, 45), Freshness.FRESH, ProviderRole.FALLBACK, "Open-Meteo", Optional.empty());
+                at(TODAY, 7, 45), Freshness.FRESH, ProviderRole.FALLBACK, "Open-Meteo", Optional.empty(), List.of());
 
         assertThat(((DashboardModel.Plan) MAPPER.map(planned(fallback))).footer())
                 .isEqualTo("Solar forecast: Forecast.Solar · Open-Meteo unavailable · updated 07:45");
@@ -173,9 +173,9 @@ class OutlookMapperTest {
     @Test
     void aStaleForecastAndARateLimitAreNamedUntilTheLimitEnds() {
         var limited = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", CREDIT, at(TODAY, 5, 30), Freshness.STALE,
-                ProviderRole.PRIMARY, "", Optional.of(at(TODAY, 9, 0)));
+                ProviderRole.PRIMARY, "", Optional.of(at(TODAY, 9, 0)), List.of());
         var ended = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", CREDIT, at(TODAY, 5, 30), Freshness.STALE,
-                ProviderRole.PRIMARY, "", Optional.of(at(TODAY, 8, 0)));
+                ProviderRole.PRIMARY, "", Optional.of(at(TODAY, 8, 0)), List.of());
 
         assertThat(((DashboardModel.Plan) MAPPER.map(planned(limited))).footer())
                 .isEqualTo(CREDIT + " · not refreshed since 05:30 · provider busy until 09:00");

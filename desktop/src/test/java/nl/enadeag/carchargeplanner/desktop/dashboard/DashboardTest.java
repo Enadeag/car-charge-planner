@@ -410,7 +410,7 @@ class DashboardTest {
     private static ForecastSource source(LocalDate today, ZoneId zone) {
         var fetched = today.atTime(7, 45).atZone(zone).toInstant();
         return new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)", fetched,
-                Freshness.FRESH, ProviderRole.PRIMARY, "", Optional.empty());
+                Freshness.FRESH, ProviderRole.PRIMARY, "", Optional.empty(), List.of());
     }
 
     private static Outlook planWithTwoDays() {

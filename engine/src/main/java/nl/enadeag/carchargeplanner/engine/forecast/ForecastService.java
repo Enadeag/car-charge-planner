@@ -7,6 +7,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsSource;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -74,14 +75,16 @@ public final class ForecastService {
     /**
      * The forecast that is stored for the system, without asking any provider or reading a key, such as for a moment
      * the device woke for, where the network is not to be used. The primary provider's stored forecast while it is
-     * still useful, else the fallback provider's; it is told as cached, as no refresh was tried.
+     * still useful, else the fallback provider's; it is told as stale when that provider failed when it was last
+     * asked, also by another process, and no answer followed, else as cached. It never says a key was refused, as no
+     * provider was asked.
      *
      * @param system the system to forecast; a stored forecast is used only when it was made for the same one
      * @param selection the providers whose stored forecasts to use and their settings that are not secret
      * @param now the current moment, by which the stored forecasts' age and cool-downs are measured
      * @return the stored forecast and where it came from
      * @throws ForecastUnavailable with the reason of each provider, when none has a stored forecast that is still
-     *     useful; it never says a key was refused, as no provider was asked
+     *     useful
      */
     public ForecastResult stored(SolarSite system, ForecastSelection selection, Instant now)
             throws ForecastUnavailable {
@@ -129,9 +132,13 @@ public final class ForecastService {
         for (int index = 0; index < order.size(); index++) {
             var outcome = ask(order.get(index), system, selection, stored, now, mode);
             if (outcome instanceof ProviderOutcome.Usable usable) {
+                if (usable.keyRefused()) {
+                    keyRefusedBy.add(order.get(index));
+                }
                 var info = providers.find(order.get(index)).orElseThrow().info();
                 var role = index == 0 ? ProviderRole.PRIMARY : ProviderRole.FALLBACK;
-                return result(usable, info, role, role == ProviderRole.FALLBACK ? primaryName(selection) : "");
+                return result(usable, info, role, role == ProviderRole.FALLBACK ? primaryName(selection) : "",
+                        keyRefusedBy);
             }
             var failure = (ProviderOutcome.Failure) outcome;
             reasons.add(failure.reason());
@@ -192,9 +199,9 @@ public final class ForecastService {
     }
 
     private static ForecastResult result(ProviderOutcome.Usable usable, ProviderInfo info, ProviderRole role,
-            String primaryName) {
+            String primaryName, List<ProviderId> keyRefusedBy) {
         var source = new ForecastSource(info.id(), info.name(), info.attribution(), usable.fetchedAt(),
-                usable.freshness(), role, primaryName, usable.cooldownUntil());
+                usable.freshness(), role, primaryName, usable.cooldownUntil(), keyRefusedBy);
         return new ForecastResult(usable.steps(), source);
     }
 

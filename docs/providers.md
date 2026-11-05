@@ -29,7 +29,7 @@ All of it is in the package `engine.forecast` ([`engine/src/main/java/nl/enadeag
 | --- | --- | --- |
 | `Unavailable` | no network, a timeout, a 5xx | tries again in five minutes |
 | `RateLimited(message, retryAfter)` | the service refuses more requests; `retryAfter` is a `Duration` if it says when, else `null` | leaves the provider alone until then, or for its `minRefresh` |
-| `KeyRefused` | the service refuses the API key (401, 403) | waits the `minRefresh`; an outlook without a forecast names the provider, so the app can say that only a new key helps |
+| `KeyRefused` | the service refuses the API key (401, 403) | waits the `minRefresh`; the outlook names the provider until it answers or the settings are saved, also while the fallback's or its last forecast gives a plan, so the app can say that only a new key helps |
 | `BadResponse` | an answer that is not what the service documents, a bad request, steps that break the contract | waits the `minRefresh` |
 | `MissingSetting` | a setting is missing or unusable (checked before anything is sent) | reports it |
 

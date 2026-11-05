@@ -151,7 +151,8 @@ public final class Engine {
      *
      * @param use where the forecast may come from: the providers as their rules allow, or only the stored forecast,
      *     which never asks a provider; without a stored forecast that is still useful the outlook has no forecast, and
-     *     on one more than 6 hours old nothing is told
+     *     nothing is told on one more than 6 hours old, nor on one whose provider failed when it was last asked, also
+     *     by another process, as it is stale then
      * @return the plan, or why there is none: not set up, a config file that cannot be used, or no forecast
      */
     public Outlook round(ForecastUse use) {

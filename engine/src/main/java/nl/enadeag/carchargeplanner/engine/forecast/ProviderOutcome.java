@@ -14,9 +14,11 @@ sealed interface ProviderOutcome {
      * @param fetchedAt when it was fetched
      * @param freshness whether it was fetched just now or comes from the cache, and then whether a refresh was due
      * @param cooldownUntil the end of the provider's cool-down, when it has one
+     * @param keyRefused true when this is the provider's last forecast because it refused its API key when it was last
+     *     asked
      */
     record Usable(List<ForecastStep> steps, Instant fetchedAt, Freshness freshness,
-            Optional<Instant> cooldownUntil) implements ProviderOutcome {
+            Optional<Instant> cooldownUntil, boolean keyRefused) implements ProviderOutcome {
     }
 
     /**

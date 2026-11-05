@@ -86,7 +86,7 @@ final class ProviderAttempt {
         var cached = cache.forecast(info.id(), key, now);
         var held = new CacheState(cached.filter(this::stillUseful), cooldownUntil());
         if (cached.isPresent() && !force && cached.get().age(now).compareTo(info.minRefresh()) < 0) {
-            return held.fromCache(cached.get(), Freshness.CACHED);
+            return held.fromCache(cached.get(), Freshness.CACHED, false);
         }
         var values = settings.get();
         var secrets = Stream.concat(info.secretValues(values).stream(), storedSecrets.get().stream()).toList();
@@ -95,21 +95,23 @@ final class ProviderAttempt {
             return afterFailure(String.join(", ", missing) + " is required", secrets, CacheState.NONE, false);
         }
         var waiting = held.cooldownUntil().map(until -> new Retry(until, false)).or(this::waitingAfterFailure);
-        return waiting.map(retry -> held.stale().orElseGet(() -> failure(
+        return waiting.map(retry -> held.stale(retry.keyRefused()).orElseGet(() -> failure(
                         "not asked again until " + clock(retry.at(), system.timezone()), retry.keyRefused())))
                 .orElseGet(() -> fetch(system, values, key, secrets, held));
     }
 
     /**
      * The stored forecast, without asking the provider or reading a secret setting: the last one while it is still
-     * useful, told as cached, for no refresh was tried.
+     * useful, told as stale when the provider failed when it was last asked and no answer followed, as a round that
+     * asks would tell it, else as cached.
      *
      * @param key what the forecast depends on, as {@link ForecastCache#key} makes it
      * @return the stored forecast, or the reason there is none; never a refused key, as nothing is asked
      */
     ProviderOutcome storedOrReason(JsonNode key) {
         var held = new CacheState(cache.forecast(info.id(), key, now).filter(this::stillUseful), cooldownUntil());
-        return held.usable().map(forecast -> held.fromCache(forecast, Freshness.CACHED))
+        var freshness = cache.refreshFailed(info.id()) ? Freshness.STALE : Freshness.CACHED;
+        return held.usable().map(forecast -> held.fromCache(forecast, freshness, false))
                 .orElseGet(() -> failure("no stored forecast that is still useful", false));
     }
 
@@ -145,23 +147,26 @@ final class ProviderAttempt {
             retryAt.remove(info.id());
             health.recordAnswer(info);
             cache.saveForecast(info.id(), key, now, steps);
-            return new ProviderOutcome.Usable(steps, now, Freshness.FRESH, Optional.empty());
+            return new ProviderOutcome.Usable(steps, now, Freshness.FRESH, Optional.empty(), false);
         } catch (ProviderError.RateLimited e) {
             var until = now.plus(e.retryAfter().orElse(info.minRefresh()));
             cache.saveCooldown(info.id(), until);
             return afterFailure(e.getMessage(), secrets, held.inCooldownUntil(until), false);
         } catch (ProviderError.Unavailable e) {
             retryAt.put(info.id(), new Retry(now.plus(RETRY_AFTER_UNAVAILABLE), false));
+            cache.saveRefreshFailed(info.id());
             return afterFailure(e.getMessage(), secrets, held, false);
         } catch (ProviderError e) {
             boolean keyRefused = e instanceof ProviderError.KeyRefused;
             retryAt.put(info.id(), new Retry(now.plus(info.minRefresh()), keyRefused)); // it answered: that counted
+            cache.saveRefreshFailed(info.id());
             return afterFailure(e.getMessage(), secrets, held, keyRefused);
         } catch (RuntimeException e) {
             // a bug in a provider must not stop the app; its message may hold a secret, so only its kind is told
             var kind = e.getClass().getSimpleName();
             LOG.error("forecast provider " + info.id() + " failed unexpectedly (" + kind + ")");
             retryAt.put(info.id(), new Retry(now.plus(info.minRefresh()), false));
+            cache.saveRefreshFailed(info.id());
             return afterFailure("an unexpected error (" + kind + ")", secrets, held, false);
         }
     }
@@ -179,7 +184,7 @@ final class ProviderAttempt {
     private ProviderOutcome afterFailure(String given, List<String> secrets, CacheState held, boolean keyRefused) {
         var reason = ProviderText.redacted(given, secrets);
         health.recordFailure(info, reason);
-        return held.stale().orElseGet(() -> failure(reason, keyRefused));
+        return held.stale(keyRefused).orElseGet(() -> failure(reason, keyRefused));
     }
 
     private ProviderOutcome failure(String reason, boolean keyRefused) {
@@ -215,10 +220,11 @@ final class ProviderAttempt {
         /**
          * The last forecast, while it is still useful, as a stale one.
          *
+         * @param keyRefused true when the provider gave none because it refused its API key
          * @return the stale forecast, or empty when there is no useful one
          */
-        Optional<ProviderOutcome> stale() {
-            return usable.map(forecast -> fromCache(forecast, Freshness.STALE));
+        Optional<ProviderOutcome> stale(boolean keyRefused) {
+            return usable.map(forecast -> fromCache(forecast, Freshness.STALE, keyRefused));
         }
 
         /**
@@ -226,11 +232,12 @@ final class ProviderAttempt {
          *
          * @param forecast the cached forecast to give
          * @param freshness how fresh it is told to be
+         * @param keyRefused true when it is given because the provider refused its API key
          * @return the forecast to use
          */
-        ProviderOutcome fromCache(ForecastCache.Cached forecast, Freshness freshness) {
+        ProviderOutcome fromCache(ForecastCache.Cached forecast, Freshness freshness, boolean keyRefused) {
             return new ProviderOutcome.Usable(List.copyOf(forecast.steps()), forecast.fetchedAt(), freshness,
-                    cooldownUntil);
+                    cooldownUntil, keyRefused);
         }
     }
 }
