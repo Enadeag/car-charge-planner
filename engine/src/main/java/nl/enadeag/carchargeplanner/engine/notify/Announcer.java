@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,11 +91,7 @@ public final class Announcer {
      */
     public void announceDue(List<DayPlan> days, GridAdvice advice, ForecastSource source, Instant now,
             EngineConfig config) {
-        var candidates = candidates(days, config);
-        advice.window().ifPresent(window -> candidates.add(new Announcement(AnnouncementKind.GRID_CHARGE, window,
-                config.system().timezone(), config.system().charger().phases(), config.planning().minimumPct(),
-                advice.chargeLimitPct())));
-        announce(candidates, source, now, config);
+        announce(candidates(days, advice, config), source, now, config);
     }
 
     /**
@@ -118,6 +115,56 @@ public final class Announcer {
         }
     }
 
+    /**
+     * When the next notice is due that a moment the device wakes for could tell: a window of the plan not announced
+     * yet, at its start minus the lead time, or the start of a trip's grid charge, by the rules
+     * {@link #announceDue(List, ForecastSource, Instant, EngineConfig)} and
+     * {@link #announceTripsDue(List, PlanLevel, ForecastSource, Instant, EngineConfig)} follow. Nothing is announced
+     * by asking.
+     *
+     * @param days the plan's days, whose charge windows are announced
+     * @param trips the plan's advice per trip, in order of departure; possibly none
+     * @param source where the plan's forecast came from; nothing is due while it is stale, or once it would be too old
+     * @param now the current moment
+     * @param config the system and preferences the plan was made for: the lead time
+     * @return the earliest moment, now when a notice is due now; empty when nothing is to come
+     */
+    public synchronized Optional<Instant> nextDue(List<DayPlan> days, List<TripAdvice> trips, ForecastSource source,
+            Instant now, EngineConfig config) {
+        return firstDue(candidates(days, config), trips, source, now, config);
+    }
+
+    /**
+     * When the next notice is due, as {@link #nextDue(List, List, ForecastSource, Instant, EngineConfig)}, with the
+     * grid advice's window among the plan's windows.
+     *
+     * @param days the plan's days, whose charge windows are announced
+     * @param advice the grid advice, whose window, when it has one, is announced as a grid charge
+     * @param trips the plan's advice per trip, in order of departure; possibly none
+     * @param source where the plan's forecast came from; nothing is due while it is stale, or once it would be too old
+     * @param now the current moment
+     * @param config the system and preferences the plan was made for: the lead time
+     * @return the earliest moment, now when a notice is due now; empty when nothing is to come
+     */
+    public synchronized Optional<Instant> nextDue(List<DayPlan> days, GridAdvice advice, List<TripAdvice> trips,
+            ForecastSource source, Instant now, EngineConfig config) {
+        return firstDue(candidates(days, advice, config), trips, source, now, config);
+    }
+
+    /**
+     * The earliest moment from now on at which a candidate not announced yet, or a trip's charge start, is due, on a
+     * forecast that is still fit to announce on then.
+     */
+    private Optional<Instant> firstDue(List<Announcement> candidates, List<TripAdvice> trips, ForecastSource source,
+            Instant now, EngineConfig config) {
+        var lead = config.planning().notifyLead();
+        var windows = candidates.stream().map(Announcement::window).filter(window -> !wasAnnounced(window))
+                .flatMap(window -> span(window, lead).firstFrom(now).stream());
+        return Stream.concat(windows, this.trips.nextChargeStart(trips, now, lead).stream())
+                .filter(due -> fitToAnnounceOn(source, due))
+                .min(Comparator.naturalOrder());
+    }
+
     /** Announces the candidates that are due, in the order they start. */
     private synchronized void announce(List<Announcement> candidates, ForecastSource source, Instant now,
             EngineConfig config) {
@@ -128,7 +175,7 @@ public final class Announcer {
         var lead = config.planning().notifyLead();
         for (var candidate : candidates) {
             var window = candidate.window();
-            if (now.isBefore(window.start()) && !window.start().isAfter(now.plus(lead)) && !wasAnnounced(window)) {
+            if (span(window, lead).contains(now) && !wasAnnounced(window)) {
                 notifier.announce(candidate);
                 LOG.info("announced a " + candidate.kind() + " starting at "
                         + window.start().atZone(candidate.zone()).toOffsetDateTime());
@@ -137,9 +184,23 @@ public final class Announcer {
         }
     }
 
+    /** A window is announced within the lead time before its start, and not once it has started. */
+    private static NoticeSpan span(Window window, Duration lead) {
+        return NoticeSpan.before(window.start(), lead, window.start());
+    }
+
     private static boolean fitToAnnounceOn(ForecastSource source, Instant now) {
         return source.freshness() != Freshness.STALE
                 && Duration.between(source.fetchedAt(), now).compareTo(MAX_FORECAST_AGE) <= 0;
+    }
+
+    /** The plan's solar windows and the grid advice's window, as announcements. */
+    private static List<Announcement> candidates(List<DayPlan> days, GridAdvice advice, EngineConfig config) {
+        var candidates = candidates(days, config);
+        advice.window().ifPresent(window -> candidates.add(new Announcement(AnnouncementKind.GRID_CHARGE, window,
+                config.system().timezone(), config.system().charger().phases(), config.planning().minimumPct(),
+                advice.chargeLimitPct())));
+        return candidates;
     }
 
     /** The plan's solar windows, as announcements. */

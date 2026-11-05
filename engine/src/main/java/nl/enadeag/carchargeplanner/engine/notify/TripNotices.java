@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,7 +106,7 @@ final class TripNotices {
         }
         var grid = advice.grid();
         if (grid.isPresent() && !before.chargeStartTold()
-                && chargeStartDue(grid.get(), now, config.planning().notifyLead())) {
+                && chargeStartSpan(grid.get(), config.planning().notifyLead()).contains(now)) {
             tell(new TripChargeStart(trip, grid.get().window(), grid.get().start(), zone,
                     config.system().charger().phases(),
                     new Percent(Math.ceil(advice.neededPct().value() - LEVEL_NOISE_PCT))), trip);
@@ -149,14 +150,31 @@ final class TripNotices {
     }
 
     /**
-     * Whether the start of a grid charge is due: one that starts as planned within the lead time before its start, one
+     * The first moment, from now on, at which the start of a trip's grid charge is due and not told yet. The battery
+     * check and a short trip are left out: they wait for the rounds that come anyway.
+     *
+     * @param advice the plan's advice per trip; possibly none
+     * @param now the current moment
+     * @param lead the notification lead time
+     * @return the earliest such moment, now when one is due now; empty when none is to come
+     */
+    Optional<Instant> nextChargeStart(List<TripAdvice> advice, Instant now, Duration lead) {
+        return advice.stream()
+                .filter(trip -> !told.getOrDefault(trip.trip().departure(), ToldTrip.nothing(trip.trip().departure()))
+                        .chargeStartTold())
+                .flatMap(trip -> trip.grid().stream())
+                .flatMap(grid -> chargeStartSpan(grid, lead).firstFrom(now).stream())
+                .min(Comparator.naturalOrder());
+    }
+
+    /**
+     * When the start of a grid charge is due: one that starts as planned within the lead time before its start, one
      * that starts now from the lead time before its start until its end.
      */
-    private static boolean chargeStartDue(TripGridCharge grid, Instant now, Duration lead) {
+    private static NoticeSpan chargeStartSpan(TripGridCharge grid, Duration lead) {
         var window = grid.window();
-        boolean started = !now.isBefore(window.start());
-        return !window.start().isAfter(now.plus(lead))
-                && (grid.start() == TripGridCharge.Start.PLANNED ? !started : now.isBefore(window.end()));
+        return NoticeSpan.before(window.start(), lead,
+                grid.start() == TripGridCharge.Start.PLANNED ? window.start() : window.end());
     }
 
     private static LocalDate dayBefore(Instant departure, ZoneId zone) {

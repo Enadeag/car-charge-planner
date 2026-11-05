@@ -135,7 +135,7 @@ class OpenMeteoTest extends ProviderConformance {
     @Test
     void aRefusedKeyPointsAtTheSettings() {
         assertThatThrownBy(() -> new OpenMeteo(ReplayHttp.always(new Reply(401, ""))).fetch(EXAMPLE_SYSTEM, Map.of(), NOW))
-                .isInstanceOf(ProviderError.BadResponse.class).hasMessageContaining("API key");
+                .isInstanceOf(ProviderError.KeyRefused.class).hasMessageContaining("API key");
     }
 
     @Test

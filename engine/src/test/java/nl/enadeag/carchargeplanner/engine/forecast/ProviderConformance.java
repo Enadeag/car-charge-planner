@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /**
@@ -313,6 +314,12 @@ public abstract class ProviderConformance {
         assertThat(error).isInstanceOf(kind);
         assertThat(made.http().unexpected).isEmpty();
         return (ProviderError) error;
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {401, 403})
+    void aRefusedKeyIsKeyRefused(int status) {
+        fails(List.of(Route.answer("", new HttpGet.Reply(status, ""))), ProviderError.KeyRefused.class);
     }
 
     @ParameterizedTest

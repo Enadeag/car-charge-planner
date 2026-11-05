@@ -26,7 +26,7 @@ public final class ForecastService {
     private final Providers providers;
     private final ForecastCache cache;
     private final SecretsSource secrets;
-    private final Map<ProviderId, Instant> retryAt = new ConcurrentHashMap<>();
+    private final Map<ProviderId, ProviderAttempt.Retry> retryAt = new ConcurrentHashMap<>();
     private final Map<ProviderId, ReentrantLock> asking = new ConcurrentHashMap<>();
     private final ProviderHealth health = new ProviderHealth();
 
@@ -44,6 +44,16 @@ public final class ForecastService {
         this.secrets = secrets;
     }
 
+    /** How a request may get its forecast. */
+    private enum Asking {
+        /** From the cache or a provider, as the rules allow. */
+        USUAL,
+        /** As usual, but a provider is asked before its minimum refresh interval and without its wait. */
+        FORCED,
+        /** From the cache only; no provider is asked and no key is read. */
+        STORED_ONLY
+    }
+
     /** The stored secrets, or none and why: the providers that need no key still work. */
     private record KeysOrProblem(Secrets secrets, Optional<SecretsProblem> problem) {
     }
@@ -58,7 +68,24 @@ public final class ForecastService {
      * @throws ForecastUnavailable with the reason of each provider asked, when none has a usable forecast
      */
     public ForecastResult get(SolarSite system, ForecastSelection selection, Instant now) throws ForecastUnavailable {
-        return fetch(system, selection, new Once<>(this::storedKeys), now, false);
+        return fetch(system, selection, new Once<>(this::storedKeys), now, Asking.USUAL);
+    }
+
+    /**
+     * The forecast that is stored for the system, without asking any provider or reading a key, such as for a moment
+     * the device woke for, where the network is not to be used. The primary provider's stored forecast while it is
+     * still useful, else the fallback provider's; it is told as cached, as no refresh was tried.
+     *
+     * @param system the system to forecast; a stored forecast is used only when it was made for the same one
+     * @param selection the providers whose stored forecasts to use and their settings that are not secret
+     * @param now the current moment, by which the stored forecasts' age and cool-downs are measured
+     * @return the stored forecast and where it came from
+     * @throws ForecastUnavailable with the reason of each provider, when none has a stored forecast that is still
+     *     useful; it never says a key was refused, as no provider was asked
+     */
+    public ForecastResult stored(SolarSite system, ForecastSelection selection, Instant now)
+            throws ForecastUnavailable {
+        return fetch(system, selection, new Once<>(this::storedKeys), now, Asking.STORED_ONLY);
     }
 
     /**
@@ -74,7 +101,7 @@ public final class ForecastService {
      */
     public ForecastResult refresh(SolarSite system, ForecastSelection selection, Instant now)
             throws ForecastUnavailable {
-        return fetch(system, selection, new Once<>(this::storedKeys), now, true);
+        return fetch(system, selection, new Once<>(this::storedKeys), now, Asking.FORCED);
     }
 
     /**
@@ -90,28 +117,34 @@ public final class ForecastService {
      */
     public ForecastResult getWithKeys(SolarSite system, ForecastSelection selection, Secrets secrets,
             Instant now) throws ForecastUnavailable {
-        return fetch(system, selection, new Once<>(() -> new KeysOrProblem(secrets, Optional.empty())), now, false);
+        return fetch(system, selection, new Once<>(() -> new KeysOrProblem(secrets, Optional.empty())), now,
+                Asking.USUAL);
     }
 
     private ForecastResult fetch(SolarSite system, ForecastSelection selection, Once<KeysOrProblem> stored,
-            Instant now, boolean force) throws ForecastUnavailable {
+            Instant now, Asking mode) throws ForecastUnavailable {
         var reasons = new ArrayList<String>();
+        var keyRefusedBy = new ArrayList<ProviderId>();
         var order = selection.order();
         for (int index = 0; index < order.size(); index++) {
-            var outcome = ask(order.get(index), system, selection, stored, now, force);
+            var outcome = ask(order.get(index), system, selection, stored, now, mode);
             if (outcome instanceof ProviderOutcome.Usable usable) {
                 var info = providers.find(order.get(index)).orElseThrow().info();
                 var role = index == 0 ? ProviderRole.PRIMARY : ProviderRole.FALLBACK;
                 return result(usable, info, role, role == ProviderRole.FALLBACK ? primaryName(selection) : "");
             }
-            reasons.add(((ProviderOutcome.Failure) outcome).reason());
+            var failure = (ProviderOutcome.Failure) outcome;
+            reasons.add(failure.reason());
+            if (failure.keyRefused()) {
+                keyRefusedBy.add(order.get(index));
+            }
         }
         var locked = new boolean[1];
         stored.ifMade(secrets -> secrets.problem().ifPresent(problem -> {
             reasons.add(problem.getMessage());
             locked[0] = problem.kind() == SecretsProblem.Kind.LOCKED;
         }));
-        throw new ForecastUnavailable(String.join("; ", reasons), locked[0]);
+        throw new ForecastUnavailable(String.join("; ", reasons), locked[0], keyRefusedBy);
     }
 
     /**
@@ -131,7 +164,7 @@ public final class ForecastService {
     }
 
     private ProviderOutcome ask(ProviderId providerId, SolarSite system, ForecastSelection selection,
-            Once<KeysOrProblem> stored, Instant now, boolean force) {
+            Once<KeysOrProblem> stored, Instant now, Asking mode) {
         var found = providers.find(providerId);
         if (found.isEmpty()) {
             return new ProviderOutcome.Failure(
@@ -146,8 +179,9 @@ public final class ForecastService {
         var lock = asking.computeIfAbsent(providerId, ignored -> new ReentrantLock());
         lock.lock();
         try {
-            return new ProviderAttempt(provider, cache, retryAt, health, now, force).forecastOrReason(system, settings,
-                    key, () -> stored.get().secrets().values());
+            var attempt = new ProviderAttempt(provider, cache, retryAt, health, now, mode == Asking.FORCED);
+            return mode == Asking.STORED_ONLY ? attempt.storedOrReason(key)
+                    : attempt.forecastOrReason(system, settings, key, () -> stored.get().secrets().values());
         } finally {
             lock.unlock();
         }

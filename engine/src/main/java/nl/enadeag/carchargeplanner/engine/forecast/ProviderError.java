@@ -5,7 +5,8 @@ import java.util.Optional;
 
 /**
  * A provider could not give a forecast. The kind says why, so the forecast service can react: try again soon, wait out
- * a cool-down, or wait the full refresh interval. A message never holds a secret setting such as an API key.
+ * a cool-down, or wait the full refresh interval; and so the owner can be told when only a new API key helps. A
+ * message never holds a secret setting such as an API key.
  */
 public abstract sealed class ProviderError extends Exception {
 
@@ -58,6 +59,21 @@ public abstract sealed class ProviderError extends Exception {
          * @param message why, in words for the owner; never a secret setting
          */
         public BadResponse(String message) {
+            super(message);
+        }
+    }
+
+    /**
+     * The provider refused the request for its API key (an HTTP 401 or 403): the owner has to change the key, and
+     * asking again with the same one will not help.
+     */
+    public static final class KeyRefused extends ProviderError {
+        /**
+         * Makes the error.
+         *
+         * @param message why, in words for the owner; never a secret setting
+         */
+        public KeyRefused(String message) {
             super(message);
         }
     }

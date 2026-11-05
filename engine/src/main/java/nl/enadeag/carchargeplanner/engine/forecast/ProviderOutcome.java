@@ -23,7 +23,17 @@ sealed interface ProviderOutcome {
      * No forecast from this provider.
      *
      * @param reason why, starting with the provider's name
+     * @param keyRefused true when the provider refused its API key when it was last asked
      */
-    record Failure(String reason) implements ProviderOutcome {
+    record Failure(String reason, boolean keyRefused) implements ProviderOutcome {
+
+        /**
+         * No forecast, for a reason other than a refused API key.
+         *
+         * @param reason why, starting with the provider's name
+         */
+        Failure(String reason) {
+            this(reason, false);
+        }
     }
 }

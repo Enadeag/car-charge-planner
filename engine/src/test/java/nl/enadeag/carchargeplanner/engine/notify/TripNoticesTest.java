@@ -14,6 +14,7 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
+import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
@@ -346,5 +347,57 @@ class TripNoticesTest {
             assertThat(log.lines()).containsExactly("INFO told a BatteryCheck for the trip leaving at "
                     + "2026-07-05T08:30+02:00");
         }
+    }
+
+    // when the start of a trip's grid charge is next due, for a moment the device wakes for
+
+    private Optional<Instant> nextDue(Announcer announcer, TripAdvice advice, Instant now) {
+        return announcer.nextDue(List.of(), List.of(advice), forecast(now.minus(Duration.ofMinutes(5)),
+                Freshness.CACHED), now, config());
+    }
+
+    @Test
+    void thePlannedStartOfATripsGridChargeIsDueAtItsStartLessTheLeadTimeUntilItIsTold() {
+        var announcer = announcer();
+        var advice = withGrid(SATURDAY_EVENING, TripGridCharge.Start.PLANNED);
+
+        assertThat(nextDue(announcer, advice, at(SATURDAY, 18, 0))).contains(at(SATURDAY, 20, 45));
+        assertThat(nextDue(announcer, advice, at(SATURDAY, 20, 50))).contains(at(SATURDAY, 20, 50));
+        assertThat(nextDue(announcer, advice, at(SATURDAY, 21, 0))).isEmpty();
+
+        check(announcer, advice, at(SATURDAY, 20, 50));
+        assertThat(nextDue(announcer, advice, at(SATURDAY, 20, 51))).isEmpty();
+        assertThat(nextDue(announcer(), advice, at(SATURDAY, 20, 51))).as("after a restart").isEmpty();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"18, 0, 20, 45", "22, 0, 22, 0", "23, 29, 23, 29"})
+    void aGridChargeThatHasToStartNowIsDueFromTheLeadTimeUntilItsEnd(int hour, int minute, int dueHour,
+            int dueMinute) {
+        var advice = withGrid(SATURDAY_EVENING, TripGridCharge.Start.NOW);
+
+        assertThat(nextDue(announcer(), advice, at(SATURDAY, hour, minute))).contains(at(SATURDAY, dueHour, dueMinute));
+        assertThat(nextDue(announcer(), advice, at(SATURDAY, 23, 30))).isEmpty();
+    }
+
+    @Test
+    void theBatteryCheckAndAShortTripAreNotPartOfTheNextDue() {
+        assertThat(nextDue(announcer(), withoutGrid(93.2, 60, 40), at(SATURDAY, 8, 0))).isEmpty();
+    }
+
+    @Test
+    void theEarliestOfAWindowAndATripsChargeStartIsDue() {
+        var advice = withGrid(SATURDAY_EVENING, TripGridCharge.Start.PLANNED);
+        var window = new Window(at(SATURDAY, 13, 0), at(SATURDAY, 15, 0), 8, 1.8, 3.6, 0);
+        var day = new DayPlan(SATURDAY, new Percent(40), List.of(window),
+                new Percent(55), new Percent(40), 12, List.of());
+        var now = at(SATURDAY, 8, 0);
+        var source = forecast(now, Freshness.FRESH);
+
+        assertThat(announcer().nextDue(List.of(day), List.of(advice), source, now, config()))
+                .contains(at(SATURDAY, 12, 45));
+        var afternoon = at(SATURDAY, 15, 0);
+        assertThat(announcer().nextDue(List.of(day), List.of(advice), forecast(afternoon, Freshness.FRESH), afternoon,
+                config())).contains(at(SATURDAY, 20, 45));
     }
 }

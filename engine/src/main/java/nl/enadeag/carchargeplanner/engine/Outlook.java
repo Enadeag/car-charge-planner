@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.engine;
 
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
+import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
@@ -109,11 +110,29 @@ public sealed interface Outlook {
      * @param reason in English: the reason of each provider asked, which may quote the provider's own reply
      * @param keychainLocked true when the API keys were not available because the system keychain that holds them is
      *     locked, so the owner should unlock it
+     * @param keyRefusedBy the providers that refused their API key, in the order they were asked, so the owner can be
+     *     told that only a new key helps; empty when none did, also when no provider was asked
      */
-    record NoForecast(String reason, boolean keychainLocked) implements Outlook {
+    record NoForecast(String reason, boolean keychainLocked, List<ProviderId> keyRefusedBy) implements Outlook {
+
+        /** Copies the providers that refused their key. */
+        public NoForecast {
+            keyRefusedBy = List.copyOf(keyRefusedBy);
+        }
 
         /**
-         * No forecast, for a reason other than a locked keychain.
+         * No forecast, for a reason other than a refused API key.
+         *
+         * @param reason in English: the reason of each provider asked, which may quote the provider's own reply
+         * @param keychainLocked true when the API keys were not available because the system keychain that holds
+         *     them is locked, so the owner should unlock it
+         */
+        public NoForecast(String reason, boolean keychainLocked) {
+            this(reason, keychainLocked, List.of());
+        }
+
+        /**
+         * No forecast, for a reason other than a locked keychain or a refused API key.
          *
          * @param reason in English: the reason of each provider asked, which may quote the provider's own reply
          */

@@ -18,9 +18,20 @@ import tools.jackson.databind.JsonNode;
 /**
  * Asking one provider for a forecast, cache first: within the minimum refresh interval the cache answers, without the
  * secret settings being read; while the provider is in a cool-down, or waiting after a failure, its last forecast is
- * used for as long as it is still useful; otherwise the provider is asked.
+ * used for as long as it is still useful; otherwise the provider is asked. Or, when only the stored forecast may be
+ * used, the cache alone answers.
  */
 final class ProviderAttempt {
+
+    /**
+     * When a provider that failed may be asked again, and whether it failed because it refused its API key, so a
+     * wait after a refused key still says so.
+     *
+     * @param at the moment from which the provider may be asked again
+     * @param keyRefused true when the failure was a refused API key
+     */
+    record Retry(Instant at, boolean keyRefused) {
+    }
 
     /** A request that never got an answer did not use the provider's allowance, so it is tried again soon. */
     static final Duration RETRY_AFTER_UNAVAILABLE = Duration.ofMinutes(5);
@@ -31,7 +42,7 @@ final class ProviderAttempt {
     private final ForecastProvider provider;
     private final ProviderInfo info;
     private final ForecastCache cache;
-    private final Map<ProviderId, Instant> retryAt;
+    private final Map<ProviderId, Retry> retryAt;
     private final ProviderHealth health;
     private final Instant now;
     private final boolean force;
@@ -41,14 +52,14 @@ final class ProviderAttempt {
      *
      * @param provider the provider to ask
      * @param cache where its last good forecast and cool-down are kept; written after an answer
-     * @param retryAt per provider, when it may be asked again after a failure; updated here, so a map that is safe
-     *     for several threads when other providers are asked at the same time
+     * @param retryAt per provider, when it may be asked again after a failure and whether it refused its API key;
+     *     updated here, so a map that is safe for several threads when other providers are asked at the same time
      * @param health whether each provider gave a forecast when it was last asked; updated here
      * @param now the current moment, by which ages, waits and cool-downs are measured
      * @param force the owner asked for a refresh: skip the minimum refresh interval and the wait after a failure,
      *     never a cool-down
      */
-    ProviderAttempt(ForecastProvider provider, ForecastCache cache, Map<ProviderId, Instant> retryAt,
+    ProviderAttempt(ForecastProvider provider, ForecastCache cache, Map<ProviderId, Retry> retryAt,
             ProviderHealth health, Instant now, boolean force) {
         this.provider = provider;
         this.info = provider.info();
@@ -73,8 +84,7 @@ final class ProviderAttempt {
     ProviderOutcome forecastOrReason(SolarSite system, Supplier<Map<String, String>> settings, JsonNode key,
             Supplier<List<String>> storedSecrets) {
         var cached = cache.forecast(info.id(), key, now);
-        var held = new CacheState(cached.filter(forecast -> forecast.age(now).compareTo(info.maxUsefulAge()) <= 0),
-                cache.cooldownUntil(info.id()).filter(now::isBefore));
+        var held = new CacheState(cached.filter(this::stillUseful), cooldownUntil());
         if (cached.isPresent() && !force && cached.get().age(now).compareTo(info.minRefresh()) < 0) {
             return held.fromCache(cached.get(), Freshness.CACHED);
         }
@@ -82,16 +92,39 @@ final class ProviderAttempt {
         var secrets = Stream.concat(info.secretValues(values).stream(), storedSecrets.get().stream()).toList();
         var missing = info.missingRequired(values);
         if (!missing.isEmpty()) { // nothing is sent without what the provider requires
-            return afterFailure(String.join(", ", missing) + " is required", secrets, CacheState.NONE);
+            return afterFailure(String.join(", ", missing) + " is required", secrets, CacheState.NONE, false);
         }
-        return held.cooldownUntil().or(this::waitingAfterFailure)
-                .map(until -> held.stale().orElseGet(
-                        () -> failure("not asked again until " + clock(until, system.timezone()))))
+        var waiting = held.cooldownUntil().map(until -> new Retry(until, false)).or(this::waitingAfterFailure);
+        return waiting.map(retry -> held.stale().orElseGet(() -> failure(
+                        "not asked again until " + clock(retry.at(), system.timezone()), retry.keyRefused())))
                 .orElseGet(() -> fetch(system, values, key, secrets, held));
     }
 
-    private Optional<Instant> waitingAfterFailure() {
-        return force ? Optional.empty() : Optional.ofNullable(retryAt.get(info.id())).filter(now::isBefore);
+    /**
+     * The stored forecast, without asking the provider or reading a secret setting: the last one while it is still
+     * useful, told as cached, for no refresh was tried.
+     *
+     * @param key what the forecast depends on, as {@link ForecastCache#key} makes it
+     * @return the stored forecast, or the reason there is none; never a refused key, as nothing is asked
+     */
+    ProviderOutcome storedOrReason(JsonNode key) {
+        var held = new CacheState(cache.forecast(info.id(), key, now).filter(this::stillUseful), cooldownUntil());
+        return held.usable().map(forecast -> held.fromCache(forecast, Freshness.CACHED))
+                .orElseGet(() -> failure("no stored forecast that is still useful", false));
+    }
+
+    private boolean stillUseful(ForecastCache.Cached forecast) {
+        return forecast.age(now).compareTo(info.maxUsefulAge()) <= 0;
+    }
+
+    /** The end of the provider's cool-down while it lasts. */
+    private Optional<Instant> cooldownUntil() {
+        return cache.cooldownUntil(info.id()).filter(now::isBefore);
+    }
+
+    private Optional<Retry> waitingAfterFailure() {
+        return force ? Optional.empty()
+                : Optional.ofNullable(retryAt.get(info.id())).filter(retry -> now.isBefore(retry.at()));
     }
 
     /**
@@ -116,19 +149,20 @@ final class ProviderAttempt {
         } catch (ProviderError.RateLimited e) {
             var until = now.plus(e.retryAfter().orElse(info.minRefresh()));
             cache.saveCooldown(info.id(), until);
-            return afterFailure(e.getMessage(), secrets, held.inCooldownUntil(until));
+            return afterFailure(e.getMessage(), secrets, held.inCooldownUntil(until), false);
         } catch (ProviderError.Unavailable e) {
-            retryAt.put(info.id(), now.plus(RETRY_AFTER_UNAVAILABLE));
-            return afterFailure(e.getMessage(), secrets, held);
+            retryAt.put(info.id(), new Retry(now.plus(RETRY_AFTER_UNAVAILABLE), false));
+            return afterFailure(e.getMessage(), secrets, held, false);
         } catch (ProviderError e) {
-            retryAt.put(info.id(), now.plus(info.minRefresh())); // it answered: that request counted
-            return afterFailure(e.getMessage(), secrets, held);
+            boolean keyRefused = e instanceof ProviderError.KeyRefused;
+            retryAt.put(info.id(), new Retry(now.plus(info.minRefresh()), keyRefused)); // it answered: that counted
+            return afterFailure(e.getMessage(), secrets, held, keyRefused);
         } catch (RuntimeException e) {
             // a bug in a provider must not stop the app; its message may hold a secret, so only its kind is told
             var kind = e.getClass().getSimpleName();
             LOG.error("forecast provider " + info.id() + " failed unexpectedly (" + kind + ")");
-            retryAt.put(info.id(), now.plus(info.minRefresh()));
-            return afterFailure("an unexpected error (" + kind + ")", secrets, held);
+            retryAt.put(info.id(), new Retry(now.plus(info.minRefresh()), false));
+            return afterFailure("an unexpected error (" + kind + ")", secrets, held, false);
         }
     }
 
@@ -139,16 +173,17 @@ final class ProviderAttempt {
      * @param given the reason as the failure gave it, which may hold a secret value
      * @param secrets the secret values to keep out of the reason
      * @param held what the cache holds now, the cool-down just told included
+     * @param keyRefused true when the provider refused its API key
      * @return the last forecast as a stale one, or the failure with its redacted reason
      */
-    private ProviderOutcome afterFailure(String given, List<String> secrets, CacheState held) {
+    private ProviderOutcome afterFailure(String given, List<String> secrets, CacheState held, boolean keyRefused) {
         var reason = ProviderText.redacted(given, secrets);
         health.recordFailure(info, reason);
-        return held.stale().orElseGet(() -> failure(reason));
+        return held.stale().orElseGet(() -> failure(reason, keyRefused));
     }
 
-    private ProviderOutcome failure(String reason) {
-        return new ProviderOutcome.Failure(info.name() + ": " + reason);
+    private ProviderOutcome failure(String reason, boolean keyRefused) {
+        return new ProviderOutcome.Failure(info.name() + ": " + reason, keyRefused);
     }
 
     private static String clock(Instant moment, ZoneId zone) {

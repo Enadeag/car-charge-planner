@@ -24,7 +24,9 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -258,5 +260,117 @@ class AnnouncerTest {
         check(announcer, List.of(day(tomorrow, next)), now, 15);
 
         assertThat(announcer.announced()).isEqualTo(kept ? List.of(first, next) : List.of(next));
+    }
+
+    // when the next notice is due: the same windows and rules as the announcements
+
+    /** When the next notice is due with a forecast fetched five minutes before now and the given lead time. */
+    private static Optional<Instant> nextDue(Announcer announcer, List<DayPlan> days, Instant now, int leadMinutes) {
+        return announcer.nextDue(days, List.of(), forecast(now.minus(Duration.ofMinutes(5)), Freshness.CACHED), now,
+                config(leadMinutes));
+    }
+
+    @Test
+    void theNextNoticeIsDueAtTheFirstWindowsStartLessTheLeadTime() {
+        var days = dayWith(window(10, 12), window(16, 18));
+
+        assertThat(nextDue(announcer(), days, at(DAY, 7, 0), 15)).contains(at(DAY, 9, 45));
+        assertThat(nextDue(announcer(), days, at(DAY, 7, 0), 30)).contains(at(DAY, 9, 30));
+    }
+
+    @Test
+    void aWindowWithinItsLeadTimeThatWasNotAnnouncedIsDueNow() {
+        var now = at(DAY, 9, 50);
+        assertThat(nextDue(announcer(), dayWith(window(10, 12)), now, 15)).contains(now);
+    }
+
+    @Test
+    void anAnnouncedWindowIsNotDueAgainSoTheNextOneIs() {
+        var announcer = announcer();
+        var days = dayWith(window(10, 12), window(16, 18));
+        check(announcer, days, at(DAY, 9, 50), 15);
+
+        assertThat(nextDue(announcer, days, at(DAY, 9, 51), 15)).contains(at(DAY, 15, 45));
+        // a newer forecast moved the announced window a little: it still counts as announced
+        assertThat(nextDue(announcer, dayWith(window(DAY, 10, 5, 12), window(16, 18)), at(DAY, 9, 52), 15))
+                .contains(at(DAY, 15, 45));
+    }
+
+    @Test
+    void aWindowThatHasStartedIsNotDueAndWithoutOneToComeNothingIs() {
+        var days = dayWith(window(10, 12), window(16, 18));
+
+        assertThat(nextDue(announcer(), days, at(DAY, 10, 0), 15)).contains(at(DAY, 15, 45));
+        assertThat(nextDue(announcer(), days, at(DAY, 16, 0), 15)).isEmpty();
+        assertThat(nextDue(announcer(), List.of(), at(DAY, 7, 0), 15)).isEmpty();
+    }
+
+    @Test
+    void theNextDueIsAskedWithoutAnnouncingAnything() {
+        var announcer = announcer();
+        var days = dayWith(window(10, 12));
+        nextDue(announcer, days, at(DAY, 9, 50), 15);
+
+        assertThat(told).isEmpty();
+        assertThat(check(announcer, days, at(DAY, 9, 51), 15)).containsExactly(window(10, 12));
+    }
+
+    @Test
+    void theGridAdvicesWindowIsDueLikeTheSolarWindows() {
+        var grid = new Window(at(DAY, 5, 30), at(DAY, 6, 0), 13, 3.0, 0, 1.5);
+        var advice = new GridAdvice(DAY, 8, 22, 1.5, Optional.of(grid), Optional.of(new Percent(32)));
+        var now = at(DAY, 4, 0);
+
+        assertThat(announcer().nextDue(dayWith(window(6, 9)), advice, List.of(), forecast(now, Freshness.FRESH), now,
+                config(15))).contains(at(DAY, 5, 15));
+        var withoutWindow = new GridAdvice(DAY, 8, 22, 1.5, Optional.empty(), Optional.empty());
+        assertThat(announcer().nextDue(dayWith(window(6, 9)), withoutWindow, List.of(),
+                forecast(now, Freshness.FRESH), now, config(15))).contains(at(DAY, 5, 45));
+    }
+
+    @Test
+    void nothingIsDueOnAForecastThatCouldNotBeRefreshed() {
+        var now = at(DAY, 7, 0);
+
+        assertThat(announcer().nextDue(dayWith(window(10, 12)), List.of(), forecast(now, Freshness.STALE), now,
+                config(15))).isEmpty();
+    }
+
+    /** The window's notice is due at 09:45; the forecast is 6 hours old at the given time. */
+    @ParameterizedTest
+    @CsvSource({"3, 45, true", "3, 44, false"})
+    void aNoticeIsDueOnlyWhileTheForecastIsNotTooOldThen(int fetchedHour, int fetchedMinute, boolean due) {
+        var now = at(DAY, 7, 0);
+        var source = forecast(at(DAY, fetchedHour, fetchedMinute), Freshness.CACHED);
+
+        assertThat(announcer().nextDue(dayWith(window(10, 12)), List.of(), source, now, config(15)).isPresent())
+                .isEqualTo(due);
+    }
+
+    @Test
+    void aLaterWindowIsNotDueOnAForecastThatIsTooOldByThenThoughAnEarlierOneIs() {
+        var now = at(DAY, 7, 0);
+        var source = forecast(at(DAY, 6, 0), Freshness.CACHED);
+
+        assertThat(announcer().nextDue(dayWith(window(10, 12)), List.of(), source, now, config(15)))
+                .contains(at(DAY, 9, 45));
+        assertThat(announcer().nextDue(dayWith(window(13, 14)), List.of(), source, now, config(15))).isEmpty();
+    }
+
+    /** On the last Sunday of October Brussels turns its clocks back from 03:00 to 02:00. */
+    @Test
+    void theLeadTimeIsCountedInRealTimeOverAClockChange() {
+        var day = LocalDate.of(2026, 10, 25);
+        var start = day.atTime(3, 15).atZone(BRUSSELS).toInstant(); // 03:15 in winter time, 02:15 UTC
+        var night = new Window(start, start.plus(Duration.ofHours(2)), 16, 3.7, 0, 7.4);
+        var now = day.atStartOfDay(BRUSSELS).toInstant();
+
+        var due = announcer().nextDue(List.of(day(day, night)), List.of(), forecast(now, Freshness.FRESH), now,
+                config(90));
+
+        // 90 minutes before 02:15 UTC is 00:45 UTC: 02:45 in summer time, before the clocks went back
+        assertThat(due).contains(Instant.parse("2026-10-25T00:45:00Z"));
+        assertThat(due.orElseThrow().atZone(BRUSSELS).toLocalTime()).isEqualTo(LocalTime.of(2, 45));
+        assertThat(due.orElseThrow().atZone(BRUSSELS).getOffset()).isEqualTo(ZoneOffset.ofHours(2));
     }
 }

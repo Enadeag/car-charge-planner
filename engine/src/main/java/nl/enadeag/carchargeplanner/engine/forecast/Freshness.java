@@ -6,7 +6,9 @@ public enum Freshness {
     /** Fetched from the provider just now. */
     FRESH,
 
-    /** From the cache, fetched too recently to ask the provider again. */
+    /**
+     * From the cache, fetched too recently to ask the provider again, or while only the stored forecast may be used.
+     */
     CACHED,
 
     /** From the cache, because a refresh was due but could not be done; still young enough to use. */

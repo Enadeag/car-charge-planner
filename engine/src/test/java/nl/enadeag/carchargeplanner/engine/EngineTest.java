@@ -31,6 +31,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet.Reply;
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderError;
+import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import nl.enadeag.carchargeplanner.engine.forecast.Providers;
 import nl.enadeag.carchargeplanner.engine.forecast.Recorded;
@@ -80,6 +81,8 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class EngineTest {
 
@@ -977,5 +980,163 @@ class EngineTest {
     @Test
     void theProvidersAreOfferedInTheirOrder() {
         assertThat(engine(clockAt(7)).providers()).containsExactly(main.info(), backup.info());
+    }
+
+    // one round in public, as a client that plans at moments of its own calls it
+
+    @Test
+    void aRoundGivesThePlanAndTellsWhatIsDueOnce() {
+        var engine = engine(clockAt(9, 50));
+
+        var outlook = engine.round(ForecastUse.ASK_PROVIDERS);
+
+        assertThat(outlook).isInstanceOf(Outlook.Planned.class);
+        assertThat(told).extracting(announcement -> announcement.window().start())
+                .containsExactly(DAY.atTime(10, 0).atZone(BRUSSELS).toInstant());
+        engine.round(ForecastUse.ASK_PROVIDERS);
+        assertThat(told).hasSize(1);
+    }
+
+    @Test
+    void aRoundNeedsToKnowWhereItsForecastMayComeFrom() {
+        assertThatThrownBy(() -> engine(clockAt(7)).round(null)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void aRoundOnTheStoredForecastOnlyAsksNoProviderYetTellsWhatIsDue() {
+        engine(clockAt(7)).outlook();
+
+        var outlook = engine(clockAt(9, 50)).round(ForecastUse.STORED_ONLY);
+
+        assertThat(((Outlook.Planned) outlook).forecastSource())
+                .extracting(ForecastSource::fetchedAt, ForecastSource::freshness)
+                .containsExactly(clockAt(7).instant(), Freshness.CACHED);
+        assertThat(told).hasSize(1);
+        assertThat(main.callCount()).isEqualTo(1); // the refresh was due at 08:00, yet nobody is asked
+    }
+
+    @Test
+    void withoutAStoredForecastARoundOnTheStoredForecastOnlyHasNoForecastAndAsksNobody() {
+        var outlook = engine(clockAt(9, 50)).round(ForecastUse.STORED_ONLY);
+
+        assertThat(outlook).isInstanceOf(Outlook.NoForecast.class);
+        assertThat(main.callCount() + backup.callCount()).isZero();
+        assertThat(told).isEmpty();
+    }
+
+    /** Fetched at 03:49 or 03:50, the forecast is just over or exactly 6 hours old at 09:50. */
+    @ParameterizedTest
+    @CsvSource({"50, true", "49, false"})
+    void aRoundOnAStoredForecastTellsNothingOnceItIsMoreThanSixHoursOld(int fetchedMinute, boolean toldAny)
+            throws IOException {
+        // useful for 12 hours, so a forecast more than 6 hours old still makes a plan
+        var lasting = new FakeProvider(new ProviderInfo(new ProviderId("lasting"), "Lasting", "A scripted provider.",
+                "https://example.test/terms", "Forecast by Lasting", "Nothing.", Duration.ofHours(1),
+                Duration.ofDays(2), Duration.ofHours(12), List.of()), steps(days(2, 4.0)));
+        choose("lasting", "");
+        engine(clockAt(3, fetchedMinute), lasting).outlook();
+
+        var outlook = engine(clockAt(9, 50), lasting).round(ForecastUse.STORED_ONLY);
+
+        assertThat(outlook).isInstanceOf(Outlook.Planned.class);
+        assertThat(told.isEmpty()).isEqualTo(!toldAny);
+    }
+
+    @Test
+    void anOutlookWithoutAForecastNamesTheProviderThatRefusedItsKey() {
+        main.script(error(new ProviderError.KeyRefused("Main refused the request (status 401): check the API key")));
+        backup.script(error(new ProviderError.Unavailable("down")));
+
+        var outlook = engine(clockAt(7)).round(ForecastUse.ASK_PROVIDERS);
+
+        assertThat(outlook).isInstanceOfSatisfying(Outlook.NoForecast.class, none -> {
+            assertThat(none.keyRefusedBy()).containsExactly(new ProviderId("main"));
+            assertThat(none.keychainLocked()).isFalse();
+        });
+        assertThat(engine(clockAt(7)).outlook()).isInstanceOfSatisfying(Outlook.NoForecast.class,
+                none -> assertThat(none.keyRefusedBy()).containsExactly(new ProviderId("main")));
+    }
+
+    @Test
+    void anOutlookWithoutAForecastForAnotherReasonNamesNoRefusedKey() {
+        main.script(error(new ProviderError.Unavailable("down")));
+        backup.script(error(new ProviderError.BadResponse("odd")));
+
+        assertThat(engine(clockAt(7)).round(ForecastUse.ASK_PROVIDERS)).isInstanceOfSatisfying(
+                Outlook.NoForecast.class, none -> assertThat(none.keyRefusedBy()).isEmpty());
+    }
+
+    // when the next notice is due, for a client that wakes the device for it
+
+    @Test
+    void afterARoundTheNextNoticeIsDueAtTheWindowsStartLessTheLeadTime() {
+        var engine = engine(clockAt(7));
+
+        var due = engine.nextNoticeDue(engine.round(ForecastUse.ASK_PROVIDERS));
+
+        assertThat(due).contains(DAY.atTime(9, 45).atZone(BRUSSELS).toInstant());
+        assertThat(told).isEmpty();
+    }
+
+    @Test
+    void aLongerLeadTimeInTheConfigFileMakesTheNextNoticeDueSooner() throws IOException {
+        Files.writeString(config,
+                Files.readString(config).replace("\"notifyLeadMinutes\": 15", "\"notifyLeadMinutes\": 30"));
+        var engine = engine(clockAt(7));
+
+        assertThat(engine.nextNoticeDue(engine.round(ForecastUse.ASK_PROVIDERS)))
+                .contains(DAY.atTime(9, 30).atZone(BRUSSELS).toInstant());
+    }
+
+    @Test
+    void onceTodaysWindowIsAnnouncedTomorrowsWouldBeOnAForecastTooOldSoNothingIsDue() {
+        var engine = engine(clockAt(9, 50));
+
+        var due = engine.nextNoticeDue(engine.round(ForecastUse.ASK_PROVIDERS));
+
+        assertThat(told).hasSize(1);
+        assertThat(due).isEmpty(); // tomorrow's 09:45 is long after 15:50, when this forecast is 6 hours old
+    }
+
+    @Test
+    void theGridAdvicesWindowIsDueToo() throws IOException {
+        // without sun, 35 % falls below the minimum of 30 %: the grid charge starts at 07:00 tomorrow
+        main.script(steps(days(3, 0)));
+        var six = DAY.plusDays(1).atTime(6, 0).atZone(BRUSSELS).toInstant();
+        var engine = engine(Clock.fixed(six, ZoneOffset.UTC), main, backup);
+        engine.setBatteryLevel(new Percent(35));
+
+        assertThat(engine.nextNoticeDue(engine.round(ForecastUse.ASK_PROVIDERS)))
+                .contains(DAY.plusDays(1).atTime(6, 45).atZone(BRUSSELS).toInstant());
+    }
+
+    @Test
+    void nothingIsDueWithoutAPlan() throws IOException {
+        Files.delete(config);
+        var engine = engine(clockAt(7));
+
+        assertThat(engine.nextNoticeDue(engine.round(ForecastUse.ASK_PROVIDERS))).isEmpty();
+    }
+
+    @Test
+    void nothingIsDueOnAForecastThatCouldNotBeRefreshed() {
+        main.script(steps(days(2, 4.0)), error(new ProviderError.Unavailable("down")));
+        backup.script(error(new ProviderError.Unavailable("down")));
+        engine(clockAt(7)).outlook();
+        var engine = engine(clockAt(9));
+
+        var outlook = engine.round(ForecastUse.ASK_PROVIDERS);
+
+        assertThat(((Outlook.Planned) outlook).forecastSource().freshness()).isEqualTo(Freshness.STALE);
+        assertThat(engine.nextNoticeDue(outlook)).isEmpty();
+    }
+
+    @Test
+    void nothingIsDueWhenTheConfigFileCannotBeUsedAnyMore() throws IOException {
+        var engine = engine(clockAt(7));
+        var outlook = engine.round(ForecastUse.ASK_PROVIDERS);
+        Files.writeString(config, "{");
+
+        assertThat(engine.nextNoticeDue(outlook)).isEmpty();
     }
 }

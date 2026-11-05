@@ -29,11 +29,12 @@ class ConnectionCheckTest {
 
     /** Java 17's compiler no longer checks that describe covers every error; this does. */
     @Test
-    void theErrorsAreTheFourTheCheckDescribes() {
+    void theErrorsAreTheFiveTheCheckDescribes() {
         assertThat(ProviderError.class.getPermittedSubclasses())
                 .as("a new error needs a branch in ConnectionCheck.describe")
                 .containsExactlyInAnyOrder(ProviderError.Unavailable.class, ProviderError.RateLimited.class,
-                        ProviderError.BadResponse.class, ProviderError.MissingSetting.class);
+                        ProviderError.BadResponse.class, ProviderError.MissingSetting.class,
+                        ProviderError.KeyRefused.class);
     }
 
     @Test
@@ -67,7 +68,10 @@ class ConnectionCheckTest {
                         "Could not get a forecast from Main: could not reach Main (ConnectException)"),
                 Arguments.of(new ProviderError.MissingSetting("the server address must start with https://"),
                         "Main is not set up completely: the server address must start with https://"),
-                Arguments.of(new ProviderError.BadResponse("odd"), "Main gave an answer the app does not understand: odd"));
+                Arguments.of(new ProviderError.BadResponse("odd"), "Main gave an answer the app does not understand: odd"),
+                Arguments.of(new ProviderError.KeyRefused("Main refused the request (status 401): check the API key"),
+                        "Main gave an answer the app does not understand: Main refused the request (status 401): "
+                                + "check the API key"));
     }
 
     @ParameterizedTest
