@@ -177,11 +177,14 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          # names the emulator action's version: update it with the action's pin, so a new version makes a new AVD
+          # names the emulator action's version: update it with the action's pin, so a new version makes a new AVD. A
+          # Dependabot pull request that bumps the emulator action must bump this suffix too, in the same pull request.
           key: avd-29-default-x86_64-emulator-runner-v2.38.0
-      # On a cache miss: boot the new AVD once and keep its snapshot, so the next runs start from it.
+      # On a cache miss: boot the new AVD once and keep its snapshot, so the next runs start from it. A timeout but no
+      # reaper (see the next step): the emulator saves the snapshot as it stops, and a kill could cut that short.
       - name: Create the AVD and its snapshot
         if: steps.avd-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 15
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 29
@@ -194,7 +197,49 @@ jobs:
       # api-level, target and arch the same as in the snapshot step, or the snapshot does not match the AVD. Each script
       # line runs in a shell of its own; logcat runs in the background, apart from the step's output, until the emulator
       # stops.
+      #
+      # The reaper (#357), started by the script's last line: the action starts the emulator with its own output pipes,
+      # and the emulator's processes, crashpad_handler among them, inherit them; one that outlives `emu kill` keeps the
+      # action, and so the step, running until the job's timeout (upstream
+      # https://github.com/ReactiveCircus/android-emulator-runner/issues/385, cause and fix in the open
+      # https://github.com/ReactiveCircus/android-emulator-runner/pull/497). The reaper is detached, with none of the
+      # step's streams, so it does not hold a pipe itself. It lists the emulator's processes, and adb's, in
+      # build/emulator-processes.txt, waits 40 seconds (the emulator gives itself 20 after `emu kill`), lists them again,
+      # sends SIGTERM to crashpad_handler, and 5 seconds later SIGKILL to every process left whose program is in the
+      # SDK's emulator directory, then lists them a last time. It runs only after the tests pass, as the action stops at
+      # the first line that fails. The reaper can go once a release of the action fixes the hang. The step's timeout
+      # turns a hang that comes back into a fast failure, also when the tests passed.
       - name: Instrumented tests on API 29
+        timeout-minutes: 15
+        env:
+          REAPER: |
+            list() {
+              {
+                echo "== $1, $(date -u +%H:%M:%S)"
+                ps -eo pid,ppid,pgid,etime,args | awk -v me="$$" 'NR == 1 || ($1 != me && /[q]emu|[c]rashpad|[n]etsim|[e]mulator|[a]db/)'
+              } >> build/emulator-processes.txt
+            }
+            emulator_pids() {
+              for proc in /proc/[0-9]*; do
+                case "$(readlink "$proc/exe" 2> /dev/null)" in
+                  "$dir"/*) echo "${proc#/proc/}" ;;
+                esac
+              done
+            }
+            dir=$(readlink -f "${ANDROID_HOME:?}/emulator") && [ -d "$dir" ] || exit 1
+            list "the tests are done"
+            sleep 40
+            list "40 seconds later"
+            for pid in $(emulator_pids); do
+              case "$(readlink "/proc/$pid/exe" 2> /dev/null)" in
+                */crashpad_handler) kill -TERM "$pid" ;;
+              esac
+            done
+            sleep 5
+            pids=$(emulator_pids)
+            if [ -n "$pids" ]; then kill -KILL $pids; fi
+            sleep 1
+            list "after the kill"
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 29
@@ -208,6 +253,7 @@ jobs:
             mkdir -p build
             adb logcat -v threadtime < /dev/null > build/logcat.txt 2>&1 &
             ./gradlew --continue --stacktrace :app:connectedDebugAndroidTest
+            setsid nohup sh -c "$REAPER" < /dev/null > /dev/null 2>&1 &
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -216,4 +262,5 @@ jobs:
             android/app/build/reports/androidTests/
             android/app/build/outputs/androidTest-results/
             android/build/logcat.txt
+            android/build/emulator-processes.txt
           retention-days: 7
