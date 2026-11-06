@@ -11,11 +11,15 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.nio.file.Path
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import nl.enadeag.carchargeplanner.android.home.Plans
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
@@ -57,6 +61,17 @@ class MainActivityOnTheHomeTest {
     private val app = ApplicationProvider.getApplicationContext<CarChargePlannerApp>()
     private val manager = app.getSystemService(NotificationManager::class.java)
 
+    /**
+     * Runs work on the phone's stores in the app's scope until it ends, while the main thread goes on, as the screen
+     * reads the same stores from it: blocking the main thread meanwhile could hold a read of the screen's up forever.
+     */
+    private fun offTheMainThread(work: suspend () -> Unit) {
+        val running = app.scope.async { work() }
+        compose.waitUntil(10_000) { running.isCompleted }
+        // done by now: this only hands on a failure
+        runBlocking { running.await() }
+    }
+
     /** Gives the home a plan without a problem, as the engine's answer to its first question. */
     private fun planned() {
         compose.waitUntil(10_000) { access.outlooks.isNotEmpty() }
@@ -86,28 +101,34 @@ class MainActivityOnTheHomeTest {
     }
 
     @Test
-    fun settingsForecastPageHasTheWifiOnlySwitch() {
+    fun settingsForecastPageHasTheWifiOnlySwitchWhichSwitchesThePhonesSetting() {
         planned()
 
         compose.onNodeWithContentDescription(text(R.string.home_settings)).performClick()
         compose.waitForIdle()
         compose.onNodeWithText(text(R.string.settings_forecast)).performClick()
         compose.waitForIdle()
-
         compose.onNode(hasText(text(R.string.forecast_wifi_only)) and
-            SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch)).assertExists()
+            SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch)).performScrollTo().performClick()
+
+        offTheMainThread { app.phoneSettings.on.first { it } }
     }
 
     @Test
     fun aPlanWithoutTheProblemEndsTheProblemsEpisodeOnTheDashboard() {
         shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
         val unusable = Outlook.ConfigUnusable(ConfigProblem.Kind.INVALID, Path.of("engine.json"), "detail")
-        runBlocking { app.problems.afterRound(unusable, ForecastUse.ASK_PROVIDERS) }
+        offTheMainThread { app.problems.afterRound(unusable, ForecastUse.ASK_PROVIDERS) }
         assertThat(shadowOf(manager).getNotification("problems", 0)).isNotNull()
 
         planned()
 
-        compose.waitUntil(10_000) { shadowOf(manager).getNotification("problems", 0) == null }
-        assertThat(runBlocking { app.phoneState.episodeStarted() }).isFalse()
+        // the flag is written after the notification went, on another thread, so it is the one waited for
+        offTheMainThread {
+            while (app.phoneState.episodeStarted()) {
+                delay(10)
+            }
+        }
+        assertThat(shadowOf(manager).getNotification("problems", 0)).isNull()
     }
 }

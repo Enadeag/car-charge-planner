@@ -9,11 +9,13 @@ import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
 import java.util.Optional
+import nl.enadeag.carchargeplanner.android.notify.NoticePlan
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.config.Phases
 import nl.enadeag.carchargeplanner.engine.notify.Announcement
 import nl.enadeag.carchargeplanner.engine.notify.AnnouncementKind
 import nl.enadeag.carchargeplanner.engine.notify.BatteryCheck
+import nl.enadeag.carchargeplanner.engine.notify.Notice
 import nl.enadeag.carchargeplanner.engine.notify.TripChargeStart
 import nl.enadeag.carchargeplanner.engine.notify.TripShort
 import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge
@@ -52,6 +54,9 @@ class NoticeWordsTest {
         }).resources
         return NoticeWords(resources, locale, twentyFour)
     }
+
+    /** A notice's words with what its plan shows on a locked screen, as the notifications ask them. */
+    private fun NoticeWords.of(notice: Notice): NoticeText = of(notice, NoticePlan.of(notice).lockScreen)
 
     private fun solar() = Announcement(AnnouncementKind.SOLAR_WINDOW, window, amsterdam, Phases.ONE, Percent(30.0),
         Optional.empty())

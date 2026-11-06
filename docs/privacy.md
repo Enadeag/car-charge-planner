@@ -47,7 +47,9 @@ In the Android app, which is not released yet, the engine's files (the settings 
 | The phone's own settings: **Wi-Fi only** (Settings, Forecast), whether the hourly update while the app is closed waits for Wi-Fi | `settings.preferences_pb` | Yes |
 | The notifications' state on this phone: whether you closed the dashboard's card about notifications, whether you refused Android's question for them, and whether a "Forecast not updated" notification was posted | `state.preferences_pb` | No: it belongs to this phone, where notifications are allowed or not |
 
-The Android app's notifications go through Android's own notification service on the phone, like any app's; they are not sent anywhere else, and their words are made on the phone.
+If one of these files is damaged, the app starts it again empty: **Wi-Fi only** is then off until you switch it on again.
+
+The Android app's notifications go through Android's own notification service on the phone, like any app's, and their words are made on the phone; the app sends them nowhere else. Like any app's notifications, they are also seen by a watch paired with the phone and by an app you gave access to your notifications.
 
 ### API keys
 

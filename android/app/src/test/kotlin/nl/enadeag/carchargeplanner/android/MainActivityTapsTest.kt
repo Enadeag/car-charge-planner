@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -155,6 +156,19 @@ class MainActivityTapsTest {
         planned()
 
         assertThat(shadowOf(manager).getNotification("battery_check:${departure.epochSecond}", 0)).isNotNull()
+    }
+
+    @Test
+    fun anIntentWhoseDataIsNoNoticeTakesNoNotificationAway() {
+        val departure = Instant.parse("2026-06-07T12:00:00Z")
+        val tag = "battery_check:${departure.epochSecond}"
+        batteryCheck(departure)
+
+        // the same words as a notice's tag, under another scheme
+        launch(tap(null).setData(Uri.fromParts("other", tag, null)))
+        planned()
+
+        assertThat(shadowOf(manager).getNotification(tag, 0)).isNotNull()
     }
 
     @Test

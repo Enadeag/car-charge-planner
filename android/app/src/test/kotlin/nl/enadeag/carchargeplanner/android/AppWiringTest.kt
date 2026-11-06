@@ -52,6 +52,22 @@ class AppWiringTest {
     }
 
     @Test
+    fun theAppsStoresReplaceAFileThatCannotBeParsedSoTheirWritesAreKeptAgain() {
+        onDisk {
+            for (name in listOf("settings", "state")) {
+                File(app.filesDir, "datastore/$name.preferences_pb").apply { parentFile?.mkdirs() }
+                    .writeBytes(byteArrayOf(0x7f, 0x13, 0x00, 0x42, 0x55))
+            }
+        }
+
+        app.phoneSettings.switch(true)
+        runBlocking { app.phoneState.close() }
+
+        runBlocking { withTimeout(5_000) { app.phoneSettings.on.first { it } } }
+        assertThat(runBlocking { app.phoneState.closed() }).isTrue()
+    }
+
+    @Test
     fun theProblemsEpisodeIsKeptInTheStateFileAndShownByTheAppsNotifications() {
         shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
         val unusable = Outlook.ConfigUnusable(ConfigProblem.Kind.INVALID, Path.of("engine.json"), "detail")

@@ -47,10 +47,10 @@ internal class NoticeWords(private val resources: Resources, private val locale:
      * The words of a notice.
      *
      * @param notice what the engine tells the owner
-     * @return its title, its text, and what a locked screen shows: "Charge window soon" for a window, the title for
-     *     what a trip asks
+     * @param lockScreen what a locked screen shows of it, as its [NoticePlan] says
+     * @return its title, its text, and what a locked screen shows: "Charge window soon", or the title
      */
-    fun of(notice: Notice): NoticeText {
+    fun of(notice: Notice, lockScreen: LockScreen): NoticeText {
         val words = DashboardWords(resources, locale, twentyFour, notice.zone())
         val (title, body) = when (notice) {
             is Announcement -> announcement(notice, words)
@@ -62,7 +62,7 @@ internal class NoticeWords(private val resources: Resources, private val locale:
                 weekday(notice.trip(), notice.zone(), words), words.time(notice.trip().departure()),
                 words.whole(ceil(notice.kmShort())))
         }
-        val shown = when (NoticePlan.of(notice).lockScreen) {
+        val shown = when (lockScreen) {
             LockScreen.WINDOW_SOON -> text(R.string.notice_window_soon)
             LockScreen.TITLE -> title
         }

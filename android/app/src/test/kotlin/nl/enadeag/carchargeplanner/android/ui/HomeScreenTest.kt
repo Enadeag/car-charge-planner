@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -49,6 +50,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.SavedStateHandle
@@ -207,12 +209,14 @@ class HomeScreenTest {
     private val page = SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange)
 
     /** Monday in Lisbon, with two windows today, none on Tuesday and one on Wednesday. */
-    private fun lisbonWeek(gridAdvice: GridAdvice? = null, freshness: Freshness = Freshness.FRESH) = Plans.planned(
+    private fun lisbonWeek(gridAdvice: GridAdvice? = null, freshness: Freshness = Freshness.FRESH,
+        keyRefusedBy: List<ProviderId> = listOf()) = Plans.planned(
         today.atTime(9, 0).atZone(lisbon), listOf(
             listOf(Plans.window(lisbon, today, 13, 15), Plans.window(lisbon, today, 16, 17)),
             listOf(),
             listOf(Plans.window(lisbon, today.plusDays(2), 11, 12, importKwh = 0.3))),
-        gridAdvice = gridAdvice, source = Plans.source(today.atTime(8, 51).atZone(lisbon).toInstant(), freshness))
+        gridAdvice = gridAdvice, source = Plans.source(today.atTime(8, 51).atZone(lisbon).toInstant(), freshness,
+            keyRefusedBy = keyRefusedBy))
 
     /** Sun from 07:00 to 18:00 on every day, at most 3.2 kW at noon. */
     private val sun = DoubleArray(24) { hour -> if (hour == 12) 3.2 else if (hour in 7..17) 2.0 else 0.0 }
@@ -658,6 +662,67 @@ class HomeScreenTest {
         compose.onNodeWithText(text(R.string.key_refused_warning, "Open-Meteo")).assertDoesNotExist()
     }
 
+    @Test
+    fun withoutAPlanARefusedKeyIsSaidAboveNoForecast() {
+        show(Outlook.NoForecast("Open-Meteo: 401 Unauthorized", false, listOf(ProviderId("open-meteo"))))
+
+        val warning = text(R.string.key_refused_warning, "Open-Meteo")
+        compose.onNodeWithText(warning).assertIsDisplayed()
+        assertThat(compose.liveRegionOf(warning)).isEqualTo(LiveRegionMode.Polite)
+        assertThat(top(warning)).isLessThan(top(text(R.string.no_forecast)))
+        compose.onNodeWithText(text(R.string.details_in_english, "Open-Meteo: 401 Unauthorized")).assertExists()
+    }
+
+    @Test
+    fun aForecastWithoutDaysSaysARefusedKeyToo() {
+        show(Plans.planned(today.atTime(9, 0).atZone(lisbon), listOf(), source = Plans.source(
+            today.atTime(8, 51).atZone(lisbon).toInstant(), keyRefusedBy = listOf(ProviderId("open-meteo")))))
+
+        compose.onNodeWithText(text(R.string.key_refused_warning, "Open-Meteo")).assertIsDisplayed()
+    }
+
+    @Test
+    fun withoutAPlanOrARefusedKeyThereIsNoSuchWarning() {
+        show(Outlook.NoForecast("Open-Meteo: no network"))
+
+        compose.onNodeWithText(text(R.string.key_refused_warning, "Open-Meteo")).assertDoesNotExist()
+        compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion)).assertDoesNotExist()
+    }
+
+    @Test
+    fun onALaterDayTheRefusedKeyAndTheCardShowOnceEach() {
+        clock("24")
+        show(lisbonWeek(keyRefusedBy = listOf(ProviderId("open-meteo"))), card = card())
+
+        tab("Wednesday").performClick()
+        compose.waitForIdle()
+
+        tab("Wednesday").assertIsSelected()
+        compose.onAllNodesWithText(text(R.string.key_refused_warning, "Open-Meteo")).assertCountEquals(1)
+        compose.onNodeWithText(text(R.string.key_refused_warning, "Open-Meteo")).assertIsDisplayed()
+        compose.onAllNodesWithText(text(R.string.notification_card_title)).assertCountEquals(1)
+        compose.onNodeWithText(text(R.string.notification_card_title)).assertIsDisplayed()
+    }
+
+    @Test
+    fun halfWayBetweenTwoDaysTheRefusedKeyAndTheCardAreStillOneEach() {
+        show(lisbonWeek(keyRefusedBy = listOf(ProviderId("open-meteo"))), card = card())
+        compose.mainClock.autoAdvance = false
+
+        compose.onNode(page).performTouchInput {
+            down(center)
+            moveBy(Offset(-width / 2f, 0f))
+        }
+        compose.mainClock.advanceTimeByFrame()
+        compose.mainClock.advanceTimeByFrame()
+
+        assertThat(compose.onAllNodes(page).fetchSemanticsNodes()).hasSize(2)
+        compose.onAllNodesWithText(text(R.string.key_refused_warning, "Open-Meteo")).assertCountEquals(1)
+        compose.onAllNodesWithText(text(R.string.notification_card_title)).assertCountEquals(1)
+        compose.onAllNodes(page).onFirst().performTouchInput { up() }
+        compose.mainClock.autoAdvance = true
+    }
+
     /** The card for a phone whose notifications are not allowed. */
     private fun card(memory: Memory = Memory(), canAsk: Boolean = true) =
         NotificationCard(memory, { false }, canAsk, scope)
@@ -718,6 +783,84 @@ class HomeScreenTest {
         compose.onNodeWithText(text(R.string.notification_card_ask)).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.notification_card_no_ask)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.notification_card_open_settings)).assertIsDisplayed()
+        // the button the focus was on is gone, so the card's title takes it
+        compose.onNode(isHeading() and hasText(text(R.string.notification_card_title))).assertIsFocused()
+    }
+
+    @Test
+    fun aCardThatLeadsToTheSettingsFromTheStartLeavesTheFocusWithTheHomesTitle() {
+        show(lisbonWeek(), card = card(Memory(refused = true)))
+
+        compose.onNode(title).assertIsFocused()
+        compose.onNode(isHeading() and hasText(text(R.string.notification_card_title))).assertIsNotFocused()
+    }
+
+    @Test
+    fun theNotificationCardIsReadTitleTextButtonAndCloseLast() {
+        show(lisbonWeek(), card = card())
+
+        val close = compose.onNode(hasContentDescription(text(R.string.action_close)) and hasClickAction())
+            .fetchSemanticsNode()
+        val group = generateSequence(close.parent) { it.parent }
+            .first { it.config.getOrNull(SemanticsProperties.IsTraversalGroup) == true }
+        val inGroup = hasAnyAncestor(SemanticsMatcher("in the card's group") { it.id == group.id })
+        val read = listOf(isHeading() and hasText(text(R.string.notification_card_title)),
+            hasText(text(R.string.notification_card_body)), hasText(text(R.string.notification_card_ask)) and
+                hasClickAction()).map { compose.onNode(it and inGroup).fetchSemanticsNode() }
+        // within the card's group the order is by this index first, then by place: Close, beside the title, is last
+        read.forEach {
+            assertThat(it.config.getOrNull(SemanticsProperties.TraversalIndex) ?: 0f)
+                .isLessThan(close.config[SemanticsProperties.TraversalIndex])
+        }
+        assertThat(read.map { it.positionInRoot.y }).isSorted()
+    }
+
+    /** Shows the card at twice the font size and checks that its button's words break only where a space is. */
+    private fun assertTheCardsButtonBreaksOnlyBetweenWords(memory: Memory, button: Int) {
+        show(lisbonWeek(), fontScaleTwo = true, card = card(memory))
+        val words = text(button)
+        val layouts = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText(words, useUnmergedTree = true).performScrollTo().fetchSemanticsNode()
+            .config[SemanticsActions.GetTextLayoutResult].action!!.invoke(layouts)
+        val layout = layouts.single()
+        val breaks = (0 until layout.lineCount - 1).map { layout.getLineEnd(it) }
+        assertThat(breaks.filter { words[it - 1] != ' ' }).`as`("the breaks inside a word of \"%s\"", words).isEmpty()
+        assertThat((0 until layout.lineCount).filter { layout.isLineEllipsized(it) })
+            .`as`("the lines of \"%s\" that end in an ellipsis", words).isEmpty()
+        assertThat(layout.didOverflowHeight).`as`("whether \"%s\" is cut off below", words).isFalse()
+    }
+
+    @Test
+    @Config(qualifiers = "nl-w320dp-h640dp")
+    fun onANarrowPhoneInDutchAtTwiceTheFontSizeTheAskButtonBreaksOnlyBetweenWords() =
+        assertTheCardsButtonBreaksOnlyBetweenWords(Memory(), R.string.notification_card_ask)
+
+    @Test
+    @Config(qualifiers = "nl-w320dp-h640dp")
+    fun onANarrowPhoneInDutchAtTwiceTheFontSizeTheSettingsButtonBreaksOnlyBetweenWords() =
+        assertTheCardsButtonBreaksOnlyBetweenWords(Memory(refused = true), R.string.notification_card_open_settings)
+
+    @Test
+    @Config(qualifiers = "nl")
+    fun theNotificationCardAndTheRefusedKeyAreInDutch() {
+        show(lisbonWeek(keyRefusedBy = listOf(ProviderId("open-meteo"))), card = card())
+
+        compose.onNode(isHeading() and hasText("Krijg een melding vóór elk laadvenster")).assertExists()
+        compose.onNodeWithText("De app meldt het kort voordat een laadvenster begint, zodat je je laadpaal op tijd " +
+            "kunt instellen. Dat kun je later wijzigen bij Meldingen in Instellingen.").assertExists()
+        compose.onNode(hasText("Meldingen aanzetten") and hasClickAction()).assertExists()
+        compose.onNode(hasContentDescription("Sluiten") and hasClickAction()).assertExists()
+        compose.onNodeWithText("Open-Meteo weigert de API-sleutel. Controleer de sleutel bij Voorspelling in " +
+            "Instellingen.").assertExists()
+    }
+
+    @Test
+    @Config(qualifiers = "nl")
+    fun afterARefusalTheNotificationCardIsInDutch() {
+        show(lisbonWeek(), card = card(Memory(refused = true)))
+
+        compose.onNodeWithText("Android vraagt het niet nog een keer. Zet meldingen daar aan.").assertExists()
+        compose.onNode(hasText("Instellingen voor meldingen openen") and hasClickAction()).assertExists()
     }
 
     @Test

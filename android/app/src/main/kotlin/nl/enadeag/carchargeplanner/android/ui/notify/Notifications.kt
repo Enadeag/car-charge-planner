@@ -48,17 +48,16 @@ internal class Notifications(private val context: Context, private val clock: Cl
     private val manager = NotificationManagerCompat.from(context)
 
     override fun announce(notice: Notice) {
-        val kind = NoticePlan.kindOf(notice)
-        post(kind) {
-            val plan = NoticePlan.of(notice)
+        val plan = NoticePlan.of(notice)
+        post(plan.kind) {
             val stay = plan.stayFrom(clock.instant()) ?: return@post null
-            val text = words().of(notice)
-            val builder = builder(plan.channel, text, plan.tap, plan.tag)
+            val words = words()
+            val builder = builder(plan.channel, words.of(notice, plan.lockScreen), plan.tap, plan.tag)
                 .setCategory(NotificationCompat.CATEGORY_REMINDER)
                 .setTimeoutAfter(stay.toMillis())
                 .setOnlyAlertOnce(plan.alertOnce)
             if (plan.tap == Tap.BATTERY_ENTRY) {
-                builder.addAction(0, words().enterLevel(), open(Tap.BATTERY_ENTRY, plan.tag))
+                builder.addAction(0, words.enterLevel(), open(Tap.BATTERY_ENTRY, plan.tag))
             }
             plan.tag to builder.build()
         }
@@ -107,14 +106,10 @@ internal class Notifications(private val context: Context, private val clock: Cl
         DateFormat.is24HourFormat(context))
 
     private fun builder(channel: NoticeChannel, text: NoticeText, tap: Tap, tag: String): NotificationCompat.Builder {
-        val shown = NotificationCompat.Builder(context, channel.id)
-            .setSmallIcon(R.drawable.ic_stat_charge)
-            .setColor(ContextCompat.getColor(context, R.color.ic_launcher_background))
+        val shown = start(channel)
             .setContentTitle(text.publicTitle)
             .build()
-        return NotificationCompat.Builder(context, channel.id)
-            .setSmallIcon(R.drawable.ic_stat_charge)
-            .setColor(ContextCompat.getColor(context, R.color.ic_launcher_background))
+        return start(channel)
             .setContentTitle(text.title)
             .setContentText(text.body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text.body))
@@ -123,6 +118,12 @@ internal class Notifications(private val context: Context, private val clock: Cl
             .setAutoCancel(true)
             .setContentIntent(open(tap, tag))
     }
+
+    /** A notification in the channel with the app's small icon and accent, as both versions of one start. */
+    private fun start(channel: NoticeChannel): NotificationCompat.Builder =
+        NotificationCompat.Builder(context, channel.id)
+            .setSmallIcon(R.drawable.ic_stat_charge)
+            .setColor(ContextCompat.getColor(context, R.color.ic_launcher_background))
 
     /**
      * The app's activity, straight, without anything another app could fill in. The notification's tag goes along as

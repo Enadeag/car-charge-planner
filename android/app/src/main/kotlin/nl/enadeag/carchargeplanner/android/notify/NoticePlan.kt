@@ -74,6 +74,10 @@ data class NoticePlan(val tag: String, val channel: NoticeChannel, val timeoutAt
      */
     fun stayFrom(now: Instant): Duration? = Duration.between(now, timeoutAt).takeIf { !it.isNegative && !it.isZero }
 
+    /** The notice's kind as a log names it, without anything of its contents, such as "solar_window". */
+    val kind: String
+        get() = tag.substringBefore(':')
+
     companion object {
 
         /** The fixed tag of the Problems notification, of which there is at most one. */
@@ -105,14 +109,6 @@ data class NoticePlan(val tag: String, val channel: NoticeChannel, val timeoutAt
             is TripShort -> NoticePlan(tag("trip_short", notice.trip().departure()), NoticeChannel.BATTERY_TRIP_CHECKS,
                 notice.trip().departure(), LockScreen.TITLE, Tap.DASHBOARD, true)
         }
-
-        /**
-         * A notice's kind as a log names it, without anything of its contents.
-         *
-         * @param notice the notice
-         * @return such as "solar_window" or "battery_check"
-         */
-        fun kindOf(notice: Notice): String = of(notice).tag.substringBefore(':')
 
         private fun tag(kind: String, moment: Instant) = "$kind:${moment.epochSecond}"
     }

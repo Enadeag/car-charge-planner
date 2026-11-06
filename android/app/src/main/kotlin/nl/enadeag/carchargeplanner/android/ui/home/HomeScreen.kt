@@ -6,6 +6,7 @@ import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -29,6 +30,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.SnackbarDuration
@@ -59,8 +61,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -107,8 +111,8 @@ import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
  * goes back to the button that opened it. Each day's "Car away" list has Add, which opens the entry of a one-off away
  * period on that day, and a Remove per period, which acts at once; a change says so in a snackbar, Remove's with Undo,
  * and the list shows the stored periods at once while the plan is made again. A provider that refused its API key
- * gets a warning in the stale warning's place. While notifications are not allowed, a card asks for them, after the
- * warnings and before the day; it is looked at again each time the owner comes back to the app.
+ * gets a warning in the stale warning's place, also without a plan. While notifications are not allowed, a card asks
+ * for them, after the warnings and before the day; it is looked at again each time the owner comes back to the app.
  *
  * @param outlook the plan it shows
  * @param notice the outcome of a Settings save not shown yet
@@ -163,6 +167,7 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
             }
             else -> Refreshable(refreshing, outlook::refresh) {
                 Notice(notice, closed)
+                KeyRefused(keyRefusedBy(now))
                 askCard()
                 NoPlan(now, outlook::refresh)
             }
@@ -358,8 +363,8 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
                 if (index == selected && dashboard.footer.stale) {
                     Warning(listOf(stringResource(R.string.stale_warning, words.time(dashboard.footer.fetchedAt))))
                 }
-                if (index == selected && dashboard.keyRefusedBy.isNotEmpty()) {
-                    Warning(dashboard.keyRefusedBy.map { stringResource(R.string.key_refused_warning, it) })
+                if (index == selected) {
+                    KeyRefused(dashboard.keyRefusedBy)
                 }
                 if (index == selected) {
                     card()
@@ -580,6 +585,26 @@ private fun Warning(lines: List<String>) {
     }
 }
 
+/**
+ * The warning that providers refused their API key, a line per provider, also without a plan; nothing when none did.
+ *
+ * @param names the providers' names, in the order they were asked
+ */
+@Composable
+private fun KeyRefused(names: List<String>) {
+    if (names.isNotEmpty()) {
+        Warning(names.map { stringResource(R.string.key_refused_warning, it) })
+    }
+}
+
+/** The providers that refused their API key, by name, for the home without a plan; none while it is asked. */
+private fun keyRefusedBy(state: HomeOutlook.State): List<String> = when (state) {
+    is HomeOutlook.State.NoForecast -> state.keyRefusedBy
+    is HomeOutlook.State.NoDays -> state.keyRefusedBy
+    is HomeOutlook.State.Planned -> state.dashboard.keyRefusedBy
+    HomeOutlook.State.Asking -> listOf()
+}
+
 /** The forecast's credit, which stays in the provider's English, its source and freshness. */
 @Composable
 private fun FooterLine(footer: Footer, words: DashboardWords) {
@@ -641,8 +666,9 @@ private fun Notice(notice: HomeNotice, closed: () -> Unit) {
 /**
  * The card that asks for notifications while they are not allowed: what they are for and where to change it later,
  * and one button that asks Android, or, when Android will not ask, opens the app's notification settings, with a line
- * that says why. It is one card that scrolls with the page and is no live region; × closes it for good, and the focus
- * then goes on, as the card is gone.
+ * that says why. It is one card that scrolls with the page and is no live region; a screen reader reads its title, its
+ * text, its button and last its ×, which closes it for good, after which the focus goes on, as the card is gone. When
+ * a refusal swaps the button for the other one, the focus goes to the card's title, as the button it was on is gone.
  *
  * @param card what the card shows, and its answers
  * @param closed moves the focus once the card is closed
@@ -655,14 +681,26 @@ private fun NotificationsCard(card: NotificationCard, closed: () -> Unit) {
     }
     val context = LocalContext.current
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission(), card::answered)
+    val title = remember { FocusRequester() }
+    val before = remember { ShownBefore(shown) }
+    LaunchedEffect(shown) {
+        if (before.shown == NotificationCard.Shown.ASK && shown == NotificationCard.Shown.OPEN_SETTINGS) {
+            title.requestFocus()
+        }
+        before.shown = shown
+    }
     Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(16.dp).semantics { isTraversalGroup = true },
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.notification_card_title), style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f).semantics { heading() })
-                BarIconButton(Icons.Filled.Close, stringResource(R.string.action_close)) {
+                    modifier = Modifier.weight(1f).focusRequester(title).focusable().semantics { heading() })
+                // beside the title for the eye, but read last, after the button; drawn at 48 dp, not Material's 40
+                IconButton(onClick = {
                     card.close()
                     closed()
+                }, modifier = Modifier.size(48.dp).semantics { traversalIndex = 1f }) {
+                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_close))
                 }
             }
             Text(stringResource(R.string.notification_card_body))
@@ -684,6 +722,13 @@ private fun NotificationsCard(card: NotificationCard, closed: () -> Unit) {
         }
     }
 }
+
+/**
+ * What the notification card showed when last looked at, which drawing never reads.
+ *
+ * @property shown what it showed
+ */
+private class ShownBefore(var shown: NotificationCard.Shown)
 
 /** The dashboard's words in the app's language and the phone's clock, with the times in this zone. */
 @Composable

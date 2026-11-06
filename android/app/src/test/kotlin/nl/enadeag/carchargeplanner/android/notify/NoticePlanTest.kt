@@ -100,8 +100,8 @@ class NoticePlanTest {
 
     @Test
     fun theKindAloneNamesANoticeInTheLog() {
-        assertThat(NoticePlan.kindOf(BatteryCheck(trip, Percent(40.0), zone))).isEqualTo("battery_check")
-        assertThat(NoticePlan.kindOf(grid())).isEqualTo("grid_charge")
+        assertThat(NoticePlan.of(BatteryCheck(trip, Percent(40.0), zone)).kind).isEqualTo("battery_check")
+        assertThat(NoticePlan.of(grid()).kind).isEqualTo("grid_charge")
     }
 
     @Test

@@ -243,7 +243,7 @@
   <string name="notification_card_title">Krijg een melding vóór elk laadvenster</string>
   <string name="notification_card_body">De app meldt het kort voordat een laadvenster begint, zodat je je laadpaal op tijd kunt instellen. Dat kun je later wijzigen bij Meldingen in Instellingen.</string>
   <string name="notification_card_ask">Meldingen aanzetten</string>
-  <string name="notification_card_open_settings">Meldingsinstellingen openen</string>
+  <string name="notification_card_open_settings">Instellingen voor meldingen openen</string>
   <string name="notification_card_no_ask">Android vraagt het niet nog een keer. Zet meldingen daar aan.</string>
 
   <string name="no_forecast">Geen voorspelling</string>

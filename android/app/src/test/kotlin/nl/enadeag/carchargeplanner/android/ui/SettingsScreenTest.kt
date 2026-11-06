@@ -1025,6 +1025,19 @@ class SettingsScreenTest {
     }
 
     @Test
+    @Config(qualifiers = "nl")
+    fun theNotificationsRowAndTheWifiOnlySwitchAreInDutch() {
+        show()
+
+        assertThat(notificationsRow().config[SemanticsProperties.Text].map { it.text })
+            .containsExactly("Meldingen", "Opent de instellingen van Android voor deze app")
+        open(SettingsPage.FORECAST)
+        assertThat(wifiRow().fetchSemanticsNode().config[SemanticsProperties.Text].map { it.text })
+            .containsExactly("Alleen wifi", "De update elk uur terwijl de app dicht is wacht op wifi, of een ander " +
+                "netwerk zonder datalimiet. Uit: elk netwerk.")
+    }
+
+    @Test
     fun theWifiOnlySwitchShowsWhatIsStoredAndSwitchesItOff() {
         wifiOnly.now.value = true
         show()

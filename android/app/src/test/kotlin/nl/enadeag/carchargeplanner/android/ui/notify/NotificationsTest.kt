@@ -307,6 +307,13 @@ class NotificationsTest {
 
         assertThat(manager.notificationChannels.map { it.name.toString() })
             .containsExactlyInAnyOrder("Laadvensters", "Controles van accuniveau en ritten", "Problemen")
+        val descriptions = manager.notificationChannels.associate { it.id to it.description }
+        assertThat(descriptions).containsExactlyInAnyOrderEntriesOf(mapOf(
+            "charge_windows" to "Een melding kort voordat een laadvenster begint, ook voor laden uit het net, met " +
+                "wat je in de app van je laadpaal instelt.",
+            "battery_trip_checks" to "Vraagt of het accuniveau klopt voor een rit, en meldt wanneer een rit een " +
+                "laadstop nodig heeft.",
+            "problems" to "Meldt wanneer de voorspelling niet vernieuwd kan worden en alleen jij dat kunt oplossen."))
     }
 
     @Test

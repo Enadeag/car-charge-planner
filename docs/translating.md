@@ -213,10 +213,10 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | updated 10:51, not refreshed since 10:51 | bijgewerkt om 10:51, niet vernieuwd sinds 10:51 | the footer, after the provider's credit, which stays as it is |
 | provider busy until 11:30 | dienst weer beschikbaar om 11:30 | the footer, during a cool-down |
 | The forecast was not refreshed since 10:51. The plan uses that forecast. | De voorspelling is niet vernieuwd sinds 10:51. De planning gebruikt die voorspelling. | the warning above a plan on a stale forecast |
-| Open-Meteo refused the API key. Check it under Forecast in Settings. | Open-Meteo weigert de API-sleutel. Controleer de sleutel bij Voorspelling in Instellingen. | the warning in the same place when a provider refused its API key, also while another forecast is used; "Forecast" is the Settings page |
+| Open-Meteo refused the API key. Check it under Forecast in Settings. | Open-Meteo weigert de API-sleutel. Controleer de sleutel bij Voorspelling in Instellingen. | the warning in the same place when a provider refused its API key, also while another forecast is used and above "No forecast" when there is no plan; "Forecast" is the Settings page |
 | Get a notice before each charge window | Krijg een melding vóór elk laadvenster | the title of the dashboard's card while notifications are not allowed; under it "The app tells you shortly before a charge window starts, so you can set your charger in time. You can change this later under Notifications in Settings." ("De app meldt het kort voordat een laadvenster begint, zodat je je laadpaal op tijd kunt instellen. Dat kun je later wijzigen bij Meldingen in Instellingen.") |
 | Turn on notifications | Meldingen aanzetten | the card's button, which asks Android |
-| Open notification settings | Meldingsinstellingen openen | the card's button after a refusal, with "Android does not ask again. Turn notifications on there." ("Android vraagt het niet nog een keer. Zet meldingen daar aan.") |
+| Open notification settings | Instellingen voor meldingen openen | the card's button after a refusal, with "Android does not ask again. Turn notifications on there." ("Android vraagt het niet nog een keer. Zet meldingen daar aan."); not "Meldingsinstellingen openen", a word too long for a narrow phone at 200%, where it breaks in two |
 | No forecast | Geen voorspelling | the heading when there is no plan |
 | Settings | Instellingen | the home's top app bar action, and the list's title |
 | Solar panels | Zonnepanelen | a Settings page: every panel array |
@@ -264,7 +264,7 @@ The notifications say the desktop's facts in the dashboard's words, with "Tap" (
 | Enter battery level | Accuniveau invullen | the battery check's one action, which opens the entry of the level; a notification's word only, as the dashboard's button is Update battery level (Accuniveau bijwerken) |
 | Plan a charging stop | Plan een laadstop | a short trip's title; the distance in km, "12 km short" ("12 km tekort") |
 | Forecast not updated | Voorspelling niet vernieuwd | the Problems notification's title, over "The forecast could not be updated. Open the app for details." ("De voorspelling kon niet worden vernieuwd. Open de app voor details.") |
-| Charge window soon | Laadvenster binnenkort | what a locked screen shows of a charge window's notification; the others show their title |
+| Charge window soon | Laadvenster binnenkort | what a locked screen shows of a charge window's, a grid charge's and a trip's planned grid charge's notification; the others show their title, also Start charging now |
 | Charge windows, Battery and trip checks, Problems | Laadvensters, Controles van accuniveau en ritten, Problemen | the channels' names in Android's settings, each with a description of one sentence |
 
 `place_search_language` is no sentence: it is the two-letter code of the file's own language (`en`, `nl`), which the place search is asked to answer in, so the names of places come in the language the app shows.
