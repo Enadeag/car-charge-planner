@@ -198,46 +198,44 @@ jobs:
       # line runs in a shell of its own; logcat runs in the background, apart from the step's output, until the emulator
       # stops.
       #
-      # The reaper (#357), started by the script's last line: the action starts the emulator with its own output pipes,
-      # and the emulator's processes, crashpad_handler among them, inherit them; one that outlives `emu kill` keeps the
-      # action, and so the step, running until the job's timeout (upstream
-      # https://github.com/ReactiveCircus/android-emulator-runner/issues/385, cause and fix in the open
-      # https://github.com/ReactiveCircus/android-emulator-runner/pull/497). The reaper is detached, with none of the
-      # step's streams, so it does not hold a pipe itself. It lists the emulator's processes, and adb's, in
-      # build/emulator-processes.txt, waits 40 seconds (the emulator gives itself 20 after `emu kill`), lists them again,
-      # sends SIGTERM to crashpad_handler, and 5 seconds later SIGKILL to every process left whose program is in the
-      # SDK's emulator directory, then lists them a last time. It runs only after the tests pass, as the action stops at
-      # the first line that fails. The reaper can go once a release of the action fixes the hang. The step's timeout
-      # turns a hang that comes back into a fast failure, also when the tests passed.
+      # The reaper (#357): the action starts the emulator with its own output pipes, and the emulator's processes,
+      # crashpad_handler among them, inherit them; one that outlives `emu kill` keeps the action, and so the step,
+      # running (upstream https://github.com/ReactiveCircus/android-emulator-runner/issues/385, cause and fix in the
+      # open https://github.com/ReactiveCircus/android-emulator-runner/pull/497). The last script line starts it after
+      # the tests, whether they pass or fail, and keeps their exit status; it is one line, as the action stops at the
+      # first line that fails. Detached, with none of the step's streams, it holds no pipe itself. It waits 40 seconds,
+      # as the emulator gives itself 20 after `emu kill`, then stops what is left of the emulator's processes, and lists
+      # them, and adb's, in build/emulator-processes.txt. The step can end before the later listings ("40 seconds
+      # later", "after the kill"), so the upload may miss them: the proof is the step's duration, about 1-2 seconds
+      # after the tests when there was no hang, about 46 when the reaper ended one. The reaper can go once a release of
+      # the action fixes the hang; the step's timeout turns a hang that comes back into a fast failure.
       - name: Instrumented tests on API 29
         timeout-minutes: 15
         env:
           REAPER: |
+            procs='[q]emu|[c]rashpad|[n]etsim|[e]mulator|[a]db'
             list() {
               {
                 echo "== $1, $(date -u +%H:%M:%S)"
-                ps -eo pid,ppid,pgid,etime,args | awk -v me="$$" 'NR == 1 || ($1 != me && /[q]emu|[c]rashpad|[n]etsim|[e]mulator|[a]db/)'
+                ps -eo pid,ppid,pgid,etime,args | awk -v me="$$" -v re="$procs" 'NR == 1 || ($1 != me && $0 ~ re)'
               } >> build/emulator-processes.txt
             }
-            emulator_pids() {
+            # reap SIGNAL PATTERN: the pattern is matched below "$dir", which stays literal
+            reap() {
               for proc in /proc/[0-9]*; do
                 case "$(readlink "$proc/exe" 2> /dev/null)" in
-                  "$dir"/*) echo "${proc#/proc/}" ;;
+                  "$dir"/$2) kill "-$1" "${proc#/proc/}" ;;
                 esac
               done
             }
-            dir=$(readlink -f "${ANDROID_HOME:?}/emulator") && [ -d "$dir" ] || exit 1
+            dir=$(readlink -f "${ANDROID_HOME:?}/emulator") && [ -x "$dir/emulator" ] && [ "${dir##*/}" = emulator ] ||
+              { echo "== no reaper: no emulator directory in ANDROID_HOME" >> build/emulator-processes.txt; exit 1; }
             list "the tests are done"
             sleep 40
             list "40 seconds later"
-            for pid in $(emulator_pids); do
-              case "$(readlink "/proc/$pid/exe" 2> /dev/null)" in
-                */crashpad_handler) kill -TERM "$pid" ;;
-              esac
-            done
+            reap TERM '*crashpad_handler'
             sleep 5
-            pids=$(emulator_pids)
-            if [ -n "$pids" ]; then kill -KILL $pids; fi
+            reap KILL '*'
             sleep 1
             list "after the kill"
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
@@ -252,8 +250,7 @@ jobs:
           script: |
             mkdir -p build
             adb logcat -v threadtime < /dev/null > build/logcat.txt 2>&1 &
-            ./gradlew --continue --stacktrace :app:connectedDebugAndroidTest
-            setsid nohup sh -c "$REAPER" < /dev/null > /dev/null 2>&1 &
+            ./gradlew --continue --stacktrace :app:connectedDebugAndroidTest; status=$?; setsid sh -c "$REAPER" < /dev/null > /dev/null 2>&1 & exit $status
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
