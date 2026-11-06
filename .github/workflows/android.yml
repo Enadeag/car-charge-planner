@@ -254,13 +254,13 @@ jobs:
             start=$(date +%s) limit=60
             missing=' input settings package activity'
             while :; do
-              found_missing=
+              round_missing=
               for name in input settings package activity; do
                 [ $(($(date +%s) - start)) -lt "$limit" ] || break 2
                 timeout 5 adb shell service check "$name" 2> /dev/null | grep -q ': found' ||
-                  found_missing="$found_missing $name"
+                  round_missing="$round_missing $name"
               done
-              missing=$found_missing
+              missing=$round_missing
               if [ -z "$missing" ]; then
                 echo "services ready after $(($(date +%s) - start)) s"
                 exit 0
@@ -268,8 +268,8 @@ jobs:
               sleep 1
             done
             echo "services not ready after $(($(date +%s) - start)) s, missing:$missing" >&2
-            adb devices >&2
-            adb logcat -d -t 100 >&2
+            timeout 10 adb devices >&2
+            timeout 10 adb logcat -d -t 100 >&2
             exit 1
         with:
           api-level: 29
