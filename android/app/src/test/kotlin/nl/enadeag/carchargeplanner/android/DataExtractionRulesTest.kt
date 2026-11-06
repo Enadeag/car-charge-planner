@@ -11,8 +11,8 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.w3c.dom.Element
 
 /**
- * What may leave the phone: only the keychain's file, as its Keystore key never moves, and the notifications' state
- * store, which belongs to this phone, stay; the settings, trips, cache and the phone's settings store, with the
+ * What may leave the phone: only the keychain's file, as its Keystore key never moves, the notifications' state
+ * store, which belongs to this phone, and WorkManager's database, which is made again, stay; the settings, trips, cache and the phone's settings store, with the
  * "Wi-Fi only" switch, go along to the owner's next phone. No device test sees a backup or a transfer, so this reads
  * the rules.
  */
@@ -34,6 +34,10 @@ class DataExtractionRulesTest {
     // DataStore keeps a store in files/datastore/<name>.preferences_pb, written through <that>.tmp
     private val stateFiles = listOf("exclude file:datastore/${PhoneStoreFiles.STATE}.preferences_pb",
         "exclude file:datastore/${PhoneStoreFiles.STATE}.preferences_pb.tmp")
+
+    // WorkManager's database, written through SQLite's write-ahead log, which WorkManager makes again
+    private val workFiles = listOf("exclude database:androidx.work.workdb", "exclude database:androidx.work.workdb-wal",
+        "exclude database:androidx.work.workdb-shm")
 
     private val application = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
         .newDocumentBuilder().parse(File("src/main/AndroidManifest.xml")).documentElement
@@ -58,15 +62,15 @@ class DataExtractionRulesTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["cloud-backup", "device-transfer"])
-    fun onlyTheKeychainsFileAndTheNotificationsStateStayOnThePhone(kind: String) {
+    fun onlyTheKeychainsFileTheNotificationsStateAndTheWorkDatabaseStayOnThePhone(kind: String) {
         val section = rules.getElementsByTagName(kind).item(0) as Element
 
-        assertThat(rulesIn(section)).containsExactlyInAnyOrderElementsOf(keychainFiles + stateFiles)
+        assertThat(rulesIn(section)).containsExactlyInAnyOrderElementsOf(keychainFiles + stateFiles + workFiles)
     }
 
     @Test
-    fun beforeAndroid12OnlyTheKeychainsFileAndTheNotificationsStateStayToo() {
-        assertThat(rulesIn(olderRules)).containsExactlyInAnyOrderElementsOf(keychainFiles + stateFiles)
+    fun beforeAndroid12OnlyTheKeychainsFileTheNotificationsStateAndTheWorkDatabaseStayToo() {
+        assertThat(rulesIn(olderRules)).containsExactlyInAnyOrderElementsOf(keychainFiles + stateFiles + workFiles)
     }
 
     @Test

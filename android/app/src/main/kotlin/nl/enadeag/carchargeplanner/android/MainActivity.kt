@@ -12,6 +12,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import kotlinx.coroutines.launch
 import nl.enadeag.carchargeplanner.android.home.NotificationCard
 import nl.enadeag.carchargeplanner.android.ui.AppScreen
 import nl.enadeag.carchargeplanner.android.ui.AppTheme
@@ -23,7 +24,8 @@ import nl.enadeag.carchargeplanner.android.ui.notify.allowed
  * single-top, so a notification's tap reaches the activity shown. A tap takes its notification away, also a tap on its
  * action, and a battery check's tap opens the battery level's entry on the home; each once: not again when the
  * activity is made again, as after turning the phone, nor when the app is opened from the recent apps with that tap's
- * intent, which would take away a newer notification under the same tag.
+ * intent, which would take away a newer notification under the same tag. Each start of the activity sets the work in
+ * the background up again, so it follows the settings file and whether notifications are allowed.
  */
 class MainActivity : ComponentActivity() {
 
@@ -70,6 +72,12 @@ class MainActivity : ComponentActivity() {
                 AppScreen(model.flow, model.card, wifiOnly)
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val app = application as CarChargePlannerApp
+        app.scope.launch { app.schedule.refresh() }
     }
 
     override fun onNewIntent(intent: Intent) {

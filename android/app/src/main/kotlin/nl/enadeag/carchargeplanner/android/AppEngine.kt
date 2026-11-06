@@ -25,7 +25,7 @@ import nl.enadeag.carchargeplanner.engine.trip.TripFile
  * Makes the app's [Engine] from the platform's parts, with the same files and the same forecast providers as the
  * desktop app's (`DesktopApp.engine`), so a settings file moves between the two as it is. The engine is not started,
  * so it makes no rounds of its own: the owner is told what is due only in a round that the work in the background
- * makes (#277).
+ * makes (`background.BackgroundRounds`).
  */
 internal object AppEngine {
 
@@ -37,10 +37,11 @@ internal object AppEngine {
      *
      * @param platform the process's one set of parts, from [AndroidPlatform.of]
      * @param notifier tells the owner about an announcement; the engine calls it only in a round
+     * @param clock what the engine plans and announces from; the same as the notifications'
      * @return the engine, with nothing read or fetched yet
      */
-    fun build(platform: AndroidPlatform, notifier: Notifier): Engine =
-        build(platform.dataFolder(), platform.http(), platform.files(), platform.apiKeys(), notifier)
+    fun build(platform: AndroidPlatform, notifier: Notifier, clock: Clock = Clock.systemUTC()): Engine =
+        build(platform.dataFolder(), platform.http(), platform.files(), platform.apiKeys(), notifier, clock)
 
     /**
      * The app's engine on these parts, for a test that keeps its files elsewhere.
@@ -50,9 +51,11 @@ internal object AppEngine {
      * @param files how the engine writes its files
      * @param apiKeys the store of the providers' secret settings
      * @param notifier tells the owner about an announcement; the engine calls it only in a round
+     * @param clock what the engine plans and announces from; the same as the notifications'
      * @return the engine, with nothing read or fetched yet
      */
-    fun build(dataFolder: Path, http: HttpGet, files: PrivateFiles, apiKeys: ApiKeys, notifier: Notifier): Engine {
+    fun build(dataFolder: Path, http: HttpGet, files: PrivateFiles, apiKeys: ApiKeys, notifier: Notifier,
+        clock: Clock = Clock.systemUTC()): Engine {
         val providers = providers(http)
         val announcer = Announcer(AnnouncedWindows(dataFolder.resolve("announced.json"), files),
             ToldTrips(dataFolder.resolve("trip-notices.json"), files), notifier)
@@ -64,7 +67,7 @@ internal object AppEngine {
             ForecastService(providers, ForecastCache(dataFolder.resolve("forecasts"), files), apiKeys), providers,
             apiKeys, AwayFile(dataFolder.resolve("away.json"), files),
             TripFile(dataFolder.resolve("trips.json"), files),
-            BatteryFile(dataFolder.resolve("battery.json"), files), Clock.systemUTC(), announcer, planner)
+            BatteryFile(dataFolder.resolve("battery.json"), files), clock, announcer, planner)
     }
 
     /**
