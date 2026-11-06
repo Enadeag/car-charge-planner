@@ -51,6 +51,12 @@ If one of these files is damaged, the app starts it again empty: **Wi-Fi only** 
 
 The Android app's notifications go through Android's own notification service on the phone, like any app's, and their words are made on the phone; the app sends them nowhere else. Like any app's notifications, they are also seen by a watch paired with the phone and by an app you gave access to your notifications.
 
+### Background
+
+Once the Android app is set up and notifications are allowed, it asks the forecast provider about once an hour while it is closed, so it can tell you before a charge window starts: only with a network connection, and with **Wi-Fi only** switched on only on Wi-Fi or another network without a data limit; a low battery does not stop it. It sends the same as when the app is open, to the same provider and fallback, and nothing else. Forecast.Solar's public plan allows 12 requests an hour for everything behind your internet address, so the phone shares that limit with the desktop app and any other device at home that asks it. The app also asks once when you open it, after a change you saved, and after the phone starts or the app is updated, for which Android lets it start at boot (the permission `RECEIVE_BOOT_COMPLETED`). The alarm that wakes the phone shortly before a notice uses only the forecast already on the phone and sends nothing. While notifications are not allowed, none of this runs, until you open the app with them allowed.
+
+Android's WorkManager keeps this schedule in its own database in the app's folder (`databases/androidx.work.workdb`, with its `-wal` and `-shm` files): which work is due and when, nothing of your settings. It stays out of the transfer to your next phone, where the app sets the schedule up again when you first open it. After a force stop nothing runs until you open the app again, and some phone makers stop apps in the background on their own; how to keep the app out of their "sleeping apps" is for the install guide ([#279](https://github.com/Enadeag/car-charge-planner/issues/279)).
+
 ### API keys
 
 API keys are kept by the system, not in a file:
