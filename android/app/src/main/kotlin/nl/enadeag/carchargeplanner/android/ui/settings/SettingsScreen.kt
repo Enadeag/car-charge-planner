@@ -74,12 +74,12 @@ import nl.enadeag.carchargeplanner.android.ui.setup.Edits
  *
  * @param session the pages, their forms and their Save
  * @param page the page open; null for the list
+ * @param wifiOnly the Forecast page's "Wi-Fi only" switch, which applies at once
  * @param licences where the licence texts are read from: the app's assets, or a test's fixture
- * @param wifiOnly the Forecast page's "Wi-Fi only" switch, which applies at once; null shows none
  */
 @Composable
-internal fun SettingsScreen(session: SettingsSession, page: SettingsPage?,
-    licences: LicenceFiles = rememberAssetLicenceFiles(), wifiOnly: WifiOnly? = null) {
+internal fun SettingsScreen(session: SettingsSession, page: SettingsPage?, wifiOnly: WifiOnly,
+    licences: LicenceFiles = rememberAssetLicenceFiles()) {
     val asked by session.discardAsked.collectAsStateWithLifecycle()
     val snackbars = remember { SnackbarHostState() }
     val saved = stringResource(R.string.settings_saved)
@@ -151,7 +151,7 @@ private fun SettingsList(session: SettingsSession, snackbars: SnackbarHostState,
 /** One page: its fields, what its Save came to, and Save; the Forecast page also the switch that applies at once. */
 @Composable
 private fun PageScreen(session: SettingsSession, page: SettingsPage, snackbars: SnackbarHostState,
-    wifiOnly: WifiOnly?) {
+    wifiOnly: WifiOnly) {
     val problemsShown by session.problemsShown.collectAsStateWithLifecycle()
     val loads by session.loads.collectAsStateWithLifecycle()
     val edits = remember(page) { Edits() }

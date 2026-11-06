@@ -63,7 +63,7 @@ class ProblemEpisode(private val flag: EpisodeFlag, private val notice: ProblemN
     private val lock = Mutex()
 
     /**
-     * Starts or ends an episode after a round of the work in the background (#362).
+     * Starts or ends an episode after a round of the work in the background.
      *
      * @param outlook what the round gave
      * @param use where the round took its forecast from: only a round that asked the providers counts, as one on the

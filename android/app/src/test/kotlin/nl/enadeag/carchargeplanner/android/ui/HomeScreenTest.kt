@@ -122,6 +122,9 @@ class HomeScreenTest {
         ProviderId("open-meteo"))))
     private val hasNoScrollAncestor = !hasAnyAncestor(hasScrollAction())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /** A card that never shows, for the tests of the home's other parts. */
+    private val noCard by lazy { allowedCard(scope) }
     private val amsterdam = ZoneId.of("Europe/Amsterdam")
     private val lisbon = ZoneId.of("Europe/Lisbon")
     private val today = LocalDate.of(2026, 6, 1)
@@ -170,7 +173,7 @@ class HomeScreenTest {
     }
 
     private fun show(answer: Outlook?, phoneZone: ZoneId = amsterdam, fontScaleTwo: Boolean = false,
-        kept: SavedStateHandle = handle, card: NotificationCard? = null): HomeOutlook {
+        kept: SavedStateHandle = handle, card: NotificationCard = noCard): HomeOutlook {
         val outlook = HomeOutlook(access, scope, clock) { }
         shownOutlook = outlook
         battery = BatteryEntry(kept, NumberText(Locale.ENGLISH), access, scope) { outlook.planAgain() }
@@ -618,6 +621,37 @@ class HomeScreenTest {
     }
 
     @Test
+    fun everyProviderThatRefusedItsKeyIsSaidInTheOrderAsked() {
+        clock("24")
+        val source = Plans.source(today.atTime(8, 51).atZone(lisbon).toInstant(),
+            keyRefusedBy = listOf(ProviderId("forecast-solar"), ProviderId("open-meteo")))
+        show(Plans.planned(today.atTime(9, 0).atZone(lisbon), listOf(listOf(Plans.window(lisbon, today, 13, 15))),
+            source = source))
+
+        val first = text(R.string.key_refused_warning, "Forecast.Solar")
+        val second = text(R.string.key_refused_warning, "Open-Meteo")
+        compose.onNodeWithText(first).assertIsDisplayed()
+        compose.onNodeWithText(second).assertIsDisplayed()
+        // one warning, a line per provider
+        assertThat(lineTop(first)).isLessThan(lineTop(second))
+    }
+
+    @Test
+    fun aStaleForecastWithARefusedKeyShowsBothWarningsTheStaleOneFirst() {
+        clock("24")
+        val source = Plans.source(today.atTime(8, 51).atZone(lisbon).toInstant(), freshness = Freshness.STALE,
+            keyRefusedBy = listOf(ProviderId("open-meteo")))
+        show(Plans.planned(today.atTime(9, 0).atZone(lisbon), listOf(listOf(Plans.window(lisbon, today, 13, 15))),
+            source = source))
+
+        val stale = text(R.string.stale_warning, "08:51")
+        val refused = text(R.string.key_refused_warning, "Open-Meteo")
+        compose.onNodeWithText(stale).assertIsDisplayed()
+        compose.onNodeWithText(refused).assertIsDisplayed()
+        assertThat(top(stale)).isLessThan(top(refused))
+    }
+
+    @Test
     fun withoutARefusedKeyThereIsNoSuchWarning() {
         show(lisbonWeek())
 
@@ -627,6 +661,9 @@ class HomeScreenTest {
     /** The card for a phone whose notifications are not allowed. */
     private fun card(memory: Memory = Memory(), canAsk: Boolean = true) =
         NotificationCard(memory, { false }, canAsk, scope)
+
+    private fun lineTop(shown: String): Float =
+        compose.onNodeWithText(shown, useUnmergedTree = true).fetchSemanticsNode().positionInRoot.y
 
     private fun top(shown: String): Float =
         compose.onNode(hasText(shown) and !NOT_READ_APART).fetchSemanticsNode().positionInRoot.y
@@ -956,8 +993,8 @@ class HomeScreenTest {
         val away = awayEntry()
         compose.setContent {
             AppTheme {
-                if (twice) AtFontScaleTwo { HomeScreen(outlook, notice, battery, away, { amsterdam }) { } }
-                else HomeScreen(outlook, notice, battery, away, { amsterdam }) { }
+                if (twice) AtFontScaleTwo { HomeScreen(outlook, notice, battery, away, { amsterdam }, noCard) { } }
+                else HomeScreen(outlook, notice, battery, away, { amsterdam }, noCard) { }
             }
         }
         compose.waitForIdle()
@@ -1070,7 +1107,7 @@ class HomeScreenTest {
         val away = awayEntry()
         compose.setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                AppTheme { HomeScreen(outlook, notice, battery, away, { amsterdam }) { } }
+                AppTheme { HomeScreen(outlook, notice, battery, away, { amsterdam }, noCard) { } }
             }
         }
         compose.waitForIdle()
@@ -1095,7 +1132,7 @@ class HomeScreenTest {
         compose.setContent {
             CompositionLocalProvider(LocalLayoutDirection provides
                 if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
-                AppTheme { HomeScreen(outlook, notice, battery, away, { amsterdam }) { } }
+                AppTheme { HomeScreen(outlook, notice, battery, away, { amsterdam }, noCard) { } }
             }
         }
         compose.waitForIdle()

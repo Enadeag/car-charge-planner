@@ -115,17 +115,17 @@ import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
  * @param battery the entry of the battery level
  * @param away the changes to the one-off away periods
  * @param phoneZone the phone's time zone as it is now, read each time the plan is shown
- * @param card the card that asks for notifications; null shows none
+ * @param card the card that asks for notifications
  * @param onSettings opens Settings
  */
 @Composable
 internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: BatteryEntry, away: AwayEntry,
-    phoneZone: () -> ZoneId, card: NotificationCard? = null, onSettings: () -> Unit) {
+    phoneZone: () -> ZoneId, card: NotificationCard, onSettings: () -> Unit) {
     val state by outlook.state.collectAsStateWithLifecycle()
     val refreshing by outlook.refreshing.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_START) {
         outlook.returned()
-        card?.recheck()
+        card.recheck()
     }
     val heading = remember { FocusRequester() }
     LaunchedEffect(Unit) { heading.requestFocus() }
@@ -155,7 +155,7 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
             enabled = state != HomeOutlook.State.Asking && !refreshing) { outlook.refresh() }
         BarIconButton(Icons.Filled.Settings, stringResource(R.string.home_settings), onClick = onSettings)
     }) {
-        val askCard: @Composable () -> Unit = { card?.let { NotificationsCard(it, closed) } }
+        val askCard: @Composable () -> Unit = { NotificationsCard(card, closed) }
         when (val now = state) {
             is HomeOutlook.State.Planned -> Days(now.dashboard, refreshing, phoneZone(), outlook::refresh,
                 BatteryAction(battery::open, update), AwayAction(away, add, busy, going, restoring), askCard) {

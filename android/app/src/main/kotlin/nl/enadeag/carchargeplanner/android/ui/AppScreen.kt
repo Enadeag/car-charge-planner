@@ -37,18 +37,18 @@ import nl.enadeag.carchargeplanner.engine.Outlook
  * @param locale the language of the activity that made this model
  * @param language that language as the place search takes it, such as "nl"
  * @param seen gets each plan the dashboard asked for, so a Problems notification it no longer shows goes
- * @param card makes the dashboard's notification card in this model's scope; null makes none
+ * @param card makes the dashboard's notification card in this model's scope
  */
 internal class AppViewModel(access: EngineAccess, saves: Saves, appScope: CoroutineScope, handle: SavedStateHandle,
     private var locale: Locale, private var language: String, seen: suspend (Outlook) -> Unit = {},
-    card: ((CoroutineScope) -> NotificationCard)? = null) : ViewModel() {
+    card: (CoroutineScope) -> NotificationCard) : ViewModel() {
 
     /** Which screen is shown. */
     val flow = AppFlow(access, saves, appScope, viewModelScope, handle, NumberText { locale }, ZoneId::systemDefault,
         { language }, Dispatchers.Main.immediate, seen = seen)
 
-    /** The dashboard's card that asks for notifications while they are not allowed; null when there is none. */
-    val card: NotificationCard? = card?.invoke(viewModelScope)
+    /** The dashboard's card that asks for notifications while they are not allowed. */
+    val card: NotificationCard = card(viewModelScope)
 
     /**
      * Takes the language of an activity made again, so what the screens write and search from now on is in it.
@@ -67,11 +67,11 @@ internal class AppViewModel(access: EngineAccess, saves: Saves, appScope: Corout
  *
  * @param flow which screen it is, the way into Settings, and the phone's time zone, which the home names the home's
  *     against
- * @param card the dashboard's card that asks for notifications; null shows none
- * @param wifiOnly the Forecast page's "Wi-Fi only" switch; null shows none
+ * @param card the dashboard's card that asks for notifications
+ * @param wifiOnly the Forecast page's "Wi-Fi only" switch
  */
 @Composable
-internal fun AppScreen(flow: AppFlow, card: NotificationCard? = null, wifiOnly: WifiOnly? = null) {
+internal fun AppScreen(flow: AppFlow, card: NotificationCard, wifiOnly: WifiOnly) {
     val screen by flow.screen.collectAsStateWithLifecycle()
     when (val now = screen) {
         AppFlow.Screen.Reading -> ReadingScreen()
@@ -79,7 +79,7 @@ internal fun AppScreen(flow: AppFlow, card: NotificationCard? = null, wifiOnly: 
         is AppFlow.Screen.Unusable -> UnusableScreen(now.again)
         is AppFlow.Screen.NewerVersion -> NewerVersionScreen()
         is AppFlow.Screen.Home -> HomeScreen(now.outlook, now.notice, now.battery, now.away, flow.phoneZone,
-            card = card, onSettings = flow::openSettings)
-        is AppFlow.Screen.Settings -> SettingsScreen(now.session, now.page, wifiOnly = wifiOnly)
+            card, flow::openSettings)
+        is AppFlow.Screen.Settings -> SettingsScreen(now.session, now.page, wifiOnly)
     }
 }

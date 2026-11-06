@@ -33,6 +33,7 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | Import tolerance | toegestane netstroom |  | Grid allowance, import limit |
 | Announcement | melding |  | Reminder, alert |
 | Battery check | controle van het accuniveau | as in "Controleer het accuniveau" | Battery question, level reminder |
+| Enter battery level | Accuniveau invullen | the battery check's notification action only; the dashboard's button is Update battery level (Accuniveau bijwerken) | Update battery level (in a notification), set level |
 | Grid advice | advies: laden uit het net | a grid charge is laden uit het net | Grid warning, top-up, emergency charge |
 | Set-up | instelhulp |  | Onboarding, configuration, wizard (the wizard is only the form set-up takes) |
 | Not set up | niet ingesteld |  | Unconfigured, first run (first run is the moment, not the state) |
@@ -65,6 +66,7 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | Official route | – | not shown in the app | Official API (a maker can have an API that owners may not use), unofficial route |
 | Local network (not encrypted) | lokaal netwerk (niet versleuteld) |  | LAN, insecure, http mode |
 | Home Assistant | Home Assistant |  | HA, the hub |
+| Wi-Fi only | Alleen wifi | the Android app's switch for the hourly update while the app is closed; Dutch writes "wifi" in lower case | WLAN only, unmetered only, Wifi (in English) |
 
 ## How the texts are written
 
@@ -232,7 +234,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Discard changes? | Wijzigingen weggooien? | asked by Back or Up on a Settings page with edits, and by Back, or a tap beside it, in the battery level's entry with a level typed and in the one-off away period's entry with something changed |
 | Keep editing | Verder bewerken | stays on the page, or in the entry |
 | Discard | Weggooien | throws the page's edits, or the typed level, away |
-| Close | Sluiten | closes a save's outcome shown on the home, and the close button of a failure or Undo snackbar |
+| Close | Sluiten | closes a save's outcome shown on the home, the notification card's ×, and the close button of a failure or Undo snackbar |
 | Array 2, east roof | Panelengroep 2, oostdak | a panel array's heading, by place and name |
 | Tilt, array 2 | Helling, panelengroep 2 | a panel array's field or button, named with its place |
 | Add an array | Panelengroep toevoegen | |

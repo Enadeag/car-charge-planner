@@ -1,12 +1,14 @@
 package nl.enadeag.carchargeplanner.android
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -18,15 +20,26 @@ import nl.enadeag.carchargeplanner.android.ui.notify.allowed
 
 /**
  * The app's one activity: set-up, the problem of a settings file, or the home, as the settings file decides. It is
- * single-top, so a notification's tap reaches the activity shown; a battery check's tap opens the battery level's
- * entry on the home, once: not again when the activity is made again, as after turning the phone, nor when the app is
- * opened from the recent apps with that tap's intent.
+ * single-top, so a notification's tap reaches the activity shown. A tap takes its notification away, also a tap on its
+ * action, and a battery check's tap opens the battery level's entry on the home; each once: not again when the
+ * activity is made again, as after turning the phone, nor when the app is opened from the recent apps with that tap's
+ * intent, which would take away a newer notification under the same tag.
  */
 class MainActivity : ComponentActivity() {
 
     companion object {
         /** The action of the intent of a battery check's notification, which opens the battery level's entry. */
         const val OPEN_BATTERY_ENTRY = "nl.enadeag.carchargeplanner.android.action.OPEN_BATTERY_ENTRY"
+
+        private const val NOTICE_SCHEME = "notice"
+
+        /**
+         * The data of a notification's intent, which names the notification.
+         *
+         * @param tag the notification's tag
+         * @return such as `notice:battery_check:1780300800`
+         */
+        internal fun noticeUri(tag: String): Uri = Uri.fromParts(NOTICE_SCHEME, tag, null)
     }
 
     private val model: AppViewModel by viewModels {
@@ -65,10 +78,18 @@ class MainActivity : ComponentActivity() {
         follow(intent)
     }
 
-    /** Opens what a notification's tap asks for; the app's start and a dashboard's tap ask for nothing more. */
+    /**
+     * Takes a tapped notification away and opens what its tap asks for; the app's start and a dashboard's tap ask for
+     * nothing more. An intent from the recent apps was followed when it first came.
+     */
     private fun follow(intent: Intent) {
-        val fromRecents = intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
-        if (intent.action == OPEN_BATTERY_ENTRY && !fromRecents) {
+        if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) {
+            return
+        }
+        intent.data?.takeIf { it.scheme == NOTICE_SCHEME }?.schemeSpecificPart?.let { tag ->
+            NotificationManagerCompat.from(this).cancel(tag, 0)
+        }
+        if (intent.action == OPEN_BATTERY_ENTRY) {
             model.flow.openBatteryEntry()
         }
     }

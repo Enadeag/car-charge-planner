@@ -9,6 +9,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.content.res.Configuration
 import android.content.res.Resources
+import android.os.Build
 import android.provider.Settings
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -86,6 +87,7 @@ class NotificationsTest {
         assertThat(posted.channelId).isEqualTo("charge_windows")
         assertThat(posted.title()).isEqualTo("Charge window 11:15 to 14:30")
         assertThat(posted.text()).startsWith("Set the charge current to 10 A (2.3 kW)")
+        assertThat(posted.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString()).isEqualTo(posted.text())
         assertThat(posted.category).isEqualTo(Notification.CATEGORY_REMINDER)
         assertThat(posted.smallIcon.resId).isEqualTo(R.drawable.ic_stat_charge)
         assertThat(shadowOf(manager).allNotifications).hasSize(1)
@@ -138,6 +140,31 @@ class NotificationsTest {
     }
 
     @Test
+    fun twoBatteryChecksKeepTheirOwnIntentsEachNamingItsNotification() {
+        val later = Trip(departure.plus(Duration.ofDays(1)), departure.plus(Duration.ofDays(1).plusHours(8)), 240.0,
+            false)
+        notifications.announce(BatteryCheck(trip, Percent(40.0), amsterdam))
+        notifications.announce(BatteryCheck(later, Percent(40.0), amsterdam))
+
+        val first = posted("battery_check:${departure.epochSecond}")
+        val second = posted("battery_check:${later.departure().epochSecond}")
+        assertThat(first.actions[0].actionIntent).isNotEqualTo(second.actions[0].actionIntent)
+        assertThat(first.contentIntent).isNotEqualTo(second.contentIntent)
+        assertThat(started(first, action = 0).data).isEqualTo(MainActivity.noticeUri(
+            "battery_check:${departure.epochSecond}"))
+        assertThat(started(second, action = 0).data).isEqualTo(MainActivity.noticeUri(
+            "battery_check:${later.departure().epochSecond}"))
+        assertThat(started(first).data).isEqualTo(started(first, action = 0).data)
+    }
+
+    @Test
+    fun theProblemsNotificationsTapNamesIt() {
+        notifications.show()
+
+        assertThat(started(posted("problems")).data).isEqualTo(MainActivity.noticeUri("problems"))
+    }
+
+    @Test
     fun aBatteryCheckAskedAgainForTheSameTripReplacesTheFirst() {
         notifications.announce(BatteryCheck(trip, Percent(40.0), amsterdam))
         notifications.announce(BatteryCheck(trip, Percent(70.0), amsterdam))
@@ -181,6 +208,27 @@ class NotificationsTest {
         notifications.show()
 
         assertThat(shadowOf(manager).allNotifications).isEmpty()
+    }
+
+    @Test
+    fun beforeAndroid13OnlyTheBlockCountsAsThereIsNoPermissionToAsk() {
+        shadowOf(app).denyPermissions(Manifest.permission.POST_NOTIFICATIONS)
+
+        assertThat(allowed(app, Build.VERSION_CODES.S_V2)).isTrue()
+
+        shadowOf(manager).setNotificationsEnabled(false)
+
+        assertThat(allowed(app, Build.VERSION_CODES.S_V2)).isFalse()
+    }
+
+    @Test
+    fun fromAndroid13ThePermissionIsNeededAsWell() {
+        assertThat(allowed(app, Build.VERSION_CODES.TIRAMISU)).isTrue()
+
+        shadowOf(app).denyPermissions(Manifest.permission.POST_NOTIFICATIONS)
+
+        assertThat(allowed(app, Build.VERSION_CODES.TIRAMISU)).isFalse()
+        assertThat(allowed(app, Build.VERSION_CODES.BAKLAVA)).isFalse()
     }
 
     @Test

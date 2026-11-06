@@ -81,6 +81,9 @@ class BatteryEntryScreenTest {
     private val access = FakeEngineAccess(StartState.Ready(EngineConfig.setUpDraft(ZoneId.of("Europe/Amsterdam"),
         ProviderId("open-meteo"))))
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /** A card that never shows, for the tests of the home's other parts. */
+    private val noCard by lazy { allowedCard(scope) }
     private val saves = Saves(access, scope)
     private val handle = SavedStateHandle()
     private lateinit var entry: BatteryEntry
@@ -112,7 +115,7 @@ class BatteryEntryScreenTest {
         val content = @Composable {
             AppTheme {
                 focus = LocalFocusManager.current
-                HomeScreen(outlook, notice, entry, away, { lisbon }) { }
+                HomeScreen(outlook, notice, entry, away, { lisbon }, noCard) { }
             }
         }
         if (restoration == null) compose.setContent(content) else restoration.setContent(content)

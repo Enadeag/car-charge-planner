@@ -90,6 +90,9 @@ class AwayEntryScreenTest {
     private val clock = TestClock(today.atTime(9, 0).atZone(lisbon).toInstant())
     private val access = FakeEngineAccess(StartState.Ready(EngineConfig.setUpDraft(lisbon, ProviderId("open-meteo"))))
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /** A card that never shows, for the tests of the home's other parts. */
+    private val noCard by lazy { allowedCard(scope) }
     private val saves = Saves(access, scope)
     private val handle = SavedStateHandle()
     private lateinit var away: AwayEntry
@@ -127,7 +130,7 @@ class AwayEntryScreenTest {
         val notice = HomeNotice(saves, scope) { }
         compose.setContent {
             focus = LocalFocusManager.current
-            AppTheme { wrap { HomeScreen(outlook, notice, battery, away, { lisbon }) { } } }
+            AppTheme { wrap { HomeScreen(outlook, notice, battery, away, { lisbon }, noCard) { } } }
         }
         compose.waitForIdle()
         if (planned) {

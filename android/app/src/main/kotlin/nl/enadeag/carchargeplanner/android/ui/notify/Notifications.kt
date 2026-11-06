@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.android.ui.notify
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.PendingIntent
 import android.content.ActivityNotFoundException
@@ -52,12 +53,12 @@ internal class Notifications(private val context: Context, private val clock: Cl
             val plan = NoticePlan.of(notice)
             val stay = plan.stayFrom(clock.instant()) ?: return@post null
             val text = words().of(notice)
-            val builder = builder(plan.channel, text, plan.tap)
+            val builder = builder(plan.channel, text, plan.tap, plan.tag)
                 .setCategory(NotificationCompat.CATEGORY_REMINDER)
                 .setTimeoutAfter(stay.toMillis())
                 .setOnlyAlertOnce(plan.alertOnce)
             if (plan.tap == Tap.BATTERY_ENTRY) {
-                builder.addAction(0, words().enterLevel(), open(Tap.BATTERY_ENTRY))
+                builder.addAction(0, words().enterLevel(), open(Tap.BATTERY_ENTRY, plan.tag))
             }
             plan.tag to builder.build()
         }
@@ -66,7 +67,7 @@ internal class Notifications(private val context: Context, private val clock: Cl
     override fun show() {
         post(NoticePlan.PROBLEMS_TAG) {
             val text = words().problems()
-            NoticePlan.PROBLEMS_TAG to builder(NoticeChannel.PROBLEMS, text, Tap.DASHBOARD)
+            NoticePlan.PROBLEMS_TAG to builder(NoticeChannel.PROBLEMS, text, Tap.DASHBOARD, NoticePlan.PROBLEMS_TAG)
                 .setCategory(NotificationCompat.CATEGORY_ERROR)
                 .setOnlyAlertOnce(true)
                 .build()
@@ -95,7 +96,7 @@ internal class Notifications(private val context: Context, private val clock: Cl
             val (tag, notification) = make() ?: return
             manager.notify(tag, 0, notification)
         } catch (failure: SecurityException) {
-            // the owner may take the permission away between the check and the post
+            // the owner may take the permission away between the check and the post; lint asks for this catch
             LOG.warn("A notification of kind {} could not be posted", kind, failure)
         } catch (failure: RuntimeException) {
             LOG.warn("A notification of kind {} could not be posted", kind, failure)
@@ -105,7 +106,7 @@ internal class Notifications(private val context: Context, private val clock: Cl
     private fun words(): NoticeWords = NoticeWords(context.resources, context.resources.configuration.locales[0],
         DateFormat.is24HourFormat(context))
 
-    private fun builder(channel: NoticeChannel, text: NoticeText, tap: Tap): NotificationCompat.Builder {
+    private fun builder(channel: NoticeChannel, text: NoticeText, tap: Tap, tag: String): NotificationCompat.Builder {
         val shown = NotificationCompat.Builder(context, channel.id)
             .setSmallIcon(R.drawable.ic_stat_charge)
             .setColor(ContextCompat.getColor(context, R.color.ic_launcher_background))
@@ -120,12 +121,20 @@ internal class Notifications(private val context: Context, private val clock: Cl
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setPublicVersion(shown)
             .setAutoCancel(true)
-            .setContentIntent(open(tap))
+            .setContentIntent(open(tap, tag))
     }
 
-    /** The app's activity, straight, without anything another app could fill in. */
-    private fun open(tap: Tap): PendingIntent {
+    /**
+     * The app's activity, straight, without anything another app could fill in. The notification's tag goes along as
+     * the intent's data, so the activity takes the notification away also when its action is tapped, which Android's
+     * auto-cancel does not do, and two notifications never share one intent.
+     *
+     * @param tap what the activity opens
+     * @param tag the tag of the notification the intent belongs to
+     */
+    private fun open(tap: Tap, tag: String): PendingIntent {
         val intent = Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            .setData(MainActivity.noticeUri(tag))
         if (tap == Tap.BATTERY_ENTRY) {
             intent.action = MainActivity.OPEN_BATTERY_ENTRY
         }
@@ -163,13 +172,16 @@ internal fun createNoticeChannels(context: Context) {
 
 /**
  * Whether the app may post notifications now: Android 13's permission given, and notifications not blocked for the
- * app.
+ * app. Before Android 13 there is no such permission, and only the block counts.
  *
  * @param context any of the app's contexts
+ * @param sdk the phone's Android API level; another only in a test
  * @return true when a notification would show
  */
-internal fun allowed(context: Context): Boolean {
-    val permitted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || ContextCompat.checkSelfPermission(context,
+// the permission is asked for only from Android 13, which the check on sdk sees to
+@SuppressLint("InlinedApi")
+internal fun allowed(context: Context, sdk: Int = Build.VERSION.SDK_INT): Boolean {
+    val permitted = sdk < Build.VERSION_CODES.TIRAMISU || ContextCompat.checkSelfPermission(context,
         Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     return permitted && NotificationManagerCompat.from(context).areNotificationsEnabled()
 }

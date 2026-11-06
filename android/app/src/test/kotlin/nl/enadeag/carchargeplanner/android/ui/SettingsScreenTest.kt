@@ -156,9 +156,9 @@ class SettingsScreenTest {
                 onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
                 val page by session.page.collectAsState()
                 if (fontScaleTwo) {
-                    AtFontScaleTwo { SettingsScreen(session, page, wifiOnly = wifiOnly) }
+                    AtFontScaleTwo { SettingsScreen(session, page, wifiOnly) }
                 } else {
-                    SettingsScreen(session, page, wifiOnly = wifiOnly)
+                    SettingsScreen(session, page, wifiOnly)
                 }
             }
         }
@@ -630,7 +630,7 @@ class SettingsScreenTest {
         restoration.setContent {
             AppTheme {
                 val page by session.page.collectAsState()
-                SettingsScreen(session, page)
+                SettingsScreen(session, page, OffWifiOnly)
             }
         }
         open(SettingsPage.CAR_AND_HOUSE)
@@ -649,7 +649,7 @@ class SettingsScreenTest {
         restoration.setContent {
             AppTheme {
                 val page by session.page.collectAsState()
-                SettingsScreen(session, page)
+                SettingsScreen(session, page, OffWifiOnly)
             }
         }
         open(SettingsPage.FORECAST)
@@ -691,7 +691,7 @@ class SettingsScreenTest {
         restoration.setContent {
             AppTheme {
                 val page by session.page.collectAsState()
-                SettingsScreen(session, page)
+                SettingsScreen(session, page, OffWifiOnly)
             }
         }
         open(SettingsPage.FORECAST)
@@ -1079,7 +1079,7 @@ class SettingsScreenTest {
         restoration.setContent {
             AppTheme {
                 val page by session.page.collectAsState()
-                SettingsScreen(session, page)
+                SettingsScreen(session, page, OffWifiOnly)
             }
         }
         compose.waitForIdle()
@@ -1393,7 +1393,7 @@ class SettingsScreenTest {
         restoration.setContent {
             AppTheme {
                 val page by session.page.collectAsState()
-                SettingsScreen(session, page)
+                SettingsScreen(session, page, OffWifiOnly)
             }
         }
         open(SettingsPage.FORECAST)

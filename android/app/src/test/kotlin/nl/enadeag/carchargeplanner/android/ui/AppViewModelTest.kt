@@ -40,7 +40,7 @@ class AppViewModelTest {
     private fun TestScope.model(): AppViewModel {
         val access = FakeEngineAccess()
         return AppViewModel(access, Saves(access, backgroundScope), backgroundScope, SavedStateHandle(),
-            Locale.ENGLISH, "en")
+            Locale.ENGLISH, "en", card = ::allowedCard)
     }
 
     @Test

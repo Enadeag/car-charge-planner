@@ -1,7 +1,6 @@
 package nl.enadeag.carchargeplanner.android.prefs
 
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import java.io.File
 import java.io.IOException
@@ -39,7 +38,7 @@ class PhonePreferencesTest {
     /** A store on its file, as the app makes one; one per file at a time, as DataStore needs. */
     private fun store(file: File): Pair<DataStore<Preferences>, CoroutineScope> {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO).also { scopes += it }
-        return PreferenceDataStoreFactory.create(scope = scope) { file } to scope
+        return phoneStore(scope) { file } to scope
     }
 
     private fun file(name: String) = folder.resolve("datastore/$name.preferences_pb").toFile()
@@ -132,6 +131,19 @@ class PhonePreferencesTest {
             assertThat(PhoneState(state).episodeStarted()).isFalse()
             assertThat(PhoneSettings(state, scope).on.first()).isFalse()
         }
+    }
+
+    @Test
+    fun aFileThatCannotBeParsedIsReplacedSoAWriteIsKeptAgain() {
+        val file = file(PhoneStoreFiles.STATE)
+        file.parentFile?.mkdirs()
+        file.writeBytes(byteArrayOf(0x7f, 0x13, 0x00, 0x42, 0x55))
+        val (state, scope) = store(file)
+        runBlocking { PhoneState(state).close() }
+
+        val (later, _) = again(scope, file)
+
+        assertThat(runBlocking { PhoneState(later).closed() }).isTrue()
     }
 
     @Test

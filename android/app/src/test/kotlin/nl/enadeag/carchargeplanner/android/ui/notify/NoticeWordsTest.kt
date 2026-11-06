@@ -115,11 +115,14 @@ class NoticeWordsTest {
 
         assertThat(words("en").of(now)).isEqualTo(NoticeText("Start charging now", "Start charging now for your " +
             "trip on Sunday at 14:00, and set the charge limit to 80%: little time is left before the departure. " +
-            setting, "Charge window soon"))
+            setting, "Start charging now"))
         assertThat(words("en").of(outside).body).isEqualTo("Start charging now for your trip on Sunday at 14:00, and " +
             "set the charge limit to 80%, although that is outside your charging hours: waiting for them would leave " +
             "too little time. $setting")
+        assertThat(words("en").of(outside).publicTitle).isEqualTo("Start charging now")
+        assertThat(words("nl").of(now).publicTitle).isEqualTo("Start nu met laden")
         assertThat(words("nl").of(outside).title).isEqualTo("Start nu met laden")
+        assertThat(words("nl").of(outside).publicTitle).isEqualTo("Start nu met laden")
     }
 
     @Test

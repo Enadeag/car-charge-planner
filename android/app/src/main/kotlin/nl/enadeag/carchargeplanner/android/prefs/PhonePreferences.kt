@@ -1,11 +1,14 @@
 package nl.enadeag.carchargeplanner.android.prefs
 
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -17,6 +20,8 @@ import nl.enadeag.carchargeplanner.android.home.CardMemory
 import nl.enadeag.carchargeplanner.android.notify.EpisodeFlag
 import org.slf4j.LoggerFactory
 
+private val LOG = LoggerFactory.getLogger("nl.enadeag.carchargeplanner.android.prefs.PhonePreferences")
+
 /** The file names of the phone's own preferences stores, which `data_extraction_rules.xml` names too. */
 object PhoneStoreFiles {
 
@@ -26,6 +31,24 @@ object PhoneStoreFiles {
     /** What stays on this phone: the notification card's state and the Problems notification's episode. */
     const val STATE = "state"
 }
+
+/**
+ * One of the phone's preferences stores on its file; one store per file in the process, as DataStore needs. Nothing is
+ * read until it is asked. A file that cannot be parsed is replaced by an empty one, so its defaults are used and a
+ * write succeeds again, rather than every write failing until the app's data is cleared.
+ *
+ * @param scope where the store reads and writes, the app's
+ * @param file the store's file, such as `files/datastore/state.preferences_pb`
+ * @return the store
+ */
+fun phoneStore(scope: CoroutineScope, file: () -> File): DataStore<Preferences> = PreferenceDataStoreFactory.create(
+    corruptionHandler = ReplaceFileCorruptionHandler { failure ->
+        LOG.warn("A preferences store could not be parsed; it starts again empty", failure)
+        emptyPreferences()
+    },
+    scope = scope,
+    produceFile = file,
+)
 
 /** Whether the hourly update while the app is closed waits for Wi-Fi, which the Forecast page switches. */
 interface WifiOnly {
@@ -92,8 +115,6 @@ class PhoneState(private val store: DataStore<Preferences>) : CardMemory, Episod
 
     private suspend fun read(key: Preferences.Key<Boolean>): Boolean = store.data.readable().first()[key] == true
 }
-
-private val LOG = LoggerFactory.getLogger(PhoneSettings::class.java)
 
 /** The store's preferences, empty when the file cannot be read, as DataStore's guide does. */
 private fun Flow<Preferences>.readable(): Flow<Preferences> = catch { failure ->

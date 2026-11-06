@@ -8,6 +8,7 @@ import nl.enadeag.carchargeplanner.engine.notify.BatteryCheck
 import nl.enadeag.carchargeplanner.engine.notify.Notice
 import nl.enadeag.carchargeplanner.engine.notify.TripChargeStart
 import nl.enadeag.carchargeplanner.engine.notify.TripShort
+import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge
 
 /**
  * A notification channel of the app. Its id never changes once released, as Android keeps the owner's choices for a
@@ -83,9 +84,10 @@ data class NoticePlan(val tag: String, val channel: NoticeChannel, val timeoutAt
          *
          * @param notice what the engine tells the owner
          * @return how it is posted: a window by its start, in the charge windows' channel until its end; a trip's grid
-         *     charge by the trip's departure in the same channel until the window's end; a battery check and a short
-         *     trip by the departure, in the checks' channel until the departure, a battery check opening the battery
-         *     entry and alerting again when it is asked again
+         *     charge by the trip's departure in the same channel until the window's end, its lock screen saying the
+         *     window comes soon only when it is planned, as one that starts now asks the owner to act; a battery check
+         *     and a short trip by the departure, in the checks' channel until the departure, a battery check opening
+         *     the battery entry and alerting again when it is asked again
          */
         fun of(notice: Notice): NoticePlan = when (notice) {
             is Announcement -> NoticePlan(tag(when (notice.kind()) {
@@ -94,7 +96,9 @@ data class NoticePlan(val tag: String, val channel: NoticeChannel, val timeoutAt
             }, notice.window().start()), NoticeChannel.CHARGE_WINDOWS, notice.window().end(), LockScreen.WINDOW_SOON,
                 Tap.DASHBOARD, true)
             is TripChargeStart -> NoticePlan(tag("trip_charge_start", notice.trip().departure()),
-                NoticeChannel.CHARGE_WINDOWS, notice.window().end(), LockScreen.WINDOW_SOON, Tap.DASHBOARD, true)
+                NoticeChannel.CHARGE_WINDOWS, notice.window().end(),
+                if (notice.start() == TripGridCharge.Start.PLANNED) LockScreen.WINDOW_SOON else LockScreen.TITLE,
+                Tap.DASHBOARD, true)
             is BatteryCheck -> NoticePlan(tag("battery_check", notice.trip().departure()),
                 NoticeChannel.BATTERY_TRIP_CHECKS, notice.trip().departure(), LockScreen.TITLE, Tap.BATTERY_ENTRY,
                 false)

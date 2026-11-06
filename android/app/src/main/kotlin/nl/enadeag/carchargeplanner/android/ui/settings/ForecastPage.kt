@@ -66,10 +66,10 @@ import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
  * @param session the forecast's form, the API keys as read, and the checks
  * @param edits counts each edit, so the fields show it
  * @param problems the page's fields in order, for the focus after Save
- * @param wifiOnly the switch; null shows none
+ * @param wifiOnly the switch
  */
 @Composable
-internal fun ForecastPage(session: SettingsSession, edits: Edits, problems: ProblemFocus, wifiOnly: WifiOnly?) {
+internal fun ForecastPage(session: SettingsSession, edits: Edits, problems: ProblemFocus, wifiOnly: WifiOnly) {
     val forecast = session.forms.forecast
     val shown by forecast.problems.collectAsStateWithLifecycle()
     val keys by session.keys.collectAsStateWithLifecycle()
@@ -104,7 +104,7 @@ internal fun ForecastPage(session: SettingsSession, edits: Edits, problems: Prob
                 last = index == providers.lastIndex && place == info.settings().lastIndex)
         }
     }
-    wifiOnly?.let { WifiOnlyRow(it) }
+    WifiOnlyRow(wifiOnly)
 }
 
 /**
@@ -116,7 +116,8 @@ private fun WifiOnlyRow(wifiOnly: WifiOnly) {
     val on by wifiOnly.on.collectAsStateWithLifecycle<Boolean?>(null)
     val now = on
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-        .toggleable(value = now == true, enabled = now != null, role = Role.Switch) { wifiOnly.switch(it) }) {
+        .toggleable(value = now == true, enabled = now != null, role = Role.Switch) { wifiOnly.switch(it) }
+        .padding(vertical = 8.dp)) {
         Column(Modifier.weight(1f).padding(end = 16.dp)) {
             Text(stringResource(R.string.forecast_wifi_only), style = MaterialTheme.typography.bodyLarge)
             Text(stringResource(R.string.forecast_wifi_only_hint), style = MaterialTheme.typography.bodyMedium,

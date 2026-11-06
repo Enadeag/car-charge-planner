@@ -4,7 +4,6 @@ import android.app.Application
 import android.os.StrictMode
 import androidx.annotation.VisibleForTesting
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import kotlinx.coroutines.CoroutineScope
@@ -14,6 +13,7 @@ import nl.enadeag.carchargeplanner.android.notify.ProblemEpisode
 import nl.enadeag.carchargeplanner.android.prefs.PhoneSettings
 import nl.enadeag.carchargeplanner.android.prefs.PhoneState
 import nl.enadeag.carchargeplanner.android.prefs.PhoneStoreFiles
+import nl.enadeag.carchargeplanner.android.prefs.phoneStore
 import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.android.store.EngineOnDispatcher
 import nl.enadeag.carchargeplanner.android.store.Saves
@@ -25,7 +25,7 @@ import nl.enadeag.carchargeplanner.android.ui.notify.createNoticeChannels
  * them, which tells the owner through Android's notifications, the notification channels, the phone's own preferences
  * stores and the app-wide scope that saves run in, so a save outlives the screen that started it. The screens reach
  * the engine only through [engine] and [saves], off the main thread. The engine is built but not started: only the
- * work in the background makes its rounds (#362).
+ * work in the background makes its rounds.
  */
 class CarChargePlannerApp : Application() {
 
@@ -66,12 +66,8 @@ class CarChargePlannerApp : Application() {
         applyMainThreadPolicy(BuildConfig.DEBUG)
     }
 
-    /**
-     * One of the phone's preferences stores, in `files/datastore/<name>.preferences_pb`; one store per file in the
-     * process, as DataStore needs. Nothing is read until it is asked, off the main thread.
-     */
-    private fun store(name: String): DataStore<Preferences> =
-        PreferenceDataStoreFactory.create(scope = scope) { preferencesDataStoreFile(name) }
+    /** One of the phone's preferences stores, in `files/datastore/<name>.preferences_pb`, read off the main thread. */
+    private fun store(name: String): DataStore<Preferences> = phoneStore(scope) { preferencesDataStoreFile(name) }
 
     internal companion object {
 

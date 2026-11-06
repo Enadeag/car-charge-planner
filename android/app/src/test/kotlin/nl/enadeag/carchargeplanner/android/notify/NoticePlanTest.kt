@@ -46,13 +46,21 @@ class NoticePlanTest {
             NoticeChannel.CHARGE_WINDOWS, end, LockScreen.WINDOW_SOON, Tap.DASHBOARD, true))
     }
 
-    @ParameterizedTest
-    @EnumSource(TripGridCharge.Start::class)
-    fun aTripsGridChargeIsTaggedByTheDepartureAndStaysUntilTheWindowsEnd(how: TripGridCharge.Start) {
-        val notice = TripChargeStart(trip, window, how, zone, Phases.THREE, Percent(80.0))
+    @Test
+    fun aTripsPlannedGridChargeIsTaggedByTheDepartureStaysUntilTheWindowsEndAndSaysTheWindowComesSoon() {
+        val notice = TripChargeStart(trip, window, TripGridCharge.Start.PLANNED, zone, Phases.THREE, Percent(80.0))
 
         assertThat(NoticePlan.of(notice)).isEqualTo(NoticePlan("trip_charge_start:${departure.epochSecond}",
             NoticeChannel.CHARGE_WINDOWS, end, LockScreen.WINDOW_SOON, Tap.DASHBOARD, true))
+    }
+
+    @ParameterizedTest
+    @EnumSource(TripGridCharge.Start::class, names = ["NOW", "NOW_OUTSIDE_CHARGING_HOURS"])
+    fun aTripsGridChargeThatStartsNowShowsItsTitleOnTheLockScreen(how: TripGridCharge.Start) {
+        val notice = TripChargeStart(trip, window, how, zone, Phases.THREE, Percent(80.0))
+
+        assertThat(NoticePlan.of(notice)).isEqualTo(NoticePlan("trip_charge_start:${departure.epochSecond}",
+            NoticeChannel.CHARGE_WINDOWS, end, LockScreen.TITLE, Tap.DASHBOARD, true))
     }
 
     @Test
