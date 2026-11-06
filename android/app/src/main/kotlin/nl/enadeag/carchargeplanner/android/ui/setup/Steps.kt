@@ -45,6 +45,7 @@ internal fun WelcomeStep(provider: String) {
     Text(stringResource(R.string.setup_welcome_intro))
     SectionHeading(stringResource(R.string.setup_welcome_privacy_title))
     Text(stringResource(R.string.setup_welcome_privacy, provider))
+    Text(stringResource(R.string.setup_welcome_background, provider))
     Text(stringResource(R.string.setup_welcome_nothing_else))
     Text(stringResource(R.string.setup_welcome_settings))
     SectionHeading(stringResource(R.string.setup_welcome_typical_title))

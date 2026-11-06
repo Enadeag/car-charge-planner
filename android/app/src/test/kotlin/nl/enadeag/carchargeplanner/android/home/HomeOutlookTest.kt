@@ -8,6 +8,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -20,6 +21,7 @@ import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem
+import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -395,5 +397,102 @@ class HomeOutlookTest {
 
         assertThat(home.state.value).isEqualTo(HomeOutlook.State.Asking)
         assertThat(access.outlooks).hasSize(2)
+    }
+
+    @Test
+    fun eachOutlookIsPassedOnAlsoOneThatLeadsAwayFromTheHomeWhoseScopeEndsWithIt() = runTest {
+        val seen = mutableListOf<Outlook>()
+        // as in the app, where the home's own scope ends when it is left
+        val own = CoroutineScope(backgroundScope.coroutineContext + Job(backgroundScope.coroutineContext[Job]))
+        HomeOutlook(access, own, clock, seen = { seen += it }) {
+            lost++
+            own.cancel()
+        }
+        runCurrent()
+        val unusable = Outlook.ConfigUnusable(ConfigProblem.Kind.INVALID, Path.of("engine.json"), "detail")
+
+        answer(0, unusable)
+
+        assertThat(seen).containsExactly(unusable)
+        assertThat(lost).isEqualTo(1)
+    }
+
+    @Test
+    fun thePlanShowsBeforeItIsPassedOnSoASlowDiskDoesNotHoldItBack() = runTest {
+        val disk = CompletableDeferred<Unit>()
+        val seen = mutableListOf<Outlook>()
+        val home = HomeOutlook(access, backgroundScope, clock, seen = {
+            disk.await()
+            seen += it
+        }) { lost++ }
+        runCurrent()
+
+        answer(0, planned)
+
+        assertThat(home.state.value).isEqualTo(HomeOutlook.State.Planned(Dashboard.of(planned, listOf())))
+        assertThat(seen).isEmpty()
+        disk.complete(Unit)
+        runCurrent()
+        assertThat(seen).containsExactly(planned)
+    }
+
+    @Test
+    fun noForecastIsPassedOnOnceShown() = runTest {
+        val seen = mutableListOf<Outlook>()
+        val home = HomeOutlook(access, backgroundScope, clock, seen = { seen += it }) { lost++ }
+        runCurrent()
+        val none = Outlook.NoForecast("Open-Meteo: no network")
+
+        answer(0, none)
+
+        assertThat(home.state.value).isEqualTo(HomeOutlook.State.NoForecast("Open-Meteo: no network"))
+        assertThat(seen).containsExactly(none)
+    }
+
+    @Test
+    fun noForecastNamesTheProvidersThatRefusedTheirKey() = runTest {
+        val home = home()
+
+        answer(0, Outlook.NoForecast("Open-Meteo: 401", false, listOf(ProviderId("open-meteo"))))
+
+        assertThat(home.state.value)
+            .isEqualTo(HomeOutlook.State.NoForecast("Open-Meteo: 401", listOf("Open-Meteo")))
+    }
+
+    @Test
+    fun aForecastWithoutDaysNamesTheProvidersThatRefusedTheirKey() = runTest {
+        val madeAt = today.atTime(8, 0).atZone(zone)
+        val home = home()
+
+        answer(0, Plans.planned(madeAt, listOf(), source = Plans.source(madeAt.toInstant(),
+            keyRefusedBy = listOf(ProviderId("forecast-solar"), ProviderId("open-meteo")))))
+
+        assertThat((home.state.value as HomeOutlook.State.NoDays).keyRefusedBy)
+            .containsExactly("Forecast.Solar", "Open-Meteo")
+    }
+
+    @Test
+    fun aFailureOfWhatTakesTheOutlookLeavesTheHomeShowingThePlan() = runTest {
+        val home = HomeOutlook(access, backgroundScope, clock, seen = { throw IllegalStateException("store gone") }) {
+            lost++
+        }
+        runCurrent()
+
+        answer(0, planned)
+
+        assertThat(home.state.value).isEqualTo(HomeOutlook.State.Planned(Dashboard.of(planned, listOf())))
+    }
+
+    @Test
+    fun aRefusedKeyIsNamedOnTheDashboardByItsProvidersName() = runTest {
+        val madeAt = today.atTime(8, 0).atZone(zone)
+        val refused = Plans.planned(madeAt, listOf(listOf()), source = Plans.source(madeAt.toInstant(),
+            keyRefusedBy = listOf(ProviderId("forecast-solar"), ProviderId("open-meteo"))))
+        val home = home()
+
+        answer(0, refused)
+
+        assertThat((home.state.value as HomeOutlook.State.Planned).dashboard.keyRefusedBy)
+            .containsExactly("Forecast.Solar", "Open-Meteo")
     }
 }

@@ -40,7 +40,16 @@ On Linux `XDG_CONFIG_HOME` and `XDG_DATA_HOME` move the config and data folders,
 
 How the app reads and writes these files, and what it does with a damaged one, is in the [guide](guide.md#the-files-and-the-log).
 
-In the Android app, which is not released yet, the engine's files (the settings file, the battery level you entered last, `battery.json`, and the away periods you entered for a day, `away.json`, among them) are kept in the app's own files folder on the phone, which no other app can read. They never leave the phone except in Android's transfer to your next phone; the API keys stay out of that.
+In the Android app, which is not released yet, the engine's files (the settings file, the battery level you entered last, `battery.json`, and the away periods you entered for a day, `away.json`, among them) are kept in the app's own files folder on the phone, which no other app can read. They never leave the phone except in Android's transfer to your next phone; the API keys stay out of that. Beside them, in `files/datastore/`, the app keeps two small preferences files of its own (Android's DataStore), which the engine does not use:
+
+| What | File | In the transfer to your next phone |
+| --- | --- | --- |
+| The phone's own settings: **Wi-Fi only** (Settings, Forecast), whether the hourly update while the app is closed waits for Wi-Fi | `settings.preferences_pb` | Yes |
+| The notifications' state on this phone: whether you closed the dashboard's card about notifications, whether you refused Android's question for them, and whether a "Forecast not updated" notification was posted | `state.preferences_pb` | No: it belongs to this phone, where notifications are allowed or not |
+
+If one of these files is damaged, the app starts it again empty: **Wi-Fi only** is then off until you switch it on again.
+
+The Android app's notifications go through Android's own notification service on the phone, like any app's, and their words are made on the phone; the app sends them nowhere else. Like any app's notifications, they are also seen by a watch paired with the phone and by an app you gave access to your notifications.
 
 ### API keys
 

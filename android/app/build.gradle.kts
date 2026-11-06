@@ -252,6 +252,8 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.core)
+    implementation(libs.datastore.preferences)
     coreLibraryDesugaring(libs.desugar.jdk.libs.nio)
 
     // the engine's contract tests, with JUnit and AssertJ, for the Android implementations of its seams
@@ -283,9 +285,10 @@ dependencies {
 }
 
 // The app's logic, which PIT mutates (CONTRIBUTING.md, What is tested where): the classes with plain JUnit 5 tests.
-// The screens, tested on Robolectric only, are left out; their tests keep hand mutants in the review.
+// The screens, tested on Robolectric only, are left out, and so are the notifications' words and their posting
+// (ui.notify); their tests keep hand mutants in the review.
 val pitLogic = listOf("form.*", "setup.*", "settings.*", "store.*", "home.*", "start.*", "licences.*", "logging.*",
-    "secrets.*", "OwnCode*", "MainThreadViolations*", "AndroidHttpGet*", "AndroidPlatform*",
+    "secrets.*", "notify.*", "prefs.*", "OwnCode*", "MainThreadViolations*", "AndroidHttpGet*", "AndroidPlatform*",
     // ChartGeometry.kt: the charts' geometry and the shapes they draw, apart from the Compose code in DayCharts.kt
     "ui.home.ChartGeometryKt*", "ui.home.PlotArea*", "ui.home.CurvePoint*", "ui.home.PlacedTick*",
     "ui.home.TimeAxis*", "ui.home.Point*", "ui.home.Shape*", "ui.home.SolarDrawing*", "ui.home.BatteryBarLayout*",
@@ -318,11 +321,12 @@ pitest {
     targetTests = setOf("nl.enadeag.carchargeplanner.android.*")
     excludedTestClasses = listOf(
         // the screens' tests, JUnit 4 on Robolectric, which runs Android in the test JVM
-        "AppOnRobolectricTest", "MainActivity*Test", "licences.AssetLicenceFilesTest", "ui.*Screen*Test",
+        "AppOnRobolectricTest", "AppWiringTest", "MainActivity*Test", "licences.AssetLicenceFilesTest", "ui.*Screen*Test",
         "ui.AppThemeTest", "ui.BarScaffoldTest", "ui.home.DashboardWordsTest", "ui.home.DrawnShapesTest",
+        "ui.notify.NoticeWordsTest", "ui.notify.NotificationsTest",
         // what the build makes rather than what the code does: the resources, the manifest, the APK and the engine on
         // the example settings file; and the ArchUnit rules, which read the classes' structure and kill no mutant
-        "StringsResourcesTest", "DataExtractionRulesTest", "NetworkSecurityConfigTest", "licences.LicencesInTheApkTest",
-        "AppEngineTest", "AppArchitectureTest",
+        "StringsResourcesTest", "DataExtractionRulesTest", "ManifestTest", "NetworkSecurityConfigTest",
+        "licences.LicencesInTheApkTest", "AppEngineTest", "AppArchitectureTest",
     ).map { "nl.enadeag.carchargeplanner.android.$it" }.toSet()
 }

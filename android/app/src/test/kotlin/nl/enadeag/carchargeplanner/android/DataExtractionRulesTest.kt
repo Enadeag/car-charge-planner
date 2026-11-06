@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.android
 
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
+import nl.enadeag.carchargeplanner.android.prefs.PhoneStoreFiles
 import nl.enadeag.carchargeplanner.android.secrets.EncryptedKeychain
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -10,8 +11,10 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.w3c.dom.Element
 
 /**
- * What may leave the phone: only the keychain's file stays, as its Keystore key never moves; the settings, trips and
- * cache go along to the owner's next phone. No device test sees a backup or a transfer, so this reads the rules.
+ * What may leave the phone: only the keychain's file, as its Keystore key never moves, and the notifications' state
+ * store, which belongs to this phone, stay; the settings, trips, cache and the phone's settings store, with the
+ * "Wi-Fi only" switch, go along to the owner's next phone. No device test sees a backup or a transfer, so this reads
+ * the rules.
  */
 class DataExtractionRulesTest {
 
@@ -27,6 +30,10 @@ class DataExtractionRulesTest {
     private val keychainFiles = listOf("exclude root:no_backup/${EncryptedKeychain.FILE_NAME}",
         "exclude root:no_backup/${EncryptedKeychain.FILE_NAME}.tmp",
         "exclude root:no_backup/${EncryptedKeychain.DAMAGED_FILE_NAME}")
+
+    // DataStore keeps a store in files/datastore/<name>.preferences_pb, written through <that>.tmp
+    private val stateFiles = listOf("exclude file:datastore/${PhoneStoreFiles.STATE}.preferences_pb",
+        "exclude file:datastore/${PhoneStoreFiles.STATE}.preferences_pb.tmp")
 
     private val application = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
         .newDocumentBuilder().parse(File("src/main/AndroidManifest.xml")).documentElement
@@ -51,15 +58,22 @@ class DataExtractionRulesTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["cloud-backup", "device-transfer"])
-    fun onlyTheKeychainsFileStaysOnThePhone(kind: String) {
+    fun onlyTheKeychainsFileAndTheNotificationsStateStayOnThePhone(kind: String) {
         val section = rules.getElementsByTagName(kind).item(0) as Element
 
-        assertThat(rulesIn(section)).containsExactlyInAnyOrderElementsOf(keychainFiles)
+        assertThat(rulesIn(section)).containsExactlyInAnyOrderElementsOf(keychainFiles + stateFiles)
     }
 
     @Test
-    fun beforeAndroid12OnlyTheKeychainsFileStaysToo() {
-        assertThat(rulesIn(olderRules)).containsExactlyInAnyOrderElementsOf(keychainFiles)
+    fun beforeAndroid12OnlyTheKeychainsFileAndTheNotificationsStateStayToo() {
+        assertThat(rulesIn(olderRules)).containsExactlyInAnyOrderElementsOf(keychainFiles + stateFiles)
+    }
+
+    @Test
+    fun thePhonesSettingsStoreGoesAlong() {
+        val excluded = (rulesIn(rules.getElementsByTagName("device-transfer").item(0) as Element) + rulesIn(olderRules))
+
+        assertThat(excluded).noneMatch { it.contains(PhoneStoreFiles.SETTINGS) }
     }
 
     @Test

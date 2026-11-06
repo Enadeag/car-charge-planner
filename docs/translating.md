@@ -33,6 +33,7 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | Import tolerance | toegestane netstroom |  | Grid allowance, import limit |
 | Announcement | melding |  | Reminder, alert |
 | Battery check | controle van het accuniveau | as in "Controleer het accuniveau" | Battery question, level reminder |
+| Enter battery level | Accuniveau invullen | the battery check's notification action only; the dashboard's button is Update battery level (Accuniveau bijwerken) | Update battery level (in a notification), set level |
 | Grid advice | advies: laden uit het net | a grid charge is laden uit het net | Grid warning, top-up, emergency charge |
 | Set-up | instelhulp |  | Onboarding, configuration, wizard (the wizard is only the form set-up takes) |
 | Not set up | niet ingesteld |  | Unconfigured, first run (first run is the moment, not the state) |
@@ -65,6 +66,7 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | Official route | – | not shown in the app | Official API (a maker can have an API that owners may not use), unofficial route |
 | Local network (not encrypted) | lokaal netwerk (niet versleuteld) |  | LAN, insecure, http mode |
 | Home Assistant | Home Assistant |  | HA, the hub |
+| Wi-Fi only | Alleen wifi | the Android app's switch for the hourly update while the app is closed; Dutch writes "wifi" in lower case | WLAN only, unmetered only, Wifi (in English) |
 
 ## How the texts are written
 
@@ -139,7 +141,7 @@ The Android app's texts are Android string resources, in `android/app/src/main/r
 
 ### The words of the Android screens
 
-The set-up screens, the screen of a settings file the app cannot use, the dashboard and Settings use these words beside the terms above, in every language the same way. The buttons and headings are short, as on a phone; the desktop's wording of the same step may differ.
+The set-up screens, the screen of a settings file the app cannot use, the dashboard, Settings and the notifications use these words beside the terms above, in every language the same way. The buttons and headings are short, as on a phone; the desktop's wording of the same step may differ.
 
 | English | Dutch | Note |
 | --- | --- | --- |
@@ -211,6 +213,10 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | updated 10:51, not refreshed since 10:51 | bijgewerkt om 10:51, niet vernieuwd sinds 10:51 | the footer, after the provider's credit, which stays as it is |
 | provider busy until 11:30 | dienst weer beschikbaar om 11:30 | the footer, during a cool-down |
 | The forecast was not refreshed since 10:51. The plan uses that forecast. | De voorspelling is niet vernieuwd sinds 10:51. De planning gebruikt die voorspelling. | the warning above a plan on a stale forecast |
+| Open-Meteo refused the API key. Check it under Forecast in Settings. | Open-Meteo weigert de API-sleutel. Controleer de sleutel bij Voorspelling in Instellingen. | the warning in the same place when a provider refused its API key, also while another forecast is used and above "No forecast" when there is no plan; "Forecast" is the Settings page |
+| Get a notice before each charge window | Krijg een melding vóór elk laadvenster | the title of the dashboard's card while notifications are not allowed; under it "The app tells you shortly before a charge window starts, so you can set your charger in time. You can change this later under Notifications in Settings." ("De app meldt het kort voordat een laadvenster begint, zodat je je laadpaal op tijd kunt instellen. Dat kun je later wijzigen bij Meldingen in Instellingen.") |
+| Turn on notifications | Meldingen aanzetten | the card's button, which asks Android |
+| Open notification settings | Instellingen voor meldingen openen | the card's button after a refusal, with "Android does not ask again. Turn notifications on there." ("Android vraagt het niet nog een keer. Zet meldingen daar aan."); not "Meldingsinstellingen openen", a word too long for a narrow phone at 200%, where it breaks in two |
 | No forecast | Geen voorspelling | the heading when there is no plan |
 | Settings | Instellingen | the home's top app bar action, and the list's title |
 | Solar panels | Zonnepanelen | a Settings page: every panel array |
@@ -228,7 +234,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Discard changes? | Wijzigingen weggooien? | asked by Back or Up on a Settings page with edits, and by Back, or a tap beside it, in the battery level's entry with a level typed and in the one-off away period's entry with something changed |
 | Keep editing | Verder bewerken | stays on the page, or in the entry |
 | Discard | Weggooien | throws the page's edits, or the typed level, away |
-| Close | Sluiten | closes a save's outcome shown on the home, and the close button of a failure or Undo snackbar |
+| Close | Sluiten | closes a save's outcome shown on the home, the notification card's ×, and the close button of a failure or Undo snackbar |
 | Array 2, east roof | Panelengroep 2, oostdak | a panel array's heading, by place and name |
 | Tilt, array 2 | Helling, panelengroep 2 | a panel array's field or button, named with its place |
 | Add an array | Panelengroep toevoegen | |
@@ -236,12 +242,30 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Check connection to Open-Meteo | Verbinding met Open-Meteo testen | asks the provider once, with what was typed |
 | Show, Hide | Tonen, Verbergen | an API key's mask |
 | None | Geen | no fallback provider; no weekly away period |
+| Notifications | Meldingen | Settings' row before the licences', "Opens Android's settings for this app" ("Opent de instellingen van Android voor deze app"); a notification is a "melding" everywhere, as the announcement is |
+| Wi-Fi only | Alleen wifi | the Forecast page's switch for the hourly update while the app is closed; Dutch writes "wifi" in lower case, as the Groene Boekje does, and the hint says "or another network without a data limit" ("of een ander netwerk zonder datalimiet") |
 | Open source licences | Opensourcelicenties | Settings' last row, and the title of the read-only screen it opens; the licence texts and their titles stay English |
 | Source code: … | Broncode: … | the repository's address on that screen, as plain text |
 | Expanded, Collapsed | Uitgevouwen, Ingevouwen | what TalkBack says of a licence's row: whether its text shows under it |
 | Reading the licences… | De licenties worden gelezen… | while a licence text, or the list of them, is read |
 | This text could not be read. | Deze tekst kon niet worden gelezen. | a licence text that is missing |
 | The licences could not be read. | De licenties konden niet worden gelezen. | the list of the licences that is missing |
+
+### The words of the notifications
+
+The notifications say the desktop's facts in the dashboard's words, with "Tap" ("Tik") where the desktop says "Click", a window's times as TalkBack reads them ("11:15 to 14:30", "11:15 tot 14:30"), and a trip by the weekday and time of its departure.
+
+| English | Dutch | Note |
+| --- | --- | --- |
+| Charge window 11:15 to 14:30 | Laadvenster 11:15 tot 14:30 | a solar window's title; its text starts with what to set ("Set the charge current to 10 A (2.3 kW) in your charger's app.", "Stel in de app van je laadpaal de laadstroom in op 10 A (2,3 kW).") and ends "About 7.9 kWh, 92% solar." ("Ongeveer 7,9 kWh, 92% zonnestroom.") |
+| Grid charge window 09:00 to 15:10 | Laden uit het net 09:00 tot 15:10 | the grid charge's title, also a trip's planned grid charge's |
+| Start charging now | Start nu met laden | a trip's grid charge that cannot wait |
+| Check the battery level | Controleer het accuniveau | the battery check's title; its text ends "Tap to enter the level the car shows." ("Tik om het accuniveau in te vullen dat de auto aangeeft.") |
+| Enter battery level | Accuniveau invullen | the battery check's one action, which opens the entry of the level; a notification's word only, as the dashboard's button is Update battery level (Accuniveau bijwerken) |
+| Plan a charging stop | Plan een laadstop | a short trip's title; the distance in km, "12 km short" ("12 km tekort") |
+| Forecast not updated | Voorspelling niet vernieuwd | the Problems notification's title, over "The forecast could not be updated. Open the app for details." ("De voorspelling kon niet worden vernieuwd. Open de app voor details.") |
+| Charge window soon | Laadvenster binnenkort | what a locked screen shows of a charge window's, a grid charge's and a trip's planned grid charge's notification; the others show their title, also Start charging now |
+| Charge windows, Battery and trip checks, Problems | Laadvensters, Controles van accuniveau en ritten, Problemen | the channels' names in Android's settings, each with a description of one sentence |
 
 `place_search_language` is no sentence: it is the two-letter code of the file's own language (`en`, `nl`), which the place search is asked to answer in, so the names of places come in the language the app shows.
 

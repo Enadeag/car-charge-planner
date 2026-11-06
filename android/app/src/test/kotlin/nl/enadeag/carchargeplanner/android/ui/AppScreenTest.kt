@@ -52,7 +52,8 @@ class AppScreenTest {
     fun theHomesSettingsOpensTheListAndUpComesBackToTheHome() {
         val flow = AppFlow(access, Saves(access, scope), scope, scope, SavedStateHandle(),
             NumberText(Locale.ENGLISH), { amsterdam }, { "en" }, Dispatchers.Main.immediate)
-        compose.setContent { AppTheme { AppScreen(flow) } }
+        val card = allowedCard(scope)
+        compose.setContent { AppTheme { AppScreen(flow, card, OffWifiOnly) } }
         compose.waitForIdle()
 
         compose.onNodeWithContentDescription(text(R.string.home_settings)).performClick()

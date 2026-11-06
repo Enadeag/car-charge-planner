@@ -134,6 +134,24 @@ class SetUpScreenTest {
         compose.waitForIdle()
     }
 
+    @Test
+    fun theWelcomeSaysThatTheAppAlsoAsksTheProviderAboutOnceAnHourWhileItIsClosed() {
+        show()
+
+        compose.onNodeWithText(text(R.string.setup_welcome_background, "Open-Meteo")).performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = "nl")
+    fun theWelcomeSaysInDutchThatTheAppAlsoAsksTheProviderAboutOnceAnHourWhileItIsClosed() {
+        show()
+
+        compose.onNodeWithText("Ook als de app dicht is, vraagt de app ongeveer elk uur aan Open-Meteo om een " +
+            "voorspelling, zodat je een melding krijgt voordat een laadvenster begint.").performScrollTo()
+            .assertIsDisplayed()
+    }
+
     /** Goes through every step to the check, each one checked as it comes in the language the test runs in. */
     private fun walkEveryStep() {
         val englishOnly = englishOnlyTexts()

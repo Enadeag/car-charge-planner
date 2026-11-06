@@ -10,6 +10,7 @@ import kotlinx.coroutines.runBlocking
 import nl.enadeag.carchargeplanner.android.store.EngineOnDispatcher
 import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
+import nl.enadeag.carchargeplanner.engine.notify.Notifier
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -47,7 +48,7 @@ class ExampleSettingsOnTheDeviceTest {
         val app = InstrumentationRegistry.getInstrumentation().targetContext
         val platform = AndroidPlatform.of(app)
         val engine = AppEngine.build(folder.toPath(), platform.http(), platform.files(), platform.apiKeys(),
-            QuietNotifier)
+            Notifier { })
 
         val state = EngineOnDispatcher(engine, Dispatchers.IO).readSettings()
 

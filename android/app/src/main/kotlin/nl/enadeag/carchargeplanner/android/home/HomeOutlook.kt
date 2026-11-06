@@ -15,6 +15,7 @@ import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.android.store.LatestAnswer
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
+import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import org.slf4j.LoggerFactory
 
 /**
@@ -30,10 +31,14 @@ import org.slf4j.LoggerFactory
  * @param clock tells how old the plan shown is
  * @param changes counts the Settings saves that changed something; each new count asks for the plan again
  * @param kept what the home showed before Settings opened, kept when no save changed anything since; null asks
+ * @param seen gets each outlook the engine gave, so a Problems notification that it no longer shows goes: after the
+ *     home shows it, so a slow disk does not hold the plan back, and before the home is left for set-up or a settings
+ *     file's problem; a failure in it is logged and changes nothing the home shows
  * @param lost called when the outlook says the app is not set up or its settings file cannot be used
  */
-class HomeOutlook(private val access: EngineAccess, scope: CoroutineScope, private val clock: Clock,
-    changes: StateFlow<Int> = MutableStateFlow(0), kept: Kept? = null, private val lost: () -> Unit) {
+class HomeOutlook(private val access: EngineAccess, private val scope: CoroutineScope, private val clock: Clock,
+    changes: StateFlow<Int> = MutableStateFlow(0), kept: Kept? = null,
+    private val seen: suspend (Outlook) -> Unit = {}, private val lost: () -> Unit) {
 
     companion object {
         /** How old a plan may be when the owner comes back to the app before a new one is asked. */
@@ -59,16 +64,20 @@ class HomeOutlook(private val access: EngineAccess, scope: CoroutineScope, priva
          * No forecast provider had a forecast, or the plan failed otherwise; the owner may try again.
          *
          * @property reason the engine's words, in English
+         * @property keyRefusedBy the names of the providers that refused their API key, in the order they were asked;
+         *     empty when none did
          */
-        data class NoForecast(val reason: String) : State
+        data class NoForecast(val reason: String, val keyRefusedBy: List<String> = listOf()) : State
 
         /**
          * The forecast has no days to plan.
          *
          * @property footer the forecast's credit, source and freshness
          * @property zone the home's time zone, in which the footer's times are told
+         * @property keyRefusedBy the names of the providers that refused their API key, in the order they were asked;
+         *     empty when none did
          */
-        data class NoDays(val footer: Footer, val zone: ZoneId) : State
+        data class NoDays(val footer: Footer, val zone: ZoneId, val keyRefusedBy: List<String> = listOf()) : State
     }
 
     /**
@@ -87,7 +96,7 @@ class HomeOutlook(private val access: EngineAccess, scope: CoroutineScope, priva
         }
     }
 
-    private val latest = LatestAnswer<State?>(scope)
+    private val latest = LatestAnswer<Answer>(scope)
     private val stateNow = MutableStateFlow(kept?.state ?: State.Asking)
     private val refreshingNow = MutableStateFlow(false)
     private var answeredAt: Instant? = kept?.at
@@ -168,31 +177,63 @@ class HomeOutlook(private val access: EngineAccess, scope: CoroutineScope, priva
             refreshingNow.value = false
         }
         pending = true
-        latest.ask({ answer() }) { state ->
+        latest.ask({ answer() }) { answer ->
             pending = false
             refreshingNow.value = false
-            if (state == null) {
+            if (answer.state == null) {
                 answeredAt = null
                 lost()
             } else {
-                stateNow.value = state
+                stateNow.value = answer.state
                 answeredAt = clock.instant()
+                answer.told?.let { outlook -> scope.launch { tell(outlook) } }
             }
         }
     }
 
-    /** The home's next state; null when the app is not set up or its settings file cannot be used. */
-    private suspend fun answer(): State? = try {
+    /**
+     * What the home shows next, and the outlook still to be passed on once it shows.
+     *
+     * @property state the home's next state; null when the app is not set up or its settings file cannot be used
+     * @property told the outlook to pass on; null when there is none, or it was passed on already
+     */
+    private class Answer(val state: State?, val told: Outlook?)
+
+    /** Asks the engine for the outlook and makes the home's next state of it. */
+    private suspend fun answer(): Answer = try {
         when (val outlook = access.outlook()) {
-            is Outlook.Planned -> if (outlook.days().isEmpty()) State.NoDays(Footer.of(outlook), outlook.zone())
-                else State.Planned(Dashboard.of(outlook, access.awayPeriods()))
-            is Outlook.NoForecast -> State.NoForecast(outlook.reason())
-            is Outlook.NotSetUp, is Outlook.ConfigUnusable -> null
+            is Outlook.Planned -> Answer(if (outlook.days().isEmpty()) {
+                State.NoDays(Footer.of(outlook), outlook.zone(), names(outlook.forecastSource().keyRefusedBy()))
+            } else {
+                State.Planned(Dashboard.of(outlook, access.awayPeriods(), ::providerName))
+            }, outlook)
+            is Outlook.NoForecast -> Answer(State.NoForecast(outlook.reason(), names(outlook.keyRefusedBy())), outlook)
+            is Outlook.NotSetUp, is Outlook.ConfigUnusable -> {
+                // the home is left, and its scope ends with it, so this cannot wait until after
+                tell(outlook)
+                Answer(null, null)
+            }
         }
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (failure: RuntimeException) {
         LOG.warn("The plan could not be made", failure)
-        State.NoForecast("The plan could not be made.")
+        Answer(State.NoForecast("The plan could not be made."), null)
     }
+
+    private suspend fun tell(outlook: Outlook) {
+        try {
+            seen(outlook)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: RuntimeException) {
+            LOG.warn("The plan could not be passed on to the notifications", failure)
+        }
+    }
+
+    private fun names(refused: List<ProviderId>): List<String> = refused.map(::providerName)
+
+    /** A provider's name as the engine knows it; its id when the engine does not know it. */
+    private fun providerName(id: ProviderId): String =
+        access.providers().firstOrNull { it.id() == id }?.name() ?: id.value()
 }
