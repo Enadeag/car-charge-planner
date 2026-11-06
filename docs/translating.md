@@ -34,6 +34,9 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | Announcement | melding |  | Reminder, alert |
 | Battery check | controle van het accuniveau | as in "Controleer het accuniveau" | Battery question, level reminder |
 | Enter battery level | Accuniveau invullen | the battery check's notification action only; the dashboard's button is Update battery level (Accuniveau bijwerken) | Update battery level (in a notification), set level |
+| Notice | melding | the same word as for an announcement, as in "Get a notice before each charge window" ("Krijg een melding vóór elk laadvenster") | Alert, message, notification (the way a system shows a notice) |
+| Trip start notice | – | not shown as a word: its title is the grid charge's, or Start charging now (Start nu met laden) | Trip reminder, departure alert |
+| Trip short notice | – | not shown as a word: its title is Plan a charging stop (Plan een laadstop) | Range warning, low-range alert |
 | Grid advice | advies: laden uit het net | a grid charge is laden uit het net | Grid warning, top-up, emergency charge |
 | Set-up | instelhulp |  | Onboarding, configuration, wizard (the wizard is only the form set-up takes) |
 | Not set up | niet ingesteld |  | Unconfigured, first run (first run is the moment, not the state) |
@@ -52,6 +55,7 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | Forecast freshness | bijgewerkt, niet vernieuwd |  | Age, outdated, expired |
 | Cool-down | dienst weer beschikbaar om |  | Rate limit (the provider's rule, not the wait), back-off, cooldown period |
 | API key | API-sleutel |  | Secret, token, password, key (on its own) |
+| Refused key | weigert de API-sleutel | as in "Open-Meteo refused the API key." ("Open-Meteo weigert de API-sleutel.") | Invalid key, wrong key, unauthorised |
 | Secret setting | API-sleutel |  | Secret (on its own), password field |
 | Keychain | sleutelbos |  | Keyring (only the Secret Service's own word), wallet, vault |
 | Start at login | starten bij aanmelden |  | Autostart, run at boot, startup item |
@@ -60,6 +64,8 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | Engine | – | not shown in the app | Backend, server, daemon, core |
 | Client | – | not shown in the app | Frontend, UI (a client is more than its screens) |
 | Outlook | – | not shown in the app | Status, result, plan (a plan is only one kind of outlook) |
+| Round | – | not shown in the app | Tick, cycle, refresh (a round need not ask a provider), poll |
+| Hourly update | de update elk uur | the Android app's round while it is closed, as in the "Wi-Fi only" hint | Background refresh, sync, polling, hourly round (in texts) |
 | Desktop app | de app |  | Tray app, the application (too vague) |
 | Integration | koppeling |  | Plugin, connector, driver, recipe (a recipe is a deferred idea, not an integration) |
 | Ability | – | not shown in the app | Capability, feature, sensor |
@@ -138,6 +144,8 @@ The Android app's texts are Android string resources, in `android/app/src/main/r
 - **Texts must work with a screen reader (TalkBack)**: write them so they make sense when read aloud, with no meaning only in colour, symbols or position, and do not rely on a text's length for the layout: a translation can be twice as long.
 
 **A new text goes into every language's file in the same pull request.** Lint fails the build on a text that is missing in a language or has no English one (`MissingTranslation`, `ExtraTranslation`), on a placeholder that does not match (`StringFormatMatches`, `StringFormatInvalid`, `StringFormatCount`) and on a plural without a form its language needs or with one it does not (`MissingQuantity`, `UnusedQuantity`, `ImpliedQuantity`). A text you cannot translate yourself must still be in the file: put the English text there for a translator to pick up. `StringsResourcesTest` checks the same on the files themselves, and also that every placeholder is positional, that nothing is wrongly escaped, and that the languages the app offers are English and the `values-*` folders.
+
+**The app's language is chosen in Android's settings, not in the app** (#274; the generated list agreed in PR #316, 2026-11-01). From Android 13 the owner can give the app a language of its own there, from the list in the app's `android:localeConfig`; the build generates that list (`generateLocaleConfig`) from English and the `values-*` folders, and `localeFilters`, from the same folders, keeps the languages that libraries bring out of the app. The app has no language menu of its own; on an older phone it follows the phone's language.
 
 ### The words of the Android screens
 

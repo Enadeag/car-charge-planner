@@ -6,6 +6,8 @@ They were written for the first version of the app, in Python with Qt ([ADR 0002
 
 Each folder is one feature and holds a **spec** (what and why, with the decisions and the alternatives that were rejected), a **review** (the finished work checked against the spec, with what could not be verified) and the **tickets** it was built from, each with notes on what was found while doing it.
 
+From the Java version on, a folder holds a **`decisions.md`** instead: a short list of the decisions about one feature's behaviour (its defaults, edge cases and errors) that the code alone does not explain, newest last, each with its date and the issue or pull request that settled it. It is where `docs/agents/review-process.md` (step 9) records such a decision. There are four: `android-setup/decisions.md`, `engine/decisions.md`, `secrets/decisions.md` and `trips/decisions.md`. Unlike the older documents, they describe the code as it is.
+
 | Folder | What it covers |
 | --- | --- |
 | `planner/` | The planner itself: surplus, charge windows, projection, grid-charge advice, the first tray popup |
@@ -16,6 +18,9 @@ Each folder is one feature and holds a **spec** (what and why, with the decision
 | `forecast-providers/` | The forecast provider contract, the service, Open-Meteo and Forecast.Solar |
 | `multi-platform/` | The plan for Windows and macOS (Windows was built; macOS was not) |
 | `secrets/` | Decisions about keeping and removing API keys and links (`decisions.md`, from the Java version on) |
+| `android-setup/` | Decisions about the Android app: set-up, the home and dashboard, Settings, notifications and the work in the background (`decisions.md`) |
+| `engine/` | Decisions about the engine that both apps share: files of a newer version, the round, the stored forecast, a refused key, the next notice (`decisions.md`) |
+| `trips/` | Decisions about trips entered by hand that ADR 0009 does not carry: the charging hours' edge cases and the trip notices (`decisions.md`) |
 
 ## Reading them
 

@@ -24,3 +24,4 @@ The app is used first by someone with a laptop or desktop computer and no home s
 ## Notes
 
 - **2026-10-17**: No client writes the engine's files; the desktop app keeps its own app settings. The engine has no interface of its own until it runs on its own: today the desktop app is its only client and calls the `Engine` class, and the interface is cut when a second client, reached over a transport, needs one.
+- **2026-11-02** (#313, PR #318): The engine never writes over, removes or sets aside a file written by a newer version of the app, for both apps and for every file it keeps with a version, and the desktop's `app.json` follows the same rule; such a change fails and the owner updates the app. A file of a newer version is a problem kind of its own (`NEWER_VERSION`). The decisions and their accepted consequences are in [docs/design/engine/decisions.md](../design/engine/decisions.md).
