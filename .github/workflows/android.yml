@@ -177,11 +177,81 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          # names the emulator action's version: update it with the action's pin, so a new version makes a new AVD
+          # names the emulator action's version: update it with the action's pin, so a new version makes a new AVD. A
+          # Dependabot pull request that bumps the emulator action must bump this suffix too, in the same pull request.
           key: avd-29-default-x86_64-emulator-runner-v2.38.0
+      # The watchdog (#357): the action starts the emulator with its own output pipes, and the emulator's processes,
+      # crashpad_handler among them, inherit them; one that outlives the emulator keeps the action, and so the step,
+      # running (upstream https://github.com/ReactiveCircus/android-emulator-runner/issues/385, cause and fix in the
+      # open https://github.com/ReactiveCircus/android-emulator-runner/pull/497). It starts here, so it also covers a
+      # failed boot, which ends the step before its script, and it waits for the emulator directory, as the action
+      # installs the emulator in its own step. Detached, it holds none of the step's pipes. It acts only on processes
+      # whose program is in that directory, never on the emulator or its qemu, so a snapshot being saved and the next
+      # step's emulator are safe; and only once they have been gone 20 seconds, so what exits by itself after `emu kill`
+      # goes first. It can go once a release of the action fixes the hang; the steps' timeouts end what it misses.
+      - name: Start the emulator watchdog
+        env:
+          WATCHDOG: |
+            out="${GITHUB_WORKSPACE:?}/android/build/emulator-processes.txt"
+            poll=3 grace=20 limit=2400
+            list() {
+              {
+                echo "== $1, $(date -u +%H:%M:%S)"
+                ps -eo pid,ppid,pgid,etime,args |
+                  awk -v me="$$" -v re='[q]emu|[c]rashpad|[n]etsim|[e]mulator|[a]db' 'NR == 1 || ($1 != me && $0 ~ re)'
+              } >> "$out"
+            }
+            # one "PID KIND" line per process whose program is in "$dir": run for the emulator and its qemu
+            scan() {
+              LC_ALL=C ls -l /proc/[0-9]*/exe 2> /dev/null | while IFS= read -r line; do
+                pid=${line%%/exe -> *}
+                case "${line#* -> }" in
+                  "$dir"/emulator | "$dir"/qemu/*) echo "${pid##*/proc/} run" ;;
+                  "$dir"/*crashpad_handler) echo "${pid##*/proc/} crashpad" ;;
+                  "$dir"/*) echo "${pid##*/proc/} other" ;;
+                esac
+              done
+            }
+            # reap SIGNAL KINDS: fails, and signals nothing, once an emulator runs again
+            reap() {
+              procs=$(scan)
+              case "$procs" in *run*) return 1 ;; esac
+              echo "$procs" | while read -r pid kind; do
+                case " $2 " in *" $kind "*) kill "-$1" "$pid" 2> /dev/null || : ;; esac
+              done
+            }
+            # the action installs the emulator after this starts: no scan until the directory passes the check
+            dir= seen= stopped=
+            end=$(($(date +%s) + limit))
+            while [ "$(date +%s)" -lt "$end" ]; do
+              if [ -z "$dir" ]; then
+                found=$(readlink -f "${ANDROID_HOME:-/nonexistent}/emulator") && [ -x "$found/emulator" ] &&
+                  [ "${found##*/}" = emulator ] && dir=$found && echo "== watching $dir, $(date -u +%H:%M:%S)" >> "$out"
+                [ -n "$dir" ] || { sleep "$poll"; continue; }
+              fi
+              case "$(scan)" in
+                *run*) seen=1 stopped= ;;
+                *)
+                  now=$(date +%s)
+                  if [ -n "$seen" ] && [ $((now - ${stopped:=$now})) -ge "$grace" ]; then
+                    list "the emulator stopped $grace seconds ago"
+                    reap TERM crashpad; sleep 5; reap KILL "crashpad other"
+                    sleep 1
+                    list "after the kill"
+                    seen= stopped=
+                  fi
+                  ;;
+              esac
+              sleep "$poll"
+            done
+            [ -n "$dir" ] || echo "== no watchdog: no emulator directory in ANDROID_HOME in $limit seconds" >> "$out"
+        run: |
+          mkdir -p android/build
+          setsid sh -c "$WATCHDOG" < /dev/null > /dev/null 2>&1 &
       # On a cache miss: boot the new AVD once and keep its snapshot, so the next runs start from it.
       - name: Create the AVD and its snapshot
         if: steps.avd-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 15
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 29
@@ -195,6 +265,7 @@ jobs:
       # line runs in a shell of its own; logcat runs in the background, apart from the step's output, until the emulator
       # stops.
       - name: Instrumented tests on API 29
+        timeout-minutes: 15
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 29
@@ -216,4 +287,5 @@ jobs:
             android/app/build/reports/androidTests/
             android/app/build/outputs/androidTest-results/
             android/build/logcat.txt
+            android/build/emulator-processes.txt
           retention-days: 7
