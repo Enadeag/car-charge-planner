@@ -107,7 +107,7 @@ A notification that asks whether the assumed battery level is right, once per tr
 _Avoid_: Battery question, level reminder
 
 **Notice**:
-Anything the app tells the owner of its own accord, shown as a notification: an announcement (of a trip's grid charge too: the trip start notice), a battery check, a trip short notice, and on Android the problem notice, which says that the forecast cannot be updated until the owner fixes the settings file, updates the app for one of a newer version, or changes an API key a provider refused. The engine decides the first four; the problem notice is the Android app's own and comes once per episode of such a problem.
+Anything the app tells the owner of its own accord, shown as a notification: an announcement (of a trip's grid charge too: the trip start notice), a battery check, a trip short notice, and on Android the problem notice, which says that the forecast cannot be updated until the owner fixes the settings file, updates the app for one of a newer version, or changes an API key a provider refused. The engine decides all but the problem notice, which is the Android app's own and comes once per episode of such a problem.
 _Avoid_: Alert, message, notification (the way a system shows a notice)
 
 **Trip start notice**:
@@ -233,7 +233,7 @@ What the engine tells its clients after each planning round: either the plan for
 _Avoid_: Status, result, plan (a plan is only one kind of outlook)
 
 **Round**:
-One planning round of the engine: it reads the settings, gets the forecast, makes the outlook and tells the notices that are due. A round may ask the providers, as their rules allow, or use only the stored forecast, which asks nobody. The desktop app makes a round every minute, asking the providers; the Android app makes one in the hourly update, when the app is opened, after a saved change, at Finish and after the phone restarts or the app is updated, asking them, and one from the stored forecast when its alarm goes off, for a notice that is due or as a retry when none is.
+One planning round of the engine: it reads the settings, gets the forecast, makes the outlook and tells the notices that are due. A round may ask the providers, as their rules allow, or use only the stored forecast, which asks nobody. The desktop app makes a round every minute, asking the providers; the Android app makes one in the hourly update, when the app is opened, after a saved change, at Finish and after the phone restarts or the app is updated, asking them; and from the stored forecast only, right after the phone restarts or the app is updated, and when its alarm goes off: shortly before a notice is due, or, after a round that gave no outlook, as a retry 9, 18, 36 and then at most 60 minutes later.
 _Avoid_: Tick, cycle, refresh (a round need not ask a provider), poll
 
 **Hourly update**:
