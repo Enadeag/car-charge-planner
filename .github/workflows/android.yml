@@ -183,16 +183,12 @@ jobs:
       # The watchdog (#357): the action starts the emulator with its own output pipes, and the emulator's processes,
       # crashpad_handler among them, inherit them; one that outlives the emulator keeps the action, and so the step,
       # running (upstream https://github.com/ReactiveCircus/android-emulator-runner/issues/385, cause and fix in the
-      # open https://github.com/ReactiveCircus/android-emulator-runner/pull/497). It runs from here to the job's end, so
-      # it also covers a step that fails before its script, as a failed boot does: the action then stops the emulator
-      # itself. Detached, with none of the step's streams, it holds no pipe itself. It waits until the emulator has
-      # been gone 20 seconds, as the emulator gives itself 20 after `emu kill`, and acts only on processes whose
-      # program is in the SDK's emulator directory, never on the emulator itself: so the snapshot of a new AVD is
-      # saved before it acts, and an emulator that the next step starts meanwhile survives. Its listings go to the
-      # uploaded build/emulator-processes.txt; the step it frees can end, and the upload start, before the last one is
-      # written. It gives up after 40 minutes, beyond the job's 30; the runner ends it with the job anyway. It can go
-      # once a release of the action fixes the hang; the steps' timeouts turn a hang that comes back into a fast
-      # failure.
+      # open https://github.com/ReactiveCircus/android-emulator-runner/pull/497). It starts here, so it also covers a
+      # failed boot, which ends the step before its script, and it waits for the emulator directory, as the action
+      # installs the emulator in its own step. Detached, it holds none of the step's pipes. It acts only on processes
+      # whose program is in that directory, never on the emulator or its qemu, so a snapshot being saved and the next
+      # step's emulator are safe; and only once they have been gone 20 seconds, so what exits by itself after `emu kill`
+      # goes first. It can go once a release of the action fixes the hang; the steps' timeouts end what it misses.
       - name: Start the emulator watchdog
         env:
           WATCHDOG: |
@@ -221,22 +217,25 @@ jobs:
               procs=$(scan)
               case "$procs" in *run*) return 1 ;; esac
               echo "$procs" | while read -r pid kind; do
-                case " $2 " in *" $kind "*) kill "-$1" "$pid" ;; esac
+                case " $2 " in *" $kind "*) kill "-$1" "$pid" 2> /dev/null || : ;; esac
               done
             }
-            dir=$(readlink -f "${ANDROID_HOME:-/nonexistent}/emulator") && [ -x "$dir/emulator" ] &&
-              [ "${dir##*/}" = emulator ] ||
-              { echo "== no watchdog: no emulator directory in ANDROID_HOME" >> "$out"; exit 1; }
-            seen= stopped=
+            # the action installs the emulator after this starts: no scan until the directory passes the check
+            dir= seen= stopped=
             end=$(($(date +%s) + limit))
             while [ "$(date +%s)" -lt "$end" ]; do
+              if [ -z "$dir" ]; then
+                found=$(readlink -f "${ANDROID_HOME:-/nonexistent}/emulator") && [ -x "$found/emulator" ] &&
+                  [ "${found##*/}" = emulator ] && dir=$found
+                [ -n "$dir" ] || { sleep "$poll"; continue; }
+              fi
               case "$(scan)" in
                 *run*) seen=1 stopped= ;;
                 *)
                   now=$(date +%s)
                   if [ -n "$seen" ] && [ $((now - ${stopped:=$now})) -ge "$grace" ]; then
                     list "the emulator stopped $grace seconds ago"
-                    reap TERM crashpad && sleep 5 && reap KILL "crashpad other"
+                    reap TERM crashpad; sleep 5; reap KILL "crashpad other"
                     sleep 1
                     list "after the kill"
                     seen= stopped=
@@ -245,6 +244,7 @@ jobs:
               esac
               sleep "$poll"
             done
+            [ -n "$dir" ] || echo "== no watchdog: no emulator directory in ANDROID_HOME in $limit seconds" >> "$out"
         run: |
           mkdir -p android/build
           setsid sh -c "$WATCHDOG" < /dev/null > /dev/null 2>&1 &
