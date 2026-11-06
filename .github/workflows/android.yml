@@ -226,7 +226,7 @@ jobs:
             while [ "$(date +%s)" -lt "$end" ]; do
               if [ -z "$dir" ]; then
                 found=$(readlink -f "${ANDROID_HOME:-/nonexistent}/emulator") && [ -x "$found/emulator" ] &&
-                  [ "${found##*/}" = emulator ] && dir=$found
+                  [ "${found##*/}" = emulator ] && dir=$found && echo "== watching $dir, $(date -u +%H:%M:%S)" >> "$out"
                 [ -n "$dir" ] || { sleep "$poll"; continue; }
               fi
               case "$(scan)" in
