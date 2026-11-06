@@ -106,6 +106,18 @@ _Avoid_: Reminder, alert
 A notification that asks whether the assumed battery level is right, once per trip and again when the trip comes to need much more from the grid, when a trip needs a grid charge or is tight and the owner has not entered a level in the last 12 hours; a click opens the entry of today's battery level, as on Android a tap or its action **Enter battery level** does. Asked within the charging hours, from the day before the departure. Like an announcement, not while the forecast could not be refreshed or is more than 6 hours old.
 _Avoid_: Battery question, level reminder
 
+**Notice**:
+Anything the app tells the owner of its own accord, shown as a notification: an announcement, a battery check, a trip start notice, a trip short notice, and on Android the problem notice, which says that the forecast cannot be updated until the owner fixes the settings file or an API key a provider refused. The engine decides the first four; the problem notice is the Android app's own and comes once per episode of such a problem.
+_Avoid_: Alert, message, notification (the way a system shows a notice)
+
+**Trip start notice**:
+The announcement of a trip's grid charge: when to start charging for the trip and the charge limit to set, within the notification lead time before the charge starts, or at once when it has to start now, then also outside the charging hours when waiting for them would leave too little time. Once per trip.
+_Avoid_: Trip reminder, departure alert
+
+**Trip short notice**:
+The notice that even a full battery cannot make a trip: how many km are missing, and to plan a charging stop. Within the charging hours, from 19:00 the evening before the departure; once per trip.
+_Avoid_: Range warning, low-range alert
+
 **Grid advice**:
 The advice to charge from the grid, because on solar power alone the battery would end a day below the minimum charge level: how much energy, and the charge window to take it in, on that day or the latest day before it with room. The charging it asks for is a **grid charge**, announced like any charge window.
 _Avoid_: Grid warning, top-up, emergency charge
@@ -182,6 +194,10 @@ _Avoid_: Rate limit (the provider's rule, not the wait), back-off, cooldown peri
 The code a forecast provider gives for a paid plan, which the app sends with each request to that provider. Kept in the system keychain, or in a file only the owner can read when there is no keychain; never in the settings files.
 _Avoid_: Secret, token, password, key (on its own)
 
+**Refused key**:
+A forecast provider answered that it does not accept the API key it was sent (HTTP 401 or 403). The outlook names such a provider until it answers again or the owner saves the keys or the settings, also while a fallback's or an older forecast still gives a plan. It does not fix itself, so on Android it is a problem: the dashboard shows it as a warning, and a round that asked the providers starts the problem notice.
+_Avoid_: Invalid key, wrong key (the app cannot tell why the provider refused it), unauthorised
+
 **Secret setting**:
 A provider's setting whose value is kept like an API key, in the keychain and never in the settings files, and is hidden while it is typed.
 _Avoid_: Secret (on its own), password field
@@ -215,6 +231,14 @@ _Avoid_: Frontend, UI (a client is more than its screens)
 **Outlook**:
 What the engine tells its clients after each planning round: either the plan for the coming days, with where its forecast came from, or why there is no plan (not set up, an unusable config, or no forecast). Either way it names the providers that refused their API key when they were asked, also while a fallback's or an older forecast still gives a plan.
 _Avoid_: Status, result, plan (a plan is only one kind of outlook)
+
+**Round**:
+One planning round of the engine: it reads the settings, gets the forecast, makes the outlook and tells the notices that are due. A round may ask the providers, as their rules allow, or use only the stored forecast, which asks nobody. The desktop app makes a round every minute, asking the providers; the Android app makes one in the hourly update and when the app is opened, asking them, and one from the stored forecast when its alarm goes off for a notice that is due and after the phone restarts.
+_Avoid_: Tick, cycle, refresh (a round need not ask a provider), poll
+
+**Hourly update**:
+The Android app's round in the background, about once an hour while the app is closed, that asks the providers for a new forecast; it waits for a network, with "Wi-Fi only" for one without a data limit. Its work is called `hourly-round` in the code.
+_Avoid_: Background refresh, sync, polling, hourly round (in texts)
 
 **Desktop app**:
 What the owner installs on their computer: the engine and the client together in one program.

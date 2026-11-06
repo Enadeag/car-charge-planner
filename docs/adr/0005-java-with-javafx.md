@@ -29,3 +29,7 @@ The engine stays as ADR 0001 describes it. The dashboard design of ADR 0004 stay
 ## Note, 2026-10-30
 
 The build is no longer one Maven module: a parent with the modules `engine` and `desktop` (ADR 0010, #263). The engine module holds only the engine and builds without JavaFX; the desktop module holds the rest and still builds `car-charge-planner.jar`.
+
+## Note, 2026-10-19 (#161)
+
+Memory and start-up time were measured on the packaged app, five runs per option on Linux and Windows, headless with software rendering (the Linux runs on JDK 27, not the release's JDK 25). Without options: on Linux about 253 MiB (PSS) at rest, 367 MiB with the dashboard open and 381 MiB after closing it, and 0.79 s to the tray; on Windows about 103 MiB private working set at rest, 129 MiB with the dashboard open, and 0.83 s until the app is ready. What helped: a heap cap (`-Xmx96m`) took about 70 MiB off the Linux figures with the dashboard open and after closing it, and nothing on Windows; G1 with lower free ratios and a periodic GC brought Linux after closing to 307 MiB and Windows at rest to 87 MiB; an AOT cache shortened the start (Linux 0.66 s, Windows 0.38 s) but added memory on Windows. `-XX:+UseSerialGC` alone made both worse. About 110–120 MiB at rest on Linux is native memory outside the JVM, which no JVM option reaches. Decided 2026-10-18: no change to the launcher options; the issue was closed on 2026-10-19 with the numbers kept on it. Reopen it when memory use or start-up time becomes a real problem for users.
