@@ -178,6 +178,7 @@ jobs:
       # wait below runs after that keyevent and cannot catch it. It only lets the tests start once the services they use
       # are up, and logs the time, so a cold boot that comes up short shows. Each script line runs in its own shell.
       # Upstream: https://github.com/ReactiveCircus/android-emulator-runner/pull/495 waits for the service.
+      #
       # The step's timeout ends a hang on shutdown, should one come back; it was seen only on snapshot boots
       # (https://github.com/ReactiveCircus/android-emulator-runner/issues/385).
       - name: Instrumented tests on API 29
