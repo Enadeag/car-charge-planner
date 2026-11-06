@@ -32,6 +32,10 @@ updates:
         versions: [">= 2026.09.00"]
       - dependency-name: "androidx.lifecycle:*"
         versions: [">= 2.11.0"]
+      # WorkManager after 2.12 (2.12.0 needs compileSdk 35; a later one is taken to need 37, as the Compose and
+      # Lifecycle releases of the same time do); remove with #321 too
+      - dependency-name: "androidx.work:*"
+        versions: [">= 2.13.0"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

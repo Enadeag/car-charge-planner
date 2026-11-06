@@ -254,6 +254,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.core)
     implementation(libs.datastore.preferences)
+    implementation(libs.work.runtime)
     coreLibraryDesugaring(libs.desugar.jdk.libs.nio)
 
     // the engine's contract tests, with JUnit and AssertJ, for the Android implementations of its seams
@@ -266,6 +267,7 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.junit)
     testImplementation(libs.compose.ui.test.junit4)
+    testImplementation(libs.work.testing)
     testRuntimeOnly(libs.junit.vintage.engine)
     // PIT's classpath (the fork's) leaves out two things the unit-test task has: the JUnit 5 engine, which the engine's
     // test fixtures bring at run time (without it PIT finds no JUnit 5 tests), and the app's Java resources (without
@@ -286,9 +288,13 @@ dependencies {
 
 // The app's logic, which PIT mutates (CONTRIBUTING.md, What is tested where): the classes with plain JUnit 5 tests.
 // The screens, tested on Robolectric only, are left out, and so are the notifications' words and their posting
-// (ui.notify); their tests keep hand mutants in the review.
+// (ui.notify) and the background work's alarm, WorkManager work and receivers; their tests keep hand mutants in the
+// review.
 val pitLogic = listOf("form.*", "setup.*", "settings.*", "store.*", "home.*", "start.*", "licences.*", "logging.*",
     "secrets.*", "notify.*", "prefs.*", "OwnCode*", "MainThreadViolations*", "AndroidHttpGet*", "AndroidPlatform*",
+    // the background work's rules, its rounds, its schedule and the engine's access that tells it of a change
+    "background.BackgroundRules*", "background.BackgroundRounds*", "background.BackgroundSchedule*",
+    "background.ReschedulingAccess*",
     // ChartGeometry.kt: the charts' geometry and the shapes they draw, apart from the Compose code in DayCharts.kt
     "ui.home.ChartGeometryKt*", "ui.home.PlotArea*", "ui.home.CurvePoint*", "ui.home.PlacedTick*",
     "ui.home.TimeAxis*", "ui.home.Point*", "ui.home.Shape*", "ui.home.SolarDrawing*", "ui.home.BatteryBarLayout*",
@@ -323,7 +329,9 @@ pitest {
         // the screens' tests, JUnit 4 on Robolectric, which runs Android in the test JVM
         "AppOnRobolectricTest", "AppWiringTest", "MainActivity*Test", "licences.AssetLicenceFilesTest", "ui.*Screen*Test",
         "ui.AppThemeTest", "ui.BarScaffoldTest", "ui.home.DashboardWordsTest", "ui.home.DrawnShapesTest",
-        "ui.notify.NoticeWordsTest", "ui.notify.NotificationsTest",
+        "ui.notify.NoticeWordsTest", "ui.notify.NotificationsTest", "background.AndroidNoticeAlarmTest",
+        "background.WorkManagerRoundsTest", "background.RoundWorkerTest", "background.BackgroundReceiversTest",
+        "background.BackgroundLifecycleTest",
         // what the build makes rather than what the code does: the resources, the manifest, the APK and the engine on
         // the example settings file; and the ArchUnit rules, which read the classes' structure and kill no mutant
         "StringsResourcesTest", "DataExtractionRulesTest", "ManifestTest", "NetworkSecurityConfigTest",
