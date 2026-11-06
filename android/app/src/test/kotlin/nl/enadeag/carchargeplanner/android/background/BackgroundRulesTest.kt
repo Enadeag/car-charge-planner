@@ -7,6 +7,7 @@ import nl.enadeag.carchargeplanner.android.background.BackgroundRules.AtStart
 import nl.enadeag.carchargeplanner.android.form.DRAFT
 import nl.enadeag.carchargeplanner.android.store.StartState
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 class BackgroundRulesTest {
@@ -35,6 +36,21 @@ class BackgroundRulesTest {
     @Test
     fun withNothingDueThereIsNoAlarm() {
         assertThat(BackgroundRules.alarmAt(null, now)).isNull()
+    }
+
+    @Test
+    fun afterRoundsWithoutAnOutlookTheAlarmGoes9Then18Then36ThenAtMost60MinutesAhead() {
+        val gaps = listOf(1, 2, 3, 4, 5, 64, Int.MAX_VALUE)
+            .map { Duration.between(now, BackgroundRules.retryAt(now, it)).toMinutes() }
+
+        assertThat(gaps).containsExactly(9L, 18L, 36L, 60L, 60L, 60L, 60L)
+    }
+
+    @Test
+    fun aRetryFollowsAtLeastOneRoundWithoutAnOutlook() {
+        assertThatThrownBy { BackgroundRules.retryAt(now, 0) }.isInstanceOf(IllegalArgumentException::class.java)
+            .hasMessageContaining("0")
+        assertThatThrownBy { BackgroundRules.retryAt(now, -1) }.isInstanceOf(IllegalArgumentException::class.java)
     }
 
     @Test

@@ -86,20 +86,21 @@ class BackgroundScheduleTest {
     }
 
     @Test
-    fun theWifiSwitchBringsTheScheduledHourlyRoundToItsNetwork() = runTest {
+    fun theWifiSwitchBringsTheScheduledHourlyRoundAndAWaitingRoundNowToItsNetwork() = runTest {
         background.hourlyIsScheduled = true
 
         schedule.wifiSwitched(true)
         schedule.wifiSwitched(false)
 
-        assertThat(background.done).containsExactly("hourly wifi", "hourly any")
+        assertThat(background.done).containsExactly("hourly wifi", "waiting once wifi", "hourly any",
+            "waiting once any")
     }
 
     @Test
-    fun theWifiSwitchSchedulesNothingWhileTheHourlyRoundIsNot() = runTest {
+    fun theWifiSwitchSchedulesNoHourlyRoundWhileItIsNotButStillBringsAWaitingRoundNowToItsNetwork() = runTest {
         schedule.wifiSwitched(true)
 
-        assertThat(background.done).isEmpty()
+        assertThat(background.done).containsExactly("waiting once wifi")
     }
 
     @Test
@@ -138,7 +139,7 @@ class BackgroundScheduleTest {
         val gate = CompletableDeferred<Unit>()
         access.roundGate = gate
         val rounds = BackgroundRounds({ access }, { _, _ -> }, background.alarm, background.work, { true },
-            Clock.fixed(now, ZoneOffset.UTC))
+            Clock.fixed(now, ZoneOffset.UTC), background.missed)
 
         val round = launch { rounds.run(ForecastUse.ASK_PROVIDERS) }
         runCurrent()

@@ -16,20 +16,30 @@ import java.time.Instant
 class AndroidNoticeAlarm(private val context: Context) : NoticeAlarm {
 
     private companion object {
+        /** Fixed, so each new alarm's intent is the same one and replaces the alarm before; any number would do. */
         const val REQUEST_CODE = 362
     }
 
     private val manager: AlarmManager = context.getSystemService(AlarmManager::class.java)
 
     override fun set(at: Instant) {
-        manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at.toEpochMilli(), intent())
+        manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at.toEpochMilli(),
+            requireNotNull(intent(PendingIntent.FLAG_UPDATE_CURRENT)))
     }
 
     override fun cancel() {
-        manager.cancel(intent())
+        intent(PendingIntent.FLAG_NO_CREATE)?.let { set ->
+            manager.cancel(set)
+            set.cancel()
+        }
     }
 
-    private fun intent(): PendingIntent = PendingIntent.getBroadcast(context, REQUEST_CODE,
-        Intent(context, NoticeAlarmReceiver::class.java),
-        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+    /**
+     * The alarm's intent.
+     *
+     * @param flag [PendingIntent.FLAG_UPDATE_CURRENT] to make it when there is none, or [PendingIntent.FLAG_NO_CREATE]
+     * @return the intent; null with [PendingIntent.FLAG_NO_CREATE] when there is none
+     */
+    private fun intent(flag: Int): PendingIntent? = PendingIntent.getBroadcast(context, REQUEST_CODE,
+        Intent(context, NoticeAlarmReceiver::class.java), PendingIntent.FLAG_IMMUTABLE or flag)
 }

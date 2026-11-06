@@ -39,7 +39,7 @@ import nl.enadeag.carchargeplanner.android.ui.notify.createNoticeChannels
  * but not started: only the work in the background makes its rounds ([rounds]), which WorkManager, the alarm and the
  * phone's start also start while the app is closed, in a process that Android starts for them without a screen.
  */
-class CarChargePlannerApp : Application() {
+open class CarChargePlannerApp : Application() {
 
     /** Where saves and other work that must outlive a screen run; it is never cancelled. */
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -79,7 +79,7 @@ class CarChargePlannerApp : Application() {
     override fun onCreate() {
         super.onCreate()
         val platform = AndroidPlatform.of(this)
-        val clock = Clock.systemUTC()
+        val clock = clock()
         val notifications = Notifications(this, clock)
         createNoticeChannels(this)
         phoneSettings = PhoneSettings(store(PhoneStoreFiles.SETTINGS), scope)
@@ -88,7 +88,7 @@ class CarChargePlannerApp : Application() {
         alarm = AndroidNoticeAlarm(this)
         val work = WorkManagerRounds(this)
         val notify = { allowed(this) }
-        rounds = BackgroundRounds({ engine }, problems::afterRound, alarm, work, notify, clock)
+        rounds = BackgroundRounds({ engine }, problems::afterRound, alarm, work, notify, clock, phoneState)
         schedule = BackgroundSchedule({ engine }, work, alarm, phoneSettings.on, notify)
         engine = ReschedulingAccess(EngineOnDispatcher(AppEngine.build(platform, notifications, clock),
             Dispatchers.IO)) { scope.launch { schedule.refresh() } }
@@ -97,6 +97,13 @@ class CarChargePlannerApp : Application() {
         // only now: the parts above may touch the disk while they are made
         applyMainThreadPolicy(BuildConfig.DEBUG)
     }
+
+    /**
+     * The one clock of the engine, the notifications and the alarm.
+     *
+     * @return the system's clock; a test's app gives a fixed one
+     */
+    protected open fun clock(): Clock = Clock.systemUTC()
 
     /** One of the phone's preferences stores, in `files/datastore/<name>.preferences_pb`, read off the main thread. */
     private fun store(name: String): DataStore<Preferences> = phoneStore(scope) { preferencesDataStoreFile(name) }

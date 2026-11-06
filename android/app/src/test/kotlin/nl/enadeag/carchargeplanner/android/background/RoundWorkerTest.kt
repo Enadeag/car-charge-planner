@@ -78,7 +78,7 @@ class RoundWorkerTest {
         val access = FakeEngineAccess()
         access.roundOutlook = Outlook.NoForecast("Open-Meteo could not be reached")
         app.rounds = BackgroundRounds({ access }, { _, _ -> }, background.alarm, background.work, { true },
-            Clock.systemUTC())
+            Clock.systemUTC(), background.missed)
 
         assertThat(work()).isEqualTo(ListenableWorker.Result.success())
         assertThat(access.rounds).containsExactly(ForecastUse.ASK_PROVIDERS)
@@ -90,7 +90,7 @@ class RoundWorkerTest {
         val access = FakeEngineAccess()
         access.roundThrows = IllegalStateException("a fault")
         app.rounds = BackgroundRounds({ access }, { _, _ -> }, background.alarm, background.work, { true },
-            Clock.systemUTC())
+            Clock.systemUTC(), background.missed)
 
         assertThat(work()).isEqualTo(ListenableWorker.Result.success())
     }
@@ -109,7 +109,7 @@ class RoundWorkerTest {
         }
         val problems = ProblemEpisode(flag, Notifications(app))
         app.rounds = BackgroundRounds({ access }, problems::afterRound, background.alarm, background.work, { true },
-            Clock.systemUTC())
+            Clock.systemUTC(), background.missed)
 
         work()
 
@@ -149,7 +149,8 @@ class RoundWorkerTest {
         val alarm = AndroidNoticeAlarm(app)
         // the alarm that woke the phone for this notice, as the morning's round set it
         alarm.set(noticeAt)
-        app.rounds = BackgroundRounds({ atNotice }, { _, _ -> }, alarm, background.work, { true }, clock)
+        app.rounds = BackgroundRounds({ atNotice }, { _, _ -> }, alarm, background.work, { true }, clock,
+            background.missed)
 
         assertThat(work()).isEqualTo(ListenableWorker.Result.success())
 

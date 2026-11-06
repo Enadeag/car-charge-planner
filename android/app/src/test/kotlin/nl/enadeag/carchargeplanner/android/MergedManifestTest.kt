@@ -35,6 +35,8 @@ class MergedManifestTest {
             "android.permission.INTERNET", "android.permission.POST_NOTIFICATIONS",
             "android.permission.RECEIVE_BOOT_COMPLETED", "android.permission.WAKE_LOCK",
             "android.permission.ACCESS_NETWORK_STATE", ownReceivers)
+        // the same request in the forms that only Android 6 and later grant, which the list above does not see
+        assertThat(elements("uses-permission-sdk-23") + elements("uses-permission-sdk-m")).isEmpty()
         // androidx.core's, which only the app's own signature holds
         assertThat(elements("permission").map { it.android("name") to it.android("protectionLevel") })
             .containsExactly(ownReceivers to "signature")

@@ -11,11 +11,17 @@ import nl.enadeag.carchargeplanner.android.store.StartState
  */
 object BackgroundRules {
 
+    /** Doublings of [MIN_ALARM_GAP] past which [MAX_RETRY_GAP] holds anyway; keeps the shift from overflowing. */
+    private const val MAX_DOUBLINGS = 3
+
     /**
      * The least time from now to the next alarm: Android lets an app's allow-while-idle alarms fire at most once per
      * nine minutes, and an alarm that keeps setting itself for "now" would otherwise wake the phone over and over.
      */
     val MIN_ALARM_GAP: Duration = Duration.ofMinutes(9)
+
+    /** The most time from now to the alarm after rounds that gave no outlook, however many came in a row. */
+    val MAX_RETRY_GAP: Duration = Duration.ofMinutes(60)
 
     /** How often the round that asks the providers runs while the app is closed. */
     val ROUND_PERIOD: Duration = Duration.ofMinutes(60)
@@ -53,12 +59,21 @@ object BackgroundRules {
 
     /**
      * When the alarm goes off after a round that gave no outlook, as it failed or was stopped: the alarm's round then
-     * tries again from the stored forecast.
+     * tries again from the stored forecast. The gap doubles with each such round in a row, so a round that keeps
+     * failing does not wake the phone every nine minutes.
      *
      * @param now the moment the alarm is set
-     * @return [MIN_ALARM_GAP] after [now]
+     * @param inRow how many rounds in a row gave no outlook, this one included; at least 1
+     * @return [MIN_ALARM_GAP] after [now] for the first, twice that for the second, four times for the third, then
+     *     [MAX_RETRY_GAP]: 9, 18, 36, then 60 minutes
      */
-    fun retryAt(now: Instant): Instant = now.plus(MIN_ALARM_GAP)
+    fun retryAt(now: Instant, inRow: Int): Instant {
+        if (inRow < 1) {
+            throw IllegalArgumentException("A retry follows at least one round without an outlook, not $inRow")
+        }
+        val doubled = MIN_ALARM_GAP.multipliedBy(1L shl minOf(inRow - 1, MAX_DOUBLINGS))
+        return now.plus(minOf(doubled, MAX_RETRY_GAP))
+    }
 
     /**
      * What a start does to the schedule.

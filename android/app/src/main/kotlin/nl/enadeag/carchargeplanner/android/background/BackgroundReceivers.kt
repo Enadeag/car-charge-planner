@@ -11,8 +11,9 @@ import nl.enadeag.carchargeplanner.android.CarChargePlannerApp
 import nl.enadeag.carchargeplanner.engine.ForecastUse
 
 /**
- * How long a receiver's round may take, waiting for a round that runs included, well within the time Android gives a
- * broadcast. A round that runs sets the alarm itself, so a receiver that gives up loses nothing.
+ * How long a receiver's round may take, waiting for a round that runs included. It stays below the shortest time
+ * Android gives a broadcast, 10 seconds on its foreground queue, after which it counts the receiver as not responding,
+ * also under `goAsync()`. A round that runs sets the alarm itself, so a receiver that gives up loses nothing.
  */
 internal val RECEIVER_ROUND_LIMIT = 8.seconds
 

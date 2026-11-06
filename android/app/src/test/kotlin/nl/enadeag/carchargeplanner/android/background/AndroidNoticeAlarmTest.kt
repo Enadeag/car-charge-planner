@@ -2,6 +2,8 @@ package nl.enadeag.carchargeplanner.android.background
 
 import android.app.AlarmManager
 import android.app.Application
+import android.app.PendingIntent
+import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.Instant
@@ -64,5 +66,31 @@ class AndroidNoticeAlarmTest {
         alarm.cancel()
 
         assertThat(manager.scheduledAlarms).isEmpty()
+    }
+
+    @Test
+    fun aCancelEndsTheAlarmsIntentTooAndMakesNoneWhenThereIsNone() {
+        alarm.set(at)
+        val operation = manager.scheduledAlarms.single().operation
+        val requestCode = shadowOf(operation).requestCode
+
+        alarm.cancel()
+        alarm.cancel()
+
+        assertThat(shadowOf(operation).isCanceled).isTrue()
+        assertThat(PendingIntent.getBroadcast(app, requestCode, Intent(app, NoticeAlarmReceiver::class.java),
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)).isNull()
+    }
+
+    @Test
+    fun anAlarmSetAfterACancelGoesOff() {
+        alarm.set(at)
+        alarm.cancel()
+
+        alarm.set(at.plusSeconds(3600))
+
+        val set = manager.scheduledAlarms.single()
+        assertThat(set.triggerAtMs).isEqualTo(at.plusSeconds(3600).toEpochMilli())
+        assertThat(shadowOf(set.operation).isCanceled).isFalse()
     }
 }

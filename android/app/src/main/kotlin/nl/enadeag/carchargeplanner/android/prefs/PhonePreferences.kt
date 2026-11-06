@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.intPreferencesKey
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import nl.enadeag.carchargeplanner.android.background.MissedRounds
 import nl.enadeag.carchargeplanner.android.home.CardMemory
 import nl.enadeag.carchargeplanner.android.notify.EpisodeFlag
 import org.slf4j.LoggerFactory
@@ -28,7 +30,10 @@ object PhoneStoreFiles {
     /** What goes along to the owner's next phone: the "Wi-Fi only" switch. */
     const val SETTINGS = "settings"
 
-    /** What stays on this phone: the notification card's state and the Problems notification's episode. */
+    /**
+     * What stays on this phone: the notification card's state, the Problems notification's episode and the rounds in
+     * the background that gave no outlook.
+     */
     const val STATE = "state"
 }
 
@@ -87,17 +92,19 @@ class PhoneSettings(private val store: DataStore<Preferences>, private val scope
 
 /**
  * The state of the notifications that belongs to this phone and stays out of a transfer to the next: whether the
- * notification card was closed, whether the owner refused Android's question once, and whether an episode of the
- * Problems notification is going on. A read that fails gives false; a write that fails is logged and leaves it.
+ * notification card was closed, whether the owner refused Android's question once, whether an episode of the
+ * Problems notification is going on, and how many rounds in the background in a row gave no outlook. A read that fails
+ * gives false or 0; a write that fails is logged and leaves it.
  *
  * @param store the `state` store
  */
-class PhoneState(private val store: DataStore<Preferences>) : CardMemory, EpisodeFlag {
+class PhoneState(private val store: DataStore<Preferences>) : CardMemory, EpisodeFlag, MissedRounds {
 
     private companion object {
         val CARD_CLOSED = booleanPreferencesKey("card_closed")
         val ASK_REFUSED = booleanPreferencesKey("ask_refused")
         val PROBLEMS_EPISODE = booleanPreferencesKey("problems_episode")
+        val MISSED_ROUNDS = intPreferencesKey("missed_rounds")
     }
 
     override suspend fun closed(): Boolean = read(CARD_CLOSED)
@@ -112,6 +119,10 @@ class PhoneState(private val store: DataStore<Preferences>) : CardMemory, Episod
 
     override suspend fun episodeStarted(started: Boolean) =
         store.write("The Problems episode") { it[PROBLEMS_EPISODE] = started }
+
+    override suspend fun missedRounds(): Int = store.data.readable().first()[MISSED_ROUNDS] ?: 0
+
+    override suspend fun missedRounds(count: Int) = store.write("The missed rounds") { it[MISSED_ROUNDS] = count }
 
     private suspend fun read(key: Preferences.Key<Boolean>): Boolean = store.data.readable().first()[key] == true
 }

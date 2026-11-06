@@ -13,6 +13,7 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import nl.enadeag.carchargeplanner.android.CarChargePlannerApp
@@ -48,7 +49,7 @@ class BackgroundReceiversTest {
         access.roundOutlook = Outlook.NoForecast("Open-Meteo could not be reached")
         access.noticeDue = due
         app.rounds = BackgroundRounds({ access }, { _, _ -> }, AndroidNoticeAlarm(app), background.work, { allowed },
-            Clock.fixed(now, ZoneOffset.UTC))
+            Clock.fixed(now, ZoneOffset.UTC), background.missed)
         app.schedule = BackgroundSchedule({ access }, background.work, background.alarm, MutableStateFlow(true)) {
             allowed
         }
@@ -181,5 +182,11 @@ class BackgroundReceiversTest {
         assertThat(shadowOf(receiver).wentAsync()).isFalse()
         assertThat(access.rounds).isEmpty()
         assertThat(background.done).isEmpty()
+    }
+
+    @Test
+    fun theReceiversGiveUpBeforeAndroidCountsThemAsNotResponding() {
+        // Android's shortest time for a broadcast, on its foreground queue
+        assertThat(RECEIVER_ROUND_LIMIT).isLessThan(10.seconds)
     }
 }

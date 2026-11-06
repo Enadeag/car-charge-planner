@@ -40,7 +40,7 @@ internal object AppEngine {
      * @param clock what the engine plans and announces from; the same as the notifications'
      * @return the engine, with nothing read or fetched yet
      */
-    fun build(platform: AndroidPlatform, notifier: Notifier, clock: Clock = Clock.systemUTC()): Engine =
+    fun build(platform: AndroidPlatform, notifier: Notifier, clock: Clock): Engine =
         build(platform.dataFolder(), platform.http(), platform.files(), platform.apiKeys(), notifier, clock)
 
     /**

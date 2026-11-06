@@ -31,7 +31,7 @@ class BackgroundRoundsTest {
     }
 
     private val rounds = BackgroundRounds({ access }, { outlook, use -> afterRound(outlook, use) }, background.alarm,
-        background.work, { allowed }, Clock.fixed(now, ZoneOffset.UTC))
+        background.work, { allowed }, Clock.fixed(now, ZoneOffset.UTC), background.missed)
 
     private val noForecast = Outlook.NoForecast("Open-Meteo could not be reached")
 
@@ -105,6 +105,63 @@ class BackgroundRoundsTest {
         }
 
     @Test
+    fun eachRoundWithoutAnOutlookInARowSetsTheAlarmTwiceAsFarAheadUpToAnHour() = runTest {
+        access.roundThrows = IllegalStateException("a fault")
+
+        repeat(5) { rounds.run(ForecastUse.STORED_ONLY) }
+
+        assertThat(background.done).containsExactlyElementsOf(listOf(9L, 18L, 36L, 60L, 60L)
+            .map { "alarm ${now.plus(Duration.ofMinutes(it))}" })
+        assertThat(background.missedRounds).isEqualTo(5)
+    }
+
+    @Test
+    fun theRoundsWithoutAnOutlookAreCountedOnFromWhatWasKept() = runTest {
+        access.roundThrows = IllegalStateException("a fault")
+        background.missedRounds = 2
+
+        rounds.run(ForecastUse.STORED_ONLY)
+
+        assertThat(background.done).containsExactly("alarm ${now.plus(Duration.ofMinutes(36))}")
+        assertThat(background.missedRounds).isEqualTo(3)
+    }
+
+    @Test
+    fun aRoundWithAnOutlookStartsTheCountAgain() = runTest {
+        background.missedRounds = 4
+        access.roundOutlook = noForecast
+        access.noticeDue = now.plus(Duration.ofHours(2))
+
+        rounds.run(ForecastUse.STORED_ONLY)
+        access.roundThrows = IllegalStateException("a fault")
+        rounds.run(ForecastUse.STORED_ONLY)
+
+        assertThat(background.done).containsExactly("after NoForecast STORED_ONLY",
+            "alarm ${now.plus(Duration.ofHours(2))}", "alarm ${now.plus(Duration.ofMinutes(9))}")
+        assertThat(background.missedRounds).isEqualTo(1)
+    }
+
+    @Test
+    fun withoutASettingsFileTheCountStartsAgainToo() = runTest {
+        background.missedRounds = 4
+        access.roundOutlook = Outlook.NotSetUp(Path.of("engine.json"))
+
+        rounds.run(ForecastUse.STORED_ONLY)
+
+        assertThat(background.missedRounds).isZero()
+    }
+
+    @Test
+    fun whileNotificationsAreNotAllowedTheCountStaysAsItIs() = runTest {
+        allowed = false
+        background.missedRounds = 2
+
+        rounds.run(ForecastUse.STORED_ONLY)
+
+        assertThat(background.missedRounds).isEqualTo(2)
+    }
+
+    @Test
     fun aRoundStoppedBeforeItsOutlookSetsTheAlarmNineMinutesAheadAndStaysStopped() = runTest {
         access.roundOutlook = noForecast
         access.noticeDue = now.plus(Duration.ofHours(2))
@@ -152,7 +209,7 @@ class BackgroundRoundsTest {
         val failing = BackgroundRounds({ access }, { _, _ -> }, object : NoticeAlarm {
             override fun set(at: Instant) = throw SecurityException("too many alarms")
             override fun cancel() = Unit
-        }, background.work, { true }, Clock.fixed(now, ZoneOffset.UTC))
+        }, background.work, { true }, Clock.fixed(now, ZoneOffset.UTC), background.missed)
 
         failing.run(ForecastUse.STORED_ONLY)
 

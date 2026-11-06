@@ -121,6 +121,27 @@ class PhonePreferencesTest {
     }
 
     @Test
+    fun theMissedRoundsStartAtNoneAndAreKeptAfterTheProcessEnded() {
+        val file = file(PhoneStoreFiles.STATE)
+        val (state, scope) = store(file)
+        val phone = PhoneState(state)
+        runBlocking {
+            assertThat(phone.missedRounds()).isZero()
+            phone.missedRounds(3)
+        }
+
+        val (later, _) = again(scope, file)
+        val after = PhoneState(later)
+        runBlocking {
+            assertThat(after.missedRounds()).isEqualTo(3)
+            assertThat(after.closed()).isFalse()
+            assertThat(after.episodeStarted()).isFalse()
+            after.missedRounds(0)
+            assertThat(after.missedRounds()).isZero()
+        }
+    }
+
+    @Test
     fun aFileThatCannotBeReadGivesTheDefaults() {
         val file = file(PhoneStoreFiles.STATE)
         file.parentFile?.mkdirs()
@@ -174,8 +195,10 @@ class PhonePreferencesTest {
 
         runBlocking {
             assertThat(phone.episodeStarted()).isFalse()
+            assertThat(phone.missedRounds()).isZero()
             phone.episodeStarted(true)
             phone.refuse()
+            phone.missedRounds(2)
             assertThat(PhoneSettings(failing, this).on.first()).isFalse()
         }
     }

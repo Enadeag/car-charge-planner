@@ -142,13 +142,13 @@ class BackgroundLifecycleTest {
     }
 
     @Test
-    fun theWifiSwitchReachesTheScheduledHourlyRound() {
+    fun theWifiSwitchReachesTheScheduledHourlyRoundAndAWaitingRoundNow() {
         fakeSchedule()
         background.hourlyIsScheduled = true
 
         app.phoneSettings.switch(true)
-        waitFor { background.done.isNotEmpty() }
+        waitFor { background.done.size >= 2 }
 
-        assertThat(background.done).containsExactly("hourly wifi")
+        assertThat(background.done).containsExactly("hourly wifi", "waiting once wifi")
     }
 }

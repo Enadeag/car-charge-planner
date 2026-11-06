@@ -5,6 +5,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileAttribute
 import java.security.KeyStoreException
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -19,9 +20,9 @@ import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import nl.enadeag.carchargeplanner.android.secrets.SoftwareKeys
 import nl.enadeag.carchargeplanner.android.store.AwaySave
@@ -81,7 +82,7 @@ class EngineOnDispatcherTest {
     private val filesFolder by lazy { root.resolve("files") }
     private val access by lazy {
         val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys)
-        EngineOnDispatcher(AppEngine.build(platform, Notifier { }), dispatcher)
+        EngineOnDispatcher(AppEngine.build(platform, Notifier { }, Clock.systemUTC()), dispatcher)
     }
     private val draft = EngineConfig.setUpDraft(ZoneId.of("Europe/Amsterdam"), ProviderId("open-meteo"))
 
@@ -378,7 +379,7 @@ class EngineOnDispatcherTest {
         access.applyKeyChanges(KeyChanges.entering(key))
         keys.failNext(KeyStoreException("the Keystore is busy"))
         val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys)
-        val later = EngineOnDispatcher(AppEngine.build(platform, Notifier { }), dispatcher)
+        val later = EngineOnDispatcher(AppEngine.build(platform, Notifier { }, Clock.systemUTC()), dispatcher)
 
         assertThat(later.storedKeys()).isEqualTo(StoredKeys.Unreadable)
     }

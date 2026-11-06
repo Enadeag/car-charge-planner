@@ -10,7 +10,10 @@ import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
 import java.time.Instant
 
-/** The alarm and the work in memory, which write what was done to them, in order, to one list. */
+/**
+ * The alarm, the work and the count of missed rounds in memory; the alarm and the work write what was done to them, in
+ * order, to one list.
+ */
 internal class FakeBackground {
 
     /** What was done, such as "alarm 2026-06-07T09:09:00Z", "alarm cancelled", "hourly wifi", "once any". */
@@ -37,8 +40,12 @@ internal class FakeBackground {
             done += "hourly " + network(wifiOnly)
         }
 
-        override fun once(wifiOnly: Boolean) {
+        override suspend fun once(wifiOnly: Boolean) {
             done += "once " + network(wifiOnly)
+        }
+
+        override suspend fun onceWaitsFor(wifiOnly: Boolean) {
+            done += "waiting once " + network(wifiOnly)
         }
 
         override fun cancel() {
@@ -47,6 +54,17 @@ internal class FakeBackground {
         }
 
         override suspend fun hourlyScheduled() = hourlyIsScheduled
+    }
+
+    /** The rounds in a row that gave no outlook, as last kept. */
+    var missedRounds = 0
+
+    val missed = object : MissedRounds {
+        override suspend fun missedRounds() = missedRounds
+
+        override suspend fun missedRounds(count: Int) {
+            missedRounds = count
+        }
     }
 
     private fun network(wifiOnly: Boolean) = if (wifiOnly) "wifi" else "any"
