@@ -2,7 +2,7 @@ name: Release
 
 # A tag vX.Y.Z builds and tests the app, packages the Linux tar.gz, .deb and .rpm and the Windows installer with an SBOM
 # for Linux and one for Windows, checks the SBOMs for known vulnerabilities, attests where the files were built, and attaches them, with SHA256SUMS, to a
-# DRAFT GitHub Release; it also creates the branch release/X.Y.Z at the tag. Nothing is ever published
+# DRAFT GitHub Release; it checks that the branch release/X.Y.Z, which the maintainer creates, is at the tag. Nothing is ever published
 # here: the maintainer reads the draft and publishes it by hand. The tag must be "v" plus the version in pom.xml, which
 # has no -SNAPSHOT at a release (CONTRIBUTING.md, Releasing).
 #
@@ -271,8 +271,8 @@ jobs:
             release/car-charge-planner-*.cdx.json
       - name: Create the release branch
         if: env.DRY_RUN != 'true'
-        # With rulesets on release/** and v* after the public launch, this token needs the maintainer's bypass,
-        # or the branch is created by hand before the tag is pushed.
+        # The ruleset on release/** lets only an admin create the branch, so the maintainer creates it before pushing the
+        # tag (CONTRIBUTING.md, Releasing); a push here, for a missing branch, is refused.
         run: |
           branch="release/$VERSION"
           existing=$(git ls-remote origin "refs/heads/$branch" | cut -f1)
