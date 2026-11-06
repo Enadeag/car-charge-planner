@@ -26,7 +26,7 @@ object BackgroundRules {
     /** What a start of the app, Finish or a change the owner saved does to the work in the background. */
     enum class AtStart {
 
-        /** The hourly round, and one round at once, are scheduled. */
+        /** The hourly round, and one round now, are scheduled. */
         SCHEDULE,
 
         /** The work and the alarm are cancelled. */
@@ -50,6 +50,15 @@ object BackgroundRules {
         val earliest = now.plus(MIN_ALARM_GAP)
         return if (due.isBefore(earliest)) earliest else due
     }
+
+    /**
+     * When the alarm goes off after a round that gave no outlook, as it failed or was stopped: the alarm's round then
+     * tries again from the stored forecast.
+     *
+     * @param now the moment the alarm is set
+     * @return [MIN_ALARM_GAP] after [now]
+     */
+    fun retryAt(now: Instant): Instant = now.plus(MIN_ALARM_GAP)
 
     /**
      * What a start does to the schedule.

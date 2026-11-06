@@ -15,14 +15,16 @@ class ManifestTest {
 
     private companion object {
         const val ANDROID = "http://schemas.android.com/apk/res/android"
+        const val TOOLS = "http://schemas.android.com/tools"
     }
 
     // the local tests run in the app module's folder
     private val manifest = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
         .newDocumentBuilder().parse(File("src/main/AndroidManifest.xml")).documentElement
 
+    // what the app takes out of a library's manifest is not asked for; MergedManifestTest reads what is left
     private fun elements(tag: String): List<Element> = manifest.getElementsByTagName(tag).let { list ->
-        (0 until list.length).map { list.item(it) as Element }
+        (0 until list.length).map { list.item(it) as Element }.filter { it.getAttributeNS(TOOLS, "node") != "remove" }
     }
 
     private fun Element.name() = getAttributeNS(ANDROID, "name")

@@ -43,9 +43,11 @@ interface CardMemory {
  * @param allowed whether notifications are allowed now, asked each time
  * @param canAsk true on Android 13 and later, where the app asks Android for the permission
  * @param scope where the memory is read and written, the screen's
+ * @param onGranted told when the owner allows notifications through the card's question, on the main thread; it must
+ *     not block
  */
 class NotificationCard(private val memory: CardMemory, private val allowed: () -> Boolean,
-    private val canAsk: Boolean, private val scope: CoroutineScope) {
+    private val canAsk: Boolean, private val scope: CoroutineScope, private val onGranted: () -> Unit = {}) {
 
     /** What the card shows. */
     enum class Shown {
@@ -74,8 +76,14 @@ class NotificationCard(private val memory: CardMemory, private val allowed: () -
         scope.launch { lock.withLock { update() } }
     }
 
-    /** Takes Android's answer to the question: a refusal makes the card lead to the settings from now on. */
+    /**
+     * Takes Android's answer to the question: a refusal makes the card lead to the settings from now on, a grant is
+     * told on.
+     */
     fun answered(granted: Boolean) {
+        if (granted) {
+            onGranted()
+        }
         scope.launch {
             lock.withLock {
                 if (!granted) {

@@ -12,7 +12,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 /**
  * The engine's reads and writes, which tell the work in the background each time the owner stored a change that
  * the plan depends on: the settings file written (at Finish, or by a Settings save that changed it) or set aside, the
- * API keys changed, a battery level or a one-off away period saved. The work then makes a round at once, so the alarm
+ * API keys changed, a battery level or a one-off away period saved. The work then makes a round now, so the alarm
  * follows the new plan and a changed place gets its forecast. A write that fails tells nothing.
  *
  * @param engine the engine's reads and writes

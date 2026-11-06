@@ -4,6 +4,7 @@ import java.io.IOException
 import java.nio.file.Path
 import java.time.Instant
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.yield
 import nl.enadeag.carchargeplanner.android.AppEngine
 import nl.enadeag.carchargeplanner.engine.ForecastUse
 import nl.enadeag.carchargeplanner.engine.Outlook
@@ -102,8 +103,10 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     /** When the next notice is due, whatever the outlook; null for none. */
     var noticeDue: Instant? = null
 
+    // suspends as the engine's dispatcher does, which a stopped coroutine does not get past
     override suspend fun nextNoticeDue(outlook: Outlook): Instant? {
         dueAskedFor += outlook
+        yield()
         return noticeDue
     }
 

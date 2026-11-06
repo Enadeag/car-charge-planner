@@ -1,7 +1,9 @@
 package nl.enadeag.carchargeplanner.android.background
 
 import android.app.AlarmManager
+import android.content.BroadcastReceiver
 import android.content.Intent
+import android.os.Bundle
 import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -9,7 +11,10 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
+import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
 import nl.enadeag.carchargeplanner.android.CarChargePlannerApp
 import nl.enadeag.carchargeplanner.android.form.DRAFT
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
@@ -21,6 +26,10 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.shadow.api.Shadow
+import org.robolectric.shadows.ShadowBroadcastPendingResult
+import org.robolectric.util.ReflectionHelpers
+import org.robolectric.util.ReflectionHelpers.ClassParameter
 
 /** The alarm's receiver and the boot receiver, reached as Android reaches them, on the app's parts in memory. */
 @RunWith(AndroidJUnit4::class)
@@ -100,15 +109,76 @@ class BackgroundReceiversTest {
         assertThat(background.done).containsExactly("work cancelled")
     }
 
+    /**
+     * Hands [intent] to [receiver] as Android does, with the result Android waits for when it goes on in the background.
+     *
+     * @return that result
+     */
+    private fun receive(receiver: BroadcastReceiver, intent: Intent): BroadcastReceiver.PendingResult {
+        val result = ReflectionHelpers.callStaticMethod<BroadcastReceiver.PendingResult>(
+            ShadowBroadcastPendingResult::class.java, "create", ClassParameter.from(Int::class.javaPrimitiveType, 0),
+            ClassParameter.from(String::class.java, null), ClassParameter.from(Bundle::class.java, null),
+            ClassParameter.from(Boolean::class.javaPrimitiveType, false))
+        ReflectionHelpers.callInstanceMethod<Unit>(receiver, "setPendingResult",
+            ClassParameter.from(BroadcastReceiver.PendingResult::class.java, result))
+        receiver.onReceive(app, intent)
+        return result
+    }
+
+    /** Waits until the receiver told Android it is done; fails after ten seconds. */
+    private fun finished(result: BroadcastReceiver.PendingResult) {
+        Shadow.extract<ShadowBroadcastPendingResult>(result).future.get(10, TimeUnit.SECONDS)
+    }
+
+    @Test
+    fun theAlarmsReceiverTellsAndroidItIsDoneOnceTheNextAlarmIsSet() {
+        finished(receive(NoticeAlarmReceiver(), Intent()))
+
+        assertThat(alarms.scheduledAlarms.map { it.triggerAtMs }).containsExactly(due.toEpochMilli())
+    }
+
+    @Test
+    fun theBootReceiverTellsAndroidItIsDoneOnceTheRoundNowIsAsked() {
+        finished(receive(BootReceiver(), Intent(Intent.ACTION_BOOT_COMPLETED)))
+
+        assertThat(background.done).containsExactly("once wifi")
+    }
+
+    @Test
+    fun theAlarmsReceiverGivesUpOnARoundThatRunsTooLongAndIsDoneInTime() {
+        runBlocking { ONE_ROUND_AT_A_TIME.lock() }
+        try {
+            finished(receive(NoticeAlarmReceiver(50.milliseconds), Intent()))
+        } finally {
+            ONE_ROUND_AT_A_TIME.unlock()
+        }
+
+        assertThat(access.rounds).isEmpty()
+        assertThat(alarms.scheduledAlarms).isEmpty()
+    }
+
+    @Test
+    fun theBootReceiverGivesUpOnARoundThatRunsTooLongAndStillAsksTheRoundNow() {
+        runBlocking { ONE_ROUND_AT_A_TIME.lock() }
+        try {
+            finished(receive(BootReceiver(50.milliseconds), Intent(Intent.ACTION_MY_PACKAGE_REPLACED)))
+        } finally {
+            ONE_ROUND_AT_A_TIME.unlock()
+        }
+
+        assertThat(access.rounds).isEmpty()
+        assertThat(background.done).containsExactly("once wifi")
+    }
+
     @Test
     fun theBootReceiverIgnoresAnyOtherIntent() {
-        app.sendBroadcast(Intent("nl.example.SOMETHING").setClass(app, BootReceiver::class.java))
-        app.sendBroadcast(Intent().setClass(app, BootReceiver::class.java))
+        val receiver = BootReceiver()
 
-        // nothing comes to wait for: give a round that should not start the time to show
-        shadowOf(Looper.getMainLooper()).idle()
-        Thread.sleep(300)
+        receive(receiver, Intent("nl.example.SOMETHING"))
+        receive(receiver, Intent())
 
+        // nothing goes on after onReceive: no round can still come
+        assertThat(shadowOf(receiver).wentAsync()).isFalse()
         assertThat(access.rounds).isEmpty()
         assertThat(background.done).isEmpty()
     }

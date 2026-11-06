@@ -151,4 +151,18 @@ class NotificationCardTest {
 
         assertThat(card.shown.value).isEqualTo(NotificationCard.Shown.ASK)
     }
+
+    @Test
+    fun aGrantIsToldOnAndARefusalIsNot() = runTest {
+        var grants = 0
+        val card = NotificationCard(memory, { allowed }, true, backgroundScope) { grants++ }
+
+        card.answered(false)
+        runCurrent()
+        assertThat(grants).isZero()
+        card.answered(true)
+        runCurrent()
+
+        assertThat(grants).isEqualTo(1)
+    }
 }

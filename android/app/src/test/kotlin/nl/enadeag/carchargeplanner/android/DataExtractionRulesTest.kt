@@ -12,8 +12,8 @@ import org.w3c.dom.Element
 
 /**
  * What may leave the phone: only the keychain's file, as its Keystore key never moves, the notifications' state
- * store, which belongs to this phone, and WorkManager's database, which is made again, stay; the settings, trips, cache and the phone's settings store, with the
- * "Wi-Fi only" switch, go along to the owner's next phone. No device test sees a backup or a transfer, so this reads
+ * store, which belongs to this phone, and WorkManager's database, which is made again, stay; the settings, trips,
+ * cache and the phone's settings store, with the "Wi-Fi only" switch, go along to the owner's next phone. No device test sees a backup or a transfer, so this reads
  * the rules.
  */
 class DataExtractionRulesTest {
@@ -35,9 +35,9 @@ class DataExtractionRulesTest {
     private val stateFiles = listOf("exclude file:datastore/${PhoneStoreFiles.STATE}.preferences_pb",
         "exclude file:datastore/${PhoneStoreFiles.STATE}.preferences_pb.tmp")
 
-    // WorkManager's database, written through SQLite's write-ahead log, which WorkManager makes again
-    private val workFiles = listOf("exclude database:androidx.work.workdb", "exclude database:androidx.work.workdb-wal",
-        "exclude database:androidx.work.workdb-shm")
+    // WorkManager's database, which it keeps in noBackupFilesDir and writes through SQLite's write-ahead log
+    private val workFiles = listOf("exclude root:no_backup/androidx.work.workdb",
+        "exclude root:no_backup/androidx.work.workdb-wal", "exclude root:no_backup/androidx.work.workdb-shm")
 
     private val application = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
         .newDocumentBuilder().parse(File("src/main/AndroidManifest.xml")).documentElement

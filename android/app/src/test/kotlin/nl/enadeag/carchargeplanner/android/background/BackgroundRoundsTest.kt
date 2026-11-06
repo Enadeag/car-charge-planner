@@ -90,15 +90,38 @@ class BackgroundRoundsTest {
         assertThat(background.done).containsExactly("alarm cancelled", "work cancelled")
     }
 
+    @ParameterizedTest
+    @EnumSource(ForecastUse::class)
+    fun aRoundThatFailsEndsQuietlyAndSetsTheAlarmNineMinutesAheadSoTheAlarmsRoundTriesAgain(use: ForecastUse) =
+        runTest {
+            access.roundThrows = IllegalStateException("a fault")
+            access.noticeDue = now.plus(Duration.ofHours(2))
+
+            rounds.run(use)
+
+            assertThat(access.rounds).containsExactly(use)
+            assertThat(access.dueAskedFor).isEmpty()
+            assertThat(background.done).containsExactly("alarm ${now.plus(Duration.ofMinutes(9))}")
+        }
+
     @Test
-    fun aRoundThatFailsEndsQuietlyAndLeavesTheAlarmAsItWas() = runTest {
-        access.roundThrows = IllegalStateException("a fault")
+    fun aRoundStoppedBeforeItsOutlookSetsTheAlarmNineMinutesAheadAndStaysStopped() = runTest {
+        access.roundOutlook = noForecast
         access.noticeDue = now.plus(Duration.ofHours(2))
+        access.roundGate = CompletableDeferred()
+        var ended = false
 
-        rounds.run(ForecastUse.ASK_PROVIDERS)
+        val run = launch {
+            rounds.run(ForecastUse.ASK_PROVIDERS)
+            ended = true
+        }
+        runCurrent()
+        run.cancel()
+        run.join()
 
-        assertThat(access.rounds).containsExactly(ForecastUse.ASK_PROVIDERS)
-        assertThat(background.done).isEmpty()
+        assertThat(ended).isFalse()
+        assertThat(access.dueAskedFor).isEmpty()
+        assertThat(background.done).containsExactly("alarm ${now.plus(Duration.ofMinutes(9))}")
     }
 
     @Test
@@ -142,12 +165,17 @@ class BackgroundRoundsTest {
         access.noticeDue = now.plus(Duration.ofHours(2))
         val stopHere = CompletableDeferred<Unit>()
         afterRound = { _, _ -> stopHere.await() }
+        var ended = false
 
-        val run = launch { rounds.run(ForecastUse.ASK_PROVIDERS) }
+        val run = launch {
+            rounds.run(ForecastUse.ASK_PROVIDERS)
+            ended = true
+        }
         runCurrent()
         run.cancel()
         run.join()
 
+        assertThat(ended).isFalse()
         assertThat(background.done).containsExactly("alarm ${now.plus(Duration.ofHours(2))}")
     }
 

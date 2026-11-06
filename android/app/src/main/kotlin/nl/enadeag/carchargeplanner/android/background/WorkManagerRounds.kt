@@ -14,7 +14,7 @@ import nl.enadeag.carchargeplanner.android.CarChargePlannerApp
 import nl.enadeag.carchargeplanner.engine.ForecastUse
 
 /**
- * The rounds that ask the providers, on WorkManager: the hourly one, with its flex, and the one at once, each under a
+ * The rounds that ask the providers, on WorkManager: the hourly one, with its flex, and the round now, each under a
  * name of its own so a start never schedules a second; only with a network, the one the "Wi-Fi only" switch says,
  * and never waiting for the battery, as a low battery is when a charge notice matters most. WorkManager keeps them
  * over a restart of the phone and an update of the app, in its own database.
@@ -27,7 +27,7 @@ class WorkManagerRounds(private val context: Context) : RoundWork {
         /** The name of the hourly round's work. */
         const val HOURLY = "hourly-round"
 
-        /** The name of the work of the round at once. */
+        /** The name of the work of the round now. */
         const val ONCE = "round-now"
     }
 
@@ -57,7 +57,7 @@ class WorkManagerRounds(private val context: Context) : RoundWork {
 }
 
 /**
- * One round that asks the providers, for the hourly work and the one at once. It always ends as a success: a provider
+ * One round that asks the providers, for the hourly work and the round now. It always ends as a success: a provider
  * that failed is the engine's to wait for, so WorkManager tries nothing again before the next hour.
  *
  * @param context the application's context

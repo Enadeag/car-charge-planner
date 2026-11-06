@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.android.background
 
 import android.Manifest
 import androidx.test.core.app.ApplicationProvider
+import androidx.lifecycle.ViewModelProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.NetworkType
 import androidx.work.WorkInfo
@@ -16,6 +17,7 @@ import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
+import nl.enadeag.carchargeplanner.android.ui.AppViewModel
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
@@ -110,6 +112,22 @@ class BackgroundLifecycleTest {
         activity.stop().destroy()
 
         assertThat(background.done).endsWith("hourly any", "once any")
+    }
+
+    @Test
+    fun allowingNotificationsOnTheDashboardsCardSetsTheWorkUpWithoutANewStart() {
+        fakeSchedule()
+        allowed = false
+        val activity = started()
+        waitFor { background.done.isNotEmpty() }
+
+        // Android's question does not stop the activity, so no new start follows the grant
+        allowed = true
+        ViewModelProvider(activity.get())[AppViewModel::class.java].card.answered(true)
+        waitFor { background.done.size == 4 }
+        activity.stop().destroy()
+
+        assertThat(background.done).containsExactly("alarm cancelled", "work cancelled", "hourly any", "once any")
     }
 
     @Test

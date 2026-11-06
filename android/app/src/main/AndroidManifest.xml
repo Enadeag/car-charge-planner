@@ -8,6 +8,8 @@
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
   <!-- the round after the phone starts, which sets the alarm for the next notice again -->
   <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+  <!-- WorkManager's own, for work in the foreground, which the app never asks for -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
 
   <!-- enableOnBackInvokedCallback: the predictive back gesture, which Android 13 and later have (tools:targetApi) -->
   <application
@@ -45,6 +47,9 @@
         <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
       </intent-filter>
     </receiver>
+    <service
+        android:name="androidx.work.impl.foreground.SystemForegroundService"
+        tools:node="remove" />
   </application>
 
 </manifest>

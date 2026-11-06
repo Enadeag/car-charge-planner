@@ -24,8 +24,9 @@ import nl.enadeag.carchargeplanner.android.ui.notify.allowed
  * single-top, so a notification's tap reaches the activity shown. A tap takes its notification away, also a tap on its
  * action, and a battery check's tap opens the battery level's entry on the home; each once: not again when the
  * activity is made again, as after turning the phone, nor when the app is opened from the recent apps with that tap's
- * intent, which would take away a newer notification under the same tag. Each start of the activity sets the work in
- * the background up again, so it follows the settings file and whether notifications are allowed.
+ * intent, which would take away a newer notification under the same tag. Each start of the activity, and the owner
+ * allowing notifications on the dashboard's card, sets the work in the background up again, so it follows the
+ * settings file and whether notifications are allowed.
  */
 class MainActivity : ComponentActivity() {
 
@@ -51,8 +52,11 @@ class MainActivity : ComponentActivity() {
                 val context = app.applicationContext
                 AppViewModel(app.engine, app.saves, app.scope, createSavedStateHandle(), locale(), searchLanguage(),
                     app.problems::dashboardSaw) { scope ->
+                    // Android's question only pauses this activity, so no start sets the work up after a grant
                     NotificationCard(app.phoneState, { allowed(context) },
-                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU, scope)
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU, scope) {
+                        app.scope.launch { app.schedule.refresh() }
+                    }
                 }
             }
         }

@@ -26,7 +26,7 @@ interface NoticeAlarm {
     fun cancel()
 }
 
-/** The work that asks the providers: every hour, and once at once. */
+/** The work that asks the providers: every hour, and one round now. */
 interface RoundWork {
 
     /**
@@ -43,7 +43,7 @@ interface RoundWork {
      */
     fun once(wifiOnly: Boolean)
 
-    /** Cancels the hourly round and the one at once. */
+    /** Cancels the hourly round and the round now. */
     fun cancel()
 
     /**
@@ -58,7 +58,7 @@ interface RoundWork {
 internal val ONE_ROUND_AT_A_TIME = Mutex()
 
 /**
- * The rounds of the work in the background: the hourly round and the one at once, which ask the providers, and the
+ * The rounds of the work in the background: the hourly round and the round now, which ask the providers, and the
  * alarm's and the start's, which plan from the stored forecast only. Each round tells the owner what is due, keeps the
  * Problems notification's episodes and sets the alarm for the next notice, under one lock for the whole process. While
  * notifications are not allowed, there is no round: the work and the alarm are cancelled, until the app is opened
@@ -80,39 +80,49 @@ class BackgroundRounds(private val access: () -> EngineAccess,
     }
 
     /**
-     * Makes one round. A failure is logged by its kind only and ends the round; a round that gave its outlook sets the
-     * alarm also when it is stopped.
+     * Makes one round. A failure is logged by its kind only and ends the round. The alarm is set also when the round
+     * fails or is stopped: for the next notice once the round gave its outlook, else [BackgroundRules.MIN_ALARM_GAP]
+     * from now, so the alarm's own round tries again and the alarm never stops coming.
      *
-     * @param use where the forecast comes from: the providers for the hourly round and the one at once, the stored
+     * @param use where the forecast comes from: the providers for the hourly round and the round now, the stored
      *     forecast only for the alarm's and the start's
      */
-    suspend fun run(use: ForecastUse) = ONE_ROUND_AT_A_TIME.withLock {
+    suspend fun run(use: ForecastUse): Unit = ONE_ROUND_AT_A_TIME.withLock {
         var outlook: Outlook? = null
+        var notAllowed = false
         try {
             if (!allowed()) {
+                notAllowed = true
                 stop()
                 return@withLock
             }
             outlook = access().round(use)
             afterRound(outlook, use)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (failure: RuntimeException) {
-            if (failure is CancellationException) {
-                throw failure
-            }
             LOG.warn("A round of kind {} failed: {}", use, failure.javaClass.simpleName)
         } finally {
-            outlook?.let { withContext(NonCancellable) { follow(it) } }
+            if (!notAllowed) {
+                withContext(NonCancellable) { follow(outlook) }
+            }
         }
     }
 
-    /** Sets the alarm for the next notice, or takes everything away when the app is no longer set up. */
-    private suspend fun follow(outlook: Outlook) {
+    /**
+     * Sets the alarm for the next notice, or takes everything away when the app is no longer set up.
+     *
+     * @param outlook the round's outlook; null when it gave none, as it failed or was stopped before
+     */
+    private suspend fun follow(outlook: Outlook?) {
         try {
             if (outlook is Outlook.NotSetUp) {
                 stop()
                 return
             }
-            val at = BackgroundRules.alarmAt(access().nextNoticeDue(outlook), clock.instant())
+            val now = clock.instant()
+            val at = if (outlook == null) BackgroundRules.retryAt(now)
+                else BackgroundRules.alarmAt(access().nextNoticeDue(outlook), now)
             if (at == null) alarm.cancel() else alarm.set(at)
         } catch (failure: RuntimeException) {
             LOG.warn("The alarm could not be set: {}", failure.javaClass.simpleName)

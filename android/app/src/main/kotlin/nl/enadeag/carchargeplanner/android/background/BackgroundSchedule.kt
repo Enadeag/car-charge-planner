@@ -10,10 +10,10 @@ import org.slf4j.LoggerFactory
 
 /**
  * Sets up the work in the background as the app is used: at each start of the screen, at Finish and after each change
- * the owner saved, the hourly round and one round at once are scheduled once the app is set up and notifications are
+ * the owner saved, the hourly round and one round now are scheduled once the app is set up and notifications are
  * allowed, so the first alarm is set at once and a changed place gets its forecast; both are cancelled, with the alarm,
  * when the settings file is gone or notifications are not allowed. After the phone starts or the app is updated, only
- * the round at once is asked: WorkManager keeps the hourly one itself. A failure is logged by its kind only.
+ * the round now is asked: WorkManager keeps the hourly one itself. A failure is logged by its kind only.
  *
  * @param access the engine's reads and writes, asked anew each time so a test can put another in place
  * @param work the work that asks the providers
@@ -29,13 +29,14 @@ class BackgroundSchedule(private val access: () -> EngineAccess, private val wor
     }
 
     /** At a start of the screen, at Finish and after a saved change: schedules, cancels or leaves the work. */
-    suspend fun refresh() = guarded("refresh") {
+    suspend fun refresh(): Unit = guarded("refresh") {
         when (BackgroundRules.atStart(access().readSettings(), allowed())) {
             BackgroundRules.AtStart.SCHEDULE -> {
                 val wifi = wifiOnly.first()
                 work.hourly(wifi)
                 work.once(wifi)
             }
+            // after a running round, so its alarm does not come back once cancelled
             BackgroundRules.AtStart.CANCEL -> ONE_ROUND_AT_A_TIME.withLock {
                 alarm.cancel()
                 work.cancel()
@@ -44,8 +45,11 @@ class BackgroundSchedule(private val access: () -> EngineAccess, private val wor
         }
     }
 
-    /** After the phone started or the app was updated, and the round on the stored forecast: one round at once. */
-    suspend fun afterBoot() = guarded("boot") {
+    /**
+     * After the phone started or the app was updated, once the round on the stored forecast has set the alarm: one round
+     * now.
+     */
+    suspend fun afterBoot(): Unit = guarded("boot") {
         if (allowed() && access().readSettings() is StartState.Ready) {
             work.once(wifiOnly.first())
         }
@@ -56,7 +60,7 @@ class BackgroundSchedule(private val access: () -> EngineAccess, private val wor
      *
      * @param on the switch as it is now
      */
-    suspend fun wifiSwitched(on: Boolean) = guarded("switch") {
+    suspend fun wifiSwitched(on: Boolean): Unit = guarded("switch") {
         if (work.hourlyScheduled()) {
             work.hourly(on)
         }
@@ -65,10 +69,9 @@ class BackgroundSchedule(private val access: () -> EngineAccess, private val wor
     private suspend fun guarded(kind: String, step: suspend () -> Unit) {
         try {
             step()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (failure: RuntimeException) {
-            if (failure is CancellationException) {
-                throw failure
-            }
             LOG.warn("The background work's {} failed: {}", kind, failure.javaClass.simpleName)
         }
     }

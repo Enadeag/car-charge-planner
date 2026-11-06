@@ -231,6 +231,16 @@ androidComponents {
         }
         variant.sources.assets?.addGeneratedSourceDirectory(licenceAssets, LicenceAssets::getAssets)
         variant.androidTest?.sources?.assets?.addGeneratedSourceDirectory(exampleConfigAsset, ExampleConfigAsset::assets)
+        // MergedManifestTest reads the release build's manifest, with what the libraries add to it
+        if (variant.name == "release") {
+            val manifest = variant.artifacts.get(SingleArtifact.MERGED_MANIFEST)
+            tasks.withType<Test>().named { it == "testDebugUnitTest" }.configureEach {
+                inputs.file(manifest).withPropertyName("releaseManifest")
+                jvmArgumentProviders.add(CommandLineArgumentProvider {
+                    listOf("-Drelease.manifest=${manifest.get().asFile}")
+                })
+            }
+        }
         // LicencesInTheApkTest reads the debug APK as the build packs it
         if (variant.name == "debug") {
             val apk = variant.artifacts.get(SingleArtifact.APK)
@@ -334,7 +344,7 @@ pitest {
         "background.BackgroundLifecycleTest",
         // what the build makes rather than what the code does: the resources, the manifest, the APK and the engine on
         // the example settings file; and the ArchUnit rules, which read the classes' structure and kill no mutant
-        "StringsResourcesTest", "DataExtractionRulesTest", "ManifestTest", "NetworkSecurityConfigTest",
-        "licences.LicencesInTheApkTest", "AppEngineTest", "AppArchitectureTest",
+        "StringsResourcesTest", "DataExtractionRulesTest", "ManifestTest", "MergedManifestTest",
+        "NetworkSecurityConfigTest", "licences.LicencesInTheApkTest", "AppEngineTest", "AppArchitectureTest",
     ).map { "nl.enadeag.carchargeplanner.android.$it" }.toSet()
 }
