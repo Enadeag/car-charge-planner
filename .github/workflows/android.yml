@@ -170,9 +170,9 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      # a diagnostic for #371: whether failed boots cluster on one CPU model
+      # whether failed boots cluster on one CPU model
       - name: Runner CPU
-        run: lscpu | grep 'Model name' || echo "lscpu names no CPU model"
+        run: lscpu | grep -m1 '^Model name' || echo "lscpu names no CPU model"
       # The watchdog (#357): the action starts the emulator with its own output pipes, and the emulator's processes,
       # crashpad_handler among them, inherit them; one that outlives the emulator keeps the action, and so the step,
       # running (upstream https://github.com/ReactiveCircus/android-emulator-runner/issues/385, cause and fix in the
@@ -241,40 +241,41 @@ jobs:
         run: |
           mkdir -p android/build
           setsid sh -c "$WATCHDOG" < /dev/null > /dev/null 2>&1 &
-      # A new AVD, booted cold, every run: no AVD cache and no snapshot (#371). Boots from the cached snapshot came up
-      # without the `input` service, and the action's `adb shell input keyevent 82` right after `sys.boot_completed`
-      # failed the step. Upstream cold boots hit that race too (issues
-      # https://github.com/ReactiveCircus/android-emulator-runner/issues/432 and /issues/489; the open
-      # https://github.com/ReactiveCircus/android-emulator-runner/pull/495 waits for the service); a release that waits
-      # comes through Dependabot. Each script line runs in a shell of its own. The first waits up to 60 seconds for the
-      # services the tests use, so a boot still settling does not fail them, and logs how long that took; logcat then
-      # runs in the background, apart from the step's output, until the emulator stops.
+      # A new AVD, booted cold, every run, with no snapshot: boots from a snapshot sometimes came up without the `input`
+      # service, and the action's own `input keyevent 82` right after boot failed the step. The cold boot is the fix; the
+      # wait below runs after that keyevent and cannot catch it. It only lets the tests start once the services they use
+      # are up, and logs the time, so a cold boot that comes up short shows. Each script line runs in its own shell.
+      # Upstream: https://github.com/ReactiveCircus/android-emulator-runner/pull/495 waits for the service.
       - name: Instrumented tests on API 29
         timeout-minutes: 15
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         env:
           SERVICES_WAIT: |
             start=$(date +%s) limit=60
+            missing=' input settings package activity'
             while :; do
-              missing=
+              found_missing=
               for name in input settings package activity; do
-                timeout 10 adb shell service check "$name" 2> /dev/null | grep -q ': found' || missing="$missing $name"
+                [ $(($(date +%s) - start)) -lt "$limit" ] || break 2
+                timeout 5 adb shell service check "$name" 2> /dev/null | grep -q ': found' ||
+                  found_missing="$found_missing $name"
               done
-              took=$(($(date +%s) - start))
+              missing=$found_missing
               if [ -z "$missing" ]; then
-                echo "services ready after $took s"
+                echo "services ready after $(($(date +%s) - start)) s"
                 exit 0
-              fi
-              if [ "$took" -ge "$limit" ]; then
-                echo "services not ready after $took s, missing:$missing" >&2
-                exit 1
               fi
               sleep 1
             done
+            echo "services not ready after $(($(date +%s) - start)) s, missing:$missing" >&2
+            adb devices >&2
+            adb logcat -d -t 100 >&2
+            exit 1
         with:
           api-level: 29
           target: default
           arch: x86_64
+          force-avd-creation: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           working-directory: android
