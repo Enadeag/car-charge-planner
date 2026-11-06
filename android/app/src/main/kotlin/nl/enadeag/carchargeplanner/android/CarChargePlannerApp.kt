@@ -6,9 +6,19 @@ import androidx.annotation.VisibleForTesting
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
+import java.time.Clock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
+import nl.enadeag.carchargeplanner.android.background.AndroidNoticeAlarm
+import nl.enadeag.carchargeplanner.android.background.BackgroundRounds
+import nl.enadeag.carchargeplanner.android.background.BackgroundSchedule
+import nl.enadeag.carchargeplanner.android.background.NoticeAlarm
+import nl.enadeag.carchargeplanner.android.background.ReschedulingAccess
+import nl.enadeag.carchargeplanner.android.background.WorkManagerRounds
 import nl.enadeag.carchargeplanner.android.notify.ProblemEpisode
 import nl.enadeag.carchargeplanner.android.prefs.PhoneSettings
 import nl.enadeag.carchargeplanner.android.prefs.PhoneState
@@ -18,16 +28,18 @@ import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.android.store.EngineOnDispatcher
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.ui.notify.Notifications
+import nl.enadeag.carchargeplanner.android.ui.notify.allowed
 import nl.enadeag.carchargeplanner.android.ui.notify.createNoticeChannels
 
 /**
  * The app's composition root, made once per process before any screen: the platform's parts, the one engine on
  * them, which tells the owner through Android's notifications, the notification channels, the phone's own preferences
- * stores and the app-wide scope that saves run in, so a save outlives the screen that started it. The screens reach
- * the engine only through [engine] and [saves], off the main thread. The engine is built but not started: only the
- * work in the background makes its rounds.
+ * stores, the work in the background, and the app-wide scope that saves run in, so a save outlives the screen that
+ * started it. The screens reach the engine only through [engine] and [saves], off the main thread. The engine is built
+ * but not started: only the work in the background makes its rounds ([rounds]), which WorkManager, the alarm and the
+ * phone's start also start while the app is closed, in a process that Android starts for them without a screen.
  */
-class CarChargePlannerApp : Application() {
+open class CarChargePlannerApp : Application() {
 
     /** Where saves and other work that must outlive a screen run; it is never cancelled. */
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -52,19 +64,46 @@ class CarChargePlannerApp : Application() {
     lateinit var problems: ProblemEpisode
         private set
 
+    /** The alarm for the next notice; a device test sets it itself. */
+    lateinit var alarm: NoticeAlarm
+        private set
+
+    /** The rounds of the work in the background, which the worker and the receivers make. */
+    lateinit var rounds: BackgroundRounds
+        @VisibleForTesting internal set
+
+    /** Sets the work in the background up, as the screen starts and the owner saves a change. */
+    lateinit var schedule: BackgroundSchedule
+        @VisibleForTesting internal set
+
     override fun onCreate() {
         super.onCreate()
         val platform = AndroidPlatform.of(this)
-        val notifications = Notifications(this)
+        val clock = clock()
+        val notifications = Notifications(this, clock)
         createNoticeChannels(this)
-        engine = EngineOnDispatcher(AppEngine.build(platform, notifications), Dispatchers.IO)
-        saves = Saves(engine, scope)
         phoneSettings = PhoneSettings(store(PhoneStoreFiles.SETTINGS), scope)
         phoneState = PhoneState(store(PhoneStoreFiles.STATE))
         problems = ProblemEpisode(phoneState, notifications)
+        alarm = AndroidNoticeAlarm(this)
+        val work = WorkManagerRounds(this)
+        val notify = { allowed(this) }
+        rounds = BackgroundRounds({ engine }, problems::afterRound, alarm, work, notify, clock, phoneState)
+        schedule = BackgroundSchedule({ engine }, work, alarm, phoneSettings.on, notify)
+        engine = ReschedulingAccess(EngineOnDispatcher(AppEngine.build(platform, notifications, clock),
+            Dispatchers.IO)) { scope.launch { schedule.refresh() } }
+        saves = Saves(engine, scope)
+        scope.launch { phoneSettings.on.distinctUntilChanged().drop(1).collect { schedule.wifiSwitched(it) } }
         // only now: the parts above may touch the disk while they are made
         applyMainThreadPolicy(BuildConfig.DEBUG)
     }
+
+    /**
+     * The one clock of the engine, the notifications and the alarm.
+     *
+     * @return the system's clock; a test's app gives a fixed one
+     */
+    protected open fun clock(): Clock = Clock.systemUTC()
 
     /** One of the phone's preferences stores, in `files/datastore/<name>.preferences_pb`, read off the main thread. */
     private fun store(name: String): DataStore<Preferences> = phoneStore(scope) { preferencesDataStoreFile(name) }

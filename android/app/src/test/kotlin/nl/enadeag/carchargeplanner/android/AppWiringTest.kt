@@ -7,20 +7,41 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.io.File
 import java.nio.file.Path
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import nl.enadeag.carchargeplanner.android.store.BatteryLevelSave
 import nl.enadeag.carchargeplanner.engine.ForecastUse
 import nl.enadeag.carchargeplanner.engine.Outlook
+import nl.enadeag.carchargeplanner.engine.battery.BatteryFile
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem
+import nl.enadeag.carchargeplanner.engine.config.Percent
+import nl.enadeag.carchargeplanner.engine.store.FilePrivacy
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
 
-/** How the app's Application puts the phone's preferences and the Problems notification together, on Robolectric. */
+/**
+ * How the app's Application puts the phone's preferences, the Problems notification and the engine's clock together, on
+ * Robolectric.
+ */
 @RunWith(AndroidJUnit4::class)
 class AppWiringTest {
+
+    private companion object {
+        val NOON: Instant = Instant.parse("2026-06-07T12:00:00Z")
+    }
+
+    /** The app as Android makes it, on a clock that stands still at [NOON]. */
+    class AppAtNoon : CarChargePlannerApp() {
+        override fun clock(): Clock = Clock.fixed(NOON, ZoneOffset.UTC)
+    }
 
     private val app = ApplicationProvider.getApplicationContext<CarChargePlannerApp>()
     private val manager = app.getSystemService(NotificationManager::class.java)
@@ -78,5 +99,28 @@ class AppWiringTest {
         assertThat(runBlocking { app.phoneState.episodeStarted() }).isTrue()
         assertThat(stored("state")).isTrue()
         assertThat(stored("settings")).isFalse()
+    }
+
+    @Test
+    fun theRoundsKeepTheirMissedCountInTheStateFile() {
+        shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        runBlocking { app.phoneState.missedRounds(2) }
+
+        // without a settings file the round's outlook is NotSetUp, after which the count starts again
+        runBlocking { app.rounds.run(ForecastUse.STORED_ONLY) }
+
+        assertThat(runBlocking { app.phoneState.missedRounds() }).isZero()
+    }
+
+    @Test
+    @Config(application = AppAtNoon::class)
+    fun theEnginePlansFromTheAppsClock() {
+        val saved = runBlocking { app.engine.saveBatteryLevel(Percent(55.0)) }
+
+        assertThat(saved).isEqualTo(BatteryLevelSave.Saved)
+        // the process's one platform, whose folder may be an earlier test's
+        val reading = onDisk { BatteryFile(AndroidPlatform.of(app).dataFolder().resolve("battery.json"),
+            PrivateFiles(FilePrivacy.NONE)).reading() }
+        assertThat(reading.map { it.enteredAt() }).contains(NOON)
     }
 }

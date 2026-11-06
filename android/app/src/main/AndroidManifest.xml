@@ -6,6 +6,10 @@
   <uses-permission android:name="android.permission.INTERNET" />
   <!-- the notifications, which Android 13 and later ask the owner for; the dashboard's card asks -->
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <!-- the round after the phone starts, which sets the alarm for the next notice again -->
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+  <!-- WorkManager's own, for work in the foreground, which the app never asks for -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
 
   <!-- enableOnBackInvokedCallback: the predictive back gesture, which Android 13 and later have (tools:targetApi) -->
   <application
@@ -30,6 +34,22 @@
         <category android:name="android.intent.category.LAUNCHER" />
       </intent-filter>
     </activity>
+    <!-- the alarm for the next notice; only the app's own alarm reaches it -->
+    <receiver
+        android:name=".background.NoticeAlarmReceiver"
+        android:exported="false" />
+    <!-- exported for the system's broadcasts after the phone starts and after an update of the app only -->
+    <receiver
+        android:name=".background.BootReceiver"
+        android:exported="true">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+      </intent-filter>
+    </receiver>
+    <service
+        android:name="androidx.work.impl.foreground.SystemForegroundService"
+        tools:node="remove" />
   </application>
 
 </manifest>

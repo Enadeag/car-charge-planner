@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.android
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Clock
 import java.time.ZoneId
 import kotlin.io.path.copyTo
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -37,7 +38,7 @@ class AppEngineTest {
 
     @Test
     fun theAppOffersTheDesktopsProvidersInItsOrder() {
-        val engine = AppEngine.build(platform, Notifier { })
+        val engine = AppEngine.build(platform, Notifier { }, Clock.systemUTC())
 
         assertThat(engine.providers().map { it.id() })
             .containsExactly(ProviderId("open-meteo"), ProviderId("forecast-solar"))
@@ -47,7 +48,7 @@ class AppEngineTest {
     fun theDocsExampleSettingsFileIsReadThroughTheEngineFromTheFilesFolder() = runTest {
         Files.createDirectories(filesFolder)
         EXAMPLE.copyTo(filesFolder.resolve("engine.json"))
-        val access = EngineOnDispatcher(AppEngine.build(platform, Notifier { }),
+        val access = EngineOnDispatcher(AppEngine.build(platform, Notifier { }, Clock.systemUTC()),
             StandardTestDispatcher(testScheduler))
 
         val state = access.readSettings()
@@ -62,7 +63,7 @@ class AppEngineTest {
     @Test
     fun theSettingsAreWrittenToEngineJsonInTheFilesFolderInTheDesktopsFormat() = runTest {
         val example = ConfigFile(EXAMPLE, PrivateFiles(FilePrivacy.NONE)).read()
-        val access = EngineOnDispatcher(AppEngine.build(platform, Notifier { }),
+        val access = EngineOnDispatcher(AppEngine.build(platform, Notifier { }, Clock.systemUTC()),
             StandardTestDispatcher(testScheduler))
 
         access.saveSettings(example)

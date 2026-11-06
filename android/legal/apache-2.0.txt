@@ -37,6 +37,7 @@ Artifact: androidx.compose.ui:ui-text-android
 Artifact: androidx.compose.ui:ui-unit-android
 Artifact: androidx.compose.ui:ui-util-android
 Artifact: androidx.concurrent:concurrent-futures
+Artifact: androidx.concurrent:concurrent-futures-ktx
 Artifact: androidx.core:core
 Artifact: androidx.core:core-ktx
 Artifact: androidx.core:core-viewtree
@@ -62,6 +63,7 @@ Artifact: androidx.lifecycle:lifecycle-process
 Artifact: androidx.lifecycle:lifecycle-runtime-android
 Artifact: androidx.lifecycle:lifecycle-runtime-compose-android
 Artifact: androidx.lifecycle:lifecycle-runtime-ktx-android
+Artifact: androidx.lifecycle:lifecycle-service
 Artifact: androidx.lifecycle:lifecycle-viewmodel
 Artifact: androidx.lifecycle:lifecycle-viewmodel-android
 Artifact: androidx.lifecycle:lifecycle-viewmodel-compose-android
@@ -73,15 +75,21 @@ Artifact: androidx.navigationevent:navigationevent-android
 Artifact: androidx.navigationevent:navigationevent-compose-android
 Artifact: androidx.print:print
 Artifact: androidx.profileinstaller:profileinstaller
+Artifact: androidx.room:room-common-jvm
+Artifact: androidx.room:room-runtime-android
 Artifact: androidx.savedstate:savedstate-android
 Artifact: androidx.savedstate:savedstate-compose-android
 Artifact: androidx.savedstate:savedstate-ktx
+Artifact: androidx.sqlite:sqlite-android
+Artifact: androidx.sqlite:sqlite-framework-android
 Artifact: androidx.startup:startup-runtime
 Artifact: androidx.tracing:tracing-android
+Artifact: androidx.tracing:tracing-ktx
 Artifact: androidx.transition:transition
 Artifact: androidx.versionedparcelable:versionedparcelable
 Artifact: androidx.window:window
 Artifact: androidx.window:window-core-android
+Artifact: androidx.work:work-runtime
 Artifact: com.google.guava:listenablefuture
 Artifact: com.squareup.okio:okio-jvm
 Artifact: org.jetbrains.kotlin:kotlin-stdlib

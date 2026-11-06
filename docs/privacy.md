@@ -40,16 +40,23 @@ On Linux `XDG_CONFIG_HOME` and `XDG_DATA_HOME` move the config and data folders,
 
 How the app reads and writes these files, and what it does with a damaged one, is in the [guide](guide.md#the-files-and-the-log).
 
-In the Android app, which is not released yet, the engine's files (the settings file, the battery level you entered last, `battery.json`, and the away periods you entered for a day, `away.json`, among them) are kept in the app's own files folder on the phone, which no other app can read. They never leave the phone except in Android's transfer to your next phone; the API keys stay out of that. Beside them, in `files/datastore/`, the app keeps two small preferences files of its own (Android's DataStore), which the engine does not use:
+In the Android app, which is not released yet, the engine's files (the settings file, the battery level you entered last, `battery.json`, and the away periods you entered for a day, `away.json`, among them) are kept in the app's own files folder on the phone, which no other app can read. They never leave the phone except in Android's transfer to your next phone; the API keys stay out of that. Beside them the app keeps a few files of its own, which the engine does not use: two small preferences files (Android's DataStore) in `files/datastore/`, and the schedule of the work in the background in the no-backup folder:
 
 | What | File | In the transfer to your next phone |
 | --- | --- | --- |
-| The phone's own settings: **Wi-Fi only** (Settings, Forecast), whether the hourly update while the app is closed waits for Wi-Fi | `settings.preferences_pb` | Yes |
-| The notifications' state on this phone: whether you closed the dashboard's card about notifications, whether you refused Android's question for them, and whether a "Forecast not updated" notification was posted | `state.preferences_pb` | No: it belongs to this phone, where notifications are allowed or not |
+| The phone's own settings: **Wi-Fi only** (Settings, Forecast), whether the hourly update while the app is closed waits for Wi-Fi | `files/datastore/settings.preferences_pb` | Yes |
+| The notifications' state on this phone: whether you closed the dashboard's card about notifications, whether you refused Android's question for them, whether a "Forecast not updated" notification was posted, and how many rounds in the background in a row could not plan | `files/datastore/state.preferences_pb` | No: it belongs to this phone, where notifications are allowed or not |
+| The schedule of the work in the background (Android's WorkManager): which work is due and when, nothing of your settings | `no_backup/androidx.work.workdb`, with its `-wal` and `-shm` files | No: Android never takes the no-backup folder along, in a backup or a transfer; the app sets the schedule up again when you first open it on the next phone |
 
-If one of these files is damaged, the app starts it again empty: **Wi-Fi only** is then off until you switch it on again.
+If one of the two preferences files is damaged, the app starts it again empty: **Wi-Fi only** is then off until you switch it on again.
 
 The Android app's notifications go through Android's own notification service on the phone, like any app's, and their words are made on the phone; the app sends them nowhere else. Like any app's notifications, they are also seen by a watch paired with the phone and by an app you gave access to your notifications.
+
+### Background
+
+Once the Android app is set up and notifications are allowed, it asks the forecast provider about once an hour while it is closed, so it can tell you before a charge window starts: only with a network connection, and with **Wi-Fi only** switched on only on Wi-Fi or another network without a data limit; a low battery does not stop it, though Android's battery saver may delay it. It sends the same as when the app is open, to the same provider and fallback, and nothing else. Forecast.Solar's public plan allows 12 requests an hour for everything behind your internet address, so the phone shares that limit with the desktop app and any other device at home that asks it. The app also asks once when you open it, after a change you saved, and after the phone starts or the app is updated, for which Android lets it start at boot (the permission `RECEIVE_BOOT_COMPLETED`). Android's WorkManager, which runs the hourly update, adds two permissions of its own: `WAKE_LOCK`, to keep the phone awake while the update runs, and `ACCESS_NETWORK_STATE`, to wait for a network (or Wi-Fi only). The alarm that wakes the phone shortly before a notice uses only the forecast already on the phone and sends nothing; with a lead time under about 10 minutes a notice may come late. While notifications are not allowed, none of this runs, until you allow them on the dashboard's card or open the app with them allowed.
+
+WorkManager keeps this schedule in its own database (in the table above). After a force stop nothing runs until you open the app again, and some phone makers stop apps in the background on their own; how to keep the app out of their "sleeping apps" is for the install guide ([#279](https://github.com/Enadeag/car-charge-planner/issues/279)).
 
 ### API keys
 

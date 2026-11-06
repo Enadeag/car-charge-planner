@@ -4,6 +4,7 @@ import java.io.IOException
 import java.nio.file.Path
 import java.time.Instant
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.yield
 import nl.enadeag.carchargeplanner.android.AppEngine
 import nl.enadeag.carchargeplanner.engine.ForecastUse
 import nl.enadeag.carchargeplanner.engine.Outlook
@@ -80,8 +81,19 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     /** What each round gives. */
     var roundOutlook: Outlook = Outlook.NotSetUp(Path.of("files", "engine.json"))
 
+    /** When set, each round throws it, as a fault in the engine would. */
+    var roundThrows: RuntimeException? = null
+
+    /** When set, the next round waits for it after it is counted. */
+    var roundGate: CompletableDeferred<Unit>? = null
+
     override suspend fun round(use: ForecastUse): Outlook {
         rounds += use
+        roundGate?.let {
+            roundGate = null
+            it.await()
+        }
+        roundThrows?.let { throw it }
         return roundOutlook
     }
 
@@ -91,8 +103,10 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     /** When the next notice is due, whatever the outlook; null for none. */
     var noticeDue: Instant? = null
 
+    // suspends as the engine's dispatcher does, which a stopped coroutine does not get past
     override suspend fun nextNoticeDue(outlook: Outlook): Instant? {
         dueAskedFor += outlook
+        yield()
         return noticeDue
     }
 
