@@ -180,8 +180,75 @@ jobs:
           # names the emulator action's version: update it with the action's pin, so a new version makes a new AVD. A
           # Dependabot pull request that bumps the emulator action must bump this suffix too, in the same pull request.
           key: avd-29-default-x86_64-emulator-runner-v2.38.0
-      # On a cache miss: boot the new AVD once and keep its snapshot, so the next runs start from it. A timeout but no
-      # reaper (see the next step): the emulator saves the snapshot as it stops, and a kill could cut that short.
+      # The watchdog (#357): the action starts the emulator with its own output pipes, and the emulator's processes,
+      # crashpad_handler among them, inherit them; one that outlives the emulator keeps the action, and so the step,
+      # running (upstream https://github.com/ReactiveCircus/android-emulator-runner/issues/385, cause and fix in the
+      # open https://github.com/ReactiveCircus/android-emulator-runner/pull/497). It runs from here to the job's end, so
+      # it also covers a step that fails before its script, as a failed boot does: the action then stops the emulator
+      # itself. Detached, with none of the step's streams, it holds no pipe itself. It waits until the emulator has
+      # been gone 20 seconds, as the emulator gives itself 20 after `emu kill`, and acts only on processes whose
+      # program is in the SDK's emulator directory, never on the emulator itself: so the snapshot of a new AVD is
+      # saved before it acts, and an emulator that the next step starts meanwhile survives. Its listings go to the
+      # uploaded build/emulator-processes.txt; the step it frees can end, and the upload start, before the last one is
+      # written. It gives up after 40 minutes, beyond the job's 30; the runner ends it with the job anyway. It can go
+      # once a release of the action fixes the hang; the steps' timeouts turn a hang that comes back into a fast
+      # failure.
+      - name: Start the emulator watchdog
+        env:
+          WATCHDOG: |
+            out="${GITHUB_WORKSPACE:?}/android/build/emulator-processes.txt"
+            poll=3 grace=20 limit=2400
+            list() {
+              {
+                echo "== $1, $(date -u +%H:%M:%S)"
+                ps -eo pid,ppid,pgid,etime,args |
+                  awk -v me="$$" -v re='[q]emu|[c]rashpad|[n]etsim|[e]mulator|[a]db' 'NR == 1 || ($1 != me && $0 ~ re)'
+              } >> "$out"
+            }
+            # one "PID KIND" line per process whose program is in "$dir": run for the emulator and its qemu
+            scan() {
+              LC_ALL=C ls -l /proc/[0-9]*/exe 2> /dev/null | while IFS= read -r line; do
+                pid=${line%%/exe -> *}
+                case "${line#* -> }" in
+                  "$dir"/emulator | "$dir"/qemu/*) echo "${pid##*/proc/} run" ;;
+                  "$dir"/*crashpad_handler) echo "${pid##*/proc/} crashpad" ;;
+                  "$dir"/*) echo "${pid##*/proc/} other" ;;
+                esac
+              done
+            }
+            # reap SIGNAL KINDS: fails, and signals nothing, once an emulator runs again
+            reap() {
+              procs=$(scan)
+              case "$procs" in *run*) return 1 ;; esac
+              echo "$procs" | while read -r pid kind; do
+                case " $2 " in *" $kind "*) kill "-$1" "$pid" ;; esac
+              done
+            }
+            dir=$(readlink -f "${ANDROID_HOME:-/nonexistent}/emulator") && [ -x "$dir/emulator" ] &&
+              [ "${dir##*/}" = emulator ] ||
+              { echo "== no watchdog: no emulator directory in ANDROID_HOME" >> "$out"; exit 1; }
+            seen= stopped=
+            end=$(($(date +%s) + limit))
+            while [ "$(date +%s)" -lt "$end" ]; do
+              case "$(scan)" in
+                *run*) seen=1 stopped= ;;
+                *)
+                  now=$(date +%s)
+                  if [ -n "$seen" ] && [ $((now - ${stopped:=$now})) -ge "$grace" ]; then
+                    list "the emulator stopped $grace seconds ago"
+                    reap TERM crashpad && sleep 5 && reap KILL "crashpad other"
+                    sleep 1
+                    list "after the kill"
+                    seen= stopped=
+                  fi
+                  ;;
+              esac
+              sleep "$poll"
+            done
+        run: |
+          mkdir -p android/build
+          setsid sh -c "$WATCHDOG" < /dev/null > /dev/null 2>&1 &
+      # On a cache miss: boot the new AVD once and keep its snapshot, so the next runs start from it.
       - name: Create the AVD and its snapshot
         if: steps.avd-cache.outputs.cache-hit != 'true'
         timeout-minutes: 15
@@ -197,47 +264,8 @@ jobs:
       # api-level, target and arch the same as in the snapshot step, or the snapshot does not match the AVD. Each script
       # line runs in a shell of its own; logcat runs in the background, apart from the step's output, until the emulator
       # stops.
-      #
-      # The reaper (#357): the action starts the emulator with its own output pipes, and the emulator's processes,
-      # crashpad_handler among them, inherit them; one that outlives `emu kill` keeps the action, and so the step,
-      # running (upstream https://github.com/ReactiveCircus/android-emulator-runner/issues/385, cause and fix in the
-      # open https://github.com/ReactiveCircus/android-emulator-runner/pull/497). The last script line starts it after
-      # the tests, whether they pass or fail, and keeps their exit status; it is one line, as the action stops at the
-      # first line that fails. Detached, with none of the step's streams, it holds no pipe itself. It waits 40 seconds,
-      # as the emulator gives itself 20 after `emu kill`, then stops what is left of the emulator's processes, and lists
-      # them, and adb's, in build/emulator-processes.txt. The step can end before the later listings ("40 seconds
-      # later", "after the kill"), so the upload may miss them: the proof is the step's duration, about 1-2 seconds
-      # after the tests when there was no hang, about 46 when the reaper ended one. The reaper can go once a release of
-      # the action fixes the hang; the step's timeout turns a hang that comes back into a fast failure.
       - name: Instrumented tests on API 29
         timeout-minutes: 15
-        env:
-          REAPER: |
-            procs='[q]emu|[c]rashpad|[n]etsim|[e]mulator|[a]db'
-            list() {
-              {
-                echo "== $1, $(date -u +%H:%M:%S)"
-                ps -eo pid,ppid,pgid,etime,args | awk -v me="$$" -v re="$procs" 'NR == 1 || ($1 != me && $0 ~ re)'
-              } >> build/emulator-processes.txt
-            }
-            # reap SIGNAL PATTERN: the pattern is matched below "$dir", which stays literal
-            reap() {
-              for proc in /proc/[0-9]*; do
-                case "$(readlink "$proc/exe" 2> /dev/null)" in
-                  "$dir"/$2) kill "-$1" "${proc#/proc/}" ;;
-                esac
-              done
-            }
-            dir=$(readlink -f "${ANDROID_HOME:?}/emulator") && [ -x "$dir/emulator" ] && [ "${dir##*/}" = emulator ] ||
-              { echo "== no reaper: no emulator directory in ANDROID_HOME" >> build/emulator-processes.txt; exit 1; }
-            list "the tests are done"
-            sleep 40
-            list "40 seconds later"
-            reap TERM '*crashpad_handler'
-            sleep 5
-            reap KILL '*'
-            sleep 1
-            list "after the kill"
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 29
@@ -250,7 +278,7 @@ jobs:
           script: |
             mkdir -p build
             adb logcat -v threadtime < /dev/null > build/logcat.txt 2>&1 &
-            ./gradlew --continue --stacktrace :app:connectedDebugAndroidTest; status=$?; setsid sh -c "$REAPER" < /dev/null > /dev/null 2>&1 & exit $status
+            ./gradlew --continue --stacktrace :app:connectedDebugAndroidTest
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
