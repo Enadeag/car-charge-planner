@@ -8,10 +8,11 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole
+import nl.enadeag.carchargeplanner.engine.trip.Trip
 
 /**
  * What the dashboard shows of a plan with days: the days, today first, today's grid advice, the charge levels the
- * battery bars mark, the coming one-off away periods and the footer.
+ * battery bars mark, the coming one-off away periods, the trips and the footer.
  *
  * @property zone the home's time zone, in which the days and times are meant
  * @property madeAt when the plan was made, whose day in [zone] is today
@@ -22,11 +23,13 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole
  * @property footer the forecast's credit, source and freshness
  * @property keyRefusedBy the names of the providers that refused their API key, in the order they were asked, also
  *     while another forecast is used; empty when none did
+ * @property trips the stored trips, in the engine's order, by their departure; each day's page lists those whose days
+ *     include it
  * @throws IllegalArgumentException when [days] is empty, which shows as no forecast instead
  */
 data class Dashboard(val zone: ZoneId, val madeAt: Instant, val days: List<DayModel>,
     val gridAdvice: GridAdviceModel?, val levels: ChargeLevels, val away: List<ComingAway>, val footer: Footer,
-    val keyRefusedBy: List<String> = listOf()) {
+    val keyRefusedBy: List<String> = listOf(), val trips: List<ListedTrip> = listOf()) {
 
     init {
         if (days.isEmpty()) {
@@ -59,6 +62,31 @@ data class Dashboard(val zone: ZoneId, val madeAt: Instant, val days: List<DayMo
      */
     fun describe(period: OneOffAwayPeriod): ComingAway = ComingAway.describe(period, zone, madeAt)
 
+    /**
+     * The trips a day's page lists, as the desktop's: those the car is away for on that day.
+     *
+     * @param day one of [days]
+     * @return the trips from whose day of departure to whose last day the day is, in the engine's order
+     */
+    fun tripsOn(day: DayModel): List<ListedTrip> = trips.filter { it.covers(day.date) }
+
+    /**
+     * The same dashboard with the trips as they are stored now, such as after the owner changed or removed one; the
+     * rest stays as the plan made it.
+     *
+     * @param stored the stored trips, in order of their departure
+     * @return the dashboard with those trips
+     */
+    fun withTrips(stored: List<Trip>): Dashboard = copy(trips = ListedTrip.of(stored, zone, madeAt))
+
+    /**
+     * A trip as this dashboard tells it, such as one just removed.
+     *
+     * @param trip the trip
+     * @return it with its days, named from the day the plan was made
+     */
+    fun describe(trip: Trip): ListedTrip = ListedTrip.of(trip, zone, madeAt)
+
     companion object {
 
         /**
@@ -66,18 +94,20 @@ data class Dashboard(val zone: ZoneId, val madeAt: Instant, val days: List<DayMo
          *
          * @param planned the engine's plan, with at least one day
          * @param away the stored one-off away periods, in order of their start; those that ended are left out
+         * @param trips the stored trips, in order of their departure
          * @param names a provider's name by its id, for those that refused their API key; its id by default
          * @return the dashboard
          * @throws IllegalArgumentException when the plan has no days
          */
-        fun of(planned: Outlook.Planned, away: List<OneOffAwayPeriod>,
+        fun of(planned: Outlook.Planned, away: List<OneOffAwayPeriod>, trips: List<Trip> = listOf(),
             names: (ProviderId) -> String = ProviderId::value): Dashboard {
             val today = planned.madeAt().atZone(planned.zone()).toLocalDate()
             return Dashboard(planned.zone(), planned.madeAt(), DayMapper(planned).map(planned.days()),
                 planned.gridAdvice().map { GridAdviceModel.of(it, planned.zone(), today) }.orElse(null),
                 ChargeLevels(planned.minimumPct(), planned.targetPct()),
                 ComingAway.of(away, planned.zone(), planned.madeAt()), Footer.of(planned),
-                planned.forecastSource().keyRefusedBy().map(names))
+                planned.forecastSource().keyRefusedBy().map(names),
+                ListedTrip.of(trips, planned.zone(), planned.madeAt()))
         }
     }
 }

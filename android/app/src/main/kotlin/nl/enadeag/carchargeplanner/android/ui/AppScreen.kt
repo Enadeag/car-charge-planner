@@ -78,8 +78,8 @@ internal fun AppScreen(flow: AppFlow, card: NotificationCard, wifiOnly: WifiOnly
         is AppFlow.Screen.SetUp -> SetUpScreen(now.session)
         is AppFlow.Screen.Unusable -> UnusableScreen(now.again)
         is AppFlow.Screen.NewerVersion -> NewerVersionScreen()
-        is AppFlow.Screen.Home -> HomeScreen(now.outlook, now.notice, now.battery, now.away, flow.phoneZone,
-            card, flow::openSettings)
+        is AppFlow.Screen.Home -> HomeScreen(now.outlook, now.notice, now.battery, now.away, now.trips,
+            flow.phoneZone, card, flow::openSettings)
         is AppFlow.Screen.Settings -> SettingsScreen(now.session, now.page, wifiOnly)
     }
 }

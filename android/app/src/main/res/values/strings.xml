@@ -331,6 +331,39 @@
   <!-- asked by Back in the entry with the choice or a time changed, under discard_question -->
   <string name="one_off_discard_text">The away time you entered is not saved yet.</string>
 
+  <!-- the Trips card on each day's page: its heading, and the line when no trip takes that day -->
+  <string name="trips_heading">Trips</string>
+  <string name="trips_none">No trip entered for this day.</string>
+  <!-- a trip in the list: %1$s its times, a time_span on the day it leaves and returns, otherwise a trip_days;
+       %2$s its distance, a trip_distance -->
+  <string name="trip_line">Away %1$s · %2$s</string>
+  <!-- the same as a screen reader reads it: %1$s its times, a time_span_spoken or a trip_days_spoken; %2$s its
+       distance, a trip_distance -->
+  <string name="trip_line_spoken">Away from %1$s, %2$s</string>
+  <!-- a trip's times when it returns on another day: %1$s the day it leaves, as in one_off_all_day; %2$s its
+       departure time; %3$s the day it returns; %4$s its return time -->
+  <string name="trip_days">%1$s %2$s – %3$s %4$s</string>
+  <!-- the same as a screen reader reads it -->
+  <string name="trip_days_spoken">%1$s %2$s to %3$s %4$s</string>
+  <!-- %1$s the distance of the whole drive in whole km, written already, such as 300 -->
+  <string name="trip_distance">%1$s km there and back</string>
+  <!-- each trip's two choices, each a checkbox row that saves at once -->
+  <string name="trip_not_with_this_car">Not with this car</string>
+  <string name="trip_can_charge">I can charge at the destination</string>
+  <!-- what a screen reader says for a choice, with the trip: %1$s the choice, such as trip_not_with_this_car; %2$s
+       the trip, a trip_line_spoken -->
+  <string name="trip_choice_spoken">%1$s, %2$s</string>
+  <!-- each trip's button; a screen reader says it with the trip, %1$s a trip_line_spoken -->
+  <string name="trip_remove">Remove</string>
+  <string name="trip_remove_spoken">Remove the trip %1$s</string>
+  <!-- after a change, in a snackbar; %1$s the trip as the list shows it, a trip_line; Removed has the action Undo,
+       which adds it back, and Saved follows that Undo -->
+  <string name="trip_saved">Saved: %1$s.</string>
+  <string name="trip_removed">Removed: %1$s.</string>
+  <!-- after a change failed, in a snackbar before the English details: a choice or an Undo; a Remove -->
+  <string name="trip_not_saved">Not saved: the trip could not be written.</string>
+  <string name="trip_not_removed">Not removed: the trip could not be written.</string>
+
   <!-- the footer's parts, after the provider's own credit; %1$s the primary provider's name, such as Open-Meteo -->
   <string name="footer_fallback">%1$s unavailable</string>
   <string name="footer_fallback_unknown">the chosen provider unavailable</string>

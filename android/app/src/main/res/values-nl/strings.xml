@@ -231,6 +231,22 @@
   <string name="one_off_not_saved">Niet opgeslagen: de afwezige tijd kon niet worden geschreven.</string>
   <string name="one_off_not_removed">Niet verwijderd: de afwezige tijd kon niet worden geschreven.</string>
   <string name="one_off_discard_text">De afwezige tijd die je invulde is nog niet opgeslagen.</string>
+  <string name="trips_heading">Ritten</string>
+  <string name="trips_none">Geen rit ingevuld voor deze dag.</string>
+  <string name="trip_line">Afwezig %1$s · %2$s</string>
+  <string name="trip_line_spoken">Afwezig van %1$s, %2$s</string>
+  <string name="trip_days">%1$s %2$s – %3$s %4$s</string>
+  <string name="trip_days_spoken">%1$s %2$s tot %3$s %4$s</string>
+  <string name="trip_distance">%1$s km heen en terug</string>
+  <string name="trip_not_with_this_car">Niet met deze auto</string>
+  <string name="trip_can_charge">Ik kan laden op de bestemming</string>
+  <string name="trip_choice_spoken">%1$s, %2$s</string>
+  <string name="trip_remove">Verwijderen</string>
+  <string name="trip_remove_spoken">Rit %1$s verwijderen</string>
+  <string name="trip_saved">Opgeslagen: %1$s.</string>
+  <string name="trip_removed">Verwijderd: %1$s.</string>
+  <string name="trip_not_saved">Niet opgeslagen: de rit kon niet worden geschreven.</string>
+  <string name="trip_not_removed">Niet verwijderd: de rit kon niet worden geschreven.</string>
 
   <string name="footer_fallback">%1$s niet beschikbaar</string>
   <string name="footer_fallback_unknown">de gekozen dienst niet beschikbaar</string>

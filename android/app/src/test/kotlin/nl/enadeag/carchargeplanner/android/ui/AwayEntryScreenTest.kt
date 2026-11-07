@@ -53,6 +53,7 @@ import nl.enadeag.carchargeplanner.android.home.BatteryEntry
 import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
 import nl.enadeag.carchargeplanner.android.home.Plans
+import nl.enadeag.carchargeplanner.android.home.TripEntry
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
@@ -127,10 +128,11 @@ class AwayEntryScreenTest {
         val outlook = HomeOutlook(access, scope, clock) { }
         val battery = BatteryEntry(kept, NumberText(Locale.ENGLISH), access, scope) { }
         away = AwayEntry(kept, access, scope, clock, outlook::awayChanged)
+        val trips = TripEntry(access, scope) { }
         val notice = HomeNotice(saves, scope) { }
         compose.setContent {
             focus = LocalFocusManager.current
-            AppTheme { wrap { HomeScreen(outlook, notice, battery, away, { lisbon }, noCard) { } } }
+            AppTheme { wrap { HomeScreen(outlook, notice, battery, away, trips, { lisbon }, noCard) { } } }
         }
         compose.waitForIdle()
         if (planned) {

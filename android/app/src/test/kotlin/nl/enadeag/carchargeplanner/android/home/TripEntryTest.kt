@@ -1,0 +1,153 @@
+package nl.enadeag.carchargeplanner.android.home
+
+import java.time.Instant
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import nl.enadeag.carchargeplanner.android.home.TripEntry.Choice
+import nl.enadeag.carchargeplanner.android.home.TripEntry.Notice
+import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
+import nl.enadeag.carchargeplanner.engine.trip.Trip
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class TripEntryTest {
+
+    private val access = FakeEngineAccess()
+    private val changes = mutableListOf<List<Trip>>()
+    private val trip = Trip(Instant.parse("2026-06-02T05:30:00Z"), Instant.parse("2026-06-02T16:00:00Z"), 300.0, false)
+    private val other = Trip(Instant.parse("2026-06-03T05:30:00Z"), Instant.parse("2026-06-03T16:00:00Z"), 80.0, true)
+
+    private fun TestScope.entry() = TripEntry(access, backgroundScope) { changes += it }
+
+    @Test
+    fun notWithThisCarSavesTheTripWithThatChoiceAloneChangedAndHandsTheStoredTripsOn() = runTest {
+        access.trips = listOf(trip, other)
+        val entry = entry()
+
+        entry.choose(trip, Choice.NOT_WITH_THIS_CAR, true)
+        runCurrent()
+
+        val changed = Trip(trip.departure(), trip.returnTime(), 300.0, false, true)
+        assertThat(access.tripChanges).containsExactly("change" to changed)
+        assertThat(access.trips).containsExactly(changed, other)
+        assertThat(changes).containsExactly(listOf(changed, other))
+        assertThat(entry.notice.value).isNull()
+    }
+
+    @Test
+    fun canChargeSavesTheTripWithThatChoiceAloneChanged() = runTest {
+        access.trips = listOf(other)
+        val entry = entry()
+
+        entry.choose(other, Choice.CAN_CHARGE, false)
+        runCurrent()
+
+        assertThat(access.trips).containsExactly(Trip(other.departure(), other.returnTime(), 80.0, false, false))
+    }
+
+    @ParameterizedTest
+    @EnumSource(Choice::class)
+    fun eachChoiceTellsAndPutsOnlyItsOwnFlag(choice: Choice) {
+        val on = choice.put(trip, true)
+
+        assertThat(choice.of(on)).isTrue()
+        assertThat(choice.of(choice.put(on, false))).isFalse()
+        assertThat(Choice.entries.filter { it != choice }.map { it.of(on) }).containsOnly(false)
+        assertThat(listOf(on.departure(), on.returnTime(), on.distanceKm()))
+            .containsExactly(trip.departure(), trip.returnTime(), trip.distanceKm())
+    }
+
+    @Test
+    fun whileAChoiceIsSavedItShowsInItsNewStateAndEveryChangeIsOff() = runTest {
+        access.trips = listOf(trip, other)
+        val gate = CompletableDeferred<Unit>()
+        access.tripGate = gate
+        val entry = entry()
+
+        entry.choose(trip, Choice.CAN_CHARGE, true)
+        runCurrent()
+        assertThat(entry.pending.value).isEqualTo(TripEntry.Pending(trip, Choice.CAN_CHARGE, true))
+        assertThat(entry.busy.value).isTrue()
+        entry.choose(other, Choice.CAN_CHARGE, false)
+        entry.remove(other)
+        entry.undo(other)
+        runCurrent()
+        assertThat(access.tripChanges).hasSize(1)
+
+        gate.complete(Unit)
+        runCurrent()
+        assertThat(entry.pending.value).isNull()
+        assertThat(entry.busy.value).isFalse()
+    }
+
+    @Test
+    fun aChoiceThatFailedSpringsBackSaysNotSavedWithTheEnginesWordsAndHandsNothingOn() = runTest {
+        access.trips = listOf(trip)
+        access.tripFails = "written by a newer version of the app"
+        val entry = entry()
+
+        entry.choose(trip, Choice.NOT_WITH_THIS_CAR, true)
+        runCurrent()
+
+        assertThat(entry.pending.value).isNull()
+        assertThat(entry.notice.value).isEqualTo(Notice.NotSaved("written by a newer version of the app"))
+        assertThat(access.trips).containsExactly(trip)
+        assertThat(changes).isEmpty()
+        assertThat(entry.busy.value).isFalse()
+    }
+
+    @Test
+    fun removeActsAtOnceSaysSoWithTheTripAndUndoAddsItBack() = runTest {
+        access.trips = listOf(trip, other)
+        val entry = entry()
+
+        entry.remove(trip)
+        runCurrent()
+        assertThat(entry.notice.value).isEqualTo(Notice.Removed(trip))
+        assertThat(changes).containsExactly(listOf(other))
+        entry.noticeShown()
+        assertThat(entry.notice.value).isNull()
+
+        entry.undo(trip)
+        runCurrent()
+        assertThat(entry.notice.value).isEqualTo(Notice.Saved(trip))
+        assertThat(changes.last()).containsExactly(trip, other)
+        assertThat(access.tripChanges).containsExactly("remove" to trip, "add" to trip)
+    }
+
+    @Test
+    fun aRemoveThatFailedSaysNotRemovedAndAnUndoThatFailedSaysNotSaved() = runTest {
+        access.trips = listOf(trip)
+        access.tripFails = "No space left on device"
+        val entry = entry()
+
+        entry.remove(trip)
+        runCurrent()
+        assertThat(entry.notice.value).isEqualTo(Notice.NotRemoved("No space left on device"))
+
+        entry.undo(trip)
+        runCurrent()
+        assertThat(entry.notice.value).isEqualTo(Notice.NotSaved("No space left on device"))
+        assertThat(changes).isEmpty()
+    }
+
+    @Test
+    fun whileARemoveRunsAChoiceDoesNothing() = runTest {
+        access.trips = listOf(trip)
+        access.tripGate = CompletableDeferred()
+        val entry = entry()
+
+        entry.remove(trip)
+        runCurrent()
+        entry.choose(trip, Choice.CAN_CHARGE, true)
+
+        assertThat(entry.pending.value).isNull()
+        assertThat(access.tripChanges).containsExactly("remove" to trip)
+    }
+}

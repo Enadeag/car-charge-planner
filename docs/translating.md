@@ -218,6 +218,16 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Not saved: the away time could not be written. | Niet opgeslagen: de afwezige tijd kon niet worden geschreven. | in the entry after its Save failed, and in a snackbar after Undo failed, with the English details; a one-off period is "afwezig", never "afwezigheid" |
 | Not removed: the away time could not be written. | Niet verwijderd: de afwezige tijd kon niet worden geschreven. | in a snackbar after Remove failed, with the English details |
 | The away time you entered is not saved yet. | De afwezige tijd die je invulde is nog niet opgeslagen. | under "Discard changes?", asked by Back in the entry with the choice or a time changed |
+| Trips | Ritten | the heading of each day's Trips card, the desktop's |
+| No trip entered for this day. | Geen rit ingevuld voor deze dag. | a day without a trip, the desktop's |
+| Away 07:30 – 18:00 · 300 km there and back | Afwezig 07:30 – 18:00 · 300 km heen en terug | a trip in the list, the desktop's; over more days "Away Tomorrow 20:00 – Wed, Jun 3 09:00 · …" ("Afwezig Morgen 20:00 – Wo 3 jun 09:00 · …"), the day as in the "Car away" list |
+| Away from 07:30 to 18:00, 300 km there and back | Afwezig van 07:30 tot 18:00, 300 km heen en terug | what TalkBack reads for a trip; over more days "Away from Tomorrow 20:00 to Wed, Jun 3 09:00, …" |
+| Not with this car, I can charge at the destination | Niet met deze auto, Ik kan laden op de bestemming | a trip's two checkboxes, the desktop's; TalkBack reads each with the trip ("Not with this car, Away from …") |
+| Remove, Remove the trip Away from … | Verwijderen, Rit Afwezig van … verwijderen | a trip's button, and what TalkBack reads for it, the desktop's order; it starts with the word on the button in English, and holds it in Dutch |
+| Saved: Away 07:30 – 18:00 · 300 km there and back. | Opgeslagen: Afwezig 07:30 – 18:00 · 300 km heen en terug. | in a snackbar after Undo of a removed trip |
+| Removed: Away 07:30 – 18:00 · 300 km there and back. | Verwijderd: Afwezig 07:30 – 18:00 · 300 km heen en terug. | in a snackbar after Remove, with Undo |
+| Not saved: the trip could not be written. | Niet opgeslagen: de rit kon niet worden geschreven. | in a snackbar after a choice or an Undo failed, with the English details; a trip is a "rit" |
+| Not removed: the trip could not be written. | Niet verwijderd: de rit kon niet worden geschreven. | in a snackbar after Remove failed, with the English details |
 | updated 10:51, not refreshed since 10:51 | bijgewerkt om 10:51, niet vernieuwd sinds 10:51 | the footer, after the provider's credit, which stays as it is |
 | provider busy until 11:30 | dienst weer beschikbaar om 11:30 | the footer, during a cool-down |
 | The forecast was not refreshed since 10:51. The plan uses that forecast. | De voorspelling is niet vernieuwd sinds 10:51. De planning gebruikt die voorspelling. | the warning above a plan on a stale forecast |

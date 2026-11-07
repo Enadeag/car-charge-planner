@@ -13,10 +13,11 @@ import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
+import nl.enadeag.carchargeplanner.engine.trip.Trip
 
 /**
  * All the app asks of the engine that reads or writes: the settings file, the API keys, the plan, the one-off away
- * periods and their changes, the battery level, the connection check and the place search for the screens' logic; a
+ * periods and their changes, the trips and their changes, the battery level, the connection check and the place search for the screens' logic; a
  * planning round and when the next notice is due for the work in the background. Each call suspends while it runs off
  * the main thread, as the keychain and the API keys may block for about a second and the others reach the disk or the
  * network.
@@ -129,6 +130,45 @@ interface EngineAccess {
      *     stored periods then unchanged
      */
     suspend fun removeAwayPeriod(period: OneOffAwayPeriod): AwaySave
+
+    /**
+     * Reads the trips the owner entered.
+     *
+     * @return the stored trips in order of their departure, also those that returned in the last day; empty when there
+     *     are none or the file cannot be read
+     */
+    suspend fun trips(): List<Trip>
+
+    /**
+     * Stores a trip the owner entered, so the next plan leaves its time free and charges for it; one stored already is
+     * kept once. A failure is an outcome, never thrown.
+     *
+     * @param trip the trip
+     * @return saved with the stored trips after the change, or failed with the system's or the engine's words, the
+     *     stored trips then unchanged
+     */
+    suspend fun addTrip(trip: Trip): TripSave
+
+    /**
+     * Replaces a stored trip by the owner's changed version of it, such as with one of its choices changed. A failure
+     * is an outcome, never thrown.
+     *
+     * @param trip the trip as [trips] gave it; when it is no longer stored, the changed one is added
+     * @param changed the trip as the owner changed it
+     * @return saved with the stored trips after the change, or failed with the system's or the engine's words, the
+     *     stored trips then unchanged
+     */
+    suspend fun changeTrip(trip: Trip, changed: Trip): TripSave
+
+    /**
+     * Forgets a trip, so the next plan may use its time again; one that is not stored changes nothing. A failure is an
+     * outcome, never thrown.
+     *
+     * @param trip the trip as [trips] gave it
+     * @return saved with the stored trips after the change, or failed with the system's or the engine's words, the
+     *     stored trips then unchanged
+     */
+    suspend fun removeTrip(trip: Trip): TripSave
 
     /**
      * Stores the battery level the owner read off the car, so the next plan starts from it instead of the assumed

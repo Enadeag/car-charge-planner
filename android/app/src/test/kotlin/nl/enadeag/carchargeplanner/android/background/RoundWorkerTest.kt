@@ -23,14 +23,17 @@ import kotlin.math.PI
 import kotlin.math.max
 import kotlin.math.sin
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import nl.enadeag.carchargeplanner.android.AppEngine
 import nl.enadeag.carchargeplanner.android.CarChargePlannerApp
+import nl.enadeag.carchargeplanner.android.MainActivity
 import nl.enadeag.carchargeplanner.android.testPlatform
 import nl.enadeag.carchargeplanner.android.notify.ProblemEpisode
 import nl.enadeag.carchargeplanner.android.notify.EpisodeFlag
 import nl.enadeag.carchargeplanner.android.store.EngineOnDispatcher
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
+import nl.enadeag.carchargeplanner.android.store.TripSave
 import nl.enadeag.carchargeplanner.android.ui.notify.Notifications
 import nl.enadeag.carchargeplanner.android.ui.notify.createNoticeChannels
 import nl.enadeag.carchargeplanner.engine.ForecastUse
@@ -38,6 +41,8 @@ import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet
 import nl.enadeag.carchargeplanner.engine.store.FilePrivacy
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles
+import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge
+import nl.enadeag.carchargeplanner.engine.trip.Trip
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
@@ -164,6 +169,86 @@ class RoundWorkerTest {
         assertThat(asked).isEmpty()
         // tomorrow's window lies beyond the six hours a forecast is trusted for, so no notice is due next
         assertThat(alarms.scheduledAlarms).isEmpty()
+    }
+
+    /**
+     * The app's engine in a folder of its own with the docs' example settings and a forecast stored five minutes
+     * before [at], on a clock fixed at [at], behind the app's own [ReschedulingAccess] that schedules the work in
+     * memory as the app's does, through [BackgroundSchedule].
+     */
+    private fun appAccess(name: String, at: Instant): ReschedulingAccess {
+        val folder = onDisk { Files.createDirectories(app.filesDir.toPath().resolve(name)) }
+        onDisk {
+            Files.copy(EXAMPLE, folder.resolve(AppEngine.SETTINGS_FILE))
+            storeForecast(folder, fetchedAt = at.minus(Duration.ofMinutes(5)))
+        }
+        val clock = Clock.fixed(at, ZoneOffset.UTC)
+        val engine = AppEngine.build(folder, { throw IOException("offline") }, PrivateFiles(FilePrivacy.NONE),
+            platform().apiKeys(), Notifications(app, clock), clock)
+        lateinit var access: ReschedulingAccess
+        val schedule = BackgroundSchedule({ access }, background.work, background.alarm, flowOf(false)) { true }
+        access = ReschedulingAccess(EngineOnDispatcher(engine, Dispatchers.IO)) {
+            runBlocking { schedule.refresh() }
+        }
+        app.rounds = BackgroundRounds({ access }, { _, _ -> }, background.alarm, background.work, { true }, clock,
+            background.missed)
+        return access
+    }
+
+    /**
+     * A trip saved through the app's engine access asks for a round now, and that round sets the alarm at the moment
+     * the trip's grid charge is to be told: its start less the example's lead of 15 minutes.
+     */
+    @Test
+    fun aSavedTripLeadsToARoundNowAndThenAnAlarmAtTheTripsChargeStart() {
+        // today's window has passed and tomorrow's lies beyond the six hours a forecast is trusted for
+        val evening = DAY.atTime(20, 0).atZone(ZONE).toInstant()
+        val access = appAccess("trip-alarm", evening)
+        assertThat(runBlocking { access.nextNoticeDue(access.outlook()) }).isNull()
+        // tomorrow early, farther than the battery holds, so a grid charge tonight
+        val trip = Trip(DAY.plusDays(1).atTime(7, 0).atZone(ZONE).toInstant(),
+            DAY.plusDays(1).atTime(13, 0).atZone(ZONE).toInstant(), 150.0, false)
+
+        assertThat(runBlocking { access.addTrip(trip) }).isEqualTo(TripSave.Saved(listOf(trip)))
+        assertThat(background.done).containsExactly("hourly any", "once any")
+
+        assertThat(work()).isEqualTo(ListenableWorker.Result.success())
+
+        val grid = (runBlocking { access.outlook() } as Outlook.Planned).tripAdvice().single().grid().orElseThrow()
+        assertThat(grid.start()).isEqualTo(TripGridCharge.Start.PLANNED)
+        assertThat(grid.window().start()).isEqualTo(DAY.atTime(21, 30).atZone(ZONE).toInstant())
+        assertThat(background.done.last()).isEqualTo("alarm ${DAY.atTime(21, 15).atZone(ZONE).toInstant()}")
+    }
+
+    /**
+     * The hourly round, on the app's engine with trips saved through its access, tells a trip that a full battery
+     * cannot make to plan a charging stop, and asks for the battery level for a trip that depends on it, by a
+     * notification whose action opens the level's entry, as no level was entered.
+     */
+    @Test
+    fun theHourlyRoundTellsATripTooFarAndAsksTheBatteryLevelForATightOne() {
+        val evening = DAY.atTime(19, 30).atZone(ZONE).toInstant()
+        val access = appAccess("trip-notices", evening)
+        val tight = Trip(DAY.plusDays(1).atTime(7, 0).atZone(ZONE).toInstant(),
+            DAY.plusDays(1).atTime(11, 0).atZone(ZONE).toInstant(), 150.0, false)
+        val tooFar = Trip(DAY.plusDays(1).atTime(12, 0).atZone(ZONE).toInstant(),
+            DAY.plusDays(1).atTime(22, 0).atZone(ZONE).toInstant(), 1000.0, false)
+        runBlocking {
+            access.addTrip(tight)
+            access.addTrip(tooFar)
+        }
+
+        assertThat(work()).isEqualTo(ListenableWorker.Result.success())
+
+        val notifications = shadowOf(notificationManager)
+        val short = notifications.getNotification("trip_short:${tooFar.departure().epochSecond}", 0)
+        assertThat(short.extras.getCharSequence(Notification.EXTRA_TITLE).toString()).isEqualTo("Plan a charging stop")
+        assertThat(short.channelId).isEqualTo("battery_trip_checks")
+        val check = notifications.getNotification("battery_check:${tight.departure().epochSecond}", 0)
+        assertThat(check.channelId).isEqualTo("battery_trip_checks")
+        assertThat(check.actions.map { it.title.toString() }).containsExactly("Enter battery level")
+        assertThat(shadowOf(check.actions[0].actionIntent).savedIntent.action)
+            .isEqualTo(MainActivity.OPEN_BATTERY_ENTRY)
     }
 
     private fun platform() = testPlatform(app.filesDir, File(app.filesDir, "no_backup"))

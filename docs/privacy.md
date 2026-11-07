@@ -40,7 +40,7 @@ On Linux `XDG_CONFIG_HOME` and `XDG_DATA_HOME` move the config and data folders,
 
 How the app reads and writes these files, and what it does with a damaged one, is in the [guide](guide.md#the-files-and-the-log).
 
-In the Android app, which is not released yet, the engine's files (the settings file, the battery level you entered last, `battery.json`, and the away periods you entered for a day, `away.json`, among them) are kept in the app's own files folder on the phone, which no other app can read. They never leave the phone except in Android's transfer to your next phone; the API keys stay out of that. Beside them the app keeps a few files of its own, which the engine does not use: two small preferences files (Android's DataStore) in `files/datastore/`, and the schedule of the work in the background in the no-backup folder:
+In the Android app, which is not released yet, the engine's files (the settings file, the battery level you entered last, `battery.json`, the away periods you entered for a day, `away.json`, your trips, `trips.json`, and what you were notified about each trip, `trip-notices.json`, among them) are kept in the app's own files folder on the phone, which no other app can read, in the same format as the desktop's. They never leave the phone except in Android's transfer to your next phone, which takes them all along; the API keys stay out of that. Beside them the app keeps a few files of its own, which the engine does not use: two small preferences files (Android's DataStore) in `files/datastore/`, and the schedule of the work in the background in the no-backup folder:
 
 | What | File | In the transfer to your next phone |
 | --- | --- | --- |
