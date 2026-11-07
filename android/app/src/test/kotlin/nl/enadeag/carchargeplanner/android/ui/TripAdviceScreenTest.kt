@@ -361,7 +361,7 @@ class TripAdviceScreenTest {
 
         compose.onNodeWithText(text(R.string.day_none_why)).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.day_none_trip)).assertDoesNotExist()
-        compose.onNode(hasContentDescription("Battery from 40% to 25% after the trip")).assertExists()
+        compose.onNode(hasContentDescription("Battery 40%, 25% after the trip")).assertExists()
         compose.onNodeWithText("Battery 40 → 25% after the trip", useUnmergedTree = true).assertExists()
         compose.assertShownButNotReadApart("40 → 25% after the trip")
         compose.assertReadAsOne("Car battery 40% at the start of tomorrow, 40% after charging; minimum 20%, target " +

@@ -407,7 +407,7 @@ class TripAdviceWordsTest {
             .isEqualTo("Battery from 50% to 74%, 70% after the trip")
         assertThat(words.figure(SourceFigure.Battery(notCharged))).isEqualTo("Battery 50 → 30% after the trip")
         assertThat(words.spokenFigure(SourceFigure.Battery(notCharged)))
-            .isEqualTo("Battery from 50% to 30% after the trip")
+            .isEqualTo("Battery 50%, 30% after the trip")
         assertThat(words.batteryLevels(charged)).isEqualTo("50 → 74%, 70% after the trip")
         assertThat(words.batteryLevels(notCharged)).isEqualTo("50 → 30% after the trip")
         assertThat(words.batteryLevels(BatteryLevels(Percent(50.0), Percent(74.0)))).isEqualTo("50 → 74%")
@@ -423,7 +423,7 @@ class TripAdviceWordsTest {
         assertThat(words.figure(SourceFigure.Battery(charged))).isEqualTo("Accu 50 → 74%, 70% na de rit")
         assertThat(words.spokenFigure(SourceFigure.Battery(charged))).isEqualTo("Accu van 50% naar 74%, 70% na de rit")
         assertThat(words.figure(SourceFigure.Battery(notCharged))).isEqualTo("Accu 50 → 30% na de rit")
-        assertThat(words.spokenFigure(SourceFigure.Battery(notCharged))).isEqualTo("Accu van 50% naar 30% na de rit")
+        assertThat(words.spokenFigure(SourceFigure.Battery(notCharged))).isEqualTo("Accu 50%, 30% na de rit")
         assertThat(words.batteryLevels(charged)).isEqualTo("50 → 74%, 70% na de rit")
         val tomorrow = day(TOMORROW, DayName.Tomorrow, charged)
         assertThat(words.battery(tomorrow, ChargeLevels(Percent(20.0), Percent(80.0)))).isEqualTo("Accu van de auto " +

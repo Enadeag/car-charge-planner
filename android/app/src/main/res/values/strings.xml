@@ -209,7 +209,7 @@
        both written already. Without a charge before the trip -->
   <string name="day_battery_trip">Battery %1$s → %2$s%% after the trip</string>
   <!-- the same as a screen reader reads it -->
-  <string name="day_battery_trip_spoken">Battery from %1$s%% to %2$s%% after the trip</string>
+  <string name="day_battery_trip_spoken">Battery %1$s%%, %2$s%% after the trip</string>
   <!-- with a charge before the trip: %1$s the level at the start of the day; %2$s after its charging; %3$s at its
        end, after the trip; all written already -->
   <string name="day_battery_charge_trip">Battery %1$s → %2$s%%, %3$s%% after the trip</string>

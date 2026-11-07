@@ -165,7 +165,7 @@
   <string name="day_battery">Accu %1$s → %2$s%%</string>
   <string name="day_battery_spoken">Accu van %1$s%% naar %2$s%%</string>
   <string name="day_battery_trip">Accu %1$s → %2$s%% na de rit</string>
-  <string name="day_battery_trip_spoken">Accu van %1$s%% naar %2$s%% na de rit</string>
+  <string name="day_battery_trip_spoken">Accu %1$s%%, %2$s%% na de rit</string>
   <string name="day_battery_charge_trip">Accu %1$s → %2$s%%, %3$s%% na de rit</string>
   <string name="day_battery_charge_trip_spoken">Accu van %1$s%% naar %2$s%%, %3$s%% na de rit</string>
   <string name="day_grid_why">Zonnestroom is niet genoeg om boven het minimum te blijven: zie het advies over laden uit het net bij Vandaag.</string>
