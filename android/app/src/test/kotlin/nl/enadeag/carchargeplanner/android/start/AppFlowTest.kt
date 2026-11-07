@@ -529,6 +529,23 @@ class AppFlowTest {
     }
 
     @Test
+    fun aHomeThatLeadsToSetUpForgetsItsTripEntry() = runTest {
+        val access = FakeEngineAccess(StartState.Ready(config))
+        val handle = SavedStateHandle()
+        val flow = flow(access, handle = handle)
+        val home = flow.screen.value as AppFlow.Screen.Home
+        home.trips.add(LocalDate.of(2096, 6, 1), ZoneId.of("UTC"))
+        home.trips.distance("120")
+        access.settings = StartState.NotSetUp
+
+        access.outlooks.single().complete(Outlook.NotSetUp(Path.of("engine.json")))
+        runCurrent()
+
+        assertThat(flow.screen.value).isInstanceOf(AppFlow.Screen.SetUp::class.java)
+        assertThat(handle.keys().filter { it.startsWith("tripEntry") }).isEmpty()
+    }
+
+    @Test
     fun aBatteryChecksTapOnTheHomeOpensTheBatteryEntry() = runTest {
         val flow = flow(FakeEngineAccess(StartState.Ready(config)))
 

@@ -21,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,6 +46,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.dp
 import nl.enadeag.carchargeplanner.android.R
 
@@ -70,20 +72,24 @@ internal val UNPADDED_PAGE_PADDING = 8.dp
  * @param lead what opens the column, without its spacing, such as why a save failed; nothing by default
  * @param scrollToTop scrolls the column to its top whenever it changes to something other than null, so what [lead]
  *     says is in view; null for none
+ * @param onClose for a full-screen dialog: what its Close does, the bar's × in Up's place, read after the title;
+ *     null for a screen
+ * @param closeEnabled false while Close cannot be used, as while a save runs
  * @param content the page's parts, from top to bottom
  */
 @Composable
 internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Unit)?,
     actions: @Composable RowScope.() -> Unit = {}, padded: Boolean = true, snackbars: SnackbarHostState? = null,
     status: @Composable ColumnScope.() -> Unit = {}, lead: @Composable ColumnScope.() -> Unit = {},
-    scrollToTop: Any? = null, content: @Composable ColumnScope.() -> Unit) {
+    scrollToTop: Any? = null, onClose: (() -> Unit)? = null, closeEnabled: Boolean = true,
+    content: @Composable ColumnScope.() -> Unit) {
     val scroll = rememberScrollState()
     LaunchedEffect(scrollToTop) {
         if (scrollToTop != null) {
             scroll.animateScrollTo(0)
         }
     }
-    BarScaffold(title, titleFocus, onUp, actions, snackbars) {
+    BarScaffold(title, titleFocus, onUp, actions, snackbars, onClose, closeEnabled) {
         Column(Modifier.padding(horizontal = 16.dp), content = status)
         Column(
             modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll)
@@ -107,13 +113,16 @@ internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Un
  * @param onUp what Up does, the same as Back; null for a screen without Up
  * @param actions the bar's actions, at its end
  * @param snackbars where a snackbar shows; null for a screen without
+ * @param onClose for a full-screen dialog: what its Close does, the bar's × in Up's place, read after the title, as
+ *     Material's full-screen dialog has it; null for a screen
+ * @param closeEnabled false while Close cannot be used, as while a save runs
  * @param content the column's parts, which scroll on their own
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun BarScaffold(title: String, titleFocus: FocusRequester?, onUp: (() -> Unit)?,
     actions: @Composable RowScope.() -> Unit = {}, snackbars: SnackbarHostState? = null,
-    content: @Composable ColumnScope.() -> Unit) {
+    onClose: (() -> Unit)? = null, closeEnabled: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
     var snackbarHeight by remember { mutableIntStateOf(0) }
     val room = with(LocalDensity.current) { snackbarHeight.toDp() }
     Scaffold(
@@ -123,9 +132,21 @@ internal fun BarScaffold(title: String, titleFocus: FocusRequester?, onUp: (() -
                     val focused = if (titleFocus == null) Modifier
                         else Modifier.focusRequester(titleFocus).focusable()
                     // no line limit: Material's bar grows with its title, so a long one at a large font is whole
-                    Text(title, modifier = focused.semantics { heading() })
+                    Text(title, modifier = focused.semantics {
+                        heading()
+                        // a dialog's title is read before its Close, which comes first for the eye
+                        if (onClose != null) {
+                            traversalIndex = -1f
+                        }
+                    })
                 },
-                navigationIcon = { if (onUp != null) UpButton(onUp) },
+                navigationIcon = {
+                    when {
+                        onClose != null -> BarIconButton(Icons.Filled.Close, stringResource(R.string.action_close),
+                            enabled = closeEnabled, onClick = onClose)
+                        onUp != null -> UpButton(onUp)
+                    }
+                },
                 actions = actions,
                 windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
             )

@@ -181,7 +181,7 @@ class HomeScreenTest {
         shownOutlook = outlook
         battery = BatteryEntry(kept, NumberText(Locale.ENGLISH), access, scope) { outlook.planAgain() }
         away = AwayEntry(kept, access, scope, clock, outlook::awayChanged)
-        val trips = TripEntry(access, scope) { }
+        val trips = TripEntry(SavedStateHandle(), NumberText(Locale.ENGLISH), access, scope, clock) { }
         val notice = HomeNotice(saves, scope) { }
         compose.setContent {
             AppTheme {
@@ -1140,7 +1140,7 @@ class HomeScreenTest {
         val notice = HomeNotice(saves, scope) { }
         val battery = entry()
         val away = awayEntry()
-        val trips = TripEntry(access, scope) { }
+        val trips = TripEntry(SavedStateHandle(), NumberText(Locale.ENGLISH), access, scope, clock) { }
         compose.setContent {
             AppTheme {
                 if (twice) {
@@ -1258,7 +1258,7 @@ class HomeScreenTest {
         val notice = HomeNotice(saves, scope) { }
         val battery = entry()
         val away = awayEntry()
-        val trips = TripEntry(access, scope) { }
+        val trips = TripEntry(SavedStateHandle(), NumberText(Locale.ENGLISH), access, scope, clock) { }
         compose.setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                 AppTheme { HomeScreen(outlook, notice, battery, away, trips, { amsterdam }, noCard) { } }
@@ -1283,7 +1283,7 @@ class HomeScreenTest {
         val notice = HomeNotice(saves, scope) { }
         val battery = entry()
         val away = awayEntry()
-        val trips = TripEntry(access, scope) { }
+        val trips = TripEntry(SavedStateHandle(), NumberText(Locale.ENGLISH), access, scope, clock) { }
         compose.setContent {
             CompositionLocalProvider(LocalLayoutDirection provides
                 if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {

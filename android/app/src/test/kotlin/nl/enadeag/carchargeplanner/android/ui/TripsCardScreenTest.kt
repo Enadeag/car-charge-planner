@@ -143,7 +143,7 @@ class TripsCardScreenTest {
         val outlook = HomeOutlook(on, scope, clock) { }
         val battery = BatteryEntry(SavedStateHandle(), NumberText(Locale.ENGLISH), on, scope) { }
         val away = AwayEntry(SavedStateHandle(), on, scope, clock, outlook::awayChanged)
-        val trips = TripEntry(on, scope, outlook::tripsChanged)
+        val trips = TripEntry(SavedStateHandle(), NumberText(Locale.ENGLISH), on, scope, clock, outlook::tripsChanged)
         val notice = HomeNotice(saves, scope) { }
         compose.setContent {
             inputMode = LocalInputModeManager.current

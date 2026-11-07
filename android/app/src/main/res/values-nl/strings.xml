@@ -247,6 +247,24 @@
   <string name="trip_removed">Verwijderd: %1$s.</string>
   <string name="trip_not_saved">Niet opgeslagen: de rit kon niet worden geschreven.</string>
   <string name="trip_not_removed">Niet verwijderd: de rit kon niet worden geschreven.</string>
+  <string name="trip_add">Toevoegen</string>
+  <string name="trip_add_spoken">Toevoegen: rit</string>
+  <string name="trip_change">Wijzigen</string>
+  <string name="trip_change_spoken">Wijzigen: rit %1$s</string>
+  <string name="trip_add_title">Rit toevoegen</string>
+  <string name="trip_change_title">Rit wijzigen</string>
+  <string name="trip_departure_day">Vertrekdag</string>
+  <string name="trip_departure_time">Vertrektijd</string>
+  <string name="trip_return_day">Terugkomstdag</string>
+  <string name="trip_return_time">Terugkomsttijd</string>
+  <string name="trip_distance_field">Afstand heen en terug</string>
+  <string name="trip_distance_spoken">Afstand heen en terug, in %1$s</string>
+  <string name="trip_return_before_departure">De terugkomst moet na het vertrek liggen.</string>
+  <string name="trip_passed">Die rit is al voorbij.</string>
+  <string name="trip_distance_not_a_number">Typ de afstand als een getal, zoals 120.</string>
+  <string name="trip_distance_not_positive">De afstand moet meer dan 0 zijn.</string>
+  <string name="trip_discard_text">De rit die je invulde is nog niet opgeslagen.</string>
+  <string name="picker_calendar">Kalender</string>
 
   <string name="footer_fallback">%1$s niet beschikbaar</string>
   <string name="footer_fallback_unknown">de gekozen dienst niet beschikbaar</string>

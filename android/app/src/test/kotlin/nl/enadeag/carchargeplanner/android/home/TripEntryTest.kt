@@ -1,11 +1,15 @@
 package nl.enadeag.carchargeplanner.android.home
 
+import androidx.lifecycle.SavedStateHandle
+import java.time.Clock
 import java.time.Instant
+import java.util.Locale
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.android.home.TripEntry.Choice
 import nl.enadeag.carchargeplanner.android.home.TripEntry.Notice
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
@@ -23,7 +27,10 @@ class TripEntryTest {
     private val trip = Trip(Instant.parse("2026-06-02T05:30:00Z"), Instant.parse("2026-06-02T16:00:00Z"), 300.0, false)
     private val other = Trip(Instant.parse("2026-06-03T05:30:00Z"), Instant.parse("2026-06-03T16:00:00Z"), 80.0, true)
 
-    private fun TestScope.entry() = TripEntry(access, backgroundScope) { changes += it }
+    private fun TestScope.entry() =
+        TripEntry(SavedStateHandle(), NumberText(Locale.ENGLISH), access, backgroundScope, Clock.systemUTC()) {
+            changes += it
+        }
 
     @Test
     fun notWithThisCarSavesTheTripWithThatChoiceAloneChangedAndHandsTheStoredTripsOn() = runTest {

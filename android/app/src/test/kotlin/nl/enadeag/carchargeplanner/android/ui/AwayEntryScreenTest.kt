@@ -137,7 +137,7 @@ class AwayEntryScreenTest {
         val outlook = HomeOutlook(access, scope, clock) { }
         val battery = BatteryEntry(kept, NumberText(Locale.ENGLISH), access, scope) { }
         away = AwayEntry(kept, access, scope, clock, outlook::awayChanged)
-        val trips = TripEntry(access, scope) { }
+        val trips = TripEntry(SavedStateHandle(), NumberText(Locale.ENGLISH), access, scope, clock) { }
         val notice = HomeNotice(saves, scope) { }
         compose.setContent {
             focus = LocalFocusManager.current
@@ -151,7 +151,9 @@ class AwayEntryScreenTest {
         }
     }
 
-    private val add get() = compose.onNode(hasText(text(R.string.one_off_add)) and !hasAnyAncestor(isDialog()))
+    // the Trips card has an Add of its own, spoken "Add trip"
+    private val add get() = compose.onNode(hasText(text(R.string.one_off_add)) and !hasAnyAncestor(isDialog())
+        and hasContentDescription(text(R.string.one_off_add_spoken)))
 
     private val save get() = compose.onNodeWithText(text(R.string.action_save))
 
