@@ -65,8 +65,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.dp
@@ -122,7 +124,10 @@ import nl.enadeag.carchargeplanner.engine.trip.Trip
  * Remove, which acts at once with Undo in a snackbar, as the away list's; its Add opens the entry of a new trip on
  * that day, and each trip's Change the entry on that trip, a full-screen dialog after which the focus goes back to the
  * Change of the trip, or to Add, and a trip saved there says so in a snackbar. A provider that refused its API key
- * gets a warning in the stale warning's place, also without a plan. While notifications are not allowed, a card asks
+ * gets a warning in the stale warning's place, also without a plan. Below the day card, the advice of each trip that
+ * leaves that day, and on today's tab of each that asks the owner to act, as the desktop's, with Adjust, which moves to
+ * today's tab at once and opens the entry of the battery level; the day card tells a day the car is away on a trip,
+ * and the battery the level after a trip on the day it leaves. While notifications are not allowed, a card asks
  * for them, after the warnings and before the day; it is looked at again each time the owner comes back to the app.
  *
  * @param outlook the plan it shows
@@ -336,6 +341,16 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
     val pager = rememberPagerState { days.size }
     val scope = rememberCoroutineScope()
     val selected = pager.currentPage.coerceIn(0, days.lastIndex)
+    // at once, not swiped across the days, so the entry opens over today's page and closes onto its Update battery
+    // level; the entry's open ignores a second call while it is open
+    val adjust: () -> Unit = {
+        scope.launch {
+            if (pager.currentPage != 0) {
+                pager.scrollToPage(0)
+            }
+            battery.open()
+        }
+    }
     PrimaryScrollableTabRow(selectedTabIndex = selected) {
         days.forEachIndexed { index, day ->
             val name = words.title(day.name)
@@ -365,7 +380,10 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
                 if (dashboard.zone != phoneZone) {
                     Text(stringResource(R.string.home_zone, dashboard.zone.id))
                 }
-                DayCard(day, words)
+                DayCard(day, dashboard, words)
+                dashboard.tripAdviceOn(day).forEach {
+                    TripAdviceCard(words.tripAdvice(it, day.date, dashboard.today), it.source, adjust)
+                }
                 dashboard.adviceOn(day)?.let { GridAdviceCard(it, words) }
                 SolarCard(day, words)
                 BatteryCard(day, dashboard.levels, words, battery.takeIf { day.name == DayName.Today })
@@ -433,7 +451,7 @@ private fun NoForecast(tryAgain: () -> Unit, why: @Composable () -> Unit) {
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DayCard(day: DayModel, words: DashboardWords) {
+private fun DayCard(day: DayModel, dashboard: Dashboard, words: DashboardWords) {
     val sources = LocalSourceColours.current
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -455,7 +473,7 @@ private fun DayCard(day: DayModel, words: DashboardWords) {
                     SourceChip(words.figure(it), sources.of(it), spoken = words.spokenFigure(it))
                 }
             }
-            val note = words.note(day)
+            val note = words.note(day, dashboard.noWindowWhy(day))
             if (note.isNotEmpty()) {
                 Text(note, style = MaterialTheme.typography.bodyMedium)
             }
@@ -472,6 +490,46 @@ private fun GridAdviceCard(advice: GridAdviceModel, words: DashboardWords) {
                 modifier = Modifier.semantics { heading() })
             Text(words.adviceTitle(advice), style = MaterialTheme.typography.titleMedium)
             Text(words.adviceDetail(advice), style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+/**
+ * A trip's advice, below the day card, as the desktop's: its heading in the colours of where the charge comes from,
+ * the trip, what to charge and when, and the battery level it starts from, with Adjust under it. A screen reader reads
+ * the advice as one heading, one sentence, and Adjust apart as a button whose name starts with its visible word, and
+ * which says what a double tap does.
+ *
+ * @param advice the advice's words for the tab it shows on
+ * @param source where the trip's charge comes from, whose colours its heading has
+ * @param adjust moves to today's tab and opens the entry of the battery level
+ */
+@Composable
+private fun TripAdviceCard(advice: TripAdviceText, source: EnergySource, adjust: () -> Unit) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // one part for a screen reader, the sentence; its words are not read apart
+            val apart = Modifier.semantics { hideFromAccessibility() }
+            Column(Modifier.fillMaxWidth().semantics {
+                contentDescription = advice.spoken
+                heading()
+            }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SourceChip(advice.label, LocalSourceColours.current.of(source), modifier = apart)
+                Text(advice.title, style = MaterialTheme.typography.titleMedium, modifier = apart)
+                Text(advice.plan, style = MaterialTheme.typography.bodyMedium, modifier = apart)
+                Text(advice.level, style = MaterialTheme.typography.bodyMedium, modifier = apart)
+            }
+            val spoken = stringResource(R.string.trip_advice_adjust_spoken)
+            val hint = stringResource(R.string.trip_advice_adjust_hint)
+            AppTextButton(onClick = adjust, modifier = Modifier.align(Alignment.End).semantics {
+                contentDescription = spoken
+                onClick(label = hint) {
+                    adjust()
+                    true
+                }
+            }) {
+                Text(stringResource(R.string.trip_advice_adjust))
+            }
         }
     }
 }
