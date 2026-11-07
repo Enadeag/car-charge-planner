@@ -78,6 +78,7 @@ import nl.enadeag.carchargeplanner.android.home.CardMemory
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
 import nl.enadeag.carchargeplanner.android.home.NotificationCard
 import nl.enadeag.carchargeplanner.android.home.Plans
+import nl.enadeag.carchargeplanner.android.home.TripEntry
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
@@ -180,16 +181,17 @@ class HomeScreenTest {
         shownOutlook = outlook
         battery = BatteryEntry(kept, NumberText(Locale.ENGLISH), access, scope) { outlook.planAgain() }
         away = AwayEntry(kept, access, scope, clock, outlook::awayChanged)
+        val trips = TripEntry(access, scope) { }
         val notice = HomeNotice(saves, scope) { }
         compose.setContent {
             AppTheme {
                 focus = LocalFocusManager.current
                 if (fontScaleTwo) {
                     AtFontScaleTwo {
-                        HomeScreen(outlook, notice, battery, away, { phoneZone }, card) { settingsOpened++ }
+                        HomeScreen(outlook, notice, battery, away, trips, { phoneZone }, card) { settingsOpened++ }
                     }
                 } else {
-                    HomeScreen(outlook, notice, battery, away, { phoneZone }, card) { settingsOpened++ }
+                    HomeScreen(outlook, notice, battery, away, trips, { phoneZone }, card) { settingsOpened++ }
                 }
             }
         }
@@ -1138,10 +1140,14 @@ class HomeScreenTest {
         val notice = HomeNotice(saves, scope) { }
         val battery = entry()
         val away = awayEntry()
+        val trips = TripEntry(access, scope) { }
         compose.setContent {
             AppTheme {
-                if (twice) AtFontScaleTwo { HomeScreen(outlook, notice, battery, away, { amsterdam }, noCard) { } }
-                else HomeScreen(outlook, notice, battery, away, { amsterdam }, noCard) { }
+                if (twice) {
+                    AtFontScaleTwo { HomeScreen(outlook, notice, battery, away, trips, { amsterdam }, noCard) { } }
+                } else {
+                    HomeScreen(outlook, notice, battery, away, trips, { amsterdam }, noCard) { }
+                }
             }
         }
         compose.waitForIdle()
@@ -1252,9 +1258,10 @@ class HomeScreenTest {
         val notice = HomeNotice(saves, scope) { }
         val battery = entry()
         val away = awayEntry()
+        val trips = TripEntry(access, scope) { }
         compose.setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                AppTheme { HomeScreen(outlook, notice, battery, away, { amsterdam }, noCard) { } }
+                AppTheme { HomeScreen(outlook, notice, battery, away, trips, { amsterdam }, noCard) { } }
             }
         }
         compose.waitForIdle()
@@ -1276,10 +1283,11 @@ class HomeScreenTest {
         val notice = HomeNotice(saves, scope) { }
         val battery = entry()
         val away = awayEntry()
+        val trips = TripEntry(access, scope) { }
         compose.setContent {
             CompositionLocalProvider(LocalLayoutDirection provides
                 if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
-                AppTheme { HomeScreen(outlook, notice, battery, away, { amsterdam }, noCard) { } }
+                AppTheme { HomeScreen(outlook, notice, battery, away, trips, { amsterdam }, noCard) { } }
             }
         }
         compose.waitForIdle()

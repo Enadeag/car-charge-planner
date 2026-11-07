@@ -19,6 +19,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsProblem
+import nl.enadeag.carchargeplanner.engine.trip.Trip
 
 /** An [EngineAccess] in memory that keeps what is saved, in the order it came, and fails when told to. */
 internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) : EngineAccess {
@@ -146,6 +147,40 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
         awayFails?.let { return AwaySave.Failed(it) }
         away = change(away)
         return AwaySave.Saved(away)
+    }
+
+    /** The trips stored, in order of their departure. */
+    var trips: List<Trip> = listOf()
+
+    override suspend fun trips(): List<Trip> = trips
+
+    /** The changes to the trips asked for, in order, such as "add", "change" and "remove", with the trip as given. */
+    val tripChanges = mutableListOf<Pair<String, Trip>>()
+
+    /** When set, a change of the trips fails with these words, as the engine's would. */
+    var tripFails: String? = null
+
+    /** When set, the next change of the trips waits for it. */
+    var tripGate: CompletableDeferred<Unit>? = null
+
+    override suspend fun addTrip(trip: Trip): TripSave =
+        changeTrips("add", trip) { (it + trip).distinct().sortedBy(Trip::departure) }
+
+    // as the engine: a trip no longer stored is added in its changed form
+    override suspend fun changeTrip(trip: Trip, changed: Trip): TripSave =
+        changeTrips("change", changed) { ((it - trip) + changed).distinct().sortedBy(Trip::departure) }
+
+    override suspend fun removeTrip(trip: Trip): TripSave = changeTrips("remove", trip) { it - trip }
+
+    private suspend fun changeTrips(what: String, trip: Trip, change: (List<Trip>) -> List<Trip>): TripSave {
+        tripChanges += what to trip
+        tripGate?.let {
+            tripGate = null
+            it.await()
+        }
+        tripFails?.let { return TripSave.Failed(it) }
+        trips = change(trips)
+        return TripSave.Saved(trips)
     }
 
     /** The battery levels stored, in the order saved. */

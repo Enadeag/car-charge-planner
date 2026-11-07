@@ -12,6 +12,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.Freshness
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice
 import nl.enadeag.carchargeplanner.engine.plan.Window
+import nl.enadeag.carchargeplanner.engine.trip.Trip
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -26,6 +27,32 @@ class DashboardTest {
 
     private fun dashboard(away: List<OneOffAwayPeriod> = listOf(), gridAdvice: GridAdvice? = null) =
         Dashboard.of(Plans.planned(madeAt, listOf(listOf(), listOf(), listOf()), gridAdvice = gridAdvice), away)
+
+    @Test
+    fun eachDayListsTheTripsTheCarIsAwayForThatDayInTheEnginesOrder() {
+        val overnight = Trip(today.atTime(20, 0).atZone(amsterdam).toInstant(),
+            today.plusDays(1).atTime(9, 0).atZone(amsterdam).toInstant(), 200.0, false)
+        val tomorrow = Trip(today.plusDays(1).atTime(10, 0).atZone(amsterdam).toInstant(),
+            today.plusDays(1).atTime(18, 0).atZone(amsterdam).toInstant(), 80.0, true)
+        val shown = Dashboard.of(Plans.planned(madeAt, listOf(listOf(), listOf(), listOf())), listOf(),
+            listOf(overnight, tomorrow))
+
+        assertThat(shown.days.map { day -> shown.tripsOn(day).map { it.trip } })
+            .containsExactly(listOf(overnight), listOf(overnight, tomorrow), listOf())
+    }
+
+    @Test
+    fun theSameDashboardWithTheStoredTripsKeepsThePlanAndTellsTheTripsByItsDay() {
+        val before = dashboard()
+        val trip = Trip(today.plusDays(1).atTime(10, 0).atZone(amsterdam).toInstant(),
+            today.plusDays(1).atTime(18, 0).atZone(amsterdam).toInstant(), 80.0, true)
+
+        val after = before.withTrips(listOf(trip))
+
+        assertThat(after.trips).containsExactly(before.describe(trip))
+        assertThat(after.trips.single().departureDay).isEqualTo(DayName.Tomorrow)
+        assertThat(after.copy(trips = listOf())).isEqualTo(before)
+    }
 
     @Test
     fun aPlanWithoutDaysIsNoDashboard() {
