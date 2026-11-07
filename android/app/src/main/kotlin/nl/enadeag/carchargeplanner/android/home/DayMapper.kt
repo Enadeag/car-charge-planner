@@ -8,10 +8,10 @@ import nl.enadeag.carchargeplanner.engine.plan.GridAdvice
 
 /**
  * The days of one plan as the dashboard's tabs show them, in the home's time zone, as the desktop's `DayMapper`
- * does; trips are left out.
+ * does; which days the car is away on a trip is the dashboard's, as the trips change without a new plan.
  *
- * @param planned the plan whose time zone, day of making, assumed battery level, grid advice and forecast the days
- *     are told in
+ * @param planned the plan whose time zone, day of making, assumed battery level, grid advice, trip advice and
+ *     forecast the days are told in
  */
 class DayMapper(planned: Outlook.Planned) {
 
@@ -26,6 +26,10 @@ class DayMapper(planned: Outlook.Planned) {
 
     /** The day the grid advice is about; null when the plan gives none. */
     private val gridDay: LocalDate? = planned.gridAdvice().map(GridAdvice::day).orElse(null)
+
+    /** The days a trip the plan advises on leaves. */
+    private val departures: Set<LocalDate> =
+        planned.tripAdvice().map { it.trip().departure().atZone(planned.zone()).toLocalDate() }.toSet()
 
     /**
      * The days, each with its windows and figures.
@@ -51,7 +55,8 @@ class DayMapper(planned: Outlook.Planned) {
                     it.importKwh().takeIf { kwh -> kwh >= NO_GRID_KWH })
             },
             later = day.windows().drop(1),
-            battery = BatteryLevels(day.startLevelPct(), day.levelAfterChargingPct()),
+            battery = BatteryLevels(day.startLevelPct(), day.levelAfterChargingPct(),
+                day.endLevelPct().takeIf { day.date() in departures }),
             assumedLevel = assumed.takeIf { day.date() == today },
             chart = charts.map(day),
         )

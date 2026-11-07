@@ -11,6 +11,8 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice
+import nl.enadeag.carchargeplanner.engine.plan.TripAdvice
+import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge
 import nl.enadeag.carchargeplanner.engine.plan.Window
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 import org.assertj.core.api.Assertions.assertThat
@@ -244,5 +246,139 @@ class DashboardTest {
         val advice = GridAdvice(today.plusDays(1), -4.0, 3.9999999, 6.0, Optional.empty(), Optional.empty())
 
         assertThat(dashboard(gridAdvice = advice).gridAdvice?.minimum).isEqualTo(Percent(0.0))
+    }
+
+    private fun at(day: LocalDate, time: String) = day.atTime(LocalTime.parse(time)).atZone(amsterdam).toInstant()
+
+    private fun trip(
+        from: LocalDate, departure: String, to: LocalDate, back: String, notWithThisCar: Boolean = false,
+        canChargeThere: Boolean = false,
+    ) = Trip(at(from, departure), at(to, back), 100.0, canChargeThere, notWithThisCar)
+
+    /** The plan's advice for a trip, which asks the owner to act when it needs a grid charge. */
+    private fun advice(trip: Trip, asks: Boolean = false): TripAdvice {
+        val grid = if (asks) {
+            Optional.of(TripGridCharge(Window(trip.departure().minusSeconds(7200), trip.departure().minusSeconds(3600),
+                16, 3.7, 0.0, 3.7), TripGridCharge.Start.PLANNED))
+        } else {
+            Optional.empty()
+        }
+        return TripAdvice(trip, Percent(60.0), listOf(), Percent(60.0), grid, Percent(70.0), 0.0, Percent(50.0))
+    }
+
+    /** Three days without a window, today's grid-advice day the one given, with these trips and their advice. */
+    private fun withTrips(trips: List<Trip>, advice: List<TripAdvice> = listOf(), gridDay: LocalDate? = null,
+        windowOn: LocalDate? = null): Dashboard {
+        val days = (0L..2L).map { index ->
+            val date = today.plusDays(index)
+            if (date == windowOn) listOf(Plans.window(amsterdam, date, 11, 12)) else listOf()
+        }
+        val grid = gridDay?.let { GridAdvice(it, 12.0, 8.0, 4.2, Optional.empty(), Optional.empty()) }
+        return Dashboard.of(Plans.planned(madeAt, days, gridAdvice = grid, tripAdvice = advice), listOf(), trips)
+    }
+
+    @Test
+    fun aDayAwayOnATripWithoutAWindowSaysSoAndOtherDaysThatTheCarNeedsNoCharging() {
+        val away = trip(today.plusDays(1), "07:00", today.plusDays(1), "19:00")
+
+        val shown = withTrips(listOf(away))
+
+        assertThat(shown.days.map(shown::noWindowWhy))
+            .containsExactly(NoWindowWhy.NOT_NEEDED, NoWindowWhy.AWAY, NoWindowWhy.NOT_NEEDED)
+    }
+
+    @Test
+    fun theDayATripTheAdviceIsForLeavesSaysNothingAsItsAdviceTellsWhatTheBatteryNeeds() {
+        val leaving = trip(today.plusDays(1), "07:00", today.plusDays(2), "19:00")
+
+        val shown = withTrips(listOf(leaving), listOf(advice(leaving)))
+
+        assertThat(shown.days.map(shown::noWindowWhy)).containsExactly(NoWindowWhy.NOT_NEEDED, null, NoWindowWhy.AWAY)
+    }
+
+    @Test
+    fun theGridAdvicesDayStillSaysGridAndADayWithAWindowIsUnchangedByATrip() {
+        val leaving = trip(today, "13:00", today.plusDays(2), "19:00")
+
+        val shown = withTrips(listOf(leaving), listOf(advice(leaving)), gridDay = today.plusDays(1),
+            windowOn = today.plusDays(2))
+
+        assertThat(shown.days.map(shown::noWindowWhy)).containsExactly(null, NoWindowWhy.GRID, null)
+        assertThat(shown.days[2].kind).isEqualTo(DayKind.SOLAR)
+    }
+
+    @Test
+    fun aTripMadeWithoutThisCarKeepsNobodyAway() {
+        val other = trip(today.plusDays(1), "07:00", today.plusDays(1), "19:00", notWithThisCar = true)
+
+        val shown = withTrips(listOf(other))
+
+        assertThat(shown.noWindowWhy(shown.days[1])).isEqualTo(NoWindowWhy.NOT_NEEDED)
+    }
+
+    @Test
+    fun aTripThatCanChargeAtItsDestinationStillKeepsTheCarAway() {
+        val leaving = trip(today, "13:00", today.plusDays(2), "19:00", canChargeThere = true)
+
+        val shown = withTrips(listOf(leaving), listOf(advice(leaving)))
+
+        assertThat(shown.days.map(shown::noWindowWhy)).containsExactly(null, NoWindowWhy.AWAY, NoWindowWhy.AWAY)
+    }
+
+    @Test
+    fun aReturnAtMidnightBelongsToTheDayBefore() {
+        val overnight = trip(today, "20:00", today.plusDays(1), "00:00")
+
+        val shown = withTrips(listOf(overnight))
+
+        assertThat(shown.days.map(shown::noWindowWhy))
+            .containsExactly(NoWindowWhy.AWAY, NoWindowWhy.NOT_NEEDED, NoWindowWhy.NOT_NEEDED)
+    }
+
+    @Test
+    fun aTripUnderWayThatLeftThisMorningKeepsTodayAwayAlthoughItHasNoAdvice() {
+        val underWay = trip(today, "07:30", today, "18:00")
+
+        val shown = withTrips(listOf(underWay))
+
+        assertThat(shown.noWindowWhy(shown.days[0])).isEqualTo(NoWindowWhy.AWAY)
+    }
+
+    @Test
+    fun theStoredTripsTellTheAwayDaysAtOnceWithoutANewPlan() {
+        val away = trip(today.plusDays(1), "07:00", today.plusDays(1), "19:00")
+        val shown = withTrips(listOf(away))
+
+        val ticked = shown.withTrips(listOf(Trip(away.departure(), away.returnTime(), 100.0, false, true)))
+        val removed = shown.withTrips(listOf())
+
+        assertThat(ticked.noWindowWhy(ticked.days[1])).isEqualTo(NoWindowWhy.NOT_NEEDED)
+        assertThat(removed.noWindowWhy(removed.days[1])).isEqualTo(NoWindowWhy.NOT_NEEDED)
+    }
+
+    @Test
+    fun eachTripsAdviceShowsOnItsDepartureDayAndOnTodayWhenItAsksInTheEnginesOrder() {
+        val tomorrow = trip(today.plusDays(1), "07:00", today.plusDays(1), "19:00")
+        val later = trip(today.plusDays(1), "20:00", today.plusDays(1), "23:00")
+        val dayAfter = trip(today.plusDays(2), "09:00", today.plusDays(2), "12:00")
+        val leavingToday = trip(today, "15:00", today, "18:00")
+        val advice = listOf(advice(leavingToday, asks = true), advice(tomorrow, asks = true), advice(later),
+            advice(dayAfter, asks = true))
+
+        val shown = withTrips(listOf(leavingToday, tomorrow, later, dayAfter), advice)
+
+        assertThat(shown.days.map { day -> shown.tripAdviceOn(day).map { it.departure } }).containsExactly(
+            listOf(leavingToday.departure(), tomorrow.departure(), dayAfter.departure()),
+            listOf(tomorrow.departure(), later.departure()),
+            listOf(dayAfter.departure()))
+    }
+
+    @Test
+    fun aTripBeyondTheLastTabThatAsksShowsOnTodaysTab() {
+        val far = trip(today.plusDays(5), "09:00", today.plusDays(5), "12:00")
+
+        val shown = withTrips(listOf(far), listOf(advice(far, asks = true)))
+
+        assertThat(shown.days.map { day -> shown.tripAdviceOn(day).size }).containsExactly(1, 0, 0)
     }
 }

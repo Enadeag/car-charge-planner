@@ -40,6 +40,9 @@ data class DayModel(
         }
     }
 
+    /** True on the day a trip the plan advises on leaves, whose advice says what the battery needs. */
+    val departs: Boolean get() = battery.afterTripPct != null
+
     /** The day's figures by source, each shown in its source's colours: the solar share, the battery, the grid. */
     val figures: List<SourceFigure>
         get() = listOfNotNull(main?.let { SourceFigure.SolarShare(it.solarShare) }, SourceFigure.Battery(battery),
@@ -116,12 +119,14 @@ data class MainCharge(val window: Window, val energyKwh: Double, val solarShare:
 }
 
 /**
- * The battery level at the start of a day and after its charging.
+ * The battery level at the start of a day and after its charging, and on the day a trip the plan advises on leaves,
+ * at the end of the day, after the trip.
  *
  * @property startPct at the start of the day; today's at the moment the plan was made
  * @property afterPct after the day's charging; the start's when the day has none
+ * @property afterTripPct at the end of the day a trip leaves, after the trip; null on any other day
  */
-data class BatteryLevels(val startPct: Percent, val afterPct: Percent)
+data class BatteryLevels(val startPct: Percent, val afterPct: Percent, val afterTripPct: Percent? = null)
 
 /**
  * The minimum and target charge levels of the plan, which every day's battery bar marks.
@@ -151,6 +156,19 @@ enum class DayKind {
 
     /** The day has no charge window: the car needs none, or there is too little solar power. */
     NONE,
+}
+
+/** Why a day without a charge window has none, as its note says. */
+enum class NoWindowWhy {
+
+    /** Solar power is not enough to stay above the minimum charge level: the grid advice says what to do. */
+    GRID,
+
+    /** The car is away on a trip, or there is too little solar power while it is home. */
+    AWAY,
+
+    /** The car needs no charging, or there is too little solar power for it. */
+    NOT_NEEDED,
 }
 
 /** How a day is named, from the day the plan was made in the home's time zone. */

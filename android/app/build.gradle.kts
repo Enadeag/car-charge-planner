@@ -341,7 +341,8 @@ pitest {
     excludedTestClasses = listOf(
         // the screens' tests, JUnit 4 on Robolectric, which runs Android in the test JVM
         "AppOnRobolectricTest", "AppWiringTest", "MainActivity*Test", "licences.AssetLicenceFilesTest", "ui.*Screen*Test",
-        "ui.AppThemeTest", "ui.BarScaffoldTest", "ui.home.DashboardWordsTest", "ui.home.DrawnShapesTest",
+        "ui.AppThemeTest", "ui.BarScaffoldTest", "ui.home.DashboardWordsTest", "ui.home.TripAdviceWordsTest",
+        "ui.home.DrawnShapesTest",
         "ui.notify.NoticeWordsTest", "ui.notify.NotificationsTest", "background.AndroidNoticeAlarmTest",
         "background.WorkManagerRoundsTest", "background.RoundWorkerTest", "background.BackgroundReceiversTest",
         "background.BackgroundLifecycleTest",

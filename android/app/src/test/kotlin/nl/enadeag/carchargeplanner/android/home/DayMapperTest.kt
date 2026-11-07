@@ -6,7 +6,9 @@ import java.time.ZoneId
 import java.util.Optional
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice
+import nl.enadeag.carchargeplanner.engine.plan.TripAdvice
 import nl.enadeag.carchargeplanner.engine.plan.Window
+import nl.enadeag.carchargeplanner.engine.trip.Trip
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.Assertions.within
@@ -164,5 +166,20 @@ class DayMapperTest {
     @Test
     fun aMainWindowThatChargesNothingFromTheGridHasNoGridFigure() {
         assertThat(MainCharge(window, 0.0, Percent(0.0), null).gridKwh).isNull()
+    }
+
+    @Test
+    fun theLevelAfterTheTripIsOnlyOnTheDayATripTheAdviceIsForLeaves() {
+        val trip = Trip(today.plusDays(1).atTime(8, 0).atZone(amsterdam).toInstant(),
+            today.plusDays(2).atTime(18, 0).atZone(amsterdam).toInstant(), 200.0, false)
+        val advice = TripAdvice(trip, Percent(60.0), listOf(), Percent(60.0), Optional.empty(), Percent(70.0), 0.0,
+            Percent(30.0))
+        val planned = Plans.planned(today.atTime(8, 0).atZone(amsterdam), listOf(listOf(), listOf(), listOf()),
+            tripAdvice = listOf(advice), endPct = { 25.0 })
+
+        val days = DayMapper(planned).map(planned.days())
+
+        assertThat(days.map { it.battery.afterTripPct }).containsExactly(null, Percent(25.0), null)
+        assertThat(days.map { it.departs }).containsExactly(false, true, false)
     }
 }

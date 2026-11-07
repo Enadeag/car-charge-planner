@@ -205,9 +205,21 @@
   <string name="day_battery">Battery %1$s → %2$s%%</string>
   <!-- the same as a screen reader reads it -->
   <string name="day_battery_spoken">Battery from %1$s%% to %2$s%%</string>
+  <!-- on the day a trip leaves: %1$s the battery level at the start of the day; %2$s at its end, after the trip;
+       both written already. Without a charge before the trip -->
+  <string name="day_battery_trip">Battery %1$s → %2$s%% after the trip</string>
+  <!-- the same as a screen reader reads it -->
+  <string name="day_battery_trip_spoken">Battery %1$s%%, %2$s%% after the trip</string>
+  <!-- with a charge before the trip: %1$s the level at the start of the day; %2$s after its charging; %3$s at its
+       end, after the trip; all written already -->
+  <string name="day_battery_charge_trip">Battery %1$s → %2$s%%, %3$s%% after the trip</string>
+  <!-- the same as a screen reader reads it -->
+  <string name="day_battery_charge_trip_spoken">Battery from %1$s%% to %2$s%%, %3$s%% after the trip</string>
   <!-- a day's note, after its later windows: why a day has no charge window; "Today" names today's tab, day_today -->
   <string name="day_grid_why">Solar power is not enough to stay above the minimum: see the grid advice on Today.</string>
   <string name="day_none_why">The car needs no charging, or there is too little solar power for it.</string>
+  <!-- why a day without a charge window has none, on a day the car is away on a trip -->
+  <string name="day_none_trip">The car is away on a trip, or there is too little solar power while it is home.</string>
   <!-- %1$s the later charge windows, each a day_later_window, joined by commas -->
   <string name="day_later_windows">Also %1$s.</string>
   <!-- %1$s the window's times, a time_span; %2$d its charge current in A -->
@@ -234,6 +246,47 @@
        charge level; both written already -->
   <string name="advice_ends_low">Without it the battery ends %1$s at %2$s%%, below the minimum of %3$s%%.</string>
 
+  <!-- the advice for a trip, on the tab of its departure day and on today's when it asks the owner to act: its
+       heading, drawn in the colours of where the charge comes from -->
+  <string name="trip_advice_label">Trip advice</string>
+  <!-- %1$s the day as in a sentence (today, tomorrow, Saturday); %2$s the departure time; %3$s the distance there
+       and back in whole km, written already -->
+  <string name="trip_advice_title">Trip %1$s at %2$s, %3$s km there and back.</string>
+  <!-- %1$s the battery level at the departure, written already -->
+  <string name="trip_advice_enough">The plan charges enough for it: the battery is at %1$s%% when you leave.</string>
+  <!-- %1$s the level to charge to, written already; %2$s the solar windows, each day named once (today 12:00 – 15:00,
+       16:00 – 17:30, tomorrow 06:30 – 07:15) -->
+  <string name="trip_advice_solar">Charge to %1$s%% on solar power: %2$s.</string>
+  <!-- %1$s the level to charge to, written already; %2$s the solar windows, as in trip_advice_solar -->
+  <string name="trip_advice_solar_grid">Charge to %1$s%%: on solar power %2$s, then from the grid.</string>
+  <!-- %1$s the level to charge to, written already -->
+  <string name="trip_advice_grid">Charge to %1$s%% from the grid.</string>
+  <!-- %1$s the battery level at the departure, written already -->
+  <string name="trip_advice_leaves">The battery is at %1$s%% when you leave.</string>
+  <!-- when to start the grid charge: %1$s trip_advice_now, or trip_advice_at -->
+  <string name="trip_advice_start_planned">Start %1$s.</string>
+  <string name="trip_advice_start_now">Start %1$s: little time is left before the departure.</string>
+  <string name="trip_advice_start_outside">Start %1$s, although that is outside your charging hours: waiting for them would leave too little time.</string>
+  <string name="trip_advice_now">now</string>
+  <!-- %1$s the day as in a sentence (today, tomorrow, Saturday), or trip_advice_tonight; %2$s the time -->
+  <string name="trip_advice_at">%1$s at %2$s</string>
+  <!-- a start later today, at 18:00 or after -->
+  <string name="trip_advice_tonight">tonight</string>
+  <!-- %1$s how many km the battery falls short, rounded up, written already -->
+  <string name="trip_advice_short">The battery is %1$s km short for the trip: plan a charging stop.</string>
+  <!-- the battery level the advice starts from, written already: assumed, or entered by the owner -->
+  <string name="trip_advice_assumed">Assuming a battery level of %1$s%%.</string>
+  <string name="trip_advice_entered">Based on the battery level of %1$s%% you entered.</string>
+  <!-- the advice as a screen reader reads it, in one go: %1$s trip_advice_label; %2$s the title; %3$s the plan,
+       its windows read as time_span_spoken; %4$s the battery level it starts from -->
+  <string name="trip_advice_spoken">%1$s: %2$s %3$s %4$s</string>
+  <!-- the button under the advice that moves to today's tab and opens the entry of the battery level -->
+  <string name="trip_advice_adjust">Adjust</string>
+  <!-- what a screen reader says for it; it starts with the visible word, so Voice Access finds it by that -->
+  <string name="trip_advice_adjust_spoken">Adjust the battery level</string>
+  <!-- what a screen reader says a double tap on it does -->
+  <string name="trip_advice_adjust_hint">Enter the battery level the car shows, on today\'s battery card</string>
+
   <!-- the solar chart's card: its heading, and its legend, the words beside the chart's signs -->
   <string name="chart_heading">Forecast</string>
   <string name="chart_legend_solar">Solar</string>
@@ -258,6 +311,11 @@
        written already, such as 50 -->
   <string name="battery_heading">Car battery</string>
   <string name="battery_levels">%1$s → %2$s%%</string>
+  <!-- on the day a trip leaves: %1$s the level at the start of the day; %2$s at its end, after the trip, without a
+       charge before it -->
+  <string name="battery_levels_trip">%1$s → %2$s%% after the trip</string>
+  <!-- with a charge before the trip: %1$s the level at the start; %2$s after charging; %3$s at the end of the day -->
+  <string name="battery_levels_charge_trip">%1$s → %2$s%%, %3$s%% after the trip</string>
   <!-- the marks on the battery bar; %1$s the minimum or target charge level, written already -->
   <string name="battery_minimum">min %1$s%%</string>
   <string name="battery_target">target %1$s%%</string>
@@ -270,6 +328,9 @@
   <!-- added to today's battery_spoken_today while the plan starts from an assumed battery level; "Update battery
        level" is the button (battery_update) under the bar -->
   <string name="battery_assumed">The battery level is assumed. Use Update battery level under it to enter the level the car shows.</string>
+  <!-- added to the battery bar's sentence on the day a trip leaves; %1$s the level at the end of the day, written
+       already -->
+  <string name="battery_spoken_after_trip">After the trip the battery is at %1$s%% at the end of the day.</string>
 
   <!-- the entry of the battery level, from today's battery card: the button that opens it, its title and sentence,
        its field's label and hint -->

@@ -164,8 +164,13 @@
   <string name="day_from_grid">%1$s kWh uit het net</string>
   <string name="day_battery">Accu %1$s → %2$s%%</string>
   <string name="day_battery_spoken">Accu van %1$s%% naar %2$s%%</string>
+  <string name="day_battery_trip">Accu %1$s → %2$s%% na de rit</string>
+  <string name="day_battery_trip_spoken">Accu %1$s%%, %2$s%% na de rit</string>
+  <string name="day_battery_charge_trip">Accu %1$s → %2$s%%, %3$s%% na de rit</string>
+  <string name="day_battery_charge_trip_spoken">Accu van %1$s%% naar %2$s%%, %3$s%% na de rit</string>
   <string name="day_grid_why">Zonnestroom is niet genoeg om boven het minimum te blijven: zie het advies over laden uit het net bij Vandaag.</string>
   <string name="day_none_why">De auto hoeft niet te laden, of er is te weinig zonnestroom voor.</string>
+  <string name="day_none_trip">De auto is weg voor een rit, of er is te weinig zonnestroom terwijl hij thuis is.</string>
   <string name="day_later_windows">Ook %1$s.</string>
   <string name="day_later_window">%1$s met %2$d A</string>
   <string name="day_battery_assumed">De planning gaat ervan uit dat de accu op %1$s%% staat. Gebruik Accuniveau bijwerken onder Accu van de auto.</string>
@@ -177,6 +182,27 @@
   <string name="advice_no_room">Er is geen dag ervoor met ruimte om uit het net te laden.</string>
   <string name="advice_runs_empty">Anders raakt de accu %1$s leeg; het minimum is %2$s%%.</string>
   <string name="advice_ends_low">Anders eindigt de accu %1$s op %2$s%%, onder het minimum van %3$s%%.</string>
+
+  <string name="trip_advice_label">Advies voor de rit</string>
+  <string name="trip_advice_title">Rit %1$s om %2$s, %3$s km heen en terug.</string>
+  <string name="trip_advice_enough">De planning laadt genoeg voor deze rit: bij vertrek staat de accu op %1$s%%.</string>
+  <string name="trip_advice_solar">Laad tot %1$s%% op zonnestroom: %2$s.</string>
+  <string name="trip_advice_solar_grid">Laad tot %1$s%%: op zonnestroom %2$s, daarna uit het net.</string>
+  <string name="trip_advice_grid">Laad tot %1$s%% uit het net.</string>
+  <string name="trip_advice_leaves">Bij vertrek staat de accu op %1$s%%.</string>
+  <string name="trip_advice_start_planned">Start het laden %1$s.</string>
+  <string name="trip_advice_start_now">Start het laden %1$s: er is weinig tijd tot het vertrek.</string>
+  <string name="trip_advice_start_outside">Start het laden %1$s, ook al is dat buiten je laaduren: wachten laat te weinig tijd over.</string>
+  <string name="trip_advice_now">nu</string>
+  <string name="trip_advice_at">%1$s om %2$s</string>
+  <string name="trip_advice_tonight">vanavond</string>
+  <string name="trip_advice_short">De accu komt %1$s km tekort voor de rit: plan een laadstop.</string>
+  <string name="trip_advice_assumed">Uitgaande van een accuniveau van %1$s%%.</string>
+  <string name="trip_advice_entered">Uitgaande van het accuniveau van %1$s%% dat je invulde.</string>
+  <string name="trip_advice_spoken">%1$s: %2$s %3$s %4$s</string>
+  <string name="trip_advice_adjust">Aanpassen</string>
+  <string name="trip_advice_adjust_spoken">Aanpassen: accuniveau</string>
+  <string name="trip_advice_adjust_hint">Vul het accuniveau in dat de auto aangeeft, op de accukaart van vandaag</string>
 
   <string name="chart_heading">Voorspelling</string>
   <string name="chart_legend_solar">Zonnestroom</string>
@@ -191,11 +217,14 @@
 
   <string name="battery_heading">Accu van de auto</string>
   <string name="battery_levels">%1$s → %2$s%%</string>
+  <string name="battery_levels_trip">%1$s → %2$s%% na de rit</string>
+  <string name="battery_levels_charge_trip">%1$s → %2$s%%, %3$s%% na de rit</string>
   <string name="battery_minimum">min. %1$s%%</string>
   <string name="battery_target">doel %1$s%%</string>
   <string name="battery_spoken_today">Accu van de auto nu %1$s%%, na het laden %2$s%%; minimum %3$s%%, doel %4$s%%.</string>
   <string name="battery_spoken_day">Accu van de auto %1$s%% aan het begin van %2$s, na het laden %3$s%%; minimum %4$s%%, doel %5$s%%.</string>
   <string name="battery_assumed">Het accuniveau is aangenomen. Gebruik Accuniveau bijwerken eronder om in te vullen wat de auto aangeeft.</string>
+  <string name="battery_spoken_after_trip">Na de rit staat de accu aan het eind van de dag op %1$s%%.</string>
 
   <string name="battery_update">Accuniveau bijwerken</string>
   <string name="battery_entry_title">Accuniveau</string>
