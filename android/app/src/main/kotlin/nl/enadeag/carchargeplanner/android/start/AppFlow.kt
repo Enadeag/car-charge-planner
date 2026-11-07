@@ -46,7 +46,8 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig
  * @property phoneZone the phone's time zone as it is now; the screens read it from here only
  * @param language the app's language now, as the place search takes it, such as "nl"
  * @param mainThread the screens' own thread, where a Settings save reads its forms: `Dispatchers.Main.immediate`
- * @param clock tells the home how old the plan it shows is, and whether an away period entered there has passed
+ * @param clock tells the home how old the plan it shows is, which day is today for a trip entered there, and whether
+ *     an away period or a trip entered there has passed
  * @param seen gets each plan the home asked for, so a Problems notification it no longer shows goes
  */
 class AppFlow(private val access: EngineAccess, private val saves: Saves, private val appScope: CoroutineScope,
@@ -168,6 +169,7 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
         if (state !is StartState.Ready) {
             BatteryEntry.forget(handle)
             AwayEntry.forget(handle)
+            TripEntry.forget(handle)
         }
         val own = nextScope()
         val battery = batteryAsked
@@ -201,7 +203,7 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
         return Screen.Home(outlook, HomeNotice(saves, own, ::show),
             BatteryEntry(handle, numbers, access, own, outlook::planAgain),
             AwayEntry(handle, access, own, clock, outlook::awayChanged),
-            TripEntry(access, own, outlook::tripsChanged))
+            TripEntry(handle, numbers, access, own, clock, outlook::tripsChanged))
     }
 
     private fun settings(own: CoroutineScope, config: EngineConfig): Screen.Settings {

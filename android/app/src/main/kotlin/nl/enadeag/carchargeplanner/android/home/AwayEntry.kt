@@ -11,7 +11,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import nl.enadeag.carchargeplanner.android.form.forget
 import nl.enadeag.carchargeplanner.android.store.AwaySave
 import nl.enadeag.carchargeplanner.android.store.EngineAccess
@@ -41,7 +40,7 @@ import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
  * @param changed gets the stored periods after each change that worked, so the dashboard shows them and plans again
  */
 class AwayEntry(private val handle: SavedStateHandle, private val access: EngineAccess,
-    private val scope: CoroutineScope, private val clock: Clock,
+    scope: CoroutineScope, private val clock: Clock,
     private val changed: (List<OneOffAwayPeriod>) -> Unit) {
 
     /** Whether the car is away the whole day or part of it. */
@@ -201,9 +200,7 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
     private val problemNow = MutableStateFlow<Problem?>(null)
     private val discardNow = MutableStateFlow(handle.get<Boolean>(DISCARD) == true)
     private val savingNow = MutableStateFlow<SaveState>(SaveState.Idle)
-    private val busyNow = MutableStateFlow(false)
-    private val noticeNow = MutableStateFlow<Notice?>(null)
-    private val waiting = ArrayDeque<OneOffAwayPeriod>()
+    private val changes = ChangeQueue<Notice>(scope)
 
     /** What the open entry holds; null while it is closed. */
     val draft: StateFlow<Draft?> = draftNow.asStateFlow()
@@ -218,10 +215,10 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
     val saving: StateFlow<SaveState> = savingNow.asStateFlow()
 
     /** True while a change runs: a save, a Remove or an Undo; Add and Remove are off then. */
-    val busy: StateFlow<Boolean> = busyNow.asStateFlow()
+    val busy: StateFlow<Boolean> = changes.busy
 
     /** What the last change came to, until the screen said so, as [noticeShown] tells; null when nothing is to say. */
-    val notice: StateFlow<Notice?> = noticeNow.asStateFlow()
+    val notice: StateFlow<Notice?> = changes.notice
 
     /**
      * Opens the entry on a day, all day with the times ready at [FIRST_START] and [FIRST_END]; one already open stays
@@ -231,7 +228,7 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
      * @param zone the home's time zone, in which the times are read
      */
     fun open(day: LocalDate, zone: ZoneId) {
-        if (draftNow.value != null || busyNow.value) {
+        if (draftNow.value != null || changes.busy.value) {
             return
         }
         handle[DAY] = day.toString()
@@ -263,7 +260,7 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
     /** Saves the period entered, or shows why it cannot be saved. While a change runs it does nothing. */
     fun save() {
         val draft = draftNow.value ?: return
-        if (busyNow.value) {
+        if (changes.busy.value) {
             return
         }
         val period = when (val checked = draft.check(clock.instant())) {
@@ -274,24 +271,17 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
             is Checked.Valid -> checked.period
         }
         savingNow.value = SaveState.Saving
-        busyNow.value = true
-        // a save cut off as the home ends may still have stored the period
-        scope.launch {
-            try {
-                when (val outcome = access.addAwayPeriod(period)) {
-                    is AwaySave.Saved -> {
-                        close()
-                        noticeNow.value = Notice.Saved(period, Entered(draft.zone,
-                            ComingAway.describe(period, draft.zone, clock.instant())))
-                        changed(outcome.periods)
-                    }
-                    is AwaySave.Failed -> savingNow.value = SaveState.Failed(outcome.detail)
+        changes.run({
+            when (val outcome = access.addAwayPeriod(period)) {
+                is AwaySave.Saved -> {
+                    close()
+                    changes.say(Notice.Saved(period, Entered(draft.zone,
+                        ComingAway.describe(period, draft.zone, clock.instant()))))
+                    changed(outcome.periods)
                 }
-            } finally {
-                busyNow.value = false
-                next()
+                is AwaySave.Failed -> savingNow.value = SaveState.Failed(outcome.detail)
             }
-        }
+        })
     }
 
     /**
@@ -314,7 +304,7 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
      */
     fun undo(period: OneOffAwayPeriod) {
         when {
-            busyNow.value -> waiting.addLast(period)
+            changes.busy.value -> changes.later { restore(period) }
             draftNow.value == null -> restore(period)
         }
     }
@@ -348,40 +338,23 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
      * The screen said what the last change came to, so it is not said again after turning; an Undo that waited for
      * that change runs now.
      */
-    fun noticeShown() {
-        noticeNow.value = null
-        next()
-    }
+    fun noticeShown() = changes.noticeShown()
 
-    private fun restore(period: OneOffAwayPeriod) =
+    private fun restore(period: OneOffAwayPeriod) {
         run(period, access::addAwayPeriod, { Notice.Saved(period) }, Notice::NotSaved)
-
-    private fun next() {
-        if (!busyNow.value && noticeNow.value == null) {
-            waiting.removeFirstOrNull()?.let(::restore)
-        }
     }
 
     private fun run(period: OneOffAwayPeriod, store: suspend (OneOffAwayPeriod) -> AwaySave, saved: () -> Notice,
         failed: (String) -> Notice) {
-        if (busyNow.value) {
-            return
-        }
-        busyNow.value = true
-        scope.launch {
-            try {
-                when (val outcome = store(period)) {
-                    is AwaySave.Saved -> {
-                        noticeNow.value = saved()
-                        changed(outcome.periods)
-                    }
-                    is AwaySave.Failed -> noticeNow.value = failed(outcome.detail)
+        changes.run({
+            when (val outcome = store(period)) {
+                is AwaySave.Saved -> {
+                    changes.say(saved())
+                    changed(outcome.periods)
                 }
-            } finally {
-                busyNow.value = false
-                next()
+                is AwaySave.Failed -> changes.say(failed(outcome.detail))
             }
-        }
+        })
     }
 
     private fun change(edit: (Draft) -> Draft) {

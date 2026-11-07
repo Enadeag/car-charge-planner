@@ -358,12 +358,42 @@
   <string name="trip_remove">Remove</string>
   <string name="trip_remove_spoken">Remove the trip %1$s</string>
   <!-- after a change, in a snackbar; %1$s the trip as the list shows it, a trip_line; Removed has the action Undo,
-       which adds it back, and Saved follows that Undo -->
+       which adds it back, and Saved follows that Undo or the trip entry's Save -->
   <string name="trip_saved">Saved: %1$s.</string>
   <string name="trip_removed">Removed: %1$s.</string>
-  <!-- after a change failed, in a snackbar before the English details: a choice or an Undo; a Remove -->
+  <!-- after a change failed, before the English details: a choice or an Undo, in a snackbar, or the trip entry's
+       Save, in the entry; a Remove, in a snackbar -->
   <string name="trip_not_saved">Not saved: the trip could not be written.</string>
   <string name="trip_not_removed">Not removed: the trip could not be written.</string>
+  <!-- the Trips card's button in its heading row, which opens the entry of a new trip on the page's day, and what a
+       screen reader says for it; it starts with the visible word, so Voice Access finds it by that -->
+  <string name="trip_add">Add</string>
+  <string name="trip_add_spoken">Add trip</string>
+  <!-- each trip's button beside Remove, which opens the entry on that trip; a screen reader says it with the trip,
+       %1$s a trip_line_spoken, starting with the visible word -->
+  <string name="trip_change">Change</string>
+  <string name="trip_change_spoken">Change the trip %1$s</string>
+  <!-- the trip entry's title, in its top app bar, for a new trip and for a change -->
+  <string name="trip_add_title">Add trip</string>
+  <string name="trip_change_title">Change trip</string>
+  <!-- the trip entry's four buttons, each with its day or time under it, which opens the date or time picker; also
+       the picker's title -->
+  <string name="trip_departure_day">Departure day</string>
+  <string name="trip_departure_time">Departure time</string>
+  <string name="trip_return_day">Return day</string>
+  <string name="trip_return_time">Return time</string>
+  <!-- the trip entry's distance field, with the unit after it -->
+  <string name="trip_distance_field">Distance there and back</string>
+  <!-- why the trip entry's Save refused the trip, the desktop's: under the return's buttons, or under the distance -->
+  <string name="trip_return_before_departure">The return must be after the departure.</string>
+  <string name="trip_passed">That trip is over already.</string>
+  <string name="trip_distance_not_a_number">Type the distance as a number, such as 120.</string>
+  <string name="trip_distance_not_positive">The distance must be more than 0.</string>
+  <!-- asked by Back or Close in the trip entry with something changed, under discard_question -->
+  <string name="trip_discard_text">The trip you entered is not saved yet.</string>
+  <!-- the date picker's button under the calendar or the typed date, named for what it switches to, as
+       one_off_keyboard and one_off_clock: one_off_keyboard switches to typing the date, this back to the calendar -->
+  <string name="picker_calendar">Calendar</string>
 
   <!-- the footer's parts, after the provider's own credit; %1$s the primary provider's name, such as Open-Meteo -->
   <string name="footer_fallback">%1$s unavailable</string>

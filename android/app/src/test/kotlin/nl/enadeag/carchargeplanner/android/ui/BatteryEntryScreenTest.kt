@@ -112,7 +112,7 @@ class BatteryEntryScreenTest {
         val outlook = HomeOutlook(access, scope, Clock.systemUTC(), kept = plan) { }
         entry = BatteryEntry(kept, NumberText(Locale.ENGLISH), access, scope) { outlook.planAgain() }
         val away = AwayEntry(kept, access, scope, Clock.systemUTC(), outlook::awayChanged)
-        val trips = TripEntry(access, scope) { }
+        val trips = TripEntry(SavedStateHandle(), NumberText(Locale.ENGLISH), access, scope, Clock.systemUTC()) { }
         val notice = HomeNotice(saves, scope) { }
         val content = @Composable {
             AppTheme {

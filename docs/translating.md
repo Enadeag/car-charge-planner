@@ -224,10 +224,19 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Away from 07:30 to 18:00, 300 km there and back | Afwezig van 07:30 tot 18:00, 300 km heen en terug | what TalkBack reads for a trip; over more days "Away from Tomorrow 20:00 to Wed, Jun 3 09:00, …" |
 | Not with this car, I can charge at the destination | Niet met deze auto, Ik kan laden op de bestemming | a trip's two checkboxes, the desktop's; TalkBack reads each with the trip ("Not with this car, Away from …") |
 | Remove, Remove the trip Away from … | Verwijderen, Verwijderen: rit Afwezig van … | a trip's button, and what TalkBack reads for it; it starts with the word on the button in both languages, as the away period's, so Voice Access finds it (the desktop's Dutch puts it last) |
-| Saved: Away 07:30 – 18:00 · 300 km there and back. | Opgeslagen: Afwezig 07:30 – 18:00 · 300 km heen en terug. | in a snackbar after Undo of a removed trip |
+| Saved: Away 07:30 – 18:00 · 300 km there and back. | Opgeslagen: Afwezig 07:30 – 18:00 · 300 km heen en terug. | in a snackbar after the trip entry's Save, or Undo of a removed trip |
 | Removed: Away 07:30 – 18:00 · 300 km there and back. | Verwijderd: Afwezig 07:30 – 18:00 · 300 km heen en terug. | in a snackbar after Remove, with Undo |
-| Not saved: the trip could not be written. | Niet opgeslagen: de rit kon niet worden geschreven. | in a snackbar after a choice or an Undo failed, with the English details; a trip is a "rit" |
+| Not saved: the trip could not be written. | Niet opgeslagen: de rit kon niet worden geschreven. | in a snackbar after a choice or an Undo failed, and at the top of the trip entry after its Save failed, with the English details; a trip is a "rit" |
 | Not removed: the trip could not be written. | Niet verwijderd: de rit kon niet worden geschreven. | in a snackbar after Remove failed, with the English details |
+| Add, Add trip | Toevoegen, Toevoegen: rit | the button in the Trips card's heading row, which opens the entry of a new trip on the page's day, and what TalkBack and Voice Access call it; it starts with the word on the button |
+| Change, Change the trip Away from … | Wijzigen, Wijzigen: rit Afwezig van … | a trip's button beside Remove, which opens the entry on that trip, and what TalkBack reads for it; it starts with the word on the button in both languages (the desktop's Dutch puts it last) |
+| Add trip, Change trip | Rit toevoegen, Rit wijzigen | the trip entry's title in its top app bar, the desktop's "Add trip" for a new trip |
+| Departure day, Departure time, Return day, Return time | Vertrekdag, Vertrektijd, Terugkomstdag, Terugkomsttijd | the trip entry's four buttons, each with its day ("Today", "Tomorrow", "Wed, Jun 3") or time under it, and the title of the picker each opens; shorter than the desktop's "Day of departure" ("Dag van vertrek") on the maintainer's word |
+| Distance there and back | Afstand heen en terug | the trip entry's distance field's label, with "km" after what is typed, the desktop's; TalkBack reads the label, the value and "km" |
+| The return must be after the departure. | De terugkomst moet na het vertrek liggen. | under the return's buttons after Save, the desktop's; also "That trip is over already." ("Die rit is al voorbij.") |
+| Type the distance as a number, such as 120. | Typ de afstand als een getal, zoals 120. | under the distance after Save, the desktop's; also "The distance must be more than 0." ("De afstand moet meer dan 0 zijn.") |
+| The trip you entered is not saved yet. | De rit die je invulde is nog niet opgeslagen. | under "Discard changes?", asked by Back or Close in the trip entry with something changed |
+| Keyboard, Calendar | Toetsenbord, Kalender | the date picker's button under the calendar or the typed date, named for what it switches to, as the time picker's "Keyboard, Clock" |
 | updated 10:51, not refreshed since 10:51 | bijgewerkt om 10:51, niet vernieuwd sinds 10:51 | the footer, after the provider's credit, which stays as it is |
 | provider busy until 11:30 | dienst weer beschikbaar om 11:30 | the footer, during a cool-down |
 | The forecast was not refreshed since 10:51. The plan uses that forecast. | De voorspelling is niet vernieuwd sinds 10:51. De planning gebruikt die voorspelling. | the warning above a plan on a stale forecast |

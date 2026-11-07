@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -29,7 +28,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,21 +37,19 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -102,7 +98,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 import nl.enadeag.carchargeplanner.android.ui.components.BarIconButton
 import nl.enadeag.carchargeplanner.android.ui.components.BarScaffold
 import nl.enadeag.carchargeplanner.android.ui.components.EnglishDetails
-import nl.enadeag.carchargeplanner.android.ui.components.FailureVisuals
+import nl.enadeag.carchargeplanner.android.ui.components.HeldButton
 import nl.enadeag.carchargeplanner.android.ui.components.NoneLine
 import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
 import nl.enadeag.carchargeplanner.android.ui.components.RowLine
@@ -123,7 +119,9 @@ import nl.enadeag.carchargeplanner.engine.trip.Trip
  * period on that day, and a Remove per period, which acts at once; a change says so in a snackbar, Remove's with Undo,
  * and the list shows the stored periods at once while the plan is made again. Below the battery card, each day's
  * Trips card lists the trips the car is away for on that day, each with its two choices, which save at once, and its
- * Remove, which acts at once with Undo in a snackbar, as the away list's. A provider that refused its API key
+ * Remove, which acts at once with Undo in a snackbar, as the away list's; its Add opens the entry of a new trip on
+ * that day, and each trip's Change the entry on that trip, a full-screen dialog after which the focus goes back to the
+ * Change of the trip, or to Add, and a trip saved there says so in a snackbar. A provider that refused its API key
  * gets a warning in the stale warning's place, also without a plan. While notifications are not allowed, a card asks
  * for them, after the warnings and before the day; it is looked at again each time the owner comes back to the app.
  *
@@ -162,7 +160,23 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
     SideEffect { planned?.let { shown.dashboard = it } }
     val going = remember { Going<OneOffAwayPeriod>() }
     val restoring = remember { Restoring<OneOffAwayPeriod>() }
-    AwayOutcome(away, snackbars, going, restoring, awayWords(shown)) {
+    val awayNamed = awayWords(shown)
+    val resources = LocalResources.current
+    ChangeOutcome(away.notice, away::noticeShown, snackbars, going, restoring, { notice ->
+        when (notice) {
+            is AwayEntry.Notice.Saved ->
+                Said.Saved(resources.getString(R.string.one_off_saved, awayNamed(notice.period, notice.entered)))
+            is AwayEntry.Notice.Removed ->
+                Said.Removed(resources.getString(R.string.one_off_removed, awayNamed(notice.period, null)),
+                    notice.period)
+            is AwayEntry.Notice.NotRemoved ->
+                Said.NotRemoved(resources.getString(R.string.one_off_not_removed), notice.detail)
+            is AwayEntry.Notice.NotSaved ->
+                Said.NotSaved(resources.getString(R.string.one_off_not_saved), notice.detail)
+        }
+    }, away::undo)
+    val awayDraft by away.draft.collectAsStateWithLifecycle()
+    AfterClose(awayDraft != null) {
         if (!add.requestFocus()) {
             heading.requestFocus()
         }
@@ -171,9 +185,30 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
     val tripGoing = remember { Going<Trip>() }
     val tripRestoring = remember { Restoring<Trip>() }
     val tripKeys = remember { TripKeys() }
-    TripOutcome(trips, snackbars, tripGoing, tripRestoring, tripWords(shown))
+    val tripNamed = tripWords(shown)
+    ChangeOutcome(trips.notice, trips::noticeShown, snackbars, tripGoing, tripRestoring, { notice ->
+        when (notice) {
+            is TripEntry.Notice.Saved ->
+                Said.Saved(resources.getString(R.string.trip_saved, tripNamed(notice.trip, notice.entered)))
+            is TripEntry.Notice.Removed ->
+                Said.Removed(resources.getString(R.string.trip_removed, tripNamed(notice.trip, null)), notice.trip)
+            is TripEntry.Notice.NotRemoved ->
+                Said.NotRemoved(resources.getString(R.string.trip_not_removed), notice.detail)
+            is TripEntry.Notice.NotSaved -> Said.NotSaved(resources.getString(R.string.trip_not_saved), notice.detail)
+        }
+    }, trips::undo)
     val tripsBusy by trips.busy.collectAsStateWithLifecycle()
     val pending by trips.pending.collectAsStateWithLifecycle()
+    val tripAdd = remember { FocusRequester() }
+    val tripOpeners = remember { TripOpeners() }
+    val tripDraft by trips.draft.collectAsStateWithLifecycle()
+    AfterClose(tripDraft != null) {
+        // the Change of the trip the entry changed, when its page is in view; otherwise that page's Add
+        val back = trips.closedOn?.let(tripOpeners::focus) == true
+        if (!back && !tripAdd.requestFocus()) {
+            heading.requestFocus()
+        }
+    }
     BarScaffold(stringResource(R.string.app_name), heading, onUp = null, snackbars = snackbars, actions = {
         BarIconButton(Icons.Filled.Refresh, stringResource(R.string.home_refresh),
             enabled = state != HomeOutlook.State.Asking && !refreshing) { outlook.refresh() }
@@ -183,7 +218,8 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
         when (val now = state) {
             is HomeOutlook.State.Planned -> Days(now.dashboard, refreshing, phoneZone(), outlook::refresh,
                 BatteryAction(battery::open, update), AwayAction(away, add, busy, going, restoring),
-                TripAction(trips, tripsBusy, pending, tripGoing, tripRestoring, tripKeys), askCard) {
+                TripAction(trips, tripsBusy, pending, tripGoing, tripRestoring, tripKeys, tripAdd, tripOpeners),
+                askCard) {
                 Notice(notice, closed)
             }
             else -> Refreshable(refreshing, outlook::refresh) {
@@ -196,6 +232,7 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
     }
     BatteryEntryDialog(battery)
     AwayEntryDialog(away)
+    TripEntryDialog(trips, phoneZone())
 }
 
 /**
@@ -226,65 +263,6 @@ private fun awayWords(shown: Shown): (OneOffAwayPeriod, AwayEntry.Entered?) -> S
 }
 
 /**
- * What a change to the one-off away periods came to, beside the entry itself, each said once in a snackbar, which a
- * screen reader reads when it comes: an added period; a removed one, with Undo, which adds it back; a Remove or an Undo
- * that failed, with the English details and a button to close it. When the entry closes, however it does, the focus
- * moves on.
- *
- * @param away the changes
- * @param snackbars where the snackbar shows
- * @param going the Remove that was pressed, forgotten when it failed
- * @param restoring gets the period an Undo adds back, so the list puts the focus on its row, forgotten when it failed
- * @param named a period as the list names it, given how the entry that saved it read it, when it did
- * @param closed moves the focus once the entry closed
- */
-@Composable
-private fun AwayOutcome(away: AwayEntry, snackbars: SnackbarHostState, going: Going<OneOffAwayPeriod>,
-    restoring: Restoring<OneOffAwayPeriod>, named: (OneOffAwayPeriod, AwayEntry.Entered?) -> String,
-    closed: () -> Unit) {
-    val resources = LocalResources.current
-    val name by rememberUpdatedState(named)
-    LaunchedEffect(away) {
-        away.notice.collect { notice ->
-            if (notice == null) {
-                return@collect
-            }
-            away.noticeShown()
-            // a change that failed leaves the list as it was, so no later change of the list moves the focus for it
-            when (notice) {
-                is AwayEntry.Notice.NotRemoved -> going.row = null
-                is AwayEntry.Notice.NotSaved -> restoring.row = null
-                else -> Unit
-            }
-            snackbars.currentSnackbarData?.dismiss()
-            launch {
-                when (notice) {
-                    is AwayEntry.Notice.Saved -> snackbars.showSnackbar(resources.getString(R.string.one_off_saved,
-                        name(notice.period, notice.entered)))
-                    is AwayEntry.Notice.Removed -> {
-                        // it stays until the next notice or Close: Material takes one with an action away after about
-                        // 10 s, also with TalkBack, which is too soon to find Undo
-                        val undo = snackbars.showSnackbar(resources.getString(R.string.one_off_removed,
-                            name(notice.period, null)), resources.getString(R.string.action_undo),
-                            withDismissAction = true, duration = SnackbarDuration.Indefinite)
-                        if (undo == SnackbarResult.ActionPerformed) {
-                            restoring.row = notice.period
-                            away.undo(notice.period)
-                        }
-                    }
-                    is AwayEntry.Notice.NotRemoved -> snackbars.showSnackbar(
-                        FailureVisuals(resources.getString(R.string.one_off_not_removed), notice.detail))
-                    is AwayEntry.Notice.NotSaved -> snackbars.showSnackbar(
-                        FailureVisuals(resources.getString(R.string.one_off_not_saved), notice.detail))
-                }
-            }
-        }
-    }
-    val draft by away.draft.collectAsStateWithLifecycle()
-    AfterClose(draft != null, closed)
-}
-
-/**
  * What a day's "Car away" list changes the periods with.
  *
  * @property entry the entry and Remove
@@ -295,15 +273,6 @@ private fun AwayOutcome(away: AwayEntry, snackbars: SnackbarHostState, going: Go
  */
 private class AwayAction(val entry: AwayEntry, val focus: FocusRequester, val busy: Boolean,
     val going: Going<OneOffAwayPeriod>, val restoring: Restoring<OneOffAwayPeriod>)
-
-/**
- * The row an Undo is adding back, a one-off away period or a trip, which drawing never reads: the list on the page in
- * view puts the focus on it once it shows; an Undo that failed forgets it.
- *
- * @param K what names a row
- * @property row the row; null when no Undo is under way
- */
-private class Restoring<K>(var row: K? = null)
 
 /**
  * What the battery entry's save came to, beside the entry itself: a level saved says so in a snackbar, which a screen
@@ -577,69 +546,21 @@ private fun AwayList(dashboard: Dashboard, day: DayModel, words: DashboardWords,
 }
 
 /**
- * A trip as the list names it, by the dashboard shown last; empty before any was shown, which a change of a trip
- * never is, as the trips are listed only with a plan.
+ * A trip as the list names it, by the dashboard shown last; before any was shown, as the entry that saved it reads
+ * it, in its zone and by the clock at Save; empty when neither is known.
  */
 @Composable
-private fun tripWords(shown: Shown): (Trip) -> String {
+private fun tripWords(shown: Shown): (Trip, TripEntry.Entered?) -> String {
     val resources = LocalResources.current
     val locale = LocalConfiguration.current.locales[0]
     val twentyFour = DateFormat.is24HourFormat(LocalContext.current)
-    return { trip ->
-        shown.dashboard?.let { DashboardWords(resources, locale, twentyFour, it.zone).trip(it.describe(trip)) }
-            .orEmpty()
-    }
-}
-
-/**
- * What a change to the trips came to, each said once in a snackbar, which a screen reader reads when it comes: a
- * removed trip, with Undo, which adds it back; a trip added back; a choice, a Remove or an Undo that failed, with the
- * English details and a button to close it. A choice saved says nothing, as its checkbox shows it.
- *
- * @param trips the changes
- * @param snackbars where the snackbar shows
- * @param going the Remove that was pressed, forgotten when it failed
- * @param restoring gets the trip an Undo adds back, so the list puts the focus on its row, forgotten when it failed
- * @param named a trip as the list names it
- */
-@Composable
-private fun TripOutcome(trips: TripEntry, snackbars: SnackbarHostState, going: Going<Trip>,
-    restoring: Restoring<Trip>, named: (Trip) -> String) {
-    val resources = LocalResources.current
-    val name by rememberUpdatedState(named)
-    LaunchedEffect(trips) {
-        trips.notice.collect { notice ->
-            if (notice == null) {
-                return@collect
-            }
-            trips.noticeShown()
-            // a change that failed leaves the list as it was, so no later change of the list moves the focus for it
-            when (notice) {
-                is TripEntry.Notice.NotRemoved -> going.row = null
-                is TripEntry.Notice.NotSaved -> restoring.row = null
-                else -> Unit
-            }
-            snackbars.currentSnackbarData?.dismiss()
-            launch {
-                when (notice) {
-                    is TripEntry.Notice.Saved ->
-                        snackbars.showSnackbar(resources.getString(R.string.trip_saved, name(notice.trip)))
-                    is TripEntry.Notice.Removed -> {
-                        // as the away list's: it stays until the next notice or Close, so Undo can be found
-                        val undo = snackbars.showSnackbar(resources.getString(R.string.trip_removed,
-                            name(notice.trip)), resources.getString(R.string.action_undo),
-                            withDismissAction = true, duration = SnackbarDuration.Indefinite)
-                        if (undo == SnackbarResult.ActionPerformed) {
-                            restoring.row = notice.trip
-                            trips.undo(notice.trip)
-                        }
-                    }
-                    is TripEntry.Notice.NotRemoved -> snackbars.showSnackbar(
-                        FailureVisuals(resources.getString(R.string.trip_not_removed), notice.detail))
-                    is TripEntry.Notice.NotSaved -> snackbars.showSnackbar(
-                        FailureVisuals(resources.getString(R.string.trip_not_saved), notice.detail))
-                }
-            }
+    return { trip, entered ->
+        val dashboard = shown.dashboard
+        when {
+            dashboard != null ->
+                DashboardWords(resources, locale, twentyFour, dashboard.zone).trip(dashboard.describe(trip))
+            entered != null -> DashboardWords(resources, locale, twentyFour, entered.zone).trip(entered.trip)
+            else -> ""
         }
     }
 }
@@ -653,9 +574,48 @@ private fun TripOutcome(trips: TripEntry, snackbars: SnackbarHostState, going: G
  * @property going the trip whose Remove was pressed, whose neighbour takes the focus once it is out of the list
  * @property restoring the trip an Undo is adding back, whose row takes the focus once it is in the list
  * @property keys what each trip's row is keyed by
+ * @property add moves the focus to the Add of the page in view
+ * @property openers moves the focus to a trip's Change on the page in view
  */
 private class TripAction(val entry: TripEntry, val busy: Boolean, val pending: TripEntry.Pending?,
-    val going: Going<Trip>, val restoring: Restoring<Trip>, val keys: TripKeys)
+    val going: Going<Trip>, val restoring: Restoring<Trip>, val keys: TripKeys, val add: FocusRequester,
+    val openers: TripOpeners)
+
+/**
+ * The Change of each trip on the page in view, which drawing never reads, so the focus goes back to it when the entry
+ * closes.
+ */
+private class TripOpeners {
+    private val changes = mutableMapOf<Trip, FocusRequester>()
+
+    /**
+     * Notes a trip's Change as it shows on the page in view.
+     *
+     * @param trip the trip
+     * @param focus moves the focus to its Change
+     */
+    fun shown(trip: Trip, focus: FocusRequester) {
+        changes[trip] = focus
+    }
+
+    /**
+     * Forgets a trip's Change that no longer shows.
+     *
+     * @param trip the trip
+     * @param focus the focus it was noted with, so a later row of the same trip stays
+     */
+    fun gone(trip: Trip, focus: FocusRequester) {
+        changes.remove(trip, focus)
+    }
+
+    /**
+     * Moves the focus to a trip's Change.
+     *
+     * @param trip the trip
+     * @return false when its Change is not on the page in view, so nothing moved
+     */
+    fun focus(trip: Trip): Boolean = changes[trip]?.requestFocus() == true
+}
 
 /**
  * What each trip's row is keyed by, which drawing reads but a choice pressed writes: a trip by itself, and a trip a
@@ -729,24 +689,38 @@ private fun TripsCard(dashboard: Dashboard, day: DayModel, words: DashboardWords
     }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(R.string.trips_heading), style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.semantics { heading() })
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.trips_heading), style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f).semantics { heading() })
+                // as the away list's Add: it may take the focus also in touch mode, so the focus comes back to it
+                val opener = if (inView) Modifier.focusProperties { canFocus = true }.focusRequester(trips.add)
+                    else Modifier
+                val spoken = stringResource(R.string.trip_add_spoken)
+                HeldButton(busy = trips.busy, onClick = { trips.entry.add(day.date, dashboard.zone) },
+                    modifier = opener.semantics { contentDescription = spoken }) {
+                    Text(stringResource(R.string.trip_add))
+                }
+            }
             if (listed.isEmpty()) {
                 NoneLine(stringResource(R.string.trips_none), focus)
             }
             listed.zip(trips.keys.of(rows)).forEach { (trip, row) ->
                 key(row) {
-                    TripRow(trip, row, words, trips, focus, rows)
+                    TripRow(trip, row, words, trips, focus, rows, dashboard.zone, inView)
                 }
             }
         }
     }
 }
 
-/** One trip of the Trips card: its line, its two choices and its Remove. */
+/**
+ * One trip of the Trips card: its line, its two choices, its Change, which opens the entry on it, and its Remove,
+ * side by side at the end while they fit.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TripRow(listed: ListedTrip, key: Trip, words: DashboardWords, trips: TripAction,
-    focus: RowFocus<Trip>, rows: List<Trip>) {
+    focus: RowFocus<Trip>, rows: List<Trip>, zone: ZoneId, inView: Boolean) {
     val trip = listed.trip
     val spoken = words.spokenTrip(listed)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -761,13 +735,31 @@ private fun TripRow(listed: ListedTrip, key: Trip, words: DashboardWords, trips:
                 trips.entry.choose(trip, choice, it)
             }
         }
+        val change = stringResource(R.string.trip_change_spoken, spoken)
         val remove = stringResource(R.string.trip_remove_spoken, spoken)
-        HeldButton(busy = trips.busy, onClick = {
-            trips.going.row = trip
-            trips.going.rows = rows
-            trips.entry.remove(trip)
-        }, modifier = Modifier.align(Alignment.End).semantics { contentDescription = remove }) {
-            Text(stringResource(R.string.trip_remove))
+        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+            // on the page in view it may take the focus also in touch mode, so the focus comes back to it, and a
+            // screen reader with it, when the entry closes
+            val opener = remember { FocusRequester() }
+            if (inView) {
+                DisposableEffect(trip, opener) {
+                    trips.openers.shown(trip, opener)
+                    onDispose { trips.openers.gone(trip, opener) }
+                }
+            }
+            val reachable = if (inView) Modifier.focusProperties { canFocus = true }.focusRequester(opener)
+                else Modifier
+            HeldButton(busy = trips.busy, onClick = { trips.entry.change(trip, zone) },
+                modifier = reachable.semantics { contentDescription = change }) {
+                Text(stringResource(R.string.trip_change))
+            }
+            HeldButton(busy = trips.busy, onClick = {
+                trips.going.row = trip
+                trips.going.rows = rows
+                trips.entry.remove(trip)
+            }, modifier = Modifier.semantics { contentDescription = remove }) {
+                Text(stringResource(R.string.trip_remove))
+            }
         }
     }
 }
@@ -803,38 +795,6 @@ private fun ChoiceRow(label: String, trip: String, checked: Boolean, busy: Boole
 
 /** Material's alpha for a disabled control's content, as its [Checkbox] draws when it is off. */
 private const val DISABLED_ALPHA = 0.38f
-
-/**
- * A text button that is off while a change runs yet keeps the focus: Compose takes the focus from a disabled control,
- * so a keyboard or switch user who pressed it would start again at the top of the page. It looks off, a screen reader
- * says it is, and a press does nothing until the change is done.
- *
- * @param busy true while a change runs
- * @param onClick what a press does while no change runs
- * @param modifier its place, focus and name
- * @param content its words
- */
-@Composable
-private fun HeldButton(busy: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier,
-    content: @Composable RowScope.() -> Unit) {
-    val colours = ButtonDefaults.textButtonColors()
-    AppTextButton(onClick = { if (!busy) onClick() }, modifier = modifier.semantics {
-        if (busy) {
-            disabled()
-        }
-    }, colors = if (busy) colours.copy(contentColor = colours.disabledContentColor) else colours, content = content)
-}
-
-/**
- * The row whose Remove was pressed, a one-off away period or a trip, and the rows as they were then, which drawing
- * never reads, so the focus moves on once the list no longer has it; a Remove that failed forgets it, as its row stays
- * in the list.
- *
- * @param K what names a row
- * @property row the row going; null when none is
- * @property rows the rows before it went, in order
- */
-private class Going<K>(var row: K? = null, var rows: List<K> = listOf())
 
 /**
  * A warning above the plan, with a warning sign and the words, in a container that stands out and a polite live
