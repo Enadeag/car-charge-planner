@@ -27,18 +27,6 @@ updates:
       - dependency-name: "org.junit*"
       - dependency-name: "org.assertj:*"
       - dependency-name: "com.tngtech.archunit:*"
-      # Until the app builds on compileSdk 37, #321, which removes these three entries: newer releases need it.
-      # The BOM by version range: its 2026.07 and 2026.08 still build on 36, and as it holds no code of its own it
-      # never brings a security update.
-      - dependency-name: "androidx.compose:compose-bom"
-        versions: [">= 2026.09.00"]
-      # Lifecycle and WorkManager by update type, not by version range, so a security update of a patch version still
-      # comes; a version range would hold that back too. A minor or major release is taken to need 37, as 2.11 of
-      # Lifecycle does; WorkManager 2.12 needs 35.
-      - dependency-name: "androidx.lifecycle:*"
-        update-types: ["version-update:semver-minor", "version-update:semver-major"]
-      - dependency-name: "androidx.work:*"
-        update-types: ["version-update:semver-minor", "version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

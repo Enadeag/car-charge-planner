@@ -102,12 +102,12 @@ jobs:
         with:
           cache-provider: basic
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
-      - name: Android SDK platform 36 and build-tools 36.0.0
+      - name: Android SDK platform 37 and build-tools 36.0.0
         id: sdk
         run: |
           sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           (yes || true) | "$sdkmanager" --licenses > /dev/null
-          "$sdkmanager" --install "platforms;android-36" "build-tools;36.0.0"
+          "$sdkmanager" --install "platforms;android-37.0" "build-tools;36.0.0"
       - name: Build the app and its test APK
         run: ./gradlew --continue --stacktrace assembleDebug assembleDebugAndroidTest
       - name: Android Lint
@@ -159,11 +159,11 @@ jobs:
           cache-provider: basic
           cache-read-only: true
       # the same as in android-build
-      - name: Android SDK platform 36 and build-tools 36.0.0
+      - name: Android SDK platform 37 and build-tools 36.0.0
         run: |
           sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           (yes || true) | "$sdkmanager" --licenses > /dev/null
-          "$sdkmanager" --install "platforms;android-36" "build-tools;36.0.0"
+          "$sdkmanager" --install "platforms;android-37.0" "build-tools;36.0.0"
       # the udev rule from the emulator action's README, so the emulator can use KVM
       - name: Enable KVM
         run: |
