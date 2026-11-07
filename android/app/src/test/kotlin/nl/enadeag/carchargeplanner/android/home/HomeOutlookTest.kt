@@ -22,6 +22,7 @@ import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.trip.Trip
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -385,6 +386,52 @@ class HomeOutlookTest {
         val later = Plans.planned(today.atTime(9, 0).atZone(zone), listOf(listOf()), assumed = false)
         answer(1, later)
         assertThat(home.state.value).isEqualTo(HomeOutlook.State.Planned(Dashboard.of(later, listOf(tomorrow))))
+    }
+
+    @Test
+    fun theHomeShowsTheStoredTripsWithItsPlan() = runTest {
+        val trip = Trip(today.atTime(9, 0).atZone(zone).toInstant(), today.atTime(17, 0).atZone(zone).toInstant(),
+            120.0, false)
+        access.trips = listOf(trip)
+        val home = home()
+
+        answer(0, planned)
+
+        assertThat(home.state.value)
+            .isEqualTo(HomeOutlook.State.Planned(Dashboard.of(planned, listOf(), listOf(trip))))
+    }
+
+    @Test
+    fun tripsChangedShowAtOnceFromTheStoredListAndThePlanIsMadeAgainWithThisOneInView() = runTest {
+        val home = home()
+        answer(0, planned)
+        val trip = Trip(today.atTime(9, 0).atZone(zone).toInstant(), today.atTime(17, 0).atZone(zone).toInstant(),
+            120.0, false)
+
+        home.tripsChanged(listOf(trip))
+        runCurrent()
+
+        val shown = (home.state.value as HomeOutlook.State.Planned).dashboard
+        assertThat(shown.trips.map { it.trip }).containsExactly(trip)
+        assertThat(shown.days).isEqualTo(Dashboard.of(planned, listOf()).days)
+        assertThat(home.refreshing.value).isTrue()
+        assertThat(access.outlooks).hasSize(2)
+        access.trips = listOf(trip)
+        val later = Plans.planned(today.atTime(9, 0).atZone(zone), listOf(listOf()), assumed = false)
+        answer(1, later)
+        assertThat(home.state.value).isEqualTo(HomeOutlook.State.Planned(Dashboard.of(later, listOf(), listOf(trip))))
+    }
+
+    @Test
+    fun tripsChangedWithoutAPlanShownAskAsAtTheStart() = runTest {
+        val home = home()
+        answer(0, Outlook.NoForecast("Open-Meteo: no network"))
+
+        home.tripsChanged(listOf())
+        runCurrent()
+
+        assertThat(home.state.value).isEqualTo(HomeOutlook.State.Asking)
+        assertThat(access.outlooks).hasSize(2)
     }
 
     @Test

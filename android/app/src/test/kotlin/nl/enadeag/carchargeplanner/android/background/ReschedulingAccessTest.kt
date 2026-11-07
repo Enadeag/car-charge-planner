@@ -8,11 +8,13 @@ import nl.enadeag.carchargeplanner.android.store.AwaySave
 import nl.enadeag.carchargeplanner.android.store.BatteryLevelSave
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.StartState
+import nl.enadeag.carchargeplanner.android.store.TripSave
 import nl.enadeag.carchargeplanner.engine.ForecastUse
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsProblem
+import nl.enadeag.carchargeplanner.engine.trip.Trip
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -83,11 +85,29 @@ class ReschedulingAccessTest {
     }
 
     @Test
+    fun aTripAddedChangedOrRemovedIsToldAndOneThatFailedIsNot() = runTest {
+        val trip = Trip(Instant.parse("2026-06-08T06:00:00Z"), Instant.parse("2026-06-08T18:00:00Z"), 300.0, false)
+        val ticked = Trip(trip.departure(), trip.returnTime(), trip.distanceKm(), true)
+
+        assertThat(access.addTrip(trip)).isEqualTo(TripSave.Saved(listOf(trip)))
+        assertThat(access.changeTrip(trip, ticked)).isEqualTo(TripSave.Saved(listOf(ticked)))
+        assertThat(access.removeTrip(ticked)).isEqualTo(TripSave.Saved(listOf()))
+        assertThat(told).isEqualTo(3)
+
+        engine.tripFails = "No space left on device"
+        access.addTrip(trip)
+        access.changeTrip(trip, ticked)
+        access.removeTrip(trip)
+        assertThat(told).isEqualTo(3)
+    }
+
+    @Test
     fun readsAndRoundsAreNotToldAndReachTheEngine() = runTest {
         assertThat(access.readSettings()).isEqualTo(StartState.Ready(DRAFT))
         access.round(ForecastUse.STORED_ONLY)
         access.nextNoticeDue(engine.roundOutlook)
         access.awayPeriods()
+        access.trips()
         access.storedKeys()
 
         assertThat(engine.rounds).containsExactly(ForecastUse.STORED_ONLY)

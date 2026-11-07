@@ -5,7 +5,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.ComponentDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.InputModeManager
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
@@ -14,6 +18,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
@@ -28,9 +33,12 @@ import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.Clock
@@ -53,6 +61,7 @@ import nl.enadeag.carchargeplanner.android.home.BatteryEntry
 import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
 import nl.enadeag.carchargeplanner.android.home.Plans
+import nl.enadeag.carchargeplanner.android.home.TripEntry
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
@@ -98,6 +107,7 @@ class AwayEntryScreenTest {
     private lateinit var away: AwayEntry
     private lateinit var entryDialog: ComponentDialog
     private lateinit var focus: FocusManager
+    private lateinit var inputMode: InputModeManager
 
     private val tomorrow = OneOffAwayPeriod.allDay(today.plusDays(1), lisbon)
     private val wednesday = OneOffAwayPeriod.on(today.plusDays(2), LocalTime.of(10, 0), LocalTime.of(12, 0), lisbon)
@@ -127,10 +137,12 @@ class AwayEntryScreenTest {
         val outlook = HomeOutlook(access, scope, clock) { }
         val battery = BatteryEntry(kept, NumberText(Locale.ENGLISH), access, scope) { }
         away = AwayEntry(kept, access, scope, clock, outlook::awayChanged)
+        val trips = TripEntry(access, scope) { }
         val notice = HomeNotice(saves, scope) { }
         compose.setContent {
             focus = LocalFocusManager.current
-            AppTheme { wrap { HomeScreen(outlook, notice, battery, away, { lisbon }, noCard) { } } }
+            inputMode = LocalInputModeManager.current
+            AppTheme { wrap { HomeScreen(outlook, notice, battery, away, trips, { lisbon }, noCard) { } } }
         }
         compose.waitForIdle()
         if (planned) {
@@ -493,6 +505,48 @@ class AwayEntryScreenTest {
     }
 
     @Test
+    fun aRemoveWithTheKeyboardFocusKeepsItWhileItRunsAndAfterItFailed() {
+        val gate = CompletableDeferred<Unit>()
+        access.awayGate = gate
+        access.awayFails = "No space left on device"
+        access.away = listOf(tomorrow)
+        show()
+        compose.runOnIdle { inputMode.requestInputMode(InputMode.Keyboard) }
+        val button = remove(text(R.string.one_off_all_day, "Tomorrow")).performScrollTo()
+        button.requestFocus()
+
+        button.performKeyInput { pressKey(Key.Enter) }
+        compose.waitForIdle()
+        button.assertIsFocused().assertIsNotEnabled()
+        gate.complete(Unit)
+        compose.waitForIdle()
+
+        button.assertIsFocused().assertIsEnabled()
+        assertThat(access.awayChanges).containsExactly("remove" to tomorrow)
+    }
+
+    @Test
+    fun aRemoveOrAddPressedWhileARemoveRunsDoesNothingAndTheFocusFollowsTheFirst() {
+        val gate = CompletableDeferred<Unit>()
+        access.awayGate = gate
+        access.away = listOf(tomorrow, wednesday)
+        show()
+        val second = text(R.string.one_off_part, "Wed, Jun 3", text(R.string.time_span, "10:00", "12:00"))
+
+        remove(text(R.string.one_off_all_day, "Tomorrow")).performScrollTo().performClick()
+        compose.waitForIdle()
+        remove(second).performScrollTo().performClick()
+        add.performScrollTo().performClick()
+        compose.waitForIdle()
+        gate.complete(Unit)
+        compose.waitForIdle()
+
+        assertThat(access.awayChanges).containsExactly("remove" to tomorrow)
+        assertThat(ShadowDialog.getLatestDialog()).isNull()
+        line(second).assertIsFocused()
+    }
+
+    @Test
     fun theEntryComesBackWithWhatWasEnteredAfterTheSystemEndedTheApp() {
         AwayEntry(handle, access, scope, clock) { }.apply {
             open(today.plusDays(1), lisbon)
@@ -545,9 +599,9 @@ class AwayEntryScreenTest {
     fun theListAndTheEntryAreInDutch() {
         access.away = listOf(tomorrow)
         show()
-        add.assertExists().assert(hasContentDescription("Afwezig toevoegen"))
+        add.assertExists().assert(hasContentDescription("Toevoegen: afwezigheid"))
         compose.assertShowsNoneOf(englishOnlyTexts())
-        compose.onNode(hasContentDescription(" verwijderen", substring = true)).performScrollTo()
+        compose.onNode(hasContentDescription("Verwijderen: Morgen, hele dag")).performScrollTo()
             .assert(hasText("Verwijderen"))
         openTheEntry()
         compose.onNode(isHeading() and hasText("Afwezig op ", substring = true) and hasAnyAncestor(isDialog()))
@@ -876,6 +930,38 @@ class AwayEntryScreenTest {
         compose.waitForIdle()
 
         line(first).assertExists().assertIsFocused()
+    }
+
+    @Test
+    fun anUndoPressedWhileAnotherRemoveRunsAddsThePeriodBackOnceThatRemoveIsSaidSaysSoAndTakesTheFocus() {
+        access.away = listOf(tomorrow, wednesday)
+        show()
+        val first = text(R.string.one_off_all_day, "Tomorrow")
+        val second = text(R.string.one_off_part, "Wed, Jun 3", text(R.string.time_span, "10:00", "12:00"))
+        remove(first).performScrollTo().performClick()
+        compose.waitForIdle()
+        val gate = CompletableDeferred<Unit>()
+        access.awayGate = gate
+        // the snackbar covers the bottom of the page, so this Remove is pressed as TalkBack does
+        remove(second).performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+
+        compose.onNodeWithText(text(R.string.action_undo)).performClick()
+        compose.waitForIdle()
+        line(first).assertDoesNotExist()
+        val adding = CompletableDeferred<Unit>()
+        access.awayGate = adding
+        gate.complete(Unit)
+        assertThat(access.awayChanges).containsExactly("remove" to tomorrow, "remove" to wednesday)
+        compose.waitForIdle()
+        compose.onNodeWithText(text(R.string.one_off_removed, second)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.action_undo)).assertIsDisplayed()
+        adding.complete(Unit)
+        compose.waitForIdle()
+
+        assertThat(access.away).containsExactly(tomorrow)
+        compose.onNodeWithText(text(R.string.one_off_saved, first)).assertIsDisplayed()
+        line(first).assertIsFocused()
     }
 
     @Test

@@ -16,17 +16,19 @@ import nl.enadeag.carchargeplanner.android.store.LatestAnswer
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.trip.Trip
 import org.slf4j.LoggerFactory
 
 /**
  * The dashboard's plan: asked when the home opens, unless it comes back from Settings where nothing changed, again on
  * Refresh or a pull, again when the owner comes back to the app and the plan shown is older than [STALE_AFTER], again
  * when a Settings save changes something while the home is shown, and again after the owner entered the battery
- * level or changed a one-off away period, only the latest answer counting. Refresh keeps a plan in view while the new
- * one is made; a Settings change does not, as the plan shown no longer fits. A settings file that is gone or cannot be
- * used is handed on, so the app shows set-up or the file's problem instead. Called from the main thread.
+ * level or changed a one-off away period or a trip, only the latest answer counting. Refresh keeps a plan in view
+ * while the new one is made; a Settings change does not, as the plan shown no longer fits. A settings file that is
+ * gone or cannot be used is handed on, so the app shows set-up or the file's problem instead. Called from the main
+ * thread.
  *
- * @param access the engine's plan and the one-off away periods
+ * @param access the engine's plan, the one-off away periods and the trips
  * @param scope where the plan is asked, the screen's
  * @param clock tells how old the plan shown is
  * @param changes counts the Settings saves that changed something; each new count asks for the plan again
@@ -152,6 +154,17 @@ class HomeOutlook(private val access: EngineAccess, private val scope: Coroutine
     }
 
     /**
+     * Shows the trips as the engine stored them after the owner changed or removed one, at once, then asks for the plan
+     * again as [planAgain] does, the plan shown staying in view until the new one comes.
+     *
+     * @param trips the stored trips after the change, in order of their departure
+     */
+    fun tripsChanged(trips: List<Trip>) {
+        (stateNow.value as? State.Planned)?.let { stateNow.value = State.Planned(it.dashboard.withTrips(trips)) }
+        planAgain()
+    }
+
+    /**
      * Tells that the owner came back to the app: a plan older than [STALE_AFTER] is asked again, unless one is asked
      * already.
      */
@@ -205,7 +218,7 @@ class HomeOutlook(private val access: EngineAccess, private val scope: Coroutine
             is Outlook.Planned -> Answer(if (outlook.days().isEmpty()) {
                 State.NoDays(Footer.of(outlook), outlook.zone(), names(outlook.forecastSource().keyRefusedBy()))
             } else {
-                State.Planned(Dashboard.of(outlook, access.awayPeriods(), ::providerName))
+                State.Planned(Dashboard.of(outlook, access.awayPeriods(), access.trips(), ::providerName))
             }, outlook)
             is Outlook.NoForecast -> Answer(State.NoForecast(outlook.reason(), names(outlook.keyRefusedBy())), outlook)
             is Outlook.NotSetUp, is Outlook.ConfigUnusable -> {

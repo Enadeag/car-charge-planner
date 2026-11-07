@@ -19,6 +19,7 @@ import nl.enadeag.carchargeplanner.android.home.DayModel
 import nl.enadeag.carchargeplanner.android.home.DayName
 import nl.enadeag.carchargeplanner.android.home.Footer
 import nl.enadeag.carchargeplanner.android.home.GridAdviceModel
+import nl.enadeag.carchargeplanner.android.home.ListedTrip
 import nl.enadeag.carchargeplanner.android.home.SolarChart
 import nl.enadeag.carchargeplanner.android.home.SourceFigure
 import nl.enadeag.carchargeplanner.engine.plan.Window
@@ -248,6 +249,35 @@ internal class DashboardWords(private val resources: Resources, private val loca
         is ComingAway.Days -> text(R.string.one_off_days, date(away.startDay), time(away.start), date(away.endDay),
             time(away.end))
     }
+
+    /**
+     * A trip in a list, as the desktop's: its times alone when it returns on the day it leaves, otherwise each with
+     * its day, and its distance in whole km.
+     *
+     * @param trip the trip
+     * @return such as "Away 07:30 – 18:00 · 300 km there and back" or "Away Tomorrow 07:30 – Wed, Jun 3 18:00 · …"
+     */
+    fun trip(trip: ListedTrip): String = text(R.string.trip_line, if (trip.sameDay) {
+        text(R.string.time_span, time(trip.departure), time(trip.returnTime))
+    } else {
+        text(R.string.trip_days, date(trip.departureDay), time(trip.departure), date(trip.returnDay),
+            time(trip.returnTime))
+    }, tripDistance(trip))
+
+    /**
+     * A trip as a screen reader reads it.
+     *
+     * @param trip the trip
+     * @return such as "Away from 07:30 to 18:00, 300 km there and back"
+     */
+    fun spokenTrip(trip: ListedTrip): String = text(R.string.trip_line_spoken, if (trip.sameDay) {
+        text(R.string.time_span_spoken, time(trip.departure), time(trip.returnTime))
+    } else {
+        text(R.string.trip_days_spoken, date(trip.departureDay), time(trip.departure), date(trip.returnDay),
+            time(trip.returnTime))
+    }, tripDistance(trip))
+
+    private fun tripDistance(trip: ListedTrip) = text(R.string.trip_distance, whole(trip.trip.distanceKm()))
 
     /**
      * The footer's line, as the desktop's: the provider's credit, the fallback, updated or stale, busy.

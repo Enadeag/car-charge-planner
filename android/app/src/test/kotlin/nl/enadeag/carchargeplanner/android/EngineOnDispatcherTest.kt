@@ -30,6 +30,7 @@ import nl.enadeag.carchargeplanner.android.store.BatteryLevelSave
 import nl.enadeag.carchargeplanner.android.store.EngineOnDispatcher
 import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.android.store.StoredKeys
+import nl.enadeag.carchargeplanner.android.store.TripSave
 import nl.enadeag.carchargeplanner.engine.ForecastUse
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
@@ -47,6 +48,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.Secrets
 import nl.enadeag.carchargeplanner.engine.store.FilePrivacy
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles
 import nl.enadeag.carchargeplanner.engine.store.StoredJson
+import nl.enadeag.carchargeplanner.engine.trip.Trip
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
@@ -89,6 +91,9 @@ class EngineOnDispatcherTest {
     /** An away period long after any run of these tests, which the engine keeps however late it is. */
     private val later = OneOffAwayPeriod(Instant.parse("2096-06-01T08:00:00Z"), Instant.parse("2096-06-01T10:00:00Z"))
 
+    /** A trip long after any run of these tests, which the engine keeps however late it is. */
+    private val trip = Trip(Instant.parse("2096-06-02T06:30:00Z"), Instant.parse("2096-06-02T17:00:00Z"), 300.0, false)
+
     @AfterEach
     fun stopTheThread() {
         dispatcher.close()
@@ -114,8 +119,12 @@ class EngineOnDispatcherTest {
         access.addAwayPeriod(later)
         access.removeAwayPeriod(later)
         access.nextNoticeDue(access.round(ForecastUse.STORED_ONLY))
+        access.trips()
+        access.addTrip(trip)
+        access.changeTrip(trip, Trip(trip.departure(), trip.returnTime(), trip.distanceKm(), true))
+        access.removeTrip(trip)
 
-        assertThat(dispatcher.handed.get()).isEqualTo(14)
+        assertThat(dispatcher.handed.get()).isEqualTo(18)
         assertThat(dispatcher.threads).containsExactly("engine-io")
     }
 
@@ -276,6 +285,93 @@ class EngineOnDispatcherTest {
         assertThat(writingFails(IOException()).addAwayPeriod(later)).isEqualTo(AwaySave.Failed("IOException"))
         assertThat(writingFails(IOException("Read-only file system")).removeAwayPeriod(later))
             .isEqualTo(AwaySave.Failed("Read-only file system"))
+    }
+
+    @Test
+    fun theTripsAreReadFromTheFilesFolderInTheDesktopsFormatInOrder() = runBlocking<Unit> {
+        Files.createDirectories(filesFolder)
+        filesFolder.resolve("trips.json").writeText("""{"version": 1, "trips": [
+            {"departure": "2096-06-03T06:00:00Z", "return": "2096-06-03T18:00:00Z", "distanceKm": 120.5,
+             "canChargeAtDestination": true},
+            {"departure": "2096-06-02T06:30:00Z", "return": "2096-06-02T17:00:00Z", "distanceKm": 300,
+             "canChargeAtDestination": false, "notWithThisCar": true}]}""")
+
+        assertThat(access.trips()).containsExactly(
+            Trip(Instant.parse("2096-06-02T06:30:00Z"), Instant.parse("2096-06-02T17:00:00Z"), 300.0, false, true),
+            Trip(Instant.parse("2096-06-03T06:00:00Z"), Instant.parse("2096-06-03T18:00:00Z"), 120.5, true))
+    }
+
+    @Test
+    fun aTripAddedChangedAndRemovedIsStoredInTheFilesFolderAndTheStoredOnesComeBack() = runBlocking<Unit> {
+        val changed = Trip(trip.departure(), trip.returnTime(), trip.distanceKm(), true)
+
+        assertThat(access.addTrip(trip)).isEqualTo(TripSave.Saved(listOf(trip)))
+        assertThat(filesFolder.resolve("trips.json").readText()).contains("2096-06-02T06:30:00Z")
+        assertThat(access.changeTrip(trip, changed)).isEqualTo(TripSave.Saved(listOf(changed)))
+        assertThat(access.trips()).containsExactly(changed)
+        assertThat(access.removeTrip(changed)).isEqualTo(TripSave.Saved(listOf()))
+        assertThat(access.trips()).isEmpty()
+    }
+
+    @Test
+    fun removingOneOfTwoTripsGivesTheOtherBack() = runBlocking<Unit> {
+        val other = Trip(Instant.parse("2096-06-03T06:00:00Z"), Instant.parse("2096-06-03T18:00:00Z"), 120.0, true)
+        access.addTrip(trip)
+        access.addTrip(other)
+
+        assertThat(access.removeTrip(trip)).isEqualTo(TripSave.Saved(listOf(other)))
+        assertThat(access.trips()).containsExactly(other)
+    }
+
+    @Test
+    fun aTripChangeThatCannotBeStoredIsAFailureWithTheEnginesWordsAndTheFileStaysAsItWas() = runBlocking<Unit> {
+        Files.createDirectories(filesFolder)
+        val newer = StoredJson.pretty(StoredJson.`object`().put("version", 99))
+        val file = filesFolder.resolve("trips.json").also { it.writeText(newer) }
+
+        listOf(access.addTrip(trip), access.changeTrip(trip, trip), access.removeTrip(trip)).forEach { outcome ->
+            assertThat(outcome).isInstanceOfSatisfying(TripSave.Failed::class.java) { failed ->
+                assertThat(failed.detail).contains("newer version")
+            }
+        }
+        assertThat(file.readText()).isEqualTo(newer)
+        assertThat(access.trips()).isEmpty()
+    }
+
+    @Test
+    fun aTripChangeThatIsCancelledStaysCancelledInsteadOfFailing() {
+        val access = writingFails(CancellationException("the home ended"))
+
+        assertThatThrownBy { runBlocking { access.addTrip(trip) } }.isInstanceOf(CancellationException::class.java)
+    }
+
+    @Test
+    fun anotherProblemWhileATripChangeIsStoredIsAFailureWithItsWordsOrItsKind() = runBlocking<Unit> {
+        assertThat(writingFails(IllegalStateException("the folder went away")).addTrip(trip))
+            .isEqualTo(TripSave.Failed("the folder went away"))
+        assertThat(writingFails(IllegalStateException()).changeTrip(trip, trip))
+            .isEqualTo(TripSave.Failed("IllegalStateException"))
+        assertThat(writingFails(IOException()).addTrip(trip)).isEqualTo(TripSave.Failed("IOException"))
+    }
+
+    @Test
+    fun twoTripChangesStartedTogetherRunOneAfterTheOtherAndBothAreKept() = runBlocking<Unit> {
+        val pool = Executors.newFixedThreadPool(2)
+        try {
+            val privacy = SlowPrivacy()
+            val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys)
+            val twoThreads = EngineOnDispatcher(AppEngine.build(filesFolder, platform.http(), PrivateFiles(privacy),
+                platform.apiKeys(), Notifier { }), pool.asCoroutineDispatcher())
+            val earlier = Trip(Instant.parse("2096-05-01T08:00:00Z"), Instant.parse("2096-05-01T10:00:00Z"), 40.0,
+                false)
+
+            listOf(async { twoThreads.addTrip(trip) }, async { twoThreads.addTrip(earlier) }).awaitAll()
+
+            assertThat(privacy.most.get()).isEqualTo(1)
+            assertThat(twoThreads.trips()).containsExactly(earlier, trip)
+        } finally {
+            pool.shutdownNow()
+        }
     }
 
     /** File privacy that takes its time and counts how many writes are inside it at once. */

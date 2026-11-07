@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.android.start
 
 import androidx.lifecycle.SavedStateHandle
 import java.nio.file.Path
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Locale
@@ -34,6 +35,7 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.Place
+import nl.enadeag.carchargeplanner.engine.trip.Trip
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -489,6 +491,23 @@ class AppFlowTest {
 
         assertThat(access.away).isEmpty()
         assertThat((home.outlook.state.value as HomeOutlook.State.Planned).dashboard.away).isEmpty()
+        assertThat(access.outlooks).hasSize(2)
+        assertThat(home.outlook.refreshing.value).isTrue()
+    }
+
+    @Test
+    fun aTripRemovedOnTheHomeLeavesTheListAtOnceAndHasANewPlanMade() = runTest {
+        val access = FakeEngineAccess(StartState.Ready(config))
+        val later = Trip(Instant.parse("2096-06-02T06:30:00Z"), Instant.parse("2096-06-02T17:00:00Z"), 300.0, false)
+        access.trips = listOf(later)
+        val home = plannedHome(access, SavedStateHandle())
+        assertThat((home.outlook.state.value as HomeOutlook.State.Planned).dashboard.trips).hasSize(1)
+
+        home.trips.remove(later)
+        runCurrent()
+
+        assertThat(access.trips).isEmpty()
+        assertThat((home.outlook.state.value as HomeOutlook.State.Planned).dashboard.trips).isEmpty()
         assertThat(access.outlooks).hasSize(2)
         assertThat(home.outlook.refreshing.value).isTrue()
     }

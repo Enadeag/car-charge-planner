@@ -19,12 +19,14 @@ import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsProblem
+import nl.enadeag.carchargeplanner.engine.trip.Trip
 import org.slf4j.LoggerFactory
 
 /**
  * The [EngineAccess] on the app's engine: every call that reads or writes runs on the dispatcher it is given,
  * `Dispatchers.IO` in the app and a test's own in the tests. Changes to the one-off away periods run one after the
- * other, so one started before the home is rebuilt cannot overlap a new one and lose it.
+ * other, and so do changes to the trips, so one started before the home is rebuilt cannot overlap a new one and lose
+ * it.
  *
  * @param engine the app's one engine
  * @param dispatcher where the engine's calls run; never the main thread's
@@ -37,6 +39,9 @@ class EngineOnDispatcher(private val engine: Engine, private val dispatcher: Cor
 
     /** Held by an away change while it runs, so a change started while another runs waits for it. */
     private val awayChange = Mutex()
+
+    /** Held by a trip change while it runs, so a change started while another runs waits for it. */
+    private val tripChange = Mutex()
 
     override fun providers() = engine.providers().toList()
 
@@ -100,6 +105,34 @@ class EngineOnDispatcher(private val engine: Engine, private val dispatcher: Cor
                 } catch (failure: RuntimeException) {
                     LOG.warn(what, failure)
                     AwaySave.Failed(failure.message ?: failure.javaClass.simpleName)
+                }
+            }
+        }
+
+    override suspend fun trips(): List<Trip> = withContext(dispatcher) { engine.trips() }
+
+    override suspend fun addTrip(trip: Trip): TripSave =
+        changeTrips("The trip could not be added") { engine.addTrip(trip) }
+
+    override suspend fun changeTrip(trip: Trip, changed: Trip): TripSave =
+        changeTrips("The trip could not be changed") { engine.changeTrip(trip, changed) }
+
+    override suspend fun removeTrip(trip: Trip): TripSave =
+        changeTrips("The trip could not be removed") { engine.removeTrip(trip) }
+
+    private suspend fun changeTrips(what: String, change: () -> List<Trip>): TripSave =
+        tripChange.withLock {
+            withContext(dispatcher) {
+                try {
+                    TripSave.Saved(change())
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (failure: IOException) {
+                    LOG.warn(what + ": " + failure.message)
+                    TripSave.Failed(failure.message ?: failure.javaClass.simpleName)
+                } catch (failure: RuntimeException) {
+                    LOG.warn(what, failure)
+                    TripSave.Failed(failure.message ?: failure.javaClass.simpleName)
                 }
             }
         }

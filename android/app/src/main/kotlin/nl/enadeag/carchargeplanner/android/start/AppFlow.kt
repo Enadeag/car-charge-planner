@@ -17,6 +17,7 @@ import nl.enadeag.carchargeplanner.android.home.AwayEntry
 import nl.enadeag.carchargeplanner.android.home.BatteryEntry
 import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
+import nl.enadeag.carchargeplanner.android.home.TripEntry
 import nl.enadeag.carchargeplanner.android.settings.SettingsPage
 import nl.enadeag.carchargeplanner.android.settings.SettingsSession
 import nl.enadeag.carchargeplanner.android.setup.SetUpAgain
@@ -91,9 +92,10 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
          * @property notice the outcome of a Settings save that no screen showed yet
          * @property battery the entry of the battery level the car shows
          * @property away the changes to the one-off away periods
+         * @property trips the changes to the trips
          */
         data class Home(val outlook: HomeOutlook, val notice: HomeNotice, val battery: BatteryEntry,
-            val away: AwayEntry) : Screen
+            val away: AwayEntry, val trips: TripEntry) : Screen
 
         /**
          * Settings: the list of its pages, or one page.
@@ -191,14 +193,15 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
 
     /**
      * The home, which keeps nothing of set-up in the handle; its entries come back as the handle has them, and a
-     * level or an away period saved there has the plan made again.
+     * level, an away period or a trip saved there has the plan made again.
      */
     private fun home(own: CoroutineScope, kept: HomeOutlook.Kept? = null): Screen.Home {
         SetUpSession.forget(handle)
         val outlook = HomeOutlook(access, own, clock, saves.changes, kept, seen, ::read)
         return Screen.Home(outlook, HomeNotice(saves, own, ::show),
             BatteryEntry(handle, numbers, access, own, outlook::planAgain),
-            AwayEntry(handle, access, own, clock, outlook::awayChanged))
+            AwayEntry(handle, access, own, clock, outlook::awayChanged),
+            TripEntry(access, own, outlook::tripsChanged))
     }
 
     private fun settings(own: CoroutineScope, config: EngineConfig): Screen.Settings {
