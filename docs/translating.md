@@ -203,7 +203,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Car away | Afwezig | the heading of the one-off away periods |
 | None entered for the coming days. | Niets ingevuld voor de komende dagen. | no one-off away period to come |
 | Add | Toevoegen | the button in the "Car away" heading row, which opens the entry of a one-off away period on the page's day |
-| Add away period | Afwezig toevoegen | what TalkBack and Voice Access call that button; it starts with the word on the button in English, and holds it in Dutch |
+| Add away period | Toevoegen: afwezigheid | what TalkBack and Voice Access call that button; it starts with the word on the button in both languages |
 | Remove, Remove Tomorrow, all day | Verwijderen, Verwijderen: Morgen, hele dag | a one-off away period's button, and what TalkBack reads for it: the period as the list shows it; it starts with the word on the button in both languages, so Voice Access finds it |
 | Car away on Thursday, November 5 | Afwezig op donderdag 5 november | the entry's title, with the day's weekday and date as the phone writes them in a sentence |
 | All day, Part of the day | Hele dag, Deel van de dag | the entry's choice |

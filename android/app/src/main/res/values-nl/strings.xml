@@ -212,7 +212,7 @@
   <string name="one_off_part">%1$s, %2$s</string>
   <string name="one_off_days">%1$s %2$s – %3$s %4$s</string>
   <string name="one_off_add">Toevoegen</string>
-  <string name="one_off_add_spoken">Afwezig toevoegen</string>
+  <string name="one_off_add_spoken">Toevoegen: afwezigheid</string>
   <string name="one_off_remove">Verwijderen</string>
   <string name="one_off_remove_spoken">Verwijderen: %1$s</string>
   <string name="one_off_entry_title">Afwezig op %1$s</string>

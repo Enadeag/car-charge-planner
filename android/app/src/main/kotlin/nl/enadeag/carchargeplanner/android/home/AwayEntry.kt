@@ -274,16 +274,19 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
         busyNow.value = true
         // a save cut off as the home ends may still have stored the period
         scope.launch {
-            when (val outcome = access.addAwayPeriod(period)) {
-                is AwaySave.Saved -> {
-                    close()
-                    noticeNow.value = Notice.Saved(period, Entered(draft.zone,
-                        ComingAway.describe(period, draft.zone, clock.instant())))
-                    changed(outcome.periods)
+            try {
+                when (val outcome = access.addAwayPeriod(period)) {
+                    is AwaySave.Saved -> {
+                        close()
+                        noticeNow.value = Notice.Saved(period, Entered(draft.zone,
+                            ComingAway.describe(period, draft.zone, clock.instant())))
+                        changed(outcome.periods)
+                    }
+                    is AwaySave.Failed -> savingNow.value = SaveState.Failed(outcome.detail)
                 }
-                is AwaySave.Failed -> savingNow.value = SaveState.Failed(outcome.detail)
+            } finally {
+                busyNow.value = false
             }
-            busyNow.value = false
         }
     }
 
@@ -342,14 +345,17 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
         }
         busyNow.value = true
         scope.launch {
-            when (val outcome = store(period)) {
-                is AwaySave.Saved -> {
-                    noticeNow.value = saved()
-                    changed(outcome.periods)
+            try {
+                when (val outcome = store(period)) {
+                    is AwaySave.Saved -> {
+                        noticeNow.value = saved()
+                        changed(outcome.periods)
+                    }
+                    is AwaySave.Failed -> noticeNow.value = failed(outcome.detail)
                 }
-                is AwaySave.Failed -> noticeNow.value = failed(outcome.detail)
+            } finally {
+                busyNow.value = false
             }
-            busyNow.value = false
         }
     }
 

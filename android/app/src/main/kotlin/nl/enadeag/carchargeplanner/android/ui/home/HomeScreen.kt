@@ -36,6 +36,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.SnackbarDuration
@@ -546,8 +547,8 @@ private fun AwayList(dashboard: Dashboard, day: DayModel, words: DashboardWords,
             val opener = if (inView) Modifier.focusProperties { canFocus = true }.focusRequester(away.focus)
                 else Modifier
             val spoken = stringResource(R.string.one_off_add_spoken)
-            HeldButton(away.busy, { away.entry.open(day.date, dashboard.zone) },
-                opener.semantics { contentDescription = spoken }) {
+            HeldButton(busy = away.busy, onClick = { away.entry.open(day.date, dashboard.zone) },
+                modifier = opener.semantics { contentDescription = spoken }) {
                 Text(stringResource(R.string.one_off_add))
             }
         }
@@ -561,11 +562,11 @@ private fun AwayList(dashboard: Dashboard, day: DayModel, words: DashboardWords,
                 Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     RowLine(text, focus, coming.period, Modifier.weight(1f))
-                    HeldButton(away.busy, {
+                    HeldButton(busy = away.busy, onClick = {
                         away.going.row = coming.period
                         away.going.rows = periods
                         away.entry.remove(coming.period)
-                    }, Modifier.semantics { contentDescription = spoken }) {
+                    }, modifier = Modifier.semantics { contentDescription = spoken }) {
                         Text(stringResource(R.string.one_off_remove))
                     }
                 }
@@ -721,11 +722,11 @@ private fun TripRow(listed: ListedTrip, words: DashboardWords, trips: TripAction
             }), spoken, pending?.on ?: choice.of(trip), trips.busy) { trips.entry.choose(trip, choice, it) }
         }
         val remove = stringResource(R.string.trip_remove_spoken, spoken)
-        HeldButton(trips.busy, {
+        HeldButton(busy = trips.busy, onClick = {
             trips.going.row = trip
             trips.going.rows = rows
             trips.entry.remove(trip)
-        }, Modifier.align(Alignment.End).semantics { contentDescription = remove }) {
+        }, modifier = Modifier.align(Alignment.End).semantics { contentDescription = remove }) {
             Text(stringResource(R.string.trip_remove))
         }
     }
@@ -754,9 +755,14 @@ private fun ChoiceRow(label: String, trip: String, checked: Boolean, busy: Boole
             }
         }, verticalAlignment = Alignment.CenterVertically) {
         Checkbox(checked = checked, onCheckedChange = null, enabled = !busy)
-        Text(label, modifier = Modifier.padding(start = 16.dp))
+        val colour = LocalContentColor.current
+        Text(label, modifier = Modifier.padding(start = 16.dp),
+            color = if (busy) colour.copy(alpha = DISABLED_ALPHA) else colour)
     }
 }
+
+/** Material's alpha for a disabled control's content, as its [Checkbox] draws when it is off. */
+private const val DISABLED_ALPHA = 0.38f
 
 /**
  * A text button that is off while a change runs yet keeps the focus: Compose takes the focus from a disabled control,

@@ -158,15 +158,18 @@ class TripEntry(private val access: EngineAccess, private val scope: CoroutineSc
     private fun run(store: suspend () -> TripSave, saved: Notice?, failed: (String) -> Notice) {
         busyNow.value = true
         scope.launch {
-            when (val outcome = store()) {
-                is TripSave.Saved -> {
-                    saved?.let { noticeNow.value = it }
-                    changed(outcome.trips)
+            try {
+                when (val outcome = store()) {
+                    is TripSave.Saved -> {
+                        saved?.let { noticeNow.value = it }
+                        changed(outcome.trips)
+                    }
+                    is TripSave.Failed -> noticeNow.value = failed(outcome.detail)
                 }
-                is TripSave.Failed -> noticeNow.value = failed(outcome.detail)
+            } finally {
+                pendingNow.value = null
+                busyNow.value = false
             }
-            pendingNow.value = null
-            busyNow.value = false
         }
     }
 }

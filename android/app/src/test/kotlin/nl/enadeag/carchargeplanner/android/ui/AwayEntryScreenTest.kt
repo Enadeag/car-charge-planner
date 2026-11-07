@@ -599,7 +599,7 @@ class AwayEntryScreenTest {
     fun theListAndTheEntryAreInDutch() {
         access.away = listOf(tomorrow)
         show()
-        add.assertExists().assert(hasContentDescription("Afwezig toevoegen"))
+        add.assertExists().assert(hasContentDescription("Toevoegen: afwezigheid"))
         compose.assertShowsNoneOf(englishOnlyTexts())
         compose.onNode(hasContentDescription("Verwijderen: Morgen, hele dag")).performScrollTo()
             .assert(hasText("Verwijderen"))
