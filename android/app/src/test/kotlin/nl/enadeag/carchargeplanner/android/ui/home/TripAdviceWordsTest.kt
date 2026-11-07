@@ -3,24 +3,10 @@ package nl.enadeag.carchargeplanner.android.ui.home
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import java.time.LocalDate
 import java.nio.file.Files
-import java.util.Optional
-import nl.enadeag.carchargeplanner.android.home.Plans
-import nl.enadeag.carchargeplanner.android.notify.LockScreen
-import nl.enadeag.carchargeplanner.android.ui.notify.NoticeWords
-import nl.enadeag.carchargeplanner.engine.config.EngineConfig
-import nl.enadeag.carchargeplanner.engine.config.ProviderId
-import nl.enadeag.carchargeplanner.engine.notify.AnnouncedWindows
-import nl.enadeag.carchargeplanner.engine.notify.Announcer
-import nl.enadeag.carchargeplanner.engine.notify.Notice
-import nl.enadeag.carchargeplanner.engine.notify.PlanLevel
-import nl.enadeag.carchargeplanner.engine.notify.ToldTrips
-import nl.enadeag.carchargeplanner.engine.notify.TripChargeStart
-import nl.enadeag.carchargeplanner.engine.plan.TripAdvice
-import nl.enadeag.carchargeplanner.engine.store.FilePrivacy
-import nl.enadeag.carchargeplanner.engine.store.PrivateFiles
+import java.time.LocalDate
 import java.util.Locale
+import java.util.Optional
 import java.util.TimeZone
 import nl.enadeag.carchargeplanner.android.home.BatteryLevels
 import nl.enadeag.carchargeplanner.android.home.ChargeLevels
@@ -28,6 +14,7 @@ import nl.enadeag.carchargeplanner.android.home.DayKind
 import nl.enadeag.carchargeplanner.android.home.DayModel
 import nl.enadeag.carchargeplanner.android.home.DayName
 import nl.enadeag.carchargeplanner.android.home.NoWindowWhy
+import nl.enadeag.carchargeplanner.android.home.Plans
 import nl.enadeag.carchargeplanner.android.home.SolarChart
 import nl.enadeag.carchargeplanner.android.home.SourceFigure
 import nl.enadeag.carchargeplanner.android.home.TripAdviceModel
@@ -39,9 +26,22 @@ import nl.enadeag.carchargeplanner.android.home.TripAdviceModelTest.Companion.ad
 import nl.enadeag.carchargeplanner.android.home.TripAdviceModelTest.Companion.at
 import nl.enadeag.carchargeplanner.android.home.TripAdviceModelTest.Companion.grid
 import nl.enadeag.carchargeplanner.android.home.TripAdviceModelTest.Companion.model
+import nl.enadeag.carchargeplanner.android.notify.LockScreen
+import nl.enadeag.carchargeplanner.android.ui.notify.NoticeWords
+import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.Percent
+import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.notify.AnnouncedWindows
+import nl.enadeag.carchargeplanner.engine.notify.Announcer
+import nl.enadeag.carchargeplanner.engine.notify.Notice
+import nl.enadeag.carchargeplanner.engine.notify.PlanLevel
+import nl.enadeag.carchargeplanner.engine.notify.ToldTrips
+import nl.enadeag.carchargeplanner.engine.notify.TripChargeStart
+import nl.enadeag.carchargeplanner.engine.plan.TripAdvice
 import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge.Start
 import nl.enadeag.carchargeplanner.engine.plan.Window
+import nl.enadeag.carchargeplanner.engine.store.FilePrivacy
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test
@@ -128,10 +128,11 @@ class TripAdviceWordsTest {
             "uit het net. Start het laden vanavond om 21:00. Stel 16 A in (3,7 kW), en een laadlimiet van 85% in de " +
             "auto of de laadpaal.")
         assertThat(today.level).isEqualTo("Uitgaande van een accuniveau van 45%.")
-        assertThat(today.spoken).isEqualTo("Advies voor de rit: Rit morgen om 08:15, 150 km heen en terug. Laad tot " +
-            "85%: op zonnestroom vandaag 12:00 tot 15:00, daarna uit het net. Start het laden vanavond om 21:00. Stel " +
-            "16 A in (3,7 kW), en een laadlimiet van 85% in de auto of de laadpaal. Uitgaande van een accuniveau van " +
-            "45%.")
+        assertThat(today.spoken).isEqualTo(
+            "Advies voor de rit: Rit morgen om 08:15, 150 km heen en terug. Laad tot 85%: op zonnestroom vandaag " +
+                "12:00 tot 15:00, daarna uit het net. Start het laden vanavond om 21:00. Stel 16 A in (3,7 kW), " +
+                "en een laadlimiet van 85% in de auto of de laadpaal. Uitgaande van een accuniveau van 45%.",
+        )
     }
 
     @Test

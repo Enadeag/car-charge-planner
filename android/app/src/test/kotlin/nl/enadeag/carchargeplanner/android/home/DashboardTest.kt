@@ -250,8 +250,10 @@ class DashboardTest {
 
     private fun at(day: LocalDate, time: String) = day.atTime(LocalTime.parse(time)).atZone(amsterdam).toInstant()
 
-    private fun trip(from: LocalDate, departure: String, to: LocalDate, back: String, notWithThisCar: Boolean = false,
-        canChargeThere: Boolean = false) = Trip(at(from, departure), at(to, back), 100.0, canChargeThere, notWithThisCar)
+    private fun trip(
+        from: LocalDate, departure: String, to: LocalDate, back: String, notWithThisCar: Boolean = false,
+        canChargeThere: Boolean = false,
+    ) = Trip(at(from, departure), at(to, back), 100.0, canChargeThere, notWithThisCar)
 
     /** The plan's advice for a trip, which asks the owner to act when it needs a grid charge. */
     private fun advice(trip: Trip, asks: Boolean = false): TripAdvice {

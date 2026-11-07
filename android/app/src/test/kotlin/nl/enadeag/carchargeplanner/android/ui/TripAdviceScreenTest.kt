@@ -372,22 +372,26 @@ class TripAdviceScreenTest {
     fun adjustStaysOpenToUseWhileATripChangeRuns() {
         val gate = CompletableDeferred<Unit>()
         access.tripGate = gate
-        show()
-        tab("Wednesday")
-        compose.onNode(hasContentDescription(text(R.string.trip_choice_spoken, text(R.string.trip_not_with_this_car),
-            text(R.string.trip_line_spoken, text(R.string.trip_days_spoken, "Tomorrow", "08:00", "Wed, Jun 3",
-                "18:00"), text(R.string.trip_distance, "300"))))).performScrollTo().performClick()
-        compose.waitForIdle()
-        assertThat(access.tripChanges).hasSize(1)
-        tab("Tomorrow")
+        try {
+            show()
+            tab("Wednesday")
+            val choice = text(R.string.trip_choice_spoken, text(R.string.trip_not_with_this_car),
+                text(R.string.trip_line_spoken, text(R.string.trip_days_spoken, "Tomorrow", "08:00", "Wed, Jun 3",
+                    "18:00"), text(R.string.trip_distance, "300")))
+            compose.onNode(hasContentDescription(choice)).performScrollTo().performClick()
+            compose.waitForIdle()
+            assertThat(access.tripChanges).hasSize(1)
+            tab("Tomorrow")
 
-        adjust.performScrollTo().assertIsEnabled().performClick()
-        compose.waitForIdle()
+            adjust.performScrollTo().assertIsEnabled().performClick()
+            compose.waitForIdle()
 
-        assertThat(gate.isCompleted).`as`("the trip change still runs").isFalse()
-        selectedTab("Today")
-        compose.onNode(isDialog()).assertExists()
-        gate.complete(Unit)
+            assertThat(gate.isCompleted).`as`("the trip change still runs").isFalse()
+            selectedTab("Today")
+            compose.onNode(isDialog()).assertExists()
+        } finally {
+            gate.complete(Unit)
+        }
     }
 
     /** The colour the chip of the trip advice card on the page in view is drawn on, a little inside its start. */

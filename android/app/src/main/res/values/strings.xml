@@ -277,8 +277,8 @@
   <!-- the battery level the advice starts from, written already: assumed, or entered by the owner -->
   <string name="trip_advice_assumed">Assuming a battery level of %1$s%%.</string>
   <string name="trip_advice_entered">Based on the battery level of %1$s%% you entered.</string>
-  <!-- the advice as a screen reader reads it, in one go: %1$s trip_advice_label; %2$s the title; %3$s the plan;
-       %4$s the battery level it starts from -->
+  <!-- the advice as a screen reader reads it, in one go: %1$s trip_advice_label; %2$s the title; %3$s the plan,
+       its windows read as time_span_spoken; %4$s the battery level it starts from -->
   <string name="trip_advice_spoken">%1$s: %2$s %3$s %4$s</string>
   <!-- the button under the advice that moves to today's tab and opens the entry of the battery level -->
   <string name="trip_advice_adjust">Adjust</string>
