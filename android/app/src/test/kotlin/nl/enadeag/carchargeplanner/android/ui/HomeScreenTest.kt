@@ -763,7 +763,7 @@ class HomeScreenTest {
 
     // On Android 16: Android 17 answers a request at once when the permission is granted already, and Robolectric 4.17
     // counts every permission the app's manifest names as granted there, so the question is answered "allowed" before
-    // the refusal below can be given (#321)
+    // the refusal below can be given (#321); try it on 37 again with each Robolectric update
     @Test
     @Config(sdk = [36])
     fun theNotificationCardsButtonAsksAndroidAndARefusalLeadsToTheSettings() {
