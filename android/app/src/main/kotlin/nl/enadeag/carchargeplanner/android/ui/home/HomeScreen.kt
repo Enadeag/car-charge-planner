@@ -661,27 +661,35 @@ private class TripAction(val entry: TripEntry, val busy: Boolean, val pending: T
  * What each trip's row is keyed by, which drawing reads but a choice pressed writes: a trip by itself, and a trip a
  * choice changed by the key of the trip it was. So the row and the focus on its checkbox stay as a choice saves, also
  * when the store puts the changed trip after another that leaves at the same time, and two trips that differ only in
- * a choice keep a row each.
+ * a choice keep a row each. A trip a choice was to make but did not, as its save failed, may come later another way,
+ * so a trip takes the key of the one it was only while that one is not listed too, and no two rows share a key. A
+ * choice pressed forgets the trips its page no longer lists. The keys are not kept when the home is made again, such
+ * as when the phone turns, which is fine, as the focus is lost then anyway.
  */
 private class TripKeys {
     private val before = mutableMapOf<Trip, Trip>()
 
     /**
-     * The key of a trip's row.
+     * The keys of a page's rows.
      *
-     * @param trip the trip as the dashboard lists it
-     * @return the trip its first row was drawn for
+     * @param trips the trips the page lists, each once
+     * @return the key of each trip's row, in the same order, no two the same
      */
-    fun of(trip: Trip): Trip = before[trip] ?: trip
+    fun of(trips: List<Trip>): List<Trip> {
+        val taken = mutableSetOf<Trip>()
+        return trips.map { trip -> before[trip]?.takeIf { it !in trips && taken.add(it) } ?: trip }
+    }
 
     /**
      * A choice is being saved, so the changed trip takes the row of the trip it was.
      *
-     * @param trip the trip as the dashboard lists it
+     * @param key the key of the row whose choice was pressed
      * @param changed the trip with the choice changed
+     * @param listed the trips the page lists
      */
-    fun changing(trip: Trip, changed: Trip) {
-        before[changed] = of(trip)
+    fun changing(key: Trip, changed: Trip, listed: List<Trip>) {
+        before.keys.retainAll(listed.toSet())
+        before[changed] = key
     }
 }
 
@@ -726,9 +734,9 @@ private fun TripsCard(dashboard: Dashboard, day: DayModel, words: DashboardWords
             if (listed.isEmpty()) {
                 NoneLine(stringResource(R.string.trips_none), focus)
             }
-            listed.forEach { trip ->
-                key(trips.keys.of(trip.trip)) {
-                    TripRow(trip, words, trips, focus, rows)
+            listed.zip(trips.keys.of(rows)).forEach { (trip, row) ->
+                key(row) {
+                    TripRow(trip, row, words, trips, focus, rows)
                 }
             }
         }
@@ -737,8 +745,8 @@ private fun TripsCard(dashboard: Dashboard, day: DayModel, words: DashboardWords
 
 /** One trip of the Trips card: its line, its two choices and its Remove. */
 @Composable
-private fun TripRow(listed: ListedTrip, words: DashboardWords, trips: TripAction, focus: RowFocus<Trip>,
-    rows: List<Trip>) {
+private fun TripRow(listed: ListedTrip, key: Trip, words: DashboardWords, trips: TripAction,
+    focus: RowFocus<Trip>, rows: List<Trip>) {
     val trip = listed.trip
     val spoken = words.spokenTrip(listed)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -749,7 +757,7 @@ private fun TripRow(listed: ListedTrip, words: DashboardWords, trips: TripAction
                 TripEntry.Choice.NOT_WITH_THIS_CAR -> R.string.trip_not_with_this_car
                 TripEntry.Choice.CAN_CHARGE -> R.string.trip_can_charge
             }), spoken, pending?.on ?: choice.of(trip), trips.busy) {
-                trips.keys.changing(trip, choice.put(trip, it))
+                trips.keys.changing(key, choice.put(trip, it), rows)
                 trips.entry.choose(trip, choice, it)
             }
         }

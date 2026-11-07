@@ -546,13 +546,14 @@ class AwayEntryTest {
     }
 
     @Test
-    fun anUndoPressedWhileARemoveRunsWaitsForItAndThenAddsThePeriodBack() = runTest {
+    fun anUndoPressedWhileARemoveRunsWaitsForItAndForTheScreenToSayItAndThenAddsThePeriodBack() = runTest {
         val going = OneOffAwayPeriod.allDay(today.plusDays(1), amsterdam)
         val other = OneOffAwayPeriod.allDay(today.plusDays(2), amsterdam)
         access.away = listOf(going, other)
         val entry = entry()
         entry.remove(going)
         runCurrent()
+        entry.noticeShown()
         val gate = CompletableDeferred<Unit>()
         access.awayGate = gate
         entry.remove(other)
@@ -563,6 +564,10 @@ class AwayEntryTest {
         assertThat(access.awayChanges).containsExactly("remove" to going, "remove" to other)
         gate.complete(Unit)
         runCurrent()
+        assertThat(entry.notice.value).isEqualTo(Notice.Removed(other))
+        assertThat(access.awayChanges).hasSize(2)
+        entry.noticeShown()
+        runCurrent()
 
         assertThat(access.awayChanges.last()).isEqualTo("add" to going)
         assertThat(access.away).containsExactly(going)
@@ -571,12 +576,13 @@ class AwayEntryTest {
     }
 
     @Test
-    fun anUndoPressedWhileASaveRunsWaitsForItAndThenAddsThePeriodBack() = runTest {
+    fun anUndoPressedWhileASaveRunsWaitsForItAndForTheScreenToSayItAndThenAddsThePeriodBack() = runTest {
         val going = OneOffAwayPeriod.allDay(today.plusDays(2), amsterdam)
         access.away = listOf(going)
         val entry = entry()
         entry.remove(going)
         runCurrent()
+        entry.noticeShown()
         entry.open(today, amsterdam)
         val gate = CompletableDeferred<Unit>()
         access.awayGate = gate
@@ -588,9 +594,41 @@ class AwayEntryTest {
         assertThat(access.awayChanges.map { it.first }).containsExactly("remove", "add")
         gate.complete(Unit)
         runCurrent()
+        assertThat((entry.notice.value as Notice.Saved).period).isNotEqualTo(going)
+        assertThat(access.awayChanges).hasSize(2)
+        entry.noticeShown()
+        runCurrent()
 
         assertThat(access.away).hasSize(2).contains(going)
         assertThat(entry.notice.value).isEqualTo(Notice.Saved(going))
+    }
+
+    @Test
+    fun anUndoPressedWhileARemoveThatFailsRunsWaitsUntilTheScreenSaidThatFailure() = runTest {
+        val going = OneOffAwayPeriod.allDay(today.plusDays(1), amsterdam)
+        val other = OneOffAwayPeriod.allDay(today.plusDays(2), amsterdam)
+        access.away = listOf(going, other)
+        val entry = entry()
+        entry.remove(going)
+        runCurrent()
+        entry.noticeShown()
+        val gate = CompletableDeferred<Unit>()
+        access.awayGate = gate
+        access.awayFails = "No space left on device"
+        entry.remove(other)
+        runCurrent()
+        entry.undo(going)
+        gate.complete(Unit)
+        runCurrent()
+        access.awayFails = null
+
+        assertThat(entry.notice.value).isEqualTo(Notice.NotRemoved("No space left on device"))
+        assertThat(access.awayChanges).containsExactly("remove" to going, "remove" to other)
+        entry.noticeShown()
+        runCurrent()
+
+        assertThat(entry.notice.value).isEqualTo(Notice.Saved(going))
+        assertThat(access.away).containsExactly(going, other)
     }
 
     @Test

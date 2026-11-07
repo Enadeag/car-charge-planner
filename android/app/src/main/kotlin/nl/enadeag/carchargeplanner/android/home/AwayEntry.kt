@@ -26,7 +26,8 @@ import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
  * entered and why. Remove acts at once and says so once, with the period, so Undo can add it back; a Remove or an
  * Undo that failed says so once with the engine's words. Only one change runs at a time: while one does, the others
  * do nothing, as the screen has them off, except an Undo, which waits for it and then runs, as its snackbar has
- * closed and would otherwise lose the period. Back, or a tap beside the entry, asks before it throws changed times or
+ * closed and would otherwise lose the period; when that change has something to say, the Undo waits until the screen
+ * said it, so neither notice is lost. Back, or a tap beside the entry, asks before it throws changed times or
  * choice away; Cancel throws them away at once. While a save runs, nothing closes the entry. Whether it is open, its
  * day and zone, what was entered and the question survive turning the phone and the system ending the app in the
  * [SavedStateHandle], and are forgotten when it closes, or when they can no longer be read, such as a time zone that
@@ -305,8 +306,9 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
     }
 
     /**
-     * Adds a removed period back, as Undo does. While a change runs it waits for it and then runs, also when the
-     * entry is open by then; while the entry is open and no change runs it does nothing.
+     * Adds a removed period back, as Undo does. While a change runs it waits for it, and for the screen to say what
+     * it came to, and then runs, also when the entry is open by then; while the entry is open and no change runs it
+     * does nothing.
      *
      * @param period the period that was removed
      */
@@ -342,16 +344,22 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
     /** Stays in the entry with what was entered, as the owner chose Keep editing. */
     fun keepEditing() = ask(false)
 
-    /** The screen said what the last change came to, so it is not said again after turning. */
+    /**
+     * The screen said what the last change came to, so it is not said again after turning; an Undo that waited for
+     * that change runs now.
+     */
     fun noticeShown() {
         noticeNow.value = null
+        next()
     }
 
     private fun restore(period: OneOffAwayPeriod) =
         run(period, access::addAwayPeriod, { Notice.Saved(period) }, Notice::NotSaved)
 
     private fun next() {
-        waiting.removeFirstOrNull()?.let(::restore)
+        if (!busyNow.value && noticeNow.value == null) {
+            waiting.removeFirstOrNull()?.let(::restore)
+        }
     }
 
     private fun run(period: OneOffAwayPeriod, store: suspend (OneOffAwayPeriod) -> AwaySave, saved: () -> Notice,

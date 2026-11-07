@@ -933,7 +933,7 @@ class AwayEntryScreenTest {
     }
 
     @Test
-    fun anUndoPressedWhileAnotherRemoveRunsAddsThePeriodBackOnceThatIsDoneSaysSoAndTakesTheFocus() {
+    fun anUndoPressedWhileAnotherRemoveRunsAddsThePeriodBackOnceThatRemoveIsSaidSaysSoAndTakesTheFocus() {
         access.away = listOf(tomorrow, wednesday)
         show()
         val first = text(R.string.one_off_all_day, "Tomorrow")
@@ -949,7 +949,14 @@ class AwayEntryScreenTest {
         compose.onNodeWithText(text(R.string.action_undo)).performClick()
         compose.waitForIdle()
         line(first).assertDoesNotExist()
+        val adding = CompletableDeferred<Unit>()
+        access.awayGate = adding
         gate.complete(Unit)
+        assertThat(access.awayChanges).containsExactly("remove" to tomorrow, "remove" to wednesday)
+        compose.waitForIdle()
+        compose.onNodeWithText(text(R.string.one_off_removed, second)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.action_undo)).assertIsDisplayed()
+        adding.complete(Unit)
         compose.waitForIdle()
 
         assertThat(access.away).containsExactly(tomorrow)

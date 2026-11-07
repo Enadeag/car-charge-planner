@@ -16,7 +16,8 @@ import nl.enadeag.carchargeplanner.engine.trip.Trip
  * and says so once with the engine's words; one saved says nothing, as the choice shows it. Remove acts at once and
  * says so once, with the trip, so Undo can add it back; a Remove or an Undo that failed says so once with the engine's
  * words. Only one change runs at a time: while one does, a choice or a Remove does nothing, as the screen has the
- * controls off, and an Undo waits for it and then runs, as its snackbar has closed and would otherwise lose the trip.
+ * controls off, and an Undo waits for it and then runs, as its snackbar has closed and would otherwise lose the trip;
+ * when that change has something to say, the Undo waits until the screen said it, so neither notice is lost.
  * Called from the main thread.
  *
  * @param access stores the changes
@@ -142,7 +143,8 @@ class TripEntry(private val access: EngineAccess, private val scope: CoroutineSc
     }
 
     /**
-     * Adds a removed trip back, as Undo does. While a change runs it waits for it and then runs.
+     * Adds a removed trip back, as Undo does. While a change runs it waits for it, and for the screen to say what it
+     * came to, and then runs.
      *
      * @param trip the trip that was removed
      */
@@ -154,12 +156,22 @@ class TripEntry(private val access: EngineAccess, private val scope: CoroutineSc
         }
     }
 
-    /** The screen said what the last change came to, so it is not said again after turning. */
+    /**
+     * The screen said what the last change came to, so it is not said again after turning; an Undo that waited for
+     * that change runs now.
+     */
     fun noticeShown() {
         noticeNow.value = null
+        next()
     }
 
     private fun restore(trip: Trip) = run({ access.addTrip(trip) }, Notice.Saved(trip), Notice::NotSaved)
+
+    private fun next() {
+        if (!busyNow.value && noticeNow.value == null) {
+            waiting.removeFirstOrNull()?.let(::restore)
+        }
+    }
 
     private fun run(store: suspend () -> TripSave, saved: Notice?, failed: (String) -> Notice) {
         busyNow.value = true
@@ -175,7 +187,7 @@ class TripEntry(private val access: EngineAccess, private val scope: CoroutineSc
             } finally {
                 pendingNow.value = null
                 busyNow.value = false
-                waiting.removeFirstOrNull()?.let(::restore)
+                next()
             }
         }
     }

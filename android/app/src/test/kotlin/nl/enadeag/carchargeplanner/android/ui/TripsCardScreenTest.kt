@@ -308,6 +308,34 @@ class TripsCardScreenTest {
     }
 
     @Test
+    fun aTripAChoiceFailedToMakeThatComesLaterAnotherWayGetsItsOwnRowAndTheFocusStays() {
+        access.trips = listOf(dayTrip)
+        show()
+        keyboard()
+        val canCharge = hasContentDescription(text(R.string.trip_choice_spoken, text(R.string.trip_can_charge),
+            dayTripSpoken()))
+        val pressed = compose.onNode(canCharge).performScrollTo()
+        pressed.requestFocus()
+        access.tripFails = "No space left on device"
+        pressed.enter()
+        access.tripFails = null
+        pressed.assert(toggle(ToggleableState.Off)).assertIsFocused()
+
+        // the trip as the choice would have made it comes another way, such as the desktop's file copied over, and
+        // is listed before the trip it was, as both leave at the same time
+        val charging = Trip(dayTrip.departure(), dayTrip.returnTime(), 300.0, true, false)
+        access.trips = listOf(charging, dayTrip)
+        compose.onNode(hasContentDescription(text(R.string.home_refresh)))
+            .performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+        access.outlooks.last().complete(week())
+        compose.waitForIdle()
+
+        compose.onAllNodes(canCharge)[0].assert(toggle(ToggleableState.On)).assertIsNotFocused()
+        compose.onAllNodes(canCharge)[1].assert(toggle(ToggleableState.Off)).assertIsFocused()
+    }
+
+    @Test
     fun aChoiceWithTheKeyboardFocusKeepsItWhileItSavesAndAKeyPressedMeanwhileDoesNothing() {
         access.trips = listOf(dayTrip)
         val gate = CompletableDeferred<Unit>()
@@ -447,6 +475,68 @@ class TripsCardScreenTest {
         compose.onNodeWithText(text(R.string.trip_saved, dayTripLine())).assertIsDisplayed()
         compose.onNodeWithText(dayTripLine()).assertIsFocused()
         choice(R.string.trip_can_charge, dayTripSpoken("19:00", "22:00")).assert(toggle(ToggleableState.On))
+    }
+
+    @Test
+    fun anUndoPressedWhileAnotherRemoveRunsWaitsUntilThatRemoveIsSaidWithItsUndoAndThenAddsTheTripBack() {
+        val evening = trip(today, "19:00", today, "22:00", 300.0)
+        access.trips = listOf(dayTrip, evening)
+        show()
+        remove(dayTripSpoken()).performScrollTo().performClick()
+        compose.waitForIdle()
+        val gate = CompletableDeferred<Unit>()
+        access.tripGate = gate
+        // the snackbar covers the bottom of the page, so this Remove is pressed as TalkBack does
+        remove(dayTripSpoken("19:00", "22:00")).performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+        compose.onNodeWithText(text(R.string.action_undo)).performClick()
+        compose.waitForIdle()
+        val adding = CompletableDeferred<Unit>()
+        access.tripGate = adding
+
+        gate.complete(Unit)
+        assertThat(access.tripChanges).containsExactly("remove" to dayTrip, "remove" to evening)
+        compose.waitForIdle()
+        compose.onNodeWithText(text(R.string.trip_removed, dayTripLine("19:00", "22:00"))).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.action_undo)).assertIsDisplayed()
+        assertThat(access.tripChanges.last()).isEqualTo("add" to dayTrip)
+        adding.complete(Unit)
+        compose.waitForIdle()
+
+        assertThat(access.trips).containsExactly(dayTrip)
+        compose.onNodeWithText(text(R.string.trip_saved, dayTripLine())).assertIsDisplayed()
+        compose.onNodeWithText(dayTripLine()).assertIsFocused()
+    }
+
+    @Test
+    fun anUndoPressedWhileAnotherRemoveFailsWaitsUntilThatFailureIsSaidAndThenAddsTheTripBack() {
+        val evening = trip(today, "19:00", today, "22:00", 300.0)
+        access.trips = listOf(dayTrip, evening)
+        show()
+        remove(dayTripSpoken()).performScrollTo().performClick()
+        compose.waitForIdle()
+        val gate = CompletableDeferred<Unit>()
+        access.tripGate = gate
+        access.tripFails = "No space left on device"
+        remove(dayTripSpoken("19:00", "22:00")).performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+        compose.onNodeWithText(text(R.string.action_undo)).performClick()
+        compose.waitForIdle()
+        val adding = CompletableDeferred<Unit>()
+        access.tripGate = adding
+
+        gate.complete(Unit)
+        access.tripFails = null
+        assertThat(access.tripChanges).containsExactly("remove" to dayTrip, "remove" to evening)
+        compose.waitForIdle()
+        val failed = text(R.string.trip_not_removed) + " " +
+            text(R.string.details_in_english, "No space left on device")
+        compose.onNodeWithText(failed).assertIsDisplayed()
+        adding.complete(Unit)
+        compose.waitForIdle()
+
+        assertThat(access.trips).containsExactly(dayTrip, evening)
+        compose.onNodeWithText(text(R.string.trip_saved, dayTripLine())).assertIsDisplayed()
     }
 
     @Test

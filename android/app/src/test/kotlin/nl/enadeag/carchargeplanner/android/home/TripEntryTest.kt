@@ -126,6 +126,7 @@ class TripEntryTest {
         val entry = entry()
         entry.remove(trip)
         runCurrent()
+        entry.noticeShown()
         val gate = CompletableDeferred<Unit>()
         access.tripGate = gate
         entry.choose(other, Choice.NOT_WITH_THIS_CAR, true)
@@ -142,6 +143,57 @@ class TripEntryTest {
         assertThat(access.trips).contains(trip)
         assertThat(entry.notice.value).isEqualTo(Notice.Saved(trip))
         assertThat(entry.busy.value).isFalse()
+    }
+
+    @Test
+    fun anUndoPressedWhileARemoveRunsWaitsUntilTheScreenSaidThatRemoveSoBothAreSaid() = runTest {
+        access.trips = listOf(trip, other)
+        val entry = entry()
+        entry.remove(trip)
+        runCurrent()
+        entry.noticeShown()
+        val gate = CompletableDeferred<Unit>()
+        access.tripGate = gate
+        entry.remove(other)
+        runCurrent()
+        entry.undo(trip)
+        gate.complete(Unit)
+        runCurrent()
+
+        assertThat(entry.notice.value).isEqualTo(Notice.Removed(other))
+        assertThat(access.tripChanges).containsExactly("remove" to trip, "remove" to other)
+        entry.noticeShown()
+        runCurrent()
+
+        assertThat(access.tripChanges.last()).isEqualTo("add" to trip)
+        assertThat(entry.notice.value).isEqualTo(Notice.Saved(trip))
+        assertThat(access.trips).containsExactly(trip)
+    }
+
+    @Test
+    fun anUndoPressedWhileARemoveThatFailsRunsWaitsUntilTheScreenSaidThatFailure() = runTest {
+        access.trips = listOf(trip, other)
+        val entry = entry()
+        entry.remove(trip)
+        runCurrent()
+        entry.noticeShown()
+        val gate = CompletableDeferred<Unit>()
+        access.tripGate = gate
+        access.tripFails = "No space left on device"
+        entry.remove(other)
+        runCurrent()
+        entry.undo(trip)
+        gate.complete(Unit)
+        runCurrent()
+        access.tripFails = null
+
+        assertThat(entry.notice.value).isEqualTo(Notice.NotRemoved("No space left on device"))
+        assertThat(access.tripChanges).containsExactly("remove" to trip, "remove" to other)
+        entry.noticeShown()
+        runCurrent()
+
+        assertThat(entry.notice.value).isEqualTo(Notice.Saved(trip))
+        assertThat(access.trips).containsExactly(trip, other)
     }
 
     @Test
