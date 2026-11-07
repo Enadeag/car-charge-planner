@@ -381,8 +381,11 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
                     Text(stringResource(R.string.home_zone, dashboard.zone.id))
                 }
                 DayCard(day, dashboard, words)
+                // by the trip, so a card keeps its place in the composition when a trip before it goes
                 dashboard.tripAdviceOn(day).forEach {
-                    TripAdviceCard(words.tripAdvice(it, day.date, dashboard.today), it.source, adjust)
+                    key(it.departure, it.distanceKm) {
+                        TripAdviceCard(words.tripAdvice(it, day.date, dashboard.today), it.source, adjust)
+                    }
                 }
                 dashboard.adviceOn(day)?.let { GridAdviceCard(it, words) }
                 SolarCard(day, words)

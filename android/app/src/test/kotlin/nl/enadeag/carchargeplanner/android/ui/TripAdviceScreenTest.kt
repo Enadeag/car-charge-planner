@@ -3,12 +3,14 @@ package nl.enadeag.carchargeplanner.android.ui
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
@@ -18,6 +20,7 @@ import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
@@ -36,7 +39,9 @@ import java.util.Locale
 import java.util.Optional
 import kotlin.math.PI
 import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -361,6 +366,51 @@ class TripAdviceScreenTest {
         compose.assertShownButNotReadApart("40 → 25% after the trip")
         compose.assertReadAsOne("Car battery 40% at the start of tomorrow, 40% after charging; minimum 20%, target " +
             "80%. After the trip the battery is at 25% at the end of the day.", Role.Image)
+    }
+
+    @Test
+    fun adjustStaysOpenToUseWhileATripChangeRuns() {
+        val gate = CompletableDeferred<Unit>()
+        access.tripGate = gate
+        show()
+        tab("Wednesday")
+        compose.onNode(hasContentDescription(text(R.string.trip_choice_spoken, text(R.string.trip_not_with_this_car),
+            text(R.string.trip_line_spoken, text(R.string.trip_days_spoken, "Tomorrow", "08:00", "Wed, Jun 3",
+                "18:00"), text(R.string.trip_distance, "300"))))).performScrollTo().performClick()
+        compose.waitForIdle()
+        assertThat(access.tripChanges).hasSize(1)
+        tab("Tomorrow")
+
+        adjust.performScrollTo().assertIsEnabled().performClick()
+        compose.waitForIdle()
+
+        assertThat(gate.isCompleted).`as`("the trip change still runs").isFalse()
+        selectedTab("Today")
+        compose.onNode(isDialog()).assertExists()
+        gate.complete(Unit)
+    }
+
+    /** The colour the chip of the trip advice card on the page in view is drawn on, a little inside its start. */
+    private fun chipGround(): Int {
+        val width = compose.onRoot().fetchSemanticsNode().size.width
+        val chip = compose.onAllNodes(hasText(text(R.string.trip_advice_label)), useUnmergedTree = true)
+            .fetchSemanticsNodes().single { it.boundsInRoot.left >= 0 && it.boundsInRoot.left < width }.boundsInRoot
+        return compose.screenshot().getPixel(chip.left.roundToInt() + 3, chip.center.y.roundToInt())
+    }
+
+    @Test
+    fun theChipIsDrawnInTheColoursOfTheAdvicesSource() {
+        show()
+        card(todaysAdvice).performScrollTo()
+
+        val grid = chipGround()
+        tab("Wednesday")
+        tab("Thursday")
+        card(thursdaysAdvice).performScrollTo()
+        val car = chipGround()
+
+        assertThat(grid).`as`("a grid charge").isEqualTo(SourceColours.LIGHT.grid.container.toArgb())
+        assertThat(car).`as`("enough").isEqualTo(SourceColours.LIGHT.car.container.toArgb())
     }
 
     @Test

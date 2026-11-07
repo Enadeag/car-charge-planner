@@ -128,7 +128,123 @@ class TripAdviceWordsTest {
             "uit het net. Start het laden vanavond om 21:00. Stel 16 A in (3,7 kW), en een laadlimiet van 85% in de " +
             "auto of de laadpaal.")
         assertThat(today.level).isEqualTo("Uitgaande van een accuniveau van 45%.")
-        assertThat(today.spoken).isEqualTo("Advies voor de rit: ${today.title} ${today.plan} ${today.level}")
+        assertThat(today.spoken).isEqualTo("Advies voor de rit: Rit morgen om 08:15, 150 km heen en terug. Laad tot " +
+            "85%: op zonnestroom vandaag 12:00 tot 15:00, daarna uit het net. Start het laden vanavond om 21:00. Stel " +
+            "16 A in (3,7 kW), en een laadlimiet van 85% in de auto of de laadpaal. Uitgaande van een accuniveau van " +
+            "45%.")
+    }
+
+    @Test
+    fun aScreenReaderReadsTheSolarWindowsWithToNotTheDash() {
+        val later = Window(at(TODAY, 16, 0), at(TODAY, 17, 30), 6, 1.4, 2.0, 0.0)
+        val solar = model(advice(93.6, listOf(SOLAR, later), 94.0, null, 94.0, 0.0))
+        val solarThenGrid = model(advice(84.2, listOf(SOLAR), 60.0, grid(at(TODAY, 21, 0), Start.PLANNED), 84.2,
+            0.0))
+
+        assertThat(onToday(solar).spoken).isEqualTo("Trip advice: Trip tomorrow at 08:15, 150 km there and back. " +
+            "Charge to 94% on solar power: today 12:00 to 15:00, 16:00 to 17:30. Assuming a battery level of 45%.")
+        assertThat(onToday(solarThenGrid).spoken).isEqualTo("Trip advice: Trip tomorrow at 08:15, 150 km there and " +
+            "back. Charge to 85%: on solar power today 12:00 to 15:00, then from the grid. Start tonight at 21:00. " +
+            "Set 16 A (3.7 kW), and a charge limit of 85% in the car or the charger. Assuming a battery level of 45%.")
+    }
+
+    @Test
+    @Config(qualifiers = "nl")
+    fun aScreenReaderReadsTheSolarWindowsWithTotInDutch() {
+        val dutch = Locale.forLanguageTag("nl")
+        val solar = model(advice(93.6, listOf(SOLAR), 94.0, null, 94.0, 0.0))
+
+        assertThat(onToday(solar, dutch).spoken).isEqualTo("Advies voor de rit: Rit morgen om 08:15, 150 km heen en " +
+            "terug. Laad tot 94% op zonnestroom: vandaag 12:00 tot 15:00. Uitgaande van een accuniveau van 45%.")
+    }
+
+    @Test
+    fun onA12HourClockAScreenReaderReadsTheSolarWindowsWithTo() {
+        val solar = model(advice(93.6, listOf(SOLAR), 94.0, null, 94.0, 0.0))
+        val solarThenGrid = model(advice(84.2, listOf(SOLAR), 60.0, grid(at(TODAY, 21, 0), Start.PLANNED), 84.2,
+            0.0))
+        val words = words(twentyFour = false)
+        val noon = words.time(SOLAR.start())
+        val three = words.time(SOLAR.end())
+
+        assertThat(onToday(solar, twentyFour = false).spoken)
+            .contains("Charge to 94% on solar power: today $noon to $three.").doesNotContain("–")
+        assertThat(onToday(solarThenGrid, twentyFour = false).spoken)
+            .contains("on solar power today $noon to $three, then from the grid.").doesNotContain("–")
+    }
+
+    @Test
+    @Config(qualifiers = "nl")
+    fun onA12HourClockInDutchTheTimesFollowItAndAScreenReaderSaysTot() {
+        val dutch = Locale.forLanguageTag("nl")
+        val model = model(advice(84.2, listOf(SOLAR), 60.0, grid(at(TODAY, 21, 0), Start.PLANNED), 84.2, 0.0))
+        val words = words(dutch, twentyFour = false)
+        val noon = words.time(SOLAR.start())
+        val three = words.time(SOLAR.end())
+        val nine = words.time(at(TODAY, 21, 0))
+
+        val shown = onToday(model, dutch, twentyFour = false)
+
+        assertThat(nine).doesNotContain("21")
+        assertThat(shown.plan).startsWith("Laad tot 85%: op zonnestroom vandaag ${span(noon, three)}, daarna uit " +
+            "het net. Start het laden vanavond om $nine.")
+        assertThat(shown.spoken).contains("op zonnestroom vandaag $noon tot $three, daarna uit het net.")
+            .doesNotContain("–")
+    }
+
+    @Test
+    fun aStartTomorrowEveningOnTodaysTabIsTomorrowNotTonight() {
+        val model = model(advice(90.0, listOf(), 45.0, grid(at(TOMORROW, 21, 0), Start.PLANNED), 90.0, 0.0))
+
+        assertThat(onToday(model).plan).contains("Start tomorrow at 21:00.")
+        assertThat(onTomorrow(model).plan).contains("Start Saturday at 21:00.")
+    }
+
+    @Test
+    @Config(qualifiers = "nl")
+    fun aStartTomorrowEveningOnTodaysTabIsMorgenNotVanavondInDutch() {
+        val model = model(advice(90.0, listOf(), 45.0, grid(at(TOMORROW, 21, 0), Start.PLANNED), 90.0, 0.0))
+
+        assertThat(onToday(model, Locale.forLanguageTag("nl")).plan).contains("Start het laden morgen om 21:00.")
+    }
+
+    @Test
+    @Config(qualifiers = "nl")
+    fun inDutchTheGridOnlyAdviceAndItsStartsHaveTheirOwnWording() {
+        val dutch = Locale.forLanguageTag("nl")
+        val cases = listOf(
+            Triple(at(TOMORROW, 7, 0), Start.PLANNED, "Start het laden morgen om 07:00."),
+            Triple(at(TODAY, 10, 20), Start.NOW, "Start het laden nu: er is weinig tijd tot het vertrek."),
+            Triple(at(TODAY, 14, 30), Start.NOW, "Start het laden vandaag om 14:30: er is weinig tijd tot het " +
+                "vertrek."),
+            Triple(at(TODAY, 10, 20), Start.NOW_OUTSIDE_CHARGING_HOURS, "Start het laden nu, ook al is dat buiten " +
+                "je laaduren: wachten laat te weinig tijd over."),
+            Triple(at(TODAY, 23, 0), Start.NOW_OUTSIDE_CHARGING_HOURS, "Start het laden vanavond om 23:00, ook al " +
+                "is dat buiten je laaduren: wachten laat te weinig tijd over."))
+
+        cases.forEach { (start, why, sentence) ->
+            val model = model(advice(90.0, listOf(), 45.0, grid(start, why), 90.0, 0.0))
+
+            assertThat(onToday(model, dutch).plan).isEqualTo("Laad tot 90% uit het net. $sentence Stel 16 A in " +
+                "(3,7 kW), en een laadlimiet van 90% in de auto of de laadpaal.")
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "nl")
+    fun inDutchAShortTripSolarOnlyAndEnoughHaveTheDesktopsWording() {
+        val dutch = Locale.forLanguageTag("nl")
+        val later = Window(at(TODAY, 16, 0), at(TODAY, 17, 30), 6, 1.4, 2.0, 0.0)
+        val short = model(advice(100.0, listOf(SOLAR), 60.0, grid(at(TODAY, 21, 0), Start.PLANNED), 100.0, 40.2))
+        val solar = model(advice(93.6, listOf(SOLAR, later), 94.0, null, 94.0, 0.0))
+        val enough = model(advice(70.0, listOf(SOLAR), 74.5, null, 74.5, 0.0))
+
+        assertThat(onToday(short, dutch).plan).endsWith("een laadlimiet van 100% in de auto of de laadpaal. " +
+            "De accu komt 41 km tekort voor de rit: plan een laadstop.")
+        assertThat(onToday(solar, dutch).plan).isEqualTo("Laad tot 94% op zonnestroom: vandaag " +
+            "${span("12:00", "15:00")}, ${span("16:00", "17:30")}.")
+        assertThat(onToday(enough, dutch).plan).isEqualTo("De planning laadt genoeg voor deze rit: bij vertrek " +
+            "staat de accu op 75%.")
     }
 
     @Test

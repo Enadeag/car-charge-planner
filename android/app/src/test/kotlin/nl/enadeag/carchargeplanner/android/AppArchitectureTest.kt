@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.android
 
+import androidx.lifecycle.SavedStateHandle
 import com.tngtech.archunit.base.DescribedPredicate
 import com.tngtech.archunit.core.domain.AccessTarget
 import com.tngtech.archunit.core.domain.JavaAccess
@@ -196,6 +197,10 @@ class AppArchitectureTest {
         /** The files of the dashboard's models, which hold its rules and know nothing of Android. */
         val MODEL_FILES = setOf("Dashboard.kt", "DayModel.kt", "DayMapper.kt", "GridAdviceModel.kt", "ListedTrip.kt",
             "ComingAway.kt", "SolarChart.kt", "TripAdviceModel.kt")
+
+        /** The other files in the dashboard's package: entries, notices and the like, which may use Android. */
+        val NOT_MODEL_FILES = setOf("AwayEntry.kt", "BatteryEntry.kt", "TripEntry.kt", "ChangeQueue.kt",
+            "HomeNotice.kt", "HomeOutlook.kt", "NotificationCard.kt")
 
         val DASHBOARD_MODELS = DescribedPredicate.describe<JavaClass>(
             "are the dashboard's models in $APP.home (${MODEL_FILES.sorted().joinToString()})") { type ->
@@ -403,6 +408,23 @@ class AppArchitectureTest {
             .`as`("a class inside it").isTrue()
         assertThat(DASHBOARD_MODELS.test(APP_CLASSES.get("$APP.home.Dashboard"))).`as`("the dashboard").isTrue()
         assertThat(DASHBOARD_MODELS.test(APP_CLASSES.get("$APP.home.BatteryEntry"))).`as`("an entry").isFalse()
+    }
+
+    @Test
+    fun everyFileOfTheDashboardsPackageIsNamedAModelOrNot() {
+        val files = APP_CLASSES.filter { it.packageName == "$APP.home" }
+            .mapNotNull { type -> type.source.flatMap { it.fileName }.orElse(null) }.toSet()
+
+        assertThat(files).`as`("a new file in home/ goes on MODEL_FILES or NOT_MODEL_FILES")
+            .isEqualTo(MODEL_FILES + NOT_MODEL_FILES)
+    }
+
+    @Test
+    fun theAndroidRuleSeesAndroidXButNotTheComposeCompilersMark() {
+        val importer = ClassFileImporter()
+
+        assertThat(ANDROID.test(importer.importClass(SavedStateHandle::class.java))).`as`("AndroidX").isTrue()
+        assertThat(ANDROID.test(importer.importClass(Class.forName(COMPOSE_STABILITY)))).`as`("the mark").isFalse()
     }
 
     @Test

@@ -250,8 +250,8 @@ class DashboardTest {
 
     private fun at(day: LocalDate, time: String) = day.atTime(LocalTime.parse(time)).atZone(amsterdam).toInstant()
 
-    private fun trip(from: LocalDate, departure: String, to: LocalDate, back: String, notWithThisCar: Boolean = false) =
-        Trip(at(from, departure), at(to, back), 100.0, false, notWithThisCar)
+    private fun trip(from: LocalDate, departure: String, to: LocalDate, back: String, notWithThisCar: Boolean = false,
+        canChargeThere: Boolean = false) = Trip(at(from, departure), at(to, back), 100.0, canChargeThere, notWithThisCar)
 
     /** The plan's advice for a trip, which asks the owner to act when it needs a grid charge. */
     private fun advice(trip: Trip, asks: Boolean = false): TripAdvice {
@@ -312,6 +312,15 @@ class DashboardTest {
         val shown = withTrips(listOf(other))
 
         assertThat(shown.noWindowWhy(shown.days[1])).isEqualTo(NoWindowWhy.NOT_NEEDED)
+    }
+
+    @Test
+    fun aTripThatCanChargeAtItsDestinationStillKeepsTheCarAway() {
+        val leaving = trip(today, "13:00", today.plusDays(2), "19:00", canChargeThere = true)
+
+        val shown = withTrips(listOf(leaving), listOf(advice(leaving)))
+
+        assertThat(shown.days.map(shown::noWindowWhy)).containsExactly(null, NoWindowWhy.AWAY, NoWindowWhy.AWAY)
     }
 
     @Test

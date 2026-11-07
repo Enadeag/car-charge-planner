@@ -20,8 +20,8 @@ import nl.enadeag.carchargeplanner.android.home.DayName
 import nl.enadeag.carchargeplanner.android.home.Footer
 import nl.enadeag.carchargeplanner.android.home.GridAdviceModel
 import nl.enadeag.carchargeplanner.android.home.ListedTrip
-import nl.enadeag.carchargeplanner.android.home.SolarChart
 import nl.enadeag.carchargeplanner.android.home.NoWindowWhy
+import nl.enadeag.carchargeplanner.android.home.SolarChart
 import nl.enadeag.carchargeplanner.android.home.SourceFigure
 import nl.enadeag.carchargeplanner.android.home.TripAdviceModel
 import nl.enadeag.carchargeplanner.engine.config.Percent
@@ -436,13 +436,25 @@ internal class DashboardWords(private val resources: Resources, private val loca
         val day = { date: LocalDate -> adviceDay(date, today, onToday) }
         val title = text(R.string.trip_advice_title, day(advice.departureDay), time(advice.departure),
             whole(advice.distanceKm))
+        val plan = planText(advice, day, onToday, today, ::unbrokenSpan)
+        val spokenPlan = planText(advice, day, onToday, today, ::spokenSpan)
+        val level = text(if (advice.levelAssumed) R.string.trip_advice_assumed else R.string.trip_advice_entered,
+            whole(advice.level.value()))
+        val label = text(R.string.trip_advice_label)
+        return TripAdviceText(label, title, plan, level,
+            text(R.string.trip_advice_spoken, label, title, spokenPlan, level))
+    }
+
+    /** What to charge and when, each solar window's times told by [span]: as shown, or as a screen reader says them. */
+    private fun planText(advice: TripAdviceModel, day: (LocalDate) -> String, onToday: Boolean, today: LocalDate,
+        span: (Window) -> String): String {
         val sentences = when (val plan = advice.plan) {
             is TripAdviceModel.Plan.Enough ->
                 listOf(text(R.string.trip_advice_enough, whole(plan.departurePct.value())))
             is TripAdviceModel.Plan.Solar ->
-                listOf(text(R.string.trip_advice_solar, whole(plan.limit.value()), windows(plan.windows, day)))
+                listOf(text(R.string.trip_advice_solar, whole(plan.limit.value()), windows(plan.windows, day, span)))
             is TripAdviceModel.Plan.SolarThenGrid -> listOf(text(R.string.trip_advice_solar_grid,
-                whole(plan.limit.value()), windows(plan.windows, day))) +
+                whole(plan.limit.value()), windows(plan.windows, day, span))) +
                 grid(plan.grid, plan.limit, day, onToday, today)
             is TripAdviceModel.Plan.Grid -> listOf(text(R.string.trip_advice_grid, whole(plan.limit.value()))) +
                 grid(plan.grid, plan.limit, day, onToday, today)
@@ -450,11 +462,7 @@ internal class DashboardWords(private val resources: Resources, private val loca
                 listOf(text(R.string.trip_advice_leaves, whole(plan.departurePct.value())))
         }
         val short = advice.shortKm?.let { text(R.string.trip_advice_short, it.toString()) }
-        val plan = (sentences + listOfNotNull(short)).joinToString(" ")
-        val level = text(if (advice.levelAssumed) R.string.trip_advice_assumed else R.string.trip_advice_entered,
-            whole(advice.level.value()))
-        val label = text(R.string.trip_advice_label)
-        return TripAdviceText(label, title, plan, level, text(R.string.trip_advice_spoken, label, title, plan, level))
+        return (sentences + listOfNotNull(short)).joinToString(" ")
     }
 
     /** When to start the grid charge, and what to set for it. */
@@ -480,12 +488,11 @@ internal class DashboardWords(private val resources: Resources, private val loca
 
     /**
      * The solar windows grouped by their day, each day named once: "today 12:00 – 13:30, 14:00 – 15:00, tomorrow …",
-     * each window's span kept on one line when the advice wraps.
+     * each window's times told by [span].
      */
-    private fun windows(days: List<TripAdviceModel.DayWindows>, day: (LocalDate) -> String): String =
-        days.joinToString(", ") { inDay ->
-            day(inDay.day) + " " + inDay.windows.joinToString(", ") { unbrokenSpan(it) }
-        }
+    private fun windows(days: List<TripAdviceModel.DayWindows>, day: (LocalDate) -> String,
+        span: (Window) -> String): String =
+        days.joinToString(", ") { inDay -> day(inDay.day) + " " + inDay.windows.joinToString(", ") { span(it) } }
 
     /**
      * A window's span with no break around its dash: the span's own spaces become no-break ones, not those a 12-hour
@@ -495,6 +502,12 @@ internal class DashboardWords(private val resources: Resources, private val loca
         resources.getString(R.string.time_span).replace(' ', NO_BREAK).format(locale, time(window.start()),
             time(window.end()))
 
+    private fun weekday(date: LocalDate, style: TextStyle): String = date.dayOfWeek.getDisplayName(style, locale)
+
+    private fun capitalised(text: String) = text.replaceFirstChar { it.titlecase(locale) }
+
+    private fun text(id: Int, vararg args: Any): String = resources.getString(id, *args)
+
     private companion object {
         /** From this hour a start later today is "tonight". */
         val EVENING: LocalTime = LocalTime.of(18, 0)
@@ -502,12 +515,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
         /** Keeps a window's times together on one line. */
         const val NO_BREAK = '\u00A0'
     }
-
-    private fun weekday(date: LocalDate, style: TextStyle): String = date.dayOfWeek.getDisplayName(style, locale)
-
-    private fun capitalised(text: String) = text.replaceFirstChar { it.titlecase(locale) }
-
-    private fun text(id: Int, vararg args: Any): String = resources.getString(id, *args)
 }
 
 /**
