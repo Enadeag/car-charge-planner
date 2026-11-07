@@ -48,12 +48,9 @@ Artifact: androidx.datastore:datastore-core-okio-jvm
 Artifact: androidx.datastore:datastore-preferences-android
 Artifact: androidx.datastore:datastore-preferences-core-android
 Artifact: androidx.datastore:datastore-preferences-proto
-Artifact: androidx.documentfile:documentfile
-Artifact: androidx.dynamicanimation:dynamicanimation
 Artifact: androidx.emoji2:emoji2
 Artifact: androidx.graphics:graphics-path
 Artifact: androidx.interpolator:interpolator
-Artifact: androidx.legacy:legacy-support-core-utils
 Artifact: androidx.lifecycle:lifecycle-common-java8
 Artifact: androidx.lifecycle:lifecycle-common-jvm
 Artifact: androidx.lifecycle:lifecycle-livedata
@@ -64,16 +61,12 @@ Artifact: androidx.lifecycle:lifecycle-runtime-android
 Artifact: androidx.lifecycle:lifecycle-runtime-compose-android
 Artifact: androidx.lifecycle:lifecycle-runtime-ktx-android
 Artifact: androidx.lifecycle:lifecycle-service
-Artifact: androidx.lifecycle:lifecycle-viewmodel
 Artifact: androidx.lifecycle:lifecycle-viewmodel-android
 Artifact: androidx.lifecycle:lifecycle-viewmodel-compose-android
 Artifact: androidx.lifecycle:lifecycle-viewmodel-ktx
 Artifact: androidx.lifecycle:lifecycle-viewmodel-savedstate-android
-Artifact: androidx.loader:loader
-Artifact: androidx.localbroadcastmanager:localbroadcastmanager
 Artifact: androidx.navigationevent:navigationevent-android
 Artifact: androidx.navigationevent:navigationevent-compose-android
-Artifact: androidx.print:print
 Artifact: androidx.profileinstaller:profileinstaller
 Artifact: androidx.room:room-common-jvm
 Artifact: androidx.room:room-runtime-android
@@ -85,7 +78,6 @@ Artifact: androidx.sqlite:sqlite-framework-android
 Artifact: androidx.startup:startup-runtime
 Artifact: androidx.tracing:tracing-android
 Artifact: androidx.tracing:tracing-ktx
-Artifact: androidx.transition:transition
 Artifact: androidx.versionedparcelable:versionedparcelable
 Artifact: androidx.window:window
 Artifact: androidx.window:window-core-android

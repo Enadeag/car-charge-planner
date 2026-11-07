@@ -6,21 +6,24 @@
 [versions]
 # the oldest Android the app runs on (Android 10) and the API it is compiled against, for :app and :engine-lint
 android-min-sdk = "29"
-android-compile-sdk = "36"
+android-compile-sdk = "37"
 agp = "9.5.1"
 kotlin = "2.4.21"
-compose-bom = "2026.06.01"
+compose-bom = "2026.09.00"
 activity-compose = "1.13.0"
 desugar-jdk-libs = "2.1.5"
 androidx-test = "1.7.0"
 androidx-test-junit = "1.3.0"
-lifecycle = "2.10.0"
+# Espresso for the screens' tests on Robolectric, above the 3.5.0 Compose's test rule brings, which fails on Android 17
+# (#321); this line goes once the test rule brings 3.7.0 or later
+androidx-test-espresso = "3.7.0"
+lifecycle = "2.11.0"
 coroutines = "1.11.0"
 robolectric = "4.17"
 # the phone-only preferences (the "Wi-Fi only" switch, and the notifications' state), #361
 datastore = "1.3.0"
-# NotificationCompat and NotificationManagerCompat; the version the Compose BOM's libraries bring already
-androidx-core = "1.18.0"
+# NotificationCompat and NotificationManagerCompat; above the 1.18.0 activity-compose asks for, taken with SDK 37 (#321)
+androidx-core = "1.19.1"
 # the hourly round while the app is closed (#362); work-runtime and work-testing at this one version. No
 # work-runtime-ktx: it is empty since 2.8, its Kotlin API is in work-runtime
 work = "2.12.0"
@@ -68,6 +71,7 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
 compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
+androidx-test-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "androidx-test-espresso" }
 desugar-jdk-libs-nio = { module = "com.android.tools:desugar_jdk_libs_nio", version.ref = "desugar-jdk-libs" }
 # the instrumented tests' runner and JUnit 4 rules, for androidTest only: they never reach the APK
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidx-test" }

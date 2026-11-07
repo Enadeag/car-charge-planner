@@ -117,7 +117,7 @@ android {
         unitTests.isIncludeAndroidResources = true
         unitTests.all {
             it.useJUnitPlatform()
-            // Robolectric's Android 16 (SDK 36) reaches into the JDK's file descriptors, which JDK 21 keeps closed
+            // Robolectric's Android 17 (SDK 37) reaches into the JDK's file descriptors, which JDK 21 keeps closed
             it.jvmArgs("--add-opens=java.base/jdk.internal.access=ALL-UNNAMED")
             it.systemProperties(logicTestProperties)
             // StringsResourcesTest reads the resources and the language list that the release build hands Android,
@@ -277,6 +277,9 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.junit)
     testImplementation(libs.compose.ui.test.junit4)
+    // above the 3.5.0 that Compose's test rule brings: on Android 17 (SDK 37) that one looks up
+    // InputManager.getInstance(), which Android 17 removed, and the screen tests fail (#321)
+    testImplementation(libs.androidx.test.espresso.core)
     testImplementation(libs.work.testing)
     testRuntimeOnly(libs.junit.vintage.engine)
     // PIT's classpath (the fork's) leaves out two things the unit-test task has: the JUnit 5 engine, which the engine's

@@ -87,11 +87,11 @@ jobs:
           cache-provider: basic
           cache-read-only: true
       # the same as in android.yml
-      - name: Android SDK platform 36 and build-tools 36.0.0
+      - name: Android SDK platform 37 and build-tools 36.0.0
         run: |
           sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           (yes || true) | "$sdkmanager" --licenses > /dev/null
-          "$sdkmanager" --install "platforms;android-36" "build-tools;36.0.0"
+          "$sdkmanager" --install "platforms;android-37.0" "build-tools;36.0.0"
       - name: PIT on the app's logic
         run: ./gradlew --stacktrace :app:pitestDebug
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
