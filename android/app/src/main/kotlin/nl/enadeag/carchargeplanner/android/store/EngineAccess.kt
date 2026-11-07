@@ -17,10 +17,10 @@ import nl.enadeag.carchargeplanner.engine.trip.Trip
 
 /**
  * All the app asks of the engine that reads or writes: the settings file, the API keys, the plan, the one-off away
- * periods and their changes, the trips and their changes, the battery level, the connection check and the place search for the screens' logic; a
- * planning round and when the next notice is due for the work in the background. Each call suspends while it runs off
- * the main thread, as the keychain and the API keys may block for about a second and the others reach the disk or the
- * network.
+ * periods and their changes, the trips and their changes, the battery level, the connection check and the place
+ * search for the screens' logic; a planning round and when the next notice is due for the work in the background.
+ * Each call suspends while it runs off the main thread, as the keychain and the API keys may block for about a second
+ * and the others reach the disk or the network.
  * The screens never call the engine, the keys or the files themselves, nor the round (`AppArchitectureTest`).
  */
 interface EngineAccess {

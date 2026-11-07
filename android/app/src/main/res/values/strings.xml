@@ -299,7 +299,7 @@
   <!-- what a screen reader says for it; it starts with the visible word, so Voice Access finds it by that -->
   <string name="one_off_add_spoken">Add away period</string>
   <!-- each period's button; a screen reader says it with the period, %1$s the period as the list shows it, such as
-       one_off_all_day -->
+       one_off_all_day; it starts with the visible word, so Voice Access finds it by that -->
   <string name="one_off_remove">Remove</string>
   <string name="one_off_remove_spoken">Remove %1$s</string>
   <!-- the entry's title; %1$s the day: its weekday and date as the phone writes them in a sentence, such as
@@ -353,7 +353,8 @@
   <!-- what a screen reader says for a choice, with the trip: %1$s the choice, such as trip_not_with_this_car; %2$s
        the trip, a trip_line_spoken -->
   <string name="trip_choice_spoken">%1$s, %2$s</string>
-  <!-- each trip's button; a screen reader says it with the trip, %1$s a trip_line_spoken -->
+  <!-- each trip's button; a screen reader says it with the trip, %1$s a trip_line_spoken; it starts with the
+       visible word, so Voice Access finds it by that -->
   <string name="trip_remove">Remove</string>
   <string name="trip_remove_spoken">Remove the trip %1$s</string>
   <!-- after a change, in a snackbar; %1$s the trip as the list shows it, a trip_line; Removed has the action Undo,

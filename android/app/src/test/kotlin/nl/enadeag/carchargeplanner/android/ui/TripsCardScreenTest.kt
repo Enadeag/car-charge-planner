@@ -3,16 +3,23 @@ package nl.enadeag.carchargeplanner.android.ui
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.InputModeManager
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
@@ -21,8 +28,11 @@ import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.io.File
@@ -94,6 +104,7 @@ class TripsCardScreenTest {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val noCard by lazy { allowedCard(scope) }
     private val saves = Saves(access, scope)
+    private lateinit var inputMode: InputModeManager
 
     /** Under way when the plan was made, at 09:00 on Monday. */
     private val dayTrip = trip(today, "07:30", today, "18:00", 300.0)
@@ -135,6 +146,7 @@ class TripsCardScreenTest {
         val trips = TripEntry(on, scope, outlook::tripsChanged)
         val notice = HomeNotice(saves, scope) { }
         compose.setContent {
+            inputMode = LocalInputModeManager.current
             AppTheme { wrap { HomeScreen(outlook, notice, battery, away, trips, { lisbon }, noCard) { } } }
         }
         compose.waitForIdle()
@@ -159,6 +171,25 @@ class TripsCardScreenTest {
 
     private fun tab(name: String) {
         compose.onNode(hasContentDescription(name) and hasClickAction()).performClick()
+        compose.waitForIdle()
+    }
+
+    /** Puts the phone in keyboard mode, as a key pressed on a keyboard does, where a control can take the focus. */
+    private fun keyboard() {
+        compose.runOnIdle { inputMode.requestInputMode(InputMode.Keyboard) }
+        compose.waitForIdle()
+    }
+
+    /** Presses Enter on a keyboard, on the control with the focus. */
+    private fun SemanticsNodeInteraction.enter() {
+        performKeyInput { pressKey(Key.Enter) }
+        compose.waitForIdle()
+    }
+
+    private fun refresh(answer: Outlook = week()) {
+        compose.onNode(hasContentDescription(text(R.string.home_refresh))).performClick()
+        compose.waitForIdle()
+        access.outlooks.last().complete(answer)
         compose.waitForIdle()
     }
 
@@ -230,18 +261,86 @@ class TripsCardScreenTest {
     }
 
     @Test
-    fun aSavedChoiceKeepsItsRowSoAScreenReaderStaysOnIt() {
-        access.trips = listOf(dayTrip)
+    fun aSavedChoiceKeepsItsRowAndFocusAlsoWhenTheNewPlanNoLongerHasTheTripBeforeIt() {
+        val evening = trip(today, "19:00", today, "22:00", 300.0)
+        access.trips = listOf(dayTrip, evening)
         show()
-        val canCharge = choice(R.string.trip_can_charge, dayTripSpoken()).performScrollTo()
+        keyboard()
+        val canCharge = choice(R.string.trip_can_charge, dayTripSpoken("19:00", "22:00")).performScrollTo()
+        canCharge.requestFocus()
         val before = canCharge.fetchSemanticsNode().id
 
-        canCharge.performClick()
+        canCharge.enter()
+        // the trip under way is no longer stored when the plan is made again, so the evening's row moves up
+        access.trips = access.trips - dayTrip
+        access.outlooks.last().complete(week())
         compose.waitForIdle()
 
-        val after = choice(R.string.trip_can_charge, dayTripSpoken()).assert(toggle(ToggleableState.On))
-            .fetchSemanticsNode().id
+        compose.onNodeWithText(dayTripLine()).assertDoesNotExist()
+        val after = choice(R.string.trip_can_charge, dayTripSpoken("19:00", "22:00"))
+            .assert(toggle(ToggleableState.On)).assertIsFocused().fetchSemanticsNode().id
         assertThat(after).isEqualTo(before)
+    }
+
+    @Test
+    fun aChoiceWithTheKeyboardFocusKeepsItWhileItSavesAndAKeyPressedMeanwhileDoesNothing() {
+        access.trips = listOf(dayTrip)
+        val gate = CompletableDeferred<Unit>()
+        access.tripGate = gate
+        show()
+        keyboard()
+        val canCharge = choice(R.string.trip_can_charge, dayTripSpoken()).performScrollTo()
+        canCharge.requestFocus()
+
+        canCharge.enter()
+        canCharge.assertIsFocused().assertIsNotEnabled().assert(toggle(ToggleableState.On))
+        canCharge.enter()
+        gate.complete(Unit)
+        compose.waitForIdle()
+
+        canCharge.assertIsFocused().assertIsEnabled().assert(toggle(ToggleableState.On))
+        assertThat(access.tripChanges).hasSize(1)
+    }
+
+    @Test
+    fun aRemoveWithTheKeyboardFocusKeepsItWhileItRunsAndAfterItFailed() {
+        access.trips = listOf(dayTrip)
+        access.tripFails = "No space left on device"
+        val gate = CompletableDeferred<Unit>()
+        access.tripGate = gate
+        show()
+        keyboard()
+        val button = remove(dayTripSpoken()).performScrollTo()
+        button.requestFocus()
+
+        button.enter()
+        button.assertIsFocused().assertIsNotEnabled()
+        gate.complete(Unit)
+        compose.waitForIdle()
+
+        button.assertIsFocused().assertIsEnabled()
+        compose.onNodeWithText(dayTripLine()).assertExists()
+    }
+
+    @Test
+    fun aRemovePressedWhileAnotherRunsDoesNothingAndTheFocusFollowsTheFirst() {
+        val evening = trip(today, "19:00", today, "22:00", 300.0)
+        access.trips = listOf(dayTrip, evening)
+        val gate = CompletableDeferred<Unit>()
+        access.tripGate = gate
+        show()
+
+        remove(dayTripSpoken("19:00", "22:00")).performScrollTo().performClick()
+        compose.waitForIdle()
+        remove(dayTripSpoken()).performScrollTo().performClick()
+        choice(R.string.trip_can_charge, dayTripSpoken()).performScrollTo().performClick()
+        compose.waitForIdle()
+        gate.complete(Unit)
+        compose.waitForIdle()
+
+        assertThat(access.tripChanges).containsExactly("remove" to evening)
+        assertThat(access.trips).containsExactly(dayTrip)
+        compose.onNodeWithText(dayTripLine()).assertIsFocused()
     }
 
     @Test
@@ -335,6 +434,65 @@ class TripsCardScreenTest {
     }
 
     @Test
+    fun afterAFailedRemoveTheTripGoingByANewPlanDoesNotMoveTheFocusToItsNeighbour() {
+        val evening = trip(today, "19:00", today, "22:00", 300.0)
+        access.trips = listOf(dayTrip, evening)
+        access.tripFails = "No space left on device"
+        show()
+        remove(dayTripSpoken("19:00", "22:00")).performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText(dayTripLine("19:00", "22:00")).assertExists()
+
+        // the trip goes another way, such as the desktop's file copied over, and the plan is made again
+        access.trips = listOf(dayTrip)
+        refresh()
+
+        compose.onNodeWithText(dayTripLine("19:00", "22:00")).assertDoesNotExist()
+        compose.onNodeWithText(dayTripLine()).assertIsNotFocused()
+    }
+
+    @Test
+    fun afterAnUndoThatFailedTheFocusStaysWhereItWasAndALaterReturnDoesNotMoveIt() {
+        val evening = trip(today, "19:00", today, "22:00", 300.0)
+        access.trips = listOf(dayTrip, evening)
+        show()
+        remove(dayTripSpoken()).performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText(dayTripLine("19:00", "22:00")).assertIsFocused()
+        access.tripFails = "No space left on device"
+        compose.onNodeWithText(text(R.string.action_undo)).performClick()
+        compose.waitForIdle()
+        access.tripFails = null
+
+        // the trip comes back another way, with a new plan
+        access.trips = listOf(dayTrip, evening)
+        refresh()
+
+        compose.onNodeWithText(dayTripLine()).assertExists().assertIsNotFocused()
+        compose.onNodeWithText(dayTripLine("19:00", "22:00")).assertIsFocused()
+    }
+
+    @Test
+    fun aRemovedTripsSnackbarIsSaidOnceAndNotAgainWhenTheHomeIsShownAgain() {
+        access.trips = listOf(dayTrip)
+        val shown = mutableStateOf(true)
+        show(wrap = { if (shown.value) it() })
+        remove(dayTripSpoken()).performScrollTo().performClick()
+        compose.waitForIdle()
+        val removed = text(R.string.trip_removed, dayTripLine())
+        compose.onNodeWithText(removed).assertIsDisplayed()
+
+        // as when the phone turns: the screen is drawn anew while the changes live on
+        shown.value = false
+        compose.waitForIdle()
+        shown.value = true
+        compose.waitForIdle()
+
+        compose.onNodeWithText(text(R.string.trips_heading)).assertExists()
+        compose.onNodeWithText(removed).assertDoesNotExist()
+    }
+
+    @Test
     fun anUndoThatFailedSaysNotSavedAndTheTripStaysGone() {
         access.trips = listOf(dayTrip)
         show()
@@ -392,7 +550,7 @@ class TripsCardScreenTest {
             .assert(hasContentDescription("Afwezig van 07:30 tot 18:00, 300 km heen en terug"))
         compose.onNode(hasContentDescription("Niet met deze auto, Afwezig van 07:30 tot 18:00, 300 km heen en terug"))
             .assertExists()
-        compose.onNode(hasContentDescription("Rit Afwezig van 07:30 tot 18:00, 300 km heen en terug verwijderen"))
+        compose.onNode(hasContentDescription("Verwijderen: rit Afwezig van 07:30 tot 18:00, 300 km heen en terug"))
             .assert(hasText("Verwijderen"))
         compose.assertShowsNoneOf(englishOnlyTexts())
     }

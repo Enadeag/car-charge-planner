@@ -214,7 +214,7 @@
   <string name="one_off_add">Toevoegen</string>
   <string name="one_off_add_spoken">Afwezig toevoegen</string>
   <string name="one_off_remove">Verwijderen</string>
-  <string name="one_off_remove_spoken">%1$s verwijderen</string>
+  <string name="one_off_remove_spoken">Verwijderen: %1$s</string>
   <string name="one_off_entry_title">Afwezig op %1$s</string>
   <string name="one_off_whole_day">Hele dag</string>
   <string name="one_off_part_of_day">Deel van de dag</string>
@@ -242,7 +242,7 @@
   <string name="trip_can_charge">Ik kan laden op de bestemming</string>
   <string name="trip_choice_spoken">%1$s, %2$s</string>
   <string name="trip_remove">Verwijderen</string>
-  <string name="trip_remove_spoken">Rit %1$s verwijderen</string>
+  <string name="trip_remove_spoken">Verwijderen: rit %1$s</string>
   <string name="trip_saved">Opgeslagen: %1$s.</string>
   <string name="trip_removed">Verwijderd: %1$s.</string>
   <string name="trip_not_saved">Niet opgeslagen: de rit kon niet worden geschreven.</string>

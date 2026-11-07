@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -64,6 +66,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.liveRegion
@@ -543,8 +546,8 @@ private fun AwayList(dashboard: Dashboard, day: DayModel, words: DashboardWords,
             val opener = if (inView) Modifier.focusProperties { canFocus = true }.focusRequester(away.focus)
                 else Modifier
             val spoken = stringResource(R.string.one_off_add_spoken)
-            AppTextButton(onClick = { away.entry.open(day.date, dashboard.zone) }, enabled = !away.busy,
-                modifier = opener.semantics { contentDescription = spoken }) {
+            HeldButton(away.busy, { away.entry.open(day.date, dashboard.zone) },
+                opener.semantics { contentDescription = spoken }) {
                 Text(stringResource(R.string.one_off_add))
             }
         }
@@ -558,11 +561,11 @@ private fun AwayList(dashboard: Dashboard, day: DayModel, words: DashboardWords,
                 Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     RowLine(text, focus, coming.period, Modifier.weight(1f))
-                    AppTextButton(onClick = {
+                    HeldButton(away.busy, {
                         away.going.row = coming.period
                         away.going.rows = periods
                         away.entry.remove(coming.period)
-                    }, enabled = !away.busy, modifier = Modifier.semantics { contentDescription = spoken }) {
+                    }, Modifier.semantics { contentDescription = spoken }) {
                         Text(stringResource(R.string.one_off_remove))
                     }
                 }
@@ -715,14 +718,14 @@ private fun TripRow(listed: ListedTrip, words: DashboardWords, trips: TripAction
             ChoiceRow(stringResource(when (choice) {
                 TripEntry.Choice.NOT_WITH_THIS_CAR -> R.string.trip_not_with_this_car
                 TripEntry.Choice.CAN_CHARGE -> R.string.trip_can_charge
-            }), spoken, pending?.on ?: choice.of(trip), !trips.busy) { trips.entry.choose(trip, choice, it) }
+            }), spoken, pending?.on ?: choice.of(trip), trips.busy) { trips.entry.choose(trip, choice, it) }
         }
         val remove = stringResource(R.string.trip_remove_spoken, spoken)
-        AppTextButton(onClick = {
+        HeldButton(trips.busy, {
             trips.going.row = trip
             trips.going.rows = rows
             trips.entry.remove(trip)
-        }, enabled = !trips.busy, modifier = Modifier.align(Alignment.End).semantics { contentDescription = remove }) {
+        }, Modifier.align(Alignment.End).semantics { contentDescription = remove }) {
             Text(stringResource(R.string.trip_remove))
         }
     }
@@ -730,23 +733,50 @@ private fun TripRow(listed: ListedTrip, words: DashboardWords, trips: TripAction
 
 /**
  * A choice as Material's checkbox in a row that toggles as a whole, at least 48 dp high, its words wrapping; a screen
- * reader says it with the trip, then whether it is checked.
+ * reader says it with the trip, then whether it is checked. While a change runs it is off as [HeldButton] is, so it
+ * keeps the focus.
  *
  * @param label the choice's words
  * @param trip the trip as a screen reader reads it
  * @param checked whether it is ticked
- * @param enabled false while a change runs
+ * @param busy true while a change runs
  * @param onChange gets the new state
  */
 @Composable
-private fun ChoiceRow(label: String, trip: String, checked: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
+private fun ChoiceRow(label: String, trip: String, checked: Boolean, busy: Boolean, onChange: (Boolean) -> Unit) {
     val spoken = stringResource(R.string.trip_choice_spoken, label, trip)
     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
-        .toggleable(value = checked, enabled = enabled, role = Role.Checkbox, onValueChange = onChange)
-        .semantics { contentDescription = spoken }, verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked = checked, onCheckedChange = null, enabled = enabled)
+        .toggleable(value = checked, role = Role.Checkbox, onValueChange = { if (!busy) onChange(it) })
+        .semantics {
+            contentDescription = spoken
+            if (busy) {
+                disabled()
+            }
+        }, verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked = checked, onCheckedChange = null, enabled = !busy)
         Text(label, modifier = Modifier.padding(start = 16.dp))
     }
+}
+
+/**
+ * A text button that is off while a change runs yet keeps the focus: Compose takes the focus from a disabled control,
+ * so a keyboard or switch user who pressed it would start again at the top of the page. It looks off, a screen reader
+ * says it is, and a press does nothing until the change is done.
+ *
+ * @param busy true while a change runs
+ * @param onClick what a press does while no change runs
+ * @param modifier its place, focus and name
+ * @param content its words
+ */
+@Composable
+private fun HeldButton(busy: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit) {
+    val colours = ButtonDefaults.textButtonColors()
+    AppTextButton(onClick = { if (!busy) onClick() }, modifier = modifier.semantics {
+        if (busy) {
+            disabled()
+        }
+    }, colors = if (busy) colours.copy(contentColor = colours.disabledContentColor) else colours, content = content)
 }
 
 /**

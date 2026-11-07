@@ -204,7 +204,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | None entered for the coming days. | Niets ingevuld voor de komende dagen. | no one-off away period to come |
 | Add | Toevoegen | the button in the "Car away" heading row, which opens the entry of a one-off away period on the page's day |
 | Add away period | Afwezig toevoegen | what TalkBack and Voice Access call that button; it starts with the word on the button in English, and holds it in Dutch |
-| Remove, Remove Tomorrow, all day | Verwijderen, Morgen, hele dag verwijderen | a one-off away period's button, and what TalkBack reads for it: the period as the list shows it |
+| Remove, Remove Tomorrow, all day | Verwijderen, Verwijderen: Morgen, hele dag | a one-off away period's button, and what TalkBack reads for it: the period as the list shows it; it starts with the word on the button in both languages, so Voice Access finds it |
 | Car away on Thursday, November 5 | Afwezig op donderdag 5 november | the entry's title, with the day's weekday and date as the phone writes them in a sentence |
 | All day, Part of the day | Hele dag, Deel van de dag | the entry's choice |
 | Away from, Away until | Afwezig vanaf, Afwezig tot | part of the day's two times, each a button that opens the time picker, and the picker's title |
@@ -223,7 +223,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Away 07:30 – 18:00 · 300 km there and back | Afwezig 07:30 – 18:00 · 300 km heen en terug | a trip in the list, the desktop's; over more days "Away Tomorrow 20:00 – Wed, Jun 3 09:00 · …" ("Afwezig Morgen 20:00 – Wo 3 jun 09:00 · …"), the day as in the "Car away" list |
 | Away from 07:30 to 18:00, 300 km there and back | Afwezig van 07:30 tot 18:00, 300 km heen en terug | what TalkBack reads for a trip; over more days "Away from Tomorrow 20:00 to Wed, Jun 3 09:00, …" |
 | Not with this car, I can charge at the destination | Niet met deze auto, Ik kan laden op de bestemming | a trip's two checkboxes, the desktop's; TalkBack reads each with the trip ("Not with this car, Away from …") |
-| Remove, Remove the trip Away from … | Verwijderen, Rit Afwezig van … verwijderen | a trip's button, and what TalkBack reads for it, the desktop's order; it starts with the word on the button in English, and holds it in Dutch |
+| Remove, Remove the trip Away from … | Verwijderen, Verwijderen: rit Afwezig van … | a trip's button, and what TalkBack reads for it; it starts with the word on the button in both languages, as the away period's, so Voice Access finds it (the desktop's Dutch puts it last) |
 | Saved: Away 07:30 – 18:00 · 300 km there and back. | Opgeslagen: Afwezig 07:30 – 18:00 · 300 km heen en terug. | in a snackbar after Undo of a removed trip |
 | Removed: Away 07:30 – 18:00 · 300 km there and back. | Verwijderd: Afwezig 07:30 – 18:00 · 300 km heen en terug. | in a snackbar after Remove, with Undo |
 | Not saved: the trip could not be written. | Niet opgeslagen: de rit kon niet worden geschreven. | in a snackbar after a choice or an Undo failed, with the English details; a trip is a "rit" |

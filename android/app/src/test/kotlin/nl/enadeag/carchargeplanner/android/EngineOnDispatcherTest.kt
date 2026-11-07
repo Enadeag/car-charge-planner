@@ -314,6 +314,16 @@ class EngineOnDispatcherTest {
     }
 
     @Test
+    fun removingOneOfTwoTripsGivesTheOtherBack() = runBlocking<Unit> {
+        val other = Trip(Instant.parse("2096-06-03T06:00:00Z"), Instant.parse("2096-06-03T18:00:00Z"), 120.0, true)
+        access.addTrip(trip)
+        access.addTrip(other)
+
+        assertThat(access.removeTrip(trip)).isEqualTo(TripSave.Saved(listOf(other)))
+        assertThat(access.trips()).containsExactly(other)
+    }
+
+    @Test
     fun aTripChangeThatCannotBeStoredIsAFailureWithTheEnginesWordsAndTheFileStaysAsItWas() = runBlocking<Unit> {
         Files.createDirectories(filesFolder)
         val newer = StoredJson.pretty(StoredJson.`object`().put("version", 99))

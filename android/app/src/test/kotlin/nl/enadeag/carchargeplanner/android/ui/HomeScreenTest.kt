@@ -1139,8 +1139,11 @@ class HomeScreenTest {
         val trips = TripEntry(access, scope) { }
         compose.setContent {
             AppTheme {
-                if (twice) AtFontScaleTwo { HomeScreen(outlook, notice, battery, away, trips, { amsterdam }, noCard) { } }
-                else HomeScreen(outlook, notice, battery, away, trips, { amsterdam }, noCard) { }
+                if (twice) {
+                    AtFontScaleTwo { HomeScreen(outlook, notice, battery, away, trips, { amsterdam }, noCard) { } }
+                } else {
+                    HomeScreen(outlook, notice, battery, away, trips, { amsterdam }, noCard) { }
+                }
             }
         }
         compose.waitForIdle()
