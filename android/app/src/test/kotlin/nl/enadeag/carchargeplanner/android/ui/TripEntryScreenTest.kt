@@ -1,13 +1,16 @@
 package nl.enadeag.carchargeplanner.android.ui
 
 import android.provider.Settings
+import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.ComponentDialog
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
@@ -28,6 +31,7 @@ import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.unit.toSize
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.Clock
@@ -190,6 +194,37 @@ class TripEntryScreenTest {
         compose.waitForIdle()
     }
 
+    /**
+     * Scrolls every page the control is on, inner to outer, so it shows whole, as the owner scrolls a page sideways
+     * and then up or down; `performScrollTo` scrolls only the innermost.
+     */
+    private fun scrolledIntoView(control: androidx.compose.ui.test.SemanticsNodeInteraction) {
+        var page = control.fetchSemanticsNode().parent
+        while (page != null) {
+            val scroll = page.config.getOrNull(SemanticsActions.ScrollBy)?.action
+            if (scroll != null) {
+                val node = control.fetchSemanticsNode()
+                val shown = Rect(page.positionInRoot, page.size.toSize())
+                val target = Rect(node.positionInRoot, node.size.toSize())
+                val dx = when {
+                    target.left < shown.left -> target.left - shown.left
+                    target.right > shown.right -> target.right - shown.right
+                    else -> 0f
+                }
+                val dy = when {
+                    target.top < shown.top -> target.top - shown.top
+                    target.bottom > shown.bottom -> target.bottom - shown.bottom
+                    else -> 0f
+                }
+                if (dx != 0f || dy != 0f) {
+                    compose.runOnIdle { scroll(dx, dy) }
+                    compose.waitForIdle()
+                }
+            }
+            page = page.parent
+        }
+    }
+
     private fun twentyFour(time: LocalTime): String = clockOf(true, Locale.ENGLISH).format(time)
 
     @Test
@@ -206,7 +241,9 @@ class TripEntryScreenTest {
         button(R.string.trip_departure_time).assert(hasText(twentyFour(LocalTime.of(8, 0))))
         button(R.string.trip_return_day).assert(hasText("Today"))
         button(R.string.trip_return_time).assert(hasText(twentyFour(LocalTime.of(18, 0))))
-        distance.assert(hasContentDescription(text(R.string.trip_distance_spoken, DISTANCE_UNIT)))
+        // named by its label, as every field of the app, with no spoken name over what is typed
+        distance.assert(hasText(text(R.string.trip_distance_field)))
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
         compose.onNode(hasText(text(R.string.trip_can_charge)) and hasAnyAncestor(isDialog()))
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
         compose.onNodeWithText(text(R.string.home_zone, lisbon.id)).assertDoesNotExist()
@@ -281,6 +318,47 @@ class TripEntryScreenTest {
         val changed = trip(today.plusDays(1), "07:30", today.plusDays(1), "19:00", 120.6)
         assertThat(access.trips).containsExactly(changed)
         change(spoken("121", end = "19:00")).assertIsFocused()
+    }
+
+    @Test
+    fun aChangeThatMovesTheTripOffThePageInViewPutsTheFocusOnThatPagesAdd() {
+        access.trips = listOf(tomorrow)
+        show()
+        compose.onNode(hasContentDescription("Tomorrow") and hasClickAction()).performClick()
+        compose.waitForIdle()
+        change(spoken("121")).performScrollTo().performClick()
+        opened()
+        compose.runOnIdle {
+            trips.departureDay(today.plusDays(2))
+            trips.returnDay(today.plusDays(2))
+        }
+
+        click(save)
+
+        assertThat(access.trips).containsExactly(trip(today.plusDays(2), "07:30", today.plusDays(2), "18:00", 120.6))
+        compose.onNode(isDialog()).assertDoesNotExist()
+        change(spoken("121")).assertDoesNotExist()
+        add.assertIsFocused()
+    }
+
+    @Test
+    fun aTripSavedBeforeAnyPlanIsNamedAsTheEntryReadItAndTheFocusGoesToTheTitle() {
+        TripEntry(handle, NumberText(Locale.ENGLISH), access, scope, clock) { }.apply {
+            add(today, lisbon)
+            distance("75")
+        }
+        show(kept = handle.afterTheSystemEndedTheApp(), planned = false)
+        entryDialog = ShadowDialog.getLatestDialog() as ComponentDialog
+
+        click(save)
+
+        assertThat(access.trips).containsExactly(trip(today, "08:00", today, "18:00", 75.0))
+        compose.onNode(isDialog()).assertDoesNotExist()
+        val line = text(R.string.trip_line, text(R.string.time_span, "08:00", "18:00"),
+            text(R.string.trip_distance, "75"))
+        compose.onNodeWithText(text(R.string.trip_saved, line)).assertIsDisplayed()
+        add.assertDoesNotExist()
+        compose.onNode(isHeading() and hasText(text(R.string.app_name))).assertIsFocused()
     }
 
     @Test
@@ -362,6 +440,99 @@ class TripEntryScreenTest {
         compose.onNode(hasText("June 21, 2026", substring = true) and hasClickAction()).assertDoesNotExist()
         click(compose.onNodeWithText(text(R.string.picker_calendar)).performScrollTo())
         compose.onNodeWithText(text(R.string.one_off_keyboard)).assertExists()
+    }
+
+    @Test
+    fun theDatePickersYearListOffersOnlyTheWindowsYear() {
+        show()
+        openAdd()
+        click(button(R.string.trip_departure_day))
+
+        click(compose.onNode(hasContentDescription("Switch to selecting a year") and hasClickAction()))
+
+        val years = compose.onAllNodes(hasText("Navigate to year", substring = true) and hasClickAction())
+            .fetchSemanticsNodes().flatMap { node -> node.config[SemanticsProperties.Text].map { it.text } }
+        assertThat(years).containsExactly("Navigate to year 2026")
+    }
+
+    @Test
+    fun okWithoutADayAsAfterTheTypedDateWasClearedOrADayOutsideTheWindowTypedKeepsTheDay() {
+        show()
+        openAdd()
+        val typed = compose.onNode(hasSetTextAction() and hasText("Date"))
+
+        click(button(R.string.trip_departure_day))
+        click(compose.onNodeWithText(text(R.string.one_off_keyboard)).performScrollTo())
+        typed.performTextReplacement("")
+        click(compose.onNodeWithText(text(R.string.action_ok)))
+        compose.onNodeWithText(text(R.string.action_ok)).assertDoesNotExist()
+        assertThat(trips.draft.value?.fields?.departureDay).isEqualTo(today)
+
+        click(button(R.string.trip_departure_day))
+        click(compose.onNodeWithText(text(R.string.one_off_keyboard)).performScrollTo())
+        typed.performTextReplacement("06302026")
+        click(compose.onNodeWithText(text(R.string.action_ok)))
+        assertThat(trips.draft.value?.fields?.departureDay).isEqualTo(today)
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h480dp", fontScale = 2.0f)
+    fun onASmallPhoneAtTwiceTheFontSizeTheDatePickerReachesEveryControlWithinTheScreen() {
+        show(wrap = { AtFontScaleTwo(it) })
+        openAdd()
+        click(button(R.string.trip_departure_day).performScrollTo())
+        val screen = compose.activity.window.decorView
+        val reachable = { matcher: SemanticsMatcher ->
+            val control = compose.onNode(matcher)
+            scrolledIntoView(control)
+            // where it is drawn whole, not clipped to the window, which would hide a part off the screen
+            val node = control.assertIsDisplayed().fetchSemanticsNode()
+            val bounds = Rect(node.positionInWindow, node.size.toSize())
+            assertThat(bounds.left).`as`("the left of %s", matcher.description).isGreaterThanOrEqualTo(-0.5f)
+            assertThat(bounds.right).`as`("the right of %s", matcher.description)
+                .isLessThanOrEqualTo(screen.width + 0.5f)
+            assertThat(bounds.top).`as`("the top of %s", matcher.description).isGreaterThanOrEqualTo(-0.5f)
+            assertThat(bounds.bottom).`as`("the bottom of %s", matcher.description)
+                .isLessThanOrEqualTo(screen.height + 0.5f)
+            control
+        }
+
+        // a Sunday and a Saturday, the calendar's first and last columns, the month's arrows, the year's button, the
+        // toggle, Cancel and OK
+        val sunday = reachable(hasText("June 7, 2026", substring = true) and hasClickAction())
+        // the days keep Material's 48 dp to a column, so the picker scrolls rather than squeezes them
+        val saturday = compose.onNode(hasText("June 13, 2026", substring = true) and hasClickAction())
+            .fetchSemanticsNode()
+        val apart = saturday.positionInRoot.x - sunday.fetchSemanticsNode().positionInRoot.x
+        assertThat(apart / saturday.layoutInfo.density.density).isGreaterThanOrEqualTo(6 * 48f - 0.5f)
+        reachable(hasContentDescription("Change to previous month") and hasClickAction())
+        reachable(hasContentDescription("Change to next month") and hasClickAction())
+        reachable(hasContentDescription("Switch to selecting a year") and hasClickAction())
+        reachable(hasText(text(R.string.one_off_keyboard)) and hasClickAction())
+        reachable(hasText(text(R.string.action_cancel)) and hasClickAction())
+        reachable(hasText(text(R.string.action_ok)) and hasClickAction())
+        click(reachable(hasText("June 13, 2026", substring = true) and hasClickAction()))
+        click(reachable(hasText(text(R.string.action_ok)) and hasClickAction()))
+
+        assertThat(trips.draft.value?.fields?.departureDay).isEqualTo(LocalDate.of(2026, 6, 13))
+    }
+
+    @Test
+    fun aTapBesideTheEntryDoesNotCloseIt() {
+        show()
+        openAdd()
+
+        compose.runOnIdle {
+            listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP).forEach { action ->
+                val tap = MotionEvent.obtain(0L, 0L, action, -10f, -10f, 0)
+                entryDialog.onTouchEvent(tap)
+                tap.recycle()
+            }
+        }
+        compose.waitForIdle()
+
+        compose.onNode(isHeading() and hasText(text(R.string.trip_add_title))).assertIsDisplayed()
+        assertThat(trips.draft.value).isNotNull()
     }
 
     @Test

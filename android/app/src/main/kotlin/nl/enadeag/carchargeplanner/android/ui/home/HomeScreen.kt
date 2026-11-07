@@ -171,7 +171,8 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
                     notice.period)
             is AwayEntry.Notice.NotRemoved ->
                 Said.NotRemoved(resources.getString(R.string.one_off_not_removed), notice.detail)
-            is AwayEntry.Notice.NotSaved -> Said.NotSaved(resources.getString(R.string.one_off_not_saved), notice.detail)
+            is AwayEntry.Notice.NotSaved ->
+                Said.NotSaved(resources.getString(R.string.one_off_not_saved), notice.detail)
         }
     }, away::undo)
     val awayDraft by away.draft.collectAsStateWithLifecycle()

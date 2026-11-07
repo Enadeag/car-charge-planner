@@ -325,7 +325,7 @@ class TripEntry(private val handle: SavedStateHandle, private val numbers: Numbe
     private val draftNow = MutableStateFlow(kept())
     private val problemNow = MutableStateFlow<Problem?>(null)
     private val refusalsNow = MutableStateFlow(0)
-    private val discardNow = MutableStateFlow(draftNow.value != null && handle.get<Boolean>(DISCARD) == true)
+    private val discardNow = MutableStateFlow(draftNow.value != null && handle.get<Any?>(DISCARD) == true)
     private val savingNow = MutableStateFlow<SaveState>(SaveState.Idle)
 
     /**
@@ -592,12 +592,15 @@ class TripEntry(private val handle: SavedStateHandle, private val numbers: Numbe
     }
 
     private fun kept(): Draft? {
-        val mode = handle.get<String>(MODE) ?: return null
+        if (handle.get<Any?>(MODE) == null) {
+            return null
+        }
         return try {
+            val mode = Mode.valueOf(text(MODE))
             val zone = ZoneId.of(text(ZONE))
-            val opened = if (Mode.valueOf(mode) == Mode.CHANGE) Trip(Instant.parse(text(OPENED_DEPARTURE)),
-                Instant.parse(text(OPENED_RETURN)), text(OPENED_KM).toDouble(), flag(OPENED_CAN_CHARGE),
-                flag(OPENED_NOT_WITH)) else null
+            val opened = if (mode == Mode.CHANGE) Trip(
+                Instant.parse(text(OPENED_DEPARTURE)), Instant.parse(text(OPENED_RETURN)), text(OPENED_KM).toDouble(),
+                flag(OPENED_CAN_CHARGE), flag(OPENED_NOT_WITH)) else null
             val first = if (opened == null) {
                 val day = LocalDate.parse(text(FIRST_DAY))
                 Fields(day, FIRST_DEPARTURE, day, FIRST_RETURN, "", false)
@@ -606,24 +609,38 @@ class TripEntry(private val handle: SavedStateHandle, private val numbers: Numbe
             }
             val fields = Fields(LocalDate.parse(text(DEPARTURE_DAY)), time(DEPARTURE_TIME),
                 LocalDate.parse(text(RETURN_DAY)), time(RETURN_TIME), text(DISTANCE), flag(CAN_CHARGE))
-            Draft(Mode.valueOf(mode), zone, LocalDate.parse(text(TODAY)), first, opened, fields)
+            val draft = Draft(mode, zone, LocalDate.parse(text(TODAY)), first, opened, fields)
+            // what the entry itself never puts: a day outside the days offered, or a longer distance
+            if (fields.departureDay !in draft.days) {
+                unreadable(DEPARTURE_DAY)
+            }
+            if (fields.returnDay !in draft.days) {
+                unreadable(RETURN_DAY)
+            }
+            if (fields.distance.length > DISTANCE_LENGTH) {
+                unreadable(DISTANCE)
+            }
+            draft
         } catch (_: DateTimeException) {
             // a zone a time-zone update removed, or a value that is no date or time: the entry is closed
             forget(handle)
             null
         } catch (_: IllegalArgumentException) {
-            // a value missing or not of its kind, such as a distance that is no number or a trip the engine refuses
+            // a value missing, not of its kind or not one the entry puts, such as a distance that is no number or a
+            // trip the engine refuses
             forget(handle)
             null
         }
     }
 
-    private fun text(key: String): String = handle.get<String>(key) ?: throw IllegalArgumentException("no $key")
+    private fun text(key: String): String = handle.get<Any?>(key) as? String ?: unreadable(key)
 
-    private fun flag(key: String): Boolean = handle.get<Boolean>(key) ?: throw IllegalArgumentException("no $key")
+    private fun flag(key: String): Boolean = handle.get<Any?>(key) as? Boolean ?: unreadable(key)
 
     private fun time(key: String): LocalTime =
-        LocalTime.ofSecondOfDay((handle.get<Int>(key) ?: throw IllegalArgumentException("no $key")).toLong())
+        LocalTime.ofSecondOfDay((handle.get<Any?>(key) as? Int ?: unreadable(key)).toLong())
+
+    private fun unreadable(key: String): Nothing = throw IllegalArgumentException("$key cannot be read")
 
     private fun ask(asking: Boolean) {
         if (asking) handle[DISCARD] = true else handle.remove<Boolean>(DISCARD)

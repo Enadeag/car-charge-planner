@@ -275,6 +275,29 @@ class TripEntryAddAndChangeTest {
     }
 
     @Test
+    fun aNewTripLeavesOnTheDepartureDayPut() = runTest {
+        val entry = added()
+        entry.departureDay(today.plusDays(3))
+        assertThat(entry.draft.value!!.fields.departureDay).isEqualTo(today.plusDays(3))
+        entry.fill("120", from = today.plusDays(3), to = today.plusDays(4))
+
+        assertThat(saved(entry)?.departure()).isEqualTo(at(today.plusDays(3), "08:00"))
+    }
+
+    @Test
+    fun aChangeSavesTheDepartureDayMoved() = runTest {
+        val stored = trip(today.plusDays(1), "07:30", today.plusDays(5), "18:00", 300.0)
+        access.trips = listOf(stored)
+        val entry = entry()
+        entry.change(stored, amsterdam)
+
+        entry.departureDay(today.plusDays(2))
+
+        assertThat(entry.draft.value!!.fields.departureDay).isEqualTo(today.plusDays(2))
+        assertThat(saved(entry)).isEqualTo(trip(today.plusDays(2), "07:30", today.plusDays(5), "18:00", 300.0))
+    }
+
+    @Test
     fun theReturnDayIsNeverMovedByTheEntryItself() = runTest {
         val entry = added()
 
@@ -438,6 +461,34 @@ class TripEntryAddAndChangeTest {
     }
 
     @Test
+    fun anEntryOpenedAfterAFailedSaveWasDiscardedStartsWithoutTheFailure() = runTest {
+        access.tripFails = "No space left on device"
+        val entry = added()
+        entry.fill("120")
+        entry.save()
+        runCurrent()
+        entry.back()
+        entry.discard()
+
+        entry.add(today, amsterdam)
+
+        assertThat(entry.saving.value).isEqualTo(SaveState.Idle)
+    }
+
+    @Test
+    fun anEntryOpenedAfterARefusalWasDiscardedStartsWithoutTheProblem() = runTest {
+        val entry = added()
+        entry.fill("abc")
+        entry.save()
+        entry.back()
+        entry.discard()
+
+        entry.add(today, amsterdam)
+
+        assertThat(entry.problem.value).isNull()
+    }
+
+    @Test
     fun whileTheTripIsSavedNothingChangesOrClosesTheEntry() = runTest {
         access.tripGate = CompletableDeferred()
         val entry = added()
@@ -560,17 +611,48 @@ class TripEntryAddAndChangeTest {
         "tripEntry.departureDay, someday",
         "tripEntry.mode, SOMETIMES",
         "tripEntry.opened.departure, ",
+        // a day outside the window, from today, 1 June, to 21 June, and a distance longer than the entry takes
+        "tripEntry.departureDay, 2026-05-31",
+        "tripEntry.returnDay, 2026-06-22",
+        "tripEntry.distance, 12345678901234567",
+        // a text where a number or a flag belongs
+        "tripEntry.departureTime, 08:00",
+        "tripEntry.canCharge, yes",
+        "tripEntry.opened.notWithThisCar, no",
     )
     fun anEntryThatCannotBeReadBackIsClosedAndForgotten(key: String, value: String?) = runTest {
         entry().change(trip(today.plusDays(1), "07:30", today.plusDays(1), "18:00", 300.0), amsterdam)
         if (value == null) handle.remove<String>(key) else handle[key] = value
 
-        val kept = handle.afterTheSystemEndedTheApp()
+        assertForgotten(handle.afterTheSystemEndedTheApp())
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["tripEntry.mode", "tripEntry.zone", "tripEntry.distance", "tripEntry.firstDay"])
+    fun anEntryWithANumberWhereATextBelongsIsClosedAndForgotten(key: String) = runTest {
+        added().distance("12")
+        handle[key] = 7
+
+        assertForgotten(handle.afterTheSystemEndedTheApp())
+    }
+
+    private fun TestScope.assertForgotten(kept: SavedStateHandle) {
         val again = entry(kept)
 
         assertThat(again.draft.value).isNull()
         assertThat(again.discardAsked.value).isFalse()
         assertThat(kept.keys()).isEmpty()
+    }
+
+    @Test
+    fun anEntryKeptWithItsDaysAtTheWindowsEndsAndSixteenCharactersComesBack() = runTest {
+        val entry = added()
+        entry.returnDay(today.plusDays(20))
+        entry.distance("1234567890123456")
+
+        val again = entry(handle.afterTheSystemEndedTheApp())
+
+        assertThat(again.draft.value).isEqualTo(entry.draft.value)
     }
 
     @Test

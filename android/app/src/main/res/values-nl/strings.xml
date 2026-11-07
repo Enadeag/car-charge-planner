@@ -258,7 +258,6 @@
   <string name="trip_return_day">Terugkomstdag</string>
   <string name="trip_return_time">Terugkomsttijd</string>
   <string name="trip_distance_field">Afstand heen en terug</string>
-  <string name="trip_distance_spoken">Afstand heen en terug, in %1$s</string>
   <string name="trip_return_before_departure">De terugkomst moet na het vertrek liggen.</string>
   <string name="trip_passed">Die rit is al voorbij.</string>
   <string name="trip_distance_not_a_number">Typ de afstand als een getal, zoals 120.</string>

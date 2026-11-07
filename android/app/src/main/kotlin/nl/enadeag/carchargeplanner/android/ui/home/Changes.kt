@@ -113,8 +113,8 @@ internal fun <K, N : Any> ChangeOutcome(notices: StateFlow<N?>, shown: () -> Uni
                     is Said.Removed -> {
                         // it stays until the next notice or Close: Material takes one with an action away after about
                         // 10 s, also with TalkBack, which is too soon to find Undo
-                        val result = snackbars.showSnackbar(saying.text, resources.getString(R.string.action_undo), withDismissAction = true,
-                            duration = SnackbarDuration.Indefinite)
+                        val result = snackbars.showSnackbar(saying.text, resources.getString(R.string.action_undo),
+                            withDismissAction = true, duration = SnackbarDuration.Indefinite)
                         if (result == SnackbarResult.ActionPerformed) {
                             restoring.row = saying.row
                             undo(saying.row)

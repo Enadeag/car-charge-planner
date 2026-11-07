@@ -385,7 +385,6 @@
   <!-- the trip entry's distance field, with the unit after it, and what a screen reader says for it: %1$s the unit,
        km -->
   <string name="trip_distance_field">Distance there and back</string>
-  <string name="trip_distance_spoken">Distance there and back, in %1$s</string>
   <!-- why the trip entry's Save refused the trip, the desktop's: under the return's buttons, or under the distance -->
   <string name="trip_return_before_departure">The return must be after the departure.</string>
   <string name="trip_passed">That trip is over already.</string>

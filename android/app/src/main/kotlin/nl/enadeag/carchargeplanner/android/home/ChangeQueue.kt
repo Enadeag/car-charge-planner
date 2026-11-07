@@ -33,11 +33,10 @@ class ChangeQueue<N : Any>(private val scope: CoroutineScope) {
      * @param change the change, which may [say] what it came to; a change cut off as the home ends may still have
      *     stored what it was to store
      * @param done called once the change ended, however it ended, before the next may start
-     * @return false when a change ran, so this one did not start
      */
-    fun run(change: suspend () -> Unit, done: () -> Unit = {}): Boolean {
+    fun run(change: suspend () -> Unit, done: () -> Unit = {}) {
         if (busyNow.value) {
-            return false
+            return
         }
         busyNow.value = true
         scope.launch {
@@ -49,7 +48,6 @@ class ChangeQueue<N : Any>(private val scope: CoroutineScope) {
                 next()
             }
         }
-        return true
     }
 
     /**

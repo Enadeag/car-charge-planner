@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -31,12 +30,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -60,11 +57,8 @@ import nl.enadeag.carchargeplanner.android.ui.components.SaveFailure
 import nl.enadeag.carchargeplanner.android.ui.components.TimeButton
 import nl.enadeag.carchargeplanner.android.ui.components.TimeDialog
 
-/** The unit of a trip's distance, in the entry and its spoken name; kilometres only until #311. */
+/** The unit of a trip's distance, after it in the entry; kilometres only until #311. */
 internal const val DISTANCE_UNIT = "km"
-
-/** The width per unit of font scale under which a day's or a time's button goes to a line of its own. */
-private val LEAST_BUTTON_WIDTH = 132.dp
 
 /** Where the focus is in the entry, so it comes back there when a picker or the question over the entry closes. */
 private enum class Spot {
@@ -251,30 +245,29 @@ private class Named(val name: String, val value: String, val focus: FocusRequest
     val onClick: () -> Unit)
 
 /**
- * A moment of the trip, the departure or the return: its day's button and its time's, side by side while both fit at
- * their least width, which grows with the font, otherwise each on a line of its own.
+ * A moment of the trip, the departure or the return: its day's button and its time's, side by side while both fit
+ * their words, otherwise each on a line of its own.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Moment(day: Named, time: Named, problem: String?, enabled: Boolean) {
-    val least = LEAST_BUTTON_WIDTH * LocalDensity.current.fontScale
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(day, time).forEach { button ->
             TimeButton(button.name, button.value, button.focus, problem, enabled,
-                Modifier.widthIn(min = least).weight(1f).then(button.noted), button.onClick)
+                Modifier.weight(1f).then(button.noted), button.onClick)
         }
     }
 }
 
 /**
  * The distance there and back: Material's field with its label, "km" after it and a decimal keyboard, whose Done
- * saves; a screen reader names it with the unit. Why Save refused it shows under it, in a polite live region of its
- * own, and the field carries it. While the trip is saved, it keeps the focus but takes no typing.
+ * saves; a screen reader reads its label, what is typed and the unit, as the field shows them. Why Save refused it
+ * shows under it, in a polite live region of its own, and the field carries it. While the trip is saved, it keeps the
+ * focus but takes no typing.
  */
 @Composable
 private fun DistanceField(text: String, problem: String?, saving: Boolean, focus: FocusRequester, noted: Modifier,
     onEdit: (String) -> Unit, onDone: () -> Unit) {
-    val spoken = stringResource(R.string.trip_distance_spoken, DISTANCE_UNIT)
     OutlinedTextField(
         value = text,
         onValueChange = onEdit,
@@ -292,7 +285,6 @@ private fun DistanceField(text: String, problem: String?, saving: Boolean, focus
             }
         },
         modifier = Modifier.fillMaxWidth().focusRequester(focus).then(noted).semantics {
-            contentDescription = spoken
             if (problem != null) {
                 error(problem)
             }
