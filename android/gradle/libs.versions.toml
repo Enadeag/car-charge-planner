@@ -22,8 +22,7 @@ coroutines = "1.11.0"
 robolectric = "4.17"
 # the phone-only preferences (the "Wi-Fi only" switch, and the notifications' state), #361
 datastore = "1.3.0"
-# NotificationCompat and NotificationManagerCompat; above the 1.18.0 the Compose BOM's libraries ask for, taken with
-# SDK 37 (#321)
+# NotificationCompat and NotificationManagerCompat; above the 1.18.0 activity-compose asks for, taken with SDK 37 (#321)
 androidx-core = "1.19.1"
 # the hourly round while the app is closed (#362); work-runtime and work-testing at this one version. No
 # work-runtime-ktx: it is empty since 2.8, its Kotlin API is in work-runtime
