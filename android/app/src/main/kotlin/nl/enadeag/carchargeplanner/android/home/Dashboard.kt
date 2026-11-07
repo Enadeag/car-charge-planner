@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.android.home
 
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
@@ -25,11 +26,14 @@ import nl.enadeag.carchargeplanner.engine.trip.Trip
  *     while another forecast is used; empty when none did
  * @property trips the stored trips, in the engine's order, by their departure; each day's page lists those whose days
  *     include it
+ * @property tripAdvice the plan's advice per trip, in the engine's order, by departure; each shows on the tabs
+ *     [TripAdviceModel.shownOn] says
  * @throws IllegalArgumentException when [days] is empty, which shows as no forecast instead
  */
 data class Dashboard(val zone: ZoneId, val madeAt: Instant, val days: List<DayModel>,
     val gridAdvice: GridAdviceModel?, val levels: ChargeLevels, val away: List<ComingAway>, val footer: Footer,
-    val keyRefusedBy: List<String> = listOf(), val trips: List<ListedTrip> = listOf()) {
+    val keyRefusedBy: List<String> = listOf(), val trips: List<ListedTrip> = listOf(),
+    val tripAdvice: List<TripAdviceModel> = listOf()) {
 
     init {
         if (days.isEmpty()) {
@@ -44,6 +48,35 @@ data class Dashboard(val zone: ZoneId, val madeAt: Instant, val days: List<DayMo
      * @return the grid advice on today's tab; null on any other, or when there is none
      */
     fun adviceOn(day: DayModel): GridAdviceModel? = gridAdvice.takeIf { day.name == DayName.Today }
+
+    /** The day the plan was made, in the home's time zone. */
+    val today: LocalDate get() = madeAt.atZone(zone).toLocalDate()
+
+    /**
+     * The trip advice a day's tab shows.
+     *
+     * @param day one of [days]
+     * @return the advice of the trips that leave that day, and on today's tab also of those that ask the owner to
+     *     act, in the engine's order
+     */
+    fun tripAdviceOn(day: DayModel): List<TripAdviceModel> = tripAdvice.filter { it.shownOn(day.date, today) }
+
+    /**
+     * Why a day without a charge window has none, as the desktop's day card tells it: the grid advice's day says so
+     * whatever the trips; the day a trip leaves says nothing, as the trip's advice on its tab tells what the battery
+     * needs; a day the car is away on a trip, by the trips as they are stored now, says that. A trip made without
+     * this car keeps nobody away.
+     *
+     * @param day one of [days]
+     * @return why; null for a day with a charge window or one a trip the plan advises on leaves
+     */
+    fun noWindowWhy(day: DayModel): NoWindowWhy? = when {
+        day.kind == DayKind.SOLAR -> null
+        day.kind == DayKind.GRID -> NoWindowWhy.GRID
+        day.departs -> null
+        trips.any { !it.trip.notWithThisCar() && it.covers(day.date) } -> NoWindowWhy.AWAY
+        else -> NoWindowWhy.NOT_NEEDED
+    }
 
     /**
      * The same dashboard with the one-off away periods as they are stored now, such as after the owner added or
@@ -107,7 +140,7 @@ data class Dashboard(val zone: ZoneId, val madeAt: Instant, val days: List<DayMo
                 ChargeLevels(planned.minimumPct(), planned.targetPct()),
                 ComingAway.of(away, planned.zone(), planned.madeAt()), Footer.of(planned),
                 planned.forecastSource().keyRefusedBy().map(names),
-                ListedTrip.of(trips, planned.zone(), planned.madeAt()))
+                ListedTrip.of(trips, planned.zone(), planned.madeAt()), TripAdviceModel.of(planned))
         }
     }
 }

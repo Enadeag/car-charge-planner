@@ -14,6 +14,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.Freshness
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice
+import nl.enadeag.carchargeplanner.engine.plan.TripAdvice
 import nl.enadeag.carchargeplanner.engine.plan.Window
 
 /** Plans made up for the home's tests, in the time zone given; only what the home shows is filled in with care. */
@@ -75,18 +76,21 @@ internal object Plans {
      * @param baseloadKw the house's use
      * @param minimum the minimum charge level in percent
      * @param target the target charge level in percent
+     * @param tripAdvice the advice per trip, in order of departure
+     * @param endPct each day's level at its end, by its date; the level after its charging by default
      */
     fun planned(madeAt: ZonedDateTime, days: List<List<Window>>, assumed: Boolean = true,
         gridAdvice: GridAdvice? = null, source: ForecastSource = source(madeAt.toInstant()),
         forecast: (LocalDate) -> List<ForecastStep> = { listOf() }, baseloadKw: Double = 0.3, minimum: Double = 20.0,
-        target: Double = 80.0): Outlook.Planned {
+        target: Double = 80.0, tripAdvice: List<TripAdvice> = listOf(),
+        endPct: (LocalDate) -> Double? = { null }): Outlook.Planned {
         val level = Percent(40.0)
         val plans = days.mapIndexed { index, windows ->
             val after = Percent(40.0 + 10.0 * windows.size)
             val date = madeAt.toLocalDate().plusDays(index.toLong())
-            DayPlan(date, level, windows, after, after, 0.0, forecast(date))
+            DayPlan(date, level, windows, after, endPct(date)?.let { Percent(it) } ?: after, 0.0, forecast(date))
         }
         return Outlook.Planned(madeAt.toInstant(), madeAt.zone, plans, level, assumed, Optional.ofNullable(gridAdvice),
-            listOf(), source, baseloadKw, Percent(minimum), Percent(target))
+            tripAdvice, source, baseloadKw, Percent(minimum), Percent(target))
     }
 }
