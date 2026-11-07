@@ -25,7 +25,8 @@ import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
  * closes the entry, says so once and hands the stored periods on; one that failed keeps the entry open with what was
  * entered and why. Remove acts at once and says so once, with the period, so Undo can add it back; a Remove or an
  * Undo that failed says so once with the engine's words. Only one change runs at a time: while one does, the others
- * do nothing, as the screen has them off. Back, or a tap beside the entry, asks before it throws changed times or
+ * do nothing, as the screen has them off, except an Undo, which waits for it and then runs, as its snackbar has
+ * closed and would otherwise lose the period. Back, or a tap beside the entry, asks before it throws changed times or
  * choice away; Cancel throws them away at once. While a save runs, nothing closes the entry. Whether it is open, its
  * day and zone, what was entered and the question survive turning the phone and the system ending the app in the
  * [SavedStateHandle], and are forgotten when it closes, or when they can no longer be read, such as a time zone that
@@ -201,6 +202,7 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
     private val savingNow = MutableStateFlow<SaveState>(SaveState.Idle)
     private val busyNow = MutableStateFlow(false)
     private val noticeNow = MutableStateFlow<Notice?>(null)
+    private val waiting = ArrayDeque<OneOffAwayPeriod>()
 
     /** What the open entry holds; null while it is closed. */
     val draft: StateFlow<Draft?> = draftNow.asStateFlow()
@@ -286,6 +288,7 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
                 }
             } finally {
                 busyNow.value = false
+                next()
             }
         }
     }
@@ -296,16 +299,22 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
      * @param period the period as the dashboard lists it
      */
     fun remove(period: OneOffAwayPeriod) {
-        run(period, access::removeAwayPeriod, { Notice.Removed(period) }, Notice::NotRemoved)
+        if (draftNow.value == null) {
+            run(period, access::removeAwayPeriod, { Notice.Removed(period) }, Notice::NotRemoved)
+        }
     }
 
     /**
-     * Adds a removed period back, as Undo does. While a change runs, or the entry is open, it does nothing.
+     * Adds a removed period back, as Undo does. While a change runs it waits for it and then runs, also when the
+     * entry is open by then; while the entry is open and no change runs it does nothing.
      *
      * @param period the period that was removed
      */
     fun undo(period: OneOffAwayPeriod) {
-        run(period, access::addAwayPeriod, { Notice.Saved(period) }, Notice::NotSaved)
+        when {
+            busyNow.value -> waiting.addLast(period)
+            draftNow.value == null -> restore(period)
+        }
     }
 
     /** Cancel: closes the entry and throws away what was entered; while a save runs it does nothing. */
@@ -338,9 +347,16 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
         noticeNow.value = null
     }
 
+    private fun restore(period: OneOffAwayPeriod) =
+        run(period, access::addAwayPeriod, { Notice.Saved(period) }, Notice::NotSaved)
+
+    private fun next() {
+        waiting.removeFirstOrNull()?.let(::restore)
+    }
+
     private fun run(period: OneOffAwayPeriod, store: suspend (OneOffAwayPeriod) -> AwaySave, saved: () -> Notice,
         failed: (String) -> Notice) {
-        if (busyNow.value || draftNow.value != null) {
+        if (busyNow.value) {
             return
         }
         busyNow.value = true
@@ -355,6 +371,7 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
                 }
             } finally {
                 busyNow.value = false
+                next()
             }
         }
     }

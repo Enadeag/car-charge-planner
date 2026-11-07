@@ -64,7 +64,7 @@ class TripEntryTest {
     }
 
     @Test
-    fun whileAChoiceIsSavedItShowsInItsNewStateAndEveryChangeIsOff() = runTest {
+    fun whileAChoiceIsSavedItShowsInItsNewStateAndAnotherChoiceOrARemoveDoesNothing() = runTest {
         access.trips = listOf(trip, other)
         val gate = CompletableDeferred<Unit>()
         access.tripGate = gate
@@ -76,7 +76,6 @@ class TripEntryTest {
         assertThat(entry.busy.value).isTrue()
         entry.choose(other, Choice.CAN_CHARGE, false)
         entry.remove(other)
-        entry.undo(other)
         runCurrent()
         assertThat(access.tripChanges).hasSize(1)
 
@@ -119,6 +118,30 @@ class TripEntryTest {
         assertThat(entry.notice.value).isEqualTo(Notice.Saved(trip))
         assertThat(changes.last()).containsExactly(trip, other)
         assertThat(access.tripChanges).containsExactly("remove" to trip, "add" to trip)
+    }
+
+    @Test
+    fun anUndoPressedWhileAChangeRunsWaitsForItAndThenAddsTheTripBack() = runTest {
+        access.trips = listOf(trip, other)
+        val entry = entry()
+        entry.remove(trip)
+        runCurrent()
+        val gate = CompletableDeferred<Unit>()
+        access.tripGate = gate
+        entry.choose(other, Choice.NOT_WITH_THIS_CAR, true)
+        runCurrent()
+
+        entry.undo(trip)
+        runCurrent()
+        assertThat(access.tripChanges).containsExactly("remove" to trip, "change" to Choice.NOT_WITH_THIS_CAR.put(
+            other, true))
+        gate.complete(Unit)
+        runCurrent()
+
+        assertThat(access.tripChanges.last()).isEqualTo("add" to trip)
+        assertThat(access.trips).contains(trip)
+        assertThat(entry.notice.value).isEqualTo(Notice.Saved(trip))
+        assertThat(entry.busy.value).isFalse()
     }
 
     @Test

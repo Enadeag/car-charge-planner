@@ -15,7 +15,8 @@ import nl.enadeag.carchargeplanner.engine.trip.Trip
  * periods' ([AwayEntry]). A choice shows its new state at once while it is saved; one whose save failed springs back
  * and says so once with the engine's words; one saved says nothing, as the choice shows it. Remove acts at once and
  * says so once, with the trip, so Undo can add it back; a Remove or an Undo that failed says so once with the engine's
- * words. Only one change runs at a time: while one does, the others do nothing, as the screen has the controls off.
+ * words. Only one change runs at a time: while one does, a choice or a Remove does nothing, as the screen has the
+ * controls off, and an Undo waits for it and then runs, as its snackbar has closed and would otherwise lose the trip.
  * Called from the main thread.
  *
  * @param access stores the changes
@@ -103,6 +104,7 @@ class TripEntry(private val access: EngineAccess, private val scope: CoroutineSc
     private val busyNow = MutableStateFlow(false)
     private val pendingNow = MutableStateFlow<Pending?>(null)
     private val noticeNow = MutableStateFlow<Notice?>(null)
+    private val waiting = ArrayDeque<Trip>()
 
     /** True while a change runs: a choice, a Remove or an Undo; the card's controls are off then. */
     val busy: StateFlow<Boolean> = busyNow.asStateFlow()
@@ -140,13 +142,15 @@ class TripEntry(private val access: EngineAccess, private val scope: CoroutineSc
     }
 
     /**
-     * Adds a removed trip back, as Undo does. While a change runs it does nothing.
+     * Adds a removed trip back, as Undo does. While a change runs it waits for it and then runs.
      *
      * @param trip the trip that was removed
      */
     fun undo(trip: Trip) {
-        if (!busyNow.value) {
-            run({ access.addTrip(trip) }, Notice.Saved(trip), Notice::NotSaved)
+        if (busyNow.value) {
+            waiting.addLast(trip)
+        } else {
+            restore(trip)
         }
     }
 
@@ -154,6 +158,8 @@ class TripEntry(private val access: EngineAccess, private val scope: CoroutineSc
     fun noticeShown() {
         noticeNow.value = null
     }
+
+    private fun restore(trip: Trip) = run({ access.addTrip(trip) }, Notice.Saved(trip), Notice::NotSaved)
 
     private fun run(store: suspend () -> TripSave, saved: Notice?, failed: (String) -> Notice) {
         busyNow.value = true
@@ -169,6 +175,7 @@ class TripEntry(private val access: EngineAccess, private val scope: CoroutineSc
             } finally {
                 pendingNow.value = null
                 busyNow.value = false
+                waiting.removeFirstOrNull()?.let(::restore)
             }
         }
     }

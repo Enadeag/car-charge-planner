@@ -283,6 +283,31 @@ class TripsCardScreenTest {
     }
 
     @Test
+    fun twoTripsThatDifferOnlyInAChoiceEachKeepTheirOwnStateAndFocusWhenOneIsSavedAndMovesDown() {
+        val without = Trip(dayTrip.departure(), dayTrip.returnTime(), 300.0, false, true)
+        access.trips = listOf(without, dayTrip)
+        show()
+        keyboard()
+        val notWith = hasContentDescription(text(R.string.trip_choice_spoken, text(R.string.trip_not_with_this_car),
+            dayTripSpoken()))
+        val canCharge = hasContentDescription(text(R.string.trip_choice_spoken, text(R.string.trip_can_charge),
+            dayTripSpoken()))
+        val pressed = compose.onAllNodes(canCharge)[0].performScrollTo()
+        pressed.requestFocus()
+
+        pressed.enter()
+
+        // the store puts the changed trip after the other, as both leave at the same time
+        val charging = Trip(dayTrip.departure(), dayTrip.returnTime(), 300.0, true, true)
+        assertThat(access.trips).containsExactly(dayTrip, charging)
+        val ticked = ToggleableState.On
+        compose.onAllNodes(notWith)[0].assert(toggle(ToggleableState.Off))
+        compose.onAllNodes(canCharge)[0].assert(toggle(ToggleableState.Off)).assertIsNotFocused()
+        compose.onAllNodes(notWith)[1].assert(toggle(ticked))
+        compose.onAllNodes(canCharge)[1].assert(toggle(ticked)).assertIsFocused()
+    }
+
+    @Test
     fun aChoiceWithTheKeyboardFocusKeepsItWhileItSavesAndAKeyPressedMeanwhileDoesNothing() {
         access.trips = listOf(dayTrip)
         val gate = CompletableDeferred<Unit>()
@@ -398,6 +423,30 @@ class TripsCardScreenTest {
         compose.onNodeWithText(dayTripLine()).assertExists()
         compose.onNodeWithText(text(R.string.trip_saved, dayTripLine())).assertIsDisplayed()
         compose.onNodeWithText(dayTripLine()).assertIsFocused()
+    }
+
+    @Test
+    fun anUndoPressedWhileAChoiceSavesAddsTheTripBackOnceThatIsDoneSaysSoAndTakesTheFocus() {
+        val evening = trip(today, "19:00", today, "22:00", 300.0)
+        access.trips = listOf(dayTrip, evening)
+        show()
+        remove(dayTripSpoken()).performScrollTo().performClick()
+        compose.waitForIdle()
+        val gate = CompletableDeferred<Unit>()
+        access.tripGate = gate
+        choice(R.string.trip_can_charge, dayTripSpoken("19:00", "22:00")).performScrollTo().performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithText(text(R.string.action_undo)).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText(dayTripLine()).assertDoesNotExist()
+        gate.complete(Unit)
+        compose.waitForIdle()
+
+        assertThat(access.tripChanges.last()).isEqualTo("add" to dayTrip)
+        compose.onNodeWithText(text(R.string.trip_saved, dayTripLine())).assertIsDisplayed()
+        compose.onNodeWithText(dayTripLine()).assertIsFocused()
+        choice(R.string.trip_can_charge, dayTripSpoken("19:00", "22:00")).assert(toggle(ToggleableState.On))
     }
 
     @Test

@@ -170,6 +170,7 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
     val busy by away.busy.collectAsStateWithLifecycle()
     val tripGoing = remember { Going<Trip>() }
     val tripRestoring = remember { Restoring<Trip>() }
+    val tripKeys = remember { TripKeys() }
     TripOutcome(trips, snackbars, tripGoing, tripRestoring, tripWords(shown))
     val tripsBusy by trips.busy.collectAsStateWithLifecycle()
     val pending by trips.pending.collectAsStateWithLifecycle()
@@ -182,7 +183,7 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
         when (val now = state) {
             is HomeOutlook.State.Planned -> Days(now.dashboard, refreshing, phoneZone(), outlook::refresh,
                 BatteryAction(battery::open, update), AwayAction(away, add, busy, going, restoring),
-                TripAction(trips, tripsBusy, pending, tripGoing, tripRestoring), askCard) {
+                TripAction(trips, tripsBusy, pending, tripGoing, tripRestoring, tripKeys), askCard) {
                 Notice(notice, closed)
             }
             else -> Refreshable(refreshing, outlook::refresh) {
@@ -651,9 +652,38 @@ private fun TripOutcome(trips: TripEntry, snackbars: SnackbarHostState, going: G
  * @property pending the choice being saved, shown at once in its new state; null while none is
  * @property going the trip whose Remove was pressed, whose neighbour takes the focus once it is out of the list
  * @property restoring the trip an Undo is adding back, whose row takes the focus once it is in the list
+ * @property keys what each trip's row is keyed by
  */
 private class TripAction(val entry: TripEntry, val busy: Boolean, val pending: TripEntry.Pending?,
-    val going: Going<Trip>, val restoring: Restoring<Trip>)
+    val going: Going<Trip>, val restoring: Restoring<Trip>, val keys: TripKeys)
+
+/**
+ * What each trip's row is keyed by, which drawing reads but a choice pressed writes: a trip by itself, and a trip a
+ * choice changed by the key of the trip it was. So the row and the focus on its checkbox stay as a choice saves, also
+ * when the store puts the changed trip after another that leaves at the same time, and two trips that differ only in
+ * a choice keep a row each.
+ */
+private class TripKeys {
+    private val before = mutableMapOf<Trip, Trip>()
+
+    /**
+     * The key of a trip's row.
+     *
+     * @param trip the trip as the dashboard lists it
+     * @return the trip its first row was drawn for
+     */
+    fun of(trip: Trip): Trip = before[trip] ?: trip
+
+    /**
+     * A choice is being saved, so the changed trip takes the row of the trip it was.
+     *
+     * @param trip the trip as the dashboard lists it
+     * @param changed the trip with the choice changed
+     */
+    fun changing(trip: Trip, changed: Trip) {
+        before[changed] = of(trip)
+    }
+}
 
 /**
  * The trips the car is away for on this page's day, under the heading "Trips", as the desktop's card: each with its
@@ -697,8 +727,7 @@ private fun TripsCard(dashboard: Dashboard, day: DayModel, words: DashboardWords
                 NoneLine(stringResource(R.string.trips_none), focus)
             }
             listed.forEach { trip ->
-                // by what a choice leaves as it was, so the row and the focus on its checkbox stay as a choice saves
-                key(trip.departure, trip.returnTime, trip.trip.distanceKm()) {
+                key(trips.keys.of(trip.trip)) {
                     TripRow(trip, words, trips, focus, rows)
                 }
             }
@@ -719,7 +748,10 @@ private fun TripRow(listed: ListedTrip, words: DashboardWords, trips: TripAction
             ChoiceRow(stringResource(when (choice) {
                 TripEntry.Choice.NOT_WITH_THIS_CAR -> R.string.trip_not_with_this_car
                 TripEntry.Choice.CAN_CHARGE -> R.string.trip_can_charge
-            }), spoken, pending?.on ?: choice.of(trip), trips.busy) { trips.entry.choose(trip, choice, it) }
+            }), spoken, pending?.on ?: choice.of(trip), trips.busy) {
+                trips.keys.changing(trip, choice.put(trip, it))
+                trips.entry.choose(trip, choice, it)
+            }
         }
         val remove = stringResource(R.string.trip_remove_spoken, spoken)
         HeldButton(busy = trips.busy, onClick = {

@@ -933,6 +933,31 @@ class AwayEntryScreenTest {
     }
 
     @Test
+    fun anUndoPressedWhileAnotherRemoveRunsAddsThePeriodBackOnceThatIsDoneSaysSoAndTakesTheFocus() {
+        access.away = listOf(tomorrow, wednesday)
+        show()
+        val first = text(R.string.one_off_all_day, "Tomorrow")
+        val second = text(R.string.one_off_part, "Wed, Jun 3", text(R.string.time_span, "10:00", "12:00"))
+        remove(first).performScrollTo().performClick()
+        compose.waitForIdle()
+        val gate = CompletableDeferred<Unit>()
+        access.awayGate = gate
+        // the snackbar covers the bottom of the page, so this Remove is pressed as TalkBack does
+        remove(second).performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+
+        compose.onNodeWithText(text(R.string.action_undo)).performClick()
+        compose.waitForIdle()
+        line(first).assertDoesNotExist()
+        gate.complete(Unit)
+        compose.waitForIdle()
+
+        assertThat(access.away).containsExactly(tomorrow)
+        compose.onNodeWithText(text(R.string.one_off_saved, first)).assertIsDisplayed()
+        line(first).assertIsFocused()
+    }
+
+    @Test
     fun afterAnUndoThatFailedTheFocusStaysWhereItWasAndALaterRestoreDoesNotMoveIt() {
         access.away = listOf(tomorrow, wednesday)
         show()
