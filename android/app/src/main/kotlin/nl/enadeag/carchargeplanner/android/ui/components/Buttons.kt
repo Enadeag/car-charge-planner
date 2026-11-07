@@ -14,6 +14,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import nl.enadeag.carchargeplanner.android.R
 
@@ -86,4 +88,25 @@ internal fun SaveButton(busy: Boolean, onClick: () -> Unit, enabled: Boolean = t
             Text(stringResource(R.string.action_save))
         }
     }
+}
+
+/**
+ * A text button that is off while a change runs yet keeps the focus: Compose takes the focus from a disabled control,
+ * so a keyboard or switch user who pressed it would start again at the top of the page. It looks off, a screen reader
+ * says it is, and a press does nothing until the change is done.
+ *
+ * @param busy true while a change runs
+ * @param onClick what a press does while no change runs
+ * @param modifier its place, focus and name
+ * @param content its words
+ */
+@Composable
+internal fun HeldButton(busy: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit) {
+    val colours = ButtonDefaults.textButtonColors()
+    AppTextButton(onClick = { if (!busy) onClick() }, modifier = modifier.semantics {
+        if (busy) {
+            disabled()
+        }
+    }, colors = if (busy) colours.copy(contentColor = colours.disabledContentColor) else colours, content = content)
 }

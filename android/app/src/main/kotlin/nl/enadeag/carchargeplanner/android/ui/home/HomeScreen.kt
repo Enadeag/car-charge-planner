@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -29,7 +28,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,9 +37,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -53,7 +49,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -102,7 +97,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 import nl.enadeag.carchargeplanner.android.ui.components.BarIconButton
 import nl.enadeag.carchargeplanner.android.ui.components.BarScaffold
 import nl.enadeag.carchargeplanner.android.ui.components.EnglishDetails
-import nl.enadeag.carchargeplanner.android.ui.components.FailureVisuals
+import nl.enadeag.carchargeplanner.android.ui.components.HeldButton
 import nl.enadeag.carchargeplanner.android.ui.components.NoneLine
 import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
 import nl.enadeag.carchargeplanner.android.ui.components.RowLine
@@ -162,7 +157,22 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
     SideEffect { planned?.let { shown.dashboard = it } }
     val going = remember { Going<OneOffAwayPeriod>() }
     val restoring = remember { Restoring<OneOffAwayPeriod>() }
-    AwayOutcome(away, snackbars, going, restoring, awayWords(shown)) {
+    val awayNamed = awayWords(shown)
+    val resources = LocalResources.current
+    ChangeOutcome(away.notice, away::noticeShown, snackbars, going, restoring, { notice ->
+        when (notice) {
+            is AwayEntry.Notice.Saved ->
+                Said.Saved(resources.getString(R.string.one_off_saved, awayNamed(notice.period, notice.entered)))
+            is AwayEntry.Notice.Removed ->
+                Said.Removed(resources.getString(R.string.one_off_removed, awayNamed(notice.period, null)),
+                    notice.period)
+            is AwayEntry.Notice.NotRemoved ->
+                Said.NotRemoved(resources.getString(R.string.one_off_not_removed), notice.detail)
+            is AwayEntry.Notice.NotSaved -> Said.NotSaved(resources.getString(R.string.one_off_not_saved), notice.detail)
+        }
+    }, away::undo)
+    val awayDraft by away.draft.collectAsStateWithLifecycle()
+    AfterClose(awayDraft != null) {
         if (!add.requestFocus()) {
             heading.requestFocus()
         }
@@ -171,7 +181,17 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
     val tripGoing = remember { Going<Trip>() }
     val tripRestoring = remember { Restoring<Trip>() }
     val tripKeys = remember { TripKeys() }
-    TripOutcome(trips, snackbars, tripGoing, tripRestoring, tripWords(shown))
+    val tripNamed = tripWords(shown)
+    ChangeOutcome(trips.notice, trips::noticeShown, snackbars, tripGoing, tripRestoring, { notice ->
+        when (notice) {
+            is TripEntry.Notice.Saved -> Said.Saved(resources.getString(R.string.trip_saved, tripNamed(notice.trip)))
+            is TripEntry.Notice.Removed ->
+                Said.Removed(resources.getString(R.string.trip_removed, tripNamed(notice.trip)), notice.trip)
+            is TripEntry.Notice.NotRemoved ->
+                Said.NotRemoved(resources.getString(R.string.trip_not_removed), notice.detail)
+            is TripEntry.Notice.NotSaved -> Said.NotSaved(resources.getString(R.string.trip_not_saved), notice.detail)
+        }
+    }, trips::undo)
     val tripsBusy by trips.busy.collectAsStateWithLifecycle()
     val pending by trips.pending.collectAsStateWithLifecycle()
     BarScaffold(stringResource(R.string.app_name), heading, onUp = null, snackbars = snackbars, actions = {
@@ -226,65 +246,6 @@ private fun awayWords(shown: Shown): (OneOffAwayPeriod, AwayEntry.Entered?) -> S
 }
 
 /**
- * What a change to the one-off away periods came to, beside the entry itself, each said once in a snackbar, which a
- * screen reader reads when it comes: an added period; a removed one, with Undo, which adds it back; a Remove or an Undo
- * that failed, with the English details and a button to close it. When the entry closes, however it does, the focus
- * moves on.
- *
- * @param away the changes
- * @param snackbars where the snackbar shows
- * @param going the Remove that was pressed, forgotten when it failed
- * @param restoring gets the period an Undo adds back, so the list puts the focus on its row, forgotten when it failed
- * @param named a period as the list names it, given how the entry that saved it read it, when it did
- * @param closed moves the focus once the entry closed
- */
-@Composable
-private fun AwayOutcome(away: AwayEntry, snackbars: SnackbarHostState, going: Going<OneOffAwayPeriod>,
-    restoring: Restoring<OneOffAwayPeriod>, named: (OneOffAwayPeriod, AwayEntry.Entered?) -> String,
-    closed: () -> Unit) {
-    val resources = LocalResources.current
-    val name by rememberUpdatedState(named)
-    LaunchedEffect(away) {
-        away.notice.collect { notice ->
-            if (notice == null) {
-                return@collect
-            }
-            away.noticeShown()
-            // a change that failed leaves the list as it was, so no later change of the list moves the focus for it
-            when (notice) {
-                is AwayEntry.Notice.NotRemoved -> going.row = null
-                is AwayEntry.Notice.NotSaved -> restoring.row = null
-                else -> Unit
-            }
-            snackbars.currentSnackbarData?.dismiss()
-            launch {
-                when (notice) {
-                    is AwayEntry.Notice.Saved -> snackbars.showSnackbar(resources.getString(R.string.one_off_saved,
-                        name(notice.period, notice.entered)))
-                    is AwayEntry.Notice.Removed -> {
-                        // it stays until the next notice or Close: Material takes one with an action away after about
-                        // 10 s, also with TalkBack, which is too soon to find Undo
-                        val undo = snackbars.showSnackbar(resources.getString(R.string.one_off_removed,
-                            name(notice.period, null)), resources.getString(R.string.action_undo),
-                            withDismissAction = true, duration = SnackbarDuration.Indefinite)
-                        if (undo == SnackbarResult.ActionPerformed) {
-                            restoring.row = notice.period
-                            away.undo(notice.period)
-                        }
-                    }
-                    is AwayEntry.Notice.NotRemoved -> snackbars.showSnackbar(
-                        FailureVisuals(resources.getString(R.string.one_off_not_removed), notice.detail))
-                    is AwayEntry.Notice.NotSaved -> snackbars.showSnackbar(
-                        FailureVisuals(resources.getString(R.string.one_off_not_saved), notice.detail))
-                }
-            }
-        }
-    }
-    val draft by away.draft.collectAsStateWithLifecycle()
-    AfterClose(draft != null, closed)
-}
-
-/**
  * What a day's "Car away" list changes the periods with.
  *
  * @property entry the entry and Remove
@@ -295,15 +256,6 @@ private fun AwayOutcome(away: AwayEntry, snackbars: SnackbarHostState, going: Go
  */
 private class AwayAction(val entry: AwayEntry, val focus: FocusRequester, val busy: Boolean,
     val going: Going<OneOffAwayPeriod>, val restoring: Restoring<OneOffAwayPeriod>)
-
-/**
- * The row an Undo is adding back, a one-off away period or a trip, which drawing never reads: the list on the page in
- * view puts the focus on it once it shows; an Undo that failed forgets it.
- *
- * @param K what names a row
- * @property row the row; null when no Undo is under way
- */
-private class Restoring<K>(var row: K? = null)
 
 /**
  * What the battery entry's save came to, beside the entry itself: a level saved says so in a snackbar, which a screen
@@ -592,59 +544,6 @@ private fun tripWords(shown: Shown): (Trip) -> String {
 }
 
 /**
- * What a change to the trips came to, each said once in a snackbar, which a screen reader reads when it comes: a
- * removed trip, with Undo, which adds it back; a trip added back; a choice, a Remove or an Undo that failed, with the
- * English details and a button to close it. A choice saved says nothing, as its checkbox shows it.
- *
- * @param trips the changes
- * @param snackbars where the snackbar shows
- * @param going the Remove that was pressed, forgotten when it failed
- * @param restoring gets the trip an Undo adds back, so the list puts the focus on its row, forgotten when it failed
- * @param named a trip as the list names it
- */
-@Composable
-private fun TripOutcome(trips: TripEntry, snackbars: SnackbarHostState, going: Going<Trip>,
-    restoring: Restoring<Trip>, named: (Trip) -> String) {
-    val resources = LocalResources.current
-    val name by rememberUpdatedState(named)
-    LaunchedEffect(trips) {
-        trips.notice.collect { notice ->
-            if (notice == null) {
-                return@collect
-            }
-            trips.noticeShown()
-            // a change that failed leaves the list as it was, so no later change of the list moves the focus for it
-            when (notice) {
-                is TripEntry.Notice.NotRemoved -> going.row = null
-                is TripEntry.Notice.NotSaved -> restoring.row = null
-                else -> Unit
-            }
-            snackbars.currentSnackbarData?.dismiss()
-            launch {
-                when (notice) {
-                    is TripEntry.Notice.Saved ->
-                        snackbars.showSnackbar(resources.getString(R.string.trip_saved, name(notice.trip)))
-                    is TripEntry.Notice.Removed -> {
-                        // as the away list's: it stays until the next notice or Close, so Undo can be found
-                        val undo = snackbars.showSnackbar(resources.getString(R.string.trip_removed,
-                            name(notice.trip)), resources.getString(R.string.action_undo),
-                            withDismissAction = true, duration = SnackbarDuration.Indefinite)
-                        if (undo == SnackbarResult.ActionPerformed) {
-                            restoring.row = notice.trip
-                            trips.undo(notice.trip)
-                        }
-                    }
-                    is TripEntry.Notice.NotRemoved -> snackbars.showSnackbar(
-                        FailureVisuals(resources.getString(R.string.trip_not_removed), notice.detail))
-                    is TripEntry.Notice.NotSaved -> snackbars.showSnackbar(
-                        FailureVisuals(resources.getString(R.string.trip_not_saved), notice.detail))
-                }
-            }
-        }
-    }
-}
-
-/**
  * What a day's Trips card changes the trips with.
  *
  * @property entry the choices and Remove
@@ -803,38 +702,6 @@ private fun ChoiceRow(label: String, trip: String, checked: Boolean, busy: Boole
 
 /** Material's alpha for a disabled control's content, as its [Checkbox] draws when it is off. */
 private const val DISABLED_ALPHA = 0.38f
-
-/**
- * A text button that is off while a change runs yet keeps the focus: Compose takes the focus from a disabled control,
- * so a keyboard or switch user who pressed it would start again at the top of the page. It looks off, a screen reader
- * says it is, and a press does nothing until the change is done.
- *
- * @param busy true while a change runs
- * @param onClick what a press does while no change runs
- * @param modifier its place, focus and name
- * @param content its words
- */
-@Composable
-private fun HeldButton(busy: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier,
-    content: @Composable RowScope.() -> Unit) {
-    val colours = ButtonDefaults.textButtonColors()
-    AppTextButton(onClick = { if (!busy) onClick() }, modifier = modifier.semantics {
-        if (busy) {
-            disabled()
-        }
-    }, colors = if (busy) colours.copy(contentColor = colours.disabledContentColor) else colours, content = content)
-}
-
-/**
- * The row whose Remove was pressed, a one-off away period or a trip, and the rows as they were then, which drawing
- * never reads, so the focus moves on once the list no longer has it; a Remove that failed forgets it, as its row stays
- * in the list.
- *
- * @param K what names a row
- * @property row the row going; null when none is
- * @property rows the rows before it went, in order
- */
-private class Going<K>(var row: K? = null, var rows: List<K> = listOf())
 
 /**
  * A warning above the plan, with a warning sign and the words, in a container that stands out and a polite live
