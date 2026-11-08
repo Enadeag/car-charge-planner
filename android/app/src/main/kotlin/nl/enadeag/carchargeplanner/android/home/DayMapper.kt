@@ -29,7 +29,7 @@ class DayMapper(planned: Outlook.Planned) {
 
     /** The days a trip the plan advises on leaves. */
     private val departures: Set<LocalDate> =
-        planned.tripAdvice().map { it.trip().departure().atZone(planned.zone()).toLocalDate() }.toSet()
+        planned.tripAdvice().map { it.trip().firstDay(planned.zone()) }.toSet()
 
     /**
      * The days, each with its windows and figures.

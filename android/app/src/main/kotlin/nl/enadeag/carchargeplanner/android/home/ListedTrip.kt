@@ -2,7 +2,6 @@ package nl.enadeag.carchargeplanner.android.home
 
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.ZoneId
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 
@@ -68,13 +67,10 @@ data class ListedTrip(val trip: Trip, val firstDay: LocalDate, val lastDay: Loca
          */
         fun of(trip: Trip, zone: ZoneId, madeAt: Instant): ListedTrip {
             val today = madeAt.atZone(zone).toLocalDate()
-            val first = trip.departure().atZone(zone).toLocalDate()
-            val back = trip.returnTime().atZone(zone)
-            // a trip back at midnight takes no time of the day it returns on
-            val last = if (back.toLocalTime() == LocalTime.MIDNIGHT) back.toLocalDate().minusDays(1)
-                else back.toLocalDate()
-            return ListedTrip(trip, first, last, DayName.of(first, today), DayName.of(back.toLocalDate(), today),
-                first == back.toLocalDate())
+            val first = trip.firstDay(zone)
+            val back = trip.returnTime().atZone(zone).toLocalDate()
+            return ListedTrip(trip, first, trip.lastDay(zone), DayName.of(first, today), DayName.of(back, today),
+                first == back)
         }
     }
 }

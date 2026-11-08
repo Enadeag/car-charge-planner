@@ -56,7 +56,7 @@ public final class GridAdvisor {
     public Optional<GridAdvice> advise(Plan plan, List<ForecastStep> forecast, Instant now) {
         var days = plan.days();
         var dip = days.stream()
-                .filter(day -> plan.trips().stream().noneMatch(trip -> TripAdvice.covers(trip.trip(), day.date(), zone)))
+                .filter(day -> plan.trips().stream().noneMatch(trip -> trip.trip().covers(day.date(), zone)))
                 .filter(this::endsBelowMinimum)
                 .findFirst();
         if (dip.isEmpty() || forecast.isEmpty()) {

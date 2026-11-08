@@ -58,7 +58,7 @@ public final class DayMapper {
                 ? messages.text(TextKey.DAY_BATTERY_ASSUMED, messages.whole(planned.batteryLevelPct().value())) : "";
         this.gridDay = planned.gridAdvice().map(GridAdvice::day).orElse(null);
         this.departures = planned.tripAdvice().stream()
-                .map(advice -> advice.trip().departure().atZone(zone).toLocalDate())
+                .map(advice -> advice.trip().firstDay(zone))
                 .collect(Collectors.toSet());
         this.trips = trips.stream().filter(trip -> !trip.notWithThisCar()).toList();
         this.charts = new SolarChartMapper(planned, messages);
@@ -118,10 +118,8 @@ public final class DayMapper {
         return withoutWindow(day, DayKind.NONE, none, messages.text(TextKey.DAY_NONE_WHY));
     }
 
-    /** From the day of the departure to the day of the return; a return at midnight belongs to the day before. */
     private boolean awayOnATrip(LocalDate date) {
-        return trips.stream().anyMatch(trip -> !date.isBefore(trip.departure().atZone(zone).toLocalDate())
-                && !date.isAfter(trip.returnTime().minusNanos(1).atZone(zone).toLocalDate()));
+        return trips.stream().anyMatch(trip -> trip.covers(date, zone));
     }
 
     private DayModel withoutWindow(DayPlan day, DayKind kind, String heading, String why) {

@@ -152,7 +152,7 @@ data class TripAdviceModel(
                 grid == null && !short -> EnergySource.SOLAR
                 else -> EnergySource.GRID
             }
-            return TripAdviceModel(trip.departure(), trip.departure().atZone(zone).toLocalDate(), trip.distanceKm(),
+            return TripAdviceModel(trip.departure(), trip.firstDay(zone), trip.distanceKm(),
                 if (enough) Plan.Enough(advice.departureLevelPct()) else plan(advice, grid, zone, madeAt), source,
                 if (short) ceil(advice.kmShort()).toInt() else null, level, assumed)
         }

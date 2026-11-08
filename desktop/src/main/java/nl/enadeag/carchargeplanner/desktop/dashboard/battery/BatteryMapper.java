@@ -31,7 +31,7 @@ public final class BatteryMapper {
         this.messages = messages;
         this.today = planned.madeAt().atZone(planned.zone()).toLocalDate();
         this.departures = planned.tripAdvice().stream()
-                .map(advice -> advice.trip().departure().atZone(planned.zone()).toLocalDate())
+                .map(advice -> advice.trip().firstDay(planned.zone()))
                 .collect(Collectors.toSet());
     }
 

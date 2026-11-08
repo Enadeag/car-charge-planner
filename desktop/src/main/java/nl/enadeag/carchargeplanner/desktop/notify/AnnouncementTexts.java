@@ -110,7 +110,7 @@ public final class AnnouncementTexts {
     }
 
     private static String weekday(Trip trip, ZoneId zone, Messages messages) {
-        return messages.weekday(trip.departure().atZone(zone).toLocalDate());
+        return messages.weekday(trip.firstDay(zone));
     }
 
     /**

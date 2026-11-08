@@ -123,7 +123,7 @@ internal class NoticeWords(private val resources: Resources, private val locale:
 
     /** The weekday of a trip's departure in the middle of a sentence, also for today and tomorrow, as the desktop. */
     private fun weekday(trip: Trip, zone: ZoneId, words: DashboardWords): String =
-        words.inSentence(DayName.Other(trip.departure().atZone(zone).toLocalDate()))
+        words.inSentence(DayName.Other(trip.firstDay(zone)))
 
     private fun text(id: Int, vararg args: Any): String = resources.getString(id, *args)
 }
