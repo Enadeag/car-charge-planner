@@ -12,6 +12,13 @@ body:
     id: steps
     attributes:
       label: Steps to reproduce
+  - type: dropdown
+    id: app
+    attributes:
+      label: Which app?
+      options: [Desktop (Linux or Windows), Android]
+    validations:
+      required: true
   - type: input
     id: version
     attributes:
@@ -22,14 +29,14 @@ body:
   - type: input
     id: desktop
     attributes:
-      label: Desktop and session
-      description: "For example: KDE Plasma 6 on Wayland, GNOME 47 on X11"
+      label: Desktop and session, or Android phone
+      description: "For example: KDE Plasma 6 on Wayland, GNOME 47 on X11; or Pixel 8, Android 15"
     validations:
       required: true
   - type: dropdown
     id: shell
     attributes:
-      label: Tray icon or window?
+      label: Desktop only: tray icon or window?
       options: [Tray icon, Window, Not sure]
   - type: textarea
     id: log
