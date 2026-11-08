@@ -170,11 +170,10 @@ final class SetUpView extends BorderPane {
     static SetUpView of(SettingsStores stores, Path keysFile, Consumer<URI> openLink,
             ObservableValue<Boolean> reducedMotion, String appName, Runnable close, Consumer<AppSettings> finished,
             Background background, Messages messages) {
-        var engine = stores.engine();
-        var providers = engine.providers();
+        var providers = stores.providers();
         var app = new AppPage(messages, TextKey.SET_UP_DISPLAY_HINT);
         var location = new LocationPage(
-                (provider, text) -> engine.searchPlaces(provider, text, messages.language().code()), background,
+                (provider, text) -> stores.searchPlaces(provider, text, messages.language().code()), background,
                 messages);
         var solar = new SolarPage(messages);
         var car = new CarCard(messages, false);
@@ -182,7 +181,7 @@ final class SetUpView extends BorderPane {
         var charger = new ChargerPage(messages);
         // a provider's own Test asks for the system as it was when the owner reached the forecast step
         var system = new AtomicReference<HomeSystem>();
-        ProviderTester tester = (provider, settings) -> engine.checkConnection(provider, system.get(), settings);
+        ProviderTester tester = (provider, settings) -> stores.checkConnection(provider, system.get(), settings);
         var forecast = new ForecastPage(providers, tester, openLink, keysFile, background, messages);
         var house = new HouseCard(messages);
         var away = new WeeklyAwayCard(messages);
@@ -193,7 +192,7 @@ final class SetUpView extends BorderPane {
         carPage.show(car.view());
 
         var pages = new EnumMap<SetUpStep, SetUpStepPage>(SetUpStep.class);
-        pages.put(SetUpStep.WELCOME, new SetUpWelcome(providers, engine::hasPlaceSearch, messages));
+        pages.put(SetUpStep.WELCOME, new SetUpWelcome(providers, stores::hasPlaceSearch, messages));
         pages.put(SetUpStep.APP, SetUpStepPage.of(app.view()));
         pages.put(SetUpStep.LOCATION, SetUpStepPage.of(location.view()));
         pages.put(SetUpStep.SOLAR, SetUpStepPage.of(solar.view()));
@@ -206,9 +205,9 @@ final class SetUpView extends BorderPane {
             var primary = config.forecast().primary();
             var settings = new HashMap<>(config.forecast().settingsOf(primary));
             settings.putAll(keys.of(primary));
-            return engine.checkConnection(primary, config.system(), settings);
+            return stores.checkConnection(primary, config.system(), settings);
         }, providers, background, messages));
-        pages.put(SetUpStep.PREVIEW, new SetUpPreview(engine::preview, reducedMotion, appName, background, messages));
+        pages.put(SetUpStep.PREVIEW, new SetUpPreview(stores::preview, reducedMotion, appName, background, messages));
 
         var parts = new EnumMap<SetUpStep, List<ConfigPart>>(SetUpStep.class);
         parts.put(SetUpStep.LOCATION, List.of(location));

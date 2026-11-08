@@ -70,6 +70,11 @@ class ArchitectureTest {
             resideInAPackage("..desktop..").and(not(resideInAPackage("..desktop.system..")))
                     .as("are in the desktop but not in desktop.system");
 
+    private static DescribedPredicate<JavaClass> dependOnJavaFx() {
+        return DescribedPredicate.describe("depend on JavaFX", type -> type.getDirectDependenciesFromSelf().stream()
+                .anyMatch(dependency -> dependency.getTargetClass().getPackageName().startsWith("javafx")));
+    }
+
     @ArchTest
     static final ArchRule engineHasNoUserInterfaceOrDesktopBus = noClasses()
             .that().resideInAPackage("..engine..")
@@ -83,6 +88,15 @@ class ArchitectureTest {
             .should().dependOnClassesThat().resideInAnyPackage("javafx..", "java.awt..", "javax.swing..", "atlantafx..")
             .because("the form logic is tested without JavaFX, so the desktop mutation run, which leaves out the "
                     + "JavaFX tests, covers it");
+
+    @ArchTest
+    static final ArchRule theJavaFxViewsDoNotCallTheBlockingEngine = noClasses()
+            .that().resideInAPackage("..desktop..").and(dependOnJavaFx())
+            .should().dependOnClassesThat().haveFullyQualifiedName("nl.enadeag.carchargeplanner.engine.Engine")
+            .orShould().dependOnClassesThat().haveFullyQualifiedName("nl.enadeag.carchargeplanner.engine.secrets.ApiKeys")
+            .orShould().dependOnClassesThat().haveFullyQualifiedName("nl.enadeag.carchargeplanner.engine.config.ConfigFile")
+            .because("the Engine, the keychain and the settings file block (a keychain call takes about a second, #313); "
+                    + "a view gets small interfaces from the composition root and calls them through Background");
 
     @ArchTest
     static final ArchRule engineDoesNotKnowItsClients = noClasses()
