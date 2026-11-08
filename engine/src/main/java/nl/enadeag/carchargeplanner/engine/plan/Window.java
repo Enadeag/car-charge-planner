@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.engine.plan;
 
+import nl.enadeag.carchargeplanner.engine.config.Percent;
 import java.time.Instant;
 
 /**
@@ -15,13 +16,22 @@ import java.time.Instant;
 public record Window(Instant start, Instant end, int amps, double powerKw, double solarKwh, double importKwh) {
 
     /**
+     * All the energy the window takes, from the solar surplus and from the grid.
+     *
+     * @return the energy in kWh
+     */
+    public double energyKwh() {
+        return solarKwh + importKwh;
+    }
+
+    /**
      * How much of the window's energy is solar.
      *
-     * @return the share from 0 to 1; 0 when the window takes no energy
+     * @return the share in percent; 0 when the window takes no energy
      */
-    public double solarShare() {
-        double total = solarKwh + importKwh;
-        return total > 0 ? solarKwh / total : 0;
+    public Percent solarSharePct() {
+        double total = energyKwh();
+        return new Percent(total > 0 ? solarKwh / total * 100 : 0);
     }
 
     /**

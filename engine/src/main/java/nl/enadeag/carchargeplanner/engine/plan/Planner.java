@@ -417,7 +417,7 @@ public final class Planner {
 
     private double gridPct(TripCharge charge) {
         return charge.grid().stream()
-                .mapToDouble(grid -> grid.window().solarKwh() + grid.window().importKwh())
+                .mapToDouble(grid -> grid.window().energyKwh())
                 .sum() * system.charger().efficiency() / system.car().usableBatteryKwh() * 100;
     }
 

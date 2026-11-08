@@ -127,13 +127,9 @@ final class GridPlacements {
         var outside = atOnce.get();
         return fromNow(quarters, energyKwh, amps, hours.nextStart(outside.start(), zone), until)
                 .filter(waiting -> hours.allowStart(waiting.start(), zone)
-                        && delivered(waiting) >= delivered(outside) - EPS)
+                        && waiting.energyKwh() >= outside.energyKwh() - EPS)
                 .map(waiting -> new TripGridCharge(waiting, TripGridCharge.Start.NOW))
                 .or(() -> Optional.of(new TripGridCharge(outside, TripGridCharge.Start.NOW_OUTSIDE_CHARGING_HOURS)));
-    }
-
-    private static double delivered(Window window) {
-        return window.solarKwh() + window.importKwh();
     }
 
     /**

@@ -90,10 +90,10 @@ internal class NoticeWords(private val resources: Resources, private val locale:
         val window = announcement.window()
         val span = words.spokenSpan(window)
         val setting = setting(window, announcement.phases(), words)
-        val energy = words.decimal(window.solarKwh() + window.importKwh())
+        val energy = words.decimal(window.energyKwh())
         return when (announcement.kind()) {
             AnnouncementKind.SOLAR_WINDOW -> text(R.string.notice_window_title, span) to
-                "$setting ${text(R.string.notice_window_body, energy, words.whole(window.solarShare() * 100))}"
+                "$setting ${text(R.string.notice_window_body, energy, words.whole(window.solarSharePct().value()))}"
             AnnouncementKind.GRID_CHARGE -> text(R.string.notice_grid_title, span) to
                 "$setting ${text(R.string.notice_grid_body, energy, words.whole(announcement.minimumPct().value()),
                     words.whole(announcement.chargeLimitPct().orElseThrow().value()))}"

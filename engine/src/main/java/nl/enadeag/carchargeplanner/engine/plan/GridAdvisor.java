@@ -111,7 +111,7 @@ public final class GridAdvisor {
      * stops the charge only once the window's energy is in; at most 100.
      */
     private Percent chargeLimit(List<DayPlan> days, List<TripAdvice> trips, Window window) {
-        double afterPct = levelAtPct(days, trips, window.start()) + percentOf(window.solarKwh() + window.importKwh());
+        double afterPct = levelAtPct(days, trips, window.start()) + percentOf(window.energyKwh());
         return Charging.chargeLimit(afterPct);
     }
 
@@ -140,7 +140,7 @@ public final class GridAdvisor {
         for (var trip : trips) {
             var grid = trip.grid().map(TripGridCharge::window);
             if (grid.isPresent() && within(grid.get(), from, moment)) {
-                level += percentOf(grid.get().solarKwh() + grid.get().importKwh());
+                level += percentOf(grid.get().energyKwh());
             }
         }
         return level;

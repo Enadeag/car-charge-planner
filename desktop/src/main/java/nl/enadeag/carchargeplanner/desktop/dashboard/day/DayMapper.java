@@ -82,10 +82,10 @@ public final class DayMapper {
     private DayModel withWindow(DayPlan day) {
         var window = day.windows().getFirst();
         var title = messages.title(day.date(), today);
-        var solarSharePct = messages.whole(window.solarShare() * 100);
+        var solarSharePct = messages.whole(window.solarSharePct().value());
         var facts = List.of(
                 messages.text(TextKey.DAY_SET, window.amps(), messages.decimal(window.powerKw())),
-                messages.text(TextKey.DAY_ENERGY, messages.decimal(window.solarKwh() + window.importKwh())));
+                messages.text(TextKey.DAY_ENERGY, messages.decimal(window.energyKwh())));
         var chips = new ArrayList<ChipModel>();
         chips.add(new ChipModel(EnergySource.SOLAR, messages.text(TextKey.DAY_SOLAR_SHARE, solarSharePct)));
         chips.add(batteryChip(day));
