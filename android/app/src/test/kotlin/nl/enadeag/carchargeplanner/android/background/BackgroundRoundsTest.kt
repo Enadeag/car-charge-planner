@@ -31,7 +31,7 @@ class BackgroundRoundsTest {
     }
 
     private val rounds = BackgroundRounds({ access }, { outlook, use -> afterRound(outlook, use) }, background.alarm,
-        background.work, { allowed }, Clock.fixed(now, ZoneOffset.UTC), background.missed)
+        background.work, { allowed }, Clock.fixed(now, ZoneOffset.UTC), background.missed, background.oneRoundAtATime)
 
     private val noForecast = Outlook.NoForecast("Open-Meteo could not be reached")
 
@@ -209,7 +209,7 @@ class BackgroundRoundsTest {
         val failing = BackgroundRounds({ access }, { _, _ -> }, object : NoticeAlarm {
             override fun set(at: Instant) = throw SecurityException("too many alarms")
             override fun cancel() = Unit
-        }, background.work, { true }, Clock.fixed(now, ZoneOffset.UTC), background.missed)
+        }, background.work, { true }, Clock.fixed(now, ZoneOffset.UTC), background.missed, background.oneRoundAtATime)
 
         failing.run(ForecastUse.STORED_ONLY)
 

@@ -7,12 +7,14 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import java.time.Clock
+import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import nl.enadeag.carchargeplanner.android.background.AndroidNoticeAlarm
 import nl.enadeag.carchargeplanner.android.background.BackgroundRounds
 import nl.enadeag.carchargeplanner.android.background.BackgroundSchedule
@@ -41,8 +43,15 @@ import nl.enadeag.carchargeplanner.android.ui.notify.createNoticeChannels
  */
 open class CarChargePlannerApp : Application() {
 
+    /** The one clock of the engine, the notifications, the alarm and the screens; a test's app gives a fixed one. */
+    open val clock: Clock = Clock.systemUTC()
+
     /** Where saves and other work that must outlive a screen run; it is never cancelled. */
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** The platform's parts the engine is made on, one set for the process: the files, the keychain, the API keys. */
+    lateinit var platform: AndroidPlatform
+        private set
 
     /** The engine's reads and writes, each off the main thread; a test of the activity puts one in memory. */
     lateinit var engine: EngineAccess
@@ -78,8 +87,7 @@ open class CarChargePlannerApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        val platform = AndroidPlatform.of(this)
-        val clock = clock()
+        platform = beforeThePolicy { AndroidPlatform.of(this, clock) }
         val notifications = Notifications(this, clock)
         createNoticeChannels(this)
         phoneSettings = PhoneSettings(store(PhoneStoreFiles.SETTINGS), scope)
@@ -88,8 +96,10 @@ open class CarChargePlannerApp : Application() {
         alarm = AndroidNoticeAlarm(this)
         val work = WorkManagerRounds(this)
         val notify = { allowed(this) }
-        rounds = BackgroundRounds({ engine }, problems::afterRound, alarm, work, notify, clock, phoneState)
-        schedule = BackgroundSchedule({ engine }, work, alarm, phoneSettings.on, notify)
+        val oneRoundAtATime = Mutex()
+        rounds = BackgroundRounds({ engine }, problems::afterRound, alarm, work, notify, clock, phoneState,
+            oneRoundAtATime)
+        schedule = BackgroundSchedule({ engine }, work, alarm, phoneSettings.on, oneRoundAtATime, notify)
         engine = ReschedulingAccess(EngineOnDispatcher(AppEngine.build(platform, notifications, clock),
             Dispatchers.IO)) { scope.launch { schedule.refresh() } }
         saves = Saves(engine, scope)
@@ -99,11 +109,29 @@ open class CarChargePlannerApp : Application() {
     }
 
     /**
-     * The one clock of the engine, the notifications and the alarm.
+     * The phone's time zone as it is now, which the owner may change while the app runs.
      *
-     * @return the system's clock; a test's app gives a fixed one
+     * @return the system's default zone
      */
-    protected open fun clock(): Clock = Clock.systemUTC()
+    fun zone(): ZoneId = ZoneId.systemDefault()
+
+    /**
+     * Makes a part that asks for the app's folders, which Android makes on the first ask, before the main thread's
+     * policy is set. The process starts without one; Robolectric makes each test's Application on the same main thread,
+     * where the app of an earlier test set it already.
+     *
+     * @param make what makes the part
+     * @return the part
+     */
+    private fun <T> beforeThePolicy(make: () -> T): T {
+        val policy = StrictMode.allowThreadDiskWrites()
+        StrictMode.allowThreadDiskReads()
+        return try {
+            make()
+        } finally {
+            StrictMode.setThreadPolicy(policy)
+        }
+    }
 
     /** One of the phone's preferences stores, in `files/datastore/<name>.preferences_pb`, read off the main thread. */
     private fun store(name: String): DataStore<Preferences> = phoneStore(scope) { preferencesDataStoreFile(name) }

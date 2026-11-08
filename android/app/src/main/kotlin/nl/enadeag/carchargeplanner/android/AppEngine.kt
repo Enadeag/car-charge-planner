@@ -35,7 +35,7 @@ internal object AppEngine {
     /**
      * The app's engine on the platform's parts.
      *
-     * @param platform the process's one set of parts, from [AndroidPlatform.of]
+     * @param platform the process's one set of parts, which the app's Application makes
      * @param notifier tells the owner about an announcement; the engine calls it only in a round
      * @param clock what the engine plans and announces from; the same as the notifications'
      * @return the engine, with nothing read or fetched yet
@@ -55,7 +55,7 @@ internal object AppEngine {
      * @return the engine, with nothing read or fetched yet
      */
     fun build(dataFolder: Path, http: HttpGet, files: PrivateFiles, apiKeys: ApiKeys, notifier: Notifier,
-        clock: Clock = Clock.systemUTC()): Engine {
+        clock: Clock): Engine {
         val providers = providers(http)
         val announcer = Announcer(AnnouncedWindows(dataFolder.resolve("announced.json"), files),
             ToldTrips(dataFolder.resolve("trip-notices.json"), files), notifier)

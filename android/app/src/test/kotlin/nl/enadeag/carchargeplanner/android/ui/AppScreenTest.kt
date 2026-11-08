@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.time.Clock
 import java.time.ZoneId
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
@@ -51,7 +52,7 @@ class AppScreenTest {
     @Test
     fun theHomesSettingsOpensTheListAndUpComesBackToTheHome() {
         val flow = AppFlow(access, Saves(access, scope), scope, scope, SavedStateHandle(),
-            NumberText(Locale.ENGLISH), { amsterdam }, { "en" }, Dispatchers.Main.immediate)
+            NumberText(Locale.ENGLISH), { amsterdam }, { "en" }, Dispatchers.Main.immediate, Clock.systemUTC())
         val card = allowedCard(scope)
         compose.setContent { AppTheme { AppScreen(flow, card, OffWifiOnly) } }
         compose.waitForIdle()

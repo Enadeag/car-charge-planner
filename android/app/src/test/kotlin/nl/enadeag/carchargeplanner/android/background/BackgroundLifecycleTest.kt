@@ -51,7 +51,8 @@ class BackgroundLifecycleTest {
     }
 
     private fun fakeSchedule() {
-        app.schedule = BackgroundSchedule({ access }, background.work, background.alarm, flowOf(false)) { allowed }
+        app.schedule = BackgroundSchedule({ access }, background.work, background.alarm, flowOf(false),
+            background.oneRoundAtATime) { allowed }
     }
 
     /**

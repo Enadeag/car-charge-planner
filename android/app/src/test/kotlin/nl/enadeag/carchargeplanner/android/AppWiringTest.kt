@@ -9,7 +9,9 @@ import java.io.File
 import java.nio.file.Path
 import java.time.Clock
 import java.time.Instant
+import java.time.ZoneId
 import java.time.ZoneOffset
+import java.util.TimeZone
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -40,7 +42,7 @@ class AppWiringTest {
 
     /** The app as Android makes it, on a clock that stands still at [NOON]. */
     class AppAtNoon : CarChargePlannerApp() {
-        override fun clock(): Clock = Clock.fixed(NOON, ZoneOffset.UTC)
+        override val clock: Clock = Clock.fixed(NOON, ZoneOffset.UTC)
     }
 
     private val app = ApplicationProvider.getApplicationContext<CarChargePlannerApp>()
@@ -113,13 +115,27 @@ class AppWiringTest {
     }
 
     @Test
+    fun theAppsTimeZoneIsThePhonesWhenAsked() {
+        val atStart = TimeZone.getDefault()
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("Europe/Amsterdam"))
+            assertThat(app.zone()).isEqualTo(ZoneId.of("Europe/Amsterdam"))
+
+            TimeZone.setDefault(TimeZone.getTimeZone("Asia/Tokyo"))
+
+            assertThat(app.zone()).isEqualTo(ZoneId.of("Asia/Tokyo"))
+        } finally {
+            TimeZone.setDefault(atStart)
+        }
+    }
+
+    @Test
     @Config(application = AppAtNoon::class)
     fun theEnginePlansFromTheAppsClock() {
         val saved = runBlocking { app.engine.saveBatteryLevel(Percent(55.0)) }
 
         assertThat(saved).isEqualTo(BatteryLevelSave.Saved)
-        // the process's one platform, whose folder may be an earlier test's
-        val reading = onDisk { BatteryFile(AndroidPlatform.of(app).dataFolder().resolve("battery.json"),
+        val reading = onDisk { BatteryFile(app.platform.dataFolder().resolve("battery.json"),
             PrivateFiles(FilePrivacy.NONE)).reading() }
         assertThat(reading.map { it.enteredAt() }).contains(NOON)
     }

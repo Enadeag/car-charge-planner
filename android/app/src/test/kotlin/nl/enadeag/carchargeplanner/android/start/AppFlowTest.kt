@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.android.start
 
 import androidx.lifecycle.SavedStateHandle
 import java.nio.file.Path
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -49,7 +50,7 @@ class AppFlowTest {
     private fun TestScope.flow(access: FakeEngineAccess, saves: Saves = Saves(access, backgroundScope),
         handle: SavedStateHandle = SavedStateHandle()) =
         AppFlow(access, saves, backgroundScope, backgroundScope, handle, NumberText(Locale.ENGLISH),
-            { amsterdam }, { "en" }, StandardTestDispatcher(testScheduler)).also { runCurrent() }
+            { amsterdam }, { "en" }, StandardTestDispatcher(testScheduler), Clock.systemUTC()).also { runCurrent() }
 
     /** The home with its plan in, then Settings opened from it. */
     private fun TestScope.settingsFromThePlannedHome(access: FakeEngineAccess, saves: Saves = Saves(access,
@@ -624,7 +625,7 @@ class AppFlowTest {
         val seen = mutableListOf<Outlook>()
         val flow = AppFlow(access, Saves(access, backgroundScope), backgroundScope, backgroundScope,
             SavedStateHandle(), NumberText(Locale.ENGLISH), { amsterdam }, { "en" },
-            StandardTestDispatcher(testScheduler), seen = { seen += it })
+            StandardTestDispatcher(testScheduler), Clock.systemUTC(), seen = { seen += it })
         runCurrent()
 
         access.outlooks.single().complete(planned)

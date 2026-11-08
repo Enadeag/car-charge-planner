@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory
  * @param context the application's context, which outlives every screen
  * @param clock tells how long a notice still has until its timeout
  */
-internal class Notifications(private val context: Context, private val clock: Clock = Clock.systemUTC()) :
+internal class Notifications(private val context: Context, private val clock: Clock) :
     Notifier, ProblemNotice {
 
     private companion object {

@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import java.time.Clock
 import java.time.ZoneId
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
@@ -36,16 +37,19 @@ import nl.enadeag.carchargeplanner.engine.Outlook
  * @param handle the screen's saved state
  * @param locale the language of the activity that made this model
  * @param language that language as the place search takes it, such as "nl"
+ * @param clock the app's one clock, which the home tells the age of its plan and today by
+ * @param phoneZone the phone's time zone as it is when asked
  * @param seen gets each plan the dashboard asked for, so a Problems notification it no longer shows goes
  * @param card makes the dashboard's notification card in this model's scope
  */
 internal class AppViewModel(access: EngineAccess, saves: Saves, appScope: CoroutineScope, handle: SavedStateHandle,
-    private var locale: Locale, private var language: String, seen: suspend (Outlook) -> Unit = {},
+    private var locale: Locale, private var language: String, clock: Clock, phoneZone: () -> ZoneId,
+    seen: suspend (Outlook) -> Unit = {},
     card: (CoroutineScope) -> NotificationCard) : ViewModel() {
 
     /** Which screen is shown. */
-    val flow = AppFlow(access, saves, appScope, viewModelScope, handle, NumberText { locale }, ZoneId::systemDefault,
-        { language }, Dispatchers.Main.immediate, seen = seen)
+    val flow = AppFlow(access, saves, appScope, viewModelScope, handle, NumberText { locale }, phoneZone,
+        { language }, Dispatchers.Main.immediate, clock, seen)
 
     /** The dashboard's card that asks for notifications while they are not allowed. */
     val card: NotificationCard = card(viewModelScope)

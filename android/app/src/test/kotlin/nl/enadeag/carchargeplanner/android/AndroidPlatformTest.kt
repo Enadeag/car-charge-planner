@@ -4,6 +4,7 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyStoreException
+import java.time.Clock
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.readText
 import nl.enadeag.carchargeplanner.android.secrets.AndroidKeystoreKeys
@@ -33,7 +34,8 @@ class AndroidPlatformTest {
     private val filesFolder by lazy { root.resolve("files") }
     private val noBackupFolder by lazy { root.resolve("no_backup") }
     private val key = SoftwareKeys()
-    private val platform by lazy { AndroidPlatform(filesFolder.toFile(), noBackupFolder.toFile(), key) }
+    private val platform by lazy { AndroidPlatform(filesFolder.toFile(), noBackupFolder.toFile(), key,
+        Clock.systemUTC()) }
 
     private fun keys(provider: ProviderId, value: String) = Secrets(mapOf(provider to mapOf("api_key" to value)))
 
@@ -98,7 +100,8 @@ class AndroidPlatformTest {
     @Test
     fun withoutAnAndroidKeystoreTheKeychainIsUnavailable() {
         val onTheJvm =
-            AndroidPlatform(File(root.toFile(), "files"), File(root.toFile(), "no_backup"), AndroidKeystoreKeys())
+            AndroidPlatform(File(root.toFile(), "files"), File(root.toFile(), "no_backup"), AndroidKeystoreKeys(),
+                Clock.systemUTC())
 
         val failure = catchThrowableOfType(KeychainException::class.java) {
             onTheJvm.keychain().write("forecast/open-meteo/api_key", "MADE-UP-OM-KEY")

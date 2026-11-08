@@ -83,7 +83,7 @@ class RoundWorkerTest {
         val access = FakeEngineAccess()
         access.roundOutlook = Outlook.NoForecast("Open-Meteo could not be reached")
         app.rounds = BackgroundRounds({ access }, { _, _ -> }, background.alarm, background.work, { true },
-            Clock.systemUTC(), background.missed)
+            Clock.systemUTC(), background.missed, background.oneRoundAtATime)
 
         assertThat(work()).isEqualTo(ListenableWorker.Result.success())
         assertThat(access.rounds).containsExactly(ForecastUse.ASK_PROVIDERS)
@@ -95,7 +95,7 @@ class RoundWorkerTest {
         val access = FakeEngineAccess()
         access.roundThrows = IllegalStateException("a fault")
         app.rounds = BackgroundRounds({ access }, { _, _ -> }, background.alarm, background.work, { true },
-            Clock.systemUTC(), background.missed)
+            Clock.systemUTC(), background.missed, background.oneRoundAtATime)
 
         assertThat(work()).isEqualTo(ListenableWorker.Result.success())
     }
@@ -112,9 +112,9 @@ class RoundWorkerTest {
                 this.started = started
             }
         }
-        val problems = ProblemEpisode(flag, Notifications(app))
+        val problems = ProblemEpisode(flag, Notifications(app, Clock.systemUTC()))
         app.rounds = BackgroundRounds({ access }, problems::afterRound, background.alarm, background.work, { true },
-            Clock.systemUTC(), background.missed)
+            Clock.systemUTC(), background.missed, background.oneRoundAtATime)
 
         work()
 
@@ -155,7 +155,7 @@ class RoundWorkerTest {
         // the alarm that woke the phone for this notice, as the morning's round set it
         alarm.set(noticeAt)
         app.rounds = BackgroundRounds({ atNotice }, { _, _ -> }, alarm, background.work, { true }, clock,
-            background.missed)
+            background.missed, background.oneRoundAtATime)
 
         assertThat(work()).isEqualTo(ListenableWorker.Result.success())
 
@@ -186,12 +186,13 @@ class RoundWorkerTest {
         val engine = AppEngine.build(folder, { throw IOException("offline") }, PrivateFiles(FilePrivacy.NONE),
             platform().apiKeys(), Notifications(app, clock), clock)
         lateinit var access: ReschedulingAccess
-        val schedule = BackgroundSchedule({ access }, background.work, background.alarm, flowOf(false)) { true }
+        val schedule = BackgroundSchedule({ access }, background.work, background.alarm, flowOf(false),
+            background.oneRoundAtATime) { true }
         access = ReschedulingAccess(EngineOnDispatcher(engine, Dispatchers.IO)) {
             runBlocking { schedule.refresh() }
         }
         app.rounds = BackgroundRounds({ access }, { _, _ -> }, background.alarm, background.work, { true }, clock,
-            background.missed)
+            background.missed, background.oneRoundAtATime)
         return access
     }
 

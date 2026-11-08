@@ -6,10 +6,15 @@ import com.tngtech.archunit.core.domain.AccessTarget
 import com.tngtech.archunit.core.domain.JavaAccess
 import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.domain.JavaClasses
+import com.tngtech.archunit.core.domain.JavaField
 import com.tngtech.archunit.core.domain.JavaMethodCall
+import com.tngtech.archunit.core.domain.JavaModifier
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
+import com.tngtech.archunit.lang.ArchCondition
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
+import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields
+import java.time.Clock
 import nl.enadeag.carchargeplanner.android.logging.LogcatServiceProvider
 import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.android.store.EngineOnDispatcher
@@ -17,7 +22,9 @@ import nl.enadeag.carchargeplanner.android.background.WorkThatCallsTheEngineItse
 import nl.enadeag.carchargeplanner.android.background.WorkThatPlansARound
 import nl.enadeag.carchargeplanner.android.backgroundwork.WorkBesideTheBackgroundPackage
 import nl.enadeag.carchargeplanner.android.store.StoreThatCallsTheEngineItself
+import nl.enadeag.carchargeplanner.android.home.LogicThatMakesThreads
 import nl.enadeag.carchargeplanner.android.home.LogicThatPlansARound
+import nl.enadeag.carchargeplanner.android.home.LogicThatReadsTheClock
 import nl.enadeag.carchargeplanner.android.ui.ScreenAccessThatPlansInALambda
 import nl.enadeag.carchargeplanner.android.ui.ScreenThatPlansARound
 import nl.enadeag.carchargeplanner.android.ui.ScreenThatRoundsANumber
@@ -33,7 +40,10 @@ import org.junit.jupiter.api.Test
  * which keeps the engine's contract on timeouts, size and redirects; no class weakens the checks of TLS; the app
  * logs through slf4j, whose provider is the one class that writes to Logcat; the screens reach the engine only
  * through the suspend interface that runs it off the main thread; and only the work in the background, in the app's
- * `background` package, makes the planning round and asks when the next notice is due, through that interface.
+ * `background` package, makes the planning round and asks when the next notice is due, through that interface. And
+ * ADR 0005's wiring rules, as the desktop's `ArchitectureTest` has them (ADR 0010): only the Application reads the
+ * system's clock and the phone's time zone, only the composition root and the HttpGet make threads, and no class keeps
+ * static mutable state.
  */
 class AppArchitectureTest {
 
@@ -220,6 +230,159 @@ class AppArchitectureTest {
                 .because("a round tells the owner what is due, once, while a screen or its logic shows an outlook "
                     + "and tells nobody; the round and the next due notice are for the work in the background, in the "
                     + "app's background package (#362), which reaches the engine through EngineAccess")
+
+        /** Whether a class is one of these or nested in one, such as a lambda Kotlin makes inside it. */
+        fun partOf(type: JavaClass, names: Collection<String>) =
+            names.any { name -> type.name == name || type.name.startsWith("$name$") }
+
+        val ROOT: String = CarChargePlannerApp::class.java.name
+
+        /** The composition root and the parts it makes the engine and the platform's seams with. */
+        val ROOT_PARTS = setOf(ROOT, AppEngine::class.java.name, AndroidPlatform::class.java.name)
+
+        val READ_THE_SYSTEM_CLOCK = DescribedPredicate.describe<JavaAccess<*>>(
+            "read the system's clock or time zone") { access ->
+            val owner = access.targetOwner.name
+            val name = access.name
+            val takesAClock = (access.target as? AccessTarget.CodeUnitAccessTarget)?.rawParameterTypes
+                ?.any { it.name == Clock::class.java.name } == true
+            name == "now" && owner.startsWith("java.time.") && !takesAClock
+                || owner == Clock::class.java.name && name in setOf("systemUTC", "systemDefaultZone", "system")
+                || owner == "java.time.ZoneId" && name == "systemDefault"
+                || owner == "java.util.TimeZone" && name == "getDefault"
+                || owner == "java.lang.System" && name == "currentTimeMillis"
+                || owner == "android.os.SystemClock"
+                && name in setOf("currentTimeMillis", "elapsedRealtime", "elapsedRealtimeNanos", "uptimeMillis")
+        }
+
+        val ONLY_THE_ROOT_READS_THE_CLOCK =
+            noClasses().that(DescribedPredicate.describe("are not the composition root") { type ->
+                !partOf(type, setOf(ROOT))
+            })
+                .should().accessTargetWhere(READ_THE_SYSTEM_CLOCK)
+                .because("the clock and the phone's time zone are handed in by the Application, so a test can set "
+                    + "the time and the engine, the notifications, the alarm and the screens see one (ADR 0005, "
+                    + "ADR 0010)")
+
+        val START_A_THREAD = DescribedPredicate.describe<JavaAccess<*>>(
+            "start a thread or make an executor or a dispatcher of their own") { access ->
+            val owner = access.targetOwner
+            owner.name == "java.lang.Thread" && access.name in setOf("<init>", "ofVirtual", "ofPlatform",
+                "startVirtualThread")
+                || owner.name == "java.util.concurrent.Executors"
+                || owner.name == "java.util.concurrent.ForkJoinPool" && access.name in setOf("<init>", "commonPool")
+                || owner.isAssignableTo("java.util.Timer") && access.name == "<init>"
+                || owner.isAssignableTo("java.util.concurrent.ThreadPoolExecutor") && access.name == "<init>"
+                || owner.name == "android.os.HandlerThread" && access.name == "<init>"
+                || owner.name == "kotlin.concurrent.ThreadsKt"
+                || owner.name.startsWith("kotlinx.coroutines.ThreadPoolDispatcherKt")
+                || owner.name == "kotlinx.coroutines.ExecutorsKt" && access.name == "from"
+        }
+
+        val THREAD_OWNERS = ROOT_PARTS + HTTP_GET
+
+        val ONLY_THE_ROOT_AND_THE_HTTP_GET_OWN_THREADS =
+            noClasses().that(DescribedPredicate.describe("are not the composition root or the HttpGet") { type ->
+                !partOf(type, THREAD_OWNERS)
+            })
+                .should().accessTargetWhere(START_A_THREAD)
+                .because("the root hands out the threads and dispatchers the parts run on (ADR 0005, ADR 0010); "
+                    + "AndroidHttpGet runs each request on a pool of its own, which keeps its timeouts")
+
+        /** What may change while a static field keeps pointing at it. */
+        val HOLDS_A_MUTABLE_OBJECT = DescribedPredicate.describe<JavaField>(
+            "hold a mutable collection, an atomic, a builder, an array, a lock or a mutable flow") { field ->
+            val type = field.rawType
+            type.isArray
+                || type.packageName.startsWith("java.util.concurrent.atomic")
+                || type.packageName == "java.util.concurrent.locks"
+                || type.isAssignableTo(StringBuilder::class.java) || type.isAssignableTo(StringBuffer::class.java)
+                || !type.isInterface && (type.isAssignableTo(java.util.Collection::class.java)
+                    || type.isAssignableTo(java.util.Map::class.java))
+                || type.isAssignableTo(java.util.Queue::class.java)
+                || type.isAssignableTo(java.util.concurrent.ConcurrentMap::class.java)
+                || type.name in setOf("kotlinx.coroutines.sync.Mutex", "kotlinx.coroutines.sync.Semaphore",
+                    "kotlinx.coroutines.flow.MutableStateFlow", "kotlinx.coroutines.flow.MutableSharedFlow")
+        }
+
+        /** The resource IDs, which the build leaves not final, so a library's are known only once the app is built. */
+        val R_CLASS = "$APP.R"
+
+        /** The lambdas the Compose compiler keeps once per file, made when first asked for, in fields not final. */
+        const val COMPOSABLE_SINGLETONS = "ComposableSingletons$"
+
+        /**
+         * The static state the app keeps on purpose, each with its reason: the keychain's lock per file, which every
+         * keychain on that file in the process shares, also one a test makes beside the app's, so two never write the
+         * file at once.
+         */
+        val DELIBERATE_STATICS = setOf("$APP.secrets.EncryptedKeychain.LOCKS")
+
+        val STATIC_FIELDS = DescribedPredicate.describe<JavaField>(
+            "are static, not made by a compiler, not resource IDs and not named as deliberate") { field ->
+            JavaModifier.STATIC in field.modifiers && JavaModifier.SYNTHETIC !in field.modifiers
+                && !partOf(field.owner, setOf(R_CLASS)) && !field.owner.name.substringAfterLast('.').startsWith(COMPOSABLE_SINGLETONS)
+                && field.fullName !in DELIBERATE_STATICS
+        }
+
+        val NO_STATIC_MUTABLE_STATE = noFields().that(STATIC_FIELDS)
+            .should(ArchCondition.from(DescribedPredicate.describe<JavaField>("be static mutable state: not final, "
+                + "or holding a mutable collection, an atomic, a builder, an array, a lock or a mutable flow") {
+                field -> JavaModifier.FINAL !in field.modifiers || HOLDS_A_MUTABLE_OBJECT.test(field)
+            }))
+            .because("dependencies come in through constructors from the Application, never through global state "
+                + "(ADR 0005, ADR 0010): a Kotlin top-level var or lock is such state, and a static outlives the "
+                + "Application that a Robolectric test makes for each test")
+    }
+
+    @Test
+    fun onlyTheRootReadsTheClock() {
+        ONLY_THE_ROOT_READS_THE_CLOCK.check(APP_CLASSES)
+    }
+
+    @Test
+    fun aClassThatReadsTheClockItselfBreaksTheRule() {
+        val reader = ClassFileImporter().importClasses(LogicThatReadsTheClock::class.java)
+
+        assertThatThrownBy { ONLY_THE_ROOT_READS_THE_CLOCK.check(reader) }
+            .isInstanceOf(AssertionError::class.java)
+            .hasMessageContaining("Clock.systemUTC()")
+            .hasMessageContaining("ZoneId.systemDefault()")
+            .hasMessageContaining("Instant.now()")
+            .hasMessageContaining("SystemClock.elapsedRealtime()")
+    }
+
+    @Test
+    fun onlyTheRootAndTheHttpGetOwnThreads() {
+        ONLY_THE_ROOT_AND_THE_HTTP_GET_OWN_THREADS.check(APP_CLASSES)
+    }
+
+    @Test
+    fun aClassThatMakesAThreadOrAnExecutorBreaksTheRule() {
+        val maker = ClassFileImporter().importClasses(LogicThatMakesThreads::class.java)
+
+        assertThatThrownBy { ONLY_THE_ROOT_AND_THE_HTTP_GET_OWN_THREADS.check(maker) }
+            .isInstanceOf(AssertionError::class.java)
+            .hasMessageContaining("Thread.<init>(")
+            .hasMessageContaining("Executors.newSingleThreadExecutor()")
+            .hasMessageContaining("ThreadPoolDispatcherKt.newSingleThreadContext(")
+    }
+
+    @Test
+    fun noClassKeepsStaticMutableState() {
+        NO_STATIC_MUTABLE_STATE.check(APP_CLASSES)
+    }
+
+    @Test
+    fun aTopLevelVarOrLockIsStaticMutableState() {
+        val state = ClassFileImporter().importClasses(Class.forName("$APP.home.TopLevelStateKt"))
+
+        assertThatThrownBy { NO_STATIC_MUTABLE_STATE.check(state) }
+            .isInstanceOf(AssertionError::class.java)
+            .hasMessageContaining("TopLevelStateKt.counted")
+            .hasMessageContaining("TopLevelStateKt.ONE_AT_A_TIME")
+            .hasMessageContaining("TopLevelStateKt.seen")
+            .satisfies({ failure -> assertThat(failure.message).doesNotContain("TopLevelStateKt.LIMIT") })
     }
 
     @Test

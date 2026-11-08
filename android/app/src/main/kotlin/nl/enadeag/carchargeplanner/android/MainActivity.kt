@@ -51,7 +51,7 @@ class MainActivity : ComponentActivity() {
                 val app = application as CarChargePlannerApp
                 val context = app.applicationContext
                 AppViewModel(app.engine, app.saves, app.scope, createSavedStateHandle(), locale(), searchLanguage(),
-                    app.problems::dashboardSaw) { scope ->
+                    app.clock, app::zone, app.problems::dashboardSaw) { scope ->
                     // Android's question only pauses this activity, so no start sets the work up after a grant
                     NotificationCard(app.phoneState, { allowed(context) },
                         Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU, scope) {

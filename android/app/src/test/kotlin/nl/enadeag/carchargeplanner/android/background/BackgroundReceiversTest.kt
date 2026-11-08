@@ -49,8 +49,9 @@ class BackgroundReceiversTest {
         access.roundOutlook = Outlook.NoForecast("Open-Meteo could not be reached")
         access.noticeDue = due
         app.rounds = BackgroundRounds({ access }, { _, _ -> }, AndroidNoticeAlarm(app), background.work, { allowed },
-            Clock.fixed(now, ZoneOffset.UTC), background.missed)
-        app.schedule = BackgroundSchedule({ access }, background.work, background.alarm, MutableStateFlow(true)) {
+            Clock.fixed(now, ZoneOffset.UTC), background.missed, background.oneRoundAtATime)
+        app.schedule = BackgroundSchedule({ access }, background.work, background.alarm, MutableStateFlow(true),
+            background.oneRoundAtATime) {
             allowed
         }
     }
@@ -147,11 +148,11 @@ class BackgroundReceiversTest {
 
     @Test
     fun theAlarmsReceiverGivesUpOnARoundThatRunsTooLongAndIsDoneInTime() {
-        runBlocking { ONE_ROUND_AT_A_TIME.lock() }
+        runBlocking { background.oneRoundAtATime.lock() }
         try {
             finished(receive(NoticeAlarmReceiver(50.milliseconds), Intent()))
         } finally {
-            ONE_ROUND_AT_A_TIME.unlock()
+            background.oneRoundAtATime.unlock()
         }
 
         assertThat(access.rounds).isEmpty()
@@ -160,11 +161,11 @@ class BackgroundReceiversTest {
 
     @Test
     fun theBootReceiverGivesUpOnARoundThatRunsTooLongAndStillAsksTheRoundNow() {
-        runBlocking { ONE_ROUND_AT_A_TIME.lock() }
+        runBlocking { background.oneRoundAtATime.lock() }
         try {
             finished(receive(BootReceiver(50.milliseconds), Intent(Intent.ACTION_MY_PACKAGE_REPLACED)))
         } finally {
-            ONE_ROUND_AT_A_TIME.unlock()
+            background.oneRoundAtATime.unlock()
         }
 
         assertThat(access.rounds).isEmpty()

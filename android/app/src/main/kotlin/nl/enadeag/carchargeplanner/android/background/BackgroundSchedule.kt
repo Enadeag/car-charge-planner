@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.android.background
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.android.store.StartState
@@ -21,10 +22,13 @@ import org.slf4j.LoggerFactory
  * @param work the work that asks the providers
  * @param alarm the alarm for the next notice
  * @param wifiOnly the "Wi-Fi only" switch
+ * @param oneAtATime the lock of the [BackgroundRounds], which a cancel waits for, so a running round's alarm does not
+ *     come back once cancelled
  * @param allowed whether notifications are allowed now
  */
 class BackgroundSchedule(private val access: () -> EngineAccess, private val work: RoundWork,
-    private val alarm: NoticeAlarm, private val wifiOnly: Flow<Boolean>, private val allowed: () -> Boolean) {
+    private val alarm: NoticeAlarm, private val wifiOnly: Flow<Boolean>, private val oneAtATime: Mutex,
+    private val allowed: () -> Boolean) {
 
     private companion object {
         val LOG = LoggerFactory.getLogger(BackgroundSchedule::class.java)
@@ -39,7 +43,7 @@ class BackgroundSchedule(private val access: () -> EngineAccess, private val wor
                 work.once(wifi)
             }
             // after a running round, so its alarm does not come back once cancelled
-            BackgroundRules.AtStart.CANCEL -> ONE_ROUND_AT_A_TIME.withLock { stopAll(alarm, work) }
+            BackgroundRules.AtStart.CANCEL -> oneAtATime.withLock { stopAll(alarm, work) }
             BackgroundRules.AtStart.LEAVE -> Unit
         }
     }

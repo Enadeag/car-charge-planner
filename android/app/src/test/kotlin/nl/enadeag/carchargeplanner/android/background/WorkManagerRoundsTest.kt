@@ -63,7 +63,7 @@ class WorkManagerRoundsTest {
         access.roundGate = held
         val background = FakeBackground()
         app.rounds = BackgroundRounds({ access }, { _, _ -> }, background.alarm, background.work, { true },
-            Clock.systemUTC(), background.missed)
+            Clock.systemUTC(), background.missed, background.oneRoundAtATime)
         once(wifiOnly = false)
         val first = work(WorkManagerRounds.ONCE).single()
         requireNotNull(WorkManagerTestInitHelper.getTestDriver(app)).setAllConstraintsMet(first.id)

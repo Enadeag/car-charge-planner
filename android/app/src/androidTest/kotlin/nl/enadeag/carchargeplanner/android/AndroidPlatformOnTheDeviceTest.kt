@@ -1,28 +1,21 @@
 package nl.enadeag.carchargeplanner.android
 
-import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.io.File
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertSame
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** The app's platform parts on the device: one set per process, in the app's own folders. Nothing is written. */
+/** The app's platform parts on the device, the one set its Application keeps, in its own folders. Nothing is written. */
 @RunWith(AndroidJUnit4::class)
 class AndroidPlatformOnTheDeviceTest {
 
-    private val context = ApplicationProvider.getApplicationContext<Context>()
-
-    @Test
-    fun everyCallGivesTheSameParts() {
-        assertSame(AndroidPlatform.of(context), AndroidPlatform.of(context))
-    }
+    private val context = ApplicationProvider.getApplicationContext<CarChargePlannerApp>()
 
     @Test
     fun theEngineFilesGoInTheFilesFolderAndTheKeychainInTheFolderThatIsNeverBackedUp() {
-        val platform = AndroidPlatform.of(context)
+        val platform = context.platform
 
         assertEquals(context.filesDir.toPath(), platform.dataFolder())
         assertEquals(File(context.noBackupFilesDir, "keychain.json").toPath(), platform.keychainFile())
