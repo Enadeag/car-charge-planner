@@ -7,6 +7,9 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ### Changed
 - A file written by a newer version of the app (`engine.json`, `app.json`, `trips.json`, `away.json`, `battery.json`, `trip-notices.json` or `secrets.json`) is no longer moved aside and replaced when you save: it is left as it is, and saving fails until you update the app.
 
+### Fixed
+- Saving API keys no longer deletes the keys of the other providers when the keychain cannot read one of the entries: that entry is left as it is, the other changes are saved, and entering a new value for it replaces it.
+
 ### Android
 Not released yet; this is the way to the first Android release, 0.1.0.
 - First-run set-up: Welcome (what leaves the phone), Location (search for a place, shown on a card with its coordinates and time zone once chosen, or enter coordinates, with the time zone under **Advanced**), Panels, Car, Charger, More (the house and weekly away) and Check, which fetches a forecast once. Typical values are marked, and each step has "I don't know". In English and Dutch.

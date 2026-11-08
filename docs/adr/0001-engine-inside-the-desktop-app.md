@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded in part by ADR 0005; engine also embedded by ADR 0010
 ---
 
 # The engine runs inside the desktop app first
@@ -25,3 +25,4 @@ The app is used first by someone with a laptop or desktop computer and no home s
 
 - **2026-10-17**: No client writes the engine's files; the desktop app keeps its own app settings. The engine has no interface of its own until it runs on its own: today the desktop app is its only client and calls the `Engine` class, and the interface is cut when a second client, reached over a transport, needs one.
 - **2026-11-02** (#313, PR #318): The engine never writes over, removes or sets aside a file written by a newer version of the app, for both apps and for every file it keeps with a version, and the desktop's `app.json` follows the same rule; such a change fails and the owner updates the app. A file of a newer version is a problem kind of its own (`NEWER_VERSION`). The decisions and their accepted consequences are in [docs/design/engine/decisions.md](../design/engine/decisions.md).
+- **2026-11-08** (#382): The decision stands: the engine runs inside the app, with clients beside it. ADR 0005 replaced Python and Qt with Java and JavaFX, so the Consequences that name Qt and "plain Python calls" are superseded (the engine is plain Java; the boundary is the `Engine` class). There is no macOS installer. ADR 0010 embeds the same engine in a second app, the Android app, and no stand-alone engine exists yet.

@@ -125,8 +125,7 @@ final class PlaceSearchCard {
 
     /** A result as a button; two results that read alike name their finer area too. */
     private Button result(Place place, List<Place> all) {
-        var alike = all.stream().filter(other -> other.label().equals(place.label())).count() > 1;
-        var button = new Button(alike ? place.detailedLabel() : place.label());
+        var button = new Button(place.labelAmong(all));
         button.getStyleClass().addAll("flat", "place-result");
         button.setMaxWidth(Double.MAX_VALUE);
         button.setOnAction(_ -> {

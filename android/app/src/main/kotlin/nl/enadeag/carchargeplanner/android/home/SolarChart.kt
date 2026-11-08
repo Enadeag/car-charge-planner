@@ -149,7 +149,7 @@ class SolarChartMapper(private val planned: Outlook.Planned) {
     }
 
     private val zone: ZoneId = planned.zone()
-    private val today: LocalDate = planned.madeAt().atZone(zone).toLocalDate()
+    private val today: LocalDate = planned.today()
     private val scaleKw: Double = max(1.0, ceil(max(
         planned.days().flatMap { it.forecast() }.maxOfOrNull(ForecastStep::powerKw) ?: 0.0, planned.baseloadKw())))
 

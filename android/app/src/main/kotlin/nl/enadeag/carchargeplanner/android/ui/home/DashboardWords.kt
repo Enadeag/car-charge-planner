@@ -2,6 +2,11 @@ package nl.enadeag.carchargeplanner.android.ui.home
 
 import android.content.res.Resources
 import android.text.format.DateFormat
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -538,3 +543,12 @@ internal data class TripAdviceText(val label: String, val title: String, val pla
  */
 internal fun clockOf(twentyFour: Boolean, locale: Locale): DateTimeFormatter =
     DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, if (twentyFour) "Hm" else "hma"), locale)
+
+/** The dashboard's words in the app's language and the phone's clock, with the times in this zone. */
+@Composable
+internal fun dashboardWords(zone: ZoneId): DashboardWords {
+    val resources = LocalResources.current
+    val locale = LocalConfiguration.current.locales[0]
+    val twentyFour = DateFormat.is24HourFormat(LocalContext.current)
+    return remember(resources, locale, twentyFour, zone) { DashboardWords(resources, locale, twentyFour, zone) }
+}

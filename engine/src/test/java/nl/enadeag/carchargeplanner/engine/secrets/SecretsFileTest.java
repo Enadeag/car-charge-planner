@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.engine.secrets;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Clock;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
@@ -41,7 +42,8 @@ class SecretsFileTest {
     }
 
     private ApiKeys withoutKeychain() {
-        return new ApiKeys(new NoKeychain(), new SecretsFile(path(), FILES));
+        return new ApiKeys(new NoKeychain(), new SecretsFile(path(), FILES),
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC());
     }
 
     private static Secrets secrets(String providerId, String value) {
@@ -55,7 +57,8 @@ class SecretsFileTest {
     @Test
     void secretsAreWrittenThroughThePlatformsPrivacyAndReadBack() throws Exception {
         var privacy = new RecordingFilePrivacy();
-        var keys = new ApiKeys(new NoKeychain(), new SecretsFile(path(), new PrivateFiles(privacy)));
+        var keys = new ApiKeys(new NoKeychain(), new SecretsFile(path(), new PrivateFiles(privacy)),
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC());
         var both = new Secrets(Map.of(OPEN_METEO, Map.of("api_key", SECRET), new ProviderId("forecast-solar"),
                 Map.of("api_key", "other")));
         keys.save(both);
@@ -91,7 +94,8 @@ class SecretsFileTest {
         var privacy = new RecordingFilePrivacy();
         privacy.openToOthers(path());
 
-        var keys = new ApiKeys(new NoKeychain(), new SecretsFile(path(), new PrivateFiles(privacy)));
+        var keys = new ApiKeys(new NoKeychain(), new SecretsFile(path(), new PrivateFiles(privacy)),
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC());
 
         assertThat(keys.load().of(OPEN_METEO)).containsEntry("api_key", SECRET);
         assertThat(privacy.isOpenToOthers(path())).isFalse();
@@ -103,7 +107,8 @@ class SecretsFileTest {
         var privacy = new RecordingFilePrivacy();
         privacy.refuse(new AccessDeniedException(path().toString()));
 
-        var keys = new ApiKeys(new NoKeychain(), new SecretsFile(path(), new PrivateFiles(privacy)));
+        var keys = new ApiKeys(new NoKeychain(), new SecretsFile(path(), new PrivateFiles(privacy)),
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC());
 
         assertThatThrownBy(keys::load).isInstanceOf(SecretsProblem.class).hasMessage(path()
                 + " is readable by other users and could not be made private (AccessDeniedException)");
@@ -198,7 +203,8 @@ class SecretsFileTest {
         try {
             withoutKeychain().save(secrets("open-meteo", SECRET));
             withoutKeychain().load();
-            new ApiKeys(new MemoryKeychain(), new SecretsFile(path(), FILES)).load(); // the move into a keychain
+            new ApiKeys(new MemoryKeychain(), new SecretsFile(path(), FILES),
+                    KeyFallback.PRIVATE_FILE, Clock.systemUTC()).load(); // the move into a keychain
             Files.writeString(path(), "{\"open-meteo\": {\"api_key\": \"" + SECRET + "\" oops}}");
             assertThatThrownBy(() -> withoutKeychain().load()).isInstanceOf(SecretsProblem.class);
             withoutKeychain().save(secrets("open-meteo", "new")); // keeps the damaged file aside
@@ -247,7 +253,8 @@ class SecretsFileTest {
     void aBrokenFileIsKeptAsideWhenTheKeysGoToTheKeychain() throws Exception {
         var broken = "{\"open-meteo\": oops}";
         Files.writeString(path(), broken);
-        var keys = new ApiKeys(new MemoryKeychain(), new SecretsFile(path(), FILES));
+        var keys = new ApiKeys(new MemoryKeychain(), new SecretsFile(path(), FILES),
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC());
 
         keys.save(secrets("open-meteo", SECRET));
 

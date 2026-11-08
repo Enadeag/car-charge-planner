@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import java.nio.file.Files
+import java.time.Clock
 import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -46,9 +47,9 @@ class ExampleSettingsOnTheDeviceTest {
             File(folder, AppEngine.SETTINGS_FILE).outputStream().use { input.copyTo(it) }
         }
         val app = InstrumentationRegistry.getInstrumentation().targetContext
-        val platform = AndroidPlatform.of(app)
+        val platform = (app.applicationContext as CarChargePlannerApp).platform
         val engine = AppEngine.build(folder.toPath(), platform.http(), platform.files(), platform.apiKeys(),
-            Notifier { })
+            Notifier { }, Clock.systemUTC())
 
         val state = EngineOnDispatcher(engine, Dispatchers.IO).readSettings()
 

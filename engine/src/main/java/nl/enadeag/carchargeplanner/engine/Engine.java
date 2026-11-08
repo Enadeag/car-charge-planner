@@ -51,6 +51,9 @@ import java.util.function.Consumer;
  * each change to its config, keys, battery level, away periods or trips, and tells its listener each new outlook.
  * Each plan uses the stored files as they are on disk, reading one again only when it changed; the forecast service
  * decides whether a provider is asked or its cache answers.
+ *
+ * <p>The changes to the away periods and to the trips may be called from any thread, also at the same time: each
+ * reads, changes and writes its file as one step, so no change is lost to another.
  */
 public final class Engine {
 
@@ -316,12 +319,11 @@ public final class Engine {
      *     left as it was
      */
     public void saveConfig(EngineConfig config) throws IOException {
-        try {
+        thenReplan(() -> {
             configFile.write(config);
             forecasts.forgetFailures();
-        } finally {
-            schedule.runSoon();
-        }
+            return null;
+        });
     }
 
     /**
@@ -335,11 +337,7 @@ public final class Engine {
      *     version, or it could not be moved; it is then left as it was
      */
     public Path setConfigAside() throws IOException {
-        try {
-            return configFile.setAside();
-        } finally {
-            schedule.runSoon();
-        }
+        return thenReplan(() -> configFile.setAside());
     }
 
     /**
@@ -350,11 +348,10 @@ public final class Engine {
      * @throws IOException when the level could not be saved; the stored one is then unchanged
      */
     public void setBatteryLevel(Percent level) throws IOException {
-        try {
+        thenReplan(() -> {
             batteryFile.save(new BatteryReading(level, clock.instant()));
-        } finally {
-            schedule.runSoon();
-        }
+            return null;
+        });
     }
 
     /**
@@ -376,11 +373,7 @@ public final class Engine {
      *     left as they are; the stored ones are then unchanged
      */
     public List<OneOffAwayPeriod> addAwayPeriod(OneOffAwayPeriod period) throws IOException {
-        try {
-            return awayFile.add(period, clock.instant());
-        } finally {
-            schedule.runSoon();
-        }
+        return thenReplan(() -> awayFile.add(period, clock.instant()));
     }
 
     /**
@@ -393,11 +386,7 @@ public final class Engine {
      *     left as they are; the stored ones are then unchanged
      */
     public List<OneOffAwayPeriod> removeAwayPeriod(OneOffAwayPeriod period) throws IOException {
-        try {
-            return awayFile.remove(period);
-        } finally {
-            schedule.runSoon();
-        }
+        return thenReplan(() -> awayFile.remove(period));
     }
 
     /**
@@ -419,11 +408,7 @@ public final class Engine {
      *     as they are; the stored ones are then unchanged
      */
     public List<Trip> addTrip(Trip trip) throws IOException {
-        try {
-            return tripFile.add(trip, clock.instant());
-        } finally {
-            schedule.runSoon();
-        }
+        return thenReplan(() -> tripFile.add(trip, clock.instant()));
     }
 
     /**
@@ -437,11 +422,7 @@ public final class Engine {
      *     as they are; the stored ones are then unchanged
      */
     public List<Trip> changeTrip(Trip trip, Trip changed) throws IOException {
-        try {
-            return tripFile.change(trip, changed, clock.instant());
-        } finally {
-            schedule.runSoon();
-        }
+        return thenReplan(() -> tripFile.change(trip, changed, clock.instant()));
     }
 
     /**
@@ -453,11 +434,7 @@ public final class Engine {
      *     as they are; the stored ones are then unchanged
      */
     public List<Trip> removeTrip(Trip trip) throws IOException {
-        try {
-            return tripFile.remove(trip, clock.instant());
-        } finally {
-            schedule.runSoon();
-        }
+        return thenReplan(() -> tripFile.remove(trip, clock.instant()));
     }
 
     /**
@@ -555,12 +532,11 @@ public final class Engine {
      *     {@link SecretsProblem.Kind#LOCKED} when the keychain stayed locked and nothing was stored
      */
     public void saveApiKeys(Secrets secrets) throws SecretsProblem {
-        try {
+        thenReplan(() -> {
             apiKeys.save(secrets);
             forecasts.forgetFailures();
-        } finally {
-            schedule.runSoon();
-        }
+            return null;
+        });
     }
 
     /**
@@ -573,12 +549,11 @@ public final class Engine {
      * @throws SecretsProblem as {@link #saveApiKeys(Secrets)}
      */
     public void applyKeyChanges(KeyChanges changes, Runnable prompting) throws SecretsProblem {
-        try {
+        thenReplan(() -> {
             apiKeys.applyChanges(changes, prompting);
             forecasts.forgetFailures();
-        } finally {
-            schedule.runSoon();
-        }
+            return null;
+        });
     }
 
     /**
@@ -587,6 +562,21 @@ public final class Engine {
      */
     public void stopUnlocking() {
         apiKeys.stopUnlocking();
+    }
+
+    /** Runs a change of the stored data, then plans again soon, also when the change failed. */
+    private <T, X extends Exception> T thenReplan(Change<T, X> change) throws X {
+        try {
+            return change.run();
+        } finally {
+            schedule.runSoon();
+        }
+    }
+
+    /** A change of the stored data that may fail with a checked exception. */
+    @FunctionalInterface
+    private interface Change<T, X extends Exception> {
+        T run() throws X;
     }
 
     private Secrets storedSecrets() {

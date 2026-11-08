@@ -25,7 +25,8 @@ class BackgroundScheduleTest {
     private val background = FakeBackground()
     private val wifiOnly = MutableStateFlow(false)
     private var allowed = true
-    private val schedule = BackgroundSchedule({ access }, background.work, background.alarm, wifiOnly) { allowed }
+    private val schedule = BackgroundSchedule({ access }, background.work, background.alarm, wifiOnly,
+        background.oneRoundAtATime) { allowed }
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
@@ -139,7 +140,7 @@ class BackgroundScheduleTest {
         val gate = CompletableDeferred<Unit>()
         access.roundGate = gate
         val rounds = BackgroundRounds({ access }, { _, _ -> }, background.alarm, background.work, { true },
-            Clock.fixed(now, ZoneOffset.UTC), background.missed)
+            Clock.fixed(now, ZoneOffset.UTC), background.missed, background.oneRoundAtATime)
 
         val round = launch { rounds.run(ForecastUse.ASK_PROVIDERS) }
         runCurrent()

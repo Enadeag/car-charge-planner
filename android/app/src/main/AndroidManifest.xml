@@ -34,6 +34,12 @@
         <category android:name="android.intent.category.LAUNCHER" />
       </intent-filter>
     </activity>
+    <!-- where a notification's tap goes: only the app itself starts it, so only its intents may take a notification
+         away or open the battery level's entry -->
+    <activity-alias
+        android:name=".NoticeTap"
+        android:exported="false"
+        android:targetActivity=".MainActivity" />
     <!-- the alarm for the next notice; only the app's own alarm reaches it -->
     <receiver
         android:name=".background.NoticeAlarmReceiver"

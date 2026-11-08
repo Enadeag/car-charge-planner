@@ -9,6 +9,7 @@ import androidx.work.WorkManager
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
 import java.time.Instant
+import kotlinx.coroutines.sync.Mutex
 
 /**
  * The alarm, the work and the count of missed rounds in memory; the alarm and the work write what was done to them, in
@@ -21,6 +22,9 @@ internal class FakeBackground {
 
     /** Whether the hourly round counts as scheduled. */
     var hourlyIsScheduled = false
+
+    /** The lock of the rounds, which the app hands the rounds and the schedule alike. */
+    val oneRoundAtATime = Mutex()
 
     /** When set, a cancel of the work throws it, as WorkManager may. */
     var workCancelThrows: RuntimeException? = null

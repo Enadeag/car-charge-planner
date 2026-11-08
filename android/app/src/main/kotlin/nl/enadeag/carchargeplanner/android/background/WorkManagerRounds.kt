@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import nl.enadeag.carchargeplanner.android.CarChargePlannerApp
 import nl.enadeag.carchargeplanner.engine.ForecastUse
 
 /**
@@ -95,7 +94,7 @@ class WorkManagerRounds(private val context: Context) : RoundWork {
 class RoundWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        (applicationContext as CarChargePlannerApp).rounds.run(ForecastUse.ASK_PROVIDERS)
+        (applicationContext as BackgroundHost).rounds.run(ForecastUse.ASK_PROVIDERS)
         return Result.success()
     }
 }

@@ -24,7 +24,7 @@ class ReleaseWorkflowTest {
     @Test
     void everyReleaseBuildUsesTheSameExactJavaVersion() throws IOException {
         var versions = new ArrayList<String>();
-        for (var workflow : List.of("release.yml", "windows-installer.yml")) {
+        for (var workflow : List.of("release.yml", "windows-installer.yml", "linux-packages.yml")) {
             var text = Files.readString(Path.of(".github", "workflows", workflow));
             JAVA_VERSION.matcher(text).results().forEach(match -> versions.add(match.group(1)));
         }

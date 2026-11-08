@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.engine.plan;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
+import nl.enadeag.carchargeplanner.engine.config.Percent;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
@@ -16,15 +17,21 @@ class WindowTest {
     }
 
     @Test
-    void theSolarShareIsTheSolarPartOfAllTheEnergy() {
-        assertThat(window(3, 1).solarShare()).isEqualTo(0.75);
-        assertThat(window(2, 0).solarShare()).isEqualTo(1.0);
-        assertThat(window(0, 2).solarShare()).isEqualTo(0.0);
+    void theEnergyIsTheSolarAndTheGridEnergyTogether() {
+        assertThat(window(3, 1.5).energyKwh()).isEqualTo(4.5);
+        assertThat(window(0, 0).energyKwh()).isEqualTo(0.0);
+    }
+
+    @Test
+    void theSolarShareIsTheSolarPartOfAllTheEnergyInPercent() {
+        assertThat(window(3, 1).solarSharePct()).isEqualTo(new Percent(75));
+        assertThat(window(2, 0).solarSharePct()).isEqualTo(new Percent(100));
+        assertThat(window(0, 2).solarSharePct()).isEqualTo(new Percent(0));
     }
 
     @Test
     void aWindowWithoutEnergyHasNoSolarShare() {
-        assertThat(window(0, 0).solarShare()).isEqualTo(0.0);
+        assertThat(window(0, 0).solarSharePct()).isEqualTo(new Percent(0));
     }
 
     @Test

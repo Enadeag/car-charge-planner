@@ -83,7 +83,8 @@ class EngineOnDispatcherTest {
     private val dispatcher = CountingDispatcher()
     private val filesFolder by lazy { root.resolve("files") }
     private val access by lazy {
-        val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys)
+        val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys,
+            Clock.systemUTC())
         EngineOnDispatcher(AppEngine.build(platform, Notifier { }, Clock.systemUTC()), dispatcher)
     }
     private val draft = EngineConfig.setUpDraft(ZoneId.of("Europe/Amsterdam"), ProviderId("open-meteo"))
@@ -359,9 +360,10 @@ class EngineOnDispatcherTest {
         val pool = Executors.newFixedThreadPool(2)
         try {
             val privacy = SlowPrivacy()
-            val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys)
+            val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys,
+                Clock.systemUTC())
             val twoThreads = EngineOnDispatcher(AppEngine.build(filesFolder, platform.http(), PrivateFiles(privacy),
-                platform.apiKeys(), Notifier { }), pool.asCoroutineDispatcher())
+                platform.apiKeys(), Notifier { }, Clock.systemUTC()), pool.asCoroutineDispatcher())
             val earlier = Trip(Instant.parse("2096-05-01T08:00:00Z"), Instant.parse("2096-05-01T10:00:00Z"), 40.0,
                 false)
 
@@ -381,7 +383,7 @@ class EngineOnDispatcherTest {
 
         override fun newFileAttributes(file: Path): List<FileAttribute<*>> {
             most.accumulateAndGet(inside.incrementAndGet()) { a, b -> maxOf(a, b) }
-            Thread.sleep(300)
+            Waiting.pause(Duration.ofMillis(300))
             inside.decrementAndGet()
             return listOf()
         }
@@ -395,9 +397,10 @@ class EngineOnDispatcherTest {
         val pool = Executors.newFixedThreadPool(2)
         try {
             val privacy = SlowPrivacy()
-            val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys)
+            val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys,
+                Clock.systemUTC())
             val twoThreads = EngineOnDispatcher(AppEngine.build(filesFolder, platform.http(), PrivateFiles(privacy),
-                platform.apiKeys(), Notifier { }), pool.asCoroutineDispatcher())
+                platform.apiKeys(), Notifier { }, Clock.systemUTC()), pool.asCoroutineDispatcher())
             val earlier = OneOffAwayPeriod(Instant.parse("2096-05-01T08:00:00Z"),
                 Instant.parse("2096-05-01T10:00:00Z"))
 
@@ -441,9 +444,10 @@ class EngineOnDispatcherTest {
 
     /** The engine on files that fail with this as they are written. */
     private fun writingFails(failure: Exception): EngineOnDispatcher {
-        val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys)
+        val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys,
+            Clock.systemUTC())
         return EngineOnDispatcher(AppEngine.build(filesFolder, platform.http(), PrivateFiles(FailingPrivacy(failure)),
-            platform.apiKeys(), Notifier { }), dispatcher)
+            platform.apiKeys(), Notifier { }, Clock.systemUTC()), dispatcher)
     }
 
     @Test
@@ -474,7 +478,8 @@ class EngineOnDispatcherTest {
         val key = Secrets(mapOf(ProviderId("open-meteo") to mapOf("api_key" to "MADEUPKEY")))
         access.applyKeyChanges(KeyChanges.entering(key))
         keys.failNext(KeyStoreException("the Keystore is busy"))
-        val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys)
+        val platform = AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), keys,
+            Clock.systemUTC())
         val later = EngineOnDispatcher(AppEngine.build(platform, Notifier { }, Clock.systemUTC()), dispatcher)
 
         assertThat(later.storedKeys()).isEqualTo(StoredKeys.Unreadable)

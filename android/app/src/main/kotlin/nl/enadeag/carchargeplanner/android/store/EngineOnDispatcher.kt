@@ -5,8 +5,6 @@ import java.time.Instant
 import kotlin.jvm.optionals.getOrNull
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import nl.enadeag.carchargeplanner.engine.Engine
 import nl.enadeag.carchargeplanner.engine.ForecastUse
@@ -24,9 +22,9 @@ import org.slf4j.LoggerFactory
 
 /**
  * The [EngineAccess] on the app's engine: every call that reads or writes runs on the dispatcher it is given,
- * `Dispatchers.IO` in the app and a test's own in the tests. Changes to the one-off away periods run one after the
- * other, and so do changes to the trips, so one started before the home is rebuilt cannot overlap a new one and lose
- * it.
+ * `Dispatchers.IO` in the app and a test's own in the tests. The engine itself makes changes to the one-off away
+ * periods, and to the trips, one at a time, so one started before the home is rebuilt cannot overlap a new one and
+ * lose it.
  *
  * @param engine the app's one engine
  * @param dispatcher where the engine's calls run; never the main thread's
@@ -36,12 +34,6 @@ class EngineOnDispatcher(private val engine: Engine, private val dispatcher: Cor
     private companion object {
         val LOG = LoggerFactory.getLogger(EngineOnDispatcher::class.java)
     }
-
-    /** Held by an away change while it runs, so a change started while another runs waits for it. */
-    private val awayChange = Mutex()
-
-    /** Held by a trip change while it runs, so a change started while another runs waits for it. */
-    private val tripChange = Mutex()
 
     override fun providers() = engine.providers().toList()
 
@@ -93,19 +85,17 @@ class EngineOnDispatcher(private val engine: Engine, private val dispatcher: Cor
         changeAway("The away period could not be removed") { engine.removeAwayPeriod(period) }
 
     private suspend fun changeAway(what: String, change: () -> List<OneOffAwayPeriod>): AwaySave =
-        awayChange.withLock {
-            withContext(dispatcher) {
-                try {
-                    AwaySave.Saved(change())
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (failure: IOException) {
-                    LOG.warn(what + ": " + failure.message)
-                    AwaySave.Failed(failure.message ?: failure.javaClass.simpleName)
-                } catch (failure: RuntimeException) {
-                    LOG.warn(what, failure)
-                    AwaySave.Failed(failure.message ?: failure.javaClass.simpleName)
-                }
+        withContext(dispatcher) {
+            try {
+                AwaySave.Saved(change())
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: IOException) {
+                LOG.warn(what + ": " + failure.message)
+                AwaySave.Failed(failure.message ?: failure.javaClass.simpleName)
+            } catch (failure: RuntimeException) {
+                LOG.warn(what, failure)
+                AwaySave.Failed(failure.message ?: failure.javaClass.simpleName)
             }
         }
 
@@ -121,19 +111,17 @@ class EngineOnDispatcher(private val engine: Engine, private val dispatcher: Cor
         changeTrips("The trip could not be removed") { engine.removeTrip(trip) }
 
     private suspend fun changeTrips(what: String, change: () -> List<Trip>): TripSave =
-        tripChange.withLock {
-            withContext(dispatcher) {
-                try {
-                    TripSave.Saved(change())
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (failure: IOException) {
-                    LOG.warn(what + ": " + failure.message)
-                    TripSave.Failed(failure.message ?: failure.javaClass.simpleName)
-                } catch (failure: RuntimeException) {
-                    LOG.warn(what, failure)
-                    TripSave.Failed(failure.message ?: failure.javaClass.simpleName)
-                }
+        withContext(dispatcher) {
+            try {
+                TripSave.Saved(change())
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: IOException) {
+                LOG.warn(what + ": " + failure.message)
+                TripSave.Failed(failure.message ?: failure.javaClass.simpleName)
+            } catch (failure: RuntimeException) {
+                LOG.warn(what, failure)
+                TripSave.Failed(failure.message ?: failure.javaClass.simpleName)
             }
         }
 

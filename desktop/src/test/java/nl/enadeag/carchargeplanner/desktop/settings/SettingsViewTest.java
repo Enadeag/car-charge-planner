@@ -133,8 +133,11 @@ class SettingsViewTest {
         });
 
         assertThat(saved).isTrue();
-        assertThat(storedPlanning()).isEqualTo(PlanningPreferences.RECOMMENDED
-                .withChargingHours(new ChargingHours(LocalTime.of(20, 30), LocalTime.of(1, 0))));
+        var recommended = PlanningPreferences.RECOMMENDED;
+        assertThat(storedPlanning()).isEqualTo(new PlanningPreferences(recommended.minimumPct(),
+                recommended.targetPct(), recommended.margin(), recommended.importToleranceKwh(),
+                recommended.minWindow(), recommended.notifyLead(),
+                new ChargingHours(LocalTime.of(20, 30), LocalTime.of(1, 0))));
     }
 
     @Test

@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.engine.secrets;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
+import java.time.Clock;
 import nl.enadeag.carchargeplanner.LogCapture;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
@@ -36,7 +37,8 @@ class CalendarLeftoversTest {
     private final LockableKeychain keychain = new LockableKeychain();
 
     private ApiKeys keys() {
-        return new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES));
+        return new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES),
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC());
     }
 
     private Path consents() {
@@ -64,7 +66,8 @@ class CalendarLeftoversTest {
         var file = new SecretsFile(folder.resolve("secrets.json"), FILES);
         file.write(WITH_LEFTOVERS);
 
-        CalendarLeftovers.remove(new ApiKeys(new NoKeychain(), file), folder, FILES);
+        CalendarLeftovers.remove(new ApiKeys(new NoKeychain(), file,
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC()), folder, FILES);
 
         assertThat(file.read()).isEqualTo(FORECAST_KEYS);
     }
@@ -112,7 +115,8 @@ class CalendarLeftoversTest {
         keychain.locked = true;
 
         try (var log = LogCapture.of(CalendarLeftovers.class)) {
-            CalendarLeftovers.remove(new ApiKeys(keychain, file), folder, FILES);
+            CalendarLeftovers.remove(new ApiKeys(keychain, file,
+                    KeyFallback.PRIVATE_FILE, Clock.systemUTC()), folder, FILES);
 
             assertThat(log.lines()).singleElement().asString().startsWith("WARNING ").contains("next start");
         }

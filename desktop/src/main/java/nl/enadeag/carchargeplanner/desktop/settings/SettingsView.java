@@ -218,19 +218,18 @@ final class SettingsView extends BorderPane {
             Consumer<AppSettings> saved, AppPage app, Background background, Messages messages) {
         var solar = new SolarPage(messages);
         var location = new LocationPage(
-                (provider, text) -> stores.engine().searchPlaces(provider, text, messages.language().code()),
+                (provider, text) -> stores.searchPlaces(provider, text, messages.language().code()),
                 background, messages);
         var carHouse = new CarHousePage(messages);
         var charger = new ChargerPage(messages);
-        var engine = stores.engine();
         ProviderTester tester = (provider, settings) -> {
             try {
-                return engine.checkConnection(provider, engine.config().system(), settings);
+                return stores.checkConnection(provider, stores.storedSystem(), settings);
             } catch (ConfigProblem e) {
                 return new ConnectionResult(false, 0, e.getMessage());
             }
         };
-        var forecast = new ForecastPage(engine.providers(), tester, openLink, facts.keysFile(), background, messages);
+        var forecast = new ForecastPage(stores.providers(), tester, openLink, facts.keysFile(), background, messages);
         var away = new AwayPage(messages);
         var planning = new PlanningPage(messages);
         app.onUnitsChanged(carHouse::showIn);

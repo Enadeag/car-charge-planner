@@ -90,4 +90,26 @@ class PopupPlacementTest {
         assertThat(primary).isEqualTo(new Point2D(M, M));
         assertThat(second).isEqualTo(new Point2D(1920 + M, M));
     }
+
+    @Test
+    void anIconInsideTheAvailableAreaKeepsThePopupOneMarginFromItOnEachSide() {
+        var available = area(0, 0, 1920, 1200);
+
+        var top = PopupPlacement.position(new Point2D(1000, 12), POPUP, available);
+        var left = PopupPlacement.position(new Point2D(10, 700), POPUP, available);
+        var right = PopupPlacement.position(new Point2D(1910, 700), POPUP, available);
+
+        assertThat(top).isEqualTo(new Point2D(1000 - 210, 12 + M));
+        assertThat(left).isEqualTo(new Point2D(10 + M, 700 - 300));
+        assertThat(right).isEqualTo(new Point2D(1910 - 420 - M, 700 - 300));
+    }
+
+    @Test
+    void theNearestEdgeWinsAtTheTwoEdgesOfACorner() {
+        var available = area(0, 0, 1920, 1200);
+
+        assertThat(PopupPlacement.panelEdge(new Point2D(1910, 600), available)).isEqualTo(Edge.RIGHT);
+        assertThat(PopupPlacement.panelEdge(new Point2D(1890, 1180), available)).isEqualTo(Edge.BOTTOM);
+        assertThat(PopupPlacement.panelEdge(new Point2D(5, 1180), available)).isEqualTo(Edge.LEFT);
+    }
 }

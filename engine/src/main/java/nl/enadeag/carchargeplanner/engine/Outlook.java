@@ -10,6 +10,7 @@ import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
@@ -57,6 +58,15 @@ public sealed interface Outlook {
             }
             days = List.copyOf(days);
             tripAdvice = List.copyOf(tripAdvice);
+        }
+
+        /**
+         * The day the plan was made, in the home's time zone.
+         *
+         * @return the local date of {@code madeAt} in {@code zone}
+         */
+        public LocalDate today() {
+            return madeAt.atZone(zone).toLocalDate();
         }
 
         /**

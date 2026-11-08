@@ -20,6 +20,7 @@ import nl.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
 import nl.enadeag.carchargeplanner.engine.notify.Announcer;
 import nl.enadeag.carchargeplanner.engine.notify.ToldTrips;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
+import nl.enadeag.carchargeplanner.engine.secrets.KeyFallback;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
@@ -54,7 +55,8 @@ class DashboardChangesTest {
     @BeforeEach
     void makeTheEngine() {
         var providers = new Providers(List.of());
-        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES));
+        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES),
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC());
         var engine = new Engine(new ConfigFile(folder.resolve("engine.json"), FILES),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache"), FILES), apiKeys), providers,
                 apiKeys,

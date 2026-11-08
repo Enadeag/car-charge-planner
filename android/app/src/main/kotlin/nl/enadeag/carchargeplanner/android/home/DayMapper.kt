@@ -2,7 +2,6 @@ package nl.enadeag.carchargeplanner.android.home
 
 import java.time.LocalDate
 import nl.enadeag.carchargeplanner.engine.Outlook
-import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice
 
@@ -21,7 +20,7 @@ class DayMapper(planned: Outlook.Planned) {
     }
 
     private val charts = SolarChartMapper(planned)
-    private val today: LocalDate = planned.madeAt().atZone(planned.zone()).toLocalDate()
+    private val today: LocalDate = planned.today()
     private val assumed = if (planned.batteryAssumed()) planned.batteryLevelPct() else null
 
     /** The day the grid advice is about; null when the plan gives none. */
@@ -29,7 +28,7 @@ class DayMapper(planned: Outlook.Planned) {
 
     /** The days a trip the plan advises on leaves. */
     private val departures: Set<LocalDate> =
-        planned.tripAdvice().map { it.trip().departure().atZone(planned.zone()).toLocalDate() }.toSet()
+        planned.tripAdvice().map { it.trip().firstDay(planned.zone()) }.toSet()
 
     /**
      * The days, each with its windows and figures.
@@ -51,7 +50,7 @@ class DayMapper(planned: Outlook.Planned) {
             name = DayName.of(day.date(), today),
             kind = kind,
             main = main?.let {
-                MainCharge(it, it.solarKwh() + it.importKwh(), Percent(it.solarShare() * 100),
+                MainCharge(it, it.energyKwh(), it.solarSharePct(),
                     it.importKwh().takeIf { kwh -> kwh >= NO_GRID_KWH })
             },
             later = day.windows().drop(1),

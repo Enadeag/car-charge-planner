@@ -66,7 +66,7 @@ class NoticeAlarmInDozeOnTheDeviceTest {
             Percent(30.0), Optional.empty())
         val tag = "solar_window:${start.epochSecond}"
         val own = app.engine
-        app.engine = RoundThatTells(own, Notifications(app), notice)
+        app.engine = RoundThatTells(own, Notifications(app, app.clock), notice)
         try {
             shell("dumpsys battery unplug")
             shell("am set-standby-bucket $pkg rare")

@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.desktop.settings;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Clock;
 import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
@@ -17,6 +18,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.FakeProvider;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import nl.enadeag.carchargeplanner.engine.forecast.SunnyDays;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
+import nl.enadeag.carchargeplanner.engine.secrets.KeyFallback;
 import nl.enadeag.carchargeplanner.engine.secrets.KeychainException;
 import nl.enadeag.carchargeplanner.engine.secrets.LockableKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
@@ -62,7 +64,8 @@ class LockedKeychainTest {
 
     @BeforeEach
     void storeKeysAndLockTheKeychain() throws Exception {
-        new ApiKeys(keychain, new SecretsFile(folder.resolve("unused.json"), FILES)).save(STORED);
+        new ApiKeys(keychain, new SecretsFile(folder.resolve("unused.json"), FILES),
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC()).save(STORED);
         keychain.locked = true;
     }
 
@@ -106,7 +109,8 @@ class LockedKeychainTest {
     /** The keys as stored, read once the keychain is unlocked again. */
     private Secrets storedAfterUnlocking() throws Exception {
         keychain.locked = false;
-        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES));
+        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES),
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC());
         keys.moveFileIntoKeychain(); // as the engine's next round does
         return keys.load();
     }

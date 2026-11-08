@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.engine.store;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import nl.enadeag.carchargeplanner.LogCapture;
@@ -12,6 +13,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -130,7 +132,7 @@ class StoredFileTest {
         var file = file();
         file.read();
 
-        var aside = file.setAside();
+        var aside = assertTimeoutPreemptively(Duration.ofSeconds(2), file::setAside);
 
         assertThat(aside).isEqualTo(folder.resolve("data.json.damaged-20261017-143000")).hasContent("{\"text\": 5}");
         assertThat(path()).doesNotExist();
@@ -188,7 +190,7 @@ class StoredFileTest {
         file().setAside();
         Files.writeString(path(), "second");
 
-        var aside = file().setAside();
+        var aside = assertTimeoutPreemptively(Duration.ofSeconds(2), () -> file().setAside());
 
         assertThat(aside).isEqualTo(folder.resolve("data.json.damaged-20261017-143000-2")).hasContent("second");
         assertThat(folder.resolve("data.json.damaged-20261017-143000")).hasContent("first");

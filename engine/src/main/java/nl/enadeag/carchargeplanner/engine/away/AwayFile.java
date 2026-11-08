@@ -24,7 +24,9 @@ import tools.jackson.databind.node.ObjectNode;
  * {@code {"version": 1, "periods": [{"start": "2026-07-04T06:00:00Z", "end": "2026-07-04T16:00:00Z"}]}}, where a file
  * without a version is version 1. A file that is missing or cannot be used holds none, and a damaged entry is left
  * out, so a bad file never stops planning. But nothing is added to or removed from such a file: that would lose what
- * it holds, so the owner is told instead. The periods are kept in memory until the file changes on disk.
+ * it holds, so the owner is told instead. The periods are kept in memory until the file changes on disk. Every
+ * method may be called from any thread: a change reads, changes and writes the file as one step, so two changes at
+ * the same time both count.
  */
 public final class AwayFile {
 
@@ -69,7 +71,7 @@ public final class AwayFile {
      * @throws IOException when the file could not be written, or it exists but could not be read whole; it is then
      *     left as it was
      */
-    public List<OneOffAwayPeriod> add(OneOffAwayPeriod period, Instant now) throws IOException {
+    public synchronized List<OneOffAwayPeriod> add(OneOffAwayPeriod period, Instant now) throws IOException {
         var keepFrom = now.minus(KEEP_AFTER_END);
         var periods = new ArrayList<>(storedForChange().stream()
                 .filter(stored -> stored.end().isAfter(keepFrom) && !stored.equals(period))
@@ -88,7 +90,7 @@ public final class AwayFile {
      * @throws IOException when the file could not be written, or it exists but could not be read whole; it is then
      *     left as it was
      */
-    public List<OneOffAwayPeriod> remove(OneOffAwayPeriod period) throws IOException {
+    public synchronized List<OneOffAwayPeriod> remove(OneOffAwayPeriod period) throws IOException {
         var periods = storedForChange().stream().filter(stored -> !stored.equals(period)).toList();
         file.write(new Entries(periods, 0));
         return periods;

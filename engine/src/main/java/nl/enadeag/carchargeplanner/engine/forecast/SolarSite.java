@@ -29,14 +29,4 @@ public record SolarSite(Coordinates location, ZoneId timezone, List<PanelArray> 
     public static SolarSite of(HomeSystem system) {
         return new SolarSite(system.location(), system.timezone(), system.panels());
     }
-
-    /**
-     * The same place with other panel arrays, such as one array of several.
-     *
-     * @param otherArrays the arrays to describe instead, at least one
-     * @return the same site with those arrays
-     */
-    public SolarSite withArrays(List<PanelArray> otherArrays) {
-        return new SolarSite(location, timezone, otherArrays);
-    }
 }

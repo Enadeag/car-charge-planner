@@ -11,7 +11,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 /**
- * Why there is no plan to show: still fetching, not set up, a config file that cannot be used, or no forecast; before
+ * Why there is no plan to show: still fetching, not set up, a settings file that cannot be used, or no forecast; before
  * the first set-up, a way into it.
  */
 final class NoPlanCard extends VBox {

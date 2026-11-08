@@ -117,9 +117,6 @@ data class TripAdviceModel(
 
     companion object {
 
-        /** A level this little above a whole percentage is the plan's rounding, not a percent more to charge. */
-        private const val LEVEL_NOISE_PCT = 1e-6
-
         /**
          * The advice for each trip of a plan.
          *
@@ -155,13 +152,13 @@ data class TripAdviceModel(
                 grid == null && !short -> EnergySource.SOLAR
                 else -> EnergySource.GRID
             }
-            return TripAdviceModel(trip.departure(), trip.departure().atZone(zone).toLocalDate(), trip.distanceKm(),
+            return TripAdviceModel(trip.departure(), trip.firstDay(zone), trip.distanceKm(),
                 if (enough) Plan.Enough(advice.departureLevelPct()) else plan(advice, grid, zone, madeAt), source,
                 if (short) ceil(advice.kmShort()).toInt() else null, level, assumed)
         }
 
         private fun plan(advice: TripAdvice, grid: TripGridCharge?, zone: ZoneId, madeAt: Instant): Plan {
-            val limit = chargeLimit(advice)
+            val limit = advice.chargeLimitPct()
             val solar = byDay(advice.solarWindows(), zone)
             val start = grid?.let { GridStart(it.window(), it.start(), !it.window().start().isAfter(madeAt)) }
             return when {
@@ -171,13 +168,6 @@ data class TripAdviceModel(
                 else -> Plan.Leaves(advice.departureLevelPct())
             }
         }
-
-        /**
-         * The level to charge to, which is also the charge limit to set: rounded up to a whole percentage, so the
-         * charge stops only once the trip's energy is in.
-         */
-        private fun chargeLimit(advice: TripAdvice): Percent =
-            Percent(ceil(advice.neededPct().value() - LEVEL_NOISE_PCT))
 
         private fun byDay(windows: List<Window>, zone: ZoneId): List<DayWindows> =
             windows.groupBy { it.start().atZone(zone).toLocalDate() }.map { (day, inDay) -> DayWindows(day, inDay) }

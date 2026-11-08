@@ -49,7 +49,7 @@ class SunnyDayPlanTest {
             assertThat(end.toLocalDate()).isEqualTo(day)
             assertThat(start.toLocalTime()).isAfterOrEqualTo(LocalTime.of(6, 0))
             assertThat(end.toLocalTime()).isBeforeOrEqualTo(LocalTime.of(20, 0))
-            assertThat(window.solarShare()).isPositive()
+            assertThat(window.solarSharePct().value()).isPositive()
         }
     }
 }

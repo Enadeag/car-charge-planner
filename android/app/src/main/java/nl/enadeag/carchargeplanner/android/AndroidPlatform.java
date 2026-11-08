@@ -16,19 +16,17 @@ import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 
 /**
- * The Android side of the engine's platform seams, made once per process ({@link #of(Context)}): the {@link HttpGet},
- * the files, the keychain and the API keys. One set per process, as {@link ApiKeys} remembers what it read and each
- * {@code HttpGet} keeps a pool of threads. The engine's files (settings, trips, the forecast cache) go in the app's
- * files folder, which is private already ({@link FilePrivacy#NONE}) and moves to the owner's next phone; the keychain's
- * file goes in the folder that is never backed up, as its keys never leave this phone. The API keys are kept only in
- * the keychain ({@link KeyFallback#NONE}), never unencrypted. The keychain and the API keys may block for about a
- * second, so they are used off the main thread.
+ * The Android side of the engine's platform seams: the {@link HttpGet}, the files, the keychain and the API keys. The
+ * app's {@code Application} makes one set ({@link #of(Context, Clock)}) and keeps it, as {@link ApiKeys} remembers what
+ * it read and each {@code HttpGet} keeps a pool of threads. The engine's files (settings, trips, the forecast cache) go
+ * in the app's files folder, which is private already ({@link FilePrivacy#NONE}) and moves to the owner's next phone;
+ * the keychain's file goes in the folder that is never backed up, as its keys never leave this phone. The API keys are
+ * kept only in the keychain ({@link KeyFallback#NONE}), never unencrypted. The keychain and the API keys may block for
+ * about a second, so they are used off the main thread.
  */
 public final class AndroidPlatform {
 
     private static final String SECRETS_FILE = "secrets.json";
-
-    private static AndroidPlatform instance;
 
     private final HttpGet http = new AndroidHttpGet();
     private final PrivateFiles files = new PrivateFiles(FilePrivacy.NONE);
@@ -38,36 +36,35 @@ public final class AndroidPlatform {
     private final ApiKeys apiKeys;
 
     /**
-     * The parts of this process, made at the first call for the app's own folders; nothing is read, written or made
-     * yet.
+     * Makes the parts for the app's own folders; nothing is read, written or made yet. The app's {@code Application}
+     * calls this once and hands the parts on.
      *
      * @param context any context of the app; its application's files folder and never-backed-up folder are used
-     * @return the same parts for every call
+     * @param clock the app's one clock, which tells the API keys when a keychain that failed may be asked again
+     * @return a new set of parts
      */
-    public static synchronized AndroidPlatform of(Context context) {
-        if (instance == null) {
-            var app = context.getApplicationContext();
-            instance = new AndroidPlatform(app.getFilesDir(), app.getNoBackupFilesDir(), new AndroidKeystoreKeys());
-        }
-        return instance;
+    public static AndroidPlatform of(Context context, Clock clock) {
+        var app = context.getApplicationContext();
+        return new AndroidPlatform(app.getFilesDir(), app.getNoBackupFilesDir(), new AndroidKeystoreKeys(), clock);
     }
 
     /**
-     * Makes the parts for these folders and these keys; nothing is read, written or made yet. The app has one set,
-     * from {@link #of(Context)}; tests make their own.
+     * Makes the parts for these folders and these keys; nothing is read, written or made yet. The app makes its set
+     * through {@link #of(Context, Clock)}; tests make their own.
      *
      * @param filesFolder the folder for the engine's files ({@code Context.getFilesDir()})
      * @param noBackupFolder the folder for the keychain's file ({@code Context.getNoBackupFilesDir()})
      * @param keys the keys the keychain encrypts with
+     * @param clock the app's one clock, which tells the API keys when a keychain that failed may be asked again
      */
-    AndroidPlatform(File filesFolder, File noBackupFolder, KeychainKeys keys) {
+    AndroidPlatform(File filesFolder, File noBackupFolder, KeychainKeys keys, Clock clock) {
         dataFolder = filesFolder.toPath();
         var keysFolder = noBackupFolder.toPath();
         keychainFile = keysFolder.resolve(EncryptedKeychain.FILE_NAME);
         keychain = new EncryptedKeychain(keychainFile, files, keys, AndroidKeystoreKeys.ALIAS);
         // without the fallback the file is never read, written, deleted or moved; ApiKeys still takes one
         apiKeys = new ApiKeys(keychain, new SecretsFile(keysFolder.resolve(SECRETS_FILE), files), KeyFallback.NONE,
-                Clock.systemUTC());
+                clock);
     }
 
     /**

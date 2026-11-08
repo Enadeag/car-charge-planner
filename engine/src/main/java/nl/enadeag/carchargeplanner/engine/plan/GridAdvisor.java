@@ -19,8 +19,6 @@ public final class GridAdvisor {
 
     /** A shortfall smaller than this is forecast noise, not worth advice. */
     private static final double MIN_DEFICIT_PCT = 1.0;
-    /** Floating-point noise in a battery level, so a level of exactly 48 % is not rounded up to 49 %. */
-    private static final double LEVEL_NOISE_PCT = 1e-6;
 
     private final HomeSystem system;
     private final PlanningPreferences preferences;
@@ -58,7 +56,7 @@ public final class GridAdvisor {
     public Optional<GridAdvice> advise(Plan plan, List<ForecastStep> forecast, Instant now) {
         var days = plan.days();
         var dip = days.stream()
-                .filter(day -> plan.trips().stream().noneMatch(trip -> TripAdvice.covers(trip.trip(), day.date(), zone)))
+                .filter(day -> plan.trips().stream().noneMatch(trip -> trip.trip().covers(day.date(), zone)))
                 .filter(this::endsBelowMinimum)
                 .findFirst();
         if (dip.isEmpty() || forecast.isEmpty()) {
@@ -113,8 +111,8 @@ public final class GridAdvisor {
      * stops the charge only once the window's energy is in; at most 100.
      */
     private Percent chargeLimit(List<DayPlan> days, List<TripAdvice> trips, Window window) {
-        double afterPct = levelAtPct(days, trips, window.start()) + percentOf(window.solarKwh() + window.importKwh());
-        return new Percent(Math.min(100, Math.ceil(afterPct - LEVEL_NOISE_PCT)));
+        double afterPct = levelAtPct(days, trips, window.start()) + percentOf(window.energyKwh());
+        return Charging.chargeLimit(afterPct);
     }
 
     /**
@@ -142,7 +140,7 @@ public final class GridAdvisor {
         for (var trip : trips) {
             var grid = trip.grid().map(TripGridCharge::window);
             if (grid.isPresent() && within(grid.get(), from, moment)) {
-                level += percentOf(grid.get().solarKwh() + grid.get().importKwh());
+                level += percentOf(grid.get().energyKwh());
             }
         }
         return level;

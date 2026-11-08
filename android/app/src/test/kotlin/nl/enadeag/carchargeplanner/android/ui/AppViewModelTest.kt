@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.android.ui
 
 import androidx.lifecycle.SavedStateHandle
+import java.time.Clock
 import java.time.ZoneId
 import java.util.Locale
 import java.util.TimeZone
@@ -37,18 +38,18 @@ class AppViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun TestScope.model(): AppViewModel {
+    private fun TestScope.model(phoneZone: () -> ZoneId = ZoneId::systemDefault): AppViewModel {
         val access = FakeEngineAccess()
         return AppViewModel(access, Saves(access, backgroundScope), backgroundScope, SavedStateHandle(),
-            Locale.ENGLISH, "en", card = ::allowedCard)
+            Locale.ENGLISH, "en", Clock.systemUTC(), phoneZone, card = ::allowedCard)
     }
 
     @Test
     fun thePhonesTimeZoneIsTheOneItHasWhenAsked() = runTest {
-        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Amsterdam"))
-        val model = model()
+        var zone = ZoneId.of("Europe/Amsterdam")
+        val model = model { zone }
 
-        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Tokyo"))
+        zone = ZoneId.of("Asia/Tokyo")
 
         assertThat(model.flow.phoneZone()).isEqualTo(ZoneId.of("Asia/Tokyo"))
     }

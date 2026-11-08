@@ -167,6 +167,18 @@
                   <excludedTestClasses>
                     <param>nl.enadeag.carchargeplanner.engine.*ArchitectureTest</param>
                   </excludedTestClasses>
+                  <!-- what no test can see, so it stays out of the report (CONTRIBUTING.md, What is tested where,
+                       Mutation testing): the method flushFolder, by name in any class, the fsync of the folder after a
+                       file was moved into it; and every line that calls FileChannel, for its force, the fsync of the
+                       file itself; only a power cut would show either. Leaving out FileChannel also leaves out the
+                       other lines that call it, in PrivateFiles those that open a file and write to it, whose effect
+                       PrivateFilesTest checks. The call of flushFolder in PrivateFiles.write stays a survivor. -->
+                  <excludedMethods>
+                    <param>flushFolder</param>
+                  </excludedMethods>
+                  <avoidCallsTo>
+                    <avoidCallsTo>java.nio.channels.FileChannel</avoidCallsTo>
+                  </avoidCallsTo>
                   <reportsDirectory>${project.build.directory}/pit-reports/engine</reportsDirectory>
                   <!-- a few points below the share of mutants killed when it was set (97 %) -->
                   <mutationThreshold>94</mutationThreshold>

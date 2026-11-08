@@ -2,8 +2,6 @@ package nl.enadeag.carchargeplanner.engine.plan;
 
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,16 +43,11 @@ public record TripAdvice(
     }
 
     /**
-     * Whether a day is one of a trip's: from the day of the departure to the day of the return.
+     * The level to charge to by the departure, which is also the charge limit to set in the car or the charger.
      *
-     * @param trip the trip
-     * @param date the local date
-     * @param zone the home's time zone, which decides the dates
-     * @return true for the day of the departure, the day of the return and the days between; a return at midnight
-     *     belongs to the day before
+     * @return the needed level rounded up to a whole percentage, so the charge stops only once the trip's energy is in
      */
-    static boolean covers(Trip trip, LocalDate date, ZoneId zone) {
-        return !date.isBefore(trip.departure().atZone(zone).toLocalDate())
-                && !date.isAfter(trip.returnTime().minusNanos(1).atZone(zone).toLocalDate());
+    public Percent chargeLimitPct() {
+        return Charging.chargeLimit(neededPct.value());
     }
 }

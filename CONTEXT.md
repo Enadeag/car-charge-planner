@@ -137,7 +137,7 @@ A settings file that is there but cannot be used, because it cannot be read, hol
 _Avoid_: Broken config, not set up (that is the state without a file)
 
 **Settings file**:
-The file that holds the description of the owner's system, the planning preferences and the forecast providers; the app settings are in a file of their own.
+The file that holds the description of the owner's system, the planning preferences and the forecast providers; the app settings are in a file of their own. In the code `EngineConfig` is this file in memory and `ConfigFile` reads and writes it; the names stay, the prose says settings file.
 _Avoid_: Config file, configuration, engine config
 
 **Panel array**:
@@ -153,7 +153,7 @@ The owner's choices about how the plan is made: the minimum and target charge le
 _Avoid_: Planning settings, options
 
 **App settings**:
-The desktop app's own settings: whether it shows itself as a tray icon or a window, the units it shows, its language and whether it looks light, dark or as the system does. Kept by the desktop app, not the engine, so they stay on the computer even when the engine runs elsewhere.
+The desktop app's own settings (the Android app keeps its own phone preferences, such as "Wi-Fi only"): whether it shows itself as a tray icon or a window, the units it shows, its language and whether it looks light, dark or as the system does. Kept by the desktop app, not the engine, so they stay on the computer even when the engine runs elsewhere.
 _Avoid_: Preferences, interface config
 
 **Place search**:
@@ -221,11 +221,11 @@ The one screen that shows the plan: the next charge window, grid advice, today's
 _Avoid_: Popup (only one of the places it appears), plan window, main screen
 
 **Engine**:
-The part of the app that plans, fetches forecasts, talks to devices and owns all stored data, without any user interface. It runs inside the desktop app, and later can also run on its own on an always-on machine.
+The part of the app that plans, fetches forecasts and owns all stored data, without any user interface. It runs inside the desktop app and inside the Android app, the same code in both; it does not yet run on its own.
 _Avoid_: Backend, server, daemon, core
 
 **Client**:
-Anything that shows the engine's plan and passes on the owner's changes: today the desktop app's tray, popup and windows; later perhaps a web or phone app. A client never stores data itself.
+Anything that shows the engine's plan and passes on the owner's changes: the desktop app's tray, popup and windows, and the Android app's screens and notifications. A client may keep preferences of its own (the desktop's app settings, the Android app's phone preferences), but never the engine's data.
 _Avoid_: Frontend, UI (a client is more than its screens)
 
 **Outlook**:
@@ -247,21 +247,21 @@ _Avoid_: Tray app, the application (too vague)
 ## Integrations
 
 **Integration**:
-Built-in code that connects the app to one outside service or device, such as a forecast provider, a smart meter, an inverter or a car maker's service. Added to the app by pull request and released with it.
+Not built yet: only the forecast providers exist today. Built-in code that connects the app to one outside service or device, such as a forecast provider, a smart meter, an inverter or a car maker's service. Added to the app by pull request and released with it.
 _Avoid_: Plugin, connector, driver, recipe (a recipe is a deferred idea, not an integration)
 
 **Ability**:
-One kind of thing a device can give or do, such as a battery level, solar production, house use and grid flow, or the charger's state. The planner asks for an ability without knowing which integration provides it; one integration can offer several.
+Not built yet (no device is read). One kind of thing a device can give or do, such as a battery level, solar production, house use and grid flow, or the charger's state. The planner asks for an ability without knowing which integration provides it; one integration can offer several.
 _Avoid_: Capability, feature, sensor
 
 **Official route**:
-A way for an owner to read their own car that the car maker offers and allows, with an API key, a sign-in or a developer app of the owner's own. A car without one is read by entering its battery level by hand.
+Not built yet (no car is read). A way for an owner to read their own car that the car maker offers and allows, with an API key, a sign-in or a developer app of the owner's own. A car without one is read by entering its battery level by hand.
 _Avoid_: Official API (a maker can have an API that owners may not use), unofficial route
 
 **Local network (not encrypted)**:
-An integration that reaches a device on the owner's own network over plain http, which only a private address allows. Settings labels it so.
+Not built yet. An integration that reaches a device on the owner's own network over plain http, which only a private address allows; Settings is to label it so. Today only a loopback address (`localhost`, `127.0.0.1`, `[::1]`) is allowed plain http, and nothing is labelled.
 _Avoid_: LAN, insecure, http mode
 
 **Home Assistant**:
-A home automation system some owners run. To this app it is one optional integration among others, never a requirement: the app works fully without it.
+Not built yet. A home automation system some owners run. To this app it is one optional integration among others, never a requirement: the app works fully without it.
 _Avoid_: HA, the hub

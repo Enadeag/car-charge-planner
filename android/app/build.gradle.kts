@@ -1,5 +1,6 @@
 import com.android.build.api.artifact.SingleArtifact
 import java.util.Locale
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import nl.enadeag.carchargeplanner.buildlogic.LicenceAssets
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -65,6 +66,7 @@ android {
         // An id of its own, so the debug build sits beside a release build on one phone, and a version name that shows
         // the commit on CI (BUILD_COMMIT) and "dev" elsewhere.
         debug {
+            enableUnitTestCoverage = true
             isPseudoLocalesEnabled = true
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug+" + debugBuildLabel.get()
@@ -117,6 +119,11 @@ android {
         unitTests.isIncludeAndroidResources = true
         unitTests.all {
             it.useJUnitPlatform()
+            // coverage of what Robolectric runs: its own class loader loads the app's classes without a location
+            it.extensions.configure<JacocoTaskExtension> {
+                isIncludeNoLocationClasses = true
+                excludes = listOf("jdk.internal.*")
+            }
             // Robolectric's Android 17 (SDK 37) reaches into the JDK's file descriptors, which JDK 21 keeps closed
             it.jvmArgs("--add-opens=java.base/jdk.internal.access=ALL-UNNAMED")
             it.systemProperties(logicTestProperties)
@@ -332,16 +339,14 @@ pitest {
     outputFormats = setOf("HTML", "XML")
     timestampedReports = false
     targetClasses = pitClasses ?: pitLogic
-    // A few points below the share of mutants killed when it was set (74 %), for the full run only: a run narrowed to
-    // some classes may be small or hold many survivors. The removed calls to the null and result checks the Kotlin
-    // compiler adds (Intrinsics, ResultKt) survive, as no test can see them, and avoidCallsTo would not help: PIT
-    // then drops every mutant on a line with such a call, the real ones too.
-    mutationThreshold = if (pitClasses == null) 71 else 0
+    // The floor is checkPitScore's, which leaves the Kotlin compiler's own mutants out; PIT's own share counts them
+    mutationThreshold = 0
     targetTests = setOf("nl.enadeag.carchargeplanner.android.*")
     excludedTestClasses = listOf(
         // the screens' tests, JUnit 4 on Robolectric, which runs Android in the test JVM
         "AppOnRobolectricTest", "AppWiringTest", "MainActivity*Test", "licences.AssetLicenceFilesTest", "ui.*Screen*Test",
-        "ui.AppThemeTest", "ui.BarScaffoldTest", "ui.home.DashboardWordsTest", "ui.home.TripAdviceWordsTest",
+        "ui.AppThemeTest", "ui.BarScaffoldTest", "secrets.AndroidKeystoreKeysOnRobolectricTest",
+        "ui.home.DashboardWordsTest", "ui.home.TripAdviceWordsTest",
         "ui.home.DrawnShapesTest",
         "ui.notify.NoticeWordsTest", "ui.notify.NotificationsTest", "background.AndroidNoticeAlarmTest",
         "background.WorkManagerRoundsTest", "background.RoundWorkerTest", "background.BackgroundReceiversTest",
@@ -352,3 +357,168 @@ pitest {
         "NetworkSecurityConfigTest", "licences.LicencesInTheApkTest", "AppEngineTest", "AppArchitectureTest",
     ).map { "nl.enadeag.carchargeplanner.android.$it" }.toSet()
 }
+
+/**
+ * The share of mutants killed, as PIT's report has it but without the mutants of code the Kotlin compiler adds, which
+ * no test can kill (and no PIT filter can drop without also dropping the real mutants on the same line): the removed
+ * calls of `Intrinsics` (the null checks) and `ResultKt.throwOnFailure`, a result replaced by null where the caller
+ * throws it away (a lambda's `Unit`, a suspend function's whose source declares no result or `Unit`, and a coroutine's
+ * `invokeSuspend` whose class is named after such a function), and the logger's `getLOG`. A suspend function's
+ * compiled result and an `invokeSuspend`'s are always `Object`, so the declaration in [sources] tells the two apart;
+ * one with an inferred result (`= ...`) is counted, and so is a suspend lambda's `Unit` in a function with a result,
+ * such as a `launch { }` there. An `invokeSuspend` whose class names no function in the file is left out, and so is a
+ * value-returning lambda in a function without a result, such as `val x = withContext(..) { .. }` there, whose null a
+ * test could see. It fails below [threshold]; a threshold of 0 only prints the share.
+ */
+abstract class PitScore : DefaultTask() {
+
+    @get:InputFile
+    abstract val mutations: RegularFileProperty
+
+    /** The Kotlin sources of the mutated classes, which say what a suspend function returns. */
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val sources: DirectoryProperty
+
+    @get:Input
+    abstract val threshold: Property<Int>
+
+    /**
+     * The result the function [method] declares, read from the nearest `fun` of that name (a `suspend fun` only, if
+     * [suspendOnly]) at or above [line] of [sourceFile], the Kotlin file of [mutatedClass]: `Unit` for none or `Unit`,
+     * `=` for one inferred from its body, else the declared type; null when there is no such `fun`.
+     */
+    private fun declaredResult(mutatedClass: String, sourceFile: String, method: String, line: Int,
+        suspendOnly: Boolean): String? {
+        val folder = mutatedClass.substringBeforeLast('.').replace('.', '/')
+        val file = sources.get().file("$folder/$sourceFile").asFile
+        if (!file.isFile) return null
+        val lines = file.readLines()
+        val plain = Regex.escape(method.substringBefore('$'))
+        val suspend = if (suspendOnly) """\bsuspend\s+""" else """\b"""
+        val name = Regex("""${suspend}fun\s+(<[^>]*>\s*)?([\w.]+\.)?$plain\s*\(""")
+        val start = (minOf(line, lines.size) - 1 downTo 0).firstOrNull { name.containsMatchIn(lines[it]) }
+            ?: return null
+        val text = lines.drop(start).joinToString("\n")
+        var at = name.find(text)!!.range.last
+        var depth = 0
+        do {
+            when (text[at]) { '(' -> depth++; ')' -> depth-- }
+            at++
+        } while (depth > 0)
+        val rest = text.substring(at).trimStart()
+        if (rest.startsWith("{")) return "Unit"
+        if (!rest.startsWith(":")) return "="
+        return rest.drop(1).takeWhile { it != '{' && it != '=' }.trim()
+    }
+
+    /**
+     * Whether the null in place of what the `invokeSuspend` of [mutatedClass] hands back, on [line] of [sourceFile],
+     * goes nowhere: true unless the function the coroutine's class is named after (a suspend lambda's or a suspend
+     * function's own continuation, such as `outlook` of `EngineOnDispatcher$outlook$2`) declares a result other than
+     * `Unit` or infers one (`= ...`), as then the value, and so the null, can reach its caller.
+     */
+    private fun resumesWithNothing(mutatedClass: String, sourceFile: String, line: Int): Boolean {
+        val function = mutatedClass.substringAfterLast('.').split('$').drop(1)
+            .lastOrNull { it.firstOrNull()?.isLowerCase() == true } ?: return true
+        val result = declaredResult(mutatedClass, sourceFile, function, line, suspendOnly = false) ?: return true
+        return result == "Unit"
+    }
+
+    @TaskAction
+    fun check() {
+        val factory = javax.xml.parsers.DocumentBuilderFactory.newInstance()
+        factory.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true)
+        val all = factory.newDocumentBuilder().parse(mutations.get().asFile).documentElement.childNodes
+        var counted = 0
+        var killed = 0
+        for (i in 0 until all.length) {
+            val mutation = all.item(i) as? org.w3c.dom.Element ?: continue
+            fun text(name: String) = mutation.getElementsByTagName(name).item(0).textContent
+            val description = text("description")
+            val method = text("mutatedMethod")
+            val result = text("methodDescription")
+            val line = text("lineNumber").toInt()
+            val compilers = description.startsWith("removed call to kotlin/jvm/internal/Intrinsics::")
+                || description.startsWith("removed call to kotlin/ResultKt::")
+                || description.startsWith("replaced return value with null") && (result.endsWith(")Lkotlin/Unit;")
+                    || method == "invokeSuspend" && resumesWithNothing(text("mutatedClass"), text("sourceFile"), line)
+                    || result.endsWith("Lkotlin/coroutines/Continuation;)Ljava/lang/Object;") && declaredResult(
+                        text("mutatedClass"), text("sourceFile"), method, line, suspendOnly = true) == "Unit")
+                || method == "getLOG"
+            if (compilers) continue
+            counted++
+            if (mutation.getAttribute("status") in setOf("KILLED", "TIMED_OUT")) killed++
+        }
+        val share = if (counted == 0) 0.0 else 100.0 * killed / counted
+        logger.lifecycle("PIT without the Kotlin compiler's mutants: $killed of $counted killed (%.1f %%)"
+            .format(share))
+        if (share < threshold.get()) {
+            throw GradleException("PIT killed %.1f %% of the mutants, below the floor of ${threshold.get()} %%"
+                .format(share))
+        }
+    }
+}
+
+// the share of mutants killed without the compiler's own, a few points below the 86.9 % it was when set, for the full
+// run only: a run narrowed to some classes may be small or hold many survivors
+val checkPitScore = tasks.register<PitScore>("checkPitScore") {
+    mutations.set(layout.buildDirectory.file("reports/pitest/debug/mutations.xml"))
+    sources.set(layout.projectDirectory.dir("src/main/kotlin"))
+    threshold.set(if (pitClasses == null) 84 else 0)
+}
+
+// the Android PIT plugin adds the variants' tasks after this script has run
+tasks.matching { it.name == "pitestDebug" }.configureEach { finalizedBy(checkPitScore) }
+
+/**
+ * The floor of the unit tests' coverage (CONTRIBUTING.md, Coverage): JaCoCo's report of `:app`, as AGP makes it from
+ * what the JVM tests and the Robolectric tests ran, must cover at least [lines] of its lines and [branches] of its
+ * branches, in percent.
+ */
+abstract class CoverageFloor : DefaultTask() {
+
+    @get:InputFile
+    abstract val report: RegularFileProperty
+
+    @get:Input
+    abstract val lines: Property<Int>
+
+    @get:Input
+    abstract val branches: Property<Int>
+
+    @TaskAction
+    fun check() {
+        val factory = javax.xml.parsers.DocumentBuilderFactory.newInstance()
+        factory.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true)
+        // JaCoCo's report names its DTD, which the check does not need
+        factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+        val children = factory.newDocumentBuilder().parse(report.get().asFile).documentElement.childNodes
+        val shares = mutableMapOf<String, Double>()
+        for (i in 0 until children.length) {
+            val counter = children.item(i) as? org.w3c.dom.Element ?: continue
+            if (counter.tagName != "counter") continue
+            val missed = counter.getAttribute("missed").toDouble()
+            val covered = counter.getAttribute("covered").toDouble()
+            shares[counter.getAttribute("type")] = 100 * covered / (missed + covered)
+        }
+        val failures = listOf("LINE" to lines.get(), "BRANCH" to branches.get()).mapNotNull { (type, floor) ->
+            val share = shares[type] ?: throw GradleException("the coverage report has no $type counter")
+            logger.lifecycle("%s coverage of the unit tests: %.1f %% (floor %d %%)"
+                .format(type.lowercase(), share, floor))
+            if (share < floor) "%s coverage is %.1f %%, below the floor of %d %%".format(type.lowercase(), share, floor)
+            else null
+        }
+        if (failures.isNotEmpty()) throw GradleException(failures.joinToString("; "))
+    }
+}
+
+// a point or two below what was measured when it was set (98.3 % of the lines, 85.4 % of the branches)
+val checkCoverage = tasks.register<CoverageFloor>("checkCoverage") {
+    dependsOn("createDebugUnitTestCoverageReport")
+    report.set(layout.buildDirectory.file("reports/coverage/test/debug/report.xml"))
+    lines.set(97)
+    branches.set(83)
+}
+
+tasks.named("check") { dependsOn(checkCoverage) }

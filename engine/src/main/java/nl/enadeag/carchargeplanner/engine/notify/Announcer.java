@@ -178,8 +178,10 @@ public final class Announcer {
             var window = candidate.window();
             if (span(window, lead).contains(now) && !wasAnnounced(window)) {
                 notifier.announce(candidate);
-                LOG.info("announced a " + candidate.kind() + " starting at "
-                        + window.start().atZone(candidate.zone()).toOffsetDateTime());
+                LOG.info("announced a " + candidate.kind());
+                // the owner's time only at DEBUG, which neither the release build on Android nor the desktop by
+                // default writes
+                LOG.debug("that window starts at " + window.start().atZone(candidate.zone()).toOffsetDateTime());
                 rememberAndSave(window, now);
             }
         }

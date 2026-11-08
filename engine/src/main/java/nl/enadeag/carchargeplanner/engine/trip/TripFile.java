@@ -27,7 +27,8 @@ import tools.jackson.databind.node.ObjectNode;
  * kept until a day after its return; an older one is left out when the file is read, and dropped from it at the next
  * change. A file that is missing or cannot be used holds none, and a damaged entry is left out, so a bad file never
  * stops planning. But nothing is added to, changed in or removed from such a file: that would lose what it holds, so
- * the owner is told instead. The trips are kept in memory until the file changes on disk.
+ * the owner is told instead. The trips are kept in memory until the file changes on disk. Every method may be called
+ * from any thread: a change reads, changes and writes the file as one step, so two changes at the same time both count.
  */
 public final class TripFile {
 
@@ -75,7 +76,7 @@ public final class TripFile {
      * @throws IOException when the file could not be written, or it exists but could not be read whole; it is then
      *     left as it was
      */
-    public List<Trip> add(Trip trip, Instant now) throws IOException {
+    public synchronized List<Trip> add(Trip trip, Instant now) throws IOException {
         return rewrite(List.of(trip), trip, now);
     }
 
@@ -89,7 +90,7 @@ public final class TripFile {
      * @throws IOException when the file could not be written, or it exists but could not be read whole; it is then
      *     left as it was
      */
-    public List<Trip> change(Trip trip, Trip changed, Instant now) throws IOException {
+    public synchronized List<Trip> change(Trip trip, Trip changed, Instant now) throws IOException {
         return rewrite(List.of(trip, changed), changed, now);
     }
 
@@ -102,7 +103,7 @@ public final class TripFile {
      * @throws IOException when the file could not be written, or it exists but could not be read whole; it is then
      *     left as it was
      */
-    public List<Trip> remove(Trip trip, Instant now) throws IOException {
+    public synchronized List<Trip> remove(Trip trip, Instant now) throws IOException {
         var trips = notPast(storedForChange().stream().filter(stored -> !stored.equals(trip)).toList(), now);
         file.write(new Entries(trips, 0));
         return trips;

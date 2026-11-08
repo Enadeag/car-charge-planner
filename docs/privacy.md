@@ -40,13 +40,15 @@ On Linux `XDG_CONFIG_HOME` and `XDG_DATA_HOME` move the config and data folders,
 
 How the app reads and writes these files, and what it does with a damaged one, is in the [guide](guide.md#the-files-and-the-log).
 
-In the Android app, which is not released yet, the engine's files (the settings file, the battery level you entered last, `battery.json`, the away periods you entered for a day, `away.json`, your trips, `trips.json`, and what you were notified about each trip, `trip-notices.json`, among them) are kept in the app's own files folder on the phone, which no other app can read, in the same format as the desktop's. They never leave the phone except in Android's transfer to your next phone, which takes them all along; the API keys stay out of that. Beside them the app keeps a few files of its own, which the engine does not use: two small preferences files (Android's DataStore) in `files/datastore/`, and the schedule of the work in the background in the no-backup folder:
+In the Android app, which is not released yet, the engine's files (the settings file, the battery level you entered last, `battery.json`, the away periods you entered for a day, `away.json`, your trips, `trips.json`, and what you were notified about each trip, `trip-notices.json`, among them) are kept in the app's own files folder on the phone, which no other app can read, in the same format as the desktop's. They never leave the phone except in Android's transfer to your next phone, which takes them all along; the API keys stay out of that. Beside them the app keeps a few files of its own: two small preferences files (Android's DataStore) in `files/datastore/`, which the engine does not use, and in the no-backup folder the schedule of the work in the background and the encrypted API keys. Its log goes to Logcat:
 
 | What | File | In the transfer to your next phone |
 | --- | --- | --- |
 | The phone's own settings: **Wi-Fi only** (Settings, Forecast), whether the hourly update while the app is closed waits for Wi-Fi | `files/datastore/settings.preferences_pb` | Yes |
 | The notifications' state on this phone: whether you closed the dashboard's card about notifications, whether you refused Android's question for them, whether a "Forecast not updated" notification was posted, and how many rounds in the background in a row could not plan | `files/datastore/state.preferences_pb` | No: it belongs to this phone, where notifications are allowed or not |
 | The schedule of the work in the background (Android's WorkManager): which work is due and when, nothing of your settings | `no_backup/androidx.work.workdb`, with its `-wal` and `-shm` files | No: Android never takes the no-backup folder along, in a backup or a transfer; the app sets the schedule up again when you first open it on the next phone |
+| The API keys, each encrypted (see [API keys](#api-keys)) | `no_backup/keychain.json`; a copy that could not be read is kept beside it as `keychain.json.damaged` | No: you type them again on the next phone |
+| Log: what the app did, from INFO in the release build: the kind of each notification, file paths, and a failure with its whole stack trace, never an API key. The times of your trips and charge windows are logged only at DEBUG, which only the debug build writes | Android's Logcat, no file. No other app can read it, but anyone with the phone can over USB debugging (`adb logcat`), and it goes into a bug report you take on the phone and may attach | No |
 
 If one of the two preferences files is damaged, the app starts it again empty: **Wi-Fi only** is then off until you switch it on again.
 
@@ -60,12 +62,13 @@ WorkManager keeps this schedule in its own database (in the table above). After 
 
 ### API keys
 
-API keys are kept by the system, not in a file:
+API keys are kept by the system, not in a plain file:
 
 | System | Where the API keys are kept |
 | --- | --- |
 | Linux | The Secret Service: GNOME Keyring, KWallet or another that offers it, as items with the attribute `application` set to `car-charge-planner` |
 | Windows | Credential Manager (Windows Credentials), as generic credentials whose names start with `car-charge-planner:` |
+| Android (not released yet) | `keychain.json` in the app's no-backup folder: each value encrypted with AES-256-GCM, under a key in the Android Keystore that never leaves the phone and that not even the app can read out. Never in a backup or the transfer to your next phone, so you type the API keys again there; there is no `secrets.json`. Should the Keystore lose that key, the API keys can no longer be read and you type them again too |
 
 The entries are named `forecast/<provider>/<name>`, after the setting, and one more entry, `index`, lists the names (no values) because a keychain cannot be asked what it holds. Without a usable keychain (a Linux machine with no Secret Service, for one) the API keys are kept in `secrets.json`, readable only by you, and the app says so. On Windows that file is in `%LOCALAPPDATA%`, so a roaming profile does not copy it to other computers (a file an older version kept beside `engine.json` is moved there once). The app reads the API keys from the keychain once and keeps them in memory until you save new ones; a keychain that cannot be used, or does not answer within a few seconds, is tried again five minutes later.
 

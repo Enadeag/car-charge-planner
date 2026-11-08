@@ -340,12 +340,12 @@ class TripNoticesTest {
     }
 
     @Test
-    void eachNoticeIsLoggedWithTheTripsDeparture() {
+    void eachNoticeIsLoggedWithItsKindAndTheTripsDepartureOnlyAtDebug() {
         try (var log = LogCapture.of(TripNotices.class)) {
             check(announcer(), withoutGrid(70, 72, 0), at(SATURDAY, 8, 0));
 
-            assertThat(log.lines()).containsExactly("INFO told a BatteryCheck for the trip leaving at "
-                    + "2026-07-05T08:30+02:00");
+            assertThat(log.lines()).containsExactly("INFO told a BatteryCheck for a trip",
+                    "FINE that trip leaves at 2026-07-05T08:30+02:00");
         }
     }
 

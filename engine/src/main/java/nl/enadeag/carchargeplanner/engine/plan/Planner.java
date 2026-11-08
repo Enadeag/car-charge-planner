@@ -183,7 +183,7 @@ public final class Planner {
     private TripCharge chargeFor(Trip trip, double forNextTripsPct, List<TripCharge> before, Input input) {
         double tripPct = tripPct(trip);
         double requiredPct = preferences.minimumPct().value() + tripPct + otherDrivingPct(trip, input.now());
-        var departureDay = trip.departure().atZone(zone).toLocalDate();
+        var departureDay = trip.firstDay(zone);
         var charge = new TripCharge(trip, tripPct, requiredPct, forNextTripsPct, departureDay, List.of());
         if (charge.neededPct() > preferences.targetPct().value()) {
             charge = new TripCharge(trip, tripPct, requiredPct, forNextTripsPct, latestBoost(charge, before, input),
@@ -352,7 +352,7 @@ public final class Planner {
         var partStart = date.atStartOfDay(zone).toInstant();
         for (var charge : charges) {
             if (gridDate(charge).filter(date::equals).isPresent()
-                    && charge.trip().departure().atZone(zone).toLocalDate().isAfter(date)) {
+                    && charge.trip().firstDay(zone).isAfter(date)) {
                 laterGridPct += gridPct(charge);
             }
             var departure = charge.trip().departure();
@@ -417,7 +417,7 @@ public final class Planner {
 
     private double gridPct(TripCharge charge) {
         return charge.grid().stream()
-                .mapToDouble(grid -> grid.window().solarKwh() + grid.window().importKwh())
+                .mapToDouble(grid -> grid.window().energyKwh())
                 .sum() * system.charger().efficiency() / system.car().usableBatteryKwh() * 100;
     }
 
@@ -456,7 +456,7 @@ public final class Planner {
     /** The other driving of the days a trip lasts, from the day of its departure to the day of its return. */
     private double otherDrivingPct(Trip trip, Instant now) {
         double pct = 0;
-        for (var date = trip.departure().atZone(zone).toLocalDate(); TripAdvice.covers(trip, date, zone);
+        for (var date = trip.firstDay(zone); trip.covers(date, zone);
                 date = date.plusDays(1)) {
             pct += otherDrivingPct(date, now);
         }

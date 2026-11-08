@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory
  * @param context the application's context, which outlives every screen
  * @param clock tells how long a notice still has until its timeout
  */
-internal class Notifications(private val context: Context, private val clock: Clock = Clock.systemUTC()) :
+internal class Notifications(private val context: Context, private val clock: Clock) :
     Notifier, ProblemNotice {
 
     private companion object {
@@ -126,15 +126,16 @@ internal class Notifications(private val context: Context, private val clock: Cl
             .setColor(ContextCompat.getColor(context, R.color.ic_launcher_background))
 
     /**
-     * The app's activity, straight, without anything another app could fill in. The notification's tag goes along as
-     * the intent's data, so the activity takes the notification away also when its action is tapped, which Android's
-     * auto-cancel does not do, and two notifications never share one intent.
+     * The app's activity, straight, through its alias that only the app itself can start, without anything another app
+     * could fill in. The notification's tag goes along as the intent's data, so the activity takes the notification
+     * away also when its action is tapped, which Android's auto-cancel does not do, and two notifications never share
+     * one intent.
      *
      * @param tap what the activity opens
      * @param tag the tag of the notification the intent belongs to
      */
     private fun open(tap: Tap, tag: String): PendingIntent {
-        val intent = Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val intent = Intent().setComponent(MainActivity.noticeTap(context)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             .setData(MainActivity.noticeUri(tag))
         if (tap == Tap.BATTERY_ENTRY) {
             intent.action = MainActivity.OPEN_BATTERY_ENTRY

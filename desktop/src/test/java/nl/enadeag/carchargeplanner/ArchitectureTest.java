@@ -11,6 +11,7 @@ import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
 import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaCodeUnit;
 import com.tngtech.archunit.core.domain.JavaField;
@@ -65,10 +66,21 @@ import java.util.stream.Stream;
         importOptions = {ImportOption.DoNotIncludeTests.class, NotTheEngineTests.class})
 class ArchitectureTest {
 
+    /**
+     * The engine's classes, which the engine's {@code EngineArchitectureTest} holds to the same rules on clocks, sleep,
+     * threads, static state, logged addresses, caught nulls and Optionals, so they run when the engine is built alone.
+     */
+    private static final String ENGINE_PARTS = "..engine..";
+
     /** The dashboard, the texts, the app settings, the theme and Settings: what no platform may reach. */
     private static final DescribedPredicate<JavaClass> DESKTOP_OUTSIDE_ITS_SYSTEM =
             resideInAPackage("..desktop..").and(not(resideInAPackage("..desktop.system..")))
                     .as("are in the desktop but not in desktop.system");
+
+    private static DescribedPredicate<JavaClass> dependOnJavaFx() {
+        return DescribedPredicate.describe("depend on JavaFX", type -> type.getDirectDependenciesFromSelf().stream()
+                .anyMatch(dependency -> dependency.getTargetClass().getPackageName().startsWith("javafx")));
+    }
 
     @ArchTest
     static final ArchRule engineHasNoUserInterfaceOrDesktopBus = noClasses()
@@ -83,6 +95,18 @@ class ArchitectureTest {
             .should().dependOnClassesThat().resideInAnyPackage("javafx..", "java.awt..", "javax.swing..", "atlantafx..")
             .because("the form logic is tested without JavaFX, so the desktop mutation run, which leaves out the "
                     + "JavaFX tests, covers it");
+
+    @ArchTest
+    static final ArchRule theJavaFxViewsDoNotCallTheBlockingEngine = noClasses()
+            .that().resideInAPackage("..desktop..").and(dependOnJavaFx())
+            .should().dependOnClassesThat().haveFullyQualifiedName("nl.enadeag.carchargeplanner.engine.Engine")
+            .orShould().dependOnClassesThat()
+            .haveFullyQualifiedName("nl.enadeag.carchargeplanner.engine.secrets.ApiKeys")
+            .orShould().dependOnClassesThat()
+            .haveFullyQualifiedName("nl.enadeag.carchargeplanner.engine.config.ConfigFile")
+            .because("the Engine, the keychain and the settings file block (a keychain call takes about a second, "
+                    + "#313); a view gets small interfaces from the composition root and calls them through "
+                    + "Background");
 
     @ArchTest
     static final ArchRule engineDoesNotKnowItsClients = noClasses()
@@ -149,7 +173,7 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule requestAddressesNeverReachALog = noClasses()
-            .that(HANDLE_REQUEST_ADDRESSES)
+            .that(HANDLE_REQUEST_ADDRESSES).and().resideOutsideOfPackage(ENGINE_PARTS)
             .should().dependOnClassesThat().haveFullyQualifiedName(System.Logger.class.getName())
             .orShould().dependOnClassesThat().resideInAnyPackage("java.util.logging..", "org.slf4j..")
             .orShould().accessField(System.class, "out")
@@ -162,6 +186,7 @@ class ArchitectureTest {
     static final ArchRule noStaticMutableState = fields()
             .that().areStatic()
             .and().areDeclaredInClassesThat().doNotHaveFullyQualifiedName(Main.class.getName())
+            .and().areDeclaredInClassesThat().resideOutsideOfPackage(ENGINE_PARTS)
             .should().beFinal()
             .because("dependencies come in through constructors, never through global state (ADR 0005)");
 
@@ -388,11 +413,10 @@ class ArchitectureTest {
             });
 
     @ArchTest
-    static final ArchRule onlyTheCompositionRootReadsTheClock = FreezingArchRule.freeze(noClasses()
-            .that().resideOutsideOfPackages(ROOT, START)
+    static final ArchRule onlyTheCompositionRootReadsTheClock = noClasses()
+            .that().resideOutsideOfPackages(ROOT, START, ENGINE_PARTS)
             .should().callMethodWhere(READ_THE_SYSTEM_CLOCK)
-            .because("the clock and the zone are handed in, so a test can set the time (ADR 0005); the stored "
-                    + "defaults of StoredFile and ApiKeys are frozen until their callers pass a clock"));
+            .because("the clock and the zone are handed in, so a test can set the time (ADR 0005)");
 
     @ArchTest
     static final ArchRule nothingSleepsInMainCode = FreezingArchRule.freeze(noClasses()
@@ -415,7 +439,7 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule onlyTheRootThePlatformsAndTheGuardOwnThreads = noClasses()
-            .that().resideOutsideOfPackages(ROOT, START, "..platform..", "..instance..")
+            .that().resideOutsideOfPackages(ROOT, START, "..platform..", "..instance..", ENGINE_PARTS)
             .should().callMethodWhere(START_A_THREAD)
             .orShould().callConstructorWhere(DescribedPredicate.describe("make a thread, a timer or a pool",
                     call -> call.getTargetOwner().isAssignableTo(Thread.class)
@@ -479,6 +503,64 @@ class ArchitectureTest {
             .that(notPartOf(JdkHttpGet.class.getName()))
             .should().dependOnClassesThat().resideInAPackage("java.net.http..")
             .because("every provider asks through the HttpGet port, so a test can answer instead (ADR 0001)");
+
+    /** The types that check certificates and host names, as in the engine's and the Android app's rules. */
+    private static final Set<String> TLS_CHECKS = Set.of(
+            "javax.net.ssl.TrustManager", "javax.net.ssl.X509TrustManager", "javax.net.ssl.X509ExtendedTrustManager",
+            "javax.net.ssl.TrustManagerFactory", "javax.net.ssl.HostnameVerifier");
+
+    private static final DescribedPredicate<JavaClass> CHECK_TLS = DescribedPredicate.describe(
+            "check certificates or host names (trust managers, host name verifiers)",
+            type -> TLS_CHECKS.contains(type.getName()));
+
+    private static final DescribedPredicate<JavaAccess<?>> TAMPER_WITH_TLS = DescribedPredicate.describe(
+            "set up TLS of their own (SSLContext.init or setDefault, an HttpsURLConnection's socket factory or host "
+                    + "name verifier, the security providers or properties)",
+            access -> {
+                var owner = access.getTargetOwner().getName();
+                var name = access.getName();
+                return owner.equals("javax.net.ssl.SSLContext") && Set.of("init", "setDefault").contains(name)
+                        || owner.equals("javax.net.ssl.HttpsURLConnection") && Set.of("setSSLSocketFactory",
+                                "setDefaultSSLSocketFactory", "setHostnameVerifier", "setDefaultHostnameVerifier")
+                                .contains(name)
+                        || owner.equals("java.security.Security") && Set.of("setProperty", "addProvider",
+                                "insertProviderAt", "removeProvider").contains(name);
+            });
+
+    @ArchTest
+    static final ArchRule onlyTheHttpGetMayTouchTheChecksOfTls = noClasses()
+            .that(notPartOf(JdkHttpGet.class.getName()))
+            .should().dependOnClassesThat(CHECK_TLS)
+            .orShould().accessTargetWhere(TAMPER_WITH_TLS)
+            .because("the app trusts the certificates and checks the host names as the JDK does; an own trust manager "
+                    + "or host name verifier lets a forged certificate through, so only the one HttpGet, which owns "
+                    + "the connections, may ever set TLS up (ADR 0001, ADR 0010)");
+
+    private static final DescribedPredicate<JavaAccess<?>> CHANGE_THE_NETWORK_OF_THE_PROCESS =
+            DescribedPredicate.describe("change how every connection of the process works (the default proxy "
+                    + "selector, authenticator, cookie handler or response cache, URL's stream handlers, "
+                    + "URLConnection's content handlers, following redirects for every HttpURLConnection, a system "
+                    + "property or the live set System.getProperties hands out, as ArchUnit cannot read which and the "
+                    + "TLS and proxy ones reach every connection)",
+                    access -> {
+                        var owner = access.getTargetOwner().getName();
+                        var name = access.getName();
+                        return Set.of("java.net.ProxySelector", "java.net.Authenticator", "java.net.CookieHandler",
+                                "java.net.ResponseCache").contains(owner) && name.equals("setDefault")
+                                || owner.equals("java.net.URL") && name.equals("setURLStreamHandlerFactory")
+                                || owner.equals("java.net.URLConnection") && name.equals("setContentHandlerFactory")
+                                || owner.equals("java.net.HttpURLConnection") && name.equals("setFollowRedirects")
+                                || owner.equals("java.lang.System")
+                                && Set.of("setProperty", "setProperties", "clearProperty", "getProperties")
+                                        .contains(name);
+                    });
+
+    @ArchTest
+    static final ArchRule onlyTheHttpGetMayChangeTheNetworkOfTheProcess = noClasses()
+            .that(notPartOf(JdkHttpGet.class.getName()))
+            .should().accessTargetWhere(CHANGE_THE_NETWORK_OF_THE_PROCESS)
+            .because("such a setting reaches every connection of the process, around the contract the HttpGet keeps "
+                    + "on redirects and what it sends (ADR 0001, ADR 0010)");
 
     @ArchTest
     static final ArchRule jacksonIsOnlyForStoredFiles = noClasses()
@@ -598,6 +680,7 @@ class ArchitectureTest {
     /** Throwable is left to {@code CatchClausesTest}: javac catches it itself for every try-with-resources. */
     @ArchTest
     static final ArchRule noCatchingNullPointer = noCodeUnits()
+            .that().areDeclaredInClassesThat().resideOutsideOfPackage(ENGINE_PARTS)
             .should(CATCH_NULL_POINTER)
             .because("a null is checked where it may come, not caught after it went wrong");
 
@@ -606,6 +689,7 @@ class ArchitectureTest {
             .that().areStatic()
             .and().doNotHaveModifier(JavaModifier.SYNTHETIC)
             .and().areDeclaredInClassesThat().doNotHaveFullyQualifiedName(Main.class.getName())
+            .and().areDeclaredInClassesThat().resideOutsideOfPackage(ENGINE_PARTS)
             .should(ArchConditions.have(HOLDS_A_MUTABLE_OBJECT))
             .because("a final field is still global state when what it holds can change (ADR 0005)");
 
@@ -615,6 +699,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule noOptionalFields = noFields()
             .that().doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .and().areDeclaredInClassesThat().resideOutsideOfPackage(ENGINE_PARTS)
             .and().areDeclaredInClassesThat().areNotRecords()
             .should().haveRawType(Optional.class)
             .because("a field holds a null object, a no-op callback or a private value that may be null, never an "
@@ -637,6 +722,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule noOptionalParameters = noCodeUnits()
             .that().doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .and().areDeclaredInClassesThat().resideOutsideOfPackage(ENGINE_PARTS)
             .and(not(RECORD_CANONICAL_CONSTRUCTOR))
             .should(ArchConditions.have(TAKES_AN_OPTIONAL))
             .because("a method or constructor takes a value or a type that names the none case, or comes in two; "

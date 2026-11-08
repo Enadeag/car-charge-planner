@@ -63,7 +63,7 @@ final class TrayStatusMapper {
         if (advice.isPresent()) {
             return new TrayStatus(StatusDot.GRID, advice.get().title());
         }
-        var today = planned.madeAt().atZone(planned.zone()).toLocalDate();
+        var today = planned.today();
         // the next window has not ended, so one that started before today is running now
         return planned.nextWindow()
                 .map(window -> day(window, planned).isAfter(today)

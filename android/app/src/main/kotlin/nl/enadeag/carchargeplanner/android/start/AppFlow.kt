@@ -53,7 +53,7 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 class AppFlow(private val access: EngineAccess, private val saves: Saves, private val appScope: CoroutineScope,
     private val scope: CoroutineScope, private val handle: SavedStateHandle, private val numbers: NumberText,
     val phoneZone: () -> ZoneId, private val language: () -> String, private val mainThread: CoroutineDispatcher,
-    private val clock: Clock = Clock.systemUTC(), private val seen: suspend (Outlook) -> Unit = {}) {
+    private val clock: Clock, private val seen: suspend (Outlook) -> Unit = {}) {
 
     private companion object {
         const val SETTINGS = "app.settings"

@@ -7,7 +7,6 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import nl.enadeag.carchargeplanner.android.CarChargePlannerApp
 import nl.enadeag.carchargeplanner.engine.ForecastUse
 
 /**
@@ -29,11 +28,11 @@ class NoticeAlarmReceiver internal constructor(private val limit: Duration) : Br
     constructor() : this(RECEIVER_ROUND_LIMIT)
 
     override fun onReceive(context: Context, intent: Intent) {
-        val app = context.applicationContext as CarChargePlannerApp
+        val host = context.applicationContext as BackgroundHost
         val pending = goAsync()
-        app.scope.launch {
+        host.scope.launch {
             try {
-                withTimeoutOrNull(limit) { app.rounds.run(ForecastUse.STORED_ONLY) }
+                withTimeoutOrNull(limit) { host.rounds.run(ForecastUse.STORED_ONLY) }
             } finally {
                 pending.finish()
             }
@@ -62,12 +61,12 @@ class BootReceiver internal constructor(private val limit: Duration) : Broadcast
         if (intent.action !in SYSTEM_ACTIONS) {
             return
         }
-        val app = context.applicationContext as CarChargePlannerApp
+        val host = context.applicationContext as BackgroundHost
         val pending = goAsync()
-        app.scope.launch {
+        host.scope.launch {
             try {
-                withTimeoutOrNull(limit) { app.rounds.run(ForecastUse.STORED_ONLY) }
-                app.schedule.afterBoot()
+                withTimeoutOrNull(limit) { host.rounds.run(ForecastUse.STORED_ONLY) }
+                host.schedule.afterBoot()
             } finally {
                 pending.finish()
             }

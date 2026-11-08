@@ -45,8 +45,6 @@ final class TripNotices {
     static final LocalTime EVENING = LocalTime.of(19, 0);
     /** How long after its departure what was told about a trip is kept. */
     static final Duration KEEP_AFTER_DEPARTURE = Duration.ofDays(1);
-    /** A level this little above a whole percentage is the plan's rounding, not a percent more to charge. */
-    private static final double LEVEL_NOISE_PCT = 1e-6;
 
     private static final Logger LOG = LoggerFactory.getLogger(TripNotices.class);
 
@@ -109,7 +107,7 @@ final class TripNotices {
                 && chargeStartSpan(grid.get(), config.planning().notifyLead()).contains(now)) {
             tell(new TripChargeStart(trip, grid.get().window(), grid.get().start(), zone,
                     config.system().charger().phases(),
-                    new Percent(Math.ceil(advice.neededPct().value() - LEVEL_NOISE_PCT))), trip);
+                    advice.chargeLimitPct()), trip);
             result = new ToldTrip(result.departure(), true, result.askedGridPct(), result.shortTold());
         }
         if (advice.kmShort() > 0 && !before.shortTold() && hours.allowStart(now, zone)
@@ -183,7 +181,8 @@ final class TripNotices {
 
     private void tell(Notice notice, Trip trip) {
         notifier.announce(notice);
-        LOG.info("told a " + notice.getClass().getSimpleName() + " for the trip leaving at "
-                + trip.departure().atZone(notice.zone()).toOffsetDateTime());
+        LOG.info("told a " + notice.getClass().getSimpleName() + " for a trip");
+        // the owner's time only at DEBUG, which neither the release build on Android nor the desktop by default writes
+        LOG.debug("that trip leaves at " + trip.departure().atZone(notice.zone()).toOffsetDateTime());
     }
 }

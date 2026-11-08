@@ -6,7 +6,6 @@ import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -47,7 +46,7 @@ public final class TripMapper {
         var text = messages.text(TextKey.TRIP_AWAY, times(trip)) + " · " + messages.text(TextKey.TRIP_DISTANCE,
                 messages.whole(units.distance(trip.distanceKm())), units.distanceUnit());
         var origin = TripOrigin.BY_HAND;
-        return new TripsModel.Listed(trip, day(trip.departure()), lastDay(trip), origin, text,
+        return new TripsModel.Listed(trip, trip.firstDay(zone), trip.lastDay(zone), origin, text,
                 messages.text(origin.text()), messages.text(TextKey.TRIP_CHANGE_SPOKEN, text),
                 messages.text(TextKey.TRIP_REMOVE_SPOKEN, text));
     }
@@ -62,13 +61,6 @@ public final class TripMapper {
         var today = day(madeAt);
         return messages.text(TextKey.TRIP_DAYS, messages.date(first, today), messages.time(trip.departure(), zone),
                 messages.date(back, today), messages.time(trip.returnTime(), zone));
-    }
-
-    /** A trip back at midnight takes no time of the day it returns on. */
-    private LocalDate lastDay(Trip trip) {
-        var back = trip.returnTime().atZone(zone);
-        return back.toLocalTime().equals(LocalTime.MIDNIGHT) ? back.toLocalDate().minusDays(1)
-                : back.toLocalDate();
     }
 
     private LocalDate day(Instant moment) {

@@ -84,14 +84,4 @@ public record PlanningPreferences(
             Duration minWindow, Duration notifyLead) {
         this(minimumPct, targetPct, margin, importToleranceKwh, minWindow, notifyLead, ChargingHours.STANDARD);
     }
-
-    /**
-     * The same preferences with other charging hours.
-     *
-     * @param hours the hours in which the owner can start a charge from now on
-     * @return a copy with those hours
-     */
-    public PlanningPreferences withChargingHours(ChargingHours hours) {
-        return new PlanningPreferences(minimumPct, targetPct, margin, importToleranceKwh, minWindow, notifyLead, hours);
-    }
 }

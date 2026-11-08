@@ -10,7 +10,7 @@ import java.util.Optional;
  * What the app was started to do, read from its arguments.
  *
  * @param command what to do
- * @param config the config file named with {@code --config=}; empty when none was named
+ * @param config the settings file named with {@code --config=}; empty when none was named
  * @param atLogin {@code --background} was given: the app was started at login and starts hidden, as a tray icon
  *     or as a window that is not shown
  */

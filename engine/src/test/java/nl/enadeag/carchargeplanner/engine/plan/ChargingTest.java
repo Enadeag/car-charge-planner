@@ -65,4 +65,10 @@ class ChargingTest {
         int amps = Charging.ampsFor(surplus, system.charger());
         assertThat(Charging.powerKw(amps, system.charger())).isLessThanOrEqualTo(surplus + 1e-9);
     }
+
+    @ParameterizedTest
+    @CsvSource({"48, 48", "48.0000000001, 48", "48.01, 49", "47.5, 48", "0, 0", "99.2, 100", "100, 100", "104.3, 100"})
+    void theChargeLimitIsTheLevelRoundedUpToAWholePercentageAtMost100(double levelPct, double limitPct) {
+        assertThat(Charging.chargeLimit(levelPct).value()).isEqualTo(limitPct);
+    }
 }

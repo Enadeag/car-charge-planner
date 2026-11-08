@@ -84,14 +84,11 @@ interface MissedRounds {
     suspend fun missedRounds(count: Int)
 }
 
-/** Held by every round of the work in the background, with what follows it, so never two run at once in the process. */
-internal val ONE_ROUND_AT_A_TIME = Mutex()
-
 /**
  * The rounds of the work in the background: the hourly round and the round now, which ask the providers, and the
  * alarm's and the start's, which plan from the stored forecast only. Each round tells the owner what is due, keeps the
- * Problems notification's episodes and sets the alarm for the next notice, under one lock for the whole process. While
- * notifications are not allowed, there is no round: the work and the alarm are cancelled, until the app is opened
+ * Problems notification's episodes and sets the alarm for the next notice, under the one lock of the process's rounds.
+ * While notifications are not allowed, there is no round: the work and the alarm are cancelled, until the app is opened
  * again with notifications allowed. Without a settings file the work and the alarm are cancelled after the round.
  *
  * @param access the engine's reads and writes, asked anew for each round so a test can put another in place
@@ -101,11 +98,13 @@ internal val ONE_ROUND_AT_A_TIME = Mutex()
  * @param allowed whether notifications are allowed now
  * @param clock the moment the alarm is set from
  * @param missed the rounds in a row that gave no outlook, which the alarm after them backs off with
+ * @param oneAtATime held by every round, with what follows it, so never two run at once in the process; the same lock
+ *     as the [BackgroundSchedule]'s
  */
 class BackgroundRounds(private val access: () -> EngineAccess,
     private val afterRound: suspend (Outlook, ForecastUse) -> Unit, private val alarm: NoticeAlarm,
     private val work: RoundWork, private val allowed: () -> Boolean, private val clock: Clock,
-    private val missed: MissedRounds) {
+    private val missed: MissedRounds, private val oneAtATime: Mutex) {
 
     private companion object {
         val LOG = LoggerFactory.getLogger(BackgroundRounds::class.java)
@@ -120,7 +119,7 @@ class BackgroundRounds(private val access: () -> EngineAccess,
      * @param use where the forecast comes from: the providers for the hourly round and the round now, the stored
      *     forecast only for the alarm's and the start's
      */
-    suspend fun run(use: ForecastUse): Unit = ONE_ROUND_AT_A_TIME.withLock {
+    suspend fun run(use: ForecastUse): Unit = oneAtATime.withLock {
         if (allowed()) {
             plan(use)
         } else {

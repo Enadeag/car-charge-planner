@@ -990,6 +990,37 @@ class ApiKeysTest {
     }
 
     @Test
+    void stoppingTheUnlockingTellsTheKeychain() {
+        var lockable = new LockableKeychain();
+
+        keys(lockable).stopUnlocking();
+
+        assertThat(lockable.stops).hasValue(1);
+    }
+
+    @Test
+    void removingFromAKeychainThatRefusesWritesSaysItWasHeldAndTheKeyIsNotLoadedAgain() throws SecretsProblem {
+        var refusing = holdingTheKeys(new RefusingWrites());
+        var before = Map.copyOf(refusing.entries);
+
+        assertThat(keys(refusing).remove(Map.of(OPEN_METEO, Set.of("api_key")))).isTrue();
+
+        assertThat(keys(refusing).load().byProvider()).doesNotContainKey(OPEN_METEO);
+        assertThat(refusing.entries).isEqualTo(before);
+    }
+
+    @Test
+    void removingAKeyKeptOnlyInTheFileMovesTheRestIntoAUsableKeychainAndDropsTheFile() throws SecretsProblem {
+        file().write(KEYS);
+
+        assertThat(keys(keychain).remove(Map.of(FORECAST_SOLAR, Set.of("api_key")))).isTrue();
+
+        assertThat(file().path()).doesNotExist();
+        assertThat(keychain.entries).containsOnlyKeys(KeychainEntries.INDEX, OPEN_METEO_ENTRY);
+        assertThat(keys(keychain).load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-SECRET-1"))));
+    }
+
+    @Test
     void withoutAKeychainRemovingTakesTheSettingsOutOfTheFile() throws SecretsProblem {
         file().write(KEYS);
 
@@ -1396,7 +1427,8 @@ class ApiKeysTest {
     @Test
     void theFileWithoutAKeychainIsTheOneItWasGiven() {
         var file = file();
-        assertThat(new ApiKeys(new NoKeychain(), file).file()).isSameAs(file);
+        assertThat(new ApiKeys(new NoKeychain(), file,
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC()).file()).isSameAs(file);
     }
 
     @Test

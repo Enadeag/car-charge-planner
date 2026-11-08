@@ -33,6 +33,25 @@ class ExchangeTest {
     }
 
     @Test
+    void aRequestThatIsInterruptedIsUnavailableAndTheThreadStaysInterrupted() {
+        var request = new HttpGet.Request(URI.create("https://example.org/KEY123/estimate"), Map.of(),
+                Duration.ofSeconds(1), ByteSize.ofKilobytes(256));
+        HttpGet interrupted = sent -> {
+            throw new InterruptedException("stopped");
+        };
+
+        try {
+            var error = catchThrowableOfType(ProviderError.Unavailable.class,
+                    () -> Exchange.send(interrupted, request, "Example"));
+
+            assertThat(error).hasMessage("the request to Example was interrupted");
+            assertThat(Thread.currentThread().isInterrupted()).as("the interrupt is kept").isTrue();
+        } finally {
+            Thread.interrupted();
+        }
+    }
+
+    @Test
     void anAnswerTooLargeToReadIsUnavailableAndSaysNothingOfTheAddress() {
         var request = new HttpGet.Request(URI.create("https://example.org/KEY123/estimate"), Map.of(),
                 Duration.ofSeconds(1), ByteSize.ofKilobytes(256));

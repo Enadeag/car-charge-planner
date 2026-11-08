@@ -405,7 +405,7 @@ class ForecastServiceTest {
     @Test
     void aChangedSystemOrSettingMakesTheCacheNotApply() throws ForecastUnavailable {
         get(T0);
-        var bigger = SYSTEM.withArrays(List.of(new PanelArray("", 9.0, 35, -45, 0.14)));
+        var bigger = SolarSites.withArrays(SYSTEM, List.of(new PanelArray("", 9.0, 35, -45, 0.14)));
         assertThat(service.get(bigger, selection, later(5)).source().freshness()).isEqualTo(Freshness.FRESH);
         var moved = new SolarSite(new Coordinates(51.0, SYSTEM.location().longitude()), SYSTEM.timezone(), SYSTEM.arrays());
         assertThat(service.get(moved, selection, later(6)).source().freshness()).isEqualTo(Freshness.FRESH);
@@ -416,7 +416,7 @@ class ForecastServiceTest {
     @Test
     void renamingAPanelArrayKeepsTheCache() throws ForecastUnavailable {
         get(T0);
-        var renamed = SYSTEM.withArrays(List.of(new PanelArray("Garage", 4.8, 35, -45, 0.14)));
+        var renamed = SolarSites.withArrays(SYSTEM, List.of(new PanelArray("Garage", 4.8, 35, -45, 0.14)));
         assertThat(service.get(renamed, selection, later(5)).source().freshness()).isEqualTo(Freshness.CACHED);
     }
 
@@ -617,7 +617,8 @@ class ForecastServiceTest {
 
     @Test
     void severalArraysAreServedFromTheCache() throws IOException, ForecastUnavailable {
-        var two = SYSTEM.withArrays(List.of(new PanelArray("", 3.0, 30, -90, 0.14), new PanelArray("", 2.0, 30, 90, 0.14)));
+        var two = SolarSites.withArrays(SYSTEM,
+                List.of(new PanelArray("", 3.0, 30, -90, 0.14), new PanelArray("", 2.0, 30, 90, 0.14)));
         service.get(two, selection, T0);
         restart();
         assertThat(service.get(two, selection, later(10)).source().freshness()).isEqualTo(Freshness.CACHED);
@@ -1139,6 +1140,14 @@ class ForecastServiceTest {
         assertThat(stored(later(1)).source())
                 .extracting(ForecastSource::fetchedAt, ForecastSource::freshness)
                 .containsExactly(T0, Freshness.CACHED);
+    }
+
+    @Test
+    void aProviderAskedBeforeCanBeAskedAgainFromAnotherThread() throws ForecastUnavailable {
+        get(T0);
+
+        // the lock of a provider is held by the thread that asked, so a lock left behind blocks the other thread
+        assertTimeoutPreemptively(Duration.ofSeconds(2), () -> refresh(later(10)));
     }
 
     @Test

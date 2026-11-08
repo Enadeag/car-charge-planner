@@ -33,7 +33,8 @@ class AppEngineTest {
 
     private val filesFolder by lazy { root.resolve("files") }
     private val platform by lazy {
-        AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), SoftwareKeys())
+        AndroidPlatform(filesFolder.toFile(), root.resolve("no_backup").toFile(), SoftwareKeys(),
+            Clock.systemUTC())
     }
 
     @Test

@@ -1,5 +1,7 @@
 package nl.enadeag.carchargeplanner.android
 
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -22,11 +24,12 @@ import nl.enadeag.carchargeplanner.android.ui.notify.allowed
 /**
  * The app's one activity: set-up, the problem of a settings file, or the home, as the settings file decides. It is
  * single-top, so a notification's tap reaches the activity shown. A tap takes its notification away, also a tap on its
- * action, and a battery check's tap opens the battery level's entry on the home; each once: not again when the
- * activity is made again, as after turning the phone, nor when the app is opened from the recent apps with that tap's
- * intent, which would take away a newer notification under the same tag. Each start of the activity, and the owner
- * allowing notifications on the dashboard's card, sets the work in the background up again, so it follows the
- * settings file and whether notifications are allowed.
+ * action, and a battery check's tap opens the battery level's entry on the home, but only when it comes through the
+ * activity's alias that no other app can start, as the activity itself is open to every app for the launcher; each
+ * once: not again when the activity is made again, as after turning the phone, nor when the app is opened from the
+ * recent apps with that tap's intent, which would take away a newer notification under the same tag. Each start of
+ * the activity, and the owner allowing notifications on the dashboard's card, sets the work in the background up
+ * again, so it follows the settings file and whether notifications are allowed.
  */
 class MainActivity : ComponentActivity() {
 
@@ -35,6 +38,17 @@ class MainActivity : ComponentActivity() {
         const val OPEN_BATTERY_ENTRY = "nl.enadeag.carchargeplanner.android.action.OPEN_BATTERY_ENTRY"
 
         private const val NOTICE_SCHEME = "notice"
+
+        /** The class name of the activity's alias in the manifest, which only the app itself can start. */
+        private const val NOTICE_TAP = "nl.enadeag.carchargeplanner.android.NoticeTap"
+
+        /**
+         * Where a notification's intent goes: the activity through its alias, which only the app itself can start.
+         *
+         * @param context the app's context
+         * @return the alias in the app's package
+         */
+        internal fun noticeTap(context: Context): ComponentName = ComponentName(context, NOTICE_TAP)
 
         /**
          * The data of a notification's intent, which names the notification.
@@ -51,7 +65,7 @@ class MainActivity : ComponentActivity() {
                 val app = application as CarChargePlannerApp
                 val context = app.applicationContext
                 AppViewModel(app.engine, app.saves, app.scope, createSavedStateHandle(), locale(), searchLanguage(),
-                    app.problems::dashboardSaw) { scope ->
+                    app.clock, app::zone, app.problems::dashboardSaw) { scope ->
                     // Android's question only pauses this activity, so no start sets the work up after a grant
                     NotificationCard(app.phoneState, { allowed(context) },
                         Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU, scope) {
@@ -92,10 +106,12 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Takes a tapped notification away and opens what its tap asks for; the app's start and a dashboard's tap ask for
-     * nothing more. An intent from the recent apps was followed when it first came.
+     * nothing more. An intent from the recent apps was followed when it first came, and one that did not come through
+     * the alias may come from any app, so neither is followed.
      */
     private fun follow(intent: Intent) {
-        if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) {
+        val fromHistory = intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
+        if (fromHistory || intent.component?.className != NOTICE_TAP) {
             return
         }
         intent.data?.takeIf { it.scheme == NOTICE_SCHEME }?.schemeSpecificPart?.let { tag ->

@@ -6,10 +6,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.NetworkType
 import androidx.work.WorkInfo
-import java.time.Duration
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import nl.enadeag.carchargeplanner.android.CarChargePlannerApp
+import nl.enadeag.carchargeplanner.android.Waiting
 import nl.enadeag.carchargeplanner.android.MainActivity
 import nl.enadeag.carchargeplanner.android.form.DRAFT
 import nl.enadeag.carchargeplanner.android.store.BatteryLevelSave
@@ -51,7 +51,8 @@ class BackgroundLifecycleTest {
     }
 
     private fun fakeSchedule() {
-        app.schedule = BackgroundSchedule({ access }, background.work, background.alarm, flowOf(false)) { allowed }
+        app.schedule = BackgroundSchedule({ access }, background.work, background.alarm, flowOf(false),
+            background.oneRoundAtATime) { allowed }
     }
 
     /**
@@ -59,11 +60,7 @@ class BackgroundLifecycleTest {
      * main thread is left alone, so the screen's endless progress indicator draws no frames meanwhile.
      */
     private fun waitFor(done: () -> Boolean) {
-        val end = System.nanoTime() + Duration.ofSeconds(10).toNanos()
-        while (!done() && System.nanoTime() < end) {
-            Thread.sleep(10)
-        }
-        assertThat(done()).isTrue()
+        assertThat(Waiting.waitUntil(condition = done)).isTrue()
     }
 
     /**

@@ -9,7 +9,8 @@ import org.w3c.dom.Element
 /**
  * What the app asks of Android and opens to other apps, from its own manifest: the network, the notifications and the
  * start of the phone; the one activity the launcher starts, single-top so a notification's tap reaches the activity
- * shown; the alarm's receiver, which no other app reaches, and the boot receiver, for the system's broadcasts only.
+ * shown, and its alias for those taps, which no other app reaches; the alarm's receiver, which no other app reaches
+ * either, and the boot receiver, for the system's broadcasts only.
  */
 class ManifestTest {
 
@@ -43,9 +44,19 @@ class ManifestTest {
     }
 
     @Test
-    fun theAppHasItsActivityAndTheTwoReceiversOfTheWorkInTheBackgroundOnly() {
-        assertThat(parts.map { it.name() }).containsExactlyInAnyOrder(".MainActivity",
+    fun theAppHasItsActivityItsAliasAndTheTwoReceiversOfTheWorkInTheBackgroundOnly() {
+        assertThat(parts.map { it.name() }).containsExactlyInAnyOrder(".MainActivity", ".NoticeTap",
             ".background.NoticeAlarmReceiver", ".background.BootReceiver")
+    }
+
+    @Test
+    fun theNotificationsAliasOfTheActivityIsNotExportedAndTakesNoIntentFromOutside() {
+        val alias = parts.single { it.tagName == "activity-alias" }
+
+        assertThat(alias.name()).isEqualTo(".NoticeTap")
+        assertThat(alias.getAttributeNS(ANDROID, "targetActivity")).isEqualTo(".MainActivity")
+        assertThat(alias.getAttributeNS(ANDROID, "exported")).isEqualTo("false")
+        assertThat(alias.getElementsByTagName("intent-filter").length).isZero()
     }
 
     @Test
@@ -69,7 +80,7 @@ class ManifestTest {
 
     @Test
     fun theOnlyActivityIsTheLaunchersSingleTopOne() {
-        val activity = parts.single { it.tagName.startsWith("activity") }
+        val activity = parts.single { it.tagName == "activity" }
 
         assertThat(activity.name()).isEqualTo(".MainActivity")
         assertThat(activity.getAttributeNS(ANDROID, "exported")).isEqualTo("true")
