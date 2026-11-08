@@ -181,7 +181,8 @@ final class TripNotices {
 
     private void tell(Notice notice, Trip trip) {
         notifier.announce(notice);
-        LOG.info("told a " + notice.getClass().getSimpleName() + " for the trip leaving at "
-                + trip.departure().atZone(notice.zone()).toOffsetDateTime());
+        LOG.info("told a " + notice.getClass().getSimpleName() + " for a trip");
+        // the owner's time only at DEBUG, which neither the release build on Android nor the desktop by default writes
+        LOG.debug("that trip leaves at " + trip.departure().atZone(notice.zone()).toOffsetDateTime());
     }
 }
