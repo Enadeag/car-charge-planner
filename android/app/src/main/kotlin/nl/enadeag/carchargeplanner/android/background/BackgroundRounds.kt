@@ -87,8 +87,8 @@ interface MissedRounds {
 /**
  * The rounds of the work in the background: the hourly round and the round now, which ask the providers, and the
  * alarm's and the start's, which plan from the stored forecast only. Each round tells the owner what is due, keeps the
- * Problems notification's episodes and sets the alarm for the next notice, under the one lock of the process's rounds. While
- * notifications are not allowed, there is no round: the work and the alarm are cancelled, until the app is opened
+ * Problems notification's episodes and sets the alarm for the next notice, under the one lock of the process's rounds.
+ * While notifications are not allowed, there is no round: the work and the alarm are cancelled, until the app is opened
  * again with notifications allowed. Without a settings file the work and the alarm are cancelled after the round.
  *
  * @param access the engine's reads and writes, asked anew for each round so a test can put another in place

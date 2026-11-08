@@ -55,8 +55,8 @@ import org.junit.jupiter.api.Test
  * ADR 0005's wiring rules, as the desktop's `ArchitectureTest` has them (ADR 0010): only the Application reads the
  * system's clock and the phone's time zone, only the composition root and the HttpGet make threads, and no class keeps
  * static mutable state. As ADR 0001 has it for every client, only the keychain writes a file and what handles a
- * request's address logs nothing. The app's parts, one package each below the root, have no cycles, only the screens know the
- * screens, and only Android knows the Application.
+ * request's address logs nothing. The app's parts, one package each below the root, have no cycles, only the screens
+ * know the screens, and only Android knows the Application.
  */
 class AppArchitectureTest {
 
@@ -396,7 +396,8 @@ class AppArchitectureTest {
         val STATIC_FIELDS = DescribedPredicate.describe<JavaField>(
             "are static, not made by a compiler, not resource IDs and not named as deliberate") { field ->
             JavaModifier.STATIC in field.modifiers && JavaModifier.SYNTHETIC !in field.modifiers
-                && !partOf(field.owner, setOf(R_CLASS)) && !field.owner.name.substringAfterLast('.').startsWith(COMPOSABLE_SINGLETONS)
+                && !partOf(field.owner, setOf(R_CLASS))
+                && !field.owner.name.substringAfterLast('.').startsWith(COMPOSABLE_SINGLETONS)
                 && field.fullName !in DELIBERATE_STATICS
         }
 
@@ -544,7 +545,8 @@ class AppArchitectureTest {
             .hasMessageContaining("TopLevelStateKt.asked")
             .hasMessageContaining("TopLevelStateKt.counts")
             .satisfies({ failure ->
-                assertThat(failure.message).doesNotContain("TopLevelStateKt.LIMIT").doesNotContain("TopLevelStateKt.names")
+                assertThat(failure.message).doesNotContain("TopLevelStateKt.LIMIT")
+                    .doesNotContain("TopLevelStateKt.names")
             })
     }
 

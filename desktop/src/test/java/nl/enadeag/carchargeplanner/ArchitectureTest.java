@@ -100,10 +100,13 @@ class ArchitectureTest {
     static final ArchRule theJavaFxViewsDoNotCallTheBlockingEngine = noClasses()
             .that().resideInAPackage("..desktop..").and(dependOnJavaFx())
             .should().dependOnClassesThat().haveFullyQualifiedName("nl.enadeag.carchargeplanner.engine.Engine")
-            .orShould().dependOnClassesThat().haveFullyQualifiedName("nl.enadeag.carchargeplanner.engine.secrets.ApiKeys")
-            .orShould().dependOnClassesThat().haveFullyQualifiedName("nl.enadeag.carchargeplanner.engine.config.ConfigFile")
-            .because("the Engine, the keychain and the settings file block (a keychain call takes about a second, #313); "
-                    + "a view gets small interfaces from the composition root and calls them through Background");
+            .orShould().dependOnClassesThat()
+            .haveFullyQualifiedName("nl.enadeag.carchargeplanner.engine.secrets.ApiKeys")
+            .orShould().dependOnClassesThat()
+            .haveFullyQualifiedName("nl.enadeag.carchargeplanner.engine.config.ConfigFile")
+            .because("the Engine, the keychain and the settings file block (a keychain call takes about a second, "
+                    + "#313); a view gets small interfaces from the composition root and calls them through "
+                    + "Background");
 
     @ArchTest
     static final ArchRule engineDoesNotKnowItsClients = noClasses()

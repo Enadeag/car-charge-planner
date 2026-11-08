@@ -18,11 +18,11 @@ import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 /**
  * The Android side of the engine's platform seams: the {@link HttpGet}, the files, the keychain and the API keys. The
  * app's {@code Application} makes one set ({@link #of(Context, Clock)}) and keeps it, as {@link ApiKeys} remembers what
- * it read and each {@code HttpGet} keeps a pool of threads. The engine's files (settings, trips, the forecast cache) go in the app's
- * files folder, which is private already ({@link FilePrivacy#NONE}) and moves to the owner's next phone; the keychain's
- * file goes in the folder that is never backed up, as its keys never leave this phone. The API keys are kept only in
- * the keychain ({@link KeyFallback#NONE}), never unencrypted. The keychain and the API keys may block for about a
- * second, so they are used off the main thread.
+ * it read and each {@code HttpGet} keeps a pool of threads. The engine's files (settings, trips, the forecast cache) go
+ * in the app's files folder, which is private already ({@link FilePrivacy#NONE}) and moves to the owner's next phone;
+ * the keychain's file goes in the folder that is never backed up, as its keys never leave this phone. The API keys are
+ * kept only in the keychain ({@link KeyFallback#NONE}), never unencrypted. The keychain and the API keys may block for
+ * about a second, so they are used off the main thread.
  */
 public final class AndroidPlatform {
 

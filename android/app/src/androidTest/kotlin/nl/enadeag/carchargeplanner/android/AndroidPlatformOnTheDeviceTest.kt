@@ -7,7 +7,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** The app's platform parts on the device, the one set its Application keeps, in its own folders. Nothing is written. */
+/**
+ * The app's platform parts on the device, the one set its Application keeps, in its own folders. Nothing is written.
+ */
 @RunWith(AndroidJUnit4::class)
 class AndroidPlatformOnTheDeviceTest {
 

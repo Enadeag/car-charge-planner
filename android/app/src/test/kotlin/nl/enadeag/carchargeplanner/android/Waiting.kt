@@ -18,7 +18,9 @@ object Waiting {
      *     looper or a clock run while it waits
      * @return whether the condition held in time
      */
-    fun waitUntil(timeout: Duration = Duration.ofSeconds(10), between: () -> Unit = {}, condition: () -> Boolean): Boolean {
+    fun waitUntil(
+        timeout: Duration = Duration.ofSeconds(10), between: () -> Unit = {}, condition: () -> Boolean,
+    ): Boolean {
         val end = System.nanoTime() + timeout.toNanos()
         while (!condition() && System.nanoTime() < end) {
             between()

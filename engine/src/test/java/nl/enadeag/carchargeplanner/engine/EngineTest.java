@@ -431,12 +431,13 @@ class EngineTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"2026-07-02T21:59:59Z, 2026-07-02", "2026-07-02T22:00:00Z, 2026-07-03", "2026-07-03T21:59:59Z, 2026-07-03"})
+    @CsvSource({"2026-07-02T21:59:59Z, 2026-07-02", "2026-07-02T22:00:00Z, 2026-07-03",
+            "2026-07-03T21:59:59Z, 2026-07-03"})
     void aPlansTodayIsTheDayItWasMadeInTheHomesTimeZone(Instant madeAt, LocalDate today) {
         var source = new ForecastSource(new ProviderId("main"), "Main", "Forecast by Main", madeAt, Freshness.FRESH,
                 ProviderRole.PRIMARY, "", Optional.empty(), List.of());
-        var planned = new Outlook.Planned(madeAt, BRUSSELS, List.of(), new Percent(50), true, Optional.empty(), List.of(),
-                source, 0.4, new Percent(30), new Percent(80));
+        var planned = new Outlook.Planned(madeAt, BRUSSELS, List.of(), new Percent(50), true, Optional.empty(),
+                List.of(), source, 0.4, new Percent(30), new Percent(80));
         assertThat(planned.today()).isEqualTo(today);
     }
 

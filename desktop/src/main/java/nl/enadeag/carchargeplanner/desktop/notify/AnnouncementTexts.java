@@ -69,7 +69,8 @@ public final class AnnouncementTexts {
         var energy = messages.decimal(window.energyKwh());
         return switch (announcement.kind()) {
             case SOLAR_WINDOW -> new NotificationText(messages.text(TextKey.NOTIFY_WINDOW_TITLE, span), setting + " "
-                    + messages.text(TextKey.NOTIFY_WINDOW_BODY, energy, messages.whole(window.solarSharePct().value())));
+                    + messages.text(TextKey.NOTIFY_WINDOW_BODY, energy,
+                            messages.whole(window.solarSharePct().value())));
             case GRID_CHARGE -> new NotificationText(messages.text(TextKey.NOTIFY_GRID_TITLE, span), setting + " "
                     + messages.text(TextKey.NOTIFY_GRID_BODY, energy, messages.whole(announcement.minimumPct().value()),
                     messages.whole(announcement.chargeLimitPct().orElseThrow().value())));

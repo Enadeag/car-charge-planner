@@ -189,10 +189,13 @@ class EngineArchitectureTest {
                         || owner.equals(System.class.getName()) && name.equals("currentTimeMillis");
             });
 
-    /** The one default clock left: the time a file that cannot be used is set aside with, until its callers pass one. */
+    /**
+     * The one default clock left: the time a file that cannot be used is set aside with, until its callers pass one.
+     */
     private static final DescribedPredicate<JavaAccess<?>> STORED_FILES_DEFAULT = DescribedPredicate.describe(
             "are not StoredFile's constructor without a clock",
-            access -> access.getOrigin().getOwner().isEquivalentTo(StoredFile.class) && access.getOrigin().isConstructor()
+            access -> access.getOrigin().getOwner().isEquivalentTo(StoredFile.class)
+                    && access.getOrigin().isConstructor()
                     && access.getOrigin().getRawParameterTypes().size() == 3);
 
     @ArchTest
