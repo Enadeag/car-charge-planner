@@ -22,6 +22,7 @@ import nl.enadeag.carchargeplanner.android.background.WorkThatCallsTheEngineItse
 import nl.enadeag.carchargeplanner.android.background.WorkThatPlansARound
 import nl.enadeag.carchargeplanner.android.backgroundwork.WorkBesideTheBackgroundPackage
 import nl.enadeag.carchargeplanner.android.store.StoreThatCallsTheEngineItself
+import nl.enadeag.carchargeplanner.android.home.LogicThatHoldsTheApiKeys
 import nl.enadeag.carchargeplanner.android.home.LogicThatMakesThreads
 import nl.enadeag.carchargeplanner.android.home.LogicThatPlansARound
 import nl.enadeag.carchargeplanner.android.home.LogicThatReadsTheClock
@@ -38,8 +39,9 @@ import org.junit.jupiter.api.Test
  * The rules for the app's own classes, Java and Kotlin alike (its main code, not its tests), as
  * `EngineArchitectureTest` has them for the engine (ADR 0010): one class opens network connections, [AndroidHttpGet],
  * which keeps the engine's contract on timeouts, size and redirects; no class weakens the checks of TLS; the app
- * logs through slf4j, whose provider is the one class that writes to Logcat; the screens reach the engine only
- * through the suspend interface that runs it off the main thread; and only the work in the background, in the app's
+ * logs through slf4j, whose provider is the one class that writes to Logcat; the screens and their logic reach the
+ * engine only through the suspend interface that runs it off the main thread, which only the composition root and
+ * `store.EngineOnDispatcher` get past; and only the work in the background, in the app's
  * `background` package, makes the planning round and asks when the next notice is due, through that interface. And
  * ADR 0005's wiring rules, as the desktop's `ArchitectureTest` has them (ADR 0010): only the Application reads the
  * system's clock and the phone's time zone, only the composition root and the HttpGet make threads, and no class keeps
@@ -141,10 +143,6 @@ class AppArchitectureTest {
             type.name == HTTP_GET || type.name.startsWith("$HTTP_GET$")
         }
 
-        val SCREENS = DescribedPredicate.describe<JavaClass>("are in a ui package or are activities") { type ->
-            "ui" in type.packageName.split('.') || type.isAssignableTo("android.app.Activity")
-        }
-
         /** What blocks or reaches the disk, the keychain or the network; the engine's data types are not here. */
         val READS_OR_WRITES = setOf(
             "nl.enadeag.carchargeplanner.engine.Engine",
@@ -163,11 +161,6 @@ class AppArchitectureTest {
             "are the engine, the API keys, the keychain, the settings file or the platform's parts") { type ->
             type.name in READS_OR_WRITES
         }
-
-        val SCREENS_REACH_THE_ENGINE_ONLY_THROUGH_ITS_SUSPEND_INTERFACE =
-            noClasses().that(SCREENS).should().dependOnClassesThat(THE_ENGINE_ITSELF)
-                .because("they may block for about a second, so the screens call them through EngineAccess, which "
-                    + "runs them off the main thread (#313); the app's Application is the one place that makes them")
 
         const val BACKGROUND_WORK = "$APP.background"
 
@@ -333,6 +326,21 @@ class AppArchitectureTest {
             .because("dependencies come in through constructors from the Application, never through global state "
                 + "(ADR 0005, ADR 0010): a Kotlin top-level var or lock is such state, and a static outlives the "
                 + "Application that a Robolectric test makes for each test")
+
+        /** The packages of the platform's parts that the engine is made of: the keychain and the log. */
+        val PLATFORM_PARTS = setOf("$APP.secrets", "$APP.logging")
+
+        val MAY_HOLD_THE_ENGINE_ITSELF = DescribedPredicate.describe<JavaClass>(
+            "are the composition root, EngineOnDispatcher or the platform's keychain or log") { type ->
+            partOf(type, ROOT_PARTS + ENGINE_ON_DISPATCHER) || type.packageName in PLATFORM_PARTS
+        }
+
+        val ONLY_THE_ROOT_AND_THE_STORE_HOLD_THE_ENGINE_ITSELF =
+            noClasses().that(DescribedPredicate.not(MAY_HOLD_THE_ENGINE_ITSELF))
+                .should().dependOnClassesThat(THE_ENGINE_ITSELF)
+                .because("they may block for about a second, so the screens and their logic, which run on the main "
+                    + "thread, call them through EngineAccess, which runs them off it (#313); the app's Application "
+                    + "is the one place that makes them, and EngineOnDispatcher the one that calls them")
     }
 
     @Test
@@ -395,24 +403,39 @@ class AppArchitectureTest {
     }
 
     @Test
-    fun theScreensRuleSeesTheAppsScreensButNotItsApplication() {
-        assertThat(SCREENS.test(APP_CLASSES.get(MainActivity::class.java))).`as`("the activity").isTrue()
-        assertThat(SCREENS.test(APP_CLASSES.get("$APP.ui.AppScreenKt"))).`as`("a screen, in Kotlin").isTrue()
-        assertThat(SCREENS.test(APP_CLASSES.get(CarChargePlannerApp::class.java))).`as`("the Application").isFalse()
-        assertThat(SCREENS.test(APP_CLASSES.get(AppEngine::class.java))).`as`("the engine's builder").isFalse()
+    fun theEngineRuleLetsTheRootTheStoreAndThePlatformsPartsHoldTheEngineAndNothingElse() {
+        fun mayHold(name: String) = MAY_HOLD_THE_ENGINE_ITSELF.test(APP_CLASSES.get(name))
+
+        assertThat(mayHold(CarChargePlannerApp::class.java.name)).`as`("the Application").isTrue()
+        assertThat(mayHold(AppEngine::class.java.name)).`as`("the engine's builder").isTrue()
+        assertThat(mayHold(AndroidPlatform::class.java.name)).`as`("the platform's parts").isTrue()
+        assertThat(mayHold(ENGINE_ON_DISPATCHER)).`as`("the suspend interface's one implementation").isTrue()
+        assertThat(mayHold("$APP.secrets.EncryptedKeychain")).`as`("the keychain").isTrue()
+        assertThat(mayHold(MainActivity::class.java.name)).`as`("the activity").isFalse()
+        assertThat(mayHold("$APP.ui.AppScreenKt")).`as`("a screen, in Kotlin").isFalse()
+        assertThat(mayHold("$APP.home.HomeOutlook")).`as`("the home's logic").isFalse()
+        assertThat(mayHold("$APP.store.Saves")).`as`("another class of the store").isFalse()
     }
 
     @Test
-    fun theScreensReachTheEngineOnlyThroughItsSuspendInterface() {
-        SCREENS_REACH_THE_ENGINE_ONLY_THROUGH_ITS_SUSPEND_INTERFACE.check(APP_CLASSES)
+    fun onlyTheRootAndTheStoreHoldTheEngineItself() {
+        ONLY_THE_ROOT_AND_THE_STORE_HOLD_THE_ENGINE_ITSELF.check(APP_CLASSES)
     }
 
     @Test
     fun aScreenThatCallsTheEngineItselfBreaksTheRule() {
         val screen = ClassFileImporter().importClasses(ScreenThatReadsTheSettingsFile::class.java)
 
-        assertThatThrownBy { SCREENS_REACH_THE_ENGINE_ONLY_THROUGH_ITS_SUSPEND_INTERFACE.check(screen) }
+        assertThatThrownBy { ONLY_THE_ROOT_AND_THE_STORE_HOLD_THE_ENGINE_ITSELF.check(screen) }
             .isInstanceOf(AssertionError::class.java).hasMessageContaining("ConfigFile")
+    }
+
+    @Test
+    fun logicOutsideTheScreensThatHoldsTheApiKeysBreaksTheRuleToo() {
+        val logic = ClassFileImporter().importClasses(LogicThatHoldsTheApiKeys::class.java)
+
+        assertThatThrownBy { ONLY_THE_ROOT_AND_THE_STORE_HOLD_THE_ENGINE_ITSELF.check(logic) }
+            .isInstanceOf(AssertionError::class.java).hasMessageContaining("ApiKeys")
     }
 
     @Test
