@@ -46,5 +46,7 @@ body:
         The app logs what it did to car-charge-planner.0.log in its data folder (Settings, About shows where):
         ~/.local/share/car-charge-planner on Linux, %LOCALAPPDATA%\car-charge-planner on Windows. Paste the lines
         around the problem, or the output of the terminal if you ran it in one. Read them first: the log holds no API
-        keys or coordinates, but its paths show your user name, and you may want to remove that.
+        keys or coordinates, but its paths show your user name, and you may want to remove that. On Android, paste
+        only the app's own Logcat lines around the problem, not a full bug report of the phone, which holds much more
+        than this app's log.
       render: text

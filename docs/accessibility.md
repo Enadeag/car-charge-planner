@@ -38,6 +38,7 @@ Robolectric shows what the app tells Android, not what a person hears or sees. B
 - **The time picker** (#338): what TalkBack says on the dial.
 - **The notifications card** (#361): TalkBack follows the focus after a refusal and reads the card in order.
 - **Notifications** and the battery level's dialog on a small phone on its side: as said above.
+- **A notification's tap** (a tap goes through the app's own alias, `.NoticeTap`, so a forged intent opens nothing): tap a battery check and its "Enter battery level" action with the app open on the dashboard, in the background, and from the recent apps; each reaches the one open app, not a second copy of it (one Back leaves the app), opens the entry of the battery level with the focus on its field, and takes the notification away.
 - **Not about access, on the same phone** (#347, #362): typing on the Galaxy S25 gives one warning and no crash; an alarm comes, late at most an hour, while the phone saves battery; Samsung's path of the note on #279; a notice from the background is in the phone's language.
 
 If you use a keyboard only or a screen reader every day, please tell us what does not work: open an issue with your system and screen reader.
