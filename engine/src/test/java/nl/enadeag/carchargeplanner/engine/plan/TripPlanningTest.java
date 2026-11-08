@@ -116,17 +116,41 @@ class TripPlanningTest {
     }
 
     @Test
-    void thePlanGoesOnFromTheLevelLeftOnReturn() {
-        var planned = plan(dark(4), 50, at(FRI, 0), trip(SAT, 8, 18, 300));
-        var saturday = planned.day(SAT);
-        // the grid charge starts on Friday evening, so it counts on Friday
-        assertThat(planned.day(FRI).endLevelPct().value()).isCloseTo(92.1, CLOSE);
-        assertThat(saturday.startLevelPct().value()).isCloseTo(92.1, CLOSE);
-        assertThat(saturday.levelAfterChargingPct().value()).isCloseTo(92.1, CLOSE);
-        assertThat(saturday.drivingPct()).isCloseTo(62.1, CLOSE);
-        assertThat(saturday.endLevelPct().value()).isCloseTo(30, CLOSE);
-        assertThat(planned.day(SUN).startLevelPct().value()).isCloseTo(30, CLOSE);
-        assertThat(planned.gridAdvice()).isEmpty();
+    void aRunningAnnouncedWindowIsNoTimeForTheGridCharge() {
+        // the window began on Friday, so no day of the plan holds it, but the charger is busy until 07:00
+        var away = new AwayTimes(List.of(), List.of(), List.of(trip(SAT, 8, 18, 100)));
+        var forecast = dark(4);
+        var free = new Planner(CAR, PREFERENCES, away)
+                .planWithTrips(forecast, new Percent(40), at(SAT, 0, 30), List.of()).trips().get(0).grid().orElseThrow()
+                .window();
+        var announced = new Window(at(FRI, 22), at(SAT, 7), 6, 1.38, 0, 0);
+        assertThat(free.start()).as("free").isBefore(announced.end());
+
+        var grid = new Planner(CAR, PREFERENCES, away)
+                .planWithTrips(forecast, new Percent(40), at(SAT, 0, 30), List.of(announced)).trips().get(0).grid()
+                .orElseThrow().window();
+
+        assertThat(grid.start()).isAfterOrEqualTo(announced.end());
+    }
+
+    @Test
+    void aShortfallOfExactlyOnePercentIsNoShortfall() {
+        // 20 kWh per 100 km without a surcharge: 105 km take 21 %, so the trip needs 30 + 21 = 51 % at 50 %: 1 % short
+        var system = Forecasts.withCar(new Car(100, 20, 0, new Percent(0)), Phases.ONE);
+        var advice = plan(system, dark(3), 50, at(FRI, 0), trip(SAT, 8, 18, 105)).trip();
+
+        assertThat(advice.neededPct().value()).isEqualTo(51);
+        assertThat(advice.grid()).isEmpty();
+        assertThat(advice.kmShort()).isZero();
+    }
+
+    @Test
+    void aShortfallOfMoreThanOnePercentGetsAGridCharge() {
+        var system = Forecasts.withCar(new Car(100, 20, 0, new Percent(0)), Phases.ONE);
+        var advice = plan(system, dark(3), 50, at(FRI, 0), trip(SAT, 8, 18, 106)).trip();
+
+        assertThat(advice.neededPct().value()).isCloseTo(51.2, CLOSE);
+        assertThat(advice.grid()).isPresent();
     }
 
     @Test
