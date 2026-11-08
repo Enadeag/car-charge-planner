@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.engine.forecast;
 
 import nl.enadeag.carchargeplanner.engine.config.Coordinates;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -35,6 +36,18 @@ public record Place(String name, Coordinates location, ZoneId timezone, String r
     public String detailedLabel() {
         var finer = area.equals(name) || area.equals(region) ? "" : area;
         return join(name, finer, sameAsName(region), country);
+    }
+
+    /**
+     * What a list of results shows for this place: its label, or its detailed label when another result reads alike.
+     *
+     * @param shown the results shown together, this place among them
+     * @return {@link #detailedLabel()} when more than one of the results has this place's {@link #label()}, else the
+     *     label
+     */
+    public String labelAmong(List<Place> shown) {
+        var alike = shown.stream().filter(other -> other.label().equals(label())).count() > 1;
+        return alike ? detailedLabel() : label();
     }
 
     private String sameAsName(String part) {

@@ -171,8 +171,6 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
         }
     }
 
-    private fun labelled(places: List<Place>): List<Result> = places.map { place ->
-        val alike = places.count { it.label() == place.label() } > 1
-        Result(place, (if (alike) place.detailedLabel() else place.label()).take(LONGEST_TEXT))
-    }
+    private fun labelled(places: List<Place>): List<Result> =
+        places.map { place -> Result(place, place.labelAmong(places).take(LONGEST_TEXT)) }
 }
