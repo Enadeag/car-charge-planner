@@ -14,6 +14,7 @@ import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaCodeUnit;
 import com.tngtech.archunit.core.domain.JavaField;
+import com.tngtech.archunit.core.domain.JavaFieldAccess;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -234,8 +235,64 @@ class EngineArchitectureTest {
             .should().beFinal()
             .because("dependencies come in through constructors, never through global state (ADR 0005)");
 
+    /** The calls of {@code java.util} that hand back a mutable collection or map. */
+    private static final DescribedPredicate<JavaMethodCall> MAKE_A_MUTABLE_COLLECTION = DescribedPredicate.describe(
+            "make a mutable collection or map",
+            call -> {
+                var owner = call.getTargetOwner().getName();
+                var name = call.getName();
+                return owner.equals("java.util.Collections") && (name.startsWith("synchronized")
+                        || name.startsWith("checked") || name.equals("newSetFromMap"))
+                        || owner.equals("java.util.concurrent.ConcurrentHashMap") && name.equals("newKeySet");
+            });
+
+    /**
+     * Whether a static field of a collection or map interface gets a mutable one where its class's static initializer
+     * sets it. Of the collections and maps the initializer makes after the line that sets the static field before it,
+     * up to the line that sets this one, the last line's decide: a mutable one made there (a constructor, or a call
+     * of {@link #MAKE_A_MUTABLE_COLLECTION}) and no other call there that hands back a collection or map, such as
+     * {@code Map.copyOf}. ArchUnit gives no order within a line, so {@code new ArrayList<>(List.of(...))} on one line
+     * is not seen.
+     */
+    private static boolean madeMutable(JavaField field) {
+        var type = field.getRawType();
+        var initializer = field.getOwner().getStaticInitializer();
+        if (!type.isInterface() || initializer.isEmpty() || !isCollectionOrMap(type)) {
+            return false;
+        }
+        var sets = initializer.get().getFieldAccesses().stream()
+                .filter(access -> access.getAccessType() == JavaFieldAccess.AccessType.SET
+                        && access.getTargetOwner().equals(field.getOwner()))
+                .toList();
+        var line = sets.stream().filter(access -> access.getName().equals(field.getName()))
+                .mapToInt(JavaAccess::getLineNumber).max();
+        if (line.isEmpty()) {
+            return false;
+        }
+        int after = sets.stream().mapToInt(JavaAccess::getLineNumber)
+                .filter(set -> set < line.getAsInt()).max().orElse(0);
+        var mutable = java.util.stream.Stream.concat(
+                initializer.get().getConstructorCallsFromSelf().stream()
+                        .filter(call -> !call.getTargetOwner().isInterface()
+                                && isCollectionOrMap(call.getTargetOwner())),
+                initializer.get().getMethodCallsFromSelf().stream().filter(MAKE_A_MUTABLE_COLLECTION))
+                .map(JavaAccess::getLineNumber).toList();
+        var others = initializer.get().getMethodCallsFromSelf().stream()
+                .filter(call -> !MAKE_A_MUTABLE_COLLECTION.test(call)
+                        && isCollectionOrMap(call.getTarget().getRawReturnType()))
+                .map(JavaAccess::getLineNumber).toList();
+        var last = java.util.stream.Stream.concat(mutable.stream(), others.stream())
+                .filter(at -> at > after && at <= line.getAsInt()).mapToInt(Integer::intValue).max();
+        return last.isPresent() && mutable.contains(last.getAsInt()) && !others.contains(last.getAsInt());
+    }
+
+    private static boolean isCollectionOrMap(JavaClass type) {
+        return type.isAssignableTo(java.util.Collection.class) || type.isAssignableTo(java.util.Map.class);
+    }
+
     private static final DescribedPredicate<JavaField> HOLDS_A_MUTABLE_OBJECT = DescribedPredicate.describe(
-            "hold a mutable collection, an atomic, a builder or an array",
+            "hold a mutable collection (also one of an interface type, such as a List, given a new ArrayList where it "
+                    + "is set), an atomic, a builder or an array",
             field -> {
                 var type = field.getRawType();
                 var concrete = !type.isInterface();
@@ -245,7 +302,8 @@ class EngineArchitectureTest {
                         || concrete && (type.isAssignableTo(java.util.Collection.class)
                                 || type.isAssignableTo(java.util.Map.class))
                         || type.isAssignableTo(java.util.Queue.class)
-                        || type.isAssignableTo(java.util.concurrent.ConcurrentMap.class);
+                        || type.isAssignableTo(java.util.concurrent.ConcurrentMap.class)
+                        || madeMutable(field);
             });
 
     @ArchTest
@@ -254,7 +312,9 @@ class EngineArchitectureTest {
             .and().doNotHaveModifier(JavaModifier.SYNTHETIC)
             .and().areDeclaredInClassesThat().resideInAPackage(ENGINE + "..")
             .should(have(HOLDS_A_MUTABLE_OBJECT))
-            .because("a final field is still global state when what it holds can change (ADR 0005)");
+            .because("a final field is still global state when what it holds can change (ADR 0005); ArchUnit sees "
+                    + "what a field of an interface type holds only where the static initializer makes it, not a "
+                    + "mutable one a method hands back, such as Collectors.toList's");
 
     private static final ArchCondition<JavaCodeUnit> CATCH_NULL_POINTER =
             new ArchCondition<>("catch NullPointerException") {

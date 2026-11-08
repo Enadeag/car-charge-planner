@@ -7,6 +7,7 @@ import com.tngtech.archunit.core.domain.JavaAccess
 import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.domain.JavaClasses
 import com.tngtech.archunit.core.domain.JavaField
+import com.tngtech.archunit.core.domain.JavaFieldAccess
 import com.tngtech.archunit.core.domain.JavaMethodCall
 import com.tngtech.archunit.core.domain.JavaModifier
 import com.tngtech.archunit.core.importer.ClassFileImporter
@@ -298,9 +299,50 @@ class AppArchitectureTest {
                 .because("the root hands out the threads and dispatchers the parts run on (ADR 0005, ADR 0010); "
                     + "AndroidHttpGet runs each request on a pool of its own, which keeps its timeouts")
 
+        /** The calls, of Kotlin's or of `java.util`, that hand back a mutable collection or map. */
+        val MAKE_A_MUTABLE_COLLECTION = DescribedPredicate.describe<JavaMethodCall>(
+            "make a mutable collection or map") { call ->
+            val owner = call.targetOwner.name
+            owner.startsWith("kotlin.collections.") && call.name in setOf("mutableListOf", "arrayListOf",
+                "mutableSetOf", "hashSetOf", "linkedSetOf", "sortedSetOf", "mutableMapOf", "hashMapOf", "linkedMapOf",
+                "sortedMapOf", "toMutableList", "toMutableSet", "toMutableMap", "toCollection")
+                || owner == "java.util.Collections" && (call.name.startsWith("synchronized")
+                    || call.name.startsWith("checked") || call.name == "newSetFromMap")
+                || owner == "java.util.concurrent.ConcurrentHashMap" && call.name == "newKeySet"
+        }
+
+        fun isCollectionOrMap(type: JavaClass) =
+            type.isAssignableTo(java.util.Collection::class.java) || type.isAssignableTo(java.util.Map::class.java)
+
+        /**
+         * Whether a static field of a collection or map interface, such as a Kotlin `MutableList`, gets a mutable one
+         * where its class's static initializer sets it. Of the collections and maps the initializer makes after the
+         * line that sets the static field before it, up to the line that sets this one, the last line's decide: a
+         * mutable one made there (a constructor, which Kotlin's `mutableListOf()` without values is too, or a call of
+         * [MAKE_A_MUTABLE_COLLECTION]) and no other call there that hands back a collection or map, such as
+         * `toList()`. ArchUnit gives no order within a line, so `ArrayList(listOf(...))` on one line is not seen.
+         */
+        fun madeMutable(field: JavaField): Boolean {
+            val initializer = field.owner.staticInitializer.orElse(null)
+            if (!field.rawType.isInterface || initializer == null || !isCollectionOrMap(field.rawType)) return false
+            val sets = initializer.fieldAccesses
+                .filter { it.accessType == JavaFieldAccess.AccessType.SET && it.targetOwner == field.owner }
+            val line = sets.filter { it.name == field.name }.maxOfOrNull { it.lineNumber } ?: return false
+            val after = sets.map { it.lineNumber }.filter { it < line }.maxOrNull() ?: 0
+            val mutable = initializer.constructorCallsFromSelf
+                .filter { !it.targetOwner.isInterface && isCollectionOrMap(it.targetOwner) }.map { it.lineNumber } +
+                initializer.methodCallsFromSelf.filter { MAKE_A_MUTABLE_COLLECTION.test(it) }.map { it.lineNumber }
+            val others = initializer.methodCallsFromSelf
+                .filter { !MAKE_A_MUTABLE_COLLECTION.test(it) && isCollectionOrMap(it.target.rawReturnType) }
+                .map { it.lineNumber }
+            val last = (mutable + others).filter { it in (after + 1)..line }.maxOrNull() ?: return false
+            return last in mutable && last !in others
+        }
+
         /** What may change while a static field keeps pointing at it. */
         val HOLDS_A_MUTABLE_OBJECT = DescribedPredicate.describe<JavaField>(
-            "hold a mutable collection, an atomic, a builder, an array, a lock or a mutable flow") { field ->
+            "hold a mutable collection (also one of an interface type, such as a MutableList, given a new one where "
+                + "it is set), an atomic, a builder, an array, a lock or a mutable flow") { field ->
             val type = field.rawType
             type.isArray
                 || type.packageName.startsWith("java.util.concurrent.atomic")
@@ -312,6 +354,7 @@ class AppArchitectureTest {
                 || type.isAssignableTo(java.util.concurrent.ConcurrentMap::class.java)
                 || type.name in setOf("kotlinx.coroutines.sync.Mutex", "kotlinx.coroutines.sync.Semaphore",
                     "kotlinx.coroutines.flow.MutableStateFlow", "kotlinx.coroutines.flow.MutableSharedFlow")
+                || madeMutable(field)
         }
 
         /** The resource IDs, which the build leaves not final, so a library's are known only once the app is built. */
@@ -341,7 +384,9 @@ class AppArchitectureTest {
             }))
             .because("dependencies come in through constructors from the Application, never through global state "
                 + "(ADR 0005, ADR 0010): a Kotlin top-level var or lock is such state, and a static outlives the "
-                + "Application that a Robolectric test makes for each test")
+                + "Application that a Robolectric test makes for each test; ArchUnit sees what a field of an "
+                + "interface type holds only where the static initializer makes it, not a mutable one a function "
+                + "hands back")
 
         /** The packages of the platform's parts that the engine is made of: the keychain and the log. */
         val PLATFORM_PARTS = setOf("$APP.secrets", "$APP.logging")
@@ -473,7 +518,11 @@ class AppArchitectureTest {
             .hasMessageContaining("TopLevelStateKt.counted")
             .hasMessageContaining("TopLevelStateKt.ONE_AT_A_TIME")
             .hasMessageContaining("TopLevelStateKt.seen")
-            .satisfies({ failure -> assertThat(failure.message).doesNotContain("TopLevelStateKt.LIMIT") })
+            .hasMessageContaining("TopLevelStateKt.asked")
+            .hasMessageContaining("TopLevelStateKt.counts")
+            .satisfies({ failure ->
+                assertThat(failure.message).doesNotContain("TopLevelStateKt.LIMIT").doesNotContain("TopLevelStateKt.names")
+            })
     }
 
     @Test
