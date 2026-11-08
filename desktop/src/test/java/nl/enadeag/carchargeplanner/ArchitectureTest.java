@@ -512,14 +512,16 @@ class ArchitectureTest {
 
     private static final DescribedPredicate<JavaAccess<?>> TAMPER_WITH_TLS = DescribedPredicate.describe(
             "set up TLS of their own (SSLContext.init or setDefault, an HttpsURLConnection's socket factory or host "
-                    + "name verifier)",
+                    + "name verifier, the security providers or properties)",
             access -> {
                 var owner = access.getTargetOwner().getName();
                 var name = access.getName();
                 return owner.equals("javax.net.ssl.SSLContext") && Set.of("init", "setDefault").contains(name)
                         || owner.equals("javax.net.ssl.HttpsURLConnection") && Set.of("setSSLSocketFactory",
                                 "setDefaultSSLSocketFactory", "setHostnameVerifier", "setDefaultHostnameVerifier")
-                                .contains(name);
+                                .contains(name)
+                        || owner.equals("java.security.Security") && Set.of("setProperty", "addProvider",
+                                "insertProviderAt", "removeProvider").contains(name);
             });
 
     @ArchTest
@@ -534,7 +536,8 @@ class ArchitectureTest {
     private static final DescribedPredicate<JavaAccess<?>> CHANGE_THE_NETWORK_OF_THE_PROCESS =
             DescribedPredicate.describe("change how every connection of the process works (the default proxy "
                     + "selector, authenticator, cookie handler or response cache, URL's stream handlers, "
-                    + "URLConnection's content handlers, following redirects for every HttpURLConnection)",
+                    + "URLConnection's content handlers, following redirects for every HttpURLConnection, a system "
+                    + "property, as ArchUnit cannot read which and the TLS and proxy ones reach every connection)",
                     access -> {
                         var owner = access.getTargetOwner().getName();
                         var name = access.getName();
@@ -542,7 +545,9 @@ class ArchitectureTest {
                                 "java.net.ResponseCache").contains(owner) && name.equals("setDefault")
                                 || owner.equals("java.net.URL") && name.equals("setURLStreamHandlerFactory")
                                 || owner.equals("java.net.URLConnection") && name.equals("setContentHandlerFactory")
-                                || owner.equals("java.net.HttpURLConnection") && name.equals("setFollowRedirects");
+                                || owner.equals("java.net.HttpURLConnection") && name.equals("setFollowRedirects")
+                                || owner.equals("java.lang.System")
+                                && Set.of("setProperty", "setProperties", "clearProperty").contains(name);
                     });
 
     @ArchTest

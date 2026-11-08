@@ -4,12 +4,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.tngtech.archunit.core.importer.ClassFileImporter;
+import java.io.InputStream;
+import java.net.ProxySelector;
+import java.net.URL;
+import java.security.GeneralSecurityException;
+import java.security.Provider;
+import java.security.Security;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import org.junit.jupiter.api.Test;
 
 /** Classes that break {@link EngineArchitectureTest}'s rules on purpose, which shows that the rules see them. */
@@ -42,6 +53,50 @@ class BrokenEngineArchitectureTest {
 
         private StaticStateBehindAnInterface() {
         }
+    }
+
+    /** A network of its own: it trusts every certificate, sends everything through a proxy and connects itself. */
+    static final class NetworkOfItsOwn implements X509TrustManager {
+
+        @Override
+        public void checkClientTrusted(X509Certificate[] chain, String authType) {
+        }
+
+        @Override
+        public void checkServerTrusted(X509Certificate[] chain, String authType) {
+        }
+
+        @Override
+        public X509Certificate[] getAcceptedIssuers() {
+            return new X509Certificate[0];
+        }
+
+        /** Sets it all up; never run. */
+        Callable<InputStream> setUp(URL address, Provider provider) throws GeneralSecurityException {
+            SSLContext.getInstance("TLS").init(null, new TrustManager[] {this}, null);
+            Security.addProvider(provider);
+            ProxySelector.setDefault(null);
+            System.setProperty("https.proxyHost", "proxy.example");
+            return address::openStream;
+        }
+    }
+
+    @Test
+    void aClassWithANetworkOfItsOwnBreaksTheNetworkAndTlsRules() {
+        var network = new ClassFileImporter().importClasses(NetworkOfItsOwn.class);
+
+        assertThatThrownBy(() -> EngineArchitectureTest.theEngineOpensNoConnectionOfItsOwn.check(network))
+                .isInstanceOf(AssertionError.class)
+                .hasMessageContaining("URL.openStream()");
+        assertThatThrownBy(() -> EngineArchitectureTest.theEngineLeavesTheChecksOfTlsAlone.check(network))
+                .isInstanceOf(AssertionError.class)
+                .hasMessageContaining("X509TrustManager")
+                .hasMessageContaining("SSLContext.init(")
+                .hasMessageContaining("Security.addProvider(");
+        assertThatThrownBy(() -> EngineArchitectureTest.theEngineLeavesTheNetworkOfTheProcessAlone.check(network))
+                .isInstanceOf(AssertionError.class)
+                .hasMessageContaining("ProxySelector.setDefault(")
+                .hasMessageContaining("System.setProperty(");
     }
 
     @Test

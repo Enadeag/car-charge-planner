@@ -31,6 +31,7 @@ import nl.enadeag.carchargeplanner.android.home.LogicThatMakesThreads
 import nl.enadeag.carchargeplanner.android.home.LogicThatPlansARound
 import nl.enadeag.carchargeplanner.android.home.LogicThatWritesAFile
 import nl.enadeag.carchargeplanner.android.home.LogicThatReadsTheClock
+import nl.enadeag.carchargeplanner.android.home.NetworkOfItsOwn
 import nl.enadeag.carchargeplanner.android.ui.ScreenAccessThatPlansInALambda
 import nl.enadeag.carchargeplanner.android.ui.ScreenOfTheLogicThatKnowsIt
 import nl.enadeag.carchargeplanner.android.ui.ScreenThatPlansARound
@@ -127,23 +128,27 @@ class AppArchitectureTest {
 
         val TAMPER_WITH_TLS = DescribedPredicate.describe<JavaAccess<*>>(
             "set up TLS of their own (SSLContext.init or setDefault, an HttpsURLConnection's socket factory or "
-                + "host name verifier)") { access ->
+                + "host name verifier, the security providers or properties)") { access ->
             val owner = access.targetOwner.name
             owner == "javax.net.ssl.SSLContext" && access.name in setOf("init", "setDefault")
                 || owner == "javax.net.ssl.HttpsURLConnection" && access.name in setOf("setSSLSocketFactory",
                 "setDefaultSSLSocketFactory", "setHostnameVerifier", "setDefaultHostnameVerifier")
+                || owner == "java.security.Security" && access.name in setOf("setProperty", "addProvider",
+                "insertProviderAt", "removeProvider")
         }
 
         val CHANGE_THE_NETWORK_OF_THE_PROCESS = DescribedPredicate.describe<JavaAccess<*>>(
             "change how every connection of the process works (the default proxy selector, authenticator, cookie "
                 + "handler or response cache, URL's stream handlers, URLConnection's content handlers, following "
-                + "redirects for every HttpURLConnection)") { access ->
+                + "redirects for every HttpURLConnection, a system property, as ArchUnit cannot read which and the "
+                + "TLS and proxy ones reach every connection)") { access ->
             val owner = access.targetOwner.name
             owner in setOf("java.net.ProxySelector", "java.net.Authenticator", "java.net.CookieHandler",
                 "java.net.ResponseCache") && access.name == "setDefault"
                 || owner == "java.net.URL" && access.name == "setURLStreamHandlerFactory"
                 || owner == "java.net.URLConnection" && access.name == "setContentHandlerFactory"
                 || owner == "java.net.HttpURLConnection" && access.name == "setFollowRedirects"
+                || owner == "java.lang.System" && access.name in setOf("setProperty", "setProperties", "clearProperty")
         }
 
         val WRITE_PAST_SLF4J = DescribedPredicate.describe<JavaAccess<*>>(
@@ -159,6 +164,24 @@ class AppArchitectureTest {
         val THE_HTTP_GET = DescribedPredicate.describe<JavaClass>("are the app's HttpGet or nested in it") { type ->
             type.name == HTTP_GET || type.name.startsWith("$HTTP_GET$")
         }
+
+        val ONLY_THE_HTTP_GET_OPENS_CONNECTIONS = noClasses().that(DescribedPredicate.not(THE_HTTP_GET))
+            .should().dependOnClassesThat(OPENS_A_CONNECTION)
+            .orShould().dependOnClassesThat().resideInAnyPackage(*NETWORK_PACKAGES)
+            .orShould().accessTargetWhere(CONNECT_THROUGH_A_URL_OR_NETWORK)
+            .because("every request goes through the HttpGet the app hands the engine, which keeps its contract on "
+                + "redirects, timeouts and size (ADR 0010)")
+
+        val NO_CLASS_CHANGES_HOW_TLS_IS_CHECKED = noClasses()
+            .should().dependOnClassesThat(CHECK_TLS)
+            .orShould().accessTargetWhere(TAMPER_WITH_TLS)
+            .because("the app trusts the certificates and checks the host names as Android does; its own trust "
+                + "manager or host name verifier is how an app lets a forged certificate through")
+
+        val NO_CLASS_CHANGES_THE_NETWORK_OF_THE_APP = noClasses()
+            .should().accessTargetWhere(CHANGE_THE_NETWORK_OF_THE_PROCESS)
+            .because("such a setting reaches every connection, AndroidHttpGet's too, around the contract it keeps on "
+                + "redirects and what it sends")
 
         /** What blocks or reaches the disk, the keychain or the network; the engine's data types are not here. */
         val READS_OR_WRITES = setOf(
@@ -733,32 +756,35 @@ class AppArchitectureTest {
 
     @Test
     fun onlyTheHttpGetOpensNetworkConnections() {
-        noClasses().that(DescribedPredicate.not(THE_HTTP_GET))
-            .should().dependOnClassesThat(OPENS_A_CONNECTION)
-            .orShould().dependOnClassesThat().resideInAnyPackage(*NETWORK_PACKAGES)
-            .orShould().accessTargetWhere(CONNECT_THROUGH_A_URL_OR_NETWORK)
-            .because("every request goes through the HttpGet the app hands the engine, which keeps its contract on "
-                + "redirects, timeouts and size (ADR 0010)")
-            .check(APP_CLASSES)
+        ONLY_THE_HTTP_GET_OPENS_CONNECTIONS.check(APP_CLASSES)
     }
 
     @Test
     fun noClassChangesHowTlsIsChecked() {
-        noClasses()
-            .should().dependOnClassesThat(CHECK_TLS)
-            .orShould().accessTargetWhere(TAMPER_WITH_TLS)
-            .because("the app trusts the certificates and checks the host names as Android does; its own trust "
-                + "manager or host name verifier is how an app lets a forged certificate through")
-            .check(APP_CLASSES)
+        NO_CLASS_CHANGES_HOW_TLS_IS_CHECKED.check(APP_CLASSES)
     }
 
     @Test
     fun noClassChangesTheNetworkOfTheWholeApp() {
-        noClasses()
-            .should().accessTargetWhere(CHANGE_THE_NETWORK_OF_THE_PROCESS)
-            .because("such a setting reaches every connection, AndroidHttpGet's too, around the contract it keeps on "
-                + "redirects and what it sends")
-            .check(APP_CLASSES)
+        NO_CLASS_CHANGES_THE_NETWORK_OF_THE_APP.check(APP_CLASSES)
+    }
+
+    @Test
+    fun aClassWithANetworkOfItsOwnBreaksTheNetworkAndTlsRules() {
+        val network = ClassFileImporter().importClasses(NetworkOfItsOwn::class.java)
+
+        assertThatThrownBy { ONLY_THE_HTTP_GET_OPENS_CONNECTIONS.check(network) }
+            .isInstanceOf(AssertionError::class.java)
+            .hasMessageContaining("URL.openStream()")
+        assertThatThrownBy { NO_CLASS_CHANGES_HOW_TLS_IS_CHECKED.check(network) }
+            .isInstanceOf(AssertionError::class.java)
+            .hasMessageContaining("X509TrustManager")
+            .hasMessageContaining("SSLContext.init(")
+            .hasMessageContaining("Security.addProvider(")
+        assertThatThrownBy { NO_CLASS_CHANGES_THE_NETWORK_OF_THE_APP.check(network) }
+            .isInstanceOf(AssertionError::class.java)
+            .hasMessageContaining("ProxySelector.setDefault(")
+            .hasMessageContaining("System.setProperty(")
     }
 
     @Test
