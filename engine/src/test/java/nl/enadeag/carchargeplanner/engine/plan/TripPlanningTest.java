@@ -116,6 +116,20 @@ class TripPlanningTest {
     }
 
     @Test
+    void thePlanGoesOnFromTheLevelLeftOnReturn() {
+        var planned = plan(dark(4), 50, at(FRI, 0), trip(SAT, 8, 18, 300));
+        var saturday = planned.day(SAT);
+        // the grid charge starts on Friday evening, so it counts on Friday
+        assertThat(planned.day(FRI).endLevelPct().value()).isCloseTo(92.1, CLOSE);
+        assertThat(saturday.startLevelPct().value()).isCloseTo(92.1, CLOSE);
+        assertThat(saturday.levelAfterChargingPct().value()).isCloseTo(92.1, CLOSE);
+        assertThat(saturday.drivingPct()).isCloseTo(62.1, CLOSE);
+        assertThat(saturday.endLevelPct().value()).isCloseTo(30, CLOSE);
+        assertThat(planned.day(SUN).startLevelPct().value()).isCloseTo(30, CLOSE);
+        assertThat(planned.gridAdvice()).isEmpty();
+    }
+
+    @Test
     void aRunningAnnouncedWindowIsNoTimeForTheGridCharge() {
         // the window began on Friday, so no day of the plan holds it, but the charger is busy until 07:00
         var away = new AwayTimes(List.of(), List.of(), List.of(trip(SAT, 8, 18, 100)));
