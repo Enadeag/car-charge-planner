@@ -360,17 +360,50 @@ pitest {
 /**
  * The share of mutants killed, as PIT's report has it but without the mutants of code the Kotlin compiler adds, which
  * no test can kill (and no PIT filter can drop without also dropping the real mutants on the same line): the removed
- * calls of `Intrinsics` (the null checks) and `ResultKt.throwOnFailure`, a coroutine's or a lambda's result replaced
- * by null (`invokeSuspend`, a suspend function's `Object` and a lambda's `Unit`), and the logger's `getLOG`. It fails
- * below [threshold]; a threshold of 0 only prints the share.
+ * calls of `Intrinsics` (the null checks) and `ResultKt.throwOnFailure`, a result replaced by null where the caller
+ * throws it away (a coroutine's `invokeSuspend`, a lambda's `Unit`, and a suspend function's whose source declares no
+ * result or `Unit`), and the logger's `getLOG`. A suspend function's compiled result is always `Object`, so its
+ * declaration in [sources] tells the two apart; one with an inferred result (`= ...`) is counted. It fails below
+ * [threshold]; a threshold of 0 only prints the share.
  */
 abstract class PitScore : DefaultTask() {
 
     @get:InputFile
     abstract val mutations: RegularFileProperty
 
+    /** The Kotlin sources of the mutated classes, which say what a suspend function returns. */
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val sources: DirectoryProperty
+
     @get:Input
     abstract val threshold: Property<Int>
+
+    /**
+     * Whether the suspend function [method] of [mutatedClass], whose mutant is on [line] of [sourceFile], is declared
+     * with no result or with `Unit`, read from the nearest `suspend fun` of that name at or above the line.
+     */
+    private fun returnsUnit(mutatedClass: String, sourceFile: String, method: String, line: Int): Boolean {
+        val folder = mutatedClass.substringBeforeLast('.').replace('.', '/')
+        val file = sources.get().file("$folder/$sourceFile").asFile
+        if (!file.isFile) return false
+        val lines = file.readLines()
+        val plain = Regex.escape(method.substringBefore('$'))
+        val name = Regex("""\bsuspend\s+fun\s+(<[^>]*>\s*)?([\w.]+\.)?$plain\s*\(""")
+        val start = (minOf(line, lines.size) - 1 downTo 0).firstOrNull { name.containsMatchIn(lines[it]) } ?: return false
+        val text = lines.drop(start).joinToString("\n")
+        var at = name.find(text)!!.range.last
+        var depth = 0
+        do {
+            when (text[at]) { '(' -> depth++; ')' -> depth-- }
+            at++
+        } while (depth > 0)
+        val rest = text.substring(at).trimStart()
+        if (rest.startsWith("{")) return true
+        if (!rest.startsWith(":")) return false
+        val result = rest.drop(1).takeWhile { it != '{' && it != '=' }.trim()
+        return result == "Unit"
+    }
 
     @TaskAction
     fun check() {
@@ -388,8 +421,9 @@ abstract class PitScore : DefaultTask() {
             val compilers = description.startsWith("removed call to kotlin/jvm/internal/Intrinsics::")
                 || description.startsWith("removed call to kotlin/ResultKt::")
                 || description.startsWith("replaced return value with null") && (method == "invokeSuspend"
-                    || result.endsWith("Lkotlin/coroutines/Continuation;)Ljava/lang/Object;")
-                    || result.endsWith(")Lkotlin/Unit;"))
+                    || result.endsWith(")Lkotlin/Unit;")
+                    || result.endsWith("Lkotlin/coroutines/Continuation;)Ljava/lang/Object;") && returnsUnit(
+                        text("mutatedClass"), text("sourceFile"), method, text("lineNumber").toInt()))
                 || method == "getLOG"
             if (compilers) continue
             counted++
@@ -403,11 +437,12 @@ abstract class PitScore : DefaultTask() {
     }
 }
 
-// the share of mutants killed without the compiler's own, a few points below the 88 % it was when set, for the full run
+// the share of mutants killed without the compiler's own, a few points below the 87 % it was when set, for the full run
 // only: a run narrowed to some classes may be small or hold many survivors
 val checkPitScore = tasks.register<PitScore>("checkPitScore") {
     mutations.set(layout.buildDirectory.file("reports/pitest/debug/mutations.xml"))
-    threshold.set(if (pitClasses == null) 85 else 0)
+    sources.set(layout.projectDirectory.dir("src/main/kotlin"))
+    threshold.set(if (pitClasses == null) 84 else 0)
 }
 
 // the Android PIT plugin adds the variants' tasks after this script has run
