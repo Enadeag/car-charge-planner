@@ -417,7 +417,6 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule nothingSleepsInMainCode = FreezingArchRule.freeze(noClasses()
-            .that().resideOutsideOfPackage(ENGINE_PARTS)
             .should().callMethod(Thread.class, "sleep", long.class)
             .orShould().callMethod(Thread.class, "sleep", long.class, int.class)
             .orShould().callMethod(Thread.class, "sleep", java.time.Duration.class)
