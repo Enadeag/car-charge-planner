@@ -77,7 +77,7 @@ public abstract class ProviderConformance {
     void severalPanelArraysGiveOneForecastOfTheirSum() throws ProviderError {
         var c = providerCase();
         var arrays = List.of(ProviderCase.EXAMPLE_SYSTEM.arrays().get(0), ProviderCase.SECOND_ARRAY);
-        var system = ProviderCase.EXAMPLE_SYSTEM.withArrays(arrays);
+        var system = SolarSites.withArrays(ProviderCase.EXAMPLE_SYSTEM, arrays);
         var made = c.provider(c.ok());
         var total = made.provider().fetch(system, c.allSettings(), c.now());
         assertThat(total).isNotEmpty();
@@ -86,7 +86,8 @@ public abstract class ProviderConformance {
 
         var singles = new ArrayList<List<ForecastStep>>();
         for (var array : arrays) {
-            singles.add(c.provider(c.ok()).provider().fetch(system.withArrays(List.of(array)), c.allSettings(), c.now()));
+            singles.add(c.provider(c.ok()).provider()
+                    .fetch(SolarSites.withArrays(system, List.of(array)), c.allSettings(), c.now()));
         }
         var expected = ArraySum.addUp(singles);
         assertThat(total).hasSameSizeAs(expected);

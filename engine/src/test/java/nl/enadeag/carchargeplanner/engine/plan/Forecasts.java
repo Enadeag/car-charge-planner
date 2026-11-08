@@ -10,6 +10,7 @@ import nl.enadeag.carchargeplanner.engine.config.House;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.Phases;
+import nl.enadeag.carchargeplanner.engine.config.PlanningFixtures;
 import nl.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import java.time.DayOfWeek;
@@ -33,7 +34,7 @@ final class Forecasts {
             Duration.ofMinutes(45), Duration.ofMinutes(15));
     /** Charging hours that span midnight, from 20:00 to 06:00, for the tests of a grid charge in the night. */
     static final PlanningPreferences NIGHT_CHARGING =
-            PREFERENCES.withChargingHours(new ChargingHours(LocalTime.of(20, 0), LocalTime.of(6, 0)));
+            PlanningFixtures.withChargingHours(PREFERENCES, new ChargingHours(LocalTime.of(20, 0), LocalTime.of(6, 0)));
     /** The example's weekly away period: Thursdays from 06:00 to 19:00. */
     static final AwayTimes WEEKLY_AWAY = new AwayTimes(
             List.of(new WeeklyAwayPeriod(DayOfWeek.THURSDAY, LocalTime.of(6, 0), LocalTime.of(19, 0))), List.of(),

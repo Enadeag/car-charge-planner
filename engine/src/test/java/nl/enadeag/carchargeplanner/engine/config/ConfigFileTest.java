@@ -169,7 +169,8 @@ class ConfigFileTest {
                 PLANNING + ", \"chargingHours\": {\"start\": \"20:30\", \"end\": \"01:00\"}"));
         var config = new ConfigFile(file, FILES).read();
         var hours = new ChargingHours(LocalTime.of(20, 30), LocalTime.of(1, 0));
-        assertThat(config.planning()).isEqualTo(PlanningPreferences.RECOMMENDED.withChargingHours(hours));
+        assertThat(config.planning())
+                .isEqualTo(PlanningFixtures.withChargingHours(PlanningPreferences.RECOMMENDED, hours));
 
         var copy = new ConfigFile(folder.resolve("copy.json"), FILES);
         copy.write(config);

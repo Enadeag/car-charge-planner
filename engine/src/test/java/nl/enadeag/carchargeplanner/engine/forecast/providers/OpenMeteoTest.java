@@ -18,6 +18,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ReplayHttp;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import nl.enadeag.carchargeplanner.engine.forecast.SolarSite;
+import nl.enadeag.carchargeplanner.engine.forecast.SolarSites;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -75,7 +76,7 @@ class OpenMeteoTest extends ProviderConformance {
     }
 
     private static SolarSite withArrays(PanelArray... arrays) {
-        return EXAMPLE_SYSTEM.withArrays(List.of(arrays));
+        return SolarSites.withArrays(EXAMPLE_SYSTEM, List.of(arrays));
     }
 
     private static double peak(List<ForecastStep> steps) {

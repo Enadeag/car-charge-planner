@@ -19,6 +19,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.Recorded;
 import nl.enadeag.carchargeplanner.engine.forecast.ReplayHttp;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import nl.enadeag.carchargeplanner.engine.forecast.SolarSite;
+import nl.enadeag.carchargeplanner.engine.forecast.SolarSites;
 import nl.enadeag.carchargeplanner.engine.forecast.StepRules;
 import java.time.Duration;
 import java.time.Instant;
@@ -46,7 +47,7 @@ class ForecastSolarTest extends ProviderConformance {
     private static final String RETRY_AT = "2026-10-07T10:19:59+02:00"; // in the 429 answer: 08:19:59 UTC
     private static final String SECRET = "FsSecretKey5555";
     private static final ZoneId AMSTERDAM = ZoneId.of("Europe/Amsterdam");
-    private static final SolarSite TWO_ARRAYS = EXAMPLE_SYSTEM.withArrays(List.of(
+    private static final SolarSite TWO_ARRAYS = SolarSites.withArrays(EXAMPLE_SYSTEM, List.of(
             new PanelArray("", 3.0, 30, -90, 0.14), new PanelArray("", 2.0, 10, 90, 0.14)));
 
     @Override
@@ -134,7 +135,7 @@ class ForecastSolarTest extends ProviderConformance {
 
     @Test
     void theSystemLossesSettingIsNotApplied() throws ProviderError {
-        var lossy = EXAMPLE_SYSTEM.withArrays(List.of(new PanelArray("", 4.8, 35, -45, 0.5)));
+        var lossy = SolarSites.withArrays(EXAMPLE_SYSTEM, List.of(new PanelArray("", 4.8, 35, -45, 0.5)));
         assertThat(fetch(RECORDED, lossy)).isEqualTo(fetch(RECORDED, EXAMPLE_SYSTEM));
     }
 
@@ -202,7 +203,7 @@ class ForecastSolarTest extends ProviderConformance {
     @ParameterizedTest
     @ValueSource(ints = {0, -90, 90, 180, -180, -45})
     void ourAzimuthIsTheirs(int azimuth) throws ProviderError {
-        var system = EXAMPLE_SYSTEM.withArrays(List.of(new PanelArray("", 4.8, 35, azimuth, 0.14)));
+        var system = SolarSites.withArrays(EXAMPLE_SYSTEM, List.of(new PanelArray("", 4.8, 35, azimuth, 0.14)));
         var parts = ForecastSolar.requestUri(system, system.arrays().get(0), Map.of()).toString().split("/");
         assertThat(parts[parts.length - 2]).isEqualTo(String.valueOf(azimuth));
     }

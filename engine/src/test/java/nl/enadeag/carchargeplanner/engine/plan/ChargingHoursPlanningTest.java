@@ -13,6 +13,7 @@ import nl.enadeag.carchargeplanner.engine.config.ChargingHours;
 import nl.enadeag.carchargeplanner.engine.config.HomeSystem;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.Phases;
+import nl.enadeag.carchargeplanner.engine.config.PlanningFixtures;
 import nl.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
@@ -101,7 +102,8 @@ class ChargingHoursPlanningTest {
 
     @Test
     void chargingNowOutsideTheHoursStartsAtOnceWhenTheCarIsAwayUntilTheyEnd() {
-        var hours = PREFERENCES.withChargingHours(new ChargingHours(LocalTime.of(7, 0), LocalTime.of(7, 15)));
+        var hours = PlanningFixtures.withChargingHours(PREFERENCES,
+                new ChargingHours(LocalTime.of(7, 0), LocalTime.of(7, 15)));
         var away = new AwayTimes(List.of(), List.of(new OneOffAwayPeriod(at(SAT, 6, 30), at(SAT, 7, 30))),
                 List.of(trip(SAT, 11, 0, 100)));
         var advice = new Planner(CAR, hours, away).planWithTrips(dark(3), new Percent(40), at(FRI, 23), List.of())
