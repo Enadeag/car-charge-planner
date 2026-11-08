@@ -18,7 +18,8 @@ import java.util.Set;
 /**
  * The rules of ADR 0001 about the engine's own parts: parts that depend one way, a pure planner, a domain model
  * without its file format, files written in one place, and no translations; and the rules of ADR 0010 that the engine
- * uses no {@code java.net.http}, which Android lacks, opens no connection of its own beside its HttpGet, logs
+ * uses no {@code java.net.http}, which Android lacks, opens no connection of its own beside its HttpGet, leaves the
+ * checks of TLS and the network settings of the process alone, logs
  * through slf4j, sets no POSIX file modes, which it leaves to the platform's FilePrivacy, reaches no keychain
  * through D-Bus or native calls, which it leaves to the platform's Keychain, and starts no programs and declares no
  * native methods, which each platform does for itself. They run when the engine is built alone;
@@ -42,17 +43,84 @@ class EngineArchitectureTest {
             .should().dependOnClassesThat().resideInAPackage("java.net.http..")
             .because("Android has no java.net.http; each platform hands the engine an HttpGet of its own (ADR 0010)");
 
+    /** The same list as the Android app's {@code AppArchitectureTest}, without Android's own classes. */
+    private static final Set<String> NETWORK_TYPES = Set.of(
+            "java.net.URLConnection", "java.net.HttpURLConnection", "java.net.JarURLConnection",
+            "javax.net.ssl.HttpsURLConnection",
+            "java.net.Socket", "java.net.ServerSocket", "java.net.DatagramSocket", "java.net.MulticastSocket",
+            "javax.net.SocketFactory", "javax.net.ssl.SSLSocketFactory", "javax.net.ssl.SSLSocket",
+            "java.nio.channels.SocketChannel", "java.nio.channels.ServerSocketChannel",
+            "java.nio.channels.DatagramChannel", "java.nio.channels.AsynchronousSocketChannel",
+            "java.nio.channels.AsynchronousServerSocketChannel");
+
+    private static final DescribedPredicate<JavaClass> OPEN_A_CONNECTION = DescribedPredicate.describe(
+            "open network connections (URLConnection, sockets, socket channels)",
+            type -> NETWORK_TYPES.contains(type.getName()));
+
+    // an access, not only a call, so a method reference such as url::openStream is caught as well
+    private static final DescribedPredicate<JavaAccess<?>> CONNECT_THROUGH_A_URL = DescribedPredicate.describe(
+            "connect through URL.openConnection, openStream or getContent",
+            access -> access.getTargetOwner().getName().equals("java.net.URL")
+                    && Set.of("openConnection", "openStream", "getContent").contains(access.getName()));
+
     @ArchTest
     static final ArchRule theEngineOpensNoConnectionOfItsOwn = noClasses()
             .that().resideInAPackage(ENGINE + "..")
-            .should().dependOnClassesThat().haveFullyQualifiedName("java.net.URLConnection")
-            .orShould().dependOnClassesThat().haveFullyQualifiedName("java.net.HttpURLConnection")
-            .orShould().dependOnClassesThat().haveFullyQualifiedName("javax.net.ssl.HttpsURLConnection")
-            .orShould().dependOnClassesThat().haveFullyQualifiedName("java.net.Socket")
-            .orShould().callMethod("java.net.URL", "openConnection")
-            .orShould().callMethod("java.net.URL", "openStream")
+            .should().dependOnClassesThat(OPEN_A_CONNECTION)
+            .orShould().accessTargetWhere(CONNECT_THROUGH_A_URL)
             .because("every request goes through the HttpGet the platform hands in, which keeps its contract on "
                     + "redirects, timeouts and size (ADR 0010)");
+
+    /** The types that check certificates and host names, as in the Android app's {@code AppArchitectureTest}. */
+    private static final Set<String> TLS_CHECKS = Set.of(
+            "javax.net.ssl.TrustManager", "javax.net.ssl.X509TrustManager", "javax.net.ssl.X509ExtendedTrustManager",
+            "javax.net.ssl.TrustManagerFactory", "javax.net.ssl.HostnameVerifier");
+
+    private static final DescribedPredicate<JavaClass> CHECK_TLS = DescribedPredicate.describe(
+            "check certificates or host names (trust managers, host name verifiers)",
+            type -> TLS_CHECKS.contains(type.getName()));
+
+    private static final DescribedPredicate<JavaAccess<?>> TAMPER_WITH_TLS = DescribedPredicate.describe(
+            "set up TLS of their own (SSLContext.init or setDefault, an HttpsURLConnection's socket factory or host "
+                    + "name verifier)",
+            access -> {
+                var owner = access.getTargetOwner().getName();
+                var name = access.getName();
+                return owner.equals("javax.net.ssl.SSLContext") && Set.of("init", "setDefault").contains(name)
+                        || owner.equals("javax.net.ssl.HttpsURLConnection") && Set.of("setSSLSocketFactory",
+                                "setDefaultSSLSocketFactory", "setHostnameVerifier", "setDefaultHostnameVerifier")
+                                .contains(name);
+            });
+
+    @ArchTest
+    static final ArchRule theEngineLeavesTheChecksOfTlsAlone = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .should().dependOnClassesThat(CHECK_TLS)
+            .orShould().accessTargetWhere(TAMPER_WITH_TLS)
+            .because("the engine runs inside both apps, which trust the certificates and check the host names as "
+                    + "their platform does; an own trust manager or host name verifier lets a forged certificate "
+                    + "through (ADR 0010)");
+
+    private static final DescribedPredicate<JavaAccess<?>> CHANGE_THE_NETWORK_OF_THE_PROCESS =
+            DescribedPredicate.describe("change how every connection of the process works (the default proxy "
+                    + "selector, authenticator, cookie handler or response cache, URL's stream handlers, "
+                    + "URLConnection's content handlers, following redirects for every HttpURLConnection)",
+                    access -> {
+                        var owner = access.getTargetOwner().getName();
+                        var name = access.getName();
+                        return Set.of("java.net.ProxySelector", "java.net.Authenticator", "java.net.CookieHandler",
+                                "java.net.ResponseCache").contains(owner) && name.equals("setDefault")
+                                || owner.equals("java.net.URL") && name.equals("setURLStreamHandlerFactory")
+                                || owner.equals("java.net.URLConnection") && name.equals("setContentHandlerFactory")
+                                || owner.equals("java.net.HttpURLConnection") && name.equals("setFollowRedirects");
+                    });
+
+    @ArchTest
+    static final ArchRule theEngineLeavesTheNetworkOfTheProcessAlone = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .should().accessTargetWhere(CHANGE_THE_NETWORK_OF_THE_PROCESS)
+            .because("such a setting reaches every connection of the app the engine runs in, its HttpGet's too, "
+                    + "around the contract that keeps on redirects and what it sends (ADR 0010)");
 
     @ArchTest
     static final ArchRule theEngineLogsThroughSlf4j = noClasses()

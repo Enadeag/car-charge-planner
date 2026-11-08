@@ -11,6 +11,7 @@ import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
 import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaCodeUnit;
 import com.tngtech.archunit.core.domain.JavaField;
@@ -493,6 +494,57 @@ class ArchitectureTest {
             .that(notPartOf(JdkHttpGet.class.getName()))
             .should().dependOnClassesThat().resideInAPackage("java.net.http..")
             .because("every provider asks through the HttpGet port, so a test can answer instead (ADR 0001)");
+
+    /** The types that check certificates and host names, as in the engine's and the Android app's rules. */
+    private static final Set<String> TLS_CHECKS = Set.of(
+            "javax.net.ssl.TrustManager", "javax.net.ssl.X509TrustManager", "javax.net.ssl.X509ExtendedTrustManager",
+            "javax.net.ssl.TrustManagerFactory", "javax.net.ssl.HostnameVerifier");
+
+    private static final DescribedPredicate<JavaClass> CHECK_TLS = DescribedPredicate.describe(
+            "check certificates or host names (trust managers, host name verifiers)",
+            type -> TLS_CHECKS.contains(type.getName()));
+
+    private static final DescribedPredicate<JavaAccess<?>> TAMPER_WITH_TLS = DescribedPredicate.describe(
+            "set up TLS of their own (SSLContext.init or setDefault, an HttpsURLConnection's socket factory or host "
+                    + "name verifier)",
+            access -> {
+                var owner = access.getTargetOwner().getName();
+                var name = access.getName();
+                return owner.equals("javax.net.ssl.SSLContext") && Set.of("init", "setDefault").contains(name)
+                        || owner.equals("javax.net.ssl.HttpsURLConnection") && Set.of("setSSLSocketFactory",
+                                "setDefaultSSLSocketFactory", "setHostnameVerifier", "setDefaultHostnameVerifier")
+                                .contains(name);
+            });
+
+    @ArchTest
+    static final ArchRule onlyTheHttpGetMayTouchTheChecksOfTls = noClasses()
+            .that(notPartOf(JdkHttpGet.class.getName()))
+            .should().dependOnClassesThat(CHECK_TLS)
+            .orShould().accessTargetWhere(TAMPER_WITH_TLS)
+            .because("the app trusts the certificates and checks the host names as the JDK does; an own trust manager "
+                    + "or host name verifier lets a forged certificate through, so only the one HttpGet, which owns "
+                    + "the connections, may ever set TLS up (ADR 0001, ADR 0010)");
+
+    private static final DescribedPredicate<JavaAccess<?>> CHANGE_THE_NETWORK_OF_THE_PROCESS =
+            DescribedPredicate.describe("change how every connection of the process works (the default proxy "
+                    + "selector, authenticator, cookie handler or response cache, URL's stream handlers, "
+                    + "URLConnection's content handlers, following redirects for every HttpURLConnection)",
+                    access -> {
+                        var owner = access.getTargetOwner().getName();
+                        var name = access.getName();
+                        return Set.of("java.net.ProxySelector", "java.net.Authenticator", "java.net.CookieHandler",
+                                "java.net.ResponseCache").contains(owner) && name.equals("setDefault")
+                                || owner.equals("java.net.URL") && name.equals("setURLStreamHandlerFactory")
+                                || owner.equals("java.net.URLConnection") && name.equals("setContentHandlerFactory")
+                                || owner.equals("java.net.HttpURLConnection") && name.equals("setFollowRedirects");
+                    });
+
+    @ArchTest
+    static final ArchRule onlyTheHttpGetMayChangeTheNetworkOfTheProcess = noClasses()
+            .that(notPartOf(JdkHttpGet.class.getName()))
+            .should().accessTargetWhere(CHANGE_THE_NETWORK_OF_THE_PROCESS)
+            .because("such a setting reaches every connection of the process, around the contract the HttpGet keeps "
+                    + "on redirects and what it sends (ADR 0001, ADR 0010)");
 
     @ArchTest
     static final ArchRule jacksonIsOnlyForStoredFiles = noClasses()
