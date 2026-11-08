@@ -197,6 +197,15 @@ class TripPlanningTest {
     }
 
     @Test
+    void aTripOfSeveralDaysTakesTheSunOfItsDepartureDayBeforeItLeaves() {
+        var morning = Map.of(9, 8.0, 10, 8.0, 11, 8.0);
+        var trip = new Trip(at(SAT, 14), at(SAT.plusDays(3), 18), 300, false);
+        var planned = plan(days(List.of(Map.of(), morning, SUNNY, Map.of(), SUNNY)), 30, at(THU, 0), trip);
+        assertThat(planned.day(SAT).levelAfterChargingPct().value()).isCloseTo(92.1, CLOSE);
+        assertThat(planned.trip().departureLevelPct().value()).isCloseTo(92.1, CLOSE);
+    }
+
+    @Test
     void aTripThatNeedsLessThanTheTargetLeavesTheSolarPlanAsItWas() {
         var forecast = days(List.of(SUNNY, Map.of(), Map.of()));
         var without = new Planner(CAR, PREFERENCES, AwayTimes.NONE).plan(forecast, new Percent(50), at(THU, 0), List.of());
