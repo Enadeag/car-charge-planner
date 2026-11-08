@@ -1,5 +1,6 @@
 import com.android.build.api.artifact.SingleArtifact
 import java.util.Locale
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import nl.enadeag.carchargeplanner.buildlogic.LicenceAssets
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -65,6 +66,7 @@ android {
         // An id of its own, so the debug build sits beside a release build on one phone, and a version name that shows
         // the commit on CI (BUILD_COMMIT) and "dev" elsewhere.
         debug {
+            enableUnitTestCoverage = true
             isPseudoLocalesEnabled = true
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug+" + debugBuildLabel.get()
@@ -117,6 +119,11 @@ android {
         unitTests.isIncludeAndroidResources = true
         unitTests.all {
             it.useJUnitPlatform()
+            // coverage of what Robolectric runs: its own class loader loads the app's classes without a location
+            it.extensions.configure<JacocoTaskExtension> {
+                isIncludeNoLocationClasses = true
+                excludes = listOf("jdk.internal.*")
+            }
             // Robolectric's Android 17 (SDK 37) reaches into the JDK's file descriptors, which JDK 21 keeps closed
             it.jvmArgs("--add-opens=java.base/jdk.internal.access=ALL-UNNAMED")
             it.systemProperties(logicTestProperties)
@@ -405,3 +412,54 @@ val checkPitScore = tasks.register<PitScore>("checkPitScore") {
 
 // the Android PIT plugin adds the variants' tasks after this script has run
 tasks.matching { it.name == "pitestDebug" }.configureEach { finalizedBy(checkPitScore) }
+
+/**
+ * The floor of the unit tests' coverage (CONTRIBUTING.md, Coverage): JaCoCo's report of `:app`, as AGP makes it from
+ * what the JVM tests and the Robolectric tests ran, must cover at least [lines] of its lines and [branches] of its
+ * branches, in percent.
+ */
+abstract class CoverageFloor : DefaultTask() {
+
+    @get:InputFile
+    abstract val report: RegularFileProperty
+
+    @get:Input
+    abstract val lines: Property<Int>
+
+    @get:Input
+    abstract val branches: Property<Int>
+
+    @TaskAction
+    fun check() {
+        val factory = javax.xml.parsers.DocumentBuilderFactory.newInstance()
+        factory.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true)
+        // JaCoCo's report names its DTD, which the check does not need
+        factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+        val children = factory.newDocumentBuilder().parse(report.get().asFile).documentElement.childNodes
+        val shares = mutableMapOf<String, Double>()
+        for (i in 0 until children.length) {
+            val counter = children.item(i) as? org.w3c.dom.Element ?: continue
+            if (counter.tagName != "counter") continue
+            val missed = counter.getAttribute("missed").toDouble()
+            val covered = counter.getAttribute("covered").toDouble()
+            shares[counter.getAttribute("type")] = 100 * covered / (missed + covered)
+        }
+        val failures = listOf("LINE" to lines.get(), "BRANCH" to branches.get()).mapNotNull { (type, floor) ->
+            val share = shares[type] ?: throw GradleException("the coverage report has no $type counter")
+            logger.lifecycle("%s coverage of the unit tests: %.1f %% (floor %d %%)".format(type.lowercase(), share, floor))
+            if (share < floor) "%s coverage is %.1f %%, below the floor of %d %%".format(type.lowercase(), share, floor)
+            else null
+        }
+        if (failures.isNotEmpty()) throw GradleException(failures.joinToString("; "))
+    }
+}
+
+// a point or two below what was measured when it was set (98.3 % of the lines, 85.4 % of the branches)
+val checkCoverage = tasks.register<CoverageFloor>("checkCoverage") {
+    dependsOn("createDebugUnitTestCoverageReport")
+    report.set(layout.buildDirectory.file("reports/coverage/test/debug/report.xml"))
+    lines.set(97)
+    branches.set(83)
+}
+
+tasks.named("check") { dependsOn(checkCoverage) }
