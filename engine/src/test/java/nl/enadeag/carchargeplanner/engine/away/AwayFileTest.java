@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -77,6 +78,58 @@ class AwayFileTest {
             }
             return null;
         };
+    }
+
+    @Test
+    void periodsRemovedFromTwoThreadsAtOnceAreAllGone() throws Exception {
+        var shared = file();
+        var mornings = new ArrayList<OneOffAwayPeriod>();
+        var afternoons = new ArrayList<OneOffAwayPeriod>();
+        for (int day = 1; day <= PERIODS_PER_THREAD; day++) {
+            mornings.add(OneOffAwayPeriod.on(DAY.plusDays(day), LocalTime.of(8, 0), LocalTime.of(10, 0), TZ));
+            afternoons.add(OneOffAwayPeriod.on(DAY.plusDays(day), LocalTime.of(14, 0), LocalTime.of(16, 0), TZ));
+        }
+        for (var period : mornings) {
+            shared.add(period, NOW);
+        }
+        for (var period : afternoons) {
+            shared.add(period, NOW);
+        }
+
+        atOnce(removing(shared, mornings), removing(shared, afternoons));
+
+        assertThat(file().periods()).isEmpty();
+    }
+
+    /** Removes the periods one by one. */
+    private static Callable<Void> removing(AwayFile shared, List<OneOffAwayPeriod> periods) {
+        return () -> {
+            for (var period : periods) {
+                shared.remove(period);
+            }
+            return null;
+        };
+    }
+
+    /** Runs both from a thread of its own, starting them at once, and waits until both are done. */
+    private static void atOnce(Callable<Void> one, Callable<Void> other) throws Exception {
+        var start = new CountDownLatch(1);
+        var pool = Executors.newFixedThreadPool(2);
+        try {
+            var first = pool.submit(() -> {
+                start.await();
+                return one.call();
+            });
+            var second = pool.submit(() -> {
+                start.await();
+                return other.call();
+            });
+            start.countDown();
+            first.get(30, TimeUnit.SECONDS);
+            second.get(30, TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
     }
 
     @Test

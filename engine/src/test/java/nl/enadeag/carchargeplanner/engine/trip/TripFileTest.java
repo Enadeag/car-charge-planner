@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -83,6 +84,93 @@ class TripFileTest {
             }
             return null;
         };
+    }
+
+    @Test
+    void tripsChangedFromTwoThreadsAtOnceAreAllChanged() throws Exception {
+        var shared = file();
+        var firsts = trips(1);
+        var seconds = trips(2);
+        for (var trip : firsts) {
+            shared.add(trip, NOW);
+        }
+        for (var trip : seconds) {
+            shared.add(trip, NOW);
+        }
+
+        atOnce(changing(shared, firsts, 11), changing(shared, seconds, 12));
+
+        var distances = file().trips(NOW).stream().map(Trip::distanceKm).toList();
+        assertThat(distances).hasSize(2 * TRIPS_PER_THREAD);
+        assertThat(distances).filteredOn(km -> km == 11).hasSize(TRIPS_PER_THREAD);
+        assertThat(distances).filteredOn(km -> km == 12).hasSize(TRIPS_PER_THREAD);
+    }
+
+    @Test
+    void tripsRemovedFromTwoThreadsAtOnceAreAllGone() throws Exception {
+        var shared = file();
+        var firsts = trips(1);
+        var seconds = trips(2);
+        for (var trip : firsts) {
+            shared.add(trip, NOW);
+        }
+        for (var trip : seconds) {
+            shared.add(trip, NOW);
+        }
+
+        atOnce(removing(shared, firsts), removing(shared, seconds));
+
+        assertThat(file().trips(NOW)).isEmpty();
+    }
+
+    /** One trip of the distance on each of the days after the test's day. */
+    private static List<Trip> trips(double distanceKm) {
+        var trips = new ArrayList<Trip>();
+        for (int day = 1; day <= TRIPS_PER_THREAD; day++) {
+            trips.add(trip(day, distanceKm));
+        }
+        return trips;
+    }
+
+    /** Changes each trip's distance to the one given, one by one. */
+    private static Callable<Void> changing(TripFile shared, List<Trip> trips, double distanceKm) {
+        return () -> {
+            for (var trip : trips) {
+                shared.change(trip, new Trip(trip.departure(), trip.returnTime(), distanceKm, false), NOW);
+            }
+            return null;
+        };
+    }
+
+    /** Removes the trips one by one. */
+    private static Callable<Void> removing(TripFile shared, List<Trip> trips) {
+        return () -> {
+            for (var trip : trips) {
+                shared.remove(trip, NOW);
+            }
+            return null;
+        };
+    }
+
+    /** Runs both from a thread of its own, starting them at once, and waits until both are done. */
+    private static void atOnce(Callable<Void> one, Callable<Void> other) throws Exception {
+        var start = new CountDownLatch(1);
+        var pool = Executors.newFixedThreadPool(2);
+        try {
+            var first = pool.submit(() -> {
+                start.await();
+                return one.call();
+            });
+            var second = pool.submit(() -> {
+                start.await();
+                return other.call();
+            });
+            start.countDown();
+            first.get(30, TimeUnit.SECONDS);
+            second.get(30, TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
     }
 
     @Test
