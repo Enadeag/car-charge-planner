@@ -29,7 +29,7 @@ public final class BatteryMapper {
     public BatteryMapper(Outlook.Planned planned, Messages messages) {
         this.planned = planned;
         this.messages = messages;
-        this.today = planned.madeAt().atZone(planned.zone()).toLocalDate();
+        this.today = planned.today();
         this.departures = planned.tripAdvice().stream()
                 .map(advice -> advice.trip().firstDay(planned.zone()))
                 .collect(Collectors.toSet());

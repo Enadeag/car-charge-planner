@@ -50,7 +50,7 @@ public final class TripAdviceMapper {
         this.messages = messages;
         this.zone = planned.zone();
         this.madeAt = planned.madeAt();
-        this.today = madeAt.atZone(zone).toLocalDate();
+        this.today = planned.today();
         this.units = units;
         this.targetPct = planned.targetPct().value();
         this.level = messages.text(planned.batteryAssumed() ? TextKey.TRIP_ADVICE_ASSUMED : TextKey.TRIP_ADVICE_ENTERED,

@@ -53,7 +53,7 @@ public final class DayMapper {
     public DayMapper(Outlook.Planned planned, List<Trip> trips, Messages messages) {
         this.messages = messages;
         this.zone = planned.zone();
-        this.today = planned.madeAt().atZone(zone).toLocalDate();
+        this.today = planned.today();
         this.todaysNote = planned.batteryAssumed()
                 ? messages.text(TextKey.DAY_BATTERY_ASSUMED, messages.whole(planned.batteryLevelPct().value())) : "";
         this.gridDay = planned.gridAdvice().map(GridAdvice::day).orElse(null);

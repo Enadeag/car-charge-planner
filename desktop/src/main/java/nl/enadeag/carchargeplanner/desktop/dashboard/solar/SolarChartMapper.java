@@ -50,7 +50,7 @@ public final class SolarChartMapper {
         this.planned = planned;
         this.messages = messages;
         this.zone = planned.zone();
-        this.today = planned.madeAt().atZone(zone).toLocalDate();
+        this.today = planned.today();
         double peak = planned.days().stream().flatMap(day -> day.forecast().stream())
                 .mapToDouble(ForecastStep::powerKw).max().orElse(0);
         this.scaleKw = Math.max(1, Math.ceil(Math.max(peak, planned.baseloadKw())));

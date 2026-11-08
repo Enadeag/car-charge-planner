@@ -134,7 +134,7 @@ data class Dashboard(val zone: ZoneId, val madeAt: Instant, val days: List<DayMo
          */
         fun of(planned: Outlook.Planned, away: List<OneOffAwayPeriod>, trips: List<Trip> = listOf(),
             names: (ProviderId) -> String = ProviderId::value): Dashboard {
-            val today = planned.madeAt().atZone(planned.zone()).toLocalDate()
+            val today = planned.today()
             return Dashboard(planned.zone(), planned.madeAt(), DayMapper(planned).map(planned.days()),
                 planned.gridAdvice().map { GridAdviceModel.of(it, planned.zone(), today) }.orElse(null),
                 ChargeLevels(planned.minimumPct(), planned.targetPct()),

@@ -24,7 +24,7 @@ public final class GridAdviceMapper {
     public GridAdviceMapper(Outlook.Planned planned, Messages messages) {
         this.messages = messages;
         this.zone = planned.zone();
-        this.today = planned.madeAt().atZone(zone).toLocalDate();
+        this.today = planned.today();
     }
 
     /**

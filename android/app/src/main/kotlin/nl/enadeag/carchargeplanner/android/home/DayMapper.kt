@@ -20,7 +20,7 @@ class DayMapper(planned: Outlook.Planned) {
     }
 
     private val charts = SolarChartMapper(planned)
-    private val today: LocalDate = planned.madeAt().atZone(planned.zone()).toLocalDate()
+    private val today: LocalDate = planned.today()
     private val assumed = if (planned.batteryAssumed()) planned.batteryLevelPct() else null
 
     /** The day the grid advice is about; null when the plan gives none. */
