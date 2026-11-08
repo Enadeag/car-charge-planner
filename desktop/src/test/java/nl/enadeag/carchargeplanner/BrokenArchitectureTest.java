@@ -39,8 +39,13 @@ class BrokenArchitectureTest {
         Callable<InputStream> setUp(URL address, Provider provider) throws GeneralSecurityException {
             SSLContext.getInstance("TLS").init(null, new TrustManager[] {this}, null);
             Security.addProvider(provider);
+            Security.insertProviderAt(provider, 1);
+            Security.removeProvider(provider.getName());
+            Security.setProperty("jdk.tls.disabledAlgorithms", "");
             ProxySelector.setDefault(null);
             System.setProperty("https.proxyHost", "proxy.example");
+            System.setProperties(null);
+            System.clearProperty("https.proxyHost");
             System.getProperties().setProperty("https.proxyHost", "proxy.example");
             return address::openStream;
         }
@@ -54,11 +59,16 @@ class BrokenArchitectureTest {
                 .isInstanceOf(AssertionError.class)
                 .hasMessageContaining("X509TrustManager")
                 .hasMessageContaining("SSLContext.init(")
-                .hasMessageContaining("Security.addProvider(");
+                .hasMessageContaining("Security.addProvider(")
+                .hasMessageContaining("Security.insertProviderAt(")
+                .hasMessageContaining("Security.removeProvider(")
+                .hasMessageContaining("Security.setProperty(");
         assertThatThrownBy(() -> ArchitectureTest.onlyTheHttpGetMayChangeTheNetworkOfTheProcess.check(network))
                 .isInstanceOf(AssertionError.class)
                 .hasMessageContaining("ProxySelector.setDefault(")
                 .hasMessageContaining("System.setProperty(")
+                .hasMessageContaining("System.setProperties(")
+                .hasMessageContaining("System.clearProperty(")
                 .hasMessageContaining("System.getProperties(");
     }
 }

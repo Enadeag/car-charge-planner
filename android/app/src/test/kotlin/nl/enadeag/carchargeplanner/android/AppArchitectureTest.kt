@@ -787,10 +787,15 @@ class AppArchitectureTest {
             .hasMessageContaining("X509TrustManager")
             .hasMessageContaining("SSLContext.init(")
             .hasMessageContaining("Security.addProvider(")
+            .hasMessageContaining("Security.insertProviderAt(")
+            .hasMessageContaining("Security.removeProvider(")
+            .hasMessageContaining("Security.setProperty(")
         assertThatThrownBy { NO_CLASS_CHANGES_THE_NETWORK_OF_THE_APP.check(network) }
             .isInstanceOf(AssertionError::class.java)
             .hasMessageContaining("ProxySelector.setDefault(")
             .hasMessageContaining("System.setProperty(")
+            .hasMessageContaining("System.setProperties(")
+            .hasMessageContaining("System.clearProperty(")
             .hasMessageContaining("System.getProperties(")
     }
 

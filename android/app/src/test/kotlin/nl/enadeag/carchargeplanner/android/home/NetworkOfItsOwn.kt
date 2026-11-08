@@ -22,8 +22,13 @@ internal class NetworkOfItsOwn : X509TrustManager {
     fun setUp(address: URL, provider: Provider): InputStream {
         SSLContext.getInstance("TLS").init(null, arrayOf(this), null)
         Security.addProvider(provider)
+        Security.insertProviderAt(provider, 1)
+        Security.removeProvider(provider.name)
+        Security.setProperty("jdk.tls.disabledAlgorithms", "")
         ProxySelector.setDefault(null)
         System.setProperty("https.proxyHost", "proxy.example")
+        System.setProperties(null)
+        System.clearProperty("https.proxyHost")
         System.getProperties().setProperty("https.proxyHost", "proxy.example")
         return address.openStream()
     }
