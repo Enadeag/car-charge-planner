@@ -1,12 +1,6 @@
 package nl.enadeag.carchargeplanner.android.ui.home
 
-import android.Manifest
-import android.os.Build
-import android.text.format.DateFormat
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -15,35 +9,25 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -54,23 +38,15 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.hideFromAccessibility
-import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -88,7 +64,6 @@ import nl.enadeag.carchargeplanner.android.home.Footer
 import nl.enadeag.carchargeplanner.android.home.GridAdviceModel
 import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
-import nl.enadeag.carchargeplanner.android.home.ListedTrip
 import nl.enadeag.carchargeplanner.android.home.NotificationCard
 import nl.enadeag.carchargeplanner.android.home.TripEntry
 import nl.enadeag.carchargeplanner.android.store.SaveOutcome
@@ -100,12 +75,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 import nl.enadeag.carchargeplanner.android.ui.components.BarIconButton
 import nl.enadeag.carchargeplanner.android.ui.components.BarScaffold
 import nl.enadeag.carchargeplanner.android.ui.components.EnglishDetails
-import nl.enadeag.carchargeplanner.android.ui.components.HeldButton
-import nl.enadeag.carchargeplanner.android.ui.components.NoneLine
-import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
-import nl.enadeag.carchargeplanner.android.ui.components.RowLine
 import nl.enadeag.carchargeplanner.android.ui.components.inEnglish
-import nl.enadeag.carchargeplanner.android.ui.notify.openNotificationSettings
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 
@@ -245,39 +215,7 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
  *
  * @property dashboard the dashboard; null until a plan was shown
  */
-private class Shown(var dashboard: Dashboard? = null)
-
-/**
- * A one-off away period as the list names it, by the dashboard shown last; before any was shown, as the entry that
- * saved it reads it, in its zone and by the clock at Save; empty when neither is known.
- */
-@Composable
-private fun awayWords(shown: Shown): (OneOffAwayPeriod, AwayEntry.Entered?) -> String {
-    val resources = LocalResources.current
-    val locale = LocalConfiguration.current.locales[0]
-    val twentyFour = DateFormat.is24HourFormat(LocalContext.current)
-    return { period, entered ->
-        val dashboard = shown.dashboard
-        when {
-            dashboard != null ->
-                DashboardWords(resources, locale, twentyFour, dashboard.zone).away(dashboard.describe(period))
-            entered != null -> DashboardWords(resources, locale, twentyFour, entered.zone).away(entered.away)
-            else -> ""
-        }
-    }
-}
-
-/**
- * What a day's "Car away" list changes the periods with.
- *
- * @property entry the entry and Remove
- * @property focus moves the focus to the Add of the page in view
- * @property busy true while a change runs, so Add and Remove are off
- * @property going the period whose Remove was pressed, whose neighbour takes the focus once it is out of the list
- * @property restoring the period an Undo is adding back, whose row takes the focus once it is in the list
- */
-private class AwayAction(val entry: AwayEntry, val focus: FocusRequester, val busy: Boolean,
-    val going: Going<OneOffAwayPeriod>, val restoring: Restoring<OneOffAwayPeriod>)
+internal class Shown(var dashboard: Dashboard? = null)
 
 /**
  * What the battery entry's save came to, beside the entry itself: a level saved says so in a snackbar, which a screen
@@ -537,371 +475,6 @@ private fun TripAdviceCard(advice: TripAdviceText, source: EnergySource, adjust:
     }
 }
 
-/**
- * The one-off away periods still to come, under the heading "Car away" with Add at the end of its row, which opens
- * the entry on this page's day; each period with its Remove, which a screen reader says with the period. After a
- * Remove the focus goes, once the period is gone, to the period before it, or the one after, or the line that says
- * there is none, so it does not fall off the page with the button that went.
- *
- * @param dashboard the dashboard, with the periods and the home's time zone
- * @param day the page's day, on which Add enters a period
- * @param words the dashboard's words
- * @param away the entry, Remove and whether a change runs
- * @param inView true on the page in view, whose Add the focus comes back to when the entry closes
- */
-@Composable
-private fun AwayList(dashboard: Dashboard, day: DayModel, words: DashboardWords, away: AwayAction, inView: Boolean) {
-    val focus = remember { RowFocus<OneOffAwayPeriod>() }
-    val periods = dashboard.away.map { it.period }
-    LaunchedEffect(periods) {
-        // only the page in view: the change was made on it, and a page beside it has its own rows
-        if (!inView) {
-            return@LaunchedEffect
-        }
-        val pressed = away.going.row
-        if (pressed != null && pressed !in periods) {
-            focus.removing(away.going.rows, pressed)
-            away.going.row = null
-        }
-        val back = away.restoring.row
-        if (back != null && back in periods) {
-            focus.next = back
-            away.restoring.row = null
-        }
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(R.string.one_off_heading), style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f).semantics { heading() })
-            // it may take the focus also in touch mode, where a button takes none, so the focus comes back to it,
-            // and a screen reader with it, when the entry closes
-            val opener = if (inView) Modifier.focusProperties { canFocus = true }.focusRequester(away.focus)
-                else Modifier
-            val spoken = stringResource(R.string.one_off_add_spoken)
-            HeldButton(busy = away.busy, onClick = { away.entry.open(day.date, dashboard.zone) },
-                modifier = opener.semantics { contentDescription = spoken }) {
-                Text(stringResource(R.string.one_off_add))
-            }
-        }
-        if (dashboard.away.isEmpty()) {
-            NoneLine(stringResource(R.string.one_off_none), focus)
-        }
-        dashboard.away.forEach { coming ->
-            key(coming.period) {
-                val text = words.away(coming)
-                val spoken = stringResource(R.string.one_off_remove_spoken, text)
-                Row(verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    RowLine(text, focus, coming.period, Modifier.weight(1f))
-                    HeldButton(busy = away.busy, onClick = {
-                        away.going.row = coming.period
-                        away.going.rows = periods
-                        away.entry.remove(coming.period)
-                    }, modifier = Modifier.semantics { contentDescription = spoken }) {
-                        Text(stringResource(R.string.one_off_remove))
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * A trip as the list names it, by the dashboard shown last; before any was shown, as the entry that saved it reads
- * it, in its zone and by the clock at Save; empty when neither is known.
- */
-@Composable
-private fun tripWords(shown: Shown): (Trip, TripEntry.Entered?) -> String {
-    val resources = LocalResources.current
-    val locale = LocalConfiguration.current.locales[0]
-    val twentyFour = DateFormat.is24HourFormat(LocalContext.current)
-    return { trip, entered ->
-        val dashboard = shown.dashboard
-        when {
-            dashboard != null ->
-                DashboardWords(resources, locale, twentyFour, dashboard.zone).trip(dashboard.describe(trip))
-            entered != null -> DashboardWords(resources, locale, twentyFour, entered.zone).trip(entered.trip)
-            else -> ""
-        }
-    }
-}
-
-/**
- * What a day's Trips card changes the trips with.
- *
- * @property entry the choices and Remove
- * @property busy true while a change runs, so the choices and Remove are off
- * @property pending the choice being saved, shown at once in its new state; null while none is
- * @property going the trip whose Remove was pressed, whose neighbour takes the focus once it is out of the list
- * @property restoring the trip an Undo is adding back, whose row takes the focus once it is in the list
- * @property keys what each trip's row is keyed by
- * @property add moves the focus to the Add of the page in view
- * @property openers moves the focus to a trip's Change on the page in view
- */
-private class TripAction(val entry: TripEntry, val busy: Boolean, val pending: TripEntry.Pending?,
-    val going: Going<Trip>, val restoring: Restoring<Trip>, val keys: TripKeys, val add: FocusRequester,
-    val openers: TripOpeners)
-
-/**
- * The Change of each trip on the page in view, which drawing never reads, so the focus goes back to it when the entry
- * closes.
- */
-private class TripOpeners {
-    private val changes = mutableMapOf<Trip, FocusRequester>()
-
-    /**
-     * Notes a trip's Change as it shows on the page in view.
-     *
-     * @param trip the trip
-     * @param focus moves the focus to its Change
-     */
-    fun shown(trip: Trip, focus: FocusRequester) {
-        changes[trip] = focus
-    }
-
-    /**
-     * Forgets a trip's Change that no longer shows.
-     *
-     * @param trip the trip
-     * @param focus the focus it was noted with, so a later row of the same trip stays
-     */
-    fun gone(trip: Trip, focus: FocusRequester) {
-        changes.remove(trip, focus)
-    }
-
-    /**
-     * Moves the focus to a trip's Change.
-     *
-     * @param trip the trip
-     * @return false when its Change is not on the page in view, so nothing moved
-     */
-    fun focus(trip: Trip): Boolean = changes[trip]?.requestFocus() == true
-}
-
-/**
- * What each trip's row is keyed by, which drawing reads but a choice pressed writes: a trip by itself, and a trip a
- * choice changed by the key of the trip it was. So the row and the focus on its checkbox stay as a choice saves, also
- * when the store puts the changed trip after another that leaves at the same time, and two trips that differ only in
- * a choice keep a row each. A trip a choice was to make but did not, as its save failed, may come later another way,
- * so a trip takes the key of the one it was only while that one is not listed too, and no two rows share a key. A
- * choice pressed forgets the trips its page no longer lists. The keys are not kept when the home is made again, such
- * as when the phone turns, which is fine, as the focus is lost then anyway.
- */
-private class TripKeys {
-    private val before = mutableMapOf<Trip, Trip>()
-
-    /**
-     * The keys of a page's rows.
-     *
-     * @param trips the trips the page lists, each once
-     * @return the key of each trip's row, in the same order, no two the same
-     */
-    fun of(trips: List<Trip>): List<Trip> {
-        val taken = mutableSetOf<Trip>()
-        return trips.map { trip -> before[trip]?.takeIf { it !in trips && taken.add(it) } ?: trip }
-    }
-
-    /**
-     * A choice is being saved, so the changed trip takes the row of the trip it was.
-     *
-     * @param key the key of the row whose choice was pressed
-     * @param changed the trip with the choice changed
-     * @param listed the trips the page lists
-     */
-    fun changing(key: Trip, changed: Trip, listed: List<Trip>) {
-        before.keys.retainAll(listed.toSet())
-        before[changed] = key
-    }
-}
-
-/**
- * The trips the car is away for on this page's day, under the heading "Trips", as the desktop's card: each with its
- * times and distance, its two choices as checkbox rows that save at once, and its Remove, which a screen reader says
- * with the trip; "No trip entered for this day." when there is none. After a Remove the focus goes, once the trip is
- * gone, to the trip before it, or the one after, or the line that says there is none, as in the away list.
- *
- * @param dashboard the dashboard, with the trips and the home's time zone
- * @param day the page's day, whose trips are listed
- * @param words the dashboard's words
- * @param trips the choices, Remove and whether a change runs
- * @param inView true on the page in view, where a change was made and the focus follows it
- */
-@Composable
-private fun TripsCard(dashboard: Dashboard, day: DayModel, words: DashboardWords, trips: TripAction,
-    inView: Boolean) {
-    val focus = remember { RowFocus<Trip>() }
-    val listed = dashboard.tripsOn(day)
-    val rows = listed.map { it.trip }
-    LaunchedEffect(rows) {
-        // only the page in view: the change was made on it, and a page beside it has its own rows
-        if (!inView) {
-            return@LaunchedEffect
-        }
-        val pressed = trips.going.row
-        if (pressed != null && pressed !in rows) {
-            focus.removing(trips.going.rows, pressed)
-            trips.going.row = null
-        }
-        val back = trips.restoring.row
-        if (back != null && back in rows) {
-            focus.next = back
-            trips.restoring.row = null
-        }
-    }
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.trips_heading), style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f).semantics { heading() })
-                // as the away list's Add: it may take the focus also in touch mode, so the focus comes back to it
-                val opener = if (inView) Modifier.focusProperties { canFocus = true }.focusRequester(trips.add)
-                    else Modifier
-                val spoken = stringResource(R.string.trip_add_spoken)
-                HeldButton(busy = trips.busy, onClick = { trips.entry.add(day.date, dashboard.zone) },
-                    modifier = opener.semantics { contentDescription = spoken }) {
-                    Text(stringResource(R.string.trip_add))
-                }
-            }
-            if (listed.isEmpty()) {
-                NoneLine(stringResource(R.string.trips_none), focus)
-            }
-            listed.zip(trips.keys.of(rows)).forEach { (trip, row) ->
-                key(row) {
-                    TripRow(trip, row, words, trips, focus, rows, dashboard.zone, inView)
-                }
-            }
-        }
-    }
-}
-
-/**
- * One trip of the Trips card: its line, its two choices, its Change, which opens the entry on it, and its Remove,
- * side by side at the end while they fit.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun TripRow(listed: ListedTrip, key: Trip, words: DashboardWords, trips: TripAction,
-    focus: RowFocus<Trip>, rows: List<Trip>, zone: ZoneId, inView: Boolean) {
-    val trip = listed.trip
-    val spoken = words.spokenTrip(listed)
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        RowLine(words.trip(listed), focus, trip, Modifier.semantics { contentDescription = spoken })
-        TripEntry.Choice.entries.forEach { choice ->
-            val pending = trips.pending?.takeIf { it.trip == trip && it.choice == choice }
-            ChoiceRow(stringResource(when (choice) {
-                TripEntry.Choice.NOT_WITH_THIS_CAR -> R.string.trip_not_with_this_car
-                TripEntry.Choice.CAN_CHARGE -> R.string.trip_can_charge
-            }), spoken, pending?.on ?: choice.of(trip), trips.busy) {
-                trips.keys.changing(key, choice.put(trip, it), rows)
-                trips.entry.choose(trip, choice, it)
-            }
-        }
-        val change = stringResource(R.string.trip_change_spoken, spoken)
-        val remove = stringResource(R.string.trip_remove_spoken, spoken)
-        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
-            // on the page in view it may take the focus also in touch mode, so the focus comes back to it, and a
-            // screen reader with it, when the entry closes
-            val opener = remember { FocusRequester() }
-            if (inView) {
-                DisposableEffect(trip, opener) {
-                    trips.openers.shown(trip, opener)
-                    onDispose { trips.openers.gone(trip, opener) }
-                }
-            }
-            val reachable = if (inView) Modifier.focusProperties { canFocus = true }.focusRequester(opener)
-                else Modifier
-            HeldButton(busy = trips.busy, onClick = { trips.entry.change(trip, zone) },
-                modifier = reachable.semantics { contentDescription = change }) {
-                Text(stringResource(R.string.trip_change))
-            }
-            HeldButton(busy = trips.busy, onClick = {
-                trips.going.row = trip
-                trips.going.rows = rows
-                trips.entry.remove(trip)
-            }, modifier = Modifier.semantics { contentDescription = remove }) {
-                Text(stringResource(R.string.trip_remove))
-            }
-        }
-    }
-}
-
-/**
- * A choice as Material's checkbox in a row that toggles as a whole, at least 48 dp high, its words wrapping; a screen
- * reader says it with the trip, then whether it is checked. While a change runs it is off as [HeldButton] is, so it
- * keeps the focus.
- *
- * @param label the choice's words
- * @param trip the trip as a screen reader reads it
- * @param checked whether it is ticked
- * @param busy true while a change runs
- * @param onChange gets the new state
- */
-@Composable
-private fun ChoiceRow(label: String, trip: String, checked: Boolean, busy: Boolean, onChange: (Boolean) -> Unit) {
-    val spoken = stringResource(R.string.trip_choice_spoken, label, trip)
-    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
-        .toggleable(value = checked, role = Role.Checkbox, onValueChange = { if (!busy) onChange(it) })
-        .semantics {
-            contentDescription = spoken
-            if (busy) {
-                disabled()
-            }
-        }, verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked = checked, onCheckedChange = null, enabled = !busy)
-        val colour = LocalContentColor.current
-        Text(label, modifier = Modifier.padding(start = 16.dp),
-            color = if (busy) colour.copy(alpha = DISABLED_ALPHA) else colour)
-    }
-}
-
-/** Material's alpha for a disabled control's content, as its [Checkbox] draws when it is off. */
-private const val DISABLED_ALPHA = 0.38f
-
-/**
- * A warning above the plan, with a warning sign and the words, in a container that stands out and a polite live
- * region, so a refresh that brings it is heard; the plan below stays in view. That the forecast could not be
- * refreshed, or that a provider refused its API key.
- *
- * @param lines the warning's sentences, each on a line of its own
- */
-@Composable
-private fun Warning(lines: List<String>) {
-    Surface(color = MaterialTheme.colorScheme.errorContainer,
-        contentColor = MaterialTheme.colorScheme.onErrorContainer, shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
-            liveRegion = LiveRegionMode.Polite
-        }) {
-        Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            // the words say it; the sign is for the eye, so a screen reader skips it
-            Icon(Icons.Filled.Warning, contentDescription = null)
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                lines.forEach { Text(it) }
-            }
-        }
-    }
-}
-
-/**
- * The warning that providers refused their API key, a line per provider, also without a plan; nothing when none did.
- *
- * @param names the providers' names, in the order they were asked
- */
-@Composable
-private fun KeyRefused(names: List<String>) {
-    if (names.isNotEmpty()) {
-        Warning(names.map { stringResource(R.string.key_refused_warning, it) })
-    }
-}
-
-/** The providers that refused their API key, by name, for the home without a plan; none while it is asked. */
-private fun keyRefusedBy(state: HomeOutlook.State): List<String> = when (state) {
-    is HomeOutlook.State.NoForecast -> state.keyRefusedBy
-    is HomeOutlook.State.NoDays -> state.keyRefusedBy
-    is HomeOutlook.State.Planned -> state.dashboard.keyRefusedBy
-    HomeOutlook.State.Asking -> listOf()
-}
-
 /** The forecast's credit, which stays in the provider's English, its source and freshness. */
 @Composable
 private fun FooterLine(footer: Footer, words: DashboardWords) {
@@ -958,80 +531,4 @@ private fun Notice(notice: HomeNotice, closed: () -> Unit) {
             Text(stringResource(R.string.action_close))
         }
     }
-}
-
-/**
- * The card that asks for notifications while they are not allowed: what they are for and where to change it later,
- * and one button that asks Android, or, when Android will not ask, opens the app's notification settings, with a line
- * that says why. It is one card that scrolls with the page and is no live region; a screen reader reads its title, its
- * text, its button and last its ×, which closes it for good, after which the focus goes on, as the card is gone. When
- * a refusal swaps the button for the other one, the focus goes to the card's title, as the button it was on is gone.
- *
- * @param card what the card shows, and its answers
- * @param closed moves the focus once the card is closed
- */
-@Composable
-private fun NotificationsCard(card: NotificationCard, closed: () -> Unit) {
-    val shown by card.shown.collectAsStateWithLifecycle()
-    if (shown == NotificationCard.Shown.NONE) {
-        return
-    }
-    val context = LocalContext.current
-    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission(), card::answered)
-    val title = remember { FocusRequester() }
-    val before = remember { ShownBefore(shown) }
-    LaunchedEffect(shown) {
-        if (before.shown == NotificationCard.Shown.ASK && shown == NotificationCard.Shown.OPEN_SETTINGS) {
-            title.requestFocus()
-        }
-        before.shown = shown
-    }
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp).semantics { isTraversalGroup = true },
-            verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.notification_card_title), style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f).focusRequester(title).focusable().semantics { heading() })
-                // beside the title for the eye, but read last, after the button; drawn at 48 dp, not Material's 40
-                IconButton(onClick = {
-                    card.close()
-                    closed()
-                }, modifier = Modifier.size(48.dp).semantics { traversalIndex = 1f }) {
-                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_close))
-                }
-            }
-            Text(stringResource(R.string.notification_card_body))
-            if (shown == NotificationCard.Shown.ASK) {
-                AppButton(onClick = {
-                    // the card asks only where Android has the permission, Android 13 and later
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        ask.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                }) {
-                    Text(stringResource(R.string.notification_card_ask))
-                }
-            } else {
-                Text(stringResource(R.string.notification_card_no_ask))
-                AppButton(onClick = { openNotificationSettings(context) }) {
-                    Text(stringResource(R.string.notification_card_open_settings))
-                }
-            }
-        }
-    }
-}
-
-/**
- * What the notification card showed when last looked at, which drawing never reads.
- *
- * @property shown what it showed
- */
-private class ShownBefore(var shown: NotificationCard.Shown)
-
-/** The dashboard's words in the app's language and the phone's clock, with the times in this zone. */
-@Composable
-internal fun dashboardWords(zone: ZoneId): DashboardWords {
-    val resources = LocalResources.current
-    val locale = LocalConfiguration.current.locales[0]
-    val twentyFour = DateFormat.is24HourFormat(LocalContext.current)
-    return remember(resources, locale, twentyFour, zone) { DashboardWords(resources, locale, twentyFour, zone) }
 }
