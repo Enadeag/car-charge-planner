@@ -332,11 +332,8 @@ pitest {
     outputFormats = setOf("HTML", "XML")
     timestampedReports = false
     targetClasses = pitClasses ?: pitLogic
-    // A few points below the share of mutants killed when it was set (74 %), for the full run only: a run narrowed to
-    // some classes may be small or hold many survivors. The removed calls to the null and result checks the Kotlin
-    // compiler adds (Intrinsics, ResultKt) survive, as no test can see them, and avoidCallsTo would not help: PIT
-    // then drops every mutant on a line with such a call, the real ones too.
-    mutationThreshold = if (pitClasses == null) 71 else 0
+    // The floor is checkPitScore's, which leaves the Kotlin compiler's own mutants out; PIT's own share counts them
+    mutationThreshold = 0
     targetTests = setOf("nl.enadeag.carchargeplanner.android.*")
     excludedTestClasses = listOf(
         // the screens' tests, JUnit 4 on Robolectric, which runs Android in the test JVM
@@ -352,3 +349,59 @@ pitest {
         "NetworkSecurityConfigTest", "licences.LicencesInTheApkTest", "AppEngineTest", "AppArchitectureTest",
     ).map { "nl.enadeag.carchargeplanner.android.$it" }.toSet()
 }
+
+/**
+ * The share of mutants killed, as PIT's report has it but without the mutants of code the Kotlin compiler adds, which
+ * no test can kill (and no PIT filter can drop without also dropping the real mutants on the same line): the removed
+ * calls of `Intrinsics` (the null checks) and `ResultKt.throwOnFailure`, a coroutine's or a lambda's result replaced
+ * by null (`invokeSuspend`, a suspend function's `Object` and a lambda's `Unit`), and the logger's `getLOG`. It fails
+ * below [threshold]; a threshold of 0 only prints the share.
+ */
+abstract class PitScore : DefaultTask() {
+
+    @get:InputFile
+    abstract val mutations: RegularFileProperty
+
+    @get:Input
+    abstract val threshold: Property<Int>
+
+    @TaskAction
+    fun check() {
+        val factory = javax.xml.parsers.DocumentBuilderFactory.newInstance()
+        factory.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true)
+        val all = factory.newDocumentBuilder().parse(mutations.get().asFile).documentElement.childNodes
+        var counted = 0
+        var killed = 0
+        for (i in 0 until all.length) {
+            val mutation = all.item(i) as? org.w3c.dom.Element ?: continue
+            fun text(name: String) = mutation.getElementsByTagName(name).item(0).textContent
+            val description = text("description")
+            val method = text("mutatedMethod")
+            val result = text("methodDescription")
+            val compilers = description.startsWith("removed call to kotlin/jvm/internal/Intrinsics::")
+                || description.startsWith("removed call to kotlin/ResultKt::")
+                || description.startsWith("replaced return value with null") && (method == "invokeSuspend"
+                    || result.endsWith("Lkotlin/coroutines/Continuation;)Ljava/lang/Object;")
+                    || result.endsWith(")Lkotlin/Unit;"))
+                || method == "getLOG"
+            if (compilers) continue
+            counted++
+            if (mutation.getAttribute("status") in setOf("KILLED", "TIMED_OUT")) killed++
+        }
+        val share = if (counted == 0) 0.0 else 100.0 * killed / counted
+        logger.lifecycle("PIT without the Kotlin compiler's mutants: $killed of $counted killed (%.1f %%)".format(share))
+        if (share < threshold.get()) {
+            throw GradleException("PIT killed %.1f %% of the mutants, below the floor of ${threshold.get()} %%".format(share))
+        }
+    }
+}
+
+// the share of mutants killed without the compiler's own, a few points below the 88 % it was when set, for the full run
+// only: a run narrowed to some classes may be small or hold many survivors
+val checkPitScore = tasks.register<PitScore>("checkPitScore") {
+    mutations.set(layout.buildDirectory.file("reports/pitest/debug/mutations.xml"))
+    threshold.set(if (pitClasses == null) 85 else 0)
+}
+
+// the Android PIT plugin adds the variants' tasks after this script has run
+tasks.matching { it.name == "pitestDebug" }.configureEach { finalizedBy(checkPitScore) }
