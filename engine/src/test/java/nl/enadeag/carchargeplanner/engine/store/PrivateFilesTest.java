@@ -5,10 +5,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import nl.enadeag.carchargeplanner.LogCapture;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -95,6 +98,41 @@ class PrivateFilesTest {
 
         assertThatThrownBy(() -> files.write(file, "new")).isInstanceOf(IOException.class);
         assertThat(file).hasContent("old");
+        // not a file the write made, so not one it removes
+        assertThat(folder.resolve("data.json.tmp")).isDirectory();
+    }
+
+    @Test
+    void aFileThatTookTheTemporaryNameDuringTheWriteIsRemovedAndNotLeftBehind() throws IOException {
+        var file = Files.writeString(folder.resolve("data.json"), "old");
+        var temporary = folder.resolve("data.json.tmp");
+        // another process makes the temporary file after the leftover was removed and before this one opens it
+        var racing = new FilePrivacy() {
+            @Override
+            public List<FileAttribute<?>> newFileAttributes(Path made) {
+                try {
+                    Files.writeString(made, "made by another process");
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+                return List.of();
+            }
+
+            @Override
+            public List<FileAttribute<?>> newFolderAttributes(Path made) {
+                return List.of();
+            }
+
+            @Override
+            public boolean tighten(Path path) {
+                return false;
+            }
+        };
+
+        assertThatThrownBy(() -> new PrivateFiles(racing).write(file, "new")).isInstanceOf(IOException.class);
+
+        assertThat(file).hasContent("old");
+        assertThat(temporary).doesNotExist();
     }
 
     @Test

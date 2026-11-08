@@ -167,6 +167,16 @@
                   <excludedTestClasses>
                     <param>nl.enadeag.carchargeplanner.engine.*ArchitectureTest</param>
                   </excludedTestClasses>
+                  <!-- what no test can see, so it stays out of the report (CONTRIBUTING.md): the fsync of the folder
+                       after a file was moved into it (flushFolder), and FileChannel.force, the fsync of the file
+                       itself, wherever it is called; only a power cut would show either. The call of flushFolder in
+                       PrivateFiles.write stays a survivor. -->
+                  <excludedMethods>
+                    <param>flushFolder</param>
+                  </excludedMethods>
+                  <avoidCallsTo>
+                    <avoidCallsTo>java.nio.channels.FileChannel</avoidCallsTo>
+                  </avoidCallsTo>
                   <reportsDirectory>${project.build.directory}/pit-reports/engine</reportsDirectory>
                   <!-- a few points below the share of mutants killed when it was set (97 %) -->
                   <mutationThreshold>94</mutationThreshold>
