@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.engine.plan;
 
 import nl.enadeag.carchargeplanner.engine.config.Charger;
 import nl.enadeag.carchargeplanner.engine.config.HomeSystem;
+import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import java.math.BigDecimal;
@@ -9,6 +10,9 @@ import java.math.RoundingMode;
 
 /** The arithmetic of surplus and charge power. */
 final class Charging {
+
+    /** A level this little above a whole percentage is the plan's rounding, not a percent more to charge. */
+    private static final double LEVEL_NOISE_PCT = 1e-6;
 
     private Charging() {
     }
@@ -58,5 +62,17 @@ final class Charging {
      */
     static double roundKwh(double kwh) {
         return new BigDecimal(kwh).setScale(6, RoundingMode.HALF_EVEN).doubleValue();
+    }
+
+    /**
+     * The charge limit to set in the car or the charger for a battery level: rounded up to a whole percentage, so the
+     * charge stops only once the energy that brings the battery to the level is in, and at most 100.
+     *
+     * @param levelPct the battery level the charge brings the battery to, in percent; may be above 100
+     * @return the level rounded up to a whole percentage, a level less than a millionth of a point above a whole
+     *     percentage rounded down to it, as that is the plan's rounding; at most 100
+     */
+    static Percent chargeLimit(double levelPct) {
+        return new Percent(Math.min(100, Math.ceil(levelPct - LEVEL_NOISE_PCT)));
     }
 }

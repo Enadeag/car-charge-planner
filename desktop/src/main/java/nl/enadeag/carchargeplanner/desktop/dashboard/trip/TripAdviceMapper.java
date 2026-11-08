@@ -29,8 +29,6 @@ public final class TripAdviceMapper {
     private static final LocalTime EVENING = LocalTime.of(18, 0);
     /** Keeps a window's times together on one line when the advice wraps. */
     private static final char NO_BREAK = '\u00A0';
-    /** A level this little above a whole percentage is the plan's rounding, not a percent more to charge. */
-    private static final double LEVEL_NOISE_PCT = 1e-6;
 
     private final Messages messages;
     private final ZoneId zone;
@@ -113,7 +111,7 @@ public final class TripAdviceMapper {
 
     /** What to charge, when to start the grid charge and what to set for it, and how far the battery falls short. */
     private String plan(TripAdvice advice, DayNames names) {
-        var limit = chargeLimit(advice);
+        var limit = messages.whole(advice.chargeLimitPct().value());
         var sentences = new ArrayList<String>();
         var solar = advice.solarWindows();
         if (advice.grid().isPresent()) {
@@ -134,14 +132,6 @@ public final class TripAdviceMapper {
                     messages.whole(Math.ceil(units.distance(advice.kmShort()))), units.distanceUnit()));
         }
         return String.join(" ", sentences);
-    }
-
-    /**
-     * The level to charge to, which is also the charge limit to set: rounded up to a whole percentage, so the charge
-     * stops only once the trip's energy is in.
-     */
-    private String chargeLimit(TripAdvice advice) {
-        return messages.whole(Math.ceil(advice.neededPct().value() - LEVEL_NOISE_PCT));
     }
 
     private String start(TripGridCharge grid, DayNames names) {

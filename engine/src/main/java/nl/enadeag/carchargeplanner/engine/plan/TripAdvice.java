@@ -45,6 +45,15 @@ public record TripAdvice(
     }
 
     /**
+     * The level to charge to by the departure, which is also the charge limit to set in the car or the charger.
+     *
+     * @return the needed level rounded up to a whole percentage, so the charge stops only once the trip's energy is in
+     */
+    public Percent chargeLimitPct() {
+        return Charging.chargeLimit(neededPct.value());
+    }
+
+    /**
      * Whether a day is one of a trip's: from the day of the departure to the day of the return.
      *
      * @param trip the trip
