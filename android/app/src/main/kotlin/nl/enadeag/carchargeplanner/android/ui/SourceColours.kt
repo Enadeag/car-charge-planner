@@ -6,7 +6,7 @@ import nl.enadeag.carchargeplanner.android.home.EnergySource
 import nl.enadeag.carchargeplanner.android.home.SourceFigure
 
 /**
- * The colours that mean an energy source on the dashboard, as on the desktop: solar amber, grid blue, the car green.
+ * The colours that mean an energy source on the dashboard: solar amber, grid blue, the car green.
  * They stay fixed whatever the wallpaper's colours, as their meaning must not change; each source's text is drawn on
  * its own container, so its contrast is the same on every phone, at least 4.5:1 in light and in dark. The colour is
  * never the only sign: the text always names the source.
@@ -27,7 +27,7 @@ internal data class SourceColours(val solar: Pair, val grid: Pair, val car: Pair
     data class Pair(val text: Color, val container: Color)
 
     /**
-     * The solar chart's and the battery bar's colours, the desktop's, all on a ground of their own, so that the lines
+     * The solar chart's and the battery bar's colours, all on a ground of their own, so that the lines
      * and marks reach 3:1 and the texts 4.5:1 on it whatever the wallpaper's colours. The see-through fills and the
      * grid are not the marks: each fill has a line of its source's colour at its edge.
      *
@@ -86,7 +86,7 @@ internal data class SourceColours(val solar: Pair, val grid: Pair, val car: Pair
 
     companion object {
 
-        /** In light, the desktop's text colours on its soft fills. */
+        /** In light, the text colours on their soft fills. */
         val LIGHT = SourceColours(
             solar = Pair(Color(0xFF8F5A00), Color(0xFFFBE7C2)),
             grid = Pair(Color(0xFF2A62B8), Color(0xFFDBE7FA)),
@@ -97,7 +97,7 @@ internal data class SourceColours(val solar: Pair, val grid: Pair, val car: Pair
                 carText = Color(0xFF17734A)),
         )
 
-        /** In dark, the desktop's dark text colours on its dark fills. */
+        /** In dark, the text colours on their dark fills. */
         val DARK = SourceColours(
             solar = Pair(Color(0xFFF2B33D), Color(0xFF3A2C10)),
             grid = Pair(Color(0xFF6AA2F5), Color(0xFF17283F)),
