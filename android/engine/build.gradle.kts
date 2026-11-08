@@ -23,6 +23,14 @@ contractTests.filterNot { engineTests.file(it).asFile.isFile }.let { missing ->
     }
 }
 
+// The engine has no resources: this build compiles its Java sources only, so a file in engine/src/main/resources, which
+// Maven would package for the desktop, would be missing from the app and fail only when the app runs.
+val engineResources = layout.projectDirectory.dir("../../engine/src/main/resources")
+if (engineResources.asFile.exists()) {
+    throw GradleException("engine/src/main/resources exists, but the Android build compiles only the engine's Java " +
+        "sources; take its files into the app's build here (ADR 0010)")
+}
+
 // The engine's own sources, compiled as they are: no copy, no published jar (ADR 0010).
 sourceSets {
     main {
