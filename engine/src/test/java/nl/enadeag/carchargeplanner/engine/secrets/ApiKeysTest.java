@@ -990,6 +990,15 @@ class ApiKeysTest {
     }
 
     @Test
+    void stoppingTheUnlockingTellsTheKeychain() {
+        var lockable = new LockableKeychain();
+
+        keys(lockable).stopUnlocking();
+
+        assertThat(lockable.stops).hasValue(1);
+    }
+
+    @Test
     void removingFromAKeychainThatRefusesWritesSaysItWasHeldAndTheKeyIsNotLoadedAgain() throws SecretsProblem {
         var refusing = holdingTheKeys(new RefusingWrites());
         var before = Map.copyOf(refusing.entries);

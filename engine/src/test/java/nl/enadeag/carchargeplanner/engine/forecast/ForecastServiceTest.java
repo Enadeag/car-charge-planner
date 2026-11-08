@@ -1143,6 +1143,14 @@ class ForecastServiceTest {
     }
 
     @Test
+    void aProviderAskedBeforeCanBeAskedAgainFromAnotherThread() throws ForecastUnavailable {
+        get(T0);
+
+        // the lock of a provider is held by the thread that asked, so a lock left behind blocks the other thread
+        assertTimeoutPreemptively(Duration.ofSeconds(2), () -> refresh(later(10)));
+    }
+
+    @Test
     void aStoredOnlyRequestDoesNotWaitForAProviderThatIsBeingAsked() throws Exception {
         var asked = new CountDownLatch(1);
         var release = new CountDownLatch(1);

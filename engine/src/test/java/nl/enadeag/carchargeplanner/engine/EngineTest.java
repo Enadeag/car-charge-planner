@@ -899,6 +899,25 @@ class EngineTest {
     }
 
     @Test
+    void savingTheApiKeysStoresThemAtOnce() throws Exception {
+        var engine = engine(clockAt(7));
+        var keys = new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "NEW-KEY")));
+
+        assertTimeoutPreemptively(Duration.ofSeconds(2), () -> engine.saveApiKeys(keys));
+
+        assertThat(keychain.entries).containsEntry("forecast/main/api_key", "NEW-KEY");
+    }
+
+    @Test
+    void stoppingTheUnlockingTellsTheKeychain() {
+        var engine = engine(clockAt(7));
+
+        assertTimeoutPreemptively(Duration.ofSeconds(2), engine::stopUnlocking);
+
+        assertThat(keychain.stops).hasValue(1);
+    }
+
+    @Test
     void aSaveThatWaitsForTheKeychainToBeUnlockedStopsWhenAsked() throws Exception {
         var engine = engine(clockAt(7));
         engine.saveApiKeys(new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "OLD-KEY"))));

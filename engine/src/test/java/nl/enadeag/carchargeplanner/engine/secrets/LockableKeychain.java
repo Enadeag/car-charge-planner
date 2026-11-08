@@ -24,6 +24,8 @@ public class LockableKeychain extends MemoryKeychain {
     public volatile KeychainException.Kind unlockFails;
     /** How often the prompt was asked for. */
     public final AtomicInteger prompts = new AtomicInteger();
+    /** How often the owner's wait was stopped, with or without a save waiting. */
+    public final AtomicInteger stops = new AtomicInteger();
     /** Counted down when the prompt shows. */
     public final CountDownLatch prompting = new CountDownLatch(1);
     private final AtomicReference<CompletableFuture<UnlockOutcome>> waiting = new AtomicReference<>();
@@ -78,6 +80,7 @@ public class LockableKeychain extends MemoryKeychain {
 
     @Override
     public void stopUnlocking() {
+        stops.incrementAndGet();
         var answered = waiting.get();
         if (answered != null) {
             answered.complete(UnlockOutcome.NOT_ANSWERED);
