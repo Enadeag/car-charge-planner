@@ -24,6 +24,7 @@ internal class NetworkOfItsOwn : X509TrustManager {
         Security.addProvider(provider)
         ProxySelector.setDefault(null)
         System.setProperty("https.proxyHost", "proxy.example")
+        System.getProperties().setProperty("https.proxyHost", "proxy.example")
         return address.openStream()
     }
 }

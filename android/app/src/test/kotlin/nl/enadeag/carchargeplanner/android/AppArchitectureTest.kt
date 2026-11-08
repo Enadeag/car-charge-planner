@@ -140,15 +140,16 @@ class AppArchitectureTest {
         val CHANGE_THE_NETWORK_OF_THE_PROCESS = DescribedPredicate.describe<JavaAccess<*>>(
             "change how every connection of the process works (the default proxy selector, authenticator, cookie "
                 + "handler or response cache, URL's stream handlers, URLConnection's content handlers, following "
-                + "redirects for every HttpURLConnection, a system property, as ArchUnit cannot read which and the "
-                + "TLS and proxy ones reach every connection)") { access ->
+                + "redirects for every HttpURLConnection, a system property or the live set System.getProperties hands "
+                + "out, as ArchUnit cannot read which and the TLS and proxy ones reach every connection)") { access ->
             val owner = access.targetOwner.name
             owner in setOf("java.net.ProxySelector", "java.net.Authenticator", "java.net.CookieHandler",
                 "java.net.ResponseCache") && access.name == "setDefault"
                 || owner == "java.net.URL" && access.name == "setURLStreamHandlerFactory"
                 || owner == "java.net.URLConnection" && access.name == "setContentHandlerFactory"
                 || owner == "java.net.HttpURLConnection" && access.name == "setFollowRedirects"
-                || owner == "java.lang.System" && access.name in setOf("setProperty", "setProperties", "clearProperty")
+                || owner == "java.lang.System"
+                && access.name in setOf("setProperty", "setProperties", "clearProperty", "getProperties")
         }
 
         val WRITE_PAST_SLF4J = DescribedPredicate.describe<JavaAccess<*>>(
@@ -787,6 +788,7 @@ class AppArchitectureTest {
             .isInstanceOf(AssertionError::class.java)
             .hasMessageContaining("ProxySelector.setDefault(")
             .hasMessageContaining("System.setProperty(")
+            .hasMessageContaining("System.getProperties(")
     }
 
     @Test

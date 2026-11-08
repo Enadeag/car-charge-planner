@@ -540,7 +540,8 @@ class ArchitectureTest {
             DescribedPredicate.describe("change how every connection of the process works (the default proxy "
                     + "selector, authenticator, cookie handler or response cache, URL's stream handlers, "
                     + "URLConnection's content handlers, following redirects for every HttpURLConnection, a system "
-                    + "property, as ArchUnit cannot read which and the TLS and proxy ones reach every connection)",
+                    + "property or the live set System.getProperties hands out, as ArchUnit cannot read which and the "
+                    + "TLS and proxy ones reach every connection)",
                     access -> {
                         var owner = access.getTargetOwner().getName();
                         var name = access.getName();
@@ -550,7 +551,8 @@ class ArchitectureTest {
                                 || owner.equals("java.net.URLConnection") && name.equals("setContentHandlerFactory")
                                 || owner.equals("java.net.HttpURLConnection") && name.equals("setFollowRedirects")
                                 || owner.equals("java.lang.System")
-                                && Set.of("setProperty", "setProperties", "clearProperty").contains(name);
+                                && Set.of("setProperty", "setProperties", "clearProperty", "getProperties")
+                                        .contains(name);
                     });
 
     @ArchTest

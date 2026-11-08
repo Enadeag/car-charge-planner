@@ -32,8 +32,9 @@ class EngineTestCodeArchitectureTest {
 
     @ArchTest
     static final ArchRule testsDoNotReadTheRealHomeOrEnvironment = noClasses()
-            .that(DescribedPredicate.describe("do not start a JVM",
-                    type -> type.getDirectDependenciesFromSelf().stream()
+            .that(DescribedPredicate.describe("do not start a JVM and do not break the network rules on purpose",
+                    type -> !type.isEquivalentTo(BrokenEngineArchitectureTest.NetworkOfItsOwn.class)
+                            && type.getDirectDependenciesFromSelf().stream()
                             .noneMatch(dependency -> dependency.getTargetClass().isEquivalentTo(ProcessBuilder.class))))
             .should().callMethod(System.class, "getProperty", String.class)
             .orShould().callMethod(System.class, "getProperty", String.class, String.class)
@@ -42,5 +43,6 @@ class EngineTestCodeArchitectureTest {
             .orShould().callMethod(System.class, "getenv", String.class)
             .because("a test works in a folder of its own and is handed what it needs, never the owner's home or "
                     + "environment; ArchUnit cannot read which property, so only a test that starts a JVM may read "
-                    + "one, to find that JVM and its class path");
+                    + "one, to find that JVM and its class path; the class that breaks the network rules on purpose "
+                    + "reaches System.getProperties to show that they see it, and is never run");
 }

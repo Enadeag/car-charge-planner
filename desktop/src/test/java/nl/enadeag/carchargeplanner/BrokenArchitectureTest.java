@@ -41,6 +41,7 @@ class BrokenArchitectureTest {
             Security.addProvider(provider);
             ProxySelector.setDefault(null);
             System.setProperty("https.proxyHost", "proxy.example");
+            System.getProperties().setProperty("https.proxyHost", "proxy.example");
             return address::openStream;
         }
     }
@@ -57,6 +58,7 @@ class BrokenArchitectureTest {
         assertThatThrownBy(() -> ArchitectureTest.onlyTheHttpGetMayChangeTheNetworkOfTheProcess.check(network))
                 .isInstanceOf(AssertionError.class)
                 .hasMessageContaining("ProxySelector.setDefault(")
-                .hasMessageContaining("System.setProperty(");
+                .hasMessageContaining("System.setProperty(")
+                .hasMessageContaining("System.getProperties(");
     }
 }
