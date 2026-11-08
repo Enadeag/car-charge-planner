@@ -11,7 +11,7 @@ name: Release
 # warns.
 #
 # The release builds use one exact Java version, which the packages bring as their runtime and the release notes name:
-# the java-version of every setup-java here and in windows-installer.yml (ReleaseWorkflowTest keeps them the same).
+# the java-version of every setup-java here, in windows-installer.yml and in linux-packages.yml (ReleaseWorkflowTest keeps them the same).
 # Moving to a new Java update is a pull request (CONTRIBUTING.md, Java updates). They use no Maven cache, which another
 # workflow run could have filled.
 on:

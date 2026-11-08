@@ -241,10 +241,10 @@ To try the workflow without releasing, start it by hand on `main`: it builds eve
 
 ### Java updates
 
-The release builds use one exact Java version, the `java-version` of each `setup-java` in `release.yml` and `windows-installer.yml` (`ReleaseWorkflowTest` keeps them the same), and the packages bring that runtime: a user's app gets Java's security fixes only through a new release. Java's security updates come quarterly, on the third Tuesday of January, April, July and October. After each one:
+The release builds use one exact Java version, the `java-version` of each `setup-java` in `release.yml`, `windows-installer.yml` and `linux-packages.yml` (`ReleaseWorkflowTest` keeps them the same; the last one only builds the test packages, which are not released), and the packages bring that runtime: a user's app gets Java's security fixes only through a new release. Java's security updates come quarterly, on the third Tuesday of January, April, July and October. After each one:
 
 1. Read the advisory of the OpenJDK Vulnerability Group (<https://openjdk.org/groups/vulnerability/advisories/>) and check which fixed vulnerabilities reach the app: the modules it links are in `src/packaging/jlink.args` and in the SBOM (`jlink.modules`); what matters most is what a forecast provider's answer reaches: TLS, the HTTP client and the JSON parsing.
-2. Once Temurin has the update, set its exact version (such as `25.0.5+11`) in both workflows in a pull request, and run `sh tools/scan-sbom.sh` on fresh SBOMs for the libraries.
+2. Once Temurin has the update, set its exact version (such as `25.0.5+11`) in all three workflows in a pull request, and run `sh tools/scan-sbom.sh` on fresh SBOMs for the libraries.
 3. When a fixed vulnerability reaches the app, release a patch version on the new runtime; otherwise the next release takes it along. The release notes and the SBOMs name the runtime each release brings.
 
 ## Code layout
