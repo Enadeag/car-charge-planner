@@ -344,7 +344,9 @@ class AppArchitectureTest {
          * line that sets the static field before it, up to the line that sets this one, the last line's decide: a
          * mutable one made there (a constructor, which Kotlin's `mutableListOf()` without values is too, or a call of
          * [MAKE_A_MUTABLE_COLLECTION]) and no other call there that hands back a collection or map, such as
-         * `toList()`. ArchUnit gives no order within a line, so `ArrayList(listOf(...))` on one line is not seen.
+         * `toList()`. ArchUnit gives no order within a line, so a mutable collection made from another on the same
+         * line is not seen: `ArrayList(listOf(...))`, `listOf(...).toMutableList()`, `filter { }.toMutableList()` and
+         * the like.
          */
         fun madeMutable(field: JavaField): Boolean {
             val initializer = field.owner.staticInitializer.orElse(null)
@@ -411,7 +413,8 @@ class AppArchitectureTest {
                 + "(ADR 0005, ADR 0010): a Kotlin top-level var or lock is such state, and a static outlives the "
                 + "Application that a Robolectric test makes for each test; ArchUnit sees what a field of an "
                 + "interface type holds only where the static initializer makes it, not a mutable one a function "
-                + "hands back")
+                + "hands back, nor one made from another collection on the same line, such as "
+                + "listOf(..).toMutableList() or ArrayList(listOf(..))")
 
         /** The packages of the platform's parts that the engine is made of: the keychain and the log. */
         val PLATFORM_PARTS = setOf("$APP.secrets", "$APP.logging")

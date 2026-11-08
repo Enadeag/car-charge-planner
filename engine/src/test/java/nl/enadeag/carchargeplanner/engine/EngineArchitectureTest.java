@@ -261,8 +261,9 @@ class EngineArchitectureTest {
      * sets it. Of the collections and maps the initializer makes after the line that sets the static field before it,
      * up to the line that sets this one, the last line's decide: a mutable one made there (a constructor, or a call
      * of {@link #MAKE_A_MUTABLE_COLLECTION}) and no other call there that hands back a collection or map, such as
-     * {@code Map.copyOf}. ArchUnit gives no order within a line, so {@code new ArrayList<>(List.of(...))} on one line
-     * is not seen.
+     * {@code Map.copyOf}. ArchUnit gives no order within a line, so a mutable collection copied from another, such as
+     * {@code new ArrayList<>(List.of(...))} or {@code new HashMap<>(Map.of(...))}, is not seen; nor is it when written
+     * over several lines, as javac gives the whole statement the one line of the field.
      */
     private static boolean madeMutable(JavaField field) {
         var type = field.getRawType();
@@ -324,7 +325,8 @@ class EngineArchitectureTest {
             .should(have(HOLDS_A_MUTABLE_OBJECT))
             .because("a final field is still global state when what it holds can change (ADR 0005); ArchUnit sees "
                     + "what a field of an interface type holds only where the static initializer makes it, not a "
-                    + "mutable one a method hands back, such as Collectors.toList's");
+                    + "mutable one a method hands back, such as Collectors.toList's, nor a mutable copy of another "
+                    + "collection, such as new ArrayList<>(List.of(..)), also over several lines");
 
     private static final ArchCondition<JavaCodeUnit> CATCH_NULL_POINTER =
             new ArchCondition<>("catch NullPointerException") {
