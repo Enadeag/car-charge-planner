@@ -51,6 +51,19 @@ class SolarChartMapperTest {
     }
 
     @Test
+    void aTickOnTheFirstOrTheLastHourShownIsKept() {
+        var day = planned(at(TODAY, 8, 0), false, day(TODAY, 50, 50,
+                hourly(TODAY, hour -> hour >= 10 && hour < 17 ? 2 : 0)));
+
+        var curve = curve(day, 0);
+
+        assertThat(curve.fromHour()).isEqualTo(9);
+        assertThat(curve.toHour()).isEqualTo(18);
+        assertThat(curve.ticks()).containsExactly(new Tick(9, "09"), new Tick(12, "12"), new Tick(15, "15"),
+                new Tick(18, "18"));
+    }
+
+    @Test
     void allDaysShareOnePowerScaleRoundedUpToAWholeKilowatt() {
         assertThat(curve(TWO_DAYS, 0).scaleKw()).isEqualTo(6);
         assertThat(curve(TWO_DAYS, 1).scaleKw()).isEqualTo(6);

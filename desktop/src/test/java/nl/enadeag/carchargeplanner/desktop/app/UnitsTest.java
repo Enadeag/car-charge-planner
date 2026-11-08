@@ -16,4 +16,10 @@ class UnitsTest {
         assertThat(Units.METRIC.distanceUnit()).isEqualTo("km");
         assertThat(Units.IMPERIAL.distanceUnit()).isEqualTo("mi");
     }
+
+    @Test
+    void theCodesAreTheNamesTheAppSettingsFileWrites() {
+        assertThat(Units.METRIC.code()).isEqualTo("metric");
+        assertThat(Units.IMPERIAL.code()).isEqualTo("imperial");
+    }
 }
