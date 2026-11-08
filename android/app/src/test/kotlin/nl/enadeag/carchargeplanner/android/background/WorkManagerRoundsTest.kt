@@ -11,6 +11,7 @@ import java.time.Duration
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import nl.enadeag.carchargeplanner.android.CarChargePlannerApp
+import nl.enadeag.carchargeplanner.android.Waiting
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.engine.Outlook
 import org.assertj.core.api.Assertions.assertThat
@@ -49,11 +50,7 @@ class WorkManagerRoundsTest {
     private fun onceWaitsFor(wifiOnly: Boolean) = runBlocking { rounds.onceWaitsFor(wifiOnly) }
 
     private fun waitUntil(condition: () -> Boolean) {
-        val until = System.nanoTime() + Duration.ofSeconds(10).toNanos()
-        while (!condition()) {
-            check(System.nanoTime() < until) { "Not met within 10 seconds" }
-            Thread.sleep(10)
-        }
+        check(Waiting.waitUntil(condition = condition)) { "Not met within 10 seconds" }
     }
 
     /** Schedules the round now on any network and lets it start; it stays in its round until the test ends. */

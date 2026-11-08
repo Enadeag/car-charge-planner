@@ -17,6 +17,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import nl.enadeag.carchargeplanner.android.CarChargePlannerApp
+import nl.enadeag.carchargeplanner.android.Waiting
 import nl.enadeag.carchargeplanner.android.form.DRAFT
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.StartState
@@ -58,12 +59,7 @@ class BackgroundReceiversTest {
 
     /** Delivers the broadcasts sent and waits until the work they started in the app's scope has ended. */
     private fun deliver(until: () -> Boolean) {
-        val end = System.nanoTime() + Duration.ofSeconds(10).toNanos()
-        while (!until() && System.nanoTime() < end) {
-            shadowOf(Looper.getMainLooper()).idle()
-            Thread.sleep(10)
-        }
-        shadowOf(Looper.getMainLooper()).idle()
+        Waiting.waitUntil(between = { shadowOf(Looper.getMainLooper()).idle() }, condition = until)
     }
 
     @Test

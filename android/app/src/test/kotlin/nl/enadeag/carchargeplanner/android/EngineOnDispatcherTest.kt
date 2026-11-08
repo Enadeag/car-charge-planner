@@ -383,7 +383,7 @@ class EngineOnDispatcherTest {
 
         override fun newFileAttributes(file: Path): List<FileAttribute<*>> {
             most.accumulateAndGet(inside.incrementAndGet()) { a, b -> maxOf(a, b) }
-            Thread.sleep(300)
+            Waiting.pause(Duration.ofMillis(300))
             inside.decrementAndGet()
             return listOf()
         }

@@ -42,7 +42,8 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 /**
- * The rules for the app's own classes, Java and Kotlin alike (its main code, not its tests), as
+ * The rules for the app's own classes, Java and Kotlin alike (its main code, apart from the one rule for the tests'
+ * sleeps), as
  * `EngineArchitectureTest` has them for the engine (ADR 0010): one class opens network connections, [AndroidHttpGet],
  * which keeps the engine's contract on timeouts, size and redirects; no class weakens the checks of TLS; the app
  * logs through slf4j, whose provider is the one class that writes to Logcat; the screens and their logic reach the
@@ -68,6 +69,13 @@ class AppArchitectureTest {
         // AGP puts each variant's local tests in folders named after it, such as debugUnitTest, which ArchUnit's own
         // DoNotIncludeTests does not know
         val MAIN_CODE_ONLY = ImportOption { location -> !location.contains("UnitTest/") }
+
+        // the classes of the local tests, which MAIN_CODE_ONLY leaves out
+        val TEST_CODE_ONLY = ImportOption { location -> location.contains("UnitTest/") }
+
+        val TEST_CLASSES: JavaClasses by lazy {
+            ClassFileImporter().withImportOption(TEST_CODE_ONLY).importPackages(APP)
+        }
 
         val APP_CLASSES: JavaClasses by lazy {
             ClassFileImporter().withImportOption(MAIN_CODE_ONLY).importPackages(APP)
@@ -747,6 +755,21 @@ class AppArchitectureTest {
 
         assertThat(files).`as`("a new file in home/ goes on MODEL_FILES or NOT_MODEL_FILES")
             .isEqualTo(MODEL_FILES + NOT_MODEL_FILES)
+    }
+
+    @Test
+    fun onlyWaitingSleepsInTheTests() {
+        assertThat(TEST_CLASSES.map { it.name }).`as`("the tests are imported").contains("$APP.Waiting")
+
+        noClasses().that().doNotHaveFullyQualifiedName("$APP.Waiting")
+            .should().callMethod(Thread::class.java, "sleep", Long::class.javaPrimitiveType)
+            .orShould().callMethod(Thread::class.java, "sleep", Long::class.javaPrimitiveType,
+                Int::class.javaPrimitiveType)
+            .orShould().callMethod(Thread::class.java, "sleep", java.time.Duration::class.java)
+            .because("a test waits for a signal or polls through Waiting, and sets the clock; a sleep is slow when it "
+                + "is long and flaky when it is short (CONTRIBUTING.md, ADR 0005, as the desktop's rule has it); the "
+                + "instrumented tests, which run on a device, are not in this rule")
+            .check(TEST_CLASSES)
     }
 
     @Test
