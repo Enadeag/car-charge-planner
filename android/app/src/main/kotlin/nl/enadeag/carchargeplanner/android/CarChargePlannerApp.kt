@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import nl.enadeag.carchargeplanner.android.background.AndroidNoticeAlarm
+import nl.enadeag.carchargeplanner.android.background.BackgroundHost
 import nl.enadeag.carchargeplanner.android.background.BackgroundRounds
 import nl.enadeag.carchargeplanner.android.background.BackgroundSchedule
 import nl.enadeag.carchargeplanner.android.background.NoticeAlarm
@@ -41,13 +42,13 @@ import nl.enadeag.carchargeplanner.android.ui.notify.createNoticeChannels
  * but not started: only the work in the background makes its rounds ([rounds]), which WorkManager, the alarm and the
  * phone's start also start while the app is closed, in a process that Android starts for them without a screen.
  */
-open class CarChargePlannerApp : Application() {
+open class CarChargePlannerApp : Application(), BackgroundHost {
 
     /** The one clock of the engine, the notifications, the alarm and the screens; a test's app gives a fixed one. */
     open val clock: Clock = Clock.systemUTC()
 
     /** Where saves and other work that must outlive a screen run; it is never cancelled. */
-    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    override val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** The platform's parts the engine is made on, one set for the process: the files, the keychain, the API keys. */
     lateinit var platform: AndroidPlatform
@@ -78,11 +79,11 @@ open class CarChargePlannerApp : Application() {
         private set
 
     /** The rounds of the work in the background, which the worker and the receivers make. */
-    lateinit var rounds: BackgroundRounds
+    override lateinit var rounds: BackgroundRounds
         @VisibleForTesting internal set
 
     /** Sets the work in the background up, as the screen starts and the owner saves a change. */
-    lateinit var schedule: BackgroundSchedule
+    override lateinit var schedule: BackgroundSchedule
         @VisibleForTesting internal set
 
     override fun onCreate() {

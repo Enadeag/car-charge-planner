@@ -14,19 +14,23 @@ import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.ArchCondition
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields
+import com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices
 import java.time.Clock
 import nl.enadeag.carchargeplanner.android.logging.LogcatServiceProvider
 import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.android.store.EngineOnDispatcher
 import nl.enadeag.carchargeplanner.android.background.WorkThatCallsTheEngineItself
+import nl.enadeag.carchargeplanner.android.background.WorkThatCastsToTheApp
 import nl.enadeag.carchargeplanner.android.background.WorkThatPlansARound
 import nl.enadeag.carchargeplanner.android.backgroundwork.WorkBesideTheBackgroundPackage
 import nl.enadeag.carchargeplanner.android.store.StoreThatCallsTheEngineItself
 import nl.enadeag.carchargeplanner.android.home.LogicThatHoldsTheApiKeys
+import nl.enadeag.carchargeplanner.android.home.LogicThatKnowsAScreen
 import nl.enadeag.carchargeplanner.android.home.LogicThatMakesThreads
 import nl.enadeag.carchargeplanner.android.home.LogicThatPlansARound
 import nl.enadeag.carchargeplanner.android.home.LogicThatReadsTheClock
 import nl.enadeag.carchargeplanner.android.ui.ScreenAccessThatPlansInALambda
+import nl.enadeag.carchargeplanner.android.ui.ScreenOfTheLogicThatKnowsIt
 import nl.enadeag.carchargeplanner.android.ui.ScreenThatPlansARound
 import nl.enadeag.carchargeplanner.android.ui.ScreenThatRoundsANumber
 import nl.enadeag.carchargeplanner.android.ui.background.ScreenWorkThatPlansARound
@@ -45,7 +49,8 @@ import org.junit.jupiter.api.Test
  * `background` package, makes the planning round and asks when the next notice is due, through that interface. And
  * ADR 0005's wiring rules, as the desktop's `ArchitectureTest` has them (ADR 0010): only the Application reads the
  * system's clock and the phone's time zone, only the composition root and the HttpGet make threads, and no class keeps
- * static mutable state.
+ * static mutable state. The app's parts, one package each below the root, have no cycles, only the screens know the
+ * screens, and only Android knows the Application.
  */
 class AppArchitectureTest {
 
@@ -341,6 +346,25 @@ class AppArchitectureTest {
                 .because("they may block for about a second, so the screens and their logic, which run on the main "
                     + "thread, call them through EngineAccess, which runs them off it (#313); the app's Application "
                     + "is the one place that makes them, and EngineOnDispatcher the one that calls them")
+
+        const val SCREENS = "$APP.ui"
+
+        val THE_LOGIC_KNOWS_NO_SCREENS = noClasses().that().resideOutsideOfPackages("$SCREENS..", APP)
+            .should().dependOnClassesThat().resideInAPackage("$SCREENS..")
+            .because("the logic, the store, the work in the background and the platform's parts are used and tested "
+                + "without the screens, which build on them; the Application wires the one screen part the engine "
+                + "tells the owner through, the notifications")
+
+        val NO_CYCLES_BETWEEN_THE_APPS_PARTS = slices().matching("$APP.(*)..")
+            .should().beFreeOfCycles()
+            .because("the app's parts depend one way, so each can be read and tested alone, as the desktop's (ADR "
+                + "0005); the root package, which wires them, is not one of them")
+
+        val ONLY_ANDROID_KNOWS_THE_APPLICATION = noClasses().that().resideOutsideOfPackage(APP)
+            .should().dependOnClassesThat().haveFullyQualifiedName(ROOT)
+            .because("the parts get what they need through their constructors; what Android makes itself, the worker "
+                + "and the receivers, finds its parts through an interface of its own package, BackgroundHost, "
+                + "which the Application is (ADR 0005)")
     }
 
     @Test
@@ -391,6 +415,46 @@ class AppArchitectureTest {
             .hasMessageContaining("TopLevelStateKt.ONE_AT_A_TIME")
             .hasMessageContaining("TopLevelStateKt.seen")
             .satisfies({ failure -> assertThat(failure.message).doesNotContain("TopLevelStateKt.LIMIT") })
+    }
+
+    @Test
+    fun theLogicKnowsNoScreens() {
+        THE_LOGIC_KNOWS_NO_SCREENS.check(APP_CLASSES)
+    }
+
+    @Test
+    fun logicThatKnowsAScreenBreaksTheRule() {
+        val logic = ClassFileImporter().importClasses(LogicThatKnowsAScreen::class.java)
+
+        assertThatThrownBy { THE_LOGIC_KNOWS_NO_SCREENS.check(logic) }
+            .isInstanceOf(AssertionError::class.java).hasMessageContaining("ScreenOfTheLogicThatKnowsIt")
+    }
+
+    @Test
+    fun theAppsPartsHaveNoCycles() {
+        NO_CYCLES_BETWEEN_THE_APPS_PARTS.check(APP_CLASSES)
+    }
+
+    @Test
+    fun twoPartsThatKnowEachOtherBreakTheRule() {
+        val cycle = ClassFileImporter().importClasses(LogicThatKnowsAScreen::class.java,
+            ScreenOfTheLogicThatKnowsIt::class.java)
+
+        assertThatThrownBy { NO_CYCLES_BETWEEN_THE_APPS_PARTS.check(cycle) }
+            .isInstanceOf(AssertionError::class.java).hasMessageContaining("Cycle detected")
+    }
+
+    @Test
+    fun onlyAndroidKnowsTheApplication() {
+        ONLY_ANDROID_KNOWS_THE_APPLICATION.check(APP_CLASSES)
+    }
+
+    @Test
+    fun workThatCastsToTheApplicationBreaksTheRule() {
+        val work = ClassFileImporter().importClasses(WorkThatCastsToTheApp::class.java)
+
+        assertThatThrownBy { ONLY_ANDROID_KNOWS_THE_APPLICATION.check(work) }
+            .isInstanceOf(AssertionError::class.java).hasMessageContaining("CarChargePlannerApp")
     }
 
     @Test
