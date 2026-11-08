@@ -9,7 +9,7 @@ import nl.enadeag.carchargeplanner.engine.Outlook;
 /**
  * Keeps the tray's menu and tooltip in the language spoken now: it shows each outlook on the tray, and when the owner
  * chooses another language it gives the menu its new labels and shows the latest outlook again in that language.
- * Before the first set-up, the menu's Settings entry says that it sets the app up; with a config file that cannot be
+ * Before the first set-up, the menu's Settings entry says that it sets the app up; with a settings file that cannot be
  * used, it stays Settings.
  *
  * <p>Its methods may be called from any thread; the tray is always told in the order they were called.
@@ -20,7 +20,7 @@ public final class TrayPresenter {
     private final LanguageChoice language;
     /** The latest outlook; null until the engine gives one. */
     private Outlook outlook;
-    /** True while the latest outlook is {@link Outlook.NotSetUp}; a config file that cannot be used is not that. */
+    /** True while the latest outlook is {@link Outlook.NotSetUp}; a settings file that cannot be used is not that. */
     private boolean beforeFirstSetUp;
 
     /**

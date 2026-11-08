@@ -137,7 +137,7 @@ A settings file that is there but cannot be used, because it cannot be read, hol
 _Avoid_: Broken config, not set up (that is the state without a file)
 
 **Settings file**:
-The file that holds the description of the owner's system, the planning preferences and the forecast providers; the app settings are in a file of their own.
+The file that holds the description of the owner's system, the planning preferences and the forecast providers; the app settings are in a file of their own. In the code `EngineConfig` is this file in memory and `ConfigFile` reads and writes it; the names stay, the prose says settings file.
 _Avoid_: Config file, configuration, engine config
 
 **Panel array**:

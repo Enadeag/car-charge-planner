@@ -28,7 +28,7 @@ import java.util.Locale;
  */
 public final class Main {
 
-    /** The desktop app's own settings, beside the engine's config file in the app's folder. */
+    /** The desktop app's own settings, beside the engine's settings file in the app's folder. */
     private static final String APP_SETTINGS_FILE = "app.json";
     /** A running app that is still starting, or busy, may take a moment to listen or to confirm a command. */
     private static final Duration INSTANCE_TIMEOUT = Duration.ofSeconds(2);
