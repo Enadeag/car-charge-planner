@@ -12,10 +12,15 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.TimeZone
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import nl.enadeag.carchargeplanner.android.store.BatteryLevelSave
+import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
+import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.engine.ForecastUse
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile
@@ -112,6 +117,31 @@ class AppWiringTest {
         runBlocking { app.rounds.run(ForecastUse.STORED_ONLY) }
 
         assertThat(runBlocking { app.phoneState.missedRounds() }).isZero()
+    }
+
+    @Test
+    fun aCancelWaitsForTheRoundThatRunsAsTheRoundsAndTheScheduleShareOneLock() {
+        shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        val engine = FakeEngineAccess(StartState.NotSetUp)
+        val gate = CompletableDeferred<Unit>()
+        engine.roundGate = gate
+        app.engine = engine
+
+        runBlocking {
+            withTimeout(5_000) {
+                val round = launch { app.rounds.run(ForecastUse.ASK_PROVIDERS) }
+                while (engine.rounds.isEmpty()) yield()
+                // without a settings file the schedule cancels the work, once the round that runs has ended
+                val refresh = launch { app.schedule.refresh() }
+                repeat(10) { yield() }
+
+                assertThat(refresh.isCompleted).`as`("the cancel waits for the round").isFalse()
+
+                gate.complete(Unit)
+                round.join()
+                refresh.join()
+            }
+        }
     }
 
     @Test
