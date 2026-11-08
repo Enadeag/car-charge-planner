@@ -20,6 +20,7 @@ import nl.enadeag.carchargeplanner.engine.notify.Announcer;
 import nl.enadeag.carchargeplanner.engine.notify.ToldTrips;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges;
+import nl.enadeag.carchargeplanner.engine.secrets.KeyFallback;
 import nl.enadeag.carchargeplanner.engine.secrets.MemoryKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
@@ -81,7 +82,8 @@ class EngineLifeCycleTest {
             sunny.add(new ForecastStep(start, start.plus(Duration.ofHours(1)), 4.0));
         }
         var providers = new Providers(List.of(new FakeProvider("main", "Main", steps(sunny))));
-        var apiKeys = new ApiKeys(new MemoryKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES));
+        var apiKeys = new ApiKeys(new MemoryKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES),
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC());
         return new Engine(new ConfigFile(config, FILES),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache"), FILES), apiKeys), providers,
                 apiKeys,

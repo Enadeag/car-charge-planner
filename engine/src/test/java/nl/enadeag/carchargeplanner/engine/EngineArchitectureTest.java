@@ -1,19 +1,38 @@
 package nl.enadeag.carchargeplanner.engine;
 
 import static com.tngtech.archunit.lang.conditions.ArchConditions.have;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noCodeUnits;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
 import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.AccessTarget;
 import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaCodeUnit;
+import com.tngtech.archunit.core.domain.JavaField;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
+import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.lang.ConditionEvents;
+import com.tngtech.archunit.lang.SimpleConditionEvent;
+import java.time.Clock;
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.Set;
+import nl.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
+import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
+import nl.enadeag.carchargeplanner.engine.store.StoredFile;
 
 /**
  * The rules of ADR 0001 about the engine's own parts: parts that depend one way, a pure planner, a domain model
@@ -22,9 +41,12 @@ import java.util.Set;
  * checks of TLS and the network settings of the process alone, logs
  * through slf4j, sets no POSIX file modes, which it leaves to the platform's FilePrivacy, reaches no keychain
  * through D-Bus or native calls, which it leaves to the platform's Keychain, and starts no programs and declares no
- * native methods, which each platform does for itself. They run when the engine is built alone;
- * the rules about the boundary with its clients, and those for every class, are in the desktop module's
- * {@code ArchitectureTest}, which sees both sides.
+ * native methods, which each platform does for itself. And the rules of ADR 0005 for the engine's own classes, which
+ * the desktop's {@code ArchitectureTest} holds for the desktop's: no clock, sleep, thread or static mutable state of
+ * its own, no request address in a log, no caught {@code NullPointerException}, no {@code Optional} field or
+ * parameter, and every provider in its package. They run when the engine is built alone; the rules about the boundary
+ * with its clients, and those for every class, are in the desktop module's {@code ArchitectureTest}, which sees both
+ * sides.
  */
 @AnalyzeClasses(packages = "nl.enadeag.carchargeplanner.engine", importOptions = ImportOption.DoNotIncludeTests.class)
 class EngineArchitectureTest {
@@ -121,6 +143,179 @@ class EngineArchitectureTest {
             .should().accessTargetWhere(CHANGE_THE_NETWORK_OF_THE_PROCESS)
             .because("such a setting reaches every connection of the app the engine runs in, its HttpGet's too, "
                     + "around the contract that keeps on redirects and what it sends (ADR 0010)");
+
+    // the rules of ADR 0005 that the desktop's ArchitectureTest holds for its own classes, here for the engine's
+
+    /** The call names the exception's own class, a subclass of Throwable, whichever overload is called. */
+    private static final DescribedPredicate<JavaMethodCall> PRINT_A_STACK_TRACE = DescribedPredicate.describe(
+            "print a stack trace",
+            call -> call.getName().equals("printStackTrace") && call.getTargetOwner().isAssignableTo(Throwable.class));
+
+    private static final DescribedPredicate<JavaClass> HANDLE_REQUEST_ADDRESSES = DescribedPredicate.describe(
+            "make or read the address of a request to a provider",
+            type -> type.getAccessesFromSelf().stream()
+                    .anyMatch(access -> access.getTargetOwner().isEquivalentTo(HttpGet.Request.class)));
+
+    @ArchTest
+    static final ArchRule requestAddressesNeverReachALog = noClasses()
+            .that().resideInAPackage(ENGINE + "..").and(HANDLE_REQUEST_ADDRESSES)
+            .should().dependOnClassesThat().haveFullyQualifiedName(System.Logger.class.getName())
+            .orShould().dependOnClassesThat().resideInAnyPackage("java.util.logging..", "org.slf4j..")
+            .orShould().accessField(System.class, "out")
+            .orShould().accessField(System.class, "err")
+            .orShould().callMethodWhere(PRINT_A_STACK_TRACE)
+            .because("an address can hold an API key and the home's coordinates, so what makes or sends one logs "
+                    + "nothing; ProviderConformance checks what the providers' errors say");
+
+    // an access, not only a call, so a method reference such as Clock::systemUTC is caught as well
+    private static final DescribedPredicate<JavaAccess<?>> READ_THE_SYSTEM_CLOCK = DescribedPredicate.describe(
+            "read the system's clock or zone",
+            access -> {
+                var owner = access.getTargetOwner().getName();
+                var name = access.getName();
+                var takesAClock = access.getTarget() instanceof AccessTarget.CodeUnitAccessTarget target
+                        && target.getRawParameterTypes().stream().anyMatch(type -> type.isEquivalentTo(Clock.class));
+                return name.equals("now") && owner.startsWith("java.time.") && !takesAClock
+                        || owner.equals(Clock.class.getName()) && Set.of("systemUTC", "systemDefaultZone", "system")
+                                .contains(name)
+                        || owner.equals("java.time.ZoneId") && name.equals("systemDefault")
+                        || owner.equals("java.util.TimeZone") && name.equals("getDefault")
+                        || owner.equals(System.class.getName()) && name.equals("currentTimeMillis");
+            });
+
+    /** The one default clock left: the time a file that cannot be used is set aside with, until its callers pass one. */
+    private static final DescribedPredicate<JavaAccess<?>> STORED_FILES_DEFAULT = DescribedPredicate.describe(
+            "are not StoredFile's constructor without a clock",
+            access -> access.getOrigin().getOwner().isEquivalentTo(StoredFile.class) && access.getOrigin().isConstructor()
+                    && access.getOrigin().getRawParameterTypes().size() == 3);
+
+    @ArchTest
+    static final ArchRule theEngineReadsNoClock = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .should().accessTargetWhere(READ_THE_SYSTEM_CLOCK.and(DescribedPredicate.not(STORED_FILES_DEFAULT)))
+            .because("each app hands the engine its clock and the home's zone, so a test can set the time (ADR "
+                    + "0005); StoredFile's constructor without a clock, which the engine's files use, is the one "
+                    + "default left, for the name of a file set aside");
+
+    @ArchTest
+    static final ArchRule theEngineDoesNotSleep = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .should().callMethod(Thread.class, "sleep", long.class)
+            .orShould().callMethod(Thread.class, "sleep", long.class, int.class)
+            .orShould().callMethod(Thread.class, "sleep", java.time.Duration.class)
+            .because("waiting is done with a signal or a deadline that is handed in (ADR 0005)");
+
+    private static final DescribedPredicate<JavaMethodCall> START_A_THREAD = DescribedPredicate.describe(
+            "start a thread or make an executor",
+            call -> {
+                var owner = call.getTargetOwner();
+                return owner.isEquivalentTo(Thread.class) && Set.of("ofVirtual", "ofPlatform", "startVirtualThread")
+                        .contains(call.getName())
+                        || owner.isEquivalentTo(java.util.concurrent.Executors.class)
+                        || owner.isEquivalentTo(java.util.concurrent.ForkJoinPool.class)
+                                && call.getName().equals("commonPool");
+            });
+
+    @ArchTest
+    static final ArchRule theEngineOwnsNoThreads = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .should().callMethodWhere(START_A_THREAD)
+            .orShould().callConstructorWhere(DescribedPredicate.describe("make a thread, a timer or a pool",
+                    call -> call.getTargetOwner().isAssignableTo(Thread.class)
+                            || call.getTargetOwner().isAssignableTo(java.util.Timer.class)
+                            || call.getTargetOwner().isAssignableTo(java.util.concurrent.ThreadPoolExecutor.class)
+                            || call.getTargetOwner().isAssignableTo(java.util.concurrent.ForkJoinPool.class)))
+            .because("each app hands the engine the executor it runs on (ADR 0005, ADR 0010)");
+
+    @ArchTest
+    static final ArchRule theEngineHasNoStaticMutableState = fields()
+            .that().areStatic()
+            .and().areDeclaredInClassesThat().resideInAPackage(ENGINE + "..")
+            .should().beFinal()
+            .because("dependencies come in through constructors, never through global state (ADR 0005)");
+
+    private static final DescribedPredicate<JavaField> HOLDS_A_MUTABLE_OBJECT = DescribedPredicate.describe(
+            "hold a mutable collection, an atomic, a builder or an array",
+            field -> {
+                var type = field.getRawType();
+                var concrete = !type.isInterface();
+                return type.isArray()
+                        || type.getPackageName().startsWith("java.util.concurrent.atomic")
+                        || type.isAssignableTo(StringBuilder.class) || type.isAssignableTo(StringBuffer.class)
+                        || concrete && (type.isAssignableTo(java.util.Collection.class)
+                                || type.isAssignableTo(java.util.Map.class))
+                        || type.isAssignableTo(java.util.Queue.class)
+                        || type.isAssignableTo(java.util.concurrent.ConcurrentMap.class);
+            });
+
+    @ArchTest
+    static final ArchRule theEngineHasNoStaticMutableObjects = noFields()
+            .that().areStatic()
+            .and().doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .and().areDeclaredInClassesThat().resideInAPackage(ENGINE + "..")
+            .should(have(HOLDS_A_MUTABLE_OBJECT))
+            .because("a final field is still global state when what it holds can change (ADR 0005)");
+
+    private static final ArchCondition<JavaCodeUnit> CATCH_NULL_POINTER =
+            new ArchCondition<>("catch NullPointerException") {
+                @Override
+                public void check(JavaCodeUnit codeUnit, ConditionEvents events) {
+                    for (var block : codeUnit.getTryCatchBlocks()) {
+                        if (block.getCaughtThrowables().stream()
+                                .anyMatch(caught -> caught.isEquivalentTo(NullPointerException.class))) {
+                            events.add(SimpleConditionEvent.satisfied(block,
+                                    codeUnit.getFullName() + " catches NullPointerException in "
+                                            + block.getSourceCodeLocation()));
+                        }
+                    }
+                }
+            };
+
+    @ArchTest
+    static final ArchRule theEngineCatchesNoNullPointer = noCodeUnits()
+            .that().areDeclaredInClassesThat().resideInAPackage(ENGINE + "..")
+            .should(CATCH_NULL_POINTER)
+            .because("a null is checked where it may come, not caught after it went wrong");
+
+    /** A record's components are its fields too, and there an {@code Optional} is part of the data. */
+    @ArchTest
+    static final ArchRule theEngineHasNoOptionalFields = noFields()
+            .that().doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .and().areDeclaredInClassesThat().resideInAPackage(ENGINE + "..")
+            .and().areDeclaredInClassesThat().areNotRecords()
+            .should().haveRawType(Optional.class)
+            .because("a field holds a null object, a no-op callback or a private value that may be null, never an "
+                    + "Optional (CONTRIBUTING)");
+
+    private static final Set<Class<?>> OPTIONALS =
+            Set.of(Optional.class, OptionalDouble.class, OptionalInt.class, OptionalLong.class);
+
+    private static final DescribedPredicate<JavaCodeUnit> TAKES_AN_OPTIONAL = DescribedPredicate.describe(
+            "an Optional parameter", codeUnit -> codeUnit.getRawParameterTypes().stream()
+                    .anyMatch(type -> OPTIONALS.stream().anyMatch(type::isEquivalentTo)));
+
+    /** A record's canonical constructor takes its components, and there an {@code Optional} is part of the data. */
+    private static final DescribedPredicate<JavaCodeUnit> RECORD_CANONICAL_CONSTRUCTOR = DescribedPredicate.describe(
+            "a record's canonical constructor", codeUnit -> codeUnit.isConstructor() && codeUnit.getOwner().isRecord()
+                    && Arrays.equals(codeUnit.getRawParameterTypes().stream().map(JavaClass::getName).toArray(),
+                            Arrays.stream(codeUnit.getOwner().reflect().getRecordComponents())
+                                    .map(component -> component.getType().getName()).toArray()));
+
+    @ArchTest
+    static final ArchRule theEngineTakesNoOptionalParameters = noCodeUnits()
+            .that().doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .and().areDeclaredInClassesThat().resideInAPackage(ENGINE + "..")
+            .and(DescribedPredicate.not(RECORD_CANONICAL_CONSTRUCTOR))
+            .should(have(TAKES_AN_OPTIONAL))
+            .because("a method or constructor takes a value or a type that names the none case, or comes in two; "
+                    + "Optional is for return values and record components (CONTRIBUTING)");
+
+    @ArchTest
+    static final ArchRule forecastProvidersAreInTheirPackage = classes()
+            .that().implement(ForecastProvider.class)
+            .and().areNotInterfaces()
+            .should().resideInAPackage(ENGINE + ".forecast.providers..")
+            .because("a provider is one class beside the others, so adding one is adding a file (ADR 0001)");
 
     @ArchTest
     static final ArchRule theEngineLogsThroughSlf4j = noClasses()

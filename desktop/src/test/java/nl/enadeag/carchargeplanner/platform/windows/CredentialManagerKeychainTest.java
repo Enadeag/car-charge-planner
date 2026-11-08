@@ -5,9 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import java.time.Clock;
 import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
+import nl.enadeag.carchargeplanner.engine.secrets.KeyFallback;
 import nl.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
 import nl.enadeag.carchargeplanner.engine.secrets.KeychainContractTest;
@@ -74,7 +76,8 @@ class CredentialManagerKeychainTest extends KeychainContractTest {
     @Test
     void theKeysAreKeptInTheCredentialManager() throws Exception {
         assumeTrue(loggedOn, "no logon session, as over ssh");
-        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES));
+        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES),
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC());
         var secrets = new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1")));
 
         keys.save(secrets);
@@ -89,7 +92,8 @@ class CredentialManagerKeychainTest extends KeychainContractTest {
         assumeFalse(loggedOn, "a logon session, so the Credential Manager works");
         assertThatThrownBy(() -> keychain.write("probe", "x")).isInstanceOfSatisfying(KeychainException.class,
                 e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.UNAVAILABLE));
-        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES));
+        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES),
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC());
         var secrets = new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1")));
 
         keys.save(secrets);

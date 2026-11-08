@@ -28,6 +28,7 @@ import nl.enadeag.carchargeplanner.android.home.LogicThatHoldsTheApiKeys
 import nl.enadeag.carchargeplanner.android.home.LogicThatKnowsAScreen
 import nl.enadeag.carchargeplanner.android.home.LogicThatMakesThreads
 import nl.enadeag.carchargeplanner.android.home.LogicThatPlansARound
+import nl.enadeag.carchargeplanner.android.home.LogicThatWritesAFile
 import nl.enadeag.carchargeplanner.android.home.LogicThatReadsTheClock
 import nl.enadeag.carchargeplanner.android.ui.ScreenAccessThatPlansInALambda
 import nl.enadeag.carchargeplanner.android.ui.ScreenOfTheLogicThatKnowsIt
@@ -35,6 +36,7 @@ import nl.enadeag.carchargeplanner.android.ui.ScreenThatPlansARound
 import nl.enadeag.carchargeplanner.android.ui.ScreenThatRoundsANumber
 import nl.enadeag.carchargeplanner.android.ui.background.ScreenWorkThatPlansARound
 import nl.enadeag.carchargeplanner.android.ui.ScreenThatReadsTheSettingsFile
+import nl.enadeag.carchargeplanner.engine.forecast.HttpGet
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -49,7 +51,8 @@ import org.junit.jupiter.api.Test
  * `background` package, makes the planning round and asks when the next notice is due, through that interface. And
  * ADR 0005's wiring rules, as the desktop's `ArchitectureTest` has them (ADR 0010): only the Application reads the
  * system's clock and the phone's time zone, only the composition root and the HttpGet make threads, and no class keeps
- * static mutable state. The app's parts, one package each below the root, have no cycles, only the screens know the
+ * static mutable state. As ADR 0001 has it for every client, only the keychain writes a file and what handles a
+ * request's address logs nothing. The app's parts, one package each below the root, have no cycles, only the screens know the
  * screens, and only Android knows the Application.
  */
 class AppArchitectureTest {
@@ -347,6 +350,54 @@ class AppArchitectureTest {
                     + "thread, call them through EngineAccess, which runs them off it (#313); the app's Application "
                     + "is the one place that makes them, and EngineOnDispatcher the one that calls them")
 
+        val CHANGE_FILES = DescribedPredicate.describe<JavaAccess<*>>(
+            "write, move or delete a file (through Files, File, Kotlin's file functions or the Context)") { access ->
+            val owner = access.targetOwner.name
+            owner == "java.nio.file.Files" && access.name in setOf("write", "writeString", "newOutputStream",
+                "newBufferedWriter", "createFile", "createTempFile", "createTempDirectory", "createDirectory",
+                "createDirectories", "move", "copy", "delete", "deleteIfExists", "newByteChannel", "setOwner",
+                "setAttribute", "setLastModifiedTime", "setPosixFilePermissions", "getFileAttributeView",
+                "createSymbolicLink", "createLink")
+                || owner == "java.io.File" && access.name in setOf("delete", "deleteOnExit", "renameTo",
+                "createNewFile", "createTempFile", "mkdir", "mkdirs", "setWritable", "setReadable", "setExecutable",
+                "setLastModified")
+                // Kotlin calls a function with a default argument through its name$default
+                || owner.startsWith("kotlin.io.FilesKt") && access.name.substringBefore('$') in setOf("writeText",
+                "writeBytes", "appendText", "appendBytes", "copyTo", "copyRecursively", "deleteRecursively", "writer",
+                "printWriter", "bufferedWriter", "outputStream")
+                || owner == "android.content.Context" && access.name in setOf("openFileOutput", "deleteFile")
+        }
+
+        val WRITE_TO_A_FILE = DescribedPredicate.describe<JavaClass>(
+            "write to a file themselves (FileOutputStream, FileWriter, RandomAccessFile, a channel)") { type ->
+            type.name in setOf("java.io.FileOutputStream", "java.io.FileWriter", "java.io.RandomAccessFile")
+                || type.packageName == "java.nio.channels"
+        }
+
+        const val KEYCHAIN = "$APP.secrets"
+
+        val ONLY_THE_KEYCHAIN_CHANGES_FILES = noClasses().that().resideOutsideOfPackage(KEYCHAIN)
+            .should().accessTargetWhere(CHANGE_FILES)
+            .orShould().dependOnClassesThat(WRITE_TO_A_FILE)
+            .because("no client writes the engine's files, which the engine writes through the PrivateFiles it is "
+                + "handed (ADR 0001, ADR 0010); the keychain keeps a file of its own beside them, and the phone's "
+                + "own preferences go through AndroidX's DataStore")
+
+        val HANDLE_REQUEST_ADDRESSES = DescribedPredicate.describe<JavaClass>(
+            "make or read the address of a request to a provider") { type ->
+            type.accessesFromSelf.any { access -> access.targetOwner.name == HttpGet.Request::class.java.name }
+        }
+
+        val REQUEST_ADDRESSES_NEVER_REACH_A_LOG = noClasses().that(HANDLE_REQUEST_ADDRESSES)
+            .should().dependOnClassesThat().resideInAPackage("org.slf4j..")
+            .orShould().dependOnClassesThat().haveFullyQualifiedName("android.util.Log")
+            .orShould().accessTargetWhere(WRITE_PAST_SLF4J)
+            .orShould().callMethodWhere(DescribedPredicate.describe("print a stack trace") { call ->
+                call.name == "printStackTrace" && call.targetOwner.isAssignableTo(Throwable::class.java)
+            })
+            .because("an address can hold an API key and the home's coordinates, so what makes or sends one logs "
+                + "nothing, as in the engine and the desktop (ADR 0001)")
+
         const val SCREENS = "$APP.ui"
 
         val THE_LOGIC_KNOWS_NO_SCREENS = noClasses().that().resideOutsideOfPackages("$SCREENS..", APP)
@@ -415,6 +466,35 @@ class AppArchitectureTest {
             .hasMessageContaining("TopLevelStateKt.ONE_AT_A_TIME")
             .hasMessageContaining("TopLevelStateKt.seen")
             .satisfies({ failure -> assertThat(failure.message).doesNotContain("TopLevelStateKt.LIMIT") })
+    }
+
+    @Test
+    fun onlyTheKeychainChangesFiles() {
+        ONLY_THE_KEYCHAIN_CHANGES_FILES.check(APP_CLASSES)
+    }
+
+    @Test
+    fun logicThatWritesAFileBreaksTheRule() {
+        val logic = ClassFileImporter().importClasses(LogicThatWritesAFile::class.java)
+
+        assertThatThrownBy { ONLY_THE_KEYCHAIN_CHANGES_FILES.check(logic) }
+            .isInstanceOf(AssertionError::class.java)
+            .hasMessageContaining("FilesKt.writeText")
+            .hasMessageContaining("File.delete()")
+            .hasMessageContaining("Files.move(")
+    }
+
+    @Test
+    fun requestAddressesNeverReachALog() {
+        REQUEST_ADDRESSES_NEVER_REACH_A_LOG.check(APP_CLASSES)
+    }
+
+    @Test
+    fun aGetThatLogsItsAddressBreaksTheRule() {
+        val get = ClassFileImporter().importClasses(GetThatLogsItsAddress::class.java)
+
+        assertThatThrownBy { REQUEST_ADDRESSES_NEVER_REACH_A_LOG.check(get) }
+            .isInstanceOf(AssertionError::class.java).hasMessageContaining("org.slf4j.Logger")
     }
 
     @Test

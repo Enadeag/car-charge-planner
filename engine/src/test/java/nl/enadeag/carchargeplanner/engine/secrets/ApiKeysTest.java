@@ -1396,7 +1396,8 @@ class ApiKeysTest {
     @Test
     void theFileWithoutAKeychainIsTheOneItWasGiven() {
         var file = file();
-        assertThat(new ApiKeys(new NoKeychain(), file).file()).isSameAs(file);
+        assertThat(new ApiKeys(new NoKeychain(), file,
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC()).file()).isSameAs(file);
     }
 
     @Test

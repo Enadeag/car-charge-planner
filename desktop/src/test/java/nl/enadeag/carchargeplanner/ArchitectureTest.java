@@ -66,6 +66,12 @@ import java.util.stream.Stream;
         importOptions = {ImportOption.DoNotIncludeTests.class, NotTheEngineTests.class})
 class ArchitectureTest {
 
+    /**
+     * The engine's classes, which the engine's {@code EngineArchitectureTest} holds to the same rules on clocks, sleep,
+     * threads, static state, logged addresses, caught nulls and Optionals, so they run when the engine is built alone.
+     */
+    private static final String ENGINE_PARTS = "..engine..";
+
     /** The dashboard, the texts, the app settings, the theme and Settings: what no platform may reach. */
     private static final DescribedPredicate<JavaClass> DESKTOP_OUTSIDE_ITS_SYSTEM =
             resideInAPackage("..desktop..").and(not(resideInAPackage("..desktop.system..")))
@@ -164,7 +170,7 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule requestAddressesNeverReachALog = noClasses()
-            .that(HANDLE_REQUEST_ADDRESSES)
+            .that(HANDLE_REQUEST_ADDRESSES).and().resideOutsideOfPackage(ENGINE_PARTS)
             .should().dependOnClassesThat().haveFullyQualifiedName(System.Logger.class.getName())
             .orShould().dependOnClassesThat().resideInAnyPackage("java.util.logging..", "org.slf4j..")
             .orShould().accessField(System.class, "out")
@@ -177,6 +183,7 @@ class ArchitectureTest {
     static final ArchRule noStaticMutableState = fields()
             .that().areStatic()
             .and().areDeclaredInClassesThat().doNotHaveFullyQualifiedName(Main.class.getName())
+            .and().areDeclaredInClassesThat().resideOutsideOfPackage(ENGINE_PARTS)
             .should().beFinal()
             .because("dependencies come in through constructors, never through global state (ADR 0005)");
 
@@ -403,14 +410,14 @@ class ArchitectureTest {
             });
 
     @ArchTest
-    static final ArchRule onlyTheCompositionRootReadsTheClock = FreezingArchRule.freeze(noClasses()
-            .that().resideOutsideOfPackages(ROOT, START)
+    static final ArchRule onlyTheCompositionRootReadsTheClock = noClasses()
+            .that().resideOutsideOfPackages(ROOT, START, ENGINE_PARTS)
             .should().callMethodWhere(READ_THE_SYSTEM_CLOCK)
-            .because("the clock and the zone are handed in, so a test can set the time (ADR 0005); the stored "
-                    + "defaults of StoredFile and ApiKeys are frozen until their callers pass a clock"));
+            .because("the clock and the zone are handed in, so a test can set the time (ADR 0005)");
 
     @ArchTest
     static final ArchRule nothingSleepsInMainCode = FreezingArchRule.freeze(noClasses()
+            .that().resideOutsideOfPackage(ENGINE_PARTS)
             .should().callMethod(Thread.class, "sleep", long.class)
             .orShould().callMethod(Thread.class, "sleep", long.class, int.class)
             .orShould().callMethod(Thread.class, "sleep", java.time.Duration.class)
@@ -430,7 +437,7 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule onlyTheRootThePlatformsAndTheGuardOwnThreads = noClasses()
-            .that().resideOutsideOfPackages(ROOT, START, "..platform..", "..instance..")
+            .that().resideOutsideOfPackages(ROOT, START, "..platform..", "..instance..", ENGINE_PARTS)
             .should().callMethodWhere(START_A_THREAD)
             .orShould().callConstructorWhere(DescribedPredicate.describe("make a thread, a timer or a pool",
                     call -> call.getTargetOwner().isAssignableTo(Thread.class)
@@ -664,6 +671,7 @@ class ArchitectureTest {
     /** Throwable is left to {@code CatchClausesTest}: javac catches it itself for every try-with-resources. */
     @ArchTest
     static final ArchRule noCatchingNullPointer = noCodeUnits()
+            .that().areDeclaredInClassesThat().resideOutsideOfPackage(ENGINE_PARTS)
             .should(CATCH_NULL_POINTER)
             .because("a null is checked where it may come, not caught after it went wrong");
 
@@ -672,6 +680,7 @@ class ArchitectureTest {
             .that().areStatic()
             .and().doNotHaveModifier(JavaModifier.SYNTHETIC)
             .and().areDeclaredInClassesThat().doNotHaveFullyQualifiedName(Main.class.getName())
+            .and().areDeclaredInClassesThat().resideOutsideOfPackage(ENGINE_PARTS)
             .should(ArchConditions.have(HOLDS_A_MUTABLE_OBJECT))
             .because("a final field is still global state when what it holds can change (ADR 0005)");
 
@@ -681,6 +690,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule noOptionalFields = noFields()
             .that().doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .and().areDeclaredInClassesThat().resideOutsideOfPackage(ENGINE_PARTS)
             .and().areDeclaredInClassesThat().areNotRecords()
             .should().haveRawType(Optional.class)
             .because("a field holds a null object, a no-op callback or a private value that may be null, never an "
@@ -703,6 +713,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule noOptionalParameters = noCodeUnits()
             .that().doNotHaveModifier(JavaModifier.SYNTHETIC)
+            .and().areDeclaredInClassesThat().resideOutsideOfPackage(ENGINE_PARTS)
             .and(not(RECORD_CANONICAL_CONSTRUCTOR))
             .should(ArchConditions.have(TAKES_AN_OPTIONAL))
             .because("a method or constructor takes a value or a type that names the none case, or comes in two; "

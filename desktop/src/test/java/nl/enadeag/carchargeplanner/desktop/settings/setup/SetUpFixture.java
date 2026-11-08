@@ -43,6 +43,7 @@ import nl.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
 import nl.enadeag.carchargeplanner.engine.notify.Announcer;
 import nl.enadeag.carchargeplanner.engine.notify.ToldTrips;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
+import nl.enadeag.carchargeplanner.engine.secrets.KeyFallback;
 import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
@@ -122,7 +123,8 @@ final class SetUpFixture {
         configPath = folder.resolve("engine.json");
         appSettings = new AppSettingsFile(folder.resolve("app.json"), Units.METRIC, FILES);
         var providers = new Providers(List.of(provider, new ForecastSolar(offline())));
-        var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES));
+        var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES),
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC());
         engine = new Engine(new ConfigFile(configPath, FILES),
                 new ForecastService(providers, new ForecastCache(folder.resolve("cache"), FILES), apiKeys), providers,
                 apiKeys,

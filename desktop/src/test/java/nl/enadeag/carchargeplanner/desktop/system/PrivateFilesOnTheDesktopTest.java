@@ -2,8 +2,10 @@ package nl.enadeag.carchargeplanner.desktop.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Clock;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
+import nl.enadeag.carchargeplanner.engine.secrets.KeyFallback;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
@@ -42,7 +44,8 @@ class PrivateFilesOnTheDesktopTest {
     }
 
     private ApiKeys keys() {
-        return new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), files));
+        return new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), files),
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC());
     }
 
     private static Secrets secrets(String value) {

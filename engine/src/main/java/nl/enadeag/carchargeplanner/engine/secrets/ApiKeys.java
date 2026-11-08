@@ -90,17 +90,6 @@ public final class ApiKeys implements SecretsSource {
     private KeyStorage where;
 
     /**
-     * Makes the store on the system's clock, with the keys in the file when the keychain cannot be used
-     * ({@link KeyFallback#PRIVATE_FILE}); nothing is read or written yet.
-     *
-     * @param keychain the system's keychain, or {@link NoKeychain} where there is none
-     * @param file where the keys go when the keychain cannot be used
-     */
-    public ApiKeys(Keychain keychain, SecretsFile file) {
-        this(keychain, file, KeyFallback.PRIVATE_FILE, Clock.systemUTC());
-    }
-
-    /**
      * Makes the store; nothing is read or written yet. It takes a {@link Clock}, not an {@code InstantSource}, which
      * Android has only from Android 14 on and desugaring does not add (ADR 0010).
      *

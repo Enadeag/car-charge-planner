@@ -52,6 +52,7 @@ import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges;
+import nl.enadeag.carchargeplanner.engine.secrets.KeyFallback;
 import nl.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import nl.enadeag.carchargeplanner.engine.secrets.LockableKeychain;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
@@ -146,7 +147,8 @@ class EngineTest {
 
     private Engine engine(Clock clock, ManualScheduler scheduler, ForecastProvider... providers) {
         var known = new Providers(List.of(providers));
-        var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES));
+        var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES),
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC());
         var service = new ForecastService(known, new ForecastCache(folder.resolve("cache"), FILES), apiKeys);
         return new Engine(new ConfigFile(config, FILES), service, known, apiKeys,
                 new AwayFile(folder.resolve("away.json"), FILES), new TripFile(folder.resolve("trips.json"), FILES),
@@ -604,7 +606,8 @@ class EngineTest {
         assertThat(engine(clockAt(7)).keyStorage()).isEqualTo(KeyStorage.KEYCHAIN);
 
         var known = new Providers(List.of(main));
-        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES));
+        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES),
+                KeyFallback.PRIVATE_FILE, Clock.systemUTC());
         var withoutKeychain = new Engine(new ConfigFile(config, FILES),
                 new ForecastService(known, new ForecastCache(folder.resolve("cache"), FILES), apiKeys), known, apiKeys,
                 new AwayFile(folder.resolve("away.json"), FILES), new TripFile(folder.resolve("trips.json"), FILES),
