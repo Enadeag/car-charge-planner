@@ -13,6 +13,10 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -25,6 +29,8 @@ class TripFileTest {
     private static final ZoneId TZ = ZoneId.of("Europe/Amsterdam");
     private static final LocalDate DAY = LocalDate.of(2026, 7, 3);
     private static final Instant NOW = DAY.atTime(7, 0).atZone(TZ).toInstant();
+    /** Enough changes from each of two threads that, without one change at a time, some overlap. */
+    private static final int TRIPS_PER_THREAD = 40;
 
     @TempDir
     Path folder;
@@ -49,6 +55,34 @@ class TripFileTest {
 
         assertThat(file().add(sooner, NOW)).containsExactly(sooner, later);
         assertThat(file().trips(NOW)).containsExactly(sooner, later);
+    }
+
+    @Test
+    void tripsAddedFromTwoThreadsAtOnceAreAllKept() throws Exception {
+        var shared = file();
+        var start = new CountDownLatch(1);
+        var pool = Executors.newFixedThreadPool(2);
+        try {
+            var firsts = pool.submit(adding(shared, start, 1));
+            var seconds = pool.submit(adding(shared, start, 2));
+            start.countDown();
+            firsts.get(30, TimeUnit.SECONDS);
+            seconds.get(30, TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
+        assertThat(file().trips(NOW)).hasSize(2 * TRIPS_PER_THREAD);
+    }
+
+    /** Adds trips of one distance, one per day, once the start is given. */
+    private static Callable<Void> adding(TripFile shared, CountDownLatch start, double distanceKm) {
+        return () -> {
+            start.await();
+            for (int day = 1; day <= TRIPS_PER_THREAD; day++) {
+                shared.add(trip(day, distanceKm), NOW);
+            }
+            return null;
+        };
     }
 
     @Test

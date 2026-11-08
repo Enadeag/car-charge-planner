@@ -51,6 +51,9 @@ import java.util.function.Consumer;
  * each change to its config, keys, battery level, away periods or trips, and tells its listener each new outlook.
  * Each plan uses the stored files as they are on disk, reading one again only when it changed; the forecast service
  * decides whether a provider is asked or its cache answers.
+ *
+ * <p>The changes to the away periods and to the trips may be called from any thread, also at the same time: each
+ * reads, changes and writes its file as one step, so no change is lost to another.
  */
 public final class Engine {
 
