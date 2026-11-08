@@ -247,21 +247,21 @@ _Avoid_: Tray app, the application (too vague)
 ## Integrations
 
 **Integration**:
-Built-in code that connects the app to one outside service or device, such as a forecast provider, a smart meter, an inverter or a car maker's service. Added to the app by pull request and released with it.
+Not built yet: only the forecast providers exist today. Built-in code that connects the app to one outside service or device, such as a forecast provider, a smart meter, an inverter or a car maker's service. Added to the app by pull request and released with it.
 _Avoid_: Plugin, connector, driver, recipe (a recipe is a deferred idea, not an integration)
 
 **Ability**:
-One kind of thing a device can give or do, such as a battery level, solar production, house use and grid flow, or the charger's state. The planner asks for an ability without knowing which integration provides it; one integration can offer several.
+Not built yet (no device is read). One kind of thing a device can give or do, such as a battery level, solar production, house use and grid flow, or the charger's state. The planner asks for an ability without knowing which integration provides it; one integration can offer several.
 _Avoid_: Capability, feature, sensor
 
 **Official route**:
-A way for an owner to read their own car that the car maker offers and allows, with an API key, a sign-in or a developer app of the owner's own. A car without one is read by entering its battery level by hand.
+Not built yet (no car is read). A way for an owner to read their own car that the car maker offers and allows, with an API key, a sign-in or a developer app of the owner's own. A car without one is read by entering its battery level by hand.
 _Avoid_: Official API (a maker can have an API that owners may not use), unofficial route
 
 **Local network (not encrypted)**:
-An integration that reaches a device on the owner's own network over plain http, which only a private address allows. Settings labels it so.
+Not built yet. An integration that reaches a device on the owner's own network over plain http, which only a private address allows; Settings is to label it so. Today only a loopback address (`localhost`, `127.0.0.1`, `[::1]`) is allowed plain http, and nothing is labelled.
 _Avoid_: LAN, insecure, http mode
 
 **Home Assistant**:
-A home automation system some owners run. To this app it is one optional integration among others, never a requirement: the app works fully without it.
+Not built yet. A home automation system some owners run. To this app it is one optional integration among others, never a requirement: the app works fully without it.
 _Avoid_: HA, the hub
