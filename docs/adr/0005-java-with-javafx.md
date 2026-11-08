@@ -33,3 +33,7 @@ Memory and start-up time were measured on the packaged app, five runs per option
 ## Note, 2026-10-30
 
 The build is no longer one Maven module: a parent with the modules `engine` and `desktop` (ADR 0010, #263). The engine module holds only the engine and builds without JavaFX; the desktop module holds the rest and still builds `car-charge-planner.jar`.
+
+## Note, 2026-11-08 (#382)
+
+The GitHub Actions workflows came back when the repository opened on 2026-10-20, not with the switch: CI, the Android build, the mutation run, the Linux packages, the Windows installer and the release all run again. Only the macOS job stays off (#134).
