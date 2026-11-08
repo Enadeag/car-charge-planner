@@ -98,13 +98,17 @@ public final class SolarChartMapper {
                 Math.min(dayHours, Math.ceil(hoursFrom(start, sunny.getLast().end())) + MARGIN_HOURS));
     }
 
-    /** Every third hour of the clock that lies within the hours shown, where it is on this day. */
+    /**
+     * Every third hour of the clock that lies within the hours shown, where it is on this day. An hour the clocks
+     * skip has no tick.
+     */
     private List<Tick> ticks(LocalDate date, ZonedDateTime start, double from, double to) {
         var ticks = new ArrayList<Tick>();
         for (int hour = 0; hour <= 24; hour += TICK_HOURS) {
             var at = hour == 24 ? date.plusDays(1).atStartOfDay(zone) : date.atTime(hour, 0).atZone(zone);
             double hours = hoursFrom(start, at.toInstant());
-            if (hours >= from && hours <= to) {
+            boolean exists = hour == 24 || at.getHour() == hour;
+            if (exists && hours >= from && hours <= to) {
                 ticks.add(new Tick(hours, String.format(Locale.ROOT, "%02d", hour)));
             }
         }

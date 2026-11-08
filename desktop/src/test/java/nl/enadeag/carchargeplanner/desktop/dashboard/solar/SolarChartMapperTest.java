@@ -16,7 +16,12 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Tick;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.WindowSpan;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
+import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import nl.enadeag.carchargeplanner.engine.Outlook;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 class SolarChartMapperTest {
@@ -105,6 +110,25 @@ class SolarChartMapperTest {
         assertThat(curve.ticks()).contains(new Tick(10, "09"), new Tick(13, "12"));
         assertThat(curve.fromHour()).isEqualTo(9);
         assertThat(stepFrom(curve, 10).readout()).startsWith("09:00: 2.0 kW solar");
+    }
+
+    @Test
+    void anHourTheClocksSkipHasNoTick() {
+        var kyiv = ZoneId.of("Europe/Kyiv");
+        var date = LocalDate.of(2026, 3, 29);
+        var midnight = date.atStartOfDay(kyiv).toInstant();
+        // 23 hours: 03:00 becomes 04:00
+        var steps = IntStream.range(0, 23).mapToObj(hour -> new ForecastStep(midnight.plus(Duration.ofHours(hour)),
+                midnight.plus(Duration.ofHours(hour + 1)), 2)).toList();
+        var base = planned(midnight, false, day(date, 50, 50, steps));
+        var kyivPlan = new Outlook.Planned(base.madeAt(), kyiv, base.days(), base.batteryLevelPct(), false,
+                base.gridAdvice(), base.tripAdvice(), base.forecastSource(), base.baseloadKw(), base.minimumPct(),
+                base.targetPct());
+
+        var curve = curve(kyivPlan, 0);
+
+        assertThat(curve.ticks()).containsExactly(new Tick(0, "00"), new Tick(5, "06"), new Tick(8, "09"),
+                new Tick(11, "12"), new Tick(14, "15"), new Tick(17, "18"), new Tick(20, "21"), new Tick(23, "24"));
     }
 
     @Test
