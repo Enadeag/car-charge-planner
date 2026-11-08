@@ -362,10 +362,13 @@ pitest {
  * The share of mutants killed, as PIT's report has it but without the mutants of code the Kotlin compiler adds, which
  * no test can kill (and no PIT filter can drop without also dropping the real mutants on the same line): the removed
  * calls of `Intrinsics` (the null checks) and `ResultKt.throwOnFailure`, a result replaced by null where the caller
- * throws it away (a coroutine's `invokeSuspend`, a lambda's `Unit`, and a suspend function's whose source declares no
- * result or `Unit`), and the logger's `getLOG`. A suspend function's compiled result is always `Object`, so its
- * declaration in [sources] tells the two apart; one with an inferred result (`= ...`) is counted. It fails below
- * [threshold]; a threshold of 0 only prints the share.
+ * throws it away (a lambda's `Unit`, a suspend function's whose source declares no result or `Unit`, and a coroutine's
+ * `invokeSuspend` whose class is named after such a function), and the logger's `getLOG`. A suspend function's
+ * compiled result and an `invokeSuspend`'s are always `Object`, so the declaration in [sources] tells the two apart;
+ * one with an inferred result (`= ...`) is counted, and so is a suspend lambda's `Unit` in a function with a result,
+ * such as a `launch { }` there. An `invokeSuspend` whose class names no function in the file is left out, and so is a
+ * value-returning lambda in a function without a result, such as `val x = withContext(..) { .. }` there, whose null a
+ * test could see. It fails below [threshold]; a threshold of 0 only prints the share.
  */
 abstract class PitScore : DefaultTask() {
 
@@ -381,18 +384,21 @@ abstract class PitScore : DefaultTask() {
     abstract val threshold: Property<Int>
 
     /**
-     * Whether the suspend function [method] of [mutatedClass], whose mutant is on [line] of [sourceFile], is declared
-     * with no result or with `Unit`, read from the nearest `suspend fun` of that name at or above the line.
+     * The result the function [method] declares, read from the nearest `fun` of that name (a `suspend fun` only, if
+     * [suspendOnly]) at or above [line] of [sourceFile], the Kotlin file of [mutatedClass]: `Unit` for none or `Unit`,
+     * `=` for one inferred from its body, else the declared type; null when there is no such `fun`.
      */
-    private fun returnsUnit(mutatedClass: String, sourceFile: String, method: String, line: Int): Boolean {
+    private fun declaredResult(mutatedClass: String, sourceFile: String, method: String, line: Int,
+        suspendOnly: Boolean): String? {
         val folder = mutatedClass.substringBeforeLast('.').replace('.', '/')
         val file = sources.get().file("$folder/$sourceFile").asFile
-        if (!file.isFile) return false
+        if (!file.isFile) return null
         val lines = file.readLines()
         val plain = Regex.escape(method.substringBefore('$'))
-        val name = Regex("""\bsuspend\s+fun\s+(<[^>]*>\s*)?([\w.]+\.)?$plain\s*\(""")
+        val suspend = if (suspendOnly) """\bsuspend\s+""" else """\b"""
+        val name = Regex("""${suspend}fun\s+(<[^>]*>\s*)?([\w.]+\.)?$plain\s*\(""")
         val start = (minOf(line, lines.size) - 1 downTo 0).firstOrNull { name.containsMatchIn(lines[it]) }
-            ?: return false
+            ?: return null
         val text = lines.drop(start).joinToString("\n")
         var at = name.find(text)!!.range.last
         var depth = 0
@@ -401,9 +407,21 @@ abstract class PitScore : DefaultTask() {
             at++
         } while (depth > 0)
         val rest = text.substring(at).trimStart()
-        if (rest.startsWith("{")) return true
-        if (!rest.startsWith(":")) return false
-        val result = rest.drop(1).takeWhile { it != '{' && it != '=' }.trim()
+        if (rest.startsWith("{")) return "Unit"
+        if (!rest.startsWith(":")) return "="
+        return rest.drop(1).takeWhile { it != '{' && it != '=' }.trim()
+    }
+
+    /**
+     * Whether the null in place of what the `invokeSuspend` of [mutatedClass] hands back, on [line] of [sourceFile],
+     * goes nowhere: true unless the function the coroutine's class is named after (a suspend lambda's or a suspend
+     * function's own continuation, such as `outlook` of `EngineOnDispatcher$outlook$2`) declares a result other than
+     * `Unit` or infers one (`= ...`), as then the value, and so the null, can reach its caller.
+     */
+    private fun resumesWithNothing(mutatedClass: String, sourceFile: String, line: Int): Boolean {
+        val function = mutatedClass.substringAfterLast('.').split('$').drop(1)
+            .lastOrNull { it.firstOrNull()?.isLowerCase() == true } ?: return true
+        val result = declaredResult(mutatedClass, sourceFile, function, line, suspendOnly = false) ?: return true
         return result == "Unit"
     }
 
@@ -420,12 +438,13 @@ abstract class PitScore : DefaultTask() {
             val description = text("description")
             val method = text("mutatedMethod")
             val result = text("methodDescription")
+            val line = text("lineNumber").toInt()
             val compilers = description.startsWith("removed call to kotlin/jvm/internal/Intrinsics::")
                 || description.startsWith("removed call to kotlin/ResultKt::")
-                || description.startsWith("replaced return value with null") && (method == "invokeSuspend"
-                    || result.endsWith(")Lkotlin/Unit;")
-                    || result.endsWith("Lkotlin/coroutines/Continuation;)Ljava/lang/Object;") && returnsUnit(
-                        text("mutatedClass"), text("sourceFile"), method, text("lineNumber").toInt()))
+                || description.startsWith("replaced return value with null") && (result.endsWith(")Lkotlin/Unit;")
+                    || method == "invokeSuspend" && resumesWithNothing(text("mutatedClass"), text("sourceFile"), line)
+                    || result.endsWith("Lkotlin/coroutines/Continuation;)Ljava/lang/Object;") && declaredResult(
+                        text("mutatedClass"), text("sourceFile"), method, line, suspendOnly = true) == "Unit")
                 || method == "getLOG"
             if (compilers) continue
             counted++
@@ -441,8 +460,8 @@ abstract class PitScore : DefaultTask() {
     }
 }
 
-// the share of mutants killed without the compiler's own, a few points below the 87 % it was when set, for the full run
-// only: a run narrowed to some classes may be small or hold many survivors
+// the share of mutants killed without the compiler's own, a few points below the 86.9 % it was when set, for the full
+// run only: a run narrowed to some classes may be small or hold many survivors
 val checkPitScore = tasks.register<PitScore>("checkPitScore") {
     mutations.set(layout.buildDirectory.file("reports/pitest/debug/mutations.xml"))
     sources.set(layout.projectDirectory.dir("src/main/kotlin"))
