@@ -167,10 +167,12 @@
                   <excludedTestClasses>
                     <param>nl.enadeag.carchargeplanner.engine.*ArchitectureTest</param>
                   </excludedTestClasses>
-                  <!-- what no test can see, so it stays out of the report (CONTRIBUTING.md): the fsync of the folder
-                       after a file was moved into it (flushFolder), and FileChannel.force, the fsync of the file
-                       itself, wherever it is called; only a power cut would show either. The call of flushFolder in
-                       PrivateFiles.write stays a survivor. -->
+                  <!-- what no test can see, so it stays out of the report (CONTRIBUTING.md, What is tested where,
+                       Mutation testing): the method flushFolder, by name in any class, the fsync of the folder after a
+                       file was moved into it; and every line that calls FileChannel, for its force, the fsync of the
+                       file itself; only a power cut would show either. Leaving out FileChannel also leaves out the
+                       other lines that call it, in PrivateFiles those that open a file and write to it, whose effect
+                       PrivateFilesTest checks. The call of flushFolder in PrivateFiles.write stays a survivor. -->
                   <excludedMethods>
                     <param>flushFolder</param>
                   </excludedMethods>
