@@ -153,7 +153,7 @@ The owner's choices about how the plan is made: the minimum and target charge le
 _Avoid_: Planning settings, options
 
 **App settings**:
-The desktop app's own settings: whether it shows itself as a tray icon or a window, the units it shows, its language and whether it looks light, dark or as the system does. Kept by the desktop app, not the engine, so they stay on the computer even when the engine runs elsewhere.
+The desktop app's own settings (the Android app keeps its own phone preferences, such as "Wi-Fi only"): whether it shows itself as a tray icon or a window, the units it shows, its language and whether it looks light, dark or as the system does. Kept by the desktop app, not the engine, so they stay on the computer even when the engine runs elsewhere.
 _Avoid_: Preferences, interface config
 
 **Place search**:
@@ -221,11 +221,11 @@ The one screen that shows the plan: the next charge window, grid advice, today's
 _Avoid_: Popup (only one of the places it appears), plan window, main screen
 
 **Engine**:
-The part of the app that plans, fetches forecasts, talks to devices and owns all stored data, without any user interface. It runs inside the desktop app, and later can also run on its own on an always-on machine.
+The part of the app that plans, fetches forecasts and owns all stored data, without any user interface. It runs inside the desktop app and inside the Android app, the same code in both; it does not yet run on its own.
 _Avoid_: Backend, server, daemon, core
 
 **Client**:
-Anything that shows the engine's plan and passes on the owner's changes: today the desktop app's tray, popup and windows; later perhaps a web or phone app. A client never stores data itself.
+Anything that shows the engine's plan and passes on the owner's changes: the desktop app's tray, popup and windows, and the Android app's screens and notifications. A client may keep preferences of its own (the desktop's app settings, the Android app's phone preferences), but never the engine's data.
 _Avoid_: Frontend, UI (a client is more than its screens)
 
 **Outlook**:
