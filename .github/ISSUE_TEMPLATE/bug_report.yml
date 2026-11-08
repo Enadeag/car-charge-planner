@@ -48,5 +48,6 @@ body:
         around the problem, or the output of the terminal if you ran it in one. Read them first: the log holds no API
         keys or coordinates, but its paths show your user name, and you may want to remove that. On Android, paste
         only the app's own Logcat lines around the problem, not a full bug report of the phone, which holds much more
-        than this app's log.
+        than this app's log. The debug build logs at DEBUG level, so its lines may also hold your trips' departure times
+        and the charge windows' times: remove those before you paste.
       render: text
