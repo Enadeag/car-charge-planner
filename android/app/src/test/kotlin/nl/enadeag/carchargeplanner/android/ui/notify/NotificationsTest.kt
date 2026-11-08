@@ -114,12 +114,15 @@ class NotificationsTest {
     }
 
     @Test
-    fun aTapOpensTheAppsActivityStraightAndAsksForNothingMore() {
+    fun aTapOpensTheAppsActivityStraightThroughItsAliasThatNoOtherAppCanStartAndAsksForNothingMore() {
         notifications.announce(solar)
 
         val intent = started(posted("solar_window:${start.epochSecond}"))
-        assertThat(intent.component?.className).isEqualTo(MainActivity::class.java.name)
+        assertThat(intent.component).isEqualTo(MainActivity.noticeTap(app))
         assertThat(intent.component?.packageName).isEqualTo(app.packageName)
+        val alias = app.packageManager.getActivityInfo(intent.component!!, 0)
+        assertThat(alias.targetActivity).isEqualTo(MainActivity::class.java.name)
+        assertThat(alias.exported).isFalse()
         assertThat(intent.action).isNull()
     }
 
@@ -134,7 +137,7 @@ class NotificationsTest {
         assertThat(posted.flags and Notification.FLAG_ONLY_ALERT_ONCE).isZero()
         assertThat(posted.actions.map { it.title.toString() }).containsExactly("Enter battery level")
         for (intent in listOf(started(posted), started(posted, action = 0))) {
-            assertThat(intent.component?.className).isEqualTo(MainActivity::class.java.name)
+            assertThat(intent.component).isEqualTo(MainActivity.noticeTap(app))
             assertThat(intent.action).isEqualTo(MainActivity.OPEN_BATTERY_ENTRY)
         }
     }

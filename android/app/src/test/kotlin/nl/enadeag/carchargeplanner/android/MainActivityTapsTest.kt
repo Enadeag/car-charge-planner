@@ -68,8 +68,12 @@ class MainActivityTapsTest {
         scenario?.close()
     }
 
-    private fun tap(action: String?) = Intent(app, MainActivity::class.java).setAction(action)
+    private fun tap(action: String?) = Intent().setComponent(MainActivity.noticeTap(app)).setAction(action)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+    /** What any app may send: the activity the launcher starts, with a notification's data and action. */
+    private fun forged(tag: String) = Intent(app, MainActivity::class.java).setAction(MainActivity.OPEN_BATTERY_ENTRY)
+        .setData(MainActivity.noticeUri(tag)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     private fun battery() = tap(MainActivity.OPEN_BATTERY_ENTRY)
 
@@ -169,6 +173,35 @@ class MainActivityTapsTest {
         planned()
 
         assertThat(shadowOf(manager).getNotification(tag, 0)).isNotNull()
+    }
+
+    @Test
+    fun aBatteryChecksIntentToTheLaunchersActivityTakesNoNotificationAwayAndOpensNoEntry() {
+        val departure = Instant.parse("2026-06-07T12:00:00Z")
+        val tag = "battery_check:${departure.epochSecond}"
+        batteryCheck(departure)
+
+        launch(forged(tag))
+        planned()
+
+        entry().assertDoesNotExist()
+        assertThat(shadowOf(manager).getNotification(tag, 0)).isNotNull()
+    }
+
+    @Test
+    fun aBatteryChecksIntentToTheLaunchersActivityWhileTheHomeIsShownOpensNoEntry() {
+        val departure = Instant.parse("2026-06-07T12:00:00Z")
+        val tag = "battery_check:${departure.epochSecond}"
+        batteryCheck(departure)
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        planned()
+
+        controller.newIntent(forged(tag))
+        compose.waitForIdle()
+
+        entry().assertDoesNotExist()
+        assertThat(shadowOf(manager).getNotification(tag, 0)).isNotNull()
+        controller.pause().stop().destroy()
     }
 
     @Test
