@@ -33,7 +33,8 @@ import nl.enadeag.carchargeplanner.engine.trip.Trip
  *     [TripAdviceModel.shownOn] says
  * @throws IllegalArgumentException when [view] has no days, which shows as no forecast instead
  */
-data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val away: List<ComingAway>, val footer: Footer, val keyRefusedBy: List<String> = listOf(),
+data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val away: List<ComingAway>,
+    val footer: Footer, val keyRefusedBy: List<String> = listOf(),
     val trips: List<ListedTrip> = listOf(), val tripAdvice: List<TripAdviceModel> = listOf()) {
 
     init {
@@ -137,7 +138,8 @@ data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val 
          */
         fun of(planned: Outlook.Planned, away: List<OneOffAwayPeriod>, trips: List<Trip> = listOf(),
             names: (ProviderId) -> String = ProviderId::value): Dashboard {
-            return Dashboard(planned, planned.dashboard(away, trips), ComingAway.of(away, planned.zone(), planned.madeAt()), Footer.of(planned),
+            return Dashboard(planned, planned.dashboard(away, trips),
+                ComingAway.of(away, planned.zone(), planned.madeAt()), Footer.of(planned),
                 planned.forecastSource().keyRefusedBy().map(names),
                 ListedTrip.of(trips, planned.zone(), planned.madeAt()), TripAdviceModel.of(planned))
         }
