@@ -79,7 +79,7 @@ class ChartGeometryTest {
     /** Every hour from 6:00 to 16:00 as a tick, on a plain day. */
     private val chart = dayChart(6.0, 16.0, ticks(6..16))
 
-    /** That day with sun from 9:00 to 10:00, the house at 1 kW, a window from 11:00 to 13:00 and now at 8:00. */
+    /** That day with sun from 9:00 to 10:00, the baseload at 1 kW, a window from 11:00 to 13:00 and now at 8:00. */
     private val busy = dayChart(6.0, 16.0, ticks(6..16), steps = listOf(DayChart.Step(9.0, 10.0, 2.0, Instant.EPOCH)),
         baseloadKw = 1.0, windows = listOf(DayChart.WindowBand(11.0, 13.0, Instant.EPOCH, Instant.EPOCH)), now = 8.0)
 

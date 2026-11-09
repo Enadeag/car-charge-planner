@@ -73,7 +73,7 @@ public final class SolarChartMapper {
         if (chart.peak().isEmpty()) {
             return messages.text(TextKey.CHART_SPOKEN_NO_SOLAR, title);
         }
-        var peak = chart.peak().get();
+        var peak = chart.peak().orElseThrow();
         var solar = messages.text(TextKey.CHART_SPOKEN, title, messages.decimal(peak.kw()),
                 messages.time(peak.at(), zone), messages.decimal(chart.baseloadKw()));
         var windows = chart.windows().isEmpty() ? "" : messages.text(TextKey.CHART_SPOKEN_WINDOWS, chart.windows()

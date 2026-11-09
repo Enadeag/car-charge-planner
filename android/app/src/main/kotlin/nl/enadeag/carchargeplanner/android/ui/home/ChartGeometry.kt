@@ -139,7 +139,7 @@ internal object TimeAxis {
      * @param hours the clock hours between two ticks, more than 0
      * @return the ticks whose clock hour is a multiple of [hours], in time order
      */
-    fun ticksEvery(chart: DayChart, hours: Int): List<DayChart.Tick> =
+    private fun ticksEvery(chart: DayChart, hours: Int): List<DayChart.Tick> =
         chart.ticks().filter { it.clockHour() % hours == 0 }
 
     private fun place(tick: DayChart.Tick, plot: PlotArea, labelWidth: Float) = PlacedTick(tick,
@@ -264,15 +264,15 @@ internal data class SolarDrawing(val plot: PlotArea, val shapes: List<Shape>, va
             }
             val curve = curveOf(chart.steps(), chart.fromHour(), chart.toHour())
                 .map { Point(plot.x(it.hour), plot.y(it.kw)) }
-            val houseY = plot.y(chart.baseloadKw())
-            val house = Shape.Line(Point(plot.left, houseY), Point(plot.right, houseY), ChartInk.MUTED, DASHED_DP * dp,
-                dashed = true)
+            val baseloadY = plot.y(chart.baseloadKw())
+            val baseload = Shape.Line(Point(plot.left, baseloadY), Point(plot.right, baseloadY), ChartInk.MUTED,
+                DASHED_DP * dp, dashed = true)
             val nowX = chart.now().orElse(null)?.let { plot.x(it.hour()) }
             val now = nowX?.let {
                 Shape.Line(Point(it, plot.top), Point(it, plot.bottom), ChartInk.TEXT, DASHED_DP * dp, dashed = true)
             }
             val shapes = grid + windows + Shape.Area(curve, ChartInk.SOLAR_AREA) +
-                Shape.Area(curve, ChartInk.SOLAR, CURVE_DP * dp) + house + listOfNotNull(now)
+                Shape.Area(curve, ChartInk.SOLAR, CURVE_DP * dp) + baseload + listOfNotNull(now)
             return SolarDrawing(plot, shapes, TimeAxis.fit(chart, plot, gap * 2, tickWidth), plot.bottom + gap,
                 Point(0f, plot.top - lineHeight / 2), Point(0f, plot.bottom - lineHeight / 2),
                 nowX?.let { Point(minOf(it + gap / 2, plot.right - nowWidth), plot.top) })
