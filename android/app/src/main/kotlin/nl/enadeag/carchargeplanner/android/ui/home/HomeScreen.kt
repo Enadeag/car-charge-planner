@@ -59,7 +59,6 @@ import nl.enadeag.carchargeplanner.android.home.BatteryEntry
 import nl.enadeag.carchargeplanner.android.home.Dashboard
 import nl.enadeag.carchargeplanner.android.home.EnergySource
 import nl.enadeag.carchargeplanner.android.home.Footer
-import nl.enadeag.carchargeplanner.android.home.GridAdviceModel
 import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
 import nl.enadeag.carchargeplanner.android.home.NotificationCard
@@ -78,6 +77,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.inEnglish
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
+import nl.enadeag.carchargeplanner.engine.dashboard.GridAdviceView
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 
 /**
@@ -425,7 +425,7 @@ private fun DayCard(day: DashboardDay, words: DashboardWords) {
 
 /** Grid advice, on today's tab: how much, when, why and what to set. */
 @Composable
-private fun GridAdviceCard(advice: GridAdviceModel, words: DashboardWords) {
+private fun GridAdviceCard(advice: GridAdviceView, words: DashboardWords) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SourceChip(stringResource(R.string.advice_label), LocalSourceColours.current.of(EnergySource.GRID),

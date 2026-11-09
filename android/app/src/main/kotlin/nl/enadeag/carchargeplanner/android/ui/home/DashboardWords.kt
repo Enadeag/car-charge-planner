@@ -18,7 +18,6 @@ import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.android.home.ComingAway
 import nl.enadeag.carchargeplanner.android.home.Footer
-import nl.enadeag.carchargeplanner.android.home.GridAdviceModel
 import nl.enadeag.carchargeplanner.android.home.ListedTrip
 import nl.enadeag.carchargeplanner.android.home.SourceFigure
 import nl.enadeag.carchargeplanner.android.home.TripAdviceModel
@@ -29,6 +28,7 @@ import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
 import nl.enadeag.carchargeplanner.engine.dashboard.DayChart
 import nl.enadeag.carchargeplanner.engine.dashboard.DayKind
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
+import nl.enadeag.carchargeplanner.engine.dashboard.GridAdviceView
 import nl.enadeag.carchargeplanner.engine.dashboard.NoWindowReason
 import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge
 import nl.enadeag.carchargeplanner.engine.plan.Window
@@ -230,14 +230,13 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * @param advice the advice
      * @return such as "Charge 8.4 kWh from the grid: Sunday 09:00 – 15:10."
      */
-    fun adviceTitle(advice: GridAdviceModel): String {
-        val energy = decimal(advice.energyKwh)
-        val window = advice.window
-        val day = advice.windowDay
-        return if (window != null && day != null) {
-            text(R.string.advice_title_window, energy, inSentence(day), span(window))
+    fun adviceTitle(advice: GridAdviceView): String {
+        val energy = decimal(advice.energyKwh())
+        val charge = advice.charge().orElse(null)
+        return if (charge != null) {
+            text(R.string.advice_title_window, energy, inSentence(charge.day()), span(charge.window()))
         } else {
-            text(R.string.advice_title_no_window, energy, inSentence(advice.lowDay))
+            text(R.string.advice_title_no_window, energy, inSentence(advice.day()))
         }
     }
 
@@ -247,15 +246,13 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * @param advice the advice
      * @return such as "Without it the battery ends Sunday at 17%, below the minimum of 30%. Set 16 A (3.7 kW), …"
      */
-    fun adviceDetail(advice: GridAdviceModel): String {
-        val why = if (advice.runsEmpty) text(R.string.advice_runs_empty, inSentence(advice.lowDay),
-            whole(advice.minimum.value()))
-            else text(R.string.advice_ends_low, inSentence(advice.lowDay), whole(advice.endLevelPct),
-                whole(advice.minimum.value()))
-        val window = advice.window
-        val limit = advice.chargeLimit
-        val settings = if (window != null && limit != null) text(R.string.advice_set, window.amps(),
-            decimal(window.powerKw()), whole(limit.value()))
+    fun adviceDetail(advice: GridAdviceView): String {
+        val minimum = whole(advice.minimumPct().value())
+        val why = if (advice.runsEmpty()) text(R.string.advice_runs_empty, inSentence(advice.day()), minimum)
+            else text(R.string.advice_ends_low, inSentence(advice.day()), whole(advice.endLevelPct()), minimum)
+        val charge = advice.charge().orElse(null)
+        val settings = if (charge != null) text(R.string.advice_set, charge.window().amps(),
+            decimal(charge.window().powerKw()), whole(charge.chargeLimitPct().value()))
             else text(R.string.advice_no_room)
         return "$why $settings"
     }

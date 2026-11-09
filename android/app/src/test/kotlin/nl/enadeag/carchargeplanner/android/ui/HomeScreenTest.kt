@@ -210,15 +210,18 @@ class HomeScreenTest {
 
     private val page = SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange)
 
-    /** Monday in Lisbon, with two windows today, none on Tuesday and one on Wednesday. */
+    /**
+     * Monday in Lisbon, with two windows today, none on Tuesday and one on Wednesday; the minimum charge level is 20%
+     * unless given.
+     */
     private fun lisbonWeek(gridAdvice: GridAdvice? = null, freshness: Freshness = Freshness.FRESH,
-        keyRefusedBy: List<ProviderId> = listOf()) = Plans.planned(
+        keyRefusedBy: List<ProviderId> = listOf(), minimum: Double = 20.0) = Plans.planned(
         today.atTime(9, 0).atZone(lisbon), listOf(
             listOf(Plans.window(lisbon, today, 13, 15), Plans.window(lisbon, today, 16, 17)),
             listOf(),
             listOf(Plans.window(lisbon, today.plusDays(2), 11, 12, importKwh = 0.3))),
         gridAdvice = gridAdvice, source = Plans.source(today.atTime(8, 51).atZone(lisbon).toInstant(), freshness,
-            keyRefusedBy = keyRefusedBy))
+            keyRefusedBy = keyRefusedBy), minimum = minimum)
 
     /** Sun from 07:00 to 18:00 on every day, at most 3.2 kW at noon. */
     private val sun = DoubleArray(24) { hour -> if (hour == 12) 3.2 else if (hour in 7..17) 2.0 else 0.0 }
@@ -301,7 +304,7 @@ class HomeScreenTest {
         val window = Window(today.atTime(20, 0).atZone(lisbon).toInstant(),
             today.atTime(22, 0).atZone(lisbon).toInstant(), 16, 3.7, 0.0, 7.4)
         val advice = GridAdvice(today.plusDays(1), 12.0, 18.0, 7.4, Optional.of(window), Optional.of(Percent(60.0)))
-        show(lisbonWeek(advice))
+        show(lisbonWeek(advice, minimum = 30.0))
 
         compose.onNodeWithText(text(R.string.advice_label)).performScrollTo().assert(isHeading())
         compose.onNodeWithText(text(R.string.advice_title_window, "7.4", "today", "20:00 – 22:00")).assertExists()
@@ -520,13 +523,13 @@ class HomeScreenTest {
     fun theHomeIsInDutch() {
         clock("24")
         access.away = listOf(OneOffAwayPeriod.allDay(today.plusDays(1), lisbon))
-        show(lisbonWeek(GridAdvice(today.plusDays(1), 0.0, 30.0, 6.0, Optional.empty(), Optional.empty()),
+        show(lisbonWeek(GridAdvice(today.plusDays(1), 0.0, 20.0, 6.0, Optional.empty(), Optional.empty()),
             Freshness.STALE))
 
         tab("Vandaag").assertIsSelected()
         compose.assertReadAsOne(text(R.string.chart_spoken_no_solar, "Vandaag"), Role.Image)
         compose.assertReadAsOne(todaysBattery("40", "60", "20", "80"), Role.Image)
-        compose.onNodeWithText(text(R.string.advice_runs_empty, "morgen", "30") + " " + text(R.string.advice_no_room))
+        compose.onNodeWithText(text(R.string.advice_runs_empty, "morgen", "20") + " " + text(R.string.advice_no_room))
             .assertExists()
         compose.assertShowsNoneOf(englishOnlyTexts())
     }
@@ -963,7 +966,8 @@ class HomeScreenTest {
 
     @Test
     fun gridAdviceForALaterDayNamesItsWeekday() {
-        show(lisbonWeek(GridAdvice(today.plusDays(2), 12.0, 18.0, 7.4, Optional.empty(), Optional.empty())))
+        show(lisbonWeek(GridAdvice(today.plusDays(2), 12.0, 18.0, 7.4, Optional.empty(), Optional.empty()),
+            minimum = 30.0))
 
         compose.onNodeWithText(text(R.string.advice_title_no_window, "7.4", "Wednesday")).performScrollTo()
             .assertIsDisplayed()
