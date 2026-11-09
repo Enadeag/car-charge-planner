@@ -264,7 +264,7 @@ internal data class SolarDrawing(val plot: PlotArea, val shapes: List<Shape>, va
             }
             val curve = curveOf(chart.steps(), chart.fromHour(), chart.toHour())
                 .map { Point(plot.x(it.hour), plot.y(it.kw)) }
-            val houseY = plot.y(chart.houseKw())
+            val houseY = plot.y(chart.baseloadKw())
             val house = Shape.Line(Point(plot.left, houseY), Point(plot.right, houseY), ChartInk.MUTED, DASHED_DP * dp,
                 dashed = true)
             val nowX = chart.now().orElse(null)?.let { plot.x(it.hour()) }

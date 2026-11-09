@@ -24,7 +24,7 @@ class DayChartTest {
 
     private static final ZoneId AMSTERDAM = ZoneId.of("Europe/Amsterdam");
     private static final LocalDate TODAY = LocalDate.of(2026, 6, 1);
-    private static final double HOUSE_KW = 0.3;
+    private static final double BASELOAD_KW = 0.3;
 
     /** Sun from 07:00 to 17:00, at most 3.2 kW at 12:00; 0.005 kW at 06:00 is no sun. */
     private static final double[] SUNNY = {0, 0, 0, 0, 0, 0, 0.005, 0.4, 1.0, 1.8, 2.5, 3.0, 3.2, 3.0, 2.4, 1.6, 0.8,
@@ -50,22 +50,22 @@ class DayChartTest {
     }
 
     /** Days from today on, each with the power of {@code kw} for its date. */
-    private static List<DashboardDay> days(Instant madeAt, int count, double houseKw,
+    private static List<DashboardDay> days(Instant madeAt, int count, double baseloadKw,
             Function<LocalDate, double[]> kw) {
         var plans = new ArrayList<DayPlan>();
         for (int i = 0; i < count; i++) {
             var date = TODAY.plusDays(i);
             plans.add(day(date, List.of(), forecast(date, kw.apply(date))));
         }
-        return DashboardView.of(madeAt, AMSTERDAM, plans, houseKw).days();
+        return DashboardView.of(madeAt, AMSTERDAM, plans, baseloadKw).days();
     }
 
     private static DayChart today(double... kw) {
-        return days(at(TODAY, 9), 1, HOUSE_KW, ignored -> kw).get(0).chart();
+        return days(at(TODAY, 9), 1, BASELOAD_KW, ignored -> kw).get(0).chart();
     }
 
     private static DayChart only(Instant madeAt, DayPlan day) {
-        return DashboardView.of(madeAt, AMSTERDAM, List.of(day), HOUSE_KW).days().get(0).chart();
+        return DashboardView.of(madeAt, AMSTERDAM, List.of(day), BASELOAD_KW).days().get(0).chart();
     }
 
     private static double[] hours(double kw, int... sunnyHours) {
@@ -137,7 +137,7 @@ class DayChartTest {
 
     @Test
     void aPlanWithoutDaysHasNoDashboardDays() {
-        assertThat(DashboardView.of(at(TODAY, 9), AMSTERDAM, List.of(), HOUSE_KW).days()).isEmpty();
+        assertThat(DashboardView.of(at(TODAY, 9), AMSTERDAM, List.of(), BASELOAD_KW).days()).isEmpty();
     }
 
     @Test
@@ -167,16 +167,16 @@ class DayChartTest {
 
     @ParameterizedTest
     @CsvSource({"3.2, 0.3, 4.0", "0.4, 0.3, 1.0", "0.0, 0.0, 1.0", "2.0, 2.4, 3.0", "4.0, 0.3, 4.0"})
-    void everyDayHasOneScaleTheWholeKilowattAboveTheHighestSunOrTheHouse(double peak, double house, double scale) {
+    void everyDayHasOneScaleTheWholeKilowattAboveTheHighestSunOrTheBaseload(double peak, double baseload, double scale) {
         // the peak is on the second day, so the first one's scale shows it is shared
-        var days = days(at(TODAY, 9), 2, house, date -> date.equals(TODAY) ? hours(0.2, 12) : hours(peak, 12));
+        var days = days(at(TODAY, 9), 2, baseload, date -> date.equals(TODAY) ? hours(0.2, 12) : hours(peak, 12));
 
         assertThat(days).extracting(day -> day.chart().scaleKw()).containsExactly(scale, scale);
-        assertThat(days.get(0).chart().houseKw()).isEqualTo(house);
+        assertThat(days.get(0).chart().baseloadKw()).isEqualTo(baseload);
     }
 
     @Test
-    void withoutSunOrHouseUseTheScaleIsOneKilowatt() {
+    void withoutSunOrBaseloadTheScaleIsOneKilowatt() {
         var days = days(at(TODAY, 9), 2, 0, ignored -> new double[24]);
 
         assertThat(days).extracting(day -> day.chart().scaleKw()).containsExactly(1.0, 1.0);
@@ -184,7 +184,7 @@ class DayChartTest {
 
     @Test
     void nowIsMarkedOnTodayOnlyAtTheMomentThePlanWasMade() {
-        var days = days(at(TODAY, 9), 2, HOUSE_KW, ignored -> SUNNY);
+        var days = days(at(TODAY, 9), 2, BASELOAD_KW, ignored -> SUNNY);
 
         assertThat(days.get(0).chart().now()).contains(new DayChart.Moment(9, at(TODAY, 9)));
         assertThat(days.get(1).chart().now()).isEmpty();
@@ -199,7 +199,7 @@ class DayChartTest {
         var plans = List.of(day(yesterday, List.of(), forecast(yesterday, allDay)),
                 day(TODAY, List.of(), forecast(TODAY, allDay)));
 
-        var days = DashboardView.of(TODAY.atStartOfDay(AMSTERDAM).toInstant(), AMSTERDAM, plans, HOUSE_KW).days();
+        var days = DashboardView.of(TODAY.atStartOfDay(AMSTERDAM).toInstant(), AMSTERDAM, plans, BASELOAD_KW).days();
 
         assertThat(days.get(0).chart().toHour()).isEqualTo(24);
         assertThat(days).extracting(day -> day.chart().now().map(DayChart.Moment::hour))
@@ -210,7 +210,7 @@ class DayChartTest {
     @ParameterizedTest
     @CsvSource({"5, false", "6, true", "19, true", "20, false"})
     void nowIsMarkedOnlyWithinTheHoursShownTheirEdgesIncluded(int madeAt, boolean marked) {
-        var chart = days(at(TODAY, madeAt), 1, HOUSE_KW, ignored -> SUNNY).get(0).chart();
+        var chart = days(at(TODAY, madeAt), 1, BASELOAD_KW, ignored -> SUNNY).get(0).chart();
 
         assertThat(chart.now().isPresent()).isEqualTo(marked);
     }

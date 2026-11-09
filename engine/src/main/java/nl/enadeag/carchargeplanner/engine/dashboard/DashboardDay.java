@@ -7,7 +7,7 @@ import java.time.LocalDate;
  *
  * @param date the day, in the home's time zone
  * @param name how the day is named, for {@code date}
- * @param chart the day's expected solar power, the house's use and the charge windows
+ * @param chart the day's expected solar power, the baseload and the charge windows
  */
 public record DashboardDay(LocalDate date, DayName name, DayChart chart) {
 

@@ -31,7 +31,7 @@ final class DayCharts {
     private final ZoneId zone;
     private final Instant madeAt;
     private final LocalDate today;
-    private final double houseKw;
+    private final double baseloadKw;
     private final double scaleKw;
 
     /**
@@ -40,16 +40,16 @@ final class DayCharts {
      * @param madeAt when the plan was made; on today's chart this is "now"
      * @param zone the home's time zone, in which the days start and the clock hours are told
      * @param days all the plan's days, whose highest solar power sets the shared scale; may be empty
-     * @param houseKw the power the house uses on its own in kW, 0 or more
+     * @param baseloadKw the baseload in kW, 0 or more
      */
-    DayCharts(Instant madeAt, ZoneId zone, List<DayPlan> days, double houseKw) {
+    DayCharts(Instant madeAt, ZoneId zone, List<DayPlan> days, double baseloadKw) {
         this.zone = zone;
         this.madeAt = madeAt;
         this.today = madeAt.atZone(zone).toLocalDate();
-        this.houseKw = houseKw;
+        this.baseloadKw = baseloadKw;
         double peak = days.stream().flatMap(day -> day.forecast().stream())
                 .mapToDouble(ForecastStep::powerKw).max().orElse(0);
-        this.scaleKw = Math.max(1, Math.ceil(Math.max(peak, houseKw)));
+        this.scaleKw = Math.max(1, Math.ceil(Math.max(peak, baseloadKw)));
     }
 
     /**
@@ -80,7 +80,7 @@ final class DayCharts {
         var peak = day.forecast().stream().max(Comparator.comparingDouble(ForecastStep::powerKw))
                 .filter(step -> step.powerKw() > SUN_KW)
                 .map(step -> new DayChart.Peak(step.powerKw(), step.start()));
-        return new DayChart(from, to, scaleKw, steps, houseKw, windows, now, ticks(start, from, to), peak);
+        return new DayChart(from, to, scaleKw, steps, baseloadKw, windows, now, ticks(start, from, to), peak);
     }
 
     /**

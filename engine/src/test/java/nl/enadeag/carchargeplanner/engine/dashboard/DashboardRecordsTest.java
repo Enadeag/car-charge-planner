@@ -17,8 +17,8 @@ class DashboardRecordsTest {
     private static final Instant NOON = Instant.parse("2026-06-01T10:00:00Z");
     private static final LocalDate DAY = LocalDate.of(2026, 6, 1);
 
-    private static DayChart chart(double from, double to, double scale, double house) {
-        return new DayChart(from, to, scale, List.of(), house, List.of(), Optional.empty(), List.of(),
+    private static DayChart chart(double from, double to, double scale, double baseload) {
+        return new DayChart(from, to, scale, List.of(), baseload, List.of(), Optional.empty(), List.of(),
                 Optional.empty());
     }
 
@@ -27,15 +27,15 @@ class DashboardRecordsTest {
         var chart = chart(0, 0.5, 0.1, 0);
 
         assertThat(chart.fromHour()).isEqualTo(0);
-        assertThat(chart.houseKw()).isEqualTo(0);
+        assertThat(chart.baseloadKw()).isEqualTo(0);
     }
 
     @ParameterizedTest
     @CsvSource({"-1, 20, 1, 0.3", "6, 6, 1, 0.3", "NaN, 20, 1, 0.3", "6, NaN, 1, 0.3", "6, 20, 0, 0.3",
         "6, 20, NaN, 0.3", "6, 20, Infinity, 0.3", "6, 20, 1, -0.1", "6, 20, 1, NaN", "6, 20, 1, Infinity"})
-    void aChartRefusesHoursThatDoNotRunForwardsFromZeroAndAScaleOrHouseOutOfRange(double from, double to,
-            double scale, double house) {
-        assertThatThrownBy(() -> chart(from, to, scale, house)).isInstanceOf(IllegalArgumentException.class);
+    void aChartRefusesHoursThatDoNotRunForwardsFromZeroAndAScaleOrBaseloadOutOfRange(double from, double to,
+            double scale, double baseload) {
+        assertThatThrownBy(() -> chart(from, to, scale, baseload)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

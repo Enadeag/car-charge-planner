@@ -49,14 +49,14 @@ public final class SolarChartMapper {
         var steps = chart.steps().stream()
                 .map(step -> new Step(step.startHour(), step.endHour(), step.kw(),
                         messages.text(TextKey.CHART_READOUT, messages.time(step.start(), zone),
-                                messages.decimal(step.kw()), messages.decimal(chart.houseKw()))))
+                                messages.decimal(step.kw()), messages.decimal(chart.baseloadKw()))))
                 .toList();
         var windows = chart.windows().stream()
                 .map(window -> new WindowSpan(window.startHour(), window.endHour()))
                 .toList();
         var madeAtHour = chart.now().map(now -> OptionalDouble.of(now.hour())).orElse(OptionalDouble.empty());
         return new SolarChartModel(chart.fromHour(), chart.toHour(), chart.scaleKw(),
-                messages.text(TextKey.CHART_SCALE, messages.whole(chart.scaleKw())), steps, chart.houseKw(), windows,
+                messages.text(TextKey.CHART_SCALE, messages.whole(chart.scaleKw())), steps, chart.baseloadKw(), windows,
                 madeAtHour, ticks(chart), spoken(day));
     }
 
@@ -75,7 +75,7 @@ public final class SolarChartMapper {
         }
         var peak = chart.peak().get();
         var solar = messages.text(TextKey.CHART_SPOKEN, title, messages.decimal(peak.kw()),
-                messages.time(peak.at(), zone), messages.decimal(chart.houseKw()));
+                messages.time(peak.at(), zone), messages.decimal(chart.baseloadKw()));
         var windows = chart.windows().isEmpty() ? "" : messages.text(TextKey.CHART_SPOKEN_WINDOWS, chart.windows()
                 .stream()
                 .map(window -> messages.text(TextKey.CHART_SPOKEN_SPAN, messages.time(window.start(), zone),

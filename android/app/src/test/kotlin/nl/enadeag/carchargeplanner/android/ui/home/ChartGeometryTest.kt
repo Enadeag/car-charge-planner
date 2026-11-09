@@ -72,8 +72,8 @@ class ChartGeometryTest {
 
     /** A chart up to 4 kW; its moments are left at the epoch, as the drawing uses only the hours. */
     private fun dayChart(from: Double, to: Double, ticks: List<DayChart.Tick>, steps: List<DayChart.Step> = listOf(),
-        houseKw: Double = 0.3, windows: List<DayChart.WindowBand> = listOf(), now: Double? = null) =
-        DayChart(from, to, 4.0, steps, houseKw, windows,
+        baseloadKw: Double = 0.3, windows: List<DayChart.WindowBand> = listOf(), now: Double? = null) =
+        DayChart(from, to, 4.0, steps, baseloadKw, windows,
             Optional.ofNullable(now?.let { DayChart.Moment(it, Instant.EPOCH) }), ticks, Optional.empty())
 
     /** Every hour from 6:00 to 16:00 as a tick, on a plain day. */
@@ -81,7 +81,7 @@ class ChartGeometryTest {
 
     /** That day with sun from 9:00 to 10:00, the house at 1 kW, a window from 11:00 to 13:00 and now at 8:00. */
     private val busy = dayChart(6.0, 16.0, ticks(6..16), steps = listOf(DayChart.Step(9.0, 10.0, 2.0, Instant.EPOCH)),
-        houseKw = 1.0, windows = listOf(DayChart.WindowBand(11.0, 13.0, Instant.EPOCH, Instant.EPOCH)), now = 8.0)
+        baseloadKw = 1.0, windows = listOf(DayChart.WindowBand(11.0, 13.0, Instant.EPOCH, Instant.EPOCH)), now = 8.0)
 
     private fun fit(labelWidth: Float, plot: PlotArea = this.plot) = TimeAxis.fit(chart, plot, 4f) { labelWidth }
 

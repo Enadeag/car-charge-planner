@@ -349,7 +349,7 @@ internal class DashboardWords(private val resources: Resources, private val loca
         val title = title(day.name)
         val peak = day.chart.peak().orElse(null) ?: return text(R.string.chart_spoken_no_solar, title)
         val solar = text(R.string.chart_spoken, title, decimal(peak.kw()), time(peak.at()),
-            decimal(day.chart.houseKw()))
+            decimal(day.chart.baseloadKw()))
         val windows = listOfNotNull(day.main?.window) + day.later
         val charging = if (windows.isEmpty()) "" else text(R.string.chart_spoken_windows,
             windows.joinToString(", ") { spokenSpan(it) })

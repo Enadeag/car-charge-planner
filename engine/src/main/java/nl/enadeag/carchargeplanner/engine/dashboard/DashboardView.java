@@ -24,12 +24,12 @@ public record DashboardView(List<DashboardDay> days) {
      * @param madeAt when the plan was made; its day in {@code zone} is today
      * @param zone the home's time zone, in which the days and times are meant
      * @param days the plan of each day, today first; may be empty
-     * @param houseKw the power the house uses on its own in kW, 0 or more
+     * @param baseloadKw the baseload in kW, 0 or more
      * @return one dashboard day per plan day, in the same order
      */
-    public static DashboardView of(Instant madeAt, ZoneId zone, List<DayPlan> days, double houseKw) {
+    public static DashboardView of(Instant madeAt, ZoneId zone, List<DayPlan> days, double baseloadKw) {
         LocalDate today = madeAt.atZone(zone).toLocalDate();
-        var charts = new DayCharts(madeAt, zone, days, houseKw);
+        var charts = new DayCharts(madeAt, zone, days, baseloadKw);
         return new DashboardView(days.stream()
                 .map(day -> new DashboardDay(day.date(), DayName.of(day.date(), today), charts.chart(day)))
                 .toList());
