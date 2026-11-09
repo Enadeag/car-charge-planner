@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
+import nl.enadeag.carchargeplanner.engine.forecast.providers.ForecastSolar;
+import nl.enadeag.carchargeplanner.engine.forecast.providers.OpenMeteo;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -42,6 +44,15 @@ class ProvidersTest {
 
         assertThat(providers.find(new ProviderId("tiny"))).containsSame(tiny);
         assertThat(providers.ids()).containsExactly(new ProviderId("tiny"));
+    }
+
+    @Test
+    void theStandardProvidersAreOpenMeteoThenForecastSolar() {
+        var providers = Providers.standard(ReplayHttp.always(new HttpGet.Reply(200, "")));
+
+        assertThat(providers.ids()).containsExactly(new ProviderId("open-meteo"), new ProviderId("forecast-solar"));
+        assertThat(providers.find(new ProviderId("open-meteo"))).get().isInstanceOf(OpenMeteo.class);
+        assertThat(providers.find(new ProviderId("forecast-solar"))).get().isInstanceOf(ForecastSolar.class);
     }
 
     @Test

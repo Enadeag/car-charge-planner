@@ -1,6 +1,8 @@
 package nl.enadeag.carchargeplanner.engine.forecast;
 
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
+import nl.enadeag.carchargeplanner.engine.forecast.providers.ForecastSolar;
+import nl.enadeag.carchargeplanner.engine.forecast.providers.OpenMeteo;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +26,17 @@ public final class Providers {
                 throw new IllegalArgumentException("there are two providers with the id '" + id + "'");
             }
         }
+    }
+
+    /**
+     * The providers built into the app, the same on every platform; a new provider is added here. The order is the
+     * order the apps offer them in, and the first is the one set-up chooses as the primary.
+     *
+     * @param http the way to the network the providers ask through; never null
+     * @return Open-Meteo, then Forecast.Solar
+     */
+    public static Providers standard(HttpGet http) {
+        return new Providers(List.of(new OpenMeteo(http), new ForecastSolar(http)));
     }
 
     /**
