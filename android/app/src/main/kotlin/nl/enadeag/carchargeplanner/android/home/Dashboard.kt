@@ -55,6 +55,9 @@ data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val 
     /** The minimum and target charge levels, which every day's battery bar marks. */
     val levels: ChargeLevels get() = view.levels()
 
+    /** The day the plan was made, in the home's time zone. */
+    val today: LocalDate get() = madeAt.atZone(zone).toLocalDate()
+
     /**
      * The grid advice a day's tab shows.
      *
@@ -62,9 +65,6 @@ data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val 
      * @return the grid advice on today's tab; null on any other, or when there is none
      */
     fun adviceOn(day: DashboardDay): GridAdviceModel? = gridAdvice.takeIf { day.name() is DayName.Today }
-
-    /** The day the plan was made, in the home's time zone. */
-    val today: LocalDate get() = madeAt.atZone(zone).toLocalDate()
 
     /**
      * The trip advice a day's tab shows.
