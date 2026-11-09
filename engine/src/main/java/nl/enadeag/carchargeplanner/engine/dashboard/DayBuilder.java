@@ -23,10 +23,10 @@ final class DayBuilder {
 
     private final ZoneId zone;
     private final LocalDate today;
-    /** The battery level the plan assumed; empty when the owner entered one. */
-    private final Optional<Percent> assumed;
-    /** The day the grid advice is about; empty when the plan gives none. */
-    private final Optional<LocalDate> gridDay;
+    /** The battery level the plan assumed; null when the owner entered one. */
+    private final Percent assumed;
+    /** The day the grid advice is about; null when the plan gives none. */
+    private final LocalDate gridDay;
     /** The days a trip the plan advises on leaves. */
     private final Set<LocalDate> departures;
     /** The trips made with this car, which keep it away on the days from their departure to their return. */
@@ -42,8 +42,8 @@ final class DayBuilder {
     DayBuilder(PlanParts parts) {
         this.zone = parts.zone();
         this.today = parts.madeAt().atZone(zone).toLocalDate();
-        this.assumed = parts.batteryAssumed() ? Optional.of(parts.batteryLevelPct()) : Optional.empty();
-        this.gridDay = parts.gridAdvice().map(GridAdvice::day);
+        this.assumed = parts.batteryAssumed() ? parts.batteryLevelPct() : null;
+        this.gridDay = parts.gridAdvice().map(GridAdvice::day).orElse(null);
         this.departures = parts.tripAdvice().stream()
                 .map(advice -> advice.trip().firstDay(zone))
                 .collect(Collectors.toSet());
@@ -59,12 +59,16 @@ final class DayBuilder {
      */
     DashboardDay day(DayPlan day, DayChart chart) {
         var date = day.date();
+        var name = DayName.of(date, today);
+        var assumedToday = Optional.ofNullable(date.equals(today) ? assumed : null);
         var windows = day.windows();
-        Optional<MainCharge> main = windows.isEmpty() ? Optional.empty() : Optional.of(main(windows.get(0)));
-        var later = windows.isEmpty() ? List.<Window>of() : windows.subList(1, windows.size());
-        var noWindow = windows.isEmpty() ? Optional.of(noWindow(date)) : Optional.<NoWindowReason>empty();
-        return new DashboardDay(DayName.of(date, today), kind(main, noWindow), main, later, noWindow, battery(day),
-                date.equals(today) ? assumed : Optional.empty(), chart);
+        if (windows.isEmpty()) {
+            var reason = noWindow(date);
+            return new DashboardDay(name, reason == NoWindowReason.GRID ? DayKind.GRID : DayKind.NONE,
+                    Optional.empty(), List.of(), Optional.of(reason), battery(day), assumedToday, chart);
+        }
+        return new DashboardDay(name, DayKind.SOLAR, Optional.of(main(windows.get(0))),
+                windows.subList(1, windows.size()), Optional.empty(), battery(day), assumedToday, chart);
     }
 
     private static MainCharge main(Window window) {
@@ -72,16 +76,9 @@ final class DayBuilder {
         return new MainCharge(window, grid >= NO_GRID_KWH ? Optional.of(grid) : Optional.empty());
     }
 
-    private static DayKind kind(Optional<MainCharge> main, Optional<NoWindowReason> noWindow) {
-        if (main.isPresent()) {
-            return DayKind.SOLAR;
-        }
-        return noWindow.equals(Optional.of(NoWindowReason.GRID)) ? DayKind.GRID : DayKind.NONE;
-    }
-
     /** The grid advice's day says so whatever the trips; the departure comes before being away on the trip. */
     private NoWindowReason noWindow(LocalDate date) {
-        if (gridDay.equals(Optional.of(date))) {
+        if (date.equals(gridDay)) {
             return NoWindowReason.GRID;
         }
         if (departures.contains(date)) {
