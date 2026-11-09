@@ -53,14 +53,27 @@ class EngineInFolderTest {
     }
 
     @Test
-    void theConfigFileIsReadFromTheDataFolder() throws IOException, ConfigProblem {
+    void theSettingsFileIsReadFromTheDataFolder() throws IOException, ConfigProblem {
         Files.copy(EXAMPLE, folder.resolve("engine.json"));
 
         assertThat(inFolder().config()).isEqualTo(new ConfigFile(EXAMPLE, FILES).read());
     }
 
     @Test
-    void aConfigFileKeptElsewhereIsSavedThereAndNotInTheDataFolder() throws IOException, ConfigProblem {
+    void aSettingsFileKeptElsewhereIsReadFromThere() throws IOException, ConfigProblem {
+        var configFile = folder.resolve("config").resolve("planner.json");
+        var data = folder.resolve("data");
+        Files.createDirectories(configFile.getParent());
+        Files.copy(EXAMPLE, configFile);
+        var engine = Engine.inFolder(data, configFile, SUNNY, FILES, apiKeys(), notice -> { },
+                Clock.fixed(NOW, ZoneOffset.UTC), new ManualScheduler());
+
+        assertThat(engine.config()).isEqualTo(new ConfigFile(EXAMPLE, FILES).read());
+        assertThat(data.resolve("engine.json")).doesNotExist();
+    }
+
+    @Test
+    void aSettingsFileKeptElsewhereIsSavedThereAndNotInTheDataFolder() throws IOException, ConfigProblem {
         var configFile = folder.resolve("config").resolve("planner.json");
         var data = folder.resolve("data");
         var example = new ConfigFile(EXAMPLE, FILES).read();
@@ -103,8 +116,8 @@ class EngineInFolderTest {
     @Test
     void aRoundKeepsTheForecastAndWhatItToldInTheDataFolder() throws IOException {
         Files.copy(EXAMPLE, folder.resolve("engine.json"));
-        // longer than a full battery reaches, so the round asks whether the assumed level is right
         var engine = inFolder();
+        // longer than a full battery reaches, so the round asks whether the assumed level is right
         engine.addTrip(new Trip(NOW.plus(Duration.ofHours(24)), NOW.plus(Duration.ofHours(32)), 300, false));
 
         var outlook = engine.round(ForecastUse.ASK_PROVIDERS);
