@@ -109,34 +109,12 @@ public final class Messages {
     /**
      * A day's short name, for its tab.
      *
-     * @param day the day to name
-     * @param today the day the plan was made, in the owner's home
-     * @return "Today", or the weekday's short name such as "Fri" in English and "Vr" in Dutch
-     */
-    public String tab(LocalDate day, LocalDate today) {
-        return tab(DayName.of(day, today));
-    }
-
-    /**
-     * A day's short name, for its tab.
-     *
      * @param day the day to name, as the dashboard's model names it
      * @return "Today", or the weekday's short name such as "Fri" in English and "Vr" in Dutch
      */
     public String tab(DayName day) {
         return day instanceof DayName.Today ? text(TextKey.DAY_TODAY)
                 : capitalised(day.date().getDayOfWeek().getDisplayName(TextStyle.SHORT, locale()));
-    }
-
-    /**
-     * A day's name, as a title.
-     *
-     * @param day the day to name
-     * @param today the day the plan was made, in the owner's home
-     * @return "Today", "Tomorrow", or the weekday such as "Sunday"
-     */
-    public String title(LocalDate day, LocalDate today) {
-        return title(DayName.of(day, today));
     }
 
     /**
