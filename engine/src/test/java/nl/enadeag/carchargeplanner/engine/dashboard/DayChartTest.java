@@ -57,7 +57,7 @@ class DayChartTest {
             var date = TODAY.plusDays(i);
             plans.add(day(date, List.of(), forecast(date, kw.apply(date))));
         }
-        return DashboardView.of(new PlanParts(madeAt, AMSTERDAM, plans, baseloadKw)).days();
+        return DashboardView.of(Parts.of(madeAt, AMSTERDAM, plans, baseloadKw)).days();
     }
 
     private static DayChart today(double... kw) {
@@ -65,7 +65,7 @@ class DayChartTest {
     }
 
     private static DayChart only(Instant madeAt, DayPlan day) {
-        return DashboardView.of(new PlanParts(madeAt, AMSTERDAM, List.of(day), BASELOAD_KW)).days().get(0).chart();
+        return DashboardView.of(Parts.of(madeAt, AMSTERDAM, List.of(day), BASELOAD_KW)).days().get(0).chart();
     }
 
     private static double[] hours(double kw, int... sunnyHours) {
@@ -137,7 +137,7 @@ class DayChartTest {
 
     @Test
     void aPlanWithoutDaysHasNoDashboardDays() {
-        assertThat(DashboardView.of(new PlanParts(at(TODAY, 9), AMSTERDAM, List.of(), BASELOAD_KW)).days()).isEmpty();
+        assertThat(DashboardView.of(Parts.of(at(TODAY, 9), AMSTERDAM, List.of(), BASELOAD_KW)).days()).isEmpty();
     }
 
     @Test
@@ -214,7 +214,7 @@ class DayChartTest {
                 day(TODAY, List.of(), forecast(TODAY, allDay)));
 
         var madeAt = TODAY.atStartOfDay(AMSTERDAM).toInstant();
-        var days = DashboardView.of(new PlanParts(madeAt, AMSTERDAM, plans, BASELOAD_KW)).days();
+        var days = DashboardView.of(Parts.of(madeAt, AMSTERDAM, plans, BASELOAD_KW)).days();
 
         assertThat(days.get(0).chart().toHour()).isEqualTo(24);
         assertThat(days).extracting(day -> day.chart().now().map(DayChart.Moment::hour))
@@ -302,7 +302,7 @@ class DayChartTest {
                 .toInstant(), midnight.plusMinutes(30L * (half + 1)).toInstant(), 1)).toList();
         var plan = day(date, List.of(), steps);
 
-        var chart = DashboardView.of(new PlanParts(midnight.toInstant(), zone, List.of(plan), BASELOAD_KW)).days()
+        var chart = DashboardView.of(Parts.of(midnight.toInstant(), zone, List.of(plan), BASELOAD_KW)).days()
                 .get(0).chart();
 
         assertThat(chart.toHour()).isEqualTo(23.5);

@@ -92,15 +92,15 @@ public sealed interface Outlook {
          *
          * @param away the stored one-off away periods, in order of their start; may be empty, never null; not used
          *     yet, the later parts of #341 add them to the dashboard
-         * @param trips the stored trips, in order of their departure; may be empty, never null; not used yet, the
-         *     later parts of #341 add them to the dashboard
+         * @param trips the stored trips, in order of their departure, also those under way and those made without this
+         *     car; may be empty, never null; a day the car is away on one says so
          * @return the dashboard, with a day for each of the plan's days
          * @throws NullPointerException when {@code away} or {@code trips} is null
          */
         public DashboardView dashboard(List<OneOffAwayPeriod> away, List<Trip> trips) {
             Objects.requireNonNull(away, "away");
-            Objects.requireNonNull(trips, "trips");
-            return DashboardView.of(new PlanParts(madeAt, zone, days, baseloadKw));
+            return DashboardView.of(new PlanParts(madeAt, zone, days, baseloadKw, batteryLevelPct, batteryAssumed,
+                    gridAdvice, tripAdvice, minimumPct, targetPct, trips));
         }
     }
 

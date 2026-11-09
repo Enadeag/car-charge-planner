@@ -5,15 +5,20 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
+import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels;
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay;
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardView;
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName;
+import nl.enadeag.carchargeplanner.engine.dashboard.NoWindowReason;
 import nl.enadeag.carchargeplanner.engine.dashboard.PlanParts;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import nl.enadeag.carchargeplanner.engine.forecast.SunnyDays;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
+import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
+import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -45,8 +50,32 @@ class PlannedDashboardTest {
 
         assertThat(dashboard.days()).extracting(DashboardDay::name).containsExactly(new DayName.Today(TODAY),
                 new DayName.Tomorrow(TODAY.plusDays(1)), new DayName.Other(TODAY.plusDays(2)));
-        assertThat(dashboard).isEqualTo(DashboardView.of(new PlanParts(MADE_AT, SunnyDays.TZ, planned.days(), 0.4)));
         assertThat(dashboard.days().get(0).chart().baseloadKw()).isEqualTo(0.4);
+    }
+
+    @Test
+    void thePlanHandsOverItsLevelsAssumptionAdviceAndTheStoredTrips() {
+        var leaving = new Trip(TODAY.plusDays(1).atTime(7, 0).atZone(SunnyDays.TZ).toInstant(),
+                TODAY.plusDays(2).atTime(20, 0).atZone(SunnyDays.TZ).toInstant(), 300, false);
+        var advice = new TripAdvice(leaving, new Percent(60), List.of(), new Percent(60), Optional.empty(),
+                new Percent(60), 0, new Percent(20));
+        var grid = new GridAdvice(TODAY, 10, 10, 3, Optional.empty(), Optional.empty());
+        var plain = planned(0.4);
+        var planned = new Outlook.Planned(MADE_AT, SunnyDays.TZ, plain.days(), new Percent(40), true,
+                Optional.of(grid), List.of(advice), plain.forecastSource(), 0.4, new Percent(20), new Percent(80));
+
+        var dashboard = planned.dashboard(List.of(), List.of(leaving));
+
+        assertThat(dashboard).isEqualTo(DashboardView.of(new PlanParts(MADE_AT, SunnyDays.TZ, planned.days(), 0.4,
+                new Percent(40), true, Optional.of(grid), List.of(advice), new Percent(20), new Percent(80),
+                List.of(leaving))));
+        assertThat(dashboard.days()).extracting(DashboardDay::noWindow).containsExactly(
+                Optional.of(NoWindowReason.GRID), Optional.of(NoWindowReason.DEPARTURE),
+                Optional.of(NoWindowReason.AWAY));
+        assertThat(dashboard.days().get(0).assumedLevel()).contains(new Percent(40));
+        assertThat(dashboard.levels()).isEqualTo(new ChargeLevels(new Percent(20), new Percent(80)));
+        assertThat(dashboard.madeAt()).isEqualTo(MADE_AT);
+        assertThat(dashboard.zone()).isEqualTo(SunnyDays.TZ);
     }
 
     @Test
