@@ -12,16 +12,21 @@ import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionCheck;
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
+import nl.enadeag.carchargeplanner.engine.forecast.ForecastCache;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastResult;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastService;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastUnavailable;
+import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.forecast.Providers;
 import nl.enadeag.carchargeplanner.engine.forecast.SolarSite;
+import nl.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
 import nl.enadeag.carchargeplanner.engine.notify.Announcer;
+import nl.enadeag.carchargeplanner.engine.notify.Notifier;
 import nl.enadeag.carchargeplanner.engine.notify.PlanLevel;
+import nl.enadeag.carchargeplanner.engine.notify.ToldTrips;
 import nl.enadeag.carchargeplanner.engine.plan.AwayTimes;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvisor;
 import nl.enadeag.carchargeplanner.engine.plan.Planner;
@@ -31,6 +36,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.KeyStorage;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsProblem;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import java.io.IOException;
@@ -56,6 +62,9 @@ import java.util.function.Consumer;
  * reads, changes and writes its file as one step, so no change is lost to another.
  */
 public final class Engine {
+
+    /** The name of the owner's settings file, which both apps keep in the same format. */
+    public static final String CONFIG_FILE_NAME = "engine.json";
 
     /** Until the owner enters the battery level, the plan starts from this one. */
     static final Percent ASSUMED_BATTERY_PCT = new Percent(50);
@@ -103,6 +112,56 @@ public final class Engine {
         this.clock = clock;
         this.announcer = announcer;
         this.schedule = new PlanSchedule(executor);
+    }
+
+    /**
+     * The engine on the files of one data folder, with the settings file {@value #CONFIG_FILE_NAME} in it too, and the
+     * {@linkplain Providers#standard(HttpGet) built-in providers}; nothing is read, created or fetched yet.
+     *
+     * @param dataFolder the folder that holds the settings file, the away periods, the trips, the battery level, the
+     *     forecast cache and what was told; it need not exist yet; never null
+     * @param http the way to the network the providers ask through; never null
+     * @param files how the engine writes its files; never null
+     * @param apiKeys where the providers' secret settings are kept; never null
+     * @param notifier tells the owner what a round finds due; never null
+     * @param clock the time plans are made at; never null
+     * @param planner the engine's own thread, where it plans once {@linkplain #start(Consumer) started}; {@link
+     *     #stop()} shuts it down; never null
+     * @return the engine, not started
+     */
+    public static Engine inFolder(Path dataFolder, HttpGet http, PrivateFiles files, ApiKeys apiKeys,
+            Notifier notifier, Clock clock, ScheduledExecutorService planner) {
+        return inFolder(dataFolder, dataFolder.resolve(CONFIG_FILE_NAME), http, files, apiKeys, notifier, clock,
+                planner);
+    }
+
+    /**
+     * The engine on the files of one data folder and a settings file kept elsewhere, with the
+     * {@linkplain Providers#standard(HttpGet) built-in providers}; nothing is read, created or fetched yet.
+     *
+     * @param dataFolder the folder that holds the away periods, the trips, the battery level, the forecast cache and
+     *     what was told; it need not exist yet; never null
+     * @param configFile the owner's settings file, such as the desktop's in its config folder or the one named with
+     *     {@code --config=}; it need not exist yet; never null
+     * @param http the way to the network the providers ask through; never null
+     * @param files how the engine writes its files; never null
+     * @param apiKeys where the providers' secret settings are kept; never null
+     * @param notifier tells the owner what a round finds due; never null
+     * @param clock the time plans are made at; never null
+     * @param planner the engine's own thread, where it plans once {@linkplain #start(Consumer) started}; {@link
+     *     #stop()} shuts it down; never null
+     * @return the engine, not started
+     */
+    public static Engine inFolder(Path dataFolder, Path configFile, HttpGet http, PrivateFiles files,
+            ApiKeys apiKeys, Notifier notifier, Clock clock, ScheduledExecutorService planner) {
+        var providers = Providers.standard(http);
+        var announcer = new Announcer(new AnnouncedWindows(dataFolder.resolve("announced.json"), files),
+                new ToldTrips(dataFolder.resolve("trip-notices.json"), files), notifier);
+        return new Engine(new ConfigFile(configFile, files),
+                new ForecastService(providers, new ForecastCache(dataFolder.resolve("forecasts"), files), apiKeys),
+                providers, apiKeys, new AwayFile(dataFolder.resolve("away.json"), files),
+                new TripFile(dataFolder.resolve("trips.json"), files),
+                new BatteryFile(dataFolder.resolve("battery.json"), files), clock, announcer, planner);
     }
 
     /**
