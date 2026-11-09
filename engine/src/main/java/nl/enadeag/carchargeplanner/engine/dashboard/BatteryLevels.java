@@ -10,9 +10,24 @@ import java.util.Optional;
  * @param start at the start of the day; today's at the moment the plan was made
  * @param after after the day's charging; the start's when the day has none
  * @param afterTrip at the end of the day a trip the plan advises on leaves, after the trip; empty on any other day
- * @param chargesBeforeTrip true when the start and the level after charging differ in whole percent, rounded half up
+ * @param chargesBeforeTrip true when the start and the level after charging differ in whole percent, rounded half up;
+ *     false when they read the same
  */
 public record BatteryLevels(Percent start, Percent after, Optional<Percent> afterTrip, boolean chargesBeforeTrip) {
+
+    /**
+     * Makes the levels of a day.
+     *
+     * @throws IllegalArgumentException when {@code chargesBeforeTrip} is not what the start and the level after
+     *     charging give: true exactly when they differ in whole percent, rounded half up
+     */
+    public BatteryLevels {
+        if (chargesBeforeTrip != differ(start, after)) {
+            throw new IllegalArgumentException("chargesBeforeTrip must be true exactly when the whole percentages "
+                    + "differ, rounded half up: start " + start.value() + " and after " + after.value()
+                    + " given with " + chargesBeforeTrip);
+        }
+    }
 
     /**
      * The levels of a day no trip the plan advises on leaves.

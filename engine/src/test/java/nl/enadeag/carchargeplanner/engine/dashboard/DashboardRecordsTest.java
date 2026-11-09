@@ -23,6 +23,20 @@ class DashboardRecordsTest {
     private static final Instant NOON = Instant.parse("2026-06-01T10:00:00Z");
     private static final LocalDate DAY = LocalDate.of(2026, 6, 1);
 
+    @ParameterizedTest
+    @CsvSource({"50, 50, true", "49.5, 50, true", "49.4, 50, false", "40, 60, false", "50, 50.4, true"})
+    void batteryLevelsRefuseAFlagThatContradictsTheWholePercentages(double start, double after, boolean flag) {
+        assertThatThrownBy(() -> new BatteryLevels(new Percent(start), new Percent(after), Optional.empty(), flag))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("chargesBeforeTrip");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"50, 50, false", "49.5, 50, false", "49.4, 50, true", "40, 60, true"})
+    void batteryLevelsAcceptAFlagThatAgreesWithTheWholePercentages(double start, double after, boolean flag) {
+        assertThat(new BatteryLevels(new Percent(start), new Percent(after), Optional.empty(), flag)
+                .chargesBeforeTrip()).isEqualTo(flag);
+    }
+
     private static DayChart chart(double from, double to, double scale, double baseload) {
         return new DayChart(from, to, scale, List.of(), baseload, List.of(), Optional.empty(), List.of(),
                 Optional.empty());
