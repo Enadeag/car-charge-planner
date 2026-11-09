@@ -9,6 +9,7 @@ import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.Outlook;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * Turns the engine's outlook into the tray icon's dot and tooltip. What needs the owner most comes first: no plan,
@@ -59,7 +60,9 @@ final class TrayStatusMapper {
     }
 
     private TrayStatus plan(Outlook.Planned planned) {
-        var advice = planned.gridAdvice().map(new GridAdviceMapper(planned, messages)::map);
+        // the grid advice does not depend on the stored away periods and trips, which the tray does not have
+        var advice = planned.dashboard(List.of(), List.of()).gridAdvice()
+                .map(new GridAdviceMapper(planned.zone(), messages)::map);
         if (advice.isPresent()) {
             return new TrayStatus(StatusDot.GRID, advice.get().title());
         }
