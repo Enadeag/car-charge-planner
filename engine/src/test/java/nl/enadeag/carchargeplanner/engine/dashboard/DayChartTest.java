@@ -176,6 +176,13 @@ class DayChartTest {
     }
 
     @Test
+    void withoutSunOrHouseUseTheScaleIsOneKilowatt() {
+        var days = days(at(TODAY, 9), 2, 0, ignored -> new double[24]);
+
+        assertThat(days).extracting(day -> day.chart().scaleKw()).containsExactly(1.0, 1.0);
+    }
+
+    @Test
     void nowIsMarkedOnTodayOnlyAtTheMomentThePlanWasMade() {
         var days = days(at(TODAY, 9), 2, HOUSE_KW, ignored -> SUNNY);
 
