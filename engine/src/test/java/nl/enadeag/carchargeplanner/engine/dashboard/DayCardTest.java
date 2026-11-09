@@ -121,10 +121,11 @@ class DayCardTest {
     }
 
     @Test
-    void todayIsTheHomesDayAlsoWhenItIsAlreadyTheNextInUtc() {
-        var lateAtNight = at(TODAY, 23, 30);
+    void todayIsTheHomesDayAlsoWhenUtcIsStillTheDayBefore() {
+        // 00:30 in Amsterdam in summer is 22:30 the day before in UTC
+        var justAfterMidnight = at(TODAY, 0, 30);
 
-        var shown = view(lateAtNight, threeDaysWithoutWindows(), true, Optional.empty(), List.of(), List.of());
+        var shown = view(justAfterMidnight, threeDaysWithoutWindows(), true, Optional.empty(), List.of(), List.of());
 
         assertThat(shown.days().get(0).assumedLevel()).contains(new Percent(40));
         assertThat(shown.days().get(1).assumedLevel()).isEmpty();
