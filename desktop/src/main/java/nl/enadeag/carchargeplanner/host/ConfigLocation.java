@@ -4,14 +4,14 @@ import nl.enadeag.carchargeplanner.engine.Engine;
 import java.nio.file.Path;
 import java.util.Map;
 
-/** Where the engine's config file is, on each system: the folder the user's settings usually go to. */
+/** Where the engine's settings file is, on each system: the folder the user's settings usually go to. */
 public final class ConfigLocation {
 
     private ConfigLocation() {
     }
 
     /**
-     * Where the config file is when the user names none.
+     * Where the settings file is when the user names none.
      *
      * @param os the system the app runs on; Windows has a folder of its own, the others share the XDG one
      * @param environment the environment variables; {@code APPDATA} must be present on Windows, {@code XDG_CONFIG_HOME}

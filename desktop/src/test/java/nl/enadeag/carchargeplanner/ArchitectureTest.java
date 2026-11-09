@@ -370,7 +370,7 @@ class ArchitectureTest {
 
     @ArchTest
     static final ArchRule providersAreOnlyReachedThroughTheForecast = noClasses()
-            .that().resideOutsideOfPackages(ENGINE + ".forecast..", ROOT, START)
+            .that().resideOutsideOfPackages(ENGINE + ".forecast..")
             .should().dependOnClassesThat().resideInAPackage(ENGINE + ".forecast.providers..")
             .because("a provider is chosen by engine.forecast; the plan and the clients know only the forecast");
 
