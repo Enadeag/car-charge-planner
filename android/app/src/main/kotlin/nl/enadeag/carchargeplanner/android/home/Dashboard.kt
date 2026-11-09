@@ -6,6 +6,7 @@ import java.time.ZoneId
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole
@@ -47,7 +48,7 @@ data class Dashboard(val zone: ZoneId, val madeAt: Instant, val days: List<DayMo
      * @param day one of [days]
      * @return the grid advice on today's tab; null on any other, or when there is none
      */
-    fun adviceOn(day: DayModel): GridAdviceModel? = gridAdvice.takeIf { day.name == DayName.Today }
+    fun adviceOn(day: DayModel): GridAdviceModel? = gridAdvice.takeIf { day.name is DayName.Today }
 
     /** The day the plan was made, in the home's time zone. */
     val today: LocalDate get() = madeAt.atZone(zone).toLocalDate()
@@ -135,7 +136,8 @@ data class Dashboard(val zone: ZoneId, val madeAt: Instant, val days: List<DayMo
         fun of(planned: Outlook.Planned, away: List<OneOffAwayPeriod>, trips: List<Trip> = listOf(),
             names: (ProviderId) -> String = ProviderId::value): Dashboard {
             val today = planned.today()
-            return Dashboard(planned.zone(), planned.madeAt(), DayMapper(planned).map(planned.days()),
+            val shown = planned.dashboard(away, trips)
+            return Dashboard(planned.zone(), planned.madeAt(), DayMapper(planned).map(shown.days()),
                 planned.gridAdvice().map { GridAdviceModel.of(it, planned.zone(), today) }.orElse(null),
                 ChargeLevels(planned.minimumPct(), planned.targetPct()),
                 ComingAway.of(away, planned.zone(), planned.madeAt()), Footer.of(planned),

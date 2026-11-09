@@ -12,10 +12,8 @@ import nl.enadeag.carchargeplanner.android.home.BatteryLevels
 import nl.enadeag.carchargeplanner.android.home.ChargeLevels
 import nl.enadeag.carchargeplanner.android.home.DayKind
 import nl.enadeag.carchargeplanner.android.home.DayModel
-import nl.enadeag.carchargeplanner.android.home.DayName
 import nl.enadeag.carchargeplanner.android.home.NoWindowWhy
 import nl.enadeag.carchargeplanner.android.home.Plans
-import nl.enadeag.carchargeplanner.android.home.SolarChart
 import nl.enadeag.carchargeplanner.android.home.SourceFigure
 import nl.enadeag.carchargeplanner.android.home.TripAdviceModel
 import nl.enadeag.carchargeplanner.android.home.TripAdviceModelTest.Companion.BRUSSELS
@@ -31,6 +29,8 @@ import nl.enadeag.carchargeplanner.android.ui.notify.NoticeWords
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.dashboard.DayChart
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.notify.AnnouncedWindows
 import nl.enadeag.carchargeplanner.engine.notify.Announcer
 import nl.enadeag.carchargeplanner.engine.notify.Notice
@@ -394,7 +394,7 @@ class TripAdviceWordsTest {
 
     private fun day(date: LocalDate, name: DayName, levels: BatteryLevels, kind: DayKind = DayKind.NONE) =
         DayModel(date, name, kind, null, listOf(), levels, null,
-            SolarChart(6.0, 20.0, 1.0, listOf(), 0.3, listOf(), null, listOf(), null))
+            DayChart(6.0, 20.0, 1.0, listOf(), 0.3, listOf(), Optional.empty(), listOf(), Optional.empty()))
 
     @Test
     fun onTheDayATripLeavesTheBatteryChipAndLineSayTheLevelAfterTheTrip() {
@@ -425,7 +425,7 @@ class TripAdviceWordsTest {
         assertThat(words.figure(SourceFigure.Battery(notCharged))).isEqualTo("Accu 50 → 30% na de rit")
         assertThat(words.spokenFigure(SourceFigure.Battery(notCharged))).isEqualTo("Accu 50%, 30% na de rit")
         assertThat(words.batteryLevels(charged)).isEqualTo("50 → 74%, 70% na de rit")
-        val tomorrow = day(TOMORROW, DayName.Tomorrow, charged)
+        val tomorrow = day(TOMORROW, DayName.Tomorrow(TOMORROW), charged)
         assertThat(words.battery(tomorrow, ChargeLevels(Percent(20.0), Percent(80.0)))).isEqualTo("Accu van de auto " +
             "50% aan het begin van morgen, na het laden 74%; minimum 20%, doel 80%. Na de rit staat de accu aan het " +
             "eind van de dag op 70%.")
@@ -435,9 +435,9 @@ class TripAdviceWordsTest {
     fun theBatteryBarsSentenceSaysTheLevelAfterTheTripLastOnlyOnTheDayATripLeaves() {
         val words = words()
         val levels = ChargeLevels(Percent(20.0), Percent(80.0))
-        val today = day(TODAY, DayName.Today, BatteryLevels(Percent(50.0), Percent(74.0), Percent(70.0)))
+        val today = day(TODAY, DayName.Today(TODAY), BatteryLevels(Percent(50.0), Percent(74.0), Percent(70.0)))
             .copy(assumedLevel = Percent(50.0))
-        val plain = day(TOMORROW, DayName.Tomorrow, BatteryLevels(Percent(50.0), Percent(74.0)))
+        val plain = day(TOMORROW, DayName.Tomorrow(TOMORROW), BatteryLevels(Percent(50.0), Percent(74.0)))
 
         assertThat(words.battery(today, levels)).isEqualTo("Car battery 50% now, 74% after charging; minimum 20%, " +
             "target 80%. The battery level is assumed. Use Update battery level under it to enter the level the car " +
@@ -449,7 +449,7 @@ class TripAdviceWordsTest {
     @Test
     fun aDaysNoteSaysWhyItHasNoWindowAsTheDashboardTellsIt() {
         val words = words()
-        val day = day(TOMORROW, DayName.Tomorrow, BatteryLevels(Percent(50.0), Percent(50.0)))
+        val day = day(TOMORROW, DayName.Tomorrow(TOMORROW), BatteryLevels(Percent(50.0), Percent(50.0)))
 
         assertThat(words.note(day, NoWindowWhy.AWAY))
             .isEqualTo("The car is away on a trip, or there is too little solar power while it is home.")
@@ -461,7 +461,7 @@ class TripAdviceWordsTest {
     @Test
     @Config(qualifiers = "nl")
     fun aDayAwayOnATripSaysSoInDutch() {
-        val day = day(TOMORROW, DayName.Tomorrow, BatteryLevels(Percent(50.0), Percent(50.0)))
+        val day = day(TOMORROW, DayName.Tomorrow(TOMORROW), BatteryLevels(Percent(50.0), Percent(50.0)))
 
         assertThat(words(Locale.forLanguageTag("nl")).note(day, NoWindowWhy.AWAY))
             .isEqualTo("De auto is weg voor een rit, of er is te weinig zonnestroom terwijl hij thuis is.")

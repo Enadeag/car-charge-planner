@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.android.home
 
 import java.time.LocalDate
 import nl.enadeag.carchargeplanner.engine.Outlook
+import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice
 
@@ -9,8 +10,8 @@ import nl.enadeag.carchargeplanner.engine.plan.GridAdvice
  * The days of one plan as the dashboard's tabs show them, in the home's time zone, as the desktop's `DayMapper`
  * does; which days the car is away on a trip is the dashboard's, as the trips change without a new plan.
  *
- * @param planned the plan whose time zone, day of making, assumed battery level, grid advice, trip advice and
- *     forecast the days are told in
+ * @param planned the plan whose time zone, day of making, assumed battery level, grid advice, trip advice and days
+ *     the days are told in
  */
 class DayMapper(planned: Outlook.Planned) {
 
@@ -19,9 +20,11 @@ class DayMapper(planned: Outlook.Planned) {
         const val NO_GRID_KWH = 0.05
     }
 
-    private val charts = SolarChartMapper(planned)
     private val today: LocalDate = planned.today()
     private val assumed = if (planned.batteryAssumed()) planned.batteryLevelPct() else null
+
+    /** The plan's days, by their date. */
+    private val plans: Map<LocalDate, DayPlan> = planned.days().associateBy(DayPlan::date)
 
     /** The day the grid advice is about; null when the plan gives none. */
     private val gridDay: LocalDate? = planned.gridAdvice().map(GridAdvice::day).orElse(null)
@@ -33,12 +36,14 @@ class DayMapper(planned: Outlook.Planned) {
     /**
      * The days, each with its windows and figures.
      *
-     * @param days the plan's days, today first; may be empty
+     * @param days the engine's dashboard days of the plan, today first, with their names and charts; may be empty
      * @return one day model per day, in the same order
+     * @throws IllegalArgumentException when a day is not one of the plan's
      */
-    fun map(days: List<DayPlan>): List<DayModel> = days.map(::map)
+    fun map(days: List<DashboardDay>): List<DayModel> = days.map(::map)
 
-    private fun map(day: DayPlan): DayModel {
+    private fun map(shown: DashboardDay): DayModel {
+        val day = plans[shown.date()] ?: throw IllegalArgumentException("the plan has no day ${shown.date()}")
         val main = day.windows().firstOrNull()
         val kind = when {
             main != null -> DayKind.SOLAR
@@ -47,7 +52,7 @@ class DayMapper(planned: Outlook.Planned) {
         }
         return DayModel(
             date = day.date(),
-            name = DayName.of(day.date(), today),
+            name = shown.name(),
             kind = kind,
             main = main?.let {
                 MainCharge(it, it.energyKwh(), it.solarSharePct(),
@@ -57,7 +62,7 @@ class DayMapper(planned: Outlook.Planned) {
             battery = BatteryLevels(day.startLevelPct(), day.levelAfterChargingPct(),
                 day.endLevelPct().takeIf { day.date() in departures }),
             assumedLevel = assumed.takeIf { day.date() == today },
-            chart = charts.map(day),
+            chart = shown.chart(),
         )
     }
 }

@@ -58,7 +58,6 @@ import nl.enadeag.carchargeplanner.android.home.AwayEntry
 import nl.enadeag.carchargeplanner.android.home.BatteryEntry
 import nl.enadeag.carchargeplanner.android.home.Dashboard
 import nl.enadeag.carchargeplanner.android.home.DayModel
-import nl.enadeag.carchargeplanner.android.home.DayName
 import nl.enadeag.carchargeplanner.android.home.EnergySource
 import nl.enadeag.carchargeplanner.android.home.Footer
 import nl.enadeag.carchargeplanner.android.home.GridAdviceModel
@@ -77,6 +76,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.BarScaffold
 import nl.enadeag.carchargeplanner.android.ui.components.EnglishDetails
 import nl.enadeag.carchargeplanner.android.ui.components.inEnglish
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 
 /**
@@ -327,7 +327,7 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
                 }
                 dashboard.adviceOn(day)?.let { GridAdviceCard(it, words) }
                 SolarCard(day, words)
-                BatteryCard(day, dashboard.levels, words, battery.takeIf { day.name == DayName.Today })
+                BatteryCard(day, dashboard.levels, words, battery.takeIf { day.name is DayName.Today })
                 TripsCard(dashboard, day, words, trips, inView = index == selected)
                 AwayList(dashboard, day, words, away, inView = index == selected)
                 FooterLine(dashboard.footer, words)

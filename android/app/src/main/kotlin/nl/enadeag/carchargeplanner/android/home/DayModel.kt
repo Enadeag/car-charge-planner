@@ -2,6 +2,8 @@ package nl.enadeag.carchargeplanner.android.home
 
 import java.time.LocalDate
 import nl.enadeag.carchargeplanner.engine.config.Percent
+import nl.enadeag.carchargeplanner.engine.dashboard.DayChart
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.plan.Window
 
 /**
@@ -28,7 +30,7 @@ data class DayModel(
     val later: List<Window>,
     val battery: BatteryLevels,
     val assumedLevel: Percent?,
-    val chart: SolarChart,
+    val chart: DayChart,
 ) {
 
     init {
@@ -169,37 +171,4 @@ enum class NoWindowWhy {
 
     /** The car needs no charging, or there is too little solar power for it. */
     NOT_NEEDED,
-}
-
-/** How a day is named, from the day the plan was made in the home's time zone. */
-sealed interface DayName {
-
-    /** The day the plan was made. */
-    data object Today : DayName
-
-    /** The day after. */
-    data object Tomorrow : DayName
-
-    /**
-     * Any other day, named by its weekday or date.
-     *
-     * @property date the day
-     */
-    data class Other(val date: LocalDate) : DayName
-
-    companion object {
-
-        /**
-         * The name of a day.
-         *
-         * @param date the day to name
-         * @param today the day the plan was made, in the home's time zone
-         * @return today, tomorrow, or the other day
-         */
-        fun of(date: LocalDate, today: LocalDate): DayName = when (date) {
-            today -> Today
-            today.plusDays(1) -> Tomorrow
-            else -> Other(date)
-        }
-    }
 }

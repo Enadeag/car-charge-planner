@@ -240,7 +240,7 @@ class AppArchitectureTest {
 
         /** The files of the dashboard's models, which hold its rules and know nothing of Android. */
         val MODEL_FILES = setOf("Dashboard.kt", "DayModel.kt", "DayMapper.kt", "GridAdviceModel.kt", "ListedTrip.kt",
-            "ComingAway.kt", "SolarChart.kt", "TripAdviceModel.kt")
+            "ComingAway.kt", "TripAdviceModel.kt")
 
         /** The other files in the dashboard's package: entries, notices and the like, which may use Android. */
         val NOT_MODEL_FILES = setOf("AwayEntry.kt", "BatteryEntry.kt", "TripEntry.kt", "ChangeQueue.kt",

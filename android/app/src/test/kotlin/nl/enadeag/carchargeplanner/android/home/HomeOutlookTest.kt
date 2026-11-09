@@ -22,6 +22,7 @@ import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -378,7 +379,7 @@ class HomeOutlookTest {
         runCurrent()
 
         val shown = (home.state.value as HomeOutlook.State.Planned).dashboard
-        assertThat(shown.away).containsExactly(ComingAway.AllDay(DayName.Tomorrow, tomorrow))
+        assertThat(shown.away).containsExactly(ComingAway.AllDay(DayName.Tomorrow(today.plusDays(1)), tomorrow))
         assertThat(shown.days).isEqualTo(Dashboard.of(planned, listOf()).days)
         assertThat(home.refreshing.value).isTrue()
         assertThat(access.outlooks).hasSize(2)

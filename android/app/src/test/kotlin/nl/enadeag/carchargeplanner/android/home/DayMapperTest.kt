@@ -5,6 +5,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Optional
 import nl.enadeag.carchargeplanner.engine.config.Percent
+import nl.enadeag.carchargeplanner.engine.dashboard.DayChart
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice
 import nl.enadeag.carchargeplanner.engine.plan.Window
@@ -24,7 +26,7 @@ class DayMapperTest {
     private fun days(vararg windows: List<Window>, assumed: Boolean = true,
         gridAdvice: GridAdvice? = null): List<DayModel> {
         val planned = Plans.planned(today.atTime(8, 0).atZone(amsterdam), windows.toList(), assumed, gridAdvice)
-        return DayMapper(planned).map(planned.days())
+        return DayMapper(planned).map(planned.dashboard(listOf(), listOf()).days())
     }
 
     @Test
@@ -85,9 +87,10 @@ class DayMapperTest {
         val madeAt = Instant.parse("2026-06-01T23:30:00Z").atZone(amsterdam)
         val planned = Plans.planned(madeAt, listOf(listOf(), listOf(), listOf()))
 
-        val days = DayMapper(planned).map(planned.days())
+        val days = DayMapper(planned).map(planned.dashboard(listOf(), listOf()).days())
 
-        assertThat(days.map { it.name }).containsExactly(DayName.Today, DayName.Tomorrow,
+        assertThat(days.map { it.name }).containsExactly(DayName.Today(LocalDate.of(2026, 6, 2)),
+            DayName.Tomorrow(LocalDate.of(2026, 6, 3)),
             DayName.Other(LocalDate.of(2026, 6, 4)))
         assertThat(days.first().assumedLevel).isEqualTo(Percent(40.0))
     }
@@ -98,10 +101,10 @@ class DayMapperTest {
         val planned = Plans.planned(madeAt.atZone(amsterdam), listOf(listOf(Plans.window(amsterdam, home, 13, 15)),
             listOf()))
 
-        val days = DayMapper(planned).map(planned.days())
+        val days = DayMapper(planned).map(planned.dashboard(listOf(), listOf()).days())
 
-        assertThat(days.map { it.date to it.name }).containsExactly(home to DayName.Today,
-            home.plusDays(1) to DayName.Tomorrow)
+        assertThat(days.map { it.date to it.name }).containsExactly(home to DayName.Today(home),
+            home.plusDays(1) to DayName.Tomorrow(home.plusDays(1)))
     }
 
     @Test
@@ -116,15 +119,26 @@ class DayMapperTest {
 
     @Test
     fun eachDayHasItsOwnChartWithNowOnTodaysOnly() {
-        val planned = Plans.planned(today.atTime(8, 0).atZone(amsterdam), listOf(listOf(
-            Plans.window(amsterdam, today, 13, 15)), listOf()), forecast = {
-            Plans.forecast(amsterdam, it, *DoubleArray(24) { hour -> if (hour in 7..17) 2.0 else 0.0 }) })
+        val window = Plans.window(amsterdam, today, 13, 15)
+        val planned = Plans.planned(today.atTime(8, 0).atZone(amsterdam), listOf(listOf(window), listOf()),
+            forecast = { Plans.forecast(amsterdam, it, *DoubleArray(24) { hour -> if (hour in 7..17) 2.0 else 0.0 }) })
+        val shown = planned.dashboard(listOf(), listOf())
 
-        val days = DayMapper(planned).map(planned.days())
+        val days = DayMapper(planned).map(shown.days())
 
-        assertThat(days.map { it.chart }).containsExactlyElementsOf(planned.days().map(SolarChartMapper(planned)::map))
-        assertThat(days[0].chart.windows).containsExactly(SolarChart.Span(13.0, 15.0))
-        assertThat(days.map { it.chart.now?.hour }).containsExactly(8.0, null)
+        assertThat(days.map { it.chart }).containsExactlyElementsOf(shown.days().map { it.chart() })
+        assertThat(days[0].chart.windows())
+            .containsExactly(DayChart.WindowBand(13.0, 15.0, window.start(), window.end()))
+        assertThat(days.map { day -> day.chart.now().map { it.hour() }.orElse(null) }).containsExactly(8.0, null)
+    }
+
+    @Test
+    fun aDayOfAnotherPlanIsRefused() {
+        val planned = Plans.planned(today.atTime(8, 0).atZone(amsterdam), listOf(listOf()))
+        val later = Plans.planned(today.plusDays(5).atTime(8, 0).atZone(amsterdam), listOf(listOf()))
+
+        assertThatThrownBy { DayMapper(planned).map(later.dashboard(listOf(), listOf()).days()) }
+            .isInstanceOf(IllegalArgumentException::class.java)
     }
 
     @Test
@@ -138,8 +152,8 @@ class DayMapperTest {
     private val battery = BatteryLevels(Percent(40.0), Percent(50.0))
 
     private fun day(kind: DayKind, main: MainCharge?, later: List<Window> = listOf()) =
-        DayModel(today, DayName.Today, kind, main, later, battery, null,
-            SolarChart(6.0, 20.0, 1.0, listOf(), 0.3, listOf(), null, listOf(), null))
+        DayModel(today, DayName.Today(today), kind, main, later, battery, null,
+            DayChart(6.0, 20.0, 1.0, listOf(), 0.3, listOf(), Optional.empty(), listOf(), Optional.empty()))
 
     @Test
     fun aSolarDayHasAMainWindowAndAnyOtherKindNone() {
@@ -177,7 +191,7 @@ class DayMapperTest {
         val planned = Plans.planned(today.atTime(8, 0).atZone(amsterdam), listOf(listOf(), listOf(), listOf()),
             tripAdvice = listOf(advice), endPct = { 25.0 })
 
-        val days = DayMapper(planned).map(planned.days())
+        val days = DayMapper(planned).map(planned.dashboard(listOf(), listOf()).days())
 
         assertThat(days.map { it.battery.afterTripPct }).containsExactly(null, Percent(25.0), null)
         assertThat(days.map { it.departs }).containsExactly(false, true, false)

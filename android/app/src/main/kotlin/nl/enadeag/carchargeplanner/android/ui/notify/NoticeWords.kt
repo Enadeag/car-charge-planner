@@ -5,11 +5,11 @@ import java.time.ZoneId
 import java.util.Locale
 import kotlin.math.ceil
 import nl.enadeag.carchargeplanner.android.R
-import nl.enadeag.carchargeplanner.android.home.DayName
 import nl.enadeag.carchargeplanner.android.notify.LockScreen
 import nl.enadeag.carchargeplanner.android.notify.NoticePlan
 import nl.enadeag.carchargeplanner.android.ui.home.DashboardWords
 import nl.enadeag.carchargeplanner.engine.config.Phases
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.notify.Announcement
 import nl.enadeag.carchargeplanner.engine.notify.AnnouncementKind
 import nl.enadeag.carchargeplanner.engine.notify.BatteryCheck

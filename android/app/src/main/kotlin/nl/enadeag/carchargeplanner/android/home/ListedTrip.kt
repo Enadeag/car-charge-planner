@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.android.home
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 
 /**
