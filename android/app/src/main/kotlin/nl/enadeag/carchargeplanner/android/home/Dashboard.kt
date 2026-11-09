@@ -10,6 +10,7 @@ import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardView
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
+import nl.enadeag.carchargeplanner.engine.dashboard.GridAdviceView
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole
@@ -22,7 +23,6 @@ import nl.enadeag.carchargeplanner.engine.trip.Trip
  * @property planned the plan the dashboard is made from, kept so a change of the trips or the away periods can make
  *     the engine's dashboard again at once
  * @property view the engine's dashboard of the plan, from the stored trips as they were when it was made
- * @property gridAdvice the grid advice, shown on today's tab; null when there is none
  * @property away the one-off away periods that had not ended when the plan was made, in order of their start
  * @property footer the forecast's credit, source and freshness
  * @property keyRefusedBy the names of the providers that refused their API key, in the order they were asked, also
@@ -33,8 +33,8 @@ import nl.enadeag.carchargeplanner.engine.trip.Trip
  *     [TripAdviceModel.shownOn] says
  * @throws IllegalArgumentException when [view] has no days, which shows as no forecast instead
  */
-data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val gridAdvice: GridAdviceModel?,
-    val away: List<ComingAway>, val footer: Footer, val keyRefusedBy: List<String> = listOf(),
+data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val away: List<ComingAway>,
+    val footer: Footer, val keyRefusedBy: List<String> = listOf(),
     val trips: List<ListedTrip> = listOf(), val tripAdvice: List<TripAdviceModel> = listOf()) {
 
     init {
@@ -55,6 +55,9 @@ data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val 
     /** The minimum and target charge levels, which every day's battery bar marks. */
     val levels: ChargeLevels get() = view.levels()
 
+    /** The plan's grid advice, shown on today's tab; null when there is none. */
+    val gridAdvice: GridAdviceView? get() = view.gridAdvice().orElse(null)
+
     /** The day the plan was made, in the home's time zone. */
     val today: LocalDate get() = madeAt.atZone(zone).toLocalDate()
 
@@ -64,7 +67,7 @@ data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val 
      * @param day one of [days]
      * @return the grid advice on today's tab; null on any other, or when there is none
      */
-    fun adviceOn(day: DashboardDay): GridAdviceModel? = gridAdvice.takeIf { day.name() is DayName.Today }
+    fun adviceOn(day: DashboardDay): GridAdviceView? = gridAdvice.takeIf { day.name() is DayName.Today }
 
     /**
      * The trip advice a day's tab shows.
@@ -135,9 +138,7 @@ data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val 
          */
         fun of(planned: Outlook.Planned, away: List<OneOffAwayPeriod>, trips: List<Trip> = listOf(),
             names: (ProviderId) -> String = ProviderId::value): Dashboard {
-            val today = planned.today()
             return Dashboard(planned, planned.dashboard(away, trips),
-                planned.gridAdvice().map { GridAdviceModel.of(it, planned.zone(), today) }.orElse(null),
                 ComingAway.of(away, planned.zone(), planned.madeAt()), Footer.of(planned),
                 planned.forecastSource().keyRefusedBy().map(names),
                 ListedTrip.of(trips, planned.zone(), planned.madeAt()), TripAdviceModel.of(planned))

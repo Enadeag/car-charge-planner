@@ -126,7 +126,7 @@ class DashboardRecordsTest {
     void aDashboardKeepsItsOwnDays() {
         var days = new ArrayList<>(List.of(day(MAIN, List.of(), Optional.empty())));
         var dashboard = new DashboardView(NOON, ZoneId.of("Europe/Amsterdam"), days,
-                new ChargeLevels(new Percent(20), new Percent(80)));
+                new ChargeLevels(new Percent(20), new Percent(80)), Optional.empty());
 
         days.clear();
 
@@ -226,5 +226,72 @@ class DashboardRecordsTest {
 
         assertThat(parts.trips()).hasSize(1);
         assertThat(parts.tripAdvice()).hasSize(1);
+    }
+
+    private static GridAdviceView gridAdvice(double energyKwh, double endLevelPct) {
+        return new GridAdviceView(new DayName.Tomorrow(DAY.plusDays(1)), energyKwh, endLevelPct, Optional.empty());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0", "-0.1", "NaN", "Infinity"})
+    void theGridAdvicesEnergyIsFiniteAndMoreThanZero(double kwh) {
+        assertThatThrownBy(() -> gridAdvice(kwh, 10)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"NaN", "Infinity", "-Infinity"})
+    void theGridAdvicesEndLevelIsFinite(double endLevelPct) {
+        assertThatThrownBy(() -> gridAdvice(6, endLevelPct)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static DashboardView dashboardWith(GridAdviceView advice) {
+        return new DashboardView(NOON, ZoneId.of("Europe/Amsterdam"), List.of(),
+                new ChargeLevels(new Percent(30), new Percent(80)), Optional.of(advice));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"30", "30.1", "100"})
+    void theDashboardRefusesAGridAdviceThatEndsAtOrAboveTheMinimum(double endLevelPct) {
+        assertThatThrownBy(() -> dashboardWith(gridAdvice(6, endLevelPct)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void theDashboardTakesAGridAdviceThatEndsJustBelowTheMinimum() {
+        var advice = gridAdvice(6, 29.99);
+
+        assertThat(dashboardWith(advice).gridAdvice()).contains(advice);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0.01, 29.99", "6, -250"})
+    void theGridAdviceTakesALittleEnergyAndAnEndLevelJustBelowTheMinimumOrFarBelowNothing(double kwh,
+            double endLevelPct) {
+        var advice = gridAdvice(kwh, endLevelPct);
+
+        assertThat(advice.energyKwh()).isEqualTo(kwh);
+        assertThat(advice.endLevelPct()).isEqualTo(endLevelPct);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0, true", "-0.0, true", "-0.01, true", "-250, true", "0.01, false", "29, false"})
+    void theGridAdviceRunsEmptyExactlyWhenTheDayEndsAtOrBelowNothing(double endLevelPct, boolean runsEmpty) {
+        assertThat(gridAdvice(6, endLevelPct).runsEmpty()).isEqualTo(runsEmpty);
+    }
+
+    @Test
+    void theGridAdvicesWindowIsOnItsDayOrBeforeItAndNotAfter() {
+        var limit = new Percent(50);
+        var tomorrow = new DayName.Tomorrow(DAY.plusDays(1));
+        var sameDay = new GridWindow(WINDOW, tomorrow, limit);
+        var before = new GridWindow(WINDOW, new DayName.Today(DAY), limit);
+        var after = new GridWindow(WINDOW, new DayName.Other(DAY.plusDays(2)), limit);
+
+        assertThat(new GridAdviceView(tomorrow, 6, 10, Optional.of(sameDay)).window())
+                .contains(sameDay);
+        assertThat(new GridAdviceView(tomorrow, 6, 10, Optional.of(before)).window())
+                .contains(before);
+        assertThatThrownBy(() -> new GridAdviceView(tomorrow, 6, 10, Optional.of(after)))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }
