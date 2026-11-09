@@ -23,6 +23,7 @@ import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
+import nl.enadeag.carchargeplanner.engine.dashboard.NoWindowReason
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -380,7 +381,7 @@ class HomeOutlookTest {
 
         val shown = (home.state.value as HomeOutlook.State.Planned).dashboard
         assertThat(shown.away).containsExactly(ComingAway.AllDay(DayName.Tomorrow(today.plusDays(1)), tomorrow))
-        assertThat(shown.days).isEqualTo(Dashboard.of(planned, listOf()).days)
+        assertThat(shown.days).isEqualTo(Dashboard.of(planned, listOf(ended, tomorrow)).days)
         assertThat(home.refreshing.value).isTrue()
         assertThat(access.outlooks).hasSize(2)
         access.away = listOf(tomorrow)
@@ -414,7 +415,8 @@ class HomeOutlookTest {
 
         val shown = (home.state.value as HomeOutlook.State.Planned).dashboard
         assertThat(shown.trips.map { it.trip }).containsExactly(trip)
-        assertThat(shown.days).isEqualTo(Dashboard.of(planned, listOf()).days)
+        assertThat(shown.days).isEqualTo(Dashboard.of(planned, listOf(), listOf(trip)).days)
+        assertThat(shown.days.single().noWindow()).contains(NoWindowReason.AWAY)
         assertThat(home.refreshing.value).isTrue()
         assertThat(access.outlooks).hasSize(2)
         access.trips = listOf(trip)

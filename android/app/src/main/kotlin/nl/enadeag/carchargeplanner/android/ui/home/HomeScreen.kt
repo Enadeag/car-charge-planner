@@ -57,13 +57,13 @@ import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.home.AwayEntry
 import nl.enadeag.carchargeplanner.android.home.BatteryEntry
 import nl.enadeag.carchargeplanner.android.home.Dashboard
-import nl.enadeag.carchargeplanner.android.home.DayModel
 import nl.enadeag.carchargeplanner.android.home.EnergySource
 import nl.enadeag.carchargeplanner.android.home.Footer
 import nl.enadeag.carchargeplanner.android.home.GridAdviceModel
 import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
 import nl.enadeag.carchargeplanner.android.home.NotificationCard
+import nl.enadeag.carchargeplanner.android.home.SourceFigure
 import nl.enadeag.carchargeplanner.android.home.TripEntry
 import nl.enadeag.carchargeplanner.android.store.SaveOutcome
 import nl.enadeag.carchargeplanner.android.ui.LocalSourceColours
@@ -76,6 +76,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.BarScaffold
 import nl.enadeag.carchargeplanner.android.ui.components.EnglishDetails
 import nl.enadeag.carchargeplanner.android.ui.components.inEnglish
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
+import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 
@@ -291,7 +292,7 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
     }
     PrimaryScrollableTabRow(selectedTabIndex = selected) {
         days.forEachIndexed { index, day ->
-            val name = words.title(day.name)
+            val name = words.title(day.name())
             Tab(selected = index == selected, onClick = { scope.launch { pager.animateScrollToPage(index) } },
                 text = { Text(words.tab(day)) }, modifier = Modifier.semantics { contentDescription = name })
         }
@@ -318,16 +319,16 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
                 if (dashboard.zone != phoneZone) {
                     Text(stringResource(R.string.home_zone, dashboard.zone.id))
                 }
-                DayCard(day, dashboard, words)
+                DayCard(day, words)
                 // by the trip, so a card keeps its place in the composition when a trip before it goes
                 dashboard.tripAdviceOn(day).forEach {
                     key(it.departure, it.distanceKm) {
-                        TripAdviceCard(words.tripAdvice(it, day.date, dashboard.today), it.source, adjust)
+                        TripAdviceCard(words.tripAdvice(it, day.name().date(), dashboard.today), it.source, adjust)
                     }
                 }
                 dashboard.adviceOn(day)?.let { GridAdviceCard(it, words) }
                 SolarCard(day, words)
-                BatteryCard(day, dashboard.levels, words, battery.takeIf { day.name is DayName.Today })
+                BatteryCard(day, dashboard.levels, words, battery.takeIf { day.name() is DayName.Today })
                 TripsCard(dashboard, day, words, trips, inView = index == selected)
                 AwayList(dashboard, day, words, away, inView = index == selected)
                 FooterLine(dashboard.footer, words)
@@ -392,29 +393,29 @@ private fun NoForecast(tryAgain: () -> Unit, why: @Composable () -> Unit) {
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DayCard(day: DayModel, dashboard: Dashboard, words: DashboardWords) {
+private fun DayCard(day: DashboardDay, words: DashboardWords) {
     val sources = LocalSourceColours.current
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(words.title(day.name), style = MaterialTheme.typography.titleLarge,
+            Text(words.title(day.name()), style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.semantics { heading() })
             Text(words.heading(day), style = MaterialTheme.typography.titleMedium)
-            day.main?.let { main ->
-                val spoken = words.spokenSpan(main.window)
-                Text(words.span(main.window), style = MaterialTheme.typography.headlineMedium,
+            day.main().orElse(null)?.window()?.let { window ->
+                val spoken = words.spokenSpan(window)
+                Text(words.span(window), style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.semantics { contentDescription = spoken })
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(stringResource(R.string.day_set, main.window.amps(), words.decimal(main.window.powerKw())))
-                    Text(stringResource(R.string.day_energy, words.decimal(main.energyKwh)))
+                    Text(stringResource(R.string.day_set, window.amps(), words.decimal(window.powerKw())))
+                    Text(stringResource(R.string.day_energy, words.decimal(window.energyKwh())))
                 }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                day.figures.forEach {
+                SourceFigure.of(day).forEach {
                     SourceChip(words.figure(it), sources.of(it), spoken = words.spokenFigure(it))
                 }
             }
-            val note = words.note(day, dashboard.noWindowWhy(day))
+            val note = words.note(day)
             if (note.isNotEmpty()) {
                 Text(note, style = MaterialTheme.typography.bodyMedium)
             }

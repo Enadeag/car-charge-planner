@@ -38,13 +38,13 @@ import androidx.compose.ui.unit.dp
 import java.time.ZoneId
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.home.Dashboard
-import nl.enadeag.carchargeplanner.android.home.DayModel
 import nl.enadeag.carchargeplanner.android.home.ListedTrip
 import nl.enadeag.carchargeplanner.android.home.TripEntry
 import nl.enadeag.carchargeplanner.android.ui.components.HeldButton
 import nl.enadeag.carchargeplanner.android.ui.components.NoneLine
 import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
 import nl.enadeag.carchargeplanner.android.ui.components.RowLine
+import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 
 /**
@@ -168,7 +168,7 @@ internal class TripKeys {
  * @param inView true on the page in view, where a change was made and the focus follows it
  */
 @Composable
-internal fun TripsCard(dashboard: Dashboard, day: DayModel, words: DashboardWords, trips: TripAction,
+internal fun TripsCard(dashboard: Dashboard, day: DashboardDay, words: DashboardWords, trips: TripAction,
     inView: Boolean) {
     val focus = remember { RowFocus<Trip>() }
     val listed = dashboard.tripsOn(day)
@@ -198,7 +198,7 @@ internal fun TripsCard(dashboard: Dashboard, day: DayModel, words: DashboardWord
                 val opener = if (inView) Modifier.focusProperties { canFocus = true }.focusRequester(trips.add)
                     else Modifier
                 val spoken = stringResource(R.string.trip_add_spoken)
-                HeldButton(busy = trips.busy, onClick = { trips.entry.add(day.date, dashboard.zone) },
+                HeldButton(busy = trips.busy, onClick = { trips.entry.add(day.name().date(), dashboard.zone) },
                     modifier = opener.semantics { contentDescription = spoken }) {
                     Text(stringResource(R.string.trip_add))
                 }

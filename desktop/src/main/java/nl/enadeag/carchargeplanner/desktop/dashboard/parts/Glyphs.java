@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.parts;
 
+import nl.enadeag.carchargeplanner.engine.dashboard.DayKind;
 import java.util.Locale;
 import javafx.scene.Group;
 import javafx.scene.Node;

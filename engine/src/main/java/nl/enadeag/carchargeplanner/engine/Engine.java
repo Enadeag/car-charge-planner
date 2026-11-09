@@ -141,8 +141,8 @@ public final class Engine {
      *
      * @param dataFolder the folder that holds the away periods, the trips, the battery level, the forecast cache and
      *     what was told; it need not exist yet; never null
-     * @param configFile the owner's settings file, such as the desktop's in its config folder or the one named with
-     *     {@code --config=}; it need not exist yet; never null
+     * @param configFile the owner's settings file, where the platform keeps it outside the data folder, such as in its
+     *     own settings folder or where the owner named it; it need not exist yet; never null
      * @param http the way to the network the providers ask through; never null
      * @param files how the engine writes its files; never null
      * @param apiKeys where the providers' secret settings are kept; never null

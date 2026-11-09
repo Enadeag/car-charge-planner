@@ -1,6 +1,9 @@
 package nl.enadeag.carchargeplanner.android.form
 
 import java.util.Locale
+import java.util.Optional
+import nl.enadeag.carchargeplanner.engine.config.Percent
+import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -82,5 +85,27 @@ class NumberTextTest {
     fun aWholeNumberBeyondWhatTheFieldHoldsIsOutOfRange() {
         assertThat(english.readWhole("99999999999")).isEqualTo(
             NumberText.WholeNumber.Wrong(FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)))
+    }
+
+    @Test
+    fun theEngineSaysTheBatteryChargesBeforeTheTripExactlyWhenTheWrittenLevelsDiffer() {
+        // every half from 0 to 100 and the closest numbers on either side of it, as the dashboard writes them
+        val levels = (0..200).flatMap { half ->
+            val value = half / 2.0
+            listOf(Math.nextDown(value), value, Math.nextUp(value), value + 0.25)
+        }.filter { it in 0.0..100.0 }
+        for (numbers in listOf(english, dutch)) {
+            val written = levels.associateWith { numbers.write(it, 0) }
+
+            val disagree = levels.flatMap { start ->
+                levels.filter { after ->
+                    BatteryLevels(Percent(start), Percent(after), Optional.empty()).chargesBeforeTrip() ==
+                        (written[start] == written[after])
+                }.map { after -> "$start and $after" }
+            }
+
+            assertThat(written).containsEntry(49.5, "50").containsEntry(Math.nextDown(49.5), "49")
+            assertThat(disagree).isEmpty()
+        }
     }
 }

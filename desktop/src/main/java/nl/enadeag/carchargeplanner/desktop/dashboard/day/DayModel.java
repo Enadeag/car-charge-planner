@@ -2,8 +2,8 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.day;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.ChipModel;
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.DayKind;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel;
+import nl.enadeag.carchargeplanner.engine.dashboard.DayKind;
 import java.time.LocalDate;
 import java.util.List;
 

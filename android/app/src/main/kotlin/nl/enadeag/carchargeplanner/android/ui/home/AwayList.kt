@@ -26,12 +26,12 @@ import androidx.compose.ui.unit.dp
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.home.AwayEntry
 import nl.enadeag.carchargeplanner.android.home.Dashboard
-import nl.enadeag.carchargeplanner.android.home.DayModel
 import nl.enadeag.carchargeplanner.android.ui.components.HeldButton
 import nl.enadeag.carchargeplanner.android.ui.components.NoneLine
 import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
 import nl.enadeag.carchargeplanner.android.ui.components.RowLine
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
+import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
 
 /**
  * A one-off away period as the list names it, by the dashboard shown last; before any was shown, as the entry that
@@ -78,7 +78,8 @@ internal class AwayAction(val entry: AwayEntry, val focus: FocusRequester, val b
  * @param inView true on the page in view, whose Add the focus comes back to when the entry closes
  */
 @Composable
-internal fun AwayList(dashboard: Dashboard, day: DayModel, words: DashboardWords, away: AwayAction, inView: Boolean) {
+internal fun AwayList(dashboard: Dashboard, day: DashboardDay, words: DashboardWords, away: AwayAction,
+    inView: Boolean) {
     val focus = remember { RowFocus<OneOffAwayPeriod>() }
     val periods = dashboard.away.map { it.period }
     LaunchedEffect(periods) {
@@ -106,7 +107,7 @@ internal fun AwayList(dashboard: Dashboard, day: DayModel, words: DashboardWords
             val opener = if (inView) Modifier.focusProperties { canFocus = true }.focusRequester(away.focus)
                 else Modifier
             val spoken = stringResource(R.string.one_off_add_spoken)
-            HeldButton(busy = away.busy, onClick = { away.entry.open(day.date, dashboard.zone) },
+            HeldButton(busy = away.busy, onClick = { away.entry.open(day.name().date(), dashboard.zone) },
                 modifier = opener.semantics { contentDescription = spoken }) {
                 Text(stringResource(R.string.one_off_add))
             }

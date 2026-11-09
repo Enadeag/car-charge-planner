@@ -6,6 +6,9 @@ import java.time.ZoneId
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels
+import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
+import nl.enadeag.carchargeplanner.engine.dashboard.DashboardView
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness
@@ -13,14 +16,13 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 
 /**
- * What the dashboard shows of a plan with days: the days, today first, today's grid advice, the charge levels the
- * battery bars mark, the coming one-off away periods, the trips and the footer.
+ * What the dashboard shows of a plan with days: the engine's dashboard with its days, today first, and charge levels;
+ * today's grid advice, the coming one-off away periods, the trips and the footer.
  *
- * @property zone the home's time zone, in which the days and times are meant
- * @property madeAt when the plan was made, whose day in [zone] is today
- * @property days the plan's days, today first; never empty
+ * @property planned the plan the dashboard is made from, kept so a change of the trips or the away periods can make
+ *     the engine's dashboard again at once
+ * @property view the engine's dashboard of the plan, from the stored trips as they were when it was made
  * @property gridAdvice the grid advice, shown on today's tab; null when there is none
- * @property levels the minimum and target charge levels
  * @property away the one-off away periods that had not ended when the plan was made, in order of their start
  * @property footer the forecast's credit, source and freshness
  * @property keyRefusedBy the names of the providers that refused their API key, in the order they were asked, also
@@ -29,18 +31,32 @@ import nl.enadeag.carchargeplanner.engine.trip.Trip
  *     include it
  * @property tripAdvice the plan's advice per trip, in the engine's order, by departure; each shows on the tabs
  *     [TripAdviceModel.shownOn] says
- * @throws IllegalArgumentException when [days] is empty, which shows as no forecast instead
+ * @throws IllegalArgumentException when [view] has no days, which shows as no forecast instead
  */
-data class Dashboard(val zone: ZoneId, val madeAt: Instant, val days: List<DayModel>,
-    val gridAdvice: GridAdviceModel?, val levels: ChargeLevels, val away: List<ComingAway>, val footer: Footer,
-    val keyRefusedBy: List<String> = listOf(), val trips: List<ListedTrip> = listOf(),
-    val tripAdvice: List<TripAdviceModel> = listOf()) {
+data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val gridAdvice: GridAdviceModel?,
+    val away: List<ComingAway>, val footer: Footer, val keyRefusedBy: List<String> = listOf(),
+    val trips: List<ListedTrip> = listOf(), val tripAdvice: List<TripAdviceModel> = listOf()) {
 
     init {
-        if (days.isEmpty()) {
+        if (view.days().isEmpty()) {
             throw IllegalArgumentException("a dashboard has days; a plan without them shows as no forecast")
         }
     }
+
+    /** The home's time zone, in which the days and times are meant. */
+    val zone: ZoneId get() = view.zone()
+
+    /** When the plan was made, whose day in [zone] is today. */
+    val madeAt: Instant get() = view.madeAt()
+
+    /** The plan's days, today first; never empty. */
+    val days: List<DashboardDay> get() = view.days()
+
+    /** The minimum and target charge levels, which every day's battery bar marks. */
+    val levels: ChargeLevels get() = view.levels()
+
+    /** The day the plan was made, in the home's time zone. */
+    val today: LocalDate get() = madeAt.atZone(zone).toLocalDate()
 
     /**
      * The grid advice a day's tab shows.
@@ -48,10 +64,7 @@ data class Dashboard(val zone: ZoneId, val madeAt: Instant, val days: List<DayMo
      * @param day one of [days]
      * @return the grid advice on today's tab; null on any other, or when there is none
      */
-    fun adviceOn(day: DayModel): GridAdviceModel? = gridAdvice.takeIf { day.name is DayName.Today }
-
-    /** The day the plan was made, in the home's time zone. */
-    val today: LocalDate get() = madeAt.atZone(zone).toLocalDate()
+    fun adviceOn(day: DashboardDay): GridAdviceModel? = gridAdvice.takeIf { day.name() is DayName.Today }
 
     /**
      * The trip advice a day's tab shows.
@@ -60,33 +73,18 @@ data class Dashboard(val zone: ZoneId, val madeAt: Instant, val days: List<DayMo
      * @return the advice of the trips that leave that day, and on today's tab also of those that ask the owner to
      *     act, in the engine's order
      */
-    fun tripAdviceOn(day: DayModel): List<TripAdviceModel> = tripAdvice.filter { it.shownOn(day.date, today) }
-
-    /**
-     * Why a day without a charge window has none, as the desktop's day card tells it: the grid advice's day says so
-     * whatever the trips; the day a trip leaves says nothing, as the trip's advice on its tab tells what the battery
-     * needs; a day the car is away on a trip, by the trips as they are stored now, says that. A trip made without
-     * this car keeps nobody away.
-     *
-     * @param day one of [days]
-     * @return why; null for a day with a charge window or one a trip the plan advises on leaves
-     */
-    fun noWindowWhy(day: DayModel): NoWindowWhy? = when {
-        day.kind == DayKind.SOLAR -> null
-        day.kind == DayKind.GRID -> NoWindowWhy.GRID
-        day.departs -> null
-        trips.any { !it.trip.notWithThisCar() && it.covers(day.date) } -> NoWindowWhy.AWAY
-        else -> NoWindowWhy.NOT_NEEDED
-    }
+    fun tripAdviceOn(day: DashboardDay): List<TripAdviceModel> =
+        tripAdvice.filter { it.shownOn(day.name().date(), today) }
 
     /**
      * The same dashboard with the one-off away periods as they are stored now, such as after the owner added or
-     * removed one; the rest stays as the plan made it.
+     * removed one: the engine's dashboard is made again from the kept plan; the rest stays as the plan made it.
      *
      * @param periods the stored one-off away periods, in order of their start; those that ended are left out
      * @return the dashboard with those periods
      */
-    fun withAway(periods: List<OneOffAwayPeriod>): Dashboard = copy(away = ComingAway.of(periods, zone, madeAt))
+    fun withAway(periods: List<OneOffAwayPeriod>): Dashboard =
+        copy(view = planned.dashboard(periods, trips.map { it.trip }), away = ComingAway.of(periods, zone, madeAt))
 
     /**
      * A one-off away period as this dashboard tells it, such as one just added or removed.
@@ -102,16 +100,18 @@ data class Dashboard(val zone: ZoneId, val madeAt: Instant, val days: List<DayMo
      * @param day one of [days]
      * @return the trips from whose day of departure to whose last day the day is, in the engine's order
      */
-    fun tripsOn(day: DayModel): List<ListedTrip> = trips.filter { it.covers(day.date) }
+    fun tripsOn(day: DashboardDay): List<ListedTrip> = trips.filter { it.covers(day.name().date()) }
 
     /**
-     * The same dashboard with the trips as they are stored now, such as after the owner changed or removed one; the
-     * rest stays as the plan made it.
+     * The same dashboard with the trips as they are stored now, such as after the owner changed or removed one: the
+     * engine's dashboard is made again from the kept plan, so a day the car is no longer away on a trip says so at
+     * once; the rest stays as the plan made it.
      *
      * @param stored the stored trips, in order of their departure
      * @return the dashboard with those trips
      */
-    fun withTrips(stored: List<Trip>): Dashboard = copy(trips = ListedTrip.of(stored, zone, madeAt))
+    fun withTrips(stored: List<Trip>): Dashboard =
+        copy(view = planned.dashboard(away.map { it.period }, stored), trips = ListedTrip.of(stored, zone, madeAt))
 
     /**
      * A trip as this dashboard tells it, such as one just removed.
@@ -136,10 +136,8 @@ data class Dashboard(val zone: ZoneId, val madeAt: Instant, val days: List<DayMo
         fun of(planned: Outlook.Planned, away: List<OneOffAwayPeriod>, trips: List<Trip> = listOf(),
             names: (ProviderId) -> String = ProviderId::value): Dashboard {
             val today = planned.today()
-            val shown = planned.dashboard(away, trips)
-            return Dashboard(planned.zone(), planned.madeAt(), DayMapper(planned).map(shown.days()),
+            return Dashboard(planned, planned.dashboard(away, trips),
                 planned.gridAdvice().map { GridAdviceModel.of(it, planned.zone(), today) }.orElse(null),
-                ChargeLevels(planned.minimumPct(), planned.targetPct()),
                 ComingAway.of(away, planned.zone(), planned.madeAt()), Footer.of(planned),
                 planned.forecastSource().keyRefusedBy().map(names),
                 ListedTrip.of(trips, planned.zone(), planned.madeAt()), TripAdviceModel.of(planned))

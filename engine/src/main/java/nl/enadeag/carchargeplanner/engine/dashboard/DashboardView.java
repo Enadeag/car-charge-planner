@@ -1,14 +1,18 @@
 package nl.enadeag.carchargeplanner.engine.dashboard;
 
-import java.time.LocalDate;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
  * What the dashboard shows of a plan, as numbers, hours and flags; each client writes the words and draws it.
  *
+ * @param madeAt when the plan was made, never null; its day in {@code zone} is today
+ * @param zone the home's time zone, never null, in which the days and times are meant
  * @param days the plan's days, today first, in the plan's order; may be empty
+ * @param levels the minimum and target charge levels, which every day's battery bar marks
  */
-public record DashboardView(List<DashboardDay> days) {
+public record DashboardView(Instant madeAt, ZoneId zone, List<DashboardDay> days, ChargeLevels levels) {
 
     /** Keeps a copy of the days. */
     public DashboardView {
@@ -23,10 +27,10 @@ public record DashboardView(List<DashboardDay> days) {
      * @return one dashboard day per plan day, in the same order
      */
     public static DashboardView of(PlanParts parts) {
-        LocalDate today = parts.madeAt().atZone(parts.zone()).toLocalDate();
         var charts = new ChartBuilder(parts);
-        return new DashboardView(parts.days().stream()
-                .map(day -> new DashboardDay(DayName.of(day.date(), today), charts.chart(day)))
-                .toList());
+        var cards = new DayBuilder(parts);
+        return new DashboardView(parts.madeAt(), parts.zone(),
+                parts.days().stream().map(day -> cards.day(day, charts.chart(day))).toList(),
+                new ChargeLevels(parts.minimumPct(), parts.targetPct()));
     }
 }

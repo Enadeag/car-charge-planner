@@ -59,11 +59,11 @@ import androidx.compose.ui.unit.max
 import kotlin.math.max
 import kotlin.math.roundToInt
 import nl.enadeag.carchargeplanner.android.R
-import nl.enadeag.carchargeplanner.android.home.ChargeLevels
-import nl.enadeag.carchargeplanner.android.home.DayModel
 import nl.enadeag.carchargeplanner.android.ui.LocalSourceColours
 import nl.enadeag.carchargeplanner.android.ui.SourceColours
 import nl.enadeag.carchargeplanner.android.ui.components.AppButton
+import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels
+import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
 
 /** The tick labels the chart's time axis shows, for the tests: what is drawn has no semantics of its own. */
 internal val AxisLabels = SemanticsPropertyKey<List<String>>("AxisLabels")
@@ -83,7 +83,7 @@ private val MIN_CHART_HEIGHT = 160.dp
  * @param words the dashboard's words
  */
 @Composable
-internal fun SolarCard(day: DayModel, words: DashboardWords) {
+internal fun SolarCard(day: DashboardDay, words: DashboardWords) {
     val colours = LocalSourceColours.current.chart
     val spoken = words.chart(day)
     ChartCard(colours) {
@@ -118,12 +118,13 @@ internal class BatteryAction(val open: () -> Unit, val focus: FocusRequester)
  *     today
  */
 @Composable
-internal fun BatteryCard(day: DayModel, levels: ChargeLevels, words: DashboardWords, update: BatteryAction? = null) {
+internal fun BatteryCard(day: DashboardDay, levels: ChargeLevels, words: DashboardWords,
+    update: BatteryAction? = null) {
     val colours = LocalSourceColours.current.chart
     ChartCard(colours) {
         Text(stringResource(R.string.battery_heading), style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.semantics { heading() })
-        Text(words.batteryLevels(day.battery), style = MaterialTheme.typography.titleMedium, color = colours.carText,
+        Text(words.batteryLevels(day.battery()), style = MaterialTheme.typography.titleMedium, color = colours.carText,
             modifier = Modifier.semantics { hideFromAccessibility() })
         BatteryBar(day, levels, words, colours)
         if (update != null) {
@@ -171,15 +172,15 @@ private fun LegendEntry(text: String, colours: SourceColours.Chart, sign: DrawSc
 
 /** The drawing of the chart, measured to the column: the labels of the axis are those that fit side by side. */
 @Composable
-private fun SolarCanvas(day: DayModel, words: DashboardWords, colours: SourceColours.Chart, spoken: String) {
+private fun SolarCanvas(day: DashboardDay, words: DashboardWords, colours: SourceColours.Chart, spoken: String) {
     LeftToRight {
         SolarPlot(day, words, colours, spoken)
     }
 }
 
 @Composable
-private fun SolarPlot(day: DayModel, words: DashboardWords, colours: SourceColours.Chart, spoken: String) {
-    val chart = day.chart
+private fun SolarPlot(day: DashboardDay, words: DashboardWords, colours: SourceColours.Chart, spoken: String) {
+    val chart = day.chart()
     val measurer = rememberTextMeasurer()
     val axis = MaterialTheme.typography.labelSmall.copy(color = colours.muted)
     val nowStyle = axis.copy(color = colours.text)
@@ -216,14 +217,14 @@ private fun SolarPlot(day: DayModel, words: DashboardWords, colours: SourceColou
 
 /** The bar, as wide as the column, with the words of its marks under it, on a second line when they would overlap. */
 @Composable
-private fun BatteryBar(day: DayModel, levels: ChargeLevels, words: DashboardWords, colours: SourceColours.Chart) {
+private fun BatteryBar(day: DashboardDay, levels: ChargeLevels, words: DashboardWords, colours: SourceColours.Chart) {
     LeftToRight {
         BatteryBarDrawing(day, levels, words, colours)
     }
 }
 
 @Composable
-private fun BatteryBarDrawing(day: DayModel, levels: ChargeLevels, words: DashboardWords,
+private fun BatteryBarDrawing(day: DashboardDay, levels: ChargeLevels, words: DashboardWords,
     colours: SourceColours.Chart) {
     val measurer = rememberTextMeasurer()
     val style = MaterialTheme.typography.labelSmall.copy(color = colours.muted)
@@ -235,8 +236,8 @@ private fun BatteryBarDrawing(day: DayModel, levels: ChargeLevels, words: Dashbo
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val density = LocalDensity.current
         val width = constraints.maxWidth.toFloat()
-        val layout = remember(day.battery, levels, width, minimum, target, density.density) {
-            BatteryBarLayout.of(day.battery, levels, width, minimum.size.width.toFloat(),
+        val layout = remember(day.battery(), levels, width, minimum, target, density.density) {
+            BatteryBarLayout.of(day.battery(), levels, width, minimum.size.width.toFloat(),
                 target.size.width.toFloat(), max(minimum.size.height, target.size.height).toFloat(),
                 density.density)
         }

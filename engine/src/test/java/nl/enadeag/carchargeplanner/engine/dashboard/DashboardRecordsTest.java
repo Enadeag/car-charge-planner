@@ -3,19 +3,36 @@ package nl.enadeag.carchargeplanner.engine.dashboard;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import nl.enadeag.carchargeplanner.engine.config.Percent;
+import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
+import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
+import nl.enadeag.carchargeplanner.engine.plan.Window;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
 class DashboardRecordsTest {
 
     private static final Instant NOON = Instant.parse("2026-06-01T10:00:00Z");
     private static final LocalDate DAY = LocalDate.of(2026, 6, 1);
+
+    @ParameterizedTest
+    @CsvSource({"50, 50, false", "49.5, 50, false", "50, 50.4, false", "49.4999, 50, true", "49.4, 50, true",
+        "50, 50.5, true", "40, 60, true"})
+    void aDayChargesBeforeTheTripExactlyWhenTheWholePercentagesDiffer(double start, double after, boolean charges) {
+        var levels = new BatteryLevels(new Percent(start), new Percent(after), Optional.empty());
+
+        assertThat(levels.chargesBeforeTrip()).isEqualTo(charges);
+    }
 
     private static DayChart chart(double from, double to, double scale, double baseload) {
         return new DayChart(from, to, scale, List.of(), baseload, List.of(), Optional.empty(), List.of(),
@@ -96,13 +113,118 @@ class DashboardRecordsTest {
         assertThat(new DayChart.Tick(hour, clockHour, NOON).clockHour()).isEqualTo(clockHour);
     }
 
+    private static final Window WINDOW = new Window(NOON, NOON.plusSeconds(3600), 10, 2.3, 2.3, 0);
+    private static final Optional<MainCharge> MAIN = Optional.of(new MainCharge(WINDOW, OptionalDouble.empty()));
+    private static final BatteryLevels BATTERY = new BatteryLevels(new Percent(40), new Percent(50), Optional.empty());
+
+    private static DashboardDay day(Optional<MainCharge> main, List<Window> later, Optional<NoWindowReason> noWindow) {
+        return new DashboardDay(new DayName.Today(DAY), main, later, noWindow, BATTERY, Optional.empty(),
+                chart(6, 20, 1, 0.3));
+    }
+
     @Test
     void aDashboardKeepsItsOwnDays() {
-        var days = new ArrayList<>(List.of(new DashboardDay(new DayName.Today(DAY), chart(6, 20, 1, 0.3))));
-        var dashboard = new DashboardView(days);
+        var days = new ArrayList<>(List.of(day(MAIN, List.of(), Optional.empty())));
+        var dashboard = new DashboardView(NOON, ZoneId.of("Europe/Amsterdam"), days,
+                new ChargeLevels(new Percent(20), new Percent(80)));
 
         days.clear();
 
         assertThat(dashboard.days()).hasSize(1);
+    }
+
+    @Test
+    void aDayKeepsItsOwnLaterWindows() {
+        var later = new ArrayList<>(List.of(WINDOW));
+        var day = day(MAIN, later, Optional.empty());
+
+        later.clear();
+
+        assertThat(day.later()).containsExactly(WINDOW);
+    }
+
+    @Test
+    void aDayWithAMainWindowKeepsItAndIsASolarDay() {
+        var day = day(MAIN, List.of(WINDOW), Optional.empty());
+
+        assertThat(day.main()).isEqualTo(MAIN);
+        assertThat(day.kind()).isEqualTo(DayKind.SOLAR);
+    }
+
+    @Test
+    void aDayWithoutAWindowBecauseOfTheGridAdviceIsAGridDay() {
+        assertThat(day(Optional.empty(), List.of(), Optional.of(NoWindowReason.GRID)).kind()).isEqualTo(DayKind.GRID);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = NoWindowReason.class, names = "GRID", mode = EnumSource.Mode.EXCLUDE)
+    void aDayWithoutAWindowForAnotherReasonIsOfNoKind(NoWindowReason reason) {
+        assertThat(day(Optional.empty(), List.of(), Optional.of(reason)).kind()).isEqualTo(DayKind.NONE);
+    }
+
+    @ParameterizedTest
+    @EnumSource(NoWindowReason.class)
+    void aDayWithoutAWindowKeepsItsReason(NoWindowReason reason) {
+        assertThat(day(Optional.empty(), List.of(), Optional.of(reason)).noWindow()).contains(reason);
+    }
+
+    @Test
+    void aDayWithoutAMainWindowHasNoLaterOnes() {
+        assertThatThrownBy(() -> day(Optional.empty(), List.of(WINDOW),
+                Optional.of(NoWindowReason.NOT_NEEDED))).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void aDayHasAReasonWithoutAWindowExactlyWhenItHasNoWindow() {
+        assertThatThrownBy(() -> day(MAIN, List.of(), Optional.of(NoWindowReason.NOT_NEEDED)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> day(Optional.empty(), List.of(), Optional.empty()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void onlyTodayHasAnAssumedLevel() {
+        var tomorrow = DAY.plusDays(1);
+
+        assertThatThrownBy(() -> new DashboardDay(new DayName.Tomorrow(tomorrow), MAIN, List.of(), Optional.empty(),
+                BATTERY, Optional.of(new Percent(40)), chart(6, 20, 1, 0.3)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(new DashboardDay(new DayName.Today(DAY), MAIN, List.of(), Optional.empty(), BATTERY,
+                Optional.of(new Percent(40)), chart(6, 20, 1, 0.3)).assumedLevel()).contains(new Percent(40));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0", "-0.1", "NaN", "Infinity"})
+    void theMainWindowsGridEnergyIsFiniteAndMoreThanZero(double kwh) {
+        assertThatThrownBy(() -> new MainCharge(WINDOW, OptionalDouble.of(kwh))).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void theMainWindowTakesALittleGridEnergyOrNone() {
+        assertThat(new MainCharge(WINDOW, OptionalDouble.of(0.01)).gridKwh()).hasValue(0.01);
+        assertThat(new MainCharge(WINDOW, OptionalDouble.empty()).gridKwh()).isEmpty();
+    }
+
+    @Test
+    void theChargeLevelsRefuseAMinimumAboveTheTargetButTakeOneEqualToIt() {
+        assertThatThrownBy(() -> new ChargeLevels(new Percent(81), new Percent(80)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(new ChargeLevels(new Percent(80), new Percent(80)).minimumPct()).isEqualTo(new Percent(80));
+    }
+
+    @Test
+    void thePartsKeepTheirOwnLists() {
+        var trip = new Trip(NOON, NOON.plusSeconds(3600), 10, false);
+        var trips = new ArrayList<>(List.of(trip));
+        var advice = new ArrayList<>(List.of(new TripAdvice(trip, new Percent(60), List.of(), new Percent(60),
+                Optional.empty(), new Percent(60), 0, new Percent(20))));
+        var parts = new PlanParts(NOON, ZoneId.of("Europe/Amsterdam"), List.<DayPlan>of(), 0.3, new Percent(40),
+                false, Optional.empty(), advice, new Percent(20), new Percent(80), trips);
+
+        trips.clear();
+        advice.clear();
+
+        assertThat(parts.trips()).hasSize(1);
+        assertThat(parts.tripAdvice()).hasSize(1);
     }
 }

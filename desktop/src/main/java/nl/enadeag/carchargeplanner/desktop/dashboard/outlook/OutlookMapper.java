@@ -115,7 +115,7 @@ public final class OutlookMapper {
     private DashboardModel.Plan plan(Outlook.Planned planned, List<OneOffAwayPeriod> away, List<Trip> trips,
             Units units) {
         var dashboard = planned.dashboard(away, trips);
-        var days = new DayMapper(planned, trips, messages).map(dashboard.days());
+        var days = new DayMapper(messages, dashboard.zone(), dashboard.levels()).map(dashboard.days());
         var tripAdvice = new TripAdviceMapper(planned, units, messages).map(planned.tripAdvice());
         var advice = planned.gridAdvice().map(new GridAdviceMapper(planned, messages)::map);
         var coming = new OneOffAwayMapper(planned.zone(), planned.madeAt(), messages).map(away);
