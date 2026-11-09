@@ -2,74 +2,69 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.battery;
 
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.engine.Outlook;
-import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
-import java.time.LocalDate;
-import java.util.Set;
+import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels;
+import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels;
+import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay;
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * The days of a plan as the battery bar draws them: the levels, with the minimum and the target, and on a day a trip
- * leaves the level the trip leaves at the end of the day.
+ * The days of a plan as the battery bar draws them, in words: the levels, with the minimum and the target, and on a
+ * day a trip leaves the level the trip leaves at the end of the day.
  */
 public final class BatteryMapper {
 
-    private final Outlook.Planned planned;
     private final Messages messages;
-    private final LocalDate today;
-    private final Set<LocalDate> departures;
 
     /**
-     * Makes the mapper for one plan.
+     * Makes the mapper.
      *
-     * @param planned the plan whose day of making, battery assumption and charge levels the bars show
      * @param messages the texts and numbers, in the owner's language
      */
-    public BatteryMapper(Outlook.Planned planned, Messages messages) {
-        this.planned = planned;
+    public BatteryMapper(Messages messages) {
         this.messages = messages;
-        this.today = planned.today();
-        this.departures = planned.tripAdvice().stream()
-                .map(advice -> advice.trip().firstDay(planned.zone()))
-                .collect(Collectors.toSet());
     }
 
     /**
      * A day's battery: its level at the start and after charging, with the minimum and target; on a day a trip
      * leaves, also the level at the end of the day, after the trip.
      *
-     * @param day one of the plan's days
+     * @param day one of the dashboard's days, with its name and battery levels
+     * @param levels the plan's minimum and target charge levels
      * @return the bar's data; only today's level can be entered
      */
-    public BatteryModel map(DayPlan day) {
-        double level = day.startLevelPct().value();
-        double after = day.levelAfterChargingPct().value();
-        double minimum = planned.minimumPct().value();
-        double target = planned.targetPct().value();
-        boolean isToday = day.date().equals(today);
-        boolean departs = departures.contains(day.date());
+    public BatteryModel map(DashboardDay day, ChargeLevels levels) {
+        var battery = day.battery();
+        double level = battery.start().value();
+        double after = battery.after().value();
+        double minimum = levels.minimum().value();
+        double target = levels.target().value();
+        boolean isToday = day.name() instanceof DayName.Today;
         var spoken = isToday
                 ? sentences(messages.text(TextKey.BATTERY_SPOKEN_TODAY, pct(level), pct(after), pct(minimum), pct(target)),
-                        planned.batteryAssumed() ? messages.text(TextKey.BATTERY_ASSUMED) : "")
-                : messages.text(TextKey.BATTERY_SPOKEN_DAY, pct(level), messages.inSentence(day.date(), today),
+                        day.assumedLevel().isPresent() ? messages.text(TextKey.BATTERY_ASSUMED) : "")
+                : messages.text(TextKey.BATTERY_SPOKEN_DAY, pct(level), messages.inSentence(day.name()),
                         pct(after), pct(minimum), pct(target));
-        var end = pct(day.endLevelPct().value());
-        if (departs) {
-            spoken = sentences(spoken, messages.text(TextKey.BATTERY_SPOKEN_AFTER_TRIP, end));
+        if (battery.afterTrip().isPresent()) {
+            spoken = sentences(spoken,
+                    messages.text(TextKey.BATTERY_SPOKEN_AFTER_TRIP, pct(battery.afterTrip().get().value())));
         }
-        return new BatteryModel(level, after, minimum, target, levels(level, after, end, departs),
+        return new BatteryModel(level, after, minimum, target, levels(battery),
                 messages.text(TextKey.BATTERY_MINIMUM, pct(minimum)), messages.text(TextKey.BATTERY_TARGET, pct(target)),
                 isToday, spoken);
     }
 
     /** Without a charge before the trip, the level after charging is the start's, and is left out. */
-    private String levels(double level, double after, String end, boolean departs) {
-        if (!departs) {
-            return messages.text(TextKey.BATTERY_LEVELS, pct(level), pct(after));
+    private String levels(BatteryLevels battery) {
+        var level = pct(battery.start().value());
+        var after = pct(battery.after().value());
+        if (battery.afterTrip().isEmpty()) {
+            return messages.text(TextKey.BATTERY_LEVELS, level, after);
         }
-        return pct(level).equals(pct(after)) ? messages.text(TextKey.BATTERY_LEVELS_TRIP, pct(level), end)
-                : messages.text(TextKey.BATTERY_LEVELS_CHARGE_TRIP, pct(level), pct(after), end);
+        var end = pct(battery.afterTrip().get().value());
+        return battery.chargesBeforeTrip() ? messages.text(TextKey.BATTERY_LEVELS_CHARGE_TRIP, level, after, end)
+                : messages.text(TextKey.BATTERY_LEVELS_TRIP, level, end);
     }
 
     private String pct(double value) {
